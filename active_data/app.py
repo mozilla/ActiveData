@@ -7,180 +7,74 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-import argparse
-import codecs
-import logging
-from logging.handlers import RotatingFileHandler
-import os
-import random
-from flask import Flask, json
+
+from flask import Flask
 import flask
-import requests
-import time
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.exceptions import abort
-import sys  # REQUIRED FOR DYNAMIC DEBUG
+
+from pyLibrary import convert
+from pyLibrary.debugs import constants, startup
+from pyLibrary.debugs.logs import Log
+from pyLibrary.dot import Dict, wrap, unwrap
+from pyLibrary.env import elasticsearch
+from pyLibrary.queries import Q
+
 
 app = Flask(__name__)
+request_log_queue = None
+default_elasticsearch = None
 
 
-def stream(raw_response):
-    while True:
-        block = raw_response.read(amt=65536, decode_content=False)
-        if not block:
-            return
-        yield block
+def record_request(request):
+    log = Dict(
+        headers=request.headers,
+        ip=request.remote_addr
+    )
+    log["from"]=request.headers["from"]
+    request_log_queue.add(log)
 
 
-def listwrap(value):
-    if value is None:
-        return []
-    elif isinstance(value, list):
-        return value
-    else:
-        return [value]
+
+def pre_filter_request(path, type):
+    pass
+    # if not flask.request.headers.get("from").strip():
+    #     # RETURN A REQUEST FOR A FROM HEADER
+    #     message = "Please add a 'From' header containing either an email address " \
+    #               "of a person to contact, or a website describing the application. " \
+    #               "In the event your application causes high load we would like to " \
+    #               "contact you to explore ways to reducing it.  A simple ban is " \
+    #               "inconvenient for both of us and does not solve the root cause."
+    #     abort(401, message=message)
+
+from2context = Dict()
 
 
-class Except(Exception):
-    def __init__(self, message):
-        super(Exception, self).__init__(self, message)
-        self._message = message
-
-    @property
-    def message(self):
-        return self._message
-
-
-@app.route('/', defaults={'path': ''}, methods=['HEAD'])
-@app.route('/<path:path>', methods=['HEAD'])
-def catch_all_head(path):
-    return catch_all(path, "HEAD")
-
-@app.route('/', defaults={'path': ''}, methods=['GET'])
+@app.route('/query', defaults={'path': ''}, methods=['GET'])
 @app.route('/<path:path>', methods=['GET'])
-def catch_all_get(path):
-    return catch_all(path, "get")
-
-
-@app.route('/', defaults={'path': ''}, methods=['POST'])
-@app.route('/<path:path>', methods=['POST'])
-def catch_all_post(path):
-    return catch_all(path, 'post')
-
-
-def catch_all(path, type):
+def query(path, type):
     try:
-        data = flask.request.environ['body_copy']
-        filter(type, path, data)
+        record_request(flask.request)
+        data = convert.json2value(convert.utf82unicode(flask.request.environ['body_copy']))
+        result = Q.run(data)
 
-        #PICK RANDOM ES
-        es = random.choice(listwrap(settings["elasticsearch"]))
+        outbound_header = wrap({
+            "access-control-allow-origin": "*"
+        })
 
-        ## SEND REQUEST
-        headers = {k: v for k, v in flask.request.headers if v is not None and v != "" and v != "null"}
-        headers['content-type'] = 'application/json'
-
-        response = requests.request(
-            type,
-            es["host"] + ":" + str(es["port"]) + "/" + path,
-            data=data,
-            stream=True,  # FOR STREAMING
-            headers=headers,
-            timeout=90
-        )
-
-        # ALLOW CROSS DOMAIN (BECAUSE ES IS USUALLY NOT ON SAME SERVER AS PAGE)
-        outbound_header = dict(response.headers)
-        outbound_header["access-control-allow-origin"] = "*"
-
-        # LOG REQUEST TO ES
-        request = flask.request
-        uid = int(round(time.time() * 1000.0))
-        slim_request = {
-            "remote_addr": request.remote_addr,
-            "method": request.method,
-            "path": request.path,
-            "request_length": len(data),
-            "response_length": int(outbound_header["content-length"]) if "content-length" in outbound_header else None
-        }
-        try:
-            requests.request(
-                type,
-                es["host"] + ":" + str(es["port"]) + "/debug/esfrontline/"+str(uid),
-                data=json.dumps(slim_request),
-                timeout=5
-            )
-        except Exception, e:
-            pass
-
-        logger.debug("path: {path}, request bytes={request_content_length}, response bytes={response_content_length}".format(
-            path=path,
-            # request_headers=dict(response.headers),
-            request_content_length=len(data),
-            # response_headers=outbound_header,
-            response_content_length=int(outbound_header["content-length"]) if "content-length" in outbound_header else None
-        ))
-
-        ## FORWARD RESPONSE
         return flask.wrappers.Response(
-            stream(response.raw),
+            convert.unicode2utf8(convert.value2json(result)),
             direct_passthrough=True, #FOR STREAMING
-            status=response.status_code,
-            headers=outbound_header
+            status=200,
+            headers=unwrap(outbound_header)
         )
-    except Except, e:
-        logger.warning(e.message)
-        abort(400)
     except Exception, e:
-        logger.exception(str(e))
-        abort(400)
+        Log.warning("problem", e)
+        abort(400, e)
 
-
-def filter(type, path_string, query):
-    """
-    THROW EXCEPTION IF THIS IS NOT AN ElasticSearch QUERY
-    """
-    try:
-        if type.upper() == "HEAD":
-            if path_string in ["", "/"]:
-                return  # HEAD REQUESTS ARE ALLOWED
-            else:
-                raise Except("HEAD requests are generally not allowed")
-
-        path = path_string.split("/")
-
-        ## EXPECTING {index_name} "/" {type_name} "/" {_id}
-        ## EXPECTING {index_name} "/" {type_name} "/_search"
-        ## EXPECTING {index_name} "/_search"
-        if len(path) == 2:
-            if path[-1] not in ["_mapping", "_search"]:
-                raise Except("request path must end with _mapping or _search")
-        elif len(path) == 3:
-            if path[-1] not in ["_mapping", "_search"]:
-                raise Except("request path must end with _mapping or _search")
-        else:
-            raise Except('request must be of form: {index_name} "/" {type_name} "/_search" ')
-
-        ## COMPARE TO WHITE LIST
-        if path[0] not in settings["whitelist"]:
-            raise Except('index not in whitelist: {index_name}'.format({"index_name": path[0]}))
-
-
-        ## EXPECTING THE QUERY TO AT LEAST HAVE .query ATTRIBUTE
-        if path[-1] == "_search" and json.loads(query).get("query", None) is None:
-            raise Except("_search must have query")
-
-        ## NO CONTENT ALLOWED WHEN ASKING FOR MAPPING
-        if path[-1] == "_mapping" and len(query) > 0:
-            raise Except("Can not provide content when requesting _mapping")
-
-    except Exception, e:
-        logger.warning(e.message)
-        raise Except("Not allowed: {path}:\n{query}".format(path=path_string, query=query))
 
 
 # Snagged from http://stackoverflow.com/questions/10999990/python-flask-how-to-get-whole-raw-post-body
-# I SUSPECT THIS IS PREVENTING STREAMING
 class WSGICopyBody(object):
     def __init__(self, application):
         self.application = application
@@ -211,53 +105,25 @@ class WSGICopyBody(object):
 
 app.wsgi_app = WSGICopyBody(app.wsgi_app)
 
-logger = None
-settings = {}
-
-
 def main():
     try:
-        parser = argparse.ArgumentParser()
-        parser.add_argument(*["--settings", "--settings-file", "--settings_file"], **{
-            "help": "path to JSON file with settings",
-            "type": str,
-            "dest": "filename",
-            "default": "./settings.json",
-            "required": False
-        })
-        namespace = parser.parse_args()
-        args = {k: getattr(namespace, k) for k in vars(namespace)}
+        settings = startup.read_settings()
+        Log.start(settings.debug)
+        constants.set(settings.constants)
 
-        if not os.path.exists(args["filename"]):
-            raise Except("Can not file settings file {filename}".format(filename=args["filename"]))
-
-        with codecs.open(args["filename"], "r", encoding="utf-8") as file:
-            json_data = file.read()
-        globals()["settings"] = json.loads(json_data)
-        settings["args"] = args
-        settings["whitelist"] = listwrap(settings.get("whitelist", None))
-
-        globals()["logger"] = logging.getLogger('esFrontLine')
-        logger.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-        for d in listwrap(settings["debug"]["log"]):
-            if d.get("filename", None):
-                fh = RotatingFileHandler(**d)
-                fh.setLevel(logging.DEBUG)
-                fh.setFormatter(formatter)
-                logger.addHandler(fh)
-            elif d.get("stream", None) in ("sys.stdout", "sys.stderr"):
-                ch = logging.StreamHandler(stream=eval(d["stream"]))
-                ch.setLevel(logging.DEBUG)
-                ch.setFormatter(formatter)
-                logger.addHandler(ch)
+        # PIPE REQUEST LOGS TO ES DEBUG
+        request_logger = elasticsearch.Cluster(settings.request_log).get_or_create_index(settings.request_log)
+        globals()["default_elasticsearch"] = elasticsearch.Index(settings.elasticsearch)
+        globals()["request_log_queue"] = request_logger.threaded_queue(size=2000)
 
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
         app.run(**settings["flask"])
     except Exception, e:
-        print(str(e))
+        Log.error("Problem with etl", e)
+    finally:
+        Log.stop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
+

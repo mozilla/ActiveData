@@ -11,16 +11,18 @@
 from __future__ import unicode_literals
 from __future__ import division
 import functools
+
 from pyLibrary.maths import stats
 from pyLibrary.collections import MIN, MAX
 from pyLibrary.debugs.logs import Log
+from pyLibrary.dot.lists import DictList
 from pyLibrary.maths import Math
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.maths.stats import ZeroMoment, ZeroMoment2Stats
 
 
+
 # A VARIETY OF SLIDING WINDOW FUNCTIONS
-from pyLibrary.dot.lists import DictList
 
 
 class AggregationFunction(object):

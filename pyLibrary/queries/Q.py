@@ -11,6 +11,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 import __builtin__
+from pyLibrary import dot
 
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.queries import flat_list, query, group_by, _normalize_select

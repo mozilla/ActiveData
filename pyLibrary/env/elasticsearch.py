@@ -46,15 +46,16 @@ class Index(object):
     @use_settings
     def __init__(self, index, type, alias=None, explore_metadata=True, debug=False, settings=None):
         """
-        settings.explore_metadata == True - IF PROBING THE CLUSTER FOR METATDATA IS ALLOWED
-        settings.timeout == NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
+
+        index - NAME OF THE INDEX, EITHER ALIAS NAME OR FULL VERSION NAME
+        type - SCHEMA NAME
+        explore_metadata == True - IF PROBING THE CLUSTER FOR METATDATA IS ALLOWED
+        timeout == NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
         """
-        if settings.index == settings.alias:
+        if index == alias:
             Log.error("must have a unique index name")
 
-        settings.setdefault("explore_metadata", True)
-
-        self.debug = settings.debug
+        self.debug = debug
         if self.debug:
             Log.note("elasticsearch debugging is on")
 
@@ -62,15 +63,15 @@ class Index(object):
         self.cluster = Cluster(settings)
 
         try:
-            index = self.get_index(settings.index)
-            if index and settings.alias==None:
+            index = self.get_index(index)
+            if index and alias==None:
                 settings.alias = settings.index
                 settings.index = index
         except Exception, e:
             # EXPLORING (get_metadata()) IS NOT ALLOWED ON THE PUBLIC CLUSTER
             pass
 
-        self.path = "/" + settings.index + "/" + settings.type
+        self.path = "/" + index + "/" + type
 
 
     def get_schema(self):

@@ -88,4 +88,4 @@ def _scrub(value):
         return value
 
 from . import encoder as json_encoder
-
+from . import ref

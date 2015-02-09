@@ -109,6 +109,9 @@ class NullType(object):
     def __iter__(self):
         return _zero_list.__iter__()
 
+    def __deepcopy__(self, memo):
+        return None
+
     def last(self):
         """
         IN CASE self IS INTERPRETED AS A list

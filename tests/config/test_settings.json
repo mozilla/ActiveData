@@ -1,0 +1,13 @@
+{
+	"startServer": false,
+	"service_url": "http://127.0.0.1:5000/query",
+	"backend_es": {
+		"host": "http://localhost",
+		"port": "9200"
+	},
+	"constants": {
+		"pyLibrary.env.http.default_headers": {
+			"From": "ActiveDataTests"
+		}
+	}
+}

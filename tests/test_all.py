@@ -2,22 +2,24 @@ from _subprocess import CREATE_NEW_PROCESS_GROUP
 import subprocess
 import signal
 
-import pytest
-
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
+from pyLibrary import jsons
+from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
 from pyLibrary.testing import elasticsearch
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 from pyLibrary.thread.threads import Signal, Thread
-from tests import testdata_set_ops, testdata_2_edge, testdata_1_edge
+from tests import testdata_set_ops, testdata_2_edge, testdata_1_edge, parametrize
 
 
 all_subtests = []
 all_subtests.extend(testdata_set_ops.tests)
 all_subtests.extend(testdata_1_edge.tests)
 all_subtests.extend(testdata_2_edge.tests)
+
+
+settings = jsons.ref.get("file://tests/config/test_settings.json")
 
 
 class TestSimpleRequests(FuzzyTestCase):
@@ -31,29 +33,33 @@ class TestSimpleRequests(FuzzyTestCase):
     def setUpClass(cls):
         cls.server_is_ready = Signal()
         cls.please_stop = Signal()
-        cls.thread = Thread("watch server", run_app, please_stop=cls.please_stop, server_is_ready=cls.server_is_ready).start()
+        if settings.startServer:
+            cls.thread = Thread("watch server", run_app, please_stop=cls.please_stop, server_is_ready=cls.server_is_ready).start()
+        else:
+            cls.server_is_ready.go()
 
     @classmethod
     def tearDownClass(cls):
         cls.please_stop.go()
-        cls.thread.stopped.wait_for_go()
+        if cls.thread:
+            cls.thread.stopped.wait_for_go()
 
 
-    def __init__(self, service_url, backend_es):
+    def __init__(self, *args, **kwargs):
         """
         :param service_url:  location opf the ActiveData server we are testing
         :param backend_es:   the ElasticSearch settings for filling the backend
         """
-        FuzzyTestCase.__init__(self)
-        self.service_url = service_url
-        self.backend_es = backend_es.copy()
+        FuzzyTestCase.__init__(self, *args, **kwargs)
+        self.service_url = settings.service_url
+        self.backend_es = settings.backend_es.copy()
         self.es = None
         self.index = None
 
-    @pytest.mark.parametrize("subtest", all_subtests)
-    def startup(self):
+    def setUp(self):
         # ADD TEST RECORDS
-        self.backend_es.index = Random.hex(10)
+        self.backend_es.index = Random.hex(10).lower()
+        self.backend_es.type = "testdata"
         self.es = elasticsearch.Cluster(self.backend_es)
         self.index = self.es.get_or_create_index(self.backend_es)
         self.server_is_ready.wait_for_go()
@@ -62,25 +68,33 @@ class TestSimpleRequests(FuzzyTestCase):
         self.es.delete_index(self.backend_es.index)
 
 
+    @parametrize("subtest", all_subtests)
     def test_queries(self, subtest):
         settings = self.backend_es.copy()
-        settings.index = "testing" + Random.hex(10)
+        settings.index = "testing" + Random.hex(10).lower()
+        settings.type = "testdata"
         settings.schema = subtest.metadata
+
+
         try:
             # MAKE CONTAINER
-            with self.es.get_or_create_index(settings) as container:
-                # INSERT DATA
-                container.extend([
-                    {"value": v} for v in subtest.data
-                ])
+            container = self.es.get_or_create_index(settings)
+            # INSERT DATA
+            container.extend([
+                {"value": v} for v in subtest.data
+            ])
+            #ENSURE query POINTS TO CONTAINER
+            subtest.query["from"] = settings.index
 
-                # EXECUTE QUERY
-                query = convert.unicode2utf8(convert.value2json(subtest.query))
-                response = http.get(self.service_url, body=query)
-                result = convert.json2value(convert.utf82unicode(response.content))
+            # EXECUTE QUERY
+            query = convert.unicode2utf8(convert.value2json(subtest.query))
+            response = http.get(self.service_url, data=query)
+            if response.status_code != 200:
+                error(response)
+            result = convert.json2value(convert.utf82unicode(response.content))
 
-                # CONFIRM MATCH
-                self.assertAlmostEqual(result, subtest.expected)
+            # CONFIRM MATCH
+            self.assertAlmostEqual(result, subtest.expected)
         except Exception, e:
             Log.error("Failed test", e)
         finally:
@@ -88,9 +102,22 @@ class TestSimpleRequests(FuzzyTestCase):
             self.es.delete_index(settings.index)
 
 
-def run_app(self, please_stop, server_is_ready):
+def error(response):
+    response = convert.utf82unicode(response.content)
+    e = None
+    try:
+        e = Except.new_instance(convert.json2value(response))
+    except Exception:
+        pass
+    if e:
+        Log.error("Failed request", e)
+    else:
+        Log.error("Failed request\n {{response}}", {"response": response})
+
+
+def run_app(please_stop, server_is_ready):
     proc = subprocess.Popen(
-        ["python", "active_data\\app.py", "--settings", "resources/config/test_settings.json"],
+        ["python", "active_data\\app.py", "--settings", "resources/config/settings.json"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -107,3 +134,6 @@ def run_app(self, please_stop, server_is_ready):
         Log.note("SERVER: {{line}}", {"line": line.strip()})
 
     proc.send_signal(signal.CTRL_C_EVENT)
+
+
+

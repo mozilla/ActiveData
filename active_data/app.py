@@ -7,11 +7,12 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-
 from flask import Flask
 import flask
+
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.exceptions import abort
+from werkzeug.wrappers import Response
 
 from pyLibrary import convert
 from pyLibrary.debugs import constants, startup
@@ -28,10 +29,13 @@ default_elasticsearch = None
 
 def record_request(request):
     log = Dict(
-        headers=request.headers,
-        ip=request.remote_addr
+        http_user_agent=request.headers.get("user_agent"),
+        http_accept_encoding=request.headers.get("accept_encoding"),
+        path=request.headers.environ["werkzeug.request"].full_path,
+        content_length=request.headers.get("content_length"),
+        remote_addr=request.remote_addr
     )
-    log["from"]=request.headers["from"]
+    log["from"] = request.headers.get("from")
     request_log_queue.add(log)
 
 
@@ -52,7 +56,7 @@ from2context = Dict()
 
 @app.route('/query', defaults={'path': ''}, methods=['GET'])
 @app.route('/<path:path>', methods=['GET'])
-def query(path, type):
+def query(path):
     try:
         record_request(flask.request)
         data = convert.json2value(convert.utf82unicode(flask.request.environ['body_copy']))
@@ -62,7 +66,7 @@ def query(path, type):
             "access-control-allow-origin": "*"
         })
 
-        return flask.wrappers.Response(
+        return Response(
             convert.unicode2utf8(convert.value2json(result)),
             direct_passthrough=True, #FOR STREAMING
             status=200,
@@ -70,8 +74,10 @@ def query(path, type):
         )
     except Exception, e:
         Log.warning("problem", e)
-        abort(400, e)
-
+        return Response(
+            convert.unicode2utf8(convert.value2json(e)),
+            status=400
+        )
 
 
 # Snagged from http://stackoverflow.com/questions/10999990/python-flask-how-to-get-whole-raw-post-body
@@ -105,6 +111,29 @@ class WSGICopyBody(object):
 
 app.wsgi_app = WSGICopyBody(app.wsgi_app)
 
+#
+# @app.errorhandler(400)
+# def handle_invalid_usage(error):
+#     response = {
+#         "status_code": error.code,
+#         'message': convert.unicode2utf8(error.description.__json__())
+#     }
+#     return response
+#
+#
+#
+# class SimpleExcept(APIException):
+#     status_code = 400
+#
+#
+#     detail = 'Service temporarily unavailable, try again later.'
+#
+#
+
+
+
+
+
 def main():
     try:
         settings = startup.read_settings()
@@ -112,12 +141,12 @@ def main():
         constants.set(settings.constants)
 
         # PIPE REQUEST LOGS TO ES DEBUG
-        request_logger = elasticsearch.Cluster(settings.request_log).get_or_create_index(settings.request_log)
+        request_logger = elasticsearch.Cluster(settings.request_logs).get_or_create_index(settings.request_logs)
         globals()["default_elasticsearch"] = elasticsearch.Index(settings.elasticsearch)
         globals()["request_log_queue"] = request_logger.threaded_queue(size=2000)
 
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
-        app.run(**settings["flask"])
+        app.run(**unwrap(settings.flask))
     except Exception, e:
         Log.error("Problem with etl", e)
     finally:

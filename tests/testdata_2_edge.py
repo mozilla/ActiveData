@@ -153,7 +153,7 @@ tests = [
                 ["z", "n", None],
                 ["z", None, None],
                 [None, "m", 17],
-                [None, "n", 19]
+                [None, "n", 19],
                 [None, None, None]
             ]
         },

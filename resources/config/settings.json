@@ -3,7 +3,7 @@
 
 	"flask":{
 	     "host":"0.0.0.0",
-	     "port":9292,
+	     "port":5000,
 	     "debug":false,
 	     "threaded":true,
 	     "processes":1
@@ -21,11 +21,14 @@
 		"host":"http://localhost",
 		"port":"9200",
 		"index":"active_data_requests",
-		"schema":{"$ref":"../schema/request_log.schema.json"}
+		"type":"request_log",
+		"schema":{"$ref":"//../schema/request_log.schema.json"}
 	},
 	"elasticsearch":{
 		"host":"http://localhost",
-		"port":"9200"
+		"port":"9200",
+		"index":"testdata",
+		"type":"testdata"
 	},
 	"debug": {
 		"trace": true,

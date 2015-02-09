@@ -411,6 +411,18 @@ def format_trace(tbs, start=0):
 
 
 class Except(Exception):
+
+    @staticmethod
+    def new_instance(desc):
+        return Except(
+            desc.type,
+            desc.template,
+            desc.params,
+            [Except.new_instance(c) for c in listwrap(desc.cause)],
+            desc.trace
+        )
+
+
     def __init__(self, type=ERROR, template=None, params=None, cause=None, trace=None):
         Exception.__init__(self)
         self.type = type

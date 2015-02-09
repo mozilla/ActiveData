@@ -281,6 +281,7 @@ class Thread(object):
     def start(self):
         try:
             thread.start_new_thread(Thread._run, (self, ))
+            return self
         except Exception, e:
             from pyLibrary.debugs.logs import Log
 

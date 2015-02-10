@@ -44,7 +44,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_test(test)
+        self._execute_es_tests(test)
 
 
     def test_single_rename(self):
@@ -77,7 +77,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_test(test)
+        self._execute_es_tests(test)
 
     def test_single_alpha_no_select(self):
         test = {
@@ -107,7 +107,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_test(test)
+        self._execute_es_tests(test)
 
     def test_dot_select(self):
         test = {
@@ -138,11 +138,12 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_test(test)
+        self._execute_es_tests(test)
 
     def test_list_of_values(self):
         test = {
             "name": "list of values",
+            "not": "elasticsearch",     # CAN NOT TEST VALUES AGAINST ES
             "data": ["a", "b"],
             "query": {
                 "from": "testdata"
@@ -166,7 +167,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_test(test)
+        self._execute_es_tests(test)
 
     def test_select_all_from_list_of_objects(self):
         test = {
@@ -202,7 +203,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_test(test)
+        self._execute_es_tests(test)
 
     def test_select_into_children(self):
         test = {
@@ -309,6 +310,6 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_test(test)
+        self._execute_es_tests(test)
 
 

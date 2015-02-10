@@ -55,7 +55,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_test(test)
+        self._execute_es_tests(test)
 
     def test_count_self(self):
         test = {
@@ -97,7 +97,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_test(test)
+        self._execute_es_tests(test)
 
     def test_count_other(self):
         test = {
@@ -139,7 +139,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_test(test)
+        self._execute_es_tests(test)
 
     def test_sum_column(self):
         test = {
@@ -181,7 +181,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_test(test)
+        self._execute_es_tests(test)
 
 
 simple_test_data = [

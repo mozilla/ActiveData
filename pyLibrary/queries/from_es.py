@@ -12,7 +12,7 @@ from __future__ import division
 
 from pyLibrary.dot import wrap, Dict, set_default
 
-type2container = None
+type2container = Dict()
 config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
 
 
@@ -21,10 +21,11 @@ def _delayed_imports():
 
     from pyLibrary.queries.db_query import DBQuery
     from pyLibrary.queries.es_query import ESQuery
-    type2container = {
+    set_default(type2container, {
         "elasticsearch": ESQuery,
         "mysql": DBQuery,
-    }
+        "memory": None
+    })
 
 
 def wrap_from(frum, schema=None):

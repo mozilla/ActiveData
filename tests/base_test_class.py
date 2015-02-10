@@ -22,6 +22,7 @@ from pyLibrary.dot import wrap, listwrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
 from pyLibrary.queries import Q, _normalize_select
+from pyLibrary.queries.from_es import type2container
 from pyLibrary.queries.query import _normalize_edges, _normalize_selects
 from pyLibrary.testing import elasticsearch
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
@@ -101,12 +102,15 @@ class ActiveDataBaseTest(FuzzyTestCase):
     def tearDown(self):
         self.es.delete_index(self.backend_es.index)
 
-    def _execute_test(self, subtest):
+    def _execute_es_tests(self, subtest):
         subtest = wrap(subtest)
         settings = self.backend_es.copy()
         settings.index = "testing_" + Random.hex(10).lower()
         settings.type = "testdata"
         settings.schema = subtest.metadata
+
+        if "elasticsearch" in subtest["not"]:
+            return
 
         try:
             # MAKE CONTAINER

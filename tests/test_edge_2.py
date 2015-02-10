@@ -86,7 +86,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_test(test)
+        self._execute_es_tests(test)
 
     def test_sum_rows(self):
         test = {
@@ -160,7 +160,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_test(test)
+        self._execute_es_tests(test)
 
 
 two_dim_test_data = [

@@ -1,3 +1,16 @@
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+
+from __future__ import unicode_literals
+from __future__ import division
+
 from _subprocess import CREATE_NEW_PROCESS_GROUP
 import subprocess
 import signal
@@ -5,29 +18,42 @@ import signal
 from pyLibrary import convert
 from pyLibrary import jsons
 from pyLibrary.debugs.logs import Log, Except, constants
-from pyLibrary.dot import Dict
+from pyLibrary.dot import wrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
 from pyLibrary.testing import elasticsearch
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 from pyLibrary.thread.threads import Signal, Thread
-from tests import testdata_set_ops, testdata_2_edge, testdata_1_edge, parametrize
 
-
-all_subtests = []
-all_subtests.extend(testdata_set_ops.tests)
-all_subtests.extend(testdata_1_edge.tests)
-all_subtests.extend(testdata_2_edge.tests)
 
 settings = jsons.ref.get("file://tests/config/test_settings.json")
 constants.set(settings.constants)
 
 
-class TestSimpleRequests(FuzzyTestCase):
+class ActiveDataBaseTest(FuzzyTestCase):
+    """
+    RESPONSIBLE FOR SETTING UP THE RAW CONTAINER, STARTING THE SERVICE,
+    AND EXECUTING QUERIES, AND CONFIRMING EXPECTED RESULTS
+
+    BASIC TEST FORMAT:
+    {
+        "name": "EXAMPLE TEMPLATE",
+        "metatdata": {},             # OPTIONAL DATA SHAPE REQUIRED FOR NESTED DOCUMENT QUERIES
+        "data": [],                  # THE DOCUMENTS NEEDED FOR THIS TEST
+        "query": {                   # THE Qb QUERY
+            "from": "testdata",      # "testdata" WILL BE REPLACED WITH DATASTORE FILLED WITH data
+            "edges": []              # THIS FILE IS EXPECTING EDGES (OR GROUP BY)
+        },
+        "expecting_list": []         # THE EXPECTATION WHEN "format":"list"
+        "expecting_table": {}        # THE EXPECTATION WHEN "format":"table"
+        "expecting_cube": {}         # THE EXPECTATION WHEN "format":"cube" (INCLUDING METADATA)
+    }
+
+    """
+
     server_is_ready = None
     please_stop = None
     thread = None
-    summary=Dict(failures=[])
 
 
     @classmethod
@@ -45,17 +71,11 @@ class TestSimpleRequests(FuzzyTestCase):
             if a.index.startswith("testing_"):
                 cluster.delete_index(a.index)
 
-
     @classmethod
     def tearDownClass(cls):
         cls.please_stop.go()
         if cls.thread:
             cls.thread.stopped.wait_for_go()
-        if TestSimpleRequests.summary.failures:
-            Log.error("Some test failures", cause=TestSimpleRequests.summary.failures)
-
-
-
 
     def __init__(self, *args, **kwargs):
         """
@@ -79,12 +99,8 @@ class TestSimpleRequests(FuzzyTestCase):
     def tearDown(self):
         self.es.delete_index(self.backend_es.index)
 
-
-    @parametrize("subtest", all_subtests)
-    def test_queries(self, subtest):
-        if subtest.name == "EXAMPLE TEMPLATE":
-            return
-
+    def _execute_test(self, subtest):
+        subtest = wrap(subtest)
         settings = self.backend_es.copy()
         settings.index = "testing_" + Random.hex(10).lower()
         settings.type = "testdata"
@@ -101,7 +117,7 @@ class TestSimpleRequests(FuzzyTestCase):
             # ENSURE query POINTS TO CONTAINER
             subtest.query["from"] = settings.index
         except Exception, e:
-            Log.warning("can not load {{data}} into container", {"data":subtest.data})
+            Log.error("can not load {{data}} into container", {"data":subtest.data})
             return
 
         try:
@@ -129,8 +145,7 @@ class TestSimpleRequests(FuzzyTestCase):
                     "name": subtest.name
                 })
         except Exception, e:
-            TestSimpleRequests.summary.failures.append(e)
-            Log.warning("Failed test {{name|quote}}", {"name": subtest.name}, e)
+            Log.error("Failed test {{name|quote}}", {"name": subtest.name}, e)
         finally:
             # REMOVE CONTAINER
             self.es.delete_index(settings.index)

@@ -18,9 +18,11 @@ import signal
 from pyLibrary import convert
 from pyLibrary import jsons
 from pyLibrary.debugs.logs import Log, Except, constants
-from pyLibrary.dot import wrap
+from pyLibrary.dot import wrap, listwrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
+from pyLibrary.queries import Q, _normalize_select
+from pyLibrary.queries.query import _normalize_edges, _normalize_selects
 from pyLibrary.testing import elasticsearch
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 from pyLibrary.thread.threads import Signal, Thread
@@ -132,10 +134,21 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
                 subtest.query.format = format
                 query = convert.unicode2utf8(convert.value2json(subtest.query))
+                # EXECUTE QUERY
                 response = http.get(self.service_url, data=query)
                 if response.status_code != 200:
                     error(response)
                 result = convert.json2value(convert.utf82unicode(response.content))
+
+                # HOW TO COMPARE THE OUT-OF-ORDER DATA?
+                if format == "table":
+                    expected.data = Q.sort(expected.data, range(len(expected.header)))
+                    result.data = Q.sort(result.data, range(len(result.header)))
+                elif format == "list":
+                    sort_order=wrap(_normalize_edges(subtest.query.edges) + _normalize_selects(listwrap(subtest.query.select))).name
+                    expected = Q.sort(expected, sort_order)
+                    result = Q.sort(result, sort_order)
+
 
                 # CONFIRM MATCH
                 self.assertAlmostEqual(result, expected)

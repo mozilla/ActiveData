@@ -43,9 +43,10 @@ class TestEdge1(ActiveDataBaseTest):
                     {
                         "name": "a",
                         "type": "set",
+                        "key":"value",
                         "allowNulls": True,
                         "domain": {
-                            "partitions": ["b", "c"]
+                            "partitions": [{"value": "b"}, {"value": "c"}]
                         }
                     }
                 ],
@@ -56,7 +57,7 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self._execute_test(test)
 
-    def test_count_column(self):
+    def test_count_self(self):
         test = {
             "name": "count column",
             "metatdata": {},
@@ -69,14 +70,14 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": [
                 {"a": "b", "count_a": 2},
                 {"a": "c", "count_a": 3},
-                {"a": None, "count_a": 0}
+                {"count_a": 0}
             ],
             "expecting_table": {
                 "header": ["a", "count_a"],
                 "data": [
                     ["b", 2],
                     ["c", 3],
-                    ["a", 0]
+                    [None, 0]
                 ]
             },
             "expecting_cube": {
@@ -84,14 +85,57 @@ class TestEdge1(ActiveDataBaseTest):
                     {
                         "name": "a",
                         "type": "set",
+                        "key":"value",
                         "allowNulls": True,
                         "domain": {
-                            "partitions": ["b", "c"]
+                            "partitions": [{"value": "b"}, {"value": "c"}]
                         }
                     }
                 ],
                 "data": {
                     "count_a": [2, 3, 0]
+                }
+            }
+        }
+        self._execute_test(test)
+
+    def test_count_other(self):
+        test = {
+            "name": "count column",
+            "metatdata": {},
+            "data": simple_test_data,
+            "query": {
+                "from": "testdata",
+                "select": {"name": "count_v", "value": "v", "aggregate": "count"},
+                "edges": ["a"]
+            },
+            "expecting_list": [
+                {"a": "b", "count_v": 1},
+                {"a": "c", "count_v": 3},
+                {"count_v": 1}
+            ],
+            "expecting_table": {
+                "header": ["a", "count_v"],
+                "data": [
+                    ["b", 1],
+                    ["c", 3],
+                    [None, 1]
+                ]
+            },
+            "expecting_cube": {
+                "edges": [
+                    {
+                        "name": "a",
+                        "type": "set",
+                        "key":"value",
+                        "allowNulls": True,
+                        "domain": {
+                            "partitions": [{"value": "b"}, {"value": "c"}]
+                        }
+                    }
+                ],
+                "data": {
+                    "count_v": [1, 3, 1]
                 }
             }
         }
@@ -125,9 +169,10 @@ class TestEdge1(ActiveDataBaseTest):
                     {
                         "name": "a",
                         "type": "set",
+                        "key":"value",
                         "allowNulls": True,
                         "domain": {
-                            "partitions": ["b", "c"]
+                            "partitions": [{"value": "b"}, {"value": "c"}]
                         }
                     }
                 ],
@@ -143,7 +188,7 @@ simple_test_data = [
     {"a": "c", "v": 13},
     {"a": "b", "v": 2},
     {"v": 3},
-    {"a": "b", "v": 5},
+    {"a": "b"},
     {"a": "c", "v": 7},
     {"a": "c", "v": 11}
 ]

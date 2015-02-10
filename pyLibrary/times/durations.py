@@ -13,11 +13,17 @@ from __future__ import division
 from datetime import timedelta, datetime
 
 from pyLibrary import regex
-from pyLibrary.times.dates import Date
 from pyLibrary.vendor.dateutil.relativedelta import relativedelta
 from pyLibrary.collections import MIN
 from pyLibrary.maths import Math
 from pyLibrary.dot import wrap
+
+
+
+Date = None
+def _delayed_import():
+    global Date
+    from pyLibrary.times.dates import Date
 
 
 class Duration(object):
@@ -66,6 +72,9 @@ class Duration(object):
         return output
 
     def __radd__(self, other):
+        if not Date:
+            _delayed_import()
+
         if isinstance(other, datetime.datetime):
             return Date(other).add(self)
         elif isinstance(other, Date):

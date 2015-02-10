@@ -68,7 +68,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                 v1 = dot.get_attr(test, k)
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
             except Exception, e:
-                Log.error("{{test}} does not match {{expected}}", {
+                Log.error("{{test|json}} does not match expected {{expected|json}}", {
                     "test": test,
                     "expected": expected
                 }, e)
@@ -90,7 +90,7 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
         # shortcut
         return
 
-    if isinstance(expected, basestring):
+    if not Math.is_number(expected):
         return test == expected
 
     num_param = 0
@@ -128,7 +128,7 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
         except Exception, e:
             pass
 
-        standardMsg = expand_template("{{test}} != {{expected}} within {{places}} places", locals())
+        standardMsg = expand_template("{{test|json}} != {{expected|json}} within {{places}} places", locals())
 
     raise AssertionError(nvl(msg, "") + ": (" + standardMsg + ")")
 

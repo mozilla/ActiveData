@@ -105,6 +105,9 @@ class Math(object):
 
     @staticmethod
     def is_number(s):
+        if s is True or s is False:
+            return False
+
         try:
             float(s)
             return True
@@ -128,6 +131,9 @@ class Math(object):
 
     @staticmethod
     def is_integer(s):
+        if s is True or s is False:
+            return False
+
         try:
             if float(s) == round(float(s), 0):
                 return True

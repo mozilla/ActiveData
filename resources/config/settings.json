@@ -28,7 +28,8 @@
 		"host":"http://localhost",
 		"port":"9200",
 		"index":"testdata",
-		"type":"testdata"
+		"type":"testdata",
+		"debug":true
 	},
 	"debug": {
 		"trace": true,

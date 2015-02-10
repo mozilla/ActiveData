@@ -333,7 +333,7 @@ class SetDomain(Domain):
 
     def getPartByKey(self, key):
         try:
-            canonical = self.map.get(key)
+            canonical = self.map.get(key, None)
             if not canonical:
                 return self.NULL
             return canonical

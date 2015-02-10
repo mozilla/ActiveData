@@ -39,7 +39,8 @@ def es_aggsop(es, mvel, query):
     esQuery = Dict()
     for s in select:
         if s.aggregate == "count" and s.value:
-            esQuery.aggs[s.name]["value_count"].field = s.value
+            esQuery.aggs[s.name].value_count.field = s.value
+            # esQuery.aggs["missing_"+s.name].missing.field = s.value
         elif s.aggregate == "count":
             pass
         else:
@@ -53,14 +54,14 @@ def es_aggsop(es, mvel, query):
 
     esQuery.size = nvl(query.limit, 0)
     esQuery.filter = simplify(query.where)
-    data = es_query_util.post(es, esQuery, query.limit)
+    result = es_query_util.post(es, esQuery, query.limit)
 
     if query.format=="cube":
-        new_edges = count_dims(data.aggregations, decoders)
-        dims = tuple(len(e.domain.partitions) for e in new_edges)
-        matricies = [(s, Matrix(*dims)) for s in select]
+        new_edges = count_dims(result.aggregations, decoders)
+        dims = tuple(len(e.domain.partitions)+(0 if e.allowNulls is False else 1) for e in new_edges)
+        matricies = [(s, Matrix(dims=dims, zeros=(s.aggregate == "count"))) for s in select]
 
-        for row, agg in aggs_iterator(data.aggregations, start):
+        for row, agg in aggs_iterator(result.aggregations, start):
             coord = tuple(d.get_part(row) for d in decoders)
             for s, m in matricies:
                 # name = literal_field(s.name)
@@ -68,14 +69,47 @@ def es_aggsop(es, mvel, query):
                     m[coord] = agg.doc_count
                 elif s.aggregate == "count":
                     m[coord] = agg[s.name].value
+
                 else:
                     Log.error("Do not know how to handle")
 
         cube = Cube(query.select, new_edges, {s.name: m for s, m in matricies})
         cube.frum = query
         return cube
+    elif query.format=="table":
+        new_edges = count_dims(result.aggregations, decoders)
+        header = new_edges.name + select.name
+
+        data = []
+        for row, agg in aggs_iterator(result.aggregations, start):
+            output = copy(row)
+            for s in select:
+                if s.aggregate == "count" and not s.value:
+                    output.append(agg.doc_count)
+                elif s.aggregate == "count":
+                    output.append(agg[s.name].value)
+                else:
+                    Log.error("Do not know how to handle")
+            data.append(output)
+        return {'header': header, "data": data}
+
+    elif query.format=="list":
+        new_edges = count_dims(result.aggregations, decoders)
+        data = []
+        for row, agg in aggs_iterator(result.aggregations, start):
+            output = {e.name: r for e, r in zip(new_edges, row)}
+
+            for s in select:
+                if s.aggregate == "count" and not s.value:
+                    output[s.name] = agg.doc_count
+                elif s.aggregate == "count":
+                    output[s.name] = agg[s.name].value
+                else:
+                    Log.error("Do not know how to handle")
+            data.append(output)
+        return data
     else:
-        Log.error("Format {{format|quote}} not supported yet", {"format": format})
+        Log.error("Format {{format|quote}} not supported yet", {"format": query.format})
 
 def count_dims(aggs, decoders):
     new_edges = []
@@ -92,10 +126,10 @@ def count_dims(aggs, decoders):
         if e.domain.type == "default":
             e.domain = SimpleSetDomain(
                 key="value",
-                partitions=[{"value": v} for i, v in enumerate(e.domain.partitions)]
+                partitions=[{"value": v} for i, v in enumerate(Q.sort(e.domain.partitions))]
             )
 
-    return new_edges
+    return wrap(new_edges)
 
 
 def _count_dims(aggs, decoders, rem):
@@ -167,9 +201,16 @@ class SimpleDecoder(AggsDecoder):
 class DefaultDecoder(AggsDecoder):
     # FOR DECODING THE default DOMAIN TYPE (UNKNOWN-AT-QUERY-TIME SET OF VALUES)
     def append_query(self, esQuery, start):
-        self.start=start
-        esQuery.terms = {"field": self.edge.value}
-        return wrap({"aggs": {str(start): esQuery}})
+        self.start = start
+        counter = esQuery.copy()
+        missing = esQuery.copy()
+        counter.terms = {"field": self.edge.value}
+        missing.missing = {"field": self.edge.value}
+
+        return wrap({"aggs": {
+            str(start): counter,
+            str(start)+"_missing": missing
+        }})
 
     def get_part(self, row):
         return self.edge.domain.getIndexByKey(row[self.start])
@@ -210,7 +251,7 @@ class DimFieldDictDecoder(AggsDecoder):
         self.start=start
         for i, (k, v) in enumerate(self.fields):
             esQuery.terms = {"field": v}
-            esQuery = wrap({"aggs": {str(start+i): esQuery}})
+            esQuery.missing = {"field": v}
         esQuery.filter = simplify(self.edge.domain.esfilter)
         return esQuery
 
@@ -231,7 +272,8 @@ class DimFieldDictDecoder(AggsDecoder):
 
 def aggs_iterator(aggs, depth):
     """
-    ITERATE OVER THE ROWS OF THE RESULTS
+    DIG INTO ES'S RECURSIVE aggs DATA-STRUCTURE:
+    RETURN AN ITERATOR OVER THE EFFECTIVE ROWS OF THE RESULTS
     """
     coord = [None]*depth
 
@@ -241,10 +283,16 @@ def aggs_iterator(aggs, depth):
                 coord[d] = b.key
                 for a in _aggs_iterator(b, d - 1):
                     yield a
+            for b in aggs[str(d)+"_missing"].buckets:
+                coord[d] = None
+                for a in _aggs_iterator(b, d - 1):
+                    yield a
         else:
             for b in aggs[str(d)].buckets:
                 coord[d] = b.key
                 yield b
+            coord[d] = None
+            yield aggs[str(d)+"_missing"]
 
     for a in _aggs_iterator(aggs, depth - 1):
         yield coord, a

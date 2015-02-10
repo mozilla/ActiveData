@@ -14,6 +14,7 @@ from __future__ import division
 from datetime import datetime, date, timedelta
 import math
 
+from pyLibrary.times.durations import Duration
 from pyLibrary.vendor.dateutil.parser import parse as parse_date
 
 try:
@@ -278,5 +279,3 @@ def unicode2datetime(value, format=None):
         from pyLibrary.debugs.logs import Log
         Log.error("Can not interpret {{value}} as a datetime", {"value": value})
 
-
-from pyLibrary.times.durations import Duration

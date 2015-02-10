@@ -245,6 +245,8 @@ def value2quote(value):
 
 
 def string2quote(value):
+    if value == None:
+        return "None"
     return quote(value)
 
 

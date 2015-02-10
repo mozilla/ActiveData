@@ -244,7 +244,6 @@ class DimFieldDictDecoder(AggsDecoder):
         self.start=start
         for i, (k, v) in enumerate(self.fields):
             esQuery.terms = {"field": v}
-            esQuery.missing = {"field": v}
         esQuery.filter = simplify(self.edge.domain.esfilter)
         return esQuery
 
@@ -276,10 +275,9 @@ def aggs_iterator(aggs, depth):
                 coord[d] = b.key
                 for a in _aggs_iterator(b, d - 1):
                     yield a
-            for b in aggs[str(d)+"_missing"].buckets:
-                coord[d] = None
-                for a in _aggs_iterator(b, d - 1):
-                    yield a
+            coord[d] = None
+            for a in _aggs_iterator(aggs[str(d)+"_missing"], d - 1):
+                yield a
         else:
             for b in aggs[str(d)].buckets:
                 coord[d] = b.key

@@ -198,6 +198,9 @@ class Dict(dict):
         return hash_value(d)
 
     def __eq__(self, other):
+        if self is other:
+            return True
+
         d = _get(self, "__dict__")
         if not d and other == None:
             return True

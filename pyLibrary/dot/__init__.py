@@ -108,11 +108,11 @@ def set_default(*params):
         p = unwrap(p)
         if p is None:
             continue
-        _all_default(agg, p)
+        _all_default(agg, p, seen={})
     return wrap(agg)
 
 
-def _all_default(d, default):
+def _all_default(d, default, seen=None):
     """
     ANY VALUE NOT SET WILL BE SET BY THE default
     THIS IS RECURSIVE
@@ -122,10 +122,16 @@ def _all_default(d, default):
     for k, default_value in default.items():
         # existing_value = d.get(k, None)
         existing_value = _get_attr(d, [k])
+
         if existing_value == None:
             _set_attr(d, [k], default_value)
         elif (hasattr(existing_value, "__setattr__") or isinstance(existing_value, dict)) and isinstance(default_value, dict):
-            _all_default(existing_value, default_value)
+            df = seen.get(id(existing_value))
+            if df:
+                _set_attr(d, [k], df)
+            else:
+                seen[id(existing_value)] = default_value
+                _all_default(existing_value, default_value, seen)
 
 
 def _getdefault(obj, key):

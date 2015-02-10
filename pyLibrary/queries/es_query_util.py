@@ -50,23 +50,24 @@ def loadColumns(es, frum):
         if frum.name in INDEX_CACHE:
             return INDEX_CACHE[frum.name]
 
-    # FILL frum WITH DEFAULTS FROM es.settings
-    set_default(frum, es.settings)
 
-    if not frum.host:
+    if not nvl(frum.host, es.settings.host):
         Log.error("must have host defined")
 
     # DETERMINE IF THE es IS FUNCTIONALLY DIFFERENT
+    output = set_default({"name": frum.name}, frum._es.settings, es.settings)
+
     diff = False
     for k, v in es.settings.items():
-        if k != "name" and v != frum[k]:
+        if k != "name" and v != output[k]:
             diff = True
     if diff:
         es = Index(frum)
 
-    output = wrap(frum).copy()
     schema = es.get_schema()
     properties = schema.properties
+
+
     output.es = es
 
     root = split_field(frum.name)[0]

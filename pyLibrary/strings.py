@@ -184,6 +184,11 @@ def comma(value):
     return output
 
 
+def quote(value):
+    from pyLibrary import convert
+    return convert.string2quote(value)
+
+
 def split(value, sep="\n"):
     # GENERATOR VERSION OF split()
     # SOMETHING TERRIBLE HAPPENS, SOMETIMES, IN PYPY

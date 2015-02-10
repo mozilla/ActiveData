@@ -10,7 +10,8 @@
 from __future__ import unicode_literals
 from __future__ import division
 import StringIO
-from tempfile import TemporaryFile
+import gzip
+from io import BytesIO
 import zipfile
 
 import boto
@@ -19,15 +20,13 @@ from boto.s3.connection import Location
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
-from pyLibrary.env.files_string import FileString, safe_size
+from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, GzipLines, LazyLines
 from pyLibrary.meta import use_settings
 from pyLibrary.times.dates import Date
 
 
 READ_ERROR = "S3 read error"
 MAX_FILE_SIZE = 100*1024*1024
-
-
 
 class File(object):
     def __init__(self, bucket, key):
@@ -37,12 +36,16 @@ class File(object):
     def read(self):
         return self.bucket.read(self.key)
 
+    def read_lines(self):
+        return self.bucket.read_lines(self.key)
+
     def write(self, value):
         self.bucket.write(self.key, value)
 
     @property
     def meta(self):
         return self.bucket.meta(self.key)
+
 
 class Connection(object):
     @use_settings
@@ -180,6 +183,16 @@ class Bucket(object):
 
         return convert.utf82unicode(json)
 
+    def read_lines(self, key):
+        source = self.get_meta(key)
+        if source.size < MAX_STRING_SIZE:
+            if source.key.endswith(".gz"):
+                return GzipLines(source.read(key))
+
+        if source.key.endswith(".gz"):
+            return LazyLines(convert.zip2bytes(safe_size(source)))
+        else:
+            return LazyLines(safe_size(source))
 
     def write(self, key, value):
         if key.endswith(".json") or key.endswith(".zip"):
@@ -227,6 +240,31 @@ class Bucket(object):
                 "bytes": len(value)
             }, e)
 
+    def write_lines(self, key, *lines):
+        storage = self.bucket.new_key(key + ".json.gz")
+
+        buff = BytesIO()
+        archive = gzip.GzipFile(fileobj=buff, mode='w')
+        count=0
+        for l in lines:
+            if hasattr(l, "__iter__"):
+                for ll in l:
+                    archive.write(ll.encode("utf8"))
+                    archive.write(b"\n")
+                    count+=1
+            else:
+                archive.write(l.encode("utf8"))
+                archive.write(b"\n")
+                count+=1
+        archive.close()
+        file_length = buff.tell()
+        buff.seek(0)
+        Log.note("Sending {{count}} lines in {{file_length|comma}} bytes", {"file_length": file_length, "count": count})
+        storage.set_contents_from_file(buff)
+
+        if self.settings.public:
+            storage.set_acl('public-read')
+        return
 
     @property
     def name(self):

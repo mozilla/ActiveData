@@ -27,7 +27,7 @@ from pyLibrary.dot import wrap, wrap_dot, unwrap
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.debugs.profiles import Profiler
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.env.files_string import FileString, safe_size
+from pyLibrary.env.big_data import FileString, safe_size
 from pyLibrary.jsons import quote
 from pyLibrary.jsons.encoder import encode
 from pyLibrary.strings import expand_template
@@ -434,10 +434,9 @@ def zip2bytes(compressed):
     UNZIP DATA
     """
     if hasattr(compressed, "read"):
-        buff = compressed
-    else:
-        buff = BytesIO(compressed)
+        return gzip.GzipFile(fileobj=compressed, mode='r')
 
+    buff = BytesIO(compressed)
     archive = gzip.GzipFile(fileobj=buff, mode='r')
     return safe_size(archive)
 

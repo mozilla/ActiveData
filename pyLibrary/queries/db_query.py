@@ -12,7 +12,7 @@ from __future__ import division
 
 from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.queries.query import Query
+from pyLibrary.meta import use_settings
 from pyLibrary.sql.db import int_list_packer, SQL, DB
 from pyLibrary.debugs.logs import Log
 from pyLibrary.strings import indent, expand_template
@@ -25,17 +25,34 @@ class DBQuery(object):
     """
     Qb to MySQL DATABASE QUERIES
     """
-    def __init__(self, db):
-        object.__init__(self)
-        if isinstance(db, DB):
-            self.db = db
-        else:
-            self.db = DB(db)
+    @use_settings
+    def __init__(
+        self,
+        host,
+        port,
+        username,
+        password,
+        debug=False,
+        schema=None,
+        preamble=None,
+        readonly=False,
+        settings=None
+    ):
+        from pyLibrary.sql.db import DB
+        self.settings = settings
+        self._db = DB(settings)
+
+    def __json__(self):
+        settings = self.settings.copy()
+        settings.settings = None
+        return convert.value2json(settings)
+
 
     def query(self, query, stacked=False):
         """
         TRANSLATE Qb QUERY ON SINGLE TABLE TO SQL QUERY
         """
+        from pyLibrary.queries.query import Query
         query = Query(query)
 
         sql, post = self._subquery(query, isolate=False, stacked=stacked)
@@ -254,7 +271,7 @@ class DBQuery(object):
             return sql, post_process  # RETURN BORING RESULT SET
         else:
             # RETURN LIST OF VALUES
-            if query.select.value == "*":
+            if query.select.value == ".":
                 select = "*"
             else:
                 name = query.select.name
@@ -276,7 +293,7 @@ class DBQuery(object):
                 "sort": self._sort2sql(query.sort)
             })
 
-            if query.select.value == "*":
+            if query.select.value == ".":
                 def post(sql):
                     result = self.db.query(sql)
                     expand_json(result)

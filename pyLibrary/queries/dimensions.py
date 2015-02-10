@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from pyLibrary import dot
 from pyLibrary.collections import SUM
+from pyLibrary.queries.container import Container
 from pyLibrary.queries.domains import Domain, ALGEBRAIC, KNOWN
 from pyLibrary.dot import Null, nvl, join_field, split_field, Dict
 from pyLibrary.dot.lists import DictList
@@ -22,7 +23,7 @@ from pyLibrary.dot import wrap, listwrap
 DEFAULT_QUERY_LIMIT = 20
 
 
-class Dimension(object):
+class Dimension(Container):
 
     def __init__(self, dim, parent, qb):
         self.name = dim.name

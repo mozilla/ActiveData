@@ -9,6 +9,8 @@
 #
 
 import unittest
+from pyLibrary import dot
+from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import nvl
 from pyLibrary.maths import Math
 from pyLibrary.dot import wrap
@@ -28,11 +30,11 @@ class FuzzyTestCase(unittest.TestCase):
         """
         self.default_places=places
 
-    def assertAlmostEqual(self, first, second, msg=None, digits=None, places=None, delta=None):
+    def assertAlmostEqual(self, test_value, expected, msg=None, digits=None, places=None, delta=None):
         if delta or digits:
-            assertAlmostEqual(first, second, msg=msg, digits=digits, places=places, delta=delta)
+            assertAlmostEqual(test_value, expected, msg=msg, digits=digits, places=places, delta=delta)
         else:
-            assertAlmostEqual(first, second, msg=msg, digits=digits, places=nvl(places, self.default_places), delta=delta)
+            assertAlmostEqual(test_value, expected, msg=msg, digits=digits, places=nvl(places, self.default_places), delta=delta)
 
     def assertEqual(self, first, second, msg=None, digits=None, places=None, delta=None):
         self.assertAlmostEqual(first, second, msg=msg, digits=digits, places=places, delta=delta)
@@ -60,11 +62,18 @@ def zipall(*args):
 
 def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=None):
     if isinstance(expected, dict):
-        test = wrap({"value": test})
         expected = wrap(expected)
         for k, v2 in expected.items():
-            v1 = test["value." + unicode(k)]
-            assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
+            try:
+                v1 = dot.get_attr(test, k)
+                assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
+            except Exception, e:
+                Log.error("{{test}} does not match {{expected}}", {
+                    "test": test,
+                    "expected": expected
+                }, e)
+
+
     elif hasattr(test, "__iter__") and hasattr(expected, "__iter__"):
         for a, b in zipall(test, expected):
             assertAlmostEqual(a, b, msg=msg, digits=digits, places=places, delta=delta)
@@ -80,6 +89,9 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
     if test == expected:
         # shortcut
         return
+
+    if isinstance(expected, basestring):
+        return test == expected
 
     num_param = 0
     if digits != None:

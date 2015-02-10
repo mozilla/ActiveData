@@ -3,12 +3,12 @@ tests = [
 
     {
         "name": "EXAMPLE TEMPLATE",
-        "metatdata": {},         # OPTIONAL DATA SHAPE REQUIRED FOR NESTED DOCUMENT QUERIES
-        "data": [],              # THE DOCUMENTS NEEDED FOR THIS TEST
-        "query": {               # THE Qb QUERY
-            "from": "testdata"   # "testdata" WILL BE REPLACED WITH DATASTORE FILLED WITH data
+        "metatdata": {},  # OPTIONAL DATA SHAPE REQUIRED FOR NESTED DOCUMENT QUERIES
+        "data": [],  # THE DOCUMENTS NEEDED FOR THIS TEST
+        "query": {  # THE Qb QUERY
+                    "from": "testdata"  # "testdata" WILL BE REPLACED WITH DATASTORE FILLED WITH data
         },
-        "expecting": []          # THE EXPECTED RESULT (INCLUDING METADATA)
+        "expecting_*": []  # THE EXPECTED RESULT (INCLUDING METADATA)
     },
 
 
@@ -22,53 +22,147 @@ tests = [
             "select": "a",
             "format": "cube"
         },
-        "expecting": {
+        "expecting_list": [
+            {"a": "b"}
+        ],
+        "expecting_table": {
+            "header": ["a"],
+            "data": [["b"]]
+        },
+        "expecting_cube": {
             "edges": [
                 {
                     "name": "index",
-                    "domain": {"type": "index", "min": 0, "max": 1, "interval": 1}
+                    "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
                 }
             ],
-            "cube": {
+            "data": {
                 "a": ["b"]
             }
         }
     },
 
     {
-        "name": "singleton_alpha no select",
+        "name": "rename singleton alpha",
         "data": [
             {"a": "b"}
         ],
         "query": {
             "from": "testdata",
-            "format": "table"
+            "select": {"name": "value", "value": "a"},
+            "format": "cube"
         },
-        "expecting": {
-            "header": ["a"],
-            "data": ["b"]
+        "expecting_list": [
+            {"value": "b"}
+        ],
+        "expecting_table": {
+            "header": ["value"],
+            "data": [["b"]]
+        },
+        "expecting_cube": {
+            "edges": [
+                {
+                    "name": "index",
+                    "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                }
+            ],
+            "data": {
+                "value": ["b"]
+            }
         }
     },
 
     {
-        "name": "singleton_alpha values",
+        "name": "singleton_alpha no select (select *)",
+        "data": [
+            {"a": "b"}
+        ],
+        "query": {
+            "from": "testdata"
+        },
+        "expecting_list": [
+            {"a": "b"}
+        ],
+        "expecting_table": {
+            "header": ["a"],
+            "data": [["b"]]
+        },
+        "expecting_cube": {
+            "edges": [
+                {
+                    "name": "index",
+                    "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                }
+            ],
+            "data": {
+                "a": ["b"]
+            }
+        }
+    },
+
+    {
+        "name": "singleton_alpha dot select",
+        "data": [
+            {"a": "b"}
+        ],
+        "query": {
+            "select":{"name":"value", "value":"."},
+            "from": "testdata"
+        },
+        "expecting_list": [
+            {"value": {"a": "b"}}
+        ],
+        "expecting_table": {
+            "header": ["value"],
+            "data": [[{"a": "b"}]]
+        },
+        "expecting_cube": {
+            "edges": [
+                {
+                    "name": "index",
+                    "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                }
+            ],
+            "data": {
+                "value": [{"a": "b"}]
+            }
+        }
+    },
+
+    {
+        "name": "list of values",
         "data": ["a", "b"],
         "query": {
             "from": "testdata"
         },
-        "expecting": ["a", "b"]
+        "expecting_list": [
+            "a", "b"
+        ],
+        "expecting_table": {
+            "header": ["value"],
+            "data": [["a"], ["b"]]
+        },
+        "expecting_cube": {
+            "edges": [
+                {
+                    "name": "index",
+                    "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                }
+            ],
+            "data": {
+                "value": ["a", "b"]
+            }
+        }
     },
-
     {
-        "name": "select * from list of objects to cube",
+        "name": "select * from list of objects",
         "data": [
             {"a": "b"},
             {"a": "d"}
         ],
         "query": {
             "from": "testdata",
-            "select": "*",
-            "format": "cube"
+            "select": "*"
         },
         "expecting_list": [
             {"a": "b"},
@@ -85,10 +179,10 @@ tests = [
             "edges": [
                 {
                     "name": "index",
-                    "domain": {"type": "index", "min": 0, "max": 2, "interval": 1}
+                    "domain": {"type": "rownum", "min": 0, "max": 2, "interval": 1}
                 }
             ],
-            "cube": {
+            "data": {
                 "a": ["b", "d"]
             }
         }
@@ -190,10 +284,10 @@ tests = [
             "edges": [
                 {
                     "name": "index",
-                    "domain": {"type": "index", "min": 0, "max": 9, "interval": 1}
+                    "domain": {"type": "rownum", "min": 0, "max": 9, "interval": 1}
                 }
             ],
-            "cube": {
+            "data": {
                 "x": [5, 3, 3, 3, 7, 11, 11, 11, 11],
                 "c": [None, 13, 17, 19, 23, 29, 37, None, 53]
             }

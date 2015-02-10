@@ -11,8 +11,8 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.collections import AND, SUM, OR
-from pyLibrary.dot import nvl, split_field
+from pyLibrary.collections import AND, SUM, OR, UNION
+from pyLibrary.dot import nvl, split_field, set_default
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap, unwrap
 from pyLibrary.queries.es_query_util import aggregates
@@ -29,7 +29,7 @@ def is_fieldop(query):
     select = listwrap(query.select)
     if not query.edges:
         isDeep = len(split_field(query.frum.name)) > 1  # LOOKING INTO NESTED WILL REQUIRE A SCRIPT
-        isSimple = AND(s.value != None and (s.value == "*" or isKeyword(s.value)) for s in select)
+        isSimple = AND(s.value != None and (s.value=="*" or isKeyword(s.value)) for s in select)
         noAgg = AND(s.aggregate == "none" for s in select)
 
         if not isDeep and isSimple and noAgg:
@@ -62,42 +62,87 @@ def es_fieldop(es, query):
     }
     esQuery.size = nvl(query.limit, 200000)
     esQuery.fields = DictList()
+    source = "fields"
     for s in select.value:
         if s == "*":
-            esQuery.fields = None
-        elif isinstance(s, list):
+            esQuery.fields=None
+            source = "_source"
+        elif s == ".":
+            esQuery.fields=None
+            source = "_source"
+        elif isinstance(s, list) and esQuery.fields is not None:
             esQuery.fields.extend(s)
-        elif isinstance(s, dict):
+        elif isinstance(s, dict) and esQuery.fields is not None:
             esQuery.fields.extend(s.values())
-        else:
+        elif esQuery.fields is not None:
             esQuery.fields.append(s)
     esQuery.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
 
     data = es_query_util.post(es, esQuery, query.limit)
 
     T = data.hits.hits
-    matricies = {}
-    for s in select:
+
+
+    for i, s in enumerate(select.copy()):
+        # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if s.value == "*":
-            matricies[s.name] = Matrix.wrap([t._source for t in T])
-        elif isinstance(s.value, dict):
-            # for k, v in s.value.items():
-            #     matricies[join_field(split_field(s.name)+[k])] = Matrix.wrap([unwrap(t.fields)[v] for t in T])
-            matricies[s.name] = Matrix.wrap([{k: unwrap(t.fields).get(v, None) for k, v in s.value.items()}for t in T])
-        elif isinstance(s.value, list):
-            matricies[s.name] = Matrix.wrap([tuple(unwrap(t.fields).get(ss, None) for ss in s.value) for t in T])
-        elif not s.value:
-            matricies[s.name] = Matrix.wrap([unwrap(t.fields).get(s.value, None) for t in T])
-        else:
             try:
-                matricies[s.name] = Matrix.wrap([unwrap(t.fields).get(s.value, None) for t in T])
+                column_names = query.frum.get_columns()
             except Exception, e:
-                Log.error("", e)
+                Log.warning("can not get columns", e)
+                column_names = UNION(*[[k for k, v in row.items()] for row in T.select(source)])
+            column_names -= set(select.name)
+            select = select[:i:] + [{"name": n, "value": n} for n in column_names] + select[i + 1::]
+            break
 
-    cube = Cube(query.select, query.edges, matricies, frum=query)
-    cube.frum = query
-    return cube
+    if query.format == "list":
+        data = []
+        for row in T:
+            r = {}
+            for s in select:
+                if s.value == ".":
+                    r[s.name] = row[source]
+                else:
+                    r[s.name] = row[source][s.value]
+            data.append(r)
+        return data
+    elif query.format == "table":
+        header = [s.name for s in select]
+        map = {s.name: i for i, s in enumerate(select)} # MAP FROM name TO COLUMN INDEX
+        data = []
+        for row in T:
+            r = [None]*len(header)
+            for s in select:
+                if s.value == ".":
+                    r[map[s.name]] = row[source]
+                else:
+                    r[map[s.name]] = row[source][s.value]
+            data.append(r)
+        return {"header": header, "data":data}
+    elif query.format == "cube":
+        matricies = {}
+        for s in select:
+            if s.value == ".":
+                matricies[s.name] = Matrix.wrap(T.select(source))
+            elif isinstance(s.value, dict):
+                # for k, v in s.value.items():
+                #     matricies[join_field(split_field(s.name)+[k])] = Matrix.wrap([unwrap(t.fields)[v] for t in T])
+                matricies[s.name] = Matrix.wrap([{k: unwrap(t[source]).get(v, None) for k, v in s.value.items()}for t in T])
+            elif isinstance(s.value, list):
+                matricies[s.name] = Matrix.wrap([tuple(unwrap(t[source]).get(ss, None) for ss in s.value) for t in T])
+            elif not s.value:
+                matricies[s.name] = Matrix.wrap([unwrap(t[source]).get(s.value, None) for t in T])
+            else:
+                try:
+                    matricies[s.name] = Matrix.wrap([unwrap(t[source]).get(s.value, None) for t in T])
+                except Exception, e:
+                    Log.error("", e)
 
+        cube = Cube(query.select, edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(T), "interval": 1}}], data=matricies, frum=query)
+        cube.frum = query
+        return cube
+    else:
+        Log.error("Expecting a 'format' clause")
 
 def is_setop(query):
     select = listwrap(query.select)

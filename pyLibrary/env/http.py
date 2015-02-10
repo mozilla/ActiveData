@@ -21,8 +21,11 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from requests import sessions, Response
+
+from pyLibrary import convert
+from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, nvl
-from pyLibrary.env.files_string import safe_size
+from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, CompressedLines, LazyLines
 
 
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
@@ -121,3 +124,18 @@ class HttpResponse(Response):
 
         return self._cached_content
 
+    @property
+    def all_lines(self):
+        try:
+            if int(self.headers["content-length"]) < MAX_STRING_SIZE:
+                content = self.content
+                if self.headers.get('content-encoding') == 'gzip':
+                    return CompressedLines(content)
+                else:
+                    return convert.utf82unicode(content).split("\n")
+            else:
+                return LazyLines(self.all_content)
+        except Exception, e:
+            Log.error("Not expected", e)
+        finally:
+            self.close()

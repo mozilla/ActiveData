@@ -11,7 +11,9 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from pyLibrary import convert
+from pyLibrary.meta import use_settings
 from pyLibrary.queries import MVEL, Q
+from pyLibrary.queries.container import Container
 from pyLibrary.queries.es_query_aggop import is_aggop, es_aggop
 from pyLibrary.queries.es_query_aggs import es_aggsop, is_aggsop
 from pyLibrary.queries.es_query_setop import is_fieldop, is_setop, is_deep, es_setop, es_deepop, es_fieldop
@@ -23,19 +25,29 @@ from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.MVEL import _MVEL
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import nvl, split_field
+from pyLibrary.dot import nvl
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 
-class ESQuery(object):
+class ESQuery(Container):
     """
     SEND GENERAL Qb QUERIES TO ElasticSearch
     """
-    def __init__(self, es):
-        self.es = es
+    @use_settings
+    def __init__(self, host, index, type, port=9200, settings=None):
+        from pyLibrary.testing import elasticsearch
+        self.settings = settings
+        self.name = settings.name
+        self._es = elasticsearch.Index(settings)
         self.edges = Dict()
         self.worker = None
         self.ready=False
+
+
+    def __json__(self):
+        settings = self.settings.copy()
+        settings.settings = None
+        return convert.value2json(settings)
 
     def __enter__(self):
         self.ready = True
@@ -69,21 +81,25 @@ class ESQuery(object):
             q2.frum = result
             return Q.run(q2)
 
-        frum = loadColumns(self.es, query["from"])
-        mvel = _MVEL(frum)
+        try:
+            frum = loadColumns(self._es, query["from"])
+            mvel = _MVEL(frum)
+        except Exception, e:
+            mvel = None
+            Log.warning("TODO: Fix this", e)
 
-        if is_aggsop(self.es, query):
-            return es_aggsop(self.es, mvel, query)
+        if is_aggsop(self._es, query):
+            return es_aggsop(self._es, mvel, query)
         if is_fieldop(query):
-            return es_fieldop(self.es, query)
+            return es_fieldop(self._es, query)
         elif is_deep(query):
-            return es_deepop(self.es, mvel, query)
+            return es_deepop(self._es, mvel, query)
         elif is_setop(query):
-            return es_setop(self.es, mvel, query)
+            return es_setop(self._es, mvel, query)
         elif is_aggop(query):
-            return es_aggop(self.es, mvel, query)
+            return es_aggop(self._es, mvel, query)
         elif is_terms(query):
-            return es_terms(self.es, mvel, query)
+            return es_terms(self._es, mvel, query)
         elif is_terms_stats(query):
             return es_terms_stats(self, mvel, query)
 
@@ -159,7 +175,7 @@ class ESQuery(object):
         command = wrap(command)
 
         # GET IDS OF DOCUMENTS
-        results = self.es.search({
+        results = self._es.search({
             "fields": [],
             "query": {"filtered": {
                 "query": {"match_all": {}},
@@ -183,8 +199,8 @@ class ESQuery(object):
                 command.append({"update": {"_id": id}})
                 command.append({"script": script})
             content = ("\n".join(convert.value2json(c) for c in command)+"\n").encode('utf-8')
-            self.es.cluster._post(
-                self.es.path + "/_bulk",
+            self._es.cluster._post(
+                self._es.path + "/_bulk",
                 data=content,
                 headers={"Content-Type": "application/json"}
             )

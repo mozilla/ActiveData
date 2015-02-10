@@ -9,17 +9,15 @@
 #
 from flask import Flask
 import flask
-
 from werkzeug.contrib.fixers import HeaderRewriterFix
-from werkzeug.exceptions import abort
 from werkzeug.wrappers import Response
 
 from pyLibrary import convert
 from pyLibrary.debugs import constants, startup
-from pyLibrary.debugs.logs import Log
+from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot import Dict, wrap, unwrap
 from pyLibrary.env import elasticsearch
-from pyLibrary.queries import Q
+from pyLibrary.queries import Q, from_es
 
 
 app = Flask(__name__)
@@ -74,6 +72,8 @@ def query(path):
         )
     except Exception, e:
         Log.warning("problem", e)
+
+        e = Except.wrap(e)
         return Response(
             convert.unicode2utf8(convert.value2json(e)),
             status=400
@@ -144,6 +144,8 @@ def main():
         request_logger = elasticsearch.Cluster(settings.request_logs).get_or_create_index(settings.request_logs)
         globals()["default_elasticsearch"] = elasticsearch.Index(settings.elasticsearch)
         globals()["request_log_queue"] = request_logger.threaded_queue(size=2000)
+
+        from_es.config.default = settings.elasticsearch.copy()
 
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
         app.run(**unwrap(settings.flask))

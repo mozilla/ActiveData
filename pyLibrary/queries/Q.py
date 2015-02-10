@@ -15,6 +15,7 @@ from pyLibrary import dot
 
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.queries import flat_list, query, group_by, _normalize_select
+from pyLibrary.queries.container import Container
 from pyLibrary.queries.filters import TRUE_FILTER, FALSE_FILTER
 from pyLibrary.queries.flat_list import FlatList
 from pyLibrary.queries.index import Index
@@ -36,7 +37,10 @@ from pyLibrary.dot import listwrap, wrap, unwrap
 def run(query):
     query = Query(query)
     frum = query["from"]
-    if isinstance(frum, list):
+    if isinstance(frum, Container):
+        with frum:
+            return frum.query(query)
+    elif isinstance(frum, list):
         pass
     elif isinstance(frum, Cube):
         pass

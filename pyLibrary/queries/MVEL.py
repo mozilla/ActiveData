@@ -491,7 +491,7 @@ def _where(esFilter, _translate):
 
 
 VAR_CHAR = "abcdefghijklmnopqurstvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_.\""
-keyword_pattern = re.compile(r"\w+(?:\.\w+)*")
+keyword_pattern = re.compile(r"\.*\w*(?:\.\w+)*")
 
 
 def isKeyword(value):

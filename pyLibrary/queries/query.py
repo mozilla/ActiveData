@@ -19,6 +19,7 @@ from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import nvl, split_field, join_field, Null, set_default
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap, listwrap
+from pyLibrary.queries.from_es import wrap_from
 
 
 class Query(object):
@@ -38,6 +39,7 @@ class Query(object):
         query = wrap(query)
 
         self.name = query.name
+        self.format = query.format
 
         select = query.select
         if isinstance(select, list):
@@ -45,14 +47,18 @@ class Query(object):
         elif select:
             select = _normalize_select(select, schema=schema)
         else:
-            select = DictList()
+            if query.edges:
+                select = {"name": "__row__", "value": ".", "aggregate": "count"}
+            else:
+                select = {"name": "__all__", "value": "*", "aggregate": "none"}
+
         self.select2index = {}  # MAP FROM NAME TO data INDEX
         for i, s in enumerate(listwrap(select)):
             self.select2index[s.name] = i
         self.select = select
 
         self.edges = _normalize_edges(query.edges, schema=schema)
-        self.frum = _normalize_from(query["from"], schema=schema)
+        self.frum = wrap_from(query["from"], schema=schema)
         self.where = _normalize_where(query.where, schema=schema)
 
         self.window = [_normalize_window(w) for w in listwrap(query.window)]
@@ -123,15 +129,6 @@ def _normalize_edge(edge, schema=None):
         )
 
 
-def _normalize_from(frum, schema=None):
-    frum = wrap(frum)
-
-    if isinstance(frum, basestring):
-        return Dict(name=frum)
-    elif isinstance(frum, dict) and (frum["from"] or isinstance(frum["from"], (list, set))):
-        return Query(frum, schema=schema)
-    else:
-        return frum
 
 
 def _normalize_domain(domain=None, schema=None):

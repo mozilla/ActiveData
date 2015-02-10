@@ -187,7 +187,7 @@ def _assign(obj, path, value, force=True):
             _setdefault(obj, path0, value)
         return
 
-    old_value = obj.get(path0, None)
+    old_value = obj.get(path0)
     if old_value == None:
         if value == None:
             return

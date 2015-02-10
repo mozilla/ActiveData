@@ -80,10 +80,10 @@ def _normalize(esfilter):
                     continue
                 if a == FALSE_FILTER:
                     return FALSE_FILTER
-                if a.get("and", None):
+                if a.get("and"):
                     isDiff = True
                     a.isNormal = None
-                    output.extend(a.get("and", None))
+                    output.extend(a.get("and"))
                 else:
                     a.isNormal = None
                     output.append(a)
@@ -110,7 +110,7 @@ def _normalize(esfilter):
                 if a == FALSE_FILTER:
                     isDiff = True
                     continue
-                if a.get("or", None):
+                if a.get("or"):
                     a.isNormal = None
                     isDiff = True
                     output.extend(a["or"])

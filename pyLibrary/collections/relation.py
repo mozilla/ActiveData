@@ -52,7 +52,7 @@ class Relation(object):
         return SUM(len(v) for k, v in self.map.items())
 
     def add(self, key, value):
-        to = self.map.get(key, None)
+        to = self.map.get(key)
         if to is None:
             to = set()
             self.map[key] = to
@@ -62,7 +62,7 @@ class Relation(object):
         """
         RETURN TRUE IF THIS RELATION IS NET-NEW
         """
-        to = self.map.get(key, None)
+        to = self.map.get(key)
         if to is None:
             to = set()
             self.map[key] = to
@@ -75,7 +75,7 @@ class Relation(object):
         return True
 
     def extend(self, key, values):
-        to = self.map.get(key, None)
+        to = self.map.get(key)
         if not to:
             to = set(values)
             self.map[key] = to
@@ -87,7 +87,7 @@ class Relation(object):
         """
         RETURN AN ARRAY OF OBJECTS THAT key MAPS TO
         """
-        o = self.map.get(key, None)
+        o = self.map.get(key)
         if not o:
             return set()
         return o

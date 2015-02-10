@@ -196,7 +196,7 @@ class Index(object):
         lines = []
         try:
             for r in records:
-                id = r.get("id", None)
+                id = r.get("id")
                 if id == None:
                     id = Random.hex(40)
 

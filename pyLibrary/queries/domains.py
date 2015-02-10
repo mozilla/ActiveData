@@ -124,7 +124,7 @@ class DefaultDomain(Domain):
         return self.getPartByKey(part.value)
 
     def getPartByKey(self, key):
-        canonical = self.map.get(key, None)
+        canonical = self.map.get(key)
         if canonical:
             return canonical
 
@@ -220,7 +220,7 @@ class SimpleSetDomain(Domain):
 
     def getIndexByKey(self, key):
         try:
-            output = self.order.get(key, None)
+            output = self.order.get(key)
             if output is None:
                 return len(self.partitions)
             return output
@@ -230,7 +230,7 @@ class SimpleSetDomain(Domain):
 
     def getPartByKey(self, key):
         try:
-            canonical = self.map.get(key, None)
+            canonical = self.map.get(key)
             if not canonical:
                 return self.NULL
             return canonical
@@ -323,7 +323,7 @@ class SetDomain(Domain):
 
     def getIndexByKey(self, key):
         try:
-            output = self.order.get(key, None)
+            output = self.order.get(key)
             if output is None:
                 return len(self.partitions)
             return output
@@ -333,7 +333,7 @@ class SetDomain(Domain):
 
     def getPartByKey(self, key):
         try:
-            canonical = self.map.get(key, None)
+            canonical = self.map.get(key)
             if not canonical:
                 return self.NULL
             return canonical

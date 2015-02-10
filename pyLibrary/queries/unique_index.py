@@ -30,7 +30,7 @@ class UniqueIndex(object):
     def __getitem__(self, key):
         try:
             key = value2key(self._keys, key)
-            d = self._data.get(key, None)
+            d = self._data.get(key)
             return wrap(d)
         except Exception, e:
             Log.error("something went wrong", e)
@@ -38,7 +38,7 @@ class UniqueIndex(object):
     def __setitem__(self, key, value):
         try:
             key = value2key(self._keys, key)
-            d = self._data.get(key, None)
+            d = self._data.get(key)
             if d != None:
                 Log.error("key already filled")
 
@@ -51,7 +51,7 @@ class UniqueIndex(object):
 
     def add(self, val):
         key = value2key(self._keys, val)
-        d = self._data.get(key, None)
+        d = self._data.get(key)
         if d is None:
             self._data[key] = unwrap(val)
             self.count += 1

@@ -153,11 +153,12 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
 def error(response):
     response = convert.utf82unicode(response.content)
-    e = None
+
     try:
         e = Except.new_instance(convert.json2value(response))
     except Exception:
-        pass
+        e = None
+
     if e:
         Log.error("Failed request", e)
     else:

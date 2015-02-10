@@ -34,7 +34,7 @@ class Log_usingElasticSearch(BaseLog):
 
     def write(self, template, params):
         try:
-            if params.get("template", None):
+            if params.get("template"):
                 # DETECTED INNER TEMPLATE, ASSUME TRACE IS ON, SO DO NOT NEED THE OUTER TEMPLATE
                 self.queue.add(params)
             else:

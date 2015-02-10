@@ -106,7 +106,7 @@ def time_delta_pusher(please_stop, appender, queue, interval):
                         please_stop.go()
                         next_run = datetime.utcnow()
                     else:
-                        expanded = expand_template(log.get("template", None), log.get("params", None))
+                        expanded = expand_template(log.get("template"), log.get("params"))
                         lines.append(expanded)
                 except Exception, e:
                     Log.warning("Trouble formatting logs", e)

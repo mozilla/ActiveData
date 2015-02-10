@@ -69,7 +69,7 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
         agg = {}
         for d in data:
             key = value2key(keys, d)
-            pair = agg.get(key, None)
+            pair = agg.get(key)
             if pair is None:
                 pair = (get_keys(d), DictList())
                 agg[key] = pair

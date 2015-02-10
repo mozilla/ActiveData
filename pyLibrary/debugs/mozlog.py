@@ -7,7 +7,7 @@ def use_mozlog():
     """
     USE AN INSTANCE OF mozlog.structured.structuredlog.StructuredLogger
     INSTEAD OF THE pyLibrary STANDARD
-    THE HOPE IS Log IS REPLACED BY ToMozLog EVERYWHERE
+    WE REPLACE ALL Log ATTRIBUTES WITH ToMozLog ATTRIBUTES
     """
 
     if _using_mozlog:

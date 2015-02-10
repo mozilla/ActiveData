@@ -134,7 +134,7 @@ class Dict(dict):
                 d = _getdefault(d, n)
             return wrap(d)
 
-        o = d.get(key, None)
+        o = d.get(key)
         if o == None:
             return NullType(d, key)
         return wrap(o)
@@ -210,10 +210,10 @@ class Dict(dict):
         e = unwrap(other)
         d = _get(self, "__dict__")
         for k, v in d.items():
-            if e.get(k, None) != v:
+            if e.get(k) != v:
                 return False
         for k, v in e.items():
-            if d.get(k, None) != v:
+            if d.get(k) != v:
                 return False
         return True
 

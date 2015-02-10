@@ -62,13 +62,13 @@ class Index(object):
         key = value2key(self._keys, val)
         d = self._data
         for k in key[:-1]:
-            e = d.get(k, None)
+            e = d.get(k)
             if e is None:
                 e = {}
                 d[k] = e
             d = e
         k = key[-1]
-        e = d.get(k, None)
+        e = d.get(k)
         if e is None:
             e = []
             d[k] = e

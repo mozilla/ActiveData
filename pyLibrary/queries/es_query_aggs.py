@@ -39,7 +39,7 @@ def es_aggsop(es, mvel, query):
     esQuery = Dict()
     for s in select:
         if s.aggregate == "count" and s.value:
-            esQuery[s.name]["value_count"].field = s.value
+            esQuery.aggs[s.name]["value_count"].field = s.value
         elif s.aggregate == "count":
             pass
         else:
@@ -55,24 +55,27 @@ def es_aggsop(es, mvel, query):
     esQuery.filter = simplify(query.where)
     data = es_query_util.post(es, esQuery, query.limit)
 
-    new_edges = count_dims(data.aggregations, decoders)
-    dims = tuple(len(e.domain.partitions) for e in new_edges)
-    matricies = [(s, Matrix(*dims)) for s in select]
+    if query.format=="cube":
+        new_edges = count_dims(data.aggregations, decoders)
+        dims = tuple(len(e.domain.partitions) for e in new_edges)
+        matricies = [(s, Matrix(*dims)) for s in select]
 
-    for row, agg in aggs_iterator(data.aggregations, start):
-        coord = tuple(d.get_part(row) for d in decoders)
-        for s, m in matricies:
-            # name = literal_field(s.name)
-            if s.aggregate == "count" and not s.value:
-                m[coord] = agg.doc_count
-            else:
-                Log.error("Do not know how to handle")
+        for row, agg in aggs_iterator(data.aggregations, start):
+            coord = tuple(d.get_part(row) for d in decoders)
+            for s, m in matricies:
+                # name = literal_field(s.name)
+                if s.aggregate == "count" and not s.value:
+                    m[coord] = agg.doc_count
+                elif s.aggregate == "count":
+                    m[coord] = agg[s.name].value
+                else:
+                    Log.error("Do not know how to handle")
 
-
-    cube = Cube(query.select, new_edges, {s.name: m for s, m in matricies})
-    cube.frum = query
-    return cube
-
+        cube = Cube(query.select, new_edges, {s.name: m for s, m in matricies})
+        cube.frum = query
+        return cube
+    else:
+        Log.error("Format {{format|quote}} not supported yet", {"format": format})
 
 def count_dims(aggs, decoders):
     new_edges = []

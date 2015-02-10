@@ -27,7 +27,7 @@ class Profiler(object):
 
     def __new__(cls, *args):
         if ON:
-            output = profiles.get(args[0], None)
+            output = profiles.get(args[0])
             if output:
                 return output
         output = object.__new__(cls, *args)

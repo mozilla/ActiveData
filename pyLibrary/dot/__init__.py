@@ -90,7 +90,7 @@ def _setdefault(obj, key, value):
     """
     DO NOT USE __dict__.setdefault(obj, key, value), IT DOES NOT CHECK FOR obj[key] == None
     """
-    v = obj.get(key, None)
+    v = obj.get(key)
     if v == None:
         obj[key] = value
         return value
@@ -120,7 +120,7 @@ def _all_default(d, default, seen=None):
     if default is None:
         return
     for k, default_value in default.items():
-        # existing_value = d.get(k, None)
+        # existing_value = d.get(k)
         existing_value = _get_attr(d, [k])
 
         if existing_value == None:

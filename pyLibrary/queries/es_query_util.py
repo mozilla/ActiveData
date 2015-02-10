@@ -500,3 +500,27 @@ aggregates = {
     "variance": "variance"
 }
 
+# FOR ELASTICSEARCH aggs
+aggregates1_4 = {
+    "none": "none",
+    "one": "count",
+    "sum": "sum",
+    "add": "sum",
+    "count": "count",
+    "maximum": "max",
+    "minimum": "min",
+    "max": "max",
+    "min": "min",
+    "mean": "mean",
+    "average": "mean",
+    "avg": "mean",
+    "N": "count",
+    "X0": "count",
+    "X1": "sum",
+    "X2": "sum_of_squares",
+    "std": "std_deviation",
+    "stddev": "std_deviation",
+    "var": "variance",
+    "variance": "variance"
+}
+

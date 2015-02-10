@@ -18,12 +18,12 @@ from pyLibrary.queries import es_query_util, Q
 from pyLibrary.queries.Q import accumulate
 from pyLibrary.queries.cube import Cube
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain
-from pyLibrary.queries.es_query_util import aggregates
 
 
 
 # THE NEW AND FANTASTIC AGGS OPERATION IN ELASTICSEARCH!
 # WE ALL WIN NOW!
+from pyLibrary.queries.es_query_util import aggregates1_4
 from pyLibrary.queries.filters import simplify
 
 
@@ -44,7 +44,7 @@ def es_aggsop(es, mvel, query):
         elif s.aggregate == "count":
             pass
         else:
-            esQuery.aggs[s.name][aggregates[s.aggregate]].field = s.value
+            esQuery.aggs[s.name][aggregates1_4[s.aggregate]].field = s.value
 
     decoders = [AggsDecoder(e) for e in query.edges]
     start = 0
@@ -65,13 +65,10 @@ def es_aggsop(es, mvel, query):
             coord = tuple(d.get_part(row) for d in decoders)
             for s, m in matricies:
                 # name = literal_field(s.name)
-                if s.aggregate == "count" and not s.value:
+                if s.aggregate == "count" and s.value == None:
                     m[coord] = agg.doc_count
-                elif s.aggregate == "count":
-                    m[coord] = agg[s.name].value
-
                 else:
-                    Log.error("Do not know how to handle")
+                    m[coord] = agg[s.name].value
 
         cube = Cube(query.select, new_edges, {s.name: m for s, m in matricies})
         cube.frum = query
@@ -84,12 +81,10 @@ def es_aggsop(es, mvel, query):
         for row, agg in aggs_iterator(result.aggregations, start):
             output = copy(row)
             for s in select:
-                if s.aggregate == "count" and not s.value:
+                if s.aggregate == "count" and s.value == None:
                     output.append(agg.doc_count)
-                elif s.aggregate == "count":
-                    output.append(agg[s.name].value)
                 else:
-                    Log.error("Do not know how to handle")
+                    output.append(agg[s.name].value)
             data.append(output)
         return {'header': header, "data": data}
 
@@ -100,12 +95,10 @@ def es_aggsop(es, mvel, query):
             output = {e.name: r for e, r in zip(new_edges, row)}
 
             for s in select:
-                if s.aggregate == "count" and not s.value:
+                if s.aggregate == "count" and s.value == None:
                     output[s.name] = agg.doc_count
-                elif s.aggregate == "count":
-                    output[s.name] = agg[s.name].value
                 else:
-                    Log.error("Do not know how to handle")
+                    output[s.name] = agg[s.name].value
             data.append(output)
         return data
     else:

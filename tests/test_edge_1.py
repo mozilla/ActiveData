@@ -152,14 +152,14 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": ["a"]
             },
             "expecting_list": [
-                {"a": "b", "v": 7},
+                {"a": "b", "v": 2},
                 {"a": "c", "v": 31},
                 {"a": None, "v": 3}
             ],
             "expecting_table": {
                 "header": ["a", "v"],
                 "data": [
-                    ["b", 7],
+                    ["b", 2],
                     ["c", 31],
                     [None, 3]
                 ]
@@ -177,7 +177,7 @@ class TestEdge1(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "v": [7, 31, 3]
+                    "v": [2, 31, 3]
                 }
             }
         }

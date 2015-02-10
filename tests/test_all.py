@@ -5,6 +5,7 @@ import signal
 from pyLibrary import convert
 from pyLibrary import jsons
 from pyLibrary.debugs.logs import Log, Except, constants
+from pyLibrary.dot import Dict
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
 from pyLibrary.testing import elasticsearch
@@ -26,6 +27,7 @@ class TestSimpleRequests(FuzzyTestCase):
     server_is_ready = None
     please_stop = None
     thread = None
+    summary=Dict(failures=[])
 
 
     @classmethod
@@ -49,6 +51,10 @@ class TestSimpleRequests(FuzzyTestCase):
         cls.please_stop.go()
         if cls.thread:
             cls.thread.stopped.wait_for_go()
+        if TestSimpleRequests.summary.failures:
+            Log.error("Some test failures", cause=TestSimpleRequests.summary.failures)
+
+
 
 
     def __init__(self, *args, **kwargs):
@@ -123,7 +129,8 @@ class TestSimpleRequests(FuzzyTestCase):
                     "name": subtest.name
                 })
         except Exception, e:
-            Log.error("Failed test {{name|quote}}", {"name": subtest.name}, e)
+            TestSimpleRequests.summary.failures.append(e)
+            Log.warning("Failed test {{name|quote}}", {"name": subtest.name}, e)
         finally:
             # REMOVE CONTAINER
             self.es.delete_index(settings.index)

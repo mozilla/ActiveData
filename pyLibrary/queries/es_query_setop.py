@@ -122,21 +122,19 @@ def es_fieldop(es, query):
     elif query.format == "cube":
         matricies = {}
         for s in select:
-            if s.value == ".":
-                matricies[s.name] = Matrix.wrap(T.select(source))
-            elif isinstance(s.value, dict):
-                # for k, v in s.value.items():
-                #     matricies[join_field(split_field(s.name)+[k])] = Matrix.wrap([unwrap(t.fields)[v] for t in T])
-                matricies[s.name] = Matrix.wrap([{k: unwrap(t[source]).get(v, None) for k, v in s.value.items()}for t in T])
-            elif isinstance(s.value, list):
-                matricies[s.name] = Matrix.wrap([tuple(unwrap(t[source]).get(ss, None) for ss in s.value) for t in T])
-            elif not s.value:
-                matricies[s.name] = Matrix.wrap([unwrap(t[source]).get(s.value, None) for t in T])
-            else:
-                try:
-                    matricies[s.name] = Matrix.wrap([unwrap(t[source]).get(s.value, None) for t in T])
-                except Exception, e:
-                    Log.error("", e)
+            try:
+                if s.value == ".":
+                    matricies[s.name] = Matrix.wrap(T.select(source))
+                elif isinstance(s.value, dict):
+                    # for k, v in s.value.items():
+                    #     matricies[join_field(split_field(s.name)+[k])] = Matrix.wrap([unwrap(t.fields)[v] for t in T])
+                    matricies[s.name] = Matrix.wrap([{k: unwrap(t[source][v]) for k, v in s.value.items()} for t in T])
+                elif isinstance(s.value, list):
+                    matricies[s.name] = Matrix.wrap([tuple(unwrap(t[source][ss]) for ss in s.value) for t in T])
+                else:
+                    matricies[s.name] = Matrix.wrap([unwrap(t[source][s.value]) for t in T])
+            except Exception, e:
+                Log.error("", e)
 
         cube = Cube(query.select, edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(T), "interval": 1}}], data=matricies, frum=query)
         cube.frum = query

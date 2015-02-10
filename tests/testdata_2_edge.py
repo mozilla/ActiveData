@@ -46,7 +46,7 @@ tests = [
 
 
     {
-        "name": "count rows",
+        "name": "count rows, 2d",
         "metatdata": {},
         "data": two_dim_test_data,
         "query": {

@@ -23,7 +23,7 @@ tests = [
 
 
     {
-        "name": "count rows",
+        "name": "count rows, 1d",
         "metatdata": {},
         "data": simple_test_data,
         "query": {

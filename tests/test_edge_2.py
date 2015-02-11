@@ -16,6 +16,7 @@ from tests.base_test_class import ActiveDataBaseTest
 class TestEdge1(ActiveDataBaseTest):
     def test_count_rows(self):
         test = {
+            "disable": True,  # TODO: PLEASE ENABLE, TOO COMPLICATED FOR v1
             "name": "count rows, 2d",
             "metatdata": {},
             "data": two_dim_test_data,
@@ -90,7 +91,6 @@ class TestEdge1(ActiveDataBaseTest):
 
     def test_sum_rows(self):
         test = {
-            "disable": True,  # TODO: PLEASE ENABLE, TOO COMPLICATED FOR v1
             "name": "sum rows",
             "metatdata": {},
             "data": two_dim_test_data,

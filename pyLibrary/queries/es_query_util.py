@@ -123,7 +123,7 @@ def buildESQuery(query):
                 "query": {
                     "match_all": {}
                 },
-                "filter": filters.simplify(query.where)
+                "filter": filters.simplify_esfilter(query.where)
             }
         }
 

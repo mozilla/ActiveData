@@ -17,7 +17,7 @@ from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap, unwrap
 from pyLibrary.queries.es_query_util import aggregates
 from pyLibrary.queries import domains, es_query_util
-from pyLibrary.queries.filters import simplify, TRUE_FILTER
+from pyLibrary.queries.filters import simplify_esfilter, TRUE_FILTER
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import MVEL, filters
 from pyLibrary.queries.cube import Cube
@@ -57,7 +57,7 @@ def es_fieldop(es, query):
             "query": {
                 "match_all": {}
             },
-            "filter": filters.simplify(query.where)
+            "filter": filters.simplify_esfilter(query.where)
         }
     }
     esQuery.size = nvl(query.limit, 200000)
@@ -171,7 +171,7 @@ def es_setop(es, mvel, query):
         if not select[0].value:
             esQuery.query = {"filtered": {
                 "query": {"match_all": {}},
-                "filter": simplify(query.where)
+                "filter": simplify_esfilter(query.where)
             }}
             esQuery.size = 1  # PREVENT QUERY CHECKER FROM THROWING ERROR
         elif MVEL.isKeyword(select[0].value):
@@ -180,7 +180,7 @@ def es_setop(es, mvel, query):
                     "field": select[0].value,
                     "size": nvl(query.limit, 200000)
                 },
-                "facet_filter": simplify(query.where)
+                "facet_filter": simplify_esfilter(query.where)
             }
             if query.sort:
                 s = query.sort
@@ -200,7 +200,7 @@ def es_setop(es, mvel, query):
                 "script_field": mvel.code(simple_query),
                 "size": nvl(simple_query.limit, 200000)
             },
-            "facet_filter": simplify(query.where)
+            "facet_filter": simplify_esfilter(query.where)
         }
     else:
         esQuery.facets.mvel = {
@@ -208,7 +208,7 @@ def es_setop(es, mvel, query):
                 "script_field": mvel.code(query),
                 "size": nvl(query.limit, 200000)
             },
-            "facet_filter": simplify(query.where)
+            "facet_filter": simplify_esfilter(query.where)
         }
 
     data = es_query_util.post(es, esQuery, query.limit)
@@ -267,7 +267,7 @@ def es_deepop(es, mvel, query):
             "script_field": mvel.code(temp_query),
             "size": query.limit
         },
-        "facet_filter": simplify(query.where)
+        "facet_filter": simplify_esfilter(query.where)
     }
 
     data = es_query_util.post(es, esQuery, query.limit)

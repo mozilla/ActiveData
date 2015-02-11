@@ -1,15 +1,16 @@
-pyLibrary.convert
------------------
+Module `convert`
+---------------
 
 General conversion library with functions in the form `<from_type> "2" <to_type>`.
-Most of these functions are simple wrappers around common Python functions,
-some are more esoteric.  A few are special implementations.
+Most of these functions are simple wrappers around common Python functions;
+often dealing with `None` values gracefully.  Many functions are generally
+useful, but a few are esoteric.
 
 
-pyLibrary.strings.expand_template()
------------------------------------
+Function `expand_template()`
+---------------------------
 
-    expand_template(template, value)
+    pyLibrary.strings.expand_template(template, value)
 
 A simple function that replaces variables in `template` with the properties
 found in `value`. Variables are indicated by the double mustaches;

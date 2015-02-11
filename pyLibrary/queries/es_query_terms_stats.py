@@ -15,7 +15,7 @@ from pyLibrary.collections import COUNT, PRODUCT
 from pyLibrary.queries import es_query_util
 from pyLibrary.queries.cube import Cube
 from pyLibrary.queries.es_query_util import aggregates, buildESQuery, compileEdges2Term
-from pyLibrary.queries.filters import simplify
+from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import domains, MVEL, filters
 from pyLibrary.queries.MVEL import UID
@@ -144,7 +144,7 @@ def es_terms_stats(esq, mvel, query):
                 }
             }
             if condition:
-                esQuery.facets[name].facet_filter = simplify({"and": condition})
+                esQuery.facets[name].facet_filter = simplify_esfilter({"and": condition})
 
     data = es_query_util.post(esq.es, esQuery, query.limit)
 
@@ -247,7 +247,7 @@ def buildCondition(mvel, edge, partition):
             })
 
         # ES WILL FREAK OUT IF WE SEND {"not":{"and":x}} (OR SOMETHING LIKE THAT)
-        return filters.simplify(condition)
+        return filters.simplify_esfilter(condition)
     elif edge.range:
         # THESE REALLY NEED FACETS TO PERFORM THE JOIN-TO-DOMAIN
         # USE MVEL CODE

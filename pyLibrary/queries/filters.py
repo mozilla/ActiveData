@@ -12,14 +12,15 @@ from __future__ import division
 
 from pyLibrary.collections import OR
 from pyLibrary.dot import wrap
+from pyLibrary.parsers import Log
 
 TRUE_FILTER = True
 FALSE_FILTER = False
 
 
-def simplify(esfilter):
+def simplify_esfilter(esfilter):
     try:
-        output = normalize(esfilter)
+        output = normalize_esfilter(where2esfilter(esfilter))
         if output is TRUE_FILTER:
             return {"match_all": {}}
         output.isNormal = None
@@ -43,7 +44,7 @@ def removeOr(esfilter):
 
     return esfilter
 
-def normalize(esfilter):
+def normalize_esfilter(esfilter):
     """
     SIMPLFY THE LOGIC EXPRESSION
     """
@@ -53,7 +54,7 @@ def normalize(esfilter):
 
 def _normalize(esfilter):
     """
-    DO NOT USE Structs, WE ARE SPENDING TOO MUCH TIME WRAPPING/UNWRAPPING
+    TODO: DO NOT USE Dicts, WE ARE SPENDING TOO MUCH TIME WRAPPING/UNWRAPPING
     REALLY, WE JUST COLLAPSE CASCADING and AND or FILTERS
     """
     if esfilter is TRUE_FILTER or esfilter is FALSE_FILTER or esfilter.isNormal:
@@ -71,7 +72,7 @@ def _normalize(esfilter):
                 if isinstance(a, (list, set)):
                     from pyLibrary.debugs.logs import Log
                     Log.error("and clause is not allowed a list inside a list")
-                a_ = normalize(a)
+                a_ = normalize_esfilter(a)
                 if a_ is not a:
                     isDiff = True
                 a = a_
@@ -171,3 +172,81 @@ def _normalize(esfilter):
 
     esfilter.isNormal = True
     return esfilter
+
+
+def where2esfilter(where):
+    """
+    CONVERT Qb QUERY where CLAUSE TO ELASTICSEARCH FILTER FORMAT
+    """
+    if where is True or where is None:
+        return {"match_all": {}}
+    if where is False:
+        return False
+
+    k, v = where.items()[0]
+    return converter_map[k](k, v)
+
+
+def _convert_many(k, v):
+    return {k: [where2esfilter(vv) for vv in v]}
+
+
+def _convert_not(k, v):
+    return {k: where2esfilter(v)}
+
+
+def _convert_in(k, v):
+    if isinstance(v, list):
+        v2 = [vv for vv in v if vv != None]
+
+        if len(v2) == 0:
+            if len(v) == 0:
+                return False
+            else:
+                return {"missing": {"field": k}}
+
+        if len(v2) == 1:
+            output = {"term": {k: v2[0]}}
+        else:
+            output = {"terms": {k: v2}}
+
+        if len(v2) != len(v):
+            output = {"or": [
+                {"missing": {"field": k}},
+                output
+            ]}
+        return output
+    else:
+        return {"term": v}
+
+
+def _convert_inequality(ine, term):
+    var, val = term.items()[0]
+    return {"range": {var: {ine: val}}}
+
+
+def _convert_field(k, var):
+    if isinstance(var, basestring):
+        return {k: {"field": var}}
+    if isinstance(var, dict) and var.get("field"):
+        return {k: var}
+    Log.error("do not know how to handle {{value}}", {"value": {k: var}})
+
+
+converter_map = {
+    "and": _convert_many,
+    "or": _convert_many,
+    "not": _convert_not,
+    "term": _convert_in,
+    "terms": _convert_in,
+    "eq": _convert_in,
+    "in": _convert_in,
+    "missing": _convert_field,
+    "exists": _convert_field,
+    "gt": _convert_inequality,
+    "gte": _convert_inequality,
+    "lt": _convert_inequality,
+    "lte": _convert_inequality
+}
+
+

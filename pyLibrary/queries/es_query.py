@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from pyLibrary import convert
+from pyLibrary.env import elasticsearch
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import MVEL, Q
 from pyLibrary.queries.container import Container
@@ -34,11 +35,10 @@ class ESQuery(Container):
     SEND GENERAL Qb QUERIES TO ElasticSearch
     """
     @use_settings
-    def __init__(self, host, index, type, port=9200, settings=None):
-        from pyLibrary.testing import elasticsearch
+    def __init__(self, host, index, type=None, port=9200, settings=None):
         self.settings = settings
         self.name = settings.name
-        self._es = elasticsearch.Index(settings)
+        self._es = elasticsearch.Index(settings=settings)
         self.edges = Dict()
         self.worker = None
         self.ready=False

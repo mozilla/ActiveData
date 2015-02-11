@@ -45,9 +45,9 @@ def wrap_from(frum, schema=None):
             "name": frum,
         }, config.default)
         return type2container["elasticsearch"](settings)
-    elif isinstance(frum, dict) and frum["type"] and type2container[frum["type"]]:
+    elif isinstance(frum, dict) and frum.type and type2container[frum.type]:
         # TODO: Ensure the frum.name is set, so we capture the deep queries
-        return type2container[frum["type"]](frum)
+        return type2container[frum.type](frum.settings)
     elif isinstance(frum, dict) and (frum["from"] or isinstance(frum["from"], (list, set))):
         from pyLibrary.queries.query import Query
         return Query(frum, schema=schema)

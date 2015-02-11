@@ -15,7 +15,7 @@ from pyLibrary.collections import AND
 from pyLibrary.dot import listwrap, unwrap, literal_field
 from pyLibrary.queries import es_query_util
 from pyLibrary.queries.es_query_util import aggregates, fix_es_stats, buildESQuery
-from pyLibrary.queries.filters import simplify
+from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.queries import MVEL
 from pyLibrary.queries.cube import Cube
 
@@ -45,14 +45,14 @@ def es_aggop(es, mvel, query):
                     "statistical": {
                         "field": s.value
                     },
-                    "facet_filter": simplify(query.where)
+                    "facet_filter": simplify_esfilter(query.where)
                 }
             else:
                 unwrap(esQuery.facets)[s.name] = {
                     "statistical": {
                         "script": mvel.compile_expression(s.value, query)
                     },
-                    "facet_filter": simplify(query.where)
+                    "facet_filter": simplify_esfilter(query.where)
                 }
             value2facet[s.value] = s.name
         name2facet[s.name] = value2facet[s.value]

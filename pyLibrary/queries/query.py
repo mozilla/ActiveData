@@ -15,7 +15,7 @@ from pyLibrary.maths import Math
 from pyLibrary.queries import MVEL, _normalize_select, INDEX_CACHE
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain
-from pyLibrary.queries.filters import TRUE_FILTER, simplify
+from pyLibrary.queries.filters import TRUE_FILTER, simplify_esfilter
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import nvl, split_field, join_field, Null, set_default
 from pyLibrary.dot.lists import DictList
@@ -121,6 +121,9 @@ def _normalize_edge(edge, schema=None):
             domain=_normalize_domain(schema=schema)
         )
     else:
+        if not edge.name and not isinstance(edge.value, basestring):
+            Log.error("You must name compound edges: {{edge}}", {"edge":edge})
+
         return Dict(
             name=nvl(edge.name, edge.value),
             value=edge.value,
@@ -175,7 +178,7 @@ def _normalize_where(where, schema=None):
         return TRUE_FILTER
     if schema == None:
         return where
-    where = simplify(_where_terms(where, where, schema))
+    where = simplify_esfilter(_where_terms(where, where, schema))
     return where
 
 

@@ -24,7 +24,7 @@ from pyLibrary.queries.domains import PARTITION, SimpleSetDomain
 # THE NEW AND FANTASTIC AGGS OPERATION IN ELASTICSEARCH!
 # WE ALL WIN NOW!
 from pyLibrary.queries.es_query_util import aggregates1_4
-from pyLibrary.queries.filters import simplify
+from pyLibrary.queries.filters import simplify_esfilter, where2esfilter
 
 
 def is_aggsop(es, query):
@@ -53,7 +53,7 @@ def es_aggsop(es, mvel, query):
         start += d.num_columns
 
     esQuery.size = nvl(query.limit, 0)
-    esQuery.filter = simplify(query.where)
+    esQuery.filter = simplify_esfilter(query.where)
     result = es_query_util.post(es, esQuery, query.limit)
 
     if query.format=="cube":
@@ -220,7 +220,7 @@ class DimFieldListDecoder(AggsDecoder):
         for i, v in enumerate(fields):
             esQuery.terms = {"field": v}
             esQuery = wrap({"aggs": {str(start+i): esQuery}})
-        esQuery.filter = simplify(self.edge.domain.esfilter)
+        esQuery.filter = simplify_esfilter(self.edge.domain.esfilter)
         return esQuery
 
     def get_part(self, row):
@@ -244,7 +244,7 @@ class DimFieldDictDecoder(AggsDecoder):
         self.start=start
         for i, (k, v) in enumerate(self.fields):
             esQuery.terms = {"field": v}
-        esQuery.filter = simplify(self.edge.domain.esfilter)
+        esQuery.filter = simplify_esfilter(self.edge.domain.esfilter)
         return esQuery
 
     def get_part(self, row):

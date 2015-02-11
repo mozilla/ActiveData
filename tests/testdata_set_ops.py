@@ -208,6 +208,7 @@ class TestSetOps(ActiveDataBaseTest):
     def test_select_into_children(self):
         test = {
             "name": "select into children to table",
+            "disable": True,  # TODO: PLEASE ENABLE, TOO COMPLICATED FOR v1
             "metadata": {
                 "properties": {
                     "x": {"type": "integer"},

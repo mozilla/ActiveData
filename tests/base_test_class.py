@@ -104,12 +104,17 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
     def _execute_es_tests(self, subtest):
         subtest = wrap(subtest)
+
+        if subtest.disable:
+            return
+
         settings = self.backend_es.copy()
         settings.index = "testing_" + Random.hex(10).lower()
         settings.type = "testdata"
 
         if "elasticsearch" in subtest["not"]:
             return
+
 
         try:
             url = "file://resources/schema/basic_schema.json.template?{{.|url}}"

@@ -111,28 +111,6 @@ class WSGICopyBody(object):
 
 app.wsgi_app = WSGICopyBody(app.wsgi_app)
 
-#
-# @app.errorhandler(400)
-# def handle_invalid_usage(error):
-#     response = {
-#         "status_code": error.code,
-#         'message': convert.unicode2utf8(error.description.__json__())
-#     }
-#     return response
-#
-#
-#
-# class SimpleExcept(APIException):
-#     status_code = 400
-#
-#
-#     detail = 'Service temporarily unavailable, try again later.'
-#
-#
-
-
-
-
 
 def main():
     try:

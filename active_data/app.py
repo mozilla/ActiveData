@@ -25,17 +25,19 @@ request_log_queue = None
 default_elasticsearch = None
 
 
-def record_request(request):
+def record_request(request, query_, data, error):
     log = Dict(
         http_user_agent=request.headers.get("user_agent"),
         http_accept_encoding=request.headers.get("accept_encoding"),
         path=request.headers.environ["werkzeug.request"].full_path,
         content_length=request.headers.get("content_length"),
-        remote_addr=request.remote_addr
+        remote_addr=request.remote_addr,
+        query=query_,
+        data=data,
+        error=error
     )
     log["from"] = request.headers.get("from")
-    request_log_queue.add(log)
-
+    request_log_queue.add({"value": log})
 
 
 def pre_filter_request(path, type):
@@ -56,8 +58,12 @@ from2context = Dict()
 @app.route('/<path:path>', methods=['GET'])
 def query(path):
     try:
-        record_request(flask.request)
-        data = convert.json2value(convert.utf82unicode(flask.request.environ['body_copy']))
+        try:
+            data = convert.json2value(convert.utf82unicode(flask.request.environ['body_copy']))
+            record_request(flask.request, data, None, None)
+        except Exception, e:
+            record_request(flask.request, None, flask.request.environ['body_copy'], e)
+
         result = Q.run(data)
 
         outbound_header = wrap({
@@ -115,8 +121,8 @@ app.wsgi_app = WSGICopyBody(app.wsgi_app)
 def main():
     try:
         settings = startup.read_settings()
-        Log.start(settings.debug)
         constants.set(settings.constants)
+        Log.start(settings.debug)
 
         # PIPE REQUEST LOGS TO ES DEBUG
         request_logger = elasticsearch.Cluster(settings.request_logs).get_or_create_index(settings.request_logs)

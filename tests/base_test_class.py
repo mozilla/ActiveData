@@ -196,7 +196,7 @@ def error(response):
 
 def run_app(please_stop, server_is_ready):
     proc = subprocess.Popen(
-        ["python", "active_data\\app.py", "--settings", "resources/config/settings.json"],
+        ["python", "active_data\\app.py", "--settings", "resources/config/development_settings.json"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

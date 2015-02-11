@@ -32,14 +32,14 @@ FILE_SIZE_LIMIT = 100 * 1024 * 1024
 MIN_READ_SIZE = 8 * 1024
 default_headers = Dict()  # TODO: MAKE THIS VARIABLE A SPECIAL TYPE OF EXPECTED MODULE PARAMETER SO IT COMPLAINS IF NOT SET
 default_timeout = 600
+
 _warning_sent = False
 
 
 def request(method, url, **kwargs):
+    global _warning_sent
     if not default_headers and not _warning_sent:
-        globals()["_warning_sent"] = True
-        from pyLibrary.debugs.logs import Log
-
+        _warning_sent = True
         Log.warning("The pyLibrary.env.http module was meant to add extra "
                     "default headers to all requests, specifically the 'From' "
                     "header with a URL to the project, or email of developer. "

@@ -10,6 +10,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 from copy import deepcopy
+from types import NoneType
 from pyLibrary.dot import split_field, _getdefault, hash_value, literal_field, nvl
 
 _get = object.__getattribute__
@@ -81,8 +82,8 @@ class Dict(dict):
     #  http://www.saltycrane.com/
     def __init__(self, **map):
         """
-        CALLING Dict(**something) WILL RESULT IN A COPY OF something, WHICH IS UNLIKELY TO BE USEFUL
-        USE wrap() INSTEAD
+        CALLING Dict(**something) WILL RESULT IN A COPY OF something, WHICH
+        IS UNLIKELY TO BE USEFUL. USE wrap() INSTEAD
         """
         dict.__init__(self)
         if DEBUG:
@@ -220,13 +221,13 @@ class Dict(dict):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def get(self, key, default):
+    def get(self, key, default=None):
         d = _get(self, "__dict__")
         return d.get(key, default)
 
     def items(self):
         d = _get(self, "__dict__")
-        return ((k, wrap(v)) for k, v in d.items())
+        return [(k, wrap(v)) for k, v in d.items() if v != None]
 
     def leaves(self, prefix=None):
         """

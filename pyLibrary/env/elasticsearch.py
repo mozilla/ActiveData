@@ -401,9 +401,6 @@ class Cluster(object):
         else:
             schema = convert.json2value(convert.value2json(schema), paths=True)
 
-        if not schema:
-            schema = settings.schema
-
         if limit_replicas:
             # DO NOT ASK FOR TOO MANY REPLICAS
             health = self.get("/_cluster/health")

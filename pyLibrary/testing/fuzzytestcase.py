@@ -18,6 +18,17 @@ from pyLibrary.strings import expand_template
 
 
 class FuzzyTestCase(unittest.TestCase):
+    """
+    COMPARE STRUCTURE AND NUMBERS!
+
+    ONLY THE ATTRIBUTES IN THE expected STRUCTURE ARE TESTED TO EXIST
+    EXTRA ATTRIBUTES ARE IGNORED.
+
+    NUMBERS ARE MATCHED BY ...
+    * places (SAME, UP TO GIVEN SIGNIFICANT DIGITS)
+    * digits (SAME, UP TO GIVEN DECIMAL PLACES, WITH NEGATIVE MEANING LEFT-OF-UNITS)
+    * delta (MAXIMUM ABSOLUTE DIFFERENCE FROM expected)
+    """
 
     def __init__(self, *args, **kwargs):
         unittest.TestCase.__init__(self, *args, **kwargs)
@@ -42,7 +53,7 @@ class FuzzyTestCase(unittest.TestCase):
 
 def zipall(*args):
     """
-    LOOP THROUGH LONGEST OF THE LISTS
+    LOOP THROUGH LONGEST OF THE LISTS, None-FILL THE REMAINDER
     """
     iters = [a.__iter__() for a in args]
 

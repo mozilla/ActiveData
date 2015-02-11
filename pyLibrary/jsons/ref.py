@@ -10,7 +10,8 @@
 
 
 import os
-from pyLibrary.dot import set_default, wrap
+from pyLibrary.dot import set_default, wrap, Null
+from pyLibrary.parsers import URL
 
 
 DEBUG = True
@@ -30,7 +31,7 @@ def get(url):
         _late_import()
 
     """
-    USE son.net CONVENTIONS TO LINK TO INLINE OTHER JSON
+    USE json.net CONVENTIONS TO LINK TO INLINE OTHER JSON
     """
     if url.find("://") == -1:
         Log.error("{{url}} must have a prototcol (eg http://) declared", {"url": url})
@@ -45,7 +46,7 @@ def get(url):
         Log.error("{{url}} must be absolute", {"url": url})
     doc = wrap({"$ref": url})
 
-    phase1 = _replace_ref(doc, '')  # BLANK URL ONLY WORKS IF url IS ABSOLUTE
+    phase1 = _replace_ref(doc, URL(""))  # BLANK URL ONLY WORKS IF url IS ABSOLUTE
     phase2 = _replace_locals(phase1, [phase1])
     return wrap(phase2)
 
@@ -58,17 +59,17 @@ def expand(doc, doc_url):
     if doc_url.find("://") == -1:
         Log.error("{{url}} must have a prototcol (eg http://) declared", {"url": doc_url})
 
-    phase1 = _replace_ref(doc, doc_url)  # BLANK URL ONLY WORKS IF url IS ABSOLUTE
+    phase1 = _replace_ref(doc, URL(doc_url))  # BLANK URL ONLY WORKS IF url IS ABSOLUTE
     phase2 = _replace_locals(phase1, [phase1])
     return wrap(phase2)
 
 
 def _replace_ref(node, url):
-    if url.endswith("/"):
-        url = url[:-1]
+    if url.path.endswith("/"):
+        url.path = url.path[:-1]
 
     if isinstance(node, dict):
-        ref, node["$ref"] = node["$ref"], None
+        ref, node["$ref"] = URL(node["$ref"]), None
 
         if not ref:
             # RECURS
@@ -81,33 +82,24 @@ def _replace_ref(node, url):
                     return_value = candidate
             return return_value
 
-        if ref.startswith("//"):
+        if not ref.scheme:
             # SCHEME RELATIVE IMPLIES SAME PROTOCOL AS LAST TIME, WHICH
             # REQUIRES THE CURRENT DOCUMENT'S SCHEME
-            ref = url.split("://")[0] + ":" + ref
-
-        if ref.find("#") >= 0:
-            # LOOKING FOR THE IN-DOCUMENT REFERENCE (EXPECTED DOT-SEPARATED
-            # PATH INTO DOCUMENT)
-            ref, doc_path = ref.split("#")
-        else:
-            doc_path = None
+            ref.scheme = url.scheme
 
         # FIND THE SCHEME AND LOAD IT
-        scheme_end = ref.find("://")
-        if scheme_end >= -1:
-            scheme_name = ref[:scheme_end]
-            if scheme_name in scheme_loaders:
-                new_value = scheme_loaders[scheme_name](ref, url)
+        if ref.scheme:
+            if ref.scheme in scheme_loaders:
+                new_value = scheme_loaders[ref.scheme](ref, url)
             else:
-                raise Log.error("unknown protocol {{scheme}}", {"scheme": scheme_name})
+                raise Log.error("unknown protocol {{scheme}}", {"scheme": ref.scheme})
         else:
             # DO NOT TOUCH LOCAL REF YET
             node["$ref"] = ref
             return node
 
-        if doc_path:
-            new_value = new_value[doc_path]
+        if ref.fragment:
+            new_value = new_value[ref.fragment]
 
         if isinstance(new_value, dict):
             return set_default({}, node, new_value)
@@ -172,25 +164,27 @@ def _replace_locals(node, doc_path):
 def get_file(ref, url):
     from pyLibrary.env.files import File
 
-    if ref[7] == "~":
+    if ref.path.startswith("~"):
         home_path = os.path.expanduser("~")
         if os.sep == "\\":
-            home_path = home_path.replace(os.sep, "/")
+            home_path = "/"+home_path.replace(os.sep, "/")
         if home_path.endswith("/"):
             home_path = home_path[:-1]
 
-        ref = "file:///" + home_path + ref[8:]
-    elif ref[7] != "/":
+        ref.path = home_path + ref.path[1::]
+    elif not ref.path.startswith("/"):
         # CONVERT RELATIVE TO ABSOLUTE
-        ref = ("/".join(url.split("/")[:-1])) + ref[6::]
-    path = ref[7::] if os.sep != "\\" else ref[8::].replace("/", "\\")
+        ref.path = "/".join(url.path.split("/")[:-1]) + "/" + ref.path
+
+    path = ref.path if os.sep != "\\" else ref.path[1::].replace("/", "\\")
+
     try:
         content = File(path).read()
     except Exception, e:
         Log.error("Could not read file {{filename}}", {"filename": path}, e)
 
     try:
-        new_value = convert.json2value(content, flexible=True, paths=True)
+        new_value = convert.json2value(content, params=ref.query, flexible=True, paths=True)
     except Exception, e:
         try:
             new_value = convert.ini2value(content)
@@ -203,7 +197,8 @@ def get_file(ref, url):
 def get_http(ref, url):
     from pyLibrary.env import http
 
-    new_value = convert.json2value(http.get(ref), flexible=True, paths=True)
+    params = url.query
+    new_value = convert.json2value(http.get(ref), params=params, flexible=True, paths=True)
     return new_value
 
 
@@ -217,8 +212,16 @@ def get_env(ref, url):
     return new_value
 
 
+def get_param(ref, url):
+    # GET PARAMETERS FROM url
+    param = url.query
+    new_value = param[ref.host]
+    return new_value
+
+
 scheme_loaders = {
     "http": get_http,
     "file": get_file,
-    "env": get_env
+    "env": get_env,
+    "param": get_param
 }

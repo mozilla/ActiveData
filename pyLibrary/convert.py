@@ -96,7 +96,6 @@ def json2value(json_string, params=None, flexible=False, paths=False):
                 json_string = re.sub(r",\s*\]", r"]", json_string)
 
             if params:
-                params = dict([(k, value2quote(v)) for k, v in params.items()])
                 json_string = expand_template(json_string, params)
             if isinstance(json_string, str):
                 Log.error("only unicode json accepted")
@@ -264,7 +263,7 @@ def value2url(value):
         Log.error("")
 
     if isinstance(value, dict):
-        output = "&".join([value2url(k) + "=" + value2url(v) for k, v in value.items()])
+        output = "&".join([value2url(k) + "=" + (value2url(v) if isinstance(v, basestring) else value2url(value2json(v))) for k,v in value.items()])
     elif isinstance(value, unicode):
         output = "".join([_map2url[c] for c in unicode2latin1(value)])
     elif isinstance(value, str):

@@ -276,7 +276,9 @@ def _simple_expand(template, seq):
         var = path.lstrip(".")
         depth = min(len(seq), max(1, len(path) - len(var)))
         try:
-            val = seq[-depth][var]
+            val = seq[-depth]
+            if var:
+                val = val[var]
             for filter in ops[1:]:
                 parts = filter.split('(')
                 if len(parts) > 1:

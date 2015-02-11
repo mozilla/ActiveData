@@ -103,7 +103,8 @@ def set_default(*params):
     UPDATES FIRST dict WITH THE MERGE RESULT, WHERE MERGE RESULT IS DEFINED AS:
     FOR EACH LEAF, RETURN THE HIGHEST PRIORITY LEAF VALUE
     """
-    agg = params[0] if params[0] != None else {}
+    p0 = params[0]
+    agg = p0 if p0 or isinstance(p0, dict) else {}
     for p in params[1:]:
         p = unwrap(p)
         if p is None:

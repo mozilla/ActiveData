@@ -21,9 +21,9 @@ from pyLibrary.debugs.logs import Log, Except, constants
 from pyLibrary.dot import wrap, listwrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
-from pyLibrary.queries import Q, _normalize_select
-from pyLibrary.queries.from_es import type2container
+from pyLibrary.queries import Q
 from pyLibrary.queries.query import _normalize_edges, _normalize_selects
+from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 from pyLibrary.thread.threads import Signal, Thread
@@ -107,14 +107,21 @@ class ActiveDataBaseTest(FuzzyTestCase):
         settings = self.backend_es.copy()
         settings.index = "testing_" + Random.hex(10).lower()
         settings.type = "testdata"
-        settings.schema = subtest.metadata
 
         if "elasticsearch" in subtest["not"]:
             return
 
         try:
+            url = "file://resources/schema/basic_schema.json.template?{{.|url}}"
+            url = expand_template(url, {
+                "type": settings.type,
+                "metadata": subtest.metadata
+            })
+            settings.schema = jsons.ref.get(url)
+
             # MAKE CONTAINER
             container = self.es.get_or_create_index(settings)
+
             # INSERT DATA
             container.extend([
                 {"value": v} for v in subtest.data
@@ -123,7 +130,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             # ENSURE query POINTS TO CONTAINER
             subtest.query["from"] = settings.index
         except Exception, e:
-            Log.error("can not load {{data}} into container", {"data":subtest.data})
+            Log.error("can not load {{data}} into container", {"data":subtest.data}, e)
             return
 
         try:

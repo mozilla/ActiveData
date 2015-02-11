@@ -1,0 +1,28 @@
+{
+	"settings": {
+		"index.store.throttle.type": "merge",
+		"index.number_of_replicas": 0,
+		"index.store.throttle.max_bytes_per_sec": "2mb",
+		"index.number_of_shards": 3
+	},
+	"mappings": {
+		{{type|quote}}: {
+			"_source": {
+				"compress": true
+			},
+			"dynamic_templates": [
+				{
+					"default_strings": {
+						"mapping": {
+							"index": "not_analyzed",
+							"type": "string"
+						},
+						"match_mapping_type": "string",
+						"match": "*"
+					}
+				}
+			],
+			"$ref":"param://metadata"
+        }
+    }
+}

@@ -40,9 +40,9 @@ class Domain(object):
         desc = wrap(desc)
         self.name = nvl(desc.name, desc.type)
         self.type = desc.type
-        self.min = desc.min
-        self.max = desc.max
-        self.interval = desc.interval
+        # self.min = desc.min
+        # self.max = desc.max
+        # self.interval = desc.interval
         self.value = desc.value
         self.key = desc.key
         self.label = desc.label
@@ -63,9 +63,9 @@ class Domain(object):
             type=self.type,
             name=self.name,
             partitions=self.partitions,
-            min=self.min,
-            max=self.max,
-            interval=self.interval,
+            # min=self.min,
+            # max=self.max,
+            # interval=self.interval,
             value=self.value,
             key=self.key,
             label=self.label,
@@ -116,6 +116,7 @@ class DefaultDomain(Domain):
         self.partitions = DictList()
         self.map = dict()
         self.map[None] = self.NULL
+        self.where = None
 
     def compare(self, a, b):
         return value_compare(a.value, b.value)

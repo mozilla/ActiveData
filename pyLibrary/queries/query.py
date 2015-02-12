@@ -39,7 +39,7 @@ class Query(object):
         object.__init__(self)
         query = wrap(query)
 
-        self.name = query.name
+        # self.name = query.name
         self.format = query.format
 
         select = query.select
@@ -123,6 +123,17 @@ def _normalize_edge(edge, schema=None):
     else:
         if not edge.name and not isinstance(edge.value, basestring):
             Log.error("You must name compound edges: {{edge}}", {"edge":edge})
+
+        if isinstance(edge.value, (dict, list)) and not edge.domain:
+            # COMPLEX EDGE IS SHORT HAND
+            domain = _normalize_domain(schema=schema)
+            domain.dimension = Dict(fields=edge.value)
+
+            return Dict(
+                name=edge.name,
+                allowNulls=False if edge.allowNulls is False else True,
+                domain=domain
+            )
 
         return Dict(
             name=nvl(edge.name, edge.value),

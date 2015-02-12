@@ -11,9 +11,9 @@
 from __future__ import unicode_literals
 from __future__ import division
 from pyLibrary import convert
+from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
 from pyLibrary.env import http
-from pyLibrary.parsers import Log
 from pyLibrary.times.dates import Date
 
 from tests.base_test_class import ActiveDataBaseTest, error
@@ -49,7 +49,7 @@ class TestUnittests(ActiveDataBaseTest):
         response = http.get(self.service_url, data=query)
         if response.status_code != 200:
             error(response)
-        result = convert.json2value(convert.utf82unicode(response.content))
+        result = convert.json2value(convert.utf82unicode(response.all_content))
 
-        Log("result\n{{result|indent}}", {"result":result})
+        Log.note("result\n{{result|indent}}", {"result": result})
 

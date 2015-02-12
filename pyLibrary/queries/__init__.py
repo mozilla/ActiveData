@@ -8,11 +8,13 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
+from pyLibrary.dot import literal_field
 
 from pyLibrary.dot.dicts import Dict, nvl
+from pyLibrary.parsers import Log
+from pyLibrary.queries.es_query_util import aggregates1_4
 
 INDEX_CACHE = {}  # MATCH NAMES TO FULL CONNECTION INFO
-
 
 
 def _normalize_select(select, schema=None):
@@ -27,9 +29,20 @@ def _normalize_select(select, schema=None):
             aggregate="none"
         )
     else:
-        if not select.name:
-            select = select.copy()
-            select.name = nvl(select.value, select.aggregate)
+        output = select.copy()
+        output.name = nvl(select.name, select.value, select.aggregate)
 
-        select.aggregate = nvl(select.aggregate, "none")
-        return select
+        if not output.name:
+            Log.error("expecting select to have a name: {{select}}", {"select": select})
+
+        output.aggregate = nvl(canonical_aggregates.get(select.aggregate), select.aggregate, "none")
+        return output
+
+
+canonical_aggregates = {
+    "min": "minimum",
+    "max": "maximum",
+    "add": "sum",
+    "avg": "average",
+    "mean": "average"
+}

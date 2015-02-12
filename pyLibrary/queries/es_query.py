@@ -30,18 +30,20 @@ from pyLibrary.dot import nvl
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 
+
 class ESQuery(Container):
     """
     SEND GENERAL Qb QUERIES TO ElasticSearch
     """
+
     @use_settings
-    def __init__(self, host, index, type=None, port=9200, settings=None):
+    def __init__(self, host, index, alias=None, name=None, type=None, port=9200, settings=None):
         self.settings = settings
-        self.name = settings.name
+        self.name = nvl(name, alias, index)
         self._es = elasticsearch.Index(settings=settings)
         self.edges = Dict()
         self.worker = None
-        self.ready=False
+        self.ready = False
 
 
     def __json__(self):
@@ -63,6 +65,11 @@ class ESQuery(Container):
             self.worker.join()
         else:
             self.worker.join()
+
+    @property
+    def url(self):
+        return self._es.settings.host + "/" + self._es.settings.alias + "/" + self._es.settings.type
+
 
     def query(self, _query):
         if not self.ready:
@@ -108,7 +115,7 @@ class ESQuery(Container):
 
     def addDimension(self, dim):
         if isinstance(dim, list):
-            Log.error("Expecting dimension to be a object, not a list:\n{{dim}}", {"dim":dim})
+            Log.error("Expecting dimension to be a object, not a list:\n{{dim}}", {"dim": dim})
         self._addDimension(dim, [])
 
     def _addDimension(self, dim, path):
@@ -147,23 +154,21 @@ class ESQuery(Container):
                     if len(fields) == 1:
                         return [{"value": fields[0]}]
                     else:
-                        return [{"name": (edge + "["+str(i)+"]"), "value": v} for i, v in enumerate(fields)]
+                        return [{"name": (edge + "[" + str(i) + "]"), "value": v} for i, v in enumerate(fields)]
                 elif isinstance(fields, dict):
                     return [{"name": (edge + "." + k), "value": v} for k, v in fields.items()]
                 else:
                     Log.error("do not know how to handle")
 
             return [{
-                "name": edge,
-                "value": edge
-            }]
+                        "name": edge,
+                        "value": edge
+                    }]
         else:
             return [{
-                "name": nvl(edge.name, edge.value),
-                "value": edge.value
-            }]
-
-
+                        "name": nvl(edge.name, edge.value),
+                        "value": edge.value
+                    }]
 
 
     def update(self, command):
@@ -190,7 +195,7 @@ class ESQuery(Container):
             if not MVEL.isKeyword(k):
                 Log.error("Only support simple paths for now")
 
-            scripts.append("ctx._source."+k+" = "+MVEL.value2MVEL(v)+";\n")
+            scripts.append("ctx._source." + k + " = " + MVEL.value2MVEL(v) + ";\n")
         script = "".join(scripts)
 
         if results.hits.hits:
@@ -198,7 +203,7 @@ class ESQuery(Container):
             for id in results.hits.hits._id:
                 command.append({"update": {"_id": id}})
                 command.append({"script": script})
-            content = ("\n".join(convert.value2json(c) for c in command)+"\n").encode('utf-8')
+            content = ("\n".join(convert.value2json(c) for c in command) + "\n").encode('utf-8')
             self._es.cluster._post(
                 self._es.path + "/_bulk",
                 data=content,

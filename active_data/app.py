@@ -129,7 +129,10 @@ def main():
         globals()["default_elasticsearch"] = elasticsearch.Index(settings.elasticsearch)
         globals()["request_log_queue"] = request_logger.threaded_queue(size=2000)
 
-        from_es.config.default = settings.elasticsearch.copy()
+        from_es.config.default = {
+            "type": "elasticsearch",
+            "settings": settings.elasticsearch.copy()
+        }
 
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
         app.run(**unwrap(settings.flask))

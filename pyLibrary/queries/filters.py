@@ -178,7 +178,7 @@ def where2esfilter(where):
     """
     CONVERT Qb QUERY where CLAUSE TO ELASTICSEARCH FILTER FORMAT
     """
-    if where is True or where is None:
+    if where is True or where == None:
         return {"match_all": {}}
     if where is False:
         return False

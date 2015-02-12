@@ -21,65 +21,9 @@ DEBUG = False
 
 class Dict(dict):
     """
-    Dict is used to declare an instance of an anonymous type, and has good
-    features for manipulating JSON.  Anonymous types are necessary when
-    writing sophisticated list comprehensions, or queries, and to keep them
-    readable.  In many ways, dict() can act as an anonymous type, but it does
-    not have the features listed here.
-
-    0) a.b==a["b"]
-    1) by allowing dot notation, the IDE does tab completion and my spelling
-       mistakes get found at "compile time"
-    2) it deals with missing keys gracefully, so I can put it into set
-       operations (database operations) without raising exceptions
-       a = wrap({})
-       > a == {}
-       a.b == None
-       > True
-       a.b.c == None
-       > True
-       a[None] == None
-       > True
-    2b) missing keys is important when dealing with JSON, which is often almost
-        anything
-    2c) you loose the ability to perform <code>a is None</code> checks, must
-        always use <code>a == None</code> instead
-    3) remove an attribute by assigning Null:  setting a
-    4) you can access paths as a variable:   a["b.c"]==a.b.c
-    5) you can set paths to values, missing dicts along the path are created:
-       a = wrap({})
-       > a == {}
-       a["b.c"] = 42
-       > a == {"b": {"c": 42}}
-    6) attribute names (keys) are corrected to unicode - it appears Python
-       object.getattribute() is called with str() even when using
-       <code>from __future__ import unicode_literals</code>
-
-    More on missing values: http://www.np.org/NA-overview.html
-    it only considers the legitimate-field-with-missing-value (Statistical Null)
-    and does not look at field-does-not-exist-in-this-context (Database Null)
-
-    The Dict is a common pattern in many frameworks even though it goes by
-    different names, some examples are:
-
-    * jinja2.environment.Environment.getattr()
-    * argparse.Environment() - code performs setattr(e, name, value) on
-      instances of Environment to provide dot(.) accessors
-    * collections.namedtuple() - gives attribute names to tuple indicies
-      effectively providing <code>a.b</code> rather than <code>a["b"]</code>
-      offered by dicts
-    * DotDict allows dot notation, and path setting: https://github.com/mozilla/configman/blob/master/configman/dotdict.py
-    * C# Linq requires anonymous types to avoid large amounts of boilerplate code.
-    * D3 has many of these conventions ["The function's return value is
-      then used to set each element's attribute. A null value will remove the
-      specified attribute."](https://github.com/mbostock/d3/wiki/Selections#attr)
-
-
-    http://www.saltycrane.com/blog/2012/08/python-data-object-motivated-desire-mutable-namedtuple-default-values/
-
+    Please see README.md
     """
 
-    #  http://www.saltycrane.com/
     def __init__(self, **map):
         """
         CALLING Dict(**something) WILL RESULT IN A COPY OF something, WHICH
@@ -91,8 +35,10 @@ class Dict(dict):
             for k, v in map.items():
                 d[literal_field(k)] = unwrap(v)
         else:
-            if map:
-                _set(self, "__dict__", map)
+            d = _get(self, "__dict__")
+            for k, v in map.items():
+                if v != None:
+                    d[literal_field(k)] = unwrap(v)
 
     def __bool__(self):
         return True

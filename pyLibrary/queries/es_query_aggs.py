@@ -52,113 +52,26 @@ def es_aggsop(es, mvel, query):
         esQuery = d.append_query(esQuery, start)
         start += d.num_columns
 
-    esQuery.size = nvl(query.limit, 0)
-    esQuery.filter = simplify_esfilter(query.where)
+    if query.where:
+        filter = simplify_esfilter(query.where)
+        esQuery = {"aggs": {"main_filter": set_default({"filter": filter}, esQuery)}}
+
     es_duration = Timer("ES query time")
     with es_duration:
         result = es_query_util.post(es, esQuery, query.limit)
     meta = Dict(es_response_time=es_duration.duration.total_seconds())
 
-    if query.format == "cube":
-        if any(isinstance(d, DefaultDecoder) for d in decoders):
-            # ENUMERATE THE DOMAINS, IF UNKNOWN AT QUERY TIME
-            for row, agg in aggs_iterator(result.aggregations, start):
-                if agg.doc_count:  # DO NOT COUNT STUFF THAT HAS NO PRESENCE
-                    for d in decoders:
-                        d.count(row)
-            for d in decoders:
-                d.done_count()
+    aggs = result.aggregations
+    if query.where:
+        aggs = aggs.main_filter
 
-        new_edges = [d.edge for d in decoders]
-        dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-        matricies = [(s, Matrix(dims=dims, zeros=(s.aggregate == "count"))) for s in select]
-
-        for row, agg in aggs_iterator(result.aggregations, start):
-            coord = tuple(d.get_part(row) for d in decoders)
-            for s, m in matricies:
-                # name = literal_field(s.name)
-                if s.aggregate == "count" and s.value == None:
-                    m[coord] = agg.doc_count
-                else:
-                    if m[coord] != None:
-                        Log.error("Not expected")
-                    m[coord] = agg[literal_field(s.name)].value
-
-        cube = Cube(query.select, new_edges, {s.name: m for s, m in matricies})
-        cube.frum = query
-        cube.meta = meta
-        return cube
-    elif query.format == "table":
-        new_edges = count_dims(result.aggregations, decoders)
-        header = new_edges.name + select.name
-
-        data = []
-        for row, agg in aggs_iterator(result.aggregations, start):
-            output = copy(row)
-            for s in select:
-                if s.aggregate == "count" and s.value == None:
-                    output.append(agg.doc_count)
-                else:
-                    output.append(agg[literal_field(s.name)].value)
-            data.append(output)
-        return Dict(
-            meta=meta,
-            header=header,
-            data=data
-        )
-
-    elif query.format == "list":
-        new_edges = count_dims(result.aggregations, decoders)
-        data = []
-        for row, agg in aggs_iterator(result.aggregations, start):
-            output = {e.name: r for e, r in zip(new_edges, row)}
-
-            for s in select:
-                if s.aggregate == "count" and s.value == None:
-                    output[literal_field(s.name)] = agg.doc_count
-                else:
-                    output[literal_field(s.name)] = agg[literal_field(s.name)].value
-            data.append(output)
-        return Dict(
-            meta=meta,
-            data=data
-        )
-    else:
+    try:
+        output = format_dispatch[query.format](decoders, aggs, start, query, select)
+        output.meta = meta
+        return output
+    except Exception, e:
         Log.error("Format {{format|quote}} not supported yet", {"format": query.format})
 
-
-def count_dims(aggs, decoders):
-    new_edges = []
-    for d in decoders:
-        if d.edge.domain.type == "default":
-            d.edge = copy(d.edge)
-            d.edge.domain.partitions = set()
-        new_edges.append(d.edge)
-
-    _count_dims(aggs, decoders, len(decoders) - 1)
-
-    # REWRITE THE DOMAINS TO REAL DOMAIN OBJECTS
-    for e in new_edges:
-        if e.domain.type == "default":
-            e.domain = SimpleSetDomain(
-                key="value",
-                partitions=[{"value": v} for i, v in enumerate(Q.sort(e.domain.partitions))]
-            )
-
-    return wrap(new_edges)
-
-
-def _count_dims(aggs, decoders, rem):
-    d = decoders[rem]
-    buckets = aggs[literal_field(str(d.start))].buckets
-
-    if isinstance(d, DefaultDecoder):
-        domain = d.edge.domain
-        domain.partitions |= set(buckets.key)
-
-    if rem > 0:
-        for b in buckets:
-            _count_dims(b, decoders, rem - 1)
 
 
 class AggsDecoder(object):
@@ -268,7 +181,10 @@ class DimFieldListDecoder(DefaultDecoder):
                 str(start + i) + "_missing": set_default({"missing": {"field": v}}, esQuery),
             }})
 
-        filter = simplify_esfilter(self.edge.domain.where)
+        if self.edge.domain.where:
+            filter = simplify_esfilter(self.edge.domain.where)
+            esQuery = {"aggs": {str(start + i) + "_filter": set_default({"filter": filter}, esQuery)}}
+
         if not isinstance(filter.match_all, dict):
             Log.error("Extra depth needed into the aggs")
         return esQuery
@@ -337,6 +253,9 @@ def aggs_iterator(aggs, depth):
     coord = [None] * depth
 
     def _aggs_iterator(aggs, d):
+        if aggs.keys()[0].endswith("_filter"):
+            aggs = aggs[aggs.keys()[0].endswith("_filter")]
+
         if d > 0:
             for b in aggs[str(d)].buckets:
                 coord[d] = b.key
@@ -356,3 +275,77 @@ def aggs_iterator(aggs, depth):
         yield coord, a
 
 
+
+def count_dim(decoders, aggs, start):
+    if any(isinstance(d, DefaultDecoder) for d in decoders):
+        # ENUMERATE THE DOMAINS, IF UNKNOWN AT QUERY TIME
+        for row, agg in aggs_iterator(aggs, start):
+            if agg.doc_count:  # DO NOT COUNT STUFF THAT HAS NO PRESENCE
+                for d in decoders:
+                    d.count(row)
+        for d in decoders:
+            d.done_count()
+    new_edges = [d.edge for d in decoders]
+    return new_edges
+
+
+def format_cube(decoders, aggs, start, query, select):
+    new_edges = count_dim(decoders, aggs, start)
+    dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
+    matricies = [(s, Matrix(dims=dims, zeros=(s.aggregate == "count"))) for s in select]
+    for row, agg in aggs_iterator(aggs, start):
+        coord = tuple(d.get_part(row) for d in decoders)
+        for s, m in matricies:
+            # name = literal_field(s.name)
+            if s.aggregate == "count" and s.value == None:
+                m[coord] = agg.doc_count
+            else:
+                if m[coord] != None:
+                    Log.error("Not expected")
+                m[coord] = agg[literal_field(s.name)].value
+    cube = Cube(query.select, new_edges, {s.name: m for s, m in matricies})
+    cube.frum = query
+    return cube
+
+
+def format_table(decoders, aggs, start, select, result):
+    new_edges = count_dim(decoders, aggs, start)
+    header = new_edges.name + select.name
+    data = []
+    for row, agg in aggs_iterator(aggs, start):
+        output = copy(row)
+        for s in select:
+            if s.aggregate == "count" and s.value == None:
+                output.append(agg.doc_count)
+            else:
+                output.append(agg[literal_field(s.name)].value)
+        data.append(output)
+    return Dict(
+        header=header,
+        data=data
+    )
+
+
+def format_list(decoders, aggs, start, query, select):
+    # new_edges = count_dim(decoders, aggs, start)
+    data = []
+    for row, agg in aggs_iterator(aggs, start):
+        output = {e.name: r for e, r in zip(query.edges, row)}
+
+        for s in select:
+            if s.aggregate == "count" and s.value == None:
+                output[s.name] = agg.doc_count
+            else:
+                output[s.name] = agg[literal_field(s.name)].value
+        data.append(output)
+    output = Dict(
+        data=data
+    )
+    return output
+
+
+format_dispatch = {
+    "cube": format_cube,
+    "table": format_table,
+    "list": format_list
+}

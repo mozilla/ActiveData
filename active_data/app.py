@@ -73,13 +73,13 @@ def query(path):
                 "access-control-allow-origin": "*"
             })
 
-            result.meta.active_data_response_time = total_duration.duration.total_seconds()
-            return Response(
-                convert.unicode2utf8(convert.value2json(result)),
-                direct_passthrough=True, #FOR STREAMING
-                status=200,
-                headers=unwrap(outbound_header)
-            )
+        result.meta.active_data_response_time = total_duration.duration.total_seconds()
+        return Response(
+            convert.unicode2utf8(convert.value2json(result)),
+            direct_passthrough=True, #FOR STREAMING
+            status=200,
+            headers=unwrap(outbound_header)
+        )
     except Exception, e:
         e = Except.wrap(e)
         Log.warning("problem", e)

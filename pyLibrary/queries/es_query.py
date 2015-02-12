@@ -26,7 +26,7 @@ from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.MVEL import _MVEL
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import nvl
+from pyLibrary.dot import nvl, unwrap
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 
@@ -46,10 +46,14 @@ class ESQuery(Container):
         self.ready = False
 
 
-    def __json__(self):
+    def __dict__(self):
         settings = self.settings.copy()
         settings.settings = None
-        return convert.value2json(settings)
+        return settings
+
+    def __json__(self):
+        return convert.value2json(self.__dict__())
+
 
     def __enter__(self):
         self.ready = True

@@ -14,7 +14,8 @@ from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
 from pyLibrary.env import http
-from pyLibrary.times.dates import Date
+from pyLibrary.times.dates import Date, Duration
+from pyLibrary.times.timer import Timer
 
 from tests.base_test_class import ActiveDataBaseTest, error
 
@@ -36,7 +37,7 @@ class TestUnittests(ActiveDataBaseTest):
                 "result.ok"
             ],
             "where": {
-                "gte": {"timestamp": Date.now().milli}
+                "gte": {"timestamp": (Date.now()-(Duration.DAY*7)).milli}
             },
             "format": "cube",
             "samples": {
@@ -46,9 +47,10 @@ class TestUnittests(ActiveDataBaseTest):
 
         query = convert.unicode2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
-        response = http.get(self.service_url, data=query)
-        if response.status_code != 200:
-            error(response)
+        with Timer("query"):
+            response = http.get(self.service_url, data=query)
+            if response.status_code != 200:
+                error(response)
         result = convert.json2value(convert.utf82unicode(response.all_content))
 
         Log.note("result\n{{result|indent}}", {"result": result})

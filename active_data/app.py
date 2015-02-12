@@ -18,6 +18,7 @@ from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot import Dict, wrap, unwrap
 from pyLibrary.env import elasticsearch
 from pyLibrary.queries import Q, from_es
+from pyLibrary.times.timer import Timer
 
 
 app = Flask(__name__)
@@ -57,34 +58,40 @@ from2context = Dict()
 @app.route('/query', defaults={'path': ''}, methods=['GET'])
 @app.route('/<path:path>', methods=['GET'])
 def query(path):
+    total_duration = Timer("total duration")
     try:
-        try:
-            data = convert.json2value(convert.utf82unicode(flask.request.environ['body_copy']))
-            record_request(flask.request, data, None, None)
-        except Exception, e:
-            record_request(flask.request, None, flask.request.environ['body_copy'], e)
+        with total_duration:
+            try:
+                data = convert.json2value(convert.utf82unicode(flask.request.environ['body_copy']))
+                record_request(flask.request, data, None, None)
+            except Exception, e:
+                record_request(flask.request, None, flask.request.environ['body_copy'], e)
 
-        result = Q.run(data)
+            result = Q.run(data)
 
-        outbound_header = wrap({
-            "access-control-allow-origin": "*"
-        })
+            outbound_header = wrap({
+                "access-control-allow-origin": "*"
+            })
 
-        return Response(
-            convert.unicode2utf8(convert.value2json(result)),
-            direct_passthrough=True, #FOR STREAMING
-            status=200,
-            headers=unwrap(outbound_header)
-        )
+            result.meta.active_data_response_time = total_duration.duration.total_seconds()
+            return Response(
+                convert.unicode2utf8(convert.value2json(result)),
+                direct_passthrough=True, #FOR STREAMING
+                status=200,
+                headers=unwrap(outbound_header)
+            )
     except Exception, e:
-        Log.warning("problem", e)
-
         e = Except.wrap(e)
+        Log.warning("problem", e)
+        e = e.__dict__()
+        e.meta.active_data_response_time = total_duration.duration.total_seconds()
+
+
+
         return Response(
             convert.unicode2utf8(convert.value2json(e)),
             status=400
         )
-
 
 # Snagged from http://stackoverflow.com/questions/10999990/python-flask-how-to-get-whole-raw-post-body
 class WSGICopyBody(object):

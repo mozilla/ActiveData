@@ -44,7 +44,7 @@ def loadColumns(es, frum):
     output = INDEX_CACHE.get(frum.name)
     if output:
         # VERIFY es IS CONSITENT
-        if frum.url != output.es.url:
+        if frum.url != output.url:
             Log.error("Using {{name}} for two different containers\n\t{{existing}}\n\t{{new}}", {
                 "name": frum.name,
                 "existing": output.es.url,
@@ -62,6 +62,7 @@ def loadColumns(es, frum):
     properties = schema.properties
     output = Dict()
     output.name = frum.name
+    output.url = frum.url
     output.es = es
     output.columns = parseColumns("dummy value", frum.name, properties)
 

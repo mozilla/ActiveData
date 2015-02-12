@@ -27,7 +27,7 @@ def inverse(d):
 
 
 def nvl(*args):
-    # pick the first none-null value
+    # pick the first not null value
     for a in args:
         if a != None:
             return wrap(a)

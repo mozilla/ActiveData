@@ -77,6 +77,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
     @classmethod
     def tearDownClass(cls):
         cls.please_stop.go()
+        Log.stop()
         if cls.thread:
             cls.thread.stopped.wait_for_go()
 

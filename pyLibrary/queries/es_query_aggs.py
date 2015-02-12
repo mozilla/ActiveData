@@ -15,7 +15,6 @@ from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, nvl
 from pyLibrary.queries import es_query_util, Q
-from pyLibrary.queries.Q import accumulate
 from pyLibrary.queries.cube import Cube
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain
 
@@ -24,7 +23,8 @@ from pyLibrary.queries.domains import PARTITION, SimpleSetDomain
 # THE NEW AND FANTASTIC AGGS OPERATION IN ELASTICSEARCH!
 # WE ALL WIN NOW!
 from pyLibrary.queries.es_query_util import aggregates1_4
-from pyLibrary.queries.filters import simplify_esfilter, where2esfilter
+from pyLibrary.queries.filters import simplify_esfilter
+from pyLibrary.times.timer import Timer
 
 
 def is_aggsop(es, query):
@@ -54,7 +54,10 @@ def es_aggsop(es, mvel, query):
 
     esQuery.size = nvl(query.limit, 0)
     esQuery.filter = simplify_esfilter(query.where)
-    result = es_query_util.post(es, esQuery, query.limit)
+    es_duration = Timer("ES query time")
+    with es_duration:
+        result = es_query_util.post(es, esQuery, query.limit)
+    meta = Dict(es_response_time=es_duration.duration.total_seconds())
 
     if query.format == "cube":
         if any(isinstance(d, DefaultDecoder) for d in decoders):
@@ -79,10 +82,11 @@ def es_aggsop(es, mvel, query):
                 else:
                     if m[coord] != None:
                         Log.error("Not expected")
-                    m[coord] = agg[s.name].value
+                    m[coord] = agg[literal_field(s.name)].value
 
         cube = Cube(query.select, new_edges, {s.name: m for s, m in matricies})
         cube.frum = query
+        cube.meta = meta
         return cube
     elif query.format == "table":
         new_edges = count_dims(result.aggregations, decoders)
@@ -97,7 +101,11 @@ def es_aggsop(es, mvel, query):
                 else:
                     output.append(agg[literal_field(s.name)].value)
             data.append(output)
-        return {'header': header, "data": data}
+        return Dict(
+            meta=meta,
+            header=header,
+            data=data
+        )
 
     elif query.format == "list":
         new_edges = count_dims(result.aggregations, decoders)
@@ -111,7 +119,10 @@ def es_aggsop(es, mvel, query):
                 else:
                     output[literal_field(s.name)] = agg[literal_field(s.name)].value
             data.append(output)
-        return data
+        return Dict(
+            meta=meta,
+            data=data
+        )
     else:
         Log.error("Format {{format|quote}} not supported yet", {"format": query.format})
 

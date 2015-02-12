@@ -103,6 +103,7 @@ class Log(object):
         if profiles.ON and hasattr(cls, "settings"):
             profiles.write(cls.settings.profile)
         cls.main_log.stop()
+        cls.main_log = Log_usingStream("sys.stdout")
 
     @classmethod
     def new_instance(cls, settings):
@@ -487,14 +488,17 @@ class Except(Exception):
     def __unicode__(self):
         return unicode(str(self))
 
-    def __json__(self):
-        return encode(Dict(
+    def __dict__(self):
+        return Dict(
             type=self.type,
             template=self.template,
             params=self.params,
             cause=self.cause,
             trace=self.trace
-        ))
+        )
+
+    def __json__(self):
+        return encode(self.__dict__())
 
 
 class BaseLog(object):

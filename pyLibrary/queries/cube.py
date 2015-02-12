@@ -330,11 +330,13 @@ class Cube(object):
         else:
             return float(self.data)
 
-
-    def __json__(self):
-        output = Dict(
+    def __dict__(self):
+        return Dict(
             select=self.select,
             edges=self.edges,
-            data={k: v.cube for k, v in self.data.items()}
+            data={k: v.cube for k, v in self.data.items()},
+            meta=self.meta
         )
-        return convert.value2json(output)
+
+    def __json__(self):
+        return convert.value2json(self.__dict__())

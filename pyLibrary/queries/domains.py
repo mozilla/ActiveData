@@ -51,14 +51,12 @@ class Domain(object):
         self.dimension = desc.dimension
 
     def __copy__(self):
-        return Domain(**unwrap(self.dict))
+        return Domain(**self.__dict__())
 
     def copy(self):
-        return Domain(**unwrap(self.dict))
+        return Domain(**self.__dict__())
 
-
-    @property
-    def dict(self):
+    def __dict__(self):
         return Dict(
             type=self.type,
             name=self.name,
@@ -74,7 +72,7 @@ class Domain(object):
         )
 
     def __json__(self):
-        return convert.value2json(self.dict)
+        return convert.value2json(self.__dict__())
 
 
 class ValueDomain(Domain):

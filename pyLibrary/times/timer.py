@@ -32,7 +32,7 @@ class Timer(object):
 
     def __init__(self, description, param=None, debug=True):
         self.template = description
-        self.param = nvl(wrap(param), Dict())
+        self.param = nvl(wrap(param), {})
         self.debug = debug
         self.interval = -1
 

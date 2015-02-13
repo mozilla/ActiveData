@@ -10,6 +10,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 from copy import copy
+from pyLibrary import convert
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
@@ -274,8 +275,6 @@ def aggs_iterator(aggs, depth):
     for a in _aggs_iterator(aggs, depth - 1):
         yield coord, a
 
-
-
 def count_dim(decoders, aggs, start):
     if any(isinstance(d, DefaultDecoder) for d in decoders):
         # ENUMERATE THE DOMAINS, IF UNKNOWN AT QUERY TIME
@@ -311,35 +310,57 @@ def format_cube(decoders, aggs, start, query, select):
 def format_table(decoders, aggs, start, select, result):
     new_edges = count_dim(decoders, aggs, start)
     header = new_edges.name + select.name
-    data = []
-    for row, agg in aggs_iterator(aggs, start):
-        output = copy(row)
-        for s in select:
-            if s.aggregate == "count" and s.value == None:
-                output.append(agg.doc_count)
-            else:
-                output.append(agg[literal_field(s.name)].value)
-        data.append(output)
+
+    def data():
+        for row, agg in aggs_iterator(aggs, start):
+            output = copy(row)
+            for s in select:
+                if s.aggregate == "count" and s.value == None:
+                    output.append(agg.doc_count)
+                else:
+                    output.append(agg[literal_field(s.name)].value)
+            yield output
+
     return Dict(
         header=header,
-        data=data
+        data=data()
     )
+
+def format_tab(decoders, aggs, start, select, result):
+    table= format_table(decoders, aggs, start, select, result)
+
+    def data():
+        yield "\t".join(map(convert.string2quote, table.header))
+        for d in table.data:
+            yield "\t".join(map(convert.string2quote, d))
+
+    return data()
+
+def format_csv(decoders, aggs, start, select, result):
+    table= format_table(decoders, aggs, start, select, result)
+
+    def data():
+        yield ", ".join(map(convert.string2quote, table.header))
+        for d in table.data:
+            yield ", ".join(map(convert.string2quote, d))
+
+    return data()
 
 
 def format_list(decoders, aggs, start, query, select):
-    # new_edges = count_dim(decoders, aggs, start)
-    data = []
-    for row, agg in aggs_iterator(aggs, start):
-        output = {e.name: r for e, r in zip(query.edges, row)}
+    def data():
+        for row, agg in aggs_iterator(aggs, start):
+            output = {e.name: r for e, r in zip(query.edges, row)}
 
-        for s in select:
-            if s.aggregate == "count" and s.value == None:
-                output[s.name] = agg.doc_count
-            else:
-                output[s.name] = agg[literal_field(s.name)].value
-        data.append(output)
+            for s in select:
+                if s.aggregate == "count" and s.value == None:
+                    output[s.name] = agg.doc_count
+                else:
+                    output[s.name] = agg[literal_field(s.name)].value
+            yield output
+
     output = Dict(
-        data=data
+        data=data()
     )
     return output
 
@@ -347,5 +368,7 @@ def format_list(decoders, aggs, start, query, select):
 format_dispatch = {
     "cube": format_cube,
     "table": format_table,
-    "list": format_list
+    "list": format_list,
+    "csv": format_csv,
+    "tab": format_tab
 }

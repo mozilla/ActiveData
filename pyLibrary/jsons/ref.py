@@ -10,11 +10,11 @@
 
 
 import os
-from pyLibrary.dot import set_default, wrap, Null
+from pyLibrary.dot import set_default, wrap
 from pyLibrary.parsers import URL
 
 
-DEBUG = True
+DEBUG = False
 convert = None
 Log = None
 
@@ -179,6 +179,8 @@ def get_file(ref, url):
     path = ref.path if os.sep != "\\" else ref.path[1::].replace("/", "\\")
 
     try:
+        if DEBUG:
+            Log.note("reading file {{path}}", {"path":path})
         content = File(path).read()
     except Exception, e:
         Log.error("Could not read file {{filename}}", {"filename": path}, e)

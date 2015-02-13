@@ -81,8 +81,6 @@ class Queue(object):
         max - LIMIT THE NUMBER IN THE QUEUE, IF TOO MANY add() AND extend() WILL BLOCK
         silent - COMPLAIN IF THE READERS ARE TOO SLOW
         """
-        if not Log:
-            _late_import()
         self.max = nvl(max, 2 ** 10)
         self.silent = silent
         self.keep_running = True
@@ -286,7 +284,7 @@ class Thread(object):
         self.please_stop = self.kwargs["please_stop"]
 
         self.stopped = Signal()
-
+        self.cprofiler = None
 
     def __enter__(self):
         return self
@@ -312,6 +310,11 @@ class Thread(object):
         self.please_stop.go()
 
     def _run(self):
+        if Log.cprofiler:
+            import cProfile
+            self.cprofiler = cProfile.Profile()
+            self.cprofiler.enable()
+
         self.id = thread.get_ident()
         with ALL_LOCK:
             ALL[self.id] = self
@@ -333,6 +336,12 @@ class Thread(object):
             del self.target, self.args, self.kwargs
             with ALL_LOCK:
                 del ALL[self.id]
+
+        if self.cprofiler:
+            import pstats
+            self.cprofiler.disable()
+            Log.cprofiler_stats.add(pstats.Stats(self.cprofiler))
+            del self.cprofiler
 
     def is_alive(self):
         return not self.stopped
@@ -446,7 +455,8 @@ class Thread(object):
                 except Exception, e:
                     pass
         except KeyboardInterrupt, SystemExit:
-            pass
+            please_stop.go()
+            Log.alert("SIGINT Detected!  Stopping...")
 
 
     @staticmethod

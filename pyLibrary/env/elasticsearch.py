@@ -56,7 +56,7 @@ class Index(object):
 
         self.debug = debug
         if self.debug:
-            Log.note("elasticsearch debugging is on")
+            Log.alert("elasticsearch debugging is on")
 
         self.settings = settings
         self.cluster = Cluster(settings)
@@ -464,11 +464,12 @@ class Cluster(object):
                 Log.error("data must be utf8 encoded string")
 
             if self.debug:
-                Log.note("{{url}}:\n{{data|left(300)|indent}}", {"url": url, "data": kwargs["data"]})
+                sample = kwargs["data"][:300]
+                Log.note("{{url}}:\n{{data|indent}}", {"url": url, "data": sample})
 
             response = http.post(url, **kwargs)
             if self.debug:
-                Log.note(utf82unicode(response.content)[:130])
+                Log.note("response: {{response}}", {"response": utf82unicode(response.content)[:130]})
             details = convert.json2value(utf82unicode(response.content))
             if details.error:
                 Log.error(convert.quote2string(details.error))
@@ -492,7 +493,7 @@ class Cluster(object):
             kwargs.setdefault("timeout", 600)
             response = http.get(url, **kwargs)
             if self.debug:
-                Log.note(utf82unicode(response.content)[:130])
+                Log.note("response: {{response}}", {"response": utf82unicode(response.content)[:130]})
             details = wrap(convert.json2value(utf82unicode(response.content)))
             if details.error:
                 Log.error(details.error)
@@ -504,13 +505,14 @@ class Cluster(object):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
 
         if self.debug:
-            Log.note("PUT {{url}}:\n{{data|indent}}", {"url": url, "data": kwargs["data"]})
+            sample = kwargs["data"][:300]
+            Log.note("PUT {{url}}:\n{{data|indent}}", {"url": url, "data": sample})
         try:
             kwargs = wrap(kwargs)
             kwargs.setdefault("timeout", 60)
             response = http.put(url, **kwargs)
             if self.debug:
-                Log.note(utf82unicode(response.content))
+                Log.note("response: {{response}}", {"response": utf82unicode(response.content)[0:300:]})
             return response
         except Exception, e:
             Log.error("Problem with call to {{url}}", {"url": url}, e)

@@ -12,7 +12,7 @@ from __future__ import division
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND, SUM, OR, UNION
-from pyLibrary.dot import nvl, split_field, set_default
+from pyLibrary.dot import nvl, split_field, set_default, Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap, unwrap
 from pyLibrary.queries.es_query_util import aggregates
@@ -105,7 +105,7 @@ def es_fieldop(es, query):
                 else:
                     r[s.name] = row[source][s.value]
             data.append(r)
-        return data
+        return Dict(data=data)
     elif query.format == "table":
         header = [s.name for s in select]
         map = {s.name: i for i, s in enumerate(select)} # MAP FROM name TO COLUMN INDEX
@@ -118,7 +118,10 @@ def es_fieldop(es, query):
                 else:
                     r[map[s.name]] = row[source][s.value]
             data.append(r)
-        return {"header": header, "data":data}
+        return Dict(
+            header=header,
+            data=data
+        )
     elif query.format == "cube":
         matricies = {}
         for s in select:

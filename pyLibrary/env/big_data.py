@@ -22,6 +22,7 @@ from __future__ import division
 import gzip
 from io import BytesIO
 from tempfile import TemporaryFile
+import zipfile
 import zlib
 
 from pyLibrary.debugs.logs import Log
@@ -61,7 +62,7 @@ class FileString(object):
 
     def __getslice__(self, i, j):
         self.file.seek(i)
-        output = self.file.read(j-i).decode(self.encoding)
+        output = self.file.read(j - i).decode(self.encoding)
         return output
 
     def __add__(self, other):
@@ -93,6 +94,7 @@ class FileString(object):
 def safe_size(source):
     """
     READ THE source UP TO SOME LIMIT, THEN COPY TO A FILE IF TOO BIG
+    RETURN A str() OR A FileString()
     """
 
     total_bytes = 0
@@ -109,9 +111,12 @@ def safe_size(source):
             del bb
             b = source.read(MIN_READ_SIZE)
             while b:
+                total_bytes += len(b)
                 data.write(b)
                 b = source.read(MIN_READ_SIZE)
             data.seek(0)
+            Log.note("Using file of size {{length}} instead of str()", {"length": total_bytes})
+
             return data
         b = source.read(MIN_READ_SIZE)
 
@@ -160,8 +165,6 @@ class LazyLines(object):
             Log.error("Problem indexing", e)
 
 
-
-
 class CompressedLines(LazyLines):
     """
     KEEP COMPRESSED HTTP (content-type: gzip) IN BYTES ARRAY
@@ -178,13 +181,7 @@ class CompressedLines(LazyLines):
         self._iter = self.__iter__()
 
     def __iter__(self):
-        decompressor = zlib.decompressobj(16 + zlib.MAX_WBITS)
-
-        def blocks():
-            for i in range(0, Math.ceiling(len(self.compressed), MIN_READ_SIZE), MIN_READ_SIZE):
-                yield decompressor.decompress(self.compressed[i: i + MIN_READ_SIZE])
-
-        return LazyLines(ibytes2ilines(blocks())).__iter__()
+        return LazyLines(ibytes2ilines(bytes2ibytes(self.compressed, MIN_READ_SIZE))).__iter__()
 
     def __getslice__(self, i, j):
         if i == self._next:
@@ -215,6 +212,23 @@ class CompressedLines(LazyLines):
         return FileString(new_file)
 
 
+def bytes2ibytes(compressed, size):
+    """
+    CONVERT AN ARRAY TO A BYTE-BLOCK GENERATOR
+    USEFUL IN THE CASE WHEN WE WANT TO LIMIT HOW MUCH WE FEED ANOTHER
+    GENERATOR (LIKE A DECOMPRESSOR)
+    """
+
+    decompressor = zlib.decompressobj(16 + zlib.MAX_WBITS)
+
+    for i in range(0, Math.ceiling(len(compressed), size), size):
+        try:
+            block = compressed[i: i + size]
+            yield decompressor.decompress(block)
+        except Exception, e:
+            Log.error("Not expected", e)
+
+
 def ibytes2ilines(stream):
     """
     CONVERT A GENERATOR OF (ARBITRARY-SIZED) byte BLOCKS
@@ -231,11 +245,23 @@ def ibytes2ilines(stream):
                 e = buffer.find(b"\n")
             except StopIteration:
                 yield buffer[s:]
+                del stream
                 return
 
         yield buffer[s:e]
         s = e + 1
         e = buffer.find(b"\n", s)
+
+def sbytes2ilines(stream):
+    """
+    CONVERT A STREAM OF (ARBITRARY-SIZED) byte BLOCKS
+    TO A LINE (CR-DELIMITED) GENERATOR
+    """
+    def read():
+        output = stream.read(MIN_READ_SIZE)
+        return output
+
+    return ibytes2ilines({"next": read})
 
 
 class GzipLines(CompressedLines):
@@ -249,3 +275,21 @@ class GzipLines(CompressedLines):
     def __iter__(self):
         buff = BytesIO(self.compressed)
         return LazyLines(gzip.GzipFile(fileobj=buff, mode='r')).__iter__()
+
+
+class ZipfileLines(CompressedLines):
+    """
+    SAME AS CompressedLines, BUT USING THE GzipFile FORMAT FOR COMPRESSED BYTES
+    """
+
+    def __init__(self, compressed):
+        CompressedLines.__init__(self, compressed)
+
+    def __iter__(self):
+        buff = BytesIO(self.compressed)
+        archive = zipfile.ZipFile(buff, mode='r')
+        names = archive.namelist()
+        if len(names) != 1:
+            Log.error("*.zip file has {{num}} files, expecting only one.", {"num": len(names)})
+        stream = archive.open(names[0], "r")
+        return LazyLines(sbytes2ilines(stream)).__iter__()

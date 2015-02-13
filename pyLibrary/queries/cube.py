@@ -34,6 +34,7 @@ class Cube(object):
 
         self.is_value = False if isinstance(select, list) else True
         self.select = select
+        self.meta = Dict()       # PUT EXTRA MARKUP HERE
 
         # ENSURE frum IS PROPER FORM
         if isinstance(select, list):

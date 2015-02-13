@@ -55,7 +55,9 @@ def es_aggsop(es, mvel, query):
 
     if query.where:
         filter = simplify_esfilter(query.where)
-        esQuery = {"aggs": {"main_filter": set_default({"filter": filter}, esQuery)}}
+        esQuery = Dict(
+            aggs={"main_filter": set_default({"filter": filter}, esQuery)}
+        )
 
     es_duration = Timer("ES query time")
     with es_duration:
@@ -71,7 +73,9 @@ def es_aggsop(es, mvel, query):
         output.meta = meta
         return output
     except Exception, e:
-        Log.error("Format {{format|quote}} not supported yet", {"format": query.format})
+        if query.format not in format_dispatch:
+            Log.error("Format {{format|quote}} not supported yet", {"format": query.format}, e)
+        Log.error("Some problem", e)
 
 
 
@@ -186,8 +190,6 @@ class DimFieldListDecoder(DefaultDecoder):
             filter = simplify_esfilter(self.edge.domain.where)
             esQuery = {"aggs": {str(start + i) + "_filter": set_default({"filter": filter}, esQuery)}}
 
-        if not isinstance(filter.match_all, dict):
-            Log.error("Extra depth needed into the aggs")
         return esQuery
 
     def count(self, row):
@@ -254,8 +256,9 @@ def aggs_iterator(aggs, depth):
     coord = [None] * depth
 
     def _aggs_iterator(aggs, d):
-        if aggs.keys()[0].endswith("_filter"):
-            aggs = aggs[aggs.keys()[0].endswith("_filter")]
+        filter_name = [k for k in aggs.keys() if k.endswith("_filter")]
+        if filter_name:
+            aggs = aggs[filter_name[0]]
 
         if d > 0:
             for b in aggs[str(d)].buckets:
@@ -284,7 +287,7 @@ def count_dim(decoders, aggs, start):
                     d.count(row)
         for d in decoders:
             d.done_count()
-    new_edges = [d.edge for d in decoders]
+    new_edges = wrap([d.edge for d in decoders])
     return new_edges
 
 
@@ -299,7 +302,7 @@ def format_cube(decoders, aggs, start, query, select):
             if s.aggregate == "count" and s.value == None:
                 m[coord] = agg.doc_count
             else:
-                if m[coord] != None:
+                if m[coord]:
                     Log.error("Not expected")
                 m[coord] = agg[literal_field(s.name)].value
     cube = Cube(query.select, new_edges, {s.name: m for s, m in matricies})
@@ -307,7 +310,7 @@ def format_cube(decoders, aggs, start, query, select):
     return cube
 
 
-def format_table(decoders, aggs, start, select, result):
+def format_table(decoders, aggs, start, query, select):
     new_edges = count_dim(decoders, aggs, start)
     header = new_edges.name + select.name
 

@@ -62,7 +62,7 @@ def URL(value):
         port=output.port,
         path=output.path,
         query=query,
-        fragmen=output.fragment
+        fragment=output.fragment
     )
 
 

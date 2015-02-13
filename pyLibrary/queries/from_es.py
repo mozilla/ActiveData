@@ -43,7 +43,7 @@ def wrap_from(frum, schema=None):
         settings = set_default({
             "index": frum,
             "name": frum,
-        }, config.default)
+        }, config.default.settings)
         return type2container["elasticsearch"](settings)
     elif isinstance(frum, dict) and frum.type and type2container[frum.type]:
         # TODO: Ensure the frum.name is set, so we capture the deep queries

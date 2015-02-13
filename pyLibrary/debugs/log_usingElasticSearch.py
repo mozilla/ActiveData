@@ -91,7 +91,7 @@ SCHEMA = {
             },
             "properties": {
                 "timestamp": {
-                    "type": "long",
+                    "type": "double",
                     "index": "not_analyzed",
                     "store": "yes"
                 },

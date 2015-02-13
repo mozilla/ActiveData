@@ -277,10 +277,10 @@ def wrap(v):
         return m
     elif type_ is list:
         return DictList(v)
-    elif type_ is GeneratorType:
-        return (wrap(vv) for vv in v)
     elif type_ is NoneType:
         return Null
+    elif type_ is GeneratorType:
+        return (wrap(vv) for vv in v)
     else:
         return v
 

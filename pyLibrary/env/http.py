@@ -25,7 +25,7 @@ from requests import sessions, Response
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, nvl
-from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, CompressedLines, LazyLines
+from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, CompressedLines, LazyLines, GzipLines, ZipfileLines
 
 
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
@@ -110,9 +110,9 @@ class HttpResponse(Response):
         # Response.content WILL LEAK MEMORY (?BECAUSE OF PYPY"S POOR HANDLING OF GENERATORS?)
         # THE TIGHT, SIMPLE, LOOP TO FILL blocks PREVENTS THAT LEAK
         if self._cached_content is None:
-            def read(size=None):
+            def read(size):
                 if self.raw._fp.fp is not None:
-                    return self.raw.read(amt=nvl(size, MIN_READ_SIZE), decode_content=True)
+                    return self.raw.read(amt=size, decode_content=True)
                 else:
                     self.close()
                     return None
@@ -127,15 +127,14 @@ class HttpResponse(Response):
     @property
     def all_lines(self):
         try:
-            if int(self.headers["content-length"]) < MAX_STRING_SIZE:
-                content = self.content
-                if self.headers.get('content-encoding') == 'gzip':
-                    return CompressedLines(content)
-                else:
-                    return convert.utf82unicode(content).split("\n")
+            content = self.raw.read(decode_content=False)
+            if self.headers.get('content-encoding') == 'gzip':
+                return CompressedLines(content)
+            elif self.headers.get('content-type') == 'application/zip':
+                return ZipfileLines(content)
             else:
-                return LazyLines(self.all_content)
+                return convert.utf82unicode(content).split("\n")
         except Exception, e:
-            Log.error("Not expected", e)
+            Log.error("Not JSON", e)
         finally:
             self.close()

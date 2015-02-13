@@ -101,7 +101,7 @@ class Duration(object):
         return output
 
     def __div__(self, amount):
-        if isinstance(amount, Duration) and not amount.month:
+        if isinstance(amount, Duration) and amount.month:
             m = self.month
             r = self.milli
 

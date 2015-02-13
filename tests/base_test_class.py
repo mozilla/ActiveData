@@ -163,8 +163,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
                     result.data = Q.sort(result.data, range(len(result.header)))
                 elif format == "list":
                     sort_order=wrap(_normalize_edges(subtest.query.edges) + _normalize_selects(listwrap(subtest.query.select))).name
-                    expected = Q.sort(expected, sort_order)
-                    result = Q.sort(result, sort_order)
+                    expected.data = Q.sort(expected.data, sort_order)
+                    result.data = Q.sort(result.data, sort_order)
 
 
                 # CONFIRM MATCH

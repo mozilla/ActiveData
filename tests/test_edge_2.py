@@ -26,7 +26,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "select": {"aggregate": "count"},
                 "edges": ["a", "b"]
             },
-            "expecting_list": [
+            "expecting_list": {"data": [
                 {"a": "x", "b": "m", "count": 2},
                 {"a": "x", "b": "n", "count": 1},
                 {"a": "x", "b": None, "count": 1},
@@ -39,7 +39,7 @@ class TestEdge1(ActiveDataBaseTest):
                 {"a": None, "b": "m", "count": 1},
                 {"a": None, "b": "n", "count": 1},
                 {"a": None, "b": None, "count": 0}
-            ],
+            ]},
             "expecting_table": {
                 "header": ["a", "b", "count"],
                 "data": [
@@ -100,7 +100,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "select": {"value": "v", "aggregate": "sum"},
                 "edges": ["a", "b"]
             },
-            "expecting_list": [
+            "expecting_list": {"data": [
                 {"a": "x", "b": "m", "v": 29},
                 {"a": "x", "b": "n", "v": 3},
                 {"a": "x", "b": None, "v": 5},
@@ -113,7 +113,7 @@ class TestEdge1(ActiveDataBaseTest):
                 {"a": None, "b": "m", "v": 17},
                 {"a": None, "b": "n", "v": 19},
                 {"a": None, "b": None, "v": None}
-            ],
+            ]},
             "expecting_table": {
                 "header": ["a", "b", "v"],
                 "data": [

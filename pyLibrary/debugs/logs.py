@@ -19,7 +19,7 @@ import sys
 from pyLibrary.debugs import constants
 from pyLibrary.dot import nvl, Dict, set_default, listwrap, wrap
 from pyLibrary.jsons.encoder import encode
-from pyLibrary.thread.threads import Thread, Lock
+from pyLibrary.thread.threads import Thread, Lock, Queue
 from pyLibrary.strings import indent, expand_template
 
 
@@ -39,6 +39,7 @@ class Log(object):
     logging_multi = None
     profiler = None   # simple pypy-friendly profiler
     cprofiler = None  # screws up with pypy, but better than nothing
+    cprofiler_stats = Queue()  # ACCUMULATION OF STATS FROM ALL THREADS
     error_mode = False  # prevent error loops
 
     @classmethod
@@ -98,7 +99,9 @@ class Log(object):
         from pyLibrary.debugs import profiles
 
         if cls.cprofiler and hasattr(cls, "settings"):
-            write_profile(cls.settings.cprofile, cls.cprofiler)
+            import pstats
+            cls.cprofiler_stats.add(pstats.Stats(cls.cprofiler))
+            write_profile(cls.settings.cprofile, cls.cprofiler_stats.pop_all())
 
         if profiles.ON and hasattr(cls, "settings"):
             profiles.write(cls.settings.profile)
@@ -610,12 +613,14 @@ class Log_usingMulti(BaseLog):
                 pass
 
 
-def write_profile(profile_settings, cprofiler):
+def write_profile(profile_settings, stats):
     from pyLibrary import convert
     from pyLibrary.env.files import File
-    import pstats
 
-    p = pstats.Stats(cprofiler)
+    acc = stats[0]
+    for s in stats[1:]:
+        acc.add(s)
+
     stats = [{
         "num_calls": d[1],
         "self_time": d[2],
@@ -626,7 +631,7 @@ def write_profile(profile_settings, cprofiler):
         "line": f[1],
         "method": f[2].lstrip("<").rstrip(">")
     }
-        for f, d, in p.stats.iteritems()
+        for f, d, in acc.stats.iteritems()
     ]
     stats_file = File(profile_settings.filename, suffix=convert.datetime2string(datetime.now(), "_%Y%m%d_%H%M%S"))
     stats_file.write(convert.list2tab(stats))

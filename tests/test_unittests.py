@@ -31,14 +31,51 @@ class TestUnittests(ActiveDataBaseTest):
                     "type": "test_results"
                 }
             },
-            "select": {"value": "result.duration", "aggregate": "average"},
+            "select": {"value": "run.duration", "aggregate": "average"},
             "edges": [
-                {"name":"chunk", "value": ["run.suite", "run.chunk"]},
-                "result.ok"
+                {"name": "chunk", "value": ["run.suite", "run.chunk"]}
             ],
-            "where": {
-                "gte": {"timestamp": (Date.now()-(Duration.DAY*7)).milli}
+            "where": {"and": [
+                {"term": {"etl.id": 0}},
+                {"gte": {"timestamp": Date.floor(Date.now() - (Duration.DAY * 7), Duration.DAY).milli / 1000}}
+            ]},
+            "format": "cube",
+            "samples": {
+                "limit": 30
+            }
+        }})
+
+        query = convert.unicode2utf8(convert.value2json(test.query))
+        # EXECUTE QUERY
+        with Timer("query"):
+            response = http.get(self.service_url, data=query)
+            if response.status_code != 200:
+                error(response)
+        result = convert.json2value(convert.utf82unicode(response.all_content))
+
+        Log.note("result\n{{result|indent}}", {"result": result})
+
+    def test_timing(self):
+        test = wrap({"query": {
+            "from": {
+                "type": "elasticsearch",
+                "settings": {
+                    "host": "http://54.148.242.195",
+                    "index": "unittest",
+                    "type": "test_results"
+                }
             },
+            "select": [
+                {"name": "count", "value": "run.duration", "aggregate": "count"},
+                {"name": "total", "value": "run.duration", "aggregate": "average"}
+            ],
+            "edges": [
+                {"name": "chunk", "value": ["run.suite", "run.chunk"]},
+                {"result.ok"}
+            ],
+            "where": {"and": [
+                {"gte": {"timestamp": Date.floor(Date.now() - (Duration.DAY * 7), Duration.DAY).milli / 1000}}
+            ]},
             "format": "cube",
             "samples": {
                 "limit": 30

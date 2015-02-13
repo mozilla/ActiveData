@@ -117,8 +117,17 @@ def outdent(value):
         Log.error("can not outdent value", e)
 
 
-def round(value, decimal=None, digits=None):
+def round(value, decimal=None, digits=None, places=None):
+    """
+    :param value:  THE VALUE TO ROUND
+    :param decimal: NUMBER OF DECIMAL PLACES TO ROUND (NEGTIVE IS LEFT-OF-DECIMAL)
+    :param digits: ROUND TO SIGNIFICANT NUMBER OF digits
+    :param places: SAME AS digits
+    :return:
+    """
+
     value = float(value)
+    digits = nvl(digits, places)
     if digits != None:
         m = pow(10, math.ceil(math.log10(abs(value))))
         return __builtin__.round(value / m, digits) * m

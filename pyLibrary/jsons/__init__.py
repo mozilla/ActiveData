@@ -46,9 +46,9 @@ def _scrub(value):
     type = value.__class__
 
     if type in (date, datetime):
-        return datetime2milli(value, type)
+        return datetime2milli(value, type)/1000
     elif type is timedelta:
-        return unicode(value.total_seconds()) + "second"
+        return value.total_seconds()
     elif type is str:
         return utf82unicode(value)
     elif type is Decimal:

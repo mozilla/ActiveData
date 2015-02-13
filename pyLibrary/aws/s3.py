@@ -23,6 +23,7 @@ from pyLibrary.dot import wrap
 from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, GzipLines, LazyLines
 from pyLibrary.meta import use_settings
 from pyLibrary.times.dates import Date
+from pyLibrary.times.timer import Timer
 
 
 READ_ERROR = "S3 read error"
@@ -188,6 +189,8 @@ class Bucket(object):
         if source.size < MAX_STRING_SIZE:
             if source.key.endswith(".gz"):
                 return GzipLines(source.read(key))
+            else:
+                return convert.utf82unicode(source.read(key)).split("\n")
 
         if source.key.endswith(".gz"):
             return LazyLines(convert.zip2bytes(safe_size(source)))
@@ -232,7 +235,7 @@ class Bucket(object):
             storage.set_contents_from_string(value)
 
             if self.settings.public:
-                key.set_acl('public-read')
+                storage.set_acl('public-read')
         except Exception, e:
             Log.error("Problem writing {{bytes}} bytes to {{key}} in {{bucket}}", {
                 "key": storage.key,
@@ -255,12 +258,12 @@ class Bucket(object):
             else:
                 archive.write(l.encode("utf8"))
                 archive.write(b"\n")
-                count+=1
+                count += 1
         archive.close()
         file_length = buff.tell()
         buff.seek(0)
-        Log.note("Sending {{count}} lines in {{file_length|comma}} bytes", {"file_length": file_length, "count": count})
-        storage.set_contents_from_file(buff)
+        with Timer("Sending {{count}} lines in {{file_length|comma}} bytes", {"file_length": file_length, "count": count}):
+            storage.set_contents_from_file(buff)
 
         if self.settings.public:
             storage.set_acl('public-read')

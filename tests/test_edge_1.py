@@ -25,11 +25,11 @@ class TestEdge1(ActiveDataBaseTest):
                 "select": {"aggregate": "count"},
                 "edges": ["a"]
             },
-            "expecting_list": [
+            "expecting_list": {"data": [
                 {"a": "b", "count": 2},
                 {"a": "c", "count": 3},
                 {"a": None, "count": 1}
-            ],
+            ]},
             "expecting_table": {
                 "header": ["a", "count"],
                 "data": [
@@ -67,11 +67,11 @@ class TestEdge1(ActiveDataBaseTest):
                 "select": {"name": "count_a", "value": "a", "aggregate": "count"},
                 "edges": ["a"]
             },
-            "expecting_list": [
+            "expecting_list": {"data": [
                 {"a": "b", "count_a": 2},
                 {"a": "c", "count_a": 3},
                 {"count_a": 0}
-            ],
+            ]},
             "expecting_table": {
                 "header": ["a", "count_a"],
                 "data": [
@@ -109,11 +109,11 @@ class TestEdge1(ActiveDataBaseTest):
                 "select": {"name": "count_v", "value": "v", "aggregate": "count"},
                 "edges": ["a"]
             },
-            "expecting_list": [
+            "expecting_list": {"data": [
                 {"a": "b", "count_v": 1},
                 {"a": "c", "count_v": 3},
                 {"count_v": 1}
-            ],
+            ]},
             "expecting_table": {
                 "header": ["a", "count_v"],
                 "data": [
@@ -151,11 +151,11 @@ class TestEdge1(ActiveDataBaseTest):
                 "select": {"value": "v", "aggregate": "sum"},
                 "edges": ["a"]
             },
-            "expecting_list": [
+            "expecting_list": {"data": [
                 {"a": "b", "v": 2},
                 {"a": "c", "v": 31},
                 {"a": None, "v": 3}
-            ],
+            ]},
             "expecting_table": {
                 "header": ["a", "v"],
                 "data": [

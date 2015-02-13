@@ -25,9 +25,9 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": "a",
                 "format": "cube"
             },
-            "expecting_list": [
+            "expecting_list": {"data": [
                 {"a": "b"}
-            ],
+            ]},
             "expecting_table": {
                 "header": ["a"],
                 "data": [["b"]]
@@ -58,9 +58,9 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": {"name": "value", "value": "a"},
                 "format": "cube"
             },
-            "expecting_list": [
+            "expecting_list": {"data": [
                 {"value": "b"}
-            ],
+            ]},
             "expecting_table": {
                 "header": ["value"],
                 "data": [["b"]]
@@ -88,9 +88,9 @@ class TestSetOps(ActiveDataBaseTest):
             "query": {
                 "from": "testdata"
             },
-            "expecting_list": [
+            "expecting_list": {"data": [
                 {"a": "b"}
-            ],
+            ]},
             "expecting_table": {
                 "header": ["a"],
                 "data": [["b"]]
@@ -119,9 +119,9 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": {"name": "value", "value": "."},
                 "from": "testdata"
             },
-            "expecting_list": [
-                {"value": {"a": "b"}}
-            ],
+            "expecting_list": {
+                "data": [{"value": {"a": "b"}}]
+            },
             "expecting_table": {
                 "header": ["value"],
                 "data": [[{"a": "b"}]]
@@ -148,9 +148,9 @@ class TestSetOps(ActiveDataBaseTest):
             "query": {
                 "from": "testdata"
             },
-            "expecting_list": [
+            "expecting_list": {"data": [
                 "a", "b"
-            ],
+            ]},
             "expecting_table": {
                 "header": ["value"],
                 "data": [["a"], ["b"]]
@@ -180,10 +180,10 @@ class TestSetOps(ActiveDataBaseTest):
                 "from": "testdata",
                 "select": "*"
             },
-            "expecting_list": [
+            "expecting_list": {"data": [
                 {"a": "b"},
                 {"a": "d"}
-            ],
+            ]},
             "expecting_table": {
                 "header": ["a"],
                 "data": [

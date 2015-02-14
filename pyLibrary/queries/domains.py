@@ -166,9 +166,10 @@ class SimpleSetDomain(Domain):
             Log.error("problem")
 
         if isinstance(desc.partitions[0], basestring):
-            # ASSMUE PARTS ARE STRINGS, CONVERT TO REAL PART OBJECTS
+            # ASSUME PARTS ARE STRINGS, CONVERT TO REAL PART OBJECTS
             self.key = ("value", )
-            self.order[None]=len(desc.partitions)
+            self.map = {}
+            self.order[None] = len(desc.partitions)
             for i, p in enumerate(desc.partitions):
                 part = {"name": p, "value": p}
                 self.partitions.append(part)

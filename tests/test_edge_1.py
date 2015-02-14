@@ -43,7 +43,7 @@ class TestEdge1(ActiveDataBaseTest):
                     {
                         "name": "a",
                         "type": "set",
-                        "key":"value",
+                        "key": "value",
                         "allowNulls": True,
                         "domain": {
                             "partitions": [{"value": "b"}, {"value": "c"}]
@@ -85,7 +85,7 @@ class TestEdge1(ActiveDataBaseTest):
                     {
                         "name": "a",
                         "type": "set",
-                        "key":"value",
+                        "key": "value",
                         "allowNulls": True,
                         "domain": {
                             "partitions": [{"value": "b"}, {"value": "c"}]
@@ -127,7 +127,7 @@ class TestEdge1(ActiveDataBaseTest):
                     {
                         "name": "a",
                         "type": "set",
-                        "key":"value",
+                        "key": "value",
                         "allowNulls": True,
                         "domain": {
                             "partitions": [{"value": "b"}, {"value": "c"}]
@@ -136,6 +136,52 @@ class TestEdge1(ActiveDataBaseTest):
                 ],
                 "data": {
                     "count_v": [1, 3, 1]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_select_2(self):
+        test = {
+            "name": "count column",
+            "metatdata": {},
+            "data": simple_test_data,
+            "query": {
+                "from": "testdata",
+                "select": [
+                    {"name": "count", "value": "v", "aggregate": "count"},
+                    {"name": "avg", "value": "v", "aggregate": "average"}
+                ],
+                "edges": ["a"]
+            },
+            "expecting_list": {"data": [
+                {"a": "b", "count": 1, "avg": 2},
+                {"a": "c", "count": 3, "avg": 31 / 3},
+                {"count": 1, "avg": 3}
+            ]},
+            "expecting_table": {
+                "header": ["a", "count", "avg"],
+                "data": [
+                    ["b", 1, 2],
+                    ["c", 3, 31 / 3],
+                    [None, 1, 3]
+                ]
+            },
+            "expecting_cube": {
+                "edges": [
+                    {
+                        "name": "a",
+                        "type": "set",
+                        "key": "value",
+                        "allowNulls": True,
+                        "domain": {
+                            "partitions": [{"value": "b"}, {"value": "c"}]
+                        }
+                    }
+                ],
+                "data": {
+                    "count": [1, 3, 1],
+                    "avg": [2, 31 / 3, 3]
                 }
             }
         }
@@ -169,7 +215,7 @@ class TestEdge1(ActiveDataBaseTest):
                     {
                         "name": "a",
                         "type": "set",
-                        "key":"value",
+                        "key": "value",
                         "allowNulls": True,
                         "domain": {
                             "partitions": [{"value": "b"}, {"value": "c"}]
@@ -178,6 +224,86 @@ class TestEdge1(ActiveDataBaseTest):
                 ],
                 "data": {
                     "v": [2, 31, 3]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_where(self):
+        test = {
+            "name": "sum column",
+            "metatdata": {},
+            "data": simple_test_data,
+            "query": {
+                "from": "testdata",
+                "select": {"value": "v", "aggregate": "max"},
+                "edges": ["a"],
+                "where": {"term": {"a": "c"}}
+            },
+            "expecting_list": {"data": [
+                {"a": "c", "v": 13},
+            ]},
+            "expecting_table": {
+                "header": ["a", "v"],
+                "data": [
+                    ["c", 13]
+                ]
+            },
+            "expecting_cube": {
+                "edges": [
+                    {
+                        "name": "a",
+                        "type": "set",
+                        "key": "value",
+                        "allowNulls": True,
+                        "domain": {
+                            "partitions": [{"value": "b"}, {"value": "c"}]
+                        }
+                    }
+                ],
+                "data": {
+                    "v": [13]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_where_w_dimension(self):
+        test = {
+            "name": "sum column",
+            "metatdata": {},
+            "data": simple_test_data,
+            "query": {
+                "from": "testdata",
+                "select": {"value": "v", "aggregate": "max"},
+                "edges": [
+                    {"value": "a", "allowNulls":False, "domain": {"type": "set", "partitions": ["b", "c"]}}
+                ],
+                "where": {"term": {"a": "c"}}
+            },
+            "expecting_list": {"data": [
+                {"a": "c", "v": 13}
+            ]},
+            "expecting_table": {
+                "header": ["a", "v"],
+                "data": [
+                    ["c", 13]
+                ]
+            },
+            "expecting_cube": {
+                "edges": [
+                    {
+                        "name": "a",
+                        "type": "set",
+                        "key": "value",
+                        "allowNulls": True,
+                        "domain": {
+                            "partitions": [{"value": "b"}, {"value": "c"}]
+                        }
+                    }
+                ],
+                "data": {
+                    "v": [None, 13],
                 }
             }
         }

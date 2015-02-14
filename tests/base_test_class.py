@@ -152,7 +152,16 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 subtest.query.format = format
                 query = convert.unicode2utf8(convert.value2json(subtest.query))
                 # EXECUTE QUERY
-                response = http.get(self.service_url, data=query)
+                while True:
+                    try:
+                        response = http.get(self.service_url, data=query)
+                        break
+                    except Exception, e:
+                        if "No connection could be made because the target machine actively refused it" not in e:
+                            Log.alert("Problem connecting")
+                        else:
+                            Log.error("Server raised exception", e)
+
                 if response.status_code != 200:
                     error(response)
                 result = convert.json2value(convert.utf82unicode(response.content))

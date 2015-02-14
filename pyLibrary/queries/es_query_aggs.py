@@ -140,6 +140,7 @@ class DefaultDecoder(AggsDecoder):
     def __init__(self, edge):
         AggsDecoder.__init__(self, edge)
         self.edge = self.edge.copy()
+        self.edge.allowNulls = False  # SINCE WE DO NOT KNOW THE DOMAIN, WE HAVE NO SENSE OF WHAT IS OUTSIDE THAT DOMAIN, allowNulls==True MAKES NO SENSE
         self.edge.domain.partitions = set()
 
     def append_query(self, esQuery, start):
@@ -159,7 +160,9 @@ class DefaultDecoder(AggsDecoder):
 
     def count(self, row):
         v = row[self.start]
-        if v != None:
+        if v==None:
+            self.edge.allowNulls = True   # OK! WE WILL ALLOW NULLS
+        else:
             self.edge.domain.partitions.add(v)
 
     def done_count(self):
@@ -266,14 +269,19 @@ def aggs_iterator(aggs, depth):
                 for a in _aggs_iterator(b, d - 1):
                     yield a
             coord[d] = None
-            for a in _aggs_iterator(aggs[str(d) + "_missing"], d - 1):
-                yield a
+            b = aggs[str(d) + "_missing"]
+            if b.doc_count:
+                for a in _aggs_iterator(b, d - 1):
+                    yield a
         else:
             for b in aggs[str(d)].buckets:
                 coord[d] = b.key
-                yield b
+                if b.doc_count:
+                    yield b
             coord[d] = None
-            yield aggs[str(d) + "_missing"]
+            b = aggs[str(d) + "_missing"]
+            if b.doc_count:
+                yield b
 
     for a in _aggs_iterator(aggs, depth - 1):
         yield coord, a
@@ -282,9 +290,8 @@ def count_dim(decoders, aggs, start):
     if any(isinstance(d, DefaultDecoder) for d in decoders):
         # ENUMERATE THE DOMAINS, IF UNKNOWN AT QUERY TIME
         for row, agg in aggs_iterator(aggs, start):
-            if agg.doc_count:  # DO NOT COUNT STUFF THAT HAS NO PRESENCE
-                for d in decoders:
-                    d.count(row)
+            for d in decoders:
+                d.count(row)
         for d in decoders:
             d.done_count()
     new_edges = wrap([d.edge for d in decoders])

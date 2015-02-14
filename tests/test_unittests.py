@@ -71,7 +71,7 @@ class TestUnittests(ActiveDataBaseTest):
             ],
             "edges": [
                 {"name": "chunk", "value": ["run.suite", "run.chunk"]},
-                {"result.ok"}
+                "result.ok"
             ],
             "where": {"and": [
                 {"gte": {"timestamp": Date.floor(Date.now() - (Duration.DAY * 7), Duration.DAY).milli / 1000}}

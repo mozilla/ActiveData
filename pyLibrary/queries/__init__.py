@@ -8,7 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
-from pyLibrary.dot import literal_field
+from pyLibrary.dot import literal_field, wrap
 
 from pyLibrary.dot.dicts import Dict, nvl
 from pyLibrary.parsers import Log
@@ -29,6 +29,7 @@ def _normalize_select(select, schema=None):
             aggregate="none"
         )
     else:
+        select = wrap(select)
         output = select.copy()
         output.name = nvl(select.name, select.value, select.aggregate)
 

@@ -121,6 +121,7 @@ def _normalize_edge(edge, schema=None):
             domain=_normalize_domain(schema=schema)
         )
     else:
+        edge = wrap(edge)
         if not edge.name and not isinstance(edge.value, basestring):
             Log.error("You must name compound edges: {{edge}}", {"edge":edge})
 

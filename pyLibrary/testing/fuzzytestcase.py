@@ -139,7 +139,3 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
         standardMsg = expand_template("{{test|json}} != {{expected|json}} within {{places}} places", locals())
 
     raise AssertionError(nvl(msg, "") + ": (" + standardMsg + ")")
-
-
-
-

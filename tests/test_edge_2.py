@@ -107,12 +107,82 @@ class TestEdge1(ActiveDataBaseTest):
                 {"a": "y", "b": "m", "v": 7},
                 {"a": "y", "b": "n", "v": 50},
                 {"a": "y", "b": None, "v": 13},
+                {"a": None, "b": "m", "v": 17},
+                {"a": None, "b": "n", "v": 19},
+                {}
+            ]},
+            "expecting_table": {
+                "header": ["a", "b", "v"],
+                "data": [
+                    ["x", "m", 29],
+                    ["x", "n", 3],
+                    ["x", None, 5],
+                    ["y", "m", 7],
+                    ["y", "n", 50],
+                    ["y", None, 13],
+                    [None, "m", 17],
+                    [None, "n", 19],
+                    [None, None, None]
+                ]
+            },
+            "expecting_cube": {
+                "edges": [
+                    {
+                        "name": "a",
+                        "type": "string",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "partitions": ["x", "y"]
+                        }
+                    },
+                    {
+                        "name": "b",
+                        "type": "string",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "partitions": ["m", "n"]
+                        }
+                    }
+                ],
+                "data": {
+                    "v": [
+                        [29, 3, 5],
+                        [7, 50, 13],
+                        [17, 19, None]
+                    ]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_sum_rows_w_domain(self):
+        test = {
+            "name": "sum rows",
+            "metatdata": {},
+            "data": two_dim_test_data,
+            "query": {
+                "from": "testdata",
+                "select": {"value": "v", "aggregate": "sum"},
+                "edges": [
+                    {"value": "a", "domain": {"type": "set", "partitions": ["x", "y", "z"]}},
+                    {"value": "b", "domain": {"type": "set", "partitions": ["m", "n"]}}
+                ]
+            },
+            "expecting_list": {"data": [
+                {"a": "x", "b": "m", "v": 29},
+                {"a": "x", "b": "n", "v": 3},
+                {"a": "x", "b": None, "v": 5},
+                {"a": "y", "b": "m", "v": 7},
+                {"a": "y", "b": "n", "v": 50},
+                {"a": "y", "b": None, "v": 13},
                 {"a": "z", "b": "m", "v": None},
                 {"a": "z", "b": "n", "v": None},
                 {"a": "z", "b": None, "v": None},
                 {"a": None, "b": "m", "v": 17},
                 {"a": None, "b": "n", "v": 19},
-                {"a": None, "b": None, "v": None}
+                {"a": None, "b": None, "v": None},
             ]},
             "expecting_table": {
                 "header": ["a", "b", "v"],

@@ -175,7 +175,7 @@ class Matrix(object):
 
     def __iter__(self):
         # TODO: MAKE THIS FASTER BY NOT CALLING __getitem__ (MAKES CUBE OBJECTS)
-        return (self[c] for c in self._all_combos())
+        return ((c, self[c]) for c in self._all_combos())
 
     def __float__(self):
         return self.value

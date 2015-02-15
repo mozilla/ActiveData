@@ -282,11 +282,13 @@ class TestEdge1(ActiveDataBaseTest):
                 "where": {"term": {"a": "c"}}
             },
             "expecting_list": {"data": [
+                {"a": "b", "v": None},
                 {"a": "c", "v": 13}
             ]},
             "expecting_table": {
                 "header": ["a", "v"],
                 "data": [
+                    ["b", None],
                     ["c", 13]
                 ]
             },

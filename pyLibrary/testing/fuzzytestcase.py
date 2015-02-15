@@ -72,25 +72,22 @@ def zipall(*args):
 
 
 def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=None):
-    if isinstance(expected, dict):
-        expected = wrap(expected)
-        for k, v2 in expected.items():
-            try:
+    try:
+        if isinstance(expected, dict):
+            expected = wrap(expected)
+            for k, v2 in expected.items():
                 v1 = dot.get_attr(test, k)
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
-            except Exception, e:
-                Log.error("{{test|json}} does not match expected {{expected|json}}", {
-                    "test": test,
-                    "expected": expected
-                }, e)
-
-
-    elif hasattr(test, "__iter__") and hasattr(expected, "__iter__"):
-        for a, b in zipall(test, expected):
-            assertAlmostEqual(a, b, msg=msg, digits=digits, places=places, delta=delta)
-
-    else:
-        assertAlmostEqualValue(test, expected, msg=msg, digits=digits, places=places, delta=delta)
+        elif hasattr(test, "__iter__") and hasattr(expected, "__iter__"):
+            for a, b in zipall(test, expected):
+                assertAlmostEqual(a, b, msg=msg, digits=digits, places=places, delta=delta)
+        else:
+            assertAlmostEqualValue(test, expected, msg=msg, digits=digits, places=places, delta=delta)
+    except Exception, e:
+        Log.error("{{test|json}} does not match expected {{expected|json}}", {
+            "test": test,
+            "expected": expected
+        }, e)
 
 
 def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, delta=None):

@@ -193,9 +193,9 @@ class Bucket(object):
                 return convert.utf82unicode(source.read(key)).split("\n")
 
         if source.key.endswith(".gz"):
-            return LazyLines(convert.zip2bytes(safe_size(source)))
+            return LazyLines(convert.zip2bytes(source))
         else:
-            return LazyLines(safe_size(source))
+            return LazyLines(source)
 
     def write(self, key, value):
         if key.endswith(".json") or key.endswith(".zip"):

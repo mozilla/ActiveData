@@ -77,13 +77,14 @@ class Log_usingEmail(BaseLog):
 
     def _send_email(self):
         try:
-            with Emailer(self.settings) as emailer:
-                emailer.send_email(
-                    from_address=self.settings.from_address,
-                    to_address=self.settings.to_address,
-                    subject=self.settings.subject,
-                    text_data="\n\n".join(self.accumulation)
-                )
+            if self.accumulation:
+                with Emailer(self.settings) as emailer:
+                    emailer.send_email(
+                        from_address=self.settings.from_address,
+                        to_address=self.settings.to_address,
+                        subject=self.settings.subject,
+                        text_data="\n\n".join(self.accumulation)
+                    )
             self.last_sent = Date.now()
             self.accumulation = []
         except Exception, e:

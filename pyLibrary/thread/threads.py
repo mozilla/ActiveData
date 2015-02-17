@@ -81,8 +81,6 @@ class Queue(object):
         max - LIMIT THE NUMBER IN THE QUEUE, IF TOO MANY add() AND extend() WILL BLOCK
         silent - COMPLAIN IF THE READERS ARE TOO SLOW
         """
-        if not Log:
-            _late_import()
         self.max = nvl(max, 2 ** 10)
         self.silent = silent
         self.keep_running = True

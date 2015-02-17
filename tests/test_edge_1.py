@@ -311,6 +311,42 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_empty_default_domain(self):
+        test = {
+            "name": "sum column",
+            "metatdata": {},
+            "data": simple_test_data,
+            "query": {
+                "from": "testdata",
+                "select": {"value": "v", "aggregate": "max"},
+                "edges": ["a"],
+                "where": {"term": {"a": "d"}}
+            },
+            "expecting_list": {"data": [
+            ]},
+            "expecting_table": {
+                "header": ["a", "v"],
+                "data": []
+            },
+            "expecting_cube": {
+                "edges": [
+                    {
+                        "name": "a",
+                        "type": "set",
+                        "key": "value",
+                        "allowNulls": True,
+                        "domain": {
+                            "partitions": []
+                        }
+                    }
+                ],
+                "data": {
+                    "v": []
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
 
 simple_test_data = [
     {"a": "c", "v": 13},

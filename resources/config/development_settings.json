@@ -40,6 +40,13 @@
 		"log": [
 			{"log_type":"console"},
 			{
+				"log_type":"email",
+				"from_address": "klahnakoski@mozilla.com",
+				"to_address": "klahnakoski@mozilla.com",
+				"subject": "[Alert][DEV]Problem with ActiveData Server",
+				"$ref":"file://~/private.json#email"
+			},
+			{
                 "log_type": "elasticsearch",
                 "host": "http://localhost",
                 "index": "debug",

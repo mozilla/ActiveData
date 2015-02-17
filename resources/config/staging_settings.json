@@ -1,0 +1,58 @@
+{
+	"flask": {
+		"host": "0.0.0.0",
+		"port": 80,
+		"debug": false,
+		"threaded": true,
+		"processes": 1
+	},
+
+	"param": {
+		"threads": 1,
+		"wait_forever": true,
+		"keep_unknown_on_queue": true
+	},
+	"constants": {
+		"pyLibrary.env.http.default_headers": {
+			"From": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
+		}
+	},
+	"request_logs": {
+		"host": "http://172.31.0.7",
+		"port": "9200",
+		"index": "active_data_requests",
+		"type": "request_log",
+		"schema": {
+			"$ref": "//../schema/request_log.schema.json"
+		}
+	},
+	"elasticsearch": {
+		"host": "http://172.31.0.7",
+		"port": "9200",
+		"index": "testdata",
+		"type": "testdata",
+		"debug": true
+	},
+	"debug": {
+		"trace": true,
+		"log": [
+			{
+				"log_type": "console"
+			},
+			{
+				"log_type": "email",
+				"from_address": "klahnakoski@mozilla.com",
+				"to_address": "klahnakoski@mozilla.com",
+				"subject": "[Alert][STAGING]Problem with ActiveData Server",
+				"$ref": "file://~/private.json#email"
+			},
+			{
+				"log_type": "elasticsearch",
+				"host": "http://172.31.0.7",
+				"index": "debug",
+				"type": "active_data"
+			}
+		]
+	}
+
+}

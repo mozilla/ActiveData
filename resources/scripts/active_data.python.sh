@@ -3,8 +3,10 @@ git checkout master
 git stash
 git pull origin master
 
+sudo -i
+cd /home/ubuntu/ActiveData/
 export PYTHONPATH=.
-python testlog_etl/etl.py --settings=resources/settings/staging_settings.json &
+python active_data/app.py --settings=resources/config/staging_settings.json &
 disown -h
 tail -f  results/logs/etl.log
 

@@ -24,13 +24,9 @@ from pyLibrary.times.timer import Timer
 
 OVERVIEW = File("active_data/ActiveData.html").read()
 
-
 app = Flask(__name__)
 request_log_queue = None
 default_elasticsearch = None
-
-
-
 
 
 def record_request(request, query_, data, error):
@@ -49,33 +45,30 @@ def record_request(request, query_, data, error):
 
 
 @app.route('/query', defaults={'path': ''}, methods=['GET'])
-@app.route('/<path:path>', methods=['GET'])
 def query(path):
     total_duration = Timer("total duration")
     try:
         with total_duration:
-
-            try:
-                data = convert.json2value(convert.utf82unicode(flask.request.environ['body_copy']))
-                record_request(flask.request, data, None, None)
-            except Exception, e:
-                record_request(flask.request, None, flask.request.environ['body_copy'], e)
+            data = convert.json2value(convert.utf82unicode(flask.request.environ['body_copy']))
+            record_request(flask.request, data, None, None)
 
             result = Q.run(data)
 
-            outbound_header = wrap({
-                "access-control-allow-origin": "*"
-            })
-
         result.meta.active_data_response_time = total_duration.duration.total_seconds()
+
         return Response(
             convert.unicode2utf8(convert.value2json(result)),
-            direct_passthrough=True, #FOR STREAMING
+            direct_passthrough=True,  # FOR STREAMING
             status=200,
-            headers=unwrap(outbound_header)
+            headers={
+                "access-control-allow-origin": "*",
+                "Content-type": "application/json"
+            }
         )
     except Exception, e:
         e = Except.wrap(e)
+
+        record_request(flask.request, None, flask.request.environ['body_copy'], e)
         Log.warning("problem", e)
         e = e.__dict__()
         e.meta.active_data_response_time = total_duration.duration.total_seconds()
@@ -84,13 +77,16 @@ def query(path):
             convert.unicode2utf8(convert.value2json(e)),
             status=400,
             headers={
-                "access-control-allow-origin": "*"
+                "access-control-allow-origin": "*",
+                "Content-type": "application/json"
             }
         )
 
-@app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
+
 @app.route('/<path:path>', methods=['GET', 'POST'])
 def overview(path):
+    record_request(flask.request, None, flask.request.environ['body_copy'], None)
+
     return Response(
         convert.unicode2utf8(OVERVIEW),
         status=400,
@@ -99,8 +95,6 @@ def overview(path):
             "Content-type": "text/html"
         }
     )
-
-
 
 
 # Snagged from http://stackoverflow.com/questions/10999990/python-flask-how-to-get-whole-raw-post-body

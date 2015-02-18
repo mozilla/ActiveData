@@ -14,12 +14,12 @@ from __future__ import division
 from tests.base_test_class import ActiveDataBaseTest
 
 
-class TestEdge1(ActiveDataBaseTest):
+class TestEdge2(ActiveDataBaseTest):
     def test_count_rows(self):
         test = {
             "disable": True,  # TODO: PLEASE ENABLE, TOO COMPLICATED FOR v1
             "name": "count rows, 2d",
-            "metatdata": {},
+            "metadata": {},
             "data": two_dim_test_data,
             "query": {
                 "from": "testdata",
@@ -93,7 +93,7 @@ class TestEdge1(ActiveDataBaseTest):
     def test_sum_rows(self):
         test = {
             "name": "sum rows",
-            "metatdata": {},
+            "metadata": {},
             "data": two_dim_test_data,
             "query": {
                 "from": "testdata",
@@ -129,20 +129,24 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "type": "string",
                         "allowNulls": True,
                         "domain": {
                             "type": "set",
-                            "partitions": ["x", "y"]
+                            "partitions": [
+                                {"name": "x", "value": "x", "dataIndex": 0},
+                                {"name": "y", "value": "y", "dataIndex": 1}
+                            ]
                         }
                     },
                     {
                         "name": "b",
-                        "type": "string",
                         "allowNulls": True,
                         "domain": {
                             "type": "set",
-                            "partitions": ["m", "n"]
+                            "partitions": [
+                                {"name": "m", "value": "m", "dataIndex": 0},
+                                {"name": "n", "value": "n", "dataIndex": 1}
+                            ]
                         }
                     }
                 ],
@@ -160,14 +164,26 @@ class TestEdge1(ActiveDataBaseTest):
     def test_sum_rows_w_domain(self):
         test = {
             "name": "sum rows",
-            "metatdata": {},
+            "metadata": {},
             "data": two_dim_test_data,
             "query": {
                 "from": "testdata",
                 "select": {"value": "v", "aggregate": "sum"},
                 "edges": [
-                    {"value": "a", "domain": {"type": "set", "partitions": ["x", "y", "z"]}},
-                    {"value": "b", "domain": {"type": "set", "partitions": ["m", "n"]}}
+                    {
+                        "value": "a",
+                        "domain": {
+                            "type": "set",
+                            "partitions": ["x", "y", "z"]
+                        }
+                    },
+                    {
+                        "value": "b",
+                        "domain": {
+                            "type": "set",
+                            "partitions": ["m", "n"]
+                        }
+                    }
                 ]
             },
             "expecting_list": {"data": [
@@ -205,20 +221,27 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "type": "string",
                         "allowNulls": True,
                         "domain": {
                             "type": "set",
-                            "partitions": ["x", "y", "z"]
+                            "key": "value",
+                            "partitions": [
+                                {"name": "x", "value": "x", "dataIndex": 0},
+                                {"name": "y", "value": "y", "dataIndex": 1},
+                                {"name": "z", "value": "z", "dataIndex": 2}
+                            ]
                         }
                     },
                     {
                         "name": "b",
-                        "type": "string",
                         "allowNulls": True,
                         "domain": {
                             "type": "set",
-                            "partitions": ["m", "n"]
+                            "key": "value",
+                            "partitions": [
+                                {"name": "m", "value": "m", "dataIndex": 0},
+                                {"name": "n", "value": "n", "dataIndex": 1}
+                            ]
                         }
                     }
                 ],

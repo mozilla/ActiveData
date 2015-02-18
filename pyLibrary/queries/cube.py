@@ -35,6 +35,10 @@ class Cube(object):
         self.is_value = False if isinstance(select, list) else True
         self.select = select
         self.meta = Dict()       # PUT EXTRA MARKUP HERE
+        self.is_none = False
+
+        if not all(data.values()):
+            is_none = True
 
         # ENSURE frum IS PROPER FORM
         if isinstance(select, list):
@@ -103,6 +107,8 @@ class Cube(object):
 
     @property
     def value(self):
+        if self.is_none:
+            return Null
         if self.edges:
             Log.error("can not get value of with dimension")
         if isinstance(self.select, list):

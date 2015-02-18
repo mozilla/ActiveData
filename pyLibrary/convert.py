@@ -110,7 +110,7 @@ def json2value(json_string, params=None, flexible=False, paths=False):
 
         except Exception, e:
             e = Except.wrap(e)
-            if e.contains("Expecting '") and e.contains("' delimiter: line"):
+            if "Expecting '" in e and "' delimiter: line" in e:
                 line_index = int(strings.between(e.message, " line ", " column ")) - 1
                 column = int(strings.between(e.message, " column ", " "))-1
                 line = json_string.split("\n")[line_index]
@@ -273,6 +273,41 @@ def value2url(value):
     else:
         output = unicode(value)
     return output
+
+
+def url_param2value(param):
+    """
+    CONVERT URL QUERY PARAMETERS INTO DICT
+    """
+
+    def _decode(v):
+        if isinstance(v, basestring):
+            try:
+                return json2value(v)
+            except Exception:
+                pass
+        return v
+
+
+    query = {}
+    for p in param.split('&'):
+        if not p:
+            continue
+        if p.find("=") == -1:
+            k = p
+            v = True
+        else:
+            k, v = p.split("=")
+
+        l = query.get(k)
+        if l is None:
+            query[k] = v
+        elif isinstance(l, list):
+            l.append(v)
+        else:
+            query[k] = [l, v]
+
+    return query
 
 
 def html2unicode(value):

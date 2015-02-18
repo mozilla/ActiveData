@@ -107,6 +107,7 @@ class Bucket(object):
         aws_secret_access_key,  # CREDENTIAL
         region=None,  # NAME OF AWS REGION, REQUIRED FOR SOME BUCKETS
         public=False,
+        debug=False,
         settings=None
     ):
         self.settings = settings
@@ -150,7 +151,7 @@ class Bucket(object):
 
     def metas(self, prefix=None):
         """
-        RETURN THE METATDATA DESCRIPTORS FOR EACH KEY
+        RETURN THE METADATA DESCRIPTORS FOR EACH KEY
         """
 
         keys = self.bucket.list(prefix=prefix)
@@ -262,7 +263,7 @@ class Bucket(object):
         archive.close()
         file_length = buff.tell()
         buff.seek(0)
-        with Timer("Sending {{count}} lines in {{file_length|comma}} bytes", {"file_length": file_length, "count": count}):
+        with Timer("Sending {{count}} lines in {{file_length|comma}} bytes", {"file_length": file_length, "count": count}, debug=self.settings.debug):
             storage.set_contents_from_file(buff)
 
         if self.settings.public:

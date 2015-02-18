@@ -13,6 +13,7 @@ from __future__ import division
 
 from datetime import datetime, date, timedelta
 import math
+from pyLibrary.dot import Null
 
 from pyLibrary.times.durations import Duration
 from pyLibrary.vendor.dateutil.parser import parse as parse_date
@@ -150,6 +151,8 @@ class Date(object):
         return str(self.value)
 
     def __sub__(self, other):
+        if other == None:
+            return None
         if isinstance(other, datetime):
             return Duration(self.milli-Date(other).milli)
         if isinstance(other, Date):

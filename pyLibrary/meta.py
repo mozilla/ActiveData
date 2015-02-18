@@ -125,7 +125,7 @@ def use_settings(func):
                 packed = params_pack(params, kwargs, dot.zip(params, args), defaults)
                 return func(**packed)
         except TypeError, e:
-            if e.message.find("takes at least")>=0:
+            if e.message.find("takes at least") >= 0:
                 missing = [p for p in params if str(p) not in packed]
 
                 Log.error("Problem calling {{func_name}}:  Expecting parameter {{missing}}", {

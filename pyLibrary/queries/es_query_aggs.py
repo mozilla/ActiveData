@@ -29,7 +29,8 @@ from pyLibrary.times.timer import Timer
 
 
 def is_aggsop(es, query):
-    if es.cluster.version.startswith("1.4") and query.edges:
+    es.cluster.get_metadata()
+    if  es.cluster.version.startswith("1.4") and query.edges:
         return True
     return False
 

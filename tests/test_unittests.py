@@ -21,12 +21,13 @@ from tests.base_test_class import ActiveDataBaseTest, error
 
 
 class TestUnittests(ActiveDataBaseTest):
+
     def test_chunk_timing(self):
         test = wrap({"query": {
             "from": {
                 "type": "elasticsearch",
                 "settings": {
-                    "host": "http://54.148.242.195",
+                    "host": "http://52.10.116.229",
                     "index": "unittest",
                     "type": "test_results"
                 }
@@ -60,7 +61,7 @@ class TestUnittests(ActiveDataBaseTest):
             "from": {
                 "type": "elasticsearch",
                 "settings": {
-                    "host": "http://54.148.242.195",
+                    "host": "http://52.10.116.229",
                     "index": "unittest",
                     "type": "test_results"
                 }
@@ -94,12 +95,12 @@ class TestUnittests(ActiveDataBaseTest):
         Log.note("result\n{{result|indent}}", {"result": result})
 
 
-    def test_branches(self):
+    def test_branch_count(self):
         test = wrap({"query": {
             "from": {
                 "type": "elasticsearch",
                 "settings": {
-                    "host": "http://54.148.242.195",
+                    "host": "http://52.10.116.229",
                     "index": "unittest",
                     "type": "test_results"
                 }

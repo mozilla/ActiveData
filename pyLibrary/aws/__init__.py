@@ -28,6 +28,7 @@ class Queue(object):
         region,
         aws_access_key_id,
         aws_secret_access_key,
+        debug=False,
         settings=None
     ):
         self.settings = settings
@@ -71,6 +72,8 @@ class Queue(object):
             self.queue.delete_message(p)
 
     def rollback(self):
+        if self.pending and self.settings.debug:
+            Log.alert("{{num}} messages returned to queue", {"num":len(self.pending)})
         self.pending = []
 
     def close(self):

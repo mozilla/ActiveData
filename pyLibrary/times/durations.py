@@ -151,15 +151,23 @@ class Duration(object):
             return time - relativedelta(months=self.month, seconds=self.milli/1000)
 
     def __lt__(self, other):
+        if other == None:
+            return False
         return self.milli < Duration(other).milli
 
     def __le__(self, other):
+        if other == None:
+            return False
         return self.milli <= Duration(other).milli
 
     def __ge__(self, other):
+        if other == None:
+            return True
         return self.milli >= Duration(other).milli
 
     def __gt__(self, other):
+        if other == None:
+            return True
         return self.milli > Duration(other).milli
 
     @property

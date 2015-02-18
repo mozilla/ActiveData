@@ -48,7 +48,7 @@ class Index(object):
 
         index - NAME OF THE INDEX, EITHER ALIAS NAME OR FULL VERSION NAME
         type - SCHEMA NAME
-        explore_metadata == True - IF PROBING THE CLUSTER FOR METATDATA IS ALLOWED
+        explore_metadata == True - IF PROBING THE CLUSTER FOR METADATA IS ALLOWED
         timeout == NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
         """
         if index == alias:
@@ -159,12 +159,12 @@ class Index(object):
     def delete_record(self, filter):
         self.cluster.get_metadata()
 
-        if self.cluster.node_metatdata.version.number.startswith("0.90"):
+        if self.cluster.node_metadata.version.number.startswith("0.90"):
             query = {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}
-        elif self.cluster.node_metatdata.version.number.startswith("1.0"):
+        elif self.cluster.node_metadata.version.number.startswith("1.0"):
             query = {"query": {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
@@ -318,7 +318,7 @@ class Cluster(object):
     @use_settings
     def __init__(self, host, port=9200, settings=None):
         """
-        settings.explore_metadata == True - IF PROBING THE CLUSTER FOR METATDATA IS ALLOWED
+        settings.explore_metadata == True - IF PROBING THE CLUSTER FOR METADATA IS ALLOWED
         settings.timeout == NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
         """
 
@@ -443,8 +443,8 @@ class Cluster(object):
             if not self.cluster_metadata:
                 response = self.get("/_cluster/state")
                 self.cluster_metadata = response.metadata
-                self.node_metatdata = self.get("/")
-                self.version = self.node_metatdata.version.number
+                self.node_metadata = self.get("/")
+                self.version = self.node_metadata.version.number
         else:
             Log.error("Metadata exploration has been disabled")
         return self.cluster_metadata

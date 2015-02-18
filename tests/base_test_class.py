@@ -41,7 +41,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
     BASIC TEST FORMAT:
     {
         "name": "EXAMPLE TEMPLATE",
-        "metatdata": {},             # OPTIONAL DATA SHAPE REQUIRED FOR NESTED DOCUMENT QUERIES
+        "metadata": {},             # OPTIONAL DATA SHAPE REQUIRED FOR NESTED DOCUMENT QUERIES
         "data": [],                  # THE DOCUMENTS NEEDED FOR THIS TEST
         "query": {                   # THE Qb QUERY
             "from": "testdata",      # "testdata" WILL BE REPLACED WITH DATASTORE FILLED WITH data
@@ -152,19 +152,11 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 subtest.query.format = format
                 query = convert.unicode2utf8(convert.value2json(subtest.query))
                 # EXECUTE QUERY
-                while True:
-                    try:
-                        response = http.get(self.service_url, data=query)
-                        break
-                    except Exception, e:
-                        if "No connection could be made because the target machine actively refused it" not in e:
-                            Log.alert("Problem connecting")
-                        else:
-                            Log.error("Server raised exception", e)
+                response = self._try_till_response(self.service_url, data=query)
 
                 if response.status_code != 200:
                     error(response)
-                result = convert.json2value(convert.utf82unicode(response.content))
+                result = convert.json2value(convert.utf82unicode(response.all_content))
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
                 if format == "table":
@@ -188,6 +180,17 @@ class ActiveDataBaseTest(FuzzyTestCase):
         finally:
             # REMOVE CONTAINER
             self.es.delete_index(settings.index)
+
+    def _try_till_response(self, *args, **kwargs):
+        while True:
+            try:
+                response = http.get(*args, **kwargs)
+                return response
+            except Exception, e:
+                if "No connection could be made because the target machine actively refused it" not in e:
+                    Log.alert("Problem connecting")
+                else:
+                    Log.error("Server raised exception", e)
 
 
 def error(response):

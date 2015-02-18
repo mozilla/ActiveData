@@ -104,20 +104,23 @@ def safe_size(source):
         total_bytes += len(b)
         bytes.append(b)
         if total_bytes > MAX_STRING_SIZE:
-            data = FileString(TemporaryFile())
-            for bb in bytes:
-                data.write(bb)
-            del bytes
-            del bb
-            b = source.read(MIN_READ_SIZE)
-            while b:
-                total_bytes += len(b)
-                data.write(b)
+            try:
+                data = FileString(TemporaryFile())
+                for bb in bytes:
+                    data.write(bb)
+                del bytes
+                del bb
                 b = source.read(MIN_READ_SIZE)
-            data.seek(0)
-            Log.note("Using file of size {{length}} instead of str()", {"length": total_bytes})
+                while b:
+                    total_bytes += len(b)
+                    data.write(b)
+                    b = source.read(MIN_READ_SIZE)
+                data.seek(0)
+                Log.note("Using file of size {{length}} instead of str()", {"length": total_bytes})
 
-            return data
+                return data
+            except Exception, e:
+                Log.error("Could not write file > {{num}} bytes", {"num": total_bytes}, e)
         b = source.read(MIN_READ_SIZE)
 
     data = b"".join(bytes)

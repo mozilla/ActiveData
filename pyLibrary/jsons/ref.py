@@ -69,7 +69,7 @@ def _replace_ref(node, url):
         url.path = url.path[:-1]
 
     if isinstance(node, dict):
-        ref, node["$ref"] = URL(node["$ref"]), None
+        ref, raw_ref, node["$ref"] = URL(node["$ref"]), node["$ref"], None
 
         if not ref:
             # RECURS
@@ -103,6 +103,8 @@ def _replace_ref(node, url):
 
         if isinstance(new_value, dict):
             return set_default({}, node, new_value)
+        elif node.keys() and new_value == None:
+            return node
         else:
             return wrap(new_value)
 

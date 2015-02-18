@@ -464,7 +464,7 @@ class Except(Exception):
             return True
         if self.cause:
             for c in self.cause:
-                if c.contains(value):
+                if value in c:
                     return True
         return False
 

@@ -21,9 +21,15 @@ from pyLibrary.queries import Q, from_es
 from pyLibrary.times.timer import Timer
 
 
+OVERVIEW = "You have discovered an instance of the ActiveData service https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
+
+
 app = Flask(__name__)
 request_log_queue = None
 default_elasticsearch = None
+
+
+
 
 
 def record_request(request, query_, data, error):
@@ -41,26 +47,13 @@ def record_request(request, query_, data, error):
     request_log_queue.add({"value": log})
 
 
-def pre_filter_request(path, type):
-    pass
-    # if not flask.request.headers.get("from").strip():
-    #     # RETURN A REQUEST FOR A FROM HEADER
-    #     message = "Please add a 'From' header containing either an email address " \
-    #               "of a person to contact, or a website describing the application. " \
-    #               "In the event your application causes high load we would like to " \
-    #               "contact you to explore ways to reducing it.  A simple ban is " \
-    #               "inconvenient for both of us and does not solve the root cause."
-    #     abort(401, message=message)
-
-from2context = Dict()
-
-
 @app.route('/query', defaults={'path': ''}, methods=['GET'])
 @app.route('/<path:path>', methods=['GET'])
 def query(path):
     total_duration = Timer("total duration")
     try:
         with total_duration:
+
             try:
                 data = convert.json2value(convert.utf82unicode(flask.request.environ['body_copy']))
                 record_request(flask.request, data, None, None)
@@ -86,12 +79,27 @@ def query(path):
         e = e.__dict__()
         e.meta.active_data_response_time = total_duration.duration.total_seconds()
 
-
-
         return Response(
             convert.unicode2utf8(convert.value2json(e)),
-            status=400
+            status=400,
+            headers={
+                "access-control-allow-origin": "*"
+            }
         )
+
+@app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
+@app.route('/<path:path>', methods=['GET', 'POST'])
+def overview(path):
+    return Response(
+        convert.unicode2utf8(OVERVIEW),
+        status=400,
+        headers={
+            "access-control-allow-origin": "*"
+        }
+    )
+
+
+
 
 # Snagged from http://stackoverflow.com/questions/10999990/python-flask-how-to-get-whole-raw-post-body
 class WSGICopyBody(object):

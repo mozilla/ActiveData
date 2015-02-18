@@ -18,7 +18,7 @@ class TestEdge1(ActiveDataBaseTest):
     def test_count_rows(self):
         test = {
             "name": "count rows, 1d",
-            "metatdata": {},
+            "metadata": {},
             "data": simple_test_data,
             "query": {
                 "from": "testdata",
@@ -42,10 +42,10 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "type": "set",
-                        "key": "value",
                         "allowNulls": True,
                         "domain": {
+                            "type": "set",
+                            "key": "value",
                             "partitions": [{"value": "b"}, {"value": "c"}]
                         }
                     }
@@ -60,7 +60,7 @@ class TestEdge1(ActiveDataBaseTest):
     def test_count_self(self):
         test = {
             "name": "count column",
-            "metatdata": {},
+            "metadata": {},
             "data": simple_test_data,
             "query": {
                 "from": "testdata",
@@ -84,10 +84,10 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "type": "set",
-                        "key": "value",
                         "allowNulls": True,
                         "domain": {
+                            "type": "set",
+                            "key": "value",
                             "partitions": [{"value": "b"}, {"value": "c"}]
                         }
                     }
@@ -102,7 +102,7 @@ class TestEdge1(ActiveDataBaseTest):
     def test_count_other(self):
         test = {
             "name": "count column",
-            "metatdata": {},
+            "metadata": {},
             "data": simple_test_data,
             "query": {
                 "from": "testdata",
@@ -126,10 +126,10 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "type": "set",
-                        "key": "value",
                         "allowNulls": True,
                         "domain": {
+                            "type": "set",
+                            "key": "value",
                             "partitions": [{"value": "b"}, {"value": "c"}]
                         }
                     }
@@ -144,7 +144,7 @@ class TestEdge1(ActiveDataBaseTest):
     def test_select_2(self):
         test = {
             "name": "count column",
-            "metatdata": {},
+            "metadata": {},
             "data": simple_test_data,
             "query": {
                 "from": "testdata",
@@ -171,10 +171,10 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "type": "set",
-                        "key": "value",
                         "allowNulls": True,
                         "domain": {
+                            "type": "set",
+                            "key": "value",
                             "partitions": [{"value": "b"}, {"value": "c"}]
                         }
                     }
@@ -190,7 +190,7 @@ class TestEdge1(ActiveDataBaseTest):
     def test_sum_column(self):
         test = {
             "name": "sum column",
-            "metatdata": {},
+            "metadata": {},
             "data": simple_test_data,
             "query": {
                 "from": "testdata",
@@ -214,10 +214,10 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "type": "set",
-                        "key": "value",
                         "allowNulls": True,
                         "domain": {
+                            "type": "set",
+                            "key": "value",
                             "partitions": [{"value": "b"}, {"value": "c"}]
                         }
                     }
@@ -232,7 +232,7 @@ class TestEdge1(ActiveDataBaseTest):
     def test_where(self):
         test = {
             "name": "sum column",
-            "metatdata": {},
+            "metadata": {},
             "data": simple_test_data,
             "query": {
                 "from": "testdata",
@@ -253,11 +253,11 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "type": "set",
-                        "key": "value",
-                        "allowNulls": True,
+                        "allowNulls": False,
                         "domain": {
-                            "partitions": [{"value": "b"}, {"value": "c"}]
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [{"value": "c"}]
                         }
                     }
                 ],
@@ -271,7 +271,7 @@ class TestEdge1(ActiveDataBaseTest):
     def test_where_w_dimension(self):
         test = {
             "name": "sum column",
-            "metatdata": {},
+            "metadata": {},
             "data": simple_test_data,
             "query": {
                 "from": "testdata",
@@ -296,10 +296,10 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "type": "set",
-                        "key": "value",
-                        "allowNulls": True,
+                        "allowNulls": False,
                         "domain": {
+                            "type": "set",
+                            "key": "value",
                             "partitions": [{"value": "b"}, {"value": "c"}]
                         }
                     }
@@ -314,7 +314,7 @@ class TestEdge1(ActiveDataBaseTest):
     def test_empty_default_domain(self):
         test = {
             "name": "sum column",
-            "metatdata": {},
+            "metadata": {},
             "data": simple_test_data,
             "query": {
                 "from": "testdata",
@@ -332,10 +332,10 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "type": "set",
-                        "key": "value",
-                        "allowNulls": True,
+                        "allowNulls": False,
                         "domain": {
+                            "type": "set",
+                            "key": "value",
                             "partitions": []
                         }
                     }

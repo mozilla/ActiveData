@@ -99,7 +99,14 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
         return
 
     if not Math.is_number(expected):
-        return test == expected
+        # SOME SPECIAL CASES, EXPECTING EMPTY CONTAINERS IS THE SAME AS EXPECTING NULL
+        if isinstance(expected, list) and len(expected)==0 and test == None:
+            return
+        if isinstance(expected, dict) and not expected.keys() and test == None:
+            return
+        if test != expected:
+            raise AssertionError(expand_template("{{test}} != {{expected}}", locals()))
+        return
 
     num_param = 0
     if digits != None:

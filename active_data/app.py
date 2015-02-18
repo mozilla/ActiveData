@@ -17,11 +17,12 @@ from pyLibrary.debugs import constants, startup
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot import Dict, wrap, unwrap
 from pyLibrary.env import elasticsearch
+from pyLibrary.env.files import File
 from pyLibrary.queries import Q, from_es
 from pyLibrary.times.timer import Timer
 
 
-OVERVIEW = "You have discovered an instance of the ActiveData service https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
+OVERVIEW = File("active_data/ActiveData.html").read()
 
 
 app = Flask(__name__)
@@ -94,7 +95,8 @@ def overview(path):
         convert.unicode2utf8(OVERVIEW),
         status=400,
         headers={
-            "access-control-allow-origin": "*"
+            "access-control-allow-origin": "*",
+            "Content-type": "text/html"
         }
     )
 

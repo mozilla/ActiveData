@@ -408,7 +408,6 @@ def extract_tb(start):
 def format_trace(tbs, start=0):
     trace = []
     for d in tbs[start::]:
-        d["file"] = d["file"].replace("/", "\\")
         item = expand_template('File "{{file}}", line {{line}}, in {{method}}\n', d)
         trace.append(item)
     return "".join(trace)

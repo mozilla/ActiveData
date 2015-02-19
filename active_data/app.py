@@ -23,6 +23,7 @@ from pyLibrary.times.timer import Timer
 
 
 OVERVIEW = File("active_data/ActiveData.html").read()
+BLANK = File("active_data/BlankQueryResponse.html").read()
 
 app = Flask(__name__)
 request_log_queue = None
@@ -49,7 +50,18 @@ def query(path):
     total_duration = Timer("total duration")
     try:
         with total_duration:
-            data = convert.json2value(convert.utf82unicode(flask.request.environ['body_copy']))
+            body = flask.request.environ['body_copy']
+            if not body.strip():
+                return Response(
+                    convert.unicode2utf8(BLANK),
+                    status=400,
+                    headers={
+                        "access-control-allow-origin": "*",
+                        "Content-type": "text/html"
+                    }
+                )
+
+            data = convert.json2value(convert.utf82unicode(body))
             record_request(flask.request, data, None, None)
 
             result = Q.run(data)

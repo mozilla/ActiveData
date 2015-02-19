@@ -95,7 +95,8 @@ def query(path):
         )
 
 
-@app.route('/<path:path>', methods=['GET', 'POST'])
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
 def overview(path):
     record_request(flask.request, None, flask.request.environ['body_copy'], None)
 

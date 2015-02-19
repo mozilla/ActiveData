@@ -25,12 +25,15 @@ class TestEdge1(ActiveDataBaseTest):
                 "select": {"aggregate": "count"},
                 "edges": ["a"]
             },
-            "expecting_list": {"data": [
-                {"a": "b", "count": 2},
-                {"a": "c", "count": 3},
-                {"a": None, "count": 1}
-            ]},
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b", "count": 2},
+                    {"a": "c", "count": 3},
+                    {"a": None, "count": 1}
+                ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["a", "count"],
                 "data": [
                     ["b", 2],
@@ -39,6 +42,7 @@ class TestEdge1(ActiveDataBaseTest):
                 ]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "a",
@@ -67,12 +71,15 @@ class TestEdge1(ActiveDataBaseTest):
                 "select": {"name": "count_a", "value": "a", "aggregate": "count"},
                 "edges": ["a"]
             },
-            "expecting_list": {"data": [
-                {"a": "b", "count_a": 2},
-                {"a": "c", "count_a": 3},
-                {"count_a": 0}
-            ]},
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b", "count_a": 2},
+                    {"a": "c", "count_a": 3},
+                    {"count_a": 0}
+                ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["a", "count_a"],
                 "data": [
                     ["b", 2],
@@ -81,6 +88,7 @@ class TestEdge1(ActiveDataBaseTest):
                 ]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "a",
@@ -109,12 +117,15 @@ class TestEdge1(ActiveDataBaseTest):
                 "select": {"name": "count_v", "value": "v", "aggregate": "count"},
                 "edges": ["a"]
             },
-            "expecting_list": {"data": [
-                {"a": "b", "count_v": 1},
-                {"a": "c", "count_v": 3},
-                {"count_v": 1}
-            ]},
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b", "count_v": 1},
+                    {"a": "c", "count_v": 3},
+                    {"count_v": 1}
+                ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["a", "count_v"],
                 "data": [
                     ["b", 1],
@@ -123,6 +134,7 @@ class TestEdge1(ActiveDataBaseTest):
                 ]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "a",
@@ -154,12 +166,15 @@ class TestEdge1(ActiveDataBaseTest):
                 ],
                 "edges": ["a"]
             },
-            "expecting_list": {"data": [
-                {"a": "b", "count": 1, "avg": 2},
-                {"a": "c", "count": 3, "avg": 31 / 3},
-                {"count": 1, "avg": 3}
-            ]},
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b", "count": 1, "avg": 2},
+                    {"a": "c", "count": 3, "avg": 31 / 3},
+                    {"count": 1, "avg": 3}
+                ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["a", "count", "avg"],
                 "data": [
                     ["b", 1, 2],
@@ -168,6 +183,7 @@ class TestEdge1(ActiveDataBaseTest):
                 ]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "a",
@@ -197,12 +213,15 @@ class TestEdge1(ActiveDataBaseTest):
                 "select": {"value": "v", "aggregate": "sum"},
                 "edges": ["a"]
             },
-            "expecting_list": {"data": [
-                {"a": "b", "v": 2},
-                {"a": "c", "v": 31},
-                {"a": None, "v": 3}
-            ]},
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b", "v": 2},
+                    {"a": "c", "v": 31},
+                    {"a": None, "v": 3}
+                ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["a", "v"],
                 "data": [
                     ["b", 2],
@@ -211,6 +230,7 @@ class TestEdge1(ActiveDataBaseTest):
                 ]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "a",
@@ -240,16 +260,20 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": ["a"],
                 "where": {"term": {"a": "c"}}
             },
-            "expecting_list": {"data": [
-                {"a": "c", "v": 13},
-            ]},
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "c", "v": 13},
+                ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["a", "v"],
                 "data": [
                     ["c", 13]
                 ]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "a",
@@ -277,15 +301,18 @@ class TestEdge1(ActiveDataBaseTest):
                 "from": "testdata",
                 "select": {"value": "v", "aggregate": "max"},
                 "edges": [
-                    {"value": "a", "allowNulls":False, "domain": {"type": "set", "partitions": ["b", "c"]}}
+                    {"value": "a", "allowNulls": False, "domain": {"type": "set", "partitions": ["b", "c"]}}
                 ],
                 "where": {"term": {"a": "c"}}
             },
-            "expecting_list": {"data": [
-                {"a": "b", "v": None},
-                {"a": "c", "v": 13}
-            ]},
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b", "v": None},
+                    {"a": "c", "v": 13}
+                ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["a", "v"],
                 "data": [
                     ["b", None],
@@ -293,6 +320,7 @@ class TestEdge1(ActiveDataBaseTest):
                 ]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "a",
@@ -322,13 +350,17 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": ["a"],
                 "where": {"term": {"a": "d"}}
             },
-            "expecting_list": {"data": [
-            ]},
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["a", "v"],
                 "data": []
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "a",

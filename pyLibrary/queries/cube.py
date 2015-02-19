@@ -34,7 +34,7 @@ class Cube(object):
 
         self.is_value = False if isinstance(select, list) else True
         self.select = select
-        self.meta = Dict()       # PUT EXTRA MARKUP HERE
+        self.meta = Dict(format="cube")       # PUT EXTRA MARKUP HERE
         self.is_none = False
 
         if not all(data.values()):

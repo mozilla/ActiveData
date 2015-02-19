@@ -105,7 +105,10 @@ def es_fieldop(es, query):
                 else:
                     r[s.name] = unwraplist(row[source][s.value])
             data.append(r)
-        return Dict(data=data)
+        return Dict(
+            meta={"format":"list"},
+            data=data
+        )
     elif query.format == "table":
         header = [s.name for s in select]
         map = {s.name: i for i, s in enumerate(select)} # MAP FROM name TO COLUMN INDEX
@@ -119,6 +122,7 @@ def es_fieldop(es, query):
                     r[map[s.name]] = unwraplist(row[source][s.value])
             data.append(r)
         return Dict(
+            meta={"format":"table"},
             header=header,
             data=data
         )

@@ -25,14 +25,17 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": "a",
                 "format": "cube"
             },
-            "expecting_list": {"data": [
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
                 {"a": "b"}
             ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["a"],
                 "data": [["b"]]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "rownum",
@@ -58,14 +61,17 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": {"name": "value", "value": "a"},
                 "format": "cube"
             },
-            "expecting_list": {"data": [
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
                 {"value": "b"}
             ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["value"],
                 "data": [["b"]]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "rownum",
@@ -88,14 +94,17 @@ class TestSetOps(ActiveDataBaseTest):
             "query": {
                 "from": "testdata"
             },
-            "expecting_list": {"data": [
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
                 {"a": "b"}
             ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["a"],
                 "data": [["b"]]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "rownum",
@@ -120,13 +129,16 @@ class TestSetOps(ActiveDataBaseTest):
                 "from": "testdata"
             },
             "expecting_list": {
+                "meta": {"format": "list"},
                 "data": [{"value": {"a": "b"}}]
             },
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["value"],
                 "data": [[{"a": "b"}]]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "rownum",
@@ -143,19 +155,22 @@ class TestSetOps(ActiveDataBaseTest):
     def test_list_of_values(self):
         test = {
             "name": "list of values",
-            "not": "elasticsearch",     # CAN NOT TEST VALUES AGAINST ES
+            "not": "elasticsearch",  # CAN NOT TEST VALUES AGAINST ES
             "data": ["a", "b"],
             "query": {
                 "from": "testdata"
             },
-            "expecting_list": {"data": [
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
                 "a", "b"
             ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["value"],
                 "data": [["a"], ["b"]]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "index",
@@ -181,11 +196,13 @@ class TestSetOps(ActiveDataBaseTest):
                 "from": "testdata",
                 "select": "*"
             },
-            "expecting_list": {"data": [
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
                 {"a": "b"},
                 {"a": "d"}
             ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["a"],
                 "data": [
                     ["b"],
@@ -193,6 +210,7 @@ class TestSetOps(ActiveDataBaseTest):
                 ]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "rownum",
@@ -274,18 +292,21 @@ class TestSetOps(ActiveDataBaseTest):
                 "from": "testdata.a.b",
                 "select": ["...x", "c"]
             },
-            "expecting_list": [
-                {"x": 5, "c": None},
-                {"x": 3, "c": 13},
-                {"x": 3, "c": 17},
-                {"x": 3, "c": 19},
-                {"x": 7, "c": 23},
-                {"x": 11, "c": 29},
-                {"x": 11, "c": 37},
-                {"x": 11, "c": None},
-                {"x": 11, "c": 53}
-            ],
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"x": 5, "c": None},
+                    {"x": 3, "c": 13},
+                    {"x": 3, "c": 17},
+                    {"x": 3, "c": 19},
+                    {"x": 7, "c": 23},
+                    {"x": 11, "c": 29},
+                    {"x": 11, "c": 37},
+                    {"x": 11, "c": None},
+                    {"x": 11, "c": 53}
+                ]},
             "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["x", "c"],
                 "data": [
                     [5, None],
@@ -300,6 +321,7 @@ class TestSetOps(ActiveDataBaseTest):
                 ]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "index",

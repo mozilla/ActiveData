@@ -45,7 +45,7 @@ def record_request(request, query_, data, error):
     request_log_queue.add({"value": log})
 
 
-@app.route('/query', defaults={'path': ''}, methods=['GET'])
+@app.route('/query', defaults={'path': ''}, methods=['GET', 'POST'])
 def query(path):
     total_duration = Timer("total duration")
     try:
@@ -95,7 +95,7 @@ def query(path):
         )
 
 
-@app.route('/', defaults={'path': ''})
+@app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
 @app.route('/<path:path>')
 def overview(path):
     record_request(flask.request, None, flask.request.environ['body_copy'], None)

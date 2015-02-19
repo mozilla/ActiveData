@@ -30,7 +30,7 @@ from pyLibrary.times.timer import Timer
 
 def is_aggsop(es, query):
     es.cluster.get_metadata()
-    if  es.cluster.version.startswith("1.4") and query.edges:
+    if es.cluster.version.startswith("1.4") and query.edges:
         return True
     return False
 
@@ -63,7 +63,6 @@ def es_aggsop(es, mvel, query):
     es_duration = Timer("ES query time")
     with es_duration:
         result = es_query_util.post(es, esQuery, query.limit)
-    meta = Dict(es_response_time=es_duration.duration.total_seconds())
 
     aggs = result.aggregations
     if query.where:
@@ -71,13 +70,12 @@ def es_aggsop(es, mvel, query):
 
     try:
         output = format_dispatch[query.format][0](decoders, aggs, start, query, select)
-        output.meta = meta
+        output.meta.es_response_time = es_duration.duration.total_seconds()
         return output
     except Exception, e:
         if query.format not in format_dispatch:
             Log.error("Format {{format|quote}} not supported yet", {"format": query.format}, e)
         Log.error("Some problem", e)
-
 
 
 class AggsDecoder(object):
@@ -167,8 +165,8 @@ class DefaultDecoder(AggsDecoder):
 
     def count(self, row):
         v = row[self.start]
-        if v==None:
-            self.edge.allowNulls = True   # OK! WE WILL ALLOW NULLS
+        if v == None:
+            self.edge.allowNulls = True  # OK! WE WILL ALLOW NULLS
         else:
             self.edge.domain.partitions.add(v)
 
@@ -292,6 +290,7 @@ def aggs_iterator(aggs, depth):
     for a in _aggs_iterator(aggs, depth - 1):
         yield coord, a
 
+
 def count_dim(decoders, aggs, start):
     if any(isinstance(d, DefaultDecoder) for d in decoders):
         # ENUMERATE THE DOMAINS, IF UNKNOWN AT QUERY TIME
@@ -342,7 +341,7 @@ def format_table(decoders, aggs, start, query, select):
                     output.append(agg[literal_field(s.name)].value)
             yield output
 
-        #EMIT THE MISSING CELLS IN THE CUBE
+        # EMIT THE MISSING CELLS IN THE CUBE
         for c, v in is_sent:
             if not v:
                 output = [d.get_value(c[i]) for i, d in enumerate(decoders)]
@@ -354,13 +353,14 @@ def format_table(decoders, aggs, start, query, select):
                 yield output
 
     return Dict(
+        meta={"format": "table"},
         header=header,
         data=data()
     )
 
 
 def format_tab(decoders, aggs, start, query, select):
-    table= format_table(decoders, aggs, start, query, select)
+    table = format_table(decoders, aggs, start, query, select)
 
     def data():
         yield "\t".join(map(convert.string2quote, table.header))
@@ -371,7 +371,7 @@ def format_tab(decoders, aggs, start, query, select):
 
 
 def format_csv(decoders, aggs, start, query, select):
-    table= format_table(decoders, aggs, start, query, select)
+    table = format_table(decoders, aggs, start, query, select)
 
     def data():
         yield ", ".join(map(convert.string2quote, table.header))
@@ -400,7 +400,7 @@ def format_list(decoders, aggs, start, query, select):
                     output[s.name] = agg[literal_field(s.name)].value
             yield output
 
-        #EMIT THE MISSING CELLS IN THE CUBE
+        # EMIT THE MISSING CELLS IN THE CUBE
         for c, v in is_sent:
             if not v:
                 output = {d.edge.name: d.get_value(c[i]) for i, d in enumerate(decoders)}
@@ -410,6 +410,7 @@ def format_list(decoders, aggs, start, query, select):
                 yield output
 
     output = Dict(
+        meta={"format": "list"},
         data=data()
     )
     return output

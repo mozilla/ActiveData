@@ -49,20 +49,16 @@ def es_aggsop(es, mvel, query):
     if query.where:
         filter = simplify_esfilter(query.where)
         esQuery = Dict(
-            aggs={"main_filter": set_default({"filter": filter}, esQuery)}
+            aggs={"_filter": set_default({"filter": filter}, esQuery)}
         )
 
     es_duration = Timer("ES query time")
     with es_duration:
         result = es_query_util.post(es, esQuery, query.limit)
 
-    aggs = result.aggregations
-    if query.where:
-        aggs = aggs.main_filter
-
     try:
         formatter, mime_type = format_dispatch[query.format]
-        output = formatter(decoders, aggs, start, query, select)
+        output = formatter(decoders, result.aggregations, start, query, select)
         output.meta.es_response_time = es_duration.duration.total_seconds()
         output.meta.content_type = mime_type
         return output

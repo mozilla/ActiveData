@@ -23,7 +23,7 @@ test_data = [
     {"a": "x", "t": Date("today-3day").unix, "v": 5},
     {"a": "x", "t": Date("today-4day").unix, "v": 7},
     {"a": "x", "t": Date("today-5day").unix, "v": 11},
-    {"a": "y", "t": None, "v": 27},
+    {"a": "x", "t": None, "v": 27},
     {"a": "y", "t": Date("today-day").unix, "v": 13},
     {"a": "y", "t": Date("today-2day").unix, "v": 17},
     {"a": "y", "t": Date("today-4day").unix, "v": 19},
@@ -31,7 +31,7 @@ test_data = [
 
 ]
 
-expected = wrap([
+expected1 = wrap([
     {"t": (Date.today() - Duration.WEEK).unix, "v": None},
     {"t": (Date.today() - 6 * Duration.DAY).unix, "v": None},
     {"t": (Date.today() - 5 * Duration.DAY).unix, "v": 34},
@@ -42,8 +42,27 @@ expected = wrap([
     {"v": 29}
 ])
 
+expected2 = wrap([
+    {"a": "x", "t": (Date.today() - Duration.WEEK).unix, "v": None},
+    {"a": "x", "t": (Date.today() - 6 * Duration.DAY).unix, "v": None},
+    {"a": "x", "t": (Date.today() - 5 * Duration.DAY).unix, "v": 11},
+    {"a": "x", "t": (Date.today() - 4 * Duration.DAY).unix, "v": 7},
+    {"a": "x", "t": (Date.today() - 3 * Duration.DAY).unix, "v": 5},
+    {"a": "x", "t": (Date.today() - 2 * Duration.DAY).unix, "v": 3},
+    {"a": "x", "t": (Date.today() - 1 * Duration.DAY).unix, "v": 2},
+    {"a": "x", "v": 29},
+    {"a": "y", "t": (Date.today() - Duration.WEEK).unix, "v": None},
+    {"a": "y", "t": (Date.today() - 6 * Duration.DAY).unix, "v": None},
+    {"a": "y", "t": (Date.today() - 5 * Duration.DAY).unix, "v": 23},
+    {"a": "y", "t": (Date.today() - 4 * Duration.DAY).unix, "v": 19},
+    {"a": "y", "t": (Date.today() - 3 * Duration.DAY).unix, "v": None},
+    {"a": "y", "t": (Date.today() - 2 * Duration.DAY).unix, "v": 17},
+    {"a": "y", "t": (Date.today() - 1 * Duration.DAY).unix, "v": 13},
+    {"a": "y", "v": None}
+])
 
-class TestTime1(ActiveDataBaseTest):
+
+class TestTime(ActiveDataBaseTest):
     def test_time_variables(self):
         test = {
             "metadata": {},
@@ -67,31 +86,94 @@ class TestTime1(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": expected
+                "data": expected1
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["t", "v"],
-                "data": [[r.t, r.v] for r in expected]
+                "data": [[r.t, r.v] for r in expected1]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "edges": [{
-                    "name": "t",
-                    "domain": {
-                        "type": "time",
-                        "key": "min",
-                        "min": Date("today-week").unix,
-                        "max": Date.today().unix,
-                        "interval": Duration.DAY.seconds,
-                        "partitions": [{"min": r.t, "max": (Date(r.t) + Duration.DAY).unix} for r in expected if r.t != None]
-                    }
-                }],
-                "data": {"v": [r.v for r in expected]}
+                              "name": "t",
+                              "domain": {
+                                  "type": "time",
+                                  "key": "min",
+                                  "min": Date("today-week").unix,
+                                  "max": Date.today().unix,
+                                  "interval": Duration.DAY.seconds,
+                                  "partitions": [{"min": r.t, "max": (Date(r.t) + Duration.DAY).unix} for r in expected1 if r.t != None]
+                              }
+                          }],
+                "data": {"v": [r.v for r in expected1]}
             }
         }
         self._execute_es_tests(test)
 
+    def test_time2_variables(self):
+        test = {
+            "metadata": {},
+            "data": test_data,
+            "query": {
+                "from": "unittest",
+                "edges": [
+                    "a",
+                    {
+                        "value": "t",
+                        "domain": {
+                            "type": "time",
+                            "min": "today-week",
+                            "max": "today",
+                            "interval": "day"
+                        }
+                    }
+                ],
+                "select": {
+                    "value": "v", "aggregate": "sum"
+                }
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": expected2
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a", "t", "v"],
+                "data": [[r.a, r.t, r.v] for r in expected2]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "a",
+                        "domain": {
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [
+                                {"name": "x", "value": "x", "dataIndex": 0},
+                                {"name": "y", "value": "y", "dataIndex": 1}
+                            ]
+                        }
+                    }, {
+                        "name": "t",
+                        "domain": {
+                            "type": "time",
+                            "key": "min",
+                            "min": Date("today-week").unix,
+                            "max": Date.today().unix,
+                            "interval": Duration.DAY.seconds,
+                            "partitions": [{"min": r.t, "max": (Date(r.t) + Duration.DAY).unix} for r in expected2 if r.t != None and r.a == "x"]
+                        }
+                    }
+                ],
+                "data": {"v": [
+                    [r.v for r in expected2 if r.a == "x"],
+                    [r.v for r in expected2 if r.a == "y"]
+                ]}
+            }
+        }
+        self._execute_es_tests(test)
 
 
         #
@@ -101,9 +183,9 @@ class TestTime1(ActiveDataBaseTest):
         # "metadata": {},
         # "data": test_data,
         # "query": {
-        #     "from": "unittest",
-        #     "edges": [
-        #         "build.branch",
+        # "from": "unittest",
+        # "edges": [
+        # "build.branch",
         #         "result.ok",
         #         {
         #             "value": "run.start",

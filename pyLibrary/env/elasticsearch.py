@@ -56,7 +56,7 @@ class Index(object):
 
         self.debug = debug
         if self.debug:
-            Log.alert("elasticsearch debugging is on")
+            Log.alert("elasticsearch debugging on index {{index}} is on", {"index": settings.index})
 
         self.settings = settings
         self.cluster = Cluster(settings)
@@ -73,10 +73,16 @@ class Index(object):
         self.path = "/" + index + "/" + type
 
 
-    def get_schema(self):
+    def get_schema(self, retry=True):
         if self.settings.explore_metadata:
             indices = self.cluster.get_metadata().indices
             index = indices[self.settings.index]
+
+            if index == None and retry:
+                #TRY AGAIN, JUST IN CASE
+                self.cluster.cluster_metadata = None
+                return self.get_schema(retry=False)
+
             if not index.mappings[self.settings.type]:
                 Log.error("ElasticSearch index ({{index}}) does not have type ({{type}})", self.settings)
             return index.mappings[self.settings.type]

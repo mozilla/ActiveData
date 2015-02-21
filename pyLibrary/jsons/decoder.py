@@ -13,7 +13,7 @@ from __future__ import division
 from pyLibrary.dot import Null
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap
-from pyLibrary.jsons.encoder import UnicodeBuilder, use_pypy, encode
+from pyLibrary.jsons.encoder import UnicodeBuilder, use_pypy, _encode
 
 DEBUG = False
 
@@ -427,7 +427,7 @@ class JSONList(object):
         if self.json is not None:
             return self.json[self.start:self.end]
         else:
-            return encode(self)
+            return _encode(self)
 
 
 

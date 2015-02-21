@@ -29,7 +29,7 @@ from pyLibrary.debugs.profiles import Profiler
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.env.big_data import FileString, safe_size
 from pyLibrary.jsons import quote
-from pyLibrary.jsons.encoder import encode
+from pyLibrary.jsons.encoder import json_encoder
 from pyLibrary.strings import expand_template
 from pyLibrary.times.dates import Date
 
@@ -39,7 +39,7 @@ DUE TO MY POOR MEMORY, THIS IS A LIST OF ALL CONVERSION ROUTINES
 """
 def value2json(obj, pretty=False):
     try:
-        json = encode(obj, pretty=pretty)
+        json = json_encoder(obj, pretty=pretty)
         if json == None:
             Log.note(str(type(obj)) + " is not valid{{type}}JSON", {"type": " (pretty) " if pretty else " "})
             Log.error("Not valid JSON: " + str(obj) + " of type " + str(type(obj)))

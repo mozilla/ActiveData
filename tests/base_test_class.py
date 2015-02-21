@@ -95,7 +95,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
     def setUp(self):
         # ADD TEST RECORDS
         self.backend_es.index = "testing_" + Random.hex(10).lower()
-        self.backend_es.type = "testdata"
+        self.backend_es.type = "test_results"
         self.es = elasticsearch.Cluster(self.backend_es)
         self.index = self.es.get_or_create_index(self.backend_es)
         self.server_is_ready.wait_for_go()
@@ -111,7 +111,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
         settings = self.backend_es.copy()
         settings.index = "testing_" + Random.hex(10).lower()
-        settings.type = "testdata"
+        settings.type = "test_results"
 
         if "elasticsearch" in subtest["not"]:
             return

@@ -336,9 +336,9 @@ def toString(val):
     if val == None:
         return ""
     elif isinstance(val, (dict, list, set)):
-        from pyLibrary.jsons.encoder import encode
+        from pyLibrary.jsons.encoder import json_encoder
 
-        return encode(val, pretty=True)
+        return json_encoder(val, pretty=True)
     elif hasattr(val, "__json__"):
         return val.__json__()
     elif isinstance(val, timedelta):

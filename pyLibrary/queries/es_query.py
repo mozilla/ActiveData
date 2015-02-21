@@ -45,14 +45,13 @@ class ESQuery(Container):
         self.worker = None
         self.ready = False
 
-
-    def __dict__(self):
+    def as_dict(self):
         settings = self.settings.copy()
         settings.settings = None
         return settings
 
     def __json__(self):
-        return convert.value2json(self.__dict__())
+        return convert.value2json(self.as_dict())
 
 
     def __enter__(self):

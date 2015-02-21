@@ -194,7 +194,9 @@ class Bucket(object):
                 return convert.utf82unicode(source.read(key)).split("\n")
 
         if source.key.endswith(".gz"):
-            return LazyLines(convert.zip2bytes(source))
+            buff = BytesIO(safe_size(source))
+            archive = gzip.GzipFile(fileobj=buff, mode='r')
+            return LazyLines(archive)
         else:
             return LazyLines(source)
 

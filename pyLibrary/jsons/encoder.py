@@ -20,6 +20,8 @@ from decimal import Decimal
 from pyLibrary.strings import utf82unicode
 from pyLibrary.dot import Dict, DictList
 from pyLibrary.jsons import quote, ESCAPE_DCT, scrub
+from pyLibrary.times.dates import Date
+from pyLibrary.times.durations import Duration
 
 json_decoder = json.JSONDecoder().decode
 
@@ -59,7 +61,7 @@ except Exception, e:
 append = UnicodeBuilder.append
 
 
-def encode(value, pretty=False):
+def _encode(value, pretty=False):
     """
     pypy DOES NOT OPTIMIZE GENERATOR CODE WELL
     """
@@ -153,13 +155,15 @@ def _value2json(value, _buffer):
         elif type in (set, list, tuple, DictList):
             _list2json(value, _buffer)
         elif type is date:
-            append(_buffer, unicode(long(time.mktime(value.timetuple()) * 1000)))
+            append(_buffer, unicode(long(time.mktime(value.timetuple()))))
         elif type is datetime:
-            append(_buffer, unicode(long(time.mktime(value.timetuple()) * 1000)))
+            append(_buffer, unicode(long(time.mktime(value.timetuple()))))
+        elif type is Date:
+            append(_buffer, unicode(long(time.mktime(value.value.timetuple()))))
         elif type is timedelta:
-            append(_buffer, "\"")
             append(_buffer, unicode(value.total_seconds()))
-            append(_buffer, "second\"")
+        elif type is Duration:
+            append(_buffer, unicode(value.total_seconds))
         elif hasattr(value, '__json__'):
             j = value.__json__()
             append(_buffer, j)
@@ -340,7 +344,7 @@ def pretty_json(value):
             except Exception, e:
                 pass
 
-            return encode(value)
+            return _encode(value)
 
     except Exception, e:
         problem_serializing(value, e)
@@ -417,9 +421,6 @@ def datetime2milli(d, type):
 # http://liangnuren.wordpress.com/2012/08/13/python-json-performance/
 # http://morepypy.blogspot.ca/2011/10/speeding-up-json-encoding-in-pypy.html
 if use_pypy:
-    json_encoder = encode
+    json_encoder = _encode
 else:
     json_encoder = cPythonJSONEncoder().encode
-
-
-

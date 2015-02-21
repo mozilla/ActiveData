@@ -30,7 +30,7 @@
 		"host": "http://172.31.0.7",
 		"port": "9200",
 		"index": "testdata",
-		"type": "testdata",
+		"type": "test_results",
 		"debug": true
 	},
 	"debug": {

@@ -42,13 +42,13 @@ class DBQuery(object):
         self.settings = settings
         self._db = DB(settings)
 
-    def __dict__(self):
+    def as_dict(self):
         settings = self.settings.copy()
         settings.settings = None
         return unwrap(settings)
 
     def __json__(self):
-        return convert.value2json(self.__dict__())
+        return convert.value2json(self.as_dict())
 
     def query(self, query, stacked=False):
         """

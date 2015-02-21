@@ -13,71 +13,83 @@ import re
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.dot import nvl, Dict, set_default
+from pyLibrary.dot import nvl, Dict, set_default, Null
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap
+from pyLibrary.times.dates import Date
+from pyLibrary.times.durations import Duration
 
 ALGEBRAIC = {"time", "duration", "numeric", "count", "datetime"}  # DOMAINS THAT HAVE ALGEBRAIC OPERATIONS DEFINED
-KNOWN = {"set", "boolean", "duration", "time", "numeric"}    # DOMAINS THAT HAVE A KNOWN NUMBER FOR PARTS AT QUERY TIME
-PARTITION = {"uid", "set", "boolean"}    # DIMENSIONS WITH CLEAR PARTS
+KNOWN = {"set", "boolean", "duration", "time", "numeric"}  # DOMAINS THAT HAVE A KNOWN NUMBER FOR PARTS AT QUERY TIME
+PARTITION = {"uid", "set", "boolean"}  # DIMENSIONS WITH CLEAR PARTS
+
+
 
 
 class Domain(object):
+    __slots__ = ["name", "type", "value", "key", "label", "end", "isFacet", "where", "dimension"]
+
     def __new__(cls, **desc):
-        desc = wrap(desc)
-        if desc.type == "value":
-            return ValueDomain(**unwrap(desc))
-        elif desc.type == "default":
-            return DefaultDomain(**unwrap(desc))
-        elif desc.type == "set":
-            return SimpleSetDomain(**unwrap(desc))
-        elif desc.type == "uid":
-            return DefaultDomain(**unwrap(desc))
+        if cls == Domain:
+            try:
+                return name2type[desc.get("type")](**desc)
+            except Exception, e:
+                Log.error("Do not know domain of type {{type}}", {"type": desc.get("type")}, e)
         else:
-            Log.error("Do not know domain of type {{type}}", {"type": desc.type})
+            return object.__new__(cls)
 
     def __init__(self, **desc):
         desc = wrap(desc)
+        self._set_slots_to_none(self.__class__)
+        set_default(self, desc)
         self.name = nvl(desc.name, desc.type)
-        self.type = desc.type
-        # self.min = desc.min
-        # self.max = desc.max
-        # self.interval = desc.interval
-        self.value = desc.value
-        self.key = desc.key
-        self.label = desc.label
-        self.end = desc.end
         self.isFacet = nvl(desc.isFacet, False)
-        self.dimension = desc.dimension
+
+    def _set_slots_to_none(self, cls):
+        """
+        WHY ARE SLOTS NOT ACCESIBLE UNTILO WE ASSIGN TO THEM?
+        """
+        if hasattr(cls, "__slots__"):
+            for s in cls.__slots__:
+                self.__setattr__(s, None)
+        for b in cls.__bases__:
+            self._set_slots_to_none(b)
+
 
     def __copy__(self):
-        return Domain(**self.__dict__())
+        return self.__class__(**self.as_dict())
 
     def copy(self):
-        return Domain(**self.__dict__())
+        return self.__class__(**self.as_dict())
 
-    def __dict__(self):
+    def as_dict(self):
         return Dict(
-            type=self.type,
             name=self.name,
-            partitions=self.partitions,
-            # min=self.min,
-            # max=self.max,
-            # interval=self.interval,
+            type=self.type,
             value=self.value,
             key=self.key,
-            label=self.label,
-            end=self.end,
-            isFacet=self.isFacet
+            isFacet=self.isFacet,
+            where=self.where,
+            dimension=self.dimension
         )
 
     def __json__(self):
-        return convert.value2json(self.__dict__())
+        return convert.value2json(self.as_dict())
+
+    @property
+    def __all_slots__(self):
+        return self._all_slots(self.__class__)
+
+    def _all_slots(self, cls):
+        output = set(getattr(cls, '__slots__', []))
+        for b in cls.__bases__:
+            output |= self._all_slots(b)
+        return output
+
 
 
 class ValueDomain(Domain):
-    def __new__(cls, **desc):
-        return object.__new__(ValueDomain)
+    __slots__ = ["NULL"]
 
     def __init__(self, **desc):
         Domain.__init__(self, **desc)
@@ -104,17 +116,15 @@ class DefaultDomain(Domain):
     DOMAIN IS A LIST OF OBJECTS, EACH WITH A value PROPERTY
     """
 
-    def __new__(cls, **desc):
-        return object.__new__(DefaultDomain)
+    __slots__ = ["NULL", "partitions", "map"]
 
     def __init__(self, **desc):
         Domain.__init__(self, **desc)
 
-        self.NULL = Dict(value=None)
+        self.NULL = Null
         self.partitions = DictList()
         self.map = dict()
         self.map[None] = self.NULL
-        self.where = None
 
     def compare(self, a, b):
         return value_compare(a.value, b.value)
@@ -142,14 +152,18 @@ class DefaultDomain(Domain):
     def getLabel(self, part):
         return part.value
 
+    def as_dict(self):
+        output = Domain.as_dict(self)
+        output.partitions = self.partitions
+        return output
+
 
 class SimpleSetDomain(Domain):
     """
     DOMAIN IS A LIST OF OBJECTS, EACH WITH A value PROPERTY
     """
 
-    def __new__(cls, **desc):
-        return object.__new__(SimpleSetDomain)
+    __slots__ = ["NULL", "partitions", "map", "order"]
 
     def __init__(self, **desc):
         Domain.__init__(self, **desc)
@@ -157,11 +171,9 @@ class SimpleSetDomain(Domain):
 
         self.type = "set"
         self.order = {}
-        self.NULL = Dict(value=None)
+        self.NULL = Null
         self.partitions = DictList()
 
-        self.esfilter = None
-        set_default(self, desc)
         if isinstance(self.key, set):
             Log.error("problem")
 
@@ -171,7 +183,7 @@ class SimpleSetDomain(Domain):
             self.map = {}
             self.order[None] = len(desc.partitions)
             for i, p in enumerate(desc.partitions):
-                part = {"name": p, "value": p, "dataIndex":i}
+                part = {"name": p, "value": p, "dataIndex": i}
                 self.partitions.append(part)
                 self.map[p] = part
                 self.order[p] = i
@@ -190,7 +202,7 @@ class SimpleSetDomain(Domain):
             self.map = UniqueIndex(keys=desc.key)
             # self.key = UNION(set(d[desc.key].keys()) for d in desc.partitions)
             # self.map = UniqueIndex(keys=self.key)
-        elif len(desc.partitions)==0:
+        elif len(desc.partitions) == 0:
             # CREATE AN EMPTY DOMAIN
             self.key = "value"
             self.map = {}
@@ -208,9 +220,9 @@ class SimpleSetDomain(Domain):
                 self.map[p[self.key]] = p
                 self.order[p[self.key]] = i
         elif all(p.esfilter for p in self.partitions):
-            #EVERY PART HAS AN esfilter DEFINED, SO USE THEM
+            # EVERY PART HAS AN esfilter DEFINED, SO USE THEM
             for i, p in enumerate(self.partitions):
-                p.dataIndex=i
+                p.dataIndex = i
 
         else:
             Log.error("Can not hanldle")
@@ -265,11 +277,16 @@ class SimpleSetDomain(Domain):
     def getLabel(self, part):
         return part[self.label]
 
+    def as_dict(self):
+        output = Domain.as_dict(self)
+        output.partitions = self.partitions
+        return output
+
+
+
 
 class SetDomain(Domain):
-
-    def __new__(cls, **desc):
-        return object.__new__(SetDomain)
+    __slots__ = ["NULL", "partitions", "map", "order"]
 
     def __init__(self, **desc):
         Domain.__init__(self, **desc)
@@ -277,11 +294,9 @@ class SetDomain(Domain):
 
         self.type = "set"
         self.order = {}
-        self.NULL = Dict(value=None)
+        self.NULL = Null
         self.partitions = DictList()
 
-        self.esfilter = None
-        set_default(self, desc)
         if isinstance(self.key, set):
             Log.error("problem")
 
@@ -371,6 +386,73 @@ class SetDomain(Domain):
     def getLabel(self, part):
         return part[self.label]
 
+    def as_dict(self):
+        output = Domain.as_dict(self)
+        output.partitions = self.partitions
+        return output
+
+
+
+
+class TimeDomain(Domain):
+    __slots__ = ["max", "min", "interval", "partitions", "NULL"]
+
+    def __init__(self, **desc):
+        Domain.__init__(self, **desc)
+        self.type = "time"
+        self.NULL = Null
+        self.min = Date(self.min)
+        self.max = Date(self.max)
+        self.interval = Duration(self.interval)
+
+        if self.partitions:
+            # IGNORE THE min, max, interval
+            if not self.key:
+                Log.error("Must have a key value")
+
+            Log.error("not implemented yet")
+
+            # VERIFY PARTITIONS DO NOT OVERLAP
+            return
+        elif not all([self.min, self.max, self.interval]):
+            Log.error("Can not handle missing parameter")
+
+        self.key = "min"
+        self.partitions = wrap([{"min": v, "max": v + self.interval, "dataIndex":i} for i, v in enumerate(Date.range(self.min, self.max, self.interval))])
+
+    def compare(self, a, b):
+        return value_compare(a, b)
+
+    def getCanonicalPart(self, part):
+        return self.getPartByKey(part[self.key])
+
+    def getIndexByKey(self, key):
+        for p in self.partitions:
+            if p.min <= key < p.max:
+                return p.dataIndex
+        return len(self.partitions)
+
+    def getPartByKey(self, key):
+        for p in self.partitions:
+            if p.min <= key < p.max:
+                return p
+        return self.NULL
+
+    def getKey(self, part):
+        return part[self.key]
+
+    def getKeyByIndex(self, index):
+        return self.partitions[index][self.key]
+
+    def as_dict(self):
+        output = Domain.as_dict(self)
+
+        output.partitions = self.partitions
+        output.min = self.min
+        output.max = self.max
+        output.interval = self.interval
+        return output
+
 
 
 def value_compare(a, b):
@@ -389,11 +471,20 @@ def value_compare(a, b):
         return 0
 
 
-
 keyword_pattern = re.compile(r"\w+(?:\.\w+)*")
+
+
 def is_keyword(value):
     if value == None:
         return False
     return True if keyword_pattern.match(value) else False
 
+
+name2type = {
+    "value": ValueDomain,
+    "default": DefaultDomain,
+    "set": SimpleSetDomain,
+    "uid": DefaultDomain,
+    "time": TimeDomain
+}
 

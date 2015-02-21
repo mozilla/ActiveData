@@ -3,10 +3,11 @@
 
 
 
-Function: jsons.encode.encoder()
+Function: jsons.encode._encoder()
 --------------------------------
 
-Fast JSON encoder used in `convert.value2json()`.  Run the [speedtest](https://github.com/klahnakoski/pyLibrary/blob/master/tests/speedtest_json.py)
+Fast JSON encoder used in `convert.value2json()` when running in Pypy.  Run the
+[speedtest](https://github.com/klahnakoski/pyLibrary/blob/master/tests/speedtest_json.py)
 to compare with default implementation and ujson
 
 

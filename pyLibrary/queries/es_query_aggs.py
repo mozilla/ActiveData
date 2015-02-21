@@ -9,20 +9,12 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
-from copy import copy
-from pyLibrary import convert
 
-from pyLibrary.collections.matrix import Matrix
+from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, nvl
+from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, nvl, Null
 from pyLibrary.queries import es_query_util, Q
-from pyLibrary.queries.cube import Cube
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain
-
-
-
-# THE NEW AND FANTASTIC AGGS OPERATION IN ELASTICSEARCH!
-# WE ALL WIN NOW!
 from pyLibrary.queries.es_query_util import aggregates1_4
 from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.times.timer import Timer
@@ -69,8 +61,10 @@ def es_aggsop(es, mvel, query):
         aggs = aggs.main_filter
 
     try:
-        output = format_dispatch[query.format][0](decoders, aggs, start, query, select)
+        formatter, mime_type = format_dispatch[query.format]
+        output = formatter(decoders, aggs, start, query, select)
         output.meta.es_response_time = es_duration.duration.total_seconds()
+        output.meta.content_type = mime_type
         return output
     except Exception, e:
         if query.format not in format_dispatch:
@@ -85,12 +79,14 @@ class AggsDecoder(object):
             return object.__new__(DefaultDecoder, e.copy())
         if e.value and e.domain.type in PARTITION:
             return object.__new__(SetDecoder, e)
+        if e.value and e.domain.type == "time":
+            return object.__new__(TimeDecoder, e)
         elif not e.value and e.domain.dimension.fields:
             # THIS domain IS FROM A dimension THAT IS A SIMPLE LIST OF fields
             # JUST PULL THE FIELDS
             fields = e.domain.dimension.fields
             if isinstance(fields, dict):
-                return object.__new__(DimFieldDictDecoder, e)
+                Log.error("Not supported yet")
             else:
                 return object.__new__(DimFieldListDecoder, e)
         else:
@@ -126,22 +122,111 @@ class SetDecoder(AggsDecoder):
     def append_query(self, esQuery, start):
         self.start = start
         return wrap({"aggs": {
-            str(start): set_default({"terms": {"field": self.edge.value}}, esQuery),
-            str(start) + "_missing": set_default({"missing": {"field": self.edge.value}}, esQuery),
+            "_match": set_default({"terms": {"field": self.edge.value}}, esQuery),
+            "_missing": set_default({"missing": {"field": self.edge.value}}, esQuery),
         }})
 
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
 
     def get_index(self, row):
-        return self.edge.domain.getIndexByKey(row[self.start])
+        try:
+            part = row[self.start]
+            if part == None:
+                return len(self.edge.domain.partitions)
+            return self.edge.domain.getIndexByKey(part.key)
+        except Exception, e:
+            Log.error("problem", e)
 
     @property
     def num_columns(self):
         return 1
 
 
-class DefaultDecoder(AggsDecoder):
+class TimeDecoder(AggsDecoder):
+    def append_query(self, esQuery, start):
+        self.start = start
+        domain = self.edge.domain
+
+        # USE RANGES
+        _min = nvl(domain.min, MAX(domain.partitions.min))
+        _max = nvl(domain.max, MAX(domain.partitions.max))
+
+        return wrap({"aggs": {
+            "_match": set_default(
+                {"range": {
+                    "field": self.edge.value,
+                    "ranges": [{"from": p.min.unix, "to": p.max.unix} for p in domain.partitions]
+                }},
+                esQuery
+            ),
+            "_other": set_default(
+                {"range": {
+                    "field": self.edge.value,
+                    "ranges": [
+                        {"to": _min.unix},
+                        {"from": _max.unix}
+                    ]
+                }},
+                esQuery
+            ),
+            "_missing": set_default({"missing": {"field": self.edge.value}}, esQuery),
+        }})
+
+        # histogram BREAKS WHEN USING extended_bounds (OOM), WE NEED BOUNDS TO CONTROL EDGES
+        # return wrap({"aggs": {
+        #     "_match": set_default(
+        #         {"histogram": {
+        #             "field": self.edge.value,
+        #             "interval": domain.interval.unix,
+        #             "min_doc_count": 0,
+        #             "extended_bounds": {
+        #                 "min": domain.min.unix,
+        #                 "max": domain.max.unix,
+        #             }
+        #         }},
+        #         esQuery
+        #     ),
+        #     "_other": set_default(
+        #         {"range": {
+        #             "field": self.edge.value,
+        #             "ranges": [
+        #                 {"to": domain.min.unix},
+        #                 {"from": domain.max.unix}
+        #             ]
+        #         }},
+        #         esQuery
+        #     ),
+        #     "_missing": set_default({"missing": {"field": self.edge.value}}, esQuery),
+        # }})
+
+    def get_value(self, index):
+        return self.edge.domain.getKeyByIndex(index)
+
+    def get_index(self, row):
+        domain = self.edge.domain
+        part = row[self.start]
+        if part == None:
+            return len(domain.partitions)
+
+        f = nvl(part["from"], part.key)
+        t = nvl(part.to, part.key)
+        if f == None or t == None:
+            return len(domain.partitions)
+        else:
+            for p in domain.partitions:
+                if p.min.unix <= f <p.max.unix:
+                    return p.dataIndex
+        sample = part.copy
+        sample.buckets = None
+        Log.error("Expecting to find {{part}}", {"part":sample})
+
+    @property
+    def num_columns(self):
+        return 1
+
+
+class DefaultDecoder(SetDecoder):
     # FOR DECODING THE default DOMAIN TYPE (UNKNOWN-AT-QUERY-TIME SET OF VALUES)
 
     def __init__(self, edge):
@@ -153,22 +238,16 @@ class DefaultDecoder(AggsDecoder):
     def append_query(self, esQuery, start):
         self.start = start
         return wrap({"aggs": {
-            str(start): set_default({"terms": {"field": self.edge.value}}, esQuery),
-            str(start) + "_missing": set_default({"missing": {"field": self.edge.value}}, esQuery),
+            "_match": set_default({"terms": {"field": self.edge.value}}, esQuery),
+            "_missing": set_default({"missing": {"field": self.edge.value}}, esQuery),
         }})
 
-    def get_value(self, index):
-        return self.edge.domain.getKeyByIndex(index)
-
-    def get_index(self, row):
-        return self.edge.domain.getIndexByKey(row[self.start])
-
     def count(self, row):
-        v = row[self.start]
-        if v == None:
+        part = row[self.start]
+        if part == None:
             self.edge.allowNulls = True  # OK! WE WILL ALLOW NULLS
         else:
-            self.edge.domain.partitions.add(v)
+            self.edge.domain.partitions.add(part.key)
 
     def done_count(self):
         self.edge.domain = SimpleSetDomain(
@@ -189,18 +268,20 @@ class DimFieldListDecoder(DefaultDecoder):
         self.start = start
         for i, v in enumerate(self.fields):
             esQuery = wrap({"aggs": {
-                str(start + i): set_default({"terms": {"field": v}}, esQuery),
-                str(start + i) + "_missing": set_default({"missing": {"field": v}}, esQuery),
+                "_match": set_default({"terms": {"field": v}}, esQuery),
+                "_missing": set_default({"missing": {"field": v}}, esQuery),
             }})
 
         if self.edge.domain.where:
             filter = simplify_esfilter(self.edge.domain.where)
-            esQuery = {"aggs": {str(start + i) + "_filter": set_default({"filter": filter}, esQuery)}}
+            esQuery = {"aggs": {"_filter": set_default({"filter": filter}, esQuery)}}
 
         return esQuery
 
     def count(self, row):
-        self.edge.domain.partitions.add(tuple(row[self.start:self.start + len(self.fields):]))
+        part = row[self.start:self.start + len(self.fields):]
+        value = tuple(p.key for p in part)
+        self.edge.domain.partitions.add(value)
 
     def done_count(self):
         self.edge.domain = SimpleSetDomain(
@@ -210,7 +291,7 @@ class DimFieldListDecoder(DefaultDecoder):
 
     def get_index(self, row):
         parts = self.edge.domain.partitions
-        find = tuple(row[self.start:self.start + self.num_columns:])
+        find = tuple(p.key for p in row[self.start:self.start + self.num_columns:])
         for p in parts:
             if p.value == find:
                 return p.dataIndex
@@ -229,72 +310,56 @@ class DimFieldListDecoder(DefaultDecoder):
         return len(self.fields)
 
 
-class DimFieldDictDecoder(DefaultDecoder):
-    def __init__(self, edge):
-        DefaultDecoder.__init__(self, edge)
-        self.fields = Q.sort(edge.domain.dimension.fields.items(), 0)
 
-    def append_query(self, esQuery, start):
-        self.start = start
-        for i, (k, v) in enumerate(self.fields):
-            esQuery.terms = {"field": v}
-        esQuery.filter = simplify_esfilter(self.edge.domain.esfilter)
-        return esQuery
-
-    def get_index(self, row):
-        # coord IS NOW SET, WHICH PART IS IT?
-        part = Dict()
-        for i, (k, v) in enumerate(self.fields):
-            part[v] = row[self.start + i]
-
-        c = self.edge.domain.getIndexByPart(part)
-        return c
-
-    @property
-    def num_columns(self):
-        return len(self.fields)
-
-
-def aggs_iterator(aggs, depth):
+def aggs_iterator(aggs, decoders):
     """
     DIG INTO ES'S RECURSIVE aggs DATA-STRUCTURE:
     RETURN AN ITERATOR OVER THE EFFECTIVE ROWS OF THE RESULTS
     """
-    coord = [None] * depth
+    depth = decoders[-1].start + decoders[-1].num_columns
+    parts = [None] * depth
 
     def _aggs_iterator(aggs, d):
-        filter_name = [k for k in aggs.keys() if k.endswith("_filter")]
-        if filter_name:
-            aggs = aggs[filter_name[0]]
+        if aggs._filter:
+            aggs = aggs._filter
 
         if d > 0:
-            for b in aggs[str(d)].buckets:
-                coord[d] = b.key
+            for b in aggs._match.buckets:
+                parts[d] = b
                 for a in _aggs_iterator(b, d - 1):
                     yield a
-            coord[d] = None
-            b = aggs[str(d) + "_missing"]
+            parts[d] = Null
+            for b in aggs._other.buckets:
+                for a in _aggs_iterator(b, d - 1):
+                    yield a
+            b = aggs._missing
             if b.doc_count:
                 for a in _aggs_iterator(b, d - 1):
                     yield a
         else:
-            for b in aggs[str(d)].buckets:
-                coord[d] = b.key
+            for b in aggs._match.buckets:
+                parts[d] = b
                 if b.doc_count:
                     yield b
-            coord[d] = None
-            b = aggs[str(d) + "_missing"]
+            parts[d] = Null
+            for b in aggs._other.buckets:
+                if b.doc_count:
+                    yield b
+            b = aggs._missing
             if b.doc_count:
                 yield b
 
     for a in _aggs_iterator(aggs, depth - 1):
-        yield coord, a
+        yield parts, a
 
 
-def count_dim(decoders, aggs, start):
+
+
+
+def count_dim(aggs, decoders):
     if any(isinstance(d, DefaultDecoder) for d in decoders):
         # ENUMERATE THE DOMAINS, IF UNKNOWN AT QUERY TIME
-        for row, agg in aggs_iterator(aggs, start):
+        for row, agg in aggs_iterator(aggs, decoders):
             for d in decoders:
                 d.count(row)
         for d in decoders:
@@ -303,134 +368,8 @@ def count_dim(decoders, aggs, start):
     return new_edges
 
 
-def format_cube(decoders, aggs, start, query, select):
-    new_edges = count_dim(decoders, aggs, start)
-    dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-    matricies = [(s, Matrix(dims=dims, zeros=(s.aggregate == "count"))) for s in select]
-    for row, agg in aggs_iterator(aggs, start):
-        coord = tuple(d.get_index(row) for d in decoders)
-        for s, m in matricies:
-            # name = literal_field(s.name)
-            if s.aggregate == "count" and s.value == None:
-                m[coord] = agg.doc_count
-            else:
-                if m[coord]:
-                    Log.error("Not expected")
-                m[coord] = agg[literal_field(s.name)].value
-    cube = Cube(query.select, new_edges, {s.name: m for s, m in matricies})
-    cube.frum = query
-    return cube
+format_dispatch = {}
+from pyLibrary.queries.es_query_aggs_format import format_cube
 
+_ = format_cube
 
-def format_table(decoders, aggs, start, query, select):
-    new_edges = count_dim(decoders, aggs, start)
-    header = new_edges.name + select.name
-
-    def data():
-        dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-        is_sent = Matrix(dims=dims, zeros=True)
-        for row, agg in aggs_iterator(aggs, start):
-            coord = tuple(d.get_index(row) for d in decoders)
-            is_sent[coord] = 1
-
-            output = copy(row)
-            for s in select:
-                if s.aggregate == "count" and s.value == None:
-                    output.append(agg.doc_count)
-                else:
-                    output.append(agg[literal_field(s.name)].value)
-            yield output
-
-        # EMIT THE MISSING CELLS IN THE CUBE
-        for c, v in is_sent:
-            if not v:
-                output = [d.get_value(c[i]) for i, d in enumerate(decoders)]
-                for s in select:
-                    if s.aggregate == "count":
-                        output.append(0)
-                    else:
-                        output.append(None)
-                yield output
-
-    return Dict(
-        meta={"format": "table"},
-        header=header,
-        data=data()
-    )
-
-
-def format_tab(decoders, aggs, start, query, select):
-    table = format_table(decoders, aggs, start, query, select)
-
-    def data():
-        yield "\t".join(map(convert.string2quote, table.header))
-        for d in table.data:
-            yield "\t".join(map(convert.string2quote, d))
-
-    return data()
-
-
-def format_csv(decoders, aggs, start, query, select):
-    table = format_table(decoders, aggs, start, query, select)
-
-    def data():
-        yield ", ".join(map(convert.string2quote, table.header))
-        for d in table.data:
-            yield ", ".join(map(convert.string2quote, d))
-
-    return data()
-
-
-def format_list(decoders, aggs, start, query, select):
-    new_edges = count_dim(decoders, aggs, start)
-
-    def data():
-        dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-        is_sent = Matrix(dims=dims, zeros=True)
-        for row, agg in aggs_iterator(aggs, start):
-            coord = tuple(d.get_index(row) for d in decoders)
-            is_sent[coord] = 1
-
-            output = {e.name: r for e, r in zip(query.edges, row)}
-
-            for s in select:
-                if s.aggregate == "count" and s.value == None:
-                    output[s.name] = agg.doc_count
-                else:
-                    output[s.name] = agg[literal_field(s.name)].value
-            yield output
-
-        # EMIT THE MISSING CELLS IN THE CUBE
-        for c, v in is_sent:
-            if not v:
-                output = {d.edge.name: d.get_value(c[i]) for i, d in enumerate(decoders)}
-                for s in select:
-                    if s.aggregate == "count":
-                        output[s.name] = 0
-                yield output
-
-    output = Dict(
-        meta={"format": "list"},
-        data=data()
-    )
-    return output
-
-
-def format_line(decoders, aggs, start, query, select):
-    list = format_list(decoders, aggs, start, query, select)
-
-    def data():
-        for d in list.data:
-            yield convert.value2json(d)
-
-    return data()
-
-
-format_dispatch = {
-    "cube": (format_cube, "json"),
-    "table": (format_table, "json"),
-    "list": (format_list, "json"),
-    "csv": (format_csv, "text"),
-    "tab": (format_tab, "text"),
-    "line": (format_line, "text")
-}

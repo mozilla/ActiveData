@@ -53,7 +53,7 @@ def query(path):
             body = flask.request.environ['body_copy']
             if not body.strip():
                 return Response(
-                    convert.unicode2utf8(BLANK),
+                    convert.unicode2utf8 (BLANK),
                     status=400,
                     headers={
                         "access-control-allow-origin": "*",
@@ -74,7 +74,7 @@ def query(path):
             status=200,
             headers={
                 "access-control-allow-origin": "*",
-                "Content-type": "application/json"
+                "Content-type": result.meta.content_type
             }
         )
     except Exception, e:
@@ -82,7 +82,7 @@ def query(path):
 
         record_request(flask.request, None, flask.request.environ['body_copy'], e)
         Log.warning("problem", e)
-        e = e.__dict__()
+        e = e.as_dict()
         e.meta.active_data_response_time = total_duration.duration.total_seconds()
 
         return Response(

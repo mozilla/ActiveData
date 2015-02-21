@@ -6,6 +6,8 @@ import json
 import re
 
 from pyLibrary.dot import DictList
+from pyLibrary.times.dates import Date
+from pyLibrary.times.durations import Duration
 
 ESCAPE_DCT = {
     u"\\": u"\\\\",
@@ -46,9 +48,13 @@ def _scrub(value):
     type = value.__class__
 
     if type in (date, datetime):
-        return datetime2milli(value, type)/1000
+        return float(datetime2milli(value))/float(1000)
     elif type is timedelta:
         return value.total_seconds()
+    elif type is Date:
+        return value.unix
+    elif type is Duration:
+        return value.seconds
     elif type is str:
         return utf82unicode(value)
     elif type is Decimal:

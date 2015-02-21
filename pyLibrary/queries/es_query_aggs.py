@@ -160,17 +160,14 @@ class TimeDecoder(AggsDecoder):
                 }},
                 esQuery
             ),
-            "_other": set_default(
-                {"range": {
-                    "field": self.edge.value,
-                    "ranges": [
-                        {"to": _min.unix},
-                        {"from": _max.unix}
-                    ]
-                }},
+            "_missing": set_default(
+                {"filter": {"or": [
+                    {"range": {self.edge.value: {"lt": _min.unix}}},
+                    {"range": {self.edge.value: {"gte": _max.unix}}},
+                    {"missing": {"field": self.edge.value}}
+                ]}},
                 esQuery
             ),
-            "_missing": set_default({"missing": {"field": self.edge.value}}, esQuery),
         }})
 
         # histogram BREAKS WHEN USING extended_bounds (OOM), WE NEED BOUNDS TO CONTROL EDGES

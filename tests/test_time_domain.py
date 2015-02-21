@@ -23,7 +23,7 @@ test_data = [
     {"a": "x", "t": Date("today-3day").unix, "v": 5},
     {"a": "x", "t": Date("today-4day").unix, "v": 7},
     {"a": "x", "t": Date("today-5day").unix, "v": 11},
-    # {"a": "y", "t": None, "v": 27},
+    {"a": "y", "t": None, "v": 27},
     {"a": "y", "t": Date("today-day").unix, "v": 13},
     {"a": "y", "t": Date("today-2day").unix, "v": 17},
     {"a": "y", "t": Date("today-4day").unix, "v": 19},
@@ -39,7 +39,7 @@ expected = wrap([
     {"t": (Date.today() - 3 * Duration.DAY).unix, "v": 5},
     {"t": (Date.today() - 2 * Duration.DAY).unix, "v": 20},
     {"t": (Date.today() - 1 * Duration.DAY).unix, "v": 15},
-    {"v": 2}
+    {"v": 29}
 ])
 
 

@@ -1,0 +1,34 @@
+{"from": {
+                "type": "elasticsearch",
+                "settings": {
+                    "host": "http://52.10.116.229",
+                    "index": "unittest",
+                    "type": "test_results"
+                }
+            },
+        "edges": [
+        "build.branch",
+                "result.ok",
+                {
+                    "value": "run.start",
+                    "domain": {
+                        "type": "time",
+                        "min": "today-2month",
+                        "max": "today",
+                        "interval": "day"
+                    }
+                }
+            ],
+            "select": {
+                "aggregate": "count"
+            },
+            "where": {
+                "and": [
+                    {
+                        "term": {
+                            "build.branch": "mozilla-central"
+                        }
+                    }
+                ]
+            }
+        }

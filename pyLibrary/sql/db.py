@@ -69,20 +69,17 @@ class DB(object):
         """
         all_db.append(self)
 
-        if isinstance(settings, DB):
-            settings = settings.settings
+        self.settings = settings
 
-        self.settings.schema = nvl(schema, self.settings.schema, self.settings.database)
-
-        preamble = nvl(preamble, self.settings.preamble)
         if preamble == None:
             self.preamble = ""
         else:
             self.preamble = indent(preamble, "# ").strip() + "\n"
 
         self.readonly = readonly
-        self.debug = nvl(self.settings.debug, DEBUG)
-        self._open()
+        self.debug = nvl(debug, DEBUG)
+        if host:
+            self._open()
 
     def _open(self):
         """ DO NOT USE THIS UNLESS YOU close() FIRST"""

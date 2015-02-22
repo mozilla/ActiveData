@@ -8,6 +8,8 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import unicode_literals
+from __future__ import division
 
 import os
 from pyLibrary.dot import set_default, wrap
@@ -82,21 +84,21 @@ def _replace_ref(node, url):
                     return_value = candidate
             return return_value
 
+        if not ref.scheme and not ref.path:
+            # DO NOT TOUCH LOCAL REF YET
+            node["$ref"] = ref
+            return node
+
         if not ref.scheme:
             # SCHEME RELATIVE IMPLIES SAME PROTOCOL AS LAST TIME, WHICH
             # REQUIRES THE CURRENT DOCUMENT'S SCHEME
             ref.scheme = url.scheme
 
         # FIND THE SCHEME AND LOAD IT
-        if ref.scheme:
-            if ref.scheme in scheme_loaders:
-                new_value = scheme_loaders[ref.scheme](ref, url)
-            else:
-                raise Log.error("unknown protocol {{scheme}}", {"scheme": ref.scheme})
+        if ref.scheme in scheme_loaders:
+            new_value = scheme_loaders[ref.scheme](ref, url)
         else:
-            # DO NOT TOUCH LOCAL REF YET
-            node["$ref"] = ref
-            return node
+            raise Log.error("unknown protocol {{scheme}}", {"scheme": ref.scheme})
 
         if ref.fragment:
             new_value = new_value[ref.fragment]
@@ -133,17 +135,20 @@ def _replace_locals(node, doc_path):
             return return_value
         else:
             # REFER TO SELF
-            if ref[0] == ".":
+            frag=ref.fragment
+            if frag[0] == ".":
                 # RELATIVE
-                for i, p in enumerate(ref):
+                for i, p in enumerate(frag):
                     if p != ".":
-                        new_value = doc_path[i][ref[i::]]
+                        if i>len(doc_path):
+                            Log.error("{{frag|quote}} reaches up past the root document", {"frag":frag})
+                        new_value = doc_path[i-1][frag[i::]]
                         break
                 else:
-                    new_value = doc_path[len(ref) - 1]
+                    new_value = doc_path[len(frag) - 1]
             else:
                 # ABSOLUTE
-                new_value = doc_path[-1][ref]
+                new_value = doc_path[-1][frag]
 
         if node:
             return set_default({}, node, new_value)
@@ -208,7 +213,7 @@ def get_http(ref, url):
 
 def get_env(ref, url):
     # GET ENVIRONMENT VARIABLES
-    ref = ref[6::]
+    ref = ref.host
     try:
         new_value = convert.json2value(os.environ[ref])
     except Exception, e:

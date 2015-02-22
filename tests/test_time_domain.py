@@ -175,38 +175,3 @@ class TestTime(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-
-        #
-        #
-        #
-        # test = {
-        # "metadata": {},
-        # "data": test_data,
-        # "query": {
-        # "from": "unittest",
-        # "edges": [
-        # "build.branch",
-        #         "result.ok",
-        #         {
-        #             "value": "run.start",
-        #             "domain": {
-        #                 "type": "time",
-        #                 "min": "today-2month",
-        #                 "max": "today",
-        #                 "interval": "day"
-        #             }
-        #         }
-        #     ],
-        #     "select": {
-        #         "aggregate": "count"
-        #     },
-        #     "where": {
-        #         "and": [
-        #             {
-        #                 "term": {
-        #                     "build.branch": "mozilla-central"
-        #                 }
-        #             }
-        #         ]
-        #     }
-        # }

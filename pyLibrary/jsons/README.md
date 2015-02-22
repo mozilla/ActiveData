@@ -1,10 +1,7 @@
 
 
-
-
-
-Function: jsons.encode._encoder()
---------------------------------
+Function: jsons.encode.json_encoder()
+-------------------------------------
 
 Fast JSON encoder used in `convert.value2json()` when running in Pypy.  Run the
 [speedtest](https://github.com/klahnakoski/pyLibrary/blob/master/tests/speedtest_json.py)
@@ -18,7 +15,7 @@ A JSON-like storage format intended for configuration files
 
 Load your settings easily:
 
-    settings = get(url):
+    settings = jsons.ref.get(url):
 
 The file format is JSON, with some important features.
 
@@ -60,11 +57,12 @@ document:
 ```python
     {
         "message": "Hello world",
-        "repeat": {"$ref": "message"}
+        "repeat": {"$ref": "#message"}
     }
 ```
 
-The object with the `$ref` is replaced with the value it points to:
+The reference must start with `#`, and the object with the `$ref` is replaced
+with the value it points to:
 
 ```python
     {
@@ -82,7 +80,7 @@ ref-object's parent, and expands just like the previous example:
 ```python
     {
         "message": "Hello world",
-        "repeat": {"$ref": "..message"}
+        "repeat": {"$ref": "#..message"}
     }
 ```
 
@@ -218,7 +216,7 @@ the dot-delimited path into the document:
 
 **Environment Variables Reference**
 
-json.ref uses the unconventionsl `env` scheme for accessing environment variables:
+json.ref uses the unconventional `env` scheme for accessing environment variables:
 
 ```python
     {

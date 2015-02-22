@@ -1,5 +1,3 @@
-
-
 from datetime import date, timedelta, datetime
 from decimal import Decimal
 import json
@@ -7,7 +5,27 @@ import re
 
 from pyLibrary.dot import DictList
 from pyLibrary.times.dates import Date
+
 from pyLibrary.times.durations import Duration
+
+
+Log = None
+datetime2milli = None
+utf82unicode = None
+
+
+def _late_import():
+    global Log
+    global datetime2milli
+    global utf82unicode
+
+    from pyLibrary.debugs.logs import Log
+    from pyLibrary.convert import datetime2milli, utf82unicode
+
+    _ = Log
+    __ = datetime2milli
+    ___ = utf82unicode
+
 
 ESCAPE_DCT = {
     u"\\": u"\\\\",
@@ -22,22 +40,22 @@ for i in range(0x20):
     ESCAPE_DCT.setdefault(chr(i), u'\\u{0:04x}'.format(i))
 
 ESCAPE = re.compile(ur'[\x00-\x1f\\"\b\f\n\r\t]')
+
+
 def replace(match):
     return ESCAPE_DCT[match.group(0)]
-def quote(value):
-    return "\""+ESCAPE.sub(replace, value)+"\""
 
-datetime2milli = None
-utf82unicode = None
+
+def quote(value):
+    return "\"" + ESCAPE.sub(replace, value) + "\""
+
+
 def scrub(value):
     """
     REMOVE/REPLACE VALUES THAT CAN NOT BE JSON-IZED
     """
-    global datetime2milli
-    global utf82unicode
-    if not datetime2milli:
-        from pyLibrary.convert import datetime2milli, utf82unicode
-
+    if not Log:
+        _late_import()
     return _scrub(value)
 
 
@@ -48,7 +66,7 @@ def _scrub(value):
     type = value.__class__
 
     if type in (date, datetime):
-        return float(datetime2milli(value))/float(1000)
+        return float(datetime2milli(value)) / float(1000)
     elif type is timedelta:
         return value.total_seconds()
     elif type is Date:
@@ -62,6 +80,8 @@ def _scrub(value):
     elif isinstance(value, dict):
         output = {}
         for k, v in value.iteritems():
+            if not isinstance(k, basestring):
+                Log.error("keys must be strings")
             v = _scrub(v)
             output[k] = v
         return output
@@ -78,11 +98,9 @@ def _scrub(value):
             return True
     elif hasattr(value, '__json__'):
         try:
-            output=json._default_decoder.decode(value.__json__())
+            output = json._default_decoder.decode(value.__json__())
             return output
         except Exception, e:
-            from pyLibrary.debugs.logs import Log
-
             Log.error("problem with calling __json__()", e)
     elif hasattr(value, '__iter__'):
         output = []
@@ -92,6 +110,7 @@ def _scrub(value):
         return output
     else:
         return value
+
 
 from . import encoder as json_encoder
 from . import ref

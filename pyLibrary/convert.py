@@ -124,7 +124,7 @@ def json2value(json_string, params=None, flexible=False, paths=False):
                 if len(sample) > 43:
                     sample = sample[:43] + "..."
 
-                Log.error("Can not decode JSON at:\n\t"+sample+"\n\t"+pointer+"\n")
+                Log.error("Can not decode JSON at:\n\t"+sample+"\n\t"+pointer+"\n", e)
 
             Log.error("Can not decode JSON:\n\t" + str(json_string), e)
 

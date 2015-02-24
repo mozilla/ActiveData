@@ -34,9 +34,9 @@ class Multiprocess(object):
 
 
     def __init__(self, functions):
-        self.outbound = Queue()
-        self.inbound = Queue()
-        self.inbound = Queue()
+        self.outbound = Queue("out to process")
+        self.inbound = Queue("in from stdin")
+        self.inbound = Queue("in from stderr")
 
         # MAKE
 

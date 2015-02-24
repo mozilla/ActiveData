@@ -8,7 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
-from pyLibrary.dot import literal_field, wrap
+from pyLibrary.dot import wrap
 
 from pyLibrary.dot.dicts import Dict, nvl
 from pyLibrary.parsers import Log

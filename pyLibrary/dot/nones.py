@@ -43,6 +43,9 @@ class NullType(object):
     def __radd__(self, other):
         return Null
 
+    def __call__(self, *args, **kwargs):
+        return Null
+
     def __iadd__(self, other):
         try:
             d = _get(self, "__dict__")

@@ -35,6 +35,8 @@ INDEX_CACHE = {}  # MATCH NAMES TO ES URL AND COLUMNS eg {name:{"url":url, "colu
 def loadColumns(es, frum):
     """
     ENSURE COLUMNS FOR GIVEN INDEX/QUERY ARE LOADED, AND MVEL COMPILATION WORKS BETTER
+
+    frum - CAN BE A STRING, OR A ESQuery OBJECT
     """
 
 

@@ -83,50 +83,54 @@ def json2value(json_string, params=None, flexible=False, paths=False):
     :param paths: ASSUME JSON KEYS ARE DOT-DELIMITED
     :return: Python value
     """
-    with Profiler("json2value"):
-        try:
-            if flexible:
-                # REMOVE """COMMENTS""", # COMMENTS, //COMMENTS, AND \n \r
-                # DERIVED FROM https://github.com/jeads/datasource/blob/master/datasource/bases/BaseHub.py# L58
-                json_string = re.sub(r"\"\"\".*?\"\"\"", r"\n", json_string, flags=re.MULTILINE)
-                json_string = "\n".join(remove_line_comment(l) for l in json_string.split("\n"))
-                # ALLOW DICTIONARY'S NAME:VALUE LIST TO END WITH COMMA
-                json_string = re.sub(r",\s*\}", r"}", json_string)
-                # ALLOW LISTS TO END WITH COMMA
-                json_string = re.sub(r",\s*\]", r"]", json_string)
+    if isinstance(json_string, str):
+        Log.error("only unicode json accepted")
 
-            if params:
-                json_string = expand_template(json_string, params)
-            if isinstance(json_string, str):
-                Log.error("only unicode json accepted")
+    try:
+        if flexible:
+            # REMOVE """COMMENTS""", # COMMENTS, //COMMENTS, AND \n \r
+            # DERIVED FROM https://github.com/jeads/datasource/blob/master/datasource/bases/BaseHub.py# L58
+            json_string = re.sub(r"\"\"\".*?\"\"\"", r"\n", json_string, flags=re.MULTILINE)
+            json_string = "\n".join(remove_line_comment(l) for l in json_string.split("\n"))
+            # ALLOW DICTIONARY'S NAME:VALUE LIST TO END WITH COMMA
+            json_string = re.sub(r",\s*\}", r"}", json_string)
+            # ALLOW LISTS TO END WITH COMMA
+            json_string = re.sub(r",\s*\]", r"]", json_string)
 
-            # LOOKUP REFERENCES
-            value = wrap(json_decoder(json_string))
+        if params:
+            json_string = expand_template(json_string, params)
 
-            if paths:
-                value = wrap_dot(value)
 
-            return value
+        # LOOKUP REFERENCES
+        value = wrap(json_decoder(json_string))
 
-        except Exception, e:
-            e = Except.wrap(e)
-            if "Expecting '" in e and "' delimiter: line" in e:
-                line_index = int(strings.between(e.message, " line ", " column ")) - 1
-                column = int(strings.between(e.message, " column ", " "))-1
-                line = json_string.split("\n")[line_index]
-                if column > 20:
-                    sample = "..." + line[column - 20:]
-                    pointer = "   " + (" " * 20) + "^"
-                else:
-                    sample = line
-                    pointer = (" " * column) + "^"
+        if paths:
+            value = wrap_dot(value)
 
-                if len(sample) > 43:
-                    sample = sample[:43] + "..."
+        return value
 
-                Log.error("Can not decode JSON at:\n\t"+sample+"\n\t"+pointer+"\n", e)
+    except Exception, e:
+        e = Except.wrap(e)
+        if "Expecting '" in e and "' delimiter: line" in e:
+            line_index = int(strings.between(e.message, " line ", " column ")) - 1
+            column = int(strings.between(e.message, " column ", " ")) - 1
+            line = json_string.split("\n")[line_index]
+            if column > 20:
+                sample = "..." + line[column - 20:]
+                pointer = "   " + (" " * 20) + "^"
+            else:
+                sample = line
+                pointer = (" " * column) + "^"
 
-            Log.error("Can not decode JSON:\n\t" + str(json_string), e)
+            if len(sample) > 43:
+                sample = sample[:43] + "..."
+
+            Log.error("Can not decode JSON at:\n\t" + sample + "\n\t" + pointer + "\n")
+
+        base_str = unicode2utf8(json_string)
+        hexx_str = bytes2hex(base_str, " ")
+        char_str = " " + ("  ".join((latin12unicode(c) if ord(c) >= 32 else ".") for c in base_str))
+        Log.error("Can not decode JSON:\n" + char_str + "\n" + hexx_str + "\n", e)
 
 
 def string2datetime(value, format=None):

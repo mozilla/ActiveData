@@ -313,8 +313,8 @@ class Index(object):
                 "query": query
             }, e)
 
-    def threaded_queue(self, size=None, period=None):
-        return ThreadedQueue(self, size=size, period=period)
+    def threaded_queue(self, batch_size=None, max_size=None, period=None, silent=False):
+        return ThreadedQueue("elasticsearch: " + self.settings.index, self, batch_size=batch_size, max_size=max_size, period=period, silent=silent)
 
     def delete(self):
         self.cluster.delete_index(index=self.settings.index)
@@ -345,12 +345,12 @@ class Cluster(object):
         limit_replicas=None,
         settings=None
     ):
-        from pyLibrary.queries import Q
+        from pyLibrary.queries import qb
 
         settings = deepcopy(settings)
         aliases = self.get_aliases()
 
-        indexes = Q.sort([
+        indexes = qb.sort([
             a
             for a in aliases
             if (a.alias == settings.index and settings.alias == None) or
@@ -460,11 +460,7 @@ class Cluster(object):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
 
         try:
-            kwargs = wrap(kwargs)
-            kwargs.setdefault("timeout", 600)
-            kwargs.headers["Accept-Encoding"] = "gzip,deflate"
-            kwargs = unwrap(kwargs)
-
+            wrap(kwargs).headers["Accept-Encoding"] = "gzip,deflate"
 
             if "data" in kwargs and not isinstance(kwargs["data"], str):
                 Log.error("data must be utf8 encoded string")
@@ -488,15 +484,19 @@ class Cluster(object):
             else:
                 suggestion = ""
 
-            Log.error("Problem with call to {{url}}" + suggestion + "\n{{body|left(10000}}", {
-                "url": url,
-                "body": kwargs["data"][0:10000] if self.debug else kwargs["data"][0:100]
-            }, e)
+            if kwargs.get("data"):
+                Log.error("Problem with call to {{url}}" + suggestion + "\n{{body|left(10000}}", {
+                    "url": url,
+                    "body": kwargs["data"][0:10000] if self.debug else kwargs["data"][0:100]
+                }, e)
+            else:
+                Log.error("Problem with call to {{url}}" + suggestion, {"url": url}, e)
+
+
 
     def get(self, path, **kwargs):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
         try:
-            kwargs.setdefault("timeout", 600)
             response = http.get(url, **kwargs)
             if self.debug:
                 Log.note("response: {{response}}", {"response": utf82unicode(response.content)[:130]})

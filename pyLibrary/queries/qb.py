@@ -30,8 +30,8 @@ from pyLibrary.dot import listwrap, wrap, unwrap
 
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
-# Qb QUERY DOCUMENTATION: https://github.com/klahnakoski/Qb/tree/master/docs
-# START HERE: https://github.com/klahnakoski/Qb/blob/master/docs/Qb_Reference.md
+# qb QUERY DOCUMENTATION: https://github.com/klahnakoski/qb/tree/master/docs
+# START HERE: https://github.com/klahnakoski/qb/blob/master/docs/Qb_Reference.md
 # TODO: USE http://docs.sqlalchemy.org/en/latest/core/tutorial.html AS DOCUMENTATION FRAMEWORK
 
 def run(query):

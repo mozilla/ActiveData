@@ -73,18 +73,20 @@ class Lock(object):
 
 class Queue(object):
     """
-    SIMPLE MESSAGE QUEUE, multiprocessing.Queue REQUIRES SERIALIZATION, WHICH IS HARD TO USE JUST BETWEEN THREADS
+     SIMPLE MESSAGE QUEUE, multiprocessing.Queue REQUIRES SERIALIZATION, WHICH
+     IS DIFFICULT TO USE JUST BETWEEN THREADS (SERIALIZATION REQUIRED)
     """
 
-    def __init__(self, max=None, silent=False):
+    def __init__(self, name, max=None, silent=False):
         """
         max - LIMIT THE NUMBER IN THE QUEUE, IF TOO MANY add() AND extend() WILL BLOCK
         silent - COMPLAIN IF THE READERS ARE TOO SLOW
         """
+        self.name = name
         self.max = nvl(max, 2 ** 10)
         self.silent = silent
         self.keep_running = True
-        self.lock = Lock("lock for queue")
+        self.lock = Lock("lock for queue " + name)
         self.queue = deque()
         self.next_warning = datetime.utcnow()  # FOR DEBUGGING
         self.gc_count = 0
@@ -135,7 +137,8 @@ class Queue(object):
                     now = datetime.utcnow()
                     if self.next_warning < now:
                         self.next_warning = now + timedelta(seconds=wait_time)
-                        Log.warning("Queue is full ({{num}}} items), thread(s) have been waiting {{wait_time}} sec", {
+                        Log.warning("Queue {{name}} is full ({{num}} items), thread(s) have been waiting {{wait_time}} sec", {
+                            "name": self.name,
                             "num": len(self.queue),
                             "wait_time": wait_time
                         })
@@ -552,51 +555,57 @@ class ThreadedQueue(Queue):
 
     def __init__(
         self,
+        name,
         queue,  # THE SLOWER QUEUE
-        size=None,  # THE MAX SIZE OF BATCHES SENT TO THE SLOW QUEUE
-        max=None,  # SET THE MAXIMUM SIZE OF THE QUEUE, WRITERS WILL BLOCK IF QUEUE IS OVER THIS LIMIT
+        batch_size=None,  # THE MAX SIZE OF BATCHES SENT TO THE SLOW QUEUE
+        max_size=None,  # SET THE MAXIMUM SIZE OF THE QUEUE, WRITERS WILL BLOCK IF QUEUE IS OVER THIS LIMIT
         period=None,  # MAX TIME BETWEEN FLUSHES TO SLOWER QUEUE
         silent=False  # WRITES WILL COMPLAIN IF THEY ARE WAITING TOO LONG
     ):
         if not Log:
             _late_import()
 
-        size = nvl(size, 900)  # REASONABLE DEFAULT
-        max = nvl(max, size)  # REASONABLE DEFAULT
+        batch_size = nvl(batch_size, int(max_size/2), 900)
+        max_size = nvl(max_size, batch_size * 2)  # REASONABLE DEFAULT
         period = nvl(period, Duration.SECOND)
 
-        Queue.__init__(self, max=max, silent=silent)
+        Queue.__init__(self, name=name, max=max_size, silent=silent)
 
         def worker_bee(please_stop):
             please_stop.on_go(lambda: self.add(Thread.STOP))
 
-            buffer = []
+            _buffer = deque()
             next_time = Date.now() + period
 
             while not please_stop:
                 try:
                     item = self.pop(till=next_time)
                     if item is Thread.STOP:
-                        queue.extend(buffer)
+                        queue.extend(_buffer)
                         please_stop.go()
-                        break
+                        return
                     elif item is None:
                         pass
                     else:
-                        buffer.append(item)
+                        _buffer.append(item)
                 except Exception, e:
-                    Log.warning("Unexpected problem", e)
+                    Log.warning("Unexpected problem", {
+                        "name": name,
+                    }, e)
 
                 try:
-                    if len(buffer) >= size or Date.now() > next_time:
+                    if len(_buffer) >= batch_size or Date.now() > next_time:
                         next_time = Date.now() + period
-                        if buffer:
-                            queue.extend(buffer)
-                            buffer = []
+                        if _buffer:
+                            queue.extend(_buffer)
+                            _buffer = deque()
                 except Exception, e:
-                    Log.warning("Problem with pushing {{num}} items to data sink", {"num": len(buffer)}, e)
+                    Log.warning("Problem with {{name}} pushing {{num}} items to data sink", {
+                        "name": name,
+                        "num": len(_buffer)
+                    }, e)
 
-        self.thread = Thread.run("threaded queue " + unicode(id(self)), worker_bee)
+        self.thread = Thread.run("threaded queue for " + name, worker_bee)
 
 
     def __enter__(self):

@@ -21,7 +21,7 @@ from pyLibrary.debugs.logs import Log, Except, constants
 from pyLibrary.dot import wrap, listwrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 from pyLibrary.queries.query import _normalize_edges, _normalize_selects
 from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
@@ -103,19 +103,10 @@ class ActiveDataBaseTest(FuzzyTestCase):
     def tearDown(self):
         self.es.delete_index(self.backend_es.index)
 
-    def _execute_es_tests(self, subtest):
-        subtest = wrap(subtest)
-
-        if subtest.disable:
-            return
-
+    def _fill_es(self, subtest):
         settings = self.backend_es.copy()
         settings.index = "testing_" + Random.hex(10).lower()
         settings.type = "test_results"
-
-        if "elasticsearch" in subtest["not"]:
-            return
-
 
         try:
             url = "file://resources/schema/basic_schema.json.template?{{.|url}}"
@@ -137,7 +128,21 @@ class ActiveDataBaseTest(FuzzyTestCase):
             subtest.query["from"] = settings.index
         except Exception, e:
             Log.error("can not load {{data}} into container", {"data":subtest.data}, e)
+
+        return settings
+
+
+
+    def _execute_es_tests(self, subtest):
+        subtest = wrap(subtest)
+
+        if subtest.disable:
             return
+
+        if "elasticsearch" in subtest["not"]:
+            return
+
+        settings = self._fill_es(subtest)
 
         try:
             # EXECUTE QUERY
@@ -160,13 +165,12 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
                 if format == "table":
-                    expected.data = Q.sort(expected.data, range(len(expected.header)))
-                    result.data = Q.sort(result.data, range(len(result.header)))
+                    expected.data = qb.sort(expected.data, range(len(expected.header)))
+                    result.data = qb.sort(result.data, range(len(result.header)))
                 elif format == "list":
                     sort_order=wrap(_normalize_edges(subtest.query.edges) + _normalize_selects(listwrap(subtest.query.select))).name
-                    expected.data = Q.sort(expected.data, sort_order)
-                    result.data = Q.sort(result.data, sort_order)
-
+                    expected.data = qb.sort(expected.data, sort_order)
+                    result.data = qb.sort(result.data, sort_order)
 
                 # CONFIRM MATCH
                 self.assertAlmostEqual(result, expected)
@@ -180,6 +184,24 @@ class ActiveDataBaseTest(FuzzyTestCase):
         finally:
             # REMOVE CONTAINER
             self.es.delete_index(settings.index)
+
+
+    def _execute_query(self, query):
+        query = wrap(query)
+
+        try:
+            query = convert.unicode2utf8(convert.value2json(query))
+            # EXECUTE QUERY
+            response = self._try_till_response(self.service_url, data=query)
+
+            if response.status_code != 200:
+                error(response)
+            result = convert.json2value(convert.utf82unicode(response.all_content))
+
+            return result
+        except Exception, e:
+            Log.error("Failed query", e)
+
 
     def _try_till_response(self, *args, **kwargs):
         while True:

@@ -10,7 +10,12 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from pyLibrary.dot import wrap, nvl
+from pyLibrary.queries import query
 from tests.base_test_class import ActiveDataBaseTest
+
+
+lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
 class TestSetOps(ActiveDataBaseTest):
@@ -22,8 +27,7 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "from": "testdata",
-                "select": "a",
-                "format": "cube"
+                "select": "a"
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
@@ -58,8 +62,7 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "from": "testdata",
-                "select": {"name": "value", "value": "a"},
-                "format": "cube"
+                "select": {"name": "value", "value": "a"}
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
@@ -161,9 +164,11 @@ class TestSetOps(ActiveDataBaseTest):
                 "from": "testdata"
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                "a", "b"
-            ]},
+                "meta": {"format": "list"},
+                "data": [
+                    "a", "b"
+                ]
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["value"],
@@ -336,4 +341,75 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_default_limit(self):
+        test = wrap({
+            "data": lots_of_data,
+            "query": {
+                "from": "testdata",
+                "select": {"name": "value", "value": "a"},
+            },
+        })
 
+        settings = self._fill_es(test)
+        try:
+            test.query.format = "list"
+            result = self._execute_query(test.query)
+            self.assertEqual(len(result.data), query.DEFAULT_LIMIT)
+
+            test.query.format = "table"
+            result = self._execute_query(test.query)
+            self.assertEqual(len(result.data), query.DEFAULT_LIMIT)
+
+            test.query.format = "cube"
+            result = self._execute_query(test.query)
+            self.assertEqual(len(result.data.value), query.DEFAULT_LIMIT)
+        finally:
+            # REMOVE CONTAINER
+            self.es.delete_index(settings.index)
+
+
+
+    def test_specific_limit(self):
+        test = wrap({
+            "data": lots_of_data,
+            "query": {
+                "from": "testdata",
+                "select": {"name": "value", "value": "a"},
+                "limit":5
+            },
+        })
+
+        settings = self._fill_es(test)
+        try:
+            test.query.format = "list"
+            result = self._execute_query(test.query)
+            self.assertEqual(len(result.data), 5)
+
+            test.query.format = "table"
+            result = self._execute_query(test.query)
+            self.assertEqual(len(result.data), 5)
+
+            test.query.format = "cube"
+            result = self._execute_query(test.query)
+            self.assertEqual(len(result.data.value), 5)
+        finally:
+            # REMOVE CONTAINER
+            self.es.delete_index(settings.index)
+
+    def test_negative_limit(self):
+        test = wrap({
+            "data": lots_of_data,
+            "query": {
+                "from": "testdata",
+                "select": {"name": "value", "value": "a"},
+                "limit": -1
+            },
+        })
+
+        settings = self._fill_es(test)
+        try:
+            test.query.format = "list"
+            self.assertRaises(Exception, self._execute_query, *[test.query])
+        finally:
+            # REMOVE CONTAINER
+            self.es.delete_index(settings.index)

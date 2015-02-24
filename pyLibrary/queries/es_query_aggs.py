@@ -13,7 +13,7 @@ from __future__ import division
 from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, nvl, Null
-from pyLibrary.queries import es_query_util, Q
+from pyLibrary.queries import es_query_util, qb
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain
 from pyLibrary.queries.es_query_util import aggregates1_4
 from pyLibrary.queries.filters import simplify_esfilter
@@ -244,7 +244,7 @@ class DefaultDecoder(SetDecoder):
 
     def done_count(self):
         self.edge.domain = SimpleSetDomain(
-            partitions=Q.sort(self.edge.domain.partitions)
+            partitions=qb.sort(self.edge.domain.partitions)
         )
 
     @property
@@ -279,7 +279,7 @@ class DimFieldListDecoder(DefaultDecoder):
     def done_count(self):
         self.edge.domain = SimpleSetDomain(
             key="value",
-            partitions=[{"value": v, "dataIndex": i} for i, v in enumerate(Q.sort(self.edge.domain.partitions, range(len(self.fields))))]
+            partitions=[{"value": v, "dataIndex": i} for i, v in enumerate(qb.sort(self.edge.domain.partitions, range(len(self.fields))))]
         )
 
     def get_index(self, row):

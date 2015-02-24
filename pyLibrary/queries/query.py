@@ -22,6 +22,8 @@ from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap, listwrap
 from pyLibrary.queries.from_es import wrap_from
 
+DEFAULT_LIMIT = 10
+
 
 class Query(object):
     def __new__(cls, query, schema=None):
@@ -65,7 +67,10 @@ class Query(object):
         self.window = [_normalize_window(w) for w in listwrap(query.window)]
 
         self.sort = _normalize_sort(query.sort)
-        self.limit = query.limit
+        self.limit = nvl(query.limit, DEFAULT_LIMIT)
+        if not Math.is_integer(self.limit) or self.limit<0:
+            Log.error("Expecting limit >= 0")
+
         self.isLean = query.isLean
 
 

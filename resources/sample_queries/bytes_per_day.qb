@@ -1,0 +1,41 @@
+{
+    "from": {
+        "type": "elasticsearch",
+        "settings": {
+            "host": "http://52.10.116.229",
+            "index": "unittest",
+            "type": "test_results"
+        }
+    },
+    "select": {
+        "name": "total_bytes",
+        "value": "run.stats.bytes",
+        "aggregate": "sum"
+    },
+    "edges": [
+        {
+            "value": "etl.timestamp",
+            "domain": {
+                "type": "time",
+                "min": "today|week-week",
+                "max": "today|week",
+                "interval": "day"
+            }
+        }
+    ],
+    "where": {
+        "and": [
+			{"term":{"etl.id":0}},
+            {
+                "gte": {
+                    "etl.timestamp": "{{today|week-week}}"
+                }
+            },
+            {
+                "lt": {
+                    "etl.timestamp": "{{now|day}}"
+                }
+            }
+        ]
+    }
+}

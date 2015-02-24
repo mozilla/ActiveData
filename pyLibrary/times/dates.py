@@ -52,7 +52,7 @@ class Date(object):
                     else:
                         self.value = datetime.utcfromtimestamp(a0)
                 elif isinstance(a0, basestring):
-                    self.value = unicode2datetime(a0).value
+                    self.value = unicode2datetime(a0)
                 else:
                     self.value = datetime(*args)
             else:
@@ -275,12 +275,12 @@ def unicode2datetime(value, format=None):
 
     value = value.strip()
     if value.lower() == "now":
-        return Date.now()
+        return Date.now().value
     elif value.lower() == "today":
-        return Date.today()
+        return Date.today().value
 
     if any(value.lower().find(n) >= 0 for n in ["now", "today"] + list(MILLI_VALUES.keys())):
-        return parse(value)
+        return parse(value).value
 
     if format != None:
         try:

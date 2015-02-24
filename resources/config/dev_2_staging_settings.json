@@ -6,12 +6,6 @@
 	     "threaded":true,
 	     "processes":1
 	 },
-
-	"param": {
-		"threads": 1,
-		"wait_forever": true,
-		"keep_unknown_on_queue": true
-	},
 	"constants":{
 		"pyLibrary.env.http.default_headers":{"From":"https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"}
 	},

@@ -166,7 +166,7 @@ def groupby_min_max_size(data, min_size=0, max_size=None, ):
                 if out:
                     # AT LEAST TRY TO RETURN WHAT HAS BEEN PROCESSED SO FAR
                     yield g, out
-                Log.error("Problem inside Q.groupby", e)
+                Log.error("Problem inside qb.groupby", e)
 
         return _iter()
     elif not isinstance(data, Multiset):

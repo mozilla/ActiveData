@@ -140,10 +140,57 @@ def percent(value, decimal=None, digits=None):
     return str(per) + "%"
 
 
+def find(value, find, start=0):
+    """
+    MUCH MORE USEFUL VERSION OF string.find()
+    """
+    l = len(value)
+    if isinstance(find, list):
+        m = l
+        for f in find:
+            i = value.find(f, start)
+            if i == -1:
+                continue
+            m = min(m, i)
+        return m
+    else:
+        i = value.find(find, start)
+        if i == -1:
+            return l
+        return i
+
+
+def strip(value):
+    """
+    REMOVE WHITESPACE (INCLUDING CONTROL CHARACTERS)
+    """
+    s = 0
+    e = len(value)
+    while s < e:
+        if ord(value[s]) > 32:
+            break
+        s += 1
+    else:
+        return ""
+
+    for i in reversed(range(s, e)):
+        if ord(value[i]) > 32:
+            return value[s:i + 1]
+
+    return ""
+
+
+
+
+def trim(value):
+    return strip(value)
+
+
 def between(value, prefix, suffix):
     value = toString(value)
     s = value.find(prefix)
-    if s == -1: return None
+    if s == -1:
+        return None
     s += len(prefix)
 
     e = value.find(suffix, s)

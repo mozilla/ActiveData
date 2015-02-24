@@ -254,8 +254,8 @@ class Cube(object):
     def filter(self, where):
         if len(self.edges)==1 and self.edges[0].domain.type=="index":
             # USE THE STANDARD LIST FILTER
-            from pyLibrary.queries import Q
-            return Q.filter(where, self.data.values()[0].cube)
+            from pyLibrary.queries import qb
+            return qb.filter(where, self.data.values()[0].cube)
         else:
             # FILTER DOES NOT ALTER DIMESIONS, JUST WHETHER THERE ARE VALUES IN THE CELLS
             Log.unexpected("Incomplete")

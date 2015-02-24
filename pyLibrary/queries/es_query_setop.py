@@ -9,6 +9,7 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from pyLibrary import queries
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND, SUM, OR, UNION
@@ -60,7 +61,7 @@ def es_fieldop(es, query):
             "filter": filters.simplify_esfilter(query.where)
         }
     }
-    esQuery.size = nvl(query.limit, 200000)
+    esQuery.size = nvl(query.limit, queries.query.DEFAULT_LIMIT)
     esQuery.fields = DictList()
     source = "fields"
     for s in select.value:
@@ -79,7 +80,6 @@ def es_fieldop(es, query):
     esQuery.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
 
     data = es_query_util.post(es, esQuery, query.limit)
-
     T = data.hits.hits
 
 
@@ -87,7 +87,7 @@ def es_fieldop(es, query):
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if s.value == "*":
             try:
-                column_names = query.frum.get_columns()
+                column_names = set(query.frum.get_column_names())
             except Exception, e:
                 Log.warning("can not get columns", e)
                 column_names = UNION(*[[k for k, v in row.items()] for row in T.select(source)])
@@ -106,7 +106,7 @@ def es_fieldop(es, query):
                     r[s.name] = unwraplist(row[source][s.value])
             data.append(r)
         return Dict(
-            meta={"format":"list"},
+            meta={"format": "list"},
             data=data
         )
     elif query.format == "table":
@@ -282,7 +282,7 @@ def es_deepop(es, mvel, query):
     rows = MVEL.unpack_terms(data.facets.mvel, query.edges)
     terms = zip(*rows)
 
-    # NUMBER ALL EDGES FOR Qb INDEXING
+    # NUMBER ALL EDGES FOR qb INDEXING
     edges = query.edges
     for f, e in enumerate(edges):
         for r in terms[f]:

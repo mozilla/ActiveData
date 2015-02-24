@@ -194,7 +194,12 @@ class Bucket(object):
                 return convert.utf82unicode(source.read(key)).split("\n")
 
         if source.key.endswith(".gz"):
-            buff = BytesIO(safe_size(source))
+            bytes = safe_size(source)
+            if isinstance(bytes, str):
+                buff = BytesIO(bytes)
+            else:
+                # SWAP OUT FILE REFERENCE
+                bytes.file, buff = None, bytes.file
             archive = gzip.GzipFile(fileobj=buff, mode='r')
             return LazyLines(archive)
         else:

@@ -13,7 +13,7 @@ from __future__ import division
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import MVEL, Q
+from pyLibrary.queries import MVEL, qb
 from pyLibrary.queries.container import Container
 from pyLibrary.queries.es_query_aggop import is_aggop, es_aggop
 from pyLibrary.queries.es_query_aggs import es_aggsop, is_aggsop
@@ -33,7 +33,7 @@ from pyLibrary.dot import wrap, listwrap
 
 class ESQuery(Container):
     """
-    SEND GENERAL Qb QUERIES TO ElasticSearch
+    SEND GENERAL qb QUERIES TO ElasticSearch
     """
 
     @use_settings
@@ -89,7 +89,7 @@ class ESQuery(Container):
             result = self.query(frum)
             q2 = query.copy()
             q2.frum = result
-            return Q.run(q2)
+            return qb.run(q2)
 
         try:
             frum = loadColumns(self._es, query["from"])
@@ -115,6 +115,12 @@ class ESQuery(Container):
 
         Log.error("Can not handle")
 
+
+    def get_column_names(self):
+        # GET METADATA FOR INDEX
+        # LIST ALL COLUMNS
+        frum = loadColumns(self._es, self)
+        return frum.columns.name
 
     def addDimension(self, dim):
         if isinstance(dim, list):

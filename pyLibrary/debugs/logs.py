@@ -39,7 +39,7 @@ class Log(object):
     logging_multi = None
     profiler = None   # simple pypy-friendly profiler
     cprofiler = None  # screws up with pypy, but better than nothing
-    cprofiler_stats = Queue()  # ACCUMULATION OF STATS FROM ALL THREADS
+    cprofiler_stats = Queue("cprofiler stats")  # ACCUMULATION OF STATS FROM ALL THREADS
     error_mode = False  # prevent error loops
 
     @classmethod
@@ -535,7 +535,7 @@ class Log_usingThread(BaseLog):
         # DELAYED LOAD FOR THREADS MODULE
         from pyLibrary.thread.threads import Queue
 
-        self.queue = Queue(max=10000, silent=True)
+        self.queue = Queue("logs", max=10000, silent=True)
         self.logger = logger
 
         def worker(please_stop):

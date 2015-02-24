@@ -31,7 +31,7 @@ class Log_usingLogger(BaseLog):
         self.logger.addHandler(make_log_from_settings(settings))
 
         # TURNS OUT LOGGERS ARE REALLY SLOW TOO
-        self.queue = threads.Queue(max=10000, silent=True)
+        self.queue = threads.Queue("log to classic logger", max=10000, silent=True)
         self.thread = Thread("log to logger", time_delta_pusher, appender=self.logger.info, queue=self.queue, interval=timedelta(seconds=0.3))
         self.thread.start()
 

@@ -34,13 +34,13 @@ class Multithread(object):
 
     def __init__(self, functions, threads=None, outbound=None, silent_queues=None):
         if outbound is None:
-            self.outbound = Queue(silent=silent_queues)
+            self.outbound = Queue("multithread", silent=silent_queues)
         elif outbound is False:
             self.outbound = None
         else:
             self.outbound = outbound
 
-        self.inbound = Queue(silent=silent_queues)
+        self.inbound = Queue("multithread", silent=silent_queues)
 
         # MAKE THREADS
         if isinstance(functions, Iterable):

@@ -176,7 +176,7 @@ def _normalize(esfilter):
 
 def where2esfilter(where):
     """
-    CONVERT Qb QUERY where CLAUSE TO ELASTICSEARCH FILTER FORMAT
+    CONVERT qb QUERY where CLAUSE TO ELASTICSEARCH FILTER FORMAT
     """
     if where is True or where == None:
         return {"match_all": {}}

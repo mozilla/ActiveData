@@ -12,7 +12,7 @@ from __future__ import division
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 from pyLibrary.queries import es_query_util
 from pyLibrary.queries.es_query_util import aggregates, buildESQuery, compileEdges2Term
 from pyLibrary.queries.filters import simplify_esfilter
@@ -64,11 +64,11 @@ def es_terms(es, mvel, query):
         for t in f.terms:
             term2Parts(t.term)
 
-    # NUMBER ALL EDGES FOR Qb INDEXING
+    # NUMBER ALL EDGES FOR qb INDEXING
     for f, e in enumerate(query.edges):
         e.index = f
         if e.domain.type in ["uid", "default"]:
-            # e.domain.partitions = Q.sort(e.domain.partitions, "value")
+            # e.domain.partitions = qb.sort(e.domain.partitions, "value")
             for p, part in enumerate(e.domain.partitions):
                 part.dataIndex = p
             e.domain.NULL.dataIndex = len(e.domain.partitions)
@@ -126,7 +126,7 @@ def _es_terms2(es, mvel, query):
     values2 = set()
     for k, f in data.facets.items():
         values2.update(f.terms.term)
-    values2 = Q.sort(values2)
+    values2 = qb.sort(values2)
     term2index = {v: i for i, v in enumerate(values2)}
     query.edges[1].domain.partitions = DictList([{"name": v, "value": v} for v in values2])
 

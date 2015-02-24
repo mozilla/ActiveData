@@ -12,13 +12,14 @@ import flask
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
-from pyLibrary import convert
+from pyLibrary import convert, strings
 from pyLibrary.debugs import constants, startup
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot import Dict, wrap, unwrap
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
-from pyLibrary.queries import Q, from_es
+from pyLibrary.queries import qb, from_es
+from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
 
 
@@ -53,7 +54,7 @@ def query(path):
             body = flask.request.environ['body_copy']
             if not body.strip():
                 return Response(
-                    convert.unicode2utf8 (BLANK),
+                    convert.unicode2utf8(BLANK),
                     status=400,
                     headers={
                         "access-control-allow-origin": "*",
@@ -61,10 +62,13 @@ def query(path):
                     }
                 )
 
-            data = convert.json2value(convert.utf82unicode(body))
-            record_request(flask.request, data, None, None)
 
-            result = Q.run(data)
+
+            text = convert.utf82unicode(body)
+            text = replace_vars(text)
+            data = convert.json2value(text)
+            record_request(flask.request, data, None, None)
+            result = qb.run(data)
 
         result.meta.active_data_response_time = total_duration.duration.total_seconds()
 
@@ -109,6 +113,17 @@ def overview(path):
         }
     )
 
+def replace_vars(text):
+    """
+    REPLACE {{vars}} WITH ENVIRONMENTAL VALUES
+    """
+    var = strings.between(text, "\"{{", "}}\"")
+    while var:
+        text = text.replace("\"{{"+var+"}}\"", unicode(Date(var).unix))
+        var = strings.between(text, "\"{{", "}}\"")
+    return text
+
+
 
 # Snagged from http://stackoverflow.com/questions/10999990/python-flask-how-to-get-whole-raw-post-body
 class WSGICopyBody(object):
@@ -151,7 +166,7 @@ def main():
         # PIPE REQUEST LOGS TO ES DEBUG
         request_logger = elasticsearch.Cluster(settings.request_logs).get_or_create_index(settings.request_logs)
         globals()["default_elasticsearch"] = elasticsearch.Index(settings.elasticsearch)
-        globals()["request_log_queue"] = request_logger.threaded_queue(size=2000)
+        globals()["request_log_queue"] = request_logger.threaded_queue(max_size=2000)
 
         from_es.config.default = {
             "type": "elasticsearch",

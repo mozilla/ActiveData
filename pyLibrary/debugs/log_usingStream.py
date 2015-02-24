@@ -50,7 +50,7 @@ class Log_usingStream(BaseLog):
         else:
             appender = self.stream.write
 
-        self.queue = Queue(max=10000, silent=True)
+        self.queue = Queue("log to stream", max=10000, silent=True)
         self.thread = Thread("log to " + name, time_delta_pusher, appender=appender, queue=self.queue, interval=timedelta(seconds=0.3))
         self.thread.start()
 

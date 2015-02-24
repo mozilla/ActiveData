@@ -1,0 +1,17 @@
+{
+	"from":{
+		"type":"elasticsearch",
+		"settings":{
+			"host":"http://52.10.116.229",
+			"index":"unittest",
+			"type":"test_results"
+		}
+	},
+	"select":"*",
+	"where":{"and":[
+		{"exists":"result.missing_test_end"},
+		{"gte":{"run.stats.start_time":"{{today|week}}"}}
+	]},
+	"format":"list",
+	"limit":1000
+}

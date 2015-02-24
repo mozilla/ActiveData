@@ -19,6 +19,42 @@ lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
 class TestSetOps(ActiveDataBaseTest):
+
+    def test_simplest(self):
+        test = {
+            "data": [
+                {"a": "b"}
+            ],
+            "query": {
+                "from": "testdata",
+                "select": "a"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                {"a": "b"}
+            ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [["b"]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a": ["b"]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
+
     def test_single_select_alpha(self):
         test = {
             "name": "singleton_alpha",

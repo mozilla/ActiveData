@@ -22,7 +22,7 @@ from pyLibrary.times.timer import Timer
 
 def is_aggsop(es, query):
     es.cluster.get_metadata()
-    if es.cluster.version.startswith("1.4") and query.edges:
+    if es.cluster.version.startswith("1.4") and (query.edges or query.groupby):
         return True
     return False
 
@@ -59,7 +59,7 @@ def es_aggsop(es, mvel, query):
     try:
         formatter, mime_type = format_dispatch[query.format]
         output = formatter(decoders, result.aggregations, start, query, select)
-        output.meta.es_response_time = es_duration.duration.total_seconds()
+        output.meta.es_response_time = es_duration.duration.seconds
         output.meta.content_type = mime_type
         return output
     except Exception, e:

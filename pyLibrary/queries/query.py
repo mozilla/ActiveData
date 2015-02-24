@@ -60,6 +60,7 @@ class Query(object):
             self.select2index[s.name] = i
         self.select = select
 
+        self.groupby = _normalize_groupby(query.edges, schema=schema)
         self.edges = _normalize_edges(query.edges, schema=schema)
         self.frum = wrap_from(query["from"], schema=schema)
         self.where = _normalize_where(query.where, schema=schema)
@@ -149,6 +150,25 @@ def _normalize_edge(edge, schema=None):
             domain=_normalize_domain(edge.domain, schema=schema)
         )
 
+def _normalize_groupby(edges, schema=None):
+    return [_normalize_group(e, schema=schema) for e in listwrap(edges)]
+
+
+def _normalize_group(edge, schema=None):
+    if isinstance(edge, basestring):
+        return Dict(
+            name=edge,
+            value=edge
+        )
+    else:
+        edge = wrap(edge)
+        if not edge.name and not isinstance(edge.value, basestring):
+            Log.error("You must name compound edges: {{edge}}", {"edge":edge})
+
+        return Dict(
+            name=nvl(edge.name, edge.value),
+            value=edge.value
+        )
 
 
 

@@ -15,13 +15,14 @@ from _subprocess import CREATE_NEW_PROCESS_GROUP
 import subprocess
 import signal
 
+from active_data.app import replace_vars
 from pyLibrary import convert
 from pyLibrary import jsons
 from pyLibrary.debugs.logs import Log, Except, constants
 from pyLibrary.dot import wrap, listwrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
-from pyLibrary.queries import qb
+from pyLibrary.queries import qb, from_es
 from pyLibrary.queries.query import _normalize_edges, _normalize_selects
 from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
@@ -57,16 +58,26 @@ class ActiveDataBaseTest(FuzzyTestCase):
     server_is_ready = None
     please_stop = None
     thread = None
+    server = None
 
 
     @classmethod
     def setUpClass(cls):
-        cls.server_is_ready = Signal()
-        cls.please_stop = Signal()
+        ActiveDataBaseTest.server_is_ready = Signal()
+        ActiveDataBaseTest.please_stop = Signal()
         if settings.startServer:
-            cls.thread = Thread("watch server", run_app, please_stop=cls.please_stop, server_is_ready=cls.server_is_ready).start()
+            ActiveDataBaseTest.thread = Thread("watch server", run_app, please_stop=ActiveDataBaseTest.please_stop, server_is_ready=ActiveDataBaseTest.server_is_ready).start()
+            ActiveDataBaseTest.server = http
         else:
-            cls.server_is_ready.go()
+            # WE WILL USE THE ActiveServer CODE, AND CONNECT TO ES DIRECTLY.
+            # THIS MAKES FOR SLIGHTLY FASTER TEST TIMES BECAUSE THE PROXY IS
+            # MISSING
+            ActiveDataBaseTest.server = FakeHttp()
+            from_es.config.default = {
+                "type": "elasticsearch",
+                "settings": settings.backend_es.copy()
+            }
+            ActiveDataBaseTest.server_is_ready.go()
 
         cluster = elasticsearch.Cluster(settings.backend_es)
         aliases = cluster.get_aliases()
@@ -76,10 +87,10 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.please_stop.go()
+        ActiveDataBaseTest.please_stop.go()
         Log.stop()
-        if cls.thread:
-            cls.thread.stopped.wait_for_go()
+        if ActiveDataBaseTest.thread:
+            ActiveDataBaseTest.thread.stopped.wait_for_go()
 
     def __init__(self, *args, **kwargs):
         """
@@ -95,7 +106,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
     def setUp(self):
         # ADD TEST RECORDS
         self.backend_es.index = "testing_" + Random.hex(10).lower()
-        self.backend_es.type = "test_results"
+        # self.backend_es.type = "test_results"
         self.es = elasticsearch.Cluster(self.backend_es)
         self.index = self.es.get_or_create_index(self.backend_es)
         self.server_is_ready.wait_for_go()
@@ -106,7 +117,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
     def _fill_es(self, subtest):
         settings = self.backend_es.copy()
         settings.index = "testing_" + Random.hex(10).lower()
-        settings.type = "test_results"
+        # settings.type = "test_results"
 
         try:
             url = "file://resources/schema/basic_schema.json.template?{{.|url}}"
@@ -206,10 +217,10 @@ class ActiveDataBaseTest(FuzzyTestCase):
     def _try_till_response(self, *args, **kwargs):
         while True:
             try:
-                response = http.get(*args, **kwargs)
+                response = ActiveDataBaseTest.server.get(*args, **kwargs)
                 return response
             except Exception, e:
-                if "No connection could be made because the target machine actively refused it" not in e:
+                if "No connection could be made because the target machine actively refused it" in e:
                     Log.alert("Problem connecting")
                 else:
                     Log.error("Server raised exception", e)
@@ -251,3 +262,23 @@ def run_app(please_stop, server_is_ready):
 
 
 
+class FakeHttp(object):
+
+    def get(*args, **kwargs):
+        body = kwargs.get("data")
+
+        if not body:
+            return wrap({
+                "status_code": 400
+            })
+
+        text = convert.utf82unicode(body)
+        text = replace_vars(text)
+        data = convert.json2value(text)
+        result = qb.run(data)
+        output_bytes = convert.unicode2utf8(convert.value2json(result))
+        return wrap({
+            "status_code":200,
+            "all_content": output_bytes,
+            "content": output_bytes
+        })

@@ -14,14 +14,14 @@ from __future__ import division
 from tests.base_test_class import ActiveDataBaseTest
 
 
-class TestEdge1(ActiveDataBaseTest):
+class TestgroupBy1(ActiveDataBaseTest):
 
     def test_no_select(self):
         test = {
             "data": simple_test_data,
             "query": {
                 "from": "testdata",
-                "edges": ["a"]
+                "groupby": "a"
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -38,23 +38,6 @@ class TestEdge1(ActiveDataBaseTest):
                     ["c", 3],
                     [None, 1]
                 ]
-            },
-            "expecting_cube": {
-                "meta": {"format": "cube"},
-                "edges": [
-                    {
-                        "name": "a",
-                        "allowNulls": True,
-                        "domain": {
-                            "type": "set",
-                            "key": "value",
-                            "partitions": [{"value": "b"}, {"value": "c"}]
-                        }
-                    }
-                ],
-                "data": {
-                    "count": [2, 3, 1]
-                }
             }
         }
         self._execute_es_tests(test)
@@ -69,7 +52,7 @@ class TestEdge1(ActiveDataBaseTest):
             "query": {
                 "from": "testdata",
                 "select": {"aggregate": "count"},
-                "edges": ["a"]
+                "groupby": ["a"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -86,23 +69,6 @@ class TestEdge1(ActiveDataBaseTest):
                     ["c", 3],
                     [None, 1]
                 ]
-            },
-            "expecting_cube": {
-                "meta": {"format": "cube"},
-                "edges": [
-                    {
-                        "name": "a",
-                        "allowNulls": True,
-                        "domain": {
-                            "type": "set",
-                            "key": "value",
-                            "partitions": [{"value": "b"}, {"value": "c"}]
-                        }
-                    }
-                ],
-                "data": {
-                    "count": [2, 3, 1]
-                }
             }
         }
         self._execute_es_tests(test)
@@ -115,7 +81,7 @@ class TestEdge1(ActiveDataBaseTest):
             "query": {
                 "from": "testdata",
                 "select": {"name": "count_a", "value": "a", "aggregate": "count"},
-                "edges": ["a"]
+                "groupby": ["a"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -132,23 +98,6 @@ class TestEdge1(ActiveDataBaseTest):
                     ["c", 3],
                     [None, 0]
                 ]
-            },
-            "expecting_cube": {
-                "meta": {"format": "cube"},
-                "edges": [
-                    {
-                        "name": "a",
-                        "allowNulls": True,
-                        "domain": {
-                            "type": "set",
-                            "key": "value",
-                            "partitions": [{"value": "b"}, {"value": "c"}]
-                        }
-                    }
-                ],
-                "data": {
-                    "count_a": [2, 3, 0]
-                }
             }
         }
         self._execute_es_tests(test)
@@ -161,7 +110,7 @@ class TestEdge1(ActiveDataBaseTest):
             "query": {
                 "from": "testdata",
                 "select": {"name": "count_v", "value": "v", "aggregate": "count"},
-                "edges": ["a"]
+                "groupby": ["a"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -178,23 +127,6 @@ class TestEdge1(ActiveDataBaseTest):
                     ["c", 3],
                     [None, 1]
                 ]
-            },
-            "expecting_cube": {
-                "meta": {"format": "cube"},
-                "edges": [
-                    {
-                        "name": "a",
-                        "allowNulls": True,
-                        "domain": {
-                            "type": "set",
-                            "key": "value",
-                            "partitions": [{"value": "b"}, {"value": "c"}]
-                        }
-                    }
-                ],
-                "data": {
-                    "count_v": [1, 3, 1]
-                }
             }
         }
         self._execute_es_tests(test)
@@ -210,7 +142,7 @@ class TestEdge1(ActiveDataBaseTest):
                     {"name": "count", "value": "v", "aggregate": "count"},
                     {"name": "avg", "value": "v", "aggregate": "average"}
                 ],
-                "edges": ["a"]
+                "groupby": ["a"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -227,24 +159,6 @@ class TestEdge1(ActiveDataBaseTest):
                     ["c", 3, 31 / 3],
                     [None, 1, 3]
                 ]
-            },
-            "expecting_cube": {
-                "meta": {"format": "cube"},
-                "edges": [
-                    {
-                        "name": "a",
-                        "allowNulls": True,
-                        "domain": {
-                            "type": "set",
-                            "key": "value",
-                            "partitions": [{"value": "b"}, {"value": "c"}]
-                        }
-                    }
-                ],
-                "data": {
-                    "count": [1, 3, 1],
-                    "avg": [2, 31 / 3, 3]
-                }
             }
         }
         self._execute_es_tests(test)
@@ -257,7 +171,7 @@ class TestEdge1(ActiveDataBaseTest):
             "query": {
                 "from": "testdata",
                 "select": {"value": "v", "aggregate": "sum"},
-                "edges": ["a"]
+                "groupby": ["a"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -274,26 +188,46 @@ class TestEdge1(ActiveDataBaseTest):
                     ["c", 31],
                     [None, 3]
                 ]
-            },
-            "expecting_cube": {
-                "meta": {"format": "cube"},
-                "edges": [
-                    {
-                        "name": "a",
-                        "allowNulls": True,
-                        "domain": {
-                            "type": "set",
-                            "key": "value",
-                            "partitions": [{"value": "b"}, {"value": "c"}]
-                        }
-                    }
-                ],
-                "data": {
-                    "v": [2, 31, 3]
-                }
             }
         }
         self._execute_es_tests(test)
+
+    def test_deep_select_column(self):
+        test = {
+            "data": [
+                {"a": [
+                    {"b": "x", "v": 2},
+                    {"b": "y", "v": 3}
+                ]},
+                {"a": {"b": "x", "v": 5}},
+                {"a": [
+                    {"b": "x", "v": 7},
+                ]},
+                {"c": "x"}
+            ],
+            "query": {
+                "from": "testdata",
+                "select": {"value": "a.v", "aggregate": "sum"},
+                "groupby": ["a.b"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": {"b": "x", "v": 14}},
+                    {"a": {"b": "y", "v": 3}},
+                ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a.b", "a.v"],
+                "data": [
+                    ["x", 14],
+                    ["y", 3],
+                    [None, None]
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
 
     def test_where(self):
         test = {
@@ -303,7 +237,7 @@ class TestEdge1(ActiveDataBaseTest):
             "query": {
                 "from": "testdata",
                 "select": {"value": "v", "aggregate": "max"},
-                "edges": ["a"],
+                "groupby": ["a"],
                 "where": {"term": {"a": "c"}}
             },
             "expecting_list": {
@@ -317,23 +251,6 @@ class TestEdge1(ActiveDataBaseTest):
                 "data": [
                     ["c", 13]
                 ]
-            },
-            "expecting_cube": {
-                "meta": {"format": "cube"},
-                "edges": [
-                    {
-                        "name": "a",
-                        "allowNulls": False,
-                        "domain": {
-                            "type": "set",
-                            "key": "value",
-                            "partitions": [{"value": "c"}]
-                        }
-                    }
-                ],
-                "data": {
-                    "v": [13]
-                }
             }
         }
         self._execute_es_tests(test)
@@ -346,7 +263,7 @@ class TestEdge1(ActiveDataBaseTest):
             "query": {
                 "from": "testdata",
                 "select": {"value": "v", "aggregate": "max"},
-                "edges": [
+                "groupby": [
                     {"value": "a", "allowNulls": False, "domain": {"type": "set", "partitions": ["b", "c"]}}
                 ],
                 "where": {"term": {"a": "c"}}
@@ -364,23 +281,6 @@ class TestEdge1(ActiveDataBaseTest):
                     ["b", None],
                     ["c", 13]
                 ]
-            },
-            "expecting_cube": {
-                "meta": {"format": "cube"},
-                "edges": [
-                    {
-                        "name": "a",
-                        "allowNulls": False,
-                        "domain": {
-                            "type": "set",
-                            "key": "value",
-                            "partitions": [{"value": "b"}, {"value": "c"}]
-                        }
-                    }
-                ],
-                "data": {
-                    "v": [None, 13],
-                }
             }
         }
         self._execute_es_tests(test)
@@ -393,7 +293,7 @@ class TestEdge1(ActiveDataBaseTest):
             "query": {
                 "from": "testdata",
                 "select": {"value": "v", "aggregate": "max"},
-                "edges": ["a"],
+                "groupby": ["a"],
                 "where": {"term": {"a": "d"}}
             },
             "expecting_list": {
@@ -404,23 +304,6 @@ class TestEdge1(ActiveDataBaseTest):
                 "meta": {"format": "table"},
                 "header": ["a", "v"],
                 "data": []
-            },
-            "expecting_cube": {
-                "meta": {"format": "cube"},
-                "edges": [
-                    {
-                        "name": "a",
-                        "allowNulls": False,
-                        "domain": {
-                            "type": "set",
-                            "key": "value",
-                            "partitions": []
-                        }
-                    }
-                ],
-                "data": {
-                    "v": []
-                }
             }
         }
         self._execute_es_tests(test)

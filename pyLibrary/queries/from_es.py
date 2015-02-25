@@ -10,7 +10,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 
-from pyLibrary.dot import wrap, Dict, set_default
+from pyLibrary.dot import wrap, Dict, set_default, split_field
 
 type2container = Dict()
 config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
@@ -19,8 +19,8 @@ config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
 def _delayed_imports():
     global type2container
 
-    from pyLibrary.queries.db_query import DBQuery
-    from pyLibrary.queries.es_query import ESQuery
+    from pyLibrary.queries.qb_usingMySQL import DBQuery
+    from pyLibrary.queries.qb_usingES import ESQuery
     set_default(type2container, {
         "elasticsearch": ESQuery,
         "mysql": DBQuery,
@@ -41,7 +41,7 @@ def wrap_from(frum, schema=None):
 
     if isinstance(frum, basestring):
         settings = set_default({
-            "index": frum,
+            "index": split_field(frum)[0],
             "name": frum,
         }, config.default.settings)
         return type2container["elasticsearch"](settings)

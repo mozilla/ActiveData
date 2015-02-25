@@ -163,7 +163,7 @@ def _value2json(value, _buffer):
         elif type is timedelta:
             append(_buffer, unicode(value.total_seconds()))
         elif type is Duration:
-            append(_buffer, unicode(value.total_seconds))
+            append(_buffer, unicode(value.seconds))
         elif hasattr(value, '__json__'):
             j = value.__json__()
             append(_buffer, j)

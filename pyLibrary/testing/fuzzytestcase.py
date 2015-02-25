@@ -11,7 +11,7 @@
 import unittest
 from pyLibrary import dot
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import nvl
+from pyLibrary.dot import nvl, Dict, literal_field
 from pyLibrary.maths import Math
 from pyLibrary.dot import wrap
 from pyLibrary.strings import expand_template
@@ -74,9 +74,8 @@ def zipall(*args):
 def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=None):
     try:
         if isinstance(expected, dict):
-            expected = wrap(expected)
             for k, v2 in expected.items():
-                v1 = dot.get_attr(test, k)
+                v1 = dot.get_attr(test, literal_field(k))
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
         elif hasattr(test, "__iter__") and hasattr(expected, "__iter__"):
             for a, b in zipall(test, expected):

@@ -12,7 +12,7 @@ from pyLibrary.dot import wrap
 
 from pyLibrary.dot.dicts import Dict, nvl
 from pyLibrary.parsers import Log
-from pyLibrary.queries.es_query_util import aggregates1_4
+from pyLibrary.queries.qb_usingES_util import aggregates1_4
 
 INDEX_CACHE = {}  # MATCH NAMES TO FULL CONNECTION INFO
 

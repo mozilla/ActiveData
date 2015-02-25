@@ -170,10 +170,6 @@ class Duration(object):
             return True
         return self.milli > Duration(other).milli
 
-    @property
-    def total_seconds(self):
-        return self.milli / 1000
-
     def floor(self, interval=None):
         if not isinstance(interval, Duration):
             from pyLibrary.debugs.logs import Log
@@ -195,7 +191,11 @@ class Duration(object):
 
     @property
     def seconds(self):
-        return self.milli/1000
+        return self.milli / 1000
+
+    @property
+    def total_seconds(self):
+        return self.milli / 1000
 
     def __str__(self):
         if not self.milli:

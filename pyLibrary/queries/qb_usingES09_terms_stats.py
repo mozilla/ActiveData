@@ -12,9 +12,9 @@ from __future__ import division
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import COUNT, PRODUCT
-from pyLibrary.queries import es_query_util
+from pyLibrary.queries import qb_usingES_util
 from pyLibrary.queries.cube import Cube
-from pyLibrary.queries.es_query_util import aggregates, buildESQuery, compileEdges2Term
+from pyLibrary.queries.qb_usingES_util import aggregates, buildESQuery, compileEdges2Term
 from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import domains, MVEL, filters
@@ -146,7 +146,7 @@ def es_terms_stats(esq, mvel, query):
             if condition:
                 esQuery.facets[name].facet_filter = simplify_esfilter({"and": condition})
 
-    data = es_query_util.post(esq.es, esQuery, query.limit)
+    data = qb_usingES_util.post(esq.es, esQuery, query.limit)
 
     if specialEdge.domain.type not in domains.KNOWN:
         # WE BUILD THE PARTS BASED ON THE RESULTS WE RECEIVED

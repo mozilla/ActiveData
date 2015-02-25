@@ -16,7 +16,7 @@ from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, literal_field, set_default
 from pyLibrary.queries.cube import Cube
-from pyLibrary.queries.es_query_aggs import count_dim, aggs_iterator, format_dispatch
+from pyLibrary.queries.qb_usingES14_aggs import count_dim, aggs_iterator, format_dispatch
 
 
 def format_cube(decoders, aggs, start, query, select):
@@ -27,7 +27,7 @@ def format_cube(decoders, aggs, start, query, select):
         coord = tuple(d.get_index(row) for d in decoders)
         for s, m in matricies:
             # name = literal_field(s.name)
-            if s.aggregate == "count" and s.value == None:
+            if s.aggregate == "count" and (s.value == None or s.value=="."):
                 m[coord] = agg.doc_count
             else:
                 try:
@@ -55,7 +55,7 @@ def format_table(decoders, aggs, start, query, select):
 
             output = [d.get_value(c) for c, d in zip(coord, decoders)]
             for s in select:
-                if s.aggregate == "count" and s.value == None:
+                if s.aggregate == "count" and (s.value == None or s.value=="."):
                     output.append(agg.doc_count)
                 else:
                     output.append(agg[literal_field(s.name)].value)
@@ -111,10 +111,12 @@ def format_list(decoders, aggs, start, query, select):
             coord = tuple(d.get_index(row) for d in decoders)
             is_sent[coord] = 1
 
-            output = {e.name: d.get_value(c) for e, c, d in zip(query.edges, coord, decoders)}
+            output = Dict()
+            for e, c, d in zip(query.edges, coord, decoders):
+                output[e.name] = d.get_value(c)
 
             for s in select:
-                if s.aggregate == "count" and s.value == None:
+                if s.aggregate == "count" and (s.value == None or s.value=="."):
                     output[s.name] = agg.doc_count
                 else:
                     output[s.name] = agg[literal_field(s.name)].value

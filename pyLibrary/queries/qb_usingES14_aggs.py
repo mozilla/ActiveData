@@ -12,10 +12,10 @@ from __future__ import division
 
 from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, nvl, Null
-from pyLibrary.queries import es_query_util, qb
+from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, nvl, Null, split_field, join_field
+from pyLibrary.queries import qb_usingES_util, qb
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain
-from pyLibrary.queries.es_query_util import aggregates1_4
+from pyLibrary.queries.qb_usingES_util import aggregates1_4
 from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.times.timer import Timer
 
@@ -27,12 +27,12 @@ def is_aggsop(es, query):
     return False
 
 
-def es_aggsop(es, mvel, query):
+def es_aggsop(es, frum, query):
     select = listwrap(query.select)
 
     esQuery = Dict()
     for s in select:
-        if s.aggregate == "count" and s.value:
+        if s.aggregate == "count" and s.value and s.value != ".":
             esQuery.aggs[literal_field(s.name)].value_count.field = s.value
             # esQuery.aggs["missing_"+literal_field(s.name)].missing.field = s.value
         elif s.aggregate == "count":
@@ -52,9 +52,18 @@ def es_aggsop(es, mvel, query):
             aggs={"_filter": set_default({"filter": filter}, esQuery)}
         )
 
+    if len(split_field(frum.name)) > 1:
+        esQuery = wrap({
+            "aggs": {"_nested": set_default({
+                "nested": {
+                    "path": join_field(split_field(frum.name)[1::])
+                }
+            }, esQuery)}
+        })
+
     es_duration = Timer("ES query time")
     with es_duration:
-        result = es_query_util.post(es, esQuery, query.limit)
+        result = qb_usingES_util.post(es, esQuery, query.limit)
 
     try:
         formatter, mime_type = format_dispatch[query.format]
@@ -312,33 +321,35 @@ def aggs_iterator(aggs, decoders):
     depth = decoders[-1].start + decoders[-1].num_columns
     parts = [None] * depth
 
-    def _aggs_iterator(aggs, d):
-        if aggs._filter:
-            aggs = aggs._filter
+    def _aggs_iterator(agg, d):
+        deeper = nvl(agg._filter, agg._nested)
+        while deeper:
+            agg = deeper
+            deeper = nvl(agg._filter, agg._nested)
 
         if d > 0:
-            for b in aggs._match.buckets:
+            for b in agg._match.buckets:
                 parts[d] = b
                 for a in _aggs_iterator(b, d - 1):
                     yield a
             parts[d] = Null
-            for b in aggs._other.buckets:
+            for b in agg._other.buckets:
                 for a in _aggs_iterator(b, d - 1):
                     yield a
-            b = aggs._missing
+            b = agg._missing
             if b.doc_count:
                 for a in _aggs_iterator(b, d - 1):
                     yield a
         else:
-            for b in aggs._match.buckets:
+            for b in agg._match.buckets:
                 parts[d] = b
                 if b.doc_count:
                     yield b
             parts[d] = Null
-            for b in aggs._other.buckets:
+            for b in agg._other.buckets:
                 if b.doc_count:
                     yield b
-            b = aggs._missing
+            b = agg._missing
             if b.doc_count:
                 yield b
 
@@ -362,7 +373,7 @@ def count_dim(aggs, decoders):
 
 
 format_dispatch = {}
-from pyLibrary.queries.es_query_aggs_format import format_cube
+from pyLibrary.queries.qb_usingES14_aggs_format import format_cube
 
 _ = format_cube
 

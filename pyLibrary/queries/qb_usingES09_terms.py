@@ -13,8 +13,8 @@ from __future__ import division
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND
 from pyLibrary.queries import qb
-from pyLibrary.queries import es_query_util
-from pyLibrary.queries.es_query_util import aggregates, buildESQuery, compileEdges2Term
+from pyLibrary.queries import qb_usingES_util
+from pyLibrary.queries.qb_usingES_util import aggregates, buildESQuery, compileEdges2Term
 from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.queries.cube import Cube
 from pyLibrary.dot import nvl
@@ -56,7 +56,7 @@ def es_terms(es, mvel, query):
 
     term2Parts = packed_term.term2parts
 
-    data = es_query_util.post(es, esQuery, query.limit)
+    data = qb_usingES_util.post(es, esQuery, query.limit)
 
     # GETTING ALL PARTS WILL EXPAND THE EDGES' DOMAINS
     # BUT HOW TO UNPACK IT FROM THE term FASTER IS UNKNOWN
@@ -120,7 +120,7 @@ def _es_terms2(es, mvel, query):
                 ]})
             }
 
-    data = es_query_util.post(es, esQuery, query.limit)
+    data = qb_usingES_util.post(es, esQuery, query.limit)
 
     # UNION ALL TERMS FROM SECOND DIMENSION
     values2 = set()

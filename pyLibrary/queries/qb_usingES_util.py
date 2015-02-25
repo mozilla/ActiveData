@@ -62,13 +62,11 @@ def loadColumns(es, frum):
 
     schema = es.get_schema()
     properties = schema.properties
-    output = Dict()
+    INDEX_CACHE[frum.name] = output = Dict()
     output.name = frum.name
-    output.url = frum.url
+    output.url = es.url
     output.es = es
     output.columns = parseColumns("dummy value", frum.name, properties)
-
-    INDEX_CACHE[frum.name] = output
     return output
 
 
@@ -132,20 +130,20 @@ def parseColumns(_dummy_, parent_path, esProperties):
         else:
             path = name
 
-        childColumns = None
-
         if property.type == "nested" and property.properties:
             # NESTED TYPE IS A NEW TYPE DEFINITION
+            childColumns = parseColumns(_dummy_, path, property.properties)
+            columns.extend(childColumns)
+            columns.append({
+                "name": join_field(split_field(path)[1::]),
+                "type": "nested",
+                "useSource": True
+            })
+
             if path not in INDEX_CACHE:
                 INDEX_CACHE[path] = INDEX_CACHE[parent_path].copy()
                 INDEX_CACHE[path].name = path
             INDEX_CACHE[path].columns = childColumns
-
-            columns.append({
-                "name": join_field(split_field(path)[1::]),
-                "type": property.type,
-                "useSource": True
-            })
             continue
 
         if property.properties:
@@ -191,11 +189,6 @@ def parseColumns(_dummy_, parent_path, esProperties):
             })
         else:
             Log.warning("unknown type {{type}} for property {{path}}", {"type": property.type, "path": path})
-
-    # SPECIAL CASE FOR PROPERTIES THAT WILL CAUSE OutOfMemory EXCEPTIONS
-    for c in columns:
-        if name == "bugs" and (c.name == "dependson" or c.name == "blocked"):
-            c.useSource = True
 
     return columns
 

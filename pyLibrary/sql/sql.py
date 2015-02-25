@@ -10,7 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
-from pyLibrary.queries.db_query import esfilter2sqlwhere
+from pyLibrary.queries.qb_usingMySQL import esfilter2sqlwhere
 from pyLibrary.dot import wrap
 
 

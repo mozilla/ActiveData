@@ -15,12 +15,12 @@ from pyLibrary.env import elasticsearch
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import MVEL, qb
 from pyLibrary.queries.container import Container
-from pyLibrary.queries.es_query_aggop import is_aggop, es_aggop
-from pyLibrary.queries.es_query_aggs import es_aggsop, is_aggsop
-from pyLibrary.queries.es_query_setop import is_fieldop, is_setop, is_deep, es_setop, es_deepop, es_fieldop
-from pyLibrary.queries.es_query_terms import es_terms, is_terms
-from pyLibrary.queries.es_query_terms_stats import es_terms_stats, is_terms_stats
-from pyLibrary.queries.es_query_util import aggregates, loadColumns
+from pyLibrary.queries.qb_usingES09_aggop import is_aggop, es_aggop
+from pyLibrary.queries.qb_usingES14_aggs import es_aggsop, is_aggsop
+from pyLibrary.queries.qb_usingES14_setop import is_fieldop, is_setop, is_deep, es_setop, es_deepop, es_fieldop
+from pyLibrary.queries.qb_usingES09_terms import es_terms, is_terms
+from pyLibrary.queries.qb_usingES09_terms_stats import es_terms_stats, is_terms_stats
+from pyLibrary.queries.qb_usingES_util import aggregates, loadColumns
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.debugs.logs import Log
@@ -71,7 +71,7 @@ class ESQuery(Container):
 
     @property
     def url(self):
-        return self._es.settings.host + "/" + self._es.settings.alias + "/" + self._es.settings.type
+        return self._es.url
 
 
     def query(self, _query):
@@ -99,7 +99,7 @@ class ESQuery(Container):
             Log.warning("TODO: Fix this", e)
 
         if is_aggsop(self._es, query):
-            return es_aggsop(self._es, mvel, query)
+            return es_aggsop(self._es, frum, query)
         if is_fieldop(query):
             return es_fieldop(self._es, query)
         elif is_deep(query):

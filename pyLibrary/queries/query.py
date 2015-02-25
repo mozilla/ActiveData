@@ -51,7 +51,7 @@ class Query(object):
             select = _normalize_select(select, schema=schema)
         else:
             if query.edges:
-                select = {"name": "__row__", "value": ".", "aggregate": "count"}
+                select = {"name": "count", "value": ".", "aggregate": "count"}
             else:
                 select = {"name": "__all__", "value": "*", "aggregate": "none"}
 

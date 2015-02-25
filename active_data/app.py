@@ -12,13 +12,13 @@ import flask
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
-from pyLibrary import convert, strings
+from pyLibrary import convert, strings, queries
 from pyLibrary.debugs import constants, startup
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import Dict, wrap, unwrap
+from pyLibrary.dot import Dict, unwrap
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
-from pyLibrary.queries import qb, from_es
+from pyLibrary.queries import qb
 from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
 
@@ -168,7 +168,7 @@ def main():
         globals()["default_elasticsearch"] = elasticsearch.Index(settings.elasticsearch)
         globals()["request_log_queue"] = request_logger.threaded_queue(max_size=2000)
 
-        from_es.config.default = {
+        queries.config.default = {
             "type": "elasticsearch",
             "settings": settings.elasticsearch.copy()
         }

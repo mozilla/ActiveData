@@ -14,7 +14,7 @@ from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import COUNT, PRODUCT
 from pyLibrary.queries import qb_usingES_util
 from pyLibrary.queries.cube import Cube
-from pyLibrary.queries.qb_usingES_util import aggregates, buildESQuery, compileEdges2Term
+from pyLibrary.queries.qb_usingES_util import aggregates, buildFromES, compileEdges2Term
 from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import domains, MVEL, filters
@@ -121,7 +121,7 @@ def es_terms_stats(esq, mvel, query):
         Log.error("not implemented yet")  # WE HAVE SOME SERIOUS PERMUTATIONS, WE MUST ISSUE MULTIPLE QUERIES
         pass
 
-    esQuery = buildESQuery(query)
+    FromES = buildFromES(query)
 
     for s in select:
         for parts in esFacets:
@@ -135,7 +135,7 @@ def es_terms_stats(esq, mvel, query):
             condition.append(query.where)
             name = ",".join(name)
 
-            esQuery.facets[name] = {
+            FromES.facets[name] = {
                 "terms_stats": {
                     "key_field": calcTerm.field,
                     "value_field": s.value if MVEL.isKeyword(s.value) else None,
@@ -144,9 +144,9 @@ def es_terms_stats(esq, mvel, query):
                 }
             }
             if condition:
-                esQuery.facets[name].facet_filter = simplify_esfilter({"and": condition})
+                FromES.facets[name].facet_filter = simplify_esfilter({"and": condition})
 
-    data = qb_usingES_util.post(esq.es, esQuery, query.limit)
+    data = qb_usingES_util.post(esq.es, FromES, query.limit)
 
     if specialEdge.domain.type not in domains.KNOWN:
         # WE BUILD THE PARTS BASED ON THE RESULTS WE RECEIVED
@@ -193,17 +193,17 @@ def es_terms_stats(esq, mvel, query):
     return cube
 
 
-def register_script_field(esQuery, code):
-    if not esQuery.script_fields:
-        esQuery.script_fields = {}
+def register_script_field(FromES, code):
+    if not FromES.script_fields:
+        FromES.script_fields = {}
 
     # IF CODE IS IDENTICAL, THEN USE THE EXISTING SCRIPT
-    for n, c in esQuery.script_fields.items():
+    for n, c in FromES.script_fields.items():
         if c.script == code:
             return n
 
     name = "script" + UID()
-    esQuery.script_fields[name].script = code
+    FromES.script_fields[name].script = code
     return name
 
 

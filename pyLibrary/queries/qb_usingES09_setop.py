@@ -50,9 +50,9 @@ def isKeyword(value):
 
 
 def es_fieldop(es, query):
-    esQuery = qb_usingES_util.buildESQuery(query)
+    FromES = qb_usingES_util.buildFromES(query)
     select = listwrap(query.select)
-    esQuery.query = {
+    FromES.query = {
         "filtered": {
             "query": {
                 "match_all": {}
@@ -60,20 +60,20 @@ def es_fieldop(es, query):
             "filter": filters.simplify(query.where)
         }
     }
-    esQuery.size = nvl(query.limit, 200000)
-    esQuery.fields = DictList()
+    FromES.size = nvl(query.limit, 200000)
+    FromES.fields = DictList()
     for s in select.value:
         if s == "*":
-            esQuery.fields = None
+            FromES.fields = None
         elif isinstance(s, list):
-            esQuery.fields.extend(s)
+            FromES.fields.extend(s)
         elif isinstance(s, dict):
-            esQuery.fields.extend(s.values())
+            FromES.fields.extend(s.values())
         else:
-            esQuery.fields.append(s)
-    esQuery.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
+            FromES.fields.append(s)
+    FromES.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
 
-    data = qb_usingES_util.post(es, esQuery, query.limit)
+    data = qb_usingES_util.post(es, FromES, query.limit)
 
     T = data.hits.hits
     matricies = {}
@@ -118,7 +118,7 @@ def is_setop(query):
 
 
 def es_setop(es, mvel, query):
-    esQuery = qb_usingES_util.buildESQuery(query)
+    FromES = qb_usingES_util.buildFromES(query)
     select = listwrap(query.select)
 
     isDeep = len(split_field(query.frum.name)) > 1  # LOOKING INTO NESTED WILL REQUIRE A SCRIPT
@@ -126,13 +126,13 @@ def es_setop(es, mvel, query):
 
     if not isDeep and not isComplex and len(select) == 1:
         if not select[0].value:
-            esQuery.query = {"filtered": {
+            FromES.query = {"filtered": {
                 "query": {"match_all": {}},
                 "filter": simplify(query.where)
             }}
-            esQuery.size = 1  # PREVENT QUERY CHECKER FROM THROWING ERROR
+            FromES.size = 1  # PREVENT QUERY CHECKER FROM THROWING ERROR
         elif MVEL.isKeyword(select[0].value):
-            esQuery.facets.mvel = {
+            FromES.facets.mvel = {
                 "terms": {
                     "field": select[0].value,
                     "size": nvl(query.limit, 200000)
@@ -148,11 +148,11 @@ def es_setop(es, mvel, query):
                 if s0.field != select[0].value:
                     Log.error("can not sort by anything other than count, or term")
 
-                esQuery.facets.mvel.terms.order = "term" if s0.sort >= 0 else "reverse_term"
+                FromES.facets.mvel.terms.order = "term" if s0.sort >= 0 else "reverse_term"
     elif not isDeep:
         simple_query = query.copy()
         simple_query.where = TRUE_FILTER  # THE FACET FILTER IS FASTER
-        esQuery.facets.mvel = {
+        FromES.facets.mvel = {
             "terms": {
                 "script_field": mvel.code(simple_query),
                 "size": nvl(simple_query.limit, 200000)
@@ -160,7 +160,7 @@ def es_setop(es, mvel, query):
             "facet_filter": simplify(query.where)
         }
     else:
-        esQuery.facets.mvel = {
+        FromES.facets.mvel = {
             "terms": {
                 "script_field": mvel.code(query),
                 "size": nvl(query.limit, 200000)
@@ -168,7 +168,7 @@ def es_setop(es, mvel, query):
             "facet_filter": simplify(query.where)
         }
 
-    data = qb_usingES_util.post(es, esQuery, query.limit)
+    data = qb_usingES_util.post(es, FromES, query.limit)
 
     if len(select) == 1:
         if not select[0].value:
@@ -212,14 +212,14 @@ def is_deep(query):
 
 
 def es_deepop(es, mvel, query):
-    esQuery = qb_usingES_util.buildESQuery(query)
+    FromES = qb_usingES_util.buildFromES(query)
 
     select = query.edges
 
     temp_query = query.copy()
     temp_query.select = select
     temp_query.edges = DictList()
-    esQuery.facets.mvel = {
+    FromES.facets.mvel = {
         "terms": {
             "script_field": mvel.code(temp_query),
             "size": query.limit
@@ -227,7 +227,7 @@ def es_deepop(es, mvel, query):
         "facet_filter": simplify(query.where)
     }
 
-    data = qb_usingES_util.post(es, esQuery, query.limit)
+    data = qb_usingES_util.post(es, FromES, query.limit)
 
     rows = MVEL.unpack_terms(data.facets.mvel, query.edges)
     terms = zip(*rows)

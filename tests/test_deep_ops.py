@@ -18,7 +18,7 @@ from tests.base_test_class import ActiveDataBaseTest
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
-class TestSetOps(ActiveDataBaseTest):
+class TestDeepOps(ActiveDataBaseTest):
 
     def test_deep_select_column(self):
         test = {
@@ -34,7 +34,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"c": "x"}
             ],
             "query": {
-                "from": "testdata",
+                "from": "testdata.a",
                 "select": {"value": "a.v", "aggregate": "sum"},
                 "edges": ["a.b"]
             },
@@ -49,8 +49,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "header": ["a.b", "a.v"],
                 "data": [
                     ["x", 14],
-                    ["y", 3],
-                    [None, None]
+                    ["y", 3]
                 ]
             },
             "expecting_cube": {
@@ -58,7 +57,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a.b",
-                        "allowNulls": True,
+                        "allowNulls": False,
                         "domain": {
                             "type": "set",
                             "key": "value",
@@ -67,10 +66,60 @@ class TestSetOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "a.v": [14, 3, None]
+                    "a.v": [14, 3]
                 }
             }
         }
         self._execute_es_tests(test)
 
+    def test_deep_select_column_w_groupby(self):
+        test = {
+            "data": [
+                {"a": [
+                    {"b": "x", "v": 2},
+                    {"b": "y", "v": 3}
+                ]},
+                {"a": {"b": "x", "v": 5}},
+                {"a": [
+                    {"b": "x", "v": 7},
+                ]},
+                {"c": "x"}
+            ],
+            "query": {
+                "from": "testdata.a",
+                "select": {"value": "a.v", "aggregate": "sum"},
+                "groupby": ["a.b"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": {"b": "x", "v": 14}},
+                    {"a": {"b": "y", "v": 3}},
+                ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a.b", "a.v"],
+                "data": [
+                    ["x", 14],
+                    ["y", 3]
+                ]
+            }
+        }
+        self._execute_es_tests(test)
 
+    def test_bad_deep_select_column_w_groupby(self):
+        test = {
+            "data": [  # WE NEED SOME DATA TO MAKE A NESTED COLUMN
+                {"a": {"b": "x"}}
+            ],
+            "query": {
+                "from": "testdata",
+                "select": {"value": "a.v", "aggregate": "sum"},
+                "groupby": ["a.b"]
+            },
+            "expecting_list": {  # DUMMY: SO AN QUERY ATTEMPT IS MADE
+                "meta": {"format": "list"},
+                "data": []
+            }
+        }
+        self.assertRaises(Exception, self._execute_es_tests, *[test])

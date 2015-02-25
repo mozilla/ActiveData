@@ -20,8 +20,16 @@
 						"match_mapping_type": "string",
 						"match": "*"
 					}
-				}
-			],
+				},
+				{
+					"default_objects": {
+						"mapping": {
+							"type": "nested"
+						},
+						"match_mapping_type": "object",
+						"match": "*"
+					}
+				}			],
 			"$ref":"param://metadata"
         }
     }

@@ -21,7 +21,7 @@ from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap, unwrap
 
 
-class DBQuery(object):
+class FromMySQL(object):
     """
     qb to MySQL DATABASE QUERIES
     """

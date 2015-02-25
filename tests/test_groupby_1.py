@@ -192,42 +192,6 @@ class TestgroupBy1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-    def test_deep_select_column(self):
-        test = {
-            "data": [
-                {"a": [
-                    {"b": "x", "v": 2},
-                    {"b": "y", "v": 3}
-                ]},
-                {"a": {"b": "x", "v": 5}},
-                {"a": [
-                    {"b": "x", "v": 7},
-                ]},
-                {"c": "x"}
-            ],
-            "query": {
-                "from": "testdata",
-                "select": {"value": "a.v", "aggregate": "sum"},
-                "groupby": ["a.b"]
-            },
-            "expecting_list": {
-                "meta": {"format": "list"},
-                "data": [
-                    {"a": {"b": "x", "v": 14}},
-                    {"a": {"b": "y", "v": 3}},
-                ]},
-            "expecting_table": {
-                "meta": {"format": "table"},
-                "header": ["a.b", "a.v"],
-                "data": [
-                    ["x", 14],
-                    ["y", 3],
-                    [None, None]
-                ]
-            }
-        }
-        self._execute_es_tests(test)
-
 
     def test_where(self):
         test = {

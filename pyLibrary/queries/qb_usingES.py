@@ -20,19 +20,20 @@ from pyLibrary.queries.qb_usingES14_aggs import es_aggsop, is_aggsop
 from pyLibrary.queries.qb_usingES14_setop import is_fieldop, is_setop, is_deep, es_setop, es_deepop, es_fieldop
 from pyLibrary.queries.qb_usingES09_terms import es_terms, is_terms
 from pyLibrary.queries.qb_usingES09_terms_stats import es_terms_stats, is_terms_stats
-from pyLibrary.queries.qb_usingES_util import aggregates, loadColumns
+from pyLibrary.queries.qb_usingES_util import aggregates, INDEX_CACHE, parse_columns
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.MVEL import _MVEL
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import nvl, unwrap
+from pyLibrary.dot import nvl, split_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 
 
-class ESQuery(Container):
+class FromES(Container):
     """
+
     SEND GENERAL qb QUERIES TO ElasticSearch
     """
 
@@ -73,12 +74,18 @@ class ESQuery(Container):
     def url(self):
         return self._es.url
 
-
     def query(self, _query):
         if not self.ready:
-            Log.error("Must use with clause for any instance of ESQuery")
+            Log.error("Must use with clause for any instance of FromES")
 
         query = Query(_query, schema=self)
+
+        try:
+            frum = self.get_columns(query["from"])
+            mvel = _MVEL(frum)
+        except Exception, e:
+            mvel = None
+            Log.warning("TODO: Fix this", e)
 
         for s in listwrap(query.select):
             if not aggregates[s.aggregate]:
@@ -90,13 +97,6 @@ class ESQuery(Container):
             q2 = query.copy()
             q2.frum = result
             return qb.run(q2)
-
-        try:
-            frum = loadColumns(self._es, query["from"])
-            mvel = _MVEL(frum)
-        except Exception, e:
-            mvel = None
-            Log.warning("TODO: Fix this", e)
 
         if is_aggsop(self._es, query):
             return es_aggsop(self._es, frum, query)
@@ -115,11 +115,46 @@ class ESQuery(Container):
 
         Log.error("Can not handle")
 
+    def get_columns(self, _from_name=None):
+        """
+        ENSURE COLUMNS FOR GIVEN INDEX/QUERY ARE LOADED, AND MVEL COMPILATION WORKS BETTER
+
+        _from_name - NOT MEANT FOR EXTERNAL USE
+        """
+
+        if _from_name is None:
+            _from_name = self.name
+
+        output = INDEX_CACHE.get(_from_name)
+        if output:
+            # VERIFY es IS CONSITENT
+            if self.url != output.url:
+                Log.error("Using {{name}} for two different containers\n\t{{existing}}\n\t{{new}}", {
+                    "name": _from_name,
+                    "existing": output.url,
+                    "new": self._es.url
+                })
+            return output.columns
+
+        path = split_field(_from_name)
+        if len(path) > 1:
+            # LOAD THE PARENT (WHICH WILL FILL THE INDEX_CACHE WITH NESTED CHILDREN)
+            self.get_columns(_from_name=path[0])
+            return INDEX_CACHE[_from_name].columns
+
+        schema = self._es.get_schema()
+        properties = schema.properties
+        INDEX_CACHE[_from_name] = output = Dict()
+        output.name = _from_name
+        output.url = self._es.url
+        output.columns = parse_columns(_from_name, properties)
+        return output.columns
+
 
     def get_column_names(self):
         # GET METADATA FOR INDEX
         # LIST ALL COLUMNS
-        frum = loadColumns(self._es, self)
+        frum = self.get_columns(self)
         return frum.columns.name
 
     def addDimension(self, dim):

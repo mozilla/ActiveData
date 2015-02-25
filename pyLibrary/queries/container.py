@@ -20,3 +20,9 @@ class Container(object):
 
     def query(self, query):
         Log.error("Not implemented")
+
+    def get_columns(self, frum):
+        """
+        USE THE frum TO DETERMINE THE COLUMNS
+        """
+        Log.error("Not implemented")

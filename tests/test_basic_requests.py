@@ -23,6 +23,9 @@ class TestBasicRequests(ActiveDataBaseTest):
         self.assertEqual(response.status_code, 400)
 
     def test_root_request(self):
+        if self.not_real_service():
+            return
+
         url = URL(self.service_url)
         url.path=""
         url = str(url)

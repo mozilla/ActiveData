@@ -30,44 +30,46 @@ def is_aggsop(es, query):
 def es_aggsop(es, frum, query):
     select = listwrap(query.select)
 
-    esQuery = Dict()
+    FromES = Dict()
     for s in select:
         if s.aggregate == "count" and s.value and s.value != ".":
-            esQuery.aggs[literal_field(s.name)].value_count.field = s.value
-            # esQuery.aggs["missing_"+literal_field(s.name)].missing.field = s.value
+            FromES.aggs[literal_field(s.name)].value_count.field = s.value
         elif s.aggregate == "count":
             pass
         else:
-            esQuery.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].field = s.value
+            FromES.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].field = s.value
 
-    decoders = [AggsDecoder(e) for e in query.edges]
+    decoders = [AggsDecoder(e) for e in nvl(query.edges, query.groupby)]
     start = 0
     for d in decoders:
-        esQuery = d.append_query(esQuery, start)
+        FromES = d.append_query(FromES, start)
         start += d.num_columns
 
     if query.where:
         filter = simplify_esfilter(query.where)
-        esQuery = Dict(
-            aggs={"_filter": set_default({"filter": filter}, esQuery)}
+        FromES = Dict(
+            aggs={"_filter": set_default({"filter": filter}, FromES)}
         )
 
     if len(split_field(frum.name)) > 1:
-        esQuery = wrap({
+        FromES = wrap({
             "aggs": {"_nested": set_default({
                 "nested": {
                     "path": join_field(split_field(frum.name)[1::])
                 }
-            }, esQuery)}
+            }, FromES)}
         })
 
     es_duration = Timer("ES query time")
     with es_duration:
-        result = qb_usingES_util.post(es, esQuery, query.limit)
+        result = qb_usingES_util.post(es, FromES, query.limit)
 
     try:
-        formatter, mime_type = format_dispatch[query.format]
-        output = formatter(decoders, result.aggregations, start, query, select)
+        formatter, groupby_formatter, mime_type = format_dispatch[query.format]
+        if query.edges:
+            output = formatter(decoders, result.aggregations, start, query, select)
+        else:
+            output = groupby_formatter(decoders, result.aggregations, start, query, select)
         output.meta.es_response_time = es_duration.duration.seconds
         output.meta.content_type = mime_type
         return output
@@ -103,7 +105,7 @@ class AggsDecoder(object):
         self.edge = edge
         self.name = literal_field(self.edge.name)
 
-    def append_query(self, esQuery, start):
+    def append_query(self, FromES, start):
         Log.error("Not supported")
 
     def count(self, row):
@@ -124,15 +126,18 @@ class AggsDecoder(object):
 
 
 class SetDecoder(AggsDecoder):
-    def append_query(self, esQuery, start):
+    def append_query(self, FromES, start):
         self.start = start
         return wrap({"aggs": {
-            "_match": set_default({"terms": {"field": self.edge.value}}, esQuery),
-            "_missing": set_default({"missing": {"field": self.edge.value}}, esQuery),
+            "_match": set_default({"terms": {"field": self.edge.value}}, FromES),
+            "_missing": set_default({"missing": {"field": self.edge.value}}, FromES),
         }})
 
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
+
+    def get_value_from_row(self, row):
+        return row[self.start].key
 
     def get_index(self, row):
         try:
@@ -149,7 +154,7 @@ class SetDecoder(AggsDecoder):
 
 
 class TimeDecoder(AggsDecoder):
-    def append_query(self, esQuery, start):
+    def append_query(self, FromES, start):
         self.start = start
         domain = self.edge.domain
 
@@ -163,7 +168,7 @@ class TimeDecoder(AggsDecoder):
                     "field": self.edge.value,
                     "ranges": [{"from": p.min.unix, "to": p.max.unix} for p in domain.partitions]
                 }},
-                esQuery
+                FromES
             ),
             "_missing": set_default(
                 {"filter": {"or": [
@@ -171,7 +176,7 @@ class TimeDecoder(AggsDecoder):
                     {"range": {self.edge.value: {"gte": _max.unix}}},
                     {"missing": {"field": self.edge.value}}
                 ]}},
-                esQuery
+                FromES
             ),
         }})
 
@@ -187,7 +192,7 @@ class TimeDecoder(AggsDecoder):
         #                 "max": domain.max.unix,
         #             }
         #         }},
-        #         esQuery
+        #         FromES
         #     ),
         #     "_other": set_default(
         #         {"range": {
@@ -197,9 +202,9 @@ class TimeDecoder(AggsDecoder):
         #                 {"from": domain.max.unix}
         #             ]
         #         }},
-        #         esQuery
+        #         FromES
         #     ),
-        #     "_missing": set_default({"missing": {"field": self.edge.value}}, esQuery),
+        #     "_missing": set_default({"missing": {"field": self.edge.value}}, FromES),
         # }})
 
     def get_value(self, index):
@@ -237,11 +242,11 @@ class DefaultDecoder(SetDecoder):
         self.edge.allowNulls = False  # SINCE WE DO NOT KNOW THE DOMAIN, WE HAVE NO SENSE OF WHAT IS OUTSIDE THAT DOMAIN, allowNulls==True MAKES NO SENSE
         self.edge.domain.partitions = set()
 
-    def append_query(self, esQuery, start):
+    def append_query(self, FromES, start):
         self.start = start
         return wrap({"aggs": {
-            "_match": set_default({"terms": {"field": self.edge.value}}, esQuery),
-            "_missing": set_default({"missing": {"field": self.edge.value}}, esQuery),
+            "_match": set_default({"terms": {"field": self.edge.value}}, FromES),
+            "_missing": set_default({"missing": {"field": self.edge.value}}, FromES),
         }})
 
     def count(self, row):
@@ -266,19 +271,19 @@ class DimFieldListDecoder(DefaultDecoder):
         DefaultDecoder.__init__(self, edge)
         self.fields = edge.domain.dimension.fields
 
-    def append_query(self, esQuery, start):
+    def append_query(self, FromES, start):
         self.start = start
         for i, v in enumerate(self.fields):
-            esQuery = wrap({"aggs": {
-                "_match": set_default({"terms": {"field": v}}, esQuery),
-                "_missing": set_default({"missing": {"field": v}}, esQuery),
+            FromES = wrap({"aggs": {
+                "_match": set_default({"terms": {"field": v}}, FromES),
+                "_missing": set_default({"missing": {"field": v}}, FromES),
             }})
 
         if self.edge.domain.where:
             filter = simplify_esfilter(self.edge.domain.where)
-            esQuery = {"aggs": {"_filter": set_default({"filter": filter}, esQuery)}}
+            FromES = {"aggs": {"_filter": set_default({"filter": filter}, FromES)}}
 
-        return esQuery
+        return FromES
 
     def count(self, row):
         part = row[self.start:self.start + len(self.fields):]

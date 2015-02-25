@@ -16,13 +16,12 @@ import subprocess
 import signal
 
 from active_data.app import replace_vars
-from pyLibrary import convert
-from pyLibrary import jsons
+from pyLibrary import convert, jsons, queries
 from pyLibrary.debugs.logs import Log, Except, constants
-from pyLibrary.dot import wrap, listwrap
+from pyLibrary.dot import wrap, listwrap, nvl
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
-from pyLibrary.queries import qb, from_es
+from pyLibrary.queries import qb
 from pyLibrary.queries.query import _normalize_edges, _normalize_selects
 from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
@@ -73,7 +72,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             # THIS MAKES FOR SLIGHTLY FASTER TEST TIMES BECAUSE THE PROXY IS
             # MISSING
             ActiveDataBaseTest.server = FakeHttp()
-            from_es.config.default = {
+            queries.config.default = {
                 "type": "elasticsearch",
                 "settings": settings.backend_es.copy()
             }
@@ -114,6 +113,9 @@ class ActiveDataBaseTest(FuzzyTestCase):
     def tearDown(self):
         self.es.delete_index(self.backend_es.index)
 
+    def not_real_service(self):
+        return not settings.startServer
+
     def _fill_es(self, subtest):
         settings = self.backend_es.copy()
         settings.index = "testing_" + Random.hex(10).lower()
@@ -136,7 +138,11 @@ class ActiveDataBaseTest(FuzzyTestCase):
             ])
             container.flush()
             # ENSURE query POINTS TO CONTAINER
-            subtest.query["from"] = settings.index
+            frum = subtest.query["from"]
+            if isinstance(frum, basestring):
+                subtest.query["from"] = frum.replace("testdata", settings.index)
+            else:
+                Log.error("Do not know how to handle")
         except Exception, e:
             Log.error("can not load {{data}} into container", {"data":subtest.data}, e)
 
@@ -179,7 +185,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
                     expected.data = qb.sort(expected.data, range(len(expected.header)))
                     result.data = qb.sort(result.data, range(len(result.header)))
                 elif format == "list":
-                    sort_order=wrap(_normalize_edges(subtest.query.edges) + _normalize_selects(listwrap(subtest.query.select))).name
+                    sort_order=wrap(_normalize_edges(nvl(subtest.query.edges, subtest.query.groupby)) + _normalize_selects(listwrap(subtest.query.select))).name
                     expected.data = qb.sort(expected.data, sort_order)
                     result.data = qb.sort(result.data, sort_order)
 

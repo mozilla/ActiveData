@@ -68,6 +68,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             ActiveDataBaseTest.thread = Thread("watch server", run_app, please_stop=ActiveDataBaseTest.please_stop, server_is_ready=ActiveDataBaseTest.server_is_ready).start()
             ActiveDataBaseTest.server = http
         else:
+            Log.alert("TESTS WILL RUN FAST, BUT NOT ALL TESTS ARE RUNNING!\nEnsure the `file://tests/config/test_settings.json#startServer=true` to tunr on the network response tests.")
             # WE WILL USE THE ActiveServer CODE, AND CONNECT TO ES DIRECTLY.
             # THIS MAKES FOR SLIGHTLY FASTER TEST TIMES BECAUSE THE PROXY IS
             # MISSING

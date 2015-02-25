@@ -1,5 +1,4 @@
-from pyLibrary.queries import _normalize_select
-from pyLibrary.queries.query import _normalize_edge
+from pyLibrary.queries.query import _normalize_edge, _normalize_select
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 
 

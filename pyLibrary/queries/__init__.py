@@ -8,42 +8,53 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
-from pyLibrary.dot import wrap
+from pyLibrary.dot import wrap, set_default, split_field
 
-from pyLibrary.dot.dicts import Dict, nvl
-from pyLibrary.parsers import Log
-from pyLibrary.queries.es_query_util import aggregates1_4
-
-INDEX_CACHE = {}  # MATCH NAMES TO FULL CONNECTION INFO
+from pyLibrary.dot.dicts import Dict
+from pyLibrary.queries.qb_usingES_util import aggregates1_4
 
 
-def _normalize_select(select, schema=None):
-    if isinstance(select, basestring):
-        if schema:
-            s = schema[select]
-            if s:
-                return s.getSelect()
-        return Dict(
-            name=select.rstrip("."),  # TRAILING DOT INDICATES THE VALUE, BUT IS INVALID FOR THE NAME
-            value=select,
-            aggregate="none"
-        )
+type2container = Dict()
+config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
+
+
+def _delayed_imports():
+    global type2container
+
+    from pyLibrary.queries.qb_usingMySQL import FromMySQL
+    from pyLibrary.queries.qb_usingES import FromES
+    set_default(type2container, {
+        "elasticsearch": FromES,
+        "mysql": FromMySQL,
+        "memory": None
+    })
+
+
+def wrap_from(frum, schema=None):
+    """
+    :param frum:
+    :param schema:
+    :return:
+    """
+    if not type2container:
+        _delayed_imports()
+
+    frum = wrap(frum)
+
+    if isinstance(frum, basestring):
+        settings = set_default({
+            "index": split_field(frum)[0],
+            "name": frum,
+        }, config.default.settings)
+        return type2container["elasticsearch"](settings)
+    elif isinstance(frum, dict) and frum.type and type2container[frum.type]:
+        # TODO: Ensure the frum.name is set, so we capture the deep queries
+        return type2container[frum.type](frum.settings)
+    elif isinstance(frum, dict) and (frum["from"] or isinstance(frum["from"], (list, set))):
+        from pyLibrary.queries.query import Query
+        return Query(frum, schema=schema)
     else:
-        select = wrap(select)
-        output = select.copy()
-        output.name = nvl(select.name, select.value, select.aggregate)
-
-        if not output.name:
-            Log.error("expecting select to have a name: {{select}}", {"select": select})
-
-        output.aggregate = nvl(canonical_aggregates.get(select.aggregate), select.aggregate, "none")
-        return output
+        return frum
 
 
-canonical_aggregates = {
-    "min": "minimum",
-    "max": "maximum",
-    "add": "sum",
-    "avg": "average",
-    "mean": "average"
-}
+

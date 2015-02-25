@@ -72,6 +72,9 @@ class Index(object):
 
         self.path = "/" + index + "/" + type
 
+    @property
+    def url(self):
+        return self.cluster.path + "/" + self.path
 
     def get_schema(self, retry=True):
         if self.settings.explore_metadata:

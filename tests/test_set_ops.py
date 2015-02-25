@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+import base_test_class
 from pyLibrary.dot import wrap, nvl
 from pyLibrary.queries import query
 from tests.base_test_class import ActiveDataBaseTest
@@ -19,6 +20,42 @@ lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
 class TestSetOps(ActiveDataBaseTest):
+
+    def test_simplest(self):
+        test = {
+            "data": [
+                {"a": "b"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": "a"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                {"a": "b"}
+            ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [["b"]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a": ["b"]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
+
     def test_single_select_alpha(self):
         test = {
             "name": "singleton_alpha",
@@ -26,7 +63,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"a": "b"}
             ],
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": "a"
             },
             "expecting_list": {
@@ -61,7 +98,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"a": "b"}
             ],
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"name": "value", "value": "a"}
             },
             "expecting_list": {
@@ -95,7 +132,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"a": "b"}
             ],
             "query": {
-                "from": "testdata"
+                "from": base_test_class.settings.backend_es.index
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
@@ -129,7 +166,7 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": {"name": "value", "value": "."},
-                "from": "testdata"
+                "from": base_test_class.settings.backend_es.index
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -161,7 +198,7 @@ class TestSetOps(ActiveDataBaseTest):
             "not": "elasticsearch",  # CAN NOT TEST VALUES AGAINST ES
             "data": ["a", "b"],
             "query": {
-                "from": "testdata"
+                "from": base_test_class.settings.backend_es.index
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -198,7 +235,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"a": "d"}
             ],
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": "*"
             },
             "expecting_list": {
@@ -294,7 +331,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             ],
             "query": {
-                "from": "testdata.a.b",
+                "from": base_test_class.settings.backend_es.index+".a.b",
                 "select": ["...x", "c"]
             },
             "expecting_list": {
@@ -345,7 +382,7 @@ class TestSetOps(ActiveDataBaseTest):
         test = wrap({
             "data": lots_of_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"name": "value", "value": "a"},
             },
         })
@@ -373,7 +410,7 @@ class TestSetOps(ActiveDataBaseTest):
         test = wrap({
             "data": lots_of_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"name": "value", "value": "a"},
                 "limit":5
             },
@@ -400,7 +437,7 @@ class TestSetOps(ActiveDataBaseTest):
         test = wrap({
             "data": lots_of_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"name": "value", "value": "a"},
                 "limit": -1
             },
@@ -409,7 +446,7 @@ class TestSetOps(ActiveDataBaseTest):
         settings = self._fill_es(test)
         try:
             test.query.format = "list"
-            self.assertRaises(Exception, self._execute_query, *[test.query])
+            self.assertRaises(Exception, self._execute_query, test.query)
         finally:
             # REMOVE CONTAINER
             self.es.delete_index(settings.index)

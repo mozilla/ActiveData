@@ -13,8 +13,8 @@ from __future__ import division
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND
 from pyLibrary.queries import qb
-from pyLibrary.queries import es_query_util
-from pyLibrary.queries.es_query_util import aggregates, buildESQuery, compileEdges2Term
+from pyLibrary.queries import qb_usingES_util
+from pyLibrary.queries.qb_usingES_util import aggregates, buildFromES, compileEdges2Term
 from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.queries.cube import Cube
 from pyLibrary.dot import nvl
@@ -42,10 +42,10 @@ def es_terms(es, mvel, query):
         return _es_terms2(es, mvel, query)
 
     select = listwrap(query.select)
-    esQuery = buildESQuery(query)
+    FromES = buildFromES(query)
     packed_term = compileEdges2Term(mvel, query.edges, wrap([]))
     for s in select:
-        esQuery.facets[s.name] = {
+        FromES.facets[s.name] = {
             "terms": {
                 "field": packed_term.field,
                 "script_field": packed_term.expression,
@@ -56,7 +56,7 @@ def es_terms(es, mvel, query):
 
     term2Parts = packed_term.term2parts
 
-    data = es_query_util.post(es, esQuery, query.limit)
+    data = qb_usingES_util.post(es, FromES, query.limit)
 
     # GETTING ALL PARTS WILL EXPAND THE EDGES' DOMAINS
     # BUT HOW TO UNPACK IT FROM THE term FASTER IS UNKNOWN
@@ -106,10 +106,10 @@ def _es_terms2(es, mvel, query):
     values1 = es_terms(es, mvel, q1).edges[0].domain.partitions.value
 
     select = listwrap(query.select)
-    esQuery = buildESQuery(query)
+    FromES = buildFromES(query)
     for s in select:
         for i, v in enumerate(values1):
-            esQuery.facets[s.name + "," + str(i)] = {
+            FromES.facets[s.name + "," + str(i)] = {
                 "terms": {
                     "field": query.edges[1].value,
                     "size": nvl(query.limit, 200000)
@@ -120,7 +120,7 @@ def _es_terms2(es, mvel, query):
                 ]})
             }
 
-    data = es_query_util.post(es, esQuery, query.limit)
+    data = qb_usingES_util.post(es, FromES, query.limit)
 
     # UNION ALL TERMS FROM SECOND DIMENSION
     values2 = set()

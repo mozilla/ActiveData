@@ -23,6 +23,9 @@ from tests.base_test_class import ActiveDataBaseTest, error
 class TestUnittests(ActiveDataBaseTest):
 
     def test_chunk_timing(self):
+        if self.not_real_service():
+            return
+
         test = wrap({"query": {
             "from": {
                 "type": "elasticsearch",
@@ -57,6 +60,9 @@ class TestUnittests(ActiveDataBaseTest):
         Log.note("result\n{{result|indent}}", {"result": result})
 
     def test_timing(self):
+        if self.not_real_service():
+            return
+
         test = wrap({"query": {
             "from": {
                 "type": "elasticsearch",
@@ -96,6 +102,9 @@ class TestUnittests(ActiveDataBaseTest):
 
 
     def test_branch_count(self):
+        if self.not_real_service():
+            return
+
         test = wrap({"query": {
             "from": {
                 "type": "elasticsearch",

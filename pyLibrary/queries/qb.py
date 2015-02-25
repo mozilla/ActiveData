@@ -14,12 +14,12 @@ import __builtin__
 from pyLibrary import dot
 
 from pyLibrary.collections import UNION, MIN
-from pyLibrary.queries import flat_list, query, group_by, _normalize_select
+from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.container import Container
 from pyLibrary.queries.filters import TRUE_FILTER, FALSE_FILTER
 from pyLibrary.queries.flat_list import FlatList
 from pyLibrary.queries.index import Index
-from pyLibrary.queries.query import Query, _normalize_selects, sort_direction
+from pyLibrary.queries.query import Query, _normalize_selects, sort_direction, _normalize_select
 from pyLibrary.queries.cube import Cube
 from pyLibrary.maths import Math
 from pyLibrary.debugs.logs import Log

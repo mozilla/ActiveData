@@ -9,6 +9,7 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from copy import deepcopy
 
 from datetime import datetime
 
@@ -20,7 +21,7 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries import domains, MVEL, filters
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import split_field, join_field, nvl
+from pyLibrary.dot import split_field, join_field, nvl, set_default
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap
 from pyLibrary.times import durations
@@ -32,56 +33,18 @@ DEBUG = False
 INDEX_CACHE = {}  # MATCH NAMES TO ES URL AND COLUMNS eg {name:{"url":url, "columns":columns"}}
 
 
-def loadColumns(es, frum):
-    """
-    ENSURE COLUMNS FOR GIVEN INDEX/QUERY ARE LOADED, AND MVEL COMPILATION WORKS BETTER
-
-    frum - CAN BE A STRING, OR A ESQuery OBJECT
-    """
 
 
-    if isinstance(frum, basestring):
-        frum=Dict(name=frum)
-
-    output = INDEX_CACHE.get(frum.name)
-    if output:
-        # VERIFY es IS CONSITENT
-        if frum.url != output.url:
-            Log.error("Using {{name}} for two different containers\n\t{{existing}}\n\t{{new}}", {
-                "name": frum.name,
-                "existing": output.es.url,
-                "new": frum.url
-            })
-        return output
-
-    path = split_field(frum.name)
-    if len(path) > 1:
-        #LOAD THE PARENT (WHICH WILL FILL THE INDEX_CACHE WITH NESTED CHILDREN)
-        loadColumns(es, path[0])
-        return INDEX_CACHE[frum.name]
-
-    schema = es.get_schema()
-    properties = schema.properties
-    output = Dict()
-    output.name = frum.name
-    output.url = frum.url
-    output.es = es
-    output.columns = parseColumns("dummy value", frum.name, properties)
-
-    INDEX_CACHE[frum.name] = output
-    return output
-
-
-def post(es, esQuery, limit):
-    if not esQuery.facets and esQuery.size == 0 and not esQuery.aggs:
-        Log.error("ESQuery is sending no facets")
+def post(es, FromES, limit):
+    if not FromES.facets and FromES.size == 0 and not FromES.aggs:
+        Log.error("FromES is sending no facets")
         # DO NOT KNOW WHY THIS WAS HERE
-    # if isinstance(query.select, list) or len(query.edges) and not esQuery.facets.keys and esQuery.size == 0:
-    #     Log.error("ESQuery is sending no facets")
+    # if isinstance(query.select, list) or len(query.edges) and not FromES.facets.keys and FromES.size == 0:
+    #     Log.error("FromES is sending no facets")
 
     postResult = None
     try:
-        postResult = es.search(esQuery)
+        postResult = es.search(FromES)
 
         for facetName, f in postResult.facets.items():
             if f._type == "statistical":
@@ -92,12 +55,12 @@ def post(es, esQuery, limit):
             if not DEBUG and not limit and len(f.terms) == limit:
                 Log.error("Not all data delivered (" + str(len(f.terms)) + "/" + str(f.total) + ") try smaller range")
     except Exception, e:
-        Log.error("Error with ESQuery", e)
+        Log.error("Error with FromES", e)
 
     return postResult
 
 
-def buildESQuery(query):
+def buildFromES(query):
     output = wrap({
         "query": {"match_all": {}},
         "from": 0,
@@ -121,7 +84,7 @@ def buildESQuery(query):
     return output
 
 
-def parseColumns(_dummy_, parent_path, esProperties):
+def parse_columns(parent_path, esProperties):
     """
     RETURN THE COLUMN DEFINITIONS IN THE GIVEN esProperties OBJECT
     """
@@ -132,25 +95,29 @@ def parseColumns(_dummy_, parent_path, esProperties):
         else:
             path = name
 
-        childColumns = None
-
         if property.type == "nested" and property.properties:
             # NESTED TYPE IS A NEW TYPE DEFINITION
+            # MARKUP CHILD COLUMNS WITH THE EXTRA DEPTH
+            child_columns = deepcopy(parse_columns(path, property.properties))
+            self_columns = deepcopy(child_columns)
+            for c in self_columns:
+                c.depth += 1
+            columns.extend(self_columns)
+            columns.append({
+                "name": join_field(split_field(path)[1::]),
+                "type": "nested",
+                "useSource": True
+            })
+
             if path not in INDEX_CACHE:
                 INDEX_CACHE[path] = INDEX_CACHE[parent_path].copy()
                 INDEX_CACHE[path].name = path
-            INDEX_CACHE[path].columns = childColumns
-
-            columns.append({
-                "name": join_field(split_field(path)[1::]),
-                "type": property.type,
-                "useSource": True
-            })
+            INDEX_CACHE[path].columns = child_columns
             continue
 
         if property.properties:
-            childColumns = parseColumns(_dummy_, path, property.properties)
-            columns.extend(childColumns)
+            child_columns = parse_columns(path, property.properties)
+            columns.extend(child_columns)
             columns.append({
                 "name": join_field(split_field(path)[1::]),
                 "type": "object",
@@ -191,11 +158,6 @@ def parseColumns(_dummy_, parent_path, esProperties):
             })
         else:
             Log.warning("unknown type {{type}} for property {{path}}", {"type": property.type, "path": path})
-
-    # SPECIAL CASE FOR PROPERTIES THAT WILL CAUSE OutOfMemory EXCEPTIONS
-    for c in columns:
-        if name == "bugs" and (c.name == "dependson" or c.name == "blocked"):
-            c.useSource = True
 
     return columns
 

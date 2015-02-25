@@ -12,13 +12,13 @@ import flask
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
-from pyLibrary import convert, strings
+from pyLibrary import convert, strings, queries
 from pyLibrary.debugs import constants, startup
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import Dict, wrap, unwrap
+from pyLibrary.dot import Dict, unwrap
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
-from pyLibrary.queries import qb, from_es
+from pyLibrary.queries import qb
 from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
 
@@ -70,7 +70,7 @@ def query(path):
             record_request(flask.request, data, None, None)
             result = qb.run(data)
 
-        result.meta.active_data_response_time = total_duration.duration.total_seconds()
+        result.meta.active_data_response_time = total_duration.duration.seconds
 
         return Response(
             convert.unicode2utf8(convert.value2json(result)),
@@ -87,7 +87,7 @@ def query(path):
         record_request(flask.request, None, flask.request.environ['body_copy'], e)
         Log.warning("problem", e)
         e = e.as_dict()
-        e.meta.active_data_response_time = total_duration.duration.total_seconds()
+        e.meta.active_data_response_time = total_duration.duration.seconds
 
         return Response(
             convert.unicode2utf8(convert.value2json(e)),
@@ -168,7 +168,7 @@ def main():
         globals()["default_elasticsearch"] = elasticsearch.Index(settings.elasticsearch)
         globals()["request_log_queue"] = request_logger.threaded_queue(max_size=2000)
 
-        from_es.config.default = {
+        queries.config.default = {
             "type": "elasticsearch",
             "settings": settings.elasticsearch.copy()
         }

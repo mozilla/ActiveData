@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+import base_test_class
 from pyLibrary.dot import wrap
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
@@ -68,7 +69,7 @@ class TestTime(ActiveDataBaseTest):
             "metadata": {},
             "data": test_data,
             "query": {
-                "from": "unittest",
+                "from": base_test_class.settings.backend_es.index,
                 "edges": [
                     {
                         "value": "t",
@@ -116,7 +117,7 @@ class TestTime(ActiveDataBaseTest):
             "metadata": {},
             "data": test_data,
             "query": {
-                "from": "unittest",
+                "from": base_test_class.settings.backend_es.index,
                 "edges": [
                     "a",
                     {

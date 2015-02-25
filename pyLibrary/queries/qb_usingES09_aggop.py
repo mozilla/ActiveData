@@ -13,8 +13,8 @@ from __future__ import division
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND
 from pyLibrary.dot import listwrap, unwrap, literal_field
-from pyLibrary.queries import es_query_util
-from pyLibrary.queries.es_query_util import aggregates, fix_es_stats, buildESQuery
+from pyLibrary.queries import qb_usingES_util
+from pyLibrary.queries.qb_usingES_util import aggregates, fix_es_stats, buildFromES
 from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.queries import MVEL
 from pyLibrary.queries.cube import Cube
@@ -28,7 +28,7 @@ def is_aggop(query):
 
 def es_aggop(es, mvel, query):
     select = listwrap(query.select)
-    esQuery = buildESQuery(query)
+    FromES = buildFromES(query)
 
     isSimple = AND(aggregates[s.aggregate] == "count" for s in select)
     if isSimple:
@@ -41,14 +41,14 @@ def es_aggop(es, mvel, query):
     for s in select:
         if s.value not in value2facet:
             if MVEL.isKeyword(s.value):
-                unwrap(esQuery.facets)[s.name] = {
+                unwrap(FromES.facets)[s.name] = {
                     "statistical": {
                         "field": s.value
                     },
                     "facet_filter": simplify_esfilter(query.where)
                 }
             else:
-                unwrap(esQuery.facets)[s.name] = {
+                unwrap(FromES.facets)[s.name] = {
                     "statistical": {
                         "script": mvel.compile_expression(s.value, query)
                     },
@@ -57,7 +57,7 @@ def es_aggop(es, mvel, query):
             value2facet[s.value] = s.name
         name2facet[s.name] = value2facet[s.value]
 
-    data = es_query_util.post(es, esQuery, query.limit)
+    data = qb_usingES_util.post(es, FromES, query.limit)
 
     matricies = {s.name: Matrix(value=fix_es_stats(data.facets[literal_field(s.name)])[aggregates[s.aggregate]]) for s in select}
     cube = Cube(query.select, [], matricies)
@@ -71,11 +71,11 @@ def es_countop(es, mvel, query):
     RETURN SINGLE COUNT
     """
     select = listwrap(query.select)
-    esQuery = buildESQuery(query)
+    FromES = buildFromES(query)
     for s in select:
 
         if MVEL.isKeyword(s.value):
-            esQuery.facets[s.name] = {
+            FromES.facets[s.name] = {
                 "terms": {
                     "field": s.value,
                     "size": query.limit,
@@ -84,14 +84,14 @@ def es_countop(es, mvel, query):
             }
         else:
             # COMPLICATED value IS PROBABLY A SCRIPT, USE IT
-            esQuery.facets[s.name] = {
+            FromES.facets[s.name] = {
                 "terms": {
                     "script_field": mvel.compile_expression(s.value, query),
                     "size": 200000
                 }
             }
 
-    data = es_query_util.post(es, esQuery, query.limit)
+    data = qb_usingES_util.post(es, FromES, query.limit)
 
     matricies = {}
     for s in select:

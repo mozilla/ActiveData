@@ -80,7 +80,7 @@ class _MVEL(object):
         path = split_field(fromPath)
 
         # ADD LOCAL VARIABLES
-        from pyLibrary.queries.es_query_util import INDEX_CACHE
+        from pyLibrary.queries.qb_usingES_util import INDEX_CACHE
 
         columns = INDEX_CACHE[path[0]].columns
         for i, c in enumerate(columns):
@@ -595,7 +595,7 @@ FUNCTIONS = {
         "}else \n" +
         "if (value is Long || value is Integer || value is Double){ 'n'+value; }else \n" +
         "if (!(value is String)){ 's'+value.getClass().getName(); }else \n" +
-        '"s"+value.replace("\\\\", "\\\\\\\\").replace("|", "\\\\p");' + # CAN NOT ""+value TO MAKE NUMBER A STRING (OR EVEN TO PREPEND A STRING!)
+        '"s"+value.replace("\\\\", "\\\\\\\\").replace("|", "\\\\p");' + # CAN NOT value TO MAKE NUMBER A STRING (OR EVEN TO PREPEND A STRING!)
         "};\n",
 
     # 	"replaceAll":

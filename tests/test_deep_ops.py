@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+import base_test_class
 from pyLibrary.dot import wrap, nvl
 from pyLibrary.queries import query
 from tests.base_test_class import ActiveDataBaseTest
@@ -34,7 +35,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"c": "x"}
             ],
             "query": {
-                "from": "testdata.a",
+                "from": base_test_class.settings.backend_es.index+".a",
                 "select": {"value": "a.v", "aggregate": "sum"},
                 "edges": ["a.b"]
             },
@@ -86,7 +87,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"c": "x"}
             ],
             "query": {
-                "from": "testdata.a",
+                "from": base_test_class.settings.backend_es.index+".a",
                 "select": {"value": "a.v", "aggregate": "sum"},
                 "groupby": ["a.b"]
             },
@@ -113,7 +114,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"a": {"b": "x"}}
             ],
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"value": "a.v", "aggregate": "sum"},
                 "groupby": ["a.b"]
             },
@@ -122,4 +123,4 @@ class TestDeepOps(ActiveDataBaseTest):
                 "data": []
             }
         }
-        self.assertRaises(Exception, self._execute_es_tests, *[test])
+        self.assertRaises(Exception, self._execute_es_tests, test)

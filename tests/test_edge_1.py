@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+import base_test_class
 
 from tests.base_test_class import ActiveDataBaseTest
 
@@ -20,7 +21,7 @@ class TestEdge1(ActiveDataBaseTest):
         test = {
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "edges": ["a"]
             },
             "expecting_list": {
@@ -67,7 +68,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"aggregate": "count"},
                 "edges": ["a"]
             },
@@ -113,7 +114,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"name": "count_a", "value": "a", "aggregate": "count"},
                 "edges": ["a"]
             },
@@ -159,7 +160,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"name": "count_v", "value": "v", "aggregate": "count"},
                 "edges": ["a"]
             },
@@ -205,7 +206,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": [
                     {"name": "count", "value": "v", "aggregate": "count"},
                     {"name": "avg", "value": "v", "aggregate": "average"}
@@ -255,7 +256,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"value": "v", "aggregate": "sum"},
                 "edges": ["a"]
             },
@@ -301,7 +302,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"value": "v", "aggregate": "max"},
                 "edges": ["a"],
                 "where": {"term": {"a": "c"}}
@@ -344,7 +345,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"value": "v", "aggregate": "max"},
                 "edges": [
                     {"value": "a", "allowNulls": False, "domain": {"type": "set", "partitions": ["b", "c"]}}
@@ -391,7 +392,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"value": "v", "aggregate": "max"},
                 "edges": ["a"],
                 "where": {"term": {"a": "d"}}

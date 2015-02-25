@@ -51,9 +51,9 @@ def isKeyword(value):
 
 
 def es_fieldop(es, query):
-    FromES = qb_usingES_util.buildFromES(query)
+    es_query = qb_usingES_util.buildFromES(query)
     select = listwrap(query.select)
-    FromES.query = {
+    es_query.query = {
         "filtered": {
             "query": {
                 "match_all": {}
@@ -61,25 +61,25 @@ def es_fieldop(es, query):
             "filter": filters.simplify_esfilter(query.where)
         }
     }
-    FromES.size = nvl(query.limit, queries.query.DEFAULT_LIMIT)
-    FromES.fields = DictList()
+    es_query.size = nvl(query.limit, queries.query.DEFAULT_LIMIT)
+    es_query.fields = DictList()
     source = "fields"
     for s in select.value:
         if s == "*":
-            FromES.fields=None
+            es_query.fields=None
             source = "_source"
         elif s == ".":
-            FromES.fields=None
+            es_query.fields=None
             source = "_source"
-        elif isinstance(s, list) and FromES.fields is not None:
-            FromES.fields.extend(s)
-        elif isinstance(s, dict) and FromES.fields is not None:
-            FromES.fields.extend(s.values())
-        elif FromES.fields is not None:
-            FromES.fields.append(s)
-    FromES.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
+        elif isinstance(s, list) and es_query.fields is not None:
+            es_query.fields.extend(s)
+        elif isinstance(s, dict) and es_query.fields is not None:
+            es_query.fields.extend(s.values())
+        elif es_query.fields is not None:
+            es_query.fields.append(s)
+    es_query.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
 
-    data = qb_usingES_util.post(es, FromES, query.limit)
+    data = qb_usingES_util.post(es, es_query, query.limit)
     T = data.hits.hits
 
 

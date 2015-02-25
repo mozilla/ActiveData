@@ -80,13 +80,13 @@ class FromES(Container):
 
         query = Query(_query, schema=self)
 
-        try:
-            frum = self.get_columns(query["from"])
-            mvel = _MVEL(frum)
-        except Exception, e:
-            mvel = None
-            Log.warning("TODO: Fix this", e)
-
+        # try:
+        #     frum = self.get_columns(query["from"])
+        #     mvel = _MVEL(frum)
+        # except Exception, e:
+        #     mvel = None
+        #     Log.warning("TODO: Fix this", e)
+        #
         for s in listwrap(query.select):
             if not aggregates[s.aggregate]:
                 Log.error("ES can not aggregate " + self.select[0].name + " because '" + self.select[0].aggregate + "' is not a recognized aggregate")
@@ -124,6 +124,8 @@ class FromES(Container):
 
         if _from_name is None:
             _from_name = self.name
+        if not isinstance(_from_name, basestring):
+            Log.error("Expecting string")
 
         output = INDEX_CACHE.get(_from_name)
         if output:
@@ -154,8 +156,8 @@ class FromES(Container):
     def get_column_names(self):
         # GET METADATA FOR INDEX
         # LIST ALL COLUMNS
-        frum = self.get_columns(self)
-        return frum.columns.name
+        frum = self.get_columns()
+        return frum.name
 
     def addDimension(self, dim):
         if isinstance(dim, list):

@@ -44,7 +44,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
         "metadata": {},             # OPTIONAL DATA SHAPE REQUIRED FOR NESTED DOCUMENT QUERIES
         "data": [],                  # THE DOCUMENTS NEEDED FOR THIS TEST
         "query": {                   # THE Qb QUERY
-            "from": "testdata",      # "testdata" WILL BE REPLACED WITH DATASTORE FILLED WITH data
+            "from": base_test_class.settings.backend_es.index,      # base_test_class.settings.backend_es.index WILL BE REPLACED WITH DATASTORE FILLED WITH data
             "edges": []              # THIS FILE IS EXPECTING EDGES (OR GROUP BY)
         },
         "expecting_list": []         # THE EXPECTATION WHEN "format":"list"
@@ -117,20 +117,20 @@ class ActiveDataBaseTest(FuzzyTestCase):
         return not settings.startServer
 
     def _fill_es(self, subtest):
-        settings = self.backend_es.copy()
-        settings.index = "testing_" + Random.hex(10).lower()
+        _settings = self.backend_es.copy()
+        _settings.index = "testing_" + Random.hex(10).lower()
         # settings.type = "test_results"
 
         try:
             url = "file://resources/schema/basic_schema.json.template?{{.|url}}"
             url = expand_template(url, {
-                "type": settings.type,
+                "type": _settings.type,
                 "metadata": subtest.metadata
             })
-            settings.schema = jsons.ref.get(url)
+            _settings.schema = jsons.ref.get(url)
 
             # MAKE CONTAINER
-            container = self.es.get_or_create_index(settings)
+            container = self.es.get_or_create_index(_settings)
 
             # INSERT DATA
             container.extend([
@@ -140,13 +140,13 @@ class ActiveDataBaseTest(FuzzyTestCase):
             # ENSURE query POINTS TO CONTAINER
             frum = subtest.query["from"]
             if isinstance(frum, basestring):
-                subtest.query["from"] = frum.replace("testdata", settings.index)
+                subtest.query["from"] = frum.replace(settings.backend_es.index, _settings.index)
             else:
                 Log.error("Do not know how to handle")
         except Exception, e:
             Log.error("can not load {{data}} into container", {"data":subtest.data}, e)
 
-        return settings
+        return _settings
 
 
 

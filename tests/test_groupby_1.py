@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+import base_test_class
 
 from tests.base_test_class import ActiveDataBaseTest
 
@@ -20,7 +21,7 @@ class TestgroupBy1(ActiveDataBaseTest):
         test = {
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "groupby": "a"
             },
             "expecting_list": {
@@ -50,7 +51,7 @@ class TestgroupBy1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"aggregate": "count"},
                 "groupby": ["a"]
             },
@@ -79,7 +80,7 @@ class TestgroupBy1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"name": "count_a", "value": "a", "aggregate": "count"},
                 "groupby": ["a"]
             },
@@ -108,7 +109,7 @@ class TestgroupBy1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"name": "count_v", "value": "v", "aggregate": "count"},
                 "groupby": ["a"]
             },
@@ -137,7 +138,7 @@ class TestgroupBy1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": [
                     {"name": "count", "value": "v", "aggregate": "count"},
                     {"name": "avg", "value": "v", "aggregate": "average"}
@@ -169,7 +170,7 @@ class TestgroupBy1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"value": "v", "aggregate": "sum"},
                 "groupby": ["a"]
             },
@@ -199,7 +200,7 @@ class TestgroupBy1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"value": "v", "aggregate": "max"},
                 "groupby": ["a"],
                 "where": {"term": {"a": "c"}}
@@ -225,29 +226,42 @@ class TestgroupBy1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"value": "v", "aggregate": "max"},
-                "groupby": [
-                    {"value": "a", "allowNulls": False, "domain": {"type": "set", "partitions": ["b", "c"]}}
-                ],
+                "groupby": "a",
                 "where": {"term": {"a": "c"}}
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a": "b", "v": None},
                     {"a": "c", "v": 13}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "v"],
                 "data": [
-                    ["b", None],
                     ["c", 13]
                 ]
             }
         }
         self._execute_es_tests(test)
+
+    def test_bad_groupby(self):
+        test = {
+            "data": [],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": "v", "aggregate": "max"},
+                "groupby": [
+                    {"value": "a", "allowNulls": False, "domain": {"type": "set", "partitions": ["b", "c"]}}
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": []
+            }
+        }
+        self.assertRaises(Exception, self._execute_es_tests, test)
 
     def test_empty_default_domain(self):
         test = {
@@ -255,7 +269,7 @@ class TestgroupBy1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"value": "v", "aggregate": "max"},
                 "groupby": ["a"],
                 "where": {"term": {"a": "d"}}

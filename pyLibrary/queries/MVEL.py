@@ -595,7 +595,7 @@ FUNCTIONS = {
         "}else \n" +
         "if (value is Long || value is Integer || value is Double){ 'n'+value; }else \n" +
         "if (!(value is String)){ 's'+value.getClass().getName(); }else \n" +
-        '"s"+value.replace("\\\\", "\\\\\\\\").replace("|", "\\\\p");' + # CAN NOT ""+value TO MAKE NUMBER A STRING (OR EVEN TO PREPEND A STRING!)
+        '"s"+value.replace("\\\\", "\\\\\\\\").replace("|", "\\\\p");' + # CAN NOT value TO MAKE NUMBER A STRING (OR EVEN TO PREPEND A STRING!)
         "};\n",
 
     # 	"replaceAll":

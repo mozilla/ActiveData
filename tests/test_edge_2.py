@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+import base_test_class
 
 from tests.base_test_class import ActiveDataBaseTest
 
@@ -22,7 +23,7 @@ class TestEdge2(ActiveDataBaseTest):
             "metadata": {},
             "data": two_dim_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"aggregate": "count"},
                 "edges": ["a", "b"]
             },
@@ -100,7 +101,7 @@ class TestEdge2(ActiveDataBaseTest):
             "metadata": {},
             "data": two_dim_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"value": "v", "aggregate": "sum"},
                 "edges": ["a", "b"]
             },
@@ -175,7 +176,7 @@ class TestEdge2(ActiveDataBaseTest):
             "metadata": {},
             "data": two_dim_test_data,
             "query": {
-                "from": "testdata",
+                "from": base_test_class.settings.backend_es.index,
                 "select": {"value": "v", "aggregate": "sum"},
                 "edges": [
                     {

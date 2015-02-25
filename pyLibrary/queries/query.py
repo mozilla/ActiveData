@@ -204,6 +204,9 @@ def _normalize_group(edge, schema=None):
         })
     else:
         edge = wrap(edge)
+        if (edge.domain and edge.domain.type != "default") or edge.allowNulls != None:
+            Log.error("groupby does not accept complicated domains")
+
         if not edge.name and not isinstance(edge.value, basestring):
             Log.error("You must name compound edges: {{edge}}", {"edge": edge})
 
@@ -481,7 +484,7 @@ def where_get_all_vars(w):
         return []
 
     output = []
-    key = w.keys()[0]
+    key = list(w.keys())[0]
     val = w[key]
     if key in ["and", "or"]:
         for ww in val:

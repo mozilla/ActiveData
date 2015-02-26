@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from _subprocess import CREATE_NEW_PROCESS_GROUP
+import os
 import subprocess
 import signal
 
@@ -29,8 +30,22 @@ from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 from pyLibrary.thread.threads import Signal, Thread
 
 
-settings = jsons.ref.get("file://tests/config/test_settings.json")
+settings = jsons.ref.get("file://tests/config/test_simple_settings.json")
 constants.set(settings.constants)
+
+
+def read_alternate_settings():
+    global settings
+
+    try:
+        filename = os.environ.get("TEST_CONFIG")
+        if filename:
+            settings = jsons.ref.get("file://"+filename)
+    except Exception, e:
+        Log.warning("problem", e)
+
+read_alternate_settings()
+
 
 
 class ActiveDataBaseTest(FuzzyTestCase):
@@ -64,15 +79,17 @@ class ActiveDataBaseTest(FuzzyTestCase):
     def setUpClass(cls):
         ActiveDataBaseTest.server_is_ready = Signal()
         ActiveDataBaseTest.please_stop = Signal()
-        if settings.startServer:
-            ActiveDataBaseTest.thread = Thread(
-                "watch server",
-                run_app,
-                please_stop=ActiveDataBaseTest.please_stop,
-                server_is_ready=ActiveDataBaseTest.server_is_ready
-            ).start()
-        else:
-            ActiveDataBaseTest.server_is_ready.go()
+        # if settings.startServer:
+        #     # THIS DEADLOCKS TOO MUCH TO GET THROUGH TESTS
+        #     ActiveDataBaseTest.thread = Thread(
+        #         "watch server",
+        #         run_app,
+        #         please_stop=ActiveDataBaseTest.please_stop,
+        #         server_is_ready=ActiveDataBaseTest.server_is_ready
+        #     ).start()
+        # else:
+        #     ActiveDataBaseTest.server_is_ready.go()
+        ActiveDataBaseTest.server_is_ready.go()
 
         if not settings.fastTesting:
             ActiveDataBaseTest.server = http
@@ -235,6 +252,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 response = ActiveDataBaseTest.server.get(*args, **kwargs)
                 return response
             except Exception, e:
+                e = Except.wrap(e)
                 if "No connection could be made because the target machine actively refused it" in e:
                     Log.alert("Problem connecting")
                 else:
@@ -257,7 +275,7 @@ def error(response):
 
 def run_app(please_stop, server_is_ready):
     proc = subprocess.Popen(
-        ["python", "active_data\\app.py", "--settings", "resources/config/development_settings.json"],
+        ["python", "active_data\\app.py", "--settings", "tests/config/test_simple_settings.json"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

@@ -11,5 +11,19 @@
 		"pyLibrary.env.http.default_headers": {
 			"From": "ActiveDataTests"
 		}
+	},
+	"flask": {
+		"host": "0.0.0.0",
+		"port": 5000,
+		"debug": false,
+		"threaded": true,
+		"processes": 1
+	},
+	"elasticsearch": {
+		"host": "http://localhost",
+		"port": "9200",
+		"index": "testdata",
+		"type": "test_results",
+		"debug": true
 	}
 }

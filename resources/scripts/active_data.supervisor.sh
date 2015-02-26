@@ -1,8 +1,8 @@
 cd /home/ubuntu/ActiveData/
-git checkout etl
-git stash
-git pull origin master
-git stash apply
+sudo git checkout etl
+sudo git stash
+sudo git pull origin master
+sudo git stash apply
 
 sudo cp /home/ubuntu/ActiveData/resources/supervisor/active_data.conf /etc/supervisor/conf.d/
 

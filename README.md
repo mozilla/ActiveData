@@ -56,12 +56,25 @@ Jump to your git project directory, set your `PYTHONPATH` and run:
 
 ## Verify
 
-Assuming you used the defaults, the service is up if you can access the Query
-Tool at [http://localhost:5000/tools/query.html](http://localhost:5000/tools/query.html).
-You may send it a sample query, but be sure to change it to refer to an
-index in your cluster.  This one can be used on [AutoTool's public ActiveData instance](http://activedata.allizom.org/tools/query.html)
+Assuming you used the defaults, you can verify the service is up if you can
+access the Query Tool at [http://localhost:5000/tools/query.html](http://localhost:5000/tools/query.html).
+You may use it to send queries to your instance of the service.  For example:
 
     {"from":"unittest"}
 
+This query can be used on [AutoTool's public ActiveData instance](http://activedata.allizom.org/tools/query.html),
+and you can use a similar query to get a few sample lines from your cluster.
+
 ## Tests
 
+The Github repo also included the test suite, and you can run it against
+your service if you wish.  **The tests will create indexes on your
+cluster which are filled, queried, and destroyed**
+
+```bash
+    cd ~/ActiveData
+    export PYTHONPATH=.
+    # OPTIONAL, TEST_SETTINGS already defaults to this file
+    set TEST_SETTINGS=tests/config/test_simple_settings.json
+    python -m unittest discover -v -s tests
+```

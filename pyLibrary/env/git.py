@@ -1,5 +1,6 @@
 from _subprocess import CREATE_NEW_PROCESS_GROUP
 import subprocess
+from pyLibrary.jsons import Log
 
 
 def get_git_revision():
@@ -15,7 +16,7 @@ def get_git_revision():
         creationflags=CREATE_NEW_PROCESS_GROUP
     )
 
-    while not please_stop:
+    while True:
         line = proc.stdout.readline()
         if not line:
             continue
@@ -23,4 +24,3 @@ def get_git_revision():
             server_is_ready.go()
         Log.note("SERVER: {{line}}", {"line": line.strip()})
 
-    proc.send_signal(signal.CTRL_C_EVENT)

@@ -1,27 +1,31 @@
 {
-	"flask":{
-	     "host":"0.0.0.0",
-	     "port":5000,
-	     "debug":true,
-	     "threaded":true,
-	     "processes":1
-	 },
-	"constants":{
-		"pyLibrary.env.http.default_headers":{"From":"https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"}
+	"flask": {
+		"host": "0.0.0.0",
+		"port": 5000,
+		"debug": true,
+		"threaded": true,
+		"processes": 1
 	},
-	"request_logs":{
-		"host":"http://localhost",
-		"port":"9200",
-		"index":"active_data_requests",
-		"type":"request_log",
-		"schema":{"$ref":"//../schema/request_log.schema.json"}
+	"constants": {
+		"pyLibrary.env.http.default_headers": {
+			"From": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
+		}
 	},
-	"elasticsearch":{
-		"host":"http://localhost",
-		"port":"9200",
-		"index":"testdata",
-		"type":"test_results",
-		"debug":true
+	"request_logs": {
+		"host": "http://localhost",
+		"port": "9200",
+		"index": "active_data_requests",
+		"type": "request_log",
+		"schema": {
+			"$ref": "//../schema/request_log.schema.json"
+		}
+	},
+	"elasticsearch": {
+		"host": "http://localhost",
+		"port": "9200",
+		"index": "testdata",
+		"type": "test_results",
+		"debug": true
 	},
 	"debug": {
 		"trace": true,
@@ -30,20 +34,22 @@
 //			"filename":"./results/profile.tab"
 //		},
 		"log": [
-			{"log_type":"console"},
 			{
-				"log_type":"email",
+				"log_type": "console"
+			},
+			{
+				"log_type": "email",
 				"from_address": "klahnakoski@mozilla.com",
 				"to_address": "klahnakoski@mozilla.com",
 				"subject": "[Alert][DEV]Problem with ActiveData Server",
-				"$ref":"file://~/private.json#email"
+				"$ref": "file://~/private.json#email"
 			},
 			{
-                "log_type": "elasticsearch",
-                "host": "http://localhost",
-                "index": "debug",
-                "type": "active_data"
-            }
+				"log_type": "elasticsearch",
+				"host": "http://localhost",
+				"index": "debug",
+				"type": "active_data"
+			}
 		]
 	}
 

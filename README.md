@@ -1,11 +1,9 @@
 # ActiveData
-Provide high speed filtering and aggregation over data
-
-see [ActiveData Wiki Page](https://wiki.mozilla.org/Auto-tools/Projects/ActiveData) for project details
+Provide high speed filtering and aggregation over data see [ActiveData Wiki Page](https://wiki.mozilla.org/Auto-tools/Projects/ActiveData) for project details
 
 ## Requirements
 
-It is assumed you have cPython installed.
+It is assumed you have Python2.7 installed.
 
 
 ## Installation
@@ -25,30 +23,28 @@ The ActiveData service requires a configuration file that will point to the
 default ElasticSearch index.  You can find a few sample config files in
 `resources/config`.  Here is simplest one:
 
-{
-	"flask":{
-	     "host":"0.0.0.0",
-	     "port":5000,
-	     "debug":false,
-	     "threaded":true,
-	     "processes":1
-	 },
-	"constants":{
-		"pyLibrary.env.http.default_headers":{"From":"https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"}
-	},
-	"elasticsearch":{
-		"host":"http://localhost",
-		"port":"9200",
-		"index":"testdata",
-		"type":"test_results",
-		"debug":true
-	}
-}
+    {
+        "flask":{
+             "host":"0.0.0.0",
+             "port":5000,
+             "debug":false,
+             "threaded":true,
+             "processes":1
+         },
+        "constants":{
+            "pyLibrary.env.http.default_headers":{"From":"https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"}
+        },
+        "elasticsearch":{
+            "host":"http://localhost",
+            "port":"9200",
+            "index":"testdata",
+            "type":"test_results",
+            "debug":true
+        }
+    }
 
 The `elasticsearch` property must be updated to point to a specific cluster,
 index and type.  It is used as a default, and to find other indexes by name.
-
-
 
 ## Run
 
@@ -63,6 +59,9 @@ Jump to your git project directory, set your `PYTHONPATH` and run:
 Assuming you used the defaults, the service is up if you can access the Query
 Tool at [http://localhost:5000/tools/query.html](http://localhost:5000/tools/query.html).
 You may send it a sample query, but be sure to change it to refer to an
-index in your cluster.
+index in your cluster.  This one can be used on [AutoTool's public ActiveData instance](http://activedata.allizom.org/tools/query.html)
 
-    <WORK IN PROGRESS>
+    {"from":"unittest"}
+
+## Tests
+

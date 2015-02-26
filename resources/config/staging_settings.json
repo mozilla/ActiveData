@@ -11,6 +11,11 @@
 			"From": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
 		}
 	},
+	"active_data": {
+		"host": "http://54.148.242.195",
+		"port": 80,
+		"path": "/query"
+	},
 	"request_logs": {
 		"host": "http://172.31.0.7",
 		"port": "9200",

@@ -14,14 +14,6 @@ importScript("charts/aColor.js");
 	window.Settings = {
 		"imagePath" : "images",
 
-		"active_data": {
-//			"host":"http://54.148.242.195",
-//			"port":80,
-			"host":"http://localhost",
-			"port":5000,
-			"path":"/query"
-		},
-
 		"indexes" : {
 			"bugs" : {"name" : "private bugs cluster", "style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "path" : "/private_bugs/bug_version"},
 			"public_bugs" : {"name" : "Mozilla public bugs cluster", "style" : {"color" : "white", "background-color" : green}, "host" : "https://esfrontline.bugzilla.mozilla.org:443", "path" : "/public_bugs/bug_version"},

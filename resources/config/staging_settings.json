@@ -12,7 +12,7 @@
 		}
 	},
 	"request_logs": {
-		"host": "http://172.31.0.7",
+		"host": "http://172.31.0.146",
 		"port": "9200",
 		"index": "active_data_requests",
 		"type": "request_log",
@@ -21,7 +21,7 @@
 		}
 	},
 	"elasticsearch": {
-		"host": "http://172.31.0.7",
+		"host": "http://172.31.0.146",
 		"port": "9200",
 		"index": "testdata",
 		"type": "test_results",
@@ -42,7 +42,7 @@
 			},
 			{
 				"log_type": "elasticsearch",
-				"host": "http://172.31.0.7",
+				"host": "http://172.31.0.146",
 				"index": "debug",
 				"type": "active_data"
 			}

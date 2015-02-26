@@ -95,7 +95,7 @@ def es_fieldop(es, query):
             select = select[:i:] + [{"name": n, "value": n} for n in column_names] + select[i + 1::]
             break
 
-    if query.format == "list":
+    if not query.format or query.format == "list":
         data = []
         for row in T:
             r = {}

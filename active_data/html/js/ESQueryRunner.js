@@ -18,7 +18,7 @@ function* ActiveDataQuery(query){
 	//USE THE ACTIVE DATA SERVICE
 	try {
 		var response = yield(Rest.post({
-			"url": Settings.active_data.host + (Settings.active_data.port ? ":" + Settings.active_data.port : "") + Settings.active_data.path,
+			"url": "/query",
 			"data": convert.value2json(query)
 		}));
 

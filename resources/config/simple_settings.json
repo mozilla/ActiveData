@@ -6,11 +6,6 @@
 		"threaded": true,
 		"processes": 1
 	},
-	"active_data": {
-		"host": "http://localhost",
-		"port": 5000,
-		"path": "/query"
-	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {
 			"From": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"

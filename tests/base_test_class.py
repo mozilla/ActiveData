@@ -65,10 +65,19 @@ class ActiveDataBaseTest(FuzzyTestCase):
         ActiveDataBaseTest.server_is_ready = Signal()
         ActiveDataBaseTest.please_stop = Signal()
         if settings.startServer:
-            ActiveDataBaseTest.thread = Thread("watch server", run_app, please_stop=ActiveDataBaseTest.please_stop, server_is_ready=ActiveDataBaseTest.server_is_ready).start()
+            ActiveDataBaseTest.thread = Thread(
+                "watch server",
+                run_app,
+                please_stop=ActiveDataBaseTest.please_stop,
+                server_is_ready=ActiveDataBaseTest.server_is_ready
+            ).start()
+        else:
+            ActiveDataBaseTest.server_is_ready.go()
+
+        if not settings.fastTesting:
             ActiveDataBaseTest.server = http
         else:
-            Log.alert("TESTS WILL RUN FAST, BUT NOT ALL TESTS ARE RUNNING!\nEnsure the `file://tests/config/test_settings.json#startServer=true` to tunr on the network response tests.")
+            Log.alert("TESTS WILL RUN FAST, BUT NOT ALL TESTS ARE RUN!\nEnsure the `file://tests/config/test_settings.json#fastTesting=true` to tunr on the network response tests.")
             # WE WILL USE THE ActiveServer CODE, AND CONNECT TO ES DIRECTLY.
             # THIS MAKES FOR SLIGHTLY FASTER TEST TIMES BECAUSE THE PROXY IS
             # MISSING
@@ -77,7 +86,6 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 "type": "elasticsearch",
                 "settings": settings.backend_es.copy()
             }
-            ActiveDataBaseTest.server_is_ready.go()
 
         cluster = elasticsearch.Cluster(settings.backend_es)
         aliases = cluster.get_aliases()
@@ -115,7 +123,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
         self.es.delete_index(self.backend_es.index)
 
     def not_real_service(self):
-        return not settings.startServer
+        return settings.fastTesting
 
     def _fill_es(self, subtest):
         _settings = self.backend_es.copy()

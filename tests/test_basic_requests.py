@@ -27,7 +27,7 @@ class TestBasicRequests(ActiveDataBaseTest):
             return
 
         url = URL(self.service_url)
-        url.path=""
+        url.path = ""
         url = str(url)
         response = self._try_till_response(url, data=b"")
         self.assertEqual(response.status_code, 400)

@@ -23,15 +23,19 @@ from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
 
 
-OVERVIEW = File("active_data/ActiveData.html").read()
-BLANK = File("active_data/BlankQueryResponse.html").read()
+OVERVIEW = File("active_data/html/index.html").read()
+BLANK = File("active_data/html/error.html").read()
 
 app = Flask(__name__)
 request_log_queue = None
 default_elasticsearch = None
+config = None
 
 
 def record_request(request, query_, data, error):
+    if not request_log_queue:
+        return
+
     log = Dict(
         http_user_agent=request.headers.get("user_agent"),
         http_accept_encoding=request.headers.get("accept_encoding"),
@@ -44,6 +48,11 @@ def record_request(request, query_, data, error):
     )
     log["from"] = request.headers.get("from")
     request_log_queue.add({"value": log})
+
+
+@app.route('/tools/<path:filename>')
+def download_file(filename):
+    return flask.send_from_directory(File("active_data/html").abspath, filename)
 
 
 @app.route('/query', defaults={'path': ''}, methods=['GET', 'POST'])
@@ -158,23 +167,29 @@ app.wsgi_app = WSGICopyBody(app.wsgi_app)
 
 
 def main():
+    global default_elasticsearch
+    global request_log_queue
+    global config
+
     try:
-        settings = startup.read_settings()
-        constants.set(settings.constants)
-        Log.start(settings.debug)
+        config = startup.read_settings()
+        constants.set(config.constants)
+        Log.start(config.debug)
 
         # PIPE REQUEST LOGS TO ES DEBUG
-        request_logger = elasticsearch.Cluster(settings.request_logs).get_or_create_index(settings.request_logs)
-        globals()["default_elasticsearch"] = elasticsearch.Index(settings.elasticsearch)
-        globals()["request_log_queue"] = request_logger.threaded_queue(max_size=2000)
+        if config.request_logs:
+            request_logger = elasticsearch.Cluster(config.request_logs).get_or_create_index(config.request_logs)
+            request_log_queue = request_logger.threaded_queue(max_size=2000)
+
+        default_elasticsearch = elasticsearch.Index(config.elasticsearch)
 
         queries.config.default = {
             "type": "elasticsearch",
-            "settings": settings.elasticsearch.copy()
+            "settings": config.elasticsearch.copy()
         }
 
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
-        app.run(**unwrap(settings.flask))
+        app.run(**unwrap(config.flask))
     except Exception, e:
         Log.error("Problem with etl", e)
     finally:

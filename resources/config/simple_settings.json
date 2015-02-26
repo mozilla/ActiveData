@@ -9,24 +9,11 @@
 	"constants":{
 		"pyLibrary.env.http.default_headers":{"From":"https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"}
 	},
-	"request_logs":{
-		"host":"http://localhost",
-		"port":"9200",
-		"index":"active_data_requests",
-		"type":"request_log",
-		"schema":{"$ref":"//../schema/request_log.schema.json"}
-	},
 	"elasticsearch":{
 		"host":"http://localhost",
 		"port":"9200",
 		"index":"testdata",
 		"type":"test_results",
 		"debug":true
-	},
-	"debug": {
-		"log": [
-			{"log_type":"console"}
-		]
 	}
-
 }

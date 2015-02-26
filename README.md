@@ -23,6 +23,7 @@ The ActiveData service requires a configuration file that will point to the
 default ElasticSearch index.  You can find a few sample config files in
 `resources/config`.  Here is simplest one:
 
+```json
     {
         "flask":{
              "host":"0.0.0.0",
@@ -42,6 +43,7 @@ default ElasticSearch index.  You can find a few sample config files in
             "debug":true
         }
     }
+```
 
 The `elasticsearch` property must be updated to point to a specific cluster,
 index and type.  It is used as a default, and to find other indexes by name.
@@ -50,9 +52,11 @@ index and type.  It is used as a default, and to find other indexes by name.
 
 Jump to your git project directory, set your `PYTHONPATH` and run:
 
+```bash
     cd ~/ActiveData
     export PYTHONPATH=.
     python active_data/app.py --settings=resources/config/simple_settings.json
+```
 
 ## Verify
 
@@ -60,7 +64,9 @@ Assuming you used the defaults, you can verify the service is up if you can
 access the Query Tool at [http://localhost:5000/tools/query.html](http://localhost:5000/tools/query.html).
 You may use it to send queries to your instance of the service.  For example:
 
+```json
     {"from":"unittest"}
+```
 
 This query can be used on [AutoTool's public ActiveData instance](http://activedata.allizom.org/tools/query.html),
 and you can use a similar query to get a few sample lines from your cluster.
@@ -75,6 +81,6 @@ cluster which are filled, queried, and destroyed**
     cd ~/ActiveData
     export PYTHONPATH=.
     # OPTIONAL, TEST_SETTINGS already defaults to this file
-    set TEST_SETTINGS=tests/config/test_simple_settings.json
+    export TEST_SETTINGS=tests/config/test_simple_settings.json
     python -m unittest discover -v -s tests
 ```

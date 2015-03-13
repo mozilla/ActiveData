@@ -60,8 +60,7 @@ def es_aggsop(es, frum, query):
             }, es_query)}
         })
 
-    es_duration = Timer("ES query time")
-    with es_duration:
+    with Timer("ES query time") as es_duration:
         result = qb_usingES_util.post(es, es_query, query.limit)
 
     try:
@@ -72,6 +71,7 @@ def es_aggsop(es, frum, query):
             output = groupby_formatter(decoders, result.aggregations, start, query, select)
         output.meta.es_response_time = es_duration.duration.seconds
         output.meta.content_type = mime_type
+        output.meta.es_query = es_query
         return output
     except Exception, e:
         if query.format not in format_dispatch:

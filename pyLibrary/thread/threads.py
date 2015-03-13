@@ -23,7 +23,7 @@ import gc
 
 from pyLibrary.dot import nvl, Dict
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import Duration
+from pyLibrary.times.durations import Duration, SECOND
 
 
 Log=None
@@ -137,7 +137,7 @@ class Queue(object):
                     now = datetime.utcnow()
                     if self.next_warning < now:
                         self.next_warning = now + timedelta(seconds=wait_time)
-                        Log.warning("Queue {{name}} is full ({{num}} items), thread(s) have been waiting {{wait_time}} sec", {
+                        Log.alert("Queue {{name}} is full ({{num}} items), thread(s) have been waiting {{wait_time}} sec", {
                             "name": self.name,
                             "num": len(self.queue),
                             "wait_time": wait_time
@@ -174,12 +174,14 @@ class Queue(object):
                     except Exception, e:
                         pass
             else:
-                while self.keep_running and Date.now() < till:
+                while self.keep_running:
                     if self.queue:
                         value = self.queue.popleft()
                         if value is Thread.STOP:  # SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
                             self.keep_running = False
                         return value
+                    elif Date.now() > till:
+                        break
 
                     try:
                         self.lock.wait(till=till)
@@ -567,38 +569,59 @@ class ThreadedQueue(Queue):
 
         batch_size = nvl(batch_size, int(max_size/2), 900)
         max_size = nvl(max_size, batch_size * 2)  # REASONABLE DEFAULT
-        period = nvl(period, Duration.SECOND)
+        period = nvl(period, SECOND)
+        bit_more_time = 5 * SECOND
 
         Queue.__init__(self, name=name, max=max_size, silent=silent)
 
         def worker_bee(please_stop):
             please_stop.on_go(lambda: self.add(Thread.STOP))
 
-            _buffer = deque()
-            next_time = Date.now() + period
+            _buffer = []
+            next_time = Date.now() + period   # THE TIME WE SHOULD DO A PUSH
 
             while not please_stop:
                 try:
+                    if not _buffer:
+                        item = self.pop()
+                        now = Date.now()
+
+                        if item is Thread.STOP:
+                            queue.extend(_buffer)
+                            please_stop.go()
+                            return
+                        elif item is not None:
+                            _buffer.append(item)
+
+                        next_time = now + period  # NO NEED TO SEND TOO EARLY
+                        continue
+
                     item = self.pop(till=next_time)
+                    now = Date.now()
+
                     if item is Thread.STOP:
                         queue.extend(_buffer)
                         please_stop.go()
                         return
-                    elif item is None:
-                        pass
-                    else:
+                    elif item is not None:
                         _buffer.append(item)
+
                 except Exception, e:
                     Log.warning("Unexpected problem", {
                         "name": name,
                     }, e)
 
                 try:
-                    if len(_buffer) >= batch_size or Date.now() > next_time:
-                        next_time = Date.now() + period
+                    if len(_buffer) >= batch_size or now > next_time:
+                        next_time = now + period
                         if _buffer:
                             queue.extend(_buffer)
-                            _buffer = deque()
+                            _buffer = []
+                            # A LITTLE MORE TIME TO FILL THE NEXT BUFFER
+                            now = Date.now()
+                            if now > next_time:
+                                next_time = now + bit_more_time
+
                 except Exception, e:
                     Log.warning("Problem with {{name}} pushing {{num}} items to data sink", {
                         "name": name,
@@ -606,6 +629,22 @@ class ThreadedQueue(Queue):
                     }, e)
 
         self.thread = Thread.run("threaded queue for " + name, worker_bee)
+
+
+    def add(self, value):
+        with self.lock:
+            self.wait_for_queue_space()
+            if self.keep_running:
+                self.queue.append(value)
+        return self
+
+    def extend(self, values):
+        with self.lock:
+            # ONCE THE queue IS BELOW LIMIT, ALLOW ADDING MORE
+            self.wait_for_queue_space()
+            if self.keep_running:
+                self.queue.extend(values)
+        return self
 
 
     def __enter__(self):

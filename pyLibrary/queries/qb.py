@@ -419,7 +419,7 @@ def _select_deep_meta(field, depth):
 
 
 def get_columns(data):
-    return [{"name": n} for n in UNION(set(d.keys()) for d in data)]
+    return wrap([{"name": n} for n in UNION(set(d.keys()) for d in data)])
 
 
 def sort(data, fieldnames=None):
@@ -444,7 +444,7 @@ def sort(data, fieldnames=None):
                 return DictList([unwrap(d) for d in sorted(data, cmp=comparer)])
             else:
                 # EXPECTING {"field":f, "sort":i} FORMAT
-                fieldnames.sort = sort_direction[fieldnames.sort]
+                fieldnames.sort = sort_direction.get(fieldnames.sort, 0)
                 fieldnames.field = nvl(fieldnames.field, fieldnames.value)
                 if fieldnames.field==None:
                     Log.error("Expecting sort to have 'field' attribute")

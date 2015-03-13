@@ -140,7 +140,7 @@ def _getdefault(obj, key):
     TRY BOTH ATTRIBUTE AND ITEM ACCESS, OR RETURN Null
     """
     try:
-        return obj.__getattribute__(key)
+        return getattr(obj, key)
     except Exception, e:
         pass
 
@@ -151,15 +151,15 @@ def _getdefault(obj, key):
 
     try:
         if float(key) == round(float(key), 0):
-            return eval("obj["+key+"]")
+            return obj[int(key)]
     except Exception, f:
         pass
 
-    try:
-        return eval("obj."+unicode(key))
-    except Exception, f:
-        pass
-
+    # TODO: FIGURE OUT WHY THIS WAS EVER HERE (AND MAKE A TEST)
+    # try:
+    #     return eval("obj."+unicode(key))
+    # except Exception, f:
+    #     pass
     return NullType(obj, key)
 
 
@@ -207,17 +207,28 @@ def _get_attr(obj, path):
             return _get_attr(obj.__dict__[attr_name], path[1:])
         elif attr_name in dir(obj):
             return _get_attr(obj[attr_name], path[1:])
+
+        # TRY FILESYSTEM
+        from pyLibrary.env.files import File
+        if File.new_instance(File(obj.__file__).parent, attr_name).set_extension("py").exists:
+            try:
+                # THIS CASE IS WHEN THE __init__.py DOES NOT IMPORT THE SUBDIR FILE
+                # WE CAN STILL PUT THE PATH TO THE FILE IN THE from CLAUSE
+                output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[1]], 0)
+                return _get_attr(output, path[1:])
+            except Exception, e:
+                pass
+
+        # TRY A CASE-INSENSITIVE MATCH
+        attr_name = lower_match(attr_name, dir(obj))
+        if not attr_name:
+            from pyLibrary.debugs.logs import Log
+            Log.error(PATH_NOT_FOUND)
+        elif len(attr_name)>1:
+            from pyLibrary.debugs.logs import Log
+            Log.error(AMBIGUOUS_PATH_FOUND+" {{paths}}", {"paths":attr_name})
         else:
-            # TRY A CASE-INSENSITIVE MATCH
-            attr_name = lower_match(attr_name, dir(obj))
-            if not attr_name:
-                from pyLibrary.debugs.logs import Log
-                Log.error(PATH_NOT_FOUND)
-            elif len(attr_name)>1:
-                from pyLibrary.debugs.logs import Log
-                Log.error(AMBIGUOUS_PATH_FOUND+" {{paths}}", {"paths":attr_name})
-            else:
-                return _get_attr(obj[attr_name[0]], path[1:])
+            return _get_attr(obj[attr_name[0]], path[1:])
     try:
         obj = _get(obj, attr_name)
         return _get_attr(obj, path[1:])
@@ -266,19 +277,16 @@ def lower_match(value, candidates):
 
 
 def wrap(v):
-    """
-    THIS IS THE CANDIDATE WE ARE TESTING TO WRAP FASTER, BUT DOES NOT SEEM TO BE
-    """
     type_ = _get(v, "__class__")
 
     if type_ is dict:
         m = Dict()
         _set(m, "__dict__", v)  # INJECT m.__dict__=v SO THERE IS NO COPY
         return m
-    elif type_ is list:
-        return DictList(v)
     elif type_ is NoneType:
         return Null
+    elif type_ is list:
+        return DictList(v)
     elif type_ is GeneratorType:
         return (wrap(vv) for vv in v)
     else:

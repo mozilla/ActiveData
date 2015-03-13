@@ -130,6 +130,13 @@ class DictList(list):
         output.extend(_get(self, "list"))
         return DictList(vals=output)
 
+    def __iadd__(self, other):
+        if isinstance(other, list):
+            self.extend(other)
+        else:
+            self.append(other)
+        return self
+
     def right(self, num=None):
         """
         WITH SLICES BEING FLAT, WE NEED A SIMPLE WAY TO SLICE FROM THE RIGHT [-num:]

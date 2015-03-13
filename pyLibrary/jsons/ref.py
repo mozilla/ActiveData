@@ -73,16 +73,18 @@ def _replace_ref(node, url):
     if isinstance(node, dict):
         ref, raw_ref, node["$ref"] = URL(node["$ref"]), node["$ref"], None
 
+        # RECURS
+        return_value = node
+        candidate = {}
+        for k, v in node.items():
+            new_v = _replace_ref(v, url)
+            candidate[k] = new_v
+            if new_v is not v:
+                return_value = candidate
         if not ref:
-            # RECURS
-            return_value = node
-            candidate = {}
-            for k, v in node.items():
-                new_v = _replace_ref(v, url)
-                candidate[k] = new_v
-                if new_v is not v:
-                    return_value = candidate
             return return_value
+        else:
+            node = return_value
 
         if not ref.scheme and not ref.path:
             # DO NOT TOUCH LOCAL REF YET
@@ -123,17 +125,19 @@ def _replace_locals(node, doc_path):
     if isinstance(node, dict):
         ref, node["$ref"] = node["$ref"], None
 
+        # RECURS
+        new_node = node
+        candidate = {}
+        for k, v in node.items():
+            new_v = _replace_locals(v, [v] + doc_path)
+            candidate[k] = new_v
+            if new_v is not v:
+                new_node = candidate
+
         if not ref:
-            # RECURS
-            return_value = node
-            candidate = {}
-            for k, v in node.items():
-                new_v = _replace_locals(v, [v] + doc_path)
-                candidate[k] = new_v
-                if new_v is not v:
-                    return_value = candidate
-            return return_value
+            return new_node
         else:
+            node = new_node
             # REFER TO SELF
             frag=ref.fragment
             if frag[0] == ".":

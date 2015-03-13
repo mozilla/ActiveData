@@ -6,7 +6,7 @@ Running Examples (Query Tool)
 -----------------------------
 
 [ElasticSearch Head](https://github.com/mobz/elasticsearch-head) is a simple
-tool for sending general queries.  [Query Tool](../html/QueryTool.html) can be used to prototype Qb
+tool for sending general queries.  [Active Data Query Tool](../html/QueryTool.html) can be used to prototype Qb
 queries, and see their equivalent ES query.  Please ```git clone``` both of these projects and open in your browser.
 
 Schema

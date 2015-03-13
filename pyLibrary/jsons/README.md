@@ -1,6 +1,6 @@
 
 
-Function: jsons.encode.json_encoder()
+Function: `jsons.encode.json_encoder()`
 -------------------------------------
 
 Fast JSON encoder used in `convert.value2json()` when running in Pypy.  Run the
@@ -8,8 +8,8 @@ Fast JSON encoder used in `convert.value2json()` when running in Pypy.  Run the
 to compare with default implementation and ujson
 
 
-jsons.ref
-=========
+Module `jsons.ref`
+==================
 
 A JSON-like storage format intended for configuration files
 
@@ -86,7 +86,7 @@ ref-object's parent, and expands just like the previous example:
 
 **File References**
 
-Configuration is often stored on the local filesystem.  You can in-line the
+Configuration is often stored on the local file system.  You can in-line the
 JSON found in a file by using the `file://` scheme:
 
 It is good practice to store sensitive data in a secure place...
@@ -145,7 +145,7 @@ file that contains
 **Home Directory Reference**
 
 You may also use the tilde (`~`) to refer to the current user's home directory.
-Here is the same again, but this example can be anywhere in the filesystem.
+Here is the same again, but this example can be anywhere in the file system.
 
 ```python
     {
@@ -170,7 +170,7 @@ configurations which are too unwieldy to inline:
 
 You are also able to leave the scheme off, so that whole constellations of
 configuration files can refer to each other no matter if they are on the local
-filesystem, or remote:
+file system, or remote:
 
 ```python
     {# LOCATED AT SOMEWHERE AT http://example.com

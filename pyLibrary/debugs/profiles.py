@@ -22,7 +22,9 @@ profiles = {}
 
 class Profiler(object):
     """
-
+    VERY SIMPLE PROFILER FOR USE IN with STATEMENTS
+    PRIMARILY TO BE USED IN PyPy, WHERE cProfile IMPACTS
+    OPTIMIZED RUN TIME TOO MUCH
     """
 
     def __new__(cls, *args):

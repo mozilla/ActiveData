@@ -33,7 +33,7 @@ class Date(object):
 
     def __new__(cls, *args, **kwargs):
         if len(args) == 1 and args[0] == None:
-            return None
+            return Null
         return object.__new__(cls, *args)
 
     def __init__(self, *args):
@@ -68,6 +68,9 @@ class Date(object):
     def floor(self, duration=None):
         if duration is None:  # ASSUME DAY
             return Date(math.floor(self.milli / 86400000) * 86400000)
+        elif duration.milli % (7*86400000) ==0:
+            offset = 4*86400000
+            return Date(math.floor((self.milli+offset) / duration.milli) * duration.milli - offset)
         elif not duration.month:
             return Date(math.floor(self.milli / duration.milli) * duration.milli)
         else:

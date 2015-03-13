@@ -151,16 +151,16 @@ class File(object):
     def is_directory(self):
         return os.path.isdir(self._filename)
 
-    def read_ascii(self):
+    def read_bytes(self):
         if not self.parent.exists:
             self.parent.create()
-        with open(self._filename, "r") as f:
+        with open(self._filename, "rb") as f:
             return f.read()
 
-    def write_ascii(self, content):
+    def write_bytes(self, content):
         if not self.parent.exists:
             self.parent.create()
-        with open(self._filename, "w") as f:
+        with open(self._filename, "wb") as f:
             f.write(content)
 
     def write(self, data):
@@ -172,7 +172,14 @@ class File(object):
 
                 Log.error("list of data and keys are not supported, encrypt before sending to file")
 
-            for d in listwrap(data):
+            if isinstance(data, list):
+                pass
+            elif isinstance(data, basestring):
+                data=[data]
+            elif hasattr(data, "__iter__"):
+                pass
+
+            for d in data:
                 if not isinstance(d, unicode):
                     from pyLibrary.debugs.logs import Log
 

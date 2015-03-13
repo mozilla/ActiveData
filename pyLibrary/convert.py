@@ -127,6 +127,8 @@ def json2value(json_string, params=None, flexible=False, paths=False):
 
             Log.error("Can not decode JSON at:\n\t" + sample + "\n\t" + pointer + "\n")
 
+        if len(json_string)>1000:
+            json_string = json_string[:50] + " ... <snip " + unicode(len(json_string) - 100) + " characters> ... " + json_string[-50:]
         base_str = unicode2utf8(json_string)
         hexx_str = bytes2hex(base_str, " ")
         char_str = " " + ("  ".join((latin12unicode(c) if ord(c) >= 32 else ".") for c in base_str))
@@ -369,7 +371,7 @@ def int2hex(value, size):
     return (("0" * size) + hex(value)[2:])[-size:]
 
 
-def hex2bytearray(value):
+def hex2bytes(value):
     return bytearray(value.decode("hex"))
 
 

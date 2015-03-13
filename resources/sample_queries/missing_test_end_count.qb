@@ -4,7 +4,7 @@
 		"settings":{
 			"host":"http://52.10.116.229",
 			"index":"unittest",
-			"type":"test_results"
+			"type":"test_result"
 		}
 	},
 	"select":{"aggregate":"count"},

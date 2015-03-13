@@ -80,19 +80,18 @@ def head(url, **kwargs):
     return HttpResponse(request('head', url, **kwargs))
 
 
-def post(url, data=None, **kwargs):
+def post(url, **kwargs):
     kwargs["stream"] = True
-    return HttpResponse(request('post', url, data=data, **kwargs))
+    return HttpResponse(request('post', url, **kwargs))
 
 
-def put(url, data=None, **kwargs):
+def put(url, **kwargs):
+    return HttpResponse(request('put', url, **kwargs))
+
+
+def patch(url, **kwargs):
     kwargs["stream"] = True
-    return HttpResponse(request('put', url, data=data, **kwargs))
-
-
-def patch(url, data=None, **kwargs):
-    kwargs["stream"] = True
-    return HttpResponse(request('patch', url, data=data, **kwargs))
+    return HttpResponse(request('patch', url, **kwargs))
 
 
 def delete(url, **kwargs):

@@ -21,7 +21,7 @@ and install your requirements:
 
 The ActiveData service requires a configuration file that will point to the
 default ElasticSearch index.  You can find a few sample config files in
-`resources/config`.  Here is simplest one:
+`resources/config`.  `simple_settings.json` is simplest one:
 
 ```json
     {
@@ -39,7 +39,7 @@ default ElasticSearch index.  You can find a few sample config files in
             "host":"http://localhost",
             "port":"9200",
             "index":"testdata",
-            "type":"test_results",
+            "type":"test_result",
             "debug":true
         }
     }

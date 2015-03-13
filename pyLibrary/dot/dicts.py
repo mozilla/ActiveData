@@ -30,6 +30,9 @@ class Dict(dict):
         IS UNLIKELY TO BE USEFUL. USE wrap() INSTEAD
         """
         dict.__init__(self)
+        if not map:
+            return
+
         if DEBUG:
             d = _get(self, "__dict__")
             for k, v in map.items():
@@ -121,8 +124,10 @@ class Dict(dict):
             return wrap(output)
         except Exception:
             d = _get(self, "__dict__")
-            if isinstance(key, str):
-                key = key.decode("utf8")
+            if isinstance(key, unicode):
+                from pyLibrary.debugs.logs import Log
+
+                Log.error("not expected")
 
             return NullType(d, key)
 
@@ -183,9 +188,9 @@ class Dict(dict):
         output = []
         for k, v in self.items():
             if isinstance(v, dict):
-                output.extend(wrap(v).leaves(prefix=prefix+literal_field(k)+"."))
+                output.extend(wrap(v).leaves(prefix=prefix + literal_field(k) + "."))
             else:
-                output.append((prefix+literal_field(k), v))
+                output.append((prefix + literal_field(k), v))
         return output
 
     def all_items(self):

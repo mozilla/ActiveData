@@ -24,7 +24,7 @@
 		"host": "http://172.31.0.146",
 		"port": "9200",
 		"index": "testdata",
-		"type": "test_results",
+		"type": "test_result",
 		"debug": true
 	},
 	"debug": {

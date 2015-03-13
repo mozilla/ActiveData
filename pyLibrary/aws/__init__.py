@@ -15,6 +15,7 @@ from boto.sqs.message import Message
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
+from pyLibrary.dot import wrap
 from pyLibrary.maths import Math
 from pyLibrary.meta import use_settings
 from pyLibrary.times.durations import Duration
@@ -52,12 +53,20 @@ class Queue(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+    def __len__(self):
+        attrib = self.queue.get_attributes("ApproximateNumberOfMessages")
+        return int(attrib['ApproximateNumberOfMessages'])
+
     def add(self, message):
+        message = wrap(message)
+        if message.bucket.startswith("ekyle-test-result") and len(message.key.split(".")) == 3:
+            Log.error("not expected")
+
         m = Message()
         m.set_body(convert.value2json(message))
         self.queue.write(m)
 
-    def pop(self, wait=Duration.SECOND):
+    def pop(self, wait=Duration.SECOND, till=None):
         m = self.queue.read(wait_time_seconds=Math.floor(wait.total_seconds))
         if not m:
             return None
@@ -72,9 +81,20 @@ class Queue(object):
             self.queue.delete_message(p)
 
     def rollback(self):
-        if self.pending and self.settings.debug:
-            Log.alert("{{num}} messages returned to queue", {"num":len(self.pending)})
-        self.pending = []
+        if self.pending:
+            pending = self.pending
+            self.pending = []
+
+            for p in pending:
+                m = Message()
+                m.set_body(p.get_body())
+                self.queue.write(m)
+
+            for p in pending:
+                self.queue.delete_message(p)
+
+            if self.settings.debug:
+                Log.alert("{{num}} messages returned to queue", {"num": len(pending)})
 
     def close(self):
         self.commit()

@@ -11,7 +11,6 @@ from __future__ import unicode_literals
 from pyLibrary.dot import wrap, set_default, split_field
 
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.queries.qb_usingES_util import aggregates1_4
 
 
 type2container = Dict()

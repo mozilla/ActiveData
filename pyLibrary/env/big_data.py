@@ -6,19 +6,9 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-
-# MIMICS THE requests API (http://docs.python-requests.org/en/latest/)
-# WITH ADDED default_headers THAT CAN BE SET USING pyLibrary.debugs.settings
-# EG
-# {"debug.constants":{
-# "pyLibrary.env.http.default_headers={
-# "From":"klahnakoski@mozilla.com"
-# }
-# }}
-
-
 from __future__ import unicode_literals
 from __future__ import division
+
 import gzip
 from io import BytesIO
 from tempfile import TemporaryFile
@@ -27,6 +17,9 @@ import zlib
 
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
+
+# LIBRARY TO DEAL WITH BIG DATA ARRAYS AS ITERATORS OVER (IR)REGULAR SIZED
+# BLOCKS, OR AS ITERATORS OVER LINES
 
 
 MIN_READ_SIZE = 8 * 1024
@@ -96,6 +89,9 @@ def safe_size(source):
     READ THE source UP TO SOME LIMIT, THEN COPY TO A FILE IF TOO BIG
     RETURN A str() OR A FileString()
     """
+
+    if source is None:
+        return None
 
     total_bytes = 0
     bytes = []
@@ -184,11 +180,22 @@ class CompressedLines(LazyLines):
         self._iter = self.__iter__()
 
     def __iter__(self):
-        return LazyLines(ibytes2ilines(bytes2ibytes(self.compressed, MIN_READ_SIZE))).__iter__()
+        return LazyLines(ibytes2ilines(compressed_bytes2ibytes(self.compressed, MIN_READ_SIZE))).__iter__()
 
     def __getslice__(self, i, j):
         if i == self._next:
             return self._iter
+
+        if i == 0:
+            return self.__iter__()
+
+        if i == self._next - 1:
+            def output():
+                yield self._last
+                for v in self._iter:
+                    yield v
+
+            return output()
         Log.error("Do not know how to slice this generator")
 
     def __getitem__(self, item):
@@ -215,7 +222,7 @@ class CompressedLines(LazyLines):
         return FileString(new_file)
 
 
-def bytes2ibytes(compressed, size):
+def compressed_bytes2ibytes(compressed, size):
     """
     CONVERT AN ARRAY TO A BYTE-BLOCK GENERATOR
     USEFUL IN THE CASE WHEN WE WANT TO LIMIT HOW MUCH WE FEED ANOTHER
@@ -231,29 +238,30 @@ def bytes2ibytes(compressed, size):
         except Exception, e:
             Log.error("Not expected", e)
 
-
 def ibytes2ilines(stream):
     """
     CONVERT A GENERATOR OF (ARBITRARY-SIZED) byte BLOCKS
     TO A LINE (CR-DELIMITED) GENERATOR
     """
-    buffer = stream.next()
+    _buffer = stream.next()
     s = 0
-    e = buffer.find(b"\n")
+    e = _buffer.find(b"\n")
     while True:
         while e == -1:
             try:
-                buffer = buffer[s:] + stream.next()
+                next_block = stream.next()
+                _buffer = _buffer[s:] + next_block
                 s = 0
-                e = buffer.find(b"\n")
+                e = _buffer.find(b"\n")
             except StopIteration:
-                yield buffer[s:]
+                _buffer = _buffer[s:]
                 del stream
+                yield _buffer
                 return
 
-        yield buffer[s:e]
+        yield _buffer[s:e]
         s = e + 1
-        e = buffer.find(b"\n", s)
+        e = _buffer.find(b"\n", s)
 
 def sbytes2ilines(stream):
     """

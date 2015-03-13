@@ -20,9 +20,19 @@ from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import nvl, split_field, join_field, Null, set_default
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap, listwrap
-from pyLibrary.queries.qb_usingES_util import INDEX_CACHE
+
 
 DEFAULT_LIMIT = 10
+
+qb =None
+INDEX_CACHE = None
+def _late_import():
+    global qb
+    global INDEX_CACHE
+
+    from pyLibrary.queries.qb_usingES_util import INDEX_CACHE
+    from pyLibrary.queries import qb
+
 
 
 class Query(object):
@@ -81,7 +91,12 @@ class Query(object):
         # DEPTH ANALYSIS - LOOK FOR COLUMN REFERENCES THAT MAY BE DEEPER THAN
         # THE from SOURCE IS.
         # TODO: IGNORE REACHING INTO THE NON-NESTED TYPES
-        columns = self.frum.get_columns()
+        if isinstance(self.frum, list):
+            if not qb:
+                _late_import()
+            columns = qb.get_columns(self.frum)
+        else:
+            columns = self.frum.get_columns()
         vars = get_all_vars(self)
         for c in columns:
             if c.name in vars and c.depth:
@@ -350,6 +365,9 @@ def _move_nested_term(master, where, schema):
 
 
 def _get_nested_path(field, schema):
+    if not INDEX_CACHE:
+        _late_import()
+
     if MVEL.isKeyword(field):
         field = join_field([schema.es.alias] + split_field(field))
         for i, f in reverse(enumerate(split_field(field))):
@@ -495,12 +513,17 @@ def where_get_all_vars(w):
         return where_get_all_vars(val)
 
     if key in ["exists", "missing"]:
-        if val.field:
-            return [val.field]
-        else:
+        if isinstance(val, unicode):
             return [val]
+        else:
+            return [val.field]
 
-    if key in ["gte", "gt", "eq", "term", "terms", "lt", "lte"]:
+    if key in ["gte", "gt", "eq", "ne", "term", "terms", "lt", "lte"]:
+        if not isinstance(val, dict):
+            Log.error("Expecting `{{key}}` to have a dict value, not a {{type}}", {
+                "key": key,
+                "type": val.__class__.__name__
+            })
         return list(val.keys())
 
     Log.error("do not know how to handle where {{where|json}}", {"where", w})

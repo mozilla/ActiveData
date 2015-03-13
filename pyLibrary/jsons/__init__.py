@@ -83,7 +83,8 @@ def _scrub(value):
             if not isinstance(k, basestring):
                 Log.error("keys must be strings")
             v = _scrub(v)
-            output[k] = v
+            if v != None or isinstance(v, dict):
+                output[k] = v
         return output
     elif type in (list, DictList):
         output = []
@@ -108,6 +109,8 @@ def _scrub(value):
             v = _scrub(v)
             output.append(v)
         return output
+    elif hasattr(value, '__call__'):
+        return repr(value)
     else:
         return value
 

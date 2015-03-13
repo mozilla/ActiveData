@@ -131,7 +131,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
     def setUp(self):
         # ADD TEST RECORDS
         self.backend_es.index = "testing_" + Random.hex(10).lower()
-        # self.backend_es.type = "test_results"
+        # self.backend_es.type = "test_result"
         self.es = elasticsearch.Cluster(self.backend_es)
         self.index = self.es.get_or_create_index(self.backend_es)
         self.server_is_ready.wait_for_go()
@@ -145,7 +145,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
     def _fill_es(self, subtest):
         _settings = self.backend_es.copy()
         _settings.index = "testing_" + Random.hex(10).lower()
-        # settings.type = "test_results"
+        # settings.type = "test_result"
 
         try:
             url = "file://resources/schema/basic_schema.json.template?{{.|url}}"
@@ -157,6 +157,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
             # MAKE CONTAINER
             container = self.es.get_or_create_index(_settings)
+            container.add_alias()
 
             # INSERT DATA
             container.extend([

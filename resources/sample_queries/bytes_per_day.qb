@@ -1,12 +1,5 @@
 {
-	"from":{
-		"type":"elasticsearch",
-		"settings":{
-			"host":"http://52.10.116.229",
-			"index":"unittest",
-			"type":"test_results"
-		}
-	},
+	"from":"unittest",
 	"select":{
 		"name":"total_bytes",
 		"value":"run.stats.bytes",

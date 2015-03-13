@@ -12,14 +12,15 @@ from __future__ import division
 import StringIO
 import gzip
 from io import BytesIO
+
 import zipfile
 
 import boto
 from boto.s3.connection import Location
 
-from pyLibrary import convert
+from pyLibrary import convert, strings
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap
+from pyLibrary.dot import wrap, Null, nvl
 from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, GzipLines, LazyLines
 from pyLibrary.meta import use_settings
 from pyLibrary.times.dates import Date
@@ -27,7 +28,7 @@ from pyLibrary.times.timer import Timer
 
 
 READ_ERROR = "S3 read error"
-MAX_FILE_SIZE = 100*1024*1024
+MAX_FILE_SIZE = 100 * 1024 * 1024
 
 class File(object):
     def __init__(self, bucket, key):
@@ -113,6 +114,7 @@ class Bucket(object):
         self.settings = settings
         self.connection = None
         self.bucket = None
+        self.key_format = _scrub_key(settings.key_format)
 
         try:
             self.connection = Connection(settings).connection
@@ -128,33 +130,89 @@ class Bucket(object):
         if self.connection:
             self.connection.close()
 
+    def __getattr__(self, item):
+        return getattr(self.bucket, item)
+
     def get_key(self, key):
+        meta = self.get_meta(key)
+        if not meta:
+            Log.error("Key {{key}} does not exist", {"key": key})
+        key = strip_extension(meta.key)
         return File(self, key)
 
-    def get_meta(self, key):
+    def delete_key(self, key):
+        # self._verify_key_format(key)  DO NOT VERIFY, DELETE BAD KEYS ANYWAY!!
+        full_key = self.get_meta(key, conforming=False)
+        self.bucket.delete_key(full_key)
+
+    def get_meta(self, key, conforming=True):
         if key.endswith(".json") or key.endswith(".zip") or key.endswith(".gz"):
             Log.error("Expecting a pure key")
 
         try:
-            metas = wrap(list(self.bucket.list(prefix=key + ".json")))
-            if len(metas) == 0:
-                return None
-            elif len(metas) > 1:
-                Log.error("multiple keys with prefix={{prefix}}\n{{list|indent}}", {"prefix": metas[0].key + ".json", "list": metas.select("key")})
+            metas = list(self.bucket.list(prefix=key))
+            metas = wrap([m for m in metas if m.name.find(".json") != -1])
 
-            return metas[0]
+            if self.name == "ekyle-talos" and key.find(".") == -1:
+                # VERY SPECIFIC CONDITIONS TO ALLOW DELETE, DELETE ME IN THE FUTURE (Now==March2015)
+                for m in metas:
+                    self.bucket.delete_key(m.key)
+                return Null
+
+            perfect = Null
+            favorite = Null
+            too_many = False
+            for m in metas:
+                try:
+                    simple = strip_extension(m.key)
+                    if conforming:
+                        self._verify_key_format(simple)
+                    if simple == key:
+                        perfect = m
+                        too_many = False
+                    if favorite and not perfect:
+                        too_many = True
+                    favorite = m
+                except Exception, _:
+                    pass
+
+            if too_many:
+                Log.error("multiple keys in {{bucket}} with prefix={{prefix|quote}}: {{list}}", {
+                    "bucket": self.name,
+                    "prefix": key,
+                    "list": [k.name for k in metas]
+                })
+            return nvl(perfect, favorite)
         except Exception, e:
             Log.error(READ_ERROR, e)
 
-    def keys(self, prefix=None):
-        return set(strip_extension(k.key) for k in self.bucket.list(prefix=prefix))
+    def keys(self, prefix=None, delimiter=None):
+        if delimiter:
+            # WE REALLY DO NOT GET KEYS, BUT RATHER Prefix OBJECTS
+            # AT LEAST THEY ARE UNIQUE
+            return set(k.name.rstrip(delimiter) for k in self.bucket.list(prefix=prefix, delimiter=delimiter))
+        else:
+            return set(strip_extension(k.key) for k in self.bucket.list(prefix=prefix))
 
-    def metas(self, prefix=None):
+    def metas(self, prefix=None, limit=None, delimiter=None):
         """
         RETURN THE METADATA DESCRIPTORS FOR EACH KEY
         """
 
-        keys = self.bucket.list(prefix=prefix)
+        keys = self.bucket.list(prefix=prefix, delimiter=delimiter)
+        if limit:
+            output = []
+            for i, k in enumerate(keys):
+                output.append({
+                    "key": strip_extension(k.key),
+                    "etag": convert.quote2string(k.etag),
+                    "expiry_date": Date(k.expiry_date),
+                    "last_modified": Date(k.last_modified)
+                })
+                if i >= limit:
+                    break
+            return wrap(output)
+
         output = [
             {
                 "key": strip_extension(k.key),
@@ -185,13 +243,19 @@ class Bucket(object):
 
         return convert.utf82unicode(json)
 
+    def read_bytes(self, key):
+        source = self.get_meta(key)
+        return safe_size(source)
+
     def read_lines(self, key):
         source = self.get_meta(key)
+        if source is None:
+            Log.error("{{key}} does not exist", {"key": key})
         if source.size < MAX_STRING_SIZE:
             if source.key.endswith(".gz"):
-                return GzipLines(source.read(key))
+                return GzipLines(source.read())
             else:
-                return convert.utf82unicode(source.read(key)).split("\n")
+                return convert.utf82unicode(source.read()).split("\n")
 
         if source.key.endswith(".gz"):
             bytes = safe_size(source)
@@ -205,15 +269,19 @@ class Bucket(object):
         else:
             return LazyLines(source)
 
-    def write(self, key, value):
+    def write(self, key, value, disable_zip=False):
         if key.endswith(".json") or key.endswith(".zip"):
             Log.error("Expecting a pure key")
 
         try:
             if hasattr(value, "read"):
-                storage = self.bucket.new_key(key + ".json.gz")
-                string_length = len(value)
-                value = convert.bytes2zip(value)
+                if disable_zip:
+                    storage = self.bucket.new_key(key + ".json")
+                    string_length = len(value)
+                else:
+                    storage = self.bucket.new_key(key + ".json.gz")
+                    string_length = len(value)
+                    value = convert.bytes2zip(value)
                 file_length = len(value)
                 Log.note("Sending contents with length {{file_length|comma}} (from string with length {{string_length|comma}})", {"file_length": file_length, "string_length":string_length})
                 value.seek(0)
@@ -223,7 +291,7 @@ class Bucket(object):
                     storage.set_acl('public-read')
                 return
 
-            if len(value) > 20 * 1000:
+            if len(value) > 20 * 1000 and not disable_zip:
                 self.bucket.delete_key(key + ".json")
                 if isinstance(value, str):
                     value = convert.bytes2zip(value)
@@ -246,7 +314,7 @@ class Bucket(object):
                 storage.set_acl('public-read')
         except Exception, e:
             Log.error("Problem writing {{bytes}} bytes to {{key}} in {{bucket}}", {
-                "key": storage.key,
+                "key": key,
                 "bucket": self.bucket.name,
                 "bytes": len(value)
             }, e)
@@ -262,7 +330,7 @@ class Bucket(object):
                 for ll in l:
                     archive.write(ll.encode("utf8"))
                     archive.write(b"\n")
-                    count+=1
+                    count += 1
             else:
                 archive.write(l.encode("utf8"))
                 archive.write(b"\n")
@@ -280,6 +348,13 @@ class Bucket(object):
     @property
     def name(self):
         return self.settings.bucket
+
+    def _verify_key_format(self, key):
+        if self.key_format != _scrub_key(key):
+            Log.error("key {{key}} in bucket {{bucket}} is of the wrong format", {
+                "key": key,
+                "bucket": self.bucket.name
+            })
 
 
 class SkeletonBucket(Bucket):
@@ -305,3 +380,17 @@ def _unzip(compressed):
     buff = StringIO.StringIO(compressed)
     archive = zipfile.ZipFile(buff, mode='r')
     return archive.read(archive.namelist()[0])
+
+
+def _scrub_key(key):
+    """
+    RETURN JUST THE :. CHARACTERS
+    """
+    if key == None:
+        return None
+
+    output = []
+    for c in key:
+        if c in [":", "."]:
+            output.append(c)
+    return "".join(output)

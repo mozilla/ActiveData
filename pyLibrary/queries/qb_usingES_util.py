@@ -24,6 +24,7 @@ from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import split_field, join_field, nvl, set_default
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap
+from pyLibrary.queries import qb
 from pyLibrary.times import durations
 
 
@@ -110,7 +111,15 @@ def parse_columns(parent_path, esProperties):
             })
 
             if path not in INDEX_CACHE:
-                INDEX_CACHE[path] = INDEX_CACHE[parent_path].copy()
+                pp = split_field(parent_path)
+                for i in qb.reverse(range(len(pp))):
+                    c = INDEX_CACHE.get(join_field(pp[:i + 1]), None)
+                    if c:
+                        INDEX_CACHE[path] = c.copy()
+                        break
+                else:
+                    Log.error("Can not find parent")
+
                 INDEX_CACHE[path].name = path
             INDEX_CACHE[path].columns = child_columns
             continue

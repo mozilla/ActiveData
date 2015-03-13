@@ -15,7 +15,7 @@
 		"host": "http://localhost",
 		"port": "9200",
 		"index": "testdata",
-		"type": "test_results",
+		"type": "test_result",
 		"debug": true
 	}
 }

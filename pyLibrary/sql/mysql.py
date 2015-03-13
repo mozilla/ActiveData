@@ -36,7 +36,7 @@ MAX_BATCH_SIZE = 100
 all_db = []
 
 
-class DB(object):
+class MySQL(object):
     """
     Parameterize SQL by name rather than by position.  Return records as objects
     rather than tuples.
@@ -363,7 +363,7 @@ class DB(object):
         settings.schema = nvl(settings.schema, settings.database)
 
         if param:
-            with DB(settings) as temp:
+            with MySQL(settings) as temp:
                 sql = expand_template(sql, temp.quote_param(param))
 
         # MWe have no way to execute an entire SQL file in bulk, so we
@@ -416,11 +416,11 @@ class DB(object):
         sql = File(filename).read()
         if ignore_errors:
             try:
-                DB.execute_sql(sql=sql, param=param, settings=settings)
+                MySQL.execute_sql(sql=sql, param=param, settings=settings)
             except Exception, e:
                 pass
         else:
-            DB.execute_sql(settings, sql, param)
+            MySQL.execute_sql(settings, sql, param)
 
     def _execute_backlog(self):
         if not self.backlog: return
@@ -614,22 +614,6 @@ def utf8_to_unicode(v):
         Log.error("not expected", e)
 
 
-
-class SQL(unicode):
-    """
-    ACTUAL SQL, DO NOT QUOTE THIS STRING
-    """
-    def __init__(self, template='', param=None):
-        unicode.__init__(self)
-        self.template = template
-        self.param = param
-
-    @property
-    def sql(self):
-        return expand_template(self.template, self.param)
-
-    def __str__(self):
-        Log.error("do not do this")
 
 
 def int_list_packer(term, values):

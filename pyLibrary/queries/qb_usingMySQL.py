@@ -13,7 +13,8 @@ from __future__ import division
 from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.meta import use_settings
-from pyLibrary.sql.db import int_list_packer, SQL, DB
+from pyLibrary.sql import SQL
+from pyLibrary.sql.mysql import int_list_packer, MySQL
 from pyLibrary.debugs.logs import Log
 from pyLibrary.strings import indent, expand_template
 from pyLibrary.dot import nvl
@@ -38,9 +39,9 @@ class FromMySQL(object):
         readonly=False,
         settings=None
     ):
-        from pyLibrary.sql.db import DB
+        from pyLibrary.sql.mysql import MySQL
         self.settings = settings
-        self._db = DB(settings)
+        self._db = MySQL(settings)
 
     def as_dict(self):
         settings = self.settings.copy()

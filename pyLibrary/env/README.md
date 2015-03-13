@@ -44,7 +44,7 @@ selecting only the properties it requires.
 		"host" : "http://192.168.0.98",
 		"port" : 9200,
 		"index" : "b2g_tests",
-		"type" : "test_results",
+		"type" : "test_result",
 		"debug" : true,
 		"limit_replicas" : true,
 		"schema_file" : "./resources/schema/test_schema.json"

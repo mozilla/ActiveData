@@ -1,9 +1,9 @@
 {
-	"fastTesting": false,  //IMPORTANT VARIABLE!  SET TO false TO INCLUDE NETWORK RESPONSE TESTS
+	"fastTesting": false,  //IMPORTANT VARIABLE!  true WILL RUN TESTS FASTER, false INCLUDES NETWORK RESPONSE TESTS
 	"service_url": "http://127.0.0.1:5000/query",
 	"backend_es": {
 		"index": "testdata",
-		"type": "test_results",
+		"type": "test_result",
 		"host": "http://localhost",
 		"port": "9200"
 	},
@@ -23,7 +23,7 @@
 		"host": "http://localhost",
 		"port": "9200",
 		"index": "testdata",
-		"type": "test_results",
+		"type": "test_result",
 		"debug": true
 	}
 }

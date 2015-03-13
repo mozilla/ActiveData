@@ -20,6 +20,8 @@ from pyLibrary.times.timer import Timer
 from tests.base_test_class import ActiveDataBaseTest, error
 
 
+ES_CLUSTER_LOCATION = "http://52.10.189.133"
+
 class TestUnittests(ActiveDataBaseTest):
 
     def test_chunk_timing(self):
@@ -30,9 +32,9 @@ class TestUnittests(ActiveDataBaseTest):
             "from": {
                 "type": "elasticsearch",
                 "settings": {
-                    "host": "http://52.10.116.229",
+                    "host": ES_CLUSTER_LOCATION,
                     "index": "unittest",
-                    "type": "test_results"
+                    "type": "test_result"
                 }
             },
             "select": {"value": "run.duration", "aggregate": "average"},
@@ -67,9 +69,9 @@ class TestUnittests(ActiveDataBaseTest):
             "from": {
                 "type": "elasticsearch",
                 "settings": {
-                    "host": "http://52.10.116.229",
+                    "host": ES_CLUSTER_LOCATION,
                     "index": "unittest",
-                    "type": "test_results"
+                    "type": "test_result"
                 }
             },
             "select": [
@@ -109,9 +111,9 @@ class TestUnittests(ActiveDataBaseTest):
             "from": {
                 "type": "elasticsearch",
                 "settings": {
-                    "host": "http://52.10.116.229",
+                    "host": ES_CLUSTER_LOCATION,
                     "index": "unittest",
-                    "type": "test_results"
+                    "type": "test_result"
                 }
             },
             "select": [
@@ -121,7 +123,7 @@ class TestUnittests(ActiveDataBaseTest):
                 "build.branch"
             ],
             "where": {"or": [
-                {"term": {"build.id", None}},
+                {"term": {"build.id": None}},
                 {"missing": "build.id"}
                 # {"gte": {"timestamp": Date.floor(Date.now() - (Duration.DAY * 7), Duration.DAY).milli / 1000}}
             ]},

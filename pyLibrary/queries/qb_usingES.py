@@ -24,7 +24,6 @@ from pyLibrary.queries.qb_usingES_util import aggregates, INDEX_CACHE, parse_col
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries.MVEL import _MVEL
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import nvl, split_field
 from pyLibrary.dot.lists import DictList
@@ -41,7 +40,7 @@ class FromES(Container):
     def __init__(self, host, index, alias=None, name=None, type=None, port=9200, settings=None):
         self.settings = settings
         self.name = nvl(name, alias, index)
-        self._es = elasticsearch.Index(settings=settings)
+        self._es = elasticsearch.Alias(alias=nvl(alias, index), settings=settings)
         self.edges = Dict()
         self.worker = None
         self.ready = False

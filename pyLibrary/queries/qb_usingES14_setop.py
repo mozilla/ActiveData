@@ -22,7 +22,10 @@ from pyLibrary.queries.filters import simplify_esfilter, TRUE_FILTER
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import MVEL, filters
 from pyLibrary.queries.cube import Cube
+from pyLibrary.times.timer import Timer
 
+
+format_dispatch = {}
 
 def is_fieldop(query):
     # THESE SMOOTH EDGES REQUIRE ALL DATA (SETOP)
@@ -79,10 +82,10 @@ def es_fieldop(es, query):
             es_query.fields.append(s)
     es_query.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
 
-    data = qb_usingES_util.post(es, es_query, query.limit)
+    with Timer("call to ES") as es_duration:
+        data = qb_usingES_util.post(es, es_query, query.limit)
+
     T = data.hits.hits
-
-
     for i, s in enumerate(select.copy()):
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if s.value == "*":
@@ -95,59 +98,17 @@ def es_fieldop(es, query):
             select = select[:i:] + [{"name": n, "value": n} for n in column_names] + select[i + 1::]
             break
 
-    if not query.format or query.format == "list":
-        data = []
-        for row in T:
-            r = {}
-            for s in select:
-                if s.value == ".":
-                    r[s.name] = row[source]
-                else:
-                    r[s.name] = unwraplist(row[source][s.value])
-            data.append(r)
-        return Dict(
-            meta={"format": "list"},
-            data=data
-        )
-    elif query.format == "table":
-        header = [s.name for s in select]
-        map = {s.name: i for i, s in enumerate(select)} # MAP FROM name TO COLUMN INDEX
-        data = []
-        for row in T:
-            r = [None]*len(header)
-            for s in select:
-                if s.value == ".":
-                    r[map[s.name]] = row[source]
-                else:
-                    r[map[s.name]] = unwraplist(row[source][s.value])
-            data.append(r)
-        return Dict(
-            meta={"format":"table"},
-            header=header,
-            data=data
-        )
-    elif query.format == "cube":
-        matricies = {}
-        for s in select:
-            try:
-                if s.value == ".":
-                    matricies[s.name] = Matrix.wrap(T.select(source))
-                elif isinstance(s.value, dict):
-                    # for k, v in s.value.items():
-                    #     matricies[join_field(split_field(s.name)+[k])] = Matrix.wrap([unwrap(t.fields)[v] for t in T])
-                    matricies[s.name] = Matrix.wrap([{k: unwraplist(t[source][v]) for k, v in s.value.items()} for t in T])
-                elif isinstance(s.value, list):
-                    matricies[s.name] = Matrix.wrap([tuple(unwraplist(t[source][ss]) for ss in s.value) for t in T])
-                else:
-                    matricies[s.name] = Matrix.wrap([unwraplist(t[source][s.value]) for t in T])
-            except Exception, e:
-                Log.error("", e)
+    try:
+        formatter, groupby_formatter, mime_type = format_dispatch[query.format]
 
-        cube = Cube(query.select, edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(T), "interval": 1}}], data=matricies, frum=query)
-        cube.frum = query
-        return cube
-    else:
-        Log.error("Expecting a 'format' clause")
+        output = formatter(T, select, source)
+        output.meta.es_response_time = es_duration.duration.seconds
+        output.meta.content_type = mime_type
+        output.meta.es_query = es_query
+        return output
+    except Exception, e:
+        Log.error("problem formatting")
+
 
 def is_setop(query):
     select = listwrap(query.select)
@@ -305,3 +266,68 @@ def es_deepop(es, mvel, query):
     cube = Cube(query.select, query.edges, {query.select.name: output})
     cube.frum = query
     return cube
+
+
+
+
+def format_list(T, select, source):
+    data = []
+    for row in T:
+        r = {}
+        for s in select:
+            if s.value == ".":
+                r[s.name] = row[source]
+            else:
+                r[s.name] = unwraplist(row[source][s.value])
+        data.append(r)
+    return Dict(
+        meta={"format": "list"},
+        data=data
+    )
+
+
+def format_table(T, select, source):
+    header = [s.name for s in select]
+    map = {s.name: i for i, s in enumerate(select)}  # MAP FROM name TO COLUMN INDEX
+    data = []
+    for row in T:
+        r = [None] * len(header)
+        for s in select:
+            if s.value == ".":
+                r[map[s.name]] = row[source]
+            else:
+                r[map[s.name]] = unwraplist(row[source][s.value])
+        data.append(r)
+    return Dict(
+        meta={"format": "table"},
+        header=header,
+        data=data
+    )
+
+
+def format_cube(T, select, source):
+    matricies = {}
+    for s in select:
+        try:
+            if s.value == ".":
+                matricies[s.name] = Matrix.wrap(T.select(source))
+            elif isinstance(s.value, dict):
+                # for k, v in s.value.items():
+                # matricies[join_field(split_field(s.name)+[k])] = Matrix.wrap([unwrap(t.fields)[v] for t in T])
+                matricies[s.name] = Matrix.wrap([{k: unwraplist(t[source][v]) for k, v in s.value.items()} for t in T])
+            elif isinstance(s.value, list):
+                matricies[s.name] = Matrix.wrap([tuple(unwraplist(t[source][ss]) for ss in s.value) for t in T])
+            else:
+                matricies[s.name] = Matrix.wrap([unwraplist(t[source][s.value]) for t in T])
+        except Exception, e:
+            Log.error("", e)
+    cube = Cube(select, edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(T), "interval": 1}}], data=matricies)
+    return cube
+
+
+set_default(format_dispatch, {
+    None: (format_cube, None, "application/json"),
+    "cube": (format_cube, None, "application/json"),
+    "table": (format_table, None, "application/json"),
+    "list": (format_list, None, "application/json")
+})

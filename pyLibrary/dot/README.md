@@ -3,7 +3,7 @@ Consistent dicts, lists and Nones
 =================================
 
 This library is solving the problem of consistency (closure) under the dot(.)
-and slice [::] operators.  The most significant difference is in the dealing
+and slice [::] operators.  The most significant differences involve dealing
 with None, missing keys, and missing items in lists.
 
 Dict replaces dict
@@ -46,10 +46,18 @@ a.b.c += 1
 a.b.c += 42
 &gt;&gt;&gt; a == {"b": {"c": 43}}
 </pre>
- 7. attribute names (keys) are corrected to unicode - it appears Python
+ 7. `+=` on lists (`[]`) will `append()`<pre>
+a = wrap({})
+&gt;&gt;&gt; a == {}
+a.b.c += [1]
+&gt;&gt;&gt; a == {"b": {"c": [1]}}
+a.b.c += [42]
+&gt;&gt;&gt; a == {"b": {"c": [1, 42]}}
+</pre>
+ 8. attribute names (keys) are corrected to unicode - it appears Python
  object.getattribute() is called with str() even when using `from __future__
  import unicode_literals`
- 8. by allowing dot notation, the IDE does tab completion and my spelling
+ 9. by allowing dot notation, the IDE does tab completion and my spelling
  mistakes get found at "compile time"
 
 ### Examples in the wild ###
@@ -59,7 +67,7 @@ different names and slightly different variations, some examples are:
 
  * `jinja2.environment.Environment.getattr()`  to allow convenient dot notation
  * `argparse.Environment()` - code performs `setattr(e, name, value)` on
-  instances of Environment to provide dot(.) accessors
+  instances of Environment to provide dot(`.`) accessors
  * `collections.namedtuple()` - gives attribute names to tuple indicies
   effectively providing <code>a.b</code> rather than <code>a["b"]</code>
      offered by dicts
@@ -145,8 +153,13 @@ in `Null`:
  * `a ∘ Null == Null`
  * `Null ∘ a == Null`
 
-where `∘` is any binary operator.
+where `∘` is most binary operators.  `and` and `or` are exceptions, and behave
+as expected:
 
+ * `True or Null == True`
+ * `False or Null == Null`
+ * `False and Null == False`
+ * `True and Null == Null`
 
 DictList is "Flat"
 ----------------------------------------
@@ -198,15 +211,15 @@ For the sake of completeness, we have two more convenience methods:
 DictList Dot (.) Operator
 ----------------------------
 
-The dot operator on a `DictList` will return a list of property values
+The dot operator on a `DictList` performs a simple projection; it will return a list of property values
 
 ```python
     myList.name == [x["name"] for x in myList]
 ```
 
 
-Motivation for DictList
------------------------
+Motivation for DictList (optional reading)
+------------------------------------------
 
 `DictList` is the final type required to to provide closure under the
 dot(.) and slice [::] operators.  Not only must `DictList` deal with

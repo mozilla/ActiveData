@@ -26,10 +26,14 @@ class NullType(object):
     ASSIGNMENT CAN BE DONE
     """
 
-    def __init__(self, obj=None, path=None):
+    def __init__(self, obj=None, key=None):
+        """
+        obj - VALUE BEING DEREFERENCED
+        key - THE dict ITEM REFERENCE (DOT(.) IS NOT ESCAPED)
+        """
         d = _get(self, "__dict__")
         d["_obj"] = obj
-        d["_path"] = path
+        d["__key__"] = key
 
     def __bool__(self):
         return False
@@ -50,10 +54,9 @@ class NullType(object):
         try:
             d = _get(self, "__dict__")
             o = d["_obj"]
-            path = d["_path"]
-            seq = split_field(path)
+            key = d["__key__"]
 
-            _assign(o, seq, other)
+            _assign(o, [key], other)
         except Exception, e:
             raise e
         return other
@@ -104,7 +107,29 @@ class NullType(object):
         return other is not None and not isinstance(other, NullType)
 
     def __getitem__(self, key):
-        return NullType(self, key)
+        if isinstance(key, str):
+            key = key.decode("utf8")
+        elif isinstance(key, int):
+            return NullType(self, key)
+
+        path = split_field(key)
+        output = self
+        for p in path:
+            output = NullType(output, p)
+        return output
+
+    def __or__(self, other):
+        if other is True:
+            return True
+        return Null
+
+    def __and__(self, other):
+        if other is False:
+            return False
+        return Null
+
+    def __xor__(self, other):
+        return Null
 
     def __len__(self):
         return 0
@@ -138,11 +163,11 @@ class NullType(object):
         try:
             d = _get(self, "__dict__")
             o = d["_obj"]
-            path = d["_path"]
+            path = d["__key__"]
             if path is None:
                 return   # NO NEED TO DO ANYTHING
 
-            seq = split_field(path)+split_field(key)
+            seq = [path] + split_field(key)
             _assign(o, seq, value)
         except Exception, e:
             raise e
@@ -172,13 +197,14 @@ Null = NullType()
 def _assign(obj, path, value, force=True):
     """
     value IS ASSIGNED TO obj[self.path][key]
+    path IS AN ARRAY OF PROPERTY NAMES
     force=False IF YOU PREFER TO use setDefault()
     """
     if isinstance(obj, NullType):
         d = _get(obj, "__dict__")
         o = d["_obj"]
-        p = d["_path"]
-        s = split_field(p)+path
+        p = d["__key__"]
+        s = [p]+path
         return _assign(o, s, value)
 
     path0 = path[0]

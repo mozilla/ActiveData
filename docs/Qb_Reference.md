@@ -1,33 +1,5 @@
-Qb (pronounced kyo͞ob) Queries
-==============================
-
-Motivation
-----------
-
-[Data cubes](http://en.wikipedia.org/wiki/OLAP_cube) facilitate strong typing of data volumes.  Thier cartesian nature
-makes counting and aggregation trivial, provably correct, operations. [MultiDimensional query eXpressions (MDX)](http://en.wikipedia.org/wiki/MultiDimensional_eXpressions)
-takes advantage of the data cube uniformity to provide a simple query language to filter and group by.  Unfortunately,
-MDX is too simple for general use, and requires copious up-front work to get the data in the cubic form required.
-
-My experience with ETL has shown existing languages to be lacking:  Javascript, and procedural languages in general,
-are not suited for general transformations because the logic is hidden in loops and handling edge case of those loops.
-SQL has been my preferred ETL language because it can state many common data transformations simply, but [SQL has many
-of it's own shortcomings](SQL Shortcomings.md)
-
-I want to extend SQL with the good parts of MDX to provide a ETL data transformation language which will avoid common
-ETL bugs.
-
-
-Design
-------
-
-Generally, Qb queries are JSON structures meant to mimic the Abstract Syntax
-Tree (AST) of SQL for the same.  It is hoped the similarity with SQL will
-make it accessible to a wider audience.   The JSON nature is simply to avoid
-making another language parser.
-
-There are differences when it comes to ```group by``` and joins, but that
-is the influence of MDX.
+Qb Reference
+============
 
 Intended Audience
 -----------------
@@ -62,6 +34,7 @@ where clause.  Use sub queries to get around this limitation for now.
 
   - **from** – the array, or list, to operate on.  Can also be the results of a query, or an in-lined subquery.
   - **edges** – definition of the edge names and their domains
+  - **groupby** - names of the attributes to group by
   - **where** – early in the processing to limit rows and aggregation: has access to domain names
   - **select** – additional aggregate columns added
   - **window** – window columns added

@@ -667,9 +667,18 @@ class Alias(object):
                 self.cluster.cluster_metadata = None
                 return self.get_schema(retry=False)
 
-            if not index.mappings[self.settings.type]:
+            properties = index.mappings[self.settings.type]
+
+
+            #TODO: REMOVE THIS BUG CORRECTION
+            if not properties and self.settings.type=="test_result":
+                properties = index.mappings["test_results"]
+            # DONE BUG CORRECTION
+
+
+            if not properties:
                 Log.error("ElasticSearch index ({{index}}) does not have type ({{type}})", self.settings)
-            return index.mappings[self.settings.type]
+            return properties
         else:
             mapping = self.cluster.get(self.path + "/_mapping")
             if not mapping[self.settings.type]:

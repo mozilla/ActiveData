@@ -593,7 +593,11 @@ Qb.ActiveDataCube2List=function(query, options){
 	var edge_names=edges.select("name");
 
 	endFunction = edges.map(function(e){
-		if (MVEL.isKeyword(e.domain.key)){
+		if (e.domain.key===undefined){
+			return function(part){
+				return part;
+			};
+		}else if (MVEL.isKeyword(e.domain.key)){
 			return function(part){
 				if (part===undefined || part==null){
 					return null;
@@ -616,7 +620,16 @@ Qb.ActiveDataCube2List=function(query, options){
 
 
 	var select = Array.newInstance(query.select);
-	if (select.length == 0) Log.error("Do not know how to listify cube with no select");
+	if (select.length == 0){
+		//MAYBE IT IS A ZERO-CUBE?
+		for(var i=0;i<edges.length;i++){
+			e = edges[i];
+			if (Array.newInstance(e.domain.partitions).length==0){
+				return [];
+			}//endif
+		}//for
+		Log.error("Do not know how to listify cube with no select");
+	}//endif
 	var select_names = select.select("name");
 	var m = new Matrix({"data": query.cube[select_names[0]]});
 

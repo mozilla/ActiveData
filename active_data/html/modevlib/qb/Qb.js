@@ -589,7 +589,13 @@ Qb.ActiveDataCube2List=function(query, options){
 	//PRECOMPUTE THE EDGES
 	var edges = Array.newInstance(query.edges);
 	var domains = edges.select("domain");
-	var parts=domains.select("partitions");
+	var parts=domains.forall(function(d, i){
+		if (d.type=="rownum"){
+			return Array.newRange(d.min, d.max);
+		}else {
+			return d.partitions;
+		}//endif
+	});
 	var edge_names=edges.select("name");
 
 	endFunction = edges.map(function(e){

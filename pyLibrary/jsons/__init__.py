@@ -78,9 +78,10 @@ def _scrub(value, is_done):
     elif type is Decimal:
         return float(value)
     elif isinstance(value, dict):
-        if id(value) in is_done:
+        _id = id(value)
+        if _id in is_done:
             Log.error("possible loop in structure detected")
-        is_done.add(id(value))
+        is_done.add(_id)
 
         output = {}
         for k, v in value.iteritems():
@@ -89,6 +90,8 @@ def _scrub(value, is_done):
             v = _scrub(v, is_done)
             if v != None or isinstance(v, dict):
                 output[k] = v
+
+        is_done.discard(_id)
         return output
     elif type in (list, DictList):
         output = []

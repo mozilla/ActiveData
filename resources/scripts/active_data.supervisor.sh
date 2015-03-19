@@ -1,5 +1,5 @@
 cd /home/ubuntu/ActiveData/
-sudo git checkout etl
+sudo git checkout master
 sudo git stash
 sudo git pull origin master
 sudo git stash apply

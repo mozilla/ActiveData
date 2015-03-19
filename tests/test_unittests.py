@@ -61,6 +61,46 @@ class TestUnittests(ActiveDataBaseTest):
 
         Log.note("result\n{{result|indent}}", {"result": result})
 
+
+{
+	"from":"unittest",
+	"select":[
+		{
+			"name":"total_duration",
+			"value":"run.stats.duration",
+			"aggregate":"sum"
+		},
+		{
+			"name":"count",
+			"value":"run.stats.duration",
+			"aggregate":"count"
+		},
+		{
+			"name":"avg_duration",
+			"value":"run.stats.duration",
+			"aggregate":"average"
+		}
+	],
+	"edges":[{
+		"name":"combo",
+		"value":[
+			"machine.platform",
+			"machine.os",
+			"run.suite",
+			"result.test",
+			"run.chunk"
+		]
+	}],
+	"where":{"and":[
+		{"term":{"etl.id":0}},
+		{"gte":{"run.stats.start_time":"{{today|week-week}}"}},
+		{"lt":{"run.stats.start_time":"{{today|week}}"}}
+	]}
+}
+
+# LIMIT NOT WORKING ON EDGES
+{"from":"unittest","edges":["result.test"],"limit":10000}
+
     def test_timing(self):
         if self.not_real_service():
             return

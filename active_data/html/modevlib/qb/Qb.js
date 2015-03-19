@@ -637,7 +637,7 @@ Qb.ActiveDataCube2List=function(query, options){
 		Log.error("Do not know how to listify cube with no select");
 	}//endif
 	var select_names = select.select("name");
-	var m = new Matrix({"data": query.cube[select_names[0]]});
+	var m = new Matrix({"data": nvl(query.cube[select_names[0]], [])});
 
 
 	var output = [];

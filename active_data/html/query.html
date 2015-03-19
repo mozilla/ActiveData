@@ -171,7 +171,7 @@ var executeCube = function(event){
 			$("#cube").val(convert.value2json(convert.json2value(code)));
 			$("#result").html("<div>" + rows.length + " rows (up to 3000 shown)</div>" + convert.List2HTMLTable(rows, {"limit": 3000}));
 		} catch (e) {
-			$("#notes").show().val(e.message);
+			$("#notes").show().val(e.toString());
 		}finally{
 			Log.actionDone(a);
 		}//try

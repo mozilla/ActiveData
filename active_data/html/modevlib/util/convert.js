@@ -818,7 +818,7 @@ convert.esFilter2function=function(esFilter){
 			return true;
 		};
 	} else if (op=="script"){
-		Log.error("not supported");
+		Log.error("scripts not supported");
 	}else if (op=="prefix"){
 		var pair = esFilter[op];
 		var variableName = Object.keys(pair)[0];

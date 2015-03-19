@@ -33,30 +33,12 @@ THIS IS A DEMONSTRATION OF USING THE ESQueryRunner
 	<div id="description">
 		Converts Qb queries to ElasticSearch queries.
 		<ul>
+			<li><a href="https://github.com/klahnakoski/ActiveData/blob/master/docs/Qb_Tutorial.md">Unittest Tutorial</a></li>
 			<li><a href="https://github.com/klahnakoski/ActiveData/blob/master/docs/Qb_Reference.md">Reference Documentation</a></li>
 			<li><a href="https://github.com/klahnakoski/ActiveData/blob/master/docs/BZ_Tutorial.md">Bugzilla Tutorial</a></li>
 			<li><a href="https://github.com/klahnakoski/ActiveData">ActiveData code on Github</a></li>
 		</ul>
 	</div>
-	<hr>
-	<div id="testMessage"></div>
-	<hr>
-	<div id="tools" class="parameters">
-		Override ES URL: <input id="index" name="Index" value=""><br>
-		<hr>
-		<b>Time Tools</b><br>
-		Current Time:
-		<div id="currtime"></div>
-		MilliTimeStamp:<input id="long2date" name="long2date" value="">
-
-		<div id="long2dateResult"></div>
-		Datetime:<input id="date2long" name="date2long" value="">
-
-		<div id="date2longResult"></div>
-	</div>
-	<div id="parameters" class="parameters">
-	</div>
-	<div id="filters" class="menu"></div>
 </div>
 <h3>ActiveData Query Tool</h3>
 
@@ -91,13 +73,6 @@ function setupBusySpinner(){
 	};//function
 
 
-	Thread.daemon(function*(){
-		$(".warning").html("");
-		while (true) {
-			$("#currtime").html("" + aMath.round(Date.now().getMilli(), -3));
-			yield (Thread.sleep(333));
-		}//while
-	});
 }
 
 importScript([], function(){

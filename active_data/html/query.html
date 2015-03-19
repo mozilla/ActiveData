@@ -157,7 +157,7 @@ var executeCube = function(event){
 				rows = Qb.Cube2List(data);
 			} else if (data.meta && data.meta.format == "table") {
 				data.columns = data.header;
-				rows = convert.Table2List(data);
+				rows = convert.Table2List({"columns":data.header, "rows":data.data});
 			} else if (data.meta && data.meta.format == "list") {
 				rows = data.data;
 			} else if (data.cube !== undefined) {

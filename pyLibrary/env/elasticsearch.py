@@ -517,7 +517,7 @@ class Cluster(object):
             if details.error:
                 Log.error(convert.quote2string(details.error))
             if details._shards.failed > 0:
-                Log.error("Shard failure")
+                Log.error("Shard failure", )
             return details
         except Exception, e:
             if url[0:4] != "http":
@@ -636,13 +636,15 @@ def _scrub(r):
 
 class Alias(object):
     @use_settings
-    def __init__(self, type, alias, explore_metadata=True, debug=False, settings=None):
-        """
-        alias - NAME OF THE ALIAS
-        type - SCHEMA NAME
-        explore_metadata == True - IF PROBING THE CLUSTER FOR METADATA IS ALLOWED
-        timeout == NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
-        """
+    def __init__(
+        self,
+        type,  # SCHEMA NAME
+        alias,  # NAME OF THE ALIAS
+        explore_metadata=True,  # IF PROBING THE CLUSTER FOR METADATA IS ALLOWED
+        debug=False,
+        timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
+        settings=None
+    ):
         self.debug = debug
         if self.debug:
             Log.alert("elasticsearch debugging on index {{index}} is on", {"index": settings.index})

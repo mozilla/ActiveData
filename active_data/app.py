@@ -71,15 +71,13 @@ def query(path):
                     }
                 )
 
-
-
             text = convert.utf82unicode(body)
             text = replace_vars(text)
             data = convert.json2value(text)
             record_request(flask.request, data, None, None)
             result = qb.run(data)
 
-        result.meta.active_data_response_time = total_duration.duration.seconds
+        result.meta.active_data_response_time = total_duration.seconds
 
         return Response(
             convert.unicode2utf8(convert.value2json(result)),
@@ -96,7 +94,7 @@ def query(path):
         record_request(flask.request, None, flask.request.environ['body_copy'], e)
         Log.warning("problem", e)
         e = e.as_dict()
-        e.meta.active_data_response_time = total_duration.duration.seconds
+        e.meta.active_data_response_time = total_duration.seconds
 
         return Response(
             convert.unicode2utf8(convert.value2json(e)),

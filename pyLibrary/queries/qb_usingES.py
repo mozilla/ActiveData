@@ -37,7 +37,7 @@ class FromES(Container):
     """
 
     @use_settings
-    def __init__(self, host, index, alias=None, name=None, type=None, port=9200, settings=None):
+    def __init__(self, host, index, type, alias=None, name=None,  port=9200, settings=None):
         self.settings = settings
         self.name = nvl(name, alias, index)
         self._es = elasticsearch.Alias(alias=nvl(alias, index), settings=settings)
@@ -116,7 +116,7 @@ class FromES(Container):
 
     def get_columns(self, _from_name=None):
         """
-        ENSURE COLUMNS FOR GIVEN INDEX/QUERY ARE LOADED, AND MVEL COMPILATION WORKS BETTER
+        ENSURE COLUMNS FOR GIVEN INDEX/QUERY ARE LOADED, MVEL COMPILATION WILL WORK BETTER
 
         _from_name - NOT MEANT FOR EXTERNAL USE
         """
@@ -128,7 +128,7 @@ class FromES(Container):
 
         output = INDEX_CACHE.get(_from_name)
         if output:
-            # VERIFY es IS CONSITENT
+            # VERIFY es IS CONSISTENT
             if self.url != output.url:
                 Log.error("Using {{name}} for two different containers\n\t{{existing}}\n\t{{new}}", {
                     "name": _from_name,

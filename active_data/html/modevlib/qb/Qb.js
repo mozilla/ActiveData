@@ -584,12 +584,12 @@ Qb.toTable=function(query){
 
 Qb.ActiveDataCube2List=function(query, options){
 	//ActiveData CUBE IS A MAP OF CUBES   {"a": [[]], "b":[[]]}
-	//Javascript CUBE IS A CUBE OF MAPS   [[{"a":v, "b":w}]]
+	//MoDevLib CUBE IS A CUBE OF MAPS   [[{"a":v, "b":w}]]  which I now know as wrong
 
 	//PRECOMPUTE THE EDGES
 	var edges = Array.newInstance(query.edges);
 	var domains = edges.select("domain");
-	var parts=domains.forall(function(d, i){
+	var parts=domains.map(function(d, i){
 		if (d.type=="rownum"){
 			return Array.newRange(d.min, d.max);
 		}else {

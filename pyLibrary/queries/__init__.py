@@ -8,6 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
+from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, set_default, split_field
 
 from pyLibrary.dot.dicts import Dict
@@ -48,6 +49,8 @@ def wrap_from(frum, schema=None):
         return type2container["elasticsearch"](settings)
     elif isinstance(frum, dict) and frum.type and type2container[frum.type]:
         # TODO: Ensure the frum.name is set, so we capture the deep queries
+        if not frum.type:
+            Log.error("Expecting from clause to have a 'type' property")
         return type2container[frum.type](frum.settings)
     elif isinstance(frum, dict) and (frum["from"] or isinstance(frum["from"], (list, set))):
         from pyLibrary.queries.query import Query

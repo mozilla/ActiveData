@@ -234,34 +234,46 @@ def set_day(offset, day):
 
 
 def parse(value):
-    def simple_date(sign, dig, type):
+    def simple_date(sign, dig, type, floor):
         if dig or sign:
             from pyLibrary.debugs.logs import Log
             Log.error("can not accept a multiplier on a datetime")
 
-        try:
-            type, floor = type.split("|")
+        if floor:
             return Date(type).floor(Duration(floor))
-        except ValueError:
+        else:
             return Date(type)
 
-    terms = re.match(r'(\d*[|\w]+)([+-]\d*[|\w]+)*', value).groups()
+    terms = re.match(r'(\d*[|\w]+)\s*([+-]\s*\d*[|\w]+)*', value).groups()
 
-    sign, dig, type = re.match(r'([+-]?)(\d*)([|\w]+)', terms[0]).groups()
+    sign, dig, type = re.match(r'([+-]?)\s*(\d*)([|\w]+)', terms[0]).groups()
+    if "|" in type:
+        type, floor = type.split("|")
+    else:
+        floor = None
+
     if type in MILLI_VALUES.keys():
         value = Duration(dig+type)
     else:
-        value = simple_date(sign, dig, type)
+        value = simple_date(sign, dig, type, floor)
 
     for term in terms[1:]:
         if not term:
             continue
-        sign, dig, type = re.match(r'([+-])(\d*)([|\w]+)', term).groups()
+        sign, dig, type = re.match(r'([+-])\s*(\d*)([|\w]+)', term).groups()
+        if "|" in type:
+            type, floor = type.split("|")
+        else:
+            floor = None
+
         op = {"+": "__add__", "-": "__sub__"}[sign]
         if type in MILLI_VALUES.keys():
+            if floor:
+                from pyLibrary.debugs.logs import Log
+                Log.error("floor (|) of duration not accepted")
             value = value.__getattribute__(op)(Duration(dig+type))
         else:
-            value = value.__getattribute__(op)(simple_date(sign, dig, type))
+            value = value.__getattribute__(op)(simple_date(sign, dig, type, floor))
 
     return value
 

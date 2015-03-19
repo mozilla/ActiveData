@@ -1,0 +1,35 @@
+{//TODO:  ALLOW THIS TYPE OF QUERY
+    "from": "unittest",
+    "select": "etl",  // I SUSPECT THIS IS THE PROBLEM (etl NOT REALLY A COLUMN TO ES)
+    "where": {
+        "and": [
+            {
+                "term": {
+                    "etl.source.source.id": 62408
+                }
+            },
+            {
+                "term": {
+                    "etl.source.id": 0
+                }
+            }
+        ]
+    },
+    "limit": 10
+}
+
+
+{//TODO: ALLOW SERVICE TO BE GIVEN PARTIAL SETTINGS TO SIGNAL SPECIFIC INDEXES
+    "from": {
+        "index": "unittest_2015-03-0820150316_172335",
+        "alias": "unittest"
+    },
+    "edges": [
+        "etl.source.source.id"
+    ]
+}
+
+
+{//TODO: DOES NOT SHOW EDGE VALUES
+"from":"unittest","edges":["etl.source.source.id"]
+}

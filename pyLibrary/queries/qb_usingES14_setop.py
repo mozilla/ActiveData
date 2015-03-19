@@ -102,7 +102,7 @@ def es_fieldop(es, query):
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]
 
         output = formatter(T, select, source)
-        output.meta.es_response_time = es_duration.duration.seconds
+        output.meta.es_response_time = es_duration.seconds
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
         return output

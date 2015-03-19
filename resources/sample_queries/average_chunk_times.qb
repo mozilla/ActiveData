@@ -1,35 +1,57 @@
 {
-	"from":{
-		"type":"elasticsearch",
-		"settings":{
-			"host":"http://52.10.116.229",
-			"index":"unittest",
-			"type":"test_result"
-		}
-	},
-	"select":[
-		{
-			"name":"total_duration",
-			"value":"run.stats.duration",
-			"aggregate":"sum"
-		},
-		{
-			"name":"count",
-			"value":"run.stats.duration",
-			"aggregate":"count"
-		},
-		{
-			"name":"avg_duration",
-			"value":"run.stats.duration",
-			"aggregate":"average"
-		}
-	],
-	"edges":[{
-			"name":"combo",
-			"value":["machine.platform","machine.os","run.suite","run.chunk"]
-		}],
-	"where":{"and":[
-		{"term":{"etl.id":0}},
-		{"gte":{"run.stats.start_time":"{{today|month}}"}}
-	]}
+    "from": {
+        "type": "elasticsearch",
+        "settings": {
+            "index": "unittest",
+            "type": "test_result",
+            "host": "http://52.10.189.133"
+        }
+    },
+    "select": [
+        {
+            "name": "total_duration",
+            "value": "run.stats.duration",
+            "aggregate": "sum"
+        },
+        {
+            "name": "count",
+            "value": "run.stats.duration",
+            "aggregate": "count"
+        },
+        {
+            "name": "avg_duration",
+            "value": "run.stats.duration",
+            "aggregate": "average"
+        }
+    ],
+    "edges": [
+        {
+            "name": "combo",
+            "value": [
+                "machine.platform",
+                "machine.os",
+                "run.suite",
+                "run.chunk"
+            ]
+        }
+    ],
+    "where": {
+        "and": [
+            {
+                "term": {
+                    "etl.id": 0
+                }
+            },
+            {
+                "gte": {
+                    "run.stats.start_time": "{{today|week-week}}"
+                }
+            },
+            {
+                "lt": {
+                    "run.stats.start_time": "{{today|week}}"
+                }
+            }
+        ]
+    }
 }

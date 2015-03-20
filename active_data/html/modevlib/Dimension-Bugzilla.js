@@ -39,7 +39,7 @@ Dimension.addEdges(true,  Mozilla, [
 	{"name":"ScrumBugs", "index":"bugs", "edges":[{
 		"name": "Points",
 		"type":"set",
-		"isFacet":true, //MULTIVALUED ATTRIBUTES CAN NOT BE HANDLED BY MVEL.Parts2Term()
+		"isFacet":true, //MULTIVALUED ATTRIBUTES CAN NOT BE HANDLED BY es09.expressions.Parts2Term()
 		"esfilter":ESQuery.TrueFilter,
 		"partitions":[
 			{"name":"P0", "esfilter":{"or":[
@@ -218,7 +218,7 @@ Dimension.addEdges(true,  Mozilla, [
 	{"name":"Security", "edges":[
 		{"name":"Priority",
 			"type":"set",
-			"isFacet":true, //MULTIVALUED ATTRIBUTES CAN NOT BE HANDLED BY MVEL.Parts2Term()
+			"isFacet":true, //MULTIVALUED ATTRIBUTES CAN NOT BE HANDLED BY es09.expressions.Parts2Term()
 			"partitions":[
 				{"name":"Critical", "weight":5, "style":{"color":"red"}, "esfilter":
 					{"or":[
@@ -249,7 +249,7 @@ Dimension.addEdges(true,  Mozilla, [
 		},
 		{"name":"Teams",
 			"type":"set",
-			"isFacet":true, //MULTIVALUED ATTRIBUTES CAN NOT BE HANDLED BY MVEL.Parts2Term()
+			"isFacet":true, //MULTIVALUED ATTRIBUTES CAN NOT BE HANDLED BY es09.expressions.Parts2Term()
 			"esfilter": {"match_all":{}},
 			"partitions":[
 			{"name": "Mobile", "esfilter":

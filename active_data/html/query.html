@@ -33,7 +33,7 @@ THIS IS A DEMONSTRATION OF USING THE ESQueryRunner
 	<div id="description">
 		Converts Qb queries to ElasticSearch queries.
 		<ul>
-			<li><a href="https://github.com/klahnakoski/ActiveData/blob/master/docs/Qb_Tutorial.md">Unittest Tutorial</a></li>
+			<li><a href="https://github.com/klahnakoski/ActiveData/blob/master/docs/Qb_TutorialReference.md">Unittest Tutorial</a></li>
 			<li><a href="https://github.com/klahnakoski/ActiveData/blob/master/docs/Qb_Reference.md">Reference Documentation</a></li>
 			<li><a href="https://github.com/klahnakoski/ActiveData/blob/master/docs/BZ_Tutorial.md">Bugzilla Tutorial</a></li>
 			<li><a href="https://github.com/klahnakoski/ActiveData">ActiveData code on Github</a></li>
@@ -72,6 +72,9 @@ function setupBusySpinner(){
 		l.hide();
 	};//function
 
+	Thread.run(function*(){
+		$(".warning").html("");
+	});
 
 }
 

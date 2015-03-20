@@ -26,7 +26,7 @@
 	],
 	"edges":[{
 		"name":"combo",
-		"value":["machine.platform","machine.os","run.suite","run.chunk"]
+		"value":["machine.platform","machine.os","run.suite","result.test","run.chunk"]
 	}],
 	"where":{"and":[
 		{"term":{"etl.id":0}},

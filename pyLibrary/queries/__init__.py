@@ -8,9 +8,9 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
+
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, set_default, split_field
-
 from pyLibrary.dot.dicts import Dict
 
 
@@ -60,3 +60,4 @@ def wrap_from(frum, schema=None):
 
 
 
+import es09.util

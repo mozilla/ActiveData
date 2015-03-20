@@ -12,9 +12,9 @@ from __future__ import division
 from pyLibrary.collections import AND, reverse
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
-from pyLibrary.queries import MVEL, wrap_from
+from pyLibrary.queries import wrap_from
 from pyLibrary.queries.dimensions import Dimension
-from pyLibrary.queries.domains import Domain
+from pyLibrary.queries.domains import Domain, is_keyword
 from pyLibrary.queries.filters import TRUE_FILTER, simplify_esfilter
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import nvl, split_field, join_field, Null, set_default
@@ -30,9 +30,10 @@ def _late_import():
     global qb
     global INDEX_CACHE
 
-    from pyLibrary.queries.qb_usingES_util import INDEX_CACHE
     from pyLibrary.queries import qb
-
+    from pyLibrary.queries.es09.util import INDEX_CACHE
+    qb=qb
+    INDEX_CACHE=INDEX_CACHE
 
 
 class Query(object):
@@ -206,8 +207,10 @@ def _normalize_edge(edge, schema=None):
         )
 
 
-def _normalize_groupby(edges, schema=None):
-    return [_normalize_group(e, schema=schema) for e in listwrap(edges)]
+def _normalize_groupby(groupby, schema=None):
+    if groupby == None:
+        return None
+    return [_normalize_group(e, schema=schema) for e in listwrap(groupby)]
 
 
 def _normalize_group(edge, schema=None):
@@ -299,7 +302,7 @@ def _map_term_using_schema(master, path, term, schema_edges):
                             output.append({"term": {es_field: local_value}})
                     continue
 
-                if len(dimension.fields) == 1 and MVEL.isKeyword(dimension.fields[0]):
+                if len(dimension.fields) == 1 and is_keyword(dimension.fields[0]):
                     # SIMPLE SINGLE-VALUED FIELD
                     if domain.getPartByKey(v) is domain.NULL:
                         output.append({"missing": {"field": dimension.fields[0]}})
@@ -307,7 +310,7 @@ def _map_term_using_schema(master, path, term, schema_edges):
                         output.append({"term": {dimension.fields[0]: v}})
                     continue
 
-                if AND(MVEL.isKeyword(f) for f in dimension.fields):
+                if AND(is_keyword(f) for f in dimension.fields):
                     # EXPECTING A TUPLE
                     if not isinstance(v, tuple):
                         Log.error("expecing {{name}}={{value}} to be a tuple", {"name": k, "value": v})
@@ -318,7 +321,7 @@ def _map_term_using_schema(master, path, term, schema_edges):
                         else:
                             output.append({"term": {f: vv}})
                     continue
-            if len(dimension.fields) == 1 and MVEL.isKeyword(dimension.fields[0]):
+            if len(dimension.fields) == 1 and is_keyword(dimension.fields[0]):
                 if domain.getPartByKey(v) is domain.NULL:
                     output.append({"missing": {"field": dimension.fields[0]}})
                 else:
@@ -368,7 +371,7 @@ def _get_nested_path(field, schema):
     if not INDEX_CACHE:
         _late_import()
 
-    if MVEL.isKeyword(field):
+    if is_keyword(field):
         field = join_field([schema.es.alias] + split_field(field))
         for i, f in reverse(enumerate(split_field(field))):
             path = join_field(split_field(field)[0:i + 1:])
@@ -418,7 +421,7 @@ def _where_terms(master, where, schema):
                                     and_agg.append({"term": {es_field: vvv}})
                             or_agg.append({"and": and_agg})
                         output.append({"or": or_agg})
-                    elif isinstance(fields, list) and len(fields) == 1 and MVEL.isKeyword(fields[0]):
+                    elif isinstance(fields, list) and len(fields) == 1 and is_keyword(fields[0]):
                         output.append({"terms": {fields[0]: v}})
                     elif domain.partitions:
                         output.append({"or": [domain.getPartByKey(vv).esfilter for vv in v]})

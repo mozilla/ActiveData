@@ -107,6 +107,11 @@ class Matrix(object):
         try:
             if len(key) != self.num:
                 Log.error("Expecting coordinates to match the number of dimensions")
+
+            if self.num == 0:
+                self.cube = value
+                return
+
             last = self.num - 1
             m = self.cube
             for k in key[0:last:]:

@@ -12,13 +12,14 @@ from __future__ import division
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import COUNT, PRODUCT
-from pyLibrary.queries import qb_usingES_util
+from pyLibrary.queries import domains
 from pyLibrary.queries.cube import Cube
-from pyLibrary.queries.qb_usingES_util import aggregates, buildFromES, compileEdges2Term
+from pyLibrary.queries.domains import is_keyword
+from pyLibrary.queries.es09.util import aggregates, build_es_query, compileEdges2Term
 from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import domains, MVEL, filters
-from pyLibrary.queries.MVEL import UID
+from pyLibrary.queries.es09.expressions import UID
+from pyLibrary.queries import es09
 from pyLibrary.dot import literal_field, nvl
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
@@ -71,7 +72,7 @@ def es_terms_stats(esq, mvel, query):
         special_index = -1
         for i, e in enumerate(facetEdges):
             l = len(e.domain.partitions)
-            if ((e.value and MVEL.isKeyword(e.value)) or len(e.domain.dimension.fields) == 1) and l > num_parts:
+            if ((e.value and is_keyword(e.value)) or len(e.domain.dimension.fields) == 1) and l > num_parts:
                 num_parts = l
                 specialEdge = e
                 special_index = i
@@ -121,7 +122,7 @@ def es_terms_stats(esq, mvel, query):
         Log.error("not implemented yet")  # WE HAVE SOME SERIOUS PERMUTATIONS, WE MUST ISSUE MULTIPLE QUERIES
         pass
 
-    FromES = buildFromES(query)
+    FromES = build_es_query(query)
 
     for s in select:
         for parts in esFacets:
@@ -138,15 +139,15 @@ def es_terms_stats(esq, mvel, query):
             FromES.facets[name] = {
                 "terms_stats": {
                     "key_field": calcTerm.field,
-                    "value_field": s.value if MVEL.isKeyword(s.value) else None,
-                    "value_script": mvel.compile_expression(s.value) if not MVEL.isKeyword(s.value) else None,
+                    "value_field": s.value if is_keyword(s.value) else None,
+                    "value_script": mvel.compile_expression(s.value) if not is_keyword(s.value) else None,
                     "size": nvl(query.limit, 200000)
                 }
             }
             if condition:
                 FromES.facets[name].facet_filter = simplify_esfilter({"and": condition})
 
-    data = qb_usingES_util.post(esq.es, FromES, query.limit)
+    data = es09.util.post(esq.es, FromES, query.limit)
 
     if specialEdge.domain.type not in domains.KNOWN:
         # WE BUILD THE PARTS BASED ON THE RESULTS WE RECEIVED
@@ -241,13 +242,13 @@ def buildCondition(mvel, edge, partition):
         # MUST USE THIS' esFacet
         condition = wrap(nvl(partition.where, {"and": []}))
 
-        if partition.min and partition.max and MVEL.isKeyword(edge.value):
+        if partition.min and partition.max and is_keyword(edge.value):
             condition["and"].append({
                 "range": {edge.value: {"gte": partition.min, "lt": partition.max}}
             })
 
         # ES WILL FREAK OUT IF WE SEND {"not":{"and":x}} (OR SOMETHING LIKE THAT)
-        return filters.simplify_esfilter(condition)
+        return simplify_esfilter(condition)
     elif edge.range:
         # THESE REALLY NEED FACETS TO PERFORM THE JOIN-TO-DOMAIN
         # USE MVEL CODE
@@ -256,43 +257,43 @@ def buildCondition(mvel, edge, partition):
 
             if edge.range.mode and edge.range.mode == "inclusive":
                 # IF THE range AND THE partition OVERLAP, THEN MATCH IS MADE
-                if MVEL.isKeyword(edge.range.min):
-                    output["and"].append({"range": {edge.range.min: {"lt": MVEL.value2value(partition.max)}}})
+                if is_keyword(edge.range.min):
+                    output["and"].append({"range": {edge.range.min: {"lt": es09.expressions.value2value(partition.max)}}})
                 else:
                     # WHOA!! SUPER SLOW!!
                     output["and"].append({"script": {"script": mvel.compile_expression(
-                        edge.range.min + " < " + MVEL.value2MVEL(partition.max)
+                        edge.range.min + " < " + es09.expressions.value2MVEL(partition.max)
                     )}})
 
-                if MVEL.isKeyword(edge.range.max):
+                if is_keyword(edge.range.max):
                     output["and"].append({"or": [
                         {"missing": {"field": edge.range.max}},
-                        {"range": {edge.range.max, {"gt": MVEL.value2value(partition.min)}}}
+                        {"range": {edge.range.max, {"gt": es09.expressions.value2value(partition.min)}}}
                     ]})
                 else:
                     # WHOA!! SUPER SLOW!!
                     output["and"].append({"script": {"script": mvel.compile_expression(
-                        edge.range.max + " > " + MVEL.value2MVEL(partition.min))}})
+                        edge.range.max + " > " + es09.expressions.value2MVEL(partition.min))}})
 
             else:
                 # SNAPSHOT - IF range INCLUDES partition.min, THEN MATCH IS MADE
-                if MVEL.isKeyword(edge.range.min):
-                    output["and"].append({"range": {edge.range.min: {"lte": MVEL.value2value(partition.min)}}})
+                if is_keyword(edge.range.min):
+                    output["and"].append({"range": {edge.range.min: {"lte": es09.expressions.value2value(partition.min)}}})
                 else:
                     # WHOA!! SUPER SLOW!!
                     output["and"].append({"script": {"script": mvel.compile_expression(
-                        edge.range.min + "<=" + MVEL.value2MVEL(partition.min)
+                        edge.range.min + "<=" + es09.expressions.value2MVEL(partition.min)
                     )}})
 
-                if MVEL.isKeyword(edge.range.max):
+                if is_keyword(edge.range.max):
                     output["and"].append({"or": [
                         {"missing": {"field": edge.range.max}},
-                        {"range": {edge.range.max, {"gte": MVEL.value2value(partition.min)}}}
+                        {"range": {edge.range.max, {"gte": es09.expressions.value2value(partition.min)}}}
                     ]})
                 else:
                     # WHOA!! SUPER SLOW!!
                     output["and"].append({"script": {"script": mvel.compile_expression(
-                        MVEL.value2MVEL(partition.min) + " <= " + edge.range.max
+                        es09.expressions.value2MVEL(partition.min) + " <= " + edge.range.max
                     )}})
             return output
         else:
@@ -301,11 +302,11 @@ def buildCondition(mvel, edge, partition):
     elif not edge.value:
         # MUST USE THIS' esFacet, AND NOT(ALL THOSE ABOVE)
         return partition.esfilter
-    elif MVEL.isKeyword(edge.value):
+    elif is_keyword(edge.value):
         # USE FAST ES SYNTAX
         if edge.domain.type in domains.ALGEBRAIC:
             output.range = {}
-            output.range[edge.value] = {"gte": MVEL.value2query(partition.min), "lt": MVEL.value2query(partition.max)}
+            output.range[edge.value] = {"gte": es09.expressions.value2query(partition.min), "lt": es09.expressions.value2query(partition.max)}
         elif edge.domain.type == "set":
             if partition.value:
                 if partition.value != edge.domain.getKey(partition):
@@ -325,11 +326,11 @@ def buildCondition(mvel, edge, partition):
     else:
         # USE MVEL CODE
         if edge.domain.type in domains.ALGEBRAIC:
-            output.script = {"script": edge.value + ">=" + MVEL.value2MVEL(partition.min) + " and " + edge.value + "<" + MVEL.value2MVEL(partition.max)}
+            output.script = {"script": edge.value + ">=" + es09.expressions.value2MVEL(partition.min) + " and " + edge.value + "<" + es09.expressions.value2MVEL(partition.max)}
         else:
-            output.script = {"script": "( " + edge.value + " ) ==" + MVEL.value2MVEL(partition.value)}
+            output.script = {"script": "( " + edge.value + " ) ==" + es09.expressions.value2MVEL(partition.value)}
 
-        code = MVEL.addFunctions(output.script.script)
+        code = es09.expressions.addFunctions(output.script.script)
         output.script.script = code.head + code.body
         return output
 

@@ -89,7 +89,14 @@ Rest.send=function*(ajaxParam){
 			} else if (request.isTimeout){
 				callback(new Exception("Error while calling " + ajaxParam.url, Exception.TIMEOUT));
 			} else {
-				ajaxParam.error(new Exception("Bad response ("+request.status+")", convert.String2Quote(request.responseText)));
+				var resp;
+				try {
+					resp = convert.json2value(request.responseText)
+				}catch(e){
+					resp = convert.String2Quote(request.responseText)
+				}
+
+				ajaxParam.error(new Exception("Bad response ("+request.status+")", resp));
 			}//endif
 		} else if (request.readyState == 3){
 			//RESPONSE IS ARRIVING, DISABLE TIMEOUT

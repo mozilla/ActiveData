@@ -80,7 +80,7 @@ class _MVEL(object):
         path = split_field(fromPath)
 
         # ADD LOCAL VARIABLES
-        from pyLibrary.queries.qb_usingES_util import INDEX_CACHE
+        from pyLibrary.queries.es09.util import INDEX_CACHE
 
         columns = INDEX_CACHE[path[0]].columns
         for i, c in enumerate(columns):

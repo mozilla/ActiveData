@@ -5,7 +5,7 @@ Intended Audience
 -----------------
 
 This document is only a reference document.  It is expected the reader already
-knows how to write Qb queries.  For a tutorial, start [here](BZ_Tutorial.md)
+knows how to write Qb queries.  For a tutorial, start [here](Qb_Tutorial.md)
 
 
 Nomenclature
@@ -204,7 +204,7 @@ edges
 -----
 
 The edges clause is an array of edge definitions.  Each edge is a column which SQL group-by will be applied; with the
-additional stipulation that all parts of all domains will have values, even if null (count==0).
+additional stipulation that all parts of all domains are represented, even if null (count==0).
 
   - **name** – The name given to the resulting edge (optional, if the value is a simple attribute name)
   - **value** – The code to generate the edge value before grouping

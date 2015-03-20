@@ -13,16 +13,16 @@ from __future__ import division
 from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, nvl, Null, split_field, join_field
-from pyLibrary.queries import qb_usingES_util, qb
+from pyLibrary.queries import qb, es09
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain
-from pyLibrary.queries.qb_usingES_util import aggregates1_4
+from pyLibrary.queries.es14.util import aggregates1_4
 from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.times.timer import Timer
 
 
 def is_aggsop(es, query):
     es.cluster.get_metadata()
-    if es.cluster.version.startswith("1.4") and (query.edges or query.groupby):
+    if es.cluster.version.startswith("1.4") and (query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate)):
         return True
     return False
 
@@ -39,7 +39,7 @@ def es_aggsop(es, frum, query):
         else:
             es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].field = s.value
 
-    decoders = [AggsDecoder(e) for e in nvl(query.edges, query.groupby)]
+    decoders = [AggsDecoder(e, query) for e in nvl(query.edges, query.groupby, [])]
     start = 0
     for d in decoders:
         es_query = d.append_query(es_query, start)
@@ -61,14 +61,17 @@ def es_aggsop(es, frum, query):
         })
 
     with Timer("ES query time") as es_duration:
-        result = qb_usingES_util.post(es, es_query, query.limit)
+        result = es09.util.post(es, es_query, query.limit)
 
     try:
-        formatter, groupby_formatter, mime_type = format_dispatch[query.format]
+        formatter, groupby_formatter, aggop_formatter, mime_type = format_dispatch[query.format]
         if query.edges:
             output = formatter(decoders, result.aggregations, start, query, select)
-        else:
+        elif query.groupby:
             output = groupby_formatter(decoders, result.aggregations, start, query, select)
+        else:
+            output = aggop_formatter(decoders, result.aggregations, start, query, select)
+
         output.meta.es_response_time = es_duration.seconds
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
@@ -100,7 +103,7 @@ class AggsDecoder(object):
             Log.error("domain type of {{type}} is not supported yet", {"type": e.domain.type})
 
 
-    def __init__(self, edge):
+    def __init__(self, edge, query):
         self.start = None
         self.edge = edge
         self.name = literal_field(self.edge.name)
@@ -239,16 +242,23 @@ class TimeDecoder(AggsDecoder):
 class DefaultDecoder(SetDecoder):
     # FOR DECODING THE default DOMAIN TYPE (UNKNOWN-AT-QUERY-TIME SET OF VALUES)
 
-    def __init__(self, edge):
-        AggsDecoder.__init__(self, edge)
+    def __init__(self, edge, query):
+        AggsDecoder.__init__(self, edge, query)
         self.edge = self.edge.copy()
         self.edge.allowNulls = False  # SINCE WE DO NOT KNOW THE DOMAIN, WE HAVE NO SENSE OF WHAT IS OUTSIDE THAT DOMAIN, allowNulls==True MAKES NO SENSE
         self.edge.domain.partitions = set()
+        self.edge.domain.limit = nvl(self.edge.domain.limit, query.limit, 10)
 
     def append_query(self, es_query, start):
         self.start = start
         return wrap({"aggs": {
-            "_match": set_default({"terms": {"field": self.edge.value}}, es_query),
+            "_match": set_default(
+                {"terms": {
+                    "field": self.edge.value,
+                    "size": self.edge.domain.limit
+                }},
+                es_query
+            ),
             "_missing": set_default({"missing": {"field": self.edge.value}}, es_query),
         }})
 
@@ -270,8 +280,8 @@ class DefaultDecoder(SetDecoder):
 
 
 class DimFieldListDecoder(DefaultDecoder):
-    def __init__(self, edge):
-        DefaultDecoder.__init__(self, edge)
+    def __init__(self, edge, query):
+        DefaultDecoder.__init__(self, edge, query)
         self.fields = edge.domain.dimension.fields
 
     def append_query(self, es_query, start):
@@ -381,7 +391,7 @@ def count_dim(aggs, decoders):
 
 
 format_dispatch = {}
-from pyLibrary.queries.qb_usingES14_aggs_format import format_cube
+from pyLibrary.queries.es14.aggs_format import format_cube
 
 _ = format_cube
 

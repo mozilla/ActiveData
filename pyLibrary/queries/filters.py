@@ -28,7 +28,7 @@ def simplify_esfilter(esfilter):
     except Exception, e:
         from pyLibrary.debugs.logs import Log
 
-        raise Log.unexpected("programmer error")
+        raise Log.unexpected("programmer error", e)
 
 
 
@@ -195,29 +195,45 @@ def _convert_not(k, v):
     return {k: where2esfilter(v)}
 
 
-def _convert_in(k, v):
-    if isinstance(v, list):
-        v2 = [vv for vv in v if vv != None]
+def _convert_not_equal(op, term):
+    if isinstance(term, list):
+        Log.error("the 'ne' clause does not accept a list parameter")
+
+    var, val = term.items()[0]
+    if isinstance(val, list):
+        return {"not": {"terms": term}}
+    else:
+        return {"not": {"term": term}}
+
+
+def _convert_in(op, term):
+    if isinstance(term, list):
+        Log.error("the 'ne' clause does not accept a list parameter")
+
+    var, val = term.items()[0]
+
+    if isinstance(val, list):
+        v2 = [vv for vv in val if vv != None]
 
         if len(v2) == 0:
-            if len(v) == 0:
+            if len(val) == 0:
                 return False
             else:
-                return {"missing": {"field": k}}
+                return {"missing": {"field": var}}
 
         if len(v2) == 1:
-            output = {"term": {k: v2[0]}}
+            output = {"term": {var: v2[0]}}
         else:
-            output = {"terms": {k: v2}}
+            output = {"terms": {var: v2}}
 
-        if len(v2) != len(v):
+        if len(v2) != len(val):
             output = {"or": [
-                {"missing": {"field": k}},
+                {"missing": {"field": var}},
                 output
             ]}
         return output
     else:
-        return {"term": v}
+        return {"term": term}
 
 
 def _convert_inequality(ine, term):
@@ -240,6 +256,7 @@ converter_map = {
     "term": _convert_in,
     "terms": _convert_in,
     "eq": _convert_in,
+    "ne": _convert_not_equal,
     "in": _convert_in,
     "missing": _convert_field,
     "exists": _convert_field,

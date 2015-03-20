@@ -1,0 +1,37 @@
+//(3:28:26 PM) ekyle: jmaher: like maybe number of failures by seconds-into-test-suite?
+//(3:29:17 PM) ekyle: jmaher: you have specific tests/suites in mind?
+//(3:29:33 PM) jmaher: ekyle: mochitest-other to start with :)
+{
+    "from": {
+        "type": "elasticsearch",
+        "settings": {
+            "index": "unittest",
+            "type": "test_result",
+            "host": "http://52.10.189.133"
+        }
+    },
+    "select": {
+        "aggregate": "count"
+    },
+    "edges": [
+        {
+            "value": {
+                "sub": [
+                    "result.end_time",
+                    "run.start_time"
+                ]
+            },
+            "domain": {
+                "type": "duration",
+                "min": 0,
+                "max": "hour",
+                "interval": "minute"
+            }
+        }
+    ],
+    "where": {
+        "eq": {
+            "result.ok": false
+        }
+    }
+}

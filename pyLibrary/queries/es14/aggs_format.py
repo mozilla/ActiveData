@@ -13,9 +13,9 @@ from __future__ import division
 from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, literal_field, set_default
+from pyLibrary.dot import Dict, literal_field, set_default, nvl, wrap
 from pyLibrary.queries.cube import Cube
-from pyLibrary.queries.qb_usingES14_aggs import count_dim, aggs_iterator, format_dispatch
+from pyLibrary.queries.es14.aggs import count_dim, aggs_iterator, format_dispatch
 
 
 def format_cube(decoders, aggs, start, query, select):
@@ -37,6 +37,26 @@ def format_cube(decoders, aggs, start, query, select):
                     tuple(d.get_index(row) for d in decoders)
                     Log.error("", e)
     cube = Cube(query.select, new_edges, {s.name: m for s, m in matricies})
+    cube.frum = query
+    return cube
+
+
+def format_cube_from_aggop(decoders, aggs, start, query, select):
+    agg = aggs
+    b = nvl(agg._filter, agg._nested)
+    while b:
+        agg = b
+        b = nvl(agg._filter, agg._nested)
+
+    matricies = [(s, Matrix(dims=[], zeros=(s.aggregate == "count"))) for s in select]
+    for s, m in matricies:
+        if s.aggregate == "count" and (s.value == None or s.value == "."):
+            m[tuple()] = agg.doc_count
+        else:
+            if m != None:
+                Log.error("Not expected")
+            m[tuple()] = agg[literal_field(s.name)].value
+    cube = Cube(query.select, [], {s.name: m for s, m in matricies})
     cube.frum = query
     return cube
 
@@ -95,6 +115,29 @@ def format_table_from_groupby(decoders, aggs, start, query, select):
         meta={"format": "table"},
         header=header,
         data=list(data())
+    )
+
+
+def format_table_from_aggop(decoders, aggs, start, query, select):
+    header = select.name
+
+    agg = aggs
+    b = nvl(agg._filter, agg._nested)
+    while b:
+        agg = b
+        b = nvl(agg._filter, agg._nested)
+
+    row = []
+    for s in select:
+        if s.aggregate == "count" and (s.value == None or s.value == "."):
+            row.append(agg.doc_count)
+        else:
+            row.append(agg[literal_field(s.name)].value)
+
+    return Dict(
+        meta={"format": "table"},
+        header=header,
+        data=[row]
     )
 
 
@@ -178,6 +221,32 @@ def format_list(decoders, aggs, start, query, select):
     return output
 
 
+def format_list_from_aggop(decoders, aggs, start, query, select):
+    agg = aggs
+    b = nvl(agg._filter, agg._nested)
+    while b:
+        agg = b
+        b = nvl(agg._filter, agg._nested)
+
+    item = Dict()
+    for s in select:
+        if s.aggregate == "count" and (s.value == None or s.value == "."):
+            item[s.name] = agg.doc_count
+        else:
+            item[s.name] = agg[literal_field(s.name)].value
+
+    return wrap({
+        "meta": {"format": "list"},
+        "data": [item]
+    })
+
+
+
+
+
+
+
+
 def format_line(decoders, aggs, start, query, select):
     list = format_list(decoders, aggs, start, query, select)
 
@@ -189,10 +258,10 @@ def format_line(decoders, aggs, start, query, select):
 
 
 set_default(format_dispatch, {
-    None: (format_cube, format_table_from_groupby, "application/json"),
-    "cube": (format_cube, format_cube, "application/json"),
-    "table": (format_table, format_table_from_groupby, "application/json"),
-    "list": (format_list, format_list_from_groupby, "application/json"),
+    None: (format_cube, format_table_from_groupby, format_cube_from_aggop, "application/json"),
+    "cube": (format_cube, format_cube, format_cube_from_aggop, "application/json"),
+    "table": (format_table, format_table_from_groupby,format_table_from_aggop,  "application/json"),
+    "list": (format_list, format_list_from_groupby, format_list_from_aggop, "application/json"),
     # "csv": (format_csv, format_csv_from_groupby,  "text/csv"),
     # "tab": (format_tab, format_tab_from_groupby,  "text/tab-separated-values"),
     # "line": (format_line, format_line_from_groupby,  "application/json")

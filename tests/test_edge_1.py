@@ -427,6 +427,163 @@ class TestEdge1(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
+    def test_wo_limit(self):
+        """
+        TESTING THAT THE DEFAULT LIMIT IS APPLIED
+        """
+        test = {
+            "name": "sum column",
+            "metadata": {},
+            "data": long_test_data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": "v", "aggregate": "max"},
+                "edges": ["k"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"k": "a", "v": 1},
+                    {"k": "b", "v": 2},
+                    {"k": "c", "v": 3},
+                    {"k": "d", "v": 4},
+                    {"k": "e", "v": 5},
+                    {"k": "f", "v": 6},
+                    {"k": "g", "v": 7},
+                    {"k": "h", "v": 8},
+                    {"k": "i", "v": 9},
+                    {"k": "j", "v": 10}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["k", "v"],
+                "data": [
+                    ["a", 1],
+                    ["b", 2],
+                    ["c", 3],
+                    ["d", 4],
+                    ["e", 5],
+                    ["f", 6],
+                    ["g", 7],
+                    ["h", 8],
+                    ["i", 9],
+                    ["j", 10]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "k",
+                        "allowNulls": False,
+                        "domain": {
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [
+                                {"value": "a"},
+                                {"value": "b"},
+                                {"value": "c"},
+                                {"value": "d"},
+                                {"value": "e"},
+                                {"value": "f"},
+                                {"value": "g"},
+                                {"value": "h"},
+                                {"value": "i"},
+                                {"value": "j"}
+                            ]
+                        }
+                    }
+                ],
+                "data": {
+                    "v": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_limit(self):
+        test = {
+            "name": "sum column",
+            "metadata": {},
+            "data": long_test_data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": "v", "aggregate": "max"},
+                "edges": [{"value": "k", "domain": {"type": "default", "limit": 100}}]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"k": "a", "v": 1},
+                    {"k": "b", "v": 2},
+                    {"k": "c", "v": 3},
+                    {"k": "d", "v": 4},
+                    {"k": "e", "v": 5},
+                    {"k": "f", "v": 6},
+                    {"k": "g", "v": 7},
+                    {"k": "h", "v": 8},
+                    {"k": "i", "v": 9},
+                    {"k": "j", "v": 10},
+                    {"k": "k", "v": 11},
+                    {"k": "l", "v": 12},
+                    {"k": "m", "v": 13}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["k", "v"],
+                "data": [
+                    ["a", 1],
+                    ["b", 2],
+                    ["c", 3],
+                    ["d", 4],
+                    ["e", 5],
+                    ["f", 6],
+                    ["g", 7],
+                    ["h", 8],
+                    ["i", 9],
+                    ["j", 10],
+                    ["k", 11],
+                    ["l", 12],
+                    ["m", 13]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "k",
+                        "allowNulls": False,
+                        "domain": {
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [
+                                {"value": "a"},
+                                {"value": "b"},
+                                {"value": "c"},
+                                {"value": "d"},
+                                {"value": "e"},
+                                {"value": "f"},
+                                {"value": "g"},
+                                {"value": "h"},
+                                {"value": "i"},
+                                {"value": "j"},
+                                {"value": "k"},
+                                {"value": "l"},
+                                {"value": "m"}
+                            ]
+                        }
+                    }
+                ],
+                "data": {
+                    "v": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
 simple_test_data = [
     {"a": "c", "v": 13},
     {"a": "b", "v": 2},
@@ -434,6 +591,22 @@ simple_test_data = [
     {"a": "b"},
     {"a": "c", "v": 7},
     {"a": "c", "v": 11}
+]
+
+long_test_data = [
+    {"k": "a", "v": 1},
+    {"k": "b", "v": 2},
+    {"k": "c", "v": 3},
+    {"k": "d", "v": 4},
+    {"k": "e", "v": 5},
+    {"k": "f", "v": 6},
+    {"k": "g", "v": 7},
+    {"k": "h", "v": 8},
+    {"k": "i", "v": 9},
+    {"k": "j", "v": 10},
+    {"k": "k", "v": 11},
+    {"k": "l", "v": 12},
+    {"k": "m", "v": 13}
 ]
 
 

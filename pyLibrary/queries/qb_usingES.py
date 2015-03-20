@@ -13,15 +13,17 @@ from __future__ import division
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import MVEL, qb
+from pyLibrary.queries import es09
 from pyLibrary.queries.container import Container
-from pyLibrary.queries.qb_usingES09_aggop import is_aggop, es_aggop
-from pyLibrary.queries.qb_usingES14_aggs import es_aggsop, is_aggsop
-from pyLibrary.queries.qb_usingES14_setop import is_fieldop, is_setop, is_deep, es_setop, es_deepop, es_fieldop
-from pyLibrary.queries.qb_usingES09_terms import es_terms, is_terms
-from pyLibrary.queries.qb_usingES09_terms_stats import es_terms_stats, is_terms_stats
-from pyLibrary.queries.qb_usingES_util import aggregates, INDEX_CACHE, parse_columns
+from pyLibrary.queries.domains import is_keyword
+from pyLibrary.queries.es09.aggop import is_aggop, es_aggop
+from pyLibrary.queries.es09.util import parse_columns, INDEX_CACHE
+from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
+from pyLibrary.queries.es14.setop import is_fieldop, is_setop, is_deep, es_setop, es_deepop, es_fieldop
+from pyLibrary.queries.es09.terms import es_terms, is_terms
+from pyLibrary.queries.es09.terms_stats import es_terms_stats, is_terms_stats
 from pyLibrary.queries.dimensions import Dimension
+from pyLibrary.queries.es14.util import aggregates1_4
 from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
@@ -87,7 +89,7 @@ class FromES(Container):
         #     Log.warning("TODO: Fix this", e)
         #
         for s in listwrap(query.select):
-            if not aggregates[s.aggregate]:
+            if not aggregates1_4[s.aggregate]:
                 Log.error("ES can not aggregate " + self.select[0].name + " because '" + self.select[0].aggregate + "' is not a recognized aggregate")
 
         frum = query["from"]
@@ -237,10 +239,10 @@ class FromES(Container):
         # SCRIPT IS SAME FOR ALL (CAN ONLY HANDLE ASSIGNMENT TO CONSTANT)
         scripts = DictList()
         for k, v in command.set.items():
-            if not MVEL.isKeyword(k):
+            if not is_keyword(k):
                 Log.error("Only support simple paths for now")
 
-            scripts.append("ctx._source." + k + " = " + MVEL.value2MVEL(v) + ";\n")
+            scripts.append("ctx._source." + k + " = " + es09.expressions.value2MVEL(v) + ";\n")
         script = "".join(scripts)
 
         if results.hits.hits:

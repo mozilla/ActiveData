@@ -1,5 +1,5 @@
-Qb Query Tutorial (incomplete)
-=================
+ActiveData: Qb Query Tutorial (incomplete)
+==========================================
 
 Qb queries are very similar to LINQ in C# except the expression tree is written directly as JSON rather than being constructed from native language method calls.   
 
@@ -7,7 +7,7 @@ Qb queries are very similar to LINQ in C# except the expression tree is written 
 Simple `from` Clause 
 --------------------
 
-All queries must have a `from` clause, which is indicates what data is being queried.  ActiveData has a default documents store, and uses it to translate names to explicit cubes.
+All queries must have a `from` clause, which is indicates what data is being queried.  ActiveData has a default container, which it uses to translate names to explicit cubes.
 
 ```javascript
 {"from": "unittest"}

@@ -47,7 +47,7 @@ class Domain(object):
 
     def _set_slots_to_none(self, cls):
         """
-        WHY ARE SLOTS NOT ACCESIBLE UNTILO WE ASSIGN TO THEM?
+        WHY ARE SLOTS NOT ACCESIBLE UNTIL WE ASSIGN TO THEM?
         """
         if hasattr(cls, "__slots__"):
             for s in cls.__slots__:
@@ -116,7 +116,7 @@ class DefaultDomain(Domain):
     DOMAIN IS A LIST OF OBJECTS, EACH WITH A value PROPERTY
     """
 
-    __slots__ = ["NULL", "partitions", "map"]
+    __slots__ = ["NULL", "partitions", "map", "limit"]
 
     def __init__(self, **desc):
         Domain.__init__(self, **desc)
@@ -475,7 +475,7 @@ keyword_pattern = re.compile(r"\w+(?:\.\w+)*")
 
 
 def is_keyword(value):
-    if value == None:
+    if not value or not isinstance(value, basestring):
         return False
     return True if keyword_pattern.match(value) else False
 

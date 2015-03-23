@@ -556,7 +556,7 @@ wrapWithHtmlTag = function(tagName, value){
 		return prefix + value + suffix;
 	} else if (typeof(value) == "string") {
 		return prefix + convert.String2HTML(value) + suffix;
-	} else if (aMath.isNumeric(value) && ("" + value).length == 10 && ("" + value).startsWith("1")) {
+	} else if (aMath.isNumeric(value) && ("" + value).length == 10 && ("" + value).startsWith("1") && value>1200000000) {
 		//PROBABLY A UNIX TIMESTAMP
 		value = new Date(value*1000);
 		if (value.floorDay().getMilli() == value.getMilli()) {

@@ -24,9 +24,8 @@
 			"aggregate":"average"
 		}
 	],
-	"groupby":["machine.platform","machine.os","run.suite","run.chunk"],
+	"groupby":["machine.platform","machine.os","run.suite","run.test"],
 	"where":{"and":[
-		{"term":{"etl.id":0}},
 		{"gte":{"run.stats.start_time":"{{today|week-week}}"}},
 		{"lt":{"run.stats.start_time":"{{today|week}}"}}
 	]}

@@ -165,7 +165,8 @@ class Log(object):
 
     @classmethod
     def note(cls, template, params=None, stack_depth=0):
-        # USE replace() AS POOR MAN'S CHILD TEMPLATE
+        if len(template) > 10000:
+            template = template[:10000]
 
         log_params = Dict(
             template=template,

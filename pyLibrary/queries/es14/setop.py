@@ -13,7 +13,7 @@ from pyLibrary import queries
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND, SUM, OR, UNION
-from pyLibrary.dot import nvl, split_field, set_default, Dict, unwraplist
+from pyLibrary.dot import nvl, split_field, set_default, Dict, unwraplist, unwrap
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
 from pyLibrary.queries.domains import is_keyword
@@ -316,7 +316,7 @@ def format_cube(T, select, source):
             elif isinstance(s.value, list):
                 matricies[s.name] = Matrix.wrap([tuple(unwraplist(t[source][ss]) for ss in s.value) for t in T])
             else:
-                matricies[s.name] = Matrix.wrap([unwraplist(t[source][s.value]) for t in T])
+                matricies[s.name] = Matrix.wrap([unwraplist(t[source][s.value]) for t in unwrap(T)])
         except Exception, e:
             Log.error("", e)
     cube = Cube(select, edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(T), "interval": 1}}], data=matricies)

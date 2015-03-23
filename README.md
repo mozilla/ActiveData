@@ -3,7 +3,8 @@ Provide high speed filtering and aggregation over data see [ActiveData Wiki Page
 
 ## Requirements
 
-It is assumed you have Python2.7 installed.
+* Python2.7 installed
+* Access to an Elasticsearch cluster, or installed one locally
 
 
 ## Installation
@@ -23,7 +24,7 @@ The ActiveData service requires a configuration file that will point to the
 default ElasticSearch index.  You can find a few sample config files in
 `resources/config`.  `simple_settings.json` is simplest one:
 
-```json
+```javascript
     {
         "flask":{
              "host":"0.0.0.0",
@@ -64,7 +65,7 @@ Assuming you used the defaults, you can verify the service is up if you can
 access the Query Tool at [http://localhost:5000/tools/query.html](http://localhost:5000/tools/query.html).
 You may use it to send queries to your instance of the service.  For example:
 
-```json
+```javascript
     {"from":"unittest"}
 ```
 

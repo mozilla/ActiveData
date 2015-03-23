@@ -88,7 +88,7 @@ def es_fieldop(es, query):
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if s.value == "*":
             try:
-                column_names = set(query.frum.get_column_names())
+                column_names = set(c for c in query.frum.get_column_names() if c.find(".") == -1)
             except Exception, e:
                 Log.warning("can not get columns", e)
                 column_names = UNION(*[[k for k, v in row.items()] for row in T.select(source)])
@@ -105,7 +105,7 @@ def es_fieldop(es, query):
         output.meta.es_query = es_query
         return output
     except Exception, e:
-        Log.error("problem formatting")
+        Log.error("problem formatting", e)
 
 
 def is_setop(query):
@@ -316,7 +316,7 @@ def format_cube(T, select, source):
             elif isinstance(s.value, list):
                 matricies[s.name] = Matrix.wrap([tuple(unwraplist(t[source][ss]) for ss in s.value) for t in T])
             else:
-                matricies[s.name] = Matrix.wrap([unwraplist(t[source][s.value]) for t in unwrap(T)])
+                matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.value)) for t in unwrap(T)])
         except Exception, e:
             Log.error("", e)
     cube = Cube(select, edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(T), "interval": 1}}], data=matricies)

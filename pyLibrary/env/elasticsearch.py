@@ -679,7 +679,10 @@ class Alias(object):
 
 
             if not properties:
-                Log.error("ElasticSearch index ({{index}}) does not have type ({{type}})", self.settings)
+                Log.error("ElasticSearch index ({{index}}) does not have type ({{type}})", {
+                    "index":self.settings.index,
+                    "type":self.settings.type
+                })
             return properties
         else:
             mapping = self.cluster.get(self.path + "/_mapping")

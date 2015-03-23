@@ -1,7 +1,7 @@
 ActiveData: Qb Query Tutorial (incomplete)
 ==========================================
 
-Qb queries are very similar to LINQ in C# except the expression tree is written directly as JSON rather than being constructed from native language method calls.   
+Qb queries are JSON structures that attempt to mimic SQL queries: Where property names correspond to SQL clauses.  There are some differences from SQL, especially when it comes to using default clauses, but I hope your knowledge of SQL can jump-start your use of Qb.
 
 
 Simple `from` Clause 

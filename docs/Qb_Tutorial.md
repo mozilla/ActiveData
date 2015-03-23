@@ -1,7 +1,7 @@
 ActiveData: Qb Query Tutorial (incomplete)
 ==========================================
 
-Qb queries are JSON structures that attempt to mimic SQL queries: Where property names correspond to SQL clauses.  There are some differences from SQL, especially when it comes to using default clauses, but I hope your knowledge of SQL can jump-start your use of Qb.
+Qb queries are JSON structures that attempt to mimic SQL queries, where property names correspond to SQL clauses.  There are some differences from SQL, especially when it comes to using default clauses, but I hope your knowledge of SQL can jump-start your use of Qb.
 
 
 Simple `from` Clause 

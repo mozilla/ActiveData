@@ -11,8 +11,9 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from pyLibrary.collections import OR
+from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
-from pyLibrary.parsers import Log
+
 
 TRUE_FILTER = True
 FALSE_FILTER = False
@@ -28,7 +29,7 @@ def simplify_esfilter(esfilter):
     except Exception, e:
         from pyLibrary.debugs.logs import Log
 
-        raise Log.unexpected("programmer error", e)
+        Log.unexpected("programmer error", e)
 
 
 
@@ -207,9 +208,8 @@ def _convert_not_equal(op, term):
 
 
 def _convert_in(op, term):
-    if isinstance(term, list):
-        Log.error("the 'ne' clause does not accept a list parameter")
-
+    if not term:
+        Log.error("Expecting a term")
     var, val = term.items()[0]
 
     if isinstance(val, list):

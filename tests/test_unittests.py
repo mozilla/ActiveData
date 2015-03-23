@@ -138,7 +138,6 @@ class TestUnittests(ActiveDataBaseTest):
                 "build.branch"
             ],
             "where": {"or": [
-                {"term": {"build.id": None}},
                 {"missing": "build.id"}
                 # {"gte": {"timestamp": Date.floor(Date.now() - (Duration.DAY * 7), Duration.DAY).milli / 1000}}
             ]},

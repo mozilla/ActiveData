@@ -517,7 +517,7 @@ class Cluster(object):
             if details.error:
                 Log.error(convert.quote2string(details.error))
             if details._shards.failed > 0:
-                Log.error("Shard failure", )
+                Log.error("Shard failures {{failures|indent}}", {"failures": "---\n".join(r.replace(";", ";\n") for r in details._shards.failures.reason)})
             return details
         except Exception, e:
             if url[0:4] != "http":

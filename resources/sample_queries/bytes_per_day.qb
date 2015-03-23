@@ -1,22 +1,45 @@
 {
-	"from":"unittest",
-	"select":{
-		"name":"total_bytes",
-		"value":"run.stats.bytes",
-		"aggregate":"sum"
-	},
-	"edges":[{
-		"value":"etl.timestamp",
-		"domain":{
-			"type":"time",
-			"min":"today|month",
-			"max":"today|day",
-			"interval":"day"
-		}
-	}],
-	"where":{"and":[
-		{"term":{"etl.id":0}},
-		{"gte":{"etl.timestamp":"{{today|month}}"}},
-		{"lt":{"etl.timestamp":"{{now|day}}"}}
-	]}
+    "from": {
+        "type": "elasticsearch",
+        "settings": {
+            "index": "unittest",
+            "type": "test_result",
+            "host": "http://52.10.189.133"
+        }
+    },
+    "select": {
+        "name": "total_bytes",
+        "value": "run.stats.bytes",
+        "aggregate": "sum"
+    },
+    "edges": [
+        {
+            "value": "build.date",
+            "domain": {
+                "type": "time",
+                "min": "today|month",
+                "max": "today|day",
+                "interval": "day"
+            }
+        }
+    ],
+    "where": {
+        "and": [
+            {
+                "term": {
+                    "etl.id": 0
+                }
+            },
+            {
+                "gte": {
+                    "build.date": "{{today|month}}"
+                }
+            },
+            {
+                "lt": {
+                    "build.date": "{{now|day}}"
+                }
+            }
+        ]
+    }
 }

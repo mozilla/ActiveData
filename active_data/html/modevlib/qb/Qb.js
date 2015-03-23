@@ -637,8 +637,17 @@ Qb.ActiveDataCube2List=function(query, options){
 		Log.error("Do not know how to listify cube with no select");
 	}//endif
 	var select_names = select.select("name");
-	var m = new Matrix({"data": nvl(query.cube[select_names[0]], [])});
 
+	//DO NOT SHOW THE FIELDS WHICH ARE A PREFIX OF ANOTHER
+	select_names = select_names.map(function(v){
+		var is_prefix=v;
+		select_names.forall(function(u){
+			if (u.startsWith(v+".")) is_prefix=undefined;
+		});
+		return is_prefix;
+	});
+
+	var m = new Matrix({"data": nvl(query.cube[select_names[0]], [])});
 
 	var output = [];
 	m.forall(function(v, c){

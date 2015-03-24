@@ -34,7 +34,6 @@ from pyLibrary.dot import wrap, listwrap
 
 class FromES(Container):
     """
-
     SEND GENERAL qb QUERIES TO ElasticSearch
     """
 
@@ -46,6 +45,12 @@ class FromES(Container):
         self.edges = Dict()
         self.worker = None
         self.ready = False
+
+    @staticmethod
+    def wrap(es):
+        output = FromES(es.settings)
+        output._es=es
+        return output
 
     def as_dict(self):
         settings = self.settings.copy()

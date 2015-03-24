@@ -20,6 +20,7 @@ import threading
 import time
 import sys
 import gc
+from pyLibrary import strings
 
 from pyLibrary.dot import nvl, Dict
 from pyLibrary.times.dates import Date
@@ -436,13 +437,16 @@ class Thread(object):
 
 
     @staticmethod
-    def wait_for_shutdown_signal(please_stop=False):
+    def wait_for_shutdown_signal(
+        please_stop=False,  # ASSIGN SIGNAL TO STOP EARLY
+        allow_exit=False    # ALLOW "exit" COMMAND ON CONSOLE TO ALSO STOP THE APP
+    ):
         """
         SLEEP UNTIL keyboard interrupt
-
-        please_stop - ASSIGN SIGNAL TO STOP EARLY
-
         """
+        if allow_exit:
+            Thread('waiting for "exit"', readloop, please_stop=please_stop).start()
+
         if Thread.current() != MAIN_THREAD:
             if not Log:
                 _late_import()
@@ -655,4 +659,12 @@ class ThreadedQueue(Queue):
         if isinstance(b, BaseException):
             self.thread.please_stop.go()
         self.thread.join()
+
+
+def readloop(please_stop):
+    while not please_stop:
+        command = sys.stdin.readline()
+        if strings.strip(command) == "exit":
+            break
+    please_stop.go()
 

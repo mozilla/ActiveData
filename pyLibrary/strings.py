@@ -253,7 +253,7 @@ def comma(value):
     FORMAT WITH THOUSANDS COMMA (,) SEPARATOR
     """
     try:
-        if float(value) == round(float(value), 0):
+        if float(value) == __builtin__.round(float(value), 0):
             output = "{:,}".format(int(value))
         else:
             output = "{:,}".format(float(value))

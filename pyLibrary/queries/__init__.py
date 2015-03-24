@@ -42,6 +42,10 @@ def wrap_from(frum, schema=None):
     frum = wrap(frum)
 
     if isinstance(frum, basestring):
+        if not config.default.settings:
+            from pyLibrary.debugs.logs import Log
+            Log.error("expecting pyLibrary.queries.query.config.default.settings to contain default elasticsearch connection info")
+
         settings = set_default({
             "index": split_field(frum)[0],
             "name": frum,

@@ -12,13 +12,12 @@ from __future__ import division
 import StringIO
 import gzip
 from io import BytesIO
-
 import zipfile
 
 import boto
 from boto.s3.connection import Location
 
-from pyLibrary import convert, strings
+from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, Null, nvl
 from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, GzipLines, LazyLines
@@ -133,28 +132,34 @@ class Bucket(object):
     def __getattr__(self, item):
         return getattr(self.bucket, item)
 
-    def get_key(self, key):
-        meta = self.get_meta(key)
-        if not meta:
-            Log.error("Key {{key}} does not exist", {"key": key})
-        key = strip_extension(meta.key)
+    def get_key(self, key, must_exist=True):
+        if must_exist:
+            meta = self.get_meta(key)
+            if not meta:
+                Log.error("Key {{key}} does not exist", {"key": key})
+            key = strip_extension(meta.key)
         return File(self, key)
 
     def delete_key(self, key):
         # self._verify_key_format(key)  DO NOT VERIFY, DELETE BAD KEYS ANYWAY!!
-        full_key = self.get_meta(key, conforming=False)
-        self.bucket.delete_key(full_key)
+        try:
+            full_key = self.get_meta(key, conforming=False)
+            self.bucket.delete_key(full_key)
+        except Exception, e:
+            self.get_meta(key, conforming=False)
+            raise e
 
     def get_meta(self, key, conforming=True):
         if key.endswith(".json") or key.endswith(".zip") or key.endswith(".gz"):
             Log.error("Expecting a pure key")
 
         try:
+            # key_prefix("2")
             metas = list(self.bucket.list(prefix=key))
             metas = wrap([m for m in metas if m.name.find(".json") != -1])
 
             if self.name == "ekyle-talos" and key.find(".") == -1:
-                # VERY SPECIFIC CONDITIONS TO ALLOW DELETE, DELETE ME IN THE FUTURE (Now==March2015)
+                # VERY SPECIFIC CONDITIONS TO ALLOW DELETE, REMOVE THIS CODE IN THE FUTURE (Now==March2015)
                 for m in metas:
                     self.bucket.delete_key(m.key)
                 return Null
@@ -162,6 +167,7 @@ class Bucket(object):
             perfect = Null
             favorite = Null
             too_many = False
+            error = None
             for m in metas:
                 try:
                     simple = strip_extension(m.key)
@@ -173,8 +179,8 @@ class Bucket(object):
                     if favorite and not perfect:
                         too_many = True
                     favorite = m
-                except Exception, _:
-                    pass
+                except Exception, e:
+                    error = e
 
             if too_many:
                 Log.error("multiple keys in {{bucket}} with prefix={{prefix|quote}}: {{list}}", {
@@ -182,6 +188,8 @@ class Bucket(object):
                     "prefix": key,
                     "list": [k.name for k in metas]
                 })
+            if not perfect and error:
+                Log.error("Problem with key request", error)
             return nvl(perfect, favorite)
         except Exception, e:
             Log.error(READ_ERROR, e)
@@ -394,3 +402,6 @@ def _scrub_key(key):
         if c in [":", "."]:
             output.append(c)
     return "".join(output)
+
+def key_prefix(key):
+    return int(key.split(":")[0].split(".")[0])

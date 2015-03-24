@@ -107,8 +107,10 @@ class TestUnittests(ActiveDataBaseTest):
 #     }
 # }
 
-#TODO: IT SEEMS TOO MANY COLUMNS RETURNED
+#TODO: IT SEEMS TOO MANY COLUMNS RETURNED, ONLY RETURN SHALLOW COLUMNS
 #  {"from":"unittest"}
+
+#TODO: COMPRESS range QUERY OVER SAME VARIABLE
 
 
     def test_timing(self):

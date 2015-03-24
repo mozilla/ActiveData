@@ -195,7 +195,12 @@ class File(object):
         # http://effbot.org/zone/wide-finder.htm
         def output():
             try:
-                with io.open(self._filename, "rb") as f:
+                path = self._filename
+                if path.startswith("~"):
+                    home_path = os.path.expanduser("~")
+                    path = home_path + path[1::]
+
+                with io.open(path, "rb") as f:
                     for line in f:
                         yield utf82unicode(line)
             except Exception, e:

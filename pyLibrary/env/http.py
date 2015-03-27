@@ -19,15 +19,14 @@
 
 from __future__ import unicode_literals
 from __future__ import division
-import StringIO
-import gzip
+from copy import copy
 
 from requests import sessions, Response
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, nvl
-from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, CompressedLines, LazyLines, GzipLines, ZipfileLines
+from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines
 
 
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
@@ -39,6 +38,13 @@ _warning_sent = False
 
 
 def request(method, url, **kwargs):
+    """
+     JUST LIKE requests.request() BUT WITH DEFAULT HEADERS AND FIXES
+
+     THE BYTE_STRINGS (b"") ARE NECESSARY TO PREVENT httplib.py FROM **FREAKING OUT**
+     IT APPEARS requests AND httplib.py SIMPLY CONCATENATE STRINGS BLINDLY, WHICH
+     INCLUDES url AND headers
+    """
     global _warning_sent
     if not default_headers and not _warning_sent:
         _warning_sent = True
@@ -51,52 +57,74 @@ def request(method, url, **kwargs):
     session = sessions.Session()
     session.headers.update(default_headers)
 
-    kwargs['timeout'] = nvl(kwargs.get('timeout'), default_timeout)
+    if isinstance(url, unicode):
+        # httplib.py WILL **FREAK OUT** IF IT SEES ANY UNICODE
+        # IT APPEARS TO
+        url = url.encode("ascii")
 
-    if len(nvl(kwargs.get("data"))) > 1000:
-        compressed = convert.bytes2zip(kwargs["data"])
-        kwargs["headers"]['content-encoding'] = 'gzip'
-        kwargs["data"] = compressed
+    _to_ascii_dict(kwargs)
+    kwargs[b'timeout'] = nvl(kwargs.get(b'timeout'), default_timeout)
+
+    if len(nvl(kwargs.get(b"data"))) > 1000:
+        compressed = convert.bytes2zip(kwargs[b"data"])
+        kwargs[b"headers"][b'content-encoding'] = b'gzip'
+        kwargs[b"data"] = compressed
+
+        _to_ascii_dict(kwargs[b"headers"])
         return session.request(method=method, url=url, **kwargs)
     else:
+        _to_ascii_dict(kwargs.get(b"headers"))
         return session.request(method=method, url=url, **kwargs)
+
+def _to_ascii_dict(headers):
+    if headers is None:
+        return
+    for k, v in copy(headers).items():
+        if isinstance(k, unicode):
+            del headers[k]
+            if isinstance(v, unicode):
+                headers[k.encode("ascii")] = v.encode("ascii")
+            else:
+                headers[k.encode("ascii")] = v
+        elif isinstance(v, unicode):
+            headers[k] = v.encode("ascii")
 
 
 def get(url, **kwargs):
-    kwargs.setdefault('allow_redirects', True)
-    kwargs["stream"] = True
-    return HttpResponse(request('get', url, **kwargs))
+    kwargs.setdefault(b'allow_redirects', True)
+    kwargs[b"stream"] = True
+    return HttpResponse(request(b'get', url, **kwargs))
 
 
 def options(url, **kwargs):
-    kwargs.setdefault('allow_redirects', True)
-    kwargs["stream"] = True
-    return HttpResponse(request('options', url, **kwargs))
+    kwargs.setdefault(b'allow_redirects', True)
+    kwargs[b"stream"] = True
+    return HttpResponse(request(b'options', url, **kwargs))
 
 
 def head(url, **kwargs):
-    kwargs.setdefault('allow_redirects', False)
-    kwargs["stream"] = True
-    return HttpResponse(request('head', url, **kwargs))
+    kwargs.setdefault(b'allow_redirects', False)
+    kwargs[b"stream"] = True
+    return HttpResponse(request(b'head', url, **kwargs))
 
 
 def post(url, **kwargs):
-    kwargs["stream"] = True
-    return HttpResponse(request('post', url, **kwargs))
+    kwargs[b"stream"] = True
+    return HttpResponse(request(b'post', url, **kwargs))
 
 
 def put(url, **kwargs):
-    return HttpResponse(request('put', url, **kwargs))
+    return HttpResponse(request(b'put', url, **kwargs))
 
 
 def patch(url, **kwargs):
-    kwargs["stream"] = True
-    return HttpResponse(request('patch', url, **kwargs))
+    kwargs[b"stream"] = True
+    return HttpResponse(request(b'patch', url, **kwargs))
 
 
 def delete(url, **kwargs):
-    kwargs["stream"] = True
-    return HttpResponse(request('delete', url, **kwargs))
+    kwargs[b"stream"] = True
+    return HttpResponse(request(b'delete', url, **kwargs))
 
 
 class HttpResponse(Response):

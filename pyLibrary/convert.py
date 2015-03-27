@@ -23,7 +23,7 @@ from tempfile import TemporaryFile
 import time
 
 from pyLibrary import strings
-from pyLibrary.dot import wrap, wrap_dot, unwrap
+from pyLibrary.dot import wrap, wrap_dot, unwrap, Dict
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.debugs.profiles import Profiler
 from pyLibrary.debugs.logs import Log, Except
@@ -285,33 +285,48 @@ def url_param2value(param):
     """
     CONVERT URL QUERY PARAMETERS INTO DICT
     """
+    if isinstance(param, unicode):
+        param = param.encode("ascii")
 
     def _decode(v):
-        if isinstance(v, basestring):
-            try:
-                return json2value(v)
-            except Exception:
-                pass
-        return v
+        output = []
+        i = 0
+        while i < len(v):
+            c = v[i]
+            if c == "%":
+                d = hex2bytes(v[i + 1:i + 3])
+                output.append(d)
+                i += 3
+            else:
+                output.append(c)
+                i += 1
+
+        output = (b"".join(output)).decode("latin1")
+        try:
+            return json2value(output)
+        except Exception:
+            pass
+        return output
 
 
     query = {}
-    for p in param.split('&'):
+    for p in param.split(b'&'):
         if not p:
             continue
-        if p.find("=") == -1:
+        if p.find(b"=") == -1:
             k = p
             v = True
         else:
-            k, v = p.split("=")
+            k, v = p.split(b"=")
+            v = _decode(v)
 
-        l = query.get(k)
-        if l is None:
+        u = query.get(k)
+        if u is None:
             query[k] = v
-        elif isinstance(l, list):
-            l.append(v)
+        elif isinstance(u, list):
+            u += [v]
         else:
-            query[k] = [l, v]
+            query[k] = [u, v]
 
     return query
 
@@ -372,7 +387,7 @@ def int2hex(value, size):
 
 
 def hex2bytes(value):
-    return bytearray(value.decode("hex"))
+    return value.decode("hex")
 
 
 def bytes2hex(value, separator=" "):
@@ -380,7 +395,7 @@ def bytes2hex(value, separator=" "):
 
 
 def base642bytearray(value):
-    return bytearray(base64.b64decode(value))
+    return base64.b64decode(value)
 
 
 def bytes2base64(value):

@@ -185,7 +185,7 @@ def where2esfilter(where):
         return False
 
     k, v = where.items()[0]
-    return converter_map[k](k, v)
+    return converter_map.get(k, _no_convert)(k, v)
 
 
 def _convert_many(k, v):
@@ -239,6 +239,10 @@ def _convert_in(op, term):
 def _convert_inequality(ine, term):
     var, val = term.items()[0]
     return {"range": {var: {ine: val}}}
+
+
+def _no_convert(op, term):
+    return {op: term}
 
 
 def _convert_field(k, var):

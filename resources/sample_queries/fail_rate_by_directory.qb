@@ -1,0 +1,9 @@
+{"from":"unittest",
+	"select":[
+		{"aggregate":"count"}
+	],
+	"edges":[
+		"result.ok"
+	],
+"where":{"prefix":{"result.test": "{{dir}}"}}
+}

@@ -21,11 +21,11 @@ config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
 def _delayed_imports():
     global type2container
 
-    from pyLibrary.queries.qb_usingMySQL import FromMySQL
+    from pyLibrary.queries.qb_usingMySQL import MySQL
     from pyLibrary.queries.qb_usingES import FromES
     set_default(type2container, {
         "elasticsearch": FromES,
-        "mysql": FromMySQL,
+        "mysql": MySQL,
         "memory": None
     })
 

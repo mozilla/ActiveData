@@ -86,6 +86,8 @@ class Domain(object):
             output |= self._all_slots(b)
         return output
 
+    def getDomain(self):
+        Log.error("Not implemented")
 
 
 class ValueDomain(Domain):

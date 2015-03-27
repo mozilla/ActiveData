@@ -14,6 +14,7 @@ from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, nvl, Null, split_field, join_field
 from pyLibrary.queries import qb, es09
+from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain
 from pyLibrary.queries.es14.util import aggregates1_4
 from pyLibrary.queries.filters import simplify_esfilter
@@ -36,6 +37,8 @@ def es_aggsop(es, frum, query):
             es_query.aggs[literal_field(s.name)].value_count.field = s.value
         elif s.aggregate == "count":
             pass
+        elif not s.value:
+            Log.error("Expecting a value property in {{select|json}}", {"select": s})
         else:
             es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].field = s.value
 
@@ -89,6 +92,9 @@ class AggsDecoder(object):
             return object.__new__(DefaultDecoder, e.copy())
         if e.value and e.domain.type in PARTITION:
             return object.__new__(SetDecoder, e)
+        if isinstance(e.domain.dimension, Dimension):
+            e.domain = e.domain.dimension.getDomain()
+            return object.__new__(SetDecoder, e)
         if e.value and e.domain.type == "time":
             return object.__new__(TimeDecoder, e)
         elif not e.value and e.domain.dimension.fields:
@@ -96,7 +102,7 @@ class AggsDecoder(object):
             # JUST PULL THE FIELDS
             fields = e.domain.dimension.fields
             if isinstance(fields, dict):
-                Log.error("Not supported yet")
+                return object.__new__(DimFieldDictDecoder, e)
             else:
                 return object.__new__(DimFieldListDecoder, e)
         else:
@@ -331,6 +337,58 @@ class DimFieldListDecoder(DefaultDecoder):
 
 
 
+class DimFieldDictDecoder(DefaultDecoder):
+    def __init__(self, edge, query):
+        DefaultDecoder.__init__(self, edge, query)
+        self.fields = edge.domain.dimension.fields.items()
+
+    def append_query(self, es_query, start):
+        self.start = start
+        for i, (k, v) in enumerate(self.fields):
+            es_query = wrap({"aggs": {
+                "_match": set_default({"terms": {"field": v}}, es_query),
+                "_missing": set_default({"missing": {"field": v}}, es_query),
+            }})
+
+        if self.edge.domain.where:
+            filter = simplify_esfilter(self.edge.domain.where)
+            es_query = {"aggs": {"_filter": set_default({"filter": filter}, es_query)}}
+
+        return es_query
+
+    def count(self, row):
+        part = row[self.start:self.start + len(self.fields):]
+        value = {k: p.key for (k, v), p in zip(self.fields, part)}
+        self.edge.domain.partitions.add(value)
+
+    def done_count(self):
+        self.edge.domain = SimpleSetDomain(
+            key="value",
+            partitions=[{"value": v, "dataIndex": i} for i, v in enumerate(qb.sort(self.edge.domain.partitions, [k for k, v in self.fields]))]
+        )
+
+    def get_index(self, row):
+        parts = self.edge.domain.partitions
+        find = tuple(p.key for p in row[self.start:self.start + self.num_columns:])
+        for p in parts:
+            if p.value == find:
+                return p.dataIndex
+        else:
+            return len(parts)
+
+    def _get_sub(self, aggs, coord):
+        domain = self.edge.domain
+        buckets = aggs[self.name].buckets
+        for b in buckets:
+            c = domain.getIndexByKey(b.key)
+            yield (c, b)
+
+    @property
+    def num_columns(self):
+        return len(self.fields.values())
+
+
+
 def aggs_iterator(aggs, decoders):
     """
     DIG INTO ES'S RECURSIVE aggs DATA-STRUCTURE:
@@ -391,7 +449,7 @@ def count_dim(aggs, decoders):
 
 
 format_dispatch = {}
-from pyLibrary.queries.es14.aggs_format import format_cube
+from pyLibrary.queries.es14.format import format_cube
 
 _ = format_cube
 

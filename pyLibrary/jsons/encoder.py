@@ -100,9 +100,6 @@ class cPythonJSONEncoder(object):
         )
 
     def encode(self, value, pretty=False):
-        if value == None:
-            return "null"
-
         if pretty:
             return pretty_json(value)
 
@@ -224,7 +221,7 @@ INDENT = "    "
 
 def pretty_json(value):
     try:
-        if value == None:
+        if scrub(value) is None:
             return "null"
         elif isinstance(value, basestring):
             if isinstance(value, str):
@@ -261,7 +258,7 @@ def pretty_json(value):
                     return "{}"
                 items = list(value.items())
                 if len(items) == 1:
-                    return "{\"" + items[0][0] + "\": " + pretty_json(items[0][1]).strip() + "}"
+                    return "{" + quote(items[0][0]) + ": " + pretty_json(items[0][1]).strip() + "}"
 
                 items = sorted(items, lambda a, b: value_compare(a[0], b[0]))
                 values = [quote(k)+": " + indent(pretty_json(v)).strip() for k, v in items if v != None]

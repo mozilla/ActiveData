@@ -290,7 +290,7 @@ class GzipLines(CompressedLines):
 
 class ZipfileLines(CompressedLines):
     """
-    SAME AS CompressedLines, BUT USING THE GzipFile FORMAT FOR COMPRESSED BYTES
+    SAME AS CompressedLines, BUT USING THE ZipFile FORMAT FOR COMPRESSED BYTES
     """
 
     def __init__(self, compressed):

@@ -25,7 +25,7 @@ from pyLibrary.queries.es09.terms_stats import es_terms_stats, is_terms_stats
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.es14.util import aggregates1_4
 from pyLibrary.queries.query import Query, _normalize_where
-from pyLibrary.debugs.logs import Log
+from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import nvl, split_field
 from pyLibrary.dot.lists import DictList
@@ -122,11 +122,11 @@ class FromES(Container):
 
             Log.error("Can not handle")
         except Exception, e:
-            e = wrap(e)
+            e = Except.wrap(e)
             if "Data too large, data for" in e:
                 http.post(self._es.cluster.path+"/_cache/clear")
                 Log.error("Problem (Tried to clear Elasticsearch cache)", e)
-            raise e
+            Log.error("problem", e)
 
 
 

@@ -571,7 +571,7 @@ class ThreadedQueue(Queue):
         if not Log:
             _late_import()
 
-        batch_size = nvl(batch_size, int(max_size/2), 900)
+        batch_size = nvl(batch_size, int(nvl(max_size, 0)/2), 900)
         max_size = nvl(max_size, batch_size * 2)  # REASONABLE DEFAULT
         period = nvl(period, SECOND)
         bit_more_time = 5 * SECOND

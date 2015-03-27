@@ -30,7 +30,7 @@ class Dimension(Container):
         self.parent = parent
         self.full_name = join_field(split_field(self.parent.full_name)+[self.name])
         dot.set_default(self, dim)
-        self.esfilter = nvl(dim.esfilter, None)
+        self.esfilter = dim.esfilter
         self.type = nvl(dim.type, "set")
         self.limit = nvl(dim.limit, DEFAULT_QUERY_LIMIT)
         self.index = nvl(dim.index, nvl(parent, Null).index, qb.es.settings.name)

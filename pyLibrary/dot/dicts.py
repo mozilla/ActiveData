@@ -50,18 +50,6 @@ class Dict(dict):
         d = _get(self, "__dict__")
         return True if d else False
 
-    def __str__(self):
-        try:
-            return "Dict("+dict.__str__(_get(self, "__dict__"))+")"
-        except Exception, e:
-            return "{}"
-
-    def __repr__(self):
-        try:
-            return "Dict("+dict.__repr__(_get(self, "__dict__"))+")"
-        except Exception, e:
-            return "Dict{}"
-
     def __contains__(self, item):
         if Dict.__getitem__(self, item):
             return True
@@ -178,7 +166,7 @@ class Dict(dict):
 
     def items(self):
         d = _get(self, "__dict__")
-        return [(k, wrap(v)) for k, v in d.items() if v != None]
+        return [(k, wrap(v)) for k, v in d.items() if v != None or isinstance(v, dict)]
 
     def leaves(self, prefix=None):
         """
@@ -260,6 +248,18 @@ class Dict(dict):
         if self[k] == None:
             self[k] = d
         return self
+
+    def __str__(self):
+        try:
+            return "Dict("+dict.__str__(_get(self, "__dict__"))+")"
+        except Exception, e:
+            return "{}"
+
+    def __repr__(self):
+        try:
+            return "Dict("+dict.__repr__(_get(self, "__dict__"))+")"
+        except Exception, e:
+            return "Dict{}"
 
 
 # KEEP TRACK OF WHAT ATTRIBUTES ARE REQUESTED, MAYBE SOME (BUILTIN) ARE STILL USEFUL

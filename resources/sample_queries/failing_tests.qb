@@ -1,0 +1,18 @@
+{
+	"from":{
+		"type":"elasticsearch",
+		"settings":{
+			"host":"http://52.10.189.133",
+			"index":"unittest",
+			"type":"test_result"
+		}
+	},
+	"select":[{"aggregate":"count"}],
+	"edges":["build.branch","result.test"],
+	"where":{"and":[
+		{"eq":{"result.ok":false}},
+		{"gt":{"run.timestamp":"{{today|week}}"}}
+	]},
+	"format":"table",
+	"limit":100000
+}

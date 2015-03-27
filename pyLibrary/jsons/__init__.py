@@ -2,8 +2,9 @@ from datetime import date, timedelta, datetime
 from decimal import Decimal
 import json
 import re
+from types import NoneType
 
-from pyLibrary.dot import DictList
+from pyLibrary.dot import DictList, NullType
 from pyLibrary.times.dates import Date
 
 from pyLibrary.times.durations import Duration
@@ -60,12 +61,11 @@ def scrub(value):
 
 
 def _scrub(value, is_done):
-    if value == None:
-        return None
-
     type = value.__class__
 
-    if type in (date, datetime):
+    if type in (NoneType, NullType):
+        return None
+    elif type in (date, datetime):
         return float(datetime2milli(value)) / float(1000)
     elif type is timedelta:
         return value.total_seconds()
@@ -88,7 +88,7 @@ def _scrub(value, is_done):
             if not isinstance(k, basestring):
                 Log.error("keys must be strings")
             v = _scrub(v, is_done)
-            if v != None or isinstance(v, dict):
+            if v != None:
                 output[k] = v
 
         is_done.discard(_id)

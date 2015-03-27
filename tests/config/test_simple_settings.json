@@ -24,6 +24,7 @@
 		"port": "9200",
 		"index": "testdata",
 		"type": "test_result",
-		"debug": true
+		"debug": true,
+		"schema":"//.../resources/schema/basic_schema.json.template"
 	}
 }

@@ -125,7 +125,8 @@ def _all_default(d, default, seen=None):
         existing_value = _get_attr(d, [k])
 
         if existing_value == None:
-            _set_attr(d, [k], default_value)
+            if default_value != None:
+                _set_attr(d, [k], default_value)
         elif (hasattr(existing_value, "__setattr__") or isinstance(existing_value, dict)) and isinstance(default_value, dict):
             df = seen.get(id(existing_value))
             if df:

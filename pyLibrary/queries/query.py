@@ -521,13 +521,16 @@ def where_get_all_vars(w):
         else:
             return [val.field]
 
-    if key in ["gte", "gt", "eq", "ne", "term", "terms", "lt", "lte"]:
+    if key in ["gte", "gt", "eq", "ne", "term", "terms", "lt", "lte", "range", "prefix"]:
         if not isinstance(val, dict):
             Log.error("Expecting `{{key}}` to have a dict value, not a {{type}}", {
                 "key": key,
                 "type": val.__class__.__name__
             })
         return list(val.keys())
+
+    if key=="match_all":
+        return []
 
     Log.error("do not know how to handle where {{where|json}}", {"where", w})
 

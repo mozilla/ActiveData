@@ -4,7 +4,7 @@ Module `convert`
 General conversion library with functions in the form `<from_type> "2" <to_type>`.
 Most of these functions are simple wrappers around common Python functions;
 often dealing with `None` values gracefully.  Many functions are generally
-useful, but a few are esoteric.
+useful.  A few are esoteric.
 
 
 Function `expand_template()`

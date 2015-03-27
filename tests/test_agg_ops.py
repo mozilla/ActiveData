@@ -44,3 +44,30 @@ class TestAggOps(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test)
+
+    def test_max(self):
+        test = {
+            "data": [{"a": i*2} for i in range(30)],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": "a", "aggregate": "max"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                {"a": 58}
+            ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [[58]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [],
+                "data": {
+                    "a": 58
+                }
+            }
+        }
+        self._execute_es_tests(test)
+

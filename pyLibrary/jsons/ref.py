@@ -27,6 +27,9 @@ def _late_import():
     from pyLibrary import convert
     from pyLibrary.debugs.logs import Log
 
+    _ = convert
+    _ = Log
+
 
 def get(url):
     if not Log:

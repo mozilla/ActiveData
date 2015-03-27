@@ -24,9 +24,10 @@
 			"aggregate":"average"
 		}
 	],
-	"groupby":["machine.platform","machine.os","run.suite","run.test"],
+	"groupby":["machine.platform","machine.os","run.suite","result.test"],
 	"where":{"and":[
 		{"gte":{"run.stats.start_time":"{{today|week-week}}"}},
 		{"lt":{"run.stats.start_time":"{{today|week}}"}}
-	]}
+	]},
+	"limit":100000
 }

@@ -7,12 +7,15 @@ Motivation
 ----------
 
 Exception handling and logging are undeniably linked.  There are many instances
-where exceptions are raised and must be logged, except when a subsuming system can handle compensate.  Exception handling semantics are great because they decoupling the cause from the solution, but this is at odds with clean logging -
+where exceptions are raised and must be logged, except when a subsuming system 
+can compensate.  Exception handling semantics are great because they 
+decoupling the cause from the solution, but this is at odds with clean logging -
 which couples raising and catching to make appropriate decisions about what to
-ultimately emit to the log.  
+emit to the log.  
 
-This logging module is additionally responsible for raising exceptions, collecting the trace and context, and then deducing
-if it must be logged, or it can be ignored because something can handle it.
+This logging module is additionally responsible for raising exceptions, 
+collecting the trace and context, and then deducing if it must be logged, or 
+if it can be ignored because something can handle it.
 
 Getting Started
 ---------------
@@ -53,7 +56,8 @@ Getting Started
             # Try something else
 ```
 
-###Use `Log.warning()` if your code can deal with an exception, but you still want to log it as an issue
+###Use `Log.warning()` if your code can deal with an exception, but you still 
+want to log it as an issue
 
 ```python
     def worker(value):
@@ -110,13 +114,15 @@ structure:
 Log 'Levels'
 ------------
 
-The `logs` module has no concept of logging levels it is expected that debug variables (variables prefixed with `DEBUG_` are used to control the logging output.
+The `logs` module has no concept of logging levels it is expected that debug 
+variables (variables prefixed with `DEBUG_` are used to control the logging 
+output.
     
 
 ```python
 	# simple.py
 	DEBUG_SHOW_DETAIL = True
-
+    
     def worker():
 		if DEBUG_SHOW_DETAIL:
 			Log.note("Starting")
@@ -137,7 +143,6 @@ The `logs` module has no concept of logging levels it is expected that debug var
             Log.error("Complain, or not", e)
         finally:
             Log.stop()
-
 ```
 
 These debug variables can be set by configuration file:
@@ -150,11 +155,3 @@ These debug variables can be set by configuration file:
 		}
 	}
 ```
-
-
-
-
-
-
-
-

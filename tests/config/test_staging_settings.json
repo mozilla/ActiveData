@@ -1,5 +1,5 @@
 {
-	"fastTesting": true,  //IMPORTANT VARIABLE!  SET TO true TO INCLUDE NETWORK RESPONSE TESTS
+	"fastTesting": true,  //IMPORTANT VARIABLE!  SET TO falseTO INCLUDE NETWORK RESPONSE TESTS
 	"service_url": "http://54.148.242.195:80/query",
 	"backend_es": {
 		"index": "testdata",

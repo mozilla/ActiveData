@@ -143,6 +143,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
         return settings.fastTesting
 
     def _fill_es(self, subtest):
+        subtest = wrap(subtest)
         _settings = self.backend_es.copy()
         _settings.index = "testing_" + Random.hex(10).lower()
         # settings.type = "test_result"
@@ -175,8 +176,6 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
         return _settings
 
-
-
     def _execute_es_tests(self, subtest):
         subtest = wrap(subtest)
 
@@ -187,6 +186,10 @@ class ActiveDataBaseTest(FuzzyTestCase):
             return
 
         settings = self._fill_es(subtest)
+        self._send_queries(settings, subtest)
+
+    def _send_queries(self, settings, subtest):
+        subtest = wrap(subtest)
 
         try:
             # EXECUTE QUERY
@@ -228,6 +231,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
         finally:
             # REMOVE CONTAINER
             self.es.delete_index(settings.index)
+
 
 
     def _execute_query(self, query):

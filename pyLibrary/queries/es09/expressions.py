@@ -16,9 +16,9 @@ from pyLibrary import convert
 from pyLibrary.collections import reverse
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
-from pyLibrary.queries.filters import TRUE_FILTER
 from pyLibrary.dot import split_field, Dict, Null, join_field, nvl
 from pyLibrary.dot import listwrap
+from pyLibrary.queries.expressions import TRUE_FILTER
 from pyLibrary.times.durations import Duration
 
 

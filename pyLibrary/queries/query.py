@@ -12,14 +12,15 @@ from __future__ import division
 from pyLibrary.collections import AND, reverse
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
-from pyLibrary.queries import wrap_from
+from pyLibrary.queries import wrap_from, expressions
+from pyLibrary.queries.container import Container
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain, is_keyword
-from pyLibrary.queries.filters import TRUE_FILTER, simplify_esfilter
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import nvl, split_field, join_field, Null, set_default
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap, listwrap
+from pyLibrary.queries.expressions import TRUE_FILTER
 
 
 DEFAULT_LIMIT = 10
@@ -37,6 +38,8 @@ def _late_import():
 
 
 class Query(object):
+    __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "format", "isLean"]
+
     def __new__(cls, query, schema=None):
         if isinstance(query, Query):
             return query
@@ -96,8 +99,10 @@ class Query(object):
             if not qb:
                 _late_import()
             columns = qb.get_columns(self.frum)
-        else:
+        elif isinstance(self.frum, Container):
             columns = self.frum.get_columns()
+        else:
+            columns=[]
         vars = get_all_vars(self)
         for c in columns:
             if c.name in vars and c.depth:
@@ -119,6 +124,9 @@ class Query(object):
         set_default(dest, source)
         return output
 
+    def as_dict(self):
+        output = wrap({s: getattr(self, s) for s in Query.__slots__})
+        return output
 
 canonical_aggregates = {
     "min": "minimum",
@@ -472,19 +480,20 @@ def get_all_vars(query):
         output.extend(edges_get_all_vars(s))
     for s in listwrap(query.groupby):
         output.extend(edges_get_all_vars(s))
-    output.extend(where_get_all_vars(query.where))
+    # for s in listwrap(query.window):
+    #     output.extend(s);
+    output.extend(expressions.get_all_vars(query.where))
     return output
 
 
 def select_get_all_vars(s):
     if isinstance(s.value, list):
         return s.value
-    elif isinstance(s.value, basestring):
-        return [s.value]
-    elif s.value == None or s.value == ".":
-        return []
     else:
-        Log.error("not supported")
+        if s.value == "*":
+            return set(["*"])
+        return expressions.get_all_vars(s.value)
+
 
 def edges_get_all_vars(e):
     output = []
@@ -493,12 +502,13 @@ def edges_get_all_vars(e):
     if e.domain.key:
         output.append(e.domain.key)
     if e.domain.where:
-        output.extend(where_get_all_vars(e.domain.where))
+        output.extend(expressions.get_all_vars(e.domain.where))
     if e.domain.partitions:
         for p in e.domain.partitions:
             if p.where:
-                output.extend(where_get_all_vars(p.where))
+                output.extend(expressions.get_all_vars(p.where))
     return output
+
 
 def where_get_all_vars(w):
     if w in [True, False, None]:
@@ -509,11 +519,11 @@ def where_get_all_vars(w):
     val = w[key]
     if key in ["and", "or"]:
         for ww in val:
-            output.extend(where_get_all_vars(ww))
+            output.extend(expressions.get_all_vars(ww))
         return output
 
     if key == "not":
-        return where_get_all_vars(val)
+        return expressions.get_all_vars(val)
 
     if key in ["exists", "missing"]:
         if isinstance(val, unicode):
@@ -533,5 +543,3 @@ def where_get_all_vars(w):
         return []
 
     Log.error("do not know how to handle where {{where|json}}", {"where", w})
-
-

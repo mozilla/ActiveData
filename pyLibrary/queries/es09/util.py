@@ -18,12 +18,13 @@ from pyLibrary.collections import COUNT
 from pyLibrary.maths import stats
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
-from pyLibrary.queries import domains, filters
+from pyLibrary.queries import domains
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import split_field, join_field, nvl
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap
 from pyLibrary.queries import qb
+from pyLibrary.queries.es09 import expressions
 from pyLibrary.queries.es09.expressions import value2MVEL, isKeyword
 from pyLibrary.times import durations
 
@@ -78,7 +79,7 @@ def build_es_query(query):
                 "query": {
                     "match_all": {}
                 },
-                "filter": filters.simplify_esfilter(query.where)
+                "filter": expressions.simplify_esfilter(query.where)
             }
         }
 

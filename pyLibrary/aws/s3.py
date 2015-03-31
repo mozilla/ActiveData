@@ -150,8 +150,11 @@ class Bucket(object):
             raise e
 
     def get_meta(self, key, conforming=True):
-        if key.endswith(".json") or key.endswith(".zip") or key.endswith(".gz"):
-            Log.error("Expecting a pure key")
+        try:
+            if key.endswith(".json") or key.endswith(".zip") or key.endswith(".gz"):
+                Log.error("Expecting a pure key")
+        except Exception, e:
+            Log.error("bad key format {{key}}", {"key":key}, e)
 
         try:
             # key_prefix("2")

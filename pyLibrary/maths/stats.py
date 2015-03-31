@@ -13,12 +13,14 @@ from __future__ import division
 
 import sys
 from math import sqrt
+import math
 
 from pyLibrary import convert
 from pyLibrary.collections import OR
-from __init__ import almost_equal
+from __init__ import almost_equal, Math
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import nvl, Dict, Null
+# from pyLibrary.queries import qb
 from pyLibrary.vendor import strangman
 
 
@@ -357,6 +359,26 @@ def median(values, simple=True, mean_weight=0.0):
                 return (_median - 0.5) + (middle + 0.5 - start_index) / num_middle
     except Exception, e:
         Log.error("problem with median of {{values}}", {"values": values}, e)
+
+
+def percentile(values, percent):
+    """
+    PERCENTILE WITH INTERPOLATION
+    RETURN VALUE AT, OR ABOVE, percentile OF THE VALUES
+
+    snagged from http://code.activestate.com/recipes/511478-finding-the-percentile-of-the-values/
+    """
+    N = sorted(values)
+    if not N:
+        return None
+    k = (len(N) - 1) * percent
+    f = int(math.floor(k))
+    c = int(math.ceil(k))
+    if f == c:
+        return N[int(k)]
+    d0 = N[f] * (c - k)
+    d1 = N[c] * (k - f)
+    return d0 + d1
 
 
 zero = Stats()

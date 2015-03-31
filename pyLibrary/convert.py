@@ -456,18 +456,6 @@ def latin12unicode(value):
         Log.error("Can not convert {{value|quote}} to unicode", {"value": value})
 
 
-def esfilter2where(esfilter):
-    """
-    CONVERT esfilter TO FUNCTION THAT WILL PERFORM THE FILTER
-    WILL ADD row, rownum, AND rows AS CONTEXT VARIABLES FOR {"script":} IF NEEDED
-    """
-
-    def output(row, rownum=None, rows=None):
-        return _filter(esfilter, row, rownum, rows)
-
-    return output
-
-
 def pipe2value(value):
     type = value[0]
     if type == '0':
@@ -576,66 +564,5 @@ def _unPipe(value):
         if s < 0:
             break
     return result + value[e::]
-
-
-def _filter(esfilter, row, rownum, rows):
-    esfilter = wrap(esfilter)
-
-    if esfilter[u"and"]:
-        for a in esfilter[u"and"]:
-            if not _filter(a, row, rownum, rows):
-                return False
-        return True
-    elif esfilter[u"or"]:
-        for a in esfilter[u"and"]:
-            if _filter(a, row, rownum, rows):
-                return True
-        return False
-    elif esfilter[u"not"]:
-        return not _filter(esfilter[u"not"], row, rownum, rows)
-    elif esfilter.term:
-        for col, val in esfilter.term.items():
-            if row[col] != val:
-                return False
-        return True
-    elif esfilter.terms:
-        for col, vals in esfilter.terms.items():
-            if not row[col] in vals:
-                return False
-        return True
-    elif esfilter.range:
-        for col, ranges in esfilter.range.items():
-            for sign, val in ranges.items():
-                if sign in ("gt", ">") and row[col] <= val:
-                    return False
-                if sign == "gte" and row[col] < val:
-                    return False
-                if sign == "lte" and row[col] > val:
-                    return False
-                if sign == "lt" and row[col] >= val:
-                    return False
-        return True
-    elif esfilter.missing:
-        if isinstance(esfilter.missing, basestring):
-            field = esfilter.missing
-        else:
-            field = esfilter.missing.field
-
-        if row[field] == None:
-            return True
-        return False
-
-    elif esfilter.exists:
-        if isinstance(esfilter.missing, basestring):
-            field = esfilter.missing
-        else:
-            field = esfilter.missing.field
-
-        if row[field] != None:
-            return True
-        return False
-    else:
-        Log.error(u"Can not convert esfilter to SQL: {{esfilter}}", {u"esfilter": esfilter})
-
 
 json_decoder = json.JSONDecoder().decode

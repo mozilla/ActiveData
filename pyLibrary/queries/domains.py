@@ -63,15 +63,15 @@ class Domain(object):
         return self.__class__(**self.as_dict())
 
     def as_dict(self):
-        return Dict(
-            name=self.name,
-            type=self.type,
-            value=self.value,
-            key=self.key,
-            isFacet=self.isFacet,
-            where=self.where,
-            dimension=self.dimension
-        )
+        return wrap({
+            "name": self.name,
+            "type": self.type,
+            "value": self.value,
+            "key": self.key,
+            "isFacet": self.isFacet,
+            "where": self.where,
+            "dimension": self.dimension
+        })
 
     def __json__(self):
         return convert.value2json(self.as_dict())

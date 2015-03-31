@@ -26,6 +26,9 @@ except Exception, e:
 from pyLibrary.strings import deformat
 
 
+ISO8601 = "%Y-%m-%d %H:%M:%S"
+
+
 class Date(object):
 
     MIN = None

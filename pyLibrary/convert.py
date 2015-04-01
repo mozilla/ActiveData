@@ -232,17 +232,32 @@ def list2tab(rows):
 
     return "\t".join(keys) + "\n" + "\n".join(output)
 
-# PROPER NULL HANDLING
+
+def list2table(rows):
+    columns = set()
+    for r in rows:
+        columns |= set(r.keys())
+    keys = list(columns)
+
+    output = []
+    for r in rows:
+        output.append([r[k] for k in keys])
+
+    return wrap({
+        "header": keys,
+        "data": output
+    })
+
 
 def value2string(value):
+    # PROPER NULL HANDLING
     if value == None:
         return None
     return unicode(value)
 
 
-# RETURN PRETTY PYTHON CODE FOR THE SAME
-
 def value2quote(value):
+    # RETURN PRETTY PYTHON CODE FOR THE SAME
     if isinstance(value, basestring):
         return string2quote(value)
     else:

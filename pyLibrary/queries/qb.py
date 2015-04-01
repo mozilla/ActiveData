@@ -13,7 +13,7 @@ from __future__ import division
 import __builtin__
 from types import GeneratorType
 
-from pyLibrary import dot
+from pyLibrary import dot, convert
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.container import Container
@@ -77,6 +77,16 @@ def run(query):
 
         for param in query.window:
             window(frum, param)
+
+    # AT THIS POINT frum IS IN LIST FORMAT, NOW PACKAGE RESULT
+    if query.format == "table":
+        frum = convert.list2table(frum)
+        frum.meta.format = "table"
+    else:
+        frum = {
+            "metat": {"format": "list"},
+            "data": frum
+        }
 
     return frum
 

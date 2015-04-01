@@ -308,6 +308,13 @@ class FromESMetadata(Container):
             for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
                 for _, properties in meta.mappings.items():
                     columns = _parse_properties(index, properties.properties)
+                    for c in columns:
+                        c.cube = index
+                        c.property = c.name
+                        c.name = None
+                        c.useSource = None
+
+                    self.columns.extend(columns)
                     for a in meta.aliases:
                         # ONLY THE LATEST ALIAS IS CHOSEN TO GET COLUMNS
                         if a in alias_done:
@@ -316,9 +323,6 @@ class FromESMetadata(Container):
                         for c in columns:
                             self.columns.append(set_default({"cube": a}, c))  # ENSURE WE COPY
 
-                    for c in columns:
-                        c.cube = index
-                    self.columns.extend(columns)
 
         return qb.run(set_default(
             {

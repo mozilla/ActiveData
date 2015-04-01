@@ -48,12 +48,12 @@ class TestMetadata(ActiveDataBaseTest):
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["cube", "property", "type"],
+                "header": ["cube", "depth", "property", "type"],
                 "data": [
-                    [ALIAS, "a", "nested"],
-                    [ALIAS, "a.b", "string"],
-                    [ALIAS, "a.v", "long"],
-                    [ALIAS, "c", "string"]
+                    [ALIAS, "a", 0, "nested"],
+                    [ALIAS, "a.b", 1, "string"],
+                    [ALIAS, "a.v", 1, "long"],
+                    [ALIAS, "c", 0, "string"]
                 ]
             }
         }

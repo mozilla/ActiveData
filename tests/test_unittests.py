@@ -113,6 +113,12 @@ class TestUnittests(ActiveDataBaseTest):
 
     #TODO: COMPRESS range QUERY OVER SAME VARIABLE
 
+    #TODO: SELECTING OBJECT SHOULD GIVE GOOD ERROR, OR ACTUALLY RETURN OBJECT
+    # {
+    # 	"from":"unittest",
+    # 	"select":"run.files",
+    # 	"where":{"gt":{"run.stats.bytes":2000000000}}
+    # }
 
     def test_timing(self):
         if self.not_real_service():

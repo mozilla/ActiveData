@@ -15,6 +15,7 @@ from _subprocess import CREATE_NEW_PROCESS_GROUP
 import os
 import subprocess
 import signal
+import itertools
 
 from active_data.app import replace_vars
 from pyLibrary import convert, jsons, queries
@@ -212,6 +213,10 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
                 if format == "table":
+                    itertools.itertools.product(enumerate(result.header),)
+                    expected.header = qb.sort(expected.header)
+
+
                     expected.data = qb.sort(expected.data, range(len(expected.header)))
                     result.data = qb.sort(result.data, range(len(result.header)))
                 elif format == "list":

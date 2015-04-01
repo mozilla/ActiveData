@@ -42,18 +42,18 @@ class TestMetadata(ActiveDataBaseTest):
                 "meta": {"format": "list"},
                 "data": [
                     {"cube": ALIAS, "property": "a", "type": "nested"},
-                    {"cube": ALIAS, "property": "a.b", "type": "string"},
-                    {"cube": ALIAS, "property": "a.v", "type": "long"},
+                    {"cube": ALIAS, "property": "a.b", "type": "string", "depth": 1},
+                    {"cube": ALIAS, "property": "a.v", "type": "long", "depth": 1},
                     {"cube": ALIAS, "property": "c", "type": "string"},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["cube", "depth", "property", "type"],
+                "header": ["cube", "property", "depth", "type"],
                 "data": [
-                    [ALIAS, "a", 0, "nested"],
+                    [ALIAS, "a", None, "nested"],
                     [ALIAS, "a.b", 1, "string"],
                     [ALIAS, "a.v", 1, "long"],
-                    [ALIAS, "c", 0, "string"]
+                    [ALIAS, "c", None, "string"]
                 ]
             }
         }

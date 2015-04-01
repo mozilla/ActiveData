@@ -83,10 +83,10 @@ def run(query):
         frum = convert.list2table(frum)
         frum.meta.format = "table"
     else:
-        frum = {
-            "metat": {"format": "list"},
+        frum = wrap({
+            "meta": {"format": "list"},
             "data": frum
-        }
+        })
 
     return frum
 

@@ -35,8 +35,6 @@ DEBUG = False
 INDEX_CACHE = {}  # MATCH NAMES TO ES URL AND COLUMNS eg {name:{"url":url, "columns":columns"}}
 
 
-
-
 def post(es, FromES, limit):
     if not FromES.facets and FromES.size == 0 and not FromES.aggs:
         Log.error("FromES is sending no facets")

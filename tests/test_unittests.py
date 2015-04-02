@@ -120,6 +120,12 @@ class TestUnittests(ActiveDataBaseTest):
     # 	"where":{"gt":{"run.stats.bytes":2000000000}}
     # }
 
+    #TODO: ENSURE NON-EXISTENT SELECT COLUMN IS POINTED OUT IN INEVITABLE ERROR
+    # {
+    #     "from": "unittest",
+    #     "select": "run.result.test"
+    # }
+
     def test_timing(self):
         if self.not_real_service():
             return

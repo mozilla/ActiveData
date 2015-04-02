@@ -126,6 +126,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
         FuzzyTestCase.__init__(self, *args, **kwargs)
         self.service_url = settings.service_url
         self.backend_es = settings.backend_es.copy()
+        if self.backend_es.schema==None:
+            Log.error("Expecting backed_es to have a schema defined")
         self.es = None
         self.index = None
 
@@ -220,12 +222,13 @@ class ActiveDataBaseTest(FuzzyTestCase):
                     ))[1])[0]
                     result.header = [result.header[m] for m in mapping]
 
-                    columns = zip(*unwrap(result.data))
-                    result.data = zip(*[columns[m] for m in mapping])
-                    result.data = qb.sort(result.data, range(len(result.header)))
+                    if result.data:
+                        columns = zip(*unwrap(result.data))
+                        result.data = zip(*[columns[m] for m in mapping])
+                        result.data = qb.sort(result.data, range(len(result.header)))
                     expected.data = qb.sort(expected.data, range(len(expected.header)))
                 elif format == "list":
-                    sort_order=wrap(_normalize_edges(nvl(subtest.query.edges, subtest.query.groupby)) + _normalize_selects(listwrap(subtest.query.select))).name
+                    sort_order = wrap(_normalize_edges(nvl(subtest.query.edges, subtest.query.groupby)) + _normalize_selects(listwrap(subtest.query.select))).name
                     expected.data = qb.sort(expected.data, sort_order)
                     result.data = qb.sort(result.data, sort_order)
 

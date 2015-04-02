@@ -37,11 +37,15 @@ class File(object):
         elif isinstance(filename, basestring):
             self.key = None
             self._filename = "/".join(filename.split(os.sep))  # USE UNIX STANDARD
-            self.buffering = buffering
         else:
             self.key = convert.base642bytearray(filename.key)
             self._filename = "/".join(filename.path.split(os.sep))  # USE UNIX STANDARD
-            self.buffering = buffering
+
+        while self._filename.find(".../") >= 0:
+            # LET ... REFER TO GRANDPARENT, .... REFER TO GREAT-GRAND-PARENT, etc...
+            self._filename = self._filename.replace(".../", "../../")
+        self.buffering = buffering
+
 
         if suffix:
             self._filename = File.add_suffix(self._filename, suffix)

@@ -5,7 +5,9 @@
 		"index": "testdata",
 		"type": "test_result",
 		"host": "http://localhost",
-		"port": "9200"
+		"port": "9200",
+		"schema":{"$ref":"//.../resources/schema/basic_schema.json.template?type=test_result"},
+		"debug":true
 	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {
@@ -24,7 +26,6 @@
 		"port": "9200",
 		"index": "testdata",
 		"type": "test_result",
-		"debug": true,
-		"schema":"//.../resources/schema/basic_schema.json.template"
+		"debug": true
 	}
 }

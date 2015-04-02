@@ -477,7 +477,17 @@ def sort(data, fieldnames=None):
             right = nvl(right, Dict())
             for f in formal:
                 try:
-                    result = f["sort"] * cmp(left[f["field"]], right[f["field"]])
+                    l = left[f["field"]]
+                    r = right[f["field"]]
+                    if l == None:
+                        if r == None:
+                            return 0
+                        else:
+                            return - f["sort"]
+                    elif r == None:
+                        return f["sort"]
+
+                    result = f["sort"] * cmp(l, r)
                     if result != 0:
                         return result
                 except Exception, e:
@@ -490,6 +500,7 @@ def sort(data, fieldnames=None):
             output = DictList([unwrap(d) for d in sorted(list(data), cmp=comparer)])
         else:
             Log.error("Do not know how to handle")
+            output = None
 
         return output
     except Exception, e:

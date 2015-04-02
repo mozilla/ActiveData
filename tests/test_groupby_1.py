@@ -11,6 +11,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 import base_test_class
+from pyLibrary.dot import wrap
 
 from tests.base_test_class import ActiveDataBaseTest
 
@@ -284,17 +285,19 @@ class TestgroupBy1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-    def test_range_aggregation(self):
+
+    def test_many_aggs_on_one_column(self):
         # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
         test = {
-            "data": simple_test_data,
+            # d = {"a": a, "v", v}
+            "data": [{"_a": {"_b": {"_c": d.v}}, "_b": d.a} for d in wrap(simple_test_data)],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
                 "select": [
-                    {"name": "maxi", "value": "v", "aggregate": "max"},
-                    {"name": "mini", "value": "v", "aggregate": "min"}
+                    {"name": "maxi", "value": "_a._b._c", "aggregate": "max"},
+                    {"name": "mini", "value": "_a._b._c", "aggregate": "count"}
                 ],
-                "groupby": "a"
+                "groupby": "_b"
             },
             "expecting_list": {
                 "meta": {"format": "list"},

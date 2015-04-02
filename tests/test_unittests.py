@@ -61,7 +61,41 @@ class TestUnittests(ActiveDataBaseTest):
 
         Log.note("result\n{{result|indent}}", {"result": result})
 
+    def test_multiple_agg_on_same_field(self):
+        if self.not_real_service():
+            return
 
+        test = wrap({"query": {
+            "from": {
+                "type": "elasticsearch",
+                "settings": {
+                    "host": ES_CLUSTER_LOCATION,
+                    "index": "unittest",
+                    "type": "test_result"
+                }
+            },
+            "select": [
+                {
+                    "value": "run.stats.bytes",
+                    "aggregate": "max"
+                },
+                {
+                    "value": "run.stats.bytes",
+                    "aggregate": "count"
+                }
+            ]
+        }})
+
+        query = convert.unicode2utf8(convert.value2json(test.query))
+        # EXECUTE QUERY
+        with Timer("query"):
+            response = http.get(self.service_url, data=query)
+            if response.status_code != 200:
+                error(response)
+        result = convert.json2value(convert.utf82unicode(response.all_content))
+
+        Log.note("result\n{{result|indent}}", {"result": result})
+    #TODO: ES WILL NOT ACCEPT THESE TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM
 
 
     #TODO: IT SEEMS TOO MANY COLUMNS RETURNED, ONLY RETURN SHALLOW COLUMNS

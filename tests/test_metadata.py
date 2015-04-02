@@ -35,7 +35,7 @@ class TestMetadata(ActiveDataBaseTest):
 
         test = {
             "query": {
-                "from": "metadata.columns",
+                "from": "meta.columns",
                 "where": {"term": {"cube": ALIAS}}
             },
             "expecting_list": {

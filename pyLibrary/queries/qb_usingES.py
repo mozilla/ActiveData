@@ -38,7 +38,7 @@ class FromES(Container):
     """
 
     def __new__(cls, *args, **kwargs):
-        if (len(args) == 1 and args[0].get("index") == "metadata") or kwargs.get("index") == "metadata":
+        if (len(args) == 1 and args[0].get("index") == "meta") or kwargs.get("index") == "meta":
             output = FromESMetadata.__new__(FromESMetadata, *args, **kwargs)
             output.__init__(*args, **kwargs)
             return output
@@ -336,7 +336,7 @@ class FromESMetadata(Container):
         """
         RETURN METADATA COLUMNS
         """
-        if self.name == "metadata.columns":
+        if self.name == "meta.columns":
             return wrap([
                 {
                     "name": "cube",

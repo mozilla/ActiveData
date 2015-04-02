@@ -215,12 +215,16 @@ def get_all_vars(expr):
     if uop:
         return get_all_vars(term)
 
+    cop = complex_operators.get(op)
+    if cop:
+        return cop(op, term).vars()
+
     Log.error("`{{op}}` is not a recognized operation", {"op": op})
 
 
 
 unary_operators = {
-    "not": "not {{term}}"
+    "not": "not {{term}}",
 }
 
 binary_operators = {
@@ -338,6 +342,23 @@ class ExistsOp(object):
         return set(self.field)
 
 
+class PrefixOp(object):
+    def __init__(self, op, term):
+        self.field, self.prefix = term.items()[0]
+
+    def to_ruby(self):
+        return qb_expression_to_ruby(self.field)+".start_with? "+convert.string2quote(self.prefix)
+
+    def to_python(self):
+        return qb_expression_to_python(self.field)+".startswith("+convert.string2quote(self.prefix)+")"
+
+    def to_esfilter(self):
+        return {"prefix": {self.field: self.prefix}}
+
+    def vars(self):
+        return set(self.field)
+
+
 class MissingOp(object):
     def __init__(self, op, term):
         if isinstance(term, basestring):
@@ -379,6 +400,7 @@ class NotOp(object):
 complex_operators = {
     "terms": TermsOp,
     "exists": ExistsOp,
-    "missing": MissingOp
+    "missing": MissingOp,
+    "prefix": PrefixOp
 }
 

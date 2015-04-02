@@ -17,9 +17,15 @@ Load your settings easily:
 
     settings = jsons.ref.get(url):
 
-The file format is JSON, with some important features.
+The file format is JSON, with three important features.
 
-###Allow Comments###
+* Comments
+* References (using `$ref`)
+* Parameterization
+
+
+Comments
+--------
 
 End-of-line Comments are allowed, using either `#` or `//` prefix:
 
@@ -28,6 +34,7 @@ End-of-line Comments are allowed, using either `#` or `//` prefix:
         "key1": "value1",  //Comment 1
     }
 ```
+
 ```python
         "key1": "value1",  #Comment 1
 ```
@@ -40,11 +47,14 @@ Multiline comments are also allowed, using either Python's triple-quotes
         "key1": /* Comment 1 */ "value1",
     }
 ```
+
 ```python
         "key1": """Comment 1""" "value1",
 ```
 
-###Reference other JSON###
+
+Reference Other JSON
+--------------------
 
 The `$ref` key is special.  Its value is interpreted as a URL pointing to more JSON
 
@@ -226,6 +236,53 @@ json.ref uses the unconventional `env` scheme for accessing environment variable
     }
 ```
 
+Parametrized JSON
+-----------------
+
+JSON documents are allowed named parameters, which are surrounded by moustaches `{{.}}`.
+
+```javascript
+	{
+	 	{{var_name}}: "value"
+	}
+```
+
+Parameter replacement is performed on the unicode text before being interpreted by the JSON parser.  It is your responsibility to ensure the parameter replacement will result in valid JSON.
+
+You pass the parameters by including them as URL parameters:
+
+	{"$ref": "//~/above_example.json?var_name=%22hello%22"}
+
+Which will expand to
+
+```javascript
+	{
+	 	"hello": "value"
+	}
+```
+
+The pipe (`|`) symbol can be used to perform some common conversions
+
+
+```javascript
+	{
+	 	{{var_name|quote}}: "value"
+	}
+```
+
+The `quote` transformation will deal with quoting, so ...
+
+	{"$ref": "//~/above_example.json?var_name=hello"}
+
+... expands to the same:
+
+```javascript
+	{
+	 	"hello": "value"
+	}
+```
+
+Please see [`exapand_template`](../README.md) for more on the parameter replacement, and transformations available
 
 
 

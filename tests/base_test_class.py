@@ -20,7 +20,7 @@ import itertools
 from active_data.app import replace_vars
 from pyLibrary import convert, jsons, queries
 from pyLibrary.debugs.logs import Log, Except, constants
-from pyLibrary.dot import wrap, listwrap, nvl
+from pyLibrary.dot import wrap, listwrap, nvl, unwrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
 from pyLibrary.queries import qb
@@ -126,6 +126,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
         FuzzyTestCase.__init__(self, *args, **kwargs)
         self.service_url = settings.service_url
         self.backend_es = settings.backend_es.copy()
+        if self.backend_es.schema==None:
+            Log.error("Expecting backed_es to have a schema defined")
         self.es = None
         self.index = None
 
@@ -213,14 +215,20 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
                 if format == "table":
-                    itertools.itertools.product(enumerate(result.header),)
-                    expected.header = qb.sort(expected.header)
+                    # MAP FROM expected COLUMN TO result COLUMN
+                    mapping = zip(*zip(*filter(
+                        lambda v: v[0][1] == v[1][1],
+                        itertools.product(enumerate(expected.header), enumerate(result.header))
+                    ))[1])[0]
+                    result.header = [result.header[m] for m in mapping]
 
-
+                    if result.data:
+                        columns = zip(*unwrap(result.data))
+                        result.data = zip(*[columns[m] for m in mapping])
+                        result.data = qb.sort(result.data, range(len(result.header)))
                     expected.data = qb.sort(expected.data, range(len(expected.header)))
-                    result.data = qb.sort(result.data, range(len(result.header)))
                 elif format == "list":
-                    sort_order=wrap(_normalize_edges(nvl(subtest.query.edges, subtest.query.groupby)) + _normalize_selects(listwrap(subtest.query.select))).name
+                    sort_order = wrap(_normalize_edges(nvl(subtest.query.edges, subtest.query.groupby)) + _normalize_selects(listwrap(subtest.query.select))).name
                     expected.data = qb.sort(expected.data, sort_order)
                     result.data = qb.sort(result.data, sort_order)
 

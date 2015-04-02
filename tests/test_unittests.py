@@ -65,15 +65,6 @@ class TestUnittests(ActiveDataBaseTest):
     # TODO: MAKE TEST: LIMIT NOT WORKING ON EDGES
     # {"from":"unittest","edges":["result.test"],"limit":10000}
 
-    #TODO: RETURN RESULT FROM SINGLE-VALUE SELECT
-    # {
-    # 	"from":"unittest",
-    # 	"select":"run.stats.bytes",
-    # 	"where":{"and":[
-    # 		{"eq":{"machine.platform":"linux64"}},
-    # 		{"gt":{"run.stats.bytes":600000000}}
-    # 	]}
-    # }
 
     #TODO: ES WILL NOT ACCEPT THESE TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM
     # {

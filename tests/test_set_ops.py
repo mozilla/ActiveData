@@ -96,14 +96,6 @@ class TestSetOps(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test)
-    # {
-    # 	"from":"unittest",
-    # 	"select":"run.stats.bytes",
-    # 	"where":{"and":[
-    # 		{"eq":{"machine.platform":"linux64"}},
-    # 		{"gt":{"run.stats.bytes":600000000}}
-    # 	]}
-    # }
 
 
     def test_single_select_alpha(self):

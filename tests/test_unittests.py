@@ -62,8 +62,7 @@ class TestUnittests(ActiveDataBaseTest):
         Log.note("result\n{{result|indent}}", {"result": result})
 
 
-        # TODO: MAKE TEST: LIMIT NOT WORKING ON EDGES
-
+    # TODO: MAKE TEST: LIMIT NOT WORKING ON EDGES
     # {"from":"unittest","edges":["result.test"],"limit":10000}
 
     #TODO: RETURN RESULT FROM SINGLE-VALUE SELECT

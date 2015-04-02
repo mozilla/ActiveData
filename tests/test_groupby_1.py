@@ -43,8 +43,6 @@ class TestgroupBy1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-
-
     def test_count_rows(self):
         test = {
             "name": "count rows, 1d",
@@ -285,6 +283,72 @@ class TestgroupBy1(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test)
+
+    def test_range_aggregation(self):
+        # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
+        test = {
+            "data": simple_test_data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": [
+                    {"name": "maxi", "value": "v", "aggregate": "max"},
+                    {"name": "mini", "value": "v", "aggregate": "min"}
+                ],
+                "groupby": "a"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b", "mini": 2, "maxi": 2},
+                    {"a": "c", "mini": 7, "maxi": 13},
+                    {"a": None, "mini": 3, "maxi": 3}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a", "mini", "maxi"],
+                "data": [
+                    ["b", 2, 2],
+                    ["c", 7, 13],
+                    [None, 3, 3]
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
+
+    # {
+    #     "from": "unittest",
+    #     "select": [
+    #         {
+    #             "value": "run.stats.bytes",
+    #             "aggregate": "max"
+    #         },
+    #         {
+    #             "value": "run.stats.bytes",
+    #             "aggregate": "count"
+    #         }
+    #     ],
+    #     "groupby": [
+    #         "machine.platform"
+    #     ],
+    #     "where": {
+    #         "and": [
+    #             {
+    #                 "eq": {
+    #                     "etl.id": 0
+    #                 }
+    #             },
+    #             {
+    #                 "gt": {
+    #                     "run.stats.bytes": 600000000
+    #                 }
+    #             }
+    #         ]
+    #     }
+    # }
+
+
 
 
 simple_test_data = [

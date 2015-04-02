@@ -62,41 +62,7 @@ class TestUnittests(ActiveDataBaseTest):
         Log.note("result\n{{result|indent}}", {"result": result})
 
 
-    # TODO: MAKE TEST: LIMIT NOT WORKING ON EDGES
-    # {"from":"unittest","edges":["result.test"],"limit":10000}
 
-
-    #TODO: ES WILL NOT ACCEPT THESE TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM
-    # {
-    #     "from": "unittest",
-    #     "select": [
-    #         {
-    #             "value": "run.stats.bytes",
-    #             "aggregate": "max"
-    #         },
-    #         {
-    #             "value": "run.stats.bytes",
-    #             "aggregate": "count"
-    #         }
-    #     ],
-    #     "groupby": [
-    #         "machine.platform"
-    #     ],
-    #     "where": {
-    #         "and": [
-    #             {
-    #                 "eq": {
-    #                     "etl.id": 0
-    #                 }
-    #             },
-    #             {
-    #                 "gt": {
-    #                     "run.stats.bytes": 600000000
-    #                 }
-    #             }
-    #         ]
-    #     }
-    # }
 
     #TODO: IT SEEMS TOO MANY COLUMNS RETURNED, ONLY RETURN SHALLOW COLUMNS
     #  {"from":"unittest"}

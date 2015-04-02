@@ -1,5 +1,5 @@
 
-Unittest Logs
+Unittest Logs 
 =============
 
 The Unittest logs are deep JSON structures describing each of the individual test results.  There are five major properties
@@ -12,20 +12,16 @@ Describes properties exclusive to an individual test result
 * `result.test` - *string* path and filename of the specific test
 * `result.result` - *string* recording the test result
 * `result.expected` - *string* representing what was expected of the test.  Not all tests are expected to pass.
-* `result.ok` - *boolean* is true if result matches expected
-
-endtime, but barring that (due to missing records) can be the test's own reported duration
+* `result.ok` - *boolean* is true if result matches expected result 
 * `result.start_time` -  *timestamp* when the test started running  
 * `result.end_time` - *timestamp* when the test ended
-* `result.duration` - *seconds* usually the calculated difference between start and * `result.last_log_time` - *timestamp* of the last log line seen for this run, may be after the `result.end_time`
-
+* `result.duration` - *seconds* usually the calculated difference between start and end times, but could be the test's own reported duration
+* `result.last_log_time` - *timestamp* of the last log line seen for this run, may be after the `result.end_time`
 * `result.stats` - *object* counts the sub-tests grouping some other features of the test not found in the structured log
-* `result.stats` - *object* counting some of the subtest features
 * `result.stats.fail` - *count*
 * `result.stats.notrun` - *count*
 * `result.stats.timeout` - *count*
 * `result.stats.pass` - *count*
-
 * `result.missing_test_end` - *boolean* missing the test's end record
 * `result.missing_test_start` - *boolean* missing the test's start record
 * `result.crash` - *boolean* the structured log recorded `"action": "crash"`
@@ -33,15 +29,17 @@ endtime, but barring that (due to missing records) can be the test's own reporte
 `run` Columns
 -------------
 
-Properties that describe the run of this test suite, and the many tests that are contained within.  Most are verbatim from the Pulse messages received by the ETL
+Properties that describe the run of this test suite, and the many tests that are contained within.  Most are verbatim from the Pulse messages received by the ETL, and replicated for every test result in the data store.  **If you are interested in suite-level aggregates, be sure to filter by the suite's canonical test result: `"where": {"eq":{"etl.id":0}}`**
 
+* `run.suite` - *string* name of the suite
+* `run.chunk` - *integer* each suite is broken into chucks to parallelize the run, each chunk is given a number
+* `run.insertion_time` - *timestamp* ?time submitted to job queue for execution?
 * `run.timestamp` - *timestamp*
 * `run.job_number` - *string* 
 * `run.files` - *array* of files recorded for this suite, one or more of which are the structured log digested to make this record 
 * `run.files.name` - *string* name of the file
 * `run.files.url` - *string* url where he contents can/could be found
-* `run.chunk` - *integer* each suite is broken into chucks to parallelize the run, each chunk is given a number
-* `run.status` - *
+* `run.status` - *string* suite's ending status
 * `run.stats` - *object* various counts for this suite/chunk
 * `run.stats.total` - *long* total number of tests
 * `run.stats.bytes` - *long* total number of bytes in structured log
@@ -58,8 +56,6 @@ Properties that describe the run of this test suite, and the many tests that are
 * `run.stats.timeout` - *long* total number of tests that ended in timeout
 * `run.stats.crash` - *long* total number of tests that ended in crash
 * `run.talos` - *boolean* indicates if Talos performance results can be found in the text log
-* `run.suite` - *string* name of the suite
-* `run.insertion_time` - *timestamp* ?time submitted to job queue for execution?
 * `run.key` - *string* complicated buildbot string describing this run (and used to generate these other properties, so is redundant)
 * `run.logurl` - *string* url to find the text log
 

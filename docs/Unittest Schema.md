@@ -41,20 +41,20 @@ Properties that describe the run of this test suite, and the many tests that are
 * `run.files.url` - *string* url where he contents can/could be found
 * `run.status` - *string* suite's ending status
 * `run.stats` - *object* various counts for this suite/chunk
-* `run.stats.total` - *long* total number of tests
-* `run.stats.bytes` - *long* total number of bytes in structured log
-* `run.stats.error` - *long* total number of tests ending in error
-* `run.stats.skip` - *long* total number of tests skipped
-* `run.stats.pass` - *long* total number of tests that passed
-* `run.stats.duration` - *seconds* duration of this suite 
-* `run.stats.fail` - *long* total number of tests that end in failure
-* `run.stats.end_time` - *timestamp* when the suite finished running
-* `run.stats.none` - *long* total number of tests that did not end 
-* `run.stats.start_time` - *timestamp* when the suite started running 
-* `run.stats.lines` - *long* total number of lines in the structured log
 * `run.stats.ok` - *long* number of tests where `result==expected`
-* `run.stats.timeout` - *long* total number of tests that ended in timeout
-* `run.stats.crash` - *long* total number of tests that ended in crash
+* `run.stats.pass` - *long* number of tests that passed
+* `run.stats.fail` - *long* number of tests that end in failure
+* `run.stats.error` - *long* number of tests ending in error
+* `run.stats.skip` - *long* number of tests skipped
+* `run.stats.none` - *long* number of tests that did not end 
+* `run.stats.timeout` - *long* number of tests that ended in timeout
+* `run.stats.crash` - *long* number of tests that ended in crash
+* `run.stats.total` - *long* number of tests
+* `run.stats.start_time` - *timestamp* when the suite started running 
+* `run.stats.end_time` - *timestamp* when the suite finished running
+* `run.stats.duration` - *seconds* duration of this suite 
+* `run.stats.bytes` - *long* number of bytes in structured log
+* `run.stats.lines` - *long* number of lines in the structured log
 * `run.talos` - *boolean* indicates if Talos performance results can be found in the text log
 * `run.key` - *string* complicated buildbot string describing this run (and used to generate these other properties, so is redundant)
 * `run.logurl` - *string* url to find the text log

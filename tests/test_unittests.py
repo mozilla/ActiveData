@@ -76,10 +76,12 @@ class TestUnittests(ActiveDataBaseTest):
             },
             "select": [
                 {
+                    "name": "max_bytes",
                     "value": "run.stats.bytes",
                     "aggregate": "max"
                 },
                 {
+                    "name": "count",
                     "value": "run.stats.bytes",
                     "aggregate": "count"
                 }

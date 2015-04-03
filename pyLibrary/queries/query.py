@@ -63,7 +63,15 @@ class Query(object):
 
         select = query.select
         if isinstance(select, list):
-            self.select = wrap([unwrap(_normalize_select(s, schema=schema)) for s in select])
+            names = set()
+            new_select = []
+            for s in select:
+                ns = _normalize_select(s, schema=schema)
+                if ns.name in names:
+                    Log.error("two select have the same name")
+                names.add(ns.name)
+                new_select.append(unwrap(ns))
+            self.select = wrap(new_select)
         elif select:
             self.select = _normalize_select(select, schema=schema)
         else:

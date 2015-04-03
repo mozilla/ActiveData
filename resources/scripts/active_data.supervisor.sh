@@ -1,5 +1,6 @@
 cd /home/ubuntu/ActiveData/
 sudo git checkout master
+sudo git stash clear
 sudo git stash
 sudo git pull origin master
 sudo git stash apply

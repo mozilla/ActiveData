@@ -320,6 +320,24 @@ class TestgroupBy1(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
+    def test_error_on_same_column_name(self):
+        test = {
+            "data": [],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": [
+                    {"value": "_a._b._c", "aggregate": "max"},
+                    {"value": "_a._b._c", "aggregate": "min"}
+                ],
+                "groupby": "_b"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": []
+            }
+        }
+        self.assertRaises(Exception, self._execute_es_tests, test)
+
     # {
     #     "from": "unittest",
     #     "select": [

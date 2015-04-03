@@ -46,8 +46,8 @@ def format_cube_from_aggop(decoders, aggs, start, query, select):
 
     matricies = [(s, Matrix(dims=[], zeros=(s.aggregate == "count"))) for s in select]
     for s, m in matricies:
-        if m[tuple()] != None:
-            Log.error("Not expected")
+
+
         m[tuple()] = agg[s.pull]
     cube = Cube(query.select, [], {s.name: m for s, m in matricies})
     cube.frum = query

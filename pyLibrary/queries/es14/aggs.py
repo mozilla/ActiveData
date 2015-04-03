@@ -32,14 +32,25 @@ def es_aggsop(es, frum, query):
     select = listwrap(query.select)
 
     es_query = Dict()
+    new_select = Dict()
     for s in select:
-        if s.aggregate == "count" and s.value and s.value != ".":
-            es_query.aggs[literal_field(s.name)].value_count.field = s.value
-        elif s.aggregate == "count":
-            pass
-        elif not s.value:
-            Log.error("Expecting a value property in {{select|json}}", {"select": s})
+        if s.aggregate == "count" and (s.value == None or s.value == "."):
+            s.pull = "doc_count"
         else:
+            new_select[literal_field(s.value)] += [s]
+
+    for l_value, many in new_select.items():
+        if len(many)>1:
+            canonical_name=literal_field(many[0].name)
+            es_query.aggs[canonical_name].stats.field = many[0].value
+            for s in many:
+                if s.aggregate == "count":
+                    s.pull = canonical_name + ".count"
+                else:
+                    s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
+        else:
+            new_select[l_value] = s
+            s.pull = literal_field(s.name) + ".value"
             es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].field = s.value
 
     decoders = [AggsDecoder(e, query) for e in nvl(query.edges, query.groupby, [])]
@@ -56,6 +67,7 @@ def es_aggsop(es, frum, query):
 
     if len(split_field(frum.name)) > 1:
         es_query = wrap({
+            "size": 0,
             "aggs": {"_nested": set_default({
                 "nested": {
                     "path": join_field(split_field(frum.name)[1::])

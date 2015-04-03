@@ -22,6 +22,16 @@
 					}
 				},
 				{
+					"default_simple_objects": {
+						"mapping": {
+							"type": "object",
+							"dynamic": true
+						},
+						"match_mapping_type": "object",
+						"match": "_*"
+					}
+				},
+				{
 					"default_objects": {
 						"mapping": {
 							"type": "nested"
@@ -29,7 +39,8 @@
 						"match_mapping_type": "object",
 						"match": "*"
 					}
-				}			],
+				}
+			],
 			"$ref":"param://metadata"
         }
     }

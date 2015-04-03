@@ -11,7 +11,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 import base_test_class
-from pyLibrary.dot import wrap, nvl
+from pyLibrary.dot import wrap
 from pyLibrary.queries import query
 from tests.base_test_class import ActiveDataBaseTest
 
@@ -54,11 +54,52 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_single_deep_select(self):
+
+        test = {
+            "data": [  # PROPERTIES STARTING WITH _ ARE NOT NESTED AUTOMATICALLY
+                {"_a": {"_b": {"_c": 1}}},
+                {"_a": {"_b": {"_c": 2}}},
+                {"_a": {"_b": {"_c": 3}}},
+                {"_a": {"_b": {"_c": 4}}},
+                {"_a": {"_b": {"_c": 5}}}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": "_a._b._c",
+                "sort": "_a._b._c"  # SO THE CUBE COMPARISON WILL PASS
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                {"_a": {"_b": {"_c": 1}}},
+                {"_a": {"_b": {"_c": 2}}},
+                {"_a": {"_b": {"_c": 3}}},
+                {"_a": {"_b": {"_c": 4}}},
+                {"_a": {"_b": {"_c": 5}}}
+            ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["_a._b._c"],
+                "data": [[1], [2], [3], [4], [5]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 5, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "_a._b._c": [1, 2, 3, 4, 5]
+                }
+            }
+        }
+        self._execute_es_tests(test)
 
 
     def test_single_select_alpha(self):
         test = {
-            "name": "singleton_alpha",
             "data": [
                 {"a": "b"}
             ],

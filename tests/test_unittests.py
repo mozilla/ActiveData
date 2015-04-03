@@ -61,52 +61,42 @@ class TestUnittests(ActiveDataBaseTest):
 
         Log.note("result\n{{result|indent}}", {"result": result})
 
+    def test_multiple_agg_on_same_field(self):
+        if self.not_real_service():
+            return
 
-        # TODO: MAKE TEST: LIMIT NOT WORKING ON EDGES
+        test = wrap({"query": {
+            "from": {
+                "type": "elasticsearch",
+                "settings": {
+                    "host": ES_CLUSTER_LOCATION,
+                    "index": "unittest",
+                    "type": "test_result"
+                }
+            },
+            "select": [
+                {
+                    "value": "run.stats.bytes",
+                    "aggregate": "max"
+                },
+                {
+                    "value": "run.stats.bytes",
+                    "aggregate": "count"
+                }
+            ]
+        }})
 
-    # {"from":"unittest","edges":["result.test"],"limit":10000}
+        query = convert.unicode2utf8(convert.value2json(test.query))
+        # EXECUTE QUERY
+        with Timer("query"):
+            response = http.get(self.service_url, data=query)
+            if response.status_code != 200:
+                error(response)
+        result = convert.json2value(convert.utf82unicode(response.all_content))
 
-    #TODO: RETURN RESULT FROM SINGLE-VALUE SELECT
-    # {
-    # 	"from":"unittest",
-    # 	"select":"run.stats.bytes",
-    # 	"where":{"and":[
-    # 		{"eq":{"machine.platform":"linux64"}},
-    # 		{"gt":{"run.stats.bytes":600000000}}
-    # 	]}
-    # }
-
+        Log.note("result\n{{result|indent}}", {"result": result})
     #TODO: ES WILL NOT ACCEPT THESE TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM
-    # {
-    #     "from": "unittest",
-    #     "select": [
-    #         {
-    #             "value": "run.stats.bytes",
-    #             "aggregate": "max"
-    #         },
-    #         {
-    #             "value": "run.stats.bytes",
-    #             "aggregate": "count"
-    #         }
-    #     ],
-    #     "groupby": [
-    #         "machine.platform"
-    #     ],
-    #     "where": {
-    #         "and": [
-    #             {
-    #                 "eq": {
-    #                     "etl.id": 0
-    #                 }
-    #             },
-    #             {
-    #                 "gt": {
-    #                     "run.stats.bytes": 600000000
-    #                 }
-    #             }
-    #         ]
-    #     }
-    # }
+
 
     #TODO: IT SEEMS TOO MANY COLUMNS RETURNED, ONLY RETURN SHALLOW COLUMNS
     #  {"from":"unittest"}

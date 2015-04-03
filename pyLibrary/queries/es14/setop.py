@@ -13,7 +13,7 @@ from pyLibrary import queries
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND, SUM, OR, UNION
-from pyLibrary.dot import nvl, split_field, set_default, Dict, unwraplist, unwrap
+from pyLibrary.dot import nvl, split_field, set_default, Dict, unwraplist, unwrap, literal_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
 from pyLibrary.queries.domains import is_keyword
@@ -271,12 +271,12 @@ def es_deepop(es, mvel, query):
 def format_list(T, select, source):
     data = []
     for row in T:
-        r = {}
+        r = Dict()
         for s in select:
             if s.value == ".":
                 r[s.name] = row[source]
             else:
-                r[s.name] = unwraplist(row[source][s.value])
+                r[s.name] = unwraplist(row[source][literal_field(s.value)])
         data.append(r)
     return Dict(
         meta={"format": "list"},
@@ -294,7 +294,7 @@ def format_table(T, select, source):
             if s.value == ".":
                 r[map[s.name]] = row[source]
             else:
-                r[map[s.name]] = unwraplist(row[source][s.value])
+                r[map[s.name]] = unwraplist(row[source][literal_field(s.value)])
         data.append(r)
     return Dict(
         meta={"format": "table"},

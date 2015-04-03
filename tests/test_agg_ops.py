@@ -71,3 +71,32 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+
+    def test_many_aggs_on_one_column(self):
+        # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
+        test = {
+            "data": [{"a": i*2} for i in range(30)],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": [
+                    {"name": "maxi", "value": "a", "aggregate": "max"},
+                    {"name": "mini", "value": "a", "aggregate": "min"},
+                    {"name": "count", "value": "a", "aggregate": "count"}
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"mini": 0, "maxi": 58, "count":30}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["mini", "maxi", "count"],
+                "data": [
+                    [0, 58, 30]
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+

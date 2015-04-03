@@ -502,7 +502,7 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-    def test_limit(self):
+    def test_edge_limit_big(self):
         test = {
             "name": "sum column",
             "metadata": {},
@@ -578,6 +578,109 @@ class TestEdge1(ActiveDataBaseTest):
                 ],
                 "data": {
                     "v": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_edge_limit_small(self):
+        test = {
+            "name": "sum column",
+            "metadata": {},
+            "data": long_test_data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": "v", "aggregate": "max"},
+                "edges": [{"value": "k", "domain": {"type": "default", "limit": 1}}]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"k": "a", "v": 1}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["k", "v"],
+                "data": [
+                    ["a", 1]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "k",
+                        "allowNulls": False,
+                        "domain": {
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [
+                                {"value": "a"}
+                            ]
+                        }
+                    }
+                ],
+                "data": {
+                    "v": [1]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_general_limit(self):
+        test = {
+            "name": "sum column",
+            "metadata": {},
+            "data": long_test_data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": "v", "aggregate": "max"},
+                "edges": [{"value": "k", "domain": {"type": "default"}}],
+                "limit": 5
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"k": "a", "v": 1},
+                    {"k": "b", "v": 2},
+                    {"k": "c", "v": 3},
+                    {"k": "d", "v": 4},
+                    {"k": "e", "v": 5}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["k", "v"],
+                "data": [
+                    ["a", 1],
+                    ["b", 2],
+                    ["c", 3],
+                    ["d", 4],
+                    ["e", 5]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "k",
+                        "allowNulls": False,
+                        "domain": {
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [
+                                {"value": "a"},
+                                {"value": "b"},
+                                {"value": "c"},
+                                {"value": "d"},
+                                {"value": "e"}
+                            ]
+                        }
+                    }
+                ],
+                "data": {
+                    "v": [1, 2, 3, 4, 5]
                 }
             }
         }

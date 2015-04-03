@@ -162,6 +162,7 @@ def qb_expression_to_python(expr):
 
     Log.error("`{{op}}` is not a recognized operation", {"op": op})
 
+
 def get_all_vars(expr):
     if expr == None:
         return set()

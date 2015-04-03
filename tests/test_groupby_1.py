@@ -295,21 +295,21 @@ class TestgroupBy1(ActiveDataBaseTest):
                 "from": base_test_class.settings.backend_es.index,
                 "select": [
                     {"name": "maxi", "value": "_a._b._c", "aggregate": "max"},
-                    {"name": "mini", "value": "_a._b._c", "aggregate": "count"}
+                    {"name": "mini", "value": "_a._b._c", "aggregate": "min"}
                 ],
                 "groupby": "_b"
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a": "b", "mini": 2, "maxi": 2},
-                    {"a": "c", "mini": 7, "maxi": 13},
-                    {"a": None, "mini": 3, "maxi": 3}
+                    {"_b": "b", "mini": 2, "maxi": 2},
+                    {"_b": "c", "mini": 7, "maxi": 13},
+                    {"_b": None, "mini": 3, "maxi": 3}
                 ]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a", "mini", "maxi"],
+                "header": ["_b", "mini", "maxi"],
                 "data": [
                     ["b", 2, 2],
                     ["c", 7, 13],

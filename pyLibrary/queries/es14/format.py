@@ -25,17 +25,13 @@ def format_cube(decoders, aggs, start, query, select):
     for row, agg in aggs_iterator(aggs, decoders):
         coord = tuple(d.get_index(row) for d in decoders)
         for s, m in matricies:
-            # name = literal_field(s.name)
-            if s.aggregate == "count" and (s.value == None or s.value == "."):
-                m[coord] = agg.doc_count
-            else:
-                try:
-                    if m[coord]:
-                        Log.error("Not expected")
-                    m[coord] = agg[literal_field(s.name)].value
-                except Exception, e:
-                    tuple(d.get_index(row) for d in decoders)
-                    Log.error("", e)
+            try:
+                if m[coord]:
+                    Log.error("Not expected")
+                m[coord] = agg[s.pull]
+            except Exception, e:
+                tuple(d.get_index(row) for d in decoders)
+                Log.error("", e)
     cube = Cube(query.select, new_edges, {s.name: m for s, m in matricies})
     cube.frum = query
     return cube
@@ -50,12 +46,9 @@ def format_cube_from_aggop(decoders, aggs, start, query, select):
 
     matricies = [(s, Matrix(dims=[], zeros=(s.aggregate == "count"))) for s in select]
     for s, m in matricies:
-        if s.aggregate == "count" and (s.value == None or s.value == "."):
-            m[tuple()] = agg.doc_count
-        else:
-            if m[tuple()] != None:
-                Log.error("Not expected")
-            m[tuple()] = agg[literal_field(s.name)].value
+        if m[tuple()] != None:
+            Log.error("Not expected")
+        m[tuple()] = agg[s.pull]
     cube = Cube(query.select, [], {s.name: m for s, m in matricies})
     cube.frum = query
     return cube
@@ -74,10 +67,7 @@ def format_table(decoders, aggs, start, query, select):
 
             output = [d.get_value(c) for c, d in zip(coord, decoders)]
             for s in select:
-                if s.aggregate == "count" and (s.value == None or s.value == "."):
-                    output.append(agg.doc_count)
-                else:
-                    output.append(agg[literal_field(s.name)].value)
+                output.append(agg[s.pull])
             yield output
 
         # EMIT THE MISSING CELLS IN THE CUBE
@@ -105,10 +95,7 @@ def format_table_from_groupby(decoders, aggs, start, query, select):
         for row, agg in aggs_iterator(aggs, decoders):
             output = [d.get_value_from_row(row) for d in decoders]
             for s in select:
-                if s.aggregate == "count" and (s.value == None or s.value == "."):
-                    output.append(agg.doc_count)
-                else:
-                    output.append(agg[literal_field(s.name)].value)
+                output.append(agg[s.pull])
             yield output
 
     return Dict(
@@ -129,10 +116,7 @@ def format_table_from_aggop(decoders, aggs, start, query, select):
 
     row = []
     for s in select:
-        if s.aggregate == "count" and (s.value == None or s.value == "."):
-            row.append(agg.doc_count)
-        else:
-            row.append(agg[literal_field(s.name)].value)
+        row.append(agg[s.pull])
 
     return Dict(
         meta={"format": "table"},
@@ -171,10 +155,7 @@ def format_list_from_groupby(decoders, aggs, start, query, select):
                 output[g.name] = d.get_value_from_row(row)
 
             for s in select:
-                if s.aggregate == "count" and (s.value == None or s.value == "."):
-                    output[s.name] = agg.doc_count
-                else:
-                    output[s.name] = agg[literal_field(s.name)].value
+                output[s.name] = agg[s.pull]
             yield output
 
     output = Dict(
@@ -199,10 +180,7 @@ def format_list(decoders, aggs, start, query, select):
                 output[e.name] = d.get_value(c)
 
             for s in select:
-                if s.aggregate == "count" and (s.value == None or s.value == "."):
-                    output[s.name] = agg.doc_count
-                else:
-                    output[s.name] = agg[literal_field(s.name)].value
+                output[s.name] = agg[s.pull]
             yield output
 
         # EMIT THE MISSING CELLS IN THE CUBE
@@ -230,10 +208,7 @@ def format_list_from_aggop(decoders, aggs, start, query, select):
 
     item = Dict()
     for s in select:
-        if s.aggregate == "count" and (s.value == None or s.value == "."):
-            item[s.name] = agg.doc_count
-        else:
-            item[s.name] = agg[literal_field(s.name)].value
+        item[s.name] = agg[s.pull]
 
     return wrap({
         "meta": {"format": "list"},

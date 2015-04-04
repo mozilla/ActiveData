@@ -103,8 +103,6 @@ class TestUnittests(ActiveDataBaseTest):
     #TODO: IT SEEMS TOO MANY COLUMNS RETURNED, ONLY RETURN SHALLOW COLUMNS
     #  {"from":"unittest"}
 
-    #TODO: COMPRESS range QUERY OVER SAME VARIABLE
-
     #TODO: SELECTING OBJECT SHOULD GIVE GOOD ERROR, OR ACTUALLY RETURN OBJECT
     # {
     # 	"from":"unittest",

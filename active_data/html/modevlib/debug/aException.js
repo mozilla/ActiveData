@@ -21,15 +21,40 @@ importScript("../util/convert.js");
 	};
 	Exception.prototype = Object.create(Error);
 
+	function pythonExcept2Exception(except){
+		var output = new Exception(
+			new Template(except.template).expand(except.params),
+			except.cause===undefined ? undefined : Array.newInstance(except.cause).map(pythonExcept2Exception)
+		);
+		output.stack = pythonTrace2Stack(except.trace);
+		return output;
+	}//function
+
+	function pythonTrace2Stack(stack){
+		if (stack===undefined || stack==null) return [];
+		var output = stack.map(function(s){
+			return {
+				"function":s.method,
+				"fileName":s.file,
+				"lineNumber":s.line,
+				"depth":s.depth
+			};
+		});
+		return output;
+	}//function
+
+
 	function wrap(e){
 		if (e===undefined || e instanceof Exception) return e;
-		if (e instanceof Error){
-			var output=new Exception(e.message, e.cause);
-			output.fileName= e.fileName;
+		if (e instanceof Error) {
+			var output = new Exception(e.message, e.cause);
+			output.fileName = e.fileName;
 			output.lineNumber = e.lineNumber;
 			output.columnNumber = e.columnNumber;
 			output.stack = parseStack(e.stack);
 			return output;
+		} else if (e.type=="ERROR"){
+			return pythonExcept2Exception(e);
 		}//endif
 
 		return new Exception(""+e);

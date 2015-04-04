@@ -10,6 +10,10 @@ var Template = function Template(template){
 
 (function(){
 	Template.prototype.expand = function expand(values){
+		if (values === undefined){
+			return this.template;
+		}//endif
+
 		var map = {};
 		if (!(values instanceof Array)) {
 			var keys = Object.keys(values);

@@ -21,6 +21,7 @@ from pyLibrary.dot import nvl, split_field, join_field, Null, set_default
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap, listwrap
 from pyLibrary.queries.expressions import TRUE_FILTER
+from pyLibrary.queries.filters import simplify_esfilter
 
 
 DEFAULT_LIMIT = 10
@@ -85,10 +86,12 @@ class Query(object):
         elif query.edges:
             self.edges = _normalize_edges(query.edges, schema=schema)
             self.groupby = None
-        else:
+        elif query.groupby:
             self.edges = None
             self.groupby = _normalize_groupby(query.groupby, schema=schema)
-
+        else:
+            self.edges = []
+            self.groupby = None
 
         self.where = _normalize_where(query.where, schema=schema)
         self.window = [_normalize_window(w) for w in listwrap(query.window)]
@@ -127,9 +130,8 @@ class Query(object):
 
     def copy(self):
         output = object.__new__(Query)
-        source = object.__getattribute__(self, "__dict__")
-        dest = object.__getattribute__(output, "__dict__")
-        set_default(dest, source)
+        for s in Query.__slots__:
+            setattr(output, s, getattr(self, s))
         return output
 
     def as_dict(self):

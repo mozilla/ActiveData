@@ -268,12 +268,12 @@ class Duration(object):
         return output
 
 
-    def format(self, interval, rounding):
-        return self.round(Duration(interval), rounding) + interval
+    def format(self, interval, decimal):
+        return self.round(Duration(interval), decimal) + interval
 
-    def round(self, interval, rounding=0):
+    def round(self, interval, decimal=0):
         output = self / interval
-        output = Math.round(output, rounding)
+        output = Math.round(output, decimal)
         return output
 
 

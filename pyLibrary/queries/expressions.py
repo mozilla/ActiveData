@@ -204,7 +204,7 @@ def get_all_vars(expr):
             if op == "eq":
                 output = set()
                 for a, b in term.items():
-                    output |= get_all_vars(a) | get_all_vars(b)
+                    output |= get_all_vars(a)  # {k:v} kIS VARIABLE, v IS A VALUE
                 return output
             else:
                 a, b = term.items()[0]
@@ -396,12 +396,31 @@ class NotOp(object):
         return self.term.vars()
 
 
+class RangeOp(object):
+    def __init__(self, op, term):
+        self.field, self.cmp = term.items()[0]
+
+    def to_ruby(self):
+        return " and ".join(qb_expression_to_ruby([{o: {self.field: v}} for o, v in self.cmp.items()]))
+
+    def to_python(self):
+        return " and ".join(qb_expression_to_python([{o: {self.field: v}} for o, v in self.cmp.items()]))
+
+    def to_esfilter(self):
+        return {"range": {self.field, self.cmp}}
+
+    def vars(self):
+        return set(self.field)
+
+
+
 
 
 complex_operators = {
     "terms": TermsOp,
     "exists": ExistsOp,
     "missing": MissingOp,
-    "prefix": PrefixOp
+    "prefix": PrefixOp,
+    "range": RangeOp
 }
 

@@ -711,11 +711,10 @@ class Alias(object):
                 properties = index.mappings["test_results"]
             # DONE BUG CORRECTION
 
-
             if not properties:
                 Log.error("ElasticSearch index ({{index}}) does not have type ({{type}})", {
-                    "index":self.settings.index,
-                    "type":self.settings.type
+                    "index": self.settings.index,
+                    "type": self.settings.type
                 })
             return properties
         else:

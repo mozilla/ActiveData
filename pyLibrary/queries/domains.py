@@ -285,8 +285,6 @@ class SimpleSetDomain(Domain):
         return output
 
 
-
-
 class SetDomain(Domain):
     __slots__ = ["NULL", "partitions", "map", "order"]
 

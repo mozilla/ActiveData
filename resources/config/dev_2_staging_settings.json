@@ -21,7 +21,7 @@
 		}
 	},
 	"elasticsearch": {
-		"host": "http://52.10.116.229",
+		"host": "http://52.11.57.80",
 		"port": "9200",
 		"index": "testdata",
 		"type": "test_result",

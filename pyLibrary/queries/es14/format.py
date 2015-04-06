@@ -73,13 +73,13 @@ def format_table(decoders, aggs, start, query, select):
         # EMIT THE MISSING CELLS IN THE CUBE
         for c, v in is_sent:
             if not v:
-                output = [d.get_value(c[i]) for i, d in enumerate(decoders)]
+                record = [d.get_value(c[i]) for i, d in enumerate(decoders)]
                 for s in select:
                     if s.aggregate == "count":
-                        output.append(0)
+                        record.append(0)
                     else:
-                        output.append(None)
-                yield output
+                        record.append(None)
+                yield record
 
     return Dict(
         meta={"format": "table"},

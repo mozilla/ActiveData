@@ -15,7 +15,6 @@ from pyLibrary.collections import AND
 from pyLibrary.queries import qb
 from pyLibrary.queries.es09.util import aggregates, build_es_query, compileEdges2Term
 from pyLibrary.queries import es09
-from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.queries.cube import Cube
 from pyLibrary.dot import nvl
 from pyLibrary.dot.lists import DictList

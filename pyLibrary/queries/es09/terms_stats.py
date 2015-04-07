@@ -16,13 +16,13 @@ from pyLibrary.queries import domains
 from pyLibrary.queries.cube import Cube
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09.util import aggregates, build_es_query, compileEdges2Term
-from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.es09.expressions import UID
 from pyLibrary.queries import es09
 from pyLibrary.dot import literal_field, nvl
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
+from pyLibrary.queries.expressions import simplify_esfilter
 
 
 def is_terms_stats(query):

@@ -20,8 +20,7 @@ from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import nvl, split_field, join_field, Null, set_default
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap, listwrap
-from pyLibrary.queries.expressions import TRUE_FILTER
-from pyLibrary.queries.filters import simplify_esfilter
+from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter
 
 
 DEFAULT_LIMIT = 10

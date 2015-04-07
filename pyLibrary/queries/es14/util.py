@@ -13,7 +13,7 @@ from __future__ import division
 from pyLibrary.dot import wrap
 
 
-def build_es_query(query):
+def es_query_template(query):
     output = wrap({
         "query": {"match_all": {}},
         "from": 0,

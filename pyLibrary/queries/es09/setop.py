@@ -18,10 +18,9 @@ from pyLibrary.dot import listwrap, unwrap
 from pyLibrary.queries.es09.expressions import unpack_terms
 from pyLibrary.queries.es09.util import aggregates
 from pyLibrary.queries import domains, es09
-from pyLibrary.queries.filters import TRUE_FILTER, simplify_esfilter
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import filters
 from pyLibrary.queries.cube import Cube
+from pyLibrary.queries.expressions import simplify_esfilter, TRUE_FILTER
 
 
 def is_fieldop(query):
@@ -58,7 +57,7 @@ def es_fieldop(es, query):
             "query": {
                 "match_all": {}
             },
-            "filter": filters.simplify(query.where)
+            "filter": simplify_esfilter(query.where)
         }
     }
     FromES.size = nvl(query.limit, 200000)

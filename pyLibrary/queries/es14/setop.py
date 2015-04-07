@@ -18,9 +18,8 @@ from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries import domains
-from pyLibrary.queries.filters import simplify_esfilter, TRUE_FILTER
+from pyLibrary.queries.expressions import qb_expression_to_esfilter, simplify_esfilter, TRUE_FILTER
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import filters
 from pyLibrary.queries.cube import Cube
 from pyLibrary.queries.es14.util import aggregates1_4
 from pyLibrary.times.timer import Timer
@@ -52,14 +51,14 @@ def is_fieldop(query):
 
 
 def es_fieldop(es, query):
-    es_query = es14.util.build_es_query(query)
+    es_query = es14.util.es_query_template(query)
     select = listwrap(query.select)
     es_query.query = {
         "filtered": {
             "query": {
                 "match_all": {}
             },
-            "filter": filters.simplify_esfilter(query.where)
+            "filter": simplify_esfilter(qb_expression_to_esfilter(query.where))
         }
     }
     es_query.size = nvl(query.limit, queries.query.DEFAULT_LIMIT)
@@ -88,7 +87,7 @@ def es_fieldop(es, query):
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if s.value == "*":
             try:
-                column_names = set(c for c in query.frum.get_column_names() if c.find(".") == -1)
+                column_names = set(c.name for c in query.frum.get_columns() if c.type not in ["object", "nested"])
             except Exception, e:
                 Log.warning("can not get columns", e)
                 column_names = UNION(*[[k for k, v in row.items()] for row in T.select(source)])
@@ -127,7 +126,7 @@ def is_setop(query):
 
 
 def es_setop(es, mvel, query):
-    FromES = es14.util.build_es_query(query)
+    FromES = es14.util.es_query_template(query)
     select = listwrap(query.select)
 
     isDeep = len(split_field(query.frum.name)) > 1  # LOOKING INTO NESTED WILL REQUIRE A SCRIPT
@@ -221,7 +220,7 @@ def is_deep(query):
 
 
 def es_deepop(es, mvel, query):
-    FromES = es14.util.build_es_query(query)
+    FromES = es14.util.es_query_template(query)
 
     select = query.edges
 
@@ -276,7 +275,7 @@ def format_list(T, select, source):
             if s.value == ".":
                 r[s.name] = row[source]
             else:
-                r[s.name] = unwraplist(row[source][literal_field(s.value)])
+                r[s.name] = unwraplist(row[source][s.value])
         data.append(r)
     return Dict(
         meta={"format": "list"},
@@ -294,7 +293,7 @@ def format_table(T, select, source):
             if s.value == ".":
                 r[map[s.name]] = row[source]
             else:
-                r[map[s.name]] = unwraplist(row[source][literal_field(s.value)])
+                r[map[s.name]] = unwraplist(row[source][s.value])
         data.append(r)
     return Dict(
         meta={"format": "table"},
@@ -316,7 +315,10 @@ def format_cube(T, select, source):
             elif isinstance(s.value, list):
                 matricies[s.name] = Matrix.wrap([tuple(unwraplist(t[source][ss]) for ss in s.value) for t in T])
             else:
-                matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.value)) for t in unwrap(T)])
+                if source == "_source":
+                    matricies[s.name] = Matrix.wrap([unwraplist(t[source][s.value]) for t in T])
+                else:  # fields
+                    matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.value)) for t in unwrap(T)])
         except Exception, e:
             Log.error("", e)
     cube = Cube(select, edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(T), "interval": 1}}], data=matricies)

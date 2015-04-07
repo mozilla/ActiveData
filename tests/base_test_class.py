@@ -215,6 +215,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
                 if format == "table":
+                    self.assertEqual(set(result.header), set(expected.header))
+
                     # MAP FROM expected COLUMN TO result COLUMN
                     mapping = zip(*zip(*filter(
                         lambda v: v[0][1] == v[1][1],

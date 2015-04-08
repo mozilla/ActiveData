@@ -273,6 +273,17 @@ class RangeDecoder(AggsDecoder):
         else:
             calc = {"script": qb_expression_to_ruby(self.edge.value) }
 
+        if is_keyword(self.edge.value):
+            missing_range = {"or": [
+                {"range": {self.edge.value: {"lt": _min}}},
+                {"range": {self.edge.value: {"gte": _max}}}
+            ]}
+        else:
+            missing_range = {"script": {"script": qb_expression_to_ruby({"or": [
+                {"lt": [self.edge.value, _min]},
+                {"gt": [self.edge.value, _max]},
+            ]})}}
+
         return wrap({"aggs": {
             "_match": set_default(
                 {"range": calc},
@@ -281,8 +292,7 @@ class RangeDecoder(AggsDecoder):
             ),
             "_missing": set_default(
                 {"filter": {"or": [
-                    {"range": {self.edge.value: {"lt": _min}}},
-                    {"range": {self.edge.value: {"gte": _max}}},
+                    missing_range,
                     {"missing": {"field": get_all_vars(self.edge.value)}}
                 ]}},
                 es_query

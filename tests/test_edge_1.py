@@ -702,7 +702,11 @@ class TestEdge1(ActiveDataBaseTest):
             "query": {
                 "from": base_test_class.settings.backend_es.index,
                 "select": {"aggregate": "count"},
-                "edges": [{"name": "start", "value": {"sub": ["r", "s"]}, "domain": {"type": "range", "min": 0, "max": 6, "interval": 1}}]
+                "edges": [{
+                    "name": "start",
+                    "value": {"sub": ["r", "s"]},
+                    "domain": {"type": "range", "min": 0, "max": 6, "interval": 1}
+                }]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -713,6 +717,7 @@ class TestEdge1(ActiveDataBaseTest):
                     {"start": 3, "count": 3},
                     {"start": 4, "count": 0},
                     {"start": 5, "count": 1},
+                    {"count": 0}
                 ]
             },
             "expecting_table": {
@@ -725,6 +730,7 @@ class TestEdge1(ActiveDataBaseTest):
                     [3, 3],
                     [4, 0],
                     [5, 1],
+                    [None, 0]
                 ]
             },
             "expecting_cube": {
@@ -732,23 +738,23 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "start",
-                        "allowNulls": False,
+                        "allowNulls": True,
                         "domain": {
                             "type": "range",
-                            "key": "value",
+                            "key": "min",
                             "partitions": [
-                                {"value": 0},
-                                {"value": 1},
-                                {"value": 2},
-                                {"value": 3},
-                                {"value": 4},
-                                {"value": 5}
+                                {"max": 1, "min": 0},
+                                {"max": 2, "min": 1},
+                                {"max": 3, "min": 2},
+                                {"max": 4, "min": 3},
+                                {"max": 5, "min": 4},
+                                {"max": 6, "min": 5}
                             ]
                         }
                     }
                 ],
                 "data": {
-                    "count": [0, 1, 2, 3, 0, 1]
+                    "count": [0, 1, 2, 3, 0, 1, 0]
                 }
             }
         }

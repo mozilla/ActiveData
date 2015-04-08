@@ -68,7 +68,7 @@ def qb_expression_to_ruby(expr):
         return "true"
     op, term = expr.items()[0]
 
-    mop = multi_operators.get(op)
+    mop = ruby_multi_operators.get(op)
     if mop:
         if isinstance(term, list):
             if not term:
@@ -84,7 +84,7 @@ def qb_expression_to_ruby(expr):
             qb_expression_to_ruby(term)
 
 
-    bop = binary_operators.get(op)
+    bop = ruby_binary_operators.get(op)
     if bop:
         if isinstance(term, list):
             output = bop.join(["(" + qb_expression_to_ruby(t) + ")" for t in term])
@@ -101,7 +101,7 @@ def qb_expression_to_ruby(expr):
         else:
             Log.error("Expecting binary term")
 
-    uop = unary_operators.get(op)
+    uop = ruby_unary_operators.get(op)
     if uop:
         output = expand_template(uop, {"term": qb_expression_to_ruby(term)})
         return output
@@ -133,7 +133,7 @@ def qb_expression_to_python(expr):
 
     op, term = expr.items()[0]
 
-    mop = multi_operators.get(op)
+    mop = python_multi_operators.get(op)
     if mop:
         if isinstance(term, list):
             if not term:
@@ -148,7 +148,7 @@ def qb_expression_to_python(expr):
         else:
             qb_expression_to_python(term)
 
-    bop = binary_operators.get(op)
+    bop = python_binary_operators.get(op)
     if bop:
         if isinstance(term, list):
             output = bop.join(["(" + qb_expression_to_python(t) + ")" for t in term])
@@ -165,7 +165,7 @@ def qb_expression_to_python(expr):
         else:
             Log.error("Expecting binary term")
 
-    uop = unary_operators.get(op)
+    uop = python_unary_operators.get(op)
     if uop:
         output = uop + "(" + qb_expression_to_python(term) + ")"
         return output
@@ -190,7 +190,7 @@ def get_all_vars(expr):
 
     op, term = expr.items()[0]
 
-    mop = multi_operators.get(op)
+    mop = ruby_multi_operators.get(op)
     if mop:
         if isinstance(term, list):
             output = set()
@@ -203,7 +203,7 @@ def get_all_vars(expr):
         else:
             get_all_vars(term)
 
-    bop = binary_operators.get(op)
+    bop = ruby_binary_operators.get(op)
     if bop:
         if isinstance(term, list):
             output = set()
@@ -222,7 +222,7 @@ def get_all_vars(expr):
         else:
             Log.error("Expecting binary term")
 
-    uop = unary_operators.get(op)
+    uop = ruby_unary_operators.get(op)
     if uop:
         return get_all_vars(term)
 
@@ -234,11 +234,11 @@ def get_all_vars(expr):
 
 
 
-unary_operators = {
+python_unary_operators = {
     "not": "not {{term}}",
 }
 
-binary_operators = {
+python_binary_operators = {
     "sub": " - ",
     "subtract": " - ",
     "minus": " - ",
@@ -255,7 +255,7 @@ binary_operators = {
     "term": " == "
 }
 
-multi_operators = {
+python_multi_operators = {
     "add": (" + ", "0"),  # (operator, zero-array default value) PAIR
     "sum": (" + ", "0"),
     "mul": (" * ", "1"),
@@ -265,20 +265,67 @@ multi_operators = {
     "or": (" or ", "false")
 }
 
+ruby_unary_operators = {
+    "not": "! {{term}}",
+}
+
+ruby_binary_operators = {
+    "sub": " - ",
+    "subtract": " - ",
+    "minus": " - ",
+    "div": " / ",
+    "divide": " / ",
+    "exp": " ** ",
+    "mod": " % ",
+    "gt": " > ",
+    "gte": " >= ",
+    "eq": " == ",
+    "lte": " <= ",
+    "lt": " < ",
+    "ne": " != ",
+    "term": " == "
+}
+
+ruby_multi_operators = {
+    "add": (" + ", "0"),  # (operator, zero-array default value) PAIR
+    "sum": (" + ", "0"),
+    "mul": (" * ", "1"),
+    "mult": (" * ", "1"),
+    "multiply": (" * ", "1"),
+    "and": (" && ", "true"),
+    "or": (" || ", "false")
+}
+
+default_multi_operators = {
+    "add": 0,  # (operator, zero-array default value) PAIR
+    "sum": 0,
+    "mul": 1,
+    "mult": 1,
+    "multiply": 1,
+    "and": True,
+    "or": False
+}
+
+
+
+
+
+
 class BinaryOp(object):
     def __init__(self, op, term):
         self.op = op
-        self.symbol = binary_operators[op]
         if isinstance(term, list):
             self.a, self.b = qb_expression(term[0]), qb_expression(term[1])
         elif isinstance(term, dict):
             self.a, self.b = map(qb_expression, term.items()[0])
 
     def to_ruby(self):
-        return "(" + self.a.to_ruby() + ")" + self.symbol + "(" + self.b.to_ruby() + ")"
+        symbol = ruby_multi_operators[self.op][0]
+        return "(" + self.a.to_ruby() + ")" + symbol + "(" + self.b.to_ruby() + ")"
 
     def to_python(self):
-        return "(" + self.a.to_python() + ")" + self.symbol + "(" + self.b.to_python() + ")"
+        symbol = python_multi_operators[self.op][0]
+        return "(" + self.a.to_python() + ")" + symbol + "(" + self.b.to_python() + ")"
 
     def to_esfilter(self):
         if self.op in ["gt", "gte", "lte", "lt"]:
@@ -292,10 +339,9 @@ class BinaryOp(object):
 class MultiOp(object):
     def __init__(self, op, terms):
         self.op = op
-        self.symbol = multi_operators[op][0]
         if isinstance(terms, list):
             if not terms:
-                self.terms = [qb_expression(multi_operators[op][1])]
+                self.terms = [default_multi_operators[op]]
             else:
                 self.terms = map(qb_expression, terms)
         elif isinstance(terms, dict):
@@ -304,10 +350,12 @@ class MultiOp(object):
             self.terms = [qb_expression_to_python(terms)]
 
     def to_ruby(self):
-        return self.symbol.join("(" + t.to_ruby() + ")" for t in self.terms)
+        symbol = ruby_multi_operators[self.op][0]
+        return symbol.join("(" + t.to_ruby() + ")" for t in self.terms)
 
     def to_python(self):
-        return self.symbol.join("(" + t.to_python() + ")" for t in self.terms)
+        symbol = python_multi_operators[self.op][0]
+        return symbol.join("(" + t.to_python() + ")" for t in self.terms)
 
     def vars(self):
         output = set()

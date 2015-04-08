@@ -206,33 +206,6 @@ class TimeDecoder(AggsDecoder):
             ),
         }})
 
-        # histogram BREAKS WHEN USING extended_bounds (OOM), WE NEED BOUNDS TO CONTROL EDGES
-        # return wrap({"aggs": {
-        #     "_match": set_default(
-        #         {"histogram": {
-        #             "field": self.edge.value,
-        #             "interval": domain.interval.unix,
-        #             "min_doc_count": 0,
-        #             "extended_bounds": {
-        #                 "min": domain.min.unix,
-        #                 "max": domain.max.unix,
-        #             }
-        #         }},
-        #         es_query
-        #     ),
-        #     "_other": set_default(
-        #         {"range": {
-        #             "field": self.edge.value,
-        #             "ranges": [
-        #                 {"to": domain.min.unix},
-        #                 {"from": domain.max.unix}
-        #             ]
-        #         }},
-        #         es_query
-        #     ),
-        #     "_missing": set_default({"missing": {"field": self.edge.value}}, es_query),
-        # }})
-
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
 

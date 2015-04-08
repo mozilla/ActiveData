@@ -13,21 +13,18 @@ from __future__ import division
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import es09
+from pyLibrary.queries import qb, expressions
 from pyLibrary.queries.container import Container
 from pyLibrary.queries.domains import is_keyword
-from pyLibrary.queries.es09.aggop import is_aggop, es_aggop
 from pyLibrary.queries.es09.util import parse_columns, INDEX_CACHE
 from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
 from pyLibrary.queries.es14.setop import is_fieldop, is_setop, es_setop, es_fieldop
-from pyLibrary.queries.es09.terms import es_terms, is_terms
-from pyLibrary.queries.es09.terms_stats import es_terms_stats, is_terms_stats
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.es14.util import aggregates1_4
-from pyLibrary.queries.query import Query, _normalize_where, qb
+from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import nvl, split_field
+from pyLibrary.dot import nvl, split_field, set_default
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 
@@ -36,6 +33,14 @@ class FromES(Container):
     """
     SEND GENERAL qb QUERIES TO ElasticSearch
     """
+
+    def __new__(cls, *args, **kwargs):
+        if (len(args) == 1 and args[0].get("index") == "meta") or kwargs.get("index") == "meta":
+            output = FromESMetadata.__new__(FromESMetadata, *args, **kwargs)
+            output.__init__(*args, **kwargs)
+            return output
+        else:
+            return Container.__new__(cls)
 
     @use_settings
     def __init__(self, host, index, type, alias=None, name=None,  port=9200, settings=None):
@@ -125,7 +130,7 @@ class FromES(Container):
 
     def get_columns(self, _from_name=None):
         """
-        ENSURE COLUMNS FOR GIVEN INDEX/QUERY ARE LOADED, MVEL COMPILATION WILL WORK BETTER
+        ENSURE COLUMNS FOR GIVEN INDEX/QUERY ARE LOADED, SCRIPT COMPILATION WILL WORK BETTER
 
         _from_name - NOT MEANT FOR EXTERNAL USE
         """
@@ -249,7 +254,7 @@ class FromES(Container):
             if not is_keyword(k):
                 Log.error("Only support simple paths for now")
 
-            scripts.append("ctx._source." + k + " = " + es09.expressions.value2MVEL(v) + ";\n")
+            scripts.append("ctx._source." + k + " = " + expressions.qb_expression_to_ruby(v) + ";\n")
         script = "".join(scripts)
 
         if results.hits.hits:
@@ -263,3 +268,98 @@ class FromES(Container):
                 data=content,
                 headers={"Content-Type": "application/json"}
             )
+
+class FromESMetadata(Container):
+    """
+    QUERY THE METADATA
+    """
+
+    @use_settings
+    def __init__(self, host, index, type, alias=None, name=None, port=9200, settings=None):
+        self.settings = settings
+        self.name = nvl(name, alias, index)
+        self._es = elasticsearch.Cluster(settings=settings)
+        self.metadata = self._es.get_metadata()
+        self.columns = None
+
+    @property
+    def url(self):
+        return self._es.path + "/" + self.name.replace(".", "/")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        pass
+
+    def query(self, _query):
+        if not self.columns:
+            self.columns = []
+            alias_done = set()
+            metadata = self._es.get_metadata()
+            for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
+                for _, properties in meta.mappings.items():
+                    columns = _parse_properties(index, properties.properties)
+                    for c in columns:
+                        c.cube = index
+                        c.property = c.name
+                        c.name = None
+                        c.useSource = None
+
+                    self.columns.extend(columns)
+                    for a in meta.aliases:
+                        # ONLY THE LATEST ALIAS IS CHOSEN TO GET COLUMNS
+                        if a in alias_done:
+                            continue
+                        alias_done.add(a)
+                        for c in columns:
+                            self.columns.append(set_default({"cube": a}, c))  # ENSURE WE COPY
+
+
+        return qb.run(set_default(
+            {
+                "from": self.columns,
+                "sort": ["cube", "property"]
+            },
+            _query.as_dict()
+        ))
+
+    def get_columns(self, _=None):
+        """
+        RETURN METADATA COLUMNS
+        """
+        if self.name == "meta.columns":
+            return wrap([
+                {
+                    "name": "cube",
+                    "type": "string",
+                    "depth": 0
+                }, {
+                    "name": "column",
+                    "type": "string",
+                    "depth": 0
+                }, {
+                    "name": "type",
+                    "type": "string",
+                    "depth": 0
+                }, {
+                    "name": "depth",
+                    "type": "integer",
+                    "depth": 0
+                }
+            ])
+        else:
+            Log.error("Unknonw metadata: {{name}}", {"name": self.settings.name})
+
+
+def _parse_properties(index, properties):
+    """
+    ISOLATE THE DEALING WITH THE INDEX_CACHE,
+    INDEX_CACHE IS REDUNDANT WHEN YOU HAVE metadata.columns
+    """
+    backup = INDEX_CACHE.get(index)
+    INDEX_CACHE[index] = output = Dict()
+    output.name = index
+    columns = parse_columns(index, properties)
+    INDEX_CACHE[index] = backup
+    return columns

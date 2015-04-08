@@ -17,6 +17,7 @@ from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap, listwrap
 from pyLibrary.maths import Math
 from pyLibrary.queries import wrap_from, expressions
+from pyLibrary.queries.container import Container
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain, is_keyword
 from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter
@@ -24,19 +25,24 @@ from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter
 
 DEFAULT_LIMIT = 10
 
-qb =None
+qb = None
 INDEX_CACHE = None
+
+
 def _late_import():
     global qb
     global INDEX_CACHE
 
     from pyLibrary.queries import qb
     from pyLibrary.queries.es09.util import INDEX_CACHE
-    qb=qb
-    INDEX_CACHE=INDEX_CACHE
+
+    _ = qb
+    _ = INDEX_CACHE
 
 
 class Query(object):
+    __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "format", "isLean"]
+
     def __new__(cls, query, schema=None):
         if isinstance(query, Query):
             return query
@@ -96,8 +102,10 @@ class Query(object):
             if not qb:
                 _late_import()
             columns = qb.get_columns(self.frum)
-        else:
+        elif isinstance(self.frum, Container):
             columns = self.frum.get_columns()
+        else:
+            columns=[]
         vars = get_all_vars(self)
         for c in columns:
             if c.name in vars and c.depth:
@@ -119,6 +127,9 @@ class Query(object):
         set_default(dest, source)
         return output
 
+    def as_dict(self):
+        output = wrap({s: getattr(self, s) for s in Query.__slots__})
+        return output
 
 canonical_aggregates = {
     "min": "minimum",
@@ -130,7 +141,14 @@ canonical_aggregates = {
 
 def _normalize_selects(selects, schema=None):
     if isinstance(selects, list):
-        return wrap([_normalize_select(s, schema=schema) for s in selects])
+        output = wrap([_normalize_select(s, schema=schema) for s in selects])
+
+        exists = set()
+        for s in output:
+            if s.name in exists:
+                Log.error("{{name}} has already been defined", {"name": s.name})
+            exists.add(s.name)
+        return output
     else:
         return _normalize_select(selects, schema=schema)
 
@@ -472,8 +490,8 @@ def get_all_vars(query):
         output.extend(edges_get_all_vars(s))
     for s in listwrap(query.groupby):
         output.extend(edges_get_all_vars(s))
-    output.extend(where_get_all_vars(query.where))
-    return set(output)
+    output.extend(expressions.get_all_vars(query.where))
+    return output
 
 
 def select_get_all_vars(s):
@@ -494,45 +512,9 @@ def edges_get_all_vars(e):
     if e.domain.key:
         output.append(e.domain.key)
     if e.domain.where:
-        output.extend(where_get_all_vars(e.domain.where))
+        output.extend(expressions.get_all_vars(e.domain.where))
     if e.domain.partitions:
         for p in e.domain.partitions:
             if p.where:
-                output.extend(where_get_all_vars(p.where))
+                output.extend(expressions.get_all_vars(p.where))
     return output
-
-def where_get_all_vars(w):
-    if w in [True, False, None]:
-        return []
-
-    output = []
-    key = list(w.keys())[0]
-    val = w[key]
-    if key in ["and", "or"]:
-        for ww in val:
-            output.extend(where_get_all_vars(ww))
-        return output
-
-    if key == "not":
-        return where_get_all_vars(val)
-
-    if key in ["exists", "missing"]:
-        if isinstance(val, unicode):
-            return [val]
-        else:
-            return [val.field]
-
-    if key in ["gte", "gt", "eq", "ne", "term", "terms", "lt", "lte", "range"]:
-        if not isinstance(val, dict):
-            Log.error("Expecting `{{key}}` to have a dict value, not a {{type}}", {
-                "key": key,
-                "type": val.__class__.__name__
-            })
-        return list(val.keys())
-
-    if key=="match_all":
-        return []
-
-    Log.error("do not know how to handle where {{where|json}}", {"where", w})
-
-

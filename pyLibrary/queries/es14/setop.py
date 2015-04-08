@@ -165,7 +165,7 @@ def es_setop(es, query):
 def format_list(T, select, source):
     data = []
     for row in T:
-        r = {}
+        r = Dict()
         for s in select:
             if s.value == ".":
                 r[s.name] = row[source]

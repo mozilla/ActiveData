@@ -14,6 +14,7 @@ from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, nvl, Null, split_field, join_field
 from pyLibrary.queries import qb, es09
+from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain
 from pyLibrary.queries.es14.util import aggregates1_4
 from pyLibrary.queries.expressions import simplify_esfilter

@@ -491,3 +491,48 @@ class TestSetOps(ActiveDataBaseTest):
         finally:
             # REMOVE CONTAINER
             self.es.delete_index(settings.index)
+
+    def test_select_expression(self):
+        test = {
+            "data": [  # PROPERTIES STARTING WITH _ ARE NOT NESTED AUTOMATICALLY
+                       {"_a": {"_b": 0, "_c": 0}},
+                       {"_a": {"_b": 0, "_c": 1}},
+                       {"_a": {"_b": 1, "_c": 0}},
+                       {"_a": {"_b": 1, "_c": 1}},
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": [
+                    {"name": "sum", "value": {"add": ["_a._b", "_a._c"]}},
+                    {"name": "sub", "value": {"sub": ["_a._b", "_a._c"]}}
+                ],
+                "sort": ["_a._b", "_a._c"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                {"sum": 0, "sub": 0},
+                {"sum": 1, "sub": -1},
+                {"sum": 1, "sub": 1},
+                {"sum": 2, "sub": 0}
+            ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["sum", "sub"],
+                "data": [[0, 0], [1, -1], [1, 1], [2, 0]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "sum": [0, 1, 1, 2],
+                    "sub": [0, -1, 1, 0]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+

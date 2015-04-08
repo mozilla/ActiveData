@@ -15,9 +15,9 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, nvl, Null, split_field, join_field
 from pyLibrary.queries import qb, es09
 from pyLibrary.queries.dimensions import Dimension
-from pyLibrary.queries.domains import PARTITION, SimpleSetDomain
+from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword
 from pyLibrary.queries.es14.util import aggregates1_4
-from pyLibrary.queries.expressions import simplify_esfilter
+from pyLibrary.queries.expressions import simplify_esfilter, qb_expression_to_ruby, get_all_vars
 from pyLibrary.times.timer import Timer
 
 
@@ -109,6 +109,8 @@ class AggsDecoder(object):
             return object.__new__(SetDecoder, e)
         if e.value and e.domain.type == "time":
             return object.__new__(TimeDecoder, e)
+        elif e.value and e.domain.type == "range":
+            return object.__new__(RangeDecoder, e)
         elif not e.value and e.domain.dimension.fields:
             # THIS domain IS FROM A dimension THAT IS A SIMPLE LIST OF fields
             # JUST PULL THE FIELDS
@@ -247,6 +249,62 @@ class TimeDecoder(AggsDecoder):
         else:
             for p in domain.partitions:
                 if p.min.unix <= f <p.max.unix:
+                    return p.dataIndex
+        sample = part.copy
+        sample.buckets = None
+        Log.error("Expecting to find {{part}}", {"part":sample})
+
+    @property
+    def num_columns(self):
+        return 1
+
+
+class RangeDecoder(AggsDecoder):
+    def append_query(self, es_query, start):
+        self.start = start
+        domain = self.edge.domain
+
+        # USE RANGES
+        _min = nvl(domain.min, MAX(domain.partitions.min))
+        _max = nvl(domain.max, MAX(domain.partitions.max))
+
+        if is_keyword(self.edge.value):
+            calc = {"field":self.edge.value}
+        else:
+            calc = {"script": qb_expression_to_ruby(self.edge.value) }
+
+        return wrap({"aggs": {
+            "_match": set_default(
+                {"range": calc},
+                {"range": {"ranges": [{"from": p.min, "to": p.max} for p in domain.partitions]}},
+                es_query
+            ),
+            "_missing": set_default(
+                {"filter": {"or": [
+                    {"range": {self.edge.value: {"lt": _min}}},
+                    {"range": {self.edge.value: {"gte": _max}}},
+                    {"missing": {"field": get_all_vars(self.edge.value)}}
+                ]}},
+                es_query
+            ),
+        }})
+
+    def get_value(self, index):
+        return self.edge.domain.getKeyByIndex(index)
+
+    def get_index(self, row):
+        domain = self.edge.domain
+        part = row[self.start]
+        if part == None:
+            return len(domain.partitions)
+
+        f = nvl(part["from"], part.key)
+        t = nvl(part.to, part.key)
+        if f == None or t == None:
+            return len(domain.partitions)
+        else:
+            for p in domain.partitions:
+                if p.min <= f <p.max:
                     return p.dataIndex
         sample = part.copy
         sample.buckets = None

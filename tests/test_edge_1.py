@@ -686,6 +686,75 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_expression_on_edge(self):
+        data = [
+            {"s": 0, "r": 5},
+            {"s": 1, "r": 2},
+            {"s": 2, "r": 4},
+            {"s": 3, "r": 5},
+            {"s": 4, "r": 7},
+            {"s": 2, "r": 5},
+            {"s": 5, "r": 8}
+        ]
+
+        test = {
+            "data": data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"aggregate": "count"},
+                "edges": [{"name": "start", "value": {"sub": ["r", "s"]}, "domain": {"type": "range", "min": 0, "max": 6, "interval": 1}}]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"start": 0, "count": 0},
+                    {"start": 1, "count": 1},
+                    {"start": 2, "count": 2},
+                    {"start": 3, "count": 3},
+                    {"start": 4, "count": 0},
+                    {"start": 5, "count": 1},
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["start", "count"],
+                "data": [
+                    [0, 0],
+                    [1, 1],
+                    [2, 2],
+                    [3, 3],
+                    [4, 0],
+                    [5, 1],
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "start",
+                        "allowNulls": False,
+                        "domain": {
+                            "type": "range",
+                            "key": "value",
+                            "partitions": [
+                                {"value": 0},
+                                {"value": 1},
+                                {"value": 2},
+                                {"value": 3},
+                                {"value": 4},
+                                {"value": 5}
+                            ]
+                        }
+                    }
+                ],
+                "data": {
+                    "count": [0, 1, 2, 3, 0, 1]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
 
 simple_test_data = [
     {"a": "c", "v": 13},

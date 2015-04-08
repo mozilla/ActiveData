@@ -24,8 +24,8 @@ from pyLibrary.dot import split_field, join_field, nvl
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap
 from pyLibrary.queries import qb
-from pyLibrary.queries.es09 import expressions
 from pyLibrary.queries.es09.expressions import value2MVEL, isKeyword
+from pyLibrary.queries.expressions import simplify_esfilter
 from pyLibrary.times import durations
 
 
@@ -33,6 +33,8 @@ TrueFilter = {"match_all": {}}
 DEBUG = False
 
 INDEX_CACHE = {}  # MATCH NAMES TO ES URL AND COLUMNS eg {name:{"url":url, "columns":columns"}}
+
+
 
 
 def post(es, FromES, limit):
@@ -77,7 +79,7 @@ def build_es_query(query):
                 "query": {
                     "match_all": {}
                 },
-                "filter": expressions.simplify_esfilter(query.where)
+                "filter": simplify_esfilter(query.where)
             }
         }
 

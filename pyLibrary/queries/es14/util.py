@@ -13,17 +13,28 @@ from __future__ import division
 from pyLibrary.dot import wrap
 
 
-def build_es_query(query):
+def es_query_template():
     output = wrap({
         "query": {"match_all": {}},
         "from": 0,
         "size": 0,
-        "sort": [],
-        "facets": {
-        }
+        "sort": []
     })
 
     return output
+
+
+def qb_sort_to_es_sort(sort):
+    output = []
+    for s in sort:
+        if s.sort == 1:
+            output.append(s.field)
+        elif s.sort == -1:
+            output.append({s.field: "desc"})
+        else:
+            pass
+    return output
+
 
 # FOR ELASTICSEARCH aggs
 aggregates1_4 = {

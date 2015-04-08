@@ -11,31 +11,33 @@ from __future__ import unicode_literals
 from __future__ import division
 from pyLibrary.collections import AND, reverse
 from pyLibrary.debugs.logs import Log
+from pyLibrary.dot.dicts import Dict
+from pyLibrary.dot import nvl, split_field, join_field, Null, set_default
+from pyLibrary.dot.lists import DictList
+from pyLibrary.dot import wrap, unwrap, listwrap
 from pyLibrary.maths import Math
 from pyLibrary.queries import wrap_from, expressions
 from pyLibrary.queries.container import Container
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain, is_keyword
-from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import nvl, split_field, join_field, Null, set_default
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import wrap, unwrap, listwrap
-from pyLibrary.queries.expressions import TRUE_FILTER
-from pyLibrary.queries.filters import simplify_esfilter
+from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter
 
 
 DEFAULT_LIMIT = 10
 
-qb =None
+qb = None
 INDEX_CACHE = None
+
+
 def _late_import():
     global qb
     global INDEX_CACHE
 
     from pyLibrary.queries import qb
     from pyLibrary.queries.es09.util import INDEX_CACHE
-    qb=qb
-    INDEX_CACHE=INDEX_CACHE
+
+    _ = qb
+    _ = INDEX_CACHE
 
 
 class Query(object):
@@ -64,15 +66,7 @@ class Query(object):
 
         select = query.select
         if isinstance(select, list):
-            names = set()
-            new_select = []
-            for s in select:
-                ns = _normalize_select(s, schema=schema)
-                if ns.name in names:
-                    Log.error("two select have the same name")
-                names.add(ns.name)
-                new_select.append(unwrap(ns))
-            self.select = wrap(new_select)
+            self.select = wrap([unwrap(_normalize_select(s, schema=schema)) for s in select])
         elif select:
             self.select = _normalize_select(select, schema=schema)
         else:
@@ -86,12 +80,10 @@ class Query(object):
         elif query.edges:
             self.edges = _normalize_edges(query.edges, schema=schema)
             self.groupby = None
-        elif query.groupby:
+        else:
             self.edges = None
             self.groupby = _normalize_groupby(query.groupby, schema=schema)
-        else:
-            self.edges = []
-            self.groupby = None
+
 
         self.where = _normalize_where(query.where, schema=schema)
         self.window = [_normalize_window(w) for w in listwrap(query.window)]
@@ -130,8 +122,9 @@ class Query(object):
 
     def copy(self):
         output = object.__new__(Query)
-        for s in Query.__slots__:
-            setattr(output, s, getattr(self, s))
+        source = object.__getattribute__(self, "__dict__")
+        dest = object.__getattribute__(output, "__dict__")
+        set_default(dest, source)
         return output
 
     def as_dict(self):
@@ -148,7 +141,14 @@ canonical_aggregates = {
 
 def _normalize_selects(selects, schema=None):
     if isinstance(selects, list):
-        return wrap([_normalize_select(s, schema=schema) for s in selects])
+        output = wrap([_normalize_select(s, schema=schema) for s in selects])
+
+        exists = set()
+        for s in output:
+            if s.name in exists:
+                Log.error("{{name}} has already been defined", {"name": s.name})
+            exists.add(s.name)
+        return output
     else:
         return _normalize_select(selects, schema=schema)
 
@@ -490,18 +490,18 @@ def get_all_vars(query):
         output.extend(edges_get_all_vars(s))
     for s in listwrap(query.groupby):
         output.extend(edges_get_all_vars(s))
-    # for s in listwrap(query.window):
-    #     output.extend(s);
     output.extend(expressions.get_all_vars(query.where))
     return output
 
 
 def select_get_all_vars(s):
     if isinstance(s.value, list):
-        return s.value
+        return set(s.value)
+    elif isinstance(s.value, basestring):
+        return set([s.value])
+    elif s.value == None or s.value == ".":
+        return set()
     else:
-        if s.value == "*":
-            return set(["*"])
         return expressions.get_all_vars(s.value)
 
 
@@ -518,38 +518,3 @@ def edges_get_all_vars(e):
             if p.where:
                 output.extend(expressions.get_all_vars(p.where))
     return output
-
-
-def where_get_all_vars(w):
-    if w in [True, False, None]:
-        return []
-
-    output = []
-    key = list(w.keys())[0]
-    val = w[key]
-    if key in ["and", "or"]:
-        for ww in val:
-            output.extend(expressions.get_all_vars(ww))
-        return output
-
-    if key == "not":
-        return expressions.get_all_vars(val)
-
-    if key in ["exists", "missing"]:
-        if isinstance(val, unicode):
-            return [val]
-        else:
-            return [val.field]
-
-    if key in ["gte", "gt", "eq", "ne", "term", "terms", "lt", "lte", "range", "prefix"]:
-        if not isinstance(val, dict):
-            Log.error("Expecting `{{key}}` to have a dict value, not a {{type}}", {
-                "key": key,
-                "type": val.__class__.__name__
-            })
-        return list(val.keys())
-
-    if key=="match_all":
-        return []
-
-    Log.error("do not know how to handle where {{where|json}}", {"where", w})

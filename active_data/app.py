@@ -33,7 +33,7 @@ config = None
 
 
 def record_request(request, query_, data, error):
-    if not request_log_queue:
+    if request_log_queue == None:
         return
 
     log = Dict(

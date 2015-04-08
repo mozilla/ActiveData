@@ -17,13 +17,13 @@ from pyLibrary.queries import qb, es09
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain
 from pyLibrary.queries.es14.util import aggregates1_4
-from pyLibrary.queries.filters import simplify_esfilter
+from pyLibrary.queries.expressions import simplify_esfilter
 from pyLibrary.times.timer import Timer
 
 
 def is_aggsop(es, query):
     es.cluster.get_metadata()
-    if es.cluster.version.startswith("1.4") and (query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate)):
+    if (es.cluster.version.startswith("1.4.") or es.cluster.version.startswith("1.5.")) and (query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate)):
         return True
     return False
 

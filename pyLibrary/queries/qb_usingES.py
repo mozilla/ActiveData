@@ -13,21 +13,18 @@ from __future__ import division
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import es09, qb
+from pyLibrary.queries import qb, expressions
 from pyLibrary.queries.container import Container
 from pyLibrary.queries.domains import is_keyword
-from pyLibrary.queries.es09.aggop import is_aggop, es_aggop
 from pyLibrary.queries.es09.util import parse_columns, INDEX_CACHE
 from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
-from pyLibrary.queries.es14.setop import is_fieldop, is_setop, is_deep, es_setop, es_deepop, es_fieldop
-from pyLibrary.queries.es09.terms import es_terms, is_terms
-from pyLibrary.queries.es09.terms_stats import es_terms_stats, is_terms_stats
+from pyLibrary.queries.es14.setop import is_fieldop, is_setop, es_setop, es_fieldop
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.es14.util import aggregates1_4
 from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import nvl, split_field, set_default, dictwrap
+from pyLibrary.dot import nvl, split_field, set_default
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 
@@ -46,7 +43,7 @@ class FromES(Container):
             return Container.__new__(cls)
 
     @use_settings
-    def __init__(self, host, index, type, alias=None, name=None, port=9200, settings=None):
+    def __init__(self, host, index, type, alias=None, name=None,  port=9200, settings=None):
         self.settings = settings
         self.name = nvl(name, alias, index)
         self._es = elasticsearch.Alias(alias=nvl(alias, index), settings=settings)
@@ -57,7 +54,7 @@ class FromES(Container):
     @staticmethod
     def wrap(es):
         output = FromES(es.settings)
-        output._es = es
+        output._es=es
         return output
 
     def as_dict(self):
@@ -96,7 +93,7 @@ class FromES(Container):
             query = Query(_query, schema=self)
 
             # try:
-            # frum = self.get_columns(query["from"])
+            #     frum = self.get_columns(query["from"])
             #     mvel = _MVEL(frum)
             # except Exception, e:
             #     mvel = None
@@ -115,26 +112,21 @@ class FromES(Container):
 
             if is_aggsop(self._es, query):
                 return es_aggsop(self._es, frum, query)
-            if is_fieldop(query):
+            if is_fieldop(self._es, query):
                 return es_fieldop(self._es, query)
-            elif is_deep(query):
-                return es_deepop(self._es, mvel, query)
-            elif is_setop(query):
-                return es_setop(self._es, mvel, query)
-            elif is_aggop(query):
-                return es_aggop(self._es, mvel, query)
-            elif is_terms(query):
-                return es_terms(self._es, mvel, query)
-            elif is_terms_stats(query):
-                return es_terms_stats(self, mvel, query)
+            if is_setop(self._es, query):
+                return es_setop(self._es, query)
 
             Log.error("Can not handle")
         except Exception, e:
             e = Except.wrap(e)
             if "Data too large, data for" in e:
-                http.post(self._es.cluster.path + "/_cache/clear")
+                http.post(self._es.cluster.path+"/_cache/clear")
                 Log.error("Problem (Tried to clear Elasticsearch cache)", e)
             Log.error("problem", e)
+
+
+
 
     def get_columns(self, _from_name=None):
         """
@@ -172,6 +164,7 @@ class FromES(Container):
         output.url = self._es.url
         output.columns = parse_columns(_from_name, properties)
         return output.columns
+
 
     def get_column_names(self):
         # GET METADATA FOR INDEX
@@ -261,7 +254,7 @@ class FromES(Container):
             if not is_keyword(k):
                 Log.error("Only support simple paths for now")
 
-            scripts.append("ctx._source." + k + " = " + es09.expressions.value2MVEL(v) + ";\n")
+            scripts.append("ctx._source." + k + " = " + expressions.qb_expression_to_ruby(v) + ";\n")
         script = "".join(scripts)
 
         if results.hits.hits:
@@ -275,7 +268,6 @@ class FromES(Container):
                 data=content,
                 headers={"Content-Type": "application/json"}
             )
-
 
 class FromESMetadata(Container):
     """

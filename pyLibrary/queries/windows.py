@@ -97,7 +97,7 @@ class _Stats(WindowFunction):
     TRACK STATS, BUT IGNORE OUTLIERS
     """
 
-    def __init__(self, middle=None, *args, **kwargs):
+    def __init__(self, middle=None):
         object.__init__(self)
         self.middle = middle
         self.samples = DictList()
@@ -129,7 +129,7 @@ class _SimpleStats(WindowFunction):
     AGGREGATE Stats OBJECTS, NOT JUST VALUES
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         object.__init__(self)
         self.total = ZeroMoment(0, 0, 0)
 
@@ -151,7 +151,7 @@ class _SimpleStats(WindowFunction):
 
 
 class Min(WindowFunction):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         object.__init__(self)
         self.total = Multiset()
 
@@ -172,7 +172,7 @@ class Min(WindowFunction):
 
 
 class Max(WindowFunction):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         object.__init__(self)
         self.total = Multiset()
 
@@ -212,7 +212,7 @@ class Count(WindowFunction):
 
 
 class Sum(WindowFunction):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         object.__init__(self)
         self.total = 0
 
@@ -229,39 +229,3 @@ class Sum(WindowFunction):
 
     def end(self):
         return self.total
-
-class Percentile(WindowFunction):
-    def __init__(self, percentile, *args, **kwargs):
-        """
-        USE num_records TO MINIMIZE MEMORY CONSUPTION
-        """
-        object.__init__(self)
-        self.percentile = percentile
-        self.total = []
-
-
-    def add(self, value):
-        if value == None:
-            return
-        self.total.append(value)
-
-    def sub(self, value):
-        if value == None:
-            return
-        try:
-            i = self.total.index(value)
-            self.total = self.total[:i] + self.total[i+1:]
-        except Exception, e:
-            Log.error("Problem with window function", e)
-
-    def end(self):
-        return stats.percentile(self.total, self.percentile)
-
-
-name2accumulator = {
-    "count": Count,
-    "sum": Sum,
-    "percentile": Percentile,
-    "max": Max,
-    "maximum": Max
-}

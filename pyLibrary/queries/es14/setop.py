@@ -18,11 +18,10 @@ from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries import domains
-from pyLibrary.queries.filters import simplify_esfilter, TRUE_FILTER
+from pyLibrary.queries.expressions import qb_expression_to_esfilter, simplify_esfilter, TRUE_FILTER, qb_expression_to_ruby
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import filters
 from pyLibrary.queries.cube import Cube
-from pyLibrary.queries.es14.util import aggregates1_4
+from pyLibrary.queries.es14.util import aggregates1_4, qb_sort_to_es_sort
 from pyLibrary.times.timer import Timer
 from pyLibrary.queries import es14, es09
 
@@ -30,9 +29,11 @@ from pyLibrary.queries import es14, es09
 
 format_dispatch = {}
 
-def is_fieldop(query):
-    # THESE SMOOTH EDGES REQUIRE ALL DATA (SETOP)
+def is_fieldop(es, query):
+    if not (es.cluster.version.startswith("1.4.") or es.cluster.version.startswith("1.5.")):
+        return False
 
+    # THESE SMOOTH EDGES REQUIRE ALL DATA (SETOP)
     select = listwrap(query.select)
     if not query.edges:
         isDeep = len(split_field(query.frum.name)) > 1  # LOOKING INTO NESTED WILL REQUIRE A SCRIPT
@@ -49,20 +50,19 @@ def is_fieldop(query):
     return False
 
 
-
-
 def es_fieldop(es, query):
-    es_query = es14.util.build_es_query(query)
+    es_query = es14.util.es_query_template()
     select = listwrap(query.select)
     es_query.query = {
         "filtered": {
             "query": {
                 "match_all": {}
             },
-            "filter": filters.simplify_esfilter(query.where)
+            "filter": simplify_esfilter(qb_expression_to_esfilter(query.where))
         }
     }
     es_query.size = nvl(query.limit, queries.query.DEFAULT_LIMIT)
+    es_query.sort = qb_sort_to_es_sort(query.sort)
     es_query.fields = DictList()
     source = "fields"
     for s in select.value:
@@ -72,6 +72,8 @@ def es_fieldop(es, query):
         elif s == ".":
             es_query.fields=None
             source = "_source"
+        elif isinstance(s, basestring) and is_keyword(s):
+            es_query.fields.append(s)
         elif isinstance(s, list) and es_query.fields is not None:
             es_query.fields.extend(s)
         elif isinstance(s, dict) and es_query.fields is not None:
@@ -80,6 +82,10 @@ def es_fieldop(es, query):
             es_query.fields.append(s)
     es_query.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
 
+    return extract_rows(es, es_query, source, select, query)
+
+
+def extract_rows(es, es_query, source, select, query):
     with Timer("call to ES") as es_duration:
         data = es09.util.post(es, es_query, query.limit)
 
@@ -88,7 +94,7 @@ def es_fieldop(es, query):
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if s.value == "*":
             try:
-                column_names = set(c for c in query.frum.get_column_names() if c.find(".") == -1)
+                column_names = set(c.name for c in query.frum.get_columns() if c.type not in ["object", "nested"])
             except Exception, e:
                 Log.warning("can not get columns", e)
                 column_names = UNION(*[[k for k, v in row.items()] for row in T.select(source)])
@@ -108,7 +114,10 @@ def es_fieldop(es, query):
         Log.error("problem formatting", e)
 
 
-def is_setop(query):
+def is_setop(es, query):
+    if not (es.cluster.version.startswith("1.4.") or es.cluster.version.startswith("1.5.")):
+        return False
+
     select = listwrap(query.select)
 
     if not query.edges:
@@ -126,146 +135,31 @@ def is_setop(query):
     return False
 
 
-def es_setop(es, mvel, query):
-    FromES = es14.util.build_es_query(query)
+def es_setop(es, query):
+    es_query = es14.util.es_query_template()
     select = listwrap(query.select)
 
-    isDeep = len(split_field(query.frum.name)) > 1  # LOOKING INTO NESTED WILL REQUIRE A SCRIPT
-    isComplex = OR([s.value == None and s.aggregate not in ("count", "none") for s in select])   # CONVERTING esfilter DEFINED PARTS WILL REQUIRE SCRIPT
-
-    if not isDeep and not isComplex and len(select) == 1:
-        if not select[0].value:
-            FromES.query = {"filtered": {
-                "query": {"match_all": {}},
-                "filter": simplify_esfilter(query.where)
-            }}
-            FromES.size = 1  # PREVENT QUERY CHECKER FROM THROWING ERROR
-        elif is_keyword(select[0].value):
-            FromES.facets.mvel = {
-                "terms": {
-                    "field": select[0].value,
-                    "size": nvl(query.limit, 200000)
-                },
-                "facet_filter": simplify_esfilter(query.where)
-            }
-            if query.sort:
-                s = query.sort
-                if len(s) > 1:
-                    Log.error("can not sort by more than one field")
-
-                s0 = s[0]
-                if s0.field != select[0].value:
-                    Log.error("can not sort by anything other than count, or term")
-
-                FromES.facets.mvel.terms.order = "term" if s0.sort >= 0 else "reverse_term"
-    elif not isDeep:
-        simple_query = query.copy()
-        simple_query.where = TRUE_FILTER  # THE FACET FILTER IS FASTER
-        FromES.facets.mvel = {
-            "terms": {
-                "script_field": mvel.code(simple_query),
-                "size": nvl(simple_query.limit, 200000)
-            },
-            "facet_filter": simplify_esfilter(query.where)
-        }
-    else:
-        FromES.facets.mvel = {
-            "terms": {
-                "script_field": mvel.code(query),
-                "size": nvl(query.limit, 200000)
-            },
-            "facet_filter": simplify_esfilter(query.where)
-        }
-
-    data = es09.util.post(es, FromES, query.limit)
-
-    if len(select) == 1:
-        if not select[0].value:
-            # SPECIAL CASE FOR SINGLE COUNT
-            output = Matrix(value=data.hits.total)
-            cube = Cube(query.select, [], {select[0].name: output})
-        elif is_keyword(select[0].value):
-            # SPECIAL CASE FOR SINGLE TERM
-            T = data.facets.mvel.terms
-            output = Matrix.wrap([t.term for t in T])
-            cube = Cube(query.select, [], {select[0].name: output})
-    else:
-        data_list = es09.expressions.unpack_terms(data.facets.mvel, select)
-        if not data_list:
-            cube = Cube(select, [], {s.name: Matrix.wrap([]) for s in select})
+    es_query.size = nvl(query.limit, queries.query.DEFAULT_LIMIT)
+    es_query.fields = DictList()
+    es_query.sort = qb_sort_to_es_sort(query.sort)
+    source = "fields"
+    for s in select:
+        if s.value == "*":
+            es_query.fields = None
+            es_query.script_fields = None
+            source = "_source"
+        elif s.value == ".":
+            es_query.fields = None
+            es_query.script_fields = None
+            source = "_source"
+        elif isinstance(s.value, basestring) and is_keyword(s.value):
+            es_query.fields.append(s.value)
+        elif isinstance(s.value, list) and es_query.fields is not None:
+            es_query.fields.extend(s.value)
         else:
-            output = zip(*data_list)
-            cube = Cube(select, [], {s.name: Matrix(list=output[i]) for i, s in enumerate(select)})
+            es_query.script_fields[literal_field(s.name)] = {"script": qb_expression_to_ruby(s.value)}
 
-    cube.frum = query
-    return cube
-
-
-
-def is_deep(query):
-    select = listwrap(query.select)
-    if len(select) > 1:
-        return False
-
-    if aggregates1_4[select[0].aggregate] not in ("none", "count"):
-        return False
-
-    if len(query.edges)<=1:
-        return False
-
-    isDeep = len(split_field(query["from"].name)) > 1  # LOOKING INTO NESTED WILL REQUIRE A SCRIPT
-    if not isDeep:
-        return False   # BETTER TO USE TERM QUERY
-
-    return True
-
-
-def es_deepop(es, mvel, query):
-    FromES = es14.util.build_es_query(query)
-
-    select = query.edges
-
-    temp_query = query.copy()
-    temp_query.select = select
-    temp_query.edges = DictList()
-    FromES.facets.mvel = {
-        "terms": {
-            "script_field": mvel.code(temp_query),
-            "size": query.limit
-        },
-        "facet_filter": simplify_esfilter(query.where)
-    }
-
-    data = es09.util.post(es, FromES, query.limit)
-
-    rows = es09.expressions.unpack_terms(data.facets.mvel, query.edges)
-    terms = zip(*rows)
-
-    # NUMBER ALL EDGES FOR qb INDEXING
-    edges = query.edges
-    for f, e in enumerate(edges):
-        for r in terms[f]:
-            e.domain.getPartByKey(r)
-
-        e.index = f
-        for p, part in enumerate(e.domain.partitions):
-            part.dataIndex = p
-        e.domain.NULL.dataIndex = len(e.domain.partitions)
-
-    # MAKE CUBE
-    dims = [len(e.domain.partitions) for e in query.edges]
-    output = Matrix(*dims)
-
-    # FILL CUBE
-    for r in rows:
-        term_coord = [e.domain.getPartByKey(r[i]).dataIndex for i, e in enumerate(edges)]
-        output[term_coord] = SUM(output[term_coord], r[-1])
-
-    cube = Cube(query.select, query.edges, {query.select.name: output})
-    cube.frum = query
-    return cube
-
-
+    return extract_rows(es, es_query, source, select, query)
 
 
 def format_list(T, select, source):
@@ -276,7 +170,14 @@ def format_list(T, select, source):
             if s.value == ".":
                 r[s.name] = row[source]
             else:
-                r[s.name] = unwraplist(row[source][literal_field(s.value)])
+                if source=="_source":
+                    r[s.name] = unwraplist(row[source][s.value])
+                elif isinstance(s.value, basestring):  # fields
+                    r[s.name] = unwraplist(row[source][literal_field(s.value)])
+                else:
+                    r[s.name] = unwraplist(row[source][literal_field(s.name)])
+
+
         data.append(r)
     return Dict(
         meta={"format": "list"},
@@ -294,7 +195,12 @@ def format_table(T, select, source):
             if s.value == ".":
                 r[map[s.name]] = row[source]
             else:
-                r[map[s.name]] = unwraplist(row[source][literal_field(s.value)])
+                if source == "_source":
+                    r[map[s.name]] = unwraplist(row[source][s.value])
+                elif isinstance(s.value, basestring):  # fields
+                    r[map[s.name]] = unwraplist(row[source][literal_field(s.value)])
+                else:
+                    r[map[s.name]] = unwraplist(row[source][literal_field(s.name)])
         data.append(r)
     return Dict(
         meta={"format": "table"},
@@ -309,14 +215,16 @@ def format_cube(T, select, source):
         try:
             if s.value == ".":
                 matricies[s.name] = Matrix.wrap(T.select(source))
-            elif isinstance(s.value, dict):
-                # for k, v in s.value.items():
-                # matricies[join_field(split_field(s.name)+[k])] = Matrix.wrap([unwrap(t.fields)[v] for t in T])
-                matricies[s.name] = Matrix.wrap([{k: unwraplist(t[source][v]) for k, v in s.value.items()} for t in T])
             elif isinstance(s.value, list):
                 matricies[s.name] = Matrix.wrap([tuple(unwraplist(t[source][ss]) for ss in s.value) for t in T])
             else:
-                matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.value)) for t in unwrap(T)])
+                if source == "_source":
+                    matricies[s.name] = Matrix.wrap([unwraplist(t[source][s.value]) for t in T])
+
+                elif isinstance(s.value, basestring):  # fields
+                    matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.value)) for t in unwrap(T)])
+                else:
+                    matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.name)) for t in unwrap(T)])
         except Exception, e:
             Log.error("", e)
     cube = Cube(select, edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(T), "interval": 1}}], data=matricies)

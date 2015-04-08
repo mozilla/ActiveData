@@ -15,28 +15,32 @@ from types import GeneratorType
 
 from pyLibrary import dot, convert
 from pyLibrary.collections import UNION, MIN
+from pyLibrary.debugs.logs import Log
+from pyLibrary.dot import set_default, Null, Dict, split_field, nvl, join_field
+from pyLibrary.dot.lists import DictList
+from pyLibrary.dot import listwrap, wrap, unwrap
+from pyLibrary.maths import Math
 from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.container import Container
 from pyLibrary.queries.cubes.aggs import cube_aggs
-from pyLibrary.queries.expressions import compile_expression, TRUE_FILTER, FALSE_FILTER
+from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, compile_expression
 from pyLibrary.queries.flat_list import FlatList
 from pyLibrary.queries.index import Index
 from pyLibrary.queries.query import Query, _normalize_selects, sort_direction, _normalize_select
 from pyLibrary.queries.cube import Cube
-from pyLibrary.maths import Math
-from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.dot import set_default, Null, Dict, split_field, nvl, join_field
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import listwrap, wrap, unwrap
+
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
 # qb QUERY DOCUMENTATION: https://github.com/klahnakoski/qb/tree/master/docs
 # START HERE: https://github.com/klahnakoski/qb/blob/master/docs/Qb_Reference.md
 # TODO: USE http://docs.sqlalchemy.org/en/latest/core/tutorial.html AS DOCUMENTATION FRAMEWORK
 
-
 def run(query):
+    """
+    THIS FUNCTION IS SIMPLY SWITCHING BASED ON THE query["from"] CONTAINER,
+    BUT IT IS ALSO PROCESSING A list CONTAINER; SEPARATE TO A ListContainer
+    """
     query = Query(query)
     frum = query["from"]
     if isinstance(frum, Container):
@@ -520,7 +524,6 @@ def pairwise(values):
         a = b
 
 
-
 def filter(data, where):
     """
     where  - a function that accepts (record, rownum, rows) and returns boolean
@@ -930,6 +933,4 @@ def reverse(vals):
         output[l] = v
 
     return wrap(output)
-
-
 from pyLibrary.queries.list.aggs import is_aggs, list_aggs

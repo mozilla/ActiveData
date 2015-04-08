@@ -77,7 +77,7 @@ class Cube(object):
                 data = {select.name: Matrix(value=data)}
                 self.edges = DictList.EMPTY
         else:
-            self.edges = edges
+            self.edges = wrap(edges)
 
         self.data = data
 
@@ -104,6 +104,19 @@ class Cube(object):
             return output
 
         Log.error("This is a multicube")
+    def values(self):
+        """
+        TRY NOT TO USE THIS, IT IS SLOW
+        """
+        matrix = self.data.values()[0]  # CANONICAL REPRESENTATIVE
+        e_names = self.edges.name
+        s_names = self.select.name
+        parts = [e.domain.partitions for e in self.edges]
+        for c in matrix._all_combos():
+            output = {n: parts[i][c[i]] for i, n in enumerate(e_names)}
+            for s in s_names:
+                output[s] = self.data[s][c]
+            yield wrap(output)
 
     @property
     def value(self):
@@ -189,7 +202,7 @@ class Cube(object):
             else:
                 output = Cube(
                     select=self.select,
-                    edges=[e for e, v in zip(self.edges, coordinates) if v is None],
+                    edges=wrap([e for e, v in zip(self.edges, coordinates) if v is None]),
                     data={k: c.__getitem__(coordinates) for k, c in self.data.items()}
                 )
                 return output
@@ -224,6 +237,7 @@ class Cube(object):
         THE parts GIVE NO INDICATION OF NEXT ITEM OR PREVIOUS ITEM LIKE rownum
         DOES.  MAYBE ALGEBRAIC EDGES SHOULD BE LOOPED DIFFERENTLY?  ON THE
         OTHER HAND, MAYBE WINDOW FUNCTIONS ARE RESPONSIBLE FOR THIS COMPLICATION
+        MAR 2015: THE ISSUE IS parts, IT SHOULD BE coord INSTEAD
 
         IT IS EXPECTED THE method ACCEPTS (value, coord, cube), WHERE
         value - VALUE FOUND AT ELEMENT

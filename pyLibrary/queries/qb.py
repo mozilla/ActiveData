@@ -271,6 +271,9 @@ def select(data, field_name):
 
     if isinstance(field_name, dict):
         field_name = wrap(field_name)
+        if field_name.value in ["*", "."]:
+            return data
+
         if field_name.value:
             # SIMPLIFY {"value":value} AS STRING
             field_name = field_name.value
@@ -460,7 +463,17 @@ def sort(data, fieldnames=None):
             right = nvl(right, Dict())
             for f in formal:
                 try:
-                    result = f["sort"] * cmp(left[f["field"]], right[f["field"]])
+                    l = left[f["field"]]
+                    r = right[f["field"]]
+                    if l == None:
+                        if r == None:
+                            return 0
+                        else:
+                            return - f["sort"]
+                    elif r == None:
+                        return f["sort"]
+
+                    result = f["sort"] * cmp(l, r)
                     if result != 0:
                         return result
                 except Exception, e:
@@ -473,6 +486,7 @@ def sort(data, fieldnames=None):
             output = DictList([unwrap(d) for d in sorted(list(data), cmp=comparer)])
         else:
             Log.error("Do not know how to handle")
+            output = None
 
         return output
     except Exception, e:
@@ -496,7 +510,7 @@ def filter(data, where):
     """
     where  - a function that accepts (record, rownum, rows) and returns boolean
     """
-    if where == TRUE_FILTER:
+    if where == None or where == TRUE_FILTER:
         return data
 
     if isinstance(data, Cube):
@@ -771,18 +785,12 @@ def drill_filter(esfilter, data):
     return FlatList(primary_column[0:max], uniform_output)
 
 
-def compile_function(source):
-    temp = None
-    exec "def temp(row, rownum, rows):\n    return "+source+";"
-    return temp
-
-
 def wrap_function(func):
     """
     RETURN A THREE-PARAMETER WINDOW FUNCTION TO MATCH
     """
     if isinstance(func, basestring):
-        return compile_function(func)
+        return compile_expression(func)
 
     numarg = func.__code__.co_argcount
     if numarg == 0:
@@ -829,7 +837,7 @@ def window(data, param):
         return
 
     if not aggregate or aggregate == "none":
-        for keys, values in groupby(data, edges.value):
+        for _, values in groupby(data, edges.value):
             if not values:
                 continue     # CAN DO NOTHING WITH THIS ZERO-SAMPLE
 

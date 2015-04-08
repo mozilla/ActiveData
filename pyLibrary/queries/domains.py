@@ -456,6 +456,66 @@ class TimeDomain(Domain):
         return output
 
 
+class DurationDomain(Domain):
+    __slots__ = ["max", "min", "interval", "partitions", "NULL"]
+
+    def __init__(self, **desc):
+        Domain.__init__(self, **desc)
+        self.type = "duration"
+        self.NULL = Null
+        self.min = Duration(self.min)
+        self.max = Duration(self.max)
+        self.interval = Duration(self.interval)
+
+        if self.partitions:
+            # IGNORE THE min, max, interval
+            if not self.key:
+                Log.error("Must have a key value")
+
+            Log.error("not implemented yet")
+
+            # VERIFY PARTITIONS DO NOT OVERLAP
+            return
+        elif not all([self.min, self.max, self.interval]):
+            Log.error("Can not handle missing parameter")
+
+        self.key = "min"
+        self.partitions = wrap([{"min": v, "max": v + self.interval, "dataIndex":i} for i, v in enumerate(Duration.range(self.min, self.max, self.interval))])
+
+    def compare(self, a, b):
+        return value_compare(a, b)
+
+    def getCanonicalPart(self, part):
+        return self.getPartByKey(part[self.key])
+
+    def getIndexByKey(self, key):
+        for p in self.partitions:
+            if p.min <= key < p.max:
+                return p.dataIndex
+        return len(self.partitions)
+
+    def getPartByKey(self, key):
+        for p in self.partitions:
+            if p.min <= key < p.max:
+                return p
+        return self.NULL
+
+    def getKey(self, part):
+        return part[self.key]
+
+    def getKeyByIndex(self, index):
+        return self.partitions[index][self.key]
+
+    def as_dict(self):
+        output = Domain.as_dict(self)
+
+        output.partitions = self.partitions
+        output.min = self.min
+        output.max = self.max
+        output.interval = self.interval
+        return output
+
+
 class RangeDomain(Domain):
     __slots__ = ["max", "min", "interval", "partitions", "NULL"]
 
@@ -548,6 +608,7 @@ name2type = {
     "set": SimpleSetDomain,
     "uid": DefaultDomain,
     "time": TimeDomain,
+    "duration": DurationDomain,
     "range": RangeDomain
 }
 

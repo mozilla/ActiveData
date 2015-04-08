@@ -18,7 +18,7 @@ from pyLibrary.times.durations import WEEK, DAY
 import base_test_class
 from tests.base_test_class import ActiveDataBaseTest
 
-TODAY =Date.today()
+TODAY = Date.today()
 
 test_data_1 = [
     {"a": "x", "t": Date("today").unix, "v": 2},
@@ -64,7 +64,6 @@ expected2 = wrap([
     {"a": "y", "v": None}
 ])
 
-
 test_data_3 = [
     {"a": TODAY, "t": Date("today").unix, "v": 2},
     {"a": TODAY, "t": Date("today-day").unix, "v": 2},
@@ -90,7 +89,6 @@ expected3 = wrap([
     {"since": 0, "v": 2},
     {"since": None, "v": 27}
 ])
-
 
 
 class TestTime(ActiveDataBaseTest):
@@ -126,17 +124,19 @@ class TestTime(ActiveDataBaseTest):
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
-                "edges": [{
-                              "name": "t",
-                              "domain": {
-                                  "type": "time",
-                                  "key": "min",
-                                  "min": Date("today-week").unix,
-                                  "max": TODAY.unix,
-                                  "interval": DAY.seconds,
-                                  "partitions": [{"min": r.t, "max": (Date(r.t) + DAY).unix} for r in expected_list_1 if r.t != None]
-                              }
-                          }],
+                "edges": [
+                    {
+                        "name": "t",
+                        "domain": {
+                            "type": "time",
+                            "key": "min",
+                            "min": Date("today-week").unix,
+                            "max": TODAY.unix,
+                            "interval": DAY.seconds,
+                            "partitions": [{"min": r.t, "max": (Date(r.t) + DAY).unix} for r in expected_list_1 if r.t != None]
+                        }
+                    }
+                ],
                 "data": {"v": [r.v for r in expected_list_1]}
             }
         }
@@ -212,14 +212,13 @@ class TestTime(ActiveDataBaseTest):
             "query": {
                 "from": base_test_class.settings.backend_es.index,
                 "edges": [
-                    "a",
                     {
                         "name": "since",
-                        "value": {"sub": ["a", "t"]},
+                        "value": {"sub": ["t", "a"]},
                         "domain": {
                             "type": "duration",
                             "min": "-week",
-                            "max": "eod",
+                            "max": "day",
                             "interval": "day"
                         }
                     }
@@ -244,10 +243,10 @@ class TestTime(ActiveDataBaseTest):
                         "name": "since",
                         "domain": {
                             "type": "duration",
-                            "key": "value",
+                            "key": "min",
                             "partitions": [
-                                {"min":e.since, "max":expected3[i+1].since}
-                                for i, e in enumerate(expected3[0:7:])
+                                {"min": e.since, "max": expected3[i + 1].since}
+                                for i, e in enumerate(expected3[0:8:])
                             ]
                         }
                     }

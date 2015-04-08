@@ -296,8 +296,10 @@ def unicode2datetime(value, format=None):
         return Date.now().value
     elif value.lower() == "today":
         return Date.today().value
+    elif value.lower() in ["eod", "tomorrow"]:
+        return Date.eod().value
 
-    if any(value.lower().find(n) >= 0 for n in ["now", "today"] + list(MILLI_VALUES.keys())):
+    if any(value.lower().find(n) >= 0 for n in ["now", "today", "eod", "tomorrow"] + list(MILLI_VALUES.keys())):
         return parse(value).value
 
     if format != None:

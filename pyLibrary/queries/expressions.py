@@ -702,9 +702,9 @@ def _convert_eq(eq, term):
 
     var, val = term.items()[0]
     if isinstance(val, list):
-        return {"not": {"terms": term}}
+        return {"terms": term}
     else:
-        return {"not": {"term": term}}
+        return {"term": term}
 
 
 def _convert_in(op, term):

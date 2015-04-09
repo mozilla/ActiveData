@@ -31,5 +31,9 @@ class TestExpressions(FuzzyTestCase):
         self.assertEqual(result, expected, "expecting the one and only variable")
 
 
+    def test_eq(self):
+        where = {"eq": {"a": 20}}
+        result = simplify_esfilter(where2esfilter(where))
+        self.assertEqual(result, {"term": {"a": 20}})
 
 

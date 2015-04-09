@@ -276,7 +276,7 @@ class FromESMetadata(Container):
     """
 
     @use_settings
-    def __init__(self, host, index, type, alias=None, name=None, port=9200, settings=None):
+    def __init__(self, host, index, alias=None, name=None, port=9200, settings=None):
         self.settings = settings
         self.name = nvl(name, alias, index)
         self._es = elasticsearch.Cluster(settings=settings)

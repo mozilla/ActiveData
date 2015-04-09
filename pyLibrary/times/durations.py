@@ -64,6 +64,18 @@ class Duration(object):
             from pyLibrary.debugs.logs import Log
             Log.error("Do not know type of object (" + convert.value2json(value) + ")of to make a Duration")
 
+    @staticmethod
+    def range(start, stop, step):
+        if not step:
+            Log.error("Expecting a non-zero duration for interval")
+        output = []
+        c = start
+        while c < stop:
+            output.append(c)
+            c += step
+        return output
+
+
 
     def __add__(self, other):
         output = Duration(0)
@@ -310,7 +322,7 @@ def parse(value):
         mlist = pplist.split("-")
         output = output + _string2Duration(mlist[0])
         for m in mlist[1::]:
-            output = output.subtract(_string2Duration(m))
+            output = output - _string2Duration(m)
     return output
 
 

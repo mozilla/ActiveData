@@ -8,7 +8,7 @@ Qb has a limited expression language to increase the number of useful queries th
 
 	{operator_name: parameters}
 
-As a side note, Qb queries are also expressions: `from` is the operator, and other name/value pairs are modifiers. 
+As a side note, Qb queries are also expressions: `from` is the operator, and other name/value pairs act as operation modifiers. 
 
 
 Operator Forms
@@ -28,6 +28,11 @@ Formal form requires a parameter list with two items.  It is useful for building
 
 		{"op": [expr1, expr2]}
 
+**Constant**
+
+The JSON values `true`, `false`, and `null` are also legitimate expressions. 
+
+
 Commutative Operators
 ----------------------
 
@@ -35,16 +40,11 @@ Commutative operators can compound many expressions, and therefore only have a *
 
 		{"op": [term1, term2, ... termN]}
 
-Famous Constants
-----------------
 
-The simplest expressions are one of the three `true`, `false`, and `null`. 
+Example
+-------
 
-
-
-
-`eq` Operator
--------------
+###`eq` Operator###
 
 The equality operator is most used, and has the most complex range of parameters.  We will use the `eq` operator to demonstrate the format for the rest of this document.  
 
@@ -75,60 +75,58 @@ which is logically equivalent to:
 			{"eq": {variable_N: constant_N}}	
 		]}
 
-NULL constants are ignored.  Comparing a `variable` to NULL requires the `missing` operator
+`null` constants are ignored by the `eq` operator.  If you want to compare a `variable` to `null`, you must use the `missing` operator.
 
 
 --------------------------------------------------------------------------------
 
-Boolean Operators
-=================
+Reference
+=========
 
-`and` Operator
---------------
+
+Boolean Operators
+-----------------
+
+###`and` Operator##
 
 		{"and": [expr_1, expr_2, expr_2, ... , expr_N]}
 
-expressions that evaluate to NULL are ignored
+expressions that evaluate to `null` are ignored
 
-		{"and": [NULL, expr, ...]} ⇒ {"and": [expr, ...]}
+		{"and": [null, expr, ...]} ⇒ {"and": [expr, ...]}
 
 an empty term evaluates to true  
 
-		{"and": []} ⇒ TRUE
+		{"and": []} ⇒ true
 
-`or` Operator
---------------
+###`or` Operator###
 
 		{"or": [expr_1, expr_2, expr_2, ... , expr_N]}
 
-expressions that evaluate to NULL are ignored
+expressions that evaluate to `null` are ignored
 
-		{"or": [NULL, expr, ...]} ⇒ {"or": [expr, ...]}
+		{"or": [null, expr, ...]} ⇒ {"or": [expr, ...]}
 
-an empty term evaluates to FALSE  
+an empty term evaluates to `false`  
 
-		{"or": []} ⇒ FALSE
+		{"or": []} ⇒ false
 
 
-`not` Operator
---------------
+###`not` Operator###
 
 Negation of another expression. 
 
 		{"not": expr}
 
-Note: negation of NULL is NULL
+Note: negation of `null` is `null`
 		
-		{"not": NULL} ⇒ NULL
+		{"not": null} ⇒ null
+
 
 Comparison Operators 
-=====================
+--------------------
 
-Matching Operators
-===================
-
-`eq` Operator
--------------
+###`eq` Operator###
 
 As detailed above, `eq` has two main forms.  The *simple* form:  
 
@@ -145,18 +143,16 @@ and the `formal` form
 		{"eq": [expr1, expr2, ... expr3]}
 
 
-`ne` Operator
--------------
+###`ne` Operator###
 
-Returns TRUE if two expressions are not equal
+Returns `true` if two expressions are not equal
 
 		{"ne": {variable: value}}
 		{"ne": [expr1, expr2]}
 
 
 
-`gt`, `gte`, `lte`, `lt` Operators
-----------------------------------
+###`gt`, `gte`, `lte`, `lt` Operators###
 
 Compare two expressions, and return a Boolean
 
@@ -166,34 +162,31 @@ Compare two expressions, and return a Boolean
 
 
 Math Operators
-==============
+--------------
 
-`count` Operator
-----------------
+###`count` Operator###
 
-For counting the number of not-NULL values.
+For counting the number of not-null values.
 
 		{"count": [expr1, expr2, ... expr3]}
 	
-NULLS are not counted
+`nulls` are not counted
 
 		{"count": []} ⇒ 0
 
 
-`sum` Operator
---------------
+###`sum` Operator###
 
 For adding the result of many expressions.  Also known as `add`.
 
 		{"sum": [expr1, expr2, ... expr3]}
 	
-expressions evaluating to NULL are ignored
+expressions evaluating to `null` are ignored.  The empty list evaluates to `null`.
 
-		{"sum": []} ⇒ NULL
+		{"sum": []} ⇒ null
 
  
-`sub` Operator
---------------
+###`sub` Operator###
 
 Subtract two expressions.  Also known as `subtract` and `minus`
 
@@ -201,39 +194,34 @@ Subtract two expressions.  Also known as `subtract` and `minus`
 		{"sub": [expr_a, expr_b]}
 
 
-`mult` Operator
----------------
+###`mult` Operator###
 
 Multiply multiple values.  Also known as `multiply` and `mul`
 
 		{"mult": [expr1, expr2, ... exprN]}
 
 
-`div` Operator
---------------
+###`div` Operator###
 
 For division.  There is no *simple* form.
 
 		{"div": [numerator, denominator]} 
 
 
-`exp` Operator
---------------
+###`exp` Operator###
 
 Raise the base to given exponent.  Also known as `pow` and `power`
 
 		{"exp": [base, exponent]} ⇒ base ** exponent
 
 
-`mod` Operator
---------------
+###`mod` Operator###
 
 Calculate the modulo, always results in a positive integer.
 	
 		{"mod": [dividend, divisor]}  ⇒ dividend % divisor
 
-`floor` Operator
-----------------
+###`floor` Operator###
 
 Highest integer less than, or equal to, `dividend`
 	
@@ -241,18 +229,16 @@ Highest integer less than, or equal to, `dividend`
 
 
 Search Operators
-================
+----------------
 
-`term` Operator
----------------
+###`term` Operator###
 
 Identical to the `eq` operator, but exists for Elasticsearch compatibility.
 
 		{"term": {variable, value}} 
 
 
-`terms` Operator
-----------------
+###`terms` Operator###
 
 The `terms` operator (*note it's plural*) has been borrowed from Elasticsearch; it compares a property to any number of constants:
 
@@ -268,41 +254,36 @@ and is logically the same as
 		]}
 
 
-`missing` Operator
-------------------
+###`missing` Operator###
 
-Test if a property is NULL, or missing from the record
+Test if a property is `null`, or missing from the record
 
 		{"missing": variable}
 
 
-`exists` Operator
------------------
+###`exists` Operator###
 
-Test is a property is not NULL
+Test is a property is not `null`
 
 		{"exists": variable}
 
-`match_all` Operator
---------------------
+###`match_all` Operator###
 
-Dummy operator that always returns TRUE.  It is an artifact of Elasticsearch filter expressions.
+Dummy operator that always returns `true`.  It is an artifact of Elasticsearch filter expressions.
 
 		{"match_all": {}}
 
 
 
-`prefix` Operator
------------------
+###`prefix` Operator###
 
 Test if a property has the given prefix.  Only the *simple* form exists.
 
 		{"prefix": {variable: prefix}}
 
-`regexp` Operator
------------------
+###`regexp` Operator###
 
-Return TRUE if a property matches a given regular expression.  The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term.  Also be sure you escape special characters:  This is a JSON string of a regular expression, not a regular expression itself.  Only the *simple* form exists.
+Return `true` if a property matches a given regular expression.  The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term.  Also be sure you escape special characters:  This is a JSON string of a regular expression, not a regular expression itself.  Only the *simple* form exists.
 
 		{"prefix": {variable: regular_expression}}
  

@@ -11,8 +11,10 @@ Qb has a limited expression language to increase the number of useful queries th
 As a side note, Qb queries are also expressions: `from` is the operator, and other name/value pairs act as operation modifiers. 
 
 
-Operator Forms
+Operator Overview
 -----------------
+
+###Operator forms###
 
 Many operators have a *simple* form and a *formal* form which use parameter objects or parameter lists respectively.  
 
@@ -33,16 +35,19 @@ Formal form requires a parameter list with two items.  It is useful for building
 The JSON values `true`, `false`, and `null` are also legitimate expressions. 
 
 
-Commutative Operators
-----------------------
+###Commutative Operators###
 
 Commutative operators can compound many expressions, and therefore only have a *formal* version:
 
 		{"op": [term1, term2, ... termN]}
 
+###Expressions involving `null`###
 
-Example
--------
+As a general rule, the commutative operators will ignore expressions that evaluate to `null`, and the binary operators usually return `null` if any parameter is `null`.  Specific behaviour of each operator on `null` is included below.
+
+
+Example: `eq` Operator
+----------------------
 
 ###`eq` Operator###
 
@@ -95,7 +100,7 @@ expressions that evaluate to `null` are ignored
 
 		{"and": [null, expr, ...]} ⇒ {"and": [expr, ...]}
 
-an empty term evaluates to true  
+an empty list evaluates to true  
 
 		{"and": []} ⇒ true
 
@@ -107,7 +112,7 @@ expressions that evaluate to `null` are ignored
 
 		{"or": [null, expr, ...]} ⇒ {"or": [expr, ...]}
 
-an empty term evaluates to `false`  
+an empty list evaluates to `false`  
 
 		{"or": []} ⇒ false
 
@@ -285,7 +290,7 @@ Test if a property has the given prefix.  Only the *simple* form exists.
 
 Return `true` if a property matches a given regular expression.  The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term.  Also be sure you escape special characters:  This is a JSON string of a regular expression, not a regular expression itself.  Only the *simple* form exists.
 
-		{"prefix": {variable: regular_expression}}
+		{"regexp": {variable: regular_expression}}
  
 
 

@@ -55,8 +55,17 @@ def qb_expression_to_function(expr):
 
 def qb_expression_to_esfilter(expr):
     """
+    CONVERT qb QUERY where CLAUSE TO ELASTICSEARCH FILTER FORMAT
     """
-    return where2esfilter(expr)
+    if expr is True or expr == None:
+        return {"match_all": {}}
+    if expr is False:
+        return False
+
+    k, v = expr.items()[0]
+    return converter_map.get(k, _no_convert)(k, v)
+
+
 
 
 def qb_expression_to_ruby(expr):
@@ -489,7 +498,7 @@ complex_operators = {
 
 def simplify_esfilter(esfilter):
     try:
-        output = normalize_esfilter(where2esfilter(esfilter))
+        output = normalize_esfilter(qb_expression_to_esfilter(esfilter))
         if output is TRUE_FILTER:
             return {"match_all": {}}
         output.isNormal = None
@@ -524,7 +533,7 @@ def normalize_esfilter(esfilter):
 def _normalize(esfilter):
     """
     TODO: DO NOT USE Dicts, WE ARE SPENDING TOO MUCH TIME WRAPPING/UNWRAPPING
-    REALLY, WE JUST COLLAPSE CASCADING and AND or FILTERS
+    REALLY, WE JUST COLLAPSE CASCADING `and` AND `or` FILTERS
     """
     if esfilter is TRUE_FILTER or esfilter is FALSE_FILTER or esfilter.isNormal:
         return esfilter
@@ -658,25 +667,12 @@ def _normalize(esfilter):
     return esfilter
 
 
-def where2esfilter(where):
-    """
-    CONVERT qb QUERY where CLAUSE TO ELASTICSEARCH FILTER FORMAT
-    """
-    if where is True or where == None:
-        return {"match_all": {}}
-    if where is False:
-        return False
-
-    k, v = where.items()[0]
-    return converter_map.get(k, _no_convert)(k, v)
-
-
 def _convert_many(k, v):
-    return {k: [where2esfilter(vv) for vv in v]}
+    return {k: [qb_expression_to_esfilter(vv) for vv in v]}
 
 
 def _convert_not(k, v):
-    return {k: where2esfilter(v)}
+    return {k: qb_expression_to_esfilter(v)}
 
 
 def _convert_not_equal(op, term):

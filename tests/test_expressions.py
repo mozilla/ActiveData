@@ -11,7 +11,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 
-from pyLibrary.queries.expressions import get_all_vars, simplify_esfilter, where2esfilter
+from pyLibrary.queries.expressions import get_all_vars, simplify_esfilter, qb_expression_to_esfilter
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 
 
@@ -22,7 +22,7 @@ class TestExpressions(FuzzyTestCase):
             {"lt": {"a": 40}}
         ]}
 
-        result = simplify_esfilter(where2esfilter(where))
+        result = simplify_esfilter(qb_expression_to_esfilter(where))
         self.assertEqual(result, {"range": {"a": {"gt": 20, "lt": 40}}})
 
     def test_value_not_a_variable(self):
@@ -30,10 +30,9 @@ class TestExpressions(FuzzyTestCase):
         expected = set(["result.test"])
         self.assertEqual(result, expected, "expecting the one and only variable")
 
-
     def test_eq(self):
         where = {"eq": {"a": 20}}
-        result = simplify_esfilter(where2esfilter(where))
+        result = simplify_esfilter(qb_expression_to_esfilter(where))
         self.assertEqual(result, {"term": {"a": 20}})
 
 

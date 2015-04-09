@@ -46,10 +46,14 @@ def wrap_from(frum, schema=None):
             from pyLibrary.debugs.logs import Log
             Log.error("expecting pyLibrary.queries.query.config.default.settings to contain default elasticsearch connection info")
 
-        settings = set_default({
-            "index": split_field(frum)[0],
-            "name": frum,
-        }, config.default.settings)
+        settings = set_default(
+            {
+                "index": split_field(frum)[0],
+                "name": frum,
+            },
+            config.default.settings
+        )
+        settings.type = None  # WE DO NOT WANT TO INFLUENCE THE TYPE BECAUSE NONE IS IN THE frum STRING ANYWAY
         return type2container["elasticsearch"](settings)
     elif isinstance(frum, dict) and frum.type and type2container[frum.type]:
         # TODO: Ensure the frum.name is set, so we capture the deep queries

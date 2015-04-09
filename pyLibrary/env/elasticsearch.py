@@ -672,8 +672,8 @@ class Alias(object):
     @use_settings
     def __init__(
         self,
-        type,  # SCHEMA NAME
         alias,  # NAME OF THE ALIAS
+        type=None,  # SCHEMA NAME, WILL HUNT FOR ONE IF None
         explore_metadata=True,  # IF PROBING THE CLUSTER FOR METADATA IS ALLOWED
         debug=False,
         timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
@@ -685,6 +685,22 @@ class Alias(object):
 
         self.settings = settings
         self.cluster = Cluster(settings)
+
+        if type == None:
+            if not explore_metadata:
+                Log.error("Alias() was given no `type` (aka schema) and not allowed to explore metadata.  Do not know what to do now.")
+            indices = self.cluster.get_metadata().indices
+            candidates = [(name, i) for name, i in indices.items() if self.settings.index in i.aliases]
+            index = qb.sort(candidates, 0).last()[1]
+
+            # FIND MAPPING WITH MOST PROPERTIES (AND ASSUME THAT IS THE CANONICAL TYPE)
+            max_prop = -1
+            for _type, mapping in index.mappings.items():
+                num_prop = len(mapping.properties.keys())
+                if max_prop < num_prop:
+                    max_prop = num_prop
+                    self.settings.type = _type
+                    type = _type
 
         self.path = "/" + alias + "/" + type
 
@@ -707,7 +723,7 @@ class Alias(object):
 
 
             #TODO: REMOVE THIS BUG CORRECTION
-            if not properties and self.settings.type=="test_result":
+            if not properties and self.settings.type == "test_result":
                 properties = index.mappings["test_results"]
             # DONE BUG CORRECTION
 

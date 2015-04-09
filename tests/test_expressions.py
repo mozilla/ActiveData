@@ -30,7 +30,6 @@ class TestExpressions(FuzzyTestCase):
         expected = set(["result.test"])
         self.assertEqual(result, expected, "expecting the one and only variable")
 
-
     def test_eq(self):
         where = {"eq": {"a": 20}}
         result = simplify_esfilter(qb_expression_to_esfilter(where))

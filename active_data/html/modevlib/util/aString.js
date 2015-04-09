@@ -168,7 +168,7 @@ String.prototype.translate=function translate(mapper){
 };
 
 function isString(value){
-	return (typeof value)=="string";
+	return (value instanceof String || typeof(value) == "string");
 }//method
 
 

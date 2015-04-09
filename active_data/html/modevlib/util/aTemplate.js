@@ -28,6 +28,12 @@ var Template = function Template(template){
 	};
 	Template.prototype.replace = Template.prototype.expand;
 
+
+	function toString(value){
+		if (isString(value)) return value;
+		return convert.value2json(value)
+	}//function
+
 	///////////////////////////////////////////////////////////////////////////
 	// DEFINE TEMPLATE FUNCTIONS HERE
 	///////////////////////////////////////////////////////////////////////////
@@ -40,12 +46,18 @@ var Template = function Template(template){
 		f = nvl(f, "yyyy-MM-dd HH:mm:ss");
 		return d.format(f);
 	};
+	FUNC.indent = function(value, amount){
+		return toString(value).indent(amount);
+	};
+	FUNC.left = function(value, amount){
+		return toString(value).left(amount);
+	};
 
 
 	function _expand(template, namespaces){
 		if (template instanceof Array) {
 			return _expand_array(template, namespaces);
-		} else if (typeof(template) == "string") {
+		} else if (isString(template)) {
 			return _expand_text(template, namespaces);
 		} else {
 			return _expand_loop(template, namespaces);
@@ -109,7 +121,11 @@ var Template = function Template(template){
 				if (path[p].split("(").length==1){
 					val = FUNC[func](val)
 				}else{
-					val = eval("FUNC[func](val, "+path[p].split("(")[1]);
+					try {
+						val = eval("FUNC[func](val, " + path[p].split("(")[1]);
+					}catch (f){
+						Log.warning("Can not evaluate "+convert.String2Quote(output.substring(s + 2, e)), f)
+					}//try
 				}//endif
 			}//for
 

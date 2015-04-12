@@ -7,14 +7,14 @@ Qb queries are JSON structures that attempt to mimic SQL queries, where property
 Simple `from` Clause 
 --------------------
 
-All queries must have a `from` clause, which is indicates what data is being queried.  ActiveData has a default container, which it uses to translate names to explicit cubes.
+All queries must have a `from` clause, which indicates what data is being queried.  ActiveData has a default container, which it uses to translate names to explicit data cubes to query.
 
 ```javascript
 	{"from": "unittest"}
 
 ```
 
-In this case, we will get some records from the `unittest` cube.  ActiveData assigns a default limit on all requests to prevent returning overwhelmingly large results by accident.
+In this case, we will get some records from the `unittest` cube.  Please note: ActiveData assigns a default limit on all requests to prevent returning overwhelmingly large results by accident.
 
 
 `format` Clause
@@ -144,7 +144,7 @@ The `groupby` clause introduces some problems for data analysis.  The biggest pr
 `edges` Clause
 --------------
 
-The `edges` clause works just like `groupby` except it's domain in unaffected by the filter:
+The `edges` clause works just like `groupby` except it's domain is unaffected by the filter:
 
 ```javascript
 {

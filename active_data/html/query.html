@@ -175,13 +175,15 @@ var queryTool = {};
 	queryTool.showMode = "showTable";
 
 	queryTool.setup = function(){
-		$("#cube").prop('disabled', true).val("Loading query...");
 		this.hideAll();
 
 		var self = this;
 		var loc = window.location.href;
 		var anchor = convert.URLParam2Object(loc.split("#")[1]);
-		if (anchor.find!==undefined) {
+		if (anchor.find===undefined) {
+			$("#cube").prop('disabled', false).val("").focus();
+		}else{
+			$("#cube").prop('disabled', true).val("Loading query...");
 			Thread.run(function*(){
 				try {
 					var response = yield(Rest.get({
@@ -202,7 +204,7 @@ var queryTool = {};
 
 	queryTool.hideAll=function hideAll(){
 		//EVAL THE Qb
-		self.shareLink=undefined;
+		this.shareLink=undefined;
 		$("#notes").hide();
 		$("#success").hide();
 		$("#results").hide();
@@ -250,7 +252,7 @@ var queryTool = {};
 
 				self.response = yield(ESQueryRunner(query));
 				self[self.showMode]();
-				$("#cube").val(convert.value2json(convert.json2value(code)));
+				$("#cube").val(convert.value2json(convert.json2value(code))).focus();
 				$("#success").show();
 
 				var loc = window.location.href.split("#")[0];

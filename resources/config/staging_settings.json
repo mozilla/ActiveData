@@ -20,6 +20,13 @@
 			"$ref": "//../schema/request_log.schema.json"
 		}
 	},
+	"saved_queries":{
+		"host": "http://172.31.0.146",
+		"port": "9200",
+		"index": "saved_queries",
+		"type": "query",
+		"debug": true
+	},
 	"elasticsearch": {
 		"host": "http://172.31.0.146",
 		"port": "9200",

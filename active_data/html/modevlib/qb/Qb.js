@@ -748,7 +748,7 @@ Qb.normalizeByCohort=function(query, multiple){
 		var total=0;
 		for(var e=0;e<query.cube[c].length;e++) total+=aMath.abs(query.cube[c][e]);
 		if (total!=0){
-			for(var e=0;e<query.cube[c].length;e++) query.cube[c][e]*=(multiple/total);
+			for(e=0;e<query.cube[c].length;e++) query.cube[c][e]*=(multiple/total);
 		}//endif
 	}//for
 };//method

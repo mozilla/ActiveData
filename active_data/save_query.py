@@ -51,7 +51,7 @@ class SaveQueries(object):
     def find(self, hash):
         with self.es:
             result = self.es.query({
-                "from": self.es.settings.alias,
+                "from": {"type": "elasticsearch", "settings": self.es.settings},
                 "where": {"prefix": {"hash": hash}}
             })
 
@@ -63,7 +63,7 @@ class SaveQueries(object):
                 return None
 
             self.es.update({
-                "update": self.es.settings.alias,
+                "update": {"type": "elasticsearch", "settings": self.es.settings},
                 "set": {"last_updated": Date.now()},
                 "where": {"eq": {"hash": hash}}
             })
@@ -85,7 +85,7 @@ class SaveQueries(object):
 
         with self.es:
             existing = self.es.query({
-                "from": self.es.settings.alias,
+                "from": {"type": "elasticsearch", "settings": self.es.settings},
                 "where": {"terms": {"hash": short_hashes.keys()}}
             })
 

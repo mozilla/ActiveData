@@ -60,6 +60,18 @@ THIS IS A DEMONSTRATION OF USING THE ESQueryRunner
 	<div id="result" style="overflow: scroll;width:800px;height:250px;"></div>
 </div>
 
+<div id="tableDialog" title="Tab-delimited" style="display:none;">
+	<p>Copy-and-paste to Spreadsheet</p>
+	<textarea name="tableContent" id="tableContent" style="overflow: scroll;width:800px;height:250px;"></textarea>
+</div>
+
+<div id="jsonDialog" title="JSON Object" style="display:none;">
+	<p>Copy</p>
+	<textarea name="jsonContent" id="jsonContent" style="overflow: scroll;width:800px;height:250px;"></textarea>
+</div>
+
+
+
 
 <script>
 function setupBusySpinner(){
@@ -97,8 +109,27 @@ importScript([], function(){
 		});
 
 		$("#copy").click(function(){
+			if (queryTool.showMode=="showTable"){
+				var list = convert.List2Tab(response2list(queryTool.response));
+				var c=$("#tableContent");
+				c.html(list.toString());
+				$("#tableDialog").dialog({
+				    width:850,
+					height:350
+				});
+				c.select().focus();
+			}else{
+				$("#jsonDialog").dialog({ width: 850, height: 350});
+				$("#jsonContent").html(convert.value2json(queryTool.response)).select().focus();
+			}//endif
+		});
 
+		$("#tab").click(function(){
+			queryTool.showTable();
+		});
 
+		$("#json").click(function(){
+			queryTool.showJSON();
 		});
 
 		$("#execute").click(function(event){
@@ -112,10 +143,34 @@ importScript([], function(){
 
 });
 
+
+function response2list(response){
+	//TRY OUR BEST TO CONVERT ActiveData RESPONSE INTO A LIST OF OBJECTS
+	var rows;
+	if (response.meta && response.meta.format == "cube") {
+		response.cube = response.data;
+		rows = Qb.Cube2List(response);
+	} else if (response.meta && response.meta.format == "table") {
+		response.columns = response.header;
+		rows = convert.Table2List({"columns": response.header, "rows": response.data});
+	} else if (response.meta && response.meta.format == "list") {
+		rows = response.data;
+	} else if (response.cube !== undefined) {
+		rows = Qb.Cube2List(response);
+	} else if (response.list !== undefined) {
+		rows = response.list
+	} else {
+		Log.error("unknown response type");
+	}//endif
+	return rows;
+}//function
+
+
 var queryTool = {};
 (function(){
 	queryTool.response = null;
 	queryTool.shareLink = null;
+	queryTool.showMode = "showTable";
 
 	queryTool.setup = function(){
 		$("#cube").prop('disabled', true).val("Loading query...");
@@ -149,7 +204,26 @@ var queryTool = {};
 		$("#notes").hide();
 		$("#success").hide();
 		$("#results").hide();
-	}//function
+	};//function
+
+	queryTool.showTable=function showTable(){
+		var self=this;
+		self.showMode="showTable";
+
+		try {
+			var rows = response2list(self.response);
+			$("#result").html("<div>" + rows.length + " rows (up to 3000 shown)</div>" + convert.List2HTMLTable(rows, {"limit": 3000})).show();
+		}catch(e){
+			$("#result").html("<div>"+convert.String2HTML(convert.value2json(self.response))+"</div>");
+		}//try
+	};//function
+
+	queryTool.showJSON=function showJSON(){
+		var self=this;
+		self.showMode="showJSON";
+		$("#result").html("<div>" + convert.String2HTML(convert.value2json(self.response)) + "/<div>")
+	};//function
+
 
 	queryTool.executeCube = function(event){
 		var self = this;
@@ -173,30 +247,16 @@ var queryTool = {};
 				query.meta.save = true;
 
 				self.response = yield(ESQueryRunner(query));
-				var rows;
-				if (self.response.meta && self.response.meta.format == "cube") {
-					self.response.cube = self.response.data;
-					rows = Qb.Cube2List(self.response);
-				} else if (self.response.meta && self.response.meta.format == "table") {
-					self.response.columns = self.response.header;
-					rows = convert.Table2List({"columns": self.response.header, "rows": self.response.data});
-				} else if (self.response.meta && self.response.meta.format == "list") {
-					rows = self.response.data;
-				} else if (self.response.cube !== undefined) {
-					rows = Qb.Cube2List(self.response);
-				} else if (self.response.list !== undefined) {
-					rows = self.response.list
-				} else {
-					$("#result").html(convert.String2HTML(convert.value2json(self.response)));
-					return
-				}//endif
-
+				self[self.showMode]();
 				$("#cube").val(convert.value2json(convert.json2value(code)));
-				$("#result").html("<div>" + rows.length + " rows (up to 3000 shown)</div>" + convert.List2HTMLTable(rows, {"limit": 3000})).show();
 				$("#success").show();
 
 				var loc = window.location.href.split("#")[0];
 				self.shareLink =  loc + "#find=" + self.response.meta.saved_as;
+
+				if (self.shareLink != window.location.href) {
+					window.history.pushState("object or string", "Good Query - ActiveData Query Tool", self.shareLink);
+				}//endif
 			} catch (e) {
 				$("#notes").show().val(e.toString());
 			} finally {
@@ -204,10 +264,14 @@ var queryTool = {};
 			}//try
 		});
 	};
+
+
 })();
 
 </script>
 
 
 </BODY>
+
+
 </HTML>

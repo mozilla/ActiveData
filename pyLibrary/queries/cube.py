@@ -104,6 +104,7 @@ class Cube(object):
             return output
 
         Log.error("This is a multicube")
+
     def values(self):
         """
         TRY NOT TO USE THIS, IT IS SLOW

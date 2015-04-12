@@ -7,25 +7,42 @@ Qb queries are JSON structures that attempt to mimic SQL queries, where property
 Simple `from` Clause 
 --------------------
 
-All queries must have a `from` clause, which is indicates what data is being queried.  ActiveData has a default container, which it uses to translate names to explicit cubes.
+All queries must have a `from` clause, which indicates what data is being queried.  ActiveData has a default container, which it uses to translate names to explicit data cubes to query.
 
 ```javascript
-{"from": "unittest"}
+	{"from": "unittest"}
 
 ```
 
-In this case, we will get some records from the `unittest` cube.  ActiveData assigns a default limit on all requests to prevent returning overwhelmingly large results by accident.
+In this case, we will get some records from the `unittest` cube.  Please note: ActiveData assigns a default limit on all requests to prevent returning overwhelmingly large results by accident.
+
+
+`format` Clause
+---------------
+
+The ActiveData Query Tool hides the formatting feature of the ActiveData service.  Most responses you get back from the service are data cubes (aka pivot tables), and this may not be the best format for your application.  You have three main formats to choose from:
+
+* `list` - service will return a list of JSON objects, which is great if you want to see the original source documents. 
+* `table` - service returns a table - There is a header containing the names of the columns, and the data which is a list of tuples containing row values.  This form is generally more compact than the other two forms.
+* `cube` - returns the default cube form - This format is good for analysis, charting, and is compact for large, dense, datasets.
+
+```javascript
+	{
+		"from":"unittest",
+		"format":"list"
+	}
+```
 
 `limit` Clause
 --------------
 
-Use the `limit` clause to get more rows
+The ActiveData service limits responses to 10 rows by default.  To increase this limit (or decrese it) Use the `limit` clause to set an upper bound on the response:
 
 ```javascript
-{
-	"from": "unittest",
-	"limit": 100
-}
+	{
+		"from": "unittest",
+		"limit": 100
+	}
 
 ```
 
@@ -127,7 +144,7 @@ The `groupby` clause introduces some problems for data analysis.  The biggest pr
 `edges` Clause
 --------------
 
-The `edges` clause works just like `groupby` except it's domain in unaffected by the filter:
+The `edges` clause works just like `groupby` except it's domain is unaffected by the filter:
 
 ```javascript
 {

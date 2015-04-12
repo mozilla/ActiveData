@@ -11,6 +11,7 @@ from flask import Flask
 import flask
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
+from active_data.save_query import SaveQueries
 
 from pyLibrary import convert, strings, queries
 from pyLibrary.debugs import constants, startup
@@ -19,6 +20,7 @@ from pyLibrary.dot import Dict, unwrap
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.queries import qb
+from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
 
@@ -30,7 +32,7 @@ app = Flask(__name__)
 request_log_queue = None
 default_elasticsearch = None
 config = None
-
+query_finder = None
 
 def record_request(request, query_, data, error):
     if request_log_queue == None:
@@ -54,6 +56,29 @@ def record_request(request, query_, data, error):
 def download_file(filename):
     return flask.send_from_directory(File("active_data/html").abspath, filename)
 
+@app.route('/find/<path:hash>')
+def find_query(hash):
+    hash = hash.split("/")[0]
+    query = query_finder.find(hash)
+
+    if not query:
+        return Response(
+            b'{"type":"ERROR", "template":"not found"}',
+            status=400,
+            headers={
+                "access-control-allow-origin": "*",
+                "Content-type": "application/json"
+            }
+        )
+    else:
+        return Response(
+            convert.unicode2utf8(query),
+            status=200,
+            headers={
+                "access-control-allow-origin": "*",
+                "Content-type": "application/json"
+            }
+        )
 
 @app.route('/query', defaults={'path': ''}, methods=['GET', 'POST'])
 def query(path):
@@ -76,6 +101,9 @@ def query(path):
             data = convert.json2value(text)
             record_request(flask.request, data, None, None)
             result = qb.run(data)
+
+        if data.meta.save:
+            result.meta.saved_as = query_finder.save(data)
 
         result.meta.active_data_response_time = total_duration.seconds
 
@@ -168,6 +196,7 @@ def main():
     global default_elasticsearch
     global request_log_queue
     global config
+    global query_finder
 
     try:
         config = startup.read_settings()
@@ -180,6 +209,7 @@ def main():
             request_log_queue = request_logger.threaded_queue(max_size=2000)
 
         default_elasticsearch = elasticsearch.Index(config.elasticsearch)
+        query_finder = SaveQueries(config.saved_queries)
 
         queries.config.default = {
             "type": "elasticsearch",

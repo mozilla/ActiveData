@@ -108,7 +108,7 @@ def parse_columns(parent_path, esProperties):
             columns.append({
                 "name": join_field(split_field(path)[1::]),
                 "type": "nested",
-                "useSource": True
+                "useSource": False
             })
 
             if path not in INDEX_CACHE:
@@ -131,7 +131,7 @@ def parse_columns(parent_path, esProperties):
             columns.append({
                 "name": join_field(split_field(path)[1::]),
                 "type": "object",
-                "useSource": True
+                "useSource": False
             })
 
         if property.dynamic:
@@ -160,11 +160,11 @@ def parse_columns(parent_path, esProperties):
                     "type": property.type,
                     "useSource": property.index == "no"
                 })
-        elif not property.enabled:
+        elif property.enabled == None or property.enabled == False:
             columns.append({
                 "name": join_field(split_field(path)[1::]),
-                "type": property.type,
-                "useSource": "yes"
+                "type": "object",
+                "useSource": True
             })
         else:
             Log.warning("unknown type {{type}} for property {{path}}", {"type": property.type, "path": path})

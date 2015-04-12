@@ -213,6 +213,9 @@ convert.Object2URL=function(value){
 
 convert.URLParam2Object = function(param){
 	// CONVERT URL QUERY PARAMETERS INTO DICT
+	if (param===undefined || param==null){
+		return {};
+	}//endif
 
 	function _decode(v){
 		var output = "";

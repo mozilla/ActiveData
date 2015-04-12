@@ -211,6 +211,61 @@ convert.Object2URL=function(value){
 };//method
 
 
+convert.URLParam2Object = function(param){
+	// CONVERT URL QUERY PARAMETERS INTO DICT
+
+	function _decode(v){
+		var output = "";
+		var i = 0;
+		while (i < v.length) {
+			var c = v[i];
+			if (c == "%") {
+				d = convert.hex2bytes(v.substring(i + 1, i + 3));
+				output += d;
+				i += 3;
+			} else {
+				output += c;
+				i += 1;
+			}//endif
+		}//while
+
+		try {
+			return convert.json2value(output)
+		} catch (e) {
+			//DO NOTHING
+		}//try
+		return output;
+	}//function
+
+
+	var query = {};
+	param.split("&").forall(function(p){
+		if (!p) return;
+
+		var k, v;
+		if (p.indexOf("=") == -1) {
+			k = p;
+			v = true;
+		} else {
+			var kv = p.split("=");
+			k = kv[0];
+			v = kv[1];
+			v = _decode(v)
+		}//endif
+
+		var u = query[k];
+		if (u === undefined || u == null) {
+			query[k] = v
+		} else if (u instanceof Array) {
+			u.append(v)
+		} else {
+			query[k] = [u, v]
+		}//endif
+	});
+
+	return query;
+};//function
+
 
 (function(){
 	var entityMap = {
@@ -698,6 +753,15 @@ convert.char2ASCII=function(char){
 
 convert.hex2int = function(value){
 	return parseInt(value, 16);
+};//method
+
+convert.hex2bytes = function(value){
+	var output = "";
+	for (var i = 0; i < value.length; i += 2) {
+		var c = parseInt(value.substring(i, i + 2), 16);
+		output += String.fromCharCode(c);
+	}//for
+	return output;
 };//method
 
 

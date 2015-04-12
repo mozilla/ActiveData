@@ -44,13 +44,19 @@ THIS IS A DEMONSTRATION OF USING THE ESQueryRunner
 </div>
 <h3>ActiveData Query Tool</h3>
 
-<div style="float:right;display: inline;">
-	<a id="execute" class="button">EXECUTE</a>
-</div>
 
 <div style="width:800px;float: left;">
 	<textarea name="cube" id="cube" style="width:800px;height:250px;"></textarea>
+
+	<div id="execute" class="button">EXECUTE</div>
+	<div id="success" style="display: inline-block;padding-left: 30px;">
+		<div id="copy" class="button">Copy</div>
+		<div id="share" class="button">Share</div>
+		<div id="tab" class="button">as Table</div>
+		<div id="json" class="button">as Json</div>
+	</div>
 	<textarea name="notes" id="notes" style="width:800px;height:250px;"></textarea>
+
 	<div id="result" style="overflow: scroll;width:800px;height:250px;"></div>
 </div>
 
@@ -78,83 +84,127 @@ function setupBusySpinner(){
 }
 
 importScript([], function(){
-
 	setupBusySpinner();
-
-	$("#currtime").click(function(){
-		var value = $(this).html();
-		window.prompt("Copy to clipboard: Ctrl+C, Enter", value);
-	});
-
-	$("#long2date").change(function(){
-		var value = $(this).val();
-		$("#long2dateResult").html(Date.newInstance(convert.String2Integer(value)).format("dd-NNN-yyyy HH:mm:ss") + "<br>" +
-			Date.newInstance(convert.String2Integer(value)).toString());
-	});
-
-	$("#date2long").change(function(){
-		var value = $(this).val();
-		$("#date2longResult").html(convert.Date2milli(Date.newInstance(value)));
-	});
 
 	$().ready(function(){
 		//STYLE AS LINED TEXT AREAQ
 		$("#cube").linedtextarea();
 
+		$("#share").click(function(){
+			if (queryTool.shareLink !== undefined) {
+				window.prompt("Copy to clipboard: Ctrl+C, Enter", queryTool.shareLink);
+			}//endif
+		});
+
+		$("#copy").click(function(){
+
+
+		});
+
 		$("#execute").click(function(event){
 			$("#result").html("");
-			executeCube();
+			queryTool.executeCube();
 		});//method
+
+		queryTool.setup();
+
 	});
 
 });
 
+var queryTool = {};
+(function(){
+	queryTool.response = null;
+	queryTool.shareLink = null;
 
-var executeCube = function(event){
-	//EVAL THE Qb
-	$("#notes").hide();
+	queryTool.setup = function(){
+		$("#cube").prop('disabled', true).val("Loading query...");
+		this.hideAll();
 
+		var self = this;
+		var loc = window.location.href;
+		var anchor = convert.URLParam2Object(loc.split("#")[1]);
+		if (anchor.find!==undefined) {
+			Thread.run(function*(){
+				try {
+					var response = yield(Rest.get({
+						"url": "/find/" + anchor.find,
+						"data": ""
+					}));
 
-	var code = $("#cube").val();
-	if (code.trim().left(1) != "{") code = "{" + code;
-	if (code.trim().right(1) != "}") code = code + "}";
+					$("#cube").prop('disabled', false).val(convert.value2json(response));
+					self.executeCube();
+					yield (response);
+				} catch (e) {
+					Log.error("Call to ActiveData failed", e)
+				}//try
+			});
+		}//endif
 
-	Thread.run(function*(){
-		var a=Log.action("Send query", true);
-		try {
-			//USE JSONLINT TO FORMAT AND TEST-COMPILE THE code
-			code = jsl.format.formatJson(code);
-			$("#cube").val(code);
-			var query = jsl.parser.parse(code);
+	};//function
 
-			var data = yield(ESQueryRunner(query));
-			var rows;
-			if (data.meta && data.meta.format == "cube") {
-				data.cube = data.data;
-				rows = Qb.Cube2List(data);
-			} else if (data.meta && data.meta.format == "table") {
-				data.columns = data.header;
-				rows = convert.Table2List({"columns":data.header, "rows":data.data});
-			} else if (data.meta && data.meta.format == "list") {
-				rows = data.data;
-			} else if (data.cube !== undefined) {
-				rows = Qb.Cube2List(data);
-			} else if (data.list !== undefined) {
-				rows = data.list
-			} else {
-				$("#result").html(convert.String2HTML(convert.value2json(data)));
-				return
-			}//endif
-			$("#cube").val(convert.value2json(convert.json2value(code)));
-			$("#result").html("<div>" + rows.length + " rows (up to 3000 shown)</div>" + convert.List2HTMLTable(rows, {"limit": 3000}));
-		} catch (e) {
-			$("#notes").show().val(e.toString());
-		}finally{
-			Log.actionDone(a);
-		}//try
-	});
-};
+	queryTool.hideAll=function hideAll(){
+		//EVAL THE Qb
+		self.shareLink=undefined;
+		$("#notes").hide();
+		$("#success").hide();
+		$("#results").hide();
+	}//function
 
+	queryTool.executeCube = function(event){
+		var self = this;
+
+		//EVAL THE Qb
+		self.hideAll();
+
+		var code = $("#cube").val();
+		if (code.trim().left(1) != "{") code = "{" + code;
+		if (code.trim().right(1) != "}") code = code + "}";
+
+		Thread.run(function*(){
+			var a = Log.action("Send query", true);
+			try {
+				//USE JSONLINT TO FORMAT AND TEST-COMPILE THE code
+				code = jsl.format.formatJson(code);
+				$("#cube").val(code);
+				var query = jsl.parser.parse(code);
+				//REQUEST A URL FOR SHARING
+				query.meta = {};
+				query.meta.save = true;
+
+				self.response = yield(ESQueryRunner(query));
+				var rows;
+				if (self.response.meta && self.response.meta.format == "cube") {
+					self.response.cube = self.response.data;
+					rows = Qb.Cube2List(self.response);
+				} else if (self.response.meta && self.response.meta.format == "table") {
+					self.response.columns = self.response.header;
+					rows = convert.Table2List({"columns": self.response.header, "rows": self.response.data});
+				} else if (self.response.meta && self.response.meta.format == "list") {
+					rows = self.response.data;
+				} else if (self.response.cube !== undefined) {
+					rows = Qb.Cube2List(self.response);
+				} else if (self.response.list !== undefined) {
+					rows = self.response.list
+				} else {
+					$("#result").html(convert.String2HTML(convert.value2json(self.response)));
+					return
+				}//endif
+
+				$("#cube").val(convert.value2json(convert.json2value(code)));
+				$("#result").html("<div>" + rows.length + " rows (up to 3000 shown)</div>" + convert.List2HTMLTable(rows, {"limit": 3000})).show();
+				$("#success").show();
+
+				var loc = window.location.href.split("#")[0];
+				self.shareLink =  loc + "#find=" + self.response.meta.saved_as;
+			} catch (e) {
+				$("#notes").show().val(e.toString());
+			} finally {
+				Log.actionDone(a);
+			}//try
+		});
+	};
+})();
 
 </script>
 

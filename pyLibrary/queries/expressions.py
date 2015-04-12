@@ -69,10 +69,12 @@ def qb_expression_to_esfilter(expr):
 
 
 def qb_expression_to_ruby(expr):
-    if isinstance(expr, unicode):
+    if is_keyword(expr):
         return "doc["+convert.string2quote(expr)+"].value"
     if Math.is_number(expr):
         return unicode(expr)
+    if isinstance(expr, Date):
+        return unicode(expr.unix)
     if not expr:
         return "true"
     op, term = expr.items()[0]
@@ -378,16 +380,16 @@ class TermsOp(object):
         self.var, self.vals = term.items()[0]
 
     def to_ruby(self):
-        return "[" + (",".join(map(convert.value2quote, self.vals))) + "].include?(" + self.var.to_ruby + ")"
+        return "[" + (",".join(map(convert.value2quote, self.vals))) + "].include?(" + qb_expression_to_ruby(self.var) + ")"
 
     def to_python(self):
-        return self.var.to_python() + " in [" + (",".join(map(convert.value2quote, self.vals))) + "]"
+        return qb_expression_to_python(self.var) + " in [" + (",".join(map(convert.value2quote, self.vals))) + "]"
 
     def to_esfilter(self):
         return {"terms": {self.var: self.vals}}
 
     def vars(self):
-        return set(self.var)
+        return set([self.var])
 
 
 class ExistsOp(object):
@@ -407,7 +409,7 @@ class ExistsOp(object):
         return {"exists": {"field": self.field}}
 
     def vars(self):
-        return set(self.field)
+        return set([self.field])
 
 
 class PrefixOp(object):
@@ -424,7 +426,7 @@ class PrefixOp(object):
         return {"prefix": {self.field: self.prefix}}
 
     def vars(self):
-        return set(self.field)
+        return set([self.field])
 
 
 class MissingOp(object):
@@ -444,7 +446,7 @@ class MissingOp(object):
         return {"missing": {"field": self.field}}
 
     def vars(self):
-        return set(self.field)
+        return set([self.field])
 
 class NotOp(object):
     def __init__(self, op, term):
@@ -477,10 +479,7 @@ class RangeOp(object):
         return {"range": {self.field, self.cmp}}
 
     def vars(self):
-        return set(self.field)
-
-
-
+        return set([self.field])
 
 
 complex_operators = {

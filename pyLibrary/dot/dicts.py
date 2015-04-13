@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from copy import deepcopy
 from types import NoneType
-from pyLibrary.dot import split_field, _getdefault, hash_value, literal_field, nvl
+from pyLibrary.dot import split_field, _getdefault, hash_value, literal_field, coalesce
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -172,7 +172,7 @@ class Dict(dict):
         """
         LIKE items() BUT RECURSIVE, AND ONLY FOR THE LEAVES (non dict) VALUES
         """
-        prefix = nvl(prefix, "")
+        prefix = coalesce(prefix, "")
         output = []
         for k, v in self.items():
             if isinstance(v, dict):

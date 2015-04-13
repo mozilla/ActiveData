@@ -14,7 +14,7 @@ from __future__ import division
 from collections import Iterable
 from types import GeneratorType
 from pyLibrary import convert
-from pyLibrary.dot import nvl
+from pyLibrary.dot import coalesce
 from pyLibrary.debugs.logs import Log
 from pyLibrary.thread.threads import Queue, Thread
 from pyLibrary.collections import OR
@@ -47,7 +47,7 @@ class Multithread(object):
             Log.error("Not supported anymore")
 
         self.threads = []
-        for t in range(nvl(threads, 1)):
+        for t in range(coalesce(threads, 1)):
             thread = worker_thread("worker " + unicode(t), self.inbound, self.outbound, functions)
             self.threads.append(thread)
 

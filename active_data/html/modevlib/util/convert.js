@@ -735,7 +735,7 @@ convert.List2Table = function(list, columnOrder){
 		var item = list[i];
 		var row = [];
 		for(var c = 0; c < columns.length; c++){
-			row[c] = nvl(item[columns[c].name], null);
+			row[c] = coalesce(item[columns[c].name], null);
 		}//for
 		data.push(row);
 	}//for
@@ -853,13 +853,13 @@ convert.esFilter2function=function(esFilter){
 		};
 	}else if (op=="exists"){
 		//"exists":{"field":"myField"}
-		var field = nvl(esFilter[op].field, esFilter[op]);
+		var field = coalesce(esFilter[op].field, esFilter[op]);
 		return function(row, i, rows){
 			var val =row[field];
 			return (val!==undefined && val!=null);
 		};
 	}else if (op=="missing"){
-		var field = nvl(esFilter[op].field, esFilter[op]);
+		var field = coalesce(esFilter[op].field, esFilter[op]);
 		return function(row, i, rows){
 			var val =row[field];
 			return (val===undefined || val==null);

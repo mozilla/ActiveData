@@ -13,7 +13,7 @@ from __future__ import division
 from mozillapulse.consumers import GenericConsumer
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import unwrap, wrap, nvl
+from pyLibrary.dot import unwrap, wrap, coalesce
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.threads import Thread
 
@@ -48,11 +48,11 @@ class Pulse(Thread):
         Thread.__init__(self, name="Pulse consumer for " + settings.exchange, target=self._worker)
         self.settings = settings
         settings.callback = self._got_result
-        settings.user = nvl(settings.user, settings.username)
-        settings.applabel = nvl(settings.applable, settings.queue, settings.queue_name)
+        settings.user = coalesce(settings.user, settings.username)
+        settings.applabel = coalesce(settings.applable, settings.queue, settings.queue_name)
 
         self.pulse = GenericConsumer(settings, connect=True, **unwrap(settings))
-        self.count = nvl(start, 0)
+        self.count = coalesce(start, 0)
         self.start()
 
 

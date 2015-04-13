@@ -1,5 +1,5 @@
 from urlparse import urlparse, parse_qs
-from pyLibrary.dot import Null, nvl, wrap
+from pyLibrary.dot import Null, coalesce, wrap
 from pyLibrary.dot.dicts import Dict
 
 

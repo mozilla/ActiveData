@@ -82,14 +82,14 @@ GUI = {};
 			checkLastUpdated     //SEND QUERY TO GET THE LAST DATA?
 		) {
 
-			GUI.performChecks=nvl(performChecks, true);
-			GUI.checkLastUpdated=nvl(checkLastUpdated, true);
+			GUI.performChecks=coalesce(performChecks, true);
+			GUI.checkLastUpdated=coalesce(checkLastUpdated, true);
 
 			if (typeof(refreshChart) != "function") {
 				Log.error("Expecting first parameter to be a refresh (creatChart) function");
 			}//endif
 			GUI.refreshChart = refreshChart;
-			GUI.pleaseRefreshLater = nvl(GUI.pleaseRefreshLater, false);
+			GUI.pleaseRefreshLater = coalesce(GUI.pleaseRefreshLater, false);
 
 			//IF THERE ARE ANY CUSTOM FILTERS, THEN TURN OFF THE DEFAULTS
 			var isCustom = false;
@@ -119,7 +119,7 @@ GUI = {};
 
 			GUI.makeSelectionPanel();
 
-			GUI.relations = nvl(relations, []);
+			GUI.relations = coalesce(relations, []);
 			GUI.FixState();
 
 			GUI.URL2State();				//OVERWRITE WITH URL PARAM

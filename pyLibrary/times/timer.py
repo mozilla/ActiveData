@@ -13,7 +13,7 @@ from __future__ import division
 from datetime import timedelta
 from time import clock
 
-from pyLibrary.dot import nvl, Dict
+from pyLibrary.dot import coalesce, Dict
 from pyLibrary.dot import wrap
 from pyLibrary.debugs.logs import Log
 
@@ -32,7 +32,7 @@ class Timer(object):
 
     def __init__(self, description, param=None, debug=True, silent=False):
         self.template = description
-        self.param = nvl(wrap(param), {})
+        self.param = coalesce(wrap(param), {})
         self.debug = debug
         self.silent = silent
         self.interval = None

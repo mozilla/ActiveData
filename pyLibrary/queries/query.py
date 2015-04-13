@@ -12,7 +12,7 @@ from __future__ import division
 from pyLibrary.collections import AND, reverse
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import nvl, split_field, join_field, Null, set_default
+from pyLibrary.dot import coalesce, split_field, join_field, Null, set_default
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap, listwrap
 from pyLibrary.maths import Math
@@ -88,7 +88,7 @@ class Query(object):
         self.where = _normalize_where(query.where, schema=schema)
         self.window = [_normalize_window(w) for w in listwrap(query.window)]
         self.sort = _normalize_sort(query.sort)
-        self.limit = nvl(query.limit, DEFAULT_LIMIT)
+        self.limit = coalesce(query.limit, DEFAULT_LIMIT)
         if not Math.is_integer(self.limit) or self.limit < 0:
             Log.error("Expecting limit >= 0")
 
@@ -113,7 +113,7 @@ class Query(object):
 
     @property
     def columns(self):
-        return listwrap(self.select) + nvl(self.edges, self.groupby)
+        return listwrap(self.select) + coalesce(self.edges, self.groupby)
 
     def __getitem__(self, item):
         if item == "from":
@@ -166,12 +166,12 @@ def _normalize_select(select, schema=None):
     else:
         select = wrap(select)
         output = select.copy()
-        output.name = nvl(select.name, select.value, select.aggregate)
+        output.name = coalesce(select.name, select.value, select.aggregate)
 
         if not output.name:
             Log.error("expecting select to have a name: {{select}}", {"select": select})
 
-        output.aggregate = nvl(canonical_aggregates.get(select.aggregate), select.aggregate, "none")
+        output.aggregate = coalesce(canonical_aggregates.get(select.aggregate), select.aggregate, "none")
         return output
 
 
@@ -217,7 +217,7 @@ def _normalize_edge(edge, schema=None):
             )
 
         return Dict(
-            name=nvl(edge.name, edge.value),
+            name=coalesce(edge.name, edge.value),
             value=edge.value,
             range=edge.range,
             allowNulls=False if edge.allowNulls is False else True,
@@ -247,7 +247,7 @@ def _normalize_group(edge, schema=None):
             Log.error("You must name compound edges: {{edge}}", {"edge": edge})
 
         return wrap({
-            "name": nvl(edge.name, edge.value),
+            "name": coalesce(edge.name, edge.value),
             "value": edge.value,
             "domain": {"type": "default"}
         })
@@ -271,7 +271,7 @@ def _normalize_domain(domain=None, schema=None):
 
 def _normalize_window(window, schema=None):
     return Dict(
-        name=nvl(window.name, window.value),
+        name=coalesce(window.name, window.value),
         value=window.value,
         edges=[_normalize_edge(e, schema) for e in listwrap(window.edges)],
         sort=_normalize_sort(window.sort),
@@ -466,7 +466,7 @@ def _normalize_sort(sort=None):
         if isinstance(s, basestring) or Math.is_integer(s):
             output.append({"field": s, "sort": 1})
         else:
-            output.append({"field": nvl(s.field, s.value), "sort": nvl(sort_direction[s.sort], 1)})
+            output.append({"field": coalesce(s.field, s.value), "sort": coalesce(sort_direction[s.sort], 1)})
     return wrap(output)
 
 

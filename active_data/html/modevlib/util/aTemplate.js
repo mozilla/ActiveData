@@ -40,7 +40,7 @@ var Template = function Template(template){
 	FUNC.css = convert.Object2CSS;
 	FUNC.attribute = convert.value2HTMLAttribute;
 	FUNC.datetime = function(d, f){
-		f = nvl(f, "yyyy-MM-dd HH:mm:ss");
+		f = coalesce(f, "yyyy-MM-dd HH:mm:ss");
 		return d.format(f);
 	};
 	FUNC.indent = function(value, amount){

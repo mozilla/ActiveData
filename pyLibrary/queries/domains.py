@@ -13,7 +13,7 @@ import re
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.dot import nvl, Dict, set_default, Null
+from pyLibrary.dot import coalesce, Dict, set_default, Null
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap
 from pyLibrary.times.dates import Date
@@ -42,8 +42,8 @@ class Domain(object):
         desc = wrap(desc)
         self._set_slots_to_none(self.__class__)
         set_default(self, desc)
-        self.name = nvl(desc.name, desc.type)
-        self.isFacet = nvl(desc.isFacet, False)
+        self.name = coalesce(desc.name, desc.type)
+        self.isFacet = coalesce(desc.isFacet, False)
 
     def _set_slots_to_none(self, cls):
         """
@@ -189,7 +189,7 @@ class SimpleSetDomain(Domain):
                 self.partitions.append(part)
                 self.map[p] = part
                 self.order[p] = i
-            self.label = nvl(self.label, "name")
+            self.label = coalesce(self.label, "name")
             return
 
         if desc.partitions and desc.dimension.fields and len(desc.dimension.fields) > 1:
@@ -209,7 +209,7 @@ class SimpleSetDomain(Domain):
             self.key = "value"
             self.map = {}
             self.order[None] = 0
-            self.label = nvl(self.label, "name")
+            self.label = coalesce(self.label, "name")
             return
         elif desc.key == None:
             Log.error("Domains must have keys")
@@ -229,7 +229,7 @@ class SimpleSetDomain(Domain):
         else:
             Log.error("Can not hanldle")
 
-        self.label = nvl(self.label, "name")
+        self.label = coalesce(self.label, "name")
 
         if isinstance(desc.partitions, list):
             self.partitions = desc.partitions.copy()
@@ -341,7 +341,7 @@ class SetDomain(Domain):
         else:
             Log.error("Can not hanldle")
 
-        self.label = nvl(self.label, "name")
+        self.label = coalesce(self.label, "name")
 
         if isinstance(desc.partitions, list):
             self.partitions = desc.partitions.copy()

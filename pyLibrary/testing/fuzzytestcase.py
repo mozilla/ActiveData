@@ -11,7 +11,7 @@
 import unittest
 from pyLibrary import dot
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import nvl, Dict, literal_field
+from pyLibrary.dot import coalesce, Dict, literal_field
 from pyLibrary.maths import Math
 from pyLibrary.dot import wrap
 from pyLibrary.strings import expand_template
@@ -45,7 +45,7 @@ class FuzzyTestCase(unittest.TestCase):
         if delta or digits:
             assertAlmostEqual(test_value, expected, msg=msg, digits=digits, places=places, delta=delta)
         else:
-            assertAlmostEqual(test_value, expected, msg=msg, digits=digits, places=nvl(places, self.default_places), delta=delta)
+            assertAlmostEqual(test_value, expected, msg=msg, digits=digits, places=coalesce(places, self.default_places), delta=delta)
 
     def assertEqual(self, test_value, expected, msg=None, digits=None, places=None, delta=None):
         self.assertAlmostEqual(test_value, expected, msg=msg, digits=digits, places=places, delta=delta)
@@ -152,4 +152,4 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
 
         standardMsg = expand_template("{{test|json}} != {{expected|json}} within {{places}} places", locals())
 
-    raise AssertionError(nvl(msg, "") + ": (" + standardMsg + ")")
+    raise AssertionError(coalesce(msg, "") + ": (" + standardMsg + ")")

@@ -14,7 +14,7 @@ from __future__ import division
 from pyLibrary.collections import PRODUCT, reverse, MAX, MIN, OR
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Null, Dict, nvl
+from pyLibrary.dot import Null, Dict, coalesce
 from pyLibrary.meta import use_settings
 
 
@@ -252,7 +252,7 @@ class Matrix(object):
         if not combos:
             return
 
-        calc = [(nvl(PRODUCT(self.dims[i+1:]), 1), mm) for i, mm in enumerate(self.dims)]
+        calc = [(coalesce(PRODUCT(self.dims[i+1:]), 1), mm) for i, mm in enumerate(self.dims)]
 
         for c in xrange(combos):
             yield tuple(int(c / dd) % mm for dd, mm in calc)

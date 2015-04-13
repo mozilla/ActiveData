@@ -14,7 +14,7 @@ import __builtin__
 
 
 from pyLibrary.strings import find_first
-from pyLibrary.dot import Null, nvl
+from pyLibrary.dot import Null, coalesce
 
 
 class Math(object):
@@ -260,7 +260,7 @@ def almost_equal(first, second, digits=None, places=None, delta=None):
         if abs(first - second) <= delta:
             return True
     else:
-        places = nvl(places, digits, 18)
+        places = coalesce(places, digits, 18)
         diff = math.log10(abs(first-second))
         if diff < Math.ceiling(math.log10(first))-places:
             return True

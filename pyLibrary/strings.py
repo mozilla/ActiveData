@@ -16,7 +16,7 @@ import re
 import math
 import __builtin__
 
-from pyLibrary.dot import nvl, wrap
+from pyLibrary.dot import coalesce, wrap
 
 
 def datetime(value):
@@ -129,7 +129,7 @@ def round(value, decimal=None, digits=None, places=None):
     if value == 0.0:
         return "0"
 
-    digits = nvl(digits, places)
+    digits = coalesce(digits, places)
     if digits != None:
         left_of_decimal = int(math.ceil(math.log10(abs(value))))
         decimal = digits - left_of_decimal
@@ -144,7 +144,7 @@ def percent(value, decimal=None, digits=None, places=None):
     if value == 0.0:
         return "0%"
 
-    digits = nvl(digits, places)
+    digits = coalesce(digits, places)
     if digits != None:
         left_of_decimal = int(math.ceil(math.log10(abs(value)))) + 2
         decimal = digits - left_of_decimal
@@ -334,7 +334,7 @@ def _expand(template, seq):
         for d in data:
             s = seq + (d,)
             output.append(_expand(template.template, s))
-        return nvl(template.separator, "").join(output)
+        return coalesce(template.separator, "").join(output)
     elif isinstance(template, list):
         return "".join(_expand(t, seq) for t in template)
     else:

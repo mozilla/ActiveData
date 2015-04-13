@@ -17,7 +17,7 @@ import smtplib
 import sys
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap
-from pyLibrary.dot import nvl
+from pyLibrary.dot import coalesce
 from pyLibrary.meta import use_settings
 
 
@@ -81,8 +81,8 @@ class Emailer:
 
         settings = self.settings
 
-        from_address = nvl(from_address, settings["from"], settings.from_address)
-        to_address = listwrap(nvl(to_address, settings.to_address, settings.to_addrs))
+        from_address = coalesce(from_address, settings["from"], settings.from_address)
+        to_address = listwrap(coalesce(to_address, settings.to_address, settings.to_addrs))
 
         if not from_address or not to_address:
             raise Exception("Both from_addr and to_addrs must be specified")
@@ -98,7 +98,7 @@ class Emailer:
             msg.attach(MIMEText(text_data, 'plain'))
             msg.attach(MIMEText(html_data, 'html'))
 
-        msg['Subject'] = nvl(subject, settings.subject)
+        msg['Subject'] = coalesce(subject, settings.subject)
         msg['From'] = from_address
         msg['To'] = ', '.join(to_address)
 

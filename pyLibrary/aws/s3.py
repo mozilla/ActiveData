@@ -19,7 +19,7 @@ from boto.s3.connection import Location
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, Null, nvl
+from pyLibrary.dot import wrap, Null, coalesce
 from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, GzipLines, LazyLines
 from pyLibrary.meta import use_settings
 from pyLibrary.times.dates import Date
@@ -193,7 +193,7 @@ class Bucket(object):
                 })
             if not perfect and error:
                 Log.error("Problem with key request", error)
-            return nvl(perfect, favorite)
+            return coalesce(perfect, favorite)
         except Exception, e:
             Log.error(READ_ERROR, e)
 

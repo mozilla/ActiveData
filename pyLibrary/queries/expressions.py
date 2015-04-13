@@ -13,7 +13,7 @@ import itertools
 
 from pyLibrary import convert
 from pyLibrary.collections import OR
-from pyLibrary.dot import nvl, wrap, set_default
+from pyLibrary.dot import coalesce, wrap, set_default
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
@@ -27,7 +27,7 @@ FALSE_FILTER = False
 
 def compile_expression(source):
     # FORCE MODULES TO BE IN NAMESPACE
-    _ = nvl
+    _ = coalesce
     _ = Date
 
     output = None

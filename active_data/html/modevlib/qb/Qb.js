@@ -163,7 +163,7 @@ function* calc2Tree(query){
 	var edges = query.edges;
 	query.columns = Qb.compile(query, sourceColumns);
 	var select = Array.newInstance(query.select);
-	var _where = Qb.where.compile(nvl(query.where, query.esfilter), sourceColumns, edges);
+	var _where = Qb.where.compile(coalesce(query.where, query.esfilter), sourceColumns, edges);
 	var numWhereFalse=0;
 
 
@@ -646,7 +646,7 @@ Qb.ActiveDataCube2List=function(query, options){
 		return is_prefix;
 	});
 
-	var m = new Matrix({"data": nvl(query.cube[select_names[0]], [])});
+	var m = new Matrix({"data": coalesce(query.cube[select_names[0]], [])});
 
 	var output = [];
 	m.forall(function(v, c){
@@ -674,9 +674,9 @@ Qb.Cube2List=function(query, options){
 	}//endif
 
 	//WILL end() ALL PARTS UNLESS options.useStruct==true OR options.useLabels==true
-	options=nvl(options, {});
-	options.useStruct=nvl(options.useStruct, false);
-	options.useLabels=nvl(options.useLabels, false);
+	options=coalesce(options, {});
+	options.useStruct=coalesce(options.useStruct, false);
+	options.useLabels=coalesce(options.useLabels, false);
 
 	//PRECOMPUTE THE EDGES
 	var edges = Array.newInstance(query.edges);
@@ -785,7 +785,7 @@ Qb.normalize=function(query, edgeIndex, multiple){
 	var m=new Matrix({"data":query.cube});
 
 	m.forall(edgeIndex, function(v, i){
-		totals[i] = nvl(totals[i], 0) + aMath.abs(v);
+		totals[i] = coalesce(totals[i], 0) + aMath.abs(v);
 	});
 	m.map(query.edges.length, function (v, i) {
 		if (totals[i]!=0){
@@ -1116,7 +1116,7 @@ Qb.sort.compile=function(sortOrder, columns, useNames){
 	if (columns===undefined){
 		orderedColumns = sortOrder.map(function(v){
 			if (v.value!==undefined && v.sort!==undefined){
-				return {"name": v.value, "sortOrder":nvl(v.sort, 1), "domain":Qb.domain.value};
+				return {"name": v.value, "sortOrder":coalesce(v.sort, 1), "domain":Qb.domain.value};
 			}else{
 				return {"name":v, "sortOrder":1, "domain":Qb.domain.value};
 			}//endif
@@ -1125,7 +1125,7 @@ Qb.sort.compile=function(sortOrder, columns, useNames){
 		orderedColumns = sortOrder.map(function(v){
 			if (v.value!==undefined){
 				for(var i=columns.length;i--;){
-					if (columns[i].name==v.value && !(columns[i].sortOrder==0)) return {"name": v.value, "sortOrder":nvl(v.sort, 1), "domain":Qb.domain.value};
+					if (columns[i].name==v.value && !(columns[i].sortOrder==0)) return {"name": v.value, "sortOrder":coalesce(v.sort, 1), "domain":Qb.domain.value};
 				}//for
 			}else{
 				for(var i=columns.length;i--;){

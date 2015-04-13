@@ -22,7 +22,7 @@ import sys
 import gc
 from pyLibrary import strings
 
-from pyLibrary.dot import nvl, Dict
+from pyLibrary.dot import coalesce, Dict
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration, SECOND
 
@@ -84,7 +84,7 @@ class Queue(object):
         silent - COMPLAIN IF THE READERS ARE TOO SLOW
         """
         self.name = name
-        self.max = nvl(max, 2 ** 10)
+        self.max = coalesce(max, 2 ** 10)
         self.silent = silent
         self.keep_running = True
         self.lock = Lock("lock for queue " + name)
@@ -571,9 +571,9 @@ class ThreadedQueue(Queue):
         if not Log:
             _late_import()
 
-        batch_size = nvl(batch_size, int(nvl(max_size, 0)/2), 900)
-        max_size = nvl(max_size, batch_size * 2)  # REASONABLE DEFAULT
-        period = nvl(period, SECOND)
+        batch_size = coalesce(batch_size, int(coalesce(max_size, 0)/2), 900)
+        max_size = coalesce(max_size, batch_size * 2)  # REASONABLE DEFAULT
+        period = coalesce(period, SECOND)
         bit_more_time = 5 * SECOND
 
         Queue.__init__(self, name=name, max=max_size, silent=silent)

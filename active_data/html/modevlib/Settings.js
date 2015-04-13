@@ -81,7 +81,7 @@ importScript("charts/aColor.js");
 
 	//GIVE ALL CLUSTERS NAMES
 	Map.forall(Settings.indexes, function(k, v){
-		v.name=nvl(v.name, k);
+		v.name=coalesce(v.name, k);
 	});
 
 	//TRY PRIVATE CLUSTER FIRST, THEN FALL BACK TO PUBLIC

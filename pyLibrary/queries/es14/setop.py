@@ -13,7 +13,7 @@ from pyLibrary import queries
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND, SUM, OR, UNION
-from pyLibrary.dot import nvl, split_field, set_default, Dict, unwraplist, unwrap, literal_field
+from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, unwrap, literal_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
 from pyLibrary.queries.domains import is_keyword
@@ -61,7 +61,7 @@ def es_fieldop(es, query):
             "filter": simplify_esfilter(qb_expression_to_esfilter(query.where))
         }
     }
-    es_query.size = nvl(query.limit, queries.query.DEFAULT_LIMIT)
+    es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
     es_query.sort = qb_sort_to_es_sort(query.sort)
     es_query.fields = DictList()
     source = "fields"
@@ -139,7 +139,7 @@ def es_setop(es, query):
     es_query = es14.util.es_query_template()
     select = listwrap(query.select)
 
-    es_query.size = nvl(query.limit, queries.query.DEFAULT_LIMIT)
+    es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
     es_query.fields = DictList()
     es_query.sort = qb_sort_to_es_sort(query.sort)
     source = "fields"

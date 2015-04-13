@@ -72,7 +72,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 				//NESTED TYPE IS A NEW TYPE DEFINITION
 				var nestedName = indexName + "." + name;
 				if (ESQuery.INDEXES[nestedName] === undefined) ESQuery.INDEXES[nestedName] = {};
-				ESQuery.INDEXES[nestedName].columns = ESQuery.parseColumns(nestedName, parentName, nvl(property.properties, {}));
+				ESQuery.INDEXES[nestedName].columns = ESQuery.parseColumns(nestedName, parentName, coalesce(property.properties, {}));
 			}//endif
 
 			if (property.properties !== undefined) {
@@ -209,7 +209,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 		if (indexInfo.columns !== undefined)
 			yield(null);
 
-		var URL = nvl(query.url, indexInfo.host + indexPath) + "/_mapping";
+		var URL = coalesce(query.url, indexInfo.host + indexPath) + "/_mapping";
 		var path = parse.URL(URL).pathname.split("/").rightBut(1);
 		var pathLength = path.length - 1;  //ASSUME /indexname.../_mapping
 
@@ -367,7 +367,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 					Log.error("Public cluster can not be used", e)
 				} else {
 					Log.action("Query timeout");
-					this.nextDelay = nvl(this.nextDelay, 500) * 2;
+					this.nextDelay = coalesce(this.nextDelay, 500) * 2;
 					yield (Thread.sleep(this.nextDelay));
 					Log.action("Retrying Query...");
 					//TODO: TRY TO DO TAIL-RECURSION
@@ -388,7 +388,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 
 			if (postResult._shards.failed > 0) {
 				Log.action(postResult._shards.failed + "of" + postResult._shards.total + " shards failed.");
-				this.nextDelay = nvl(this.nextDelay, 500) * 2;
+				this.nextDelay = coalesce(this.nextDelay, 500) * 2;
 				yield (Thread.sleep(this.nextDelay));
 				Log.action("Retrying Query...");
 				//TODO: TRY TO DO TAIL-RECURSION
@@ -697,7 +697,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 
 		if (edge.domain.isFacet) {
 			//MUST USE THIS' esFacet
-			var condition = nvl(partition.esfilter, {"and": []});
+			var condition = coalesce(partition.esfilter, {"and": []});
 
 			if (partition.min !== undefined && partition.max !== undefined && MVEL.isKeyword(edge.value)) {
 				condition.and.push({
@@ -1016,7 +1016,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 
 
 		var nullTest = ESQuery.compileNullTest(edge);
-		var ref = nvl(edge.domain.min, edge.domain.max, new Date(2000, 0, 1));
+		var ref = coalesce(edge.domain.min, edge.domain.max, new Date(2000, 0, 1));
 
 		var partition2int;
 		if (edge.domain.interval.month > 0) {
@@ -1056,7 +1056,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 		var value = edge.value;
 		if (MVEL.isKeyword(value)) value = "doc[\"" + value + "\"].value";
 
-		var ref = nvl(edge.domain.min, edge.domain.max, Duration.ZERO);
+		var ref = coalesce(edge.domain.min, edge.domain.max, Duration.ZERO);
 		var nullTest = ESQuery.compileNullTest(edge);
 
 
@@ -1384,7 +1384,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 					d = d[offset];
 				}//for
 				if (agg0 != "count" && facetValue.count == 0) {
-					d[parseInt(coord[f])] = nvl(self.query.select["default"], null);
+					d[parseInt(coord[f])] = coalesce(self.query.select["default"], null);
 				} else {
 					d[parseInt(coord[f])] = facetValue[agg0];
 				}//endif
@@ -1480,8 +1480,8 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 
 
 		if (this.esMode == "fields") {
-			this.esQuery.size = nvl(this.query.limit, 200000);
-			this.esQuery.sort = nvl(this.query.sort, []);
+			this.esQuery.size = coalesce(this.query.limit, 200000);
+			this.esQuery.sort = coalesce(this.query.sort, []);
 			if (select[0].value != "_source") {
 				this.esQuery.fields = select.select("value");
 			}//endif
@@ -1531,7 +1531,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 		}//endif
 
 		for (var i = T.length; i--;) {
-			var record = nvl(T[i].fields, {});
+			var record = coalesce(T[i].fields, {});
 			var new_rec = {};
 			this.select.forall(function(s, j){
 				if (s.domain && s.domain.interval == "none") {
@@ -1543,7 +1543,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 					}//endif
 				} else {
 					var field = splitField(s.value)[0].split(".")[0];  //USING BASE OF MULTI_FIELD WHICH HAS ACTUAL VALUE
-					new_rec[s.name] = nvl(record[s.value], T[i][field]);
+					new_rec[s.name] = coalesce(record[s.value], T[i][field]);
 				}
 			});
 			o.push(new_rec)

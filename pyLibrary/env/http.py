@@ -25,7 +25,7 @@ from requests import sessions, Response
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, nvl
+from pyLibrary.dot import Dict, coalesce
 from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines
 
 
@@ -63,9 +63,9 @@ def request(method, url, **kwargs):
         url = url.encode("ascii")
 
     _to_ascii_dict(kwargs)
-    kwargs[b'timeout'] = nvl(kwargs.get(b'timeout'), default_timeout)
+    kwargs[b'timeout'] = coalesce(kwargs.get(b'timeout'), default_timeout)
 
-    if len(nvl(kwargs.get(b"data"))) > 1000:
+    if len(coalesce(kwargs.get(b"data"))) > 1000:
         compressed = convert.bytes2zip(kwargs[b"data"])
         kwargs[b"headers"][b'content-encoding'] = b'gzip'
         kwargs[b"data"] = compressed

@@ -16,7 +16,7 @@ RadioFilter.newInstance=function(param){
 	var self = new RadioFilter();
 	Map.expecting(param, ["id", "name", "options", "default"]);
 	Map.copy(param, self);
-	self.description = nvl(self.description, self.message);
+	self.description = coalesce(self.description, self.message);
 	self.selected=self["default"];
 	self.isFilter=true;
 	self.doneSetup=false;

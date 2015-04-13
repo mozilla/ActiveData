@@ -59,7 +59,7 @@ Bugzilla.search=function*(bugList, fields){
 				var b=data[r];
 				for(var c=fields.length;c--;){
 					var f=fields[c];
-					b[f]=nvl(b[f], null);
+					b[f]=coalesce(b[f], null);
 				}
 			}
 

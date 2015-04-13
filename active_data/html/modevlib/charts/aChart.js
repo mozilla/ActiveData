@@ -346,7 +346,7 @@ aChart.showPie=function(params){
 		width: 400,
 		height: 400,
 		animate:false,
-		title: nvl(params.name, chartCube.name),
+		title: coalesce(params.name, chartCube.name),
 		legend: true,
 		legendPosition: "right",
 //		legendAlign: "center",
@@ -407,7 +407,7 @@ aChart.showScatter=function(params){
 
 	var chartCube=params.cube;
 	var type="scatter";
-	var stacked=nvl(params.stacked, false);
+	var stacked=coalesce(params.stacked, false);
 
 
 	////////////////////////////////////////////////////////////////////////////
@@ -424,7 +424,7 @@ aChart.showScatter=function(params){
 			chartCube.edges[0].domain.partitions.forall(function(part,i){
 				var total=0;
 				Array.newInstance(chartCube.select).forall(function(s){
-					total+=nvl(chartCube.cube[i][s.name], 0);
+					total+=coalesce(chartCube.cube[i][s.name], 0);
 				});
 				max=aMath.max(max, total);
 			});
@@ -479,7 +479,7 @@ aChart.showScatter=function(params){
 		width: width,
 		height: height,
 		animate:false,
-		title: nvl(params.name, chartCube.name),
+		title: coalesce(params.name, chartCube.name),
 		legend: (chartCube.edges.length!=1 || Array.newInstance(chartCube.select).length>1),		//DO NOT SHOW LEGEND IF NO CATEGORIES
 		legendPosition: "bottom",
 		legendAlign: "center",
@@ -634,7 +634,7 @@ aChart.show=function(params){
 
 	var chartCube=params.cube;
 	var type=params.type;
-	var stacked=nvl(params.stacked, false);
+	var stacked=coalesce(params.stacked, false);
 	////////////////////////////////////////////////////////////////////////////
 	// TYPE OF CHART
 	////////////////////////////////////////////////////////////////////////////
@@ -701,7 +701,7 @@ aChart.show=function(params){
 //			chartCube.edges[0].domain.partitions.forall(function(part,i){
 //				var total=0;
 //				Array.newInstance(chartCube.select).forall(function(s){
-//					total+=nvl(chartCube.cube[i][s.name], 0);
+//					total+=coalesce(chartCube.cube[i][s.name], 0);
 //				});
 //				max=aMath.max(max, total);
 //			});
@@ -773,7 +773,7 @@ aChart.show=function(params){
 		height: height,
 		animate:false,
 		ignoreNulls: false,
-		title: nvl(params.name, chartCube.name),
+		title: coalesce(params.name, chartCube.name),
 		legend: (chartCube.edges.length!=1 || Array.newInstance(chartCube.select).length>1),		//DO NOT SHOW LEGEND IF NO CATEGORIES
 		legendPosition: "bottom",
 		legendAlign: "center",
@@ -795,7 +795,7 @@ aChart.show=function(params){
 //			}
 		},
 		"colors":styles.map(function(s, i){
-			var c = nvl(s.color, DEFAULT_STYLES[i%(DEFAULT_STYLES.length)].color);
+			var c = coalesce(s.color, DEFAULT_STYLES[i%(DEFAULT_STYLES.length)].color);
 			if (c.toHTML){
 				return c.toHTML();
 			}else{
@@ -963,9 +963,9 @@ function fixAction(chartParams, actionName){
 	chartParams[actionName] = function(series, x, d, elem){
 		if (series.atoms !== undefined){
 			//CCC VERSION 2
-			var s = nvl(series.atoms.series, {"value":"data"}).value;
-			var c = nvl(series.atoms.category, series.atoms.x).value;
-			var v = nvl(series.atoms.value, series.atoms.y).value;
+			var s = coalesce(series.atoms.series, {"value":"data"}).value;
+			var c = coalesce(series.atoms.category, series.atoms.x).value;
+			var v = coalesce(series.atoms.value, series.atoms.y).value;
 			if (c instanceof Date){  //CCC 2 DATES ARE IN LOCAL TZ
 				c = c.addTimezone();
 			}//endif
@@ -985,8 +985,8 @@ function findDateMarks(part, name){
 	var output = [];
 	Array.newInstance(part.dateMarks).forall(function (mark) {
 		var style = Map.setDefault({}, mark.style, part.style, {"color": "black", "lineWidth": "2.0", verticalAnchor: "top"});
-		style.strokeStyle = nvl(style.strokeStyle, style.color);
-		style.textStyle = nvl(style.textStyle, style.color);
+		style.strokeStyle = coalesce(style.strokeStyle, style.color);
+		style.textStyle = coalesce(style.textStyle, style.color);
 
 		if (mark.name !== undefined) {
 			//EXPECTING {"name":<name>, "date":<date>, "style":<style>} FORMAT

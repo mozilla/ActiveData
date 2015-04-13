@@ -16,7 +16,7 @@ import shutil
 
 from pyLibrary.strings import utf82unicode
 from pyLibrary.maths import crypto
-from pyLibrary.dot import nvl, set_default, split_field, join_field
+from pyLibrary.dot import coalesce, set_default, split_field, join_field
 from pyLibrary.dot import listwrap, wrap
 from pyLibrary import convert
 
@@ -131,7 +131,7 @@ class File(object):
         """
         RETURN A FILENAME THAT CAN SERVE AS A BACKUP FOR THIS FILE
         """
-        suffix = convert.datetime2string(nvl(timestamp, datetime.now()), "%Y%m%d_%H%M%S")
+        suffix = convert.datetime2string(coalesce(timestamp, datetime.now()), "%Y%m%d_%H%M%S")
         return File.add_suffix(self._filename, suffix)
 
     def read(self, encoding="utf8"):

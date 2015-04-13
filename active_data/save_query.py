@@ -81,7 +81,7 @@ class SaveQueries(object):
             hash = hashlib.sha1(hash).digest()
             hashes[i] = hash
 
-        short_hashes = {convert.bytes2base64(h[0:6]): True for h in hashes}
+        short_hashes = {convert.bytes2base64(h[0:6]).replace("/", "_"): True for h in hashes}
 
         with self.es:
             existing = self.es.query({

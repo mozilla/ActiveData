@@ -152,9 +152,11 @@ function response2list(response){
 	if (response.meta && response.meta.format == "cube") {
 		response.cube = response.data;
 		rows = Qb.Cube2List(response);
+		response.cube = undefined;
 	} else if (response.meta && response.meta.format == "table") {
 		response.columns = response.header;
 		rows = convert.Table2List({"columns": response.header, "rows": response.data});
+		response.columns = undefined;
 	} else if (response.meta && response.meta.format == "list") {
 		rows = response.data;
 	} else if (response.cube !== undefined) {
@@ -180,14 +182,14 @@ var queryTool = {};
 		var self = this;
 		var loc = window.location.href;
 		var anchor = convert.URLParam2Object(loc.split("#")[1]);
-		if (anchor.find===undefined) {
+		if (anchor.query_id===undefined) {
 			$("#cube").prop('disabled', false).val("").focus();
 		}else{
 			$("#cube").prop('disabled', true).val("Loading query...");
 			Thread.run(function*(){
 				try {
 					var response = yield(Rest.get({
-						"url": "/find/" + anchor.find,
+						"url": "/find/" + anchor.query_id,
 						"data": ""
 					}));
 
@@ -256,7 +258,7 @@ var queryTool = {};
 				$("#success").show();
 
 				var loc = window.location.href.split("#")[0];
-				self.shareLink =  loc + "#find=" + self.response.meta.saved_as;
+				self.shareLink =  loc + "#query_id=" + self.response.meta.saved_as;
 
 				if (self.shareLink != window.location.href) {
 					window.history.pushState("object or string", "Good Query - ActiveData Query Tool", self.shareLink);

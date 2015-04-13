@@ -581,7 +581,6 @@ Qb.toTable=function(query){
 };//method
 
 
-
 Qb.ActiveDataCube2List=function(query, options){
 	//ActiveData CUBE IS A MAP OF CUBES   {"a": [[]], "b":[[]]}
 	//MoDevLib CUBE IS A CUBE OF MAPS   [[{"a":v, "b":w}]]  which I now know as wrong

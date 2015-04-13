@@ -18,9 +18,6 @@ importScript("../rest/ElasticSearch.js");
 importScript("../rest/Rest.js");
 
 
-
-
-
 var ESQuery = function(query){
 	this.query = query;
 	this.compile();

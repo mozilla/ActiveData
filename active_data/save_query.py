@@ -64,7 +64,7 @@ class SaveQueries(object):
 
             self.es.update({
                 "update": {"type": "elasticsearch", "settings": self.es.settings},
-                "set": {"last_updated": Date.now()},
+                "set": {"last_used": Date.now()},
                 "where": {"eq": {"hash": hash}}
             })
 

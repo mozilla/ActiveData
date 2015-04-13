@@ -16,7 +16,7 @@ Operator Overview
 
 ###Operator forms###
 
-Many operators have a *simple* form and a *formal* form which use parameter objects or parameter lists respectively.  
+Many operators have a *simple* form and a *formal* form which use parameter objects or parameter lists respectively.  The only important point here is ***be careful of the distinction between a parameter as an object `{}` or an array `[]`***.   
 
 **Simple:**
 

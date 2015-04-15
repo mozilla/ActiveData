@@ -73,7 +73,7 @@ class SaveQueries(object):
     def save(self, query):
         query.meta = None
         json = convert.value2json(query)
-        protohash = hash = convert.unicode2utf8(json)
+        hash = convert.unicode2utf8(json)
 
         #TRY MANY HASHES AT ONCE
         hashes = [None] * HASH_BLOCK_SIZE
@@ -81,12 +81,13 @@ class SaveQueries(object):
             hash = hashlib.sha1(hash).digest()
             hashes[i] = hash
 
-        short_hashes = {convert.bytes2base64(h[0:6]).replace("/", "_"): True for h in hashes}
+        short_hashes = [convert.bytes2base64(h[0:6]).replace("/", "_") for h in hashes]
+        available = {h: True for h in short_hashes}
 
         with self.es:
             existing = self.es.query({
                 "from": {"type": "elasticsearch", "settings": self.es.settings},
-                "where": {"terms": {"hash": short_hashes.keys()}}
+                "where": {"terms": {"hash": short_hashes}}
             })
 
         for e in Cube(select=existing.select, edges=existing.edges, data=existing.data).values():
@@ -95,7 +96,7 @@ class SaveQueries(object):
             short_hashes[e.hash] = False
 
         # THIS WILL THROW AN ERROR IF THERE ARE NONE, HOW UNLUCKY!
-        best = [h for h, available in short_hashes.items() if available][0]
+        best = [h for h in short_hashes if available[h]][0]
 
         self.queue.add({
             "id": best,

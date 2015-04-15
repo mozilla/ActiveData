@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 
 import json
+from json import encoder as json_encoder_module
 from math import floor
 import time
 import sys
@@ -82,10 +83,30 @@ def _encode(value, pretty=False):
         except Exception, f:
             Log.error("problem serializing object", f)
 
+almost_pattern = r"(?:\.(\d*)999)|(?:\.(\d*)000)"
+
+def float_repr(value):
+    output = repr(value)
+    d = output.find(".")
+    if d != -1:
+        i = output.find("999", d)
+        if i == -1:
+            i = output.find("000", d)
+            if i == -1:
+                return output
+            fixed = output
+        else:
+            fixed = repr(output + pow(10, d - i - 3))
+        fixed = output[:i]
+    else:
+        return output
+
+json_encoder_module.FLOAT_REPR = float_repr
 
 class cPythonJSONEncoder(object):
     def __init__(self):
         object.__init__(self)
+
 
         self.encoder = json.JSONEncoder(
             skipkeys=False,

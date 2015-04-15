@@ -14,6 +14,7 @@ import StringIO
 import base64
 import cgi
 import datetime
+from decimal import Decimal
 import gzip
 import hashlib
 from io import BytesIO
@@ -152,12 +153,6 @@ def datetime2str(value, format="%Y-%m-%d %H:%M:%S"):
 
 
 def datetime2unix(d):
-    if d == None:
-        return None
-    return long(time.mktime(d.timetuple()))
-
-
-def datetime2milli(d):
     try:
         if d == None:
             return None
@@ -169,10 +164,13 @@ def datetime2milli(d):
             Log.error("Can not convert {{value}} of type {{type}}", {"value": d, "type": d.__class__})
 
         diff = d - epoch
-        return long(diff.total_seconds()) * 1000L + long(diff.microseconds / 1000)
+        return Decimal(long(diff.total_seconds() * 1000000)) / 1000000
     except Exception, e:
         Log.error("Can not convert {{value}}", {"value": d}, e)
 
+
+def datetime2milli(d):
+    return datetime2unix(d) * 1000
 
 def timedelta2milli(v):
     return v.total_seconds()

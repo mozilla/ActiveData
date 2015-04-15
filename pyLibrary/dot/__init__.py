@@ -9,6 +9,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from decimal import Decimal
 from types import GeneratorType, NoneType, ModuleType
 
 _get = object.__getattribute__
@@ -28,6 +29,7 @@ def inverse(d):
 
 def coalesce(*args):
     # pick the first not null value
+    # http://en.wikipedia.org/wiki/Null_coalescing_operator
     for a in args:
         if a != None:
             return wrap(a)
@@ -215,8 +217,14 @@ def _get_attr(obj, path):
             try:
                 # THIS CASE IS WHEN THE __init__.py DOES NOT IMPORT THE SUBDIR FILE
                 # WE CAN STILL PUT THE PATH TO THE FILE IN THE from CLAUSE
-                output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[1]], 0)
-                return _get_attr(output, path[1:])
+                if len(path)==1:
+                    #GET MODULE OBJECT
+                    output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[0]], 0)
+                    return output
+                else:
+                    #GET VARIABLE IN MODULE
+                    output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[1]], 0)
+                    return _get_attr(output, path[1:])
             except Exception, e:
                 pass
 
@@ -418,25 +426,41 @@ def tuplewrap(value):
     return unwrap(value),
 
 
-class DictWrap(object):
+class DictWrap(dict):
+
     def __init__(self, obj):
-        self.obj = obj
+        dict.__init__(self)
+        _set(self, "obj", wrap(_get(obj, "__dict__")))
 
     def __getattr__(self, item):
-        return DictWrap(get_attr(self.obj, item))
+        return dictwrap(_get(self, "obj")[item])
 
     def __setattr__(self, key, value):
-        set_attr(self.obj, key, value)
+        _get(self, "obj")[key] = value
 
     def __getitem__(self, item):
-        return DictWrap(get_attr(self.obj, item))
+        return dictwrap(_get(self, "obj")[item])
 
+    def keys(self):
+        return _get(self, "obj").keys()
+
+    def items(self):
+        return _get(self, "obj").items()
+
+    def __iter__(self):
+        return _get(self, "obj").__iter__()
+
+    def __str__(self):
+        return _get(self, "obj").__str__()
+
+    def __len__(self):
+        return _get(self, "obj").__len__()
 
 def dictwrap(obj):
     """
     wrap object as Dict
     """
-    if isinstance(obj, dict):
+    if isinstance(obj, (dict, basestring, int, float, Decimal)):
         return obj
     return DictWrap(obj)
 

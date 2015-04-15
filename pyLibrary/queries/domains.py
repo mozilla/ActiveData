@@ -27,7 +27,7 @@ PARTITION = {"uid", "set", "boolean"}  # DIMENSIONS WITH CLEAR PARTS
 
 
 class Domain(object):
-    __slots__ = ["name", "type", "value", "key", "label", "end", "isFacet", "where", "dimension"]
+    __slots__ = ["name", "type", "value", "key", "label", "end", "isFacet", "where", "dimension", "primitive"]
 
     def __new__(cls, **desc):
         if cls == Domain:
@@ -175,6 +175,7 @@ class SimpleSetDomain(Domain):
         self.order = {}
         self.NULL = Null
         self.partitions = DictList()
+        self.primitive = True  # True IF DOMAIN IS A PRIMITIVE VALUE SET
 
         if isinstance(self.key, set):
             Log.error("problem")
@@ -190,6 +191,7 @@ class SimpleSetDomain(Domain):
                 self.map[p] = part
                 self.order[p] = i
             self.label = coalesce(self.label, "name")
+            self.primitive = True
             return
 
         if desc.partitions and desc.dimension.fields and len(desc.dimension.fields) > 1:
@@ -212,7 +214,18 @@ class SimpleSetDomain(Domain):
             self.label = coalesce(self.label, "name")
             return
         elif desc.key == None:
-            Log.error("Domains must have keys")
+            if desc.partitions and len(set(desc.partitions.value)) == len(desc.partitions):
+                # TRY A COMMON KEY CALLED "value".  IT APPEARS UNIQUE
+                self.key = "value"
+                self.map = dict()
+                self.map[None] = self.NULL
+                self.order[None] = len(desc.partitions)
+                for i, p in enumerate(desc.partitions):
+                    self.map[p[self.key]] = p
+                    self.order[p[self.key]] = i
+                self.primitive = False
+            else:
+                Log.error("Domains must have keys")
         elif self.key:
             self.key = desc.key
             self.map = dict()
@@ -221,6 +234,7 @@ class SimpleSetDomain(Domain):
             for i, p in enumerate(desc.partitions):
                 self.map[p[self.key]] = p
                 self.order[p[self.key]] = i
+            self.primitive = False
         elif all(p.esfilter for p in self.partitions):
             # EVERY PART HAS AN esfilter DEFINED, SO USE THEM
             for i, p in enumerate(self.partitions):
@@ -283,8 +297,6 @@ class SimpleSetDomain(Domain):
         output = Domain.as_dict(self)
         output.partitions = self.partitions
         return output
-
-
 
 
 class SetDomain(Domain):
@@ -598,8 +610,8 @@ keyword_pattern = re.compile(r"\w+(?:\.\w+)*")
 
 def is_keyword(value):
     if not value or not isinstance(value, basestring):
-        return False
-    return True if keyword_pattern.match(value) else False
+        return False  # _a._b
+    return keyword_pattern.match(value).group(0) == value
 
 
 name2type = {

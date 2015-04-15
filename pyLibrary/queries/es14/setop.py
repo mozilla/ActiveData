@@ -176,8 +176,6 @@ def format_list(T, select, source):
                     r[s.name] = unwraplist(row[source][literal_field(s.value)])
                 else:
                     r[s.name] = unwraplist(row[source][literal_field(s.name)])
-
-
         data.append(r)
     return Dict(
         meta={"format": "list"},

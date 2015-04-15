@@ -355,14 +355,12 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a": "b", "v": None},
                     {"a": "c", "v": 13}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "v"],
                 "data": [
-                    ["b", None],
                     ["c", 13]
                 ]
             },
@@ -711,26 +709,20 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"start": 0, "count": 0},
                     {"start": 1, "count": 1},
                     {"start": 2, "count": 2},
                     {"start": 3, "count": 3},
-                    {"start": 4, "count": 0},
-                    {"start": 5, "count": 1},
-                    {"count": 0}
+                    {"start": 5, "count": 1}
                 ]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["start", "count"],
                 "data": [
-                    [0, 0],
                     [1, 1],
                     [2, 2],
                     [3, 3],
-                    [4, 0],
-                    [5, 1],
-                    [None, 0]
+                    [5, 1]
                 ]
             },
             "expecting_cube": {

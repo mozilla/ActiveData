@@ -119,6 +119,7 @@ class Dimension(Container):
                 }
                 for i, count in enumerate(parts)
             ])
+            self.order = {p.value: i for i, p in enumerate(self.partitions)}
         elif len(edges) == 2:
             self.value = "name"  # USE THE "name" ATTRIBUTE OF PARTS
             d2 = parts.edges[1].domain
@@ -188,7 +189,7 @@ class Dimension(Container):
                     "value":v.name,
                     "esfilter":v.esfilter,
                     "style":v.style,
-                    "weight":v.weight # YO! WHAT DO WE *NOT* COPY?
+                    "weight":v.weight  # YO! WHAT DO WE *NOT* COPY?
                 }
                 for i, v in enumerate(self.edges)
                 if i < coalesce(self.limit, DEFAULT_QUERY_LIMIT) and v.esfilter

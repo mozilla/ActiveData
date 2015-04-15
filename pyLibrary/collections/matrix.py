@@ -94,7 +94,10 @@ class Matrix(object):
                     dims, cube = zip(*[_getitem(cc, i[1::]) for cc in sub])
                     return (len(cube),)+dims[0], cube
                 else:
-                    return _getitem(c[select], i[1::])
+                    try:
+                        return _getitem(c[select], i[1::])
+                    except Exception, _:
+                        pass
 
 
         dims, cube = _getitem(self.cube, index)
@@ -193,6 +196,8 @@ class Matrix(object):
     def groupby(self, io_select):
         """
         SLICE THIS MATRIX INTO ONES WITH LESS DIMENSIONALITY
+        io_select - 1 IF GROUPING BY THIS DIMENSION, 0 IF FLATTENING
+        return -
         """
 
         # offsets WILL SERVE TO MASK DIMS WE ARE NOT GROUPING BY, AND SERVE AS RELATIVE INDEX FOR EACH COORDINATE

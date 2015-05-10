@@ -19,6 +19,7 @@ from pyLibrary import convert
 from pyLibrary.dot import wrap
 from pyLibrary.env import elasticsearch
 from pyLibrary.parsers import URL
+from pyLibrary.thread.threads import Thread
 
 
 class TestLoadAndSaveQueries(ActiveDataBaseTest):
@@ -59,6 +60,7 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
         #ENSURE THE QUERY HAS BEEN INDEXED
         container = elasticsearch.Index(index="saved_queries", settings=settings)
         container.flush()
+        Thread.sleep(seconds=5)
 
         url = URL(self.service_url)
 

@@ -63,6 +63,6 @@ class TestExpressions(FuzzyTestCase):
             "b": [2, 3]
         }}
         result = simplify_esfilter(qb_expression_to_esfilter(where))
-        self.assertEqual(result, {"and": [{"term": {"a": 1}}, {"term": {"b": [2, 3]}}]})
+        self.assertEqual(result, {"and": [{"term": {"a": 1}}, {"terms": {"b": [2, 3]}}]})
 
 

@@ -7,7 +7,7 @@
         "settings": {
             "index": "unittest",
             "type": "test_result",
-            "host": "http://52.10.189.133"
+            "host": "http://54.149.35.214"
         }
     },
     "select": {

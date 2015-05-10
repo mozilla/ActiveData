@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 
 import json
+from json import encoder as json_encoder_module
 from math import floor
 import time
 import sys
@@ -82,10 +83,30 @@ def _encode(value, pretty=False):
         except Exception, f:
             Log.error("problem serializing object", f)
 
+almost_pattern = r"(?:\.(\d*)999)|(?:\.(\d*)000)"
+
+def float_repr(value):
+    output = repr(value)
+    d = output.find(".")
+    if d != -1:
+        i = output.find("999", d)
+        if i == -1:
+            i = output.find("000", d)
+            if i == -1:
+                return output
+            fixed = output
+        else:
+            fixed = repr(output + pow(10, d - i - 3))
+        fixed = output[:i]
+    else:
+        return output
+
+json_encoder_module.FLOAT_REPR = float_repr
 
 class cPythonJSONEncoder(object):
     def __init__(self):
         object.__init__(self)
+
 
         self.encoder = json.JSONEncoder(
             skipkeys=False,
@@ -258,10 +279,10 @@ def pretty_json(value):
                     return "{}"
                 items = list(value.items())
                 if len(items) == 1:
-                    return "{" + quote(items[0][0]) + ": " + pretty_json(items[0][1]).strip() + "}"
+                    return "{" + quote(unicode(items[0][0])) + ": " + pretty_json(items[0][1]).strip() + "}"
 
                 items = sorted(items, lambda a, b: value_compare(a[0], b[0]))
-                values = [quote(k)+": " + indent(pretty_json(v)).strip() for k, v in items if v != None]
+                values = [quote(unicode(k))+": " + indent(pretty_json(v)).strip() for k, v in items if v != None]
                 return "{\n" + INDENT + (",\n"+INDENT).join(values) + "\n}"
             except Exception, e:
                 from pyLibrary.debugs.logs import Log
@@ -305,22 +326,23 @@ def pretty_json(value):
                 )
                 return "[\n" + indent(content) + "\n]"
 
-            pretty_list = [pretty_json(v) for v in value]
+            pretty_list = js
 
-            output = "[\n"
+            output = ["[\n"]
             for i, p in enumerate(pretty_list):
                 try:
                     if i > 0:
-                        output += ",\n"
-                    output += indent(p)
+                        output.append(",\n")
+                    output.append(indent(p))
                 except Exception, e:
                     from pyLibrary.debugs.logs import Log
 
                     Log.warning("problem concatenating string of length {{len1}} and {{len2}}", {
-                        "len1": len(output),
+                        "len1": len("".join(output)),
                         "len2": len(p)
                     })
-            return output + "\n]"
+            output.append("\n]")
+            return "".join(output)
         elif hasattr(value, '__json__'):
             j = value.__json__()
             if j == None:

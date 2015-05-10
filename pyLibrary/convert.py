@@ -14,18 +14,17 @@ import StringIO
 import base64
 import cgi
 import datetime
+from decimal import Decimal
 import gzip
 import hashlib
 from io import BytesIO
 import json
 import re
 from tempfile import TemporaryFile
-import time
 
 from pyLibrary import strings
-from pyLibrary.dot import wrap, wrap_dot, unwrap, Dict
+from pyLibrary.dot import wrap, wrap_dot, unwrap
 from pyLibrary.collections.multiset import Multiset
-from pyLibrary.debugs.profiles import Profiler
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.env.big_data import FileString, safe_size
 from pyLibrary.jsons import quote
@@ -152,12 +151,6 @@ def datetime2str(value, format="%Y-%m-%d %H:%M:%S"):
 
 
 def datetime2unix(d):
-    if d == None:
-        return None
-    return long(time.mktime(d.timetuple()))
-
-
-def datetime2milli(d):
     try:
         if d == None:
             return None
@@ -169,9 +162,13 @@ def datetime2milli(d):
             Log.error("Can not convert {{value}} of type {{type}}", {"value": d, "type": d.__class__})
 
         diff = d - epoch
-        return long(diff.total_seconds()) * 1000L + long(diff.microseconds / 1000)
+        return Decimal(long(diff.total_seconds() * 1000000)) / 1000000
     except Exception, e:
         Log.error("Can not convert {{value}}", {"value": d}, e)
+
+
+def datetime2milli(d):
+    return datetime2unix(d) * 1000
 
 
 def timedelta2milli(v):
@@ -410,11 +407,16 @@ def bytes2hex(value, separator=" "):
 
 
 def base642bytearray(value):
+    return bytearray(base64.b64decode(value))
+
+
+def base642bytes(value):
     return base64.b64decode(value)
 
 
 def bytes2base64(value):
     return base64.b64encode(value).decode("utf8")
+
 
 def bytes2sha1(value):
     if isinstance(value, unicode):

@@ -191,7 +191,7 @@ TeamFilter.prototype.setSimpleState=function(value){
 
 TeamFilter.prototype.makeFilter = function(field_name){
 	if (this.selectedEmails.length == 0) return ESQuery.TrueFilter;
-	field_name=nvl(field_name, this.field_name);
+	field_name=coalesce(field_name, this.field_name);
 	if (field_name==null) return ESQuery.TrueFilter;
 
 	var selected = Thread.runSynchronously(this.getSelectedPeople());

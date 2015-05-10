@@ -46,9 +46,9 @@ importScript("../util/convert.js");
 
 	function wrap(e){
 		if (e===undefined || e instanceof Exception) return e;
-		if (e instanceof Error) {
-			var output = new Exception(e.message, e.cause);
-			output.fileName = e.fileName;
+		if (e instanceof Error){
+			var output=new Exception(e.message, e.cause);
+			output.fileName= e.fileName;
 			output.lineNumber = e.lineNumber;
 			output.columnNumber = e.columnNumber;
 			output.stack = parseStack(e.stack);

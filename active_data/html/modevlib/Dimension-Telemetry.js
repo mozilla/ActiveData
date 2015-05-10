@@ -107,7 +107,7 @@ Dimension.addEdges(false, Mozilla, [
 				"path":function(v){
 					//MAP TO HUMANE NAMES, IF POSSIBLE
 					return [{
-						"name":nvl(Telemetry.addonGUID2Name[v.toLowerCase()], v.toLowerCase()),
+						"name":coalesce(Telemetry.addonGUID2Name[v.toLowerCase()], v.toLowerCase()),
 						"esfilter":{"prefix":{"info.addons.name":v}}
 					}];
 				}

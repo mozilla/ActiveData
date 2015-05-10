@@ -42,7 +42,7 @@ class Cube(object):
 
         # ENSURE frum IS PROPER FORM
         if isinstance(select, list):
-            if OR(not isinstance(v, Matrix) for v in data.values()):
+            if edges and OR(not isinstance(v, Matrix) for v in data.values()):
                 Log.error("Expecting data to be a dict with Matrix values")
 
         if not edges:
@@ -112,7 +112,7 @@ class Cube(object):
         matrix = self.data.values()[0]  # CANONICAL REPRESENTATIVE
         e_names = self.edges.name
         s_names = self.select.name
-        parts = [e.domain.partitions for e in self.edges]
+        parts = [e.domain.partitions.value if e.domain.primitive else e.domain.partitions for e in self.edges]
         for c in matrix._all_combos():
             output = {n: parts[i][c[i]] for i, n in enumerate(e_names)}
             for s in s_names:
@@ -189,7 +189,10 @@ class Cube(object):
             for name, v in item.items():
                 ei, parts = wrap([(i, e.domain.partitions) for i, e in enumerate(self.edges) if e.name == name])[0]
                 if not parts:
-                    Log.error("Can not find {{name}} in list of edges, maybe this feature is not implemented yet", {"name": name})
+                    Log.error("Can not find {{name}}=={{value|quote}} in list of edges, maybe this feature is not implemented yet", {
+                        "name": name,
+                        "value": v
+                    })
                 part = wrap([p for p in parts if p.value == v])[0]
                 if not part:
                     return Null
@@ -197,14 +200,14 @@ class Cube(object):
                     coordinates[ei] = part.dataIndex
 
             edges = [e for e, v in zip(self.edges, coordinates) if v is None]
-            if not edges and self.is_value:
+            if not edges:
                 # ZERO DIMENSIONAL VALUE
-                return self.data.values()[0].__getitem__(coordinates)
+                return wrap({k: v.__getitem__(coordinates) for k, v in self.data.items()})
             else:
                 output = Cube(
                     select=self.select,
                     edges=wrap([e for e, v in zip(self.edges, coordinates) if v is None]),
-                    data={k: c.__getitem__(coordinates) for k, c in self.data.items()}
+                    data={k: Matrix(values=c.__getitem__(coordinates)) for k, c in self.data.items()}
                 )
                 return output
         elif isinstance(item, basestring):
@@ -253,9 +256,6 @@ class Cube(object):
         for c in matrix._all_combos():
             method(matrix[c], [parts[i][cc] for i, cc in enumerate(c)], self)
 
-
-
-
     def _select(self, select):
         selects = listwrap(select)
         is_aggregate = OR(s.aggregate != None and s.aggregate != "none" for s in selects)
@@ -274,6 +274,58 @@ class Cube(object):
         else:
             # FILTER DOES NOT ALTER DIMESIONS, JUST WHETHER THERE ARE VALUES IN THE CELLS
             Log.unexpected("Incomplete")
+
+    def _groupby(self, edges):
+        """
+        RETURNS LIST OF (coord, values) TUPLES, WHERE
+            coord IS THE INDEX INTO self CUBE (-1 INDEX FOR COORDINATES NOT GROUPED BY)
+            values ALL VALUES THAT BELONG TO THE SLICE
+
+        """
+        edges = DictList([_normalize_edge(e) for e in edges])
+
+        stacked = [e for e in self.edges if e.name in edges.name]
+        remainder = [e for e in self.edges if e.name not in edges.name]
+        selector = [1 if e.name in edges.name else 0 for e in self.edges]
+
+        if len(stacked) + len(remainder) != len(self.edges):
+            Log.error("can not find some edges to group by")
+        # CACHE SOME RESULTS
+        keys = edges.name
+        getKey = [e.domain.getKey for e in self.edges]
+        lookup = [[getKey[i](p) for p in e.domain.partitions+([None] if e.allowNulls else [])] for i, e in enumerate(self.edges)]
+
+        if isinstance(self.select, list):
+            selects = listwrap(self.select)
+            index, v = zip(*self.data[selects[0].name].groupby(selector))
+
+            coord = wrap([coord2term(c) for c in index])
+
+            values = [v]
+            for s in selects[1::]:
+                i, v = zip(*self.data[s.name].group_by(selector))
+                values.append(v)
+
+            output = zip(coord, [Cube(self.select, remainder, {s.name: v[i] for i, s in enumerate(selects)}) for v in zip(*values)])
+        elif not remainder:
+            # v IS A VALUE, NO NEED TO WRAP IT IN A Cube
+            output = (
+                (
+                    coord2term(coord),
+                    v
+                )
+                for coord, v in self.data[self.select.name].groupby(selector)
+            )
+        else:
+            output = (
+                (
+                    coord2term(coord),
+                    Cube(self.select, remainder, v)
+                )
+                for coord, v in self.data[self.select.name].groupby(selector)
+            )
+
+        return output
 
 
     def groupby(self, edges):

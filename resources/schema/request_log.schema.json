@@ -64,6 +64,9 @@
 				"http_user_agent": {
 					"index": "not_analyzed",
 					"type": "string"
+				},
+				"timestamp":{
+					"type": "double"
 				}
 
 			}

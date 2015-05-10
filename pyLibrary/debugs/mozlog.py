@@ -9,11 +9,12 @@ def use_mozlog():
     INSTEAD OF THE pyLibrary STANDARD
     WE REPLACE ALL Log ATTRIBUTES WITH ToMozLog ATTRIBUTES
     """
+    global _using_mozlog
 
     if _using_mozlog:
         return
 
-    globals()["_using_mozlog"] = True
+    _using_mozlog = True
     try:
         from pyLibrary.debugs.mozlog.structured import structuredlog
 

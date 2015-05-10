@@ -11,16 +11,15 @@ from flask import Flask
 import flask
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
-from active_data.save_query import SaveQueries
 
+from active_data.save_query import SaveQueries
 from pyLibrary import convert, strings, queries
 from pyLibrary.debugs import constants, startup
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import Dict, unwrap
+from pyLibrary.dot import Dict, unwrap, wrap
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.queries import qb
-from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
 
@@ -38,16 +37,17 @@ def record_request(request, query_, data, error):
     if request_log_queue == None:
         return
 
-    log = Dict(
-        http_user_agent=request.headers.get("user_agent"),
-        http_accept_encoding=request.headers.get("accept_encoding"),
-        path=request.headers.environ["werkzeug.request"].full_path,
-        content_length=request.headers.get("content_length"),
-        remote_addr=request.remote_addr,
-        query=query_,
-        data=data,
-        error=error
-    )
+    log = wrap({
+        "timestamp": Date.now(),
+        "http_user_agent": request.headers.get("user_agent"),
+        "http_accept_encoding": request.headers.get("accept_encoding"),
+        "path": request.headers.environ["werkzeug.request"].full_path,
+        "content_length": request.headers.get("content_length"),
+        "remote_addr": request.remote_addr,
+        "query": query_,
+        "data": data,
+        "error": error
+    })
     log["from"] = request.headers.get("from")
     request_log_queue.add({"value": log})
 
@@ -120,7 +120,7 @@ def query(path):
         e = Except.wrap(e)
 
         record_request(flask.request, None, flask.request.environ['body_copy'], e)
-        Log.warning("problem", e)
+        Log.warning("Problem sent back to client", e)
         e = e.as_dict()
         e.meta.active_data_response_time = total_duration.seconds
 
@@ -209,7 +209,9 @@ def main():
             request_log_queue = request_logger.threaded_queue(max_size=2000)
 
         default_elasticsearch = elasticsearch.Index(config.elasticsearch)
-        query_finder = SaveQueries(config.saved_queries)
+
+        if config.saved_queries:
+            query_finder = SaveQueries(config.saved_queries)
 
         queries.config.default = {
             "type": "elasticsearch",

@@ -21,10 +21,10 @@ Dimension.prototype = {
 				"separator": "."
 			};
 		}//endif
-		param.depth = nvl(param.depth, 0);
-		param.separator = nvl(param.separator, ".");
+		param.depth = coalesce(param.depth, 0);
+		param.separator = coalesce(param.separator, ".");
 
-		var useFullFilter = nvl(param.fullFilter, false);
+		var useFullFilter = coalesce(param.fullFilter, false);
 
 		var self = this;
 		var partitions = null;
@@ -32,10 +32,10 @@ Dimension.prototype = {
 		if (!this.partitions && this.edges) {
 			//USE EACH EDGE AS A PARTITION, BUT isFacet==true SO IT ALLOWS THE OVERLAP
 			partitions = this.edges.map(function (v, i) {
-				if (i >= nvl(self.limit, DEFAULT_QUERY_LIMIT))
+				if (i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT))
 					return undefined;
 				if (v.esfilter === undefined) return;
-				v.style = nvl(v.style, {});
+				v.style = coalesce(v.style, {});
 				var temp = v.parent;
 				v.parent=undefined;
 				var output = Map.clone(v);
@@ -46,8 +46,8 @@ Dimension.prototype = {
 			self.isFacet = true;
 		} else if (param.depth == 0) {
 			partitions = this.partitions.map(function (v, i) {
-				if (i >= nvl(self.limit, DEFAULT_QUERY_LIMIT)) return undefined;
-				v.style = nvl(v.style, {});
+				if (i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT)) return undefined;
+				v.style = coalesce(v.style, {});
 				var temp = v.parent;
 				v.parent=undefined;
 				var output = Map.clone(v);
@@ -59,7 +59,7 @@ Dimension.prototype = {
 			partitions = [];
 			var rownum = 0;
 			self.partitions.forall(function (part, i) {
-				if (i >= nvl(self.limit, DEFAULT_QUERY_LIMIT)) return undefined;
+				if (i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT)) return undefined;
 				rownum++;
 				part.partitions.forall(function (subpart, j) {
 					var temp = subpart.parent;
@@ -95,10 +95,10 @@ Dimension.prototype = {
 			//PLEASE SPLIT end() INTO value() (replacing the string value) AND
 			//label() (for presentation)
 			"value": (!this.value && this.partitions) ? "name" : this.value,
-			"label": nvl(this.label, (this.type == "set" && this.name !== undefined) ? function (v) {
+			"label": coalesce(this.label, (this.type == "set" && this.name !== undefined) ? function (v) {
 				return v.name;
 			} : undefined),
-			"end": nvl(this.end, (this.type == "set" && this.name !== undefined) ? function (v) {
+			"end": coalesce(this.end, (this.type == "set" && this.name !== undefined) ? function (v) {
 				return v;
 			} : undefined),  //I DO NOT KNOW WHY IS NOT return v.name
 //			"value":(!this.value && this.partitions) ? "name" : this.value,
@@ -125,7 +125,7 @@ Dimension.prototype = {
 
 		var output = {
 			"name": this.name,
-			"value": MVEL.Parts2TermScript(nvl(param !== undefined ? param.index : null, this.index), domain)
+			"value": MVEL.Parts2TermScript(coalesce(param !== undefined ? param.index : null, this.index), domain)
 		};
 		return output;
 	}
@@ -143,7 +143,7 @@ Dimension.prototype = {
 		if (index === undefined) index = 0;
 		if (index == childPath.length) return;
 		var c = childPath[index];
-		parentPart.count = nvl(parentPart.count, 0) + count;
+		parentPart.count = coalesce(parentPart.count, 0) + count;
 
 		if (parentPart.partitions === undefined) parentPart.partitions = [];
 		for (var i = 0; i < parentPart.partitions.length; i++) {
@@ -168,9 +168,9 @@ Dimension.prototype = {
 					p.parent = part;
 					convertPart(p, otherFilters);
 					if (siblingFilter != undefined) otherFilters.append(siblingFilter);
-					p.value = nvl(p.value, p.name);
+					p.value = coalesce(p.value, p.name);
 					if (part.index) p.index = part.index;   //COPY INDEX DOWN
-					part[p.name] = nvl(part[p.name], p);
+					part[p.name] = coalesce(part[p.name], p);
 				});
 			}//endif
 
@@ -201,7 +201,7 @@ Dimension.prototype = {
 			if (dim.edges) {
 				//ALLOW ACCESS TO SUB-PART BY NAME (IF ONLY THERE IS NO NAME COLLISION)
 				dim.edges.forall(function (e, i) {
-					dim[e.name] = nvl(dim[e.name], e);
+					dim[e.name] = coalesce(dim[e.name], e);
 					e.parent = dim;
 					if (dim.index) e.index = dim.index;   //COPY INDEX DOWN
 					convertDim(e);

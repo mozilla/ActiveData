@@ -17,7 +17,7 @@ from pyLibrary.times.durations import Duration
 
 class TestTimeParser(FuzzyTestCase):
     def test_now(self):
-        self.assertAlmostEqual(parse("now").milli, Date.now().milli)
+        self.assertAlmostEqual(parse("now").milli, Date.now().milli, places=12)  # IGNORE THE LEAST SIGNIFICANT MILLISECOND
 
     def test_today(self):
         self.assertAlmostEqual(parse("today").milli, Date.today().milli)

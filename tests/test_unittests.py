@@ -20,7 +20,7 @@ from pyLibrary.times.timer import Timer
 from tests.base_test_class import ActiveDataBaseTest, error
 
 
-ES_CLUSTER_LOCATION = "http://52.10.189.133"
+ES_CLUSTER_LOCATION = "http://54.149.35.214"
 
 
 class TestUnittests(ActiveDataBaseTest):

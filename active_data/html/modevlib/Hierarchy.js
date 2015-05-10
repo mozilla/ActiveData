@@ -83,7 +83,7 @@ Hierarchy.addDescendants = function addDescendants(args){
 	var id = args.id_field;
 	var fk = args.fk_field;
 	var descendants_field = args.descendants_field;
-	var DEBUG = nvl(args.DEBUG, false);
+	var DEBUG = coalesce(args.DEBUG, false);
 	var DEBUG_MIN = 1000000;
 
 	//REVERSE POINTERS

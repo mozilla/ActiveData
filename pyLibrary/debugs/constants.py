@@ -31,7 +31,7 @@ def set(constants):
             old_value = dot.set_attr(sys.modules, k, new_value)
             continue
         except Exception, e:
-            errors.append[e]
+            errors.append(e)
 
         # ONE MODULE IS MISSING, THE CALLING MODULE
         try:

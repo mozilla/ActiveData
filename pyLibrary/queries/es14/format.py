@@ -13,7 +13,7 @@ from __future__ import division
 from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, literal_field, set_default, nvl, wrap
+from pyLibrary.dot import Dict, literal_field, set_default, coalesce, wrap
 from pyLibrary.queries.cube import Cube
 from pyLibrary.queries.es14.aggs import count_dim, aggs_iterator, format_dispatch
 
@@ -39,10 +39,10 @@ def format_cube(decoders, aggs, start, query, select):
 
 def format_cube_from_aggop(decoders, aggs, start, query, select):
     agg = aggs
-    b = nvl(agg._filter, agg._nested)
+    b = coalesce(agg._filter, agg._nested)
     while b:
         agg = b
-        b = nvl(agg._filter, agg._nested)
+        b = coalesce(agg._filter, agg._nested)
 
     matricies = [(s, Matrix(dims=[], zeros=(s.aggregate == "count"))) for s in select]
     for s, m in matricies:
@@ -69,15 +69,15 @@ def format_table(decoders, aggs, start, query, select):
             yield output
 
         # EMIT THE MISSING CELLS IN THE CUBE
-        for c, v in is_sent:
-            if not v:
-                record = [d.get_value(c[i]) for i, d in enumerate(decoders)]
-                for s in select:
-                    if s.aggregate == "count":
-                        record.append(0)
-                    else:
-                        record.append(None)
-                yield record
+        # for c, v in is_sent:
+        #     if not v:
+        #         record = [d.get_value(c[i]) for i, d in enumerate(decoders)]
+        #         for s in select:
+        #             if s.aggregate == "count":
+        #                 record.append(0)
+        #             else:
+        #                 record.append(None)
+        #         yield record
 
     return Dict(
         meta={"format": "table"},
@@ -107,10 +107,10 @@ def format_table_from_aggop(decoders, aggs, start, query, select):
     header = select.name
 
     agg = aggs
-    b = nvl(agg._filter, agg._nested)
+    b = coalesce(agg._filter, agg._nested)
     while b:
         agg = b
-        b = nvl(agg._filter, agg._nested)
+        b = coalesce(agg._filter, agg._nested)
 
     row = []
     for s in select:
@@ -181,15 +181,6 @@ def format_list(decoders, aggs, start, query, select):
                 output[s.name] = agg[s.pull]
             yield output
 
-        # EMIT THE MISSING CELLS IN THE CUBE
-        for c, v in is_sent:
-            if not v:
-                output = {d.edge.name: d.get_value(c[i]) for i, d in enumerate(decoders)}
-                for s in select:
-                    if s.aggregate == "count":
-                        output[s.name] = 0
-                yield output
-
     output = Dict(
         meta={"format": "list"},
         data=list(data())
@@ -199,10 +190,10 @@ def format_list(decoders, aggs, start, query, select):
 
 def format_list_from_aggop(decoders, aggs, start, query, select):
     agg = aggs
-    b = nvl(agg._filter, agg._nested)
+    b = coalesce(agg._filter, agg._nested)
     while b:
         agg = b
-        b = nvl(agg._filter, agg._nested)
+        b = coalesce(agg._filter, agg._nested)
 
     item = Dict()
     for s in select:

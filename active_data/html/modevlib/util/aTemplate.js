@@ -13,7 +13,6 @@ var Template = function Template(template){
 		if (values === undefined){
 			return this.template;
 		}//endif
-
 		var map = {};
 		if (!(values instanceof Array)) {
 			var keys = Object.keys(values);
@@ -28,12 +27,10 @@ var Template = function Template(template){
 	};
 	Template.prototype.replace = Template.prototype.expand;
 
-
 	function toString(value){
 		if (isString(value)) return value;
 		return convert.value2json(value)
 	}//function
-
 	///////////////////////////////////////////////////////////////////////////
 	// DEFINE TEMPLATE FUNCTIONS HERE
 	///////////////////////////////////////////////////////////////////////////
@@ -43,7 +40,7 @@ var Template = function Template(template){
 	FUNC.css = convert.Object2CSS;
 	FUNC.attribute = convert.value2HTMLAttribute;
 	FUNC.datetime = function(d, f){
-		f = nvl(f, "yyyy-MM-dd HH:mm:ss");
+		f = coalesce(f, "yyyy-MM-dd HH:mm:ss");
 		return d.format(f);
 	};
 	FUNC.indent = function(value, amount){

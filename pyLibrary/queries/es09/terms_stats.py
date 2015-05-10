@@ -19,7 +19,7 @@ from pyLibrary.queries.es09.util import aggregates, build_es_query, compileEdges
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.es09.expressions import UID
 from pyLibrary.queries import es09
-from pyLibrary.dot import literal_field, nvl
+from pyLibrary.dot import literal_field, coalesce
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 from pyLibrary.queries.expressions import simplify_esfilter
@@ -141,7 +141,7 @@ def es_terms_stats(esq, mvel, query):
                     "key_field": calcTerm.field,
                     "value_field": s.value if is_keyword(s.value) else None,
                     "value_script": mvel.compile_expression(s.value) if not is_keyword(s.value) else None,
-                    "size": nvl(query.limit, 200000)
+                    "size": coalesce(query.limit, 200000)
                 }
             }
             if condition:
@@ -240,7 +240,7 @@ def buildCondition(mvel, edge, partition):
 
     if edge.domain.isFacet:
         # MUST USE THIS' esFacet
-        condition = wrap(nvl(partition.where, {"and": []}))
+        condition = wrap(coalesce(partition.where, {"and": []}))
 
         if partition.min and partition.max and is_keyword(edge.value):
             condition["and"].append({

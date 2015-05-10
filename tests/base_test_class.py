@@ -20,7 +20,7 @@ import itertools
 from active_data.app import replace_vars
 from pyLibrary import convert, jsons, queries
 from pyLibrary.debugs.logs import Log, Except, constants
-from pyLibrary.dot import wrap, listwrap, nvl, unwrap
+from pyLibrary.dot import wrap, listwrap, coalesce, unwrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
 from pyLibrary.queries import qb
@@ -230,7 +230,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
                         result.data = qb.sort(result.data, range(len(result.header)))
                     expected.data = qb.sort(expected.data, range(len(expected.header)))
                 elif format == "list":
-                    sort_order = wrap(_normalize_edges(nvl(subtest.query.edges, subtest.query.groupby)) + _normalize_selects(listwrap(subtest.query.select))).name
+                    sort_order = wrap(_normalize_edges(coalesce(subtest.query.edges, subtest.query.groupby)) + _normalize_selects(listwrap(subtest.query.select))).name
                     expected.data = qb.sort(expected.data, sort_order)
                     result.data = qb.sort(result.data, sort_order)
 

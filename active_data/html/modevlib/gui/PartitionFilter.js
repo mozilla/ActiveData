@@ -31,7 +31,7 @@ PartitionFilter.newInstance=function(param){
 
 	var self=new PartitionFilter();
 	Map.copy(param, self);
-	self.showAll=nvl(self.showAll, true);
+	self.showAll=coalesce(self.showAll, true);
 
 	if (self.dimension.partitions===undefined && self.dimension.edges===undefined) Log.error(self.dimension.name+" does not have a partition defined");
 
@@ -71,8 +71,8 @@ function convertToTreeLater(self, treeNode, dimension){
 		}//while
 		var pleaseUpdate = (treeNode.children==WAITING_FOR_RESULTS);
 		treeNode.children = dimension.partitions.map(function (v, i) {
-			if (i < nvl(dimension.limit, DEFAULT_CHILD_LIMIT)){
-				v.limit = nvl(v.limit, dimension.limit, DEFAULT_CHILD_LIMIT);
+			if (i < coalesce(dimension.limit, DEFAULT_CHILD_LIMIT)){
+				v.limit = coalesce(v.limit, dimension.limit, DEFAULT_CHILD_LIMIT);
 				return convertToTree(self, {}, 1, v);
 			}//endif
 		});
@@ -108,8 +108,8 @@ function convertToTree(self, parent, depth, dimension){
 		}else{
 			if (depth < self.treeDepth){
 				node.children=dimension.partitions.map(function(v,i){
-					if (i<nvl(dimension.limit, DEFAULT_CHILD_LIMIT))
-						v.limit = nvl(v.limit, dimension.limit, DEFAULT_CHILD_LIMIT);
+					if (i<coalesce(dimension.limit, DEFAULT_CHILD_LIMIT))
+						v.limit = coalesce(v.limit, dimension.limit, DEFAULT_CHILD_LIMIT);
 						return convertToTree(self, depth==0 ? {} : node, depth+1, v);
 				});
 				if (depth==0){
@@ -122,7 +122,7 @@ function convertToTree(self, parent, depth, dimension){
 	}//endif
 	if (dimension.edges){
 		node.children=dimension.edges.map(function(v,i){
-			v.limit = nvl(v.limit, dimension.limit, DEFAULT_CHILD_LIMIT);
+			v.limit = coalesce(v.limit, dimension.limit, DEFAULT_CHILD_LIMIT);
 			return convertToTree(self, node, 0, v);
 		});
 	}//endif

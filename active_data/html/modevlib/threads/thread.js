@@ -57,7 +57,7 @@ build = function(){
 	}};
 
 	//RETURN FIRST NOT NULL, AND DEFINED VALUE
-	function nvl(){
+	function coalesce(){
 		var args = arguments;
 		var a;
 		for (var i = 0; i < args.length; i++) {
@@ -319,9 +319,9 @@ build = function(){
 
 		if (retval instanceof Exception) {
 			if (POPUP_ON_ERROR || DEBUG) {
-				Log.alert("Uncaught Error in thread: " + nvl(this.name, "") + "\n  " + retval.toString());
+				Log.alert("Uncaught Error in thread: " + coalesce(this.name, "") + "\n  " + retval.toString());
 			} else {
-				Log.warning("Uncaught Error in thread: " + nvl(this.name, "") + "\n  ", retval);
+				Log.warning("Uncaught Error in thread: " + coalesce(this.name, "") + "\n  ", retval);
 			}//endif
 		}//endif
 

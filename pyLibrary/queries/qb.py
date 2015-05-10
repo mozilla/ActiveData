@@ -16,25 +16,25 @@ from types import GeneratorType
 from pyLibrary import dot, convert
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, Null, Dict, split_field, nvl, join_field
+from pyLibrary.dot import set_default, Null, Dict, split_field, coalesce, join_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap, wrap, unwrap
 from pyLibrary.maths import Math
 from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.container import Container
 from pyLibrary.queries.cubes.aggs import cube_aggs
-from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, compile_expression
+from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, compile_expression, qb_expression_to_function
 from pyLibrary.queries.flat_list import FlatList
 from pyLibrary.queries.index import Index
 from pyLibrary.queries.query import Query, _normalize_selects, sort_direction, _normalize_select
 from pyLibrary.queries.cube import Cube
 from pyLibrary.queries.unique_index import UniqueIndex
 
-
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
 # qb QUERY DOCUMENTATION: https://github.com/klahnakoski/qb/tree/master/docs
 # START HERE: https://github.com/klahnakoski/qb/blob/master/docs/Qb_Reference.md
 # TODO: USE http://docs.sqlalchemy.org/en/latest/core/tutorial.html AS DOCUMENTATION FRAMEWORK
+
 
 def run(query):
     """
@@ -46,38 +46,38 @@ def run(query):
     if isinstance(frum, Container):
         with frum:
             return frum.query(query)
-    elif isinstance(frum, (list, GeneratorType)):
-        pass
+    elif isinstance(frum, (list, set, GeneratorType)):
+        frum = wrap(list(frum))
     elif isinstance(frum, Cube):
         if is_aggs(query):
             return cube_aggs(frum, query)
 
     elif isinstance(frum, Query):
-        frum = run(frum)
+        frum = run(frum).data
     else:
-        Log.error("Do not know how to handle")
+        Log.error("Do not know how to handle {{type}}", {"type":frum.__class__.__name__})
 
     if is_aggs(query):
-        return list_aggs(frum, query)
+        frum = list_aggs(frum, query)
+    else:  # SETOP
+        try:
+            if query.filter != None or query.esfilter != None:
+                Log.error("use 'where' clause")
+        except AttributeError, e:
+            pass
 
-    try:
-        if query.filter != None or query.esfilter != None:
-            Log.error("use 'where' clause")
-    except AttributeError, e:
-        pass
+        if query.where is not TRUE_FILTER:
+            frum = filter(frum, query.where)
 
-    if query.where is not TRUE_FILTER:
-        frum = filter(frum, query.where)
+        if query.sort:
+            frum = sort(frum, query.sort)
 
-    if query.sort:
-        frum = sort(frum, query.sort)
-
-    if query.select:
-        frum = select(frum, query.select)
+        if query.select:
+            frum = select(frum, query.select)
 
     if query.window:
         if isinstance(frum, Cube):
-            frum = DictList(list(frum))  # TRY TO CAST TO LIST OF RECORDS
+            frum = list(frum.values())
 
         for param in query.window:
             window(frum, param)
@@ -460,25 +460,25 @@ def sort(data, fieldnames=None):
             # SPECIAL CASE, ONLY ONE FIELD TO SORT BY
             if isinstance(fieldnames, (basestring, int)):
                 def comparer(left, right):
-                    return cmp(nvl(left)[fieldnames], nvl(right)[fieldnames])
+                    return cmp(coalesce(left)[fieldnames], coalesce(right)[fieldnames])
 
                 return DictList([unwrap(d) for d in sorted(data, cmp=comparer)])
             else:
                 # EXPECTING {"field":f, "sort":i} FORMAT
                 fieldnames.sort = sort_direction.get(fieldnames.sort, 0)
-                fieldnames.field = nvl(fieldnames.field, fieldnames.value)
+                fieldnames.field = coalesce(fieldnames.field, fieldnames.value)
                 if fieldnames.field==None:
                     Log.error("Expecting sort to have 'field' attribute")
                 def comparer(left, right):
-                    return fieldnames["sort"] * cmp(nvl(left, Dict())[fieldnames["field"]], nvl(right, Dict())[fieldnames["field"]])
+                    return fieldnames["sort"] * cmp(coalesce(left, Dict())[fieldnames["field"]], coalesce(right, Dict())[fieldnames["field"]])
 
                 return DictList([unwrap(d) for d in sorted(data, cmp=comparer)])
 
         formal = query._normalize_sort(fieldnames)
 
         def comparer(left, right):
-            left = nvl(left, Dict())
-            right = nvl(right, Dict())
+            left = coalesce(left, Dict())
+            right = coalesce(right, Dict())
             for f in formal:
                 try:
                     l = left[f["field"]]
@@ -524,11 +524,12 @@ def pairwise(values):
         a = b
 
 
+
 def filter(data, where):
     """
     where  - a function that accepts (record, rownum, rows) and returns boolean
     """
-    if where == None or where == TRUE_FILTER:
+    if len(data)==0 or where == None or where == TRUE_FILTER:
         return data
 
     if isinstance(data, Cube):
@@ -839,16 +840,15 @@ def window(data, param):
     edges = param.edges          # columns to gourp by
     where = param.where          # DO NOT CONSIDER THESE VALUES
     sortColumns = param.sort            # columns to sort by
-    calc_value = wrap_function(param.value) # function that takes a record and returns a value (for aggregation)
+    calc_value = wrap_function(qb_expression_to_function(param.value)) # function that takes a record and returns a value (for aggregation)
     aggregate = param.aggregate  # WindowFunction to apply
     _range = param.range          # of form {"min":-10, "max":0} to specify the size and relative position of window
 
     data = filter(data, where)
 
-    if sortColumns:
-        data = sort(data, sortColumns)
-
     if not aggregate and not edges:
+        if sortColumns:
+            data = sort(data, sortColumns)
         # SIMPLE CALCULATED VALUE
         for rownum, r in enumerate(data):
             r[name] = calc_value(r, rownum, data)
@@ -874,8 +874,8 @@ def window(data, param):
         for rownum, r in enumerate(sequence):
             r["__temp__"] = calc_value(r, rownum, sequence)
 
-        head = nvl(_range.max, _range.stop)
-        tail = nvl(_range.min, _range.start)
+        head = coalesce(_range.max, _range.stop)
+        tail = coalesce(_range.min, _range.start)
 
         # PRELOAD total
         total = aggregate()
@@ -933,4 +933,5 @@ def reverse(vals):
         output[l] = v
 
     return wrap(output)
+
 from pyLibrary.queries.list.aggs import is_aggs, list_aggs

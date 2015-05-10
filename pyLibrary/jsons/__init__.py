@@ -11,21 +11,21 @@ from pyLibrary.times.durations import Duration
 
 
 Log = None
-datetime2milli = None
+datetime2unix = None
 utf82unicode = None
 
 
 def _late_import():
     global Log
-    global datetime2milli
+    global datetime2unix
     global utf82unicode
 
     from pyLibrary.debugs.logs import Log
-    from pyLibrary.convert import datetime2milli, utf82unicode
+    from pyLibrary.convert import datetime2unix, utf82unicode
 
     _ = Log
-    __ = datetime2milli
-    ___ = utf82unicode
+    _ = datetime2unix
+    _ = utf82unicode
 
 
 ESCAPE_DCT = {
@@ -48,6 +48,7 @@ def replace(match):
 
 
 def quote(value):
+    value
     return "\"" + ESCAPE.sub(replace, value) + "\""
 
 
@@ -66,11 +67,11 @@ def _scrub(value, is_done):
     if type in (NoneType, NullType):
         return None
     elif type in (date, datetime):
-        return float(datetime2milli(value)) / float(1000)
+        return float(datetime2unix(value))
     elif type is timedelta:
         return value.total_seconds()
     elif type is Date:
-        return value.unix
+        return float(value.unix)
     elif type is Duration:
         return value.seconds
     elif type is str:

@@ -12,7 +12,7 @@ from __future__ import division
 
 from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, nvl, Null, split_field, join_field
+from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, join_field
 from pyLibrary.queries import qb, es09
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword
@@ -33,13 +33,16 @@ def es_aggsop(es, frum, query):
 
     es_query = Dict()
     new_select = Dict()
+    formula = []
     for s in select:
         if s.aggregate == "count" and (s.value == None or s.value == "."):
             s.pull = "doc_count"
-        else:
+        elif is_keyword(s.value):
             new_select[literal_field(s.value)] += [s]
+        else:
+            formula.append(s)
 
-    for l_value, many in new_select.items():
+    for l_field, many in new_select.items():
         if len(many)>1:
             canonical_name=literal_field(many[0].name)
             es_query.aggs[canonical_name].stats.field = many[0].value
@@ -49,11 +52,16 @@ def es_aggsop(es, frum, query):
                 else:
                     s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
         else:
-            new_select[l_value] = s
+            new_select[l_field] = s
             s.pull = literal_field(s.name) + ".value"
             es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].field = s.value
 
-    decoders = [AggsDecoder(e, query) for e in nvl(query.edges, query.groupby, [])]
+    for i, s in enumerate(formula):
+        new_select[unicode(i)] = s
+        s.pull = literal_field(s.name) + ".value"
+        es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].script = qb_expression_to_ruby(s.value)
+
+    decoders = [AggsDecoder(e, query) for e in coalesce(query.edges, query.groupby, [])]
     start = 0
     for d in decoders:
         es_query = d.append_query(es_query, start)
@@ -183,8 +191,8 @@ class SetDecoder(AggsDecoder):
 
 def _range_composer(edge, domain, es_query, to_float):
     # USE RANGES
-    _min = nvl(domain.min, MAX(domain.partitions.min))
-    _max = nvl(domain.max, MAX(domain.partitions.max))
+    _min = coalesce(domain.min, MAX(domain.partitions.min))
+    _max = coalesce(domain.max, MAX(domain.partitions.max))
 
     if is_keyword(edge.value):
         calc = {"field": edge.value}
@@ -232,8 +240,8 @@ class TimeDecoder(AggsDecoder):
         if part == None:
             return len(domain.partitions)
 
-        f = nvl(part["from"], part.key)
-        t = nvl(part.to, part.key)
+        f = coalesce(part["from"], part.key)
+        t = coalesce(part.to, part.key)
         if f == None or t == None:
             return len(domain.partitions)
         else:
@@ -263,8 +271,8 @@ class DurationDecoder(AggsDecoder):
         if part == None:
             return len(domain.partitions)
 
-        f = nvl(part["from"], part.key)
-        t = nvl(part.to, part.key)
+        f = coalesce(part["from"], part.key)
+        t = coalesce(part.to, part.key)
         if f == None or t == None:
             return len(domain.partitions)
         else:
@@ -294,8 +302,8 @@ class RangeDecoder(AggsDecoder):
         if part == None:
             return len(domain.partitions)
 
-        f = nvl(part["from"], part.key)
-        t = nvl(part.to, part.key)
+        f = coalesce(part["from"], part.key)
+        t = coalesce(part.to, part.key)
         if f == None or t == None:
             return len(domain.partitions)
         else:
@@ -319,7 +327,7 @@ class DefaultDecoder(SetDecoder):
         self.edge = self.edge.copy()
         self.edge.allowNulls = False  # SINCE WE DO NOT KNOW THE DOMAIN, WE HAVE NO SENSE OF WHAT IS OUTSIDE THAT DOMAIN, allowNulls==True MAKES NO SENSE
         self.edge.domain.partitions = set()
-        self.edge.domain.limit = nvl(self.edge.domain.limit, query.limit, 10)
+        self.edge.domain.limit = coalesce(self.edge.domain.limit, query.limit, 10)
 
     def append_query(self, es_query, start):
         self.start = start
@@ -464,10 +472,10 @@ def aggs_iterator(aggs, decoders):
     parts = [None] * depth
 
     def _aggs_iterator(agg, d):
-        deeper = nvl(agg._filter, agg._nested)
+        deeper = coalesce(agg._filter, agg._nested)
         while deeper:
             agg = deeper
-            deeper = nvl(agg._filter, agg._nested)
+            deeper = coalesce(agg._filter, agg._nested)
 
         if d > 0:
             for b in agg._match.buckets:

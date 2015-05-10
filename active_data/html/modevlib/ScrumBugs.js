@@ -26,10 +26,10 @@ var ScrumBugs={};
 	ScrumBugs.parse=function(whiteboard){
 		whiteboard=whiteboard+" ";
 		var output={
-			"feature":nvl(featurePattern.exec(whiteboard), noMatch)[1],
-			"component":nvl(componentPattern.exec(whiteboard), noMatch)[1],
-			"user":nvl(userPattern.exec(whiteboard), noMatch)[1],
-			"points":nvl((pointsPattern.exec(whiteboard)), noMatch)[1]
+			"feature":coalesce(featurePattern.exec(whiteboard), noMatch)[1],
+			"component":coalesce(componentPattern.exec(whiteboard), noMatch)[1],
+			"user":coalesce(userPattern.exec(whiteboard), noMatch)[1],
+			"points":coalesce((pointsPattern.exec(whiteboard)), noMatch)[1]
 		};
 		if (output.feature=="iteration"){
 			//feature=iteration (May 02, 2013 - May 23, 2013)

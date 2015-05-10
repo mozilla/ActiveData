@@ -115,7 +115,7 @@ var Log = new function(){
 	};//method
 
 	Log.error = function(description, cause, stackOffset){
-		var ex=new Exception(description, cause, nvl(stackOffset, 0)+1);
+		var ex=new Exception(description, cause, coalesce(stackOffset, 0)+1);
 //		console.error(ex.toString());
 		throw ex;
 	};//method

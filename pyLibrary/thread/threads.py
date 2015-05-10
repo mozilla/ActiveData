@@ -14,6 +14,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 from collections import deque
+from copy import copy
 from datetime import datetime, timedelta
 import thread
 import threading
@@ -22,7 +23,7 @@ import sys
 import gc
 from pyLibrary import strings
 
-from pyLibrary.dot import nvl, Dict
+from pyLibrary.dot import coalesce, Dict, wrap
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration, SECOND
 
@@ -84,7 +85,7 @@ class Queue(object):
         silent - COMPLAIN IF THE READERS ARE TOO SLOW
         """
         self.name = name
-        self.max = nvl(max, 2 ** 10)
+        self.max = coalesce(max, 2 ** 10)
         self.silent = silent
         self.keep_running = True
         self.lock = Lock("lock for queue " + name)
@@ -263,8 +264,33 @@ class AllThread(object):
         self.threads.append(t)
 
 
+class MainThread(object):
+
+    def __init__(self):
+        self.name="Main Thread"
+        self.id = thread.get_ident()
+        self.children= []
+
+    def add_child(self, child):
+        self.children.append(child)
+
+    def remove_child(self, child):
+        self.children.remove(child)
+
+    def stop(self):
+        """
+        BLOCKS UNTIL ALL THREADS HAVE STOPPED
+        """
+        children = copy(self.children)
+        for c in children:
+            c.stop()
+        for c in children:
+            c.join()
+
+
+MAIN_THREAD = MainThread()
+
 ALL_LOCK = Lock("threads ALL_LOCK")
-MAIN_THREAD = Dict(name="Main Thread", id=thread.get_ident())
 ALL = dict()
 ALL[thread.get_ident()] = MAIN_THREAD
 
@@ -291,12 +317,16 @@ class Thread(object):
         self.args = args
 
         # ENSURE THERE IS A SHARED please_stop SIGNAL
-        self.kwargs = kwargs.copy()
+        self.kwargs = copy(kwargs)
         self.kwargs["please_stop"] = self.kwargs.get("please_stop", Signal())
         self.please_stop = self.kwargs["please_stop"]
 
         self.stopped = Signal()
         self.cprofiler = None
+        self.children = []
+
+        self.parent = kwargs.get("parent_thread", Thread.current())
+        self.parent.add_child(self)
 
     def __enter__(self):
         return self
@@ -319,7 +349,15 @@ class Thread(object):
             Log.error("Can not start thread", e)
 
     def stop(self):
+        for c in copy(self.children):
+            c.stop()
         self.please_stop.go()
+
+    def add_child(self, child):
+        self.children.append(child)
+
+    def remove_child(self, child):
+        self.children.remove(child)
 
     def _run(self):
         if Log.cprofiler:
@@ -333,17 +371,28 @@ class Thread(object):
 
         try:
             if self.target is not None:
-                response = self.target(*self.args, **self.kwargs)
+                a, k = self.args, self.kwargs
+                self.args, self.kwargs = None, None
+                response = self.target(*a, **k)
                 with self.synch_lock:
                     self.response = Dict(response=response)
         except Exception, e:
             with self.synch_lock:
                 self.response = Dict(exception=e)
             try:
-                Log.fatal("Problem in thread {{name}}", {"name": self.name}, e)
+                Log.fatal("Problem in thread {{name|quote}}", {"name": self.name}, e)
             except Exception, f:
                 sys.stderr.write("ERROR in thread: " + str(self.name) + " " + str(e) + "\n")
         finally:
+            children=copy(self.children)
+            for c in children:
+                c.stop()
+            for c in children:
+                try:
+                    c.join()
+                except Exception, _:
+                    pass
+
             self.stopped.go()
             del self.target, self.args, self.kwargs
             with ALL_LOCK:
@@ -362,6 +411,10 @@ class Thread(object):
         """
         RETURN THE RESULT {"response":r, "exception":e} OF THE THREAD EXECUTION (INCLUDING EXCEPTION, IF EXISTS)
         """
+        children = copy(self.children)
+        for c in children:
+            c.join(timeout=timeout, till=till)
+
         if not till and timeout:
             till = datetime.utcnow() + timedelta(seconds=timeout)
 
@@ -370,6 +423,7 @@ class Thread(object):
                 with self.synch_lock:
                     for i in range(10):
                         if self.stopped:
+                            self.parent.remove_child(self)
                             return self.response
                         self.synch_lock.wait(0.5)
 
@@ -378,6 +432,7 @@ class Thread(object):
         else:
             self.stopped.wait_for_go(till=till)
             if self.stopped:
+                self.parent.remove_child(self)
                 return self.response
             else:
                 from pyLibrary.debugs.logs import Except
@@ -444,6 +499,9 @@ class Thread(object):
         """
         SLEEP UNTIL keyboard interrupt
         """
+        if not isinstance(please_stop, Signal):
+            please_stop = Signal()
+
         if allow_exit:
             Thread('waiting for "exit"', readloop, please_stop=please_stop).start()
 
@@ -451,9 +509,6 @@ class Thread(object):
             if not Log:
                 _late_import()
             Log.error("Only the main thread can sleep forever (waiting for KeyboardInterrupt)")
-
-        if not isinstance(please_stop, Signal):
-            please_stop = Signal()
 
         # DEOS NOT SEEM TO WOKR
         # def stopper():
@@ -571,9 +626,9 @@ class ThreadedQueue(Queue):
         if not Log:
             _late_import()
 
-        batch_size = nvl(batch_size, int(nvl(max_size, 0)/2), 900)
-        max_size = nvl(max_size, batch_size * 2)  # REASONABLE DEFAULT
-        period = nvl(period, SECOND)
+        batch_size = coalesce(batch_size, int(coalesce(max_size, 0)/2), 900)
+        max_size = coalesce(max_size, batch_size * 2)  # REASONABLE DEFAULT
+        period = coalesce(period, SECOND)
         bit_more_time = 5 * SECOND
 
         Queue.__init__(self, name=name, max=max_size, silent=silent)

@@ -11,7 +11,19 @@ from __future__ import unicode_literals
 from __future__ import division
 from pyLibrary import dot
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import unwrap, set_default, wrap
+from pyLibrary.dot import unwrap, set_default, wrap, _get_attr
+
+
+def get_class(path):
+    try:
+        #ASSUME DIRECT FROM MODULE
+        output = __import__(".".join(path[0:-1]), globals(), locals(), [path[-1]], 0)
+        return _get_attr(output, path[-1:])
+        # return output
+    except Exception, e:
+        from pyLibrary.debugs.logs import Log
+
+        Log.error("Could not find module {{module|quote}}", {"module": ".".join(path)})
 
 
 def new_instance(settings):

@@ -11,39 +11,12 @@ Qb has a limited expression language to increase the number of useful queries th
 As a side note, Qb queries are also expressions: `from` is the operator, and other name/value pairs act as operation modifiers. 
 
 
-Operator Overview
------------------
+Expressions are composed of 
 
-###Operator forms###
+* primitive values `true`, `false`, `null`
+* strings representing property names (with format of `\w+(?:\.\w+)*`)
+* objects representing operators to compound expressions
 
-Many operators have a *simple* form and a *formal* form which use parameter objects or parameter lists respectively.  
-
-**Simple:**
-
-Simple form uses a simple parameter object, and is for comparing a property (a variable) to a constant value.
-	
-		{"op": {variable: value}}
-
-**Formal:**
-
-Formal form requires a parameter list with two items.  It is useful for building compound expressions.
-
-		{"op": [expr1, expr2]}
-
-**Constant**
-
-The JSON values `true`, `false`, and `null` are also legitimate expressions. 
-
-
-###Commutative Operators###
-
-Commutative operators can compound many expressions, and therefore only have a *formal* version:
-
-		{"op": [term1, term2, ... termN]}
-
-###Expressions involving `null`###
-
-As a general rule, the commutative operators will ignore expressions that evaluate to `null`, and the binary operators usually return `null` if any parameter is `null`.  Specific behaviour of each operator on `null` is included below.
 
 
 Example: `eq` Operator
@@ -57,6 +30,8 @@ The equality operator is most used, and has the most complex range of parameters
 
 		{"eq": {variable: constant}}
 		{"eq": [expr1, expr2]}
+
+***Be careful of the distinction between a parameter as an object `{}` or an array `[]`***
 
 Since "eq" is commutative, the *formal* form is not limited to just two expressions 
 
@@ -173,7 +148,7 @@ Math Operators
 
 For counting the number of not-null values.
 
-		{"count": [expr1, expr2, ... expr3]}
+		{"count": [expr1, expr2, ... exprN]}
 	
 `nulls` are not counted
 
@@ -184,7 +159,7 @@ For counting the number of not-null values.
 
 For adding the result of many expressions.  Also known as `add`.
 
-		{"sum": [expr1, expr2, ... expr3]}
+		{"sum": [expr1, expr2, ... exprN]}
 	
 expressions evaluating to `null` are ignored.  The empty list evaluates to `null`.
 
@@ -293,6 +268,79 @@ Return `true` if a property matches a given regular expression.  The whole term 
 		{"regexp": {variable: regular_expression}}
  
 
+Conditional Operators (Not Yet Implemented)
+-------------------------------------------
 
+###`coalesce` Operator###
+
+Return the first not `null` value in the list of evaluated expressions 
+
+		{"coalesce": [expr1, expr2, ... exprN]}
+
+If all expressions evaluate to `null`, or the list is empty, then the result is `null` 
+
+###`when` Operator###
+
+If the `when` clause evaluates to `true` then return the value found in the `then` clause, otherwise return the value of the `else` clause. 
+	
+		{
+			"when": test_expression,
+			"then": pass_expression,
+			"else": fail_expression
+		}
+
+Both the `then` and `else` clause are optional
+
+###`case` Operator###
+
+Evaluates a list of `when` sub-clauses in order, if one evaluates to `true` the `then` clause is evaluated for a return value, and the remaining sub-clauses are ignored.
+
+		{"case": [
+			{"when":condition1, "then":expression1},
+			{"when":condition2, "then":expression2},
+			...
+			{"when":conditionN, "then":expressionN},
+			default_expression
+		]}
+
+The last item in the list can be a plain expression, called the `default_expression`.  It is  evaluated-and-returned only if all previous conditions evaluate to `false`.  If the `default_expression` is missing, and all conditions evaluate to `false`, `null` is returned.  
+***If any `when` sub-clauses contain an `else` clause, it is ignored.***
+
+
+Operator Philosophy
+-------------------
+
+Put at bottom of document because it only explains general design choices
+
+###Operator forms###
+
+Many operators have a *simple* form and a *formal* form which use parameter objects or parameter lists respectively.    
+
+**Simple:**
+
+Simple form uses a simple parameter object, and is for comparing a property (a variable) to a constant value.
+	
+		{"op": {variable: value}}
+
+**Formal:**
+
+Formal form requires a parameter list with two items.  It is useful for building compound expressions.
+
+		{"op": [expr1, expr2]}
+
+**Constant**
+
+The JSON values `true`, `false`, and `null` are also legitimate expressions. 
+
+
+###Commutative Operators###
+
+Commutative operators can compound many expressions, and therefore only have a *formal* version:
+
+		{"op": [term1, term2, ... termN]}
+
+###Expressions involving `null`###
+
+As a general rule, the commutative operators will ignore expressions that evaluate to `null`, and the binary operators usually return `null` if any parameter is `null`.  Specific behaviour of each operator on `null` is included below.
 
 

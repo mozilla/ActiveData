@@ -19,7 +19,7 @@ from pyLibrary import convert
 from pyLibrary.collections import OR
 from __init__ import almost_equal, Math
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import nvl, Dict, Null
+from pyLibrary.dot import coalesce, Dict, Null
 # from pyLibrary.queries import qb
 from pyLibrary.vendor import strangman
 
@@ -63,14 +63,14 @@ def chisquare(f_obs, f_exp):
 def Stats2ZeroMoment(stats):
     # MODIFIED FROM http://statsmodels.sourceforge.net/devel/_modules/statsmodels/stats/moment_helpers.html
     # ADDED count
-    mc0, mc1, mc2, skew, kurt = stats.count, nvl(stats.mean, 0), nvl(stats.variance, 0), nvl(stats.skew, 0), nvl(stats.kurtosis, 0)
+    mc0, mc1, mc2, skew, kurt = stats.count, coalesce(stats.mean, 0), coalesce(stats.variance, 0), coalesce(stats.skew, 0), coalesce(stats.kurtosis, 0)
 
     mz0 = mc0
     mz1 = mc1 * mc0
     mz2 = (mc2 + mc1 * mc1) * mc0
-    mc3 = nvl(skew, 0) * (mc2 ** 1.5) # 3rd central moment
+    mc3 = coalesce(skew, 0) * (mc2 ** 1.5) # 3rd central moment
     mz3 = (mc3 + 3 * mc1 * mc2 + mc1 ** 3) * mc0  # 3rd non-central moment
-    mc4 = (nvl(kurt, 0) + 3.0) * (mc2 ** 2.0) # 4th central moment
+    mc4 = (coalesce(kurt, 0) + 3.0) * (mc2 ** 2.0) # 4th central moment
     mz4 = (mc4 + 4 * mc1 * mc3 + 6 * mc1 * mc1 * mc2 + mc1 ** 4) * mc0
 
     m = ZeroMoment(mz0, mz1, mz2, mz3, mz4)
@@ -289,11 +289,11 @@ class ZeroMoment(object):
 
 
 def add(a, b):
-    return nvl(a, 0) + nvl(b, 0)
+    return coalesce(a, 0) + coalesce(b, 0)
 
 
 def sub(a, b):
-    return nvl(a, 0) - nvl(b, 0)
+    return coalesce(a, 0) - coalesce(b, 0)
 
 
 def ZeroMoment2dict(z):

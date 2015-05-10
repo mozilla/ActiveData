@@ -20,10 +20,11 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries import domains
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import split_field, join_field, nvl
+from pyLibrary.dot import split_field, join_field, coalesce
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap
 from pyLibrary.queries import qb
+from pyLibrary.queries.es09 import expressions
 from pyLibrary.queries.es09.expressions import value2MVEL, isKeyword
 from pyLibrary.queries.expressions import simplify_esfilter
 from pyLibrary.times import durations
@@ -33,8 +34,6 @@ TrueFilter = {"match_all": {}}
 DEBUG = False
 
 INDEX_CACHE = {}  # MATCH NAMES TO ES URL AND COLUMNS eg {name:{"url":url, "columns":columns"}}
-
-
 
 
 def post(es, FromES, limit):
@@ -187,7 +186,7 @@ def compileTime2Term(edge):
         value = "doc[\"" + value + "\"].value"
 
     nullTest = compileNullTest(edge)
-    ref = nvl(edge.domain.min, edge.domain.max, datetime(2000, 1, 1))
+    ref = coalesce(edge.domain.min, edge.domain.max, datetime(2000, 1, 1))
 
     if edge.domain.interval.month > 0:
         offset = ref.subtract(ref.floorMonth(), durations.DAY).milli
@@ -227,7 +226,7 @@ def compileDuration2Term(edge):
     if isKeyword(value):
         value = "doc[\"" + value + "\"].value"
 
-    ref = nvl(edge.domain.min, edge.domain.max, durations.ZERO)
+    ref = coalesce(edge.domain.min, edge.domain.max, durations.ZERO)
     nullTest = compileNullTest(edge)
 
     ms = edge.domain.interval.milli

@@ -16,7 +16,7 @@ from pyLibrary import convert
 from pyLibrary.collections import reverse
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
-from pyLibrary.dot import split_field, Dict, Null, join_field, nvl
+from pyLibrary.dot import split_field, Dict, Null, join_field, coalesce
 from pyLibrary.dot import listwrap
 from pyLibrary.queries.expressions import TRUE_FILTER
 from pyLibrary.times.durations import Duration
@@ -439,8 +439,8 @@ def _where(esFilter, _translate):
         return "(" + _translate(variableName) + "!=null)"
     elif op == "missing":
         fieldName = _translate(esFilter[op].field)
-        testExistence = nvl(esFilter[op].existence, True)
-        testNull = nvl(esFilter[op].null_value, True)
+        testExistence = coalesce(esFilter[op].existence, True)
+        testNull = coalesce(esFilter[op].null_value, True)
 
         output = []
         if testExistence and not testNull:

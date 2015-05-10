@@ -16,7 +16,7 @@ import shutil
 
 from pyLibrary.strings import utf82unicode
 from pyLibrary.maths import crypto
-from pyLibrary.dot import nvl, set_default, split_field, join_field
+from pyLibrary.dot import coalesce, set_default, split_field, join_field
 from pyLibrary.dot import listwrap, wrap
 from pyLibrary import convert
 
@@ -71,7 +71,16 @@ class File(object):
 
     @property
     def abspath(self):
-        return os.path.abspath(self._filename)
+        if self._filename.startswith("~"):
+            home_path = os.path.expanduser("~")
+            if os.sep == "\\":
+                home_path = home_path.replace(os.sep, "/")
+            if home_path.endswith("/"):
+                home_path = home_path[:-1]
+
+            return home_path + self._filename[1::]
+        else:
+            return os.path.abspath(self._filename)
 
     @staticmethod
     def add_suffix(filename, suffix):
@@ -131,7 +140,7 @@ class File(object):
         """
         RETURN A FILENAME THAT CAN SERVE AS A BACKUP FOR THIS FILE
         """
-        suffix = convert.datetime2string(nvl(timestamp, datetime.now()), "%Y%m%d_%H%M%S")
+        suffix = convert.datetime2string(coalesce(timestamp, datetime.now()), "%Y%m%d_%H%M%S")
         return File.add_suffix(self._filename, suffix)
 
     def read(self, encoding="utf8"):
@@ -156,10 +165,15 @@ class File(object):
         return os.path.isdir(self._filename)
 
     def read_bytes(self):
-        if not self.parent.exists:
-            self.parent.create()
-        with open(self._filename, "rb") as f:
-            return f.read()
+        try:
+            if not self.parent.exists:
+                self.parent.create()
+            with open(self._filename, "rb") as f:
+                return f.read()
+        except Exception, e:
+            from pyLibrary.debugs.logs import Log
+
+            Log.error("roblem reading file {{filename}}", self.abspath)
 
     def write_bytes(self, content):
         if not self.parent.exists:

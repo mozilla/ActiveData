@@ -9,7 +9,10 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from decimal import Decimal
+import os
 from types import GeneratorType, NoneType, ModuleType
+import sys
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -26,8 +29,9 @@ def inverse(d):
     return output
 
 
-def nvl(*args):
+def coalesce(*args):
     # pick the first not null value
+    # http://en.wikipedia.org/wiki/Null_coalescing_operator
     for a in args:
         if a != None:
             return wrap(a)
@@ -192,7 +196,7 @@ def get_attr(obj, path):
     except Exception, e:
         from pyLibrary.debugs.logs import Log
         if PATH_NOT_FOUND in e:
-            Log.error(PATH_NOT_FOUND+": {{path}}", {"path":path})
+            Log.error(PATH_NOT_FOUND+": {{path}}", {"path":path}, e)
         else:
             Log.error("Problem setting value", e)
 
@@ -215,8 +219,14 @@ def _get_attr(obj, path):
             try:
                 # THIS CASE IS WHEN THE __init__.py DOES NOT IMPORT THE SUBDIR FILE
                 # WE CAN STILL PUT THE PATH TO THE FILE IN THE from CLAUSE
-                output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[1]], 0)
-                return _get_attr(output, path[1:])
+                if len(path)==1:
+                    #GET MODULE OBJECT
+                    output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[0]], 0)
+                    return output
+                else:
+                    #GET VARIABLE IN MODULE
+                    output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[1]], 0)
+                    return _get_attr(output, path[1:])
             except Exception, e:
                 pass
 
@@ -418,29 +428,54 @@ def tuplewrap(value):
     return unwrap(value),
 
 
-class DictWrap(object):
+class DictWrap(dict):
+
     def __init__(self, obj):
-        self.obj = obj
+        dict.__init__(self)
+        _set(self, "_obj", obj)
+        try:
+            _set(self, "_dict", wrap(_get(obj, "__dict__")))
+        except Exception, _:
+            pass
 
     def __getattr__(self, item):
-        return DictWrap(get_attr(self.obj, item))
+        try:
+            output = _get(_get(self, "_obj"), item)
+            return dictwrap(output)
+        except Exception, _:
+            return dictwrap(_get(self, "_dict")[item])
 
     def __setattr__(self, key, value):
-        set_attr(self.obj, key, value)
+        _get(self, "_dict")[key] = value
 
     def __getitem__(self, item):
-        return DictWrap(get_attr(self.obj, item))
+        return dictwrap(_get(self, "_dict")[item])
 
+    def keys(self):
+        return _get(self, "_dict").keys()
+
+    def items(self):
+        return _get(self, "_dict").items()
+
+    def __iter__(self):
+        return _get(self, "_dict").__iter__()
+
+    def __str__(self):
+        return _get(self, "_dict").__str__()
+
+    def __len__(self):
+        return _get(self, "_dict").__len__()
+
+    def __call__(self, *args, **kwargs):
+        return _get(self, "_obj")(*args, **kwargs)
 
 def dictwrap(obj):
     """
     wrap object as Dict
     """
-    if isinstance(obj, dict):
-        return obj
+    if isinstance(obj, (dict, basestring, int, float, list, set, Decimal, NoneType, NullType)):
+        return wrap(obj)
     return DictWrap(obj)
-
-
 
 
 from pyLibrary.dot.nones import Null, NullType

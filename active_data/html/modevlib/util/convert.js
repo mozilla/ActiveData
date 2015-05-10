@@ -310,7 +310,7 @@ convert.String2HTMLTable = function(value){
 };//method
 
 convert.String2Quote = function(str){
-	return "\"" + (str + '').replaceAll("\n", "\\n").replace(/([\n\\"'])/g, "\\$1").replace(/\0/g, "\\0") + "\"";
+	return "\"" + (str + '').replaceAll("\n", "\\n").replace(/([\n\t\\"'])/g, "\\$1").replace(/\0/g, "\\0") + "\"";
 };//method
 
 convert.Date2Code = function(date){
@@ -360,7 +360,7 @@ convert.Value2Text=function(value){
 		}//endif
 	}//endif
 
-	var json = convert.value2json(value);
+	var json = JSON.stringify(value);
 	return convert.String2Quote(json);
 };//method
 
@@ -735,7 +735,7 @@ convert.List2Table = function(list, columnOrder){
 		var item = list[i];
 		var row = [];
 		for(var c = 0; c < columns.length; c++){
-			row[c] = nvl(item[columns[c].name], null);
+			row[c] = coalesce(item[columns[c].name], null);
 		}//for
 		data.push(row);
 	}//for
@@ -853,13 +853,13 @@ convert.esFilter2function=function(esFilter){
 		};
 	}else if (op=="exists"){
 		//"exists":{"field":"myField"}
-		var field = nvl(esFilter[op].field, esFilter[op]);
+		var field = coalesce(esFilter[op].field, esFilter[op]);
 		return function(row, i, rows){
 			var val =row[field];
 			return (val!==undefined && val!=null);
 		};
 	}else if (op=="missing"){
-		var field = nvl(esFilter[op].field, esFilter[op]);
+		var field = coalesce(esFilter[op].field, esFilter[op]);
 		return function(row, i, rows){
 			var val =row[field];
 			return (val===undefined || val==null);

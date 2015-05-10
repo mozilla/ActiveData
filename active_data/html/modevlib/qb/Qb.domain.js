@@ -371,7 +371,7 @@ Qb.domain.time.addRange = function(min, max, domain){
 			"value":v,
 			"min":v,
 			"max":v.add(domain.interval),
-			"name":v.format(nvl(domain.format, Qb.domain.time.DEFAULT_FORMAT))
+			"name":v.format(coalesce(domain.format, Qb.domain.time.DEFAULT_FORMAT))
 		};
 		domain.map[v] = partition;
 		domain.partitions.push(partition);
@@ -584,7 +584,7 @@ Qb.domain.duration = function(column, sourceColumns){
 				if (this.min===undefined){
 					if (noMax || key.milli < this.max.milli){
 						this.min = floor;
-						this.max = nvl(this.max, ceil);
+						this.max = coalesce(this.max, ceil);
 						Qb.domain.duration.addRange(this.min, this.max, this);
 					}//endif
 				}else if (key.milli < this.min.milli){
@@ -599,7 +599,7 @@ Qb.domain.duration = function(column, sourceColumns){
 			if (noMax){//NO MAXIMUM REQUESTED
 				if (this.max===undefined){
 					if (noMin || this.min.milli <= key.milli){
-						this.min = nvl(this.min, floor);
+						this.min = coalesce(this.min, floor);
 						this.max = ceil;
 						Qb.domain.duration.addRange(this.min, this.max, this);
 					}//endif

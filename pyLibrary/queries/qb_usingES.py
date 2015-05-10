@@ -24,7 +24,7 @@ from pyLibrary.queries.es14.util import aggregates1_4
 from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import nvl, split_field, set_default
+from pyLibrary.dot import coalesce, split_field, set_default
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 
@@ -45,8 +45,8 @@ class FromES(Container):
     @use_settings
     def __init__(self, host, index, type=None, alias=None, name=None,  port=9200, settings=None):
         self.settings = settings
-        self.name = nvl(name, alias, index)
-        self._es = elasticsearch.Alias(alias=nvl(alias, index), settings=settings)
+        self.name = coalesce(name, alias, index)
+        self._es = elasticsearch.Alias(alias=coalesce(alias, index), settings=settings)
         self.settings.type = self._es.settings.type  # Alias() WILL ASSIGN A TYPE IF IT WAS MISSING
         self.edges = Dict()
         self.worker = None
@@ -226,7 +226,7 @@ class FromES(Container):
                     }]
         else:
             return [{
-                        "name": nvl(edge.name, edge.value),
+                        "name": coalesce(edge.name, edge.value),
                         "value": edge.value
                     }]
 
@@ -278,7 +278,7 @@ class FromESMetadata(Container):
     @use_settings
     def __init__(self, host, index, alias=None, name=None, port=9200, settings=None):
         self.settings = settings
-        self.name = nvl(name, alias, index)
+        self.name = coalesce(name, alias, index)
         self._es = elasticsearch.Cluster(settings=settings)
         self.metadata = self._es.get_metadata()
         self.columns = None

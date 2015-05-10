@@ -12,7 +12,7 @@ from __future__ import division
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND, SUM, OR
-from pyLibrary.dot import nvl, split_field
+from pyLibrary.dot import coalesce, split_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap, unwrap
 from pyLibrary.queries.es09.expressions import unpack_terms
@@ -60,7 +60,7 @@ def es_fieldop(es, query):
             "filter": simplify_esfilter(query.where)
         }
     }
-    FromES.size = nvl(query.limit, 200000)
+    FromES.size = coalesce(query.limit, 200000)
     FromES.fields = DictList()
     for s in select.value:
         if s == "*":
@@ -135,7 +135,7 @@ def es_setop(es, mvel, query):
             FromES.facets.mvel = {
                 "terms": {
                     "field": select[0].value,
-                    "size": nvl(query.limit, 200000)
+                    "size": coalesce(query.limit, 200000)
                 },
                 "facet_filter": simplify_esfilter(query.where)
             }
@@ -155,7 +155,7 @@ def es_setop(es, mvel, query):
         FromES.facets.mvel = {
             "terms": {
                 "script_field": mvel.code(simple_query),
-                "size": nvl(simple_query.limit, 200000)
+                "size": coalesce(simple_query.limit, 200000)
             },
             "facet_filter": simplify_esfilter(query.where)
         }
@@ -163,7 +163,7 @@ def es_setop(es, mvel, query):
         FromES.facets.mvel = {
             "terms": {
                 "script_field": mvel.code(query),
-                "size": nvl(query.limit, 200000)
+                "size": coalesce(query.limit, 200000)
             },
             "facet_filter": simplify_esfilter(query.where)
         }

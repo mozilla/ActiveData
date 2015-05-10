@@ -37,7 +37,7 @@ PickDim.prototype._findPart=function(name){
 	var selected;
 
 	if (!this.focus) Log.error("Must add a dimension before finding a part");
-	var parts = nvl(this.focus.edge.edges, this.focus.edge.partitions);
+	var parts = coalesce(this.focus.edge.edges, this.focus.edge.partitions);
 	if (!parts) Log.error("No part by name of " + name);
 
 	parts.forall(function(v, i){
@@ -114,7 +114,7 @@ PickDim.prototype.toggle = function(name){
 
 PickDim.prototype.addPart=function(edge){
 	//NO NEED TO SHOW ANOTHER LEVEL, IF THERE ARE NONE
-	var parts=nvl(edge.edges, edge.partitions);
+	var parts=coalesce(edge.edges, edge.partitions);
 	if (!parts) return;
 
 
@@ -133,7 +133,7 @@ PickDim.prototype.addPart=function(edge){
 		'<tr>'+
 			'<td><div class="dim-container"><div class="position">'+
 				parts.map(function(v, i){
-					if (i>=nvl(edge.limit, DEFAULT_CHILD_LIMIT)) return undefined;
+					if (i>=coalesce(edge.limit, DEFAULT_CHILD_LIMIT)) return undefined;
 					return '<span class="dim-part" name="'+v.name+'">'+v.name+'</span>';
 				}).join("")+
 			'</div></td>'+
@@ -306,7 +306,7 @@ PickDim.prototype.getQuery=function(){
 					"domain":{
 						"type":self.focus.edge.type,
 						"partitions":selectedParts.map(function(p,i){
-							if (i>=nvl(self.focus.edge.limit, DEFAULT_CHILD_LIMIT)) return undefined;
+							if (i>=coalesce(self.focus.edge.limit, DEFAULT_CHILD_LIMIT)) return undefined;
 							return {
 								"name":p.name,
 								"value": p.value,
@@ -333,7 +333,7 @@ PickDim.prototype.getQuery=function(){
 					"domain":{
 						"type":"set",
 						"partitions":selectedParts.map(function(p,i){
-							if (i>=nvl(self.focus.edge.limit, DEFAULT_CHILD_LIMIT)) return undefined;
+							if (i>=coalesce(self.focus.edge.limit, DEFAULT_CHILD_LIMIT)) return undefined;
 							return p;
 						}),
 						"getKey":function(p){return p.name;},

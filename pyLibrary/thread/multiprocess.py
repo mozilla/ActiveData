@@ -31,6 +31,7 @@ class Log_usingInterProcessQueue(Log):
 class Multiprocess(object):
     # THE COMPLICATION HERE IS CONNECTING THE DISPARATE LOGGING TO
     # A CENTRAL POINT
+    # ONLY THE MAIN THREAD CAN CREATE AND COMMUNICATE WITH multiprocess.Process
 
 
     def __init__(self, functions):

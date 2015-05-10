@@ -16,7 +16,7 @@ from datetime import timedelta
 import logging
 import sys
 
-from .log_usingStream import Log_usingStream, time_delta_pusher
+from .log_usingThreadedStream import Log_usingThreadedStream, time_delta_pusher
 from .logs import BaseLog, DEBUG_LOGGING, Log
 from pyLibrary.dot import unwrap
 from pyLibrary.thread import threads
@@ -70,7 +70,7 @@ def make_log_from_settings(settings):
     except Exception, e:
         if settings.stream and not constructor:
             # PROVIDE A DEFAULT STREAM HANLDER
-            constructor = Log_usingStream
+            constructor = Log_usingThreadedStream
         else:
             Log.error("Can not find class {{class}}", {"class": path}, e)
 

@@ -179,7 +179,10 @@ def _normalize_select(select, schema=None):
     else:
         select = wrap(select)
         output = select.copy()
-        output.name = coalesce(select.name, select.value, select.aggregate)
+        if not select.value or isinstance(select.value, basestring):
+            output.name = coalesce(select.name, select.value, select.aggregate)
+        elif not output.name:
+            Log.error("Must give name to each column in select clause")
 
         if not output.name:
             Log.error("expecting select to have a name: {{select}}", {"select": select})

@@ -12,12 +12,14 @@ from __future__ import division
 
 from boto import sqs
 from boto.sqs.message import Message
+import requests
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap
+from pyLibrary.dot import wrap, unwrap
 from pyLibrary.maths import Math
 from pyLibrary.meta import use_settings
+from pyLibrary.thread.threads import Thread
 from pyLibrary.times.durations import Duration
 
 
@@ -27,8 +29,8 @@ class Queue(object):
         self,
         name,
         region,
-        aws_access_key_id,
-        aws_secret_access_key,
+        aws_access_key_id=None,
+        aws_secret_access_key=None,
         debug=False,
         settings=None
     ):
@@ -39,9 +41,9 @@ class Queue(object):
             Log.error("Can not find region {{region}} in {{regions}}", {"region": settings.region, "regions": [r.name for r in sqs.regions()]})
 
         conn = sqs.connect_to_region(
-            region_name=settings.region,
-            aws_access_key_id=settings.aws_access_key_id,
-            aws_secret_access_key=settings.aws_secret_access_key,
+            region_name=unwrap(settings.region),
+            aws_access_key_id=unwrap(settings.aws_access_key_id),
+            aws_secret_access_key=unwrap(settings.aws_secret_access_key),
         )
         self.queue = conn.get_queue(settings.name)
         if self.queue == None:
@@ -96,5 +98,24 @@ class Queue(object):
     def close(self):
         self.commit()
 
+
+def capture_termination_signal(please_stop):
+    """
+    WILL SIGNAL please_stop WHEN THIS AWS INSTANCE IS DUE FOR SHUTDOWN
+    """
+
+    def worker(please_stop):
+        while not please_stop:
+            try:
+                response = requests.get("http://169.254.169.254/latest/meta-data/spot/termination-time")
+                if response.status_code != 400:
+                    please_stop.go()
+                    return
+            except Exception, e:
+                pass  # BE QUIET
+                Thread.sleep(seconds=61)
+            Thread.sleep(seconds=11)
+
+    Thread.run("listen for termination", worker)
 
 from . import s3

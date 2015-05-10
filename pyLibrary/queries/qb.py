@@ -46,10 +46,8 @@ def run(query):
     if isinstance(frum, Container):
         with frum:
             return frum.query(query)
-    elif isinstance(frum, GeneratorType):
-        frum = list(frum)
-    elif isinstance(frum, (list, GeneratorType)):
-        pass
+    elif isinstance(frum, (list, set, GeneratorType)):
+        frum = wrap(list(frum))
     elif isinstance(frum, Cube):
         if is_aggs(query):
             return cube_aggs(frum, query)
@@ -57,7 +55,7 @@ def run(query):
     elif isinstance(frum, Query):
         frum = run(frum).data
     else:
-        Log.error("Do not know how to handle")
+        Log.error("Do not know how to handle {{type}}", {"type":frum.__class__.__name__})
 
     if is_aggs(query):
         frum = list_aggs(frum, query)

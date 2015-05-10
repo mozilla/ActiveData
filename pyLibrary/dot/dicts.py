@@ -110,7 +110,7 @@ class Dict(dict):
         try:
             output = _get(self, key)
             return wrap(output)
-        except Exception:
+        except Exception, _:
             d = _get(self, "__dict__")
             if isinstance(key, unicode):
                 from pyLibrary.debugs.logs import Log

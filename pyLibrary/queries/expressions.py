@@ -29,6 +29,7 @@ def compile_expression(source):
     # FORCE MODULES TO BE IN NAMESPACE
     _ = coalesce
     _ = Date
+    _ = convert
 
     output = None
     exec """
@@ -36,7 +37,7 @@ def output(row, rownum=None, rows=None):
     try:
         return """ + source + """
     except Exception, e:
-        Log.error("Problem with dynamic function {{func|quote}}", {"func": """ + convert.value2quote(source) + """})
+        Log.error("Problem with dynamic function {{func|quote}}", {"func": """ + convert.value2quote(source) + """}, e)
 """
     return output
 
@@ -50,6 +51,8 @@ def qb_expression(expr):
 
 
 def qb_expression_to_function(expr):
+    if expr!=None and not isinstance(expr, (dict, list)) and  hasattr(expr, "__call__"):
+        return expr
     return compile_expression(qb_expression_to_python(expr))
 
 
@@ -69,14 +72,22 @@ def qb_expression_to_esfilter(expr):
 
 
 def qb_expression_to_ruby(expr):
-    if is_keyword(expr):
-        return "doc["+convert.string2quote(expr)+"].value"
-    if Math.is_number(expr):
+
+    if expr == None:
+        return "nil"
+    elif Math.is_number(expr):
         return unicode(expr)
-    if isinstance(expr, Date):
+    elif is_keyword(expr):
+        return "doc[" + convert.string2quote(expr) + "].value"
+    elif isinstance(expr, CODE):
+        return expr.code
+    elif isinstance(expr, Date):
         return unicode(expr.unix)
-    if not expr:
+    elif expr is True:
         return "true"
+    elif expr is False:
+        return "false"
+
     op, term = expr.items()[0]
 
     mop = ruby_multi_operators.get(op)
@@ -127,7 +138,11 @@ def qb_expression_to_ruby(expr):
 
 def qb_expression_to_python(expr):
     if expr == None:
-        return "True"
+        return "None"
+    elif Math.is_number(expr):
+        return unicode(expr)
+    elif isinstance(expr, Date):
+        return unicode(expr.unix)
     elif isinstance(expr, unicode):
         if expr == ".":
             return "row"
@@ -135,12 +150,12 @@ def qb_expression_to_python(expr):
             return "row[" + convert.value2quote(expr) + "]"
         else:
             Log.error("Expecting a json path")
+    elif isinstance(expr, CODE):
+        return expr.code
     elif expr is True:
         return "True"
     elif expr is False:
         return "False"
-    elif Math.is_number(expr):
-        return unicode(expr)
 
     op, term = expr.items()[0]
 
@@ -229,7 +244,7 @@ def get_all_vars(expr):
                 return output
             else:
                 a, b = term.items()[0]
-                return get_all_vars(a) | get_all_vars(b)
+                return get_all_vars(a)
         else:
             Log.error("Expecting binary term")
 
@@ -482,6 +497,8 @@ class RangeOp(object):
         return set([self.field])
 
 
+
+
 complex_operators = {
     "terms": TermsOp,
     "exists": ExistsOp,
@@ -686,6 +703,9 @@ def _convert_not_equal(op, term):
 
 
 def _convert_eq(eq, term):
+    if not term:
+        return {"match_all":{}}
+
     if isinstance(term, list):
         if len(term) != 2:
             Log.error("the 'eq' clause only accepts list of length 2")
@@ -693,13 +713,17 @@ def _convert_eq(eq, term):
         output = {"script": {"script" : qb_expression_to_ruby({"eq":term})}}
         return output
 
+    def _convert(k, v):
+        if isinstance(v, list):
+            return {"terms": {k: v}}
+        else:
+            return {"term": {k: v}}
 
-
-    var, val = term.items()[0]
-    if isinstance(val, list):
-        return {"terms": term}
+    items = term.items()
+    if len(items) > 1:
+        return {"and": [_convert(k, v) for k, v in items]}
     else:
-        return {"term": term}
+        return _convert(*items[0])
 
 
 def _convert_in(op, term):
@@ -768,3 +792,10 @@ converter_map = {
 }
 
 
+class CODE(object):
+    """
+    WRAP SAFE CODE
+    DO NOT USE ON UNKNOWN SOURCES, OTHERWISE YOU GET REMOTE CODE EXPLOITS
+    """
+    def __init__(self, code):
+        self.code = code

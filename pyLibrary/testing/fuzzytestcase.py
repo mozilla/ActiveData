@@ -74,7 +74,9 @@ def zipall(*args):
 def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=None):
     show_detail=True
     try:
-        if isinstance(expected, dict):
+        if test==None and expected==None:
+            return
+        elif isinstance(expected, dict):
             for k, v2 in expected.items():
                 if isinstance(k, basestring):
                     v1 = dot.get_attr(test, literal_field(k))

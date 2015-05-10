@@ -182,6 +182,11 @@ class Duration(object):
             return True
         return self.milli > Duration(other).milli
 
+    def ceiling(self, interval=None):
+        if interval is None:
+            interval = DAY
+        return (self + interval).floor(interval) - interval
+
     def floor(self, interval=None):
         if not isinstance(interval, Duration):
             from pyLibrary.debugs.logs import Log

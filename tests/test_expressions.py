@@ -44,9 +44,25 @@ class TestExpressions(FuzzyTestCase):
         expected = set(["result.test"])
         self.assertEqual(result, expected, "expecting the one and only variable")
 
-    def test_eq(self):
+    def test_eq1(self):
         where = {"eq": {"a": 20}}
         result = simplify_esfilter(qb_expression_to_esfilter(where))
         self.assertEqual(result, {"term": {"a": 20}})
+
+    def test_eq2(self):
+        where = {"eq": {
+            "a": 1,
+            "b": 2
+        }}
+        result = simplify_esfilter(qb_expression_to_esfilter(where))
+        self.assertEqual(result, {"and": [{"term": {"a": 1}}, {"term": {"b": 2}}]})
+
+    def test_eq3(self):
+        where = {"eq": {
+            "a": 1,
+            "b": [2, 3]
+        }}
+        result = simplify_esfilter(qb_expression_to_esfilter(where))
+        self.assertEqual(result, {"and": [{"term": {"a": 1}}, {"term": {"b": [2, 3]}}]})
 
 

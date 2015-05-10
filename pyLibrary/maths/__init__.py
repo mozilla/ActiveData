@@ -229,6 +229,10 @@ class Math(object):
 
     @staticmethod
     def max(*values):
+        return Math.MAX(values)
+
+    @staticmethod
+    def MAX(values):
         output = None
         for v in values:
             if v == None:
@@ -241,6 +245,10 @@ class Math(object):
 
     @staticmethod
     def min(*values):
+        return Math.MIN(values)
+
+    @staticmethod
+    def MIN(values):
         output = None
         for v in values:
             if v == None:

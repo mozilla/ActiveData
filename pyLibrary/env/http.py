@@ -63,18 +63,24 @@ def request(method, url, **kwargs):
         url = url.encode("ascii")
 
     _to_ascii_dict(kwargs)
-    kwargs[b'timeout'] = coalesce(kwargs.get(b'timeout'), default_timeout)
+    timeout = kwargs[b'timeout'] = coalesce(kwargs.get(b'timeout'), default_timeout)
 
-    if len(coalesce(kwargs.get(b"data"))) > 1000:
-        compressed = convert.bytes2zip(kwargs[b"data"])
-        kwargs[b"headers"][b'content-encoding'] = b'gzip'
-        kwargs[b"data"] = compressed
+    try:
+        if len(coalesce(kwargs.get(b"data"))) > 1000:
+            compressed = convert.bytes2zip(kwargs[b"data"])
+            kwargs[b"headers"][b'content-encoding'] = b'gzip'
+            kwargs[b"data"] = compressed
 
-        _to_ascii_dict(kwargs[b"headers"])
-        return session.request(method=method, url=url, **kwargs)
-    else:
-        _to_ascii_dict(kwargs.get(b"headers"))
-        return session.request(method=method, url=url, **kwargs)
+            _to_ascii_dict(kwargs[b"headers"])
+            return session.request(method=method, url=url, **kwargs)
+        else:
+            _to_ascii_dict(kwargs.get(b"headers"))
+            return session.request(method=method, url=url, **kwargs)
+    except Exception, e:
+        if " Read timed out." in e:
+            Log.error("Timeout failure (timeout was {{timeout}}", {"timeout": timeout}, e)
+        else:
+            Log.error("Request failure", e)
 
 def _to_ascii_dict(headers):
     if headers is None:

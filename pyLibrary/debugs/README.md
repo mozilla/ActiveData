@@ -17,16 +17,49 @@ This logging module is additionally responsible for raising exceptions,
 collecting the trace and context, and then deducing if it must be logged, or 
 if it can be ignored because something can handle it.
 
-Getting Started
+Quick Notes
 ---------------
 
-###Instead of `raise` use `Log.error()`
+**Use `Log.note()` for all logging**
+
+```python
+    Log.note("Hello, World!")
+```
+
+There is no need to create logger objects.  The `Log` module will keep track of what, where and who of every call.
+
+
+**Use named parameters**
+
+```python
+    Log.note("Hello, {{name}}!", {"name": "World!"})
+```
+
+All logs are structured logs; the parameters will be included, unchanged, in the log structure.  This library also expects all parameter values to be JSON-serializable they can be stored/processed by downstream JSON tools.
+  
+```javascript
+	{//EXAMPLE STRUCTURED LOG
+		"template": "Hello, {{name}}!",
+		"param": {"name": "World!"},
+		"timestamp": 1429721745,
+		"thread": {
+			"name": "Main thread"
+		},
+		"location": {
+			"line": 3,
+			"file": "hello.py",
+			"method": "hello"
+		}
+	}
+```
+
+**Instead of `raise` use `Log.error()`**
 
 ```python
     Log.error("This will throw an error")
 ```
 
-###Always chain your exceptions
+**Always chain your exceptions**
 
 ```python
     try:
@@ -35,7 +68,7 @@ Getting Started
         Log.error("Describe what you were trying to do", e)
 ```
 
-###Name your logging parameters for later machine manipulation:
+**Name your logging parameters for later machine manipulation:**
 
 ```python
     def worker(value):
@@ -46,7 +79,8 @@ Getting Started
             Log.error("Failure to work with {{key2}}", {"key2":value2}, e)
 ```
 
-###If you can deal with an exception, then it will never be logged
+
+**If you can deal with an exception, then it will never be logged**
 
 ```python
     def worker(value):
@@ -56,8 +90,7 @@ Getting Started
             # Try something else
 ```
 
-###Use `Log.warning()` if your code can deal with an exception, but you still 
-want to log it as an issue
+**Use `Log.warning()` if your code can deal with an exception, but you still want to log it as an issue**
 
 ```python
     def worker(value):
@@ -67,16 +100,6 @@ want to log it as an issue
         except Exception, e:
             Log.warning("Failure to work with {{key4}}", {"key4":value4}, e)
 ```
-
-
-This library also expects all log messages and exception messages to have named
-parameters so they can be stored in easy-to-digest JSON, which can be processed
-by downstream tools.
-
-```python
-    Log.error("This will throw an {{name}} error", {"name":"special")
-```
-
 
 Configuration
 -------------
@@ -147,7 +170,7 @@ output.
 
 These debug variables can be set by configuration file:
 
-```json
+```javascript
 	// settings.json
 	{
 		"debug":{

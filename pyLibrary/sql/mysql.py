@@ -20,6 +20,7 @@ from pymysql import connect, InterfaceError
 from pyLibrary import jsons
 from pyLibrary.maths import Math
 from pyLibrary.meta import use_settings
+from pyLibrary.sql import SQL
 from pyLibrary.strings import expand_template
 from pyLibrary.dot import coalesce, wrap, listwrap, unwrap
 from pyLibrary import convert

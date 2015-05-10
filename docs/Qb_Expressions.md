@@ -273,7 +273,7 @@ Conditional Operators (Not Yet Implemented)
 
 ###`coalesce` Operator###
 
-Return the first `null` value in the list of evaluated expressions 
+Return the first not `null` value in the list of evaluated expressions 
 
 		{"coalesce": [expr1, expr2, ... exprN]}
 
@@ -304,7 +304,7 @@ Evaluates a list of `when` sub-clauses in order, if one evaluates to `true` the 
 		]}
 
 The last item in the list can be a plain expression, called the `default_expression`.  It is  evaluated-and-returned only if all previous conditions evaluate to `false`.  If the `default_expression` is missing, and all conditions evaluate to `false`, `null` is returned.  
-If any `when` sub-clauses contain an `else` clause, it is ignored.
+***If any `when` sub-clauses contain an `else` clause, it is ignored.***
 
 
 Operator Philosophy

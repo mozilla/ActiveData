@@ -71,6 +71,18 @@ class UniqueIndex(object):
                     "value": val
                 })
 
+    def remove(self, val):
+        key = value2key(self._keys, val)
+        if key == None:
+            Log.error("Expecting key to not be None")
+
+        d = self._data.get(key)
+        if d is None:
+            # ALREADY GONE
+            return
+        else:
+            del self._data[key]
+            self.count -= 1
 
     def __contains__(self, key):
         return self[key] != None
@@ -93,8 +105,13 @@ class UniqueIndex(object):
 
     def __or__(self, other):
         output = UniqueIndex(self._keys)
-        for v in self: output.add(v)
-        for v in other: output.add(v)
+        for v in self:
+            output.add(v)
+        for v in other:
+            try:
+                output.add(v)
+            except Exception, e:
+                pass
         return output
 
     def __len__(self):

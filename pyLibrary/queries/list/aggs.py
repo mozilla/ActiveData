@@ -36,7 +36,7 @@ def list_aggs(frum, query):
         if isinstance(e.domain, DefaultDomain):
             e.domain = SimpleSetDomain(partitions=list(sorted(set(frum.select(e.value)))))
 
-    for s in query.select:
+    for s in listwrap(query.select):
         s["exec"] = qb_expression_to_function(s.value)
 
     result = {
@@ -105,6 +105,20 @@ def get_matches(e, d):
                 return []
             else:
                 return [c]
+    elif e.range and e.range.mode == "inclusive":
+        for p in e.domain.partitions:
+            if p["max"] == None or p["min"] == None:
+                Log.error("Inclusive expects domain parts to have `min` and `max` properties")
+
+        output = []
+        mi, ma = d[e.range.min], d[e.range.max]
+        for p in e.domain.partitions:
+            if mi <= p["max"] and p["min"] < ma:
+                output.append(p.dataIndex)
+        if e.allowNulls and not output:
+            output.append(len(e.domain.partitions))  # ENSURE THIS IS NULL
+        return output
+
     elif e.range:
         output = []
         mi, ma = d[e.range.min], d[e.range.max]

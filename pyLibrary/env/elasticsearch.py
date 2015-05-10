@@ -25,7 +25,7 @@ from pyLibrary.strings import utf82unicode
 from pyLibrary.dot import coalesce, Null, Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap
-from pyLibrary.thread.threads import ThreadedQueue
+from pyLibrary.thread.threads import ThreadedQueue, Thread
 
 
 class Index(object):
@@ -54,9 +54,13 @@ class Index(object):
         debug=False,  # DO NOT SHOW THE DEBUG STATEMENTS
         settings=None
     ):
+        if index==None or type==None:
+            Log.error("not allowed")
         if index == alias:
             Log.error("must have a unique index name")
 
+        self.cluster_state = None
+        self.cluster_metadata = None
         self.debug = debug
         if self.debug:
             Log.alert("elasticsearch debugging for index {{index}} is on", {"index": settings.index})
@@ -69,6 +73,8 @@ class Index(object):
             if index and alias==None:
                 settings.alias = settings.index
                 settings.index = index
+            if index==None:
+                Log.error("not allowed")
         except Exception, e:
             # EXPLORING (get_metadata()) IS NOT ALLOWED ON THE PUBLIC CLUSTER
             pass
@@ -86,7 +92,7 @@ class Index(object):
 
             if index == None and retry:
                 #TRY AGAIN, JUST IN CASE
-                self.cluster.cluster_metadata = None
+                self.cluster.cluster_state = None
                 return self.get_schema(retry=False)
 
             if not index.mappings[self.settings.type]:
@@ -114,7 +120,7 @@ class Index(object):
 
     def add_alias(self, alias=None):
         if alias:
-            self.cluster_metadata = None
+            self.cluster_state = None
             self.cluster._post(
                 "/_aliases",
                 data=convert.unicode2utf8(convert.value2json({
@@ -126,7 +132,7 @@ class Index(object):
             )
         else:
             # SET ALIAS ACCORDING TO LIFECYCLE RULES
-            self.cluster_metadata = None
+            self.cluster_state = None
             self.cluster._post(
                 "/_aliases",
                 data=convert.unicode2utf8(convert.value2json({
@@ -184,12 +190,12 @@ class Index(object):
     def delete_record(self, filter):
         self.cluster.get_metadata()
 
-        if self.cluster.node_metadata.version.number.startswith("0.90"):
+        if self.cluster.cluster_state.version.number.startswith("0.90"):
             query = {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}
-        elif self.cluster.node_metadata.version.number.startswith("1.0"):
+        elif self.cluster.cluster_state.version.number.startswith("1.0"):
             query = {"query": {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
@@ -356,7 +362,9 @@ class Cluster(object):
 
         settings.setdefault("explore_metadata", True)
 
+        self.cluster_state = None
         self.cluster_metadata = None
+
         self.debug = settings.debug
         self.settings = settings
         self.version = None
@@ -499,9 +507,9 @@ class Cluster(object):
         if self.settings.explore_metadata:
             if not self.cluster_metadata:
                 response = self.get("/_cluster/state")
-                self.cluster_metadata = response.metadata
-                self.node_metadata = self.get("/")
-                self.version = self.node_metadata.version.number
+                self.cluster_metadata = wrap(response.metadata)
+                self.cluster_state = wrap(self.get("/"))
+                self.version = self.cluster_state.version.number
         else:
             Log.error("Metadata exploration has been disabled")
         return self.cluster_metadata
@@ -728,7 +736,7 @@ class Alias(object):
 
             if index == None and retry:
                 #TRY AGAIN, JUST IN CASE
-                self.cluster.cluster_metadata = None
+                self.cluster.cluster_state = None
                 return self.get_schema(retry=False)
 
             properties = index.mappings[self.settings.type]
@@ -750,6 +758,49 @@ class Alias(object):
             if not mapping[self.settings.type]:
                 Log.error("{{index}} does not have type {{type}}", self.settings)
             return wrap({"mappings": mapping[self.settings.type]})
+
+    def delete(self, filter):
+        self.cluster.get_metadata()
+
+        if self.cluster.cluster_state.version.number.startswith("0.90"):
+            query = {"filtered": {
+                "query": {"match_all": {}},
+                "filter": filter
+            }}
+        elif self.cluster.cluster_state.version.number.startswith("1."):
+            query = {"query": {"filtered": {
+                "query": {"match_all": {}},
+                "filter": filter
+            }}}
+        else:
+            raise NotImplementedError
+
+        if self.debug:
+            Log.note("Delete bugs:\n{{query}}", {"query": query})
+
+        keep_trying = True
+        while keep_trying:
+            result = self.cluster.delete(
+                self.path + "/_query",
+                data=convert.value2json(query),
+                timeout=60
+            )
+            keep_trying = False
+            for name, status in result._indices.items():
+                if status._shards.failed > 0:
+                    if status._shards.failures[0].reason.find("rejected execution (queue capacity ") >= 0:
+                        keep_trying = True
+                        Thread.sleep(seconds=5)
+                        break
+
+            if not keep_trying:
+                for name, status in result._indices.items():
+                    if status._shards.failed > 0:
+                        Log.error("ES shard(s) report Failure to delete from {{index}}: {{message}}.  Query was {{query}}", {
+                            "index": name,
+                            "query": query,
+                            "message": status._shards.failures[0].reason
+                        })
 
 
     def search(self, query, timeout=None):

@@ -42,7 +42,7 @@ class Cube(object):
 
         # ENSURE frum IS PROPER FORM
         if isinstance(select, list):
-            if OR(not isinstance(v, Matrix) for v in data.values()):
+            if edges and OR(not isinstance(v, Matrix) for v in data.values()):
                 Log.error("Expecting data to be a dict with Matrix values")
 
         if not edges:
@@ -189,7 +189,10 @@ class Cube(object):
             for name, v in item.items():
                 ei, parts = wrap([(i, e.domain.partitions) for i, e in enumerate(self.edges) if e.name == name])[0]
                 if not parts:
-                    Log.error("Can not find {{name}} in list of edges, maybe this feature is not implemented yet", {"name": name})
+                    Log.error("Can not find {{name}}=={{value|quote}} in list of edges, maybe this feature is not implemented yet", {
+                        "name": name,
+                        "value": v
+                    })
                 part = wrap([p for p in parts if p.value == v])[0]
                 if not part:
                     return Null
@@ -197,14 +200,14 @@ class Cube(object):
                     coordinates[ei] = part.dataIndex
 
             edges = [e for e, v in zip(self.edges, coordinates) if v is None]
-            if not edges and self.is_value:
+            if not edges:
                 # ZERO DIMENSIONAL VALUE
-                return self.data.values()[0].__getitem__(coordinates)
+                return wrap({k: v.__getitem__(coordinates) for k, v in self.data.items()})
             else:
                 output = Cube(
                     select=self.select,
                     edges=wrap([e for e, v in zip(self.edges, coordinates) if v is None]),
-                    data={k: c.__getitem__(coordinates) for k, c in self.data.items()}
+                    data={k: Matrix(values=c.__getitem__(coordinates)) for k, c in self.data.items()}
                 )
                 return output
         elif isinstance(item, basestring):

@@ -28,7 +28,7 @@
 		"debug": true
 	},
 	"elasticsearch": {
-		"host": "http://52.11.57.80",
+		"host": "http://54.149.35.214",
 		"port": "9200",
 		"index": "testdata",
 		"type": "test_result",

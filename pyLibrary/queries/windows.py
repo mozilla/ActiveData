@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from copy import copy
 import functools
 
 from pyLibrary.maths import stats
@@ -287,12 +288,33 @@ class Percentile(WindowFunction):
         return stats.percentile(self.total, self.percentile)
 
 
+class List(WindowFunction):
+    def __init__(self, **kwargs):
+        object.__init__(self)
+        self.agg = []
+
+    def add(self, value):
+        self.agg.append(value)
+
+    def sub(self, value):
+        if value != self.agg[0]:
+            Log.error("Not a sliding window")
+        self.agg = self.agg[1:]
+
+    def end(self):
+        return copy(self.agg)
+
+
+
+
+
 name2accumulator = {
     "count": Count,
     "sum": Sum,
     "exists": Exists,
     "max": Max,
     "maximum": Max,
+    "list": List,
     "min": Min,
     "minimum": Min,
     "percentile": Percentile,

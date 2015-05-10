@@ -120,7 +120,7 @@ def query(path):
         e = Except.wrap(e)
 
         record_request(flask.request, None, flask.request.environ['body_copy'], e)
-        Log.warning("problem", e)
+        Log.warning("Problem sent back to client", e)
         e = e.as_dict()
         e.meta.active_data_response_time = total_duration.seconds
 

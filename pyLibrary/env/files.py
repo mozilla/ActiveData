@@ -71,7 +71,16 @@ class File(object):
 
     @property
     def abspath(self):
-        return os.path.abspath(self._filename)
+        if self._filename.startswith("~"):
+            home_path = os.path.expanduser("~")
+            if os.sep == "\\":
+                home_path = home_path.replace(os.sep, "/")
+            if home_path.endswith("/"):
+                home_path = home_path[:-1]
+
+            return home_path + self._filename[1::]
+        else:
+            return os.path.abspath(self._filename)
 
     @staticmethod
     def add_suffix(filename, suffix):
@@ -156,10 +165,15 @@ class File(object):
         return os.path.isdir(self._filename)
 
     def read_bytes(self):
-        if not self.parent.exists:
-            self.parent.create()
-        with open(self._filename, "rb") as f:
-            return f.read()
+        try:
+            if not self.parent.exists:
+                self.parent.create()
+            with open(self._filename, "rb") as f:
+                return f.read()
+        except Exception, e:
+            from pyLibrary.debugs.logs import Log
+
+            Log.error("roblem reading file {{filename}}", self.abspath)
 
     def write_bytes(self, content):
         if not self.parent.exists:

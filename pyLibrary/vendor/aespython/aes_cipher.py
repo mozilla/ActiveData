@@ -16,6 +16,8 @@ Copyright (c) 2010, Adam Newman http://www.caller9.com/
                     Demur Rumed https://github.com/serprex
 Licensed under the MIT license http://www.opensource.org/licenses/mit-license.php
 """
+from pyLibrary.debugs.logs import Log
+
 __author__ = "Adam Newman"
 
 # Normally use relative import. In test mode use local import.
@@ -84,7 +86,8 @@ class AESCipher:
 
     def _add_round_key (self, state, round):
         # XOR the state with the current round key
-        for k,(i,j) in enumerate(zip(state, self._expanded_key[round*16:(round+1)*16])):state[k]=i^j
+        for k, (i, j) in enumerate(zip(state, self._expanded_key[round * 16:(round + 1) * 16])):
+            state[k] = i ^ j
 
     def cipher_block (self, state):
         """Perform AES block cipher on input"""
@@ -106,8 +109,8 @@ class AESCipher:
 
     def decipher_block (self, state):
         """Perform AES block decipher on input"""
-        # null padding. Padding actually should not be needed here with valid input.
-        state=state+[0]*(16-len(state))
+        if len(state) != 16:
+            Log.error("Expecting block of 16")
 
         self._add_round_key(state, self._Nr)
 

@@ -73,33 +73,6 @@ class Matrix(object):
         if len(index) == 0:
             return self.cube
 
-        def _getitem(c, i):
-            if len(i)==1:
-                select = i[0]
-                if select == None:
-                    return (len(c), ), c
-                elif isinstance(select, slice):
-                    sub = c[select]
-                    dims, cube = zip(*[_getitem(cc, i[1::]) for cc in sub])
-                    return (len(cube),) + dims[0], cube
-                else:
-                    return (), c[select]
-            else:
-                select = i[0]
-                if select == None:
-                    dims, cube = zip(*[_getitem(cc, i[1::]) for cc in c])
-                    return (len(cube),)+dims[0], cube
-                elif isinstance(select, slice):
-                    sub = c[select]
-                    dims, cube = zip(*[_getitem(cc, i[1::]) for cc in sub])
-                    return (len(cube),)+dims[0], cube
-                else:
-                    try:
-                        return _getitem(c[select], i[1::])
-                    except Exception, _:
-                        pass
-
-
         dims, cube = _getitem(self.cube, index)
 
         if len(dims) == 0:
@@ -246,7 +219,8 @@ class Matrix(object):
         ITERATE THROUGH ALL coord, value PAIRS
         """
         for c in self._all_combos():
-            yield c, self[c]
+            _, value = _getitem(self.cube, c)
+            yield c, value
 
 
     def _all_combos(self):
@@ -343,5 +317,35 @@ def _groupby(cube, depth, intervals, offset, output, group, new_coord):
     else:
         for i, c in enumerate(cube):
             _groupby(c, depth + 1, intervals, offset, output, group + (-1, ), new_coord + [i])
+
+
+
+
+
+def _getitem(c, i):
+    if len(i)==1:
+        select = i[0]
+        if select == None:
+            return (len(c), ), c
+        elif isinstance(select, slice):
+            sub = c[select]
+            dims, cube = zip(*[_getitem(cc, i[1::]) for cc in sub])
+            return (len(cube),) + dims[0], cube
+        else:
+            return (), c[select]
+    else:
+        select = i[0]
+        if select == None:
+            dims, cube = zip(*[_getitem(cc, i[1::]) for cc in c])
+            return (len(cube),)+dims[0], cube
+        elif isinstance(select, slice):
+            sub = c[select]
+            dims, cube = zip(*[_getitem(cc, i[1::]) for cc in sub])
+            return (len(cube),)+dims[0], cube
+        else:
+            try:
+                return _getitem(c[select], i[1::])
+            except Exception, _:
+                pass
 
 

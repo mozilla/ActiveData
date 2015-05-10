@@ -72,6 +72,9 @@ class DictList(list):
     def select(self, key):
         return DictList(vals=[unwrap(wrap(v)[key]) for v in _get(self, "list")])
 
+    def filter(self, _filter):
+        return DictList(vals=[unwrap(u) for u in (wrap(v) for v in _get(self, "list")) if _filter(u)])
+
     def __iter__(self):
         return (wrap(v) for v in _get(self, "list"))
 

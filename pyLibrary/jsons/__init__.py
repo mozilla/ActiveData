@@ -48,6 +48,7 @@ def replace(match):
 
 
 def quote(value):
+    value
     return "\"" + ESCAPE.sub(replace, value) + "\""
 
 

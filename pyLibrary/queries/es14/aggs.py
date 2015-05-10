@@ -33,13 +33,16 @@ def es_aggsop(es, frum, query):
 
     es_query = Dict()
     new_select = Dict()
+    formula = []
     for s in select:
         if s.aggregate == "count" and (s.value == None or s.value == "."):
             s.pull = "doc_count"
-        else:
+        elif is_keyword(s.value):
             new_select[literal_field(s.value)] += [s]
+        else:
+            formula.append(s)
 
-    for l_value, many in new_select.items():
+    for l_field, many in new_select.items():
         if len(many)>1:
             canonical_name=literal_field(many[0].name)
             es_query.aggs[canonical_name].stats.field = many[0].value
@@ -49,9 +52,14 @@ def es_aggsop(es, frum, query):
                 else:
                     s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
         else:
-            new_select[l_value] = s
+            new_select[l_field] = s
             s.pull = literal_field(s.name) + ".value"
             es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].field = s.value
+
+    for i, s in enumerate(formula):
+        new_select[unicode(i)] = s
+        s.pull = literal_field(s.name) + ".value"
+        es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].script = qb_expression_to_ruby(s.value)
 
     decoders = [AggsDecoder(e, query) for e in coalesce(query.edges, query.groupby, [])]
     start = 0

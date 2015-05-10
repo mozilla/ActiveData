@@ -34,7 +34,7 @@ class Domain(object):
             try:
                 return name2type[desc.get("type")](**desc)
             except Exception, e:
-                Log.error("Do not know domain of type {{type}}", {"type": desc.get("type")}, e)
+                Log.error("Do not know domain of type {{type}}", {"type": desc.get("type")})
         else:
             return object.__new__(cls)
 

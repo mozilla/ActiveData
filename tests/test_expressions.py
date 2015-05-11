@@ -14,6 +14,7 @@ from pyLibrary.queries.domains import is_keyword
 
 from pyLibrary.queries.expressions import get_all_vars, simplify_esfilter, qb_expression_to_esfilter
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
+from pyLibrary.times.dates import Date
 
 
 class TestExpressions(FuzzyTestCase):
@@ -30,7 +31,7 @@ class TestExpressions(FuzzyTestCase):
             "That's a good variable name!"
         )
 
-    def test_range_packing(self):
+    def test_range_packing1(self):
         where = {"and": [
             {"gt": {"a": 20}},
             {"lt": {"a": 40}}
@@ -38,6 +39,15 @@ class TestExpressions(FuzzyTestCase):
 
         result = simplify_esfilter(qb_expression_to_esfilter(where))
         self.assertEqual(result, {"range": {"a": {"gt": 20, "lt": 40}}})
+
+    def test_range_packing2(self):
+        where = {"and": [
+            {"gte": {"build.date": 1429747200}},
+            {"lt": {"build.date": 1429920000}}
+        ]}
+
+        result = simplify_esfilter(qb_expression_to_esfilter(where))
+        self.assertEqual(result, {"range": {"build.date": {"gte": Date("23 APR 2015").unix, "lt": Date("25 APR 2015").unix}}})
 
     def test_value_not_a_variable(self):
         result = get_all_vars({"eq": {"result.test": "/XMLHttpRequest/send-entity-body-document.htm"}})

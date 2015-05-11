@@ -250,6 +250,61 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_select_3(self):
+        test = {
+            "name": "count column",
+            "metadata": {},
+            "data": structured_test_data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": [
+                    {"name": "v", "value": "v", "aggregate": "sum"},
+                    {"name": "d", "value": "_b.d", "aggregate": "sum"}
+                ],
+                "edges": ["_b.r"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"v": 6, "d": 6, "_b": {"r": "a"}},
+                    {"v": 15, "d": 6, "_b": {"r": "b"}},
+                    {"v": 24, "d": 6, "_b": {"r": "c"}},
+                    {"v": 33, "d": 6, "_b": {"r": "d"}},
+                    {"v": 13, "d": 3}
+                ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["v", "d", "_b.r"],
+                "data": [
+                    [6, 6, "a"],
+                    [15, 6, "b"],
+                    [24, 6, "c"],
+                    [33, 6, "d"],
+                    [13, 3, None]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "_b.r",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [{"value": "a"}, {"value": "b"}, {"value": "c"}, {"value": "d"}]
+                        }
+                    }
+                ],
+                "data": {
+                    "v": [6, 15, 24, 33, 13],
+                    "d": [6, 6, 6, 6, 3, None]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
     def test_sum_column(self):
         test = {
             "name": "sum column",
@@ -777,6 +832,23 @@ long_test_data = [
     {"k": "k", "v": 11},
     {"k": "l", "v": 12},
     {"k": "m", "v": 13}
+]
+
+
+structured_test_data = [
+    {"_b": {"r": "a", "d": 1}, "v": 1},
+    {"_b": {"r": "a", "d": 2}, "v": 2},
+    {"_b": {"r": "a", "d": 3}, "v": 3},
+    {"_b": {"r": "b", "d": 1}, "v": 4},
+    {"_b": {"r": "b", "d": 2}, "v": 5},
+    {"_b": {"r": "b", "d": 3}, "v": 6},
+    {"_b": {"r": "c", "d": 1}, "v": 7},
+    {"_b": {"r": "c", "d": 2}, "v": 8},
+    {"_b": {"r": "c", "d": 3}, "v": 9},
+    {"_b": {"r": "d", "d": 1}, "v": 10},
+    {"_b": {"r": "d", "d": 2}, "v": 11},
+    {"_b": {"r": "d", "d": 3}, "v": 12},
+    {"_b": {"r": None, "d": 3}, "v": 13}
 ]
 
 

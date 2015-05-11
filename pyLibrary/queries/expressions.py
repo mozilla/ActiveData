@@ -13,7 +13,7 @@ import itertools
 
 from pyLibrary import convert
 from pyLibrary.collections import OR
-from pyLibrary.dot import coalesce, wrap, set_default
+from pyLibrary.dot import coalesce, wrap, set_default, literal_field
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
@@ -570,7 +570,7 @@ def _normalize(esfilter):
                     f0, tt0 = t0.range.items()[0]
                     f1, tt1 = t1.range.items()[0]
                     if f0 == f1:
-                        set_default(terms[i0].range[f1], tt1)
+                        set_default(terms[i0].range[literal_field(f1)], tt1)
                         terms[i1] = True
                 except Exception, e:
                     pass

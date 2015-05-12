@@ -782,6 +782,7 @@ converter_map = {
     "terms": _convert_in,
     "eq": _convert_eq,
     "ne": _convert_not_equal,
+    "neq": _convert_not_equal,
     "in": _convert_in,
     "missing": _convert_field,
     "exists": _convert_field,

@@ -65,14 +65,17 @@ class Dict(MutableMapping):
 
     def __iter__(self):
         d = _get(self, "_dict")
-        for k,v in d.iteritems():
-            yield (k, wrap(v))
+        return d.__iter__()
 
     def __getitem__(self, key):
         if key == None:
             return Null
         if isinstance(key, str):
             key = key.decode("utf8")
+        elif not isinstance(key, unicode):
+            from pyLibrary.debugs.logs import Log
+            Log.error("only string keys are supported")
+
 
         d = _get(self, "_dict")
 
@@ -272,13 +275,8 @@ class _DictUsingSelf(dict):
         """
         dict.__init__(self)
 
-
     def __bool__(self):
         return True
-
-    def __iter__(self):
-        for k,v in dict.iteritems(self):
-            yield (k, wrap(v))
 
     def __getitem__(self, key):
         if key == None:

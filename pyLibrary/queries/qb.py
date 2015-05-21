@@ -488,7 +488,7 @@ def sort(data, fieldnames=None):
             right = coalesce(right)
             for f in formal:
                 try:
-                    result = value_compare(left[f.field], right[f.fields], f.sort)
+                    result = value_compare(left[f.field], right[f.field], f.sort)
                     if result != 0:
                         return result
                 except Exception, e:

@@ -14,7 +14,6 @@ from collections import Mapping
 from types import GeneratorType, NoneType, ModuleType
 
 _get = object.__getattribute__
-_set = object.__setattr__
 
 
 def inverse(d):
@@ -240,7 +239,7 @@ def _get_attr(obj, path):
         else:
             return _get_attr(obj[attr_name[0]], path[1:])
     try:
-        obj = _get(obj, attr_name)
+        obj = getattr(obj, attr_name)
         return _get_attr(obj, path[1:])
     except Exception, e:
         try:
@@ -271,7 +270,7 @@ def _set_attr(obj, path, value):
         new_value = value
 
     try:
-        _set(obj, attr_name, new_value)
+        _get(obj, "__setattr__")(attr_name, new_value)
         return old_value
     except Exception, e:
         try:

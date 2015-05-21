@@ -16,10 +16,11 @@ from active_data.save_query import SaveQueries
 from pyLibrary import convert, strings, queries
 from pyLibrary.debugs import constants, startup
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import Dict, unwrap, wrap
+from pyLibrary.dot import Dict, unwrap, wrap, coalesce
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.queries import qb
+from pyLibrary.strings import expand_template
 from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
 
@@ -97,7 +98,7 @@ def query(path):
                 )
 
             text = convert.utf82unicode(body)
-            text = replace_vars(text)
+            text = replace_vars(text, flask.request.args)
             data = convert.json2value(text)
             record_request(flask.request, data, None, None)
             result = qb.run(data)
@@ -148,16 +149,29 @@ def overview(path):
         }
     )
 
-def replace_vars(text):
+
+def replace_vars(text, params=None):
     """
     REPLACE {{vars}} WITH ENVIRONMENTAL VALUES
     """
-    var = strings.between(text, "\"{{", "}}\"")
+    start = 0
+    var = strings.between(text, "{{", "}}", start)
     while var:
-        text = text.replace("\"{{"+var+"}}\"", unicode(Date(var).unix))
-        var = strings.between(text, "\"{{", "}}\"")
-    return text
+        replace = "{{" + var + "}}"
+        index = text.find(replace, 0)
+        end = index + len(replace)
 
+        try:
+            replacement = unicode(Date(var).unix)
+            text = text[:index] + replacement + text[end:]
+            start = index + len(replacement)
+        except Exception, _:
+            start += 1
+
+        var = strings.between(text, "{{", "}}", start)
+
+    text = expand_template(text, coalesce(params, {}))
+    return text
 
 
 # Snagged from http://stackoverflow.com/questions/10999990/python-flask-how-to-get-whole-raw-post-body

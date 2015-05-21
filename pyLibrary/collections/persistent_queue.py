@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
@@ -63,10 +64,10 @@ class PersistentQueue(object):
                 except Exception:
                     pass  # HAPPENS FOR self.db.status, BUT MAYBE OTHER PROPERTIES TOO
             if lost:
-                Log.warning("queue file had {{num}} items lost", {"num": lost})
+                Log.warning("queue file had {{num}} items lost",  num= lost)
 
             if DEBUG:
-                Log.note("Persistent queue {{name}} found with {{num}} items", {"name": self.file.abspath, "num": len(self)})
+                Log.note("Persistent queue {{name}} found with {{num}} items",  name= self.file.abspath,  num= len(self))
         else:
             self.db.status = Dict(
                 start=0,
@@ -74,7 +75,7 @@ class PersistentQueue(object):
             )
             self.start = self.db.status.start
             if DEBUG:
-                Log.note("New persistent queue {{name}}", {"name": self.file.abspath})
+                Log.note("New persistent queue {{name}}",  name= self.file.abspath)
 
     def _add_pending(self, delta):
         delta = wrap(delta)
@@ -96,7 +97,7 @@ class PersistentQueue(object):
                 if value is not Thread.STOP:
                     yield value
             except Exception, e:
-                Log.warning("Tell me about what happened here", e)
+                Log.warning("Tell me about what happened here", cause=e)
         if DEBUG:
             Log.note("queue iterator is done")
 
@@ -177,12 +178,12 @@ class PersistentQueue(object):
                 if self.db.status.end - self.start < 10 or Random.range(1000) == 0:  # FORCE RE-WRITE TO LIMIT FILE SIZE
                     # SIMPLY RE-WRITE FILE
                     if DEBUG:
-                        Log.note("Re-write {{num_keys}} keys to persistent queue", {"num_keys": self.db.status.end - self.start})
+                        Log.note("Re-write {{num_keys}} keys to persistent queue",  num_keys= self.db.status.end - self.start)
 
                         for k in self.db.keys():
                             if k == "status" or int(k) >= self.db.status.start:
                                 continue
-                            Log.error("Not expecting {{key}}", {"key": k})
+                            Log.error("Not expecting {{key}}",  key= k)
                     self._commit()
                     self.file.write(convert.value2json({"add": self.db}) + "\n")
                 else:
@@ -206,7 +207,7 @@ class PersistentQueue(object):
                 self.file.delete()
             else:
                 if DEBUG:
-                    Log.note("persistent queue closed with {{num}} items left", {"num": len(self)})
+                    Log.note("persistent queue closed with {{num}} items left",  num= len(self))
                 try:
                     self._add_pending({"add": {"status.start": self.start}})
                     for i in range(self.db.status.start, self.start):

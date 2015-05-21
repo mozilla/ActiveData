@@ -13,6 +13,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 from collections import deque
 from copy import copy
 from datetime import datetime, timedelta
@@ -21,22 +22,24 @@ import threading
 import time
 import sys
 import gc
+
 from pyLibrary import strings
-
-from pyLibrary.dot import coalesce, Dict, wrap
+from pyLibrary.dot import coalesce, Dict
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import Duration, SECOND
+from pyLibrary.times.durations import SECOND
 
 
-Log=None
-def _late_import():
-    global Log
-    from pyLibrary.debugs.logs import Log
-
+Log = None
 DEBUG = True
 MAX_DATETIME = datetime(2286, 11, 20, 17, 46, 39)
 
 
+def _late_import():
+    global Log
+
+    from pyLibrary.debugs.logs import Log
+
+    _ = Log
 
 
 class Lock(object):
@@ -139,11 +142,11 @@ class Queue(object):
                     now = datetime.utcnow()
                     if self.next_warning < now:
                         self.next_warning = now + timedelta(seconds=wait_time)
-                        Log.alert("Queue {{name}} is full ({{num}} items), thread(s) have been waiting {{wait_time}} sec", {
-                            "name": self.name,
-                            "num": len(self.queue),
-                            "wait_time": wait_time
-                        })
+                        Log.alert("Queue {{name}} is full ({{num}} items), thread(s) have been waiting {{wait_time}} sec",
+                            name= self.name,
+                            num= len(self.queue),
+                            wait_time= wait_time
+                        )
 
     def __len__(self):
         with self.lock:
@@ -283,6 +286,8 @@ class MainThread(object):
         """
         children = copy(self.children)
         for c in children:
+            if c.name:
+                Log.note("Stopping thread {{name|quote}}",  name= c.name)
             c.stop()
         for c in children:
             c.join()
@@ -342,6 +347,9 @@ class Thread(object):
 
 
     def start(self):
+        if not Log:
+            _late_import()
+
         try:
             thread.start_new_thread(Thread._run, (self, ))
             return self
@@ -380,7 +388,7 @@ class Thread(object):
             with self.synch_lock:
                 self.response = Dict(exception=e)
             try:
-                Log.fatal("Problem in thread {{name|quote}}", {"name": self.name}, e)
+                Log.fatal("Problem in thread {{name|quote}}",  name= self.name, cause=e)
             except Exception, f:
                 sys.stderr.write("ERROR in thread: " + str(self.name) + " " + str(e) + "\n")
         finally:
@@ -411,12 +419,15 @@ class Thread(object):
         """
         RETURN THE RESULT {"response":r, "exception":e} OF THE THREAD EXECUTION (INCLUDING EXCEPTION, IF EXISTS)
         """
+        if timeout is not None:
+            if till is None:
+                till = datetime.utcnow() + timedelta(seconds=timeout)
+            else:
+                Log.error("Can not except both `timeout` and `till`")
+
         children = copy(self.children)
         for c in children:
-            c.join(timeout=timeout, till=till)
-
-        if not till and timeout:
-            till = datetime.utcnow() + timedelta(seconds=timeout)
+            c.join(till=till)
 
         if till is None:
             while True:
@@ -428,7 +439,7 @@ class Thread(object):
                         self.synch_lock.wait(0.5)
 
                 if DEBUG:
-                    Log.note("Waiting on thread {{thread|json}}", {"thread": self.name})
+                    Log.note("Waiting on thread {{thread|json}}",  thread= self.name)
         else:
             self.stopped.wait_for_go(till=till)
             if self.stopped:
@@ -666,9 +677,10 @@ class ThreadedQueue(Queue):
                         _buffer.append(item)
 
                 except Exception, e:
-                    Log.warning("Unexpected problem", {
-                        "name": name,
-                    }, e)
+                    Log.warning("Unexpected problem",
+                        name= name,
+                        cause=e
+                    )
 
                 try:
                     if len(_buffer) >= batch_size or now > next_time:
@@ -682,10 +694,11 @@ class ThreadedQueue(Queue):
                                 next_time = now + bit_more_time
 
                 except Exception, e:
-                    Log.warning("Problem with {{name}} pushing {{num}} items to data sink", {
-                        "name": name,
-                        "num": len(_buffer)
-                    }, e)
+                    Log.warning("Problem with {{name}} pushing {{num}} items to data sink",
+                        name=name,
+                        num=len(_buffer),
+                        cause=e
+                    )
 
         self.thread = Thread.run("threaded queue for " + name, worker_bee)
 

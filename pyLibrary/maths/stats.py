@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 
 import sys
 from math import sqrt
@@ -17,10 +18,9 @@ import math
 
 from pyLibrary import convert
 from pyLibrary.collections import OR
-from __init__ import almost_equal, Math
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, Dict, Null
-# from pyLibrary.queries import qb
+from pyLibrary.maths import almost_equal, Math
 from pyLibrary.vendor import strangman
 
 
@@ -137,11 +137,12 @@ def ZeroMoment2Stats(z_moment):
             for i in range(5):
                 assertAlmostEqualValue(v.S[i], Z[i], places=7)
         except Exception, e:
-            Log.error("Convertion failed.  Programmer error:\nfrom={{from|indent}},\nresult stats={{stats|indent}},\nexpected param={{expected|indent}}", {
-                "from": Z,
-                "stats": stats,
-                "expected": v.S
-            }, e)
+            Log.error("Conversion failed.  Programmer error:\nfrom={{from|indent}},\nresult stats={{stats|indent}},\nexpected param={{expected|indent}}",
+                {"from": Z},
+                stats=stats,
+                expected=v.S,
+                cause=e
+            )
         globals()["DEBUG"] = True
 
     return stats
@@ -358,7 +359,7 @@ def median(values, simple=True, mean_weight=0.0):
             else:
                 return (_median - 0.5) + (middle + 0.5 - start_index) / num_middle
     except Exception, e:
-        Log.error("problem with median of {{values}}", {"values": values}, e)
+        Log.error("problem with median of {{values}}",  values= values, cause=e)
 
 
 def percentile(values, percent):

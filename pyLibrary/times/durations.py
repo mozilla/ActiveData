@@ -9,6 +9,7 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 import datetime
 
 from pyLibrary import regex
@@ -48,7 +49,7 @@ class Duration(object):
             else:
                 return None
         if Math.is_number(value):
-            output.milli = value
+            output.milli = value*1000
             output.month = 0
             return output
         elif isinstance(value, basestring):

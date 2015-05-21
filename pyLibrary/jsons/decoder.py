@@ -9,6 +9,8 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from collections import Mapping
 
 from pyLibrary.dot import Null
 from pyLibrary.dot.lists import DictList
@@ -45,7 +47,7 @@ def decode(json):
                 pass
             elif c == "]":
                 curr = stack.pop()
-                if isinstance(curr, dict):
+                if isinstance(curr, Mapping):
                     mode = OBJECT
                 else:
                     mode = ARRAY
@@ -77,7 +79,7 @@ def decode(json):
                 mode = VALUE
             elif c == "}":
                 curr = stack.pop()
-                if isinstance(curr, dict):
+                if isinstance(curr, Mapping):
                     mode = OBJECT
                 else:
                     mode = ARRAY
@@ -88,7 +90,7 @@ def decode(json):
                 pass
             elif c == "}":
                 curr = stack.pop()
-                if isinstance(curr, dict):
+                if isinstance(curr, Mapping):
                     mode = OBJECT
                 else:
                     mode = ARRAY

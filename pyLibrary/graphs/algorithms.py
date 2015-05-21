@@ -9,6 +9,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 from collections import deque
 from pyLibrary.collections import INTERSECT
 from pyLibrary.graphs.paths import Step, Path

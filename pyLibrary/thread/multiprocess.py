@@ -8,6 +8,7 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 
 from pyLibrary.debugs.logs import Log
 from pyLibrary.thread.threads import Queue

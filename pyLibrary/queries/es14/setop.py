@@ -9,6 +9,8 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from collections import Mapping
 from pyLibrary import queries
 
 from pyLibrary.collections.matrix import Matrix
@@ -76,7 +78,7 @@ def es_fieldop(es, query):
             es_query.fields.append(s)
         elif isinstance(s, list) and es_query.fields is not None:
             es_query.fields.extend(s)
-        elif isinstance(s, dict) and es_query.fields is not None:
+        elif isinstance(s, Mapping) and es_query.fields is not None:
             es_query.fields.extend(s.values())
         elif es_query.fields is not None:
             es_query.fields.append(s)

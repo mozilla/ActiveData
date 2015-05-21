@@ -9,6 +9,8 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from collections import Mapping
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND, SUM, OR
@@ -42,7 +44,7 @@ def is_fieldop(query):
     return False
 
 def isKeyword(value):
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         return AND(isKeyword(v) for k, v in value.items())
     if isinstance(value, list):
         return AND(isKeyword(v) for v in value)
@@ -67,7 +69,7 @@ def es_fieldop(es, query):
             FromES.fields = None
         elif isinstance(s, list):
             FromES.fields.extend(s)
-        elif isinstance(s, dict):
+        elif isinstance(s, Mapping):
             FromES.fields.extend(s.values())
         else:
             FromES.fields.append(s)
@@ -80,7 +82,7 @@ def es_fieldop(es, query):
     for s in select:
         if s.value == "*":
             matricies[s.name] = Matrix.wrap([t._source for t in T])
-        elif isinstance(s.value, dict):
+        elif isinstance(s.value, Mapping):
             # for k, v in s.value.items():
             #     matricies[join_field(split_field(s.name)+[k])] = Matrix.wrap([unwrap(t.fields)[v] for t in T])
             matricies[s.name] = Matrix.wrap([{k: unwrap(t.fields).get(v, None) for k, v in s.value.items()}for t in T])

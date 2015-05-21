@@ -9,6 +9,7 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 
 from boto import sqs
 from boto.sqs.message import Message
@@ -38,7 +39,7 @@ class Queue(object):
         self.pending = []
 
         if settings.region not in [r.name for r in sqs.regions()]:
-            Log.error("Can not find region {{region}} in {{regions}}", {"region": settings.region, "regions": [r.name for r in sqs.regions()]})
+            Log.error("Can not find region {{region}} in {{regions}}",  region= settings.region,  regions= [r.name for r in sqs.regions()])
 
         conn = sqs.connect_to_region(
             region_name=unwrap(settings.region),
@@ -47,7 +48,7 @@ class Queue(object):
         )
         self.queue = conn.get_queue(settings.name)
         if self.queue == None:
-            Log.error("Can not find queue with name {{queue}} in region {{region}}", {"queue": settings.name, "region": settings.region})
+            Log.error("Can not find queue with name {{queue}} in region {{region}}",  queue= settings.name,  region= settings.region)
 
     def __enter__(self):
         return self
@@ -93,7 +94,7 @@ class Queue(object):
                 self.queue.delete_message(p)
 
             if self.settings.debug:
-                Log.alert("{{num}} messages returned to queue", {"num": len(pending)})
+                Log.alert("{{num}} messages returned to queue",  num= len(pending))
 
     def close(self):
         self.commit()

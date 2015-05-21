@@ -9,14 +9,23 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 from copy import deepcopy
+
 from pyLibrary.dot.nones import Null
 from pyLibrary.dot import wrap, unwrap
 
 
 _get = object.__getattribute__
 _set = object.__setattr__
+dictwrap = None
 
+
+def _late_import():
+    global dictwrap
+    from pyLibrary.dot.objects import dictwrap
+
+    _ = dictwrap
 
 class DictList(list):
     """
@@ -70,7 +79,13 @@ class DictList(list):
         return DictList.select(self, key)
 
     def select(self, key):
-        return DictList(vals=[unwrap(wrap(v)[key]) for v in _get(self, "list")])
+        """
+        simple `select`
+        """
+        if not dictwrap:
+            _late_import()
+
+        return DictList(vals=[unwrap(dictwrap(v)[key]) for v in _get(self, "list")])
 
     def filter(self, _filter):
         return DictList(vals=[unwrap(u) for u in (wrap(v) for v in _get(self, "list")) if _filter(u)])
@@ -201,4 +216,3 @@ class DictList(list):
 
 
 DictList.EMPTY = Null
-

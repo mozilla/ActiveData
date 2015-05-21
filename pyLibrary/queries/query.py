@@ -9,6 +9,9 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from UserDict import UserDict
+from collections import Mapping
 from pyLibrary import dot
 from pyLibrary.collections import AND, reverse
 from pyLibrary.debugs.logs import Log
@@ -158,7 +161,7 @@ def _normalize_selects(selects, schema=None):
         exists = set()
         for s in output:
             if s.name in exists:
-                Log.error("{{name}} has already been defined", {"name": s.name})
+                Log.error("{{name}} has already been defined",  name= s.name)
             exists.add(s.name)
         return output
     else:
@@ -185,7 +188,7 @@ def _normalize_select(select, schema=None):
             Log.error("Must give name to each column in select clause")
 
         if not output.name:
-            Log.error("expecting select to have a name: {{select}}", {"select": select})
+            Log.error("expecting select to have a name: {{select}}",  select= select)
 
         output.aggregate = coalesce(canonical_aggregates.get(select.aggregate), select.aggregate, "none")
         return output
@@ -219,9 +222,9 @@ def _normalize_edge(edge, schema=None):
     else:
         edge = wrap(edge)
         if not edge.name and not isinstance(edge.value, basestring):
-            Log.error("You must name compound edges: {{edge}}", {"edge": edge})
+            Log.error("You must name compound edges: {{edge}}",  edge= edge)
 
-        if isinstance(edge.value, (dict, list)) and not edge.domain:
+        if isinstance(edge.value, (Mapping, list)) and not edge.domain:
             # COMPLEX EDGE IS SHORT HAND
             domain = _normalize_domain(schema=schema)
             domain.dimension = Dict(fields=edge.value)
@@ -261,7 +264,7 @@ def _normalize_group(edge, schema=None):
             Log.error("groupby does not accept complicated domains")
 
         if not edge.name and not isinstance(edge.value, basestring):
-            Log.error("You must name compound edges: {{edge}}", {"edge": edge})
+            Log.error("You must name compound edges: {{edge}}",  edge= edge)
 
         return wrap({
             "name": coalesce(edge.name, edge.value),
@@ -283,7 +286,11 @@ def _normalize_domain(domain=None, schema=None):
     if not domain.name:
         domain = domain.copy()
         domain.name = domain.type
-    return Domain(**unwrap(domain))
+
+    if not isinstance(domain.partitions, list):
+        domain.partitions = list(domain.partitions)
+
+    return Domain(**domain)
 
 
 def _normalize_window(window, schema=None):
@@ -327,7 +334,7 @@ def _map_term_using_schema(master, path, term, schema_edges):
         if isinstance(dimension, Dimension):
             domain = dimension.getDomain()
             if dimension.fields:
-                if isinstance(dimension.fields, dict):
+                if isinstance(dimension.fields, Mapping):
                     # EXPECTING A TUPLE
                     for local_field, es_field in dimension.fields.items():
                         local_value = v[local_field]
@@ -348,7 +355,7 @@ def _map_term_using_schema(master, path, term, schema_edges):
                 if AND(is_keyword(f) for f in dimension.fields):
                     # EXPECTING A TUPLE
                     if not isinstance(v, tuple):
-                        Log.error("expecing {{name}}={{value}} to be a tuple", {"name": k, "value": v})
+                        Log.error("expecing {{name}}={{value}} to be a tuple",  name= k,  value= v)
                     for i, f in enumerate(dimension.fields):
                         vv = v[i]
                         if vv == None:
@@ -370,7 +377,7 @@ def _map_term_using_schema(master, path, term, schema_edges):
                 continue
             else:
                 Log.error("not expected")
-        elif isinstance(v, dict):
+        elif isinstance(v, Mapping):
             sub = _map_term_using_schema(master, path + [k], v, schema_edges[k])
             output.append(sub)
             continue
@@ -420,7 +427,7 @@ def _where_terms(master, where, schema):
     USE THE SCHEMA TO CONVERT DIMENSION NAMES TO ES FILTERS
     master - TOP LEVEL WHERE (FOR PLACING NESTED FILTERS)
     """
-    if isinstance(where, dict):
+    if isinstance(where, Mapping):
         if where.term:
             # MAP TERM
             try:
@@ -446,7 +453,7 @@ def _where_terms(master, where, schema):
                     except Exception, e:
                         Log.error("programmer error", e)
                     fields = domain.dimension.fields
-                    if isinstance(fields, dict):
+                    if isinstance(fields, Mapping):
                         or_agg = []
                         for vv in v:
                             and_agg = []
@@ -561,11 +568,10 @@ def where_get_all_vars(w):
             return [val.field]
 
     if key in ["gte", "gt", "eq", "ne", "term", "terms", "lt", "lte", "range", "prefix"]:
-        if not isinstance(val, dict):
-            Log.error("Expecting `{{key}}` to have a dict value, not a {{type}}", {
-                "key": key,
-                "type": val.__class__.__name__
-            })
+        if not isinstance(val, Mapping):
+            Log.error("Expecting `{{key}}` to have a dict value, not a {{type}}",
+                key= key,
+                type= val.__class__.__name__)
         return list(val.keys())
 
     if key == "match_all":

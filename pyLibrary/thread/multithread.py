@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 
 from collections import Iterable
 from types import GeneratorType
@@ -142,13 +143,13 @@ class worker_thread(Thread):
                 request = self.in_queue.pop()
             if request == Thread.STOP:
                 if DEBUG:
-                    Log.note("{{name}} got a stop message", {"name": self.name})
+                    Log.note("{{name}} got a stop message",  name= self.name)
                 got_stop_message = True
                 if self.in_queue:
-                    Log.warning("programmer error, queue not empty. {{num}} requests lost:\n{{requests}}", {
-                        "num": len(self.in_queue.queue),
-                        "requests": list(self.in_queue.queue)[:5:] + list(self.in_queue.queue)[-5::]
-                    })
+                    Log.warning("programmer error, queue not empty. {{num}} requests lost:\n{{requests}}",
+                        num= len(self.in_queue.queue),
+                        requests= list(self.in_queue.queue)[:5:] + list(self.in_queue.queue)[-5::]
+                    )
                 break
             if please_stop.is_go():
                 break
@@ -159,7 +160,7 @@ class worker_thread(Thread):
                     if self.out_queue != None:
                         self.out_queue.add({"response": result})
                 except Exception, e:
-                    Log.warning("Can not execute with params={{params}}", {"params": request}, e)
+                    Log.warning("Can not execute with params={{params}}",  params= request, cause=e)
                     if self.out_queue != None:
                         self.out_queue.add({"exception": e})
                 finally:
@@ -172,20 +173,19 @@ class worker_thread(Thread):
 
         if DEBUG:
             if self.num_runs == 0:
-                Log.note("{{name}} thread did no work", {"name": self.name})
+                Log.note("{{name}} thread did no work",  name= self.name)
             else:
-                Log.note("{{name}} thread did {{num}} units of work", {
-                    "name": self.name,
-                    "num": self.num_runs
-                })
+                Log.note("{{name}} thread did {{num}} units of work",
+                    name= self.name,
+                    num= self.num_runs)
 
         if got_stop_message and self.in_queue:
-            Log.warning("multithread programmer error, queue not empty. {{num}} requests lost\n{{sample|indent}}", {
-                "num": len(self.in_queue.queue),
-                "sample": convert.value2json([self.in_queue.queue[i] for i in range(min(5, len(self.in_queue.queue)))])
-            })
+            Log.warning("multithread programmer error, queue not empty. {{num}} requests lost\n{{sample|indent}}",
+                num=len(self.in_queue.queue),
+                sample=convert.value2json([self.in_queue.queue[i] for i in range(min(5, len(self.in_queue.queue)))])
+            )
         if DEBUG:
-            Log.note("{{thread}} DONE", {"thread": self.name})
+            Log.note("{{thread}} DONE",  thread= self.name)
 
 def get_function_name(func):
     if hasattr(func, "__name__"):

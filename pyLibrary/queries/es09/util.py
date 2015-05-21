@@ -9,6 +9,7 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 from copy import deepcopy
 from datetime import datetime
 
@@ -166,7 +167,7 @@ def parse_columns(parent_path, esProperties):
                 "useSource": True
             })
         else:
-            Log.warning("unknown type {{type}} for property {{path}}", {"type": property.type, "path": path})
+            Log.warning("unknown type {{type}} for property {{path}}",  type= property.type,  path= path)
 
     return columns
 

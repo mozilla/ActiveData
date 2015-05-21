@@ -54,10 +54,10 @@ a.b.c += [1]
 a.b.c += [42]
 &gt;&gt;&gt; a == {"b": {"c": [1, 42]}}
 </pre>
- 8. attribute names (keys) are corrected to unicode - it appears Python
+ 8. attribute names (keys) are coerced to unicode - it appears Python
  object.getattribute() is called with str() even when using `from __future__
  import unicode_literals`
- 9. by allowing dot notation, the IDE does tab completion and my spelling
+ 9. by allowing dot notation, the IDE does tab completion, plus my spelling
  mistakes get found at "compile time"
 
 ### Examples in the wild ###
@@ -209,7 +209,7 @@ For the sake of completeness, we have two more convenience methods:
   * `flat_list.rightBut(b)` same as `flat_list[b::]`
 
 DictList Dot (.) Operator
-----------------------------
+-------------------------
 
 The dot operator on a `DictList` performs a simple projection; it will return a list of property values
 
@@ -217,6 +217,26 @@ The dot operator on a `DictList` performs a simple projection; it will return a 
     myList.name == [x["name"] for x in myList]
 ```
 
+DictObject for data
+-------------------
+
+There are two major families of objects in Object Oriented programming.  The first, are ***Actors***: characterized by a number of useful instance methods and some state bundled into a package.  The second are ***Data***: Primarily a set of properties, with only (de)serialization functions, or algebraic operators defined.  Boto has many examples of these *Data* classes, [here is one](https://github.com/boto/boto/blob/4b8269562e663f090403e57ba1a3a471b6e0aa0e/boto/ec2/networkinterface.py).
+
+The problem with *Data* objects is they have an useless distinction between attributes and properties.  This prevents us from using the `[]` operator for dereferencing, forcing use to use the verbose `__getattr__()` instead.  It also prevents the use of query operators over these objects.
+
+You can register a class as a *data* class, by wrapping it with `DictClass`.
+
+```python
+	SomeDataClass = DictClass(SomeDataClass)
+```
+
+This does two things:
+* It will wrap all objects referenced by `Dict` and all items found in `DictList` so they can be used in queries.   
+* It decorates the constructor to add a `settings` parameter, which can be used to pass default parameters, like [`@use_settings`](https://github.com/klahnakoski/pyLibrary/blob/6e3233abe6e68d00020907d9d630c9a57c14e8a2/pyLibrary/meta.py#L80) 
+
+
+Appendix
+========
 
 Motivation for DictList (optional reading)
 ------------------------------------------

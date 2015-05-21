@@ -9,6 +9,8 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from collections import Mapping
 
 from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
@@ -101,7 +103,7 @@ def es_aggsop(es, frum, query):
         return output
     except Exception, e:
         if query.format not in format_dispatch:
-            Log.error("Format {{format|quote}} not supported yet", {"format": query.format}, e)
+            Log.error("Format {{format|quote}} not supported yet",  format= query.format, cause=e)
         Log.error("Some problem", e)
 
 
@@ -125,12 +127,12 @@ class AggsDecoder(object):
             # THIS domain IS FROM A dimension THAT IS A SIMPLE LIST OF fields
             # JUST PULL THE FIELDS
             fields = e.domain.dimension.fields
-            if isinstance(fields, dict):
+            if isinstance(fields, Mapping):
                 return object.__new__(DimFieldDictDecoder, e)
             else:
                 return object.__new__(DimFieldListDecoder, e)
         else:
-            Log.error("domain type of {{type}} is not supported yet", {"type": e.domain.type})
+            Log.error("domain type of {{type}} is not supported yet",  type= e.domain.type)
 
 
     def __init__(self, edge, query):
@@ -250,7 +252,7 @@ class TimeDecoder(AggsDecoder):
                     return p.dataIndex
         sample = part.copy
         sample.buckets = None
-        Log.error("Expecting to find {{part}}", {"part":sample})
+        Log.error("Expecting to find {{part}}",  part=sample)
 
     @property
     def num_columns(self):
@@ -281,7 +283,7 @@ class DurationDecoder(AggsDecoder):
                     return p.dataIndex
         sample = part.copy
         sample.buckets = None
-        Log.error("Expecting to find {{part}}", {"part":sample})
+        Log.error("Expecting to find {{part}}",  part=sample)
 
     @property
     def num_columns(self):
@@ -312,7 +314,7 @@ class RangeDecoder(AggsDecoder):
                     return p.dataIndex
         sample = part.copy
         sample.buckets = None
-        Log.error("Expecting to find {{part}}", {"part":sample})
+        Log.error("Expecting to find {{part}}",  part=sample)
 
     @property
     def num_columns(self):

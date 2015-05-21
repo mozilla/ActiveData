@@ -10,6 +10,8 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from collections import Mapping
 
 import functools
 from pyLibrary.collections import MIN
@@ -52,7 +54,7 @@ class FlatList(list):
             yield r
 
     def select(self, fields):
-        if isinstance(fields, dict):
+        if isinstance(fields, Mapping):
             fields=fields.value
 
         if isinstance(fields, basestring):

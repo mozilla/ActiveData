@@ -9,6 +9,7 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 
 
 from pyLibrary.collections import PRODUCT, reverse, MAX, MIN, OR
@@ -198,7 +199,7 @@ class Matrix(object):
     def aggregate(self, type):
         func = aggregates[type]
         if not type:
-            Log.error("Aggregate of type {{type}} is not supported yet", {"type": type})
+            Log.error("Aggregate of type {{type}} is not supported yet",  type= type)
 
         return func(self.num, self.cube)
 

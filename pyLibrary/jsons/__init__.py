@@ -1,3 +1,4 @@
+from collections import Mapping
 from datetime import date, timedelta, datetime
 from decimal import Decimal
 import json
@@ -78,7 +79,7 @@ def _scrub(value, is_done):
         return utf82unicode(value)
     elif type is Decimal:
         return float(value)
-    elif isinstance(value, dict):
+    elif isinstance(value, Mapping):
         _id = id(value)
         if _id in is_done:
             Log.error("possible loop in structure detected")

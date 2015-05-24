@@ -11,9 +11,10 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+
 from collections import Mapping
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import unwrap, tuplewrap
+from pyLibrary.dot import unwrap, tuplewrap, wrap
 from pyLibrary.dot.objects import dictwrap
 
 
@@ -37,7 +38,7 @@ class UniqueIndex(object):
         try:
             key = value2key(self._keys, key)
             d = self._data.get(key)
-            return dictwrap(d)
+            return wrap(d)
         except Exception, e:
             Log.error("something went wrong", e)
 
@@ -94,7 +95,7 @@ class UniqueIndex(object):
         return self[key] != None
 
     def __iter__(self):
-        return (dictwrap(v) for v in self._data.itervalues())
+        return (wrap(v) for v in self._data.itervalues())
 
     def __sub__(self, other):
         output = UniqueIndex(self._keys)

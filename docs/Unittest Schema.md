@@ -10,9 +10,10 @@ The Unittest logs are deep JSON structures describing each of the individual tes
 Describes properties exclusive to an individual test result
 
 * `result.test` - *string* path and filename of the specific test
-* `result.result` - *string* recording the test result
+* `result.status` - *string* recording the test result
+* ~~`result.result` - *string* recording the test result~~
 * `result.expected` - *string* representing what was expected of the test.  Not all tests are expected to pass.
-* `result.ok` - *boolean* where `result==expected`
+* `result.ok` - *boolean* where `result==expected`, and all subtests too
 * `result.start_time` -  *timestamp* when the test started running
 * `result.end_time` - *timestamp* when the test ended
 * `result.duration` - *seconds* usually the calculated difference between start and end times, but could be the test's own reported duration

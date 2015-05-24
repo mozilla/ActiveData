@@ -44,7 +44,6 @@ def wrap_from(frum, schema=None):
 
     if isinstance(frum, basestring):
         if not config.default.settings:
-            from pyLibrary.debugs.logs import Log
             Log.error("expecting pyLibrary.queries.query.config.default.settings to contain default elasticsearch connection info")
 
         settings = set_default(

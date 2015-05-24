@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from collections import MutableMapping, Mapping
 from copy import deepcopy
 
-from pyLibrary.dot import split_field, _getdefault, hash_value, literal_field, coalesce
+from pyLibrary.dot import split_field, _getdefault, hash_value, literal_field, coalesce, listwrap
 
 
 _get = object.__getattribute__
@@ -198,7 +198,7 @@ class Dict(MutableMapping):
     def iteritems(self):
         # LOW LEVEL ITERATION, NO WRAPPING
         d = _get(self, "_dict")
-        return d.iteritems()
+        return ((k, wrap(v)) for k, v in d.iteritems())
 
     def keys(self):
         d = _get(self, "_dict")
@@ -206,7 +206,7 @@ class Dict(MutableMapping):
 
     def values(self):
         d = _get(self, "_dict")
-        return (wrap(v) for v in d.values())
+        return listwrap(d.values())
 
     def clear(self):
         from pyLibrary.debugs.logs import Log
@@ -403,7 +403,7 @@ class _DictUsingSelf(dict):
         return set(dict.keys(self))
 
     def values(self):
-        return (wrap(v) for v in dict.values(self))
+        return listwrap(dict.values(self))
 
     def clear(self):
         from pyLibrary.debugs.logs import Log

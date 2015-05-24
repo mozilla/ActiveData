@@ -10,6 +10,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+from collections import Mapping
 from datetime import date, datetime
 from decimal import Decimal
 from types import NoneType, GeneratorType
@@ -20,10 +21,9 @@ _set = object.__setattr__
 WRAPPED_CLASSES = set()
 
 
-class DictObject(dict):
+class DictObject(Mapping):
 
     def __init__(self, obj):
-        dict.__init__(self)
         _set(self, "_obj", obj)
 
     def __getattr__(self, item):
@@ -53,6 +53,9 @@ class DictObject(dict):
             return obj.__dict__.items()
         except Exception, e:
             raise e
+
+    def __iter__(self):
+        return (k for k in self.keys())
 
     def __str__(self):
         obj = _get(self, "_obj")

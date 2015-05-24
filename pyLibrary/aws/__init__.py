@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from boto import sqs
+from boto import sqs, boto
 from boto.sqs.message import Message
 import requests
 
@@ -21,7 +21,7 @@ from pyLibrary.dot import wrap, unwrap
 from pyLibrary.maths import Math
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.threads import Thread
-from pyLibrary.times.durations import Duration
+from pyLibrary.times.durations import Duration, SECOND
 
 
 class Queue(object):
@@ -66,7 +66,11 @@ class Queue(object):
         m.set_body(convert.value2json(message))
         self.queue.write(m)
 
-    def pop(self, wait=Duration.SECOND, till=None):
+    def extend(self, messages):
+        for m in messages:
+            self.add(m)
+
+    def pop(self, wait=SECOND, till=None):
         m = self.queue.read(wait_time_seconds=Math.floor(wait.seconds))
         if not m:
             return None
@@ -118,5 +122,10 @@ def capture_termination_signal(please_stop):
             Thread.sleep(seconds=11)
 
     Thread.run("listen for termination", worker)
+
+
+def get_instance_metadata():
+    return wrap(dict(boto.utils.get_instance_metadata()))
+
 
 from . import s3

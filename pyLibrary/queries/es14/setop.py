@@ -96,7 +96,7 @@ def extract_rows(es, es_query, source, select, query):
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if s.value == "*":
             try:
-                column_names = set(c.name for c in query.frum.get_columns() if c.type not in ["object", "nested"] or c.useSource)
+                column_names = set(c.name for c in query.frum.get_columns() if (c.type not in ["object"] or c.useSource) and not c.depth)
             except Exception, e:
                 Log.warning("can not get columns", e)
                 column_names = UNION(*[[k for k, v in row.items()] for row in T.select(source)])

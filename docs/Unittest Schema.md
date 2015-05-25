@@ -30,7 +30,7 @@ Describes properties exclusive to an individual test result
 `result.subtests` Columns
 -------------------------
 
-Some tests are further broken down into *subtests*, which has less
+Some tests contain *subtests*, which correspond to individual `assert` statements.
 
 * `result.subtests.ordering` - *integer* for maintaining the original log ordering
 * `result.subtests.name` - *string* name of the subtest

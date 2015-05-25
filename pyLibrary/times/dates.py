@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 
 from datetime import datetime, date, timedelta
 from decimal import Decimal
@@ -19,18 +20,16 @@ import re
 
 try:
     import pytz
-except Exception, e:
+except Exception, _:
     pass
 
 
 from pyLibrary.dot import Null
 from pyLibrary.times.durations import Duration, MILLI_VALUES
 from pyLibrary.vendor.dateutil.parser import parse as parse_date
-
 from pyLibrary.strings import deformat
 
-
-ISO8601 = "%Y-%m-%d %H:%M:%S"
+ISO8601 = '%Y-%m-%dT%H:%M:%SZ'
 
 
 class Date(object):
@@ -49,7 +48,7 @@ class Date(object):
     def floor(self, duration=None):
         if duration is None:  # ASSUME DAY
             return Date(math.floor(self.milli / 86400000) * 86400000)
-        elif duration.milli % (7*86400000) ==0:
+        elif duration.milli % (7 * 86400000) == 0:
             offset = 4*86400000
             return Date(math.floor((self.milli+offset) / duration.milli) * duration.milli - offset)
         elif not duration.month:
@@ -63,7 +62,8 @@ class Date(object):
             return self.value.strftime(format)
         except Exception, e:
             from pyLibrary.debugs.logs import Log
-            Log.error("Can not format {{value}} with {{format}}", {"value": self.value, "format": format}, e)
+
+            Log.error("Can not format {{value}} with {{format}}", value=self.value, format=format, cause=e)
 
     @property
     def milli(self):
@@ -80,7 +80,7 @@ class Date(object):
                 epoch = date(1970, 1, 1)
             else:
                 from pyLibrary.debugs.logs import Log
-                Log.error("Can not convert {{value}} of type {{type}}", {"value": self.value, "type": self.value.__class__})
+                Log.error("Can not convert {{value}} of type {{type}}",  value= self.value,  type= self.value.__class__)
                 epoch = None
 
             diff = self.value - epoch
@@ -88,7 +88,7 @@ class Date(object):
             return output / 1000000
         except Exception, e:
             from pyLibrary.debugs.logs import Log
-            Log.error("Can not convert {{value}}", {"value": self.value}, e)
+            Log.error("Can not convert {{value}}",  value= self.value, cause=e)
 
     def addDay(self):
         return Date(self.value + timedelta(days=1))
@@ -119,7 +119,7 @@ class Date(object):
                 return Date(self.milli + other.milli)
         else:
             from pyLibrary.debugs.logs import Log
-            Log.error("can not subtract {{type}} from Date", {"type":other.__class__.__name__})
+            Log.error("can not subtract {{type}} from Date",  type=other.__class__.__name__)
 
     @staticmethod
     def now():
@@ -146,13 +146,16 @@ class Date(object):
     def __str__(self):
         return str(self.value)
 
+    def __repr__(self):
+        return Date(self.value.__repr__())
+
     def __sub__(self, other):
         if other == None:
             return None
         if isinstance(other, datetime):
-            return Duration(self.milli-Date(other).milli)
+            return Duration(self.unix - Date(other).unix)
         if isinstance(other, Date):
-            return Duration(self.milli-other.milli)
+            return Duration(self.unix - other.unix)
 
         return self.add(-other)
 
@@ -204,7 +207,7 @@ def _cpython_value2date(*args):
         return output
     except Exception, e:
         from pyLibrary.debugs.logs import Log
-        Log.error("Can not convert {{args}} to Date", {"args": args}, e)
+        Log.error("Can not convert {{args}} to Date",  args= args, cause=e)
 
 
 def _pypy_value2date(*args):
@@ -235,7 +238,7 @@ def _pypy_value2date(*args):
         return output
     except Exception, e:
         from pyLibrary.debugs.logs import Log
-        Log.error("Can not convert {{args}} to Date", {"args": args}, e)
+        Log.error("Can not convert {{args}} to Date",  args= args, cause=e)
 
 
 if platform.python_implementation() == "PyPy":
@@ -358,7 +361,8 @@ def unicode2datetime(value, format=None):
             return datetime.strptime(value, format)
         except Exception, e:
             from pyLibrary.debugs.logs import Log
-            Log.error("Can not format {{value}} with {{format}}", {"value": value, "format": format}, e)
+
+            Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
 
     try:
         local_value = parse_date(value)  #eg 2014-07-16 10:57 +0200
@@ -402,5 +406,5 @@ def unicode2datetime(value, format=None):
             pass
     else:
         from pyLibrary.debugs.logs import Log
-        Log.error("Can not interpret {{value}} as a datetime", {"value": value})
+        Log.error("Can not interpret {{value}} as a datetime",  value= value)
 

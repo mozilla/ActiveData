@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 
 # FOR WINDOWS INSTALL OF psycopg2
 # http://stickpeople.com/projects/python/win-psycopg/2.6.0/psycopg2-2.6.0.win32-py2.7-pg9.4.1-release.exe
@@ -79,7 +80,7 @@ class Redshift(object):
                 self.connection = None
                 self._connect()
                 if not retry:
-                    Log.error("Problem with command:\n{{command|indent}}", {"command": command}, e)
+                    Log.error("Problem with command:\n{{command|indent}}",  command= command, cause=e)
         return output
 
     def insert(self, table_name, record):
@@ -94,7 +95,7 @@ class Redshift(object):
 
             self.execute(command)
         except Exception, e:
-            Log.error("problem with record: {{record}}", {"record": record}, e)
+            Log.error("problem with record: {{record}}",  record= record, cause=e)
 
 
     def insert_list(self, table_name, records):

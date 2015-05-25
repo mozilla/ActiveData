@@ -9,6 +9,8 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from collections import Mapping
 
 from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
@@ -26,6 +28,7 @@ class MySQL(object):
     """
     qb to MySQL DATABASE QUERIES
     """
+
     @use_settings
     def __init__(
         self,
@@ -40,6 +43,7 @@ class MySQL(object):
         settings=None
     ):
         from pyLibrary.sql.mysql import MySQL
+
         self.settings = settings
         self._db = MySQL(settings)
 
@@ -56,6 +60,7 @@ class MySQL(object):
         TRANSLATE qb QUERY ON SINGLE TABLE TO SQL QUERY
         """
         from pyLibrary.queries.query import Query
+
         query = Query(query)
 
         sql, post = self._subquery(query, isolate=False, stacked=stacked)
@@ -91,7 +96,7 @@ class MySQL(object):
                 sql, post = self._setop(query)
 
         if isolate:
-            return "(\n"+sql+"\n) a\n", post
+            return "(\n" + sql + "\n) a\n", post
         else:
             return sql, post
 
@@ -101,14 +106,14 @@ class MySQL(object):
         # RETURN SINGLE OBJECT WITH AGGREGATES
         for s in select:
             if s.aggregate not in aggregates:
-                Log.error("Expecting all columns to have an aggregate: {{select}}", {"select": s})
+                Log.error("Expecting all columns to have an aggregate: {{select}}", select=s)
 
         selects = DictList()
         groups = DictList()
         edges = query.edges
         for e in edges:
             if e.domain.type != "default":
-                Log.error("domain of type {{type}} not supported, yet", {"type": e.domain.type})
+                Log.error("domain of type {{type}} not supported, yet", type=e.domain.type)
             groups.append(e.value)
             selects.append(e.value + " AS " + self.db.quote_column(e.name))
 
@@ -173,7 +178,7 @@ class MySQL(object):
             # RETURN SINGLE OBJECT WITH AGGREGATES
             for s in query.select:
                 if s.aggregate not in aggregates:
-                    Log.error("Expecting all columns to have an aggregate: {{select}}", {"select": s})
+                    Log.error("Expecting all columns to have an aggregate: {{select}}", select=s)
 
             selects = DictList()
             for s in query.select:
@@ -196,7 +201,7 @@ class MySQL(object):
             # RETURN SINGLE VALUE
             s0 = query.select
             if s0.aggregate not in aggregates:
-                Log.error("Expecting all columns to have an aggregate: {{select}}", {"select": s0})
+                Log.error("Expecting all columns to have an aggregate: {{select}}", select=s0)
 
             select = aggregates[s0.aggregate].replace("{{code}}", s0.value) + " AS " + self.db.quote_column(s0.name)
 
@@ -226,12 +231,12 @@ class MySQL(object):
             # RETURN BORING RESULT SET
             selects = DictList()
             for s in listwrap(query.select):
-                if isinstance(s.value, dict):
+                if isinstance(s.value, Mapping):
                     for k, v in s.value.items:
-                        selects.append(v + " AS " + self.db.quote_column(s.name+"."+k))
+                        selects.append(v + " AS " + self.db.quote_column(s.name + "." + k))
                 if isinstance(s.value, list):
                     for i, ss in enumerate(s.value):
-                        selects.append(s.value + " AS " + self.db.quote_column(s.name+","+str(i)))
+                        selects.append(s.value + " AS " + self.db.quote_column(s.name + "," + str(i)))
                 else:
                     selects.append(s.value + " AS " + self.db.quote_column(s.name))
 
@@ -254,12 +259,12 @@ class MySQL(object):
             def post_process(sql):
                 result = self.db.query(sql)
                 for s in listwrap(query.select):
-                    if isinstance(s.value, dict):
+                    if isinstance(s.value, Mapping):
                         for r in result:
                             r[s.name] = {}
                             for k, v in s.value:
-                                r[s.name][k] = r[s.name+"."+k]
-                                r[s.name+"."+k] = None
+                                r[s.name][k] = r[s.name + "." + k]
+                                r[s.name + "." + k] = None
 
                     if isinstance(s.value, list):
                         # REWRITE AS TUPLE
@@ -312,16 +317,16 @@ class MySQL(object):
         """
         if not sort:
             return ""
-        return SQL("ORDER BY "+",\n".join([self.db.quote_column(o.field)+(" DESC" if o.sort==-1 else "") for o in sort]))
+        return SQL("ORDER BY " + ",\n".join([self.db.quote_column(o.field) + (" DESC" if o.sort == -1 else "") for o in sort]))
 
     def _limit2sql(self, limit):
-        return SQL("" if not limit else "LIMIT "+str(limit))
+        return SQL("" if not limit else "LIMIT " + str(limit))
 
 
     def _where2sql(self, where):
         if where == None:
             return ""
-        return SQL("WHERE "+_esfilter2sqlwhere(self.db, where))
+        return SQL("WHERE " + _esfilter2sqlwhere(self.db, where))
 
 
 def _isolate(separator, list):
@@ -331,10 +336,11 @@ def _isolate(separator, list):
         else:
             return list[0]
     except Exception, e:
-        Log.error("Programming problem: separator={{separator}}, list={{list}", {
-            "list": list,
-            "separator": separator
-        }, e)
+        Log.error("Programming problem: separator={{separator}}, list={{list}",
+            list=list,
+            separator=separator,
+            cause=e
+        )
 
 
 def esfilter2sqlwhere(db, esfilter):
@@ -403,7 +409,7 @@ def _esfilter2sqlwhere(db, esfilter):
             else:
                 return " AND ".join(
                     db.quote_column(col) + name2sign[sign] + db.quote_value(value)
-                        for sign, value in r.items()
+                    for sign, value in r.items()
                 )
 
         output = _isolate("AND", [single(col, ranges) for col, ranges in esfilter.range.items()])
@@ -423,7 +429,7 @@ def _esfilter2sqlwhere(db, esfilter):
     elif esfilter.instr:
         return _isolate("AND", ["instr(" + db.quote_column(col) + ", " + db.quote_value(val) + ")>0" for col, val in esfilter.instr.items()])
     else:
-        Log.error("Can not convert esfilter to SQL: {{esfilter}}", {"esfilter": esfilter})
+        Log.error("Can not convert esfilter to SQL: {{esfilter}}", esfilter=esfilter)
 
 
 def expand_json(rows):

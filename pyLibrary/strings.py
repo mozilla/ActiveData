@@ -10,13 +10,16 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+
+from collections import Mapping
 from datetime import timedelta, date
 from datetime import datetime as builtin_datetime
 import re
 import math
 import __builtin__
 
-from pyLibrary.dot import coalesce, wrap
+from pyLibrary.dot import coalesce, wrap, Dict
 
 
 def datetime(value):
@@ -207,16 +210,16 @@ def trim(value):
     return strip(value)
 
 
-def between(value, prefix, suffix):
+def between(value, prefix, suffix, start=0):
     value = toString(value)
     if prefix == None:
-        e = value.find(suffix)
+        e = value.find(suffix, start)
         if e == -1:
             return None
         else:
             return value[:e]
 
-    s = value.find(prefix)
+    s = value.find(prefix, start)
     if s == -1:
         return None
     s += len(prefix)
@@ -225,7 +228,7 @@ def between(value, prefix, suffix):
     if e == -1:
         return None
 
-    s = value.rfind(prefix, 0, e) + len(prefix)  # WE KNOW THIS EXISTS, BUT THERE MAY BE A RIGHT-MORE ONE
+    s = value.rfind(prefix, start, e) + len(prefix)  # WE KNOW THIS EXISTS, BUT THERE MAY BE A RIGHT-MORE ONE
 
     return value[s:e]
 
@@ -331,7 +334,7 @@ def _expand(template, seq):
     """
     if isinstance(template, basestring):
         return _simple_expand(template, seq)
-    elif isinstance(template, dict):
+    elif isinstance(template, Mapping):
         template = wrap(template)
         assert template["from"], "Expecting template to have 'from' attribute"
         assert template.template, "Expecting template to have 'template' attribute"
@@ -385,9 +388,10 @@ def _simple_expand(template, seq):
                 if not Log:
                     _late_import()
 
-                Log.warning("Can not expand " + "|".join(ops) + " in template: {{template|json}}", {
-                    "template": template
-                }, e)
+                Log.warning("Can not expand " + "|".join(ops) + " in template: {{template|json}}",
+                    template=template,
+                    cause=e
+                )
             return "[template expansion error: (" + str(e.message) + ")]"
 
     return pattern.sub(replacer, template)
@@ -415,7 +419,7 @@ def deformat(value):
 def toString(val):
     if val == None:
         return ""
-    elif isinstance(val, (dict, list, set)):
+    elif isinstance(val, (Mapping, list, set)):
         from pyLibrary.jsons.encoder import json_encoder
 
         return json_encoder(val, pretty=True)
@@ -493,7 +497,7 @@ def apply_diff(text, diff, reverse=False):
         if not Log:
             _late_import()
 
-        Log.error("Can not handle {{diff}}\n", {"diff": diff[0]})
+        Log.error("Can not handle {{diff}}\n",  diff= diff[0])
 
     remove = [int(i.strip()) for i in matches.group(1).split(",")]
     if len(remove) == 1:
@@ -535,14 +539,14 @@ def utf82unicode(value):
             _late_import()
 
         if not isinstance(value, basestring):
-            Log.error("Can not convert {{type}} to unicode because it's not a string", {"type": type(value).__name__})
+            Log.error("Can not convert {{type}} to unicode because it's not a string",  type= type(value).__name__)
 
         e = Except.wrap(e)
         for i, c in enumerate(value):
             try:
                 c.decode("utf8")
             except Exception, f:
-                Log.error("Can not convert charcode {{c}} in string  index {{i}}", {"i": i, "c": ord(c)}, [e, Except.wrap(f)])
+                Log.error("Can not convert charcode {{c}} in string  index {{i}}", i=i, c=ord(c), cause=[e, Except.wrap(f)])
 
         try:
             latin1 = unicode(value.decode("latin1"))

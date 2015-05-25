@@ -8,6 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
+from collections import Mapping
 
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, set_default, split_field
@@ -43,7 +44,6 @@ def wrap_from(frum, schema=None):
 
     if isinstance(frum, basestring):
         if not config.default.settings:
-            from pyLibrary.debugs.logs import Log
             Log.error("expecting pyLibrary.queries.query.config.default.settings to contain default elasticsearch connection info")
 
         settings = set_default(
@@ -55,12 +55,12 @@ def wrap_from(frum, schema=None):
         )
         settings.type = None  # WE DO NOT WANT TO INFLUENCE THE TYPE BECAUSE NONE IS IN THE frum STRING ANYWAY
         return type2container["elasticsearch"](settings)
-    elif isinstance(frum, dict) and frum.type and type2container[frum.type]:
+    elif isinstance(frum, Mapping) and frum.type and type2container[frum.type]:
         # TODO: Ensure the frum.name is set, so we capture the deep queries
         if not frum.type:
             Log.error("Expecting from clause to have a 'type' property")
         return type2container[frum.type](frum.settings)
-    elif isinstance(frum, dict) and (frum["from"] or isinstance(frum["from"], (list, set))):
+    elif isinstance(frum, Mapping) and (frum["from"] or isinstance(frum["from"], (list, set))):
         from pyLibrary.queries.query import Query
         return Query(frum, schema=schema)
     else:

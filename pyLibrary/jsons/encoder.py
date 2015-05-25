@@ -9,6 +9,8 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from collections import Mapping
 
 import json
 from json import encoder as json_encoder_module
@@ -129,7 +131,7 @@ class cPythonJSONEncoder(object):
             return unicode(self.encoder.encode(scrubbed))
         except Exception, e:
             from pyLibrary.debugs.logs import Log
-            Log.warning("problem serializing {{type}}", {"type": repr(value)}, e)
+            Log.warning("problem serializing {{type}}",  type= repr(value), cause=e)
             raise e
 
 
@@ -253,7 +255,7 @@ def pretty_json(value):
                 from pyLibrary.debugs.logs import Log
 
                 try:
-                    Log.note("try explicit convert of string with length {{length}}", {"length": len(value)})
+                    Log.note("try explicit convert of string with length {{length}}",  length= len(value))
                     acc = [u"\""]
                     for c in value:
                         try:
@@ -265,15 +267,15 @@ def pretty_json(value):
                             acc.append(c3)
                         except BaseException, g:
                             pass
-                            # Log.warning("odd character {{ord}} found in string.  Ignored.", {"ord": ord(c)}, g)
+                            # Log.warning("odd character {{ord}} found in string.  Ignored.",  ord= ord(c)}, cause=g)
                     acc.append(u"\"")
                     output = u"".join(acc)
-                    Log.note("return value of length {{length}}", {"length": len(output)})
+                    Log.note("return value of length {{length}}",  length= len(output))
                     return output
                 except BaseException, f:
                     Log.warning("can not even explicit convert", f)
                     return "null"
-        elif isinstance(value, dict):
+        elif isinstance(value, Mapping):
             try:
                 if not value:
                     return "{}"
@@ -337,10 +339,10 @@ def pretty_json(value):
                 except Exception, e:
                     from pyLibrary.debugs.logs import Log
 
-                    Log.warning("problem concatenating string of length {{len1}} and {{len2}}", {
-                        "len1": len("".join(output)),
-                        "len2": len(p)
-                    })
+                    Log.warning("problem concatenating string of length {{len1}} and {{len2}}",
+                        len1=len("".join(output)),
+                        len2=len(p)
+                    )
             output.append("\n]")
             return "".join(output)
         elif hasattr(value, '__json__'):
@@ -392,10 +394,11 @@ def problem_serializing(value, e=None):
             "type": typename
         }, e)
     else:
-        Log.error("Problem turning value ({{value}}) of type {{type}} to json", {
-            "value": rep,
-            "type": typename
-        }, e)
+        Log.error("Problem turning value ({{value}}) of type {{type}} to json",
+            value= rep,
+            type= typename,
+            cause=e
+        )
 
 
 def indent(value, prefix=INDENT):

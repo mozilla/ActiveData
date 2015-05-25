@@ -224,7 +224,7 @@ class File(object):
             except Exception, e:
                 from pyLibrary.debugs.logs import Log
 
-                Log.error("Can not read line from {{filename}}", {"filename": self._filename}, e)
+                Log.error("Can not read line from {{filename}}",  filename= self._filename, cause=e)
 
         return output()
 
@@ -286,7 +286,7 @@ class File(object):
         except Exception, e:
             from pyLibrary.debugs.logs import Log
 
-            Log.error("Could not make directory {{dir_name}}", {"dir_name": self._filename}, e)
+            Log.error("Could not make directory {{dir_name}}",  dir_name= self._filename, cause=e)
 
     @property
     def children(self):

@@ -9,6 +9,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 
 from mozillapulse.consumers import GenericConsumer
 
@@ -51,7 +52,7 @@ class Pulse(Thread):
         settings.user = coalesce(settings.user, settings.username)
         settings.applabel = coalesce(settings.applable, settings.queue, settings.queue_name)
 
-        self.pulse = GenericConsumer(settings, connect=True, **unwrap(settings))
+        self.pulse = GenericConsumer(settings, connect=True, **settings)
         self.count = coalesce(start, 0)
         self.start()
 
@@ -62,7 +63,7 @@ class Pulse(Thread):
         self.count += 1
 
         if self.settings.debug:
-            Log.note("{{data}}", {"data": data})
+            Log.note("{{data}}",  data= data)
         if self.target_queue != None:
             try:
                 self.target_queue.add(data)
@@ -75,7 +76,7 @@ class Pulse(Thread):
                 self.pulse_target(data)
                 message.ack()
             except Exception, e:
-                Log.error("Problem processing Pulse payload\n{{data|indent}}", {"data": data}, e)
+                Log.error("Problem processing Pulse payload\n{{data|indent}}",  data= data, cause=e)
 
     def _worker(self, please_stop):
         while not please_stop:

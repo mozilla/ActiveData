@@ -2,8 +2,8 @@
 Consistent dicts, lists and Nones
 =================================
 
-This library is solving the problem of consistency (closure) under the dot(.)
-and slice [::] operators.  The most significant differences involve dealing
+This library is solves Python's lack of consistency (lack of closure) under the dot (`.`)
+and slice `[::]` operators.  The most significant differences involve dealing
 with None, missing keys, and missing items in lists.
 
 Dict replaces dict
@@ -28,10 +28,10 @@ a[None] == None
 &gt;&gt;&gt; True</pre>
     missing keys are common when dealing with JSON, which is often almost anything.
     Unfortunately, you do loose the ability to perform <code>a is None</code>
-    checks:  You must always use <code>a == None</code> instead.
+    checks:  **You must always use <code>a == None</code> instead**.
  3. remove an attribute by assigning `None` (eg `a.b = None`)
  4. you can access paths as a variable:  `a["b.c"] == a.b.c`.  Of course,
- this creates a need to refer to literal dot (.), which can be done by
+ this creates a need to refer to literal dot (`.`), which can be done by
  escaping with backslash: `a["b\\.c"] == a["b\.c"]`
  5. you can set paths to values, missing dicts along the path are created:<pre>
 a = wrap({})
@@ -54,10 +54,10 @@ a.b.c += [1]
 a.b.c += [42]
 &gt;&gt;&gt; a == {"b": {"c": [1, 42]}}
 </pre>
- 8. attribute names (keys) are corrected to unicode - it appears Python
+ 8. property names (keys) are coerced to unicode - it appears Python's
  object.getattribute() is called with str() even when using `from __future__
  import unicode_literals`
- 9. by allowing dot notation, the IDE does tab completion and my spelling
+ 9. by allowing dot notation, the IDE does tab completion, plus my spelling
  mistakes get found at "compile time"
 
 ### Examples in the wild ###
@@ -129,6 +129,18 @@ To minimize the use of `Null` in our code we let comparisons
 with `None` succeed. The right-hand-side of the above comparisons can be
 replaced with `None` in all cases.
 
+###Identity and Absorbing (Zero) Elements###
+
+With closure we can realize we have defined an algebraic semigroup:  The identity element is the dot string (`"."`) and the zero element is `Null` (or `None`).
+
+ 1. `a[Null] == Null`
+ 2. `a["."] == a`
+
+which are true for all `a`
+
+
+###NullTypes are Lazy###
+
 NullTypes can also perform lazy assignment for increased expressibility.
 
 ```python
@@ -166,7 +178,7 @@ DictList is "Flat"
 `DictList` uses a *flat-list* assumption to interpret slicing and indexing
 operations.  This assumes lists are defined over all integer (**ℤ**)
 indices; defaulting to `Null` for indices not explicitly defined otherwise.
-This is distinctly different from Python's usual *loop-around*  assumption,
+This is distinctly different from Python's *loop-around* assumption,
 where negative indices are interpreted modulo-the-list-length.
 
     loop_list = ['A', 'B', 'C']
@@ -208,8 +220,7 @@ For the sake of completeness, we have two more convenience methods:
   * `flat_list.left(b)` same as `flat_list[:b:]`
   * `flat_list.rightBut(b)` same as `flat_list[b::]`
 
-DictList Dot (.) Operator
-----------------------------
+###DictList Dot (.) Operator###
 
 The dot operator on a `DictList` performs a simple projection; it will return a list of property values
 
@@ -217,6 +228,26 @@ The dot operator on a `DictList` performs a simple projection; it will return a 
     myList.name == [x["name"] for x in myList]
 ```
 
+DictObject for data
+-------------------
+
+There are two major families of objects in Object Oriented programming.  The first, are ***Actors***: characterized by a number of useful instance methods and some state bundled into a package.  The second are ***Data***: Primarily a set of properties, with only (de)serialization functions, or algebraic operators defined.  Boto has many examples of these *Data* classes, [here is one](https://github.com/boto/boto/blob/4b8269562e663f090403e57ba1a3a471b6e0aa0e/boto/ec2/networkinterface.py).
+
+The problem with *Data* objects is they have an useless distinction between attributes and properties.  This prevents us from using the `[]` operator for dereferencing, forcing use to use the verbose `__getattr__()` instead.  It also prevents the use of query operators over these objects.
+
+You can register a class as a *data* class, by wrapping it with `DictClass`.
+
+```python
+	SomeDataClass = DictClass(SomeDataClass)
+```
+
+This does two things:
+* It will wrap all objects referenced by `Dict` and all items found in `DictList` so they can be used in queries.   
+* It decorates the constructor to add a `settings` parameter, which can be used to pass default parameters, like [`@use_settings`](https://github.com/klahnakoski/pyLibrary/blob/6e3233abe6e68d00020907d9d630c9a57c14e8a2/pyLibrary/meta.py#L80) 
+
+
+Appendix
+========
 
 Motivation for DictList (optional reading)
 ------------------------------------------

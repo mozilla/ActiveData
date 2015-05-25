@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 import sys
 import math
 from pyLibrary.queries.cube import Cube
@@ -128,9 +129,11 @@ def groupby_Multiset(data, min_size, max_size):
             g = [k]
 
         if total >= max_size:
-            Log.error("({{min}}, {{max}}) range is too strict given step of {{increment}}", {
-                "min": min_size, "max": max_size, "increment": c
-            })
+            Log.error("({{min}}, {{max}}) range is too strict given step of {{increment}}",
+                min=min_size,
+                max=max_size,
+                increment=c
+            )
 
     if g:
         yield (i, g)

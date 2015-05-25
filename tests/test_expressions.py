@@ -75,4 +75,13 @@ class TestExpressions(FuzzyTestCase):
         result = simplify_esfilter(qb_expression_to_esfilter(where))
         self.assertEqual(result, {"and": [{"term": {"a": 1}}, {"terms": {"b": [2, 3]}}]})
 
+    def test_ne1(self):
+        where = {"ne": {"a": 1}}
+        result = simplify_esfilter(qb_expression_to_esfilter(where))
+        self.assertEqual(result, {"not": {"term": {"a": 1}}})
+
+    def test_ne2(self):
+        where = {"neq": {"a": 1}}
+        result = simplify_esfilter(qb_expression_to_esfilter(where))
+        self.assertEqual(result, {"not": {"term": {"a": 1}}})
 

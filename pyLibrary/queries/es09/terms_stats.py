@@ -9,6 +9,7 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import COUNT, PRODUCT
@@ -99,7 +100,7 @@ def es_terms_stats(esq, mvel, query):
 
         counts["count"].forall(add_facet)
 
-        Log.note("{{theory_count}} theoretical combinations, {{real_count}} actual combos found", {"real_count": len(esFacets), "theory_count":total_facets})
+        Log.note("{{theory_count}} theoretical combinations, {{real_count}} actual combos found",  real_count= len(esFacets),  theory_count=total_facets)
 
         if not esFacets:
             # MAKE EMPTY CUBE

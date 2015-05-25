@@ -10,6 +10,8 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from collections import Mapping
 from pyLibrary.debugs.logs import Log
 
 from pyLibrary.queries.unique_index import UniqueIndex
@@ -171,13 +173,13 @@ class Index(object):
 
 def value2key(keys, val):
     if len(keys) == 1:
-        if isinstance(val, dict):
+        if isinstance(val, Mapping):
             return val[keys[0]],
         elif isinstance(val, (list, tuple)):
             return val[0],
         return val,
     else:
-        if isinstance(val, dict):
+        if isinstance(val, Mapping):
             return tuple(val[k] for k in keys)
         elif isinstance(val, (list, tuple)):
             return tuple(val)

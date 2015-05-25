@@ -11,6 +11,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 
 from datetime import timedelta
 import logging
@@ -72,7 +73,7 @@ def make_log_from_settings(settings):
             # PROVIDE A DEFAULT STREAM HANLDER
             constructor = Log_usingThreadedStream
         else:
-            Log.error("Can not find class {{class}}", {"class": path}, e)
+            Log.error("Can not find class {{class}}",  {"class": path}, cause=e)
 
     # IF WE NEED A FILE, MAKE SURE DIRECTORY EXISTS
     if settings.filename:

@@ -19,6 +19,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 from copy import copy
 
 from requests import sessions, Response
@@ -78,7 +79,7 @@ def request(method, url, **kwargs):
             return session.request(method=method, url=url, **kwargs)
     except Exception, e:
         if " Read timed out." in e:
-            Log.error("Timeout failure (timeout was {{timeout}}", {"timeout": timeout}, e)
+            Log.error("Timeout failure (timeout was {{timeout}}",  timeout= timeout, cause=e)
         else:
             Log.error("Request failure", e)
 

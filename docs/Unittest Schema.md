@@ -10,9 +10,10 @@ The Unittest logs are deep JSON structures describing each of the individual tes
 Describes properties exclusive to an individual test result
 
 * `result.test` - *string* path and filename of the specific test
-* `result.result` - *string* recording the test result
+* `result.status` - *string* recording the test result
+* ~~`result.result` - *string* recording the test result~~
 * `result.expected` - *string* representing what was expected of the test.  Not all tests are expected to pass.
-* `result.ok` - *boolean* where `result==expected`
+* `result.ok` - *boolean* where `result==expected`, and all subtests too
 * `result.start_time` -  *timestamp* when the test started running
 * `result.end_time` - *timestamp* when the test ended
 * `result.duration` - *seconds* usually the calculated difference between start and end times, but could be the test's own reported duration
@@ -25,6 +26,21 @@ Describes properties exclusive to an individual test result
 * `result.missing_test_end` - *boolean* missing the test's end record
 * `result.missing_test_start` - *boolean* missing the test's start record
 * `result.crash` - *boolean* the structured log recorded `"action": "crash"`
+
+`result.subtests` Columns
+-------------------------
+
+Some tests contain *subtests*, which correspond to individual `assert` statements.
+
+* `result.subtests.ordering` - *integer* for maintaining the original log ordering
+* `result.subtests.name` - *string* name of the subtest
+* ~~`result.subtests.subtest` - *string* name of the subtest~~
+* `result.subtests.ok` - *boolean* `true` iff `status==expected``
+* `result.subtests.status` - *string* result of the subtest
+* `result.subtests.expected` - *string* the expected status
+* `result.subtests.message` - *string* some description
+* `result.subtests.timestamp` - *timestamp* given to this log line
+
 
 `run` Columns
 -------------

@@ -9,6 +9,8 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from collections import Mapping
 import re
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
@@ -32,9 +34,9 @@ class Domain(object):
     def __new__(cls, **desc):
         if cls == Domain:
             try:
-                return name2type[desc.get("type")](**desc)
+                return name_to_type[desc.get("type")](**desc)
             except Exception, e:
-                Log.error("Do not know domain of type {{type}}", {"type": desc.get("type")})
+                Log.error("Do not know domain of type {{type}}", type=desc.get("type"), cause=e)
         else:
             return object.__new__(cls)
 
@@ -201,7 +203,7 @@ class SimpleSetDomain(Domain):
             # TODO: desc.key CAN BE MUCH LIKE A SELECT, WHICH UniqueIndex CAN NOT HANDLE
             self.key = desc.key
             self.map = UniqueIndex(keys=desc.key)
-        elif desc.partitions and isinstance(desc.partitions[0][desc.key], dict):
+        elif desc.partitions and isinstance(desc.partitions[0][desc.key], Mapping):
             self.key = desc.key
             self.map = UniqueIndex(keys=desc.key)
             # self.key = UNION(set(d[desc.key].keys()) for d in desc.partitions)
@@ -245,8 +247,8 @@ class SimpleSetDomain(Domain):
 
         self.label = coalesce(self.label, "name")
 
-        if isinstance(desc.partitions, list):
-            self.partitions = desc.partitions.copy()
+        if hasattr(desc.partitions, "__iter__"):
+            self.partitions = list(desc.partitions)
         else:
             Log.error("expecting a list of partitions")
 
@@ -330,7 +332,7 @@ class SetDomain(Domain):
             # TODO: desc.key CAN BE MUCH LIKE A SELECT, WHICH UniqueIndex CAN NOT HANDLE
             self.key = desc.key
             self.map = UniqueIndex(keys=desc.key)
-        elif desc.partitions and isinstance(desc.partitions[0][desc.key], dict):
+        elif desc.partitions and isinstance(desc.partitions[0][desc.key], Mapping):
             self.key = desc.key
             self.map = UniqueIndex(keys=desc.key)
             # self.key = UNION(set(d[desc.key].keys()) for d in desc.partitions)
@@ -614,7 +616,7 @@ def is_keyword(value):
     return keyword_pattern.match(value).group(0) == value
 
 
-name2type = {
+name_to_type = {
     "value": ValueDomain,
     "default": DefaultDomain,
     "set": SimpleSetDomain,

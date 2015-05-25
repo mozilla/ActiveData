@@ -7,6 +7,7 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
+from collections import Mapping
 
 import unittest
 from pyLibrary import dot
@@ -76,7 +77,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
     try:
         if test==None and expected==None:
             return
-        elif isinstance(expected, dict):
+        elif isinstance(expected, Mapping):
             for k, v2 in expected.items():
                 if isinstance(k, basestring):
                     v1 = dot.get_attr(test, literal_field(k))
@@ -93,10 +94,12 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
         else:
             assertAlmostEqualValue(test, expected, msg=msg, digits=digits, places=places, delta=delta)
     except Exception, e:
-        Log.error("{{test|json}} does not match expected {{expected|json}}", {
-            "test": test if show_detail else "[can not show]",
-            "expected": expected if show_detail else "[can not show]"
-        }, e)
+        Log.error(
+            "{{test|json}} does not match expected {{expected|json}}",
+            test=test if show_detail else "[can not show]",
+            expected=expected if show_detail else "[can not show]",
+            cause=e
+        )
 
 
 def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, delta=None):
@@ -111,7 +114,7 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
         # SOME SPECIAL CASES, EXPECTING EMPTY CONTAINERS IS THE SAME AS EXPECTING NULL
         if isinstance(expected, list) and len(expected)==0 and test == None:
             return
-        if isinstance(expected, dict) and not expected.keys() and test == None:
+        if isinstance(expected, Mapping) and not expected.keys() and test == None:
             return
         if test != expected:
             raise AssertionError(expand_template("{{test}} != {{expected}}", locals()))

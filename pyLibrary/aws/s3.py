@@ -9,6 +9,7 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 import StringIO
 import gzip
 from io import BytesIO
@@ -119,7 +120,7 @@ class Bucket(object):
             self.connection = Connection(settings).connection
             self.bucket = self.connection.get_bucket(self.settings.bucket, validate=False)
         except Exception, e:
-            Log.error("Problem connecting to {{bucket}}", {"bucket": self.settings.bucket}, e)
+            Log.error("Problem connecting to {{bucket}}",  bucket= self.settings.bucket, cause=e)
 
 
     def __enter__(self):
@@ -136,7 +137,7 @@ class Bucket(object):
         if must_exist:
             meta = self.get_meta(key)
             if not meta:
-                Log.error("Key {{key}} does not exist", {"key": key})
+                Log.error("Key {{key}} does not exist",  key= key)
             key = strip_extension(meta.key)
         return File(self, key)
 
@@ -150,12 +151,6 @@ class Bucket(object):
             raise e
 
     def get_meta(self, key, conforming=True):
-        try:
-            if key.endswith(".json") or key.endswith(".zip") or key.endswith(".gz"):
-                Log.error("Expecting a pure key")
-        except Exception, e:
-            Log.error("bad key format {{key}}", {"key":key}, e)
-
         try:
             # key_prefix("2")
             metas = list(self.bucket.list(prefix=key))
@@ -186,11 +181,10 @@ class Bucket(object):
                     error = e
 
             if too_many:
-                Log.error("multiple keys in {{bucket}} with prefix={{prefix|quote}}: {{list}}", {
-                    "bucket": self.name,
-                    "prefix": key,
-                    "list": [k.name for k in metas]
-                })
+                Log.error("multiple keys in {{bucket}} with prefix={{prefix|quote}}: {{list}}",
+                    bucket= self.name,
+                    prefix= key,
+                    list= [k.name for k in metas])
             if not perfect and error:
                 Log.error("Problem with key request", error)
             return coalesce(perfect, favorite)
@@ -261,7 +255,7 @@ class Bucket(object):
     def read_lines(self, key):
         source = self.get_meta(key)
         if source is None:
-            Log.error("{{key}} does not exist", {"key": key})
+            Log.error("{{key}} does not exist",  key= key)
         if source.size < MAX_STRING_SIZE:
             if source.key.endswith(".gz"):
                 return GzipLines(source.read())
@@ -294,7 +288,7 @@ class Bucket(object):
                     string_length = len(value)
                     value = convert.bytes2zip(value)
                 file_length = len(value)
-                Log.note("Sending contents with length {{file_length|comma}} (from string with length {{string_length|comma}})", {"file_length": file_length, "string_length":string_length})
+                Log.note("Sending contents with length {{file_length|comma}} (from string with length {{string_length|comma}})",  file_length= file_length,  string_length=string_length)
                 value.seek(0)
                 storage.set_contents_from_file(value)
 
@@ -324,13 +318,15 @@ class Bucket(object):
             if self.settings.public:
                 storage.set_acl('public-read')
         except Exception, e:
-            Log.error("Problem writing {{bytes}} bytes to {{key}} in {{bucket}}", {
-                "key": key,
-                "bucket": self.bucket.name,
-                "bytes": len(value)
-            }, e)
+            Log.error("Problem writing {{bytes}} bytes to {{key}} in {{bucket}}",
+                key=key,
+                bucket=self.bucket.name,
+                bytes=len(value),
+                cause=e
+            )
 
     def write_lines(self, key, *lines):
+        self._verify_key_format(key)
         storage = self.bucket.new_key(key + ".json.gz")
 
         buff = BytesIO()
@@ -365,10 +361,11 @@ class Bucket(object):
             return
 
         if self.key_format != _scrub_key(key):
-            Log.error("key {{key}} in bucket {{bucket}} is of the wrong format", {
-                "key": key,
-                "bucket": self.bucket.name
-            })
+            Log.error(
+                "key {{key}} in bucket {{bucket}} is of the wrong format",
+                key=key,
+                bucket=self.bucket.name
+            )
 
 
 class SkeletonBucket(Bucket):

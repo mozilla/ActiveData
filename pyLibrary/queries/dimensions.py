@@ -9,6 +9,8 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from collections import Mapping
 from pyLibrary import dot
 from pyLibrary.collections import SUM
 from pyLibrary.queries.container import Container
@@ -50,7 +52,7 @@ class Dimension(Container):
         fields = coalesce(dim.field, dim.fields)
         if not fields:
             return  # NO FIELDS TO SEARCH
-        elif isinstance(fields, dict):
+        elif isinstance(fields, Mapping):
             self.fields = wrap(fields)
             edges = wrap([{"name": k, "value": v, "allowNulls": False} for k, v in self.fields.items()])
         else:
@@ -70,7 +72,7 @@ class Dimension(Container):
                 "esfilter": self.esfilter,
                 "limit": self.limit
             })
-            Log.note("{{name}} has {{num}} parts", {"name": self.name, "num": len(parts)})
+            Log.note("{{name}} has {{num}} parts",  name= self.name,  num= len(parts))
 
         d = parts.edges[0].domain
 
@@ -91,7 +93,7 @@ class Dimension(Container):
                 )
             self.value = coalesce(dim.value, "name")
             self.partitions = temp.partitions
-        elif isinstance(fields, dict):
+        elif isinstance(fields, Mapping):
             self.value = "name"  # USE THE "name" ATTRIBUTE OF PARTS
 
             partitions = DictList()
@@ -128,7 +130,7 @@ class Dimension(Container):
             array = parts.data.values()[0].cube  # DIG DEEP INTO RESULT (ASSUME SINGLE VALUE CUBE, WITH NULL AT END)
 
             def edges2value(*values):
-                if isinstance(fields, dict):
+                if isinstance(fields, Mapping):
                     output = Dict()
                     for e, v in zip(edges, values):
                         output[e.name] = v
@@ -324,10 +326,9 @@ def parse_partition(part):
 
     if not part.esfilter:
         if len(part.partitions) > 100:
-            Log.error("Must define an esfilter on {{name}} there are too many partitions ({{num_parts}})", {
-                "name": part.name,
-                "num_parts": len(part.partitions)
-            })
+            Log.error("Must define an esfilter on {{name}} there are too many partitions ({{num_parts}})",
+                name= part.name,
+                num_parts= len(part.partitions))
 
         # DEFAULT esfilter IS THE UNION OF ALL CHILD FILTERS
         if part.partitions:

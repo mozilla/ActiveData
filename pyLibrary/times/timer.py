@@ -9,6 +9,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 
 from datetime import timedelta
 from time import clock
@@ -32,7 +33,7 @@ class Timer(object):
 
     def __init__(self, description, param=None, debug=True, silent=False):
         self.template = description
-        self.param = coalesce(wrap(param), {})
+        self.param = wrap(coalesce(param, {}))
         self.debug = debug
         self.silent = silent
         self.interval = None

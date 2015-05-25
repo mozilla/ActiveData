@@ -9,6 +9,8 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from collections import Mapping
 
 from datetime import datetime
 import re
@@ -169,7 +171,7 @@ class _MVEL(object):
 
         term = []
         if len(split_field(self.fromData.name)) == 1 and fields:
-            if isinstance(fields, dict):
+            if isinstance(fields, Mapping):
                 # CONVERT UNORDERED FIELD DEFS
                 qb_fields, es_fields = zip(*[(k, fields[k]) for k in sorted(fields.keys())])
             else:
@@ -347,7 +349,7 @@ def setValues(expression, constants):
         if isinstance(value, list):
             continue  # DO NOT MESS WITH ARRAYS
 
-        if isinstance(value, dict):
+        if isinstance(value, Mapping):
             for k, v in value.items():
                 constants.append({"name": n + "." + k, "value": v})
 

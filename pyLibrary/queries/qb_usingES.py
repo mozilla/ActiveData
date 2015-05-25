@@ -9,6 +9,8 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from collections import Mapping
 
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch, http
@@ -145,11 +147,10 @@ class FromES(Container):
         if output:
             # VERIFY es IS CONSISTENT
             if self.url != output.url:
-                Log.error("Using {{name}} for two different containers\n\t{{existing}}\n\t{{new}}", {
-                    "name": _from_name,
-                    "existing": output.url,
-                    "new": self._es.url
-                })
+                Log.error("Using {{name}} for two different containers\n\t{{existing}}\n\t{{new}}",
+                    name= _from_name,
+                    existing= output.url,
+                    new= self._es.url)
             return output.columns
 
         path = split_field(_from_name)
@@ -175,7 +176,7 @@ class FromES(Container):
 
     def addDimension(self, dim):
         if isinstance(dim, list):
-            Log.error("Expecting dimension to be a object, not a list:\n{{dim}}", {"dim": dim})
+            Log.error("Expecting dimension to be a object, not a list:\n{{dim}}",  dim= dim)
         self._addDimension(dim, [])
 
     def _addDimension(self, dim, path):
@@ -215,7 +216,7 @@ class FromES(Container):
                         return [{"value": fields[0]}]
                     else:
                         return [{"name": (edge + "[" + str(i) + "]"), "value": v} for i, v in enumerate(fields)]
-                elif isinstance(fields, dict):
+                elif isinstance(fields, Mapping):
                     return [{"name": (edge + "." + k), "value": v} for k, v in fields.items()]
                 else:
                     Log.error("do not know how to handle")
@@ -350,7 +351,7 @@ class FromESMetadata(Container):
                 }
             ])
         else:
-            Log.error("Unknonw metadata: {{name}}", {"name": self.settings.name})
+            Log.error("Unknonw metadata: {{name}}",  name= self.settings.name)
 
 
 def _parse_properties(index, properties):

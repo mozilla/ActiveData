@@ -13,6 +13,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 
 from pyLibrary.collections import PRODUCT
 from pyLibrary.debugs.logs import Log
@@ -166,7 +167,7 @@ class _array:
         if item in IGNORE:
             pass
         else:
-            Log.error("operation {{op}} not found", {"op": item})
+            Log.error("operation {{op}} not found", op=item)
 
     def __iter__(self):
         return self._value.__iter__()

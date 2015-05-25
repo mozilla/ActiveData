@@ -305,6 +305,61 @@ class TestEdge1(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
+    def test_select_4(self):
+        test = {
+            "name": "count column",
+            "metadata": {},
+            "data": structured_test_data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": [
+                    {"name": "v", "value": "v", "aggregate": "min"},
+                    {"name": "d", "value": "_b.d", "aggregate": "max"}
+                ],
+                "edges": ["_b.r"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"v": 1, "d": 3, "_b": {"r": "a"}},
+                    {"v": 4, "d": 3, "_b": {"r": "b"}},
+                    {"v": 7, "d": 3, "_b": {"r": "c"}},
+                    {"v": 10, "d": 3, "_b": {"r": "d"}},
+                    {"v": 13, "d": 3}
+                ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["v", "d", "_b.r"],
+                "data": [
+                    [1, 3, "a"],
+                    [4, 3, "b"],
+                    [7, 3, "c"],
+                    [10, 3, "d"],
+                    [13, 3, None]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "_b.r",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [{"value": "a"}, {"value": "b"}, {"value": "c"}, {"value": "d"}]
+                        }
+                    }
+                ],
+                "data": {
+                    "v": [1, 4, 7, 10, 13],
+                    "d": [3, 3, 3, 3, 3, None]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
     def test_sum_column(self):
         test = {
             "name": "sum column",

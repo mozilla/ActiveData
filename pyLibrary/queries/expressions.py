@@ -9,6 +9,8 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+from collections import Mapping
 import itertools
 
 from pyLibrary import convert
@@ -37,7 +39,7 @@ def output(row, rownum=None, rows=None):
     try:
         return """ + source + """
     except Exception, e:
-        Log.error("Problem with dynamic function {{func|quote}}", {"func": """ + convert.value2quote(source) + """}, e)
+        Log.error("Problem with dynamic function {{func|quote}}",  func= """ + convert.value2quote(source) + """, cause=e)
 """
     return output
 
@@ -51,7 +53,7 @@ def qb_expression(expr):
 
 
 def qb_expression_to_function(expr):
-    if expr!=None and not isinstance(expr, (dict, list)) and  hasattr(expr, "__call__"):
+    if expr!=None and not isinstance(expr, (Mapping, list)) and  hasattr(expr, "__call__"):
         return expr
     return compile_expression(qb_expression_to_python(expr))
 
@@ -69,10 +71,7 @@ def qb_expression_to_esfilter(expr):
     return converter_map.get(k, _no_convert)(k, v)
 
 
-
-
 def qb_expression_to_ruby(expr):
-
     if expr == None:
         return "nil"
     elif Math.is_number(expr):
@@ -98,7 +97,7 @@ def qb_expression_to_ruby(expr):
             else:
                 output = mop[0].join(["(" + qb_expression_to_ruby(t) + ")" for t in term])
                 return output
-        elif isinstance(term, dict):
+        elif isinstance(term, Mapping):
             a, b = term.items()[0]
             output = "(" + qb_expression_to_ruby(a) + ")" + mop[0] + "(" + qb_expression_to_ruby(b) + ")"
             return output
@@ -111,7 +110,7 @@ def qb_expression_to_ruby(expr):
         if isinstance(term, list):
             output = bop.join(["(" + qb_expression_to_ruby(t) + ")" for t in term])
             return output
-        elif isinstance(term, dict):
+        elif isinstance(term, Mapping):
             if op == "eq":
                 # eq CAN ACCEPT A WHOLE OBJECT OF key:value PAIRS TO COMPARE
                 output = " and ".join("(" + qb_expression_to_ruby(a) + ")" + bop + "(" + qb_expression_to_ruby(b) + ")" for a, b in term.items())
@@ -133,7 +132,7 @@ def qb_expression_to_ruby(expr):
         output = cop(term).to_ruby()
         return output
 
-    Log.error("`{{op}}` is not a recognized operation", {"op": op})
+    Log.error("`{{op}}` is not a recognized operation",  op= op)
 
 
 def qb_expression_to_python(expr):
@@ -167,7 +166,7 @@ def qb_expression_to_python(expr):
             else:
                 output = mop[0].join(["(" + qb_expression_to_python(t) + ")" for t in term])
                 return output
-        elif isinstance(term, dict):
+        elif isinstance(term, Mapping):
             a, b = term.items()[0]
             output = "(" + qb_expression_to_python(a) + ")" + mop[0] + "(" + qb_expression_to_python(b) + ")"
             return output
@@ -179,7 +178,7 @@ def qb_expression_to_python(expr):
         if isinstance(term, list):
             output = bop.join(["(" + qb_expression_to_python(t) + ")" for t in term])
             return output
-        elif isinstance(term, dict):
+        elif isinstance(term, Mapping):
             if op == "eq":
                 # eq CAN ACCEPT A WHOLE OBJECT OF key:value PAIRS TO COMPARE
                 output = " and ".join("(" + qb_expression_to_python(a) + ")" + bop + "(" + qb_expression_to_python(b) + ")" for a, b in term.items())
@@ -196,7 +195,7 @@ def qb_expression_to_python(expr):
         output = uop + "(" + qb_expression_to_python(term) + ")"
         return output
 
-    Log.error("`{{op}}` is not a recognized operation", {"op": op})
+    Log.error("`{{op}}` is not a recognized operation",  op= op)
 
 
 def get_all_vars(expr):
@@ -223,7 +222,7 @@ def get_all_vars(expr):
             for t in term:
                 output |= get_all_vars(t)
             return output
-        elif isinstance(term, dict):
+        elif isinstance(term, Mapping):
             a, b = term.items()[0]
             return get_all_vars(a) | get_all_vars(b)
         else:
@@ -236,11 +235,11 @@ def get_all_vars(expr):
             for t in term:
                 output |= get_all_vars(t)
             return output
-        elif isinstance(term, dict):
+        elif isinstance(term, Mapping):
             if op == "eq":
                 output = set()
                 for a, b in term.items():
-                    output |= get_all_vars(a)  # {k:v} kIS VARIABLE, v IS A VALUE
+                    output |= get_all_vars(a)  # {k:v} k IS VARIABLE, v IS A VALUE
                 return output
             else:
                 a, b = term.items()[0]
@@ -256,7 +255,7 @@ def get_all_vars(expr):
     if cop:
         return cop(op, term).vars()
 
-    Log.error("`{{op}}` is not a recognized operation", {"op": op})
+    Log.error("`{{op}}` is not a recognized operation",  op= op)
 
 
 
@@ -342,7 +341,7 @@ class BinaryOp(object):
         self.op = op
         if isinstance(term, list):
             self.a, self.b = qb_expression(term[0]), qb_expression(term[1])
-        elif isinstance(term, dict):
+        elif isinstance(term, Mapping):
             self.a, self.b = map(qb_expression, term.items()[0])
 
     def to_ruby(self):
@@ -357,7 +356,7 @@ class BinaryOp(object):
         if self.op in ["gt", "gte", "lte", "lt"]:
             return {"range":{self.op: {self.a: self.b}}}
         else:
-            Log.error("Operator {{op}} is not supported by ES", {"op":self.op})
+            Log.error("Operator {{op}} is not supported by ES",  op=self.op)
 
     def vars(self):
         return self.a.vars() | self.b.vars()
@@ -370,7 +369,7 @@ class MultiOp(object):
                 self.terms = [default_multi_operators[op]]
             else:
                 self.terms = map(qb_expression, terms)
-        elif isinstance(terms, dict):
+        elif isinstance(terms, Mapping):
             self.terms = map(qb_expression, terms.items()[0])
         else:
             self.terms = [qb_expression_to_python(terms)]
@@ -729,8 +728,8 @@ def _convert_eq(eq, term):
 def _convert_in(op, term):
     if not term:
         Log.error("Expecting a term")
-    if not isinstance(term, dict):
-        Log.error("Expecting {{op}} to have dict value", {"op": op})
+    if not isinstance(term, Mapping):
+        Log.error("Expecting {{op}} to have dict value",  op= op)
     var, val = term.items()[0]
 
     if isinstance(val, list):
@@ -769,9 +768,9 @@ def _no_convert(op, term):
 def _convert_field(k, var):
     if isinstance(var, basestring):
         return {k: {"field": var}}
-    if isinstance(var, dict) and var.get("field"):
+    if isinstance(var, Mapping) and var.get("field"):
         return {k: var}
-    Log.error("do not know how to handle {{value}}", {"value": {k: var}})
+    Log.error("do not know how to handle {{value}}",  value= {k: var})
 
 
 converter_map = {
@@ -782,6 +781,7 @@ converter_map = {
     "terms": _convert_in,
     "eq": _convert_eq,
     "ne": _convert_not_equal,
+    "neq": _convert_not_equal,
     "in": _convert_in,
     "missing": _convert_field,
     "exists": _convert_field,

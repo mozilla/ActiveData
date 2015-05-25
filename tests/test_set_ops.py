@@ -54,6 +54,49 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+
+    def test_select_on_missing_field(self):
+        test = {
+            "data": [  # PROPERTIES STARTING WITH _ ARE NOT NESTED AUTOMATICALLY
+                {"_a": {"_b": {"_c": 1}}},
+                {"_a": {"_b": {"_c": 2}}},
+                {"_a": {"_b": {"_c": 3}}},
+                {"_a": {"_b": {"_c": 4}}},
+                {"_a": {"_b": {"_c": 5}}}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": "_a._b._d"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                {},
+                {},
+                {},
+                {},
+                {}
+            ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["_a._b._d"],
+                "data": [[None], [None], [None], [None], [None]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 5, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "_a._b._d": [None,None,None,None,None]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
     def test_single_deep_select(self):
 
         test = {

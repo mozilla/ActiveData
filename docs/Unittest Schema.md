@@ -27,6 +27,21 @@ Describes properties exclusive to an individual test result
 * `result.missing_test_start` - *boolean* missing the test's start record
 * `result.crash` - *boolean* the structured log recorded `"action": "crash"`
 
+`result.subtests` Columns
+-------------------------
+
+Some tests are further broken down into *subtests*, which has less
+
+* `result.subtests.ordering` - *integer* for maintaining the original log ordering
+* `result.subtests.name` - *string* name of the subtest
+* ~~`result.subtests.subtest` - *string* name of the subtest~~
+* `result.subtests.ok` - *boolean* `true` iff `status==expected``
+* `result.subtests.status` - *string* result of the subtest
+* `result.subtests.expected` - *string* the expected status
+* `result.subtests.message` - *string* some description
+* `result.subtests.timestamp` - *timestamp* given to this log line
+
+
 `run` Columns
 -------------
 

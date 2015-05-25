@@ -48,7 +48,7 @@ class Date(object):
     def floor(self, duration=None):
         if duration is None:  # ASSUME DAY
             return Date(math.floor(self.milli / 86400000) * 86400000)
-        elif duration.milli % (7*86400000) ==0:
+        elif duration.milli % (7 * 86400000) == 0:
             offset = 4*86400000
             return Date(math.floor((self.milli+offset) / duration.milli) * duration.milli - offset)
         elif not duration.month:
@@ -62,7 +62,8 @@ class Date(object):
             return self.value.strftime(format)
         except Exception, e:
             from pyLibrary.debugs.logs import Log
-            Log.error("Can not format {{value}} with {{format}}",  value= self.value, format=format, cause=e)
+
+            Log.error("Can not format {{value}} with {{format}}", value=self.value, format=format, cause=e)
 
     @property
     def milli(self):
@@ -144,6 +145,9 @@ class Date(object):
 
     def __str__(self):
         return str(self.value)
+
+    def __repr__(self):
+        return Date(self.value.__repr__())
 
     def __sub__(self, other):
         if other == None:

@@ -222,9 +222,9 @@ def format_cube(T, select, source):
                     matricies[s.name] = Matrix.wrap([unwraplist(t[source][s.value]) for t in T])
 
                 elif isinstance(s.value, basestring):  # fields
-                    matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.value)) for t in unwrap(T)])
+                    matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.value)) for t in T])
                 else:
-                    matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.name)) for t in unwrap(T)])
+                    matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.name)) for t in T])
         except Exception, e:
             Log.error("", e)
     cube = Cube(select, edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(T), "interval": 1}}], data=matricies)

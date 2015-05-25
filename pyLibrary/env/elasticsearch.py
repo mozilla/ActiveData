@@ -266,14 +266,20 @@ class Index(object):
             for i, item in enumerate(items):
                 if self.cluster.version.startswith("0.90."):
                     if not item.index.ok:
-                        Log.error("{{error}} while loading line:\n{{line}}",
-                            error= item.index.error,
-                            line= lines[i * 2 + 1])
+                        Log.error(
+                            "{{error}} while loading line:\n{{line}}",
+                            error=item.index.error,
+                            line=lines[i * 2 + 1]
+                        )
                 elif self.cluster.version.startswith("1.4."):
                     if item.index.status not in [200, 201]:
-                        Log.error("{{error}} while loading line:\n{{line}}",
-                            error= item.index.error,
-                            line= lines[i * 2 + 1])
+                        Log.error(
+                            "{{num}} {{error}} while loading line into {{index}}:\n{{line}}",
+                            num=item.index.status,
+                            error=item.index.error,
+                            line=lines[i * 2 + 1],
+                            index=self.settings.index
+                        )
                 else:
                     Log.error("version not supported {{version}}",  version=self.cluster.version)
 
@@ -333,14 +339,15 @@ class Index(object):
                     show_query.facets = {k: "..." for k in query.facets.keys()}
                 else:
                     show_query = query
-                Log.note("Query:\n{{query|indent}}",  query= show_query)
+                Log.note("Query:\n{{query|indent}}", query=show_query)
             return self.cluster._post(
                 self.path + "/_search",
                 data=convert.value2json(query).encode("utf8"),
                 timeout=coalesce(timeout, self.settings.timeout)
             )
         except Exception, e:
-            Log.error("Problem with search (path={{path}}):\n{{query|indent}}",
+            Log.error(
+                "Problem with search (path={{path}}):\n{{query|indent}}",
                 path=self.path + "/_search",
                 query=query,
                 cause=e

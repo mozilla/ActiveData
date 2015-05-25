@@ -2,8 +2,8 @@
 Consistent dicts, lists and Nones
 =================================
 
-This library is solving the problem of consistency (closure) under the dot(.)
-and slice [::] operators.  The most significant differences involve dealing
+This library is solves Python's lack of consistency (lack of closure) under the dot (`.`)
+and slice `[::]` operators.  The most significant differences involve dealing
 with None, missing keys, and missing items in lists.
 
 Dict replaces dict
@@ -28,10 +28,10 @@ a[None] == None
 &gt;&gt;&gt; True</pre>
     missing keys are common when dealing with JSON, which is often almost anything.
     Unfortunately, you do loose the ability to perform <code>a is None</code>
-    checks:  You must always use <code>a == None</code> instead.
+    checks:  **You must always use <code>a == None</code> instead**.
  3. remove an attribute by assigning `None` (eg `a.b = None`)
  4. you can access paths as a variable:  `a["b.c"] == a.b.c`.  Of course,
- this creates a need to refer to literal dot (.), which can be done by
+ this creates a need to refer to literal dot (`.`), which can be done by
  escaping with backslash: `a["b\\.c"] == a["b\.c"]`
  5. you can set paths to values, missing dicts along the path are created:<pre>
 a = wrap({})
@@ -54,7 +54,7 @@ a.b.c += [1]
 a.b.c += [42]
 &gt;&gt;&gt; a == {"b": {"c": [1, 42]}}
 </pre>
- 8. attribute names (keys) are coerced to unicode - it appears Python
+ 8. property names (keys) are coerced to unicode - it appears Python's
  object.getattribute() is called with str() even when using `from __future__
  import unicode_literals`
  9. by allowing dot notation, the IDE does tab completion, plus my spelling
@@ -129,6 +129,18 @@ To minimize the use of `Null` in our code we let comparisons
 with `None` succeed. The right-hand-side of the above comparisons can be
 replaced with `None` in all cases.
 
+###Identity and Absorbing (Zero) Elements###
+
+With closure we can realize we have defined an algebraic semigroup:  The identity element is the dot string (`"."`) and the zero element is `Null` (or `None`).
+
+ 1. `a[Null] == Null`
+ 2. `a["."] == a`
+
+which are true for all `a`
+
+
+###NullTypes are Lazy###
+
 NullTypes can also perform lazy assignment for increased expressibility.
 
 ```python
@@ -166,7 +178,7 @@ DictList is "Flat"
 `DictList` uses a *flat-list* assumption to interpret slicing and indexing
 operations.  This assumes lists are defined over all integer (**ℤ**)
 indices; defaulting to `Null` for indices not explicitly defined otherwise.
-This is distinctly different from Python's usual *loop-around*  assumption,
+This is distinctly different from Python's *loop-around* assumption,
 where negative indices are interpreted modulo-the-list-length.
 
     loop_list = ['A', 'B', 'C']
@@ -208,8 +220,7 @@ For the sake of completeness, we have two more convenience methods:
   * `flat_list.left(b)` same as `flat_list[:b:]`
   * `flat_list.rightBut(b)` same as `flat_list[b::]`
 
-DictList Dot (.) Operator
--------------------------
+###DictList Dot (.) Operator###
 
 The dot operator on a `DictList` performs a simple projection; it will return a list of property values
 

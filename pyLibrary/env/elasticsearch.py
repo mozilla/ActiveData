@@ -738,29 +738,33 @@ class Alias(object):
             if not self.settings.alias or self.settings.alias==self.settings.index:
                 #PARTIALLY DEFINED settings
                 candidates = [(name, i) for name, i in indices.items() if self.settings.index in i.aliases]
-                index = qb.sort(candidates, 0).last()[1]
+                # TODO: MERGE THE mappings OF ALL candidates, DO NOT JUST PICK THE LAST ONE
+                index = "dummy value"
+                schema = wrap({"properties": {}})
+                for _, ind in qb.sort(candidates, {"value": 0, "sort": -1}):
+                    schema.properties = _merge_mapping(schema.properties, ind.mappings[self.settings.type].properties)
             else:
                 #FULLY DEFINED settings
                 index = indices[self.settings.index]
+                schema = index.mappings[self.settings.type]
 
             if index == None and retry:
                 #TRY AGAIN, JUST IN CASE
                 self.cluster.cluster_state = None
                 return self.get_schema(retry=False)
 
-            properties = index.mappings[self.settings.type]
-
-
             #TODO: REMOVE THIS BUG CORRECTION
-            if not properties and self.settings.type == "test_result":
-                properties = index.mappings["test_results"]
+            if not schema and self.settings.type == "test_result":
+                schema = index.mappings["test_results"]
             # DONE BUG CORRECTION
 
-            if not properties:
-                Log.error("ElasticSearch index ({{index}}) does not have type ({{type}})",
-                    index= self.settings.index,
-                    type= self.settings.type)
-            return properties
+            if not schema:
+                Log.error(
+                    "ElasticSearch index ({{index}}) does not have type ({{type}})",
+                    index=self.settings.index,
+                    type=self.settings.type
+                )
+            return schema
         else:
             mapping = self.cluster.get(self.path + "/_mapping")
             if not mapping[self.settings.type]:
@@ -804,10 +808,12 @@ class Alias(object):
             if not keep_trying:
                 for name, status in result._indices.items():
                     if status._shards.failed > 0:
-                        Log.error("ES shard(s) report Failure to delete from {{index}}: {{message}}.  Query was {{query}}",
-                            index= name,
-                            query= query,
-                            message= status._shards.failures[0].reason)
+                        Log.error(
+                            "ES shard(s) report Failure to delete from {{index}}: {{message}}.  Query was {{query}}",
+                            index=name,
+                            query=query,
+                            message=status._shards.failures[0].reason
+                        )
 
 
     def search(self, query, timeout=None):
@@ -826,9 +832,117 @@ class Alias(object):
                 timeout=coalesce(timeout, self.settings.timeout)
             )
         except Exception, e:
-            Log.error("Problem with search (path={{path}}):\n{{query|indent}}",
-                path= self.path + "/_search",
-                query= query,
+            Log.error(
+                "Problem with search (path={{path}}):\n{{query|indent}}",
+                path=self.path + "/_search",
+                query=query,
                 cause=e
             )
+
+
+def _merge_mapping(a, b):
+    """
+    MERGE TWO MAPPINGS, a TAKES PRECEDENCE
+    """
+    for name, b_details in b.items():
+        a_details = a[name]
+        if a_details.properties and not a_details.type:
+            a_details.type = "object"
+        if b_details.properties and not b_details.type:
+            b_details.type = "object"
+
+        if a_details:
+            a_details.type = _merge_type[a_details.type][b_details.type]
+
+            if b_details.type in ["object", "nested"]:
+                _merge_mapping(a_details.properties, b_details.properties)
+        else:
+            a[name] = deepcopy(b_details)
+
+    return a
+
+_merge_type = {
+    "boolean": {
+        "boolean": "boolean",
+        "integer": "integer",
+        "long": "long",
+        "float": "float",
+        "double": "double",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "integer": {
+        "boolean": "integer",
+        "integer": "integer",
+        "long": "long",
+        "float": "float",
+        "double": "double",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "long": {
+        "boolean": "long",
+        "integer": "long",
+        "long": "long",
+        "float": "double",
+        "double": "double",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "float": {
+        "boolean": "float",
+        "integer": "float",
+        "long": "double",
+        "float": "float",
+        "double": "double",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "double": {
+        "boolean": "double",
+        "integer": "double",
+        "long": "double",
+        "float": "double",
+        "double": "double",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "string": {
+        "boolean": "string",
+        "integer": "string",
+        "long": "string",
+        "float": "string",
+        "double": "string",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "object": {
+        "boolean": None,
+        "integer": None,
+        "long": None,
+        "float": None,
+        "double": None,
+        "string": None,
+        "object": "object",
+        "nested": "nested"
+    },
+    "nested": {
+        "boolean": None,
+        "integer": None,
+        "long": None,
+        "float": None,
+        "double": None,
+        "string": None,
+        "object": "nested",
+        "nested": "nested"
+    }
+}
+
+
 

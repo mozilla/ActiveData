@@ -391,6 +391,7 @@ def unicode2datetime(value, format=None):
         "%d%B%Y",
         "%d%B%y",
         "%Y%m%d%H%M%S",
+        "%Y%m%dT%H%M%S",
         "%d%m%Y%H%M%S",
         "%d%m%y%H%M%S",
         "%d%b%Y%H%M%S",

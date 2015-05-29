@@ -120,10 +120,11 @@ class Query(object):
             columns = self.frum.get_columns()
         else:
             columns = []
-        vars = get_all_vars(self)
+
+        vars = get_all_vars(self, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
         for c in columns:
             if c.name in vars and c.depth:
-                Log.error("This query, with variable {{var_name}} looks too deep", )
+                Log.error("This query, with variable {{var_name}} is too deep", var_name=c.name)
 
     @property
     def columns(self):
@@ -506,7 +507,12 @@ sort_direction = {
 }
 
 
-def get_all_vars(query):
+def get_all_vars(query, exclude_where=False):
+    """
+    :param query:
+    :param exclude_where: Sometimes we do not what to look at the where clause
+    :return: all variables in use by query
+    """
     output = []
     for s in listwrap(query.select):
         output.extend(select_get_all_vars(s))
@@ -514,7 +520,8 @@ def get_all_vars(query):
         output.extend(edges_get_all_vars(s))
     for s in listwrap(query.groupby):
         output.extend(edges_get_all_vars(s))
-    output.extend(expressions.get_all_vars(query.where))
+    if not exclude_where:
+        output.extend(expressions.get_all_vars(query.where))
     return output
 
 

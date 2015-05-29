@@ -78,6 +78,8 @@ def qb_expression_to_ruby(expr):
         return unicode(expr)
     elif is_keyword(expr):
         return "doc[" + convert.string2quote(expr) + "].value"
+    elif isinstance(expr, basestring):
+        Log.error("{{name|quote}} is not a valid variable name", name=expr)
     elif isinstance(expr, CODE):
         return expr.code
     elif isinstance(expr, Date):

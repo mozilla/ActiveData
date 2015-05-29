@@ -131,7 +131,7 @@ def json2value(json_string, params={}, flexible=False, paths=False):
             Log.error("Can not decode JSON at:\n\t" + sample + "\n\t" + pointer + "\n")
 
         if len(json_string)>1000:
-            json_string = json_string[:50] + " ... <snip " + unicode(len(json_string) - 100) + " characters> ... " + json_string[-50:]
+            json_string = json_string[0:50] + " ... <snip " + strings.comma(len(json_string)) + " characters> ... " + json_string[len(json_string)-50:len(json_string)]
         base_str = unicode2utf8(json_string)
         hexx_str = bytes2hex(base_str, " ")
         char_str = " " + ("  ".join((latin12unicode(c) if ord(c) >= 32 else ".") for c in base_str))
@@ -220,15 +220,25 @@ def table2list(
 ):
     return wrap([dict(zip(column_names, r)) for r in rows])
 
+def table2tab(
+    column_names, # tuple of columns names
+    rows          # list of tuples
+):
+    def row(r):
+        return "\t".join(map(value2json, r))
+
+    return row(column_names)+"\n"+("\n".join(row(r) for r in rows))
+
+
 
 def list2tab(rows):
     columns = set()
-    for r in rows:
-        columns |= set(r.keys())
+    for r in wrap(rows):
+        columns |= set(k for k, v in r.leaves())
     keys = list(columns)
 
     output = []
-    for r in rows:
+    for r in wrap(rows):
         output.append("\t".join(value2json(r[k]) for k in keys))
 
     return "\t".join(keys) + "\n" + "\n".join(output)

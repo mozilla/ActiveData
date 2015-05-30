@@ -627,7 +627,7 @@ class Log_usingStream(BaseLog):
         value = expand_template(template, params)
         if isinstance(value, unicode):
             value = value.encode('utf8')
-        self.stream.write(value)
+        self.stream.write(value+b"\n")
 
     def stop(self):
         pass

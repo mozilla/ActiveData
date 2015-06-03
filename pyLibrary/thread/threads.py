@@ -110,7 +110,7 @@ class Queue(object):
 
     def add(self, value):
         with self.lock:
-            self.wait_for_queue_space()
+            self._wait_for_queue_space()
             if self.keep_running:
                 self.queue.append(value)
         return self
@@ -118,12 +118,12 @@ class Queue(object):
     def extend(self, values):
         with self.lock:
             # ONCE THE queue IS BELOW LIMIT, ALLOW ADDING MORE
-            self.wait_for_queue_space()
+            self._wait_for_queue_space()
             if self.keep_running:
                 self.queue.extend(values)
         return self
 
-    def wait_for_queue_space(self):
+    def _wait_for_queue_space(self):
         """
         EXPECT THE self.lock TO BE HAD, WAITS FOR self.queue TO HAVE A LITTLE SPACE
         """
@@ -278,16 +278,19 @@ class MainThread(object):
         self.children.append(child)
 
     def remove_child(self, child):
-        self.children.remove(child)
+        try:
+            self.children.remove(child)
+        except Exception, _:
+            pass
 
     def stop(self):
         """
         BLOCKS UNTIL ALL THREADS HAVE STOPPED
         """
         children = copy(self.children)
-        for c in children:
+        for c in reversed(children):
             if c.name:
-                Log.note("Stopping thread {{name|quote}}",  name= c.name)
+                Log.note("Stopping thread {{name|quote}}", name=c.name)
             c.stop()
         for c in children:
             c.join()
@@ -513,6 +516,8 @@ class Thread(object):
         if not isinstance(please_stop, Signal):
             please_stop = Signal()
 
+        please_stop.on_go(lambda: MAIN_THREAD.stop())
+
         if allow_exit:
             Thread('waiting for "exit"', readloop, please_stop=please_stop).start()
 
@@ -521,7 +526,7 @@ class Thread(object):
                 _late_import()
             Log.error("Only the main thread can sleep forever (waiting for KeyboardInterrupt)")
 
-        # DEOS NOT SEEM TO WOKR
+        # DOES NOT SEEM TO WORK
         # def stopper():
         # Log.note("caught breaker")
         #     please_stop.go()
@@ -535,7 +540,7 @@ class Thread(object):
                     Thread.sleep(please_stop=please_stop)
                 except Exception, e:
                     pass
-        except KeyboardInterrupt, SystemExit:
+        except (KeyboardInterrupt, SystemExit), _:
             please_stop.go()
             Log.alert("SIGINT Detected!  Stopping...")
 
@@ -557,7 +562,7 @@ class Signal(object):
     go() - ACTIVATE SIGNAL (DOES NOTHING IF SIGNAL IS ALREADY ACTIVATED)
     wait_for_go() - PUT THREAD IN WAIT STATE UNTIL SIGNAL IS ACTIVATED
     is_go() - TEST IF SIGNAL IS ACTIVATED, DO NOT WAIT
-    on_go() - METHOD FOR OTHEr THREAD TO RUN WHEN ACTIVATING SIGNAL
+    on_go() - METHOD FOR OTHER THREAD TO RUN WHEN ACTIVATING SIGNAL
     """
 
     def __init__(self):
@@ -645,7 +650,10 @@ class ThreadedQueue(Queue):
         Queue.__init__(self, name=name, max=max_size, silent=silent)
 
         def worker_bee(please_stop):
-            please_stop.on_go(lambda: self.add(Thread.STOP))
+            def stopper():
+                self.add(Thread.STOP)
+
+            please_stop.on_go(stopper)
 
             _buffer = []
             next_time = Date.now() + period   # THE TIME WE SHOULD DO A PUSH
@@ -659,7 +667,7 @@ class ThreadedQueue(Queue):
                         if item is Thread.STOP:
                             queue.extend(_buffer)
                             please_stop.go()
-                            return
+                            break
                         elif item is not None:
                             _buffer.append(item)
 
@@ -672,13 +680,14 @@ class ThreadedQueue(Queue):
                     if item is Thread.STOP:
                         queue.extend(_buffer)
                         please_stop.go()
-                        return
+                        break
                     elif item is not None:
                         _buffer.append(item)
 
                 except Exception, e:
-                    Log.warning("Unexpected problem",
-                        name= name,
+                    Log.warning(
+                        "Unexpected problem",
+                        name=name,
                         cause=e
                     )
 
@@ -694,18 +703,22 @@ class ThreadedQueue(Queue):
                                 next_time = now + bit_more_time
 
                 except Exception, e:
-                    Log.warning("Problem with {{name}} pushing {{num}} items to data sink",
+                    Log.warning(
+                        "Problem with {{name}} pushing {{num}} items to data sink",
                         name=name,
                         num=len(_buffer),
                         cause=e
                     )
 
+            if _buffer:
+                Log.warning("Shutdown of ThreadedQueue {{name|quote}} with {{num}} messages in buffer", name=self.name, num=len(_buffer))
+            elif DEBUG:
+                Log.note("ThreadedQueue {{name|quote}} finished and empty, good job!", name=self.name)
         self.thread = Thread.run("threaded queue for " + name, worker_bee)
-
 
     def add(self, value):
         with self.lock:
-            self.wait_for_queue_space()
+            self._wait_for_queue_space()
             if self.keep_running:
                 self.queue.append(value)
         return self
@@ -713,7 +726,7 @@ class ThreadedQueue(Queue):
     def extend(self, values):
         with self.lock:
             # ONCE THE queue IS BELOW LIMIT, ALLOW ADDING MORE
-            self.wait_for_queue_space()
+            self._wait_for_queue_space()
             if self.keep_running:
                 self.queue.extend(values)
         return self

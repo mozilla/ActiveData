@@ -75,15 +75,15 @@ class TestEdge1(ActiveDataBaseTest):
             #         {"a": "c", "count": 3},
             #         {"a": None, "count": 1}
             #     ]},
-            # "expecting_table": {
-            #     "meta": {"format": "table"},
-            #     "header": ["a", "count"],
-            #     "data": [
-            #         ["b", 2],
-            #         ["c", 3],
-            #         [None, 1]
-            #     ]
-            # },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["_run.timestamp", "count"],
+                "data": [
+                    ["b", 2],
+                    ["c", 3],
+                    [None, 1]
+                ]
+            },
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "edges": [

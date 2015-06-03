@@ -5,7 +5,7 @@ SQL Shortcomings
 
 Here is a unordered list of the anti-patterns I see when dealing with SQL.
 It is a personal note to myself, but I hope to expand it to explain the
-benefits of Qb queries. solutions
+benefits of Qb queries.
 
 This document serves to provide motivation for a query language beyond standard
 SQL.
@@ -15,9 +15,8 @@ Meta Programming
 ----------------
 
 Qb is a query language optimized specifically for hierarchical databases, nested
-JSON, and data warehouses.  A deliberate feature of a Qb is it's JSON; so can be
-easily manipulated by code.  Many of the SQL's shortcomings are a result of SQL not
-having no macros.
+JSON, and data warehouses.  A deliberate feature of a Qb is its JSON; so can be
+easily manipulated by code.  Many of the SQL's shortcomings are a result of SQL having no macros.
 
 
 ###Splitting credit and debit
@@ -115,7 +114,7 @@ complicated.  Given we got this one wrong, we have little chance of writing
 complicated ranking algorithms correctly.
 
 Window functions almost do what we want:  They can categorize using edges, and
-rank using sort, but they do not change trhe number of rows returned.
+rank using sort, but they do not change the number of rows returned.
 Generally, we what a clause that can pick the "best" record according to some
 ranking algorithm, by category.
 
@@ -576,7 +575,7 @@ Dimension rollup
     INSERT INTO transaction_types (code, description, type) VALUES ('ATWTWF','account to account Account Transfer Fee','Fees');
     INSERT INTO transaction_types (code, description, type) VALUES ('BF','Bulk Beam Fee','Fees');
 
-Ordering, rollup and style
+Ordering, roll-up and style
 
     INSERT INTO categories (ordering, type, color, group) VALUES (1, 'Load-Credit Card','blue', 'Load');
     INSERT INTO categories VALUES (2, 'Retail Sales','blue', 'Spend');

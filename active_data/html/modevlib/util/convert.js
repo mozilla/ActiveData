@@ -776,6 +776,9 @@ function String2Selector(str){
 convert.String2JQuery=String2Selector;
 convert.String2Selector=String2Selector;
 
+convert.String2Regexp= function(s) {
+    return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+};
 
 TRUE_FILTER = function(row, i, rows){return true;};
 FALSE_FILTER = function(row, i, rows){return false;};

@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
+from numbers import Number
 import re
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
@@ -182,7 +183,7 @@ class SimpleSetDomain(Domain):
         if isinstance(self.key, set):
             Log.error("problem")
 
-        if isinstance(desc.partitions[0], basestring):
+        if not desc.key and isinstance(desc.partitions[0], (basestring, Number)):
             # ASSUME PARTS ARE STRINGS, CONVERT TO REAL PART OBJECTS
             self.key = "value"
             self.map = {}

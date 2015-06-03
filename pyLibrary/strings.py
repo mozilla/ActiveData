@@ -19,7 +19,7 @@ import re
 import math
 import __builtin__
 
-from pyLibrary.dot import coalesce, wrap, Dict
+from pyLibrary.dot import coalesce, wrap
 
 
 def datetime(value):
@@ -158,6 +158,7 @@ def percent(value, decimal=None, digits=None, places=None):
         left_of_decimal = int(math.ceil(math.log10(abs(value)))) + 2
         decimal = digits - left_of_decimal
 
+    decimal = coalesce(decimal, 0)
     right_of_decimal = max(decimal, 0)
     format = "{:." + unicode(right_of_decimal) + "%}"
     return format.format(__builtin__.round(value, decimal + 2))
@@ -388,7 +389,8 @@ def _simple_expand(template, seq):
                 if not Log:
                     _late_import()
 
-                Log.warning("Can not expand " + "|".join(ops) + " in template: {{template|json}}",
+                Log.warning(
+                    "Can not expand " + "|".join(ops) + " in template: {{template|json}}",
                     template=template,
                     cause=e
                 )
@@ -432,6 +434,7 @@ def toString(val):
     try:
         return unicode(val)
     except Exception, e:
+        return unicode(val)
         if not Log:
             _late_import()
 

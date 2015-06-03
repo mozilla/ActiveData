@@ -98,7 +98,7 @@ def es_aggsop(es, frum, query):
         else:
             output = aggop_formatter(decoders, result.aggregations, start, query, select)
 
-        output.meta.es_response_time = es_duration.seconds
+        output.meta.es_response_time = es_duration.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
         return output

@@ -17,6 +17,7 @@ from time import clock
 from pyLibrary.dot import coalesce, Dict
 from pyLibrary.dot import wrap
 from pyLibrary.debugs.logs import Log
+from pyLibrary.times.durations import Duration
 
 
 class Timer(object):
@@ -57,12 +58,4 @@ class Timer(object):
 
     @property
     def duration(self):
-        return timedelta(seconds=self.interval)
-
-    def total_seconds(self):
-        return self.interval
-
-    @property
-    def seconds(self):
-        return self.interval
-
+        return Duration(self.interval)

@@ -51,6 +51,7 @@ class Pulse(Thread):
         settings.callback = self._got_result
         settings.user = coalesce(settings.user, settings.username)
         settings.applabel = coalesce(settings.applable, settings.queue, settings.queue_name)
+        settings.topic = topic
 
         self.pulse = GenericConsumer(settings, connect=True, **settings)
         self.count = coalesce(start, 0)

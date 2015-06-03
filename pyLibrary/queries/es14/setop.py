@@ -88,7 +88,7 @@ def es_fieldop(es, query):
 
 
 def extract_rows(es, es_query, source, select, query):
-    with Timer("call to ES") as es_duration:
+    with Timer("call to ES") as call_timer:
         data = es09.util.post(es, es_query, query.limit)
 
     T = data.hits.hits
@@ -108,7 +108,7 @@ def extract_rows(es, es_query, source, select, query):
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]
 
         output = formatter(T, select, source)
-        output.meta.es_response_time = es_duration.seconds
+        output.meta.es_response_time = call_timer.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
         return output

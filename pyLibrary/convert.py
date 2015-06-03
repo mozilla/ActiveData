@@ -281,6 +281,9 @@ def string2quote(value):
     return quote(value)
 
 
+string2regexp = re.escape
+
+
 def string2url(value):
     if isinstance(value, unicode):
         return "".join([_map2url[c] for c in unicode2latin1(value)])

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+	<meta charset="UTF-8">
+	<title>Intermittent Failures</title>
+	<script type="application/javascript" src="./modevlib/imports/import.js"></script>
+</head>
+<body>
+	<div>
+		<input id="result.test" name="result.test" layout="width=..width" style="padding:3px 20px 3px 20px;">
+	</div>
+	<div id="matches">
+		<div
+		<svg height="100" width="100">
+		    <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" />
+		</svg>
+
+
+	</div>
+
+</body>
+
+<script>
+
+importScript([], function(){
+
+
+
+
+
+
+});
+
+
+function showCounts(){
+	chart({
+		"type":"heat",
+		"area":{
+
+
+		},
+		"xAxis":{
+			"position":"top",
+			"angle":-30,
+			"height":30,
+			"lines":"none",
+			"ticks":{
+				"minor":
+					"major":
+			}
+		},
+		"yAxis":{
+			"position":"left",
+			"width":40
+		},
+		"cube":data
+
+	}
+
+
+
+
+
+}
+
+
+
+function findMatches(words){
+	var matcher = ".*("+words.split(" ").map(function(w){
+		if (w.length==0) return undefined;
+		return convert.String2Regexp(w);
+	}).join("|")+").*";
+
+	var counter = {
+		"from":"unittest",
+		"select":{"aggregate":"count"},
+		"where":{"and":[
+			{"or":[
+				{"regexp":{"result.test":matcher}},
+				{"regexp":{"run.suite":matcher}},
+				{"regexp":{"build.branch":matcher}}
+			]},
+			{"gt": {"run.timestamp": "{{today-month}}"}},
+			{"eq": {"result.ok":false}}
+		]}
+	};
+
+	var count = activeData.query(counter);
+
+	if (count<1000){
+		var summary = {
+			"from": "unittest",
+			"edges": [
+				{"name": "suite:test", "value": ["run.suite", "result.test"]},
+				{"name": "branch", "value": "build.branch"},
+				{"name": "platform", "value": "build.platform"}
+			],
+			"where": {"and": [
+				{"or": [
+					{"regexp": {"result.test": matcher}},
+					{"regexp": {"run.suite": matcher}},
+					{"regexp": {"build.branch": matcher}}
+				]},
+				{"gt": {"run.timestamp": "{{today-month}}"}},
+				{"eq": {"result.ok": false}}
+			]}
+		};
+	}//endif
+
+	//NUMBER IN AS MANY HOURS
+	//AS % OF TOTAL TESTS, SINCE START
+	//WHEN IT STARTED (REVISION RANGE)
+	//
+
+
+}
+
+
+
+</script>
+
+
+
+
+</html>

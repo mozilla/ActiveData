@@ -57,6 +57,9 @@ Properties that describe the run of this test suite, and the many tests that are
 * `run.files` - *array* of files recorded for this suite, one or more of which are the structured log digested to make this record
 	* `run.files.name` - *string* name of the file
 	* `run.files.url` - *string* url where he contents can/could be found
+* `run.machine` - *object* properties of the machine that ran the suite
+	* `machine.os` - *string* operating system
+	* `machine.name` - *string* the particular piece of hardware that ran suite
 * `run.stats` - *object* various counts for this suite/chunk
 	* `run.stats.ok` - *long* number of tests where `result==expected`
 	* `run.stats.pass` - *long* number of tests that passed
@@ -86,6 +89,7 @@ Properties describing the build
 * `build.id` - *uid* unique build id
 * `build.branch` - *string* the branch in hg
 * `build.revision` - *string* revision number found in hg
+* `build.revision12` - *string* first 12 characters of revision number
 * `build.locale` - *string* locale option for build
 * `build.type` - *string* more options
 * `build.date` - *timestamp* when the build was assembled
@@ -93,14 +97,25 @@ Properties describing the build
 * `build.url` - *string* where you can find the build results
 * `build.name` - *string* full name of the build, including options (parsed to create the other properties, so is redundant)
 
+`repo` Columns
+---------------
 
-`machine` Columns
------------------
+Properties of the changeset, revision and push
 
-Properties of the machine that ran the suite
-
-* `machine.os` - *string* operating system
-* `machine.name` - *string* the particular piece of hardware that ran suite
+* `repo.changeset` - *object* 
+	* `repo.changeset.id` - *string* unique hash value of changeset 
+    * `repo.changeset.files` - *strings* full path to files changed 
+	* `repo.changeset.date` - *timestamp*  
+	* `repo.changeset.description` - *string* text assigned to push 
+	* `repo.changeset.author` - *string* author info 
+* `repo.index` - *integer* unique value given to this revision by hg.mozilla.org  
+* `repo.branch` - *string* name of the branch 
+* `repo.push` - *object* more about the push 
+    * `repo.push.id` - *integer* unique value given to this push by hg.mozilla.org 
+    * `repo.push.user` - *string* name of person doing push 
+    * `repo.push.date` - *timestamp* when push was applied 
+* `repo.parents` - *strings* ids of any parents 
+* `repo.children` - *strings* ids of any children
 
 
 `other` Columns

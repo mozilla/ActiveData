@@ -114,10 +114,15 @@ build = function(){
 			name = undefined;
 		}//endif
 
+
+		Thread.currentThread.addChild(this);
+
 		//START IN SILENT MODE
 		var output = new Thread(gen);
 		output.name = name;
 		output.resume(output.stack.pop());
+		output.parentThread = Thread.currentThread;
+		Thread.currentThread.addChild(this);
 		return output;
 	};//method
 
@@ -156,7 +161,7 @@ build = function(){
 		this.children.push(child);
 		child.parentThread = this;
 //		Log.note("add "+child.name+" as child of "+this.name);
-//		Log.note("Children  of "+this.name+": "+CNV.Object2JSON(this.children.select("name")));
+//		Log.note("Children  of "+this.name+": "+convert.value2json(this.children.select("name")));
 	}//function
 	Thread.prototype.addChild = addChild;
 
@@ -255,7 +260,7 @@ build = function(){
 	Thread.prototype.kill = function(retval){
 
 		var children = this.children.copy();  //CHILD THREAD WILL REMOVE THEMSELVES FROM THIS LIST
-//		Log.note("Killing "+CNV.Object2JSON(children.select("name"))+" child threads");
+//		Log.note("Killing "+convert.value2json(children.select("name"))+" child threads");
 		for (var c = 0; c < children.length; c++) {
 			var child = children[c];
 			if (!child) continue;

@@ -4,6 +4,8 @@
 
 importScript("aHTML.js");
 importScript("aUtil.js");
+importScript("aDuration.js");
+
 
 
 var convert = function(){
@@ -93,7 +95,7 @@ convert.json2value = function(json){
 
 
 convert.Map2Style = function(map){
-	return mapAllKey(map, function(k, v){return k+":"+v;}).join(";")+";";
+	return Map.map(map, function(k, v){return k+":"+v;}).join(";")+";";
 };//method
 
 
@@ -151,7 +153,7 @@ convert.value2json = function(json){
 		}//for
 		return output+"\n}";
 
-//		return "{\n\t"+mapAllKey(json, function(k, v){
+//		return "{\n\t"+Map.map(json, function(k, v){
 //			if (v===undefined) return "";
 //			return "\""+k+"\":"+convert.value2json(v).indent(1).trim();
 //		}).join(",\n\t")+"\n}";
@@ -179,14 +181,14 @@ convert.Object2CSS=function(value){
 	});
 
 	if (depth==2){
-		return mapAllKey(value, function(selector, css){
+		return Map.map(value, function(selector, css){
 			return selector+" {"+
-				mapAllKey(css, function(name, value){
+				Map.map(css, function(name, value){
 					return  name+":"+value;
 				}).join(";")+"}";
 		}).join("\n\n");
 	}else{
-		return mapAllKey(value, function(name, value){
+		return Map.map(value, function(name, value){
 			return  name+":"+value;
 		}).join(";")
 	}//endif
@@ -200,7 +202,7 @@ convert.style2Object=function(value){
 };//method
 
 convert.Object2style=function(style){
-	return mapAllKey(style, function(name, value){
+	return Map.map(style, function(name, value){
 		return name+":"+value;
 	}).join(";");
 };//method
@@ -272,6 +274,7 @@ convert.URLParam2Object = function(param){
 
 (function(){
 	var entityMap = {
+		" ": "&nbsp;",
 		"&": "&amp;",
 		"<": "&lt;",
 		">": "&gt;",
@@ -874,15 +877,15 @@ convert.esFilter2function=function(esFilter){
 
 		return function(row, i, rows){
 			if (range.gte !== undefined){
-				if (range.gte > row[variableName]) return false;
+				if (range.gte > Map.get(row, variableName)) return false;
 			} else if (range.gt !== undefined){
-				if (range.gt >= row[variableName]) return false;
+				if (range.gt >= Map.get(row, variableName)) return false;
 			}//endif
 
 			if (range.lte !== undefined){
-				if (range.lte < row[variableName]) return false;
+				if (range.lte < Map.get(row, variableName)) return false;
 			} else if (range.lt !== undefined){
-				if (range.lt <= row[variableName]) return false;
+				if (range.lt <= Map.get(row, variableName)) return false;
 			}//endif
 
 			return true;
@@ -894,19 +897,19 @@ convert.esFilter2function=function(esFilter){
 		var variableName = Object.keys(pair)[0];
 		var prefix = pair[variableName];
 		return function(row, i, rows){
-			var v = row[variableName];
+			var v = Map.get(row, variableName);
 			return typeof(v)=="string" && v.startsWith(prefix);
 		}
 	}else if (op=="match_all"){
 		return TRUE_FILTER;
-	}else if (op=="regexp"){
+	}else if (op=="regexp") {
 		var pair = esFilter[op];
 		var variableName = Object.keys(pair)[0];
 		var regexp = new RegExp(pair[variableName]);
 		return function(row, i, rows){
-			if (regexp.test(row[variableName])){
+			if (regexp.test(Map.get(row, variableName))) {
 				return true;
-			}else{
+			} else {
 				return false;
 			}//endif
 		}
@@ -915,7 +918,7 @@ convert.esFilter2function=function(esFilter){
 		var variableName = Object.keys(pair)[0];
 		var substr = pair[variableName];
 		return function(row, i, rows){
-			var v = row[variableName];
+			var v = Map.get(row, variableName);
 			if (v===undefined){
 				return false;
 			}else if (v instanceof Array){
@@ -926,6 +929,33 @@ convert.esFilter2function=function(esFilter){
 				Log.error("Do not know how to handle")
 			}//endif
 		}
+	}else if (op=="nested"){
+		//REACH INTO THE NESTED TEMPLATE FOR THE filter
+		var path = splitField(esFilter[op].path);
+		var deepFilter = convert.esFilter2function(esFilter[op].query.filtered.filter);
+
+
+		function select(path, rows){
+			//RETURN THE CHILD ROWS FOUND ALONG path
+			if (path.length==0) return rows;
+
+			var output = [];
+			rows.forall(function(r){
+				var crows = Array.newInstance(Map.get(r, path[0]));
+				var cresult = select(path.rightBut(1), crows).map(function(cr){
+					return Map.newInstance(path[0], cr);
+				});
+				output.extend(cresult);
+			});
+			return output;
+
+		}
+
+		return function(row, i, rows){
+			//MAKE A LIST OF CHILD DOCUMENTS TO RUN FILTER ON
+			var childRows = select(path, [row]);
+			return (childRows.filter(deepFilter).length > 0);
+		};
 	} else{
 		Log.error("'" + op + "' is an unknown operation");
 	}//endif
@@ -964,7 +994,7 @@ convert.esFilter2Expression=function(esFilter){
 	} else if (op == "not"){
 		return "!(" + convert.esFilter2Expression(esFilter[op]) + ")";
 	} else if (op == "term"){
-		return mapAllKey(esFilter[op], function(variableName, value){
+		return Map.map(esFilter[op], function(variableName, value){
 			if (value instanceof Array){
 				Log.error("Do not use term filter with array of values ("+convert.value2json(esFilter)+")");
 			}//endif

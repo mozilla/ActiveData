@@ -11,8 +11,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 import base_test_class
-from pyLibrary.dot import wrap, coalesce
-from pyLibrary.queries import query
+from pyLibrary.dot import wrap
 from tests.base_test_class import ActiveDataBaseTest
 
 

@@ -108,7 +108,9 @@ class NullType(object):
         return other is not None and not isinstance(other, NullType)
 
     def __getitem__(self, key):
-        if isinstance(key, str):
+        if isinstance(key, slice):
+            return Null
+        elif isinstance(key, str):
             key = key.decode("utf8")
         elif isinstance(key, int):
             return NullType(self, key)

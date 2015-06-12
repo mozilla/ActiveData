@@ -30,6 +30,10 @@ Relation.prototype.testAndAdd=function(from, to){
 	return isNew;
 };
 
+Relation.prototype.domain = function(){
+	return Object.keys(this.map);
+};
+
 Relation.prototype.addArray=function(from, toArray){
 	var f=this.map[from];
 	if (!f){

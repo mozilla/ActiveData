@@ -19,10 +19,10 @@ Describes properties exclusive to an individual test result
 * `result.duration` - *seconds* usually the calculated difference between start and end times, but could be the test's own reported duration
 * `result.last_log_time` - *timestamp* of the last log line seen for this run, may be after the `result.end_time`
 * `result.stats` - *object* counts the sub-tests grouping some other features of the test not found in the structured log
-* `result.stats.fail` - *count*
-* `result.stats.notrun` - *count*
-* `result.stats.timeout` - *count*
-* `result.stats.pass` - *count*
+  * `result.stats.fail` - *count*
+  * `result.stats.notrun` - *count*
+  * `result.stats.timeout` - *count*
+  * `result.stats.pass` - *count*
 * `result.missing_test_end` - *boolean* missing the test's end record
 * `result.missing_test_start` - *boolean* missing the test's start record
 * `result.crash` - *boolean* the structured log recorded `"action": "crash"`
@@ -116,7 +116,15 @@ Properties of the changeset, revision and push
     * `repo.push.date` - *timestamp* when push was applied 
 * `repo.parents` - *strings* ids of any parents 
 * `repo.children` - *strings* ids of any children
+ 
 
+`machine` Columns
+-----------------
+
+See `run.machine` instead ~~Properties of the machine that ran the suite~~
+
+* ~~`machine.os` - *string* operating system~~
+* ~~`machine.name` - *string* the particular piece of hardware that ran suite~~
 
 `other` Columns
 ---------------

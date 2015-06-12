@@ -11,7 +11,8 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from boto import sqs, boto
+from boto import sqs
+from boto import utils as boto_utils
 from boto.sqs.message import Message
 import requests
 
@@ -19,9 +20,9 @@ from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, unwrap
 from pyLibrary.maths import Math
-from pyLibrary.meta import use_settings
+from pyLibrary.meta import use_settings, cache
 from pyLibrary.thread.threads import Thread
-from pyLibrary.times.durations import Duration, SECOND
+from pyLibrary.times.durations import SECOND
 
 
 class Queue(object):
@@ -118,14 +119,14 @@ def capture_termination_signal(please_stop):
                     return
             except Exception, e:
                 pass  # BE QUIET
-                Thread.sleep(seconds=61)
-            Thread.sleep(seconds=11)
+                Thread.sleep(seconds=61, please_stop=please_stop)
+            Thread.sleep(seconds=11, please_stop=please_stop)
 
     Thread.run("listen for termination", worker)
 
-
+@cache
 def get_instance_metadata():
-    return wrap(dict(boto.utils.get_instance_metadata()))
-
+    output = wrap({k.replace("-", "_"): v for k, v in boto_utils.get_instance_metadata().items()})
+    return output
 
 from . import s3

@@ -95,7 +95,9 @@ class Date(object):
         return Date(self.value + timedelta(days=1))
 
     def add(self, other):
-        if isinstance(other, datetime):
+        if other==None:
+            return Null
+        elif isinstance(other, datetime):
             return Date(self.value - other)
         elif isinstance(other, date):
             return Date(self.value - other)
@@ -120,7 +122,8 @@ class Date(object):
                 return Date(self.milli + other.milli)
         else:
             from pyLibrary.debugs.logs import Log
-            Log.error("can not subtract {{type}} from Date",  type=other.__class__.__name__)
+
+            Log.error("can not subtract {{type}} from Date", type=other.__class__.__name__)
 
     @staticmethod
     def now():

@@ -62,7 +62,7 @@ class UniqueIndex(object):
         val = dictwrap(val)
         key = value2key(self._keys, val)
         if key == None:
-            Log.error("Expecting key to not be None")
+            Log.error("Expecting key to be not None")
 
         d = self._data.get(key)
         if d is None:

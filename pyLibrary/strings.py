@@ -390,8 +390,8 @@ def _simple_expand(template, seq):
                     _late_import()
 
                 Log.warning(
-                    "Can not expand " + "|".join(ops) + " in template: {{template|json}}",
-                    template=template,
+                    "Can not expand " + "|".join(ops) + " in template: {{template_|json}}",
+                    template_=template,
                     cause=e
                 )
             return "[template expansion error: (" + str(e.message) + ")]"
@@ -419,6 +419,9 @@ def deformat(value):
 
 
 def toString(val):
+    if not convert:
+        _late_import()
+
     if val == None:
         return ""
     elif isinstance(val, (Mapping, list, set)):
@@ -427,6 +430,8 @@ def toString(val):
         return json_encoder(val, pretty=True)
     elif hasattr(val, "__json__"):
         return val.__json__()
+    elif isinstance(val, Duration):
+        return unicode(round(val.seconds, places=4)) + " seconds"
     elif isinstance(val, timedelta):
         duration = val.total_seconds()
         return unicode(round(duration, 3)) + " seconds"
@@ -434,7 +439,6 @@ def toString(val):
     try:
         return unicode(val)
     except Exception, e:
-        return unicode(val)
         if not Log:
             _late_import()
 
@@ -569,17 +573,20 @@ def utf82unicode(value):
 convert = None
 Log = None
 Except = None
-
+Duration = None
 
 def _late_import():
     global convert
     global Log
     global Except
+    global Duration
 
     from pyLibrary import convert
     from pyLibrary.debugs.logs import Log, Except
+    from pyLibrary.times.durations import Duration
 
     _ = convert
     _ = Log
     _ = Except
+    _ = Duration
 

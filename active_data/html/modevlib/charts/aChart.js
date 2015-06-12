@@ -686,7 +686,15 @@ aChart.show=function(params){
 		});
 	}else if (chartCube.edges.length==2){
 		if (chartCube.select instanceof Array){
-			Log.error("Can not chart when select clause is an array");
+			if (chartCube.length>1) {
+				Log.error("Can not chart when select clause is an array");
+			}else{
+				chartCube.select = chartCube.select[0];
+				chartCube.cube = new Matrix({"data":chartCube.cube}).map(function(v, c){
+					return v[chartCube.select.name];
+				});
+
+			}//endif
 		}//endif
 		categoryAxis=chartCube.edges[0];
 		categoryLabels=getAxisLabels(chartCube.edges[0]);
@@ -886,14 +894,17 @@ aChart.show=function(params){
 	//
 	data.forall(function(v,i,d){
 		v=v.copy();
+		var isNull=false;  //true IF SEEN A NULL IN THIS SERIES
 		for(var j=0;j<v.length;j++){
-			if (v[j]==null){
+			if (v[j]!=null && isNull){
 				//the charting library has a bug that makes it simply not draw null values
 				//(or even leave a visual placeholder)  This results in a mismatch between
 				//the horizontal scale and the values charted.  For example, if the first
 				//day has null, then the second day is rendered in the first day position,
 				//and so on.
 				Log.error("Charting library can not handle null values (maybe set a default?)");
+			}else if (v[j]==null){
+				isNull=true;
 			}//endif
 		}//for
 		v.splice(0,0, categoryLabels[i]);

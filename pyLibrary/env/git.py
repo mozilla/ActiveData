@@ -13,8 +13,10 @@ from __future__ import division
 from __future__ import absolute_import
 
 from pyLibrary.env.processes import Process
+from pyLibrary.meta import cache
 
 
+@cache
 def get_git_revision():
     """
     GET THE CURRENT GIT REVISION

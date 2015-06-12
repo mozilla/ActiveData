@@ -74,6 +74,13 @@ The `cause` parameter accepts an `Exception`, or a list of exceptions.  Chaining
         Log.error("Describe what you were trying to do", cause=e)
 ```
 
+**Always catch all `Exceptions`**
+
+Catching all exceptions is preferred over the *only-catch-what-you-can-handle* strategy.  First, exceptions are not lost because we are chaining.  Second, we catch unexpected `Exceptions` early and we annotate them with a description of what the local code was intending to do.  This annotation effectively groups the possible errors (known, or not) into a class, which can be used by callers to decide on appropriate mitigation.  
+
+To repeat:  When using dependency injection, callers can not reasonably be expected to know about the types of failures that can happen deep down the call chain.  This makes it vitally important that methods summarize all exceptions, both known and unknown, so their callers have the information to make better decisions on appropriate action.  
+
+
 **Use named parameters in your error descriptions too**
 
 Error logging accepts keyword parameters just like `Log.note()` does

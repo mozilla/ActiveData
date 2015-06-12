@@ -11,6 +11,7 @@ importScript([
 ]);
 importScript("aException.js");
 importScript("../util/aTemplate.js");
+importScript("../charts/aColor.js");
 
 
 

@@ -378,7 +378,7 @@ PickDim.prototype.getQuery=function(){
 	}//endif
 
 	for(var i=0;i<self.filters.length;i++){
-		var esfilters=mapAllKey(self.filters[i].selected, function(k, v){
+		var esfilters=Map.map(self.filters[i].selected, function(k, v){
 			return v.esfilter;
 		});
 		if (esfilters.length==0){

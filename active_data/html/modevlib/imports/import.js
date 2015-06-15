@@ -14,8 +14,8 @@ var importScript;
 (function () {
 
 	var METHOD_NAME = "importScript";
-	var FORCE_RELOAD = false;  //COMPENSATE FOR BUG https://bugzilla.mozilla.org/show_bug.cgi?id=991252
-	var DEBUG = false;
+	var FORCE_RELOAD = true;  //COMPENSATE FOR BUG https://bugzilla.mozilla.org/show_bug.cgi?id=991252
+	var DEBUG = true;
 
 	if (typeof(window.Log) == "undefined") {
 		window.Log = {
@@ -74,6 +74,18 @@ var importScript;
 		}//for
 		a.length = j;
 	}//method
+
+	function between(self, start, end){
+		var s=self.indexOf(start);
+		if (s==-1) return null;
+		s+=start.length;
+		if (end===undefined) return self.substring(s);
+
+		var e=self.indexOf(end, s);
+		if (e==-1) return self.substring(s);
+		return self.substring(s, e);
+	}//method
+
 
 	function contains(array, element) {
 		for (var i = array.length; i--;) {
@@ -230,7 +242,7 @@ var importScript;
 		}, 15000);
 
 		function onLoadCallback() {
-			var path = this.src.slice(this.src.indexOf("://")+3);
+			var path = "/"+between(between(this.src, "://", "?"), "/");
 			remove(numLoaded, path);
 			if (numLoaded.length == 0) {
 				doneCallback();

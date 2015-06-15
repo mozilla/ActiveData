@@ -3,18 +3,27 @@
 <head lang="en">
 	<meta charset="UTF-8">
 	<title>Intermittent Failures</title>
+	<link type="text/css" rel="stylesheet" href="css/menu.css">
 	<script type="application/javascript" src="./modevlib/imports/import.js"></script>
 </head>
 <body>
-	<h2>Search for failure by test name:</h2>
-	<div>
-		<input id="testName" name="testName" layout="left=page.left; right=page.right" style="padding:3px 20px 3px 20px;">
-	</div>
+<div id="step1">
+	<h2>1. Search for failure by test name:</h2>
+	<input id="testName" name="testName" style="width:500px; padding:3px 20px 3px 20px;margin:0 0 0 0;">
+	<span id="status" style="height:30px"><img src="images/spinner.gif" alt=""></span>
+</div>
+<div id="spinner"></div>
+<div id="step2" style="display: none;">
+	<h2>2. Pick a test</h2>
 	<div id="matches">
-	</div>
-	<div id="summary" layout="top=matches.bottom;right=page.right"></div>
-	<div id="results" layout="top=matches.bottom;left=page.left;right=summary.left;">
-	</div>
+</div>
+</div>
+<div id="step3" style="display: none;">
+	<h2>3. Review summary</h2>
+
+	<div id="summary" layout="right=page.right"></div>
+	<div id="results" layout="left=page.left;right=summary.left;"></div>
+</div>
 </body>
 
 <script>
@@ -29,32 +38,41 @@ importScript([
 ], function(){
 	layoutAll();
 
-	var MATCH_TEMPLATE = new Template({
-		"from": ".",
-		"template": '<div id="singleMatch" class="hoverable">' +
-			'    <div>{{testName}}</div>' +
-			'    <div>{{count}}</div>' +
-			'</div>'
-	});
+	var MATCH_TEMPLATE = new Template([
+		'<table class="table"><tr><th>Name</th><th>Failure Count</th></tr>',
+		{
+			"from": "data",
+			"template": '<tr id="{{result.test|deformat}}" class="hoverable">' +
+				'<td><div>{{result.test}}</div></td>' +
+				'<td><div style="text-align: right;">{{count}}</div></td>' +
+				'</tr>'
+		},
+		"</table>"
+	]);
 
-	var activeData=new ActiveData();
+	var activeData = new ActiveData("http://localhost:5000/query");
 
 	(function(){
-		var currentQuery=null;
-		var lastValue=null;
+		var currentQuery = null;
+		var lastValue = null;
 
 		Thread.run(function*(){
-			while(true) {
+			while (true) {
 				var testName = $("#testName").val();
 				if (testName == lastValue) return;
 				if (testName.trim().length == 0) return;
 				lastValue = testName;
 
+				$("#status").show();
+				$("#step2").hide();
+				$("#step3").hide();
 				currentQuery = Thread.run(function*(){
 					var matches = yield (findMatches(activeData, testName));
 					if (Thread.currentThread != currentQuery)
 						yield null;   //WAS CANCELLED
-					$("#matches").html(MATCH_TEMPLATE.expand(matches));
+					$("#status").hide();
+					$("#step2").show();
+					$("#matches").html(MATCH_TEMPLATE.expand(matches)).show();
 				});
 				Thread.sleep(500);
 			}//while
@@ -62,11 +80,7 @@ importScript([
 	})();
 
 
-
-
 });
-
-
 
 
 function* findMatches(activeData, words){
@@ -87,19 +101,20 @@ function* findMatches(activeData, words){
 			]},
 			{"gt": {"run.timestamp": "{{today-month}}"}},
 			{"eq": {"result.ok": false}}
-		]}
+		]},
+		"format": "list"
 	};
 
 	var count = yield (activeData.query(counter));
 
-	yield (count.data);
+	yield (count);
 }//function
 
 function* summary(activeData, testName){
 	//FIND FIRST INSTANCE
 	var min_query = {
 		"from": "unittest",
-		"select":{"name":"firstSeen", "value":"run.timestamp", "aggregate":"min"},
+		"select": {"name": "firstSeen", "value": "run.timestamp", "aggregate": "min"},
 		"where": {"and": [
 			{"eq": {"run.result.test": testName}},
 			{"gt": {"run.timestamp": "{{today-month}}"}}
@@ -119,7 +134,7 @@ function* summary(activeData, testName){
 			{"eq": {"run.result.test": testName}},
 			{"gt": {"run.timestamp": min_result.data.firstSeen}}
 		]},
-		"limit":100000
+		"limit": 100000
 	};
 
 	var output = (yield (activeData.query(summary))).data;
@@ -136,7 +151,7 @@ function* details(activeData, testName){
 			}},
 			{"gt": {"run.timestamp": "{{today-month}}"}}
 		]},
-		"limit":100000
+		"limit": 100000
 	};
 
 	var output = (yield (activeData.query(details))).data;
@@ -146,8 +161,6 @@ function* details(activeData, testName){
 
 
 </script>
-
-
 
 
 </html>

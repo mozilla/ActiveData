@@ -555,7 +555,7 @@ class RangeDomain(Domain):
             Log.error("Can not handle missing parameter")
 
         self.key = "min"
-        self.partitions = wrap([{"min": v, "max": v + self.interval, "dataIndex": i} for i, v in enumerate(range(self.min, self.max, self.interval))])
+        self.partitions = wrap([{"min": v, "max": v + self.interval, "dataIndex": i} for i, v in enumerate(frange(self.min, self.max, self.interval))])
 
     def compare(self, a, b):
         return value_compare(a, b)
@@ -590,6 +590,13 @@ class RangeDomain(Domain):
         output.interval = self.interval
         return output
 
+
+def frange(start, stop, step):
+    # LIKE range(), BUT FOR FLOATS
+    output = start
+    while output < stop:
+        yield output
+        output += step
 
 
 def value_compare(a, b):

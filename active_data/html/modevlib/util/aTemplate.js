@@ -50,6 +50,9 @@ var Template = function Template(template){
 	FUNC.left = function(value, amount){
 		return toString(value).left(amount);
 	};
+	FUNC.deformat = function(value){
+		return toString(value).deformat();
+	};
 
 
 	function _expand(template, namespaces){

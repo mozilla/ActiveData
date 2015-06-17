@@ -30,7 +30,7 @@ Describes properties exclusive to an individual test result
 `result.subtests` Columns
 -------------------------
 
-Some tests contain *subtests*, which correspond to individual `assert` statements.
+Some test types have multiple individual results per top-level test, these are represented as *subtests*
 
 * `result.subtests.ordering` - *integer* for maintaining the original log ordering
 * `result.subtests.name` - *string* name of the subtest
@@ -102,21 +102,21 @@ Properties describing the build
 
 Properties of the changeset, revision and push
 
-* `repo.changeset` - *object* 
-	* `repo.changeset.id` - *string* unique hash value of changeset 
-    * `repo.changeset.files` - *strings* full path to files changed 
-	* `repo.changeset.date` - *timestamp*  
-	* `repo.changeset.description` - *string* text assigned to push 
-	* `repo.changeset.author` - *string* author info 
-* `repo.index` - *integer* unique value given to this revision by hg.mozilla.org  
-* `repo.branch` - *string* name of the branch 
-* `repo.push` - *object* more about the push 
-    * `repo.push.id` - *integer* unique value given to this push by hg.mozilla.org 
-    * `repo.push.user` - *string* name of person doing push 
-    * `repo.push.date` - *timestamp* when push was applied 
-* `repo.parents` - *strings* ids of any parents 
+* `repo.changeset` - *object*
+	* `repo.changeset.id` - *string* unique hash value of changeset
+    * `repo.changeset.files` - *strings* full path to files changed
+	* `repo.changeset.date` - *timestamp*
+	* `repo.changeset.description` - *string* text assigned to push *This property has been parsed into words
+	* `repo.changeset.author` - *string* author info
+* `repo.index` - *integer* unique value given to this revision by hg.mozilla.org
+* `repo.branch` - *string* name of the branch
+* `repo.push` - *object* more about the push
+    * `repo.push.id` - *integer* unique value given to this push by hg.mozilla.org
+    * `repo.push.user` - *string* name of person doing push
+    * `repo.push.date` - *timestamp* when push was applied
+* `repo.parents` - *strings* ids of any parents
 * `repo.children` - *strings* ids of any children
- 
+
 
 `machine` Columns
 -----------------

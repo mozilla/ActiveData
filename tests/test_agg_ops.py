@@ -12,7 +12,6 @@ from __future__ import unicode_literals
 from __future__ import division
 
 import base_test_class
-from pyLibrary.dot import wrap
 from tests.base_test_class import ActiveDataBaseTest
 
 
@@ -66,6 +65,33 @@ class TestAggOps(ActiveDataBaseTest):
                 "edges": [],
                 "data": {
                     "a": 58
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
+    def test_median(self):
+        test = {
+            "data": [{"a": i^2} for i in range(30)],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": "a", "aggregate": "median"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                {"a": 210.5}
+            ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [[210.5]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [],
+                "data": {
+                    "a": 210.5
                 }
             }
         }

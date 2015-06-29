@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+	<meta charset="UTF-8">
+	<title>Intermittent Failures</title>
+	<link type="text/css" rel="stylesheet" href="css/menu.css">
+	<script type="application/javascript" src="./modevlib/imports/import.js"></script>
+</head>
+<body>
+<div id="step1">
+	<h2>1. Search for failure by test name:</h2>
+	<input id="testName" name="testName" style="width:500px; padding:3px 20px 3px 20px;margin:0 0 0 0;">
+	<span id="status" style="height:30px"><img src="images/spinner.gif" alt=""></span>
+</div>
+<div id="spinner"></div>
+<div id="step2" style="display: none;">
+	<h2>2. Pick a test</h2>
+	<div id="matches">
+</div>
+</div>
+<div id="step3" style="display: none;">
+	<h2>3. Review summary</h2>
+
+	<div id="summary" layout="right=page.right"></div>
+	<div id="results" layout="left=page.left;right=summary.left;"></div>
+</div>
+</body>
+
+<script>
+
+
+importScript([
+	"lib/jquery.js",
+	"modevlib/threads/thread.js",
+	"modevlib/util/aTemplate.js",
+	"modevlib/layouts/layout.js",
+	"js/ActiveData.js"
+], function(){
+	layoutAll();
+
+	var MATCH_TEMPLATE = new Template([
+		'<table class="table"><tr><th>Name</th><th>Failure Count</th></tr>',
+		{
+			"from": "data",
+			"template": '<tr id="{{result.test|deformat}}" class="hoverable">' +
+				'<td><div>{{result.test}}</div></td>' +
+				'<td><div style="text-align: right;">{{count}}</div></td>' +
+				'</tr>'
+		},
+		"</table>"
+	]);
+
+	var activeData = new ActiveData("http://localhost:5000/query");
+
+	(function(){
+		var currentQuery = null;
+		var lastValue = null;
+
+		Thread.run(function*(){
+			while (true) {
+				var testName = $("#testName").val();
+				if (testName == lastValue) return;
+				if (testName.trim().length == 0) return;
+				lastValue = testName;
+
+				$("#status").show();
+				$("#step2").hide();
+				$("#step3").hide();
+				currentQuery = Thread.run(function*(){
+					var matches = yield (findMatches(activeData, testName));
+					if (Thread.currentThread != currentQuery)
+						yield null;   //WAS CANCELLED
+					$("#status").hide();
+					$("#step2").show();
+					$("#matches").html(MATCH_TEMPLATE.expand(matches)).show();
+				});
+				Thread.sleep(500);
+			}//while
+		});
+	})();
+
+
+});
+
+
+function* findMatches(activeData, words){
+	var matcher = ".*(" + words.split(" ").map(function(w){
+		if (w.length == 0) return undefined;
+		return convert.String2Regexp(w);
+	}).join("|") + ").*";
+
+	var counter = {
+		"from": "unittest",
+		"select": {"aggregate": "count"},
+		"edges": ["result.test"],
+		"where": {"and": [
+			{"or": [
+				{"regexp": {"result.test": matcher}},
+				{"regexp": {"run.suite": matcher}},
+				{"regexp": {"build.branch": matcher}}
+			]},
+			{"gt": {"run.timestamp": "{{today-month}}"}},
+			{"eq": {"result.ok": false}}
+		]},
+		"format": "list"
+	};
+
+	var count = yield (activeData.query(counter));
+
+	yield (count);
+}//function
+
+function* summary(activeData, testName){
+	//FIND FIRST INSTANCE
+	var min_query = {
+		"from": "unittest",
+		"select": {"name": "firstSeen", "value": "run.timestamp", "aggregate": "min"},
+		"where": {"and": [
+			{"eq": {"run.result.test": testName}},
+			{"gt": {"run.timestamp": "{{today-month}}"}}
+		]}
+	};
+
+	var min_result = yield (activeData.query(min_query));
+
+	var summary = {
+		"from": "unittest",
+		"edges": [
+			{"name": "branch", "value": "build.branch"},
+			{"name": "platform", "value": "build.platform"},
+			{"name": "ok", "value": "run.result.ok"}
+		],
+		"where": {"and": [
+			{"eq": {"run.result.test": testName}},
+			{"gt": {"run.timestamp": min_result.data.firstSeen}}
+		]},
+		"limit": 100000
+	};
+
+	var output = (yield (activeData.query(summary))).data;
+	yield output;
+}//function
+
+function* details(activeData, testName){
+	var details = {
+		"from": "unittest",
+		"where": {"and": [
+			{"eq": {
+				"run.result.ok": false,
+				"run.result.test": testName
+			}},
+			{"gt": {"run.timestamp": "{{today-month}}"}}
+		]},
+		"limit": 100000
+	};
+
+	var output = (yield (activeData.query(details))).data;
+	yield output;
+
+}//function
+
+
+</script>
+
+
+</html>

@@ -109,7 +109,7 @@ class DictList(list):
     def __getslice__(self, i, j):
         from pyLibrary.debugs.logs import Log
 
-        Log.warning("slicing is broken in Python 2.7: a[i:j] == a[i+len(a), j] sometimes.  Use [start:stop:step] (see https://github.com/klahnakoski/pyLibrary/blob/master/pyLibrary/dot/README.md#slicing-is-broken-in-python-27)")
+        Log.warning("slicing is broken in Python 2.7: a[i:j] == a[i+len(a), j] sometimes.  Use [start:stop:step] (see https://github.com/klahnakoski/pyLibrary/blob/master/pyLibrary/dot/README.md#the-slice-operator-in-python27-is-inconsistent)")
         return self[i:j:]
 
     def copy(self):

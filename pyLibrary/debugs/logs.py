@@ -557,6 +557,7 @@ class Log_usingThread(BaseLog):
                         self.logger.write(**log)
 
         self.thread = Thread("log thread", worker)
+        self.thread.parent.remove_child(self.thread)  # LOGGING WILL BE RESPONSIBLE FOR THREAD stop()
         self.thread.start()
 
     def write(self, template, params):

@@ -862,6 +862,73 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_float_range(self):
+        data = [
+            {"r": 0.5},
+            {"r": 0.2},
+            {"r": 0.4},
+            {"r": 0.5},
+            {"r": 0.7},
+            {"r": 0.5},
+            {"r": 0.8}
+        ]
+
+        test = {
+            "data": data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"aggregate": "count"},
+                "edges": [{
+                    "name": "start",
+                    "value": "r",
+                    "domain": {"type": "range", "min": 0, "max": 0.6, "interval": 0.1}
+                }]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"start": 0.2, "count": 1},
+                    {"start": 0.4, "count": 1},
+                    {"start": 0.5, "count": 3},
+                    {"start": None, "count": 2}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["start", "count"],
+                "data": [
+                    [0.2, 1],
+                    [0.4, 1],
+                    [0.5, 3],
+                    [None, 2]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "start",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "range",
+                            "key": "min",
+                            "partitions": [
+                                {"max": 0.1, "min": 0.0},
+                                {"max": 0.2, "min": 0.1},
+                                {"max": 0.3, "min": 0.2},
+                                {"max": 0.4, "min": 0.3},
+                                {"max": 0.5, "min": 0.4},
+                                {"max": 0.6, "min": 0.5}
+                            ]
+                        }
+                    }
+                ],
+                "data": {
+                    "count": [0, 0, 1, 0, 1, 3, 2]
+                }
+            }
+        }
+        self._execute_es_tests(test)
 
 
 simple_test_data = [

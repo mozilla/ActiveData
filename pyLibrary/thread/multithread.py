@@ -14,12 +14,13 @@ from __future__ import absolute_import
 
 from collections import Iterable
 from types import GeneratorType
+
 from pyLibrary import convert
 from pyLibrary.dot import coalesce
 from pyLibrary.debugs.logs import Log
 from pyLibrary.thread.threads import Queue, Thread
-from pyLibrary.collections import OR
 from pyLibrary.times.timer import Timer
+
 
 DEBUG = False
 

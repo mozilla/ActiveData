@@ -264,7 +264,11 @@ GUI = {};
 				if (v.isFilter) {
 					simplestate[k] = v.getSimpleState();
 				} else if (jQuery.isArray(v)) {
-					if (v.length > 0) simplestate[k] = v.join(",");
+					if (v.length > 0) {
+						simplestate[k] = v.join(",");
+					}else{
+						simplestate[k] = undefined;
+					}//endif
 				} else if (p && p.type == "json") {
 					v = convert.value2json(v);
 					v = v.escape(GUI.urlMap);
@@ -315,6 +319,13 @@ GUI = {};
 				} else if (p && p.type == "text") {
 					v = v.escape(Map.inverse(GUI.urlMap));
 					GUI.state[k] = v;
+				} else if (p && p.type == "set") {
+					v = v.escape(Map.inverse(GUI.urlMap));
+					if (v.trim()==""){
+						GUI.state[k]=[];
+					}else{
+						GUI.state[k] = v.split(",").map(String.trim);
+					}//endif
 				} else if (p && p.type == "code") {
 					v = v.escape(Map.inverse(GUI.urlMap));
 					GUI.state[k] = v;
@@ -332,7 +343,8 @@ GUI = {};
 		// ADD INTERACTIVE PARAMETERS TO THE PAGE
 		// id - id of the html form element (can exist, or not), also used as GUI.state variable
 		// name - humane name of the parameter
-		// type - some basic data types to drive the type of form element used (time, date, datetime, duration, text, boolean, json, code)
+		// type - some basic data types to drive the type of form element used
+		// (time, date, datetime, duration, text, set, boolean, json, code)
 		// default - default value if not specified in URL
 		///////////////////////////////////////////////////////////////////////////
 		GUI.AddParameters = function (parameters, relations) {
@@ -366,7 +378,8 @@ GUI = {};
 						"text": "text",
 						"boolean": "checkbox",
 						"json": "textarea",
-						"code": "textarea"
+						"code": "textarea",
+						"set": "text"
 					}[param.type]  //MAP PARAMETER TYPES TO HTML TYPES
 				});
 			});
@@ -467,12 +480,19 @@ GUI = {};
 				} else if (param.type == "code") {
 					var codeDiv = $("#" + param.id);
 					codeDiv.linedtextarea();
-					codeDiv.change(function () {
+					codeDiv.change(function(){
 						if (GUI.UpdateState()) {
 							GUI.refreshChart();
 						}
 					});
 					codeDiv.val(defaultValue);
+				}else if (param.type == "set"){
+					$("#" + param.id).change(function () {
+						if (GUI.UpdateState()) {
+							GUI.refreshChart();
+						}
+					});
+					$("#" + param.id).val(defaultValue.join(","));
 				} else {
 					if (param.type == "string") param.type = "text";
 					$("#" + param.id).change(function () {
@@ -499,6 +519,8 @@ GUI = {};
 					$("#" + param.id).prop("checked", GUI.state[param.id]);
 				} else if (param.type == "datetime") {
 					$("#" + param.id).val(Date.newInstance(GUI.state[param.id]).format("yyyy-MM-dd HH:mm:ss"))
+				} else if (param.type == "set") {
+					$("#" + param.id).val(GUI.state[param.id].join(","))
 				} else {
 				//if (param.type.getSimpleState) return;  //param.type===GUI.state[param.id] NO ACTION REQUIRED
 					$("#" + param.id).val(GUI.state[param.id]);
@@ -514,6 +536,13 @@ GUI = {};
 					GUI.state[param.id] = convert.json2value($("#" + param.id).val());
 				} else if (param.type == "boolean") {
 					GUI.state[param.id] = $("#" + param.id).prop("checked");
+				}else if (param.type =="set"){
+					var v=$("#" + param.id).val();
+					if (v.trim() == "") {
+						GUI.state[param.id]=[];
+					}else{
+						GUI.state[param.id]=v.split(",").map(String.trim);
+					}//endif
 				} else {
 					GUI.state[param.id] = $("#" + param.id).val();
 				}//endif

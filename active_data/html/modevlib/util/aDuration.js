@@ -4,7 +4,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 importScript("aDate.js");
+importScript("aString.js");
 importScript("convert.js");
+importScript("../math/aMath.js");
 
 
 
@@ -237,6 +239,11 @@ Duration.prototype.floor = function(interval){
 		output.milli = aMath.floor(this.milli / (interval.milli)) * (interval.milli);
 	}//endif
 	return output;
+};//method
+
+
+Duration.prototype.mod = function(interval){
+	return this.subtract(this.floor(interval));
 };//method
 
 

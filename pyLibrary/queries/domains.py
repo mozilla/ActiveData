@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
+from numbers import Number
 import re
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
@@ -182,7 +183,7 @@ class SimpleSetDomain(Domain):
         if isinstance(self.key, set):
             Log.error("problem")
 
-        if isinstance(desc.partitions[0], basestring):
+        if not desc.key and isinstance(desc.partitions[0], (basestring, Number)):
             # ASSUME PARTS ARE STRINGS, CONVERT TO REAL PART OBJECTS
             self.key = "value"
             self.map = {}
@@ -243,7 +244,7 @@ class SimpleSetDomain(Domain):
                 p.dataIndex = i
 
         else:
-            Log.error("Can not hanldle")
+            Log.error("Can not handle")
 
         self.label = coalesce(self.label, "name")
 
@@ -554,7 +555,7 @@ class RangeDomain(Domain):
             Log.error("Can not handle missing parameter")
 
         self.key = "min"
-        self.partitions = wrap([{"min": v, "max": v + self.interval, "dataIndex": i} for i, v in enumerate(range(self.min, self.max, self.interval))])
+        self.partitions = wrap([{"min": v, "max": v + self.interval, "dataIndex": i} for i, v in enumerate(frange(self.min, self.max, self.interval))])
 
     def compare(self, a, b):
         return value_compare(a, b)
@@ -589,6 +590,13 @@ class RangeDomain(Domain):
         output.interval = self.interval
         return output
 
+
+def frange(start, stop, step):
+    # LIKE range(), BUT FOR FLOATS
+    output = start
+    while output < stop:
+        yield output
+        output += step
 
 
 def value_compare(a, b):

@@ -209,12 +209,15 @@ class Duration(object):
 
     @property
     def seconds(self):
-        return self.milli / 1000
+        return self.milli / 1000.0
 
     def total_seconds(self):
-        return self.milli / 1000
+        return self.milli / 1000.0
 
     def __str__(self):
+        return str(self.__unicode__())
+
+    def __unicode__(self):
         if not self.milli:
             return "zero"
 
@@ -226,25 +229,25 @@ class Duration(object):
         # MILLI
         rem = rest % 1000
         if rem != 0:
-            output = "+" + rem + "milli" + output
+            output = "+" + unicode(rem) + "milli" + output
         rest = Math.floor(rest / 1000)
 
         # SECOND
         rem = rest % 60
         if rem != 0:
-            output = "+" + rem + "second" + output
+            output = "+" + unicode(rem) + "second" + output
         rest = Math.floor(rest / 60)
 
         # MINUTE
         rem = rest % 60
         if rem != 0:
-            output = "+" + rem + "minute" + output
+            output = "+" + unicode(rem) + "minute" + output
         rest = Math.floor(rest / 60)
 
         # HOUR
         rem = rest % 24
         if rem != 0:
-            output = "+" + rem + "hour" + output
+            output = "+" + unicode(rem) + "hour" + output
         rest = Math.floor(rest / 24)
 
         # DAY
@@ -256,11 +259,11 @@ class Duration(object):
             rest = Math.floor(rest / 7)
 
         if rem != 0:
-            output = "+" + str(rem) + "day" + output
+            output = "+" + unicode(rem) + "day" + output
 
         # WEEK
         if rest != 0:
-            output = "+" + str(rest) + "week" + output
+            output = "+" + unicode(rest) + "week" + output
 
         if isNegative:
             output = output.replace("+", "-")
@@ -271,13 +274,13 @@ class Duration(object):
             month = Math.abs(self.month)
 
             if month <= 18 and month != 12:
-                output = sign + month + "month" + output
+                output = sign + unicode(month) + "month" + output
             else:
                 m = month % 12
                 if m != 0:
-                    output = sign + m + "month" + output
+                    output = sign + unicode(m) + "month" + output
                 y = Math.floor(month / 12)
-                output = sign + str(y) + "year" + output
+                output = sign + unicode(y) + "year" + output
 
         if output[0] == "+":
             output = output[1::]

@@ -47,7 +47,7 @@ class Dict(MutableMapping):
                 else:
                     _set(self, "_dict", _get(args[0], "__dict__"))
             elif kwargs:
-                _set(self, "_dict", kwargs)
+                _set(self, "_dict", unwrap(kwargs))
             else:
                 _set(self, "_dict", {})
 

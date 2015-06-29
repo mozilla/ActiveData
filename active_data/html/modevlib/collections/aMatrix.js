@@ -78,10 +78,10 @@ Matrix.prototype.forall = function(func, other){
 		}//endif
 	}//function
 	iter(data, 0);
-}
+};
 
 
-//PROVIDE func(v, i, c, cube) WHERE
+//PROVIDE func(v, c, cube) WHERE
 // v - IS A VALUE IN THE CUBE
 // c - AN ARRAY OF COORDINATES v IS FOUND AT
 // cube - THE WHOLE CUBE

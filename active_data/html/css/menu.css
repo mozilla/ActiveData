@@ -18,8 +18,8 @@ html {
     position: relative;
     border-top: 2px solid #fff;
     height: 100%;
-    margin: 0px;
-    padding: 0px;
+    margin: 0;
+    padding: 0;
     /*background: #f5f1e8 url(../images/bg-sand.png) repeat;*/
     background: url(../images/bg-gradient-sand.png) repeat-x 0 0, url(../images/bg-sand.png) repeat 0 0, #f6f5f1
 }
@@ -79,7 +79,6 @@ a.tabzilla:hover, a.tabzilla:active {
     height: 13em;
     width: 15em;
     clear: both;
-    /*padding-top: 2em;*/
     margin: 10px;
     border-radius: 0.5em;
     background: rgba(0, 0, 0, 0.1);
@@ -95,30 +94,16 @@ a.tabzilla:hover, a.tabzilla:active {
 
 body {
     position: relative;
-
-     /*background: #f9f9f9 url(../images/grain.png) 0 0 repeat-x*/
-
-    /*background-image: -khtml-gradient(linear, left top, left bottom, from(#d7d3c8), to(#f6f4ec));*/
-    /*background-image: -moz-linear-gradient(#d7d3c8, #f6f4ec);*/
-    /*background-image: -ms-linear-gradient(#d7d3c8, #f6f4ec);*/
-    /*background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #d7d3c8), color-stop(100%, #f6f4ec));*/
-    /*background-image: -webkit-linear-gradient(#d7d3c8, #f6f4ec);*/
-    /*background-image: -o-linear-gradient(#d7d3c8, #f6f4ec);*/
-    /*-ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorstr='#d7d3c8', endColorstr='#f6f4ec', GradientType=0)";*/
-    /*background-image: linear-gradient(#d7d3c8, #f6f4ec);*/
-
     font-family: 'Open Sans', sans-serif;
     font-size: 14px;
     color: #444444;
-    padding: 0px;
+    padding: 0;
     height: 100%;
     width: 100%;
     line-height: 20px;
     padding-bottom: 40px;
-    /*width: 1000px;*/
     margin: 0 auto;
     position: relative
-
 }
 
 
@@ -578,7 +563,7 @@ TOOLBAR
     vertical-align: middle;
     font-size: 14px;
     /*margin: 4px 4px 4px 4px;*/
-    padding: 4px 0px 0px 0px;
+    padding: 4px 0 0 0;
     height: 36px;
     width: 40px;
     line-height: 20px;
@@ -637,7 +622,7 @@ TOOLBAR
     vertical-align: middle;
     font-size: 14px;
     /*margin: 4px 4px 4px 4px;*/
-    padding: 2px 0px 0px 0px;
+    padding: 2px 0 0 0;
     height: 20px;
     width: 20px;
     line-height: 10px;
@@ -680,7 +665,7 @@ TOOLBAR
     text-align: center;
     vertical-align: top;
     font-size: 14px;
-    padding: 2px 0px 5px 0px;
+    padding: 2px 0 5px 0;
     height: 20px;
     width: 20px;
     line-height: 10px;

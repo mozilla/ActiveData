@@ -19,7 +19,7 @@ import re
 import math
 import __builtin__
 
-from pyLibrary.dot import coalesce, wrap, Dict
+from pyLibrary.dot import coalesce, wrap
 
 
 def datetime(value):
@@ -158,6 +158,7 @@ def percent(value, decimal=None, digits=None, places=None):
         left_of_decimal = int(math.ceil(math.log10(abs(value)))) + 2
         decimal = digits - left_of_decimal
 
+    decimal = coalesce(decimal, 0)
     right_of_decimal = max(decimal, 0)
     format = "{:." + unicode(right_of_decimal) + "%}"
     return format.format(__builtin__.round(value, decimal + 2))
@@ -388,8 +389,9 @@ def _simple_expand(template, seq):
                 if not Log:
                     _late_import()
 
-                Log.warning("Can not expand " + "|".join(ops) + " in template: {{template|json}}",
-                    template=template,
+                Log.warning(
+                    "Can not expand " + "|".join(ops) + " in template: {{template_|json}}",
+                    template_=template,
                     cause=e
                 )
             return "[template expansion error: (" + str(e.message) + ")]"
@@ -417,6 +419,9 @@ def deformat(value):
 
 
 def toString(val):
+    if not convert:
+        _late_import()
+
     if val == None:
         return ""
     elif isinstance(val, (Mapping, list, set)):
@@ -425,6 +430,8 @@ def toString(val):
         return json_encoder(val, pretty=True)
     elif hasattr(val, "__json__"):
         return val.__json__()
+    elif isinstance(val, Duration):
+        return unicode(round(val.seconds, places=4)) + " seconds"
     elif isinstance(val, timedelta):
         duration = val.total_seconds()
         return unicode(round(duration, 3)) + " seconds"
@@ -566,17 +573,20 @@ def utf82unicode(value):
 convert = None
 Log = None
 Except = None
-
+Duration = None
 
 def _late_import():
     global convert
     global Log
     global Except
+    global Duration
 
     from pyLibrary import convert
     from pyLibrary.debugs.logs import Log, Except
+    from pyLibrary.times.durations import Duration
 
     _ = convert
     _ = Log
     _ = Except
+    _ = Duration
 

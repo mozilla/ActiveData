@@ -214,7 +214,7 @@ additional stipulation that all parts of all domains are represented, even if nu
   - **mode** – ```inclusive``` will ensure any domain part that intersects with the range will be used in the aggregate.  ```snapshot`` (default) will only count ranges that contain the domain part key value.
   - **test** – Can be used instead of value: Code that is responsible for returning true/false on whether the data will match the domain parts.  Use this to simulate a SQL join.
   - **domain** – The range of values to be part of the aggregation
-  - **allowNulls** – Set to true if you want to aggregate all values outside the domain
+  - **allowNulls** – Set to `true` (default) if you want to aggregate all values outside the domain
 
 edges.domain
 --------------

@@ -83,9 +83,9 @@ def find_query(hash):
 
 @app.route('/query', defaults={'path': ''}, methods=['GET', 'POST'])
 def query(path):
-    total_duration = Timer("total duration")
+    active_data_timer = Timer("total duration")
     try:
-        with total_duration:
+        with active_data_timer:
             body = flask.request.environ['body_copy']
             if not body.strip():
                 return Response(
@@ -106,7 +106,7 @@ def query(path):
         if data.meta.save:
             result.meta.saved_as = query_finder.save(data)
 
-        result.meta.active_data_response_time = total_duration.seconds
+        result.meta.active_data_response_time = active_data_timer.duration
 
         return Response(
             convert.unicode2utf8(convert.value2json(result)),
@@ -123,7 +123,7 @@ def query(path):
         record_request(flask.request, None, flask.request.environ['body_copy'], e)
         Log.warning("Problem sent back to client", e)
         e = e.as_dict()
-        e.meta.active_data_response_time = total_duration.seconds
+        e.meta.active_data_response_time = active_data_timer.duration
 
         return Response(
             convert.unicode2utf8(convert.value2json(e)),

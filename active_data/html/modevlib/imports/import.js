@@ -14,8 +14,8 @@ var importScript;
 (function () {
 
 	var METHOD_NAME = "importScript";
-	var FORCE_RELOAD = false;  //COMPENSATE FOR BUG https://bugzilla.mozilla.org/show_bug.cgi?id=991252
-	var DEBUG = false;
+	var FORCE_RELOAD = true;  //COMPENSATE FOR BUG https://bugzilla.mozilla.org/show_bug.cgi?id=991252
+	var DEBUG = true;
 
 	if (typeof(window.Log) == "undefined") {
 		window.Log = {
@@ -63,6 +63,30 @@ var importScript;
 		return c;
 	}//method
 
+	function remove(a, v){
+		//REMOVE v FROM a
+		var j=0;
+		for (var i = 0; i < a.length; i++) {
+			if (a[i] !== v) {
+				a[j] = a[i];
+				j++;
+			}//endif
+		}//for
+		a.length = j;
+	}//method
+
+	function between(self, start, end){
+		var s=self.indexOf(start);
+		if (s==-1) return null;
+		s+=start.length;
+		if (end===undefined) return self.substring(s);
+
+		var e=self.indexOf(end, s);
+		if (e==-1) return self.substring(s);
+		return self.substring(s, e);
+	}//method
+
+
 	function contains(array, element) {
 		for (var i = array.length; i--;) {
 			if (array[i] == element) return true;
@@ -101,7 +125,12 @@ var importScript;
 	function readfile(fullPath, callback){
 		var request = new XMLHttpRequest();
 		try {
-			var url = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + fullPath;
+			var url;
+			if (window.location.protocol=="file:") {
+				url = window.location.protocol + "//" + fullPath;
+			}else{
+				url = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + fullPath;
+			}//endif
 			request.open('GET', url);
 			request.responseType="text";
 			request.isDone = false;
@@ -201,13 +230,24 @@ var importScript;
 
 		var netPaths = subtract(paths, existingScripts);
 
-		var numLoaded = netPaths.length;
-		if (DEBUG) Log.note("Waiting for " + numLoaded + " scripts to load");
+		var numLoaded = netPaths;
+		if (DEBUG) Log.note("Waiting for " + numLoaded.length + " scripts to load");
+
+		setTimeout(function(){
+			if (numLoaded.length>0){
+				var list = "";
+				numLoaded.forall(function(v){list+="\t"+v+"\n";});
+				Log.error("Scripts not imported!\n"+list)
+			}//endif
+		}, 15000);
 
 		function onLoadCallback() {
-			numLoaded--;
-			if (numLoaded == 0) {
+			var path = "/"+between(between(this.src, "://", "?"), "/");
+			remove(numLoaded, path);
+			if (numLoaded.length == 0) {
 				doneCallback();
+			}else{
+				if (DEBUG) Log.note("Loaded: "+this.outerHTML+ " remaining: "+numLoaded.length)
 			}//endif
 		}
 
@@ -221,7 +261,8 @@ var importScript;
 				newCSS.rel = "stylesheet";
 				newCSS.href = netPaths[i];
 				frag.appendChild(newCSS);
-				numLoaded--;
+				remove(numLoaded, netPaths[i]);
+				i--;
 			} else {
 				var script = document.createElement('script');
 				script.type = 'text/javascript';
@@ -232,8 +273,8 @@ var importScript;
 			}//endif
 		}//for
 		head.appendChild(frag);
-		if (numLoaded == 0) doneCallback();
-		if (DEBUG) Log.note("Added " + numLoaded + " scripts");
+		if (numLoaded.length == 0) doneCallback();
+		if (DEBUG) Log.note("Added " + numLoaded.length + " scripts");
 	}//function
 
 

@@ -67,7 +67,7 @@ class PersistentQueue(object):
                 Log.warning("queue file had {{num}} items lost",  num= lost)
 
             if DEBUG:
-                Log.note("Persistent queue {{name}} found with {{num}} items",  name= self.file.abspath,  num= len(self))
+                Log.note("Persistent queue {{name}} found with {{num}} items", name=self.file.abspath, num=len(self))
         else:
             self.db.status = Dict(
                 start=0,
@@ -75,7 +75,7 @@ class PersistentQueue(object):
             )
             self.start = self.db.status.start
             if DEBUG:
-                Log.note("New persistent queue {{name}}",  name= self.file.abspath)
+                Log.note("New persistent queue {{name}}", name=self.file.abspath)
 
     def _add_pending(self, delta):
         delta = wrap(delta)
@@ -135,10 +135,10 @@ class PersistentQueue(object):
 
                 try:
                     self.lock.wait()
-                except Exception, e:
+                except Exception, _:
                     pass
             if DEBUG:
-                Log.note("persistent queue stopped")
+                Log.note("persistent queue already stopped")
             return Thread.STOP
 
     def pop_all(self):
@@ -178,12 +178,12 @@ class PersistentQueue(object):
                 if self.db.status.end - self.start < 10 or Random.range(1000) == 0:  # FORCE RE-WRITE TO LIMIT FILE SIZE
                     # SIMPLY RE-WRITE FILE
                     if DEBUG:
-                        Log.note("Re-write {{num_keys}} keys to persistent queue",  num_keys= self.db.status.end - self.start)
+                        Log.note("Re-write {{num_keys}} keys to persistent queue", num_keys=self.db.status.end - self.start)
 
                         for k in self.db.keys():
                             if k == "status" or int(k) >= self.db.status.start:
                                 continue
-                            Log.error("Not expecting {{key}}",  key= k)
+                            Log.error("Not expecting {{key}}", key=k)
                     self._commit()
                     self.file.write(convert.value2json({"add": self.db}) + "\n")
                 else:
@@ -201,18 +201,20 @@ class PersistentQueue(object):
             if self.db is None:
                 return
 
+            self.add(Thread.STOP)
+
             if self.db.status.end == self.start:
                 if DEBUG:
                     Log.note("persistent queue clear and closed")
                 self.file.delete()
             else:
                 if DEBUG:
-                    Log.note("persistent queue closed with {{num}} items left",  num= len(self))
+                    Log.note("persistent queue closed with {{num}} items left", num=len(self))
                 try:
                     self._add_pending({"add": {"status.start": self.start}})
                     for i in range(self.db.status.start, self.start):
                         self._add_pending({"remove": str(i)})
-                    self.file.write(convert.value2json({"add": self.db}) + "\n" + ("\n".join(convert.value2json(p) for p in self.pending)) +"\n")
+                    self.file.write(convert.value2json({"add": self.db}) + "\n" + ("\n".join(convert.value2json(p) for p in self.pending)) + "\n")
                     self._apply_pending()
                 except Exception, e:
                     raise e

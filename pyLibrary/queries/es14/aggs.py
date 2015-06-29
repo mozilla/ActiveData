@@ -46,8 +46,8 @@ def es_aggsop(es, frum, query):
             formula.append(s)
 
     for litral_field, many in new_select.items():
-        if len(many)>1:
-            canonical_name=literal_field(many[0].name)
+        if len(many) > 1:
+            canonical_name = literal_field(many[0].name)
             es_query.aggs[canonical_name].stats.field = many[0].value
             for s in many:
                 if s.aggregate == "count":
@@ -98,7 +98,7 @@ def es_aggsop(es, frum, query):
         else:
             output = aggop_formatter(decoders, result.aggregations, start, query, select)
 
-        output.meta.es_response_time = es_duration.seconds
+        output.meta.es_response_time = es_duration.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
         return output

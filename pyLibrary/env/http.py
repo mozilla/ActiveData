@@ -164,9 +164,11 @@ class HttpResponse(Response):
 
     @property
     def all_content(self):
-        # Response.content WILL LEAK MEMORY (?BECAUSE OF PYPY"S POOR HANDLING OF GENERATORS?)
+        # response.content WILL LEAK MEMORY (?BECAUSE OF PYPY"S POOR HANDLING OF GENERATORS?)
         # THE TIGHT, SIMPLE, LOOP TO FILL blocks PREVENTS THAT LEAK
-        if self._cached_content is None:
+        if self._content is not False:
+            self._cached_content = self._content
+        elif self._cached_content is None:
             def read(size):
                 if self.raw._fp.fp is not None:
                     return self.raw.read(amt=size, decode_content=True)

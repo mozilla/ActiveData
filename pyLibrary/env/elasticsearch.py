@@ -230,12 +230,17 @@ class Index(object):
         try:
             for r in records:
                 id = r.get("id")
+
                 if id == None:
                     id = Random.hex(40)
 
                 if "json" in r:
+                    # if id != coalesce(wrap(convert.json2value(r["json"])).value._id, id):
+                    #     Log.error("expecting _id to match")
                     json = r["json"]
                 elif "value" in r:
+                    # if id != coalesce(wrap(r).value._id, id):
+                    #     Log.error("expecting _id to match")
                     json = convert.value2json(r["value"])
                 else:
                     json = None
@@ -252,7 +257,7 @@ class Index(object):
                 data_bytes = "\n".join(lines) + "\n"
                 data_bytes = data_bytes.encode("utf8")
             except Exception, e:
-                Log.error("can not make request body from\n{{lines|indent}}",  lines= lines, cause=e)
+                Log.error("can not make request body from\n{{lines|indent}}", lines=lines, cause=e)
 
 
             response = self.cluster._post(
@@ -271,7 +276,7 @@ class Index(object):
                             error=item.index.error,
                             line=lines[i * 2 + 1]
                         )
-                elif self.cluster.version.startswith("1.4."):
+                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5."])):
                     if item.index.status not in [200, 201]:
                         Log.error(
                             "{{num}} {{error}} while loading line into {{index}}:\n{{line}}",
@@ -284,10 +289,10 @@ class Index(object):
                     Log.error("version not supported {{version}}",  version=self.cluster.version)
 
             if self.debug:
-                Log.note("{{num}} documents added",  num= len(items))
+                Log.note("{{num}} documents added", num=len(items))
         except Exception, e:
             if e.message.startswith("sequence item "):
-                Log.error("problem with {{data}}",  data= repr(lines[int(e.message[14:16].strip())]), cause=e)
+                Log.error("problem with {{data}}", data=repr(lines[int(e.message[14:16].strip())]), cause=e)
             Log.error("problem sending to ES", e)
 
 
@@ -311,21 +316,21 @@ class Index(object):
                 data='{"index":{"refresh_interval":' + convert.value2json(interval) + '}}'
             )
 
-            result = convert.json2value(utf82unicode(response.content))
+            result = convert.json2value(utf82unicode(response.all_content))
             if not result.ok:
                 Log.error("Can not set refresh interval ({{error}})", {
-                    "error": utf82unicode(response.content)
+                    "error": utf82unicode(response.all_content)
                 })
-        elif self.cluster.version.startswith("1.4."):
+        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5."])):
             response = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
                 data=convert.unicode2utf8('{"index":{"refresh_interval":' + convert.value2json(interval) + '}}')
             )
 
-            result = convert.json2value(utf82unicode(response.content))
+            result = convert.json2value(utf82unicode(response.all_content))
             if not result.acknowledged:
                 Log.error("Can not set refresh interval ({{error}})", {
-                    "error": utf82unicode(response.content)
+                    "error": utf82unicode(response.all_content)
                 })
         else:
             Log.error("Do not know how to handle ES version {{version}}",  version=self.cluster.version)
@@ -354,7 +359,7 @@ class Index(object):
             )
 
     def threaded_queue(self, batch_size=None, max_size=None, period=None, silent=False):
-        return ThreadedQueue("elasticsearch: " + self.settings.index, self, batch_size=batch_size, max_size=max_size, period=period, silent=silent)
+        return ThreadedQueue("push to elasticsearch: " + self.settings.index, self, batch_size=batch_size, max_size=max_size, period=period, silent=silent)
 
     def delete(self):
         self.cluster.delete_index(index=self.settings.index)
@@ -437,8 +442,6 @@ class Cluster(object):
             settings.index = alias
             return Index(settings)
         Log.error("Can not find any index with alias {{alias_name}}",  alias_name= alias)
-
-
 
     @use_settings
     def create_index(
@@ -538,10 +541,10 @@ class Cluster(object):
 
             response = http.post(url, **kwargs)
             if response.status_code not in [200, 201]:
-                Log.error(response.reason+": "+response.content)
+                Log.error(response.reason + ": " + response.all_content)
             if self.debug:
-                Log.note("response: {{response}}",  response= utf82unicode(response.content)[:130])
-            details = convert.json2value(utf82unicode(response.content))
+                Log.note("response: {{response}}", response=utf82unicode(response.all_content)[:130])
+            details = convert.json2value(utf82unicode(response.all_content))
             if details.error:
                 Log.error(convert.quote2string(details.error))
             if details._shards.failed > 0:
@@ -569,10 +572,10 @@ class Cluster(object):
         try:
             response = http.get(url, **kwargs)
             if response.status_code not in [200]:
-                Log.error(response.reason+": "+response.content)
+                Log.error(response.reason+": "+response.all_content)
             if self.debug:
-                Log.note("response: {{response}}",  response= utf82unicode(response.content)[:130])
-            details = wrap(convert.json2value(utf82unicode(response.content)))
+                Log.note("response: {{response}}",  response= utf82unicode(response.all_content)[:130])
+            details = wrap(convert.json2value(utf82unicode(response.all_content)))
             if details.error:
                 Log.error(details.error)
             return details
@@ -584,11 +587,11 @@ class Cluster(object):
         try:
             response = http.head(url, **kwargs)
             if response.status_code not in [200]:
-                Log.error(response.reason+": "+response.content)
+                Log.error(response.reason+": "+response.all_content)
             if self.debug:
-                Log.note("response: {{response}}",  response= utf82unicode(response.content)[:130])
-            if response.content:
-                details = wrap(convert.json2value(utf82unicode(response.content)))
+                Log.note("response: {{response}}",  response= utf82unicode(response.all_content)[:130])
+            if response.all_content:
+                details = wrap(convert.json2value(utf82unicode(response.all_content)))
                 if details.error:
                     Log.error(details.error)
                 return details
@@ -606,9 +609,9 @@ class Cluster(object):
         try:
             response = http.put(url, **kwargs)
             if response.status_code not in [200]:
-                Log.error(response.reason+": "+response.content)
+                Log.error(response.reason+": "+response.all_content)
             if self.debug:
-                Log.note("response: {{response}}",  response= utf82unicode(response.content)[0:300:])
+                Log.note("response: {{response}}",  response= utf82unicode(response.all_content)[0:300:])
             return response
         except Exception, e:
             Log.error("Problem with call to {{url}}",  url= url, cause=e)

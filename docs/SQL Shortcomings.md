@@ -5,20 +5,24 @@ SQL Shortcomings
 
 Here is a unordered list of the anti-patterns I see when dealing with SQL.
 It is a personal note to myself, but I hope to expand it to explain the
-benefits of Qb queries. solutions
+benefits of Qb queries.
 
 This document serves to provide motivation for a query language beyond standard
-SQL.
+SQL. Qb is a query language optimized specifically for hierarchical databases, nested
+JSON, and data warehouses.  
 
+JSON vs SQL
+------------
 
-Meta Programming
-----------------
+A deliberate feature of a Qb is it's JSON.  It can be easily declared in Python and Javascript code, and easily manipulated by code.  
 
-Qb is a query language optimized specifically for hierarchical databases, nested
-JSON, and data warehouses.  A deliberate feature of a Qb is it's JSON; so can be
-easily manipulated by code.  Many of the SQL's shortcomings are a result of SQL not
-having no macros.
+Many of the SQL's shortcomings, which I touch on below, are overcome by string concatenation on client-side code.  Good ORM libraries will formalize this string manipulation with a series of function calls, which are used to create a abstract syntax tree, which is serialized to SQL.  SQLAlchemy is a particularly good ORM because it leverages Python's magic methods to make elegant imperative Python expressions generate those data structures behind the scenes.  But, in every case, you are running code that generates a data structure, which is then used to generate SQL.      
 
+	ORM Expressions -> AST -> SQL -> network -> SQL -> AST -> Query
+
+Qb is slightly better in this regard:  It is its own AST, and does not require serialization to a complex intermediate language.  Furthermore, an ORM library would be trivial to write, so trivial that it would provide negligible benefit over simply stating the JSON structure directly.
+
+	Qb -> JSON -> network -> JSON -> Qb -> Query 
 
 ###Splitting credit and debit
 
@@ -115,7 +119,7 @@ complicated.  Given we got this one wrong, we have little chance of writing
 complicated ranking algorithms correctly.
 
 Window functions almost do what we want:  They can categorize using edges, and
-rank using sort, but they do not change trhe number of rows returned.
+rank using sort, but they do not change the number of rows returned.
 Generally, we what a clause that can pick the "best" record according to some
 ranking algorithm, by category.
 
@@ -576,7 +580,7 @@ Dimension rollup
     INSERT INTO transaction_types (code, description, type) VALUES ('ATWTWF','account to account Account Transfer Fee','Fees');
     INSERT INTO transaction_types (code, description, type) VALUES ('BF','Bulk Beam Fee','Fees');
 
-Ordering, rollup and style
+Ordering, roll-up and style
 
     INSERT INTO categories (ordering, type, color, group) VALUES (1, 'Load-Credit Card','blue', 'Load');
     INSERT INTO categories VALUES (2, 'Retail Sales','blue', 'Spend');

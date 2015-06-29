@@ -17,6 +17,7 @@ from decimal import Decimal
 import math
 import platform
 import re
+from pyLibrary.maths import Math
 
 try:
     import pytz
@@ -94,7 +95,9 @@ class Date(object):
         return Date(self.value + timedelta(days=1))
 
     def add(self, other):
-        if isinstance(other, datetime):
+        if other==None:
+            return Null
+        elif isinstance(other, datetime):
             return Date(self.value - other)
         elif isinstance(other, date):
             return Date(self.value - other)
@@ -119,7 +122,8 @@ class Date(object):
                 return Date(self.milli + other.milli)
         else:
             from pyLibrary.debugs.logs import Log
-            Log.error("can not subtract {{type}} from Date",  type=other.__class__.__name__)
+
+            Log.error("can not subtract {{type}} from Date", type=other.__class__.__name__)
 
     @staticmethod
     def now():
@@ -194,6 +198,15 @@ def _cpython_value2date(*args):
                     output = datetime.utcfromtimestamp(a0 / 1000)
                 else:
                     output = datetime.utcfromtimestamp(a0)
+            elif isinstance(a0, basestring) and len(a0) in [9, 10, 12, 13] and Math.is_integer(a0):
+                a0 = long(a0)
+                if a0 == 9999999999000:  # PYPY BUG https://bugs.pypy.org/issue1697
+                    output = Date.MAX
+                elif a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
+                    output = datetime.utcfromtimestamp(a0 / 1000)
+                else:
+                    output = datetime.utcfromtimestamp(a0)
+
             elif isinstance(a0, basestring):
                 output = unicode2datetime(a0)
             else:

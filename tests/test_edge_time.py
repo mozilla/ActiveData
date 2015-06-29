@@ -68,22 +68,28 @@ class TestEdge1(ActiveDataBaseTest):
                     }
                 ]
             },
-            # "expecting_list": {
-            #     "meta": {"format": "list"},
-            #     "data": [
-            #         {"a": "b", "count": 2},
-            #         {"a": "c", "count": 3},
-            #         {"a": None, "count": 1}
-            #     ]},
-            # "expecting_table": {
-            #     "meta": {"format": "table"},
-            #     "header": ["a", "count"],
-            #     "data": [
-            #         ["b", 2],
-            #         ["c", 3],
-            #         [None, 1]
-            #     ]
-            # },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"_run": {"timestamp": (FROM_DATE + 1 * DAY).unix}, "count": 6},
+                    {"_run": {"timestamp": (FROM_DATE + 2 * DAY).unix}, "count": 5},
+                    {"_run": {"timestamp": (FROM_DATE + 3 * DAY).unix}, "count": 4},
+                    {"_run": {"timestamp": (FROM_DATE + 4 * DAY).unix}, "count": 3},
+                    {"_run": {"timestamp": (FROM_DATE + 5 * DAY).unix}, "count": 2},
+                    {"_run": {"timestamp": (FROM_DATE + 6 * DAY).unix}, "count": 1}
+                ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["_run.timestamp", "count"],
+                "data": [
+                    [(FROM_DATE + 1 * DAY).unix, 6],
+                    [(FROM_DATE + 2 * DAY).unix, 5],
+                    [(FROM_DATE + 3 * DAY).unix, 4],
+                    [(FROM_DATE + 4 * DAY).unix, 3],
+                    [(FROM_DATE + 5 * DAY).unix, 2],
+                    [(FROM_DATE + 6 * DAY).unix, 1]
+                ]
+            },
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "edges": [

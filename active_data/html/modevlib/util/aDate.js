@@ -69,7 +69,7 @@ Date.max=function(){
 
 
 Date.prototype.getMilli = Date.prototype.getTime;
-
+Date.prototype.milli = Date.prototype.getTime;
 
 Date.prototype.between=function(min, max){
 	if (min==null) return null;	//NULL MEANS UNKNOWN, SO between() IS UNKNOWN

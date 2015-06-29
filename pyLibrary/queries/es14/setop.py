@@ -11,22 +11,21 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
-from pyLibrary import queries, convert
 
+from pyLibrary import queries
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.collections import AND, SUM, OR, UNION
-from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, unwrap, literal_field
+from pyLibrary.collections import AND, UNION
+from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries import domains
-from pyLibrary.queries.expressions import qb_expression_to_esfilter, simplify_esfilter, TRUE_FILTER, qb_expression_to_ruby
+from pyLibrary.queries.expressions import qb_expression_to_esfilter, simplify_esfilter, qb_expression_to_ruby
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.cube import Cube
-from pyLibrary.queries.es14.util import aggregates1_4, qb_sort_to_es_sort
+from pyLibrary.queries.es14.util import qb_sort_to_es_sort
 from pyLibrary.times.timer import Timer
 from pyLibrary.queries import es14, es09
-
 
 
 format_dispatch = {}
@@ -88,7 +87,7 @@ def es_fieldop(es, query):
 
 
 def extract_rows(es, es_query, source, select, query):
-    with Timer("call to ES") as es_duration:
+    with Timer("call to ES") as call_timer:
         data = es09.util.post(es, es_query, query.limit)
 
     T = data.hits.hits
@@ -108,7 +107,7 @@ def extract_rows(es, es_query, source, select, query):
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]
 
         output = formatter(T, select, source)
-        output.meta.es_response_time = es_duration.seconds
+        output.meta.es_response_time = call_timer.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
         return output

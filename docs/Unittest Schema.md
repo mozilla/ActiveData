@@ -19,10 +19,10 @@ Describes properties exclusive to an individual test result
 * `result.duration` - *seconds* usually the calculated difference between start and end times, but could be the test's own reported duration
 * `result.last_log_time` - *timestamp* of the last log line seen for this run, may be after the `result.end_time`
 * `result.stats` - *object* counts the sub-tests grouping some other features of the test not found in the structured log
-* `result.stats.fail` - *count*
-* `result.stats.notrun` - *count*
-* `result.stats.timeout` - *count*
-* `result.stats.pass` - *count*
+  * `result.stats.fail` - *count*
+  * `result.stats.notrun` - *count*
+  * `result.stats.timeout` - *count*
+  * `result.stats.pass` - *count*
 * `result.missing_test_end` - *boolean* missing the test's end record
 * `result.missing_test_start` - *boolean* missing the test's start record
 * `result.crash` - *boolean* the structured log recorded `"action": "crash"`
@@ -30,7 +30,7 @@ Describes properties exclusive to an individual test result
 `result.subtests` Columns
 -------------------------
 
-Some tests contain *subtests*, which correspond to individual `assert` statements.
+Some test types have multiple individual results per top-level test, these are represented as *subtests*
 
 * `result.subtests.ordering` - *integer* for maintaining the original log ordering
 * `result.subtests.name` - *string* name of the subtest
@@ -57,6 +57,9 @@ Properties that describe the run of this test suite, and the many tests that are
 * `run.files` - *array* of files recorded for this suite, one or more of which are the structured log digested to make this record
 	* `run.files.name` - *string* name of the file
 	* `run.files.url` - *string* url where he contents can/could be found
+* `run.machine` - *object* properties of the machine that ran the suite
+	* `machine.os` - *string* operating system
+	* `machine.name` - *string* the particular piece of hardware that ran suite
 * `run.stats` - *object* various counts for this suite/chunk
 	* `run.stats.ok` - *long* number of tests where `result==expected`
 	* `run.stats.pass` - *long* number of tests that passed
@@ -86,6 +89,7 @@ Properties describing the build
 * `build.id` - *uid* unique build id
 * `build.branch` - *string* the branch in hg
 * `build.revision` - *string* revision number found in hg
+* `build.revision12` - *string* first 12 characters of revision number
 * `build.locale` - *string* locale option for build
 * `build.type` - *string* more options
 * `build.date` - *timestamp* when the build was assembled
@@ -93,15 +97,34 @@ Properties describing the build
 * `build.url` - *string* where you can find the build results
 * `build.name` - *string* full name of the build, including options (parsed to create the other properties, so is redundant)
 
+`repo` Columns
+---------------
+
+Properties of the changeset, revision and push
+
+* `repo.changeset` - *object*
+	* `repo.changeset.id` - *string* unique hash value of changeset
+    * `repo.changeset.files` - *strings* full path to files changed
+	* `repo.changeset.date` - *timestamp*
+	* `repo.changeset.description` - *string* text assigned to push *This property has been parsed into words
+	* `repo.changeset.author` - *string* author info
+* `repo.index` - *integer* unique value given to this revision by hg.mozilla.org
+* `repo.branch` - *string* name of the branch
+* `repo.push` - *object* more about the push
+    * `repo.push.id` - *integer* unique value given to this push by hg.mozilla.org
+    * `repo.push.user` - *string* name of person doing push
+    * `repo.push.date` - *timestamp* when push was applied
+* `repo.parents` - *strings* ids of any parents
+* `repo.children` - *strings* ids of any children
+
 
 `machine` Columns
 -----------------
 
-Properties of the machine that ran the suite
+See `run.machine` instead ~~Properties of the machine that ran the suite~~
 
-* `machine.os` - *string* operating system
-* `machine.name` - *string* the particular piece of hardware that ran suite
-
+* ~~`machine.os` - *string* operating system~~
+* ~~`machine.name` - *string* the particular piece of hardware that ran suite~~
 
 `other` Columns
 ---------------

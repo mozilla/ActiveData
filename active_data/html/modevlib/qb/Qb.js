@@ -1279,6 +1279,38 @@ Qb.drill=function(query, parts){
 		return output;
 	};
 
+	Qb.requiredFields = function requiredFields(esfilter){
+		//THIS LOOKS INTO DIMENSION DEFINITIONS, AS WELL AS ES FILTERS
+
+		if (esfilter===undefined) return [];
+
+		var parts = coalesce(esfilter.edges, esfilter.partitions, esfilter.and, esfilter.or);
+		if (parts){
+			var rf = requiredFields(esfilter.esfilter);
+			//A DIMENSION! - USE IT ANYWAY
+			return Array.union(parts.map(requiredFields).append(rf));
+		}//endif
+
+		if (esfilter.esfilter){
+			return requiredFields(esfilter.esfilter);
+		}else if (esfilter.not){
+			return requiredFields(esfilter.not);
+		}else if (esfilter.term){
+			return Object.keys(esfilter.term)
+		}else if (esfilter.terms){
+			return Object.keys(esfilter.terms)
+		}else if (esfilter.regexp){
+			return Object.keys(esfilter.regexp)
+		}else if (esfilter.missing){
+			return [esfilter.missing.field]
+		}else if (esfilter.exists) {
+			return [esfilter.missing.field]
+		}else if (esfilter.nested){
+			 return [splitField(esfilter.nested.path)[0]]
+		}else{
+			return []
+		}//endif
+	};//method
 
 
 	Qb.query={};

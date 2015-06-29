@@ -123,7 +123,7 @@ class Query(object):
 
         vars = get_all_vars(self, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
         for c in columns:
-            if c.name in vars and c.depth:
+            if c.name in vars and c.depth >= 0:
                 Log.error("This query, with variable {{var_name}} is too deep", var_name=c.name)
 
     @property

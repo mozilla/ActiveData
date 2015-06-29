@@ -15,7 +15,7 @@ from collections import Mapping
 from pyLibrary.dot import Null
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap
-from pyLibrary.jsons.encoder import UnicodeBuilder, use_pypy, _encode
+from pyLibrary.jsons.encoder import UnicodeBuilder, use_pypy, pypy_json_encode
 
 DEBUG = False
 
@@ -429,7 +429,7 @@ class JSONList(object):
         if self.json is not None:
             return self.json[self.start:self.end]
         else:
-            return _encode(self)
+            return pypy_json_encode(self)
 
 
 

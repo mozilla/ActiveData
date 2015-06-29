@@ -70,7 +70,7 @@ def read_settings(filename=None, defs=None):
             "help": "path to JSON file with settings",
             "type": str,
             "dest": "filename",
-            "default": "./development_settings.json",
+            "default": "./settings.json",
             "required": False
         })
         args = _argparse(defs)

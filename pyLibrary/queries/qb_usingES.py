@@ -15,7 +15,7 @@ from collections import Mapping
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import qb, expressions
+from pyLibrary.queries import qb, expressions, config
 from pyLibrary.queries.container import Container
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09.util import parse_columns, INDEX_CACHE
@@ -46,6 +46,10 @@ class FromES(Container):
 
     @use_settings
     def __init__(self, host, index, type=None, alias=None, name=None,  port=9200, settings=None):
+
+        if not config.default:
+            config.default.settings = settings
+
         self.settings = settings
         self.name = coalesce(name, alias, index)
         self._es = elasticsearch.Alias(alias=coalesce(alias, index), settings=settings)

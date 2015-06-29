@@ -73,7 +73,7 @@ class TestAggOps(ActiveDataBaseTest):
 
     def test_median(self):
         test = {
-            "data": [{"a": i^2} for i in range(30)],
+            "data": [{"a": i**2} for i in range(30)],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
                 "select": {"value": "a", "aggregate": "median"}

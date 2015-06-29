@@ -115,7 +115,9 @@ How many of these monster files are there?
 }
 ```
 
-A few notes on this query: First, if there is no `select` clause when using the  `groupby` clause, it is assumed a `count` is requested.  Second, the properties in the `groupby` clause will be included in the result set.  Finally, and most important:
+A few notes on this query: First, if there is no `select` clause when using `groupby`, it is assumed a `count` is requested.  Second, the properties in the `groupby` clause will be included in the result set.  This differs from SQL, which only shows columns found in the select clause.
+
+Finally, and most important:
 
 > The `unittest` data cube is a list of **test results** not test runs; each run has multiple results, so if we want to accurately count the number of runs we must pick a specific test result that will act as representative: Your best choice is `etl.id==0`.
 
@@ -139,7 +141,7 @@ At time of this writing we see structured logs of over 1.1 Gigabytes!  No wonder
 `edges` Clause
 --------------
 
-The `edges` clause works just like `groupby` except its domain is unaffected by the filter:
+The `edges` clause works just like `groupby` except its domain is unaffected by the filter.  This means that all parts of the domain will be represented in the result-set, even in the case when no records are in that part.  Furthermore, every domain has a `null` part representing the records that are outside the domain. 
 
 ```javascript
 {
@@ -152,6 +154,60 @@ The `edges` clause works just like `groupby` except its domain is unaffected by 
 	]}
 }
 ```
+
+Complex `edges`
+---------------
+
+Edges can be more than strings, they can be objects, like `select` members, with an additional description of the domain.
+
+
+```javascript
+{
+	"from":"unittest",
+	"edges":[{
+		"name":"platform", 
+		"value":"machine.platform", 
+		"domain":{"type":"set", "partitions":["win32"]
+	}],
+	"where":{"and":[
+		{"eq":{"etl.id":0}},
+		{"gt":{"run.stats.bytes":600000000}}
+	]}
+}
+```
+
+In this case, we only care about "win32".  The result will include counts for both "win32" and the "`null`" part which includes everything else.  
+
+Declaring the `domain`
+----------------------
+
+Domains have several forms.  Unsurprisingly, the default domain type is `"type": "default"`.  This means a clause, like 
+
+```javascript
+"edges":["machine.platform"]
+```
+
+is really a short form of 
+
+```javascript
+"edges":[{
+	"value": "machine.platform"
+	"domain": {"type":"default"}
+}]
+```
+
+The `default` domain will accumulate the distinct values, and use them as the parts in the domain of the final result.
+
+Other domains are 
+
+* `set` - which accepts an explicit `partition` of values, 
+* `time` - to query over time ranges, defined by the `min`, `max`, and `interval`
+* `range` - for regular numeric intervals using the same `min`, `max`, and `interval`
+
+More details about the properties that these (and other) domain types accept are in the [reference documention](Qb_Reference.md#edges.domain)
+
+
+
 
 
 

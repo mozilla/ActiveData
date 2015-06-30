@@ -1,7 +1,7 @@
 from pyLibrary import strings, convert
 from pyLibrary.debugs import constants
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, Dict, coalesce
+from pyLibrary.dot import wrap, Dict, coalesce, unwraplist
 from pyLibrary.env import http
 from pyLibrary.queries import qb
 from pyLibrary.queries.qb_usingES import FromES
@@ -130,8 +130,8 @@ data = qb.sort([
         suite=r.run.suite,
         test=r.result.test,
         message=coalesce(r.first_message, "missing test end" if r.result.missing_test_end else None),
-        bug_id=r.best.bug_id,
-        bug_desc=r.best.short_desc,
+        bug_id=unwraplist(r.best.bug_id),
+        bug_desc=unwraplist(r.best.short_desc),
         first_seen_branch=r.first_branch,
         first_seen_timestamp=r.first_seen
     )

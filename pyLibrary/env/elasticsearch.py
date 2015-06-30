@@ -572,8 +572,6 @@ class Cluster(object):
             else:
                 Log.error("Problem with call to {{url}}" + suggestion, {"url": url}, e)
 
-
-
     def get(self, path, **kwargs):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
         try:

@@ -18,6 +18,7 @@ from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb, expressions, config
 from pyLibrary.queries.container import Container
 from pyLibrary.queries.domains import is_keyword
+from pyLibrary.queries.es09 import setop as es09_setop
 from pyLibrary.queries.es09.util import parse_columns, INDEX_CACHE
 from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
 from pyLibrary.queries.es14.setop import is_fieldop, is_setop, es_setop, es_fieldop
@@ -117,6 +118,8 @@ class FromES(Container):
                 return es_fieldop(self._es, query)
             if is_setop(self._es, query):
                 return es_setop(self._es, query)
+            if es09_setop.is_setop(query):
+                return es09_setop.es_setop(self._es, None, query)
 
             Log.error("Can not handle")
         except Exception, e:

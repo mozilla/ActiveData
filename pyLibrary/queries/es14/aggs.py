@@ -430,7 +430,10 @@ class DimFieldDictDecoder(DefaultDecoder):
         self.start = start
         for i, (k, v) in enumerate(self.fields):
             es_query = wrap({"aggs": {
-                "_match": set_default({"terms": {"field": v}}, es_query),
+                "_match": set_default({"terms": {
+                    "field": v,
+                    "size": self.edge.domain.limit
+                }}, es_query),
                 "_missing": set_default({"missing": {"field": v}}, es_query),
             }})
 

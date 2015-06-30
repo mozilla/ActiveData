@@ -569,6 +569,10 @@ def utf82unicode(value):
 
         Log.error("Can not explain conversion failure of " + type(value).__name__ + "!", e)
 
+def wordify(value):
+    return [w for w in re.split(r"[\W_]", value) if strip(w)]
+
+
 
 convert = None
 Log = None

@@ -3,6 +3,7 @@ from pyLibrary.debugs import constants
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, Dict, coalesce
 from pyLibrary.env import http
+from pyLibrary.queries import qb
 from pyLibrary.queries.qb_usingES import FromES
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.strings import edit_distance
@@ -122,18 +123,19 @@ for r in groups:
                         r.score = score
                         r.best = b
 
-tab=convert.list2tab([
+data = qb.sort([
     Dict(
         count=len(r.others),
         chunk=r.run.chunk,
         suite=r.run.suite,
         test=r.result.test,
-        message=coalesce(r.result.message, "missing test end" if r.result.missing_test_end else None),
+        message=coalesce(r.first_message, "missing test end" if r.result.missing_test_end else None),
         bug_id=r.best.bug_id,
         bug_desc=r.best.short_desc,
         first_seen_branch=r.first_branch,
         first_seen_timestamp=r.first_seen
     )
     for r in groups
-], columns=["count", "suite", "test", "chunk", "message", "bug_id", "bug_desc", "first_seen_branch", "first_seen_timestamp"])
+], {"value": "count", "sort": -1})
+tab = convert.list2tab(data, columns=["count", "suite", "test", "chunk", "message", "bug_id", "bug_desc", "first_seen_branch", "first_seen_timestamp"])
 Log.note("\n{{tab}}", tab=tab)

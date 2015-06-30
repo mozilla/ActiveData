@@ -49,7 +49,7 @@ while True:
 
 
 # SIMPLE LIST OF ALL TEST FAILURES
-result = http.post_json(config.url, data={
+result = http.post_json(config.ActiveData.url, data={
     "from": "unittest",
     "select": "*",
     "where": {"and": [
@@ -70,7 +70,7 @@ for r in result.data:
             r.message += [m]
 
 #GROUP TESTS, AND COUNT
-groups = UniqueIndex(["suite", "test", "message"])
+groups = UniqueIndex(["run.suite", "result.test", "message"])
 for r in result.data:
     g = groups[r]
     if not g:

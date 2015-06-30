@@ -230,12 +230,14 @@ def table2tab(
     return row(column_names)+"\n"+("\n".join(row(r) for r in rows))
 
 
-
-def list2tab(rows):
-    columns = set()
-    for r in wrap(rows):
-        columns |= set(k for k, v in r.leaves())
-    keys = list(columns)
+def list2tab(rows, columns=None):
+    if columns is None:
+        columns = set()
+        for r in wrap(rows):
+            columns |= r.keys()
+        keys = list(columns)
+    else:
+        keys = columns
 
     output = []
     for r in wrap(rows):

@@ -1,4 +1,4 @@
-from pyLibrary import strings
+from pyLibrary import strings, convert
 from pyLibrary.debugs import constants
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, Dict, coalesce
@@ -70,7 +70,7 @@ for r in result.data:
             r.message += [m]
 
 #GROUP TESTS, AND COUNT
-groups = UniqueIndex(["run.suite", "result.test", "message"])
+groups = UniqueIndex(["run.suite", "result.test", "first_message"])
 for r in result.data:
     g = groups[r]
     if not g:
@@ -122,15 +122,18 @@ for r in groups:
                         r.score = score
                         r.best = b
 
-for r in groups:
-    Log.note(
-        "{{suite}} | {{chunk}} | {{test}} | {{message}} | {{bug_id}} | {{desc}} | {{branch}} | {{first_seen|date}}",
+tab=convert.list2tab([
+    Dict(
+        count=len(r.others),
         chunk=r.run.chunk,
         suite=r.run.suite,
         test=r.result.test,
         message=coalesce(r.result.message, "missing test end" if r.result.missing_test_end else None),
         bug_id=r.best.bug_id,
-        desc=r.best.short_desc,
-        branch=r.first_branch,
-        first_seen=r.first_seen
+        bug_desc=r.best.short_desc,
+        first_seen_branch=r.first_branch,
+        first_seen_timestamp=r.first_seen
     )
+    for r in groups
+], columns=["count", "suite", "test", "chunk", "message", "bug_id", "bug_desc", "first_seen_branch", "first_seen_timestamp"])
+Log.note("\n{{tab}}", tab=tab)

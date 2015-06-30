@@ -351,7 +351,7 @@ class TestgroupBy1(ActiveDataBaseTest):
     #         }
     #     ],
     #     "groupby": [
-    #         "machine.platform"
+    #         "build.platform"
     #     ],
     #     "where": {
     #         "and": [

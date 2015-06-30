@@ -33,10 +33,28 @@ The ActiveData Query Tool hides the formatting feature of the ActiveData service
 	}
 ```
 
+###Inspecting Individual Records
+
+The `"format":"list"` clause is great for extracting specific records from ActiveData.  Individual records will give you an idea of what is available, and allow you to drill down while exploring possible anomalies.
+
+```javascript
+{
+	"from":"unittest",
+	"where":{"eq":{
+		"run.suite":"mochitest-browser-chrome",
+		"result.test":"Main app process exited normally"
+	}},
+	"format":"list"
+}
+```
+
+In the above case, I was curious about the test named "Main app process exited normally": It is actually an emission from [the harness attempting to report the last run test](https://hg.mozilla.org/mozilla-central/file/291614a686f1/testing/mochitest/runtests.py#l1824).  In this case, the harness could not make that determination because the browser closed without error.  
+
+
 `limit` Clause
 --------------
 
-The ActiveData service limits responses to 10 rows by default.  To increase this limit (or decrease it) Use the `limit` clause to set an upper bound on the response:
+**The ActiveData service limits responses to 10 rows by default**.  To increase this limit (or decrease it) Use the `limit` clause to set an upper bound on the response:
 
 ```javascript
 	{
@@ -49,16 +67,18 @@ The ActiveData service limits responses to 10 rows by default.  To increase this
 `where` Clause
 --------------
 
-Use the `where` clause to restrict our results to those that match
+Use the `where` clause to restrict our results to those that match.  *This service is still experimental, and filtering your results as much as possible is greatly appreciated.*
+
 
 ```javascript
 {
 	"from": "unittest",
-	"where":{"eq":{"machine.platform": "linux64"}}
+	"where":{"eq":{"build.platform": "linux64"}}
 }
 ```
 
-in this case, we limit ourselves to test results on `linux64` platform.
+In this case, we limit ourselves to test results on `linux64` platform.  You have a [variety of other expressions available](Qb_Expressions.md). 
+
 
 `select` Clause
 ---------------
@@ -70,7 +90,7 @@ The `unittest` records are quite large, and in most cases you will not be intere
 	"from":"unittest",
 	"select":"run.stats.bytes",
 	"where":{"and":[
-		{"eq":{"machine.platform":"linux64"}},
+		{"eq":{"build.platform":"linux64"}},
 		{"gt":{"run.stats.bytes":600000000}}
 	]}
 }
@@ -78,6 +98,7 @@ The `unittest` records are quite large, and in most cases you will not be intere
 
 Knowing the size is not enough: What files are they?
 
+BROKEN QUERY: `run.files.url` is nested!
 ```javascript
 {
 	"from":"unittest",
@@ -86,7 +107,7 @@ Knowing the size is not enough: What files are they?
 		"run.files.url"
 	],
 	"where":{"and":[
-		{"eq":{"machine.platform":"linux64"}},
+		{"eq":{"build.platform":"linux64"}},
 		{"gt":{"run.stats.bytes":600000000}}
 	]}
 }
@@ -107,7 +128,7 @@ How many of these monster files are there?
 ```javascript
 {
 	"from":"unittest",
-	"groupby":["machine.platform"],
+	"groupby":["build.platform"],
 	"where":{"and":[
 		{"eq":{"etl.id":0}},
 		{"gt":{"run.stats.bytes":600000000}}		
@@ -127,7 +148,7 @@ How big do these files get?
 {
 	"from":"unittest",
 	"select":{"value":"run.stats.bytes","aggregate":"max"},
-	"groupby":["machine.platform"],
+	"groupby":["build.platform"],
 	"where":{"and":[
 		{"eq":{"etl.id":0}},
 		{"gt":{"run.stats.bytes":600000000}}
@@ -147,7 +168,7 @@ The `edges` clause works just like `groupby` except its domain is unaffected by 
 {
 	"from":"unittest",
 	"select":{"value":"run.stats.bytes","aggregate":"max"},
-	"edges":["machine.platform"],
+	"edges":["build.platform"],
 	"where":{"and":[
 		{"eq":{"etl.id":0}},
 		{"gt":{"run.stats.bytes":600000000}}
@@ -166,7 +187,7 @@ Edges can be more than strings, they can be objects, like `select` members, with
 	"from":"unittest",
 	"edges":[{
 		"name":"platform", 
-		"value":"machine.platform", 
+		"value":"build.platform", 
 		"domain":{"type":"set", "partitions":["win32"]
 	}],
 	"where":{"and":[
@@ -184,14 +205,14 @@ Declaring the `domain`
 Domains have several forms.  Unsurprisingly, the default domain type is `"type": "default"`.  This means a clause, like 
 
 ```javascript
-"edges":["machine.platform"]
+"edges":["build.platform"]
 ```
 
 is really a short form of 
 
 ```javascript
 "edges":[{
-	"value": "machine.platform"
+	"value": "build.platform"
 	"domain": {"type":"default"}
 }]
 ```

@@ -9,7 +9,7 @@ Window Functions
 		"window": [{
 		    "select": "rows.last().result.ok",
 		    "edges": [
-		       "machine.platform",
+		       "build.platform",
 		        "build.type",
 		        "run.suite",
 		        "result.test"

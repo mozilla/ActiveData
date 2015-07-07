@@ -20,7 +20,8 @@ from pyLibrary.times.timer import Timer
 from tests.base_test_class import ActiveDataBaseTest, error
 
 
-ES_CLUSTER_LOCATION = "http://activedata.allizom.org"
+ACTIVE_DATA_URL = "http://activedata.allizom.org/query"
+ES_CLUSTER_LOCATION = "http://54.149.35.214"
 
 
 class TestUnittests(ActiveDataBaseTest):
@@ -156,6 +157,20 @@ class TestUnittests(ActiveDataBaseTest):
         result = convert.json2value(convert.utf82unicode(response.all_content))
 
         Log.note("result\n{{result|indent}}", {"result": result})
+
+    def test_big_result_works(self):
+        result = http.get_json(ACTIVE_DATA_URL, data={
+            "sort": [],
+            "query": {"filtered": {
+            "filter": {"and": [
+                {"range": {"run.timestamp": {"lt": "1436140800", "gte": "1436054400"}}},
+                {"term": {"result.ok": False}}
+            ]},
+            "query": {"match_all": {}}
+            }},
+            "from": 0,
+            "size": 10000
+        })
 
 
     def test_branch_count(self):

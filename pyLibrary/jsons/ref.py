@@ -196,7 +196,7 @@ def get_file(ref, url):
 
     try:
         if DEBUG:
-            Log.note("reading file {{path}}",  path=path)
+            Log.note("reading file {{path}}", path=path)
         content = File(path).read()
     except Exception, e:
         content = None

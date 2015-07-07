@@ -183,10 +183,12 @@ class Bucket(object):
                     error = e
 
             if too_many:
-                Log.error("multiple keys in {{bucket}} with prefix={{prefix|quote}}: {{list}}",
-                    bucket= self.name,
-                    prefix= key,
-                    list= [k.name for k in metas])
+                Log.error(
+                    "multiple keys in {{bucket}} with prefix={{prefix|quote}}: {{list}}",
+                    bucket=self.name,
+                    prefix=key,
+                    list=[k.name for k in metas]
+                )
             if not perfect and error:
                 Log.error("Problem with key request", error)
             return coalesce(perfect, favorite)

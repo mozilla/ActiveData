@@ -33,10 +33,28 @@ The ActiveData Query Tool hides the formatting feature of the ActiveData service
 	}
 ```
 
+###Inspecting Individual Records
+
+The `"format":"list"` clause is great for extracting specific records from ActiveData.  Individual records will give you an idea of what is available, and allow you to drill down while exploring possible anomalies.
+
+```javascript
+{
+	"from":"unittest",
+	"where":{"eq":{
+		"run.suite":"mochitest-browser-chrome",
+		"result.test":"Main app process exited normally"
+	}},
+	"format":"list"
+}
+```
+
+In the above case, I was curious about the test named "Main app process exited normally": It is actually an emission from [the harness attempting to report the last run test](https://hg.mozilla.org/mozilla-central/file/291614a686f1/testing/mochitest/runtests.py#l1824).  In this case, the harness could not make that determination because the browser closed without error.  
+
+
 `limit` Clause
 --------------
 
-The ActiveData service limits responses to 10 rows by default.  To increase this limit (or decrease it) Use the `limit` clause to set an upper bound on the response:
+**The ActiveData service limits responses to 10 rows by default**.  To increase this limit (or decrease it) Use the `limit` clause to set an upper bound on the response:
 
 ```javascript
 	{
@@ -49,16 +67,18 @@ The ActiveData service limits responses to 10 rows by default.  To increase this
 `where` Clause
 --------------
 
-Use the `where` clause to restrict our results to those that match
+Use the `where` clause to restrict our results to those that match.  *This service is still experimental, and filtering your results as much as possible is greatly appreciated.*
+
 
 ```javascript
 {
 	"from": "unittest",
-	"where":{"eq":{"machine.platform": "linux64"}}
+	"where":{"eq":{"build.platform": "linux64"}}
 }
 ```
 
-in this case, we limit ourselves to test results on `linux64` platform.
+In this case, we limit ourselves to test results on `linux64` platform.  You have a [variety of other expressions available](Qb_Expressions.md). 
+
 
 `select` Clause
 ---------------
@@ -70,7 +90,7 @@ The `unittest` records are quite large, and in most cases you will not be intere
 	"from":"unittest",
 	"select":"run.stats.bytes",
 	"where":{"and":[
-		{"eq":{"machine.platform":"linux64"}},
+		{"eq":{"build.platform":"linux64"}},
 		{"gt":{"run.stats.bytes":600000000}}
 	]}
 }
@@ -78,6 +98,7 @@ The `unittest` records are quite large, and in most cases you will not be intere
 
 Knowing the size is not enough: What files are they?
 
+BROKEN QUERY: `run.files.url` is nested!
 ```javascript
 {
 	"from":"unittest",
@@ -86,7 +107,7 @@ Knowing the size is not enough: What files are they?
 		"run.files.url"
 	],
 	"where":{"and":[
-		{"eq":{"machine.platform":"linux64"}},
+		{"eq":{"build.platform":"linux64"}},
 		{"gt":{"run.stats.bytes":600000000}}
 	]}
 }
@@ -107,7 +128,7 @@ How many of these monster files are there?
 ```javascript
 {
 	"from":"unittest",
-	"groupby":["machine.platform"],
+	"groupby":["build.platform"],
 	"where":{"and":[
 		{"eq":{"etl.id":0}},
 		{"gt":{"run.stats.bytes":600000000}}		
@@ -127,7 +148,7 @@ How big do these files get?
 {
 	"from":"unittest",
 	"select":{"value":"run.stats.bytes","aggregate":"max"},
-	"groupby":["machine.platform"],
+	"groupby":["build.platform"],
 	"where":{"and":[
 		{"eq":{"etl.id":0}},
 		{"gt":{"run.stats.bytes":600000000}}
@@ -147,7 +168,7 @@ The `edges` clause works just like `groupby` except its domain is unaffected by 
 {
 	"from":"unittest",
 	"select":{"value":"run.stats.bytes","aggregate":"max"},
-	"edges":["machine.platform"],
+	"edges":["build.platform"],
 	"where":{"and":[
 		{"eq":{"etl.id":0}},
 		{"gt":{"run.stats.bytes":600000000}}
@@ -155,8 +176,7 @@ The `edges` clause works just like `groupby` except its domain is unaffected by 
 }
 ```
 
-Complex `edges`
----------------
+###Complex `edges`
 
 Edges can be more than strings, they can be objects, like `select` members, with an additional description of the domain.
 
@@ -166,7 +186,7 @@ Edges can be more than strings, they can be objects, like `select` members, with
 	"from":"unittest",
 	"edges":[{
 		"name":"platform", 
-		"value":"machine.platform", 
+		"value":"build.platform", 
 		"domain":{"type":"set", "partitions":["win32"]
 	}],
 	"where":{"and":[
@@ -176,22 +196,21 @@ Edges can be more than strings, they can be objects, like `select` members, with
 }
 ```
 
-In this case, we only care about "win32".  The result will include counts for both "win32" and the "`null`" part which includes everything else.  
+In this case, we only care about "win32".  The result will include counts for both "win32" and the "`null`" part which counts everything else.  
 
-Declaring the `domain`
-----------------------
+###Declaring the `domain`
 
 Domains have several forms.  Unsurprisingly, the default domain type is `"type": "default"`.  This means a clause, like 
 
 ```javascript
-"edges":["machine.platform"]
+"edges":["build.platform"]
 ```
 
 is really a short form of 
 
 ```javascript
 "edges":[{
-	"value": "machine.platform"
+	"value": "build.platform"
 	"domain": {"type":"default"}
 }]
 ```
@@ -206,8 +225,83 @@ Other domains are
 
 More details about the properties that these (and other) domain types accept are in the [reference documention](Qb_Reference.md#edges.domain)
 
+### Time, Duration and Relative Values
+
+ActiveData does not store time data, instead it standardizes all time queries to unix timestamps (seconds since epoch, GMT).  All datetime values going in, or out, of ActiveData should be converted to GMT (not UTC with its leap seconds).    
+
+The `"type":"time"` domain will accept relative time values, and allow you to perform simple time math.  
 
 
+{
+    "from": "unittest",
+    "select": {
+        "name": "total_bytes",
+        "value": "run.stats.bytes",
+        "aggregate": "sum"
+    },
+    "edges": [
+        {
+            "value": "run.timestamp",
+            "domain": {
+                "type": "time",
+                "min": "today|month",
+                "max": "today|day",
+                "interval": "day"
+            }
+        }
+    ],
+    "where": {
+        "and": [
+            {
+                "term": {
+                    "etl.id": 0
+                }
+            },
+            {
+                "gte": {
+                    "build.date": "{{today|month}}"
+                }
+            },
+            {
+                "lt": {
+                    "build.date": "{{now|day}}"
+                }
+            }
+        ]
+    }
+}
+
+
+
+
+###Explicit Partitions
+
+A domain has a partition.  Usually this partition is defined with a regular interval, but this may not be what you want in all cases.   You are free to define the parts of the partitions explicitly.  For example, we may want a semi-logarithmic scale to display the spectrum of file sizes. 
+
+```javascript
+{
+	"from":"unittest",
+	"edges":[{
+		"name":"size",
+		"value":"run.stats.bytes",
+		"domain":{
+			"type":"range",
+			"key":"min",
+			"partitions":[
+				{"min":0,"max":1000},
+				{"min":1000,"max":10000},
+				{"min":10000,"max":100000},
+				{"min":100000,"max":1000000},
+				{"min":1000000,"max":10000000},
+				{"min":10000000,"max":100000000},
+				{"min":100000000,"max":1000000000},
+				{"min":1000000000,"max":10000000000}
+			]
+		}
+	}],
+	"where":{"and":[{"eq":{"etl.id":0}}]}
+}
+```
 
 
 

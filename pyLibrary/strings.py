@@ -12,12 +12,15 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
+import __builtin__
+
+import re
+import math
+import string
+
 from collections import Mapping
 from datetime import timedelta, date
 from datetime import datetime as builtin_datetime
-import re
-import math
-import __builtin__
 
 from pyLibrary.dot import coalesce, wrap
 
@@ -314,6 +317,10 @@ def find_first(value, find_arr, start=0):
     return i
 
 
+def is_hex(value):
+    return all(c in string.hexdigits for c in value)
+
+
 pattern = re.compile(r"\{\{([\w_\.]+(\|[^\}^\|]+)*)\}\}")
 
 
@@ -568,6 +575,10 @@ def utf82unicode(value):
             pass
 
         Log.error("Can not explain conversion failure of " + type(value).__name__ + "!", e)
+
+def wordify(value):
+    return [w for w in re.split(r"[\W_]", value) if strip(w)]
+
 
 
 convert = None

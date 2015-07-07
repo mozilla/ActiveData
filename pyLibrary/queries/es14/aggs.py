@@ -46,8 +46,8 @@ def es_aggsop(es, frum, query):
             formula.append(s)
 
     for litral_field, many in new_select.items():
-        if len(many) > 1:
-            canonical_name = literal_field(many[0].name)
+        if len(many)>1:
+            canonical_name=literal_field(many[0].name)
             es_query.aggs[canonical_name].stats.field = many[0].value
             for s in many:
                 if s.aggregate == "count":
@@ -375,7 +375,10 @@ class DimFieldListDecoder(DefaultDecoder):
         self.start = start
         for i, v in enumerate(self.fields):
             es_query = wrap({"aggs": {
-                "_match": set_default({"terms": {"field": v}}, es_query),
+                "_match": set_default({"terms": {
+                    "field": v,
+                    "size": self.edge.domain.limit
+                }}, es_query),
                 "_missing": set_default({"missing": {"field": v}}, es_query),
             }})
 
@@ -427,7 +430,10 @@ class DimFieldDictDecoder(DefaultDecoder):
         self.start = start
         for i, (k, v) in enumerate(self.fields):
             es_query = wrap({"aggs": {
-                "_match": set_default({"terms": {"field": v}}, es_query),
+                "_match": set_default({"terms": {
+                    "field": v,
+                    "size": self.edge.domain.limit
+                }}, es_query),
                 "_missing": set_default({"missing": {"field": v}}, es_query),
             }})
 

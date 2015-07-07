@@ -12,13 +12,14 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from collections import Mapping
+from collections import Mapping, Iterable
+from sets import BaseSet
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import unwrap, tuplewrap, wrap
 from pyLibrary.dot.objects import dictwrap
 
 
-class UniqueIndex(object):
+class UniqueIndex(BaseSet, Mapping):
     """
     DEFINE A SET OF ATTRIBUTES THAT UNIQUELY IDENTIFIES EACH OBJECT IN A list.
     THIS ALLOWS set-LIKE COMPARISIONS (UNION, INTERSECTION, DIFFERENCE, ETC) WHILE
@@ -36,9 +37,17 @@ class UniqueIndex(object):
 
     def __getitem__(self, key):
         try:
-            key = value2key(self._keys, key)
-            d = self._data.get(key)
-            return wrap(d)
+            _key = value2key(self._keys, key)
+            if len(self._keys) == 1 or len(key) == len(self._keys):
+                d = self._data.get(_key)
+                return wrap(d)
+            else:
+                output = wrap([
+                    d
+                    for d in self._data.values()
+                    if all(d[k] == v for k, v in _key.items())
+                ])
+                return output
         except Exception, e:
             Log.error("something went wrong", e)
 
@@ -70,13 +79,17 @@ class UniqueIndex(object):
             self.count += 1
         elif d is not val:
             if self.fail_on_dup:
-                Log.error("key {{key|json}} already filled",  key=key)
+                Log.error("key {{key|json}} already filled", key=key)
             else:
                 Log.warning("key {{key|json}} already filled\nExisting\n{{existing|json|indent}}\nValue\n{{value|json|indent}}",
                     key=key,
                     existing=d,
                     value=val
                 )
+
+    def extend(self, values):
+        for v in values:
+            self.add(v)
 
     def remove(self, val):
         key = value2key(self._keys, dictwrap(val))
@@ -121,6 +134,12 @@ class UniqueIndex(object):
             except Exception, e:
                 pass
         return output
+
+    def __xor__(self, other):
+        if not isinstance(other, Iterable):
+            Log.error("Expecting other to be iterable")
+        other = UniqueIndex(keys=self._keys, data=other, fail_on_dup=False)
+        return (self-other) | (other-self)
 
     def __len__(self):
         if self.count == 0:

@@ -215,3 +215,13 @@ These debug variables can be set by configuration file:
 		}
 	}
 ```
+
+Problems with Python Logging
+----------------------------
+
+[Python's default `logging` module](https://docs.python.org/2/library/logging.html#logging.debug) is deceptively close to doing the right thing:  
+  * It has  keyword parameters, but they are expanded at call time so the values are lost in a string.  
+  * It has `extra` parameters, but they are lost if not used by the matching `Formatter`.  
+  * It even has stack trace with `exc_info` parameter, but only if an exception is being handled.
+
+

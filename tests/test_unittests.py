@@ -15,6 +15,7 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
 from pyLibrary.env import http
 from pyLibrary.times.dates import Date, Duration
+from pyLibrary.times.durations import DAY
 from pyLibrary.times.timer import Timer
 
 from tests.base_test_class import ActiveDataBaseTest, error
@@ -163,7 +164,7 @@ class TestUnittests(ActiveDataBaseTest):
             "sort": [],
             "query": {"filtered": {
             "filter": {"and": [
-                {"range": {"run.timestamp": {"lt": "1436140800", "gte": "1436054400"}}},
+                {"range": {"run.timestamp": {"lt": Date.today(), "gte": Date.today() - 3 * DAY}}},
                 {"term": {"result.ok": False}}
             ]},
             "query": {"match_all": {}}

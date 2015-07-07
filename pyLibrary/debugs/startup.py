@@ -15,16 +15,18 @@ import argparse
 import os
 import tempfile
 import sys
-from pyLibrary.jsons import ref
 
+from pyLibrary.jsons import ref
 from pyLibrary.dot import listwrap, wrap, unwrap
 from pyLibrary.debugs.logs import Log
 from pyLibrary.env.files import File
 
 
 
+
 # PARAMETERS MATCH argparse.ArgumentParser.add_argument()
-# http://docs.python.org/dev/library/argparse.html# the-add-argument-method
+# https://docs.python.org/dev/library/argparse.html#the-add-argument-method
+#
 # name or flags - Either a name or a list of option strings, e.g. foo or -f, --foo.
 # action - The basic type of action to be taken when this argument is encountered at the command line.
 # nargs - The number of command-line arguments that should be consumed.
@@ -36,7 +38,6 @@ from pyLibrary.env.files import File
 # help - A brief description of what the argument does.
 # metavar - A name for the argument in usage messages.
 # dest - The name of the attribute to be added to the object returned by parse_args().
-from pyLibrary.dot.dicts import Dict
 
 
 def _argparse(defs):
@@ -59,7 +60,7 @@ def read_settings(filename=None, defs=None):
             Log.error("Can not file settings file {{filename}}", {
                 "filename": settings_file.abspath
             })
-        settings = ref.get("file://"+settings_file.abspath)
+        settings = ref.get("file://" + settings_file.abspath)
         if defs:
             settings.args = _argparse(defs)
         return settings
@@ -70,7 +71,7 @@ def read_settings(filename=None, defs=None):
             "help": "path to JSON file with settings",
             "type": str,
             "dest": "filename",
-            "default": "./development_settings.json",
+            "default": "./settings.json",
             "required": False
         })
         args = _argparse(defs)

@@ -3,7 +3,7 @@
 -- THIS QUERY TAKES 364 row(s) retrieved starting from 0 in 268/257515 ms
 
 SELECT
-	"machine.platform",
+	"build.platform",
 	"machine.os",
 	"run.suite",
 	"run.chunk",
@@ -16,12 +16,12 @@ WHERE
 	date_trunc('week', dateadd(DAY, -7, GETDATE())) <= TIMESTAMP 'epoch' + "run.stats.start_time" * INTERVAL '1 second' AND
 	TIMESTAMP 'epoch' + "run.stats.start_time" * INTERVAL '1 second' < date_trunc('week', GETDATE())
 GROUP BY
-	"machine.platform",
+	"build.platform",
 	"machine.os",
 	"run.suite",
 	"run.chunk"
 ORDER BY
-	"machine.platform",
+	"build.platform",
 	"machine.os",
 	"run.suite",
 	"run.chunk"

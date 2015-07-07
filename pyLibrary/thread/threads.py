@@ -336,8 +336,13 @@ class Thread(object):
         self.cprofiler = None
         self.children = []
 
-        self.parent = kwargs.get("parent_thread", Thread.current())
-        self.parent.add_child(self)
+        if "parent_thread" in kwargs:
+            del self.kwargs["parent_thread"]
+            self.parent = kwargs["parent_thread"]
+        else:
+            self.parent = Thread.current()
+            self.parent.add_child(self)
+
 
     def __enter__(self):
         return self
@@ -712,7 +717,7 @@ class ThreadedQueue(Queue):
                 # ONE LAST PUSH, DO NOT HAVE TIME TO DEAL WITH ERRORS
                 queue.extend(_buffer)
 
-        self.thread = Thread.run("threaded queue for " + name, worker_bee)
+        self.thread = Thread.run("threaded queue for " + name, worker_bee, parent_thread=self)
 
     def add(self, value):
         with self.lock:
@@ -738,6 +743,11 @@ class ThreadedQueue(Queue):
         if isinstance(b, BaseException):
             self.thread.please_stop.go()
         self.thread.join()
+
+    def stop(self):
+        self.add(Thread.STOP)
+        self.thread.join()
+
 
 
 def _wait_for_exit(please_stop):

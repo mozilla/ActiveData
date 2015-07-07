@@ -140,12 +140,12 @@ def parse_columns(parent_path, esProperties):
             continue
         if property.type == "multi_field":
             property.type = property.fields[name].type  # PULL DEFAULT TYPE
-            for i, n, p in enumerate(property.fields):
+            for i, (n, p) in enumerate(property.fields.items()):
                 if n == name:
                     # DEFAULT
                     columns.append({"name": join_field(split_field(path)[1::]), "type": p.type, "useSource": p.index == "no"})
                 else:
-                    columns.append({"name": join_field(split_field(path)[1::]) + "\\." + n, "type": p.type, "useSource": p.index == "no"})
+                    columns.append({"name": join_field(split_field(path)[1::]) + "." + n, "type": p.type, "useSource": p.index == "no"})
             continue
 
         if property.type in ["string", "boolean", "integer", "date", "long", "double"]:

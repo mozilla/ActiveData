@@ -10,19 +10,23 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+
 import datetime
+
 from kombu import Connection, Producer, Exchange
-
-from mozillapulse.consumers import GenericConsumer
-from mozillapulse.utils import time_to_string
 from pytz import timezone
-from pyLibrary import jsons
 
+from mozillapulse.utils import time_to_string
+
+from pyLibrary.debugs import constants
+from pyLibrary import jsons
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import unwrap, wrap, coalesce, Dict, set_default
+from pyLibrary.dot import wrap, coalesce, Dict, set_default
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.threads import Thread
+from mozillapulse.consumers import GenericConsumer
 
+constants.set({"mozillapulse": {"consumers": {"logging": Log}}})
 
 class Consumer(Thread):
     @use_settings

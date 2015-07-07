@@ -120,6 +120,6 @@ The solar day is he most popular timekeeping unit.  This library chose GMT (UT1)
 Error Analysis
 --------------
 
-Assuming we need a generous leap second each 6 months (the past decade saw only 4 leap seconds), then GMT deviates from UTC by up to 1 seconds over 181 days (December to June, 15,638,400 seconds) which is an error rate `error = 1/15,638,400 = 0.000006395%`.  If we want to call the error "noise", we have a 70dB signal/noise ratio.  All applications that can tolerate this error should use GMT as their time basis.
+Assuming we need a generous leap second each 6 months (the past decade saw only 4 leap seconds), then GMT deviates from UTC by up to 1 seconds over 181 days (December to June, 15,638,400 seconds) which is an error rate `error = 1/15,638,400 = 0.00000006395%`.  If we want to call the error "noise", we have a 70dB signal/noise ratio.  All applications that can tolerate this error should use GMT as their time basis.
 
   

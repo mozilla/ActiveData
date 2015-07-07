@@ -122,6 +122,14 @@ def get(url, **kwargs):
     return HttpResponse(request(b'get', url, **kwargs))
 
 
+def get_json(url, **kwargs):
+    """
+    ASSUME RESPONSE IN IN JSON
+    """
+    response = get(url, **kwargs)
+    c = response.all_content
+    return convert.json2value(convert.utf82unicode(c))
+
 def options(url, **kwargs):
     kwargs.setdefault(b'allow_redirects', True)
     kwargs[b"stream"] = True
@@ -137,6 +145,17 @@ def head(url, **kwargs):
 def post(url, **kwargs):
     kwargs[b"stream"] = True
     return HttpResponse(request(b'post', url, **kwargs))
+
+
+def post_json(url, **kwargs):
+    """
+    ASSUME RESPONSE IN IN JSON
+    """
+    kwargs["data"] = convert.unicode2utf8(convert.value2json(kwargs["data"]))
+
+    response = post(url, **kwargs)
+    c=response.content
+    return convert.json2value(convert.utf82unicode(c))
 
 
 def put(url, **kwargs):

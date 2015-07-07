@@ -15,9 +15,10 @@ from collections import Mapping
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import qb, expressions
+from pyLibrary.queries import qb, expressions, config
 from pyLibrary.queries.container import Container
 from pyLibrary.queries.domains import is_keyword
+from pyLibrary.queries.es09 import setop as es09_setop
 from pyLibrary.queries.es09.util import parse_columns, INDEX_CACHE
 from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
 from pyLibrary.queries.es14.setop import is_fieldop, is_setop, es_setop, es_fieldop
@@ -26,7 +27,7 @@ from pyLibrary.queries.es14.util import aggregates1_4
 from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import coalesce, split_field, set_default
+from pyLibrary.dot import coalesce, split_field, set_default, literal_field, unwraplist
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 
@@ -45,7 +46,9 @@ class FromES(Container):
             return Container.__new__(cls)
 
     @use_settings
-    def __init__(self, host, index, type=None, alias=None, name=None,  port=9200, settings=None):
+    def __init__(self, host, index, type=None, alias=None, name=None, port=9200, settings=None):
+        if not config.default:
+            config.default.settings = settings
         self.settings = settings
         self.name = coalesce(name, alias, index)
         self._es = elasticsearch.Alias(alias=coalesce(alias, index), settings=settings)
@@ -58,7 +61,7 @@ class FromES(Container):
     @staticmethod
     def wrap(es):
         output = FromES(es.settings)
-        output._es=es
+        output._es = es
         return output
 
     def as_dict(self):
@@ -96,6 +99,13 @@ class FromES(Container):
 
             query = Query(_query, schema=self)
 
+            # try:
+            #     frum = self.get_columns(query["from"])
+            #     mvel = _MVEL(frum)
+            # except Exception, e:
+            #     mvel = None
+            #     Log.warning("TODO: Fix this", e)
+            #
             for s in listwrap(query.select):
                 if not aggregates1_4[s.aggregate]:
                     Log.error("ES can not aggregate " + self.select[0].name + " because '" + self.select[0].aggregate + "' is not a recognized aggregate")
@@ -113,6 +123,8 @@ class FromES(Container):
                 return es_fieldop(self._es, query)
             if is_setop(self._es, query):
                 return es_setop(self._es, query)
+            if es09_setop.is_setop(query):
+                return es09_setop.es_setop(self._es, None, query)
 
             Log.error("Can not handle")
         except Exception, e:
@@ -169,6 +181,7 @@ class FromES(Container):
         output.url = self._es.url
         output.columns = parse_columns(_from_name, properties)
         return output.columns
+
 
     def get_column_names(self):
         # GET METADATA FOR INDEX
@@ -241,10 +254,11 @@ class FromES(Container):
         THE where CLAUSE IS AN ES FILTER
         """
         command = wrap(command)
+        schema = self._es.get_schema()
 
         # GET IDS OF DOCUMENTS
         results = self._es.search({
-            "fields": [],
+            "fields": listwrap(schema._routing.path),
             "query": {"filtered": {
                 "query": {"match_all": {}},
                 "filter": _normalize_where(command.where, self)
@@ -262,16 +276,18 @@ class FromES(Container):
         script = "".join(scripts)
 
         if results.hits.hits:
-            command = []
-            for id in results.hits.hits._id:
-                command.append({"update": {"_id": id}})
-                command.append({"script": script})
-            content = ("\n".join(convert.value2json(c) for c in command) + "\n").encode('utf-8')
-            self._es.cluster._post(
+            updates = []
+            for h in results.hits.hits:
+                updates.append({"update": {"_id": h._id, "_routing": unwraplist(h.fields[literal_field(schema._routing.path)])}})
+                updates.append({"script": script})
+            content = ("\n".join(convert.value2json(c) for c in updates) + "\n").encode('utf-8')
+            response = self._es.cluster._post(
                 self._es.path + "/_bulk",
                 data=content,
                 headers={"Content-Type": "application/json"}
             )
+            if response.errors:
+                Log.error("could not update: {{error}}", error=[e.error for i in response["items"] for e in i.values() if e.status not in (200, 201)])
 
 class FromESMetadata(Container):
     """

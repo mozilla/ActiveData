@@ -13,10 +13,12 @@ from __future__ import absolute_import
 from collections import Mapping
 from numbers import Number
 import re
+import itertools
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
+from pyLibrary.maths import Math
 from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.dot import coalesce, Dict, set_default, Null
+from pyLibrary.dot import coalesce, Dict, set_default, Null, listwrap
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap
 from pyLibrary.times.dates import Date
@@ -538,18 +540,28 @@ class RangeDomain(Domain):
         Domain.__init__(self, **desc)
         self.type = "range"
         self.NULL = Null
-        self.min = self.min
-        self.max = self.max
-        self.interval = self.interval
 
         if self.partitions:
             # IGNORE THE min, max, interval
             if not self.key:
                 Log.error("Must have a key value")
 
-            Log.error("not implemented yet")
+            parts = listwrap(self.partitions)
+            for i, p in enumerate(parts):
+                self.min = Math.min(self.min, p.min)
+                self.max = Math.max(self.max, p.max)
+                if p.dataIndex != None and p.dataIndex != i:
+                    Log.error("Expecting `dataIndex` to agree with the order of the parts")
+                if p[self.key] == None:
+                    Log.error("Expecting all parts to have {{key}} as a property", key=self.key)
+                p.dataIndex = i
 
-            # VERIFY PARTITIONS DO NOT OVERLAP
+            # VERIFY PARTITIONS DO NOT OVERLAP, HOLES ARE FINE
+            for p, q in itertools.product(parts, parts):
+                if p.min <= q.min and q.min < p.max:
+                    Log.error("partitions overlap!")
+
+            self.partitions = parts
             return
         elif any([self.min == None, self.max == None, self.interval == None]):
             Log.error("Can not handle missing parameter")

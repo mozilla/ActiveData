@@ -176,8 +176,7 @@ The `edges` clause works just like `groupby` except its domain is unaffected by 
 }
 ```
 
-Complex `edges`
----------------
+###Complex `edges`
 
 Edges can be more than strings, they can be objects, like `select` members, with an additional description of the domain.
 
@@ -197,10 +196,9 @@ Edges can be more than strings, they can be objects, like `select` members, with
 }
 ```
 
-In this case, we only care about "win32".  The result will include counts for both "win32" and the "`null`" part which includes everything else.  
+In this case, we only care about "win32".  The result will include counts for both "win32" and the "`null`" part which counts everything else.  
 
-Declaring the `domain`
-----------------------
+###Declaring the `domain`
 
 Domains have several forms.  Unsurprisingly, the default domain type is `"type": "default"`.  This means a clause, like 
 
@@ -227,8 +225,83 @@ Other domains are
 
 More details about the properties that these (and other) domain types accept are in the [reference documention](Qb_Reference.md#edges.domain)
 
+### Time, Duration and Relative Values
+
+ActiveData does not store time data, instead it standardizes all time queries to unix timestamps (seconds since epoch, GMT).  All datetime values going in, or out, of ActiveData should be converted to GMT (not UTC with its leap seconds).    
+
+The `"type":"time"` domain will accept relative time values, and allow you to perform simple time math.  
 
 
+{
+    "from": "unittest",
+    "select": {
+        "name": "total_bytes",
+        "value": "run.stats.bytes",
+        "aggregate": "sum"
+    },
+    "edges": [
+        {
+            "value": "run.timestamp",
+            "domain": {
+                "type": "time",
+                "min": "today|month",
+                "max": "today|day",
+                "interval": "day"
+            }
+        }
+    ],
+    "where": {
+        "and": [
+            {
+                "term": {
+                    "etl.id": 0
+                }
+            },
+            {
+                "gte": {
+                    "build.date": "{{today|month}}"
+                }
+            },
+            {
+                "lt": {
+                    "build.date": "{{now|day}}"
+                }
+            }
+        ]
+    }
+}
+
+
+
+
+###Explicit Partitions
+
+A domain has a partition.  Usually this partition is defined with a regular interval, but this may not be what you want in all cases.   You are free to define the parts of the partitions explicitly.  For example, we may want a semi-logarithmic scale to display the spectrum of file sizes. 
+
+```javascript
+{
+	"from":"unittest",
+	"edges":[{
+		"name":"size",
+		"value":"run.stats.bytes",
+		"domain":{
+			"type":"range",
+			"key":"min",
+			"partitions":[
+				{"min":0,"max":1000},
+				{"min":1000,"max":10000},
+				{"min":10000,"max":100000},
+				{"min":100000,"max":1000000},
+				{"min":1000000,"max":10000000},
+				{"min":10000000,"max":100000000},
+				{"min":100000000,"max":1000000000},
+				{"min":1000000000,"max":10000000000}
+			]
+		}
+	}],
+	"where":{"and":[{"eq":{"etl.id":0}}]}
+}
+```
 
 
 

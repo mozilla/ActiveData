@@ -4,7 +4,7 @@ Qb Expressions (INCOMPLETE)
 Summary
 -------
 
-Qb has a limited expression language to increase the number of useful queries that can be written.  Expressions are JSON objects inspired by [Polish prefix notation](http://en.wikipedia.org/wiki/Polish_notation):  All expression objects are `{name: value}` pairs, where the operator is the name, and value is parameters.
+Qb has a limited expression language to increase the number of useful queries that can be written.  Expressions are JSON objects inspired by [Polish prefix notation](http://en.wikipedia.org/wiki/Polish_notation):  All expression objects are `{name: value}` pairs, where the operator is the name, and value holds the parameters.
 
 	{operator_name: parameters}
 
@@ -14,8 +14,8 @@ As a side note, Qb queries are also expressions: `from` is the operator, and oth
 Expressions are composed of 
 
 * primitive values `true`, `false`, `null`
-* strings representing property names (with format of `\w+(?:\.\w+)*`)
-* objects representing operators to compound expressions
+* strings representing dot-separated property names (with format of `\w+(?:\.\w+)*`)
+* objects representing operators on compound expressions
 
 
 
@@ -266,7 +266,8 @@ Test if a property has the given prefix.  Only the *simple* form exists.
 Return `true` if a property matches a given regular expression.  The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term.  Also be sure you escape special characters:  This is a JSON string of a regular expression, not a regular expression itself.  Only the *simple* form exists.
 
 		{"regexp": {variable: regular_expression}}
- 
+
+
 
 Conditional Operators (Not Yet Implemented)
 -------------------------------------------
@@ -305,6 +306,37 @@ Evaluates a list of `when` sub-clauses in order, if one evaluates to `true` the 
 
 The last item in the list can be a plain expression, called the `default_expression`.  It is  evaluated-and-returned only if all previous conditions evaluate to `false`.  If the `default_expression` is missing, and all conditions evaluate to `false`, `null` is returned.  
 ***If any `when` sub-clauses contain an `else` clause, it is ignored.***
+
+Value Operators
+---------------
+
+Value operators are meant to convert the JSON argument into some useful abstract value. 
+
+###`doc` Operator###
+
+By default Qb, interprets JSON as an expression.  Sometimes you just want the literal JSON value.  `doc` simply returns the property value, unchanged.
+
+		{"doc": {"name":"Kyle Lahnakoski", "age": 41}}
+
+
+### `ref` Operator ###
+
+**Not implemented.  Security risk if not done properly (eg file://)**
+
+Uses the URL provided to retrieve a JSON value.  
+
+		{"ref": "http://example.com/my_data.json"}
+
+### `eval` Operator ###
+
+**Not implemented.  Requires a security review.**
+
+Evaluate the given JSON as an expression:
+
+		{"eval": {"gt": {"build.date": "{{today}}"}}}
+
+`eval` can be useful within the context of `ref`.   
+ 
 
 
 Operator Philosophy

@@ -275,12 +275,15 @@ def wrap_function(cache_store, func_):
 
 
 _repr = Repr()
-_repr.maxlevel = 2
+_repr.maxlevel = 3
+
 def repr(obj):
     """
     JUST LIKE __builtin__.repr(), BUT WITH SOME REASONABLE LIMITS
     """
     return _repr.repr(obj)
+
+
 class _FakeLock():
 
 

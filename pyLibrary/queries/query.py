@@ -10,9 +10,8 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-from UserDict import UserDict
 from collections import Mapping
-from pyLibrary import dot
+
 from pyLibrary.collections import AND, reverse
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
@@ -123,7 +122,7 @@ class Query(object):
 
         vars = get_all_vars(self, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
         for c in columns:
-            if c.name in vars and c.depth >= 0:
+            if c.name in vars and c.depth:
                 Log.error("This query, with variable {{var_name}} is too deep", var_name=c.name)
 
     @property

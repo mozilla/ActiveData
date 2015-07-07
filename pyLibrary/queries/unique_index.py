@@ -38,7 +38,7 @@ class UniqueIndex(BaseSet, Mapping):
     def __getitem__(self, key):
         try:
             _key = value2key(self._keys, key)
-            if len(self._keys) == 1 or len(_key) == len(self._keys):
+            if len(self._keys) == 1 or len(key) == len(self._keys):
                 d = self._data.get(_key)
                 return wrap(d)
             else:
@@ -79,7 +79,7 @@ class UniqueIndex(BaseSet, Mapping):
             self.count += 1
         elif d is not val:
             if self.fail_on_dup:
-                Log.error("key {{key|json}} already filled",  key=key)
+                Log.error("key {{key|json}} already filled", key=key)
             else:
                 Log.warning("key {{key|json}} already filled\nExisting\n{{existing|json|indent}}\nValue\n{{value|json|indent}}",
                     key=key,
@@ -140,6 +140,7 @@ class UniqueIndex(BaseSet, Mapping):
             Log.error("Expecting other to be iterable")
         other = UniqueIndex(keys=self._keys, data=other, fail_on_dup=False)
         return (self-other) | (other-self)
+
     def __len__(self):
         if self.count == 0:
             for d in self:

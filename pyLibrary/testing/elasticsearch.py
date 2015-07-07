@@ -36,7 +36,7 @@ def open_test_instance(name, settings):
             host= settings.host,
             type= name)
 
-        Index(settings).delete()
+        Index(read_only=False, settings=settings).delete()
 
         es = Cluster(settings).create_index(settings, limit_replicas=True)
         return es

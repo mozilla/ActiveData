@@ -37,7 +37,7 @@ class Log(object):
     """
     FOR STRUCTURED LOGGING AND EXCEPTION CHAINING
     """
-    trace = False
+    trace = False  # SHOW MACHINE AND LINE NUMBER
     main_log = None
     logging_multi = None
     profiler = None   # simple pypy-friendly profiler
@@ -675,6 +675,7 @@ machine_metadata = wrap({
     "instance_type": ec2.instance_type,
     "name": coalesce(ec2.instance_id, platform.node())
 })
+
 
 if not Log.main_log:
     Log.main_log = Log_usingStream(sys.stdout)

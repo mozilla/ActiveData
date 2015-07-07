@@ -12,12 +12,15 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
+import __builtin__
+
+import re
+import math
+import string
+
 from collections import Mapping
 from datetime import timedelta, date
 from datetime import datetime as builtin_datetime
-import re
-import math
-import __builtin__
 
 from pyLibrary.dot import coalesce, wrap
 
@@ -312,6 +315,10 @@ def find_first(value, find_arr, start=0):
         i = min(i, temp)
     if i == len(value): return -1
     return i
+
+
+def is_hex(value):
+    return all(c in string.hexdigits for c in value)
 
 
 pattern = re.compile(r"\{\{([\w_\.]+(\|[^\}^\|]+)*)\}\}")

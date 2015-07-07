@@ -224,3 +224,4 @@ Problems with Python Logging
   * It has `extra` parameters, but they are lost if not used by the matching `Formatter`.  
   * It even has stack trace with `exc_info` parameter, but only if an exception is being handled.
 
+

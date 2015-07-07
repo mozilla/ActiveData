@@ -394,16 +394,12 @@ class MultiOp(object):
 class RegExpOp(object):
     def __init__(self, op, term):
         self.var, self.pattern = term.items()[0]
-
     def to_ruby(self):
         Log.error("do not know how to hanlde")
-
     def to_python(self):
         return "re.match("+convert.string2quote(self.pattern)+", "+qb_expression_to_python(self.var)+")"
-
     def to_esfilter(self):
         return {"regexp": {self.var: self.pattern}}
-
     def vars(self):
         return {self.var}
 
@@ -481,6 +477,7 @@ class MissingOp(object):
     def vars(self):
         return set([self.field])
 
+
 class NotOp(object):
     def __init__(self, op, term):
         self.term = qb_expression(term)
@@ -515,6 +512,44 @@ class RangeOp(object):
         return set([self.field])
 
 
+class DocOp(object):
+    """
+    A literal JSON document
+    """
+    def __init__(self, term):
+        self.json = convert.value2json(term)
+
+    def to_ruby(self):
+        def _convert(v):
+            if v is None:
+                return "nil"
+            if v is True:
+                return "true"
+            if v is False:
+                return "false"
+            if isinstance(v, basestring):
+                return convert.string2quote(v)
+            if isinstance(v, (int, long, float)):
+                return unicode(v)
+            if isinstance(v, dict):
+                return "{" + ", ".join(convert.string2quote(k) + "=>" + _convert(vv) for k, vv in v.items()) + "}"
+            if isinstance(v, list):
+                return "[" + ", ".join(_convert(vv) for vv in v) + "]"
+
+        return _convert(convert.json_decoder(self.json))
+
+    def to_python(self):
+        return self.json
+
+    def to_esfilter(self):
+        Log.error("can not use JSON in esfilter")
+
+    def vars(self):
+        return {}
+
+
+
+
 
 
 complex_operators = {
@@ -524,7 +559,8 @@ complex_operators = {
     "prefix": PrefixOp,
     "range": RangeOp,
     "regexp": RegExpOp,
-    "regex": RegExpOp
+    "regex": RegExpOp,
+    "doc": DocOp
 }
 
 

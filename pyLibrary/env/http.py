@@ -154,7 +154,7 @@ def post_json(url, **kwargs):
     kwargs["data"] = convert.unicode2utf8(convert.value2json(kwargs["data"]))
 
     response = post(url, **kwargs)
-    c=response.all_content
+    c=response.content
     return convert.json2value(convert.utf82unicode(c))
 
 

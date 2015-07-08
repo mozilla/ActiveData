@@ -160,19 +160,19 @@ class TestUnittests(ActiveDataBaseTest):
         Log.note("result\n{{result|indent}}", {"result": result})
 
     def test_big_result_works(self):
-        result = http.get_json(ACTIVE_DATA_URL, data={
-            "sort": [],
-            "query": {"filtered": {
-            "filter": {"and": [
-                {"range": {"run.timestamp": {"lt": Date.today(), "gte": Date.today() - 3 * DAY}}},
-                {"term": {"result.ok": False}}
+        result = http.post_json(ACTIVE_DATA_URL, data={
+            "from": "unittest",
+            "where": {"and": [
+                {"gte": {"run.timestamp": Date.today() - DAY}},
+                {"lt": {"run.timestamp": Date.today()}},
+                {"eq": {"result.ok": False}}
             ]},
-            "query": {"match_all": {}}
-            }},
-            "from": 0,
-            "size": 10000
+            "format": "list",
+            "limit": 10000
         })
-
+        if result.template:
+            Log.error("problem with call", cause=result)
+        Log.note("Got {{num}} test failures", num=len(result.data))
 
     def test_branch_count(self):
         if self.not_real_service():

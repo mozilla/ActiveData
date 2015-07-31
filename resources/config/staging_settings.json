@@ -13,7 +13,7 @@
  		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000
 	},
 	"request_logs": {
-		"host": "http://172.31.0.233",
+		"host": "http://172.31.0.125",
 		"port": "9200",
 		"index": "active_data_requests",
 		"type": "request_log",
@@ -22,14 +22,14 @@
 		}
 	},
 	"saved_queries":{
-		"host": "http://172.31.0.233",
+		"host": "http://172.31.0.125",
 		"port": "9200",
 		"index": "saved_queries",
 		"type": "query",
 		"debug": true
 	},
 	"elasticsearch": {
-		"host": "http://172.31.0.233",
+		"host": "http://172.31.0.125",
 		"port": "9200",
 		"index": "testdata",
 		"type": "test_result",
@@ -50,7 +50,7 @@
 			},
 			{
 				"log_type": "elasticsearch",
-				"host": "http://172.31.0.233",
+				"host": "http://172.31.0.125",
 				"index": "debug",
 				"type": "active_data"
 			}

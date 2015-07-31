@@ -3,7 +3,6 @@ git checkout master
 git stash
 git pull origin master
 
-sudo -i
 cd ~/ActiveData/
 export PYTHONPATH=.
 python active_data/app.py --settings=resources/config/staging_settings.json &

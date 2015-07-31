@@ -1,10 +1,10 @@
-cd /home/ubuntu/ActiveData/
+cd ~/ActiveData/
 git checkout master
 git stash
 git pull origin master
 
 sudo -i
-cd /home/ubuntu/ActiveData/
+cd ~/ActiveData/
 export PYTHONPATH=.
 python active_data/app.py --settings=resources/config/staging_settings.json &
 disown -h

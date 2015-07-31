@@ -46,7 +46,7 @@
 				"from_address": "klahnakoski@mozilla.com",
 				"to_address": "klahnakoski@mozilla.com",
 				"subject": "[ALERT][STAGING]Problem with ActiveData Server",
-				"$ref": "file:///home/ubuntu/private.json#email"
+				"$ref": "file://~/private.json#email"
 			},
 			{
 				"log_type": "elasticsearch",

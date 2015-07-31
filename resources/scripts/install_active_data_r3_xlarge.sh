@@ -91,7 +91,12 @@ sudo cp ~/ActiveData/resources/config/elasticsearch.yml /usr/local/elasticsearch
 sudo cp ~/ActiveData/resources/config/elasticsearch.in.sh /usr/local/elasticsearch/bin/elasticsearch.in.sh
 
 # SUPERVISOR CONFIG
-sudo cp ~/ActiveData/config/supervisord.conf /etc/supervisord.conf
+sudo cp ~/ActiveData/resources/config/supervisord.conf /etc/supervisord.conf
+
+
+sudo mkdir /dev/sdb/logs
+sudo ln -s /dev/sdb/logs /logs
+
 
 # START DAEMON (OR THROW ERROR IF RUNNING ALREADY)
 sudo /usr/local/bin/supervisord -c /etc/supervisord.conf

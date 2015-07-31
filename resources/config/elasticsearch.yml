@@ -1,0 +1,43 @@
+cluster.name: active-data
+node.zone: spot
+node.name: coordinator
+node.master: true
+node.data: false
+
+cluster.routing.allocation.awareness.force.zone.values: primary,spot
+cluster.routing.allocation.awareness.attributes: zone
+cluster.routing.allocation.cluster_concurrent_rebalance: 1
+cluster.routing.allocation.balance.shard: 0.70
+cluster.routing.allocation.balance.primary: 0.3  #TRY TO LIMIT PRIMARY SHARDS TO THREE-PER-NODE
+
+bootstrap.mlockall: true
+cloud:
+    aws:
+        region: us-west-2
+        protocol: https
+        ec2:
+            protocol: https
+discovery.type: ec2
+discovery.zen.ping.multicast.enabled: false
+discovery.zen.minimum_master_nodes: 1
+
+index.number_of_shards: 1
+index.number_of_replicas: 1
+index.cache.field.type: soft
+index.translog.interval: 60s
+index.translog.flush_threshold_size: 1gb
+
+indices.memory.index_buffer_size: 20%
+indices.fielddata.cache.expire: 20m
+indices.recovery.concurrent_streams: 1
+indices.recovery.max_bytes_per_sec: 1000mb
+
+http.compression: true
+http.cors.allow-origin: "/.*/"
+http.cors.enabled: true
+http.compression: true
+http.max_content_length: 1000mb
+http.timeout: 600
+
+threadpool.bulk.queue_size: 3000
+threadpool.index.queue_size: 1000

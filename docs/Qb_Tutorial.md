@@ -232,6 +232,7 @@ ActiveData does not store time data, instead it standardizes all time queries to
 The `"type":"time"` domain will accept relative time values, and allow you to perform simple time math.  
 
 
+```javascript
 {
     "from": "unittest",
     "select": {
@@ -270,7 +271,7 @@ The `"type":"time"` domain will accept relative time values, and allow you to pe
         ]
     }
 }
-
+```
 
 
 

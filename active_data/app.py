@@ -20,6 +20,8 @@ from pyLibrary.dot import Dict, unwrap, wrap, coalesce
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.queries import qb
+from pyLibrary.queries import containers
+from pyLibrary.queries.containers import Container
 from pyLibrary.strings import expand_template
 from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
@@ -101,6 +103,7 @@ def query(path):
             text = replace_vars(text, flask.request.args)
             data = convert.json2value(text)
             record_request(flask.request, data, None, None)
+            frum = Container.new_instance(data["from"])
             result = qb.run(data)
 
         if data.meta.save:
@@ -224,13 +227,13 @@ def main():
 
         default_elasticsearch = elasticsearch.Index(config.elasticsearch)
 
-        if config.saved_queries:
-            query_finder = SaveQueries(config.saved_queries)
-
-        queries.config.default = {
+        containers.config.default = {
             "type": "elasticsearch",
             "settings": config.elasticsearch.copy()
         }
+
+        if config.saved_queries:
+            query_finder = SaveQueries(config.saved_queries)
 
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
         app.run(**unwrap(config.flask))

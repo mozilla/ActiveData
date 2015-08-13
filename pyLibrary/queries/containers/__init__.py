@@ -41,7 +41,7 @@ def _delayed_imports():
     from pyLibrary.queries.containers.cube import Cube as _Cube
     from pyLibrary.queries.qb import run as _run
     from pyLibrary.queries.query import Query as _Query
-    from pyLibrary.queries.namespace.normal import Normal as _Normal
+    # from pyLibrary.queries.namespace.normal import Normal as _Normal
 
     set_default(type2container, {
         "elasticsearch": _FromES,
@@ -108,7 +108,7 @@ class Container(object):
 
         self.data = frum
         self.schema = schema
-        self.namespaces = wrap([_Normal()])
+        # self.namespaces = wrap([_Normal()])
 
     def query(self, query):
         if query.frum != self:

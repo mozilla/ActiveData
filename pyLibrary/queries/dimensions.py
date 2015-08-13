@@ -13,7 +13,7 @@ from __future__ import absolute_import
 from collections import Mapping
 from pyLibrary import dot
 from pyLibrary.collections import SUM
-from pyLibrary.queries.container import Container
+from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import Domain, ALGEBRAIC, KNOWN
 from pyLibrary.dot import Null, coalesce, join_field, split_field, Dict
 from pyLibrary.dot.lists import DictList

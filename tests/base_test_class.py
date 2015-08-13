@@ -18,17 +18,16 @@ import signal
 import itertools
 
 from active_data.app import replace_vars
-from pyLibrary import convert, jsons, queries
+from pyLibrary import convert, jsons
 from pyLibrary.debugs.logs import Log, Except, constants
 from pyLibrary.dot import wrap, listwrap, coalesce, unwrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
-from pyLibrary.queries import qb
-from pyLibrary.queries.query import _normalize_edges, _normalize_selects
+from pyLibrary.queries import qb, containers
 from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
-from pyLibrary.thread.threads import Signal, Thread
+from pyLibrary.thread.threads import Signal
 
 
 settings = jsons.ref.get("file://tests/config/test_simple_settings.json")
@@ -100,7 +99,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             # THIS MAKES FOR SLIGHTLY FASTER TEST TIMES BECAUSE THE PROXY IS
             # MISSING
             ActiveDataBaseTest.server = FakeHttp()
-            queries.config.default = {
+            containers.config.default = {
                 "type": "elasticsearch",
                 "settings": settings.backend_es.copy()
             }
@@ -145,7 +144,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
     def not_real_service(self):
         return settings.fastTesting
 
-    def _fill_es(self, subtest):
+    def _fill_es(self, subtest, tjson=False):
         subtest = wrap(subtest)
         _settings = self.backend_es.copy()
         _settings.index = "testing_" + Random.hex(10).lower()
@@ -160,8 +159,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
             _settings.schema = jsons.ref.get(url)
 
             # MAKE CONTAINER
-            container = self.es.get_or_create_index(tjson=True, settings=_settings)
-            container.add_alias()
+            container = self.es.get_or_create_index(tjson=tjson, settings=_settings)
+            container.add_alias(_settings.index)
 
             # INSERT DATA
             container.extend([
@@ -179,7 +178,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
         return _settings
 
-    def _execute_es_tests(self, subtest):
+    def _execute_es_tests(self, subtest, tjson=False):
         subtest = wrap(subtest)
 
         if subtest.disable:
@@ -188,7 +187,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
         if "elasticsearch" in subtest["not"]:
             return
 
-        settings = self._fill_es(subtest)
+        settings = self._fill_es(subtest, tjson=tjson)
         self._send_queries(settings, subtest)
 
     def _send_queries(self, settings, subtest):

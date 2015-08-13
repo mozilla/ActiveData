@@ -24,13 +24,13 @@ from pyLibrary.dot import listwrap, wrap, unwrap
 from pyLibrary.dot.objects import DictClass, DictObject
 from pyLibrary.maths import Math
 from pyLibrary.queries import flat_list, query, group_by
-from pyLibrary.queries.container import Container
+from pyLibrary.queries.containers import Container
 from pyLibrary.queries.cubes.aggs import cube_aggs
 from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, compile_expression, qb_expression_to_function
 from pyLibrary.queries.flat_list import FlatList
 from pyLibrary.queries.index import Index
 from pyLibrary.queries.query import Query, _normalize_selects, sort_direction, _normalize_select
-from pyLibrary.queries.cube import Cube
+from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.unique_index import UniqueIndex
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
@@ -47,8 +47,7 @@ def run(query):
     query = Query(query)
     frum = query["from"]
     if isinstance(frum, Container):
-        with frum:
-            return frum.query(query)
+        return frum.query(query)
     elif isinstance(frum, (list, set, GeneratorType)):
         frum = wrap(list(frum))
     elif isinstance(frum, Cube):

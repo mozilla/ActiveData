@@ -20,7 +20,7 @@ from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap, listwrap
 from pyLibrary.maths import Math
 from pyLibrary.queries import wrap_from, expressions
-from pyLibrary.queries.container import Container
+from pyLibrary.queries.containers import Container
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain, is_keyword
 from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter

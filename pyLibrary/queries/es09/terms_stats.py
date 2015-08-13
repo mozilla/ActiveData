@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import COUNT, PRODUCT
 from pyLibrary.queries import domains
-from pyLibrary.queries.cube import Cube
+from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09.util import aggregates, build_es_query, compileEdges2Term
 from pyLibrary.debugs.logs import Log

@@ -13,7 +13,7 @@ from collections import Mapping
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, set_default, split_field
 from pyLibrary.dot.dicts import Dict
-
+from pyLibrary.queries import containers
 
 type2container = Dict()
 config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
@@ -43,7 +43,7 @@ def wrap_from(frum, schema=None):
     frum = wrap(frum)
 
     if isinstance(frum, basestring):
-        if not config.default.settings:
+        if not containers.config.default.settings:
             Log.error("expecting pyLibrary.queries.query.config.default.settings to contain default elasticsearch connection info")
 
         settings = set_default(
@@ -51,7 +51,7 @@ def wrap_from(frum, schema=None):
                 "index": split_field(frum)[0],
                 "name": frum,
             },
-            config.default.settings
+            containers.config.default.settings
         )
         settings.type = None  # WE DO NOT WANT TO INFLUENCE THE TYPE BECAUSE NONE IS IN THE frum STRING ANYWAY
         return type2container["elasticsearch"](settings)

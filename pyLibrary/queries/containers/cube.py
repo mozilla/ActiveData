@@ -15,14 +15,16 @@ from pyLibrary import dot
 from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import MAX, OR
-from pyLibrary.queries.query import _normalize_edge
+from pyLibrary.queries.containers import Container
+# from pyLibrary.queries.query import _normalize_edge
 from pyLibrary.dot import Null, Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, wrap_dot, listwrap
 from pyLibrary.debugs.logs import Log
+from pyLibrary.queries.query import _normalize_edge
 
 
-class Cube(object):
+class Cube(Container):
     """
     A CUBE IS LIKE A NUMPY ARRAY, ONLY WITH THE DIMENSIONS TYPED AND NAMED.
     CUBES ARE BETTER THAN PANDAS BECAUSE THEY DEAL WITH NULLS GRACEFULLY
@@ -271,7 +273,7 @@ class Cube(object):
         if len(self.edges)==1 and self.edges[0].domain.type=="index":
             # USE THE STANDARD LIST FILTER
             from pyLibrary.queries import qb
-            return qb.filter(where, self.data.values()[0].cube)
+            return qb.filter(self.data.values()[0].cube, where)
         else:
             # FILTER DOES NOT ALTER DIMESIONS, JUST WHETHER THERE ARE VALUES IN THE CELLS
             Log.unexpected("Incomplete")

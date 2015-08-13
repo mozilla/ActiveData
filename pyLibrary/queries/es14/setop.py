@@ -22,7 +22,7 @@ from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries import domains
 from pyLibrary.queries.expressions import qb_expression_to_esfilter, simplify_esfilter, TRUE_FILTER, qb_expression_to_ruby
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries.cube import Cube
+from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.es14.util import aggregates1_4, qb_sort_to_es_sort
 from pyLibrary.times.timer import Timer
 from pyLibrary.queries import es14, es09

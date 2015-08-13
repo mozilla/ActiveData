@@ -4,7 +4,7 @@ Consistent dicts, lists and Nones
 
 This library is solves Python's lack of consistency (lack of closure) under the dot (`.`)
 and slice `[::]` operators.  The most significant differences involve dealing
-with None, missing keys, and missing items in lists.
+with None, missing property names, and missing items in lists.
 
 Dict replaces dict
 --------------------
@@ -16,7 +16,7 @@ readable.  In many ways, `dict()` can act as an anonymous type, but it does
 not have the features listed here.
 
  1. `a.b == a["b"]`
- 2. missing keys are handled gracefully, which is beneficial when being used in
+ 2. missing property names are handled gracefully, which is beneficial when being used in
     set operations (database operations) without raising exceptions <pre>
 a = wrap({})
 &gt;&gt;&gt; a == {}
@@ -26,7 +26,7 @@ a.b.c == None
 &gt;&gt;&gt; True
 a[None] == None
 &gt;&gt;&gt; True</pre>
-    missing keys are common when dealing with JSON, which is often almost anything.
+    missing property names are common when dealing with JSON, which is often almost anything.
     Unfortunately, you do loose the ability to perform <code>a is None</code>
     checks:  **You must always use <code>a == None</code> instead**.
  3. remove an attribute by assigning `None` (eg `a.b = None`)
@@ -54,7 +54,7 @@ a.b.c += [1]
 a.b.c += [42]
 &gt;&gt;&gt; a == {"b": {"c": [1, 42]}}
 </pre>
- 8. property names (keys) are coerced to unicode - it appears Python's
+ 8. property names are coerced to unicode - it appears Python's
  object.getattribute() is called with str() even when using `from __future__
  import unicode_literals`
  9. by allowing dot notation, the IDE does tab completion, plus my spelling
@@ -298,7 +298,7 @@ reveal itself.
 ```
 
 So, clearly, `[-num:]` can not be understood as a suffix slice, rather
-something more complicated; especially considering that `num` could be
+something more complicated; consider that `num` could be
 negative.
 
 I advocate never using negative indices in the slice operator.  Rather, use the

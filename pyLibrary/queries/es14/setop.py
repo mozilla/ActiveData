@@ -32,7 +32,7 @@ from pyLibrary.queries import es14, es09
 format_dispatch = {}
 
 def is_fieldop(es, query):
-    if not (es.cluster.version.startswith("1.4.") or es.cluster.version.startswith("1.5.")):
+    if not any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
         return False
 
     # THESE SMOOTH EDGES REQUIRE ALL DATA (SETOP)
@@ -53,20 +53,13 @@ def is_fieldop(es, query):
 
 
 def es_fieldop(es, query):
-    es_query = es14.util.es_query_template()
-    select = listwrap(query.select)
-    es_query.query = {
-        "filtered": {
-            "query": {
-                "match_all": {}
-            },
-            "filter": simplify_esfilter(qb_expression_to_esfilter(query.where))
-        }
-    }
-    es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
+    es_query, es_filter = es14.util.es_query_template(query.frum.name)
+    es_query[es_filter] = simplify_esfilter(qb_expression_to_esfilter(query.where))
+    es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = qb_sort_to_es_sort(query.sort)
     es_query.fields = DictList()
     source = "fields"
+    select = listwrap(query.select)
     for s in select.value:
         if s == "*":
             es_query.fields=None
@@ -82,7 +75,7 @@ def es_fieldop(es, query):
             es_query.fields.extend(s.values())
         elif es_query.fields is not None:
             es_query.fields.append(s)
-    es_query.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
+    es_query.sort = qb_sort_to_es_sort(query.sort)
 
     return extract_rows(es, es_query, source, select, query)
 
@@ -117,7 +110,7 @@ def extract_rows(es, es_query, source, select, query):
 
 
 def is_setop(es, query):
-    if not (es.cluster.version.startswith("1.4.") or es.cluster.version.startswith("1.5.")):
+    if not any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
         return False
 
     select = listwrap(query.select)
@@ -138,13 +131,14 @@ def is_setop(es, query):
 
 
 def es_setop(es, query):
-    es_query = es14.util.es_query_template()
-    select = listwrap(query.select)
-
+    es_query, es_filter = es14.util.es_query_template(query.frum.name)
+    es_query[es_filter]=simplify_esfilter(qb_expression_to_esfilter(query.where))
     es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
     es_query.fields = DictList()
-    es_query.sort = qb_sort_to_es_sort(query.sort)
+    es_query.sort = qb_sort_to_es_sort(qb_sort_to_typed_sort(query.sort))
+
     source = "fields"
+    select = listwrap(query.select)
     for s in select:
         if s.value == "*":
             es_query.fields = None
@@ -157,7 +151,7 @@ def es_setop(es, query):
         elif isinstance(s.value, basestring) and is_keyword(s.value):
             es_query.fields.append(s.value)
         elif isinstance(s.value, list) and es_query.fields is not None:
-            es_query.fields.extend(s.value)
+            es_query.fields.extend([v for v in s.value])
         else:
             es_query.script_fields[literal_field(s.name)] = {"script": qb_expression_to_ruby(s.value)}
 

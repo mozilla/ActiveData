@@ -196,14 +196,23 @@ def format_list_from_aggop(decoders, aggs, start, query, select):
         agg = b
         b = coalesce(agg._filter, agg._nested)
 
-    item = Dict()
-    for s in select:
-        item[s.name] = agg[s.pull]
+    if isinstance(query.select, list):
+        item = Dict()
+        for s in select:
+            item[s.name] = agg[s.pull]
+    else:
+        item = agg[select[0].pull]
 
-    return wrap({
-        "meta": {"format": "list"},
-        "data": [item]
-    })
+    if query.edges or query.groupby:
+        return wrap({
+            "meta": {"format": "list"},
+            "data": [item]
+        })
+    else:
+        return wrap({
+            "meta": {"format": "value"},
+            "data": item
+        })
 
 
 

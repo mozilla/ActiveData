@@ -49,15 +49,16 @@ class Index(object):
     def __init__(
         self,
         index,  # NAME OF THE INDEX, EITHER ALIAS NAME OR FULL VERSION NAME
-        type,  # SCHEMA NAME
+        type=None,  # SCHEMA NAME, (DEFAULT TO TYPE IN INDEX, IF ONLY ONE)
         alias=None,
         explore_metadata=True,  # PROBING THE CLUSTER FOR METADATA IS ALLOWED
         read_only=True,
+        tjson=False,  # STORED AS TYPED JSON
         timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
         debug=False,  # DO NOT SHOW THE DEBUG STATEMENTS
         settings=None
     ):
-        if index==None or type==None:
+        if index==None:
             Log.error("not allowed")
         if index == alias:
             Log.error("must have a unique index name")
@@ -78,6 +79,15 @@ class Index(object):
                 settings.index = index
             if index==None:
                 Log.error("not allowed")
+            if type == None:
+                # NO type PROVIDED, MAYBE THERE IS A SUITABLE DEFAULT?
+                indices = self.cluster.get_metadata().indices
+                index_ = indices[self.settings.index]
+
+                candidate_types = list(index_.mappings.keys())
+                if len(candidate_types) != 1:
+                    Log.error("Expecting `type` parameter")
+                self.settings.type = type = candidate_types[0]
         except Exception, e:
             # EXPLORING (get_metadata()) IS NOT ALLOWED ON THE PUBLIC CLUSTER
             pass
@@ -240,7 +250,10 @@ class Index(object):
                     Log.error("Expecting every record given to have \"value\" or \"json\" property")
 
                 lines.append('{"index":{"_id": ' + convert.value2json(id) + '}}')
-                lines.append(json)
+                if self.settings.tjson:
+                    lines.append(json2typed(json))
+                else:
+                    lines.append(json)
             del records
 
             if not lines:
@@ -269,7 +282,7 @@ class Index(object):
                             error=item.index.error,
                             line=lines[i * 2 + 1]
                         )
-                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5."])):
+                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
                     if item.index.status not in [200, 201]:
                         Log.error(
                             "{{num}} {{error}} while loading line into {{index}}:\n{{line}}",
@@ -313,7 +326,7 @@ class Index(object):
                 Log.error("Can not set refresh interval ({{error}})", {
                     "error": utf82unicode(response.all_content)
                 })
-        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5."])):
+        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
             response = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
                 data=convert.unicode2utf8('{"index":{"refresh_interval":' + convert.value2json(interval) + '}}')
@@ -390,13 +403,24 @@ class Cluster(object):
         schema=None,
         limit_replicas=None,
         read_only=False,
+        tjson=False,
         settings=None
     ):
+        best = self._get_best(settings)
+        if not best:
+            output = self.create_index(settings=settings, schema=schema, limit_replicas=limit_replicas)
+            return output
+        elif best.alias != None:
+            settings.alias = best.alias
+            settings.index = best.index
+        elif settings.alias == None:
+            settings.alias = settings.index
+            settings.index = best.index
+        return Index(settings)
+
+    def _get_best(self, settings):
         from pyLibrary.queries import qb
-
-        settings = deepcopy(settings)
         aliases = self.get_aliases()
-
         indexes = qb.sort([
             a
             for a in aliases
@@ -404,31 +428,37 @@ class Cluster(object):
                (re.match(re.escape(settings.index) + r'\d{8}_\d{6}', a.index) and settings.alias == None) or
             (a.index == settings.index and (a.alias == None or a.alias == settings.alias ))
         ], "index")
-        if not indexes:
-            output = self.create_index(settings=settings, schema=schema, limit_replicas=limit_replicas)
-            return output
-        elif indexes.last().alias != None:
-            settings.alias = indexes.last().alias
-            settings.index = indexes.last().index
-        elif settings.alias == None:
-            settings.alias = settings.index
-            settings.index = indexes.last().index
-        return Index(settings)
+        return indexes.last()
 
     @use_settings
-    def get_index(self, index, alias=None, read_only=True, settings=None):
+    def get_index(self, index, type=None, alias=None, read_only=True, settings=None):
         """
         TESTS THAT THE INDEX EXISTS BEFORE RETURNING A HANDLE
         """
-        aliases = self.get_aliases()
-        if index in aliases.index:
+        if read_only:
+            # GET EXACT MATCH, OR ALIAS
+            aliases = self.get_aliases()
+            if index in aliases.index:
+                return Index(settings)
+            if index in aliases.alias:
+                match = [a for a in aliases if a.alias == index][0]
+                settings.alias = match.alias
+                settings.index = match.index
+                return Index(settings)
+            Log.error("Can not find index {{index_name}}", index_name=settings.index)
+        else:
+            # GET BEST MATCH, INCLUDING PROTOTYPE
+            best = self._get_best(settings)
+            if not best:
+                Log.error("Can not find index {{index_name}}", index_name=settings.index)
+
+            if best.alias != None:
+                settings.alias = best.alias
+                settings.index = best.index
+            elif settings.alias == None:
+                settings.alias = settings.index
+                settings.index = best.index
             return Index(settings)
-        if index in aliases.alias:
-            match = [a for a in aliases if a.alias == index][0]
-            settings.alias = match.alias
-            settings.index = match.index
-            return Index(settings)
-        Log.error("Can not find index {{index_name}}",  index_name= settings.index)
 
     def get_alias(self, alias):
         """
@@ -463,6 +493,7 @@ class Cluster(object):
         schema=None,
         limit_replicas=None,
         read_only=False,
+        tjson=False,
         settings=None
     ):
         if not settings.alias:
@@ -575,7 +606,7 @@ class Cluster(object):
                     url= url,
                     body= kwargs["data"][0:10000] if self.debug else kwargs["data"][0:100], cause=e)
             else:
-                Log.error("Problem with call to {{url}}" + suggestion, {"url": url}, e)
+                Log.error("Problem with call to {{url}}" + suggestion, url=url, cause=e)
 
 
 
@@ -689,6 +720,8 @@ def _scrub(r):
                     output.append(v)
             if not output:
                 return None
+            if len(output) == 1:
+                return output[0]
             try:
                 return sort(output)
             except Exception:
@@ -745,7 +778,7 @@ class Alias(object):
 
     @property
     def url(self):
-        return self.cluster.path + "/" + self.path
+        return self.cluster.path.rstrip("/") + "/" + self.path.lstrip("/")
 
     def get_schema(self, retry=True):
         if self.settings.explore_metadata:

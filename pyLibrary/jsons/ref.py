@@ -19,29 +19,29 @@ from pyLibrary.parsers import URL
 
 
 DEBUG = False
-convert = None
-Log = None
+_convert = None
+_Log = None
 
 
 def _late_import():
-    global convert
-    global Log
-    from pyLibrary import convert
-    from pyLibrary.debugs.logs import Log
+    global _convert
+    global _Log
+    from pyLibrary import convert as _convert
+    from pyLibrary.debugs.logs import Log as _Log
 
-    _ = convert
-    _ = Log
+    _ = _convert
+    _ = _Log
 
 
 def get(url):
-    if not Log:
+    if not _Log:
         _late_import()
 
     """
     USE json.net CONVENTIONS TO LINK TO INLINE OTHER JSON
     """
     if url.find("://") == -1:
-        Log.error("{{url}} must have a prototcol (eg http://) declared",  url= url)
+        _Log.error("{{url}} must have a prototcol (eg http://) declared",  url= url)
     if url.startswith("file://") and url[7] != "/":
         # RELATIVE
         if os.sep == "\\":
@@ -50,7 +50,7 @@ def get(url):
             url = "file://" + os.getcwd() + "/" + url[7:]
 
     if url[url.find("://") + 3] != "/":
-        Log.error("{{url}} must be absolute",  url= url)
+        _Log.error("{{url}} must be absolute",  url= url)
     doc = wrap({"$ref": url})
 
     phase1 = _replace_ref(doc, URL(""))  # BLANK URL ONLY WORKS IF url IS ABSOLUTE
@@ -64,7 +64,7 @@ def expand(doc, doc_url):
     EXPANDING FEATURE
     """
     if doc_url.find("://") == -1:
-        Log.error("{{url}} must have a prototcol (eg http://) declared",  url= doc_url)
+        _Log.error("{{url}} must have a prototcol (eg http://) declared",  url= doc_url)
 
     phase1 = _replace_ref(doc, URL(doc_url))  # BLANK URL ONLY WORKS IF url IS ABSOLUTE
     phase2 = _replace_locals(phase1, [phase1])
@@ -105,7 +105,7 @@ def _replace_ref(node, url):
         if ref.scheme in scheme_loaders:
             new_value = scheme_loaders[ref.scheme](ref, url)
         else:
-            raise Log.error("unknown protocol {{scheme}}",  scheme= ref.scheme)
+            raise _Log.error("unknown protocol {{scheme}}",  scheme= ref.scheme)
 
         if ref.fragment:
             new_value = new_value[ref.fragment]
@@ -150,7 +150,7 @@ def _replace_locals(node, doc_path):
                 for i, p in enumerate(frag):
                     if p != ".":
                         if i>len(doc_path):
-                            Log.error("{{frag|quote}} reaches up past the root document",  frag=frag)
+                            _Log.error("{{frag|quote}} reaches up past the root document",  frag=frag)
                         new_value = doc_path[i-1][frag[i::]]
                         break
                 else:
@@ -196,19 +196,19 @@ def get_file(ref, url):
 
     try:
         if DEBUG:
-            Log.note("reading file {{path}}", path=path)
+            _Log.note("reading file {{path}}", path=path)
         content = File(path).read()
     except Exception, e:
         content = None
-        Log.error("Could not read file {{filename}}",  filename= path, cause=e)
+        _Log.error("Could not read file {{filename}}",  filename= path, cause=e)
 
     try:
-        new_value = convert.json2value(content, params=ref.query, flexible=True, paths=True)
+        new_value = _convert.json2value(content, params=ref.query, flexible=True, paths=True)
     except Exception, e:
         try:
-            new_value = convert.ini2value(content)
+            new_value = _convert.ini2value(content)
         except Exception, f:
-            raise Log.error("Can not read {{file}}",  file= path, cause=e)
+            raise _Log.error("Can not read {{file}}", file=path, cause=e)
     new_value = _replace_ref(new_value, ref)
     return new_value
 
@@ -217,7 +217,7 @@ def get_http(ref, url):
     from pyLibrary.env import http
 
     params = url.query
-    new_value = convert.json2value(http.get(ref), params=params, flexible=True, paths=True)
+    new_value = _convert.json2value(http.get(ref), params=params, flexible=True, paths=True)
     return new_value
 
 
@@ -225,7 +225,7 @@ def get_env(ref, url):
     # GET ENVIRONMENT VARIABLES
     ref = ref.host
     try:
-        new_value = convert.json2value(os.environ[ref])
+        new_value = _convert.json2value(os.environ[ref])
     except Exception, e:
         new_value = os.environ[ref]
     return new_value

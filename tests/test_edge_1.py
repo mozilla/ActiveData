@@ -259,22 +259,22 @@ class TestEdge1(ActiveDataBaseTest):
                 "from": base_test_class.settings.backend_es.index,
                 "select": [
                     {"name": "v", "value": "v", "aggregate": "sum"},
-                    {"name": "d", "value": "_b.d", "aggregate": "sum"}
+                    {"name": "d", "value": "b.d", "aggregate": "sum"}
                 ],
-                "edges": ["_b.r"]
+                "edges": ["b.r"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"v": 6, "d": 6, "_b": {"r": "a"}},
-                    {"v": 15, "d": 6, "_b": {"r": "b"}},
-                    {"v": 24, "d": 6, "_b": {"r": "c"}},
-                    {"v": 33, "d": 6, "_b": {"r": "d"}},
+                    {"v": 6, "d": 6, "b": {"r": "a"}},
+                    {"v": 15, "d": 6, "b": {"r": "b"}},
+                    {"v": 24, "d": 6, "b": {"r": "c"}},
+                    {"v": 33, "d": 6, "b": {"r": "d"}},
                     {"v": 13, "d": 3}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["v", "d", "_b.r"],
+                "header": ["v", "d", "b.r"],
                 "data": [
                     [6, 6, "a"],
                     [15, 6, "b"],
@@ -287,7 +287,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "meta": {"format": "cube"},
                 "edges": [
                     {
-                        "name": "_b.r",
+                        "name": "b.r",
                         "allowNulls": True,
                         "domain": {
                             "type": "set",
@@ -314,22 +314,22 @@ class TestEdge1(ActiveDataBaseTest):
                 "from": base_test_class.settings.backend_es.index,
                 "select": [
                     {"name": "v", "value": "v", "aggregate": "min"},
-                    {"name": "d", "value": "_b.d", "aggregate": "max"}
+                    {"name": "d", "value": "b.d", "aggregate": "max"}
                 ],
-                "edges": ["_b.r"]
+                "edges": ["b.r"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"v": 1, "d": 3, "_b": {"r": "a"}},
-                    {"v": 4, "d": 3, "_b": {"r": "b"}},
-                    {"v": 7, "d": 3, "_b": {"r": "c"}},
-                    {"v": 10, "d": 3, "_b": {"r": "d"}},
+                    {"v": 1, "d": 3, "b": {"r": "a"}},
+                    {"v": 4, "d": 3, "b": {"r": "b"}},
+                    {"v": 7, "d": 3, "b": {"r": "c"}},
+                    {"v": 10, "d": 3, "b": {"r": "d"}},
                     {"v": 13, "d": 3}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["v", "d", "_b.r"],
+                "header": ["v", "d", "b.r"],
                 "data": [
                     [1, 3, "a"],
                     [4, 3, "b"],
@@ -342,7 +342,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "meta": {"format": "cube"},
                 "edges": [
                     {
-                        "name": "_b.r",
+                        "name": "b.r",
                         "allowNulls": True,
                         "domain": {
                             "type": "set",
@@ -407,6 +407,7 @@ class TestEdge1(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
     def test_where(self):
+        # THE CONTAINER SHOULD RETURN THE FULL CUBE, DESPITE IT NOT BEING EXPLICIT
         test = {
             "name": "sum column",
             "metadata": {},
@@ -434,16 +435,16 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "allowNulls": False,
+                        "allowNulls": True,
                         "domain": {
                             "type": "set",
                             "key": "value",
-                            "partitions": [{"value": "c"}]
+                            "partitions": [{"value":"b"}, {"value": "c"}]
                         }
                     }
                 ],
                 "data": {
-                    "v": [13]
+                    "v": [None, 13, None]
                 }
             }
         }
@@ -958,19 +959,19 @@ long_test_data = [
 
 
 structured_test_data = [
-    {"_b": {"r": "a", "d": 1}, "v": 1},
-    {"_b": {"r": "a", "d": 2}, "v": 2},
-    {"_b": {"r": "a", "d": 3}, "v": 3},
-    {"_b": {"r": "b", "d": 1}, "v": 4},
-    {"_b": {"r": "b", "d": 2}, "v": 5},
-    {"_b": {"r": "b", "d": 3}, "v": 6},
-    {"_b": {"r": "c", "d": 1}, "v": 7},
-    {"_b": {"r": "c", "d": 2}, "v": 8},
-    {"_b": {"r": "c", "d": 3}, "v": 9},
-    {"_b": {"r": "d", "d": 1}, "v": 10},
-    {"_b": {"r": "d", "d": 2}, "v": 11},
-    {"_b": {"r": "d", "d": 3}, "v": 12},
-    {"_b": {"r": None, "d": 3}, "v": 13}
+    {"b": {"r": "a", "d": 1}, "v": 1},
+    {"b": {"r": "a", "d": 2}, "v": 2},
+    {"b": {"r": "a", "d": 3}, "v": 3},
+    {"b": {"r": "b", "d": 1}, "v": 4},
+    {"b": {"r": "b", "d": 2}, "v": 5},
+    {"b": {"r": "b", "d": 3}, "v": 6},
+    {"b": {"r": "c", "d": 1}, "v": 7},
+    {"b": {"r": "c", "d": 2}, "v": 8},
+    {"b": {"r": "c", "d": 3}, "v": 9},
+    {"b": {"r": "d", "d": 1}, "v": 10},
+    {"b": {"r": "d", "d": 2}, "v": 11},
+    {"b": {"r": "d", "d": 3}, "v": 12},
+    {"b": {"r": None, "d": 3}, "v": 13}
 ]
 
 

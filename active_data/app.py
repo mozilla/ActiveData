@@ -235,7 +235,7 @@ def main():
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
         app.run(**unwrap(config.flask))
     except Exception, e:
-        Log.error("Problem with etl", e)
+        Log.error("Problem with etl", cause=e)
     finally:
         Log.stop()
 

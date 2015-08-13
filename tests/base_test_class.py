@@ -160,7 +160,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             _settings.schema = jsons.ref.get(url)
 
             # MAKE CONTAINER
-            container = self.es.get_or_create_index(_settings)
+            container = self.es.get_or_create_index(tjson=True, settings=_settings)
             container.add_alias()
 
             # INSERT DATA
@@ -214,28 +214,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 result = convert.json2value(convert.utf82unicode(response.all_content))
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
-                if format == "table":
-                    self.assertEqual(set(result.header), set(expected.header))
-
-                    # MAP FROM expected COLUMN TO result COLUMN
-                    mapping = zip(*zip(*filter(
-                        lambda v: v[0][1] == v[1][1],
-                        itertools.product(enumerate(expected.header), enumerate(result.header))
-                    ))[1])[0]
-                    result.header = [result.header[m] for m in mapping]
-
-                    if result.data:
-                        columns = zip(*unwrap(result.data))
-                        result.data = zip(*[columns[m] for m in mapping])
-                        result.data = qb.sort(result.data, range(len(result.header)))
-                    expected.data = qb.sort(expected.data, range(len(expected.header)))
-                elif format == "list":
-                    sort_order = wrap(_normalize_edges(coalesce(subtest.query.edges, subtest.query.groupby)) + _normalize_selects(listwrap(subtest.query.select))).name
-                    expected.data = qb.sort(expected.data, sort_order)
-                    result.data = qb.sort(result.data, sort_order)
-
-                # CONFIRM MATCH
-                self.assertAlmostEqual(result, expected)
+                self.compare_to_expected(query, result, expected)
 
             if num_expectations == 0:
                 Log.error("Expecting test {{name|quote}} to have property named 'expecting_*' for testing the various format clauses", {
@@ -247,6 +226,35 @@ class ActiveDataBaseTest(FuzzyTestCase):
             # REMOVE CONTAINER
             self.es.delete_index(settings.index)
 
+    def compare_to_expected(self, query, result, expected):
+        expected = wrap(expected)
+
+        if result.meta.format == "table":
+            self.assertEqual(set(result.header), set(expected.header))
+
+            # MAP FROM expected COLUMN TO result COLUMN
+            mapping = zip(*zip(*filter(
+                lambda v: v[0][1] == v[1][1],
+                itertools.product(enumerate(expected.header), enumerate(result.header))
+            ))[1])[0]
+            result.header = [result.header[m] for m in mapping]
+
+            if result.data:
+                columns = zip(*unwrap(result.data))
+                result.data = zip(*[columns[m] for m in mapping])
+                result.data = qb.sort(result.data, range(len(result.header)))
+            expected.data = qb.sort(expected.data, range(len(expected.header)))
+        elif result.meta.format == "list":
+            query = Normal().convert(query)
+            sort_order = coalesce(query.edges, query.groupby) + listwrap(query.select)
+
+            if isinstance(expected.data, list):
+                expected.data = qb.sort(expected.data, sort_order.name)
+            if isinstance(result.data, list):
+                result.data = qb.sort(result.data, sort_order.name)
+
+        # CONFIRM MATCH
+        self.assertAlmostEqual(result, expected)
 
 
     def _execute_query(self, query):

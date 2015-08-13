@@ -26,7 +26,7 @@ from pyLibrary.times.timer import Timer
 
 def is_aggsop(es, query):
     es.cluster.get_metadata()
-    if (es.cluster.version.startswith("1.4.") or es.cluster.version.startswith("1.5.")) and (query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate)):
+    if any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])) and (query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate)):
         return True
     return False
 
@@ -40,24 +40,31 @@ def es_aggsop(es, frum, query):
     for s in select:
         if s.aggregate == "count" and (s.value == None or s.value == "."):
             s.pull = "doc_count"
+        elif s.value == ".":
+            Log.error("do not know how to handle")
         elif is_keyword(s.value):
             new_select[literal_field(s.value)] += [s]
         else:
             formula.append(s)
 
-    for litral_field, many in new_select.items():
+    for canonical_name, many in new_select.items():
+        representative = many[0]
+        if representative.value == ".":
+            Log.error("do not know how to handle")
+        else:
+            field_name = representative.value
+
         if len(many)>1:
-            canonical_name=literal_field(many[0].name)
-            es_query.aggs[canonical_name].stats.field = many[0].value
+            # canonical_name=literal_field(many[0].name)
+            es_query.aggs[literal_field(canonical_name)].stats.field = field_name
             for s in many:
                 if s.aggregate == "count":
-                    s.pull = canonical_name + ".count"
+                    s.pull = literal_field(canonical_name) + ".count"
                 else:
-                    s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
+                    s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
         else:
-            s = many[0]
-            s.pull = literal_field(s.value) + ".value"
-            es_query.aggs[literal_field(s.value)][aggregates1_4[s.aggregate]].field = s.value
+            es_query.aggs[literal_field(canonical_name)][aggregates1_4[representative.aggregate]].field = field_name
+            representative.pull = literal_field(canonical_name) + ".value"
 
     for i, s in enumerate(formula):
         new_select[unicode(i)] = s
@@ -85,6 +92,8 @@ def es_aggsop(es, frum, query):
                 }
             }, es_query)}
         })
+
+    es_query.size=0
 
     with Timer("ES query time") as es_duration:
         result = es09.util.post(es, es_query, query.limit)
@@ -216,7 +225,7 @@ def _range_composer(edge, domain, es_query, to_float):
         missing_filter = set_default(
             {"filter": {"or": [
                 missing_range,
-                {"missing": {"field": get_all_vars(edge.value)}}
+                {"or": [{"missing": {"field": v}} for v in get_all_vars(edge.value)]}
             ]}},
             es_query
         )

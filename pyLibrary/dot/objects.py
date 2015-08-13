@@ -54,6 +54,19 @@ class DictObject(Mapping):
         except Exception, e:
             raise e
 
+    def iteritems(self):
+        obj = _get(self, "_obj")
+        try:
+            return obj.__dict__.iteritems()
+        except Exception, e:
+            def output():
+                for k in dir(obj):
+                    if k.startswith("__"):
+                        continue
+                    yield k, getattr(obj, k, None)
+            return output()
+
+
     def __iter__(self):
         return (k for k in self.keys())
 

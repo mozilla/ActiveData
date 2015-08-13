@@ -22,19 +22,19 @@
 					}
 				},
 				{
-					"default_simple_objects": {
+					"default_nested_objects": {
 						"mapping": {
-							"type": "object",
-							"dynamic": true
+							"type": "nested"
 						},
 						"match_mapping_type": "object",
 						"match": "_*"
 					}
 				},
 				{
-					"default_objects": {
+					"default_simple_objects": {
 						"mapping": {
-							"type": "nested"
+							"type": "object",
+							"dynamic": true
 						},
 						"match_mapping_type": "object",
 						"match": "*"

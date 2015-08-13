@@ -46,16 +46,19 @@ class FromES(Container):
             return Container.__new__(cls)
 
     @use_settings
-    def __init__(self, host, index, type=None, alias=None, name=None, port=9200, settings=None):
+    def __init__(self, host, index, type=None, alias=None, name=None, port=9200, read_only=True, settings=None):
+        Container.__init__(self, None, None)
         if not config.default:
             config.default.settings = settings
         self.settings = settings
         self.name = coalesce(name, alias, index)
-        self._es = elasticsearch.Alias(alias=coalesce(alias, index), settings=settings)
-        self.settings.type = self._es.settings.type  # Alias() WILL ASSIGN A TYPE IF IT WAS MISSING
+        if read_only:
+            self._es = elasticsearch.Alias(alias=coalesce(alias, index), settings=settings)
+        else:
+            self._es = elasticsearch.Cluster(settings=settings).get_index(read_only=read_only, settings=settings)
+        self.settings.type = self._es.settings.type
         self.edges = Dict()
         self.worker = None
-        self.ready = False
         self._columns = None
 
     @staticmethod
@@ -74,11 +77,10 @@ class FromES(Container):
 
 
     def __enter__(self):
-        self.ready = True
+        Log.error("No longer used")
         return self
 
     def __exit__(self, type, value, traceback):
-        self.ready = False
         if not self.worker:
             return
 
@@ -94,20 +96,9 @@ class FromES(Container):
 
     def query(self, _query):
         try:
-            if not self.ready:
-                Log.error("Must use with clause for any instance of FromES")
-
             query = Query(_query, schema=self)
-
-            # try:
-            #     frum = self.get_columns(query["from"])
-            #     mvel = _MVEL(frum)
-            # except Exception, e:
-            #     mvel = None
-            #     Log.warning("TODO: Fix this", e)
-            #
             for s in listwrap(query.select):
-                if not aggregates1_4[s.aggregate]:
+                if not aggregates1_4.get(s.aggregate):
                     Log.error("ES can not aggregate " + self.select[0].name + " because '" + self.select[0].aggregate + "' is not a recognized aggregate")
 
             frum = query["from"]
@@ -278,8 +269,9 @@ class FromES(Container):
         if results.hits.hits:
             updates = []
             for h in results.hits.hits:
-                updates.append({"update": {"_id": h._id, "_routing": unwraplist(h.fields[literal_field(schema._routing.path)])}})
-                updates.append({"script": script})
+                for s in scripts:
+                    updates.append({"update": {"_id": h._id, "_routing": unwraplist(h.fields[literal_field(schema._routing.path)])}})
+                    updates.append(s)
             content = ("\n".join(convert.value2json(c) for c in updates) + "\n").encode('utf-8')
             response = self._es.cluster._post(
                 self._es.path + "/_bulk",
@@ -296,6 +288,7 @@ class FromESMetadata(Container):
 
     @use_settings
     def __init__(self, host, index, alias=None, name=None, port=9200, settings=None):
+        Container.__init__(self, None, schema=self)
         self.settings = settings
         self.name = coalesce(name, alias, index)
         self._es = elasticsearch.Cluster(settings=settings)
@@ -312,29 +305,31 @@ class FromESMetadata(Container):
     def __exit__(self, type, value, traceback):
         pass
 
+    def _get_columns(self):
+        self.columns = []
+        alias_done = set()
+        metadata = self._es.get_metadata()
+        for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
+            for _, properties in meta.mappings.items():
+                columns = _parse_properties(index, properties.properties)
+                for c in columns:
+                    c.cube = index
+                    c.property = c.name
+                    c.name = None
+                    c.useSource = None
+
+                self.columns.extend(columns)
+                for a in meta.aliases:
+                    # ONLY THE LATEST ALIAS IS CHOSEN TO GET COLUMNS
+                    if a in alias_done:
+                        continue
+                    alias_done.add(a)
+                    for c in columns:
+                        self.columns.append(set_default({"cube": a}, c))  # ENSURE WE COPY
+
     def query(self, _query):
         if not self.columns:
-            self.columns = []
-            alias_done = set()
-            metadata = self._es.get_metadata()
-            for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
-                for _, properties in meta.mappings.items():
-                    columns = _parse_properties(index, properties.properties)
-                    for c in columns:
-                        c.cube = index
-                        c.property = c.name
-                        c.name = None
-                        c.useSource = None
-
-                    self.columns.extend(columns)
-                    for a in meta.aliases:
-                        # ONLY THE LATEST ALIAS IS CHOSEN TO GET COLUMNS
-                        if a in alias_done:
-                            continue
-                        alias_done.add(a)
-                        for c in columns:
-                            self.columns.append(set_default({"cube": a}, c))  # ENSURE WE COPY
-
+            self._get_columns()
 
         return qb.run(set_default(
             {

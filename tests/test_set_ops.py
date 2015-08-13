@@ -101,28 +101,28 @@ class TestSetOps(ActiveDataBaseTest):
 
         test = {
             "data": [  # PROPERTIES STARTING WITH _ ARE NOT NESTED AUTOMATICALLY
-                {"_a": {"_b": {"_c": 1}}},
-                {"_a": {"_b": {"_c": 2}}},
-                {"_a": {"_b": {"_c": 3}}},
-                {"_a": {"_b": {"_c": 4}}},
-                {"_a": {"_b": {"_c": 5}}}
+                {"a": {"b": {"c": 1}}},
+                {"a": {"b": {"c": 2}}},
+                {"a": {"b": {"c": 3}}},
+                {"a": {"b": {"c": 4}}},
+                {"a": {"b": {"c": 5}}}
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
-                "select": "_a._b._c",
-                "sort": "_a._b._c"  # SO THE CUBE COMPARISON WILL PASS
+                "select": "a.b.c",
+                "sort": "a.b.c"  # SO THE CUBE COMPARISON WILL PASS
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
-                {"_a": {"_b": {"_c": 1}}},
-                {"_a": {"_b": {"_c": 2}}},
-                {"_a": {"_b": {"_c": 3}}},
-                {"_a": {"_b": {"_c": 4}}},
-                {"_a": {"_b": {"_c": 5}}}
+                {"a": {"b": {"c": 1}}},
+                {"a": {"b": {"c": 2}}},
+                {"a": {"b": {"c": 3}}},
+                {"a": {"b": {"c": 4}}},
+                {"a": {"b": {"c": 5}}}
             ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["_a._b._c"],
+                "header": ["a.b.c"],
                 "data": [[1], [2], [3], [4], [5]]
             },
             "expecting_cube": {
@@ -134,7 +134,7 @@ class TestSetOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "_a._b._c": [1, 2, 3, 4, 5]
+                    "a.b.c": [1, 2, 3, 4, 5]
                 }
             }
         }
@@ -244,7 +244,6 @@ class TestSetOps(ActiveDataBaseTest):
 
     def test_dot_select(self):
         test = {
-            "name": "singleton_alpha dot select",
             "data": [
                 {"a": "b"}
             ],
@@ -538,18 +537,18 @@ class TestSetOps(ActiveDataBaseTest):
     def test_select_expression(self):
         test = {
             "data": [  # PROPERTIES STARTING WITH _ ARE NOT NESTED AUTOMATICALLY
-                       {"_a": {"_b": 0, "_c": 0}},
-                       {"_a": {"_b": 0, "_c": 1}},
-                       {"_a": {"_b": 1, "_c": 0}},
-                       {"_a": {"_b": 1, "_c": 1}},
+                       {"a": {"b": 0, "c": 0}},
+                       {"a": {"b": 0, "c": 1}},
+                       {"a": {"b": 1, "c": 0}},
+                       {"a": {"b": 1, "c": 1}},
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
                 "select": [
-                    {"name": "sum", "value": {"add": ["_a._b", "_a._c"]}},
-                    {"name": "sub", "value": {"sub": ["_a._b", "_a._c"]}}
+                    {"name": "sum", "value": {"add": ["a.b", "a.c"]}},
+                    {"name": "sub", "value": {"sub": ["a.b", "a.c"]}}
                 ],
-                "sort": ["_a._b", "_a._c"]
+                "sort": ["a.b", "a.c"]
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
@@ -574,6 +573,62 @@ class TestSetOps(ActiveDataBaseTest):
                 "data": {
                     "sum": [0, 1, 1, 2],
                     "sub": [0, -1, 1, 0]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_select_object(self):
+        """
+        ES DOES NOT ALLOW YOU TO SELECT AN OBJECT, ONLY THE LEAVES
+        THIS SHOULD USE THE SCHEMA TO SELECT-ON-OBJECT TO MANY SELECT ON LEAVES
+        """
+        test = {
+            "data": [
+                {"o": 3, "a": {"b": "x", "v": 2}},
+                {"o": 1, "a": {"b": "x", "v": 5}},
+                {"o": 2, "a": {"b": "x", "v": 7}},
+                {"o": 4, "c": "x"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["a"],
+                "format": "table"
+            },
+            "expecting_list":{
+                "meta": {"format": "list"},
+                "data": [
+                    {"b": "x", "v": 2},
+                    {"b": "x", "v": 5},
+                    {"b": "x", "v": 7},
+                    None
+                ]
+            },
+            "expecting_table":{
+                "meta": {"format": "table"},
+                "header": ["a.b", "a.v"],
+                "data": [
+                    ["x", 2],
+                    ["x", 5],
+                    ["x", 7],
+                    [None, None]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "index",
+                        "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a": [
+                        {"b": "x", "v": 2},
+                        {"b": "x", "v": 5},
+                        {"b": "x", "v": 7},
+                        None
+                    ]
                 }
             }
         }

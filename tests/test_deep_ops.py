@@ -124,6 +124,78 @@ class TestDeepOps(ActiveDataBaseTest):
         }
         self.assertRaises(Exception, self._execute_es_tests, test)
 
+    def test_abs_shallow_select(self):
+        # TEST THAT ABSOLUTE COLUMN NAMES WORK (WHEN THEY DO NOT CONFLICT WITH RELATIVE PROPERTY NAME)
+        test = {
+            "data": [
+                {"o": 3, "_a": [
+                    {"b": "x", "v": 2},
+                    {"b": "y", "v": 3}
+                ]},
+                {"o": 1, "_a": {"b": "x", "v": 5}},
+                {"o": 2, "_a": [
+                    {"b": "x", "v": 7},
+                ]},
+                {"o": 4, "c": "x"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+"._a",
+                "select": ["b", "o"],
+                "where": {"eq": {"b": "x"}},
+                "sort": ["o"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"o": 3, "b": "x"},
+                    {"o": 3, "b": "y"},
+                    {"o": 1, "b": "x"},
+                    {"o": 2, "b": "x"},
+                    {"o": 4}
+                ]},
+            # "expecting_table": {
+            #     "meta": {"format": "table"},
+            #     "header": ["o", "a", "c"],
+            #     "data": [
+            #         [1, {"b": "x", "v": 5}, None],
+            #         [2, {"b": "x", "v": 7}, None],
+            #         [3,
+            #             [
+            #                 {"b": "x", "v": 2},
+            #                 {"b": "y", "v": 3}
+            #             ],
+            #             None
+            #         ],
+            #         [4, None, "x"]
+            #     ]
+            # },
+            # "expecting_cube": {
+            #     "meta": {"format": "cube"},
+            #     "edges": [
+            #         {
+            #             "name": "rownum",
+            #             "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
+            #         }
+            #     ],
+            #     "data": {
+            #         "a": [
+            #             {"b": "x", "v": 5},
+            #             {"b": "x", "v": 7},
+            #             [
+            #                 {"b": "x", "v": 2},
+            #                 {"b": "y", "v": 3}
+            #             ],
+            #             None
+            #         ],
+            #         "c": [None, None, None, "x"],
+            #         "o": [1, 2, 3, 4]
+            #     }
+            # }
+        }
+
+        self._execute_es_tests(test)
+
+
 
     def test_select_whole_document(self):
         test = {

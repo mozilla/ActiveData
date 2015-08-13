@@ -26,9 +26,8 @@ class TestAggOps(ActiveDataBaseTest):
                 "select": {"aggregate": "count"}
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                {"count": 30}
-            ]},
+                "meta": {"format": "value"}, "data": 30
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["count"],
@@ -52,9 +51,8 @@ class TestAggOps(ActiveDataBaseTest):
                 "select": {"value": "a", "aggregate": "max"}
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                {"a": 58}
-            ]},
+                "meta": {"format": "value"}, "data": 58
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a"],
@@ -111,10 +109,139 @@ class TestAggOps(ActiveDataBaseTest):
                 ]
             },
             "expecting_list": {
-                "meta": {"format": "list"},
+                "meta": {"format": "value"},
+                "data": {"mini": 0, "maxi": 58, "count": 30}
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["mini", "maxi", "count"],
                 "data": [
-                    {"mini": 0, "maxi": 58, "count":30}
+                    [0, 58, 30]
                 ]
+            }
+        }
+        self._execute_es_tests(test)
+
+
+    def test_simplest_on_value(self):
+        test = {
+            "data": range(30),
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"aggregate": "count"}
+            },
+            "expecting_list": {
+                "meta": {"format": "value"}, "data": 30
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["count"],
+                "data": [[30]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [],
+                "data": {
+                    "count": 30
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_max_on_value(self):
+        test = {
+            "data": [{"a": i*2} for i in range(30)],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": ".", "aggregate": "max"}
+            },
+            "expecting_list": {
+                "meta": {"format": "value"}, "data": 58
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["max"],
+                "data": [[58]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [],
+                "data": {
+                    "max": 58
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
+    def test_max_object_on_value(self):
+        test = {
+            "data": [{"a": i*2} for i in range(30)],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": [{"value": ".", "aggregate": "max"}]
+            },
+            "expecting_list": {
+                "meta": {"format": "value"}, "data": {"max": 58}
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["max"],
+                "data": [[58]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [],
+                "data": {
+                    "max": 58
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
+    def test_median_on_value(self):
+        test = {
+            "data": [i**2 for i in range(30)],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": ".", "aggregate": "median"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                210.5
+            ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["medain"],
+                "data": [[210.5]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [],
+                "data": {
+                    "median": 210.5
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
+    def test_many_aggs_on_value(self):
+        # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
+        test = {
+            "data": [i*2 for i in range(30)],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": [
+                    {"name": "maxi", "value": ".", "aggregate": "max"},
+                    {"name": "mini", "value": ".", "aggregate": "min"},
+                    {"name": "count", "value": ".", "aggregate": "count"}
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "value"},
+                "data": {"mini": 0, "maxi": 58, "count":30}
             },
             "expecting_table": {
                 "meta": {"format": "table"},

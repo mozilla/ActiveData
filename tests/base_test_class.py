@@ -253,12 +253,13 @@ class ActiveDataBaseTest(FuzzyTestCase):
             expected.data = qb.sort(expected.data, range(len(expected.header)))
         elif result.meta.format == "list":
             query = Query(query, schema=FromES(self.index.settings))
-            sort_order = coalesce(query.edges, query.groupby) + listwrap(query.select)
+            if not query.sort:
+                sort_order = coalesce(query.edges, query.groupby) + listwrap(query.select)
 
-            if isinstance(expected.data, list):
-                expected.data = qb.sort(expected.data, sort_order.name)
-            if isinstance(result.data, list):
-                result.data = qb.sort(result.data, sort_order.name)
+                if isinstance(expected.data, list):
+                    expected.data = qb.sort(expected.data, sort_order.name)
+                if isinstance(result.data, list):
+                    result.data = qb.sort(result.data, sort_order.name)
 
         # CONFIRM MATCH
         self.assertAlmostEqual(result, expected)

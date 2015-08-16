@@ -593,9 +593,71 @@ class TestSetOps(ActiveDataBaseTest):
             "query": {
                 "from": base_test_class.settings.backend_es.index,
                 "select": ["a"],
-                "format": "table"
+                "sort": "a.v"
             },
-            "expecting_list":{
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": {"b": "x", "v": 2}},
+                    {"a": {"b": "x", "v": 5}},
+                    {"a": {"b": "x", "v": 7}},
+                    None
+                ]
+            },
+            "expecting_table":{
+                "meta": {"format": "table"},
+                "header": ["a.b", "a.v"],
+                "data": [
+                    ["x", 2],
+                    ["x", 5],
+                    ["x", 7],
+                    [None, None]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a.b": [
+                        "x",
+                        "x",
+                        "x",
+                        None
+                    ],
+                    "a.v": [
+                        2,
+                        5,
+                        7,
+                        None
+                    ]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_select_value_object(self):
+        """
+        ES DOES NOT ALLOW YOU TO SELECT AN OBJECT, ONLY THE LEAVES
+        THIS SHOULD USE THE SCHEMA TO SELECT-ON-OBJECT TO MANY SELECT ON LEAVES
+        """
+        test = {
+            "data": [
+                {"o": 3, "a": {"b": "x", "v": 2}},
+                {"o": 1, "a": {"b": "x", "v": 5}},
+                {"o": 2, "a": {"b": "x", "v": 7}},
+                {"o": 4, "c": "x"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": "a",
+                "sort": "a.v"
+            },
+            "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
                     {"b": "x", "v": 2},
@@ -618,7 +680,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "meta": {"format": "cube"},
                 "edges": [
                     {
-                        "name": "index",
+                        "name": "rownum",
                         "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
                     }
                 ],
@@ -629,6 +691,63 @@ class TestSetOps(ActiveDataBaseTest):
                         {"b": "x", "v": 7},
                         None
                     ]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_select2_object(self):
+        """
+        ES DOES NOT ALLOW YOU TO SELECT AN OBJECT, ONLY THE LEAVES
+        THIS SHOULD USE THE SCHEMA TO SELECT-ON-OBJECT TO MANY SELECT ON LEAVES
+        """
+        test = {
+            "data": [
+                {"o": 3, "a": {"b": "x", "v": 2}},
+                {"o": 1, "a": {"b": "x", "v": 5}},
+                {"o": 2, "a": {"b": "x", "v": 7}},
+                {"o": 4, "c": "x"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["o", "a"],
+                "sort": "a.v"
+            },
+            "expecting_list":{
+                "meta": {"format": "list"},
+                "data": [
+                    {"o": 3, "a": {"b": "x", "v": 2}},
+                    {"o": 1, "a": {"b": "x", "v": 5}},
+                    {"o": 2, "a": {"b": "x", "v": 7}},
+                    {"o": 4}
+                ]
+            },
+            "expecting_table":{
+                "meta": {"format": "table"},
+                "header": ["o", "a.b", "a.v"],
+                "data": [
+                    [3, "x", 2],
+                    [1, "x", 5],
+                    [2, "x", 7],
+                    [4, None, None]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a": [
+                        {"b": "x", "v": 2},
+                        {"b": "x", "v": 5},
+                        {"b": "x", "v": 7},
+                        None
+                    ],
+                    "o": [3, 1, 2, 4]
                 }
             }
         }

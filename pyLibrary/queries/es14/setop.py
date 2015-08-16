@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
+from copy import copy
 from pyLibrary import queries, convert
 
 from pyLibrary.collections.matrix import Matrix
@@ -25,6 +26,7 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.es14.util import aggregates1_4, qb_sort_to_es_sort
 from pyLibrary.queries.query import DEFAULT_LIMIT
+from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.times.timer import Timer
 from pyLibrary.queries import es14, es09
 
@@ -60,22 +62,32 @@ def es_fieldop(es, query):
     es_query.sort = qb_sort_to_es_sort(query.sort)
     es_query.fields = DictList()
     source = "fields"
-    select = listwrap(query.select)
-    for s in select.value:
-        if s == "*":
+    select = copy(listwrap(query.select))  # ADD FIELDS TO select IF REQUIRED
+    columns = query.frum.get_columns()
+
+    for s in listwrap(query.select):
+        if s.value == "*":
             es_query.fields=None
             source = "_source"
-        elif s == ".":
+        elif s.value == ".":
             es_query.fields=None
             source = "_source"
-        elif isinstance(s, basestring) and is_keyword(s):
-            es_query.fields.append(s)
-        elif isinstance(s, list) and es_query.fields is not None:
-            es_query.fields.extend(s)
-        elif isinstance(s, Mapping) and es_query.fields is not None:
-            es_query.fields.extend(s.values())
+        elif isinstance(s.value, basestring) and is_keyword(s.value):
+            match = columns.filter(lambda c: c.name == s.value and c.type=="object")[0]
+            if match:
+                select = select.remove(s)
+                leaves = columns.filter(lambda c: c.name.startswith(s.value + ".") and c.type not in ["object", "nested"] and coalesce(c.depth, 0)<=coalesce(match.depth, 0))
+                for l in leaves:
+                    select.append({"name": s.name + l.name[len(s.value)::], "value": l.name})
+                es_query.fields.extend(leaves.name)
+            else:
+                es_query.fields.append(s.value)
+        elif isinstance(s.value, list) and es_query.fields is not None:
+            es_query.fields.extend(s.value)
+        elif isinstance(s.value, Mapping) and es_query.fields is not None:
+            es_query.fields.extend(s.value.values())
         elif es_query.fields is not None:
-            es_query.fields.append(s)
+            es_query.fields.append(s.value)
     es_query.sort = qb_sort_to_es_sort(query.sort)
 
     return extract_rows(es, es_query, source, select, query)
@@ -162,7 +174,7 @@ def es_setop(es, query):
 def format_list(T, select, source):
     data = []
     for row in T:
-        r = Dict(_id=row._id)
+        r = Dict()
         for s in select:
             if s.value == ".":
                 r[s.name] = row[source]
@@ -173,7 +185,7 @@ def format_list(T, select, source):
                     r[s.name] = unwraplist(row[source][literal_field(s.value)])
                 else:
                     r[s.name] = unwraplist(row[source][literal_field(s.name)])
-        data.append(r)
+        data.append(r if r else None)
     return Dict(
         meta={"format": "list"},
         data=data

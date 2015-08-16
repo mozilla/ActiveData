@@ -439,7 +439,7 @@ class TestEdge1(ActiveDataBaseTest):
                         "domain": {
                             "type": "set",
                             "key": "value",
-                            "partitions": [{"value":"b"}, {"value": "c"}]
+                            "partitions": [{"value": "b"}, {"value": "c"}]
                         }
                     }
                 ],
@@ -663,7 +663,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "k",
-                        "allowNulls": False,
+                        "allowNulls": True,
                         "domain": {
                             "type": "set",
                             "key": "value",

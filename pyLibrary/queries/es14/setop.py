@@ -24,6 +24,7 @@ from pyLibrary.queries.expressions import qb_expression_to_esfilter, simplify_es
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.es14.util import aggregates1_4, qb_sort_to_es_sort
+from pyLibrary.queries.query import DEFAULT_LIMIT
 from pyLibrary.times.timer import Timer
 from pyLibrary.queries import es14, es09
 
@@ -135,7 +136,7 @@ def es_setop(es, query):
     es_query[es_filter]=simplify_esfilter(qb_expression_to_esfilter(query.where))
     es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
     es_query.fields = DictList()
-    es_query.sort = qb_sort_to_es_sort(qb_sort_to_typed_sort(query.sort))
+    es_query.sort = qb_sort_to_es_sort(query.sort)
 
     source = "fields"
     select = listwrap(query.select)

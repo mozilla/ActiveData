@@ -24,7 +24,7 @@ from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
 from pyLibrary.queries.es14.setop import is_fieldop, is_setop, es_setop, es_fieldop
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.es14.util import aggregates1_4
-from pyLibrary.queries.query import Query, _normalize_where
+from pyLibrary.queries.query import Query, _normalize_where, _normalize_domain
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import coalesce, split_field, set_default, literal_field, unwraplist
@@ -134,16 +134,12 @@ class FromES(Container):
         abs_columns=self._get_columns(self.settings.alias, self.path)
 
 
-
-
-
     def get_columns(self, _from_name=None):
         """
         ENSURE COLUMNS FOR GIVEN INDEX/QUERY ARE LOADED, SCRIPT COMPILATION WILL WORK BETTER
 
         _from_name - NOT MEANT FOR EXTERNAL USE
         """
-
         if _from_name is None:
             _from_name = self.name
         if not isinstance(_from_name, basestring):
@@ -153,10 +149,12 @@ class FromES(Container):
         if output:
             # VERIFY es IS CONSISTENT
             if self.url != output.url:
-                Log.error("Using {{name}} for two different containers\n\t{{existing}}\n\t{{new}}",
+                Log.error(
+                    "Using {{name}} for two different containers\n\t{{existing}}\n\t{{new}}",
                     name= _from_name,
                     existing= output.url,
-                    new= self._es.url)
+                    new= self._es.url
+                )
             return output.columns
 
         path = split_field(_from_name)
@@ -171,6 +169,30 @@ class FromES(Container):
         output.name = _from_name
         output.url = self._es.url
         output.columns = parse_columns(_from_name, properties)
+
+        # CHECK CARDINALITY
+        counts = self._es.get_cardinality(output.columns)
+
+        for c in output.columns:
+            col = counts[literal_field(c.name)]
+            if not col:
+                continue
+
+            if c.type in ["long", "integer", "double", "float"]:
+                if col.count <= 30:
+                    c.domain.type = "set"
+                    c.domain.partitions = col.partitions
+                else:
+                    c.domain.type = "numeric"
+            elif c.type in ["boolean", "bool"]:
+                c.domain.type = "boolean"
+            else:
+                if col.count <= 1000:
+                    c.domain.type = "set"
+                    c.domain.partitions = col.partitions
+                else:
+                    c.domain.type = "uid"
+            c.domain = _normalize_domain(c.domain)
         return output.columns
 
 

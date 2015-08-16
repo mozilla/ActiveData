@@ -49,24 +49,23 @@ class SaveQueries(object):
 
 
     def find(self, hash):
-        with self.es:
-            result = self.es.query({
-                "from": {"type": "elasticsearch", "settings": self.es.settings},
-                "where": {"prefix": {"hash": hash}}
-            })
+        result = self.es.query({
+            "from": {"type": "elasticsearch", "settings": self.es.settings},
+            "where": {"prefix": {"hash": hash}}
+        })
 
-            try:
-                query = wrap(result.data).query
-                if len(query) != 1:
-                    return None
-            except Exception, e:
+        try:
+            query = wrap(result.data).query
+            if len(query) != 1:
                 return None
+        except Exception, e:
+            return None
 
-            self.es.update({
-                "update": {"type": "elasticsearch", "settings": self.es.settings},
-                "set": {"last_used": Date.now()},
-                "where": {"eq": {"hash": hash}}
-            })
+        self.es.update({
+            "update": {"type": "elasticsearch", "settings": self.es.settings},
+            "set": {"last_used": Date.now()},
+            "where": {"eq": {"hash": hash}}
+        })
 
         return query[0]
 
@@ -84,11 +83,10 @@ class SaveQueries(object):
         short_hashes = [convert.bytes2base64(h[0:6]).replace("/", "_") for h in hashes]
         available = {h: True for h in short_hashes}
 
-        with self.es:
-            existing = self.es.query({
-                "from": {"type": "elasticsearch", "settings": self.es.settings},
-                "where": {"terms": {"hash": short_hashes}}
-            })
+        existing = self.es.query({
+            "from": {"type": "elasticsearch", "settings": self.es.settings},
+            "where": {"terms": {"hash": short_hashes}}
+        })
 
         for e in Cube(select=existing.select, edges=existing.edges, data=existing.data).values():
             if e.query == json:

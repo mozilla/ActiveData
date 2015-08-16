@@ -25,13 +25,50 @@ from pyLibrary.maths import Math
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb
 from pyLibrary.strings import utf82unicode
-from pyLibrary.dot import coalesce, Null, Dict, set_default
+from pyLibrary.dot import coalesce, Null, Dict, set_default, listwrap, literal_field, split_field, join_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap
 from pyLibrary.thread.threads import ThreadedQueue, Thread
 
 
-class Index(object):
+
+class Features(object):
+
+    def get_cardinality(self, columns):
+        """
+        FAST AND DIRTY COUNT OF UNIQUE VALUES IN COLUMNS
+        """
+        columns = listwrap(columns)
+
+        def counter(c):
+            if c.depth:
+                return {
+                    "nested": {
+                        "path": join_field(split_field(c.name)[c.depth::])
+                    },
+                    "aggs": {
+                        c.name: {"cardinality": {"field": c.name}}
+                    }
+                }
+            else:
+                return {"cardinality": {"field": c.name}}
+
+        result = self.search({
+            "aggs": {c.name: counter(c) for c in columns}
+        })
+        output = wrap({c: {"name": c, "count": r.value} for c, r in result.aggregations.items()})
+
+        result = self.search({
+            "aggs": {c.name: {"terms": {"field": c.name, "size": 0}} for c in columns if output[literal_field(c.name)].count <= 1000}
+        })
+
+        for name, aggs in result.aggregations.items():
+            output[literal_field(name)].partitions = qb.sort(aggs.buckets.key)
+
+        return output
+
+
+class Index(Features):
     """
     AN ElasticSearch INDEX LIFETIME MANAGEMENT TOOL
 
@@ -97,7 +134,7 @@ class Index(object):
 
     @property
     def url(self):
-        return self.cluster.path + "/" + self.path
+        return self.cluster.path.rstrip("/") + "/" + self.path.lstrip("/")
 
     def get_schema(self, retry=True):
         if self.settings.explore_metadata:
@@ -734,7 +771,7 @@ def _scrub(r):
 
 
 
-class Alias(object):
+class Alias(Features):
     @use_settings
     def __init__(
         self,
@@ -995,6 +1032,4 @@ _merge_type = {
         "nested": "nested"
     }
 }
-
-
 

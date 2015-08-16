@@ -643,6 +643,7 @@ name_to_type = {
     "uid": DefaultDomain,
     "time": TimeDomain,
     "duration": DurationDomain,
-    "range": RangeDomain
+    "range": RangeDomain,
+    "numeric": RangeDomain
 }
 

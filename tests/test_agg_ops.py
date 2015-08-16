@@ -251,5 +251,5 @@ class TestAggOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self._execute_es_tests(test, tjson=True)
 

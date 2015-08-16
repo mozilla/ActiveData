@@ -207,16 +207,19 @@ def _normalize_edge(edge, schema=None):
                     return Dict(
                         name=e.name,
                         value=e.fields[0],
+                        allowNulls=True,
                         domain=e.getDomain()
                     )
                 else:
                     return Dict(
                         name=e.name,
+                        allowNulls=True,
                         domain=e.getDomain()
                     )
         return Dict(
             name=edge,
             value=edge,
+            allowNulls=True,
             domain=_normalize_domain(schema=schema)
         )
     else:
@@ -231,7 +234,7 @@ def _normalize_edge(edge, schema=None):
 
             return Dict(
                 name=edge.name,
-                allowNulls=False if edge.allowNulls is False else True,
+                allowNulls=bool(coalesce(edge.allowNulls, True)),
                 domain=domain
             )
 
@@ -240,7 +243,7 @@ def _normalize_edge(edge, schema=None):
             name=coalesce(edge.name, edge.value),
             value=edge.value,
             range=edge.range,
-            allowNulls=False if edge.allowNulls is False else True,
+            allowNulls=bool(coalesce(edge.allowNulls, True)),
             domain=domain
         )
 
@@ -488,9 +491,9 @@ def _normalize_sort(sort=None):
     output = DictList()
     for s in listwrap(sort):
         if isinstance(s, basestring) or Math.is_integer(s):
-            output.append({"field": s, "sort": 1})
+            output.append({"value": s, "sort": 1})
         else:
-            output.append({"field": coalesce(s.field, s.value), "sort": coalesce(sort_direction[s.sort], 1)})
+            output.append({"value": coalesce(s.value, s.field), "sort": coalesce(sort_direction[s.sort], 1)})
     return wrap(output)
 
 

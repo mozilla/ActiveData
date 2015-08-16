@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary.dot import wrap
+from pyLibrary.dot import wrap, split_field, join_field
 
 
 def es_query_template(path):

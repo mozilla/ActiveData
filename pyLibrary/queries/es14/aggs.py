@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
+from copy import deepcopy
 
 from pyLibrary import convert
 from pyLibrary.collections import MAX
@@ -121,7 +122,17 @@ class AggsDecoder(object):
     def __new__(cls, *args, **kwargs):
         e = args[0]
         if e.value and e.domain.type == "default":
-            return object.__new__(DefaultDecoder, e.copy())
+            if is_keyword(e.value):
+                cols = coalesce(args[1] if len(args)>1 else None, kwargs.get("query")).frum.get_columns()
+                col = cols.filter(lambda c: c.name == e.value)[0]
+                if not col:
+                    return object.__new__(DefaultDecoder, e.copy())
+                e.domain = deepcopy(col.domain)
+            elif isinstance(e.value, (list, Mapping)):
+                Log.error("Not supported yet")
+            else:
+                return object.__new__(DefaultDecoder, e.copy())
+
         if e.value and e.domain.type in PARTITION:
             return object.__new__(SetDecoder, e)
         if isinstance(e.domain.dimension, Dimension):
@@ -177,7 +188,7 @@ class SetDecoder(AggsDecoder):
     def append_query(self, es_query, start):
         self.start = start
         return wrap({"aggs": {
-            "_match": set_default({"terms": {"field": self.edge.value}}, es_query),
+            "_match": set_default({"terms": {"field": self.edge.value, "size": 0}}, es_query),
             "_missing": set_default({"missing": {"field": self.edge.value}}, es_query),
         }})
 

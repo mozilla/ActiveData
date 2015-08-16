@@ -24,6 +24,8 @@ from pyLibrary.dot import wrap, listwrap, coalesce, unwrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
 from pyLibrary.queries import qb, containers
+from pyLibrary.queries.qb_usingES import FromES
+from pyLibrary.queries.query import Query
 from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
@@ -77,6 +79,12 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
     @classmethod
     def setUpClass(cls):
+        if not containers.config.default:
+            containers.config.default = {
+                "type": "elasticsearch",
+                "settings": settings.backend_es
+            }
+
         ActiveDataBaseTest.server_is_ready = Signal()
         ActiveDataBaseTest.please_stop = Signal()
         # if settings.startServer:
@@ -213,7 +221,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 result = convert.json2value(convert.utf82unicode(response.all_content))
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
-                self.compare_to_expected(query, result, expected)
+                self.compare_to_expected(subtest.query, result, expected)
 
             if num_expectations == 0:
                 Log.error("Expecting test {{name|quote}} to have property named 'expecting_*' for testing the various format clauses", {
@@ -244,7 +252,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 result.data = qb.sort(result.data, range(len(result.header)))
             expected.data = qb.sort(expected.data, range(len(expected.header)))
         elif result.meta.format == "list":
-            query = Normal().convert(query)
+            query = Query(query, schema=FromES(self.index.settings))
             sort_order = coalesce(query.edges, query.groupby) + listwrap(query.select)
 
             if isinstance(expected.data, list):

@@ -20,31 +20,31 @@ FROM_DATE = Date.today()-7*DAY
 TO_DATE = Date.today()
 
 simple_test_data =[
-    {"_run":{"timestamp": Date("now-4day"), "value": 1}},
-    {"_run":{"timestamp": Date("now-4day"), "value": 2}},
-    {"_run":{"timestamp": Date("now-4day"), "value": 3}},
-    {"_run":{"timestamp": Date("now-4day"), "value": 4}},
-    {"_run":{"timestamp": Date("now-3day"), "value": 5}},
-    {"_run":{"timestamp": Date("now-3day"), "value": 6}},
-    {"_run":{"timestamp": Date("now-3day"), "value": 7}},
-    {"_run":{"timestamp": Date("now-2day"), "value": 8}},
-    {"_run":{"timestamp": Date("now-2day"), "value": 9}},
-    {"_run":{"timestamp": Date("now-1day"), "value": 0}},
-    {"_run":{"timestamp": Date("now-5day"), "value": 1}},
-    {"_run":{"timestamp": Date("now-5day"), "value": 2}},
-    {"_run":{"timestamp": Date("now-5day"), "value": 3}},
-    {"_run":{"timestamp": Date("now-5day"), "value": 4}},
-    {"_run":{"timestamp": Date("now-5day"), "value": 5}},
-    {"_run":{"timestamp": Date("now-6day"), "value": 6}},
-    {"_run":{"timestamp": Date("now-6day"), "value": 7}},
-    {"_run":{"timestamp": Date("now-6day"), "value": 8}},
-    {"_run":{"timestamp": Date("now-6day"), "value": 9}},
-    {"_run":{"timestamp": Date("now-6day"), "value": 0}},
-    {"_run":{"timestamp": Date("now-6day"), "value": 1}},
-    {"_run":{"timestamp": Date("now-0day"), "value": 2}},
-    {"_run":{"timestamp": Date("now-0day"), "value": 3}},
-    {"_run":{"timestamp": Date("now-0day"), "value": 4}},
-    {"_run":{"timestamp": Date("now-0day"), "value": 5}}
+    {"run":{"timestamp": Date("now-4day"), "value": 1}},
+    {"run":{"timestamp": Date("now-4day"), "value": 2}},
+    {"run":{"timestamp": Date("now-4day"), "value": 3}},
+    {"run":{"timestamp": Date("now-4day"), "value": 4}},
+    {"run":{"timestamp": Date("now-3day"), "value": 5}},
+    {"run":{"timestamp": Date("now-3day"), "value": 6}},
+    {"run":{"timestamp": Date("now-3day"), "value": 7}},
+    {"run":{"timestamp": Date("now-2day"), "value": 8}},
+    {"run":{"timestamp": Date("now-2day"), "value": 9}},
+    {"run":{"timestamp": Date("now-1day"), "value": 0}},
+    {"run":{"timestamp": Date("now-5day"), "value": 1}},
+    {"run":{"timestamp": Date("now-5day"), "value": 2}},
+    {"run":{"timestamp": Date("now-5day"), "value": 3}},
+    {"run":{"timestamp": Date("now-5day"), "value": 4}},
+    {"run":{"timestamp": Date("now-5day"), "value": 5}},
+    {"run":{"timestamp": Date("now-6day"), "value": 6}},
+    {"run":{"timestamp": Date("now-6day"), "value": 7}},
+    {"run":{"timestamp": Date("now-6day"), "value": 8}},
+    {"run":{"timestamp": Date("now-6day"), "value": 9}},
+    {"run":{"timestamp": Date("now-6day"), "value": 0}},
+    {"run":{"timestamp": Date("now-6day"), "value": 1}},
+    {"run":{"timestamp": Date("now-0day"), "value": 2}},
+    {"run":{"timestamp": Date("now-0day"), "value": 3}},
+    {"run":{"timestamp": Date("now-0day"), "value": 4}},
+    {"run":{"timestamp": Date("now-0day"), "value": 5}}
 ]
 
 
@@ -57,7 +57,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "from": base_test_class.settings.backend_es.index,
                 "edges": [
                     {
-                        "value": "_run.timestamp",
+                        "value": "run.timestamp",
                         "allowNulls": False,
                         "domain": {
                             "type": "time",
@@ -71,16 +71,16 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"_run": {"timestamp": (FROM_DATE + 1 * DAY).unix}, "count": 6},
-                    {"_run": {"timestamp": (FROM_DATE + 2 * DAY).unix}, "count": 5},
-                    {"_run": {"timestamp": (FROM_DATE + 3 * DAY).unix}, "count": 4},
-                    {"_run": {"timestamp": (FROM_DATE + 4 * DAY).unix}, "count": 3},
-                    {"_run": {"timestamp": (FROM_DATE + 5 * DAY).unix}, "count": 2},
-                    {"_run": {"timestamp": (FROM_DATE + 6 * DAY).unix}, "count": 1}
+                    {"run": {"timestamp": (FROM_DATE + 1 * DAY).unix}, "count": 6},
+                    {"run": {"timestamp": (FROM_DATE + 2 * DAY).unix}, "count": 5},
+                    {"run": {"timestamp": (FROM_DATE + 3 * DAY).unix}, "count": 4},
+                    {"run": {"timestamp": (FROM_DATE + 4 * DAY).unix}, "count": 3},
+                    {"run": {"timestamp": (FROM_DATE + 5 * DAY).unix}, "count": 2},
+                    {"run": {"timestamp": (FROM_DATE + 6 * DAY).unix}, "count": 1}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["_run.timestamp", "count"],
+                "header": ["run.timestamp", "count"],
                 "data": [
                     [(FROM_DATE + 1 * DAY).unix, 6],
                     [(FROM_DATE + 2 * DAY).unix, 5],
@@ -94,7 +94,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "meta": {"format": "cube"},
                 "edges": [
                     {
-                        "name": "_run.timestamp",
+                        "name": "run.timestamp",
                         "domain": {
                             "type": "time",
                             "key": "min",

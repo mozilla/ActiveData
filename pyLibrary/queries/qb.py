@@ -462,22 +462,22 @@ def sort(data, fieldnames=None):
             fieldnames = fieldnames[0]
             # SPECIAL CASE, ONLY ONE FIELD TO SORT BY
             if isinstance(fieldnames, (basestring, int)):
-                fieldnames = wrap({"field": fieldnames, "sort": 1})
+                fieldnames = wrap({"value": fieldnames, "sort": 1})
 
             # EXPECTING {"field":f, "sort":i} FORMAT
             fieldnames.sort = sort_direction.get(fieldnames.sort, 1)
-            fieldnames.field = coalesce(fieldnames.field, fieldnames.value)
-            if fieldnames.field==None:
-                Log.error("Expecting sort to have 'field' attribute")
+            fieldnames.value = coalesce(fieldnames.value, fieldnames.field)
+            if fieldnames.value==None:
+                Log.error("Expecting sort to have 'value' attribute")
 
-            if fieldnames.field == ".":
+            if fieldnames.value == ".":
                 #VALUE COMPARE
                 def _compare_v(l, r):
                     return value_compare(l, r, fieldnames.sort)
                 return DictList([unwrap(d) for d in sorted(data, cmp=_compare_v)])
             else:
                 def _compare_o(left, right):
-                    return value_compare(coalesce(left)[fieldnames.field], coalesce(right)[fieldnames.field], fieldnames.sort)
+                    return value_compare(coalesce(left)[fieldnames.value], coalesce(right)[fieldnames.value], fieldnames.sort)
                 return DictList([unwrap(d) for d in sorted(data, cmp=_compare_o)])
 
         formal = query._normalize_sort(fieldnames)
@@ -487,7 +487,7 @@ def sort(data, fieldnames=None):
             right = coalesce(right)
             for f in formal:
                 try:
-                    result = value_compare(left[f.field], right[f.field], f.sort)
+                    result = value_compare(left[f.value], right[f.value], f.sort)
                     if result != 0:
                         return result
                 except Exception, e:
@@ -504,7 +504,7 @@ def sort(data, fieldnames=None):
 
         return output
     except Exception, e:
-        Log.error("Problem sorting\n{{data}}",  data= data, cause=e)
+        Log.error("Problem sorting\n{{data}}",  data=data, cause=e)
 
 
 def value_compare(l, r, ordering=1):

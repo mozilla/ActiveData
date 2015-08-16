@@ -33,6 +33,38 @@ class TestBasicRequests(ActiveDataBaseTest):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.all_content, OVERVIEW)
 
+    def test_meta(self):
+        test = {
+            "data": [
+                {"a": "b"}
+            ],
+            "query": {
+                "from": "meta",
+                "where": {"eq": {"table.name": base_test_class.settings.backend_es.index}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                {"a": "b"}
+            ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [["b"]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a": ["b"]
+                }
+            }
+        }
+        self._execute_es_tests(test)
 
 
 

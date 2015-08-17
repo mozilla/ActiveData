@@ -284,9 +284,10 @@ class FromES(Container):
         for k, v in command.set.items():
             if not is_keyword(k):
                 Log.error("Only support simple paths for now")
-
-            scripts.append("ctx._source." + k + " = " + expressions.qb_expression_to_ruby(v) + ";\n")
-        script = "".join(scripts)
+            if isinstance(v, Mapping) and v.doc:
+                scripts.append({"doc": v.doc})
+            else:
+                scripts.append({"script": "ctx._source." + k + " = " + expressions.qb_expression_to_ruby(v)})
 
         if results.hits.hits:
             updates = []

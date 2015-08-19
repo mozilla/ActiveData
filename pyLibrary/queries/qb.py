@@ -26,7 +26,7 @@ from pyLibrary.maths import Math
 from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.cubes.aggs import cube_aggs
-from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, compile_expression, qb_expression_to_function
+from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, compile_expression, qb_expression_to_function, qb_expression_to_python
 from pyLibrary.queries.flat_list import FlatList
 from pyLibrary.queries.index import Index
 from pyLibrary.queries.query import Query, _normalize_selects, sort_direction, _normalize_select
@@ -39,13 +39,13 @@ from pyLibrary.queries.unique_index import UniqueIndex
 # TODO: USE http://docs.sqlalchemy.org/en/latest/core/tutorial.html AS DOCUMENTATION FRAMEWORK
 
 
-def run(query):
+def run(query, frum=None):
     """
     THIS FUNCTION IS SIMPLY SWITCHING BASED ON THE query["from"] CONTAINER,
     BUT IT IS ALSO PROCESSING A list CONTAINER; SEPARATE TO A ListContainer
     """
     query = Query(query)
-    frum = query["from"]
+    frum = coalesce(frum, query["from"])
     if isinstance(frum, Container):
         return frum.query(query)
     elif isinstance(frum, (list, set, GeneratorType)):
@@ -62,11 +62,11 @@ def run(query):
     if is_aggs(query):
         frum = list_aggs(frum, query)
     else:  # SETOP
-        try:
-            if query.filter != None or query.esfilter != None:
-                Log.error("use 'where' clause")
-        except AttributeError, e:
-            pass
+        # try:
+        #     if query.filter != None or query.esfilter != None:
+        #         Log.error("use 'where' clause")
+        # except AttributeError:
+        #     pass
 
         if query.where is not TRUE_FILTER:
             frum = filter(frum, query.where)
@@ -85,7 +85,9 @@ def run(query):
             window(frum, param)
 
     # AT THIS POINT frum IS IN LIST FORMAT, NOW PACKAGE RESULT
-    if query.format == "table":
+    if query.format == "cube":
+        frum = convert.list2cube(frum)
+    elif query.format == "table":
         frum = convert.list2table(frum)
         frum.meta.format = "table"
     else:
@@ -546,9 +548,13 @@ def filter(data, where):
     if isinstance(data, Cube):
         data.filter(where)
 
+    temp = None
+    exec("def temp(row):\n    return "+qb_expression_to_python(where))
+    return data.filter(temp)
+
     try:
         return drill_filter(where, data)
-    except Exception, e:
+    except Exception, _:
         # WOW!  THIS IS INEFFICIENT!
         return wrap([unwrap(d) for d in drill_filter(where, [DictObject(d) for d in data])])
 
@@ -571,7 +577,10 @@ def drill_filter(esfilter, data):
         col = split_field(fieldname)
         d = data
         for i, c in enumerate(col):
-            d = d[c]
+            try:
+                d = d[c]
+            except Exception, e:
+                Log.error("{{name}} does not exist", name=fieldname)
             if isinstance(d, list) and len(col) > 1:
                 if len(primary_column) <= depth+i:
                     primary_nested.append(True)
@@ -636,10 +645,11 @@ def drill_filter(esfilter, data):
                 return True
             else:
                 return {"not": f}
-        elif filter.term:
+        elif filter.term or filter.eq:
+            eq = coalesce(filter.term, filter.eq)
             result = True
             output = {}
-            for col, val in filter["term"].items():
+            for col, val in eq.items():
                 first, rest = parse_field(col, data, depth)
                 d = data[first]
                 if not rest:

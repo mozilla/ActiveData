@@ -233,9 +233,8 @@ class TestAggOps(ActiveDataBaseTest):
                 "select": {"value": ".", "aggregate": "median"}
             },
             "expecting_list": {
-                "meta": {"format": "value"}, "data": [
-                210.5
-            ]},
+                "meta": {"format": "value"}, "data": 210.5
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["median"],

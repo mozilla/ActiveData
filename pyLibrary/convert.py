@@ -260,6 +260,31 @@ def list2table(rows):
     })
 
 
+def list2cube(rows):
+    columns = set()
+    for r in rows:
+        columns |= set(r.keys())
+    keys = list(columns)
+
+    data = {k: [] for k in keys}
+    output = wrap({
+        "meta": {"format": "cube"},
+        "edges": [
+            {
+                "name": "rownum",
+                "domain": {"type": "rownum", "min": 0, "max": len(rows), "interval": 1}
+            }
+        ],
+        "data": data
+    })
+
+    for r in rows:
+        for k in keys:
+            data[k].append(r[k])
+
+    return output
+
+
 def value2string(value):
     # PROPER NULL HANDLING
     if value == None:

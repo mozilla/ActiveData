@@ -183,11 +183,11 @@ def qb_expression_to_python(expr):
         elif isinstance(term, Mapping):
             if op == "eq":
                 # eq CAN ACCEPT A WHOLE OBJECT OF key:value PAIRS TO COMPARE
-                output = " and ".join("(" + qb_expression_to_python(a) + ")" + bop + "(" + qb_expression_to_python(b) + ")" for a, b in term.items())
+                output = " and ".join("(" + qb_expression_to_python(a) + ")" + bop + convert.value2json(b) for a, b in term.items())
                 return output
             else:
                 a, b = term.items()[0]
-                output = "(" + qb_expression_to_python(a) + ")" + bop + "(" + qb_expression_to_python(b) + ")"
+                output = "(" + qb_expression_to_python(a) + ")" + bop + convert.value2json(b)
                 return output
         else:
             Log.error("Expecting binary term")

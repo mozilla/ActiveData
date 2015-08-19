@@ -254,7 +254,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
         elif result.meta.format == "list":
             query = Query(query, schema=FromES(self.index.settings))
             if not query.sort:
-                sort_order = coalesce(query.edges, query.groupby) + listwrap(query.select)
+                sort_order = coalesce(query.edges, query.groupby) + listwrap(query.select) + qb.get_columns(result.data)
 
                 if isinstance(expected.data, list):
                     expected.data = qb.sort(expected.data, sort_order.name)

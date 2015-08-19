@@ -104,7 +104,7 @@ def query(path):
             data = convert.json2value(text)
             record_request(flask.request, data, None, None)
             frum = Container.new_instance(data["from"])
-            result = qb.run(data)
+            result = qb.run(data, frum)
 
         if data.meta.save:
             result.meta.saved_as = query_finder.save(data)

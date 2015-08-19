@@ -108,6 +108,7 @@ def parse_columns(parent_path, esProperties):
             columns.append({
                 "name": join_field(split_field(path)[1::]),
                 "type": "nested",
+                "depth": 0,
                 "useSource": False
             })
 
@@ -131,6 +132,7 @@ def parse_columns(parent_path, esProperties):
             columns.append({
                 "name": join_field(split_field(path)[1::]),
                 "type": "object",
+                "depth": 0,
                 "useSource": False
             })
 
@@ -152,18 +154,21 @@ def parse_columns(parent_path, esProperties):
             columns.append({
                 "name": join_field(split_field(path)[1::]),
                 "type": property.type,
+                "depth": 0,
                 "useSource": property.index == "no"
             })
             if property.index_name and name != property.index_name:
                 columns.append({
                     "name": property.index_name,
                     "type": property.type,
+                    "depth": 0,
                     "useSource": property.index == "no"
                 })
         elif property.enabled == None or property.enabled == False:
             columns.append({
                 "name": join_field(split_field(path)[1::]),
                 "type": "object",
+                "depth": 0,
                 "useSource": True
             })
         else:

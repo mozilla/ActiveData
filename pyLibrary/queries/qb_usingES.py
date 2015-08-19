@@ -341,9 +341,7 @@ class FromESMetadata(Container):
             for _, properties in meta.mappings.items():
                 columns = _parse_properties(index, properties.properties)
                 for c in columns:
-                    c.cube = index
-                    c.property = c.name
-                    c.name = None
+                    c.table = index
                     c.useSource = None
 
                 self.columns.extend(columns)
@@ -353,19 +351,19 @@ class FromESMetadata(Container):
                         continue
                     alias_done.add(a)
                     for c in columns:
-                        self.columns.append(set_default({"cube": a}, c))  # ENSURE WE COPY
+                        self.columns.append(set_default({"table": a}, c))  # ENSURE WE COPY
 
     def query(self, _query):
         if not self.columns:
             self._get_columns()
 
-        return qb.run(set_default(
+        return qb.run(Query(set_default(
             {
                 "from": self.columns,
-                "sort": ["cube", "property"]
+                "sort": ["table", "property"]
             },
             _query.as_dict()
-        ))
+        )))
 
     def get_columns(self, _=None):
         """
@@ -374,11 +372,11 @@ class FromESMetadata(Container):
         if self.name == "meta.columns":
             return wrap([
                 {
-                    "name": "cube",
+                    "name": "table",
                     "type": "string",
                     "depth": 0
                 }, {
-                    "name": "column",
+                    "name": "name",
                     "type": "string",
                     "depth": 0
                 }, {
@@ -392,7 +390,7 @@ class FromESMetadata(Container):
                 }
             ])
         else:
-            Log.error("Unknonw metadata: {{name}}",  name= self.settings.name)
+            Log.error("Unknonw metadata: {{name}}.  Only `meta.columns` exists for now.",  name= self.settings.name)
 
 
 def _parse_properties(index, properties):

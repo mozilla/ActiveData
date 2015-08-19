@@ -56,7 +56,7 @@ class TestMetadata(ActiveDataBaseTest):
                     "table": [table_name],
                     "name": ["a"],
                     "type": ["string"],
-                    "depth": 0
+                    "depth": [0]
                 }
             }
         })

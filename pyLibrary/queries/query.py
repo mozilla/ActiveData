@@ -44,7 +44,7 @@ def _late_import():
 
 
 class Query(object):
-    __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "format", "isLean"]
+    __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "having", "format", "isLean"]
 
     def __new__(cls, query, schema=None):
         if isinstance(query, Query):
@@ -55,7 +55,7 @@ class Query(object):
         """
         NORMALIZE QUERY SO IT CAN STILL BE JSON
         """
-        if isinstance(query, Query):
+        if isinstance(query, Query) or query == None:
             return
 
         object.__init__(self)
@@ -100,6 +100,7 @@ class Query(object):
 
         self.where = _normalize_where(query.where, schema=schema)
         self.window = [_normalize_window(w) for w in listwrap(query.window)]
+        self.having = None
         self.sort = _normalize_sort(query.sort)
         self.limit = coalesce(query.limit, DEFAULT_LIMIT)
         if not Math.is_integer(self.limit) or self.limit < 0:
@@ -170,12 +171,19 @@ def _normalize_selects(selects, schema=None):
 
 def _normalize_select(select, schema=None):
     if isinstance(select, basestring):
+        select = select.rstrip(".")
+        if not select:
+            return Dict(
+                name="_all",
+                value=".",
+                aggregate="none"
+            )
         if schema:
             s = schema[select]
             if s:
                 return s.getSelect()
         return Dict(
-            name=select.rstrip("."),  # TRAILING DOT INDICATES THE VALUE, BUT IS INVALID FOR THE NAME
+            name=select,  # TRAILING DOT INDICATES THE VALUE, BUT IS INVALID FOR THE NAME
             value=select,
             aggregate="none"
         )
@@ -183,7 +191,10 @@ def _normalize_select(select, schema=None):
         select = wrap(select)
         output = select.copy()
         if not select.value or isinstance(select.value, basestring):
-            output.name = coalesce(select.name, select.value, select.aggregate)
+            if select.value == ".":
+                output.name = coalesce(select.name, select.aggregate)
+            else:
+                output.name = coalesce(select.name, select.value, select.aggregate)
         elif not output.name:
             Log.error("Must give name to each column in select clause")
 
@@ -515,15 +526,15 @@ def get_all_vars(query, exclude_where=False):
     :param exclude_where: Sometimes we do not what to look at the where clause
     :return: all variables in use by query
     """
-    output = []
+    output = set()
     for s in listwrap(query.select):
-        output.extend(select_get_all_vars(s))
+        output |= select_get_all_vars(s)
     for s in listwrap(query.edges):
-        output.extend(edges_get_all_vars(s))
+        output |= edges_get_all_vars(s)
     for s in listwrap(query.groupby):
-        output.extend(edges_get_all_vars(s))
+        output |= edges_get_all_vars(s)
     if not exclude_where:
-        output.extend(expressions.get_all_vars(query.where))
+        output |= expressions.get_all_vars(query.where)
     return output
 
 

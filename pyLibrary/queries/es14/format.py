@@ -115,6 +115,8 @@ def format_table_from_aggop(decoders, aggs, start, query, select):
 
     row = []
     for s in select:
+        if not s.pull:
+            Log.error("programmer error")
         row.append(agg[s.pull])
 
     return Dict(

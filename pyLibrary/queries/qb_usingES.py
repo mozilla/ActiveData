@@ -24,6 +24,7 @@ from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
 from pyLibrary.queries.es14.setop import is_fieldop, is_setop, es_setop, es_fieldop
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.es14.util import aggregates1_4
+from pyLibrary.queries.namespace.typed import Typed
 from pyLibrary.queries.query import Query, _normalize_where, _normalize_domain
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
@@ -59,7 +60,9 @@ class FromES(Container):
         self.settings.type = self._es.settings.type
         self.edges = Dict()
         self.worker = None
-        self._columns = None
+        self._columns = self.get_columns()
+        # SWITCH ON TYPED MODE
+        self.typed = any(c.name in ("$value", "$object") for c in self._columns)
 
     @staticmethod
     def wrap(es):
@@ -97,9 +100,12 @@ class FromES(Container):
     def query(self, _query):
         try:
             query = Query(_query, schema=self)
+            if self.typed:
+                query = Typed().convert(query)
+
             for s in listwrap(query.select):
                 if not aggregates1_4.get(s.aggregate):
-                    Log.error("ES can not aggregate " + self.select[0].name + " because '" + self.select[0].aggregate + "' is not a recognized aggregate")
+                    Log.error("ES can not aggregate " + s.name + " because '" + s.aggregate + "' is not a recognized aggregate")
 
             frum = query["from"]
             if isinstance(frum, Query):
@@ -136,8 +142,6 @@ class FromES(Container):
 
     def get_columns(self, _from_name=None):
         """
-        ENSURE COLUMNS FOR GIVEN INDEX/QUERY ARE LOADED, SCRIPT COMPILATION WILL WORK BETTER
-
         _from_name - NOT MEANT FOR EXTERNAL USE
         """
         if _from_name is None:
@@ -151,9 +155,9 @@ class FromES(Container):
             if self.url != output.url:
                 Log.error(
                     "Using {{name}} for two different containers\n\t{{existing}}\n\t{{new}}",
-                    name= _from_name,
-                    existing= output.url,
-                    new= self._es.url
+                    name=_from_name,
+                    existing=output.url,
+                    new=self._es.url
                 )
             return output.columns
 
@@ -193,6 +197,7 @@ class FromES(Container):
                 else:
                     c.domain.type = "uid"
             c.domain = _normalize_domain(c.domain)
+
         return output.columns
 
 

@@ -17,10 +17,11 @@ from pyLibrary import convert
 from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, join_field
+from pyLibrary.maths import Math
 from pyLibrary.queries import qb, es09
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword
-from pyLibrary.queries.es14.util import aggregates1_4
+from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
 from pyLibrary.queries.expressions import simplify_esfilter, qb_expression_to_ruby, get_all_vars
 from pyLibrary.times.timer import Timer
 
@@ -42,7 +43,20 @@ def es_aggsop(es, frum, query):
         if s.aggregate == "count" and (s.value == None or s.value == "."):
             s.pull = "doc_count"
         elif s.value == ".":
-            Log.error("do not know how to handle")
+            if frum.typed:
+                # STATISITCAL AGGS IMPLY $value, WHILE OTHERS CAN BE ANYTHING
+                if s.aggregate in NON_STATISTICAL_AGGS:
+                    #TODO: HANDLE BOTH $value AND $objects TO COUNT
+                    Log.error("do not know how to handle")
+                else:
+                    s.value = "$value"
+                    new_select["$value"] += [s]
+            else:
+                if s.aggregate in NON_STATISTICAL_AGGS:
+                    #TODO:  WE SHOULD BE ABLE TO COUNT, BUT WE MUST *OR* ALL LEAF VALUES TO DO IT
+                    Log.error("do not know how to handle")
+                else:
+                    Log.error('Not expecting ES to have a value at "." which {{agg}} can be applied', agg=s.aggregate)
         elif is_keyword(s.value):
             new_select[literal_field(s.value)] += [s]
         else:
@@ -55,13 +69,29 @@ def es_aggsop(es, frum, query):
         else:
             field_name = representative.value
 
-        if len(many)>1:
+        if len(many)>1 or many[0].aggregate in ("median", "percentile"):
             # canonical_name=literal_field(many[0].name)
-            es_query.aggs[literal_field(canonical_name)].stats.field = field_name
             for s in many:
                 if s.aggregate == "count":
+                    es_query.aggs[literal_field(canonical_name)].stats.field = field_name
                     s.pull = literal_field(canonical_name) + ".count"
+                elif s.aggregate == "median":
+                    #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
+                    key=literal_field(canonical_name + " percentile")
+
+                    es_query.aggs[key].percentiles.field = field_name
+                    es_query.aggs[key].percentiles.percents += [50]
+                    s.pull = key + ".values.50\.0"
+                elif s.aggregate == "percentile":
+                    #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
+                    key=literal_field(canonical_name + " percentile")
+                    percent = Math.round(s.percentile * 100, decimal=6)
+
+                    es_query.aggs[key].percentiles.field = field_name
+                    es_query.aggs[key].percentiles.percents += [percent]
+                    s.pull = key + ".values." + literal_field(unicode(percent))
                 else:
+                    es_query.aggs[literal_field(canonical_name)].stats.field = field_name
                     s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
         else:
             es_query.aggs[literal_field(canonical_name)][aggregates1_4[representative.aggregate]].field = field_name

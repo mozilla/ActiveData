@@ -143,13 +143,13 @@ def _getdefault(obj, key):
     TRY BOTH ATTRIBUTE AND ITEM ACCESS, OR RETURN Null
     """
     try:
-        return getattr(obj, key)
-    except Exception, e:
+        return obj[key]
+    except Exception, f:
         pass
 
     try:
-        return obj[key]
-    except Exception, f:
+        return getattr(obj, key)
+    except Exception, e:
         pass
 
     try:

@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from collections import Mapping
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, wrap, Dict
+from pyLibrary.dot import set_default, wrap, Dict, Null
 from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.namespace import convert_list, Namespace
@@ -66,10 +66,10 @@ class Typed(Namespace):
             return wrap([self.convert(value) for value in expr])
 
     def _convert_query(self, query):
-        output = Query()
+        output = Query(Null)
         output.select = self._convert_clause(query.select)
         output.where = self.convert(query.where)
-        output["from"] = self._convert_from(query["from"])
+        output.frum = self._convert_from(query.frum)
         output.edges = self._convert_clause(query.edges)
         output.groupby = self._convert_clause(query.groupby)
         output.window = convert_list(self._convert_window, query.window)

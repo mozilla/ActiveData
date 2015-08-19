@@ -77,6 +77,8 @@ aggregates1_4 = {
     "mean": "avg",
     "average": "avg",
     "avg": "avg",
+    "median": "median",
+    "percentile": "percentile",
     "N": "count",
     "X0": "count",
     "X1": "sum",
@@ -86,4 +88,6 @@ aggregates1_4 = {
     "var": "variance",
     "variance": "variance"
 }
+
+NON_STATISTICAL_AGGS = {"none", "one", "count"}
 

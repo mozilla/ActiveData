@@ -77,9 +77,8 @@ class TestAggOps(ActiveDataBaseTest):
                 "select": {"value": "a", "aggregate": "median"}
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                {"a": 210.5}
-            ]},
+                "meta": {"format": "value"}, "data": 210.5
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a"],
@@ -90,6 +89,32 @@ class TestAggOps(ActiveDataBaseTest):
                 "edges": [],
                 "data": {
                     "a": 210.5
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
+    def test_percentile(self):
+        test = {
+            "data": [{"a": i**2} for i in range(30)],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": "a", "aggregate": "percentile", "percentile": 0.90}
+            },
+            "expecting_list": {
+                "meta": {"format": "value"}, "data": 681.3
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [[681.3]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [],
+                "data": {
+                    "a": 681.3
                 }
             }
         }
@@ -146,7 +171,7 @@ class TestAggOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self._execute_es_tests(test, tjson=True)
 
     def test_max_on_value(self):
         test = {
@@ -171,7 +196,7 @@ class TestAggOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self._execute_es_tests(test, tjson=True)
 
 
     def test_max_object_on_value(self):
@@ -197,7 +222,7 @@ class TestAggOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self._execute_es_tests(test, tjson=True)
 
 
     def test_median_on_value(self):
@@ -208,12 +233,12 @@ class TestAggOps(ActiveDataBaseTest):
                 "select": {"value": ".", "aggregate": "median"}
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
+                "meta": {"format": "value"}, "data": [
                 210.5
             ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["medain"],
+                "header": ["median"],
                 "data": [[210.5]]
             },
             "expecting_cube": {
@@ -224,7 +249,7 @@ class TestAggOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self._execute_es_tests(test, tjson=True)
 
 
     def test_many_aggs_on_value(self):
@@ -241,7 +266,7 @@ class TestAggOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "value"},
-                "data": {"mini": 0, "maxi": 58, "count":30}
+                "data": {"mini": 0, "maxi": 58, "count": 30}
             },
             "expecting_table": {
                 "meta": {"format": "table"},

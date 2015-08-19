@@ -552,17 +552,17 @@ def select_get_all_vars(s):
 
 
 def edges_get_all_vars(e):
-    output = []
+    output = set()
     if isinstance(e.value, basestring):
-        output.append(e.value)
+        output.add(e.value)
     if e.domain.key:
-        output.append(e.domain.key)
+        output.add(e.domain.key)
     if e.domain.where:
-        output.extend(expressions.get_all_vars(e.domain.where))
+        output |= expressions.get_all_vars(e.domain.where)
     if e.domain.partitions:
         for p in e.domain.partitions:
             if p.where:
-                output.extend(expressions.get_all_vars(p.where))
+                output |= expressions.get_all_vars(p.where)
     return output
 
 
@@ -570,12 +570,12 @@ def where_get_all_vars(w):
     if w in [True, False, None]:
         return []
 
-    output = []
+    output = set()
     key = list(w.keys())[0]
     val = w[key]
     if key in ["and", "or"]:
         for ww in val:
-            output.extend(expressions.get_all_vars(ww))
+            output |= expressions.get_all_vars(ww)
         return output
 
     if key == "not":
@@ -583,18 +583,18 @@ def where_get_all_vars(w):
 
     if key in ["exists", "missing"]:
         if isinstance(val, unicode):
-            return [val]
+            return {val}
         else:
-            return [val.field]
+            return {val.field}
 
     if key in ["gte", "gt", "eq", "ne", "term", "terms", "lt", "lte", "range", "prefix"]:
         if not isinstance(val, Mapping):
             Log.error("Expecting `{{key}}` to have a dict value, not a {{type}}",
                 key= key,
                 type= val.__class__.__name__)
-        return list(val.keys())
+        return val.keys()
 
     if key == "match_all":
-        return []
+        return set()
 
     Log.error("do not know how to handle where {{where|json}}", {"where", w})

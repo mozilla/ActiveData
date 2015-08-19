@@ -157,7 +157,7 @@ class AggsDecoder(object):
                 col = cols.filter(lambda c: c.name == e.value)[0]
                 if not col:
                     return object.__new__(DefaultDecoder, e.copy())
-                e.domain = deepcopy(col.domain)
+                e.domain = set_default(col.domain, e.domain.as_dict())
             elif isinstance(e.value, (list, Mapping)):
                 Log.error("Not supported yet")
             else:

@@ -32,7 +32,7 @@ from pyLibrary.queries import es14, es09
 format_dispatch = {}
 
 def is_fieldop(es, query):
-    if not (es.cluster.version.startswith("1.4.") or es.cluster.version.startswith("1.5.")):
+    if not any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6", "1.7"])):
         return False
 
     # THESE SMOOTH EDGES REQUIRE ALL DATA (SETOP)
@@ -117,7 +117,7 @@ def extract_rows(es, es_query, source, select, query):
 
 
 def is_setop(es, query):
-    if not (es.cluster.version.startswith("1.4.") or es.cluster.version.startswith("1.5.")):
+    if not any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6", "1.7"])):
         return False
 
     select = listwrap(query.select)

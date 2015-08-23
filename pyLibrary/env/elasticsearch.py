@@ -269,7 +269,7 @@ class Index(object):
                             error=item.index.error,
                             line=lines[i * 2 + 1]
                         )
-                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5."])):
+                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6", "1.7"])):
                     if item.index.status not in [200, 201]:
                         Log.error(
                             "{{num}} {{error}} while loading line into {{index}}:\n{{line}}",
@@ -313,7 +313,7 @@ class Index(object):
                 Log.error("Can not set refresh interval ({{error}})", {
                     "error": utf82unicode(response.all_content)
                 })
-        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5."])):
+        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6", "1.7"])):
             response = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
                 data=convert.unicode2utf8('{"index":{"refresh_interval":' + convert.value2json(interval) + '}}')

@@ -16,7 +16,7 @@ from copy import copy
 from pyLibrary import queries
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND, UNION
-from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field
+from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field, unwrap
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
 from pyLibrary.queries.domains import is_keyword
@@ -217,21 +217,43 @@ def format_list(T, select, source, query=None):
 
 
 def format_table(T, select, source, query=None):
-    header = [s.name for s in select]
-    map = {s.name: i for i, s in enumerate(select)}  # MAP FROM name TO COLUMN INDEX
+    header = [s.name for s in listwrap(query.select)]
+
+    # EACH FIELD CAN END UP IN MORE THAN ONE COLUMN
+    # MAP FROM select.name -> (index, shortname) PAIR
+    map = Dict()
+    for s in select:
+        for i, h in enumerate(header):
+            if s.name.startswith(h+"."):
+                map[literal_field(s.name)] += [(i, s.name[len(h)+1:])]
+            elif s.name == h:
+                map[literal_field(s.name)] += [(i, None)]
+    map = unwrap(map)
+
     data = []
     for row in T:
         r = [None] * len(header)
         for s in select:
             if s.value == ".":
-                r[map[s.name]] = row[source]
+                value = row[source]
             else:
                 if source == "_source":
-                    r[map[s.name]] = unwraplist(row[source][s.value])
+                    value = unwraplist(row[source][s.value])
                 elif isinstance(s.value, basestring):  # fields
-                    r[map[s.name]] = unwraplist(row[source][literal_field(s.value)])
+                    value = unwraplist(row[source][literal_field(s.value)])
                 else:
-                    r[map[s.name]] = unwraplist(row[source][literal_field(s.name)])
+                    value = unwraplist(row[source][literal_field(s.name)])
+
+            if value != None:
+                for i, n in map[s.name]:
+                    if n is None:
+                        r[i] = value
+                    else:
+                        col = r[i]
+                        if col is None:
+                            r[i] = Dict()
+                        r[i][n] = value
+
         data.append(r)
     return Dict(
         meta={"format": "table"},
@@ -241,23 +263,47 @@ def format_table(T, select, source, query=None):
 
 
 def format_cube(T, select, source, query=None):
-    matricies = {}
+    # EACH FIELD CAN END UP IN MORE THAN ONE COLUMN
+    # MAP FROM select.name -> (parent_name, shortname) PAIR
+    map = Dict()
     for s in select:
-        try:
-            if s.value == ".":
-                matricies[s.name] = Matrix.wrap(T.select(source))
-            elif isinstance(s.value, list):
-                matricies[s.name] = Matrix.wrap([tuple(unwraplist(t[source][ss]) for ss in s.value) for t in T])
-            else:
-                if source == "_source":
-                    matricies[s.name] = Matrix.wrap([unwraplist(t[source][s.value]) for t in T])
+        for h in listwrap(query.select).name:
+            if s.name.startswith(h+"."):
+                map[literal_field(s.name)] += [(h, s.name[len(h)+1:])]
+            elif s.name == h:
+                map[literal_field(s.name)] += [(h, None)]
+    map = unwrap(map)
 
-                elif isinstance(s.value, basestring):  # fields
-                    matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.value)) for t in T])
+    matricies = {s.name: Matrix(dims=(len(T),)) for s in listwrap(query.select)}
+    for i, t in enumerate(T):
+        for s in select:
+            try:
+                if s.value == ".":
+                    value = t[source]
+                elif isinstance(s.value, list):
+                    value = tuple(unwraplist(t[source][ss]) for ss in s.value)
                 else:
-                    matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.name)) for t in T])
-        except Exception, e:
-            Log.error("", e)
+                    if source == "_source":
+                        value = unwraplist(t[source][s.value])
+                    elif isinstance(s.value, basestring):  # fields
+                        value = unwraplist(t[source].get(s.value))
+                    else:
+                        value = unwraplist(t[source].get(s.name))
+
+                if value == None:
+                    continue
+
+                for p, n in map[s.name]:
+                    if n is None:
+                        matricies[p][(i,)] = value
+                    else:
+                        col = matricies[p][(i,)]
+                        if col == None:
+                            matricies[p][(i,)] = Dict()
+                        matricies[p][(i,)][n] = value
+
+            except Exception, e:
+                Log.error("", e)
     cube = Cube(select, edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(T), "interval": 1}}], data=matricies)
     return cube
 

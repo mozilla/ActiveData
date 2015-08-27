@@ -18,6 +18,7 @@ from pyLibrary.times.durations import WEEK, DAY
 import base_test_class
 from tests.base_test_class import ActiveDataBaseTest
 
+null = None
 TODAY = Date.today()
 
 test_data_1 = [
@@ -200,7 +201,8 @@ class TestTime(ActiveDataBaseTest):
                 ],
                 "data": {"v": [
                     [r.v for r in expected2 if r.a == "x"],
-                    [r.v for r in expected2 if r.a == "y"]
+                    [r.v for r in expected2 if r.a == "y"],
+                    [null for r in expected2 if r.a == "x"]
                 ]}
             }
         }

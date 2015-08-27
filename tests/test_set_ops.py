@@ -621,17 +621,11 @@ class TestSetOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "a.b": [
-                        "x",
-                        "x",
-                        "x",
-                        None
-                    ],
-                    "a.v": [
-                        2,
-                        5,
-                        7,
-                        None
+                    "a": [
+                        ["x", 2],
+                        ["x", 5],
+                        ["x", 7],
+                        [None, None]
                     ]
                 }
             }
@@ -666,12 +660,12 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a.b", "a.v"],
+                "header": ["a"],
                 "data": [
-                    ["x", 2],
-                    ["x", 5],
-                    ["x", 7],
-                    [None, None]
+                    [{"b": "x", "v": 2}],
+                    [{"b": "x", "v": 5}],
+                    [{"b": "x", "v": 7}],
+                    [None]
                 ]
             },
             "expecting_cube": {

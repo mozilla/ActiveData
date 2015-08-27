@@ -2,6 +2,21 @@
 Advanced Query Operations
 =========================
 
+Select Clause Variations
+------------------------
+
+The select clause is used for both selecting particular values, and for declaring the structure those values are contained in.  In every case, the result of a query will return a set of rows, and the select clause can be used to give those rows structure.
+
+Selecting a single value, without a list, will ensure the row is identical to the value,
+"select": "*"
+"select": "."
+"select": ".*"
+"select": "a"
+"select": "a.b"
+"select": "a.*"
+"select": [ 
+
+
 
 Window Functions
 ----------------

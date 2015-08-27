@@ -12,24 +12,22 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
 from copy import copy
-from pyLibrary import queries, convert
 
+from pyLibrary import queries
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.collections import AND, SUM, OR, UNION
-from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, unwrap, literal_field
+from pyLibrary.collections import AND, UNION
+from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries import domains
-from pyLibrary.queries.expressions import qb_expression_to_esfilter, simplify_esfilter, TRUE_FILTER, qb_expression_to_ruby
+from pyLibrary.queries.expressions import qb_expression_to_esfilter, simplify_esfilter, qb_expression_to_ruby
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.containers.cube import Cube
-from pyLibrary.queries.es14.util import aggregates1_4, qb_sort_to_es_sort
+from pyLibrary.queries.es14.util import qb_sort_to_es_sort
 from pyLibrary.queries.query import DEFAULT_LIMIT
-from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.times.timer import Timer
 from pyLibrary.queries import es14, es09
-
 
 
 format_dispatch = {}
@@ -113,7 +111,7 @@ def extract_rows(es, es_query, source, select, query):
     try:
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]
 
-        output = formatter(T, select, source)
+        output = formatter(T, select, source, query)
         output.meta.es_response_time = call_timer.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
@@ -171,28 +169,54 @@ def es_setop(es, query):
     return extract_rows(es, es_query, source, select, query)
 
 
-def format_list(T, select, source):
-    data = []
-    for row in T:
-        r = Dict()
-        for s in select:
-            if s.value == ".":
-                r[s.name] = row[source]
-            else:
-                if source=="_source":
-                    r[s.name] = unwraplist(row[source][s.value])
-                elif isinstance(s.value, basestring):  # fields
-                    r[s.name] = unwraplist(row[source][literal_field(s.value)])
+def format_list(T, select, source, query=None):
+
+    if isinstance(query.select, list):
+        data = []
+        for row in T:
+            r = Dict()
+            for s in select:
+                if s.value == ".":
+                    r[s.name] = row[source]
                 else:
-                    r[s.name] = unwraplist(row[source][literal_field(s.name)])
-        data.append(r if r else None)
-    return Dict(
-        meta={"format": "list"},
-        data=data
-    )
+                    if source=="_source":
+                        r[s.name] = unwraplist(row[source][s.value])
+                    elif isinstance(s.value, basestring):  # fields
+                        r[s.name] = unwraplist(row[source][literal_field(s.value)])
+                    else:
+                        r[s.name] = unwraplist(row[source][literal_field(s.name)])
+            data.append(r if r else None)
+        return Dict(
+            meta={"format": "list"},
+            data=data
+        )
+    else:
+        # REMOVE THE name GIVEN TO THE SINGLE COLUMN
+        prefix_length = len(query.select.name+".")
+        def suffix(name):
+            return name[prefix_length:]
+
+        data = []
+        for row in T:
+            r = Dict()
+            for s in select:
+                if s.value == ".":
+                    r[suffix(s.name)] = row[source]
+                else:
+                    if source=="_source":
+                        r[suffix(s.name)] = unwraplist(row[source][s.value])
+                    elif isinstance(s.value, basestring):  # fields
+                        r[suffix(s.name)] = unwraplist(row[source][literal_field(s.value)])
+                    else:
+                        r[suffix(s.name)] = unwraplist(row[source][literal_field(s.name)])
+            data.append(r if r else None)
+        return Dict(
+            meta={"format": "list"},
+            data=data
+        )
 
 
-def format_table(T, select, source):
+def format_table(T, select, source, query=None):
     header = [s.name for s in select]
     map = {s.name: i for i, s in enumerate(select)}  # MAP FROM name TO COLUMN INDEX
     data = []
@@ -216,7 +240,7 @@ def format_table(T, select, source):
     )
 
 
-def format_cube(T, select, source):
+def format_cube(T, select, source, query=None):
     matricies = {}
     for s in select:
         try:

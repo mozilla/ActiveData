@@ -132,6 +132,7 @@ class DefaultDomain(Domain):
         self.partitions = DictList()
         self.map = dict()
         self.map[None] = self.NULL
+        self.limit = desc.get('limit')
 
     def compare(self, a, b):
         return value_compare(a.value, b.value)
@@ -162,6 +163,7 @@ class DefaultDomain(Domain):
     def as_dict(self):
         output = Domain.as_dict(self)
         output.partitions = self.partitions
+        output.limit = self.limit
         return output
 
 
@@ -284,6 +286,8 @@ class SimpleSetDomain(Domain):
         return self.partitions[index]
 
     def getKeyByIndex(self, index):
+        if index < 0 or index >= len(self.partitions):
+            return None
         return self.partitions[index][self.key]
 
     def getKey(self, part):

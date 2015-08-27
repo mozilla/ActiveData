@@ -20,7 +20,6 @@ lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
 class TestSetOps(ActiveDataBaseTest):
-
     def test_simplest(self):
         test = {
             "data": [
@@ -58,11 +57,11 @@ class TestSetOps(ActiveDataBaseTest):
     def test_select_on_missing_field(self):
         test = {
             "data": [  # PROPERTIES STARTING WITH _ ARE NOT NESTED AUTOMATICALLY
-                {"_a": {"_b": {"_c": 1}}},
-                {"_a": {"_b": {"_c": 2}}},
-                {"_a": {"_b": {"_c": 3}}},
-                {"_a": {"_b": {"_c": 4}}},
-                {"_a": {"_b": {"_c": 5}}}
+                       {"_a": {"_b": {"_c": 1}}},
+                       {"_a": {"_b": {"_c": 2}}},
+                       {"_a": {"_b": {"_c": 3}}},
+                       {"_a": {"_b": {"_c": 4}}},
+                       {"_a": {"_b": {"_c": 5}}}
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
@@ -90,7 +89,7 @@ class TestSetOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "_a._b._d": [None,None,None,None,None]
+                    "_a._b._d": [None, None, None, None, None]
                 }
             }
         }
@@ -101,11 +100,11 @@ class TestSetOps(ActiveDataBaseTest):
 
         test = {
             "data": [  # PROPERTIES STARTING WITH _ ARE NOT NESTED AUTOMATICALLY
-                {"a": {"b": {"c": 1}}},
-                {"a": {"b": {"c": 2}}},
-                {"a": {"b": {"c": 3}}},
-                {"a": {"b": {"c": 4}}},
-                {"a": {"b": {"c": 5}}}
+                       {"a": {"b": {"c": 1}}},
+                       {"a": {"b": {"c": 2}}},
+                       {"a": {"b": {"c": 3}}},
+                       {"a": {"b": {"c": 4}}},
+                       {"a": {"b": {"c": 5}}}
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
@@ -414,7 +413,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a.b",
+                "from": base_test_class.settings.backend_es.index + ".a.b",
                 "select": ["...x", "c"]
             },
             "expecting_list": {
@@ -488,14 +487,13 @@ class TestSetOps(ActiveDataBaseTest):
             self.es.delete_index(settings.index)
 
 
-
     def test_specific_limit(self):
         test = wrap({
             "data": lots_of_data,
             "query": {
                 "from": base_test_class.settings.backend_es.index,
                 "select": {"name": "value", "value": "a"},
-                "limit":5
+                "limit": 5
             },
         })
 
@@ -604,7 +602,7 @@ class TestSetOps(ActiveDataBaseTest):
                     None
                 ]
             },
-            "expecting_table":{
+            "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a.b", "a.v"],
                 "data": [
@@ -666,7 +664,7 @@ class TestSetOps(ActiveDataBaseTest):
                     None
                 ]
             },
-            "expecting_table":{
+            "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a.b", "a.v"],
                 "data": [
@@ -713,7 +711,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": ["o", "a"],
                 "sort": "a.v"
             },
-            "expecting_list":{
+            "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
                     {"o": 3, "a": {"b": "x", "v": 2}},
@@ -722,7 +720,7 @@ class TestSetOps(ActiveDataBaseTest):
                     {"o": 4}
                 ]
             },
-            "expecting_table":{
+            "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["o", "a.b", "a.v"],
                 "data": [
@@ -748,6 +746,56 @@ class TestSetOps(ActiveDataBaseTest):
                         None
                     ],
                     "o": [3, 1, 2, 4]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_length(self):
+        test = {
+            "data": [
+                {"v": "1"},
+                {"v": "22"},
+                {"v": "333"},
+                {"v": "4444"},
+                {"v": "55555"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"name": "l", "value": {"length": "v"}},
+                "sort": "v"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"l": 1},
+                    {"l": 2},
+                    {"l": 3},
+                    {"l": 4},
+                    {"l": 5}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["l"],
+                "data": [
+                    [1],
+                    [2],
+                    [3],
+                    [4],
+                    [5]
+                ]
+           },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 5, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "l": [1, 2, 3, 4, 5]
                 }
             }
         }

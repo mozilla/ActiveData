@@ -257,13 +257,13 @@ class Dict(MutableMapping):
         try:
             return "Dict("+dict.__str__(_get(self, "_dict"))+")"
         except Exception, e:
-            return "{}"
+            return "Dict{}"
 
     def __repr__(self):
         try:
             return "Dict("+dict.__repr__(_get(self, "_dict"))+")"
         except Exception, e:
-            return "Dict{}"
+            return "Dict()"
 
 
 class _DictUsingSelf(dict):

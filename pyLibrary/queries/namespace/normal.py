@@ -32,6 +32,9 @@ DEFAULT_LIMIT = 10
 
 
 class Normal(Namespace):
+    """
+    UNREMARKABLE NAMESPACE, SIMPLY FOR CONVERTING QUERY TO NORMAL FORM
+    """
 
     def convert(self, expr):
         if isinstance(expr, Mapping) and expr["from"]:

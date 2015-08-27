@@ -128,7 +128,13 @@ def _all_default(d, default, seen=None):
 
         if existing_value == None:
             if default_value != None:
-                _set_attr(d, [k], default_value)
+                try:
+                    _set_attr(d, [k], default_value)
+                except Exception, e:
+                    if PATH_NOT_FOUND not in e:
+                        from pyLibrary.debugs.logs import Log
+                        Log.error("Can not set attribute {{name}}", name=k, cause=e)
+
         elif (hasattr(existing_value, "__setattr__") or isinstance(existing_value, Mapping)) and isinstance(default_value, Mapping):
             df = seen.get(id(existing_value))
             if df:
@@ -270,7 +276,7 @@ def _set_attr(obj, path, value):
         new_value = value
 
     try:
-        _get(obj, "__setattr__")(attr_name, new_value)
+        setattr(obj, attr_name, new_value)
         return old_value
     except Exception, e:
         try:

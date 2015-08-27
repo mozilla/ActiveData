@@ -263,6 +263,7 @@ def get_all_vars(expr):
 
 python_unary_operators = {
     "not": "not {{term}}",
+    "length": 'len({{term}})'
 }
 
 python_binary_operators = {
@@ -294,6 +295,7 @@ python_multi_operators = {
 
 ruby_unary_operators = {
     "not": "! {{term}}",
+    "length": '({{term}}).length()'
 }
 
 ruby_binary_operators = {

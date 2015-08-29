@@ -246,16 +246,20 @@ class ActiveDataBaseTest(FuzzyTestCase):
             ))[1])[0]
             result.header = [result.header[m] for m in mapping]
 
+            if result.data:
+                columns = zip(*unwrap(result.data))
+                result.data = zip(*[columns[m] for m in mapping])
+
             if not query.sort:
-                if result.data:
-                    columns = zip(*unwrap(result.data))
-                    result.data = zip(*[columns[m] for m in mapping])
-                    result.data = qb.sort(result.data, range(len(result.header)))
+                result.data = qb.sort(result.data, range(len(result.header)))
                 expected.data = qb.sort(expected.data, range(len(expected.header)))
         elif result.meta.format == "list":
             query = Query(query, schema=FromES(self.index.settings))
             if not query.sort:
-                sort_order = coalesce(query.edges, query.groupby) + listwrap(query.select) + qb.get_columns(result.data)
+                if isinstance(query.select, list):
+                    sort_order = coalesce(query.edges, query.groupby) + query.select + qb.get_columns(result.data)
+                else:
+                    sort_order = coalesce(query.edges, query.groupby) + [{"name": "."}]
 
                 if isinstance(expected.data, list):
                     expected.data = qb.sort(expected.data, sort_order.name)

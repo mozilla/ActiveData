@@ -64,7 +64,9 @@ def split_field(field):
     """
     RETURN field AS ARRAY OF DOT-SEPARATED FIELDS
     """
-    if field.find(".") >= 0:
+    if field == ".":
+        return []
+    elif field.find(".") >= 0:
         field = field.replace("\.", "\a")
         return [k.replace("\a", ".") for k in field.split(".")]
     else:

@@ -5,7 +5,7 @@ import json
 import re
 from types import NoneType
 
-from pyLibrary.dot import DictList, NullType
+from pyLibrary.dot import DictList, NullType, Dict, unwrap
 from pyLibrary.dot.objects import DictObject
 from pyLibrary.times.dates import Date
 
@@ -81,6 +81,8 @@ def _scrub(value, is_done):
         return utf82unicode(value)
     elif type_ is Decimal:
         return float(value)
+    elif type_ is Dict:
+        return _scrub(unwrap(value), is_done)
     elif isinstance(value, Mapping):
         _id = id(value)
         if _id in is_done:

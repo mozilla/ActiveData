@@ -84,7 +84,7 @@ class Query(object):
             if query.edges or query.groupby:
                 self.select = {"name": "count", "value": ".", "aggregate": "count"}
             else:
-                self.select = {"name": "__all__", "value": "*", "aggregate": "none"}
+                self.select = {"name": ".", "value": "*", "aggregate": "none"}
 
         if query.groupby and query.edges:
             Log.error("You can not use both the `groupby` and `edges` clauses in the same query!")
@@ -174,16 +174,22 @@ def _normalize_select(select, schema=None):
         select = select.rstrip(".")
         if not select:
             return Dict(
-                name="_all",
-                value=".",
+                name=".",
+                value="*",
                 aggregate="none"
             )
         if schema:
             s = schema[select]
             if s:
                 return s.getSelect()
+
+        if select.endswith(".*"):
+            name = select[:-2]
+        else:
+            name = select
+
         return Dict(
-            name=select,  # TRAILING DOT INDICATES THE VALUE, BUT IS INVALID FOR THE NAME
+            name=name,
             value=select,
             aggregate="none"
         )
@@ -200,6 +206,8 @@ def _normalize_select(select, schema=None):
 
         if not output.name:
             Log.error("expecting select to have a name: {{select}}",  select= select)
+        if output.name.endswith(".*"):
+            output.name = output.name[:-2]
 
         output.aggregate = coalesce(canonical_aggregates.get(select.aggregate), select.aggregate, "none")
         return output

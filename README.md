@@ -69,7 +69,8 @@ You may use it to send queries to your instance of the service.  For example:
     {"from":"unittest"}
 ```
 
-This query can be used on [AutoTool's public ActiveData instance](http://activedata.allizom.org/tools/query.html),
+This query can be used on [Engineering Productivity's](https://wiki.mozilla.org/EngineeringProductivity) 
+[public ActiveData instance](http://activedata.allizom.org/tools/query.html),
 and you can use a similar query to get a few sample lines from your cluster.
 
 ## Tests

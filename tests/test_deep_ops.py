@@ -200,12 +200,12 @@ class TestDeepOps(ActiveDataBaseTest):
     def test_select_whole_document(self):
         test = {
             "data": [
-                {"o": 3, "a": [
+                {"o": 3, "_a": [
                     {"b": "x", "v": 2},
                     {"b": "y", "v": 3}
                 ]},
-                {"o": 1, "a": {"b": "x", "v": 5}},
-                {"o": 2, "a": [
+                {"o": 1, "_a": {"b": "x", "v": 5}},
+                {"o": 2, "_a": [
                     {"b": "x", "v": 7},
                 ]},
                 {"o": 4, "c": "x"}

@@ -10,24 +10,24 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+
 from collections import Mapping
-from copy import copy
 
 from pyLibrary import queries
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.collections import AND, UNION
-from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field, unwrap
+from pyLibrary.collections import AND
+from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
-from pyLibrary.queries.domains import is_keyword
-from pyLibrary.queries import domains
-from pyLibrary.queries.expressions import qb_expression_to_esfilter, simplify_esfilter, qb_expression_to_ruby
+from pyLibrary.maths import Math
 from pyLibrary.debugs.logs import Log
+from pyLibrary.queries import domains, es14, es09, qb
 from pyLibrary.queries.containers.cube import Cube
+from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es14.util import qb_sort_to_es_sort
+from pyLibrary.queries.expressions import qb_expression_to_esfilter, simplify_esfilter, qb_expression_to_ruby
 from pyLibrary.queries.query import DEFAULT_LIMIT
 from pyLibrary.times.timer import Timer
-from pyLibrary.queries import es14, es09
 
 
 format_dispatch = {}
@@ -59,59 +59,77 @@ def es_fieldop(es, query):
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = qb_sort_to_es_sort(query.sort)
     es_query.fields = DictList()
+
+    return extract_rows(es, es_query, query)
+
+
+def extract_rows(es, es_query, query):
+
+    new_select = DictList()
+    column_names = set(c.name for c in query.frum.get_columns() if (c.type not in ["object"] or c.useSource) and not c.depth)
     source = "fields"
-    select = copy(listwrap(query.select))  # ADD FIELDS TO select IF REQUIRED
-    columns = query.frum.get_columns()
 
+    i = 0
     for s in listwrap(query.select):
+        # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if s.value == "*":
-            es_query.fields=None
+            es_query.fields = None
             source = "_source"
+
+            net_columns = column_names - set(listwrap(query.select).name)
+            for n in net_columns:
+                new_select.append({"name": n, "value": n, "put": {"index": i, "child": "."}})
+                i += 1
         elif s.value == ".":
-            es_query.fields=None
+            es_query.fields = None
             source = "_source"
+
+            new_select.append({"name": s.name, "value": s.value, "put": {"index": i, "child": "."}})
+            i += 1
+        elif isinstance(s.value, basestring) and s.value.endswith(".*") and is_keyword(s.value[:-2]):
+            parent = s.value[:-1]
+            prefix = len(parent)
+            for c in column_names:
+                if c.startswith(parent):
+                    if es_query.fields is not None:
+                        es_query.fields.append(c)
+
+                    new_select.append({"name": s.name+"."+c[prefix:], "value": c, "put": {"index": i, "child": "."}})
+                    i += 1
         elif isinstance(s.value, basestring) and is_keyword(s.value):
-            match = columns.filter(lambda c: c.name == s.value and c.type=="object")[0]
-            if match:
-                select = select.remove(s)
-                leaves = columns.filter(lambda c: c.name.startswith(s.value + ".") and c.type not in ["object", "nested"] and coalesce(c.depth, 0)<=coalesce(match.depth, 0))
-                for l in leaves:
-                    select.append({"name": s.name + l.name[len(s.value)::], "value": l.name})
-                es_query.fields.extend(leaves.name)
+            parent = s.value + "."
+            prefix = len(parent)
+            net_columns = [c for c in column_names if c.startswith(parent)]
+            if not net_columns:
+                if es_query.fields is not None:
+                    es_query.fields.append(s.value)
+                new_select.append({"name": s.name, "value": s.value, "put": {"index": i, "child": "."}})
             else:
-                es_query.fields.append(s.value)
-        elif isinstance(s.value, list) and es_query.fields is not None:
-            es_query.fields.extend(s.value)
-        elif isinstance(s.value, Mapping) and es_query.fields is not None:
-            es_query.fields.extend(s.value.values())
-        elif es_query.fields is not None:
-            es_query.fields.append(s.value)
-    es_query.sort = qb_sort_to_es_sort(query.sort)
+                for n in net_columns:
+                    if es_query.fields is not None:
+                        es_query.fields.append(n)
+                    new_select.append({"name": s.name, "value": n, "put": {"index": i, "child": n[prefix:]}})
+            i += 1
+        elif isinstance(s.value, list):
+            Log.error("need an example")
+            if es_query.fields is not None:
+                es_query.fields.extend([v for v in s.value])
+        else:
+            es_query.script_fields[literal_field(s.name)] = {"script": qb_expression_to_ruby(s.value)}
+            new_select.append({"name": s.name, "value": s.name, "put": {"index": i, "child": "."}})
+            i += 1
 
-    return extract_rows(es, es_query, source, select, query)
 
 
-def extract_rows(es, es_query, source, select, query):
     with Timer("call to ES") as call_timer:
         data = es09.util.post(es, es_query, query.limit)
 
     T = data.hits.hits
-    for i, s in enumerate(select.copy()):
-        # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
-        if s.value == "*":
-            try:
-                column_names = set(c.name for c in query.frum.get_columns() if (c.type not in ["object"] or c.useSource) and not c.depth)
-            except Exception, e:
-                Log.warning("can not get columns", e)
-                column_names = UNION(*[[k for k, v in row.items()] for row in T.select(source)])
-            column_names -= set(select.name)
-            select = select[:i:] + [{"name": n, "value": n} for n in column_names] + select[i + 1::]
-            break
 
     try:
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]
 
-        output = formatter(T, select, source, query)
+        output = formatter(T, new_select, source, query)
         output.meta.es_response_time = call_timer.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
@@ -143,118 +161,60 @@ def is_setop(es, query):
 
 def es_setop(es, query):
     es_query, es_filter = es14.util.es_query_template(query.frum.name)
-    es_query[es_filter]=simplify_esfilter(qb_expression_to_esfilter(query.where))
+    es_query[es_filter] = simplify_esfilter(qb_expression_to_esfilter(query.where))
     es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
     es_query.fields = DictList()
     es_query.sort = qb_sort_to_es_sort(query.sort)
 
-    source = "fields"
-    select = listwrap(query.select)
-    for s in select:
-        if s.value == "*":
-            es_query.fields = None
-            es_query.script_fields = None
-            source = "_source"
-        elif s.value == ".":
-            es_query.fields = None
-            es_query.script_fields = None
-            source = "_source"
-        elif isinstance(s.value, basestring) and is_keyword(s.value):
-            es_query.fields.append(s.value)
-        elif isinstance(s.value, list) and es_query.fields is not None:
-            es_query.fields.extend([v for v in s.value])
-        else:
-            es_query.script_fields[literal_field(s.name)] = {"script": qb_expression_to_ruby(s.value)}
-
-    return extract_rows(es, es_query, source, select, query)
+    return extract_rows(es, es_query, query)
 
 
 def format_list(T, select, source, query=None):
-
-    if isinstance(query.select, list):
-        data = []
-        for row in T:
-            r = Dict()
-            for s in select:
-                if s.value == ".":
-                    r[s.name] = row[source]
-                else:
-                    if source=="_source":
-                        r[s.name] = unwraplist(row[source][s.value])
-                    elif isinstance(s.value, basestring):  # fields
-                        r[s.name] = unwraplist(row[source][literal_field(s.value)])
-                    else:
-                        r[s.name] = unwraplist(row[source][literal_field(s.name)])
-            data.append(r if r else None)
-        return Dict(
-            meta={"format": "list"},
-            data=data
-        )
-    else:
-        # REMOVE THE name GIVEN TO THE SINGLE COLUMN
-        prefix_length = len(query.select.name+".")
-        def suffix(name):
-            return name[prefix_length:]
-
-        data = []
-        for row in T:
-            r = Dict()
-            for s in select:
-                if s.value == ".":
-                    r[suffix(s.name)] = row[source]
-                else:
-                    if source=="_source":
-                        r[suffix(s.name)] = unwraplist(row[source][s.value])
-                    elif isinstance(s.value, basestring):  # fields
-                        r[suffix(s.name)] = unwraplist(row[source][literal_field(s.value)])
-                    else:
-                        r[suffix(s.name)] = unwraplist(row[source][literal_field(s.name)])
-            data.append(r if r else None)
-        return Dict(
-            meta={"format": "list"},
-            data=data
-        )
+    data = []
+    for row in T:
+        r = Dict()
+        for s in select:
+            if source == "_source":
+                r[s.name][s.put.child] = unwraplist(row[source][s.value])
+            elif isinstance(s.value, basestring):  # fields
+                r[s.name][s.put.child] = unwraplist(row[source][literal_field(s.value)])
+            else:
+                r[s.name][s.put.child] = unwraplist(row[source][literal_field(s.name)])
+        data.append(r if r else None)
+    return Dict(
+        meta={"format": "list"},
+        data=data
+    )
 
 
 def format_table(T, select, source, query=None):
-    header = [s.name for s in listwrap(query.select)]
-
-    # EACH FIELD CAN END UP IN MORE THAN ONE COLUMN
-    # MAP FROM select.name -> (index, shortname) PAIR
-    map = Dict()
-    for s in select:
-        for i, h in enumerate(header):
-            if s.name.startswith(h+"."):
-                map[literal_field(s.name)] += [(i, s.name[len(h)+1:])]
-            elif s.name == h:
-                map[literal_field(s.name)] += [(i, None)]
-    map = unwrap(map)
-
     data = []
+    num_columns=(Math.MAX(select.put.index)+1)
     for row in T:
-        r = [None] * len(header)
+        r = [None] * num_columns
         for s in select:
-            if s.value == ".":
-                value = row[source]
+            if source == "_source":
+                value = unwraplist(row[source][s.value])
+            elif isinstance(s.value, basestring):  # fields
+                value = unwraplist(row[source][literal_field(s.value)])
             else:
-                if source == "_source":
-                    value = unwraplist(row[source][s.value])
-                elif isinstance(s.value, basestring):  # fields
-                    value = unwraplist(row[source][literal_field(s.value)])
-                else:
-                    value = unwraplist(row[source][literal_field(s.name)])
+                value = unwraplist(row[source][literal_field(s.name)])
 
             if value != None:
-                for i, n in map[s.name]:
-                    if n is None:
-                        r[i] = value
-                    else:
-                        col = r[i]
-                        if col is None:
-                            r[i] = Dict()
-                        r[i][n] = value
+                i, n = s.put.index, s.put.child
+                col = r[i]
+                if col is None:
+                    r[i] = Dict()
+                r[i][n] = value
 
         data.append(r)
+
+    header = [None]*num_columns
+    for s in select:
+        if header[s.put.index]:
+            continue
+        header[s.put.index] = s.name
+
     return Dict(
         meta={"format": "table"},
         header=header,
@@ -263,24 +223,11 @@ def format_table(T, select, source, query=None):
 
 
 def format_cube(T, select, source, query=None):
-    # EACH FIELD CAN END UP IN MORE THAN ONE COLUMN
-    # MAP FROM select.name -> (parent_name, shortname) PAIR
-    map = Dict()
-    for s in select:
-        for h in listwrap(query.select).name:
-            if s.name.startswith(h+"."):
-                map[literal_field(s.name)] += [(h, s.name[len(h)+1:])]
-            elif s.name == h:
-                map[literal_field(s.name)] += [(h, None)]
-    map = unwrap(map)
-
-    matricies = {s.name: Matrix(dims=(len(T),)) for s in listwrap(query.select)}
+    matricies = {s: Matrix(dims=(len(T),)) for s in set(select.name)}
     for i, t in enumerate(T):
         for s in select:
             try:
-                if s.value == ".":
-                    value = t[source]
-                elif isinstance(s.value, list):
+                if isinstance(s.value, list):
                     value = tuple(unwraplist(t[source][ss]) for ss in s.value)
                 else:
                     if source == "_source":
@@ -293,14 +240,11 @@ def format_cube(T, select, source, query=None):
                 if value == None:
                     continue
 
-                for p, n in map[s.name]:
-                    if n is None:
-                        matricies[p][(i,)] = value
-                    else:
-                        col = matricies[p][(i,)]
-                        if col == None:
-                            matricies[p][(i,)] = Dict()
-                        matricies[p][(i,)][n] = value
+                p, n = s.name, s.put.child
+                col = matricies[p][(i,)]
+                if col == None:
+                    matricies[p][(i,)] = Dict()
+                matricies[p][(i,)][n] = value
 
             except Exception, e:
                 Log.error("", e)

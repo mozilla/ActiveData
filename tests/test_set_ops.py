@@ -30,9 +30,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": "a"
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                {"a": "b"}
-            ]},
+                "meta": {"format": "list"}, "data": ["b"]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a"],
@@ -210,7 +208,6 @@ class TestSetOps(ActiveDataBaseTest):
 
     def test_single_alpha_no_select(self):
         test = {
-            "name": "singleton_alpha no select (select *)",
             "data": [
                 {"a": "b"}
             ],
@@ -252,7 +249,7 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [{"value": {"a": "b"}}]
+                "data": [{"a": "b"}]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -604,6 +601,62 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_table": {
                 "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [
+                    [{"b": "x", "v": 2}],
+                    [{"b": "x", "v": 5}],
+                    [{"b": "x", "v": 7}],
+                    [None]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a": [
+                        {"b": "x", "v": 2},
+                        {"b": "x", "v": 5},
+                        {"b": "x", "v": 7},
+                        None
+                    ]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_select_leaves(self):
+        """
+        ES DOES NOT ALLOW YOU TO SELECT AN OBJECT, ONLY THE LEAVES
+        THIS SHOULD USE THE SCHEMA TO SELECT-ON-OBJECT TO MANY SELECT ON LEAVES
+        """
+        test = {
+            "data": [
+                {"o": 3, "a": {"b": "x", "v": 2}},
+                {"o": 1, "a": {"b": "x", "v": 5}},
+                {"o": 2, "a": {"b": "x", "v": 7}},
+                {"o": 4, "c": "x"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["a.*"],
+                "sort": "a.v"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": {"b": "x", "v": 2}},
+                    {"a": {"b": "x", "v": 5}},
+                    {"a": {"b": "x", "v": 7}},
+                    None
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["a.b", "a.v"],
                 "data": [
                     ["x", 2],
@@ -716,6 +769,63 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_table": {
                 "meta": {"format": "table"},
+                "header": ["o", "a"],
+                "data": [
+                    [3, {"b": "x", "v": 2}],
+                    [1, {"b": "x", "v": 5}],
+                    [2, {"b": "x", "v": 7}],
+                    [4, None]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a": [
+                        {"b": "x", "v": 2},
+                        {"b": "x", "v": 5},
+                        {"b": "x", "v": 7},
+                        None
+                    ],
+                    "o": [3, 1, 2, 4]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_select3_object(self):
+        """
+        ES DOES NOT ALLOW YOU TO SELECT AN OBJECT, ONLY THE LEAVES
+        THIS SHOULD USE THE SCHEMA TO SELECT-ON-OBJECT TO MANY SELECT ON LEAVES
+        """
+        test = {
+            "data": [
+                {"o": 3, "a": {"b": "x", "v": 2}},
+                {"o": 1, "a": {"b": "x", "v": 5}},
+                {"o": 2, "a": {"b": "x", "v": 7}},
+                {"o": 4, "c": "x"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["o", "a.*"],
+                "sort": "a.v"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"o": 3, "a": {"b": "x", "v": 2}},
+                    {"o": 1, "a": {"b": "x", "v": 5}},
+                    {"o": 2, "a": {"b": "x", "v": 7}},
+                    {"o": 4}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
                 "header": ["o", "a.b", "a.v"],
                 "data": [
                     [3, "x", 2],
@@ -757,13 +867,7 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [
-                    {"l": 1},
-                    {"l": 2},
-                    {"l": 3},
-                    {"l": 4},
-                    {"l": 5}
-                ]
+                "data": [1, 2, 3, 4, 5]
             },
             "expecting_table": {
                 "meta": {"format": "table"},

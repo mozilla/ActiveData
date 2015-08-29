@@ -269,7 +269,7 @@ def select_one(record, selection):
         output = Dict()
         for f in selection:
             f = _normalize_select(f)
-            output[f.name]=record[f.value]
+            output[f.name] = record[f.value]
         return output
     else:
         Log.error("Do not know how to handle")
@@ -463,6 +463,8 @@ def sort(data, fieldnames=None):
         if len(fieldnames) == 1:
             fieldnames = fieldnames[0]
             # SPECIAL CASE, ONLY ONE FIELD TO SORT BY
+            if fieldnames == ".":
+                return wrap(sorted(data))
             if isinstance(fieldnames, (basestring, int)):
                 fieldnames = wrap({"value": fieldnames, "sort": 1})
 

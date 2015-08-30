@@ -537,6 +537,52 @@ class DurationDomain(Domain):
         return output
 
 
+
+class NumericDomain(Domain):
+    __slots__ = ["max", "min"]
+
+    def __new__(cls, **desc):
+        if not desc.get('partitions') and not desc.get('interval'):
+            return object.__new__(cls)
+        else:
+            return object.__new__(RangeDomain)
+
+    def __init__(self, **desc):
+        Domain.__init__(self, **desc)
+        self.min = desc.get('min')
+        self.max = desc.get('max')
+
+    def compare(self, a, b):
+        return value_compare(a, b)
+
+    def getCanonicalPart(self, part):
+        return part
+
+    def getIndexByKey(self, key):
+        return key
+
+    def getPartByKey(self, key):
+        if self.min!=None and key < self.min:
+            return self.NULL
+        if self.max!=None and key >= self.max:
+            return self.NULL
+        return key
+
+    def getKey(self, part):
+        return part
+
+    def getKeyByIndex(self, index):
+        return index
+
+    def as_dict(self):
+        output = Domain.as_dict(self)
+
+        output.min = self.min
+        output.max = self.max
+        return output
+
+
+
 class RangeDomain(Domain):
     __slots__ = ["max", "min", "interval", "partitions", "NULL"]
 
@@ -647,7 +693,7 @@ name_to_type = {
     "uid": DefaultDomain,
     "time": TimeDomain,
     "duration": DurationDomain,
-    "range": RangeDomain,
-    "numeric": RangeDomain
+    "range": NumericDomain,
+    "numeric": NumericDomain
 }
 

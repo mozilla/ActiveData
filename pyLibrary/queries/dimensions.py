@@ -65,9 +65,10 @@ class Dimension(Container):
 
         if dim.partitions:
             return  # ALREADY HAVE PARTS
-        if dim.type not in KNOWN - ALGEBRAIC:
+        if self.type not in KNOWN - ALGEBRAIC:
             return  # PARTS OR TOO FUZZY (OR TOO NUMEROUS) TO FETCH
 
+        qb.get_columns()
         with Timer("Get parts of {{name}}", {"name": self.name}):
             parts = qb.query({
                 "from": self.index,
@@ -177,6 +178,9 @@ class Dimension(Container):
         RETURN CHILD EDGE OR PARTITION BY NAME
         """
         #TODO: IGNORE THE STANDARD DIMENSION PROPERTIES TO AVOID ACCIDENTAL SELECTION OF EDGE OR PART
+        if key in Dimension.__slots__:
+            return None
+
         e = self.edges[key]
         if e:
             return e
@@ -194,11 +198,11 @@ class Dimension(Container):
             # USE EACH EDGE AS A PARTITION, BUT isFacet==True SO IT ALLOWS THE OVERLAP
             partitions = [
                 {
-                    "name":v.name,
-                    "value":v.name,
-                    "where":v.where,
-                    "style":v.style,
-                    "weight":v.weight  # YO! WHAT DO WE *NOT* COPY?
+                    "name": v.name,
+                    "value": v.name,
+                    "where": v.where,
+                    "style": v.style,
+                    "weight": v.weight  # YO! WHAT DO WE *NOT* COPY?
                 }
                 for i, v in enumerate(self.edges)
                 if i < coalesce(self.limit, DEFAULT_QUERY_LIMIT) and v.where

@@ -253,11 +253,13 @@ def _get_attr(obj, path):
         obj = getattr(obj, attr_name)
         return _get_attr(obj, path[1:])
     except Exception, e:
-        try:
-            obj = obj[attr_name]
-            return _get_attr(obj, path[1:])
-        except Exception, f:
-            return None
+        pass
+
+    try:
+        obj = obj[attr_name]
+        return _get_attr(obj, path[1:])
+    except Exception, f:
+        return None
 
 
 def _set_attr(obj, path, value):

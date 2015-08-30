@@ -32,18 +32,18 @@ from pyLibrary.times.timer import Timer
 
 format_dispatch = {}
 
-def is_fieldop(es, query):
+def is_setop(es, query):
     if not any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
         return False
 
-    # THESE SMOOTH EDGES REQUIRE ALL DATA (SETOP)
     select = listwrap(query.select)
+
     if not query.edges:
         isDeep = len(split_field(query.frum.name)) > 1  # LOOKING INTO NESTED WILL REQUIRE A SCRIPT
-        isSimple = AND(s.value != None and (s.value in ["*", "."] or is_keyword(s.value)) for s in select)
-        noAgg = AND(s.aggregate == "none" for s in select)
+        simpleAgg = AND([s.aggregate in ("count", "none") for s in select])   # CONVERTING esfilter DEFINED PARTS WILL REQUIRE SCRIPT
 
-        if not isDeep and isSimple and noAgg:
+        # NO EDGES IMPLIES SIMPLER QUERIES: EITHER A SET OPERATION, OR RETURN SINGLE AGGREGATE
+        if simpleAgg or isDeep:
             return True
     else:
         isSmooth = AND((e.domain.type in domains.ALGEBRAIC and e.domain.interval == "none") for e in query.edges)
@@ -53,10 +53,10 @@ def is_fieldop(es, query):
     return False
 
 
-def es_fieldop(es, query):
+def es_setop(es, query):
     es_query, es_filter = es14.util.es_query_template(query.frum.name)
     es_query[es_filter] = simplify_esfilter(qb_expression_to_esfilter(query.where))
-    es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
+    es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
     es_query.sort = qb_sort_to_es_sort(query.sort)
     es_query.fields = DictList()
 
@@ -137,36 +137,6 @@ def extract_rows(es, es_query, query):
     except Exception, e:
         Log.error("problem formatting", e)
 
-
-def is_setop(es, query):
-    if not any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
-        return False
-
-    select = listwrap(query.select)
-
-    if not query.edges:
-        isDeep = len(split_field(query.frum.name)) > 1  # LOOKING INTO NESTED WILL REQUIRE A SCRIPT
-        simpleAgg = AND([s.aggregate in ("count", "none") for s in select])   # CONVERTING esfilter DEFINED PARTS WILL REQUIRE SCRIPT
-
-        # NO EDGES IMPLIES SIMPLER QUERIES: EITHER A SET OPERATION, OR RETURN SINGLE AGGREGATE
-        if simpleAgg or isDeep:
-            return True
-    else:
-        isSmooth = AND((e.domain.type in domains.ALGEBRAIC and e.domain.interval == "none") for e in query.edges)
-        if isSmooth:
-            return True
-
-    return False
-
-
-def es_setop(es, query):
-    es_query, es_filter = es14.util.es_query_template(query.frum.name)
-    es_query[es_filter] = simplify_esfilter(qb_expression_to_esfilter(query.where))
-    es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
-    es_query.fields = DictList()
-    es_query.sort = qb_sort_to_es_sort(query.sort)
-
-    return extract_rows(es, es_query, query)
 
 
 def format_list(T, select, source, query=None):

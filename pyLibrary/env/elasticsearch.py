@@ -54,12 +54,12 @@ class Features(object):
                 return {"cardinality": {"field": c.name}}
 
         result = self.search({
-            "aggs": {c.name: counter(c) for c in columns}
+            "aggs": {c.name: counter(c) for c in columns if c.type not in ["object", "nested"]}
         })
         output = wrap({c: {"name": c, "count": r.value} for c, r in result.aggregations.items()})
 
         result = self.search({
-            "aggs": {c.name: {"terms": {"field": c.name, "size": 0}} for c in columns if output[literal_field(c.name)].count <= 1000}
+            "aggs": {c.name: {"terms": {"field": c.name, "size": 0}} for c in columns if c.type not in ["object", "nested"] and output[literal_field(c.name)].count <= 1000}
         })
 
         for name, aggs in result.aggregations.items():

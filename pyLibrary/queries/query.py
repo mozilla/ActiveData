@@ -49,15 +49,16 @@ class Query(object):
     def __new__(cls, query, schema=None):
         if isinstance(query, Query):
             return query
-        return object.__new__(cls)
+        output = object.__new__(cls)
+        for s in Query.__slots__:
+            setattr(output, s, None)
+        return output
 
     def __init__(self, query, schema=None):
         """
         NORMALIZE QUERY SO IT CAN STILL BE JSON
         """
         if isinstance(query, Query) or query == None:
-            for s in Query.__slots__:
-                setattr(self, s, None)
             return
 
         object.__init__(self)

@@ -33,7 +33,7 @@ class Rename(Namespace):
         dimensions = wrap(dimensions)
         if isinstance(dimensions, Mapping) and dimensions.name == None:
             # CONVERT TO A REAL DIMENSION DEFINITION
-            dimensions = {"name": ".", "edges":[{"name": k, "field": v} for k, v in dimensions.items()]}
+            dimensions = {"name": ".", "type": "set", "edges":[{"name": k, "field": v} for k, v in dimensions.items()]}
 
         self.dimensions = Dimension(dimensions, None, source)
 
@@ -108,11 +108,13 @@ class Rename(Namespace):
 
         if len(listwrap(dim.fields)) == 1:
             #TODO: CHECK IF EDGE DOMAIN AND DIMENSION DOMAIN CONFLICT
-            return set_default({"value": unwraplist(dim.fields)}, edge)
+            new_edge = set_default({"value": unwraplist(dim.fields)}, edge)
+            return new_edge
+            new_edge.domain = dim.getDomain()
 
         edge = copy(edge)
         edge.value = None
-        edge.domain = dim.get_domain()
+        edge.domain = dim.getDomain()
         return edge
 
     def _convert_clause(self, clause):

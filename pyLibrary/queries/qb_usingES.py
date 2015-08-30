@@ -21,7 +21,7 @@ from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09 import setop as es09_setop
 from pyLibrary.queries.es09.util import parse_columns, INDEX_CACHE
 from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
-from pyLibrary.queries.es14.setop import is_fieldop, is_setop, es_setop, es_fieldop
+from pyLibrary.queries.es14.setop import is_setop, es_setop
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.es14.util import aggregates1_4
 from pyLibrary.queries.namespace.typed import Typed
@@ -119,8 +119,6 @@ class FromES(Container):
 
             if is_aggsop(self._es, query):
                 return es_aggsop(self._es, frum, query)
-            if is_fieldop(self._es, query):
-                return es_fieldop(self._es, query)
             if is_setop(self._es, query):
                 return es_setop(self._es, query)
             if es09_setop.is_setop(query):

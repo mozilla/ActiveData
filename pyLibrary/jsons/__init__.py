@@ -22,10 +22,10 @@ def _late_import():
     global datetime2unix
     global utf82unicode
 
-    from pyLibrary.debugs.logs import Log
+    from pyLibrary.debugs.logs import Log as _Log
     from pyLibrary.convert import datetime2unix, utf82unicode
 
-    _ = Log
+    _ = _Log
     _ = datetime2unix
     _ = utf82unicode
 

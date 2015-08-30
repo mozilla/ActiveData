@@ -27,86 +27,82 @@ class Namespace(ActiveDataBaseTest):
         pass
 
     def test_rename_select(self):
-        query = {
-            "from": base_test_class.settings.backend_es.index,
-            "select": ["o", "w"],
-            "format": "table"
-        }
-
-        self._fill_es({"query":query, "data": deep_test_data})
-        db = FromES(settings=base_test_class.settings.backend_es)
-        db.namespaces += [Rename(dimensions={"w": "a.v"}), Typed()]
-        result = db.query(query)
-        self.compare_to_expected(query, result, {
-            "header": ["o", "w"],
-            "data": [
-                [3, 2],
-                [1, 5],
-                [2, 7],
-                [4, None]
-            ]
-        })
+        self._run_test(
+            query={
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["o", "w"],
+                "format": "table"
+            },
+            data=deep_test_data,
+            dimensions={"w": "a.v"},
+            expect={
+                "header": ["o", "w"],
+                "data": [
+                    [3, 2],
+                    [1, 5],
+                    [2, 7],
+                    [4, None]
+                ]
+            }
+        )
 
     def test_rename_select_to_struct(self):
-        query = {
-            "from": base_test_class.settings.backend_es.index,
-            "select": ["o", "w"],
-            "format": "table"
-        }
-
-        self._fill_es({"query":query, "data": deep_test_data})
-        db = FromES(settings=base_test_class.settings.backend_es)
-        db.namespaces += [Rename(dimensions={"w": {"a": "a.v", "b": "a.b"}}), Typed()]
-        result = db.query(query)
-        self.compare_to_expected(query, result, {
-            "header": ["o", "w.a", "w.b"],
-            "data": [
-                [3, 2, "x"],
-                [1, 5, "x"],
-                [2, 7, "x"],
-                [4, None, None]
-            ]
-        })
+        self._run_test(
+            query={
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["o", "w"],
+                "format": "table"
+            },
+            dimensions={"w": {"a": "a.v", "b": "a.b"}},
+            data=deep_test_data,
+            expect={
+                "header": ["o", "w.a", "w.b"],
+                "data": [
+                    [3, 2, "x"],
+                    [1, 5, "x"],
+                    [2, 7, "x"],
+                    [4, None, None]
+                ]
+            }
+        )
 
     def test_rename_select_to_list(self):
-        query = {
-            "from": base_test_class.settings.backend_es.index,
-            "select": ["o", "w"],
-            "format": "table"
-        }
-
-        self._fill_es({"query":query, "data": deep_test_data})
-        db = FromES(settings=base_test_class.settings.backend_es)
-        db.namespaces += [Rename(dimensions={"w": ["a.v", "a.b"]}), Typed()]
-        result = db.query(query)
-        self.compare_to_expected(query, result, {
-            "header": ["o", "w"],
-            "data": [
-                [3, [2, "x"]],
-                [1, [5, "x"]],
-                [2, [7, "x"]],
-                [4, [None, None]]
-            ]
-        })
+        self._run_test(
+            query={
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["o", "w"],
+                "format": "table"
+            },
+            dimensions={"w": ["a.v", "a.b"]},
+            data=deep_test_data,
+            expect={
+                "header": ["o", "w"],
+                "data": [
+                    [3, [2, "x"]],
+                    [1, [5, "x"]],
+                    [2, [7, "x"]],
+                    [4, [None, None]]
+                ]
+            }
+        )
 
     def test_rename_edge(self):
-        query = {
-            "from": base_test_class.settings.backend_es.index,
-            "edges": ["w"],
-            "format": "table"
-        }
-
-        new_settings = self._fill_es({"query": query, "data": deep_test_data}, tjson=True)
-        db = FromES(settings=new_settings)
-        db.namespaces += [Rename(dimensions={"w": "a.b"}, source=db)]
-        result = db.query(query)
-        self.compare_to_expected(query, result, {
-            "header": ["w", "count"],
-            "data": [
-                ["x", 3],
-                [None, 1]
-            ]
-        })
+        self._run_test(
+            query={
+                "from": base_test_class.settings.backend_es.index,
+                "edges": ["w"],
+                "format": "table"
+            },
+            dimensions={"w": "a.b"},
+            data=deep_test_data,
+            expect={
+                "header": ["w", "count"],
+                "data": [
+                    ["x", 3],
+                    [None, 1]
+                ]
+            }
+        )
 
     def test_rename_edge_to_struct(self):
         query = {
@@ -133,28 +129,34 @@ class Namespace(ActiveDataBaseTest):
         """
         EXPAND DIMENSION
         """
-        query = {
-            "from": base_test_class.settings.backend_es.index,
-            "edges": ["w"],
-            "format": "cube"
-        }
+        self._run_test(
+            query={
+                "from": base_test_class.settings.backend_es.index,
+                "edges": ["w"],
+                "format": "cube"
+            },
+            dimensions={"w": ["a.v", "a.b"]},
+            data=deep_test_data,
+            expect={
+                "edges": [{
+                    "name": "w",
+                    "domain": {"type": "set", "partitions": [
+                        {"value": [2, "x"]},
+                        {"value": [5, "x"]},
+                        {"value": [7, "x"]},
+                        {"value": None}
+                    ]}
+                }],
+                "data": {"count": [1, 1, 1, 1]}
+            }
+        )
 
-        self._fill_es({"query": query, "data": deep_test_data})
-        db = FromES(settings=base_test_class.settings.backend_es)
-        db.namespaces += [Rename(dimensions={"w": ["a.v", "a.b"]}), Typed()]
+    def _run_test(self, data, query, expect, dimensions):
+        new_settings = self._fill_es({"query": query, "data": data}, tjson=True)
+        db = FromES(settings=new_settings)
+        db.namespaces += [Rename(dimensions=dimensions, source=db)]
         result = db.query(query)
-        self.compare_to_expected(query, result, {
-            "edges": [{
-                "name": "w",
-                "domain": {"type": "set", "partitions": [
-                    {"value": [2, "x"]},
-                    {"value": [5, "x"]},
-                    {"value": [7, "x"]},
-                    {"value": None}
-                ]}
-            }],
-            "data": {"count": [1, 1, 1, 1]}
-        })
+        self.compare_to_expected(query, result, expect)
 
 
 

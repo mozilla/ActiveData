@@ -64,7 +64,7 @@ def split_field(field):
     """
     RETURN field AS ARRAY OF DOT-SEPARATED FIELDS
     """
-    if field == ".":
+    if field == "." or field==None:
         return []
     elif field.find(".") >= 0:
         field = field.replace("\.", "\a")
@@ -77,7 +77,10 @@ def join_field(field):
     """
     RETURN field SEQUENCE AS STRING
     """
-    return ".".join([f.replace(".", "\.") for f in field])
+    potent = [f for f in field if f != "."]
+    if not potent:
+        return "."
+    return ".".join([f.replace(".", "\.") for f in potent])
 
 
 def hash_value(v):

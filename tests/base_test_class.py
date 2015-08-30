@@ -153,6 +153,9 @@ class ActiveDataBaseTest(FuzzyTestCase):
         return settings.fastTesting
 
     def _fill_es(self, subtest, tjson=False):
+        """
+        RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
+        """
         subtest = wrap(subtest)
         _settings = self.backend_es.copy()
         _settings.index = "testing_" + Random.hex(10).lower()
@@ -234,6 +237,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             self.es.delete_index(settings.index)
 
     def compare_to_expected(self, query, result, expected):
+        query = wrap(query)
         expected = wrap(expected)
 
         if result.meta.format == "table":
@@ -258,6 +262,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
             if not query.sort:
                 if isinstance(query.select, list):
                     sort_order = coalesce(query.edges, query.groupby) + query.select + qb.get_columns(result.data)
+                elif wrap(query.select).value.endswith("*"):
+                    sort_order = coalesce(query.edges, query.groupby) + qb.get_columns(result.data)
                 else:
                     sort_order = coalesce(query.edges, query.groupby) + [{"name": "."}]
 

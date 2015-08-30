@@ -64,7 +64,7 @@ def es_fieldop(es, query):
 
 
 def extract_rows(es, es_query, query):
-
+    is_list = isinstance(query.select, list)
     new_select = DictList()
     column_names = set(c.name for c in query.frum.get_columns() if (c.type not in ["object"] or c.useSource) and not c.depth)
     source = "fields"
@@ -78,13 +78,13 @@ def extract_rows(es, es_query, query):
 
             net_columns = column_names - set(listwrap(query.select).name)
             for n in net_columns:
-                new_select.append({"name": n, "value": n, "put": {"index": i, "child": "."}})
+                new_select.append({"name": n, "value": n, "put": {"name": n, "index": i, "child": "."}})
                 i += 1
         elif s.value == ".":
             es_query.fields = None
             source = "_source"
 
-            new_select.append({"name": s.name, "value": s.value, "put": {"index": i, "child": "."}})
+            new_select.append({"name": s.name if is_list else ".", "value": s.value, "put": {"name": s.name, "index": i, "child": "."}})
             i += 1
         elif isinstance(s.value, basestring) and s.value.endswith(".*") and is_keyword(s.value[:-2]):
             parent = s.value[:-1]
@@ -94,7 +94,7 @@ def extract_rows(es, es_query, query):
                     if es_query.fields is not None:
                         es_query.fields.append(c)
 
-                    new_select.append({"name": s.name+"."+c[prefix:], "value": c, "put": {"index": i, "child": "."}})
+                    new_select.append({"name": s.name+"."+c[prefix:], "value": c, "put": {"name": s.name+"."+c[prefix:], "index": i, "child": "."}})
                     i += 1
         elif isinstance(s.value, basestring) and is_keyword(s.value):
             parent = s.value + "."
@@ -103,12 +103,12 @@ def extract_rows(es, es_query, query):
             if not net_columns:
                 if es_query.fields is not None:
                     es_query.fields.append(s.value)
-                new_select.append({"name": s.name, "value": s.value, "put": {"index": i, "child": "."}})
+                new_select.append({"name": s.name if is_list else ".", "value": s.value, "put": {"name": s.name, "index": i, "child": "."}})
             else:
                 for n in net_columns:
                     if es_query.fields is not None:
                         es_query.fields.append(n)
-                    new_select.append({"name": s.name, "value": n, "put": {"index": i, "child": n[prefix:]}})
+                    new_select.append({"name": s.name if is_list else ".", "value": n, "put": {"name": s.name, "index": i, "child": n[prefix:]}})
             i += 1
         elif isinstance(s.value, list):
             Log.error("need an example")
@@ -116,7 +116,7 @@ def extract_rows(es, es_query, query):
                 es_query.fields.extend([v for v in s.value])
         else:
             es_query.script_fields[literal_field(s.name)] = {"script": qb_expression_to_ruby(s.value)}
-            new_select.append({"name": s.name, "value": s.name, "put": {"index": i, "child": "."}})
+            new_select.append({"name": s.name if is_list else ".", "value": s.name, "put": {"name": s.name, "index": i, "child": "."}})
             i += 1
 
 
@@ -201,11 +201,11 @@ def format_table(T, select, source, query=None):
                 value = unwraplist(row[source][literal_field(s.name)])
 
             if value != None:
-                i, n = s.put.index, s.put.child
+                i, child = s.put.index, s.put.child
                 col = r[i]
                 if col is None:
                     r[i] = Dict()
-                r[i][n] = value
+                r[i][child] = value
 
         data.append(r)
 
@@ -213,7 +213,7 @@ def format_table(T, select, source, query=None):
     for s in select:
         if header[s.put.index]:
             continue
-        header[s.put.index] = s.name
+        header[s.put.index] = s.put.name
 
     return Dict(
         meta={"format": "table"},
@@ -223,7 +223,7 @@ def format_table(T, select, source, query=None):
 
 
 def format_cube(T, select, source, query=None):
-    matricies = {s: Matrix(dims=(len(T),)) for s in set(select.name)}
+    matricies = {s: Matrix(dims=(len(T),)) for s in set(select.put.name)}
     for i, t in enumerate(T):
         for s in select:
             try:
@@ -240,11 +240,11 @@ def format_cube(T, select, source, query=None):
                 if value == None:
                     continue
 
-                p, n = s.name, s.put.child
-                col = matricies[p][(i,)]
+                name, child = s.put.name, s.put.child
+                col = matricies[name][(i,)]
                 if col == None:
-                    matricies[p][(i,)] = Dict()
-                matricies[p][(i,)][n] = value
+                    matricies[name][(i,)] = Dict()
+                matricies[name][(i,)][child] = value
 
             except Exception, e:
                 Log.error("", e)

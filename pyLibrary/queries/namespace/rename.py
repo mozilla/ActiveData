@@ -26,33 +26,16 @@ from pyLibrary.times.dates import Date
 
 class Rename(Namespace):
 
-    def __init__(self, dimensions):
+    def __init__(self, dimensions, source):
         """
         EXPECTING A LIST OF {"name":name, "value":value} OBJECTS TO PERFORM A MAPPING
         """
-        self.converter_map = {
-            "and": self._convert_many,
-            "or": self._convert_many,
-            "not": self.convert,
-            "missing": self.convert,
-            "exists": self.convert
-        }
-        self.dimensions = Dict()
-        for d in listwrap(dimensions):
-            self.addDimension(d)
+        dimensions = wrap(dimensions)
+        if isinstance(dimensions, Mapping) and dimensions.name == None:
+            # CONVERT TO A REAL DIMENSION DEFINITION
+            dimensions = {"name": ".", "edges":[{"name": k, "field": v} for k, v in dimensions.items()]}
 
-    def addDimension(self, dim):
-        if isinstance(dim, list):
-            Log.error("Expecting dimension to be a object, not a list:\n{{dim}}",  dim= dim)
-        self._addDimension(dim, [])
-
-    def _addDimension(self, dim, path):
-        dim.full_name = dim.name
-        for e in dim.edges:
-            d = Dimension(e, dim, self)
-            self.dimensions[d.full_name] = d
-
-
+        self.dimensions = Dimension(dimensions, None, source)
 
     def convert(self, expr):
         """
@@ -81,15 +64,17 @@ class Rename(Namespace):
             else:
                 # ASSUME SINGLE-CLAUSE EXPRESSION
                 k, v = expr.items()[0]
-                return self.converter_map.get(k, self._convert_bop)(k, v)
+                return converter_map.get(k, self._convert_bop)(self, k, v)
         elif isinstance(expr, (list, set, tuple)):
             return wrap([self.convert(value) for value in expr])
+        else:
+            return expr
 
     def _convert_query(self, query):
-        output = Query()
+        output = Query(None)
         output.select = self._convert_clause(query.select)
         output.where = self.convert(query.where)
-        output["from"] = self._convert_from(query["from"])
+        output.frum = self._convert_from(query.frum)
         output.edges = convert_list(self._convert_edge, query.edges)
         output.having = convert_list(self._convert_having, query.having)
         output.window = convert_list(self._convert_window, query.window)
@@ -121,13 +106,14 @@ class Rename(Namespace):
         if not dim:
             return edge
 
-        if len(listwrap(dim.domain.fields)) == 1:
-            #TODO: CHECK IF EDGE DOMAIN AND DIMENSION DOMAIN CONFILICT
-            edge.value = unwraplist(dim.domain.fields)
-        else:
-            edge = copy(edge)
-            edge.value = None
-            edge.domain = dim.get_domain()
+        if len(listwrap(dim.fields)) == 1:
+            #TODO: CHECK IF EDGE DOMAIN AND DIMENSION DOMAIN CONFLICT
+            return set_default({"value": unwraplist(dim.fields)}, edge)
+
+        edge = copy(edge)
+        edge.value = None
+        edge.domain = dim.get_domain()
+        return edge
 
     def _convert_clause(self, clause):
         """
@@ -141,4 +127,12 @@ class Rename(Namespace):
             return set_default({"value": self.convert(clause.value)}, clause)
         else:
             return [set_default({"value": self.convert(c.value)}, c) for c in clause]
+
+converter_map = {
+    "and": Rename._convert_many,
+    "or": Rename._convert_many,
+    "not": Rename.convert,
+    "missing": Rename.convert,
+    "exists": Rename.convert
+}
 

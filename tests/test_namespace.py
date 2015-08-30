@@ -96,9 +96,9 @@ class Namespace(ActiveDataBaseTest):
             "format": "table"
         }
 
-        self._fill_es({"query":query, "data": deep_test_data})
-        db = FromES(settings=base_test_class.settings.backend_es)
-        db.namespaces += [Rename(dimensions={"w": "a.b"}), Typed()]
+        new_settings = self._fill_es({"query": query, "data": deep_test_data}, tjson=True)
+        db = FromES(settings=new_settings)
+        db.namespaces += [Rename(dimensions={"w": "a.b"}, source=db)]
         result = db.query(query)
         self.compare_to_expected(query, result, {
             "header": ["w", "count"],

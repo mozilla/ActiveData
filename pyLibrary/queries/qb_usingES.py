@@ -100,6 +100,9 @@ class FromES(Container):
     def query(self, _query):
         try:
             query = Query(_query, schema=self)
+
+            for n in self.namespaces:
+                query = n.convert(query)
             if self.typed:
                 query = Typed().convert(query)
 

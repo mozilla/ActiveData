@@ -39,9 +39,7 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
                 "meta": {
                     "format": "list"
                 },
-                "data": [
-                    {"a": "b"}
-                ]
+                "data": ["b"]
             }
         }
 

@@ -110,13 +110,8 @@ class TestSetOps(ActiveDataBaseTest):
                 "sort": "a.b.c"  # SO THE CUBE COMPARISON WILL PASS
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                {"a": {"b": {"c": 1}}},
-                {"a": {"b": {"c": 2}}},
-                {"a": {"b": {"c": 3}}},
-                {"a": {"b": {"c": 4}}},
-                {"a": {"b": {"c": 5}}}
-            ]},
+                "meta": {"format": "list"}, "data": [1, 2, 3, 4, 5]
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a.b.c"],
@@ -148,9 +143,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": "a"
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                {"a": "b"}
-            ]},
+                "meta": {"format": "list"}, "data": ["b"]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a"],
@@ -183,9 +176,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": {"name": "value", "value": "a"}
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                {"value": "b"}
-            ]},
+                "meta": {"format": "list"}, "data": ["b"]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["value"],
@@ -674,12 +665,8 @@ class TestSetOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "a": [
-                        ["x", 2],
-                        ["x", 5],
-                        ["x", 7],
-                        [None, None]
-                    ]
+                    "a.b": ["x", "x", "x", None],
+                    "a.v": [2, 5, 7, None]
                 }
             }
         }

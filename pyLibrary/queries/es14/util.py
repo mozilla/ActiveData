@@ -15,6 +15,11 @@ from pyLibrary.dot import wrap, split_field, join_field
 
 
 def es_query_template(path):
+    """
+    RETURN TEMPLATE AND PATH-TO-FILTER AS A 2-TUPLE
+    :param path:
+    :return:
+    """
     sub_path = split_field(path)[1:]
 
     if sub_path:

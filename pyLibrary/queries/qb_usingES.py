@@ -21,6 +21,7 @@ from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09 import setop as es09_setop
 from pyLibrary.queries.es09.util import parse_columns, INDEX_CACHE
 from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
+from pyLibrary.queries.es14.deep import is_deepop, es_deepop
 from pyLibrary.queries.es14.setop import is_setop, es_setop
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.es14.util import aggregates1_4
@@ -117,6 +118,8 @@ class FromES(Container):
                 q2.frum = result
                 return qb.run(q2)
 
+            if is_deepop(self, query):
+                return es_deepop(self._es, query)
             if is_aggsop(self._es, query):
                 return es_aggsop(self._es, frum, query)
             if is_setop(self._es, query):
@@ -165,7 +168,7 @@ class FromES(Container):
         path = split_field(_from_name)
         if len(path) > 1:
             # LOAD THE PARENT (WHICH WILL FILL THE INDEX_CACHE WITH NESTED CHILDREN)
-            self.get_columns(_from_name=path[0])
+            all_columns = self.get_columns(_from_name=path[0])
             return INDEX_CACHE[_from_name].columns
 
         schema = self._es.get_schema()

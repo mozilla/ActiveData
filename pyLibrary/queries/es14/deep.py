@@ -11,34 +11,22 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary.dot import split_field, join_field
-from pyLibrary.queries.qb import concat
+from pyLibrary.queries.expressions import query_get_all_vars
 
 
-def es_deepop(es, frum, query):
+def is_deepop(es, query):
+    vars = query_get_all_vars(query)
+    columns = es.get_columns()
+    if any(c for c in columns if c.depth and c.name in vars):
+        return True
+    return False
+
+
+def es_deepop(es, query):
     # Generate esFilter
     # Generate Ruby filter on subsequence
         # split filter variables by depth?
     # Iterate through subsequence
     # Add to list of results
     #
-    if len(split_field(frum.name)) > 1:
-
-    real_path = []
-    for p, n in concat(split_field(frum.name)):
-        candidate = join_field(p)
-        if len(real_path)==es.schema[candidate].depth:
-            real_path += [candidate]
-
-
-
-
-    header = "output = []\n"
-
-    loop_headers = ["for {{var}} in {{expr}} do\n"]
-
-
-
-
-    loop_footers = ["end"]
-
+    pass

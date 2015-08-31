@@ -144,6 +144,14 @@ class TestDeepOps(ActiveDataBaseTest):
                 "where": {"eq": {"b": "x"}},
                 "sort": ["o"]
             },
+            "es_query": {  # FOR REFERENCE
+                "query": {"nested": {
+                    "path": "_a",
+                    "inner_hits": {},
+                    "filter": {"term": {"_a.b": "x"}}
+                }},
+                "fields": ["o"]
+            },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [

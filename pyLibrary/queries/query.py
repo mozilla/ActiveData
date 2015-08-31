@@ -19,11 +19,11 @@ from pyLibrary.dot import coalesce, split_field, join_field, Null
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap, listwrap
 from pyLibrary.maths import Math
-from pyLibrary.queries import wrap_from, expressions
+from pyLibrary.queries import wrap_from
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain, is_keyword
-from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter
+from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter, query_get_all_vars
 
 
 DEFAULT_LIMIT = 10
@@ -124,7 +124,7 @@ class Query(object):
         else:
             columns = []
 
-        vars = get_all_vars(self, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
+        vars = query_get_all_vars(self, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
         for c in columns:
             if c.name in vars and c.depth:
                 Log.error("This query, with variable {{var_name}} is too deep", var_name=c.name)
@@ -530,82 +530,3 @@ sort_direction = {
     Null: 1
 }
 
-
-def get_all_vars(query, exclude_where=False):
-    """
-    :param query:
-    :param exclude_where: Sometimes we do not what to look at the where clause
-    :return: all variables in use by query
-    """
-    output = set()
-    for s in listwrap(query.select):
-        output |= select_get_all_vars(s)
-    for s in listwrap(query.edges):
-        output |= edges_get_all_vars(s)
-    for s in listwrap(query.groupby):
-        output |= edges_get_all_vars(s)
-    if not exclude_where:
-        output |= expressions.get_all_vars(query.where)
-    return output
-
-
-def select_get_all_vars(s):
-    if isinstance(s.value, list):
-        return set(s.value)
-    elif isinstance(s.value, basestring):
-        return set([s.value])
-    elif s.value == None or s.value == ".":
-        return set()
-    else:
-        if s.value == "*":
-            return set(["*"])
-        return expressions.get_all_vars(s.value)
-
-
-def edges_get_all_vars(e):
-    output = set()
-    if isinstance(e.value, basestring):
-        output.add(e.value)
-    if e.domain.key:
-        output.add(e.domain.key)
-    if e.domain.where:
-        output |= expressions.get_all_vars(e.domain.where)
-    if e.domain.partitions:
-        for p in e.domain.partitions:
-            if p.where:
-                output |= expressions.get_all_vars(p.where)
-    return output
-
-
-def where_get_all_vars(w):
-    if w in [True, False, None]:
-        return []
-
-    output = set()
-    key = list(w.keys())[0]
-    val = w[key]
-    if key in ["and", "or"]:
-        for ww in val:
-            output |= expressions.get_all_vars(ww)
-        return output
-
-    if key == "not":
-        return expressions.get_all_vars(val)
-
-    if key in ["exists", "missing"]:
-        if isinstance(val, unicode):
-            return {val}
-        else:
-            return {val.field}
-
-    if key in ["gte", "gt", "eq", "ne", "term", "terms", "lt", "lte", "range", "prefix"]:
-        if not isinstance(val, Mapping):
-            Log.error("Expecting `{{key}}` to have a dict value, not a {{type}}",
-                key= key,
-                type= val.__class__.__name__)
-        return val.keys()
-
-    if key == "match_all":
-        return set()
-
-    Log.error("do not know how to handle where {{where|json}}", {"where", w})

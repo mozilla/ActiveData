@@ -101,7 +101,7 @@ def parse_columns(parent_path, esProperties):
             # NESTED TYPE IS A NEW TYPE DEFINITION
             # MARKUP CHILD COLUMNS WITH THE EXTRA DEPTH
             child_columns = deepcopy(parse_columns(path, property.properties))
-            self_columns = deepcopy(child_columns)
+            self_columns = parse_columns(path, property.properties)
             for c in self_columns:
                 c.depth += 1
             columns.extend(self_columns)
@@ -115,7 +115,7 @@ def parse_columns(parent_path, esProperties):
             if path not in INDEX_CACHE:
                 pp = split_field(parent_path)
                 for i in qb.reverse(range(len(pp))):
-                    c = INDEX_CACHE.get(join_field(pp[:i + 1]), None)
+                    c = INDEX_CACHE.get(join_field(pp[:i + 1]))
                     if c:
                         INDEX_CACHE[path] = c.copy()
                         break

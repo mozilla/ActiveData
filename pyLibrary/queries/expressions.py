@@ -15,7 +15,7 @@ import itertools
 
 from pyLibrary import convert
 from pyLibrary.collections import OR
-from pyLibrary.dot import coalesce, wrap, set_default, literal_field
+from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
@@ -24,6 +24,16 @@ from pyLibrary.times.dates import Date
 
 TRUE_FILTER = True
 FALSE_FILTER = False
+
+_Query = None
+
+def _late_import():
+    global _Query
+
+    from pyLibrary.queries.query import Query as _Query
+
+    _=_Query
+
 
 
 
@@ -201,8 +211,13 @@ def qb_expression_to_python(expr):
 
 
 def get_all_vars(expr):
+    if not _Query:
+        _late_import()
+
     if expr == None:
         return set()
+    elif isinstance(expr, _Query):
+        return query_get_all_vars(expr)
     elif isinstance(expr, unicode):
         if expr == "." or is_keyword(expr):
             return set([expr])
@@ -259,6 +274,85 @@ def get_all_vars(expr):
 
     Log.error("`{{op}}` is not a recognized operation",  op= op)
 
+
+def query_get_all_vars(query, exclude_where=False):
+    """
+    :param query:
+    :param exclude_where: Sometimes we do not what to look at the where clause
+    :return: all variables in use by query
+    """
+    output = set()
+    for s in listwrap(query.select):
+        output |= select_get_all_vars(s)
+    for s in listwrap(query.edges):
+        output |= edges_get_all_vars(s)
+    for s in listwrap(query.groupby):
+        output |= edges_get_all_vars(s)
+    if not exclude_where:
+        output |= get_all_vars(query.where)
+    return output
+
+
+def select_get_all_vars(s):
+    if isinstance(s.value, list):
+        return set(s.value)
+    elif isinstance(s.value, basestring):
+        return set([s.value])
+    elif s.value == None or s.value == ".":
+        return set()
+    else:
+        if s.value == "*":
+            return set(["*"])
+        return get_all_vars(s.value)
+
+
+def edges_get_all_vars(e):
+    output = set()
+    if isinstance(e.value, basestring):
+        output.add(e.value)
+    if e.domain.key:
+        output.add(e.domain.key)
+    if e.domain.where:
+        output |= get_all_vars(e.domain.where)
+    if e.domain.partitions:
+        for p in e.domain.partitions:
+            if p.where:
+                output |= get_all_vars(p.where)
+    return output
+
+
+def where_get_all_vars(w):
+    if w in [True, False, None]:
+        return []
+
+    output = set()
+    key = list(w.keys())[0]
+    val = w[key]
+    if key in ["and", "or"]:
+        for ww in val:
+            output |= get_all_vars(ww)
+        return output
+
+    if key == "not":
+        return get_all_vars(val)
+
+    if key in ["exists", "missing"]:
+        if isinstance(val, unicode):
+            return {val}
+        else:
+            return {val.field}
+
+    if key in ["gte", "gt", "eq", "ne", "term", "terms", "lt", "lte", "range", "prefix"]:
+        if not isinstance(val, Mapping):
+            Log.error("Expecting `{{key}}` to have a dict value, not a {{type}}",
+                key= key,
+                type= val.__class__.__name__)
+        return val.keys()
+
+    if key == "match_all":
+        return set()
+
+    Log.error("do not know how to handle where {{where|json}}", {"where", w})
 
 
 python_unary_operators = {

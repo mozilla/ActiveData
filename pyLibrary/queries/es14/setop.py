@@ -16,7 +16,7 @@ from collections import Mapping
 from pyLibrary import queries
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND
-from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field
+from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field, join_field, unwrap
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
 from pyLibrary.maths import Math
@@ -127,7 +127,7 @@ def extract_rows(es, es_query, query):
         if n.pull:
             continue
         if source == "_source":
-            n.pull = "_source." + n.value
+            n.pull = join_field(["_source"] + split_field(n.value))
         else:
             n.pull = "fields." + literal_field(n.value)
 
@@ -164,18 +164,22 @@ def format_list(T, select, query=None):
 
 def format_table(T, select, query=None):
     data = []
-    num_columns=(Math.MAX(select.put.index)+1)
+    num_columns = (Math.MAX(select.put.index)+1)
     for row in T:
         r = [None] * num_columns
         for s in select:
             value = unwraplist(row[s.pull])
 
-            if value != None:
-                i, child = s.put.index, s.put.child
-                col = r[i]
-                if col is None:
-                    r[i] = Dict()
-                r[i][child] = value
+            if value == None:
+                continue
+
+            index, child = s.put.index, s.put.child
+            if child == ".":
+                r[index] = value
+            else:
+                if r[index] is None:
+                    r[index] = Dict()
+                r[index][child] = value
 
         data.append(r)
 
@@ -193,36 +197,21 @@ def format_table(T, select, query=None):
 
 
 def format_cube(T, select, query=None):
-    names = set(select.put.name)
-    matricies = {s: [] for s in names}
-    for i, t in enumerate(T):
-        m = {}
-        for n in names:
-            m[n] = v = Dict()
-            matricies[n].append(v)
-            v["."] = None
-        for s in select:
-            try:
-                if isinstance(s.pull, list):
-                    value = tuple(unwraplist(t[ss]) for ss in s.pull)
-                else:
-                    value = unwraplist(t[s.pull])
+    table = format_table(T, select, query)
 
-                if value == None:
-                    continue
+    if len(table.data) == 0:
+        return Cube(
+            select,
+            edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": 0, "interval": 1}}],
+            data={h: Matrix(list=[]) for i, h in enumerate(table.header)}
+        )
 
-                name, child = s.put.name, s.put.child
-                m[name][child] = value
-
-            except Exception, e:
-                Log.error("", e)
-
-    cube = Cube(
+    cols = zip(*unwrap(table.data))
+    return Cube(
         select,
-        edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(matricies.values()[0]), "interval": 1}}],
-        data={s: Matrix(list=matricies[s]) for s in names}
+        edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(table.data), "interval": 1}}],
+        data={h: Matrix(list=cols[i]) for i, h in enumerate(table.header)}
     )
-    return cube
 
 
 set_default(format_dispatch, {

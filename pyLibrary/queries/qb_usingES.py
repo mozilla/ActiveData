@@ -421,28 +421,28 @@ class FromESMetadata(Container):
                     table="meta.columns",
                     name="table",
                     type="string",
-                    nested_path=None,
+                    nested_path=Null,
                     useSource=True
                 ),
                 Column(
                     table="meta.columns",
                     name="name",
                     type="string",
-                    nested_path=None,
+                    nested_path=Null,
                     useSource=True
                 ),
                 Column(
                     table="meta.columns",
                     name="type",
                     type="string",
-                    nested_path=None,
+                    nested_path=Null,
                     useSource=True
                 ),
                 Column(
                     table="meta.columns",
                     name="nested_path",
                     type="string",
-                    nested_path=None,
+                    nested_path=Null,
                     useSource=True
                 )
             ])

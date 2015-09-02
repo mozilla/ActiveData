@@ -50,7 +50,7 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
             "select": "a",
             "format": "list"
         }))
-        expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6])
+        expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
         wrap(test).expecting_list.meta.saved_as = expected_hash
 
         self._send_queries(settings, test)

@@ -152,7 +152,7 @@ def parse_columns(parent_index_name, parent_query_path, esProperties):
                 table=index_name,
                 name=query_path,
                 type="object",
-                nested_path=None,
+                nested_path=Null,
                 useSource=False,
                 domain=Null
             ))

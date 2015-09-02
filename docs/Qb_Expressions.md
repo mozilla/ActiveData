@@ -268,6 +268,22 @@ Return `true` if a property matches a given regular expression.  The whole term 
 		{"regexp": {variable: regular_expression}}
 
 
+String Operators
+----------------
+
+###`length` Operator###
+
+Return the length of a string.
+
+		{"length": variable}
+
+###`number` Operator###
+
+Convert a string to a numeric value.
+
+		{"number": variable}
+
+
 
 Conditional Operators (Not Yet Implemented)
 -------------------------------------------

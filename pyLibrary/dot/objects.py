@@ -93,6 +93,8 @@ def dictwrap(v):
         m = Dict()
         _set(m, "_dict", v)  # INJECT m.__dict__=v SO THERE IS NO COPY
         return m
+    elif type_ is Dict:
+        return v
     elif type_ is NoneType:
         return None   # So we allow `is None` (OFTEN USED IN PYTHON LIBRARIES)
     elif type_ is list:

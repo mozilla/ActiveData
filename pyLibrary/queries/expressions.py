@@ -409,7 +409,8 @@ def where_get_all_vars(w):
 
 python_unary_operators = {
     "not": "not {{term}}",
-    "length": 'len({{term}})'
+    "length": 'len({{term}})',
+    "number": 'float({{term}})',
 }
 
 python_binary_operators = {
@@ -441,7 +442,8 @@ python_multi_operators = {
 
 ruby_unary_operators = {
     "not": "! {{term}}",
-    "length": '({{term}}).length()'
+    "length": '({{term}}).length()',
+    "number": '({{term}}).to_f'
 }
 
 ruby_binary_operators = {

@@ -18,14 +18,14 @@ from pyLibrary.dot import wrap, unwrap
 
 _get = object.__getattribute__
 _set = object.__setattr__
-dictwrap = None
+_dictwrap = None
 
 
 def _late_import():
-    global dictwrap
-    from pyLibrary.dot.objects import dictwrap
+    global _dictwrap
+    from pyLibrary.dot.objects import dictwrap as _dictwrap
 
-    _ = dictwrap
+    _ = _dictwrap
 
 class DictList(list):
     """
@@ -82,10 +82,10 @@ class DictList(list):
         """
         simple `select`
         """
-        if not dictwrap:
+        if not _dictwrap:
             _late_import()
 
-        return DictList(vals=[unwrap(dictwrap(v)[key]) for v in _get(self, "list")])
+        return DictList(vals=[unwrap(_dictwrap(v)[key]) for v in _get(self, "list")])
 
     def filter(self, _filter):
         return DictList(vals=[unwrap(u) for u in (wrap(v) for v in _get(self, "list")) if _filter(u)])

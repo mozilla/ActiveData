@@ -18,6 +18,7 @@ from pyLibrary.env import elasticsearch, http
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb, expressions, containers
 from pyLibrary.queries.containers import Container
+from pyLibrary.queries.containers.lists import ListContainer
 from pyLibrary.queries.domains import is_keyword, SimpleSetDomain, NumericDomain, UniqueDomain
 from pyLibrary.queries.es09 import setop as es09_setop
 from pyLibrary.queries.es09.util import parse_columns, INDEX_CACHE, Column
@@ -30,7 +31,7 @@ from pyLibrary.queries.namespace.typed import Typed
 from pyLibrary.queries.query import Query, _normalize_where, _normalize_domain
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import coalesce, split_field, set_default, literal_field, unwraplist, join_field
+from pyLibrary.dot import coalesce, split_field, set_default, literal_field, unwraplist, join_field, Null
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 
@@ -211,7 +212,7 @@ class FromES(Container):
         INDEX_CACHE[_from_name] = output = Dict()
         output.name = _from_name
         output.url = self._es.url
-        output.columns = parse_columns(_from_name, properties)
+        output.columns = parse_columns(_from_name, None, properties)
 
         # CHECK CARDINALITY
         counts = self._es.get_cardinality(output.columns, join_field(split_field(_from_name)[1:]))
@@ -361,6 +362,10 @@ class FromESMetadata(Container):
         self.columns = None
 
     @property
+    def query_path(self):
+        return None
+
+    @property
     def url(self):
         return self._es.path + "/" + self.name.replace(".", "/")
 
@@ -371,7 +376,7 @@ class FromESMetadata(Container):
         pass
 
     def _get_columns(self):
-        self.columns = []
+        all_columns = []
         alias_done = set()
         metadata = self._es.get_metadata()
         for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
@@ -381,23 +386,27 @@ class FromESMetadata(Container):
                     c.table = index
                     c.useSource = None
 
-                self.columns.extend(columns)
+                all_columns.extend(columns)
                 for a in meta.aliases:
                     # ONLY THE LATEST ALIAS IS CHOSEN TO GET COLUMNS
                     if a in alias_done:
                         continue
                     alias_done.add(a)
                     for c in columns:
-                        self.columns.append(set_default({"table": a}, c))  # ENSURE WE COPY
+                        cc = copy(c)
+                        cc.table = a
+                        all_columns.append(cc)
+
+        self.columns = ListContainer([c.as_dict() for c in all_columns], {c.name: c for c in self.get_columns()})
 
     def query(self, _query):
         if not self.columns:
             self._get_columns()
 
-        return qb.run(Query(set_default(
+        return self.columns.query(Query(set_default(
             {
                 "from": self.columns,
-                "sort": ["table", "property"]
+                "sort": ["table", "name"]
             },
             _query.as_dict()
         )))
@@ -409,27 +418,31 @@ class FromESMetadata(Container):
         if self.name == "meta.columns":
             return wrap([
                 Column(
+                    table="meta.columns",
                     name="table",
                     type="string",
-                    nested_path=[],
+                    nested_path=None,
                     useSource=True
                 ),
                 Column(
+                    table="meta.columns",
                     name="name",
                     type="string",
-                    nested_path=[],
+                    nested_path=None,
                     useSource=True
                 ),
                 Column(
+                    table="meta.columns",
                     name="type",
                     type="string",
-                    nested_path=[],
+                    nested_path=None,
                     useSource=True
                 ),
                 Column(
-                    name="depth",
-                    type="integer",
-                    nested_path=[],
+                    table="meta.columns",
+                    name="nested_path",
+                    type="string",
+                    nested_path=None,
                     useSource=True
                 )
             ])
@@ -445,6 +458,6 @@ def _parse_properties(index, properties):
     backup = INDEX_CACHE.get(index)
     INDEX_CACHE[index] = output = Dict()
     output.name = index
-    columns = parse_columns(index, properties)
+    columns = parse_columns(index, None, properties)
     INDEX_CACHE[index] = backup
     return columns

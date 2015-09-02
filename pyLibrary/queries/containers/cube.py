@@ -16,7 +16,6 @@ from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import MAX, OR
 from pyLibrary.queries.containers import Container
-# from pyLibrary.queries.query import _normalize_edge
 from pyLibrary.dot import Null, Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, wrap_dot, listwrap

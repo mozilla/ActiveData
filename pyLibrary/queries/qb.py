@@ -963,4 +963,4 @@ def reverse(vals):
 
     return wrap(output)
 
-from pyLibrary.queries.list.aggs import is_aggs, list_aggs
+from pyLibrary.queries.lists.aggs import is_aggs, list_aggs

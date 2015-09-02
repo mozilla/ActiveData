@@ -99,6 +99,8 @@ def dictwrap(v):
         return DictList(v)
     elif type_ is GeneratorType:
         return (wrap(vv) for vv in v)
+    elif hasattr(v, "as_dict"):
+        return v.as_dict()
     elif isinstance(v, (basestring, int, float, Decimal, datetime, date, Dict, DictList, NullType, NoneType)):
         return v
     else:

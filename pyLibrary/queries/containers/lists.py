@@ -13,23 +13,30 @@ from __future__ import absolute_import
 from pyLibrary import convert
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, wrap
+from pyLibrary.dot import Dict, wrap, listwrap, unwraplist
+from pyLibrary.queries import qb
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.expressions import TRUE_FILTER
-from pyLibrary.queries.list.aggs import is_aggs, list_aggs
+from pyLibrary.queries.es09.util import Column
+from pyLibrary.queries.expressions import TRUE_FILTER, qb_expression_to_python
+from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
 
 
 class ListContainer(Container):
     def __init__(self, frum, schema=None):
+        frum = list(frum)
         Container.__init__(self, frum, schema)
-        self.frum = list(frum)
+        self.frum = frum
         if schema == None:
             self.schema = get_schema_from_list(frum)
 
+    @property
+    def query_path(self):
+        return None
+
     def query(self, q):
-        frum = self.frum
+        frum = self
         if is_aggs(q):
-            frum = list_aggs(frum, q)
+            frum = list_aggs(frum.data, q)
         else:  # SETOP
             try:
                 if q.filter != None or q.esfilter != None:
@@ -57,15 +64,18 @@ class ListContainer(Container):
         return self.where(where)
 
     def where(self, where):
-        _ = where
-        Log.error("not implemented")
+        temp = None
+        exec("def temp(row):\n    return "+qb_expression_to_python(where))
+        return ListContainer(filter(temp, self.data), self.schema)
 
     def sort(self, sort):
-        _ = sort
-        Log.error("not implemented")
+        return ListContainer(qb.sort(self.data, sort), self.schema)
 
     def select(self, select):
-        _ = select
+        selects = listwrap(select)
+        if selects[0].value == "*" and selects[0].name == ".":
+            return self
+
         Log.error("not implemented")
 
     def window(self, window):
@@ -78,15 +88,17 @@ class ListContainer(Container):
 
     def format(self, format):
         if format == "table":
-            frum = convert.list2table(self.data)
-            frum.meta.format = "table"
+            frum = convert.list2table(self.data, self.schema.keys())
+        elif format == "cube":
+            frum = convert.list2cube(self.data, self.schema.keys())
         else:
             frum = wrap({
                 "meta": {"format": "list"},
-                "data": self.data
+                "data": [{k: unwraplist(v) for k, v in row.items()} for row in self.data]
             })
+        return frum
 
-    def get_columns(self, frum):
+    def get_columns(self, query_path=None):
         return self.schema.values()
 
 
@@ -98,7 +110,7 @@ def get_schema_from_list(frum):
     _get_schema_from_list(frum, columns, [], 0)
     return columns
 
-def _get_schema_from_list(frum, columns, prefix, depth):
+def _get_schema_from_list(frum, columns, prefix, nested_path):
     """
     SCAN THE LIST FOR COLUMN TYPES
     """
@@ -111,14 +123,21 @@ def _get_schema_from_list(frum, columns, prefix, depth):
             names[name] = new_type
 
             if this_type == "object":
-                _get_schema_from_list([value], columns, prefix + [name], depth)
+                _get_schema_from_list([value], columns, prefix + [name], nested_path)
             elif this_type == "nested":
-                _get_schema_from_list(value, columns, prefix + [name], depth+1)
+                if not nested_path:
+                    _get_schema_from_list(value, columns, prefix + [name], [name])
+                else:
+                    _get_schema_from_list(value, columns, prefix + [name], [nested_path[0]+"."+name]+nested_path)
 
     for n, t in names.items():
         full_name = ".".join(prefix + [n])
-        column = {"name": full_name, "value": full_name, "type": t, "depth": depth}
-        columns[full_name] = column
+        column = Column(
+            name=full_name,
+            type=t,
+            nested_path=nested_path
+        )
+        columns[columns.name] = column
 
 
 _type_to_name = {

@@ -69,7 +69,10 @@ class Query(object):
         self.format = query.format
 
         self.frum = wrap_from(query["from"], schema=schema)
-        query_path = join_field(split_field(self.frum.name)[1:])
+        if self.frum == "meta.columns":
+            query_path = Null
+        else:
+            query_path = self.frum.query_path
 
         select = query.select
         if isinstance(select, list):

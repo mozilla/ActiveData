@@ -107,6 +107,8 @@ class Container(object):
             _delayed_imports()
 
         self.data = frum
+        if isinstance(schema, list):
+            Log.error("expecting map from abs_name to column object")
         self.schema = schema
         # self.namespaces = wrap([_Normal()])
 

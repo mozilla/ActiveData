@@ -17,10 +17,14 @@ from pyLibrary.queries import containers
 
 type2container = Dict()
 config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
-
+_ListContainer = None
 
 def _delayed_imports():
     global type2container
+    global _ListContainer
+
+    from pyLibrary.queries.containers.lists import ListContainer as _ListContainer
+    _ = _ListContainer
 
     from pyLibrary.queries.qb_usingMySQL import MySQL
     from pyLibrary.queries.qb_usingES import FromES
@@ -63,6 +67,8 @@ def wrap_from(frum, schema=None):
     elif isinstance(frum, Mapping) and (frum["from"] or isinstance(frum["from"], (list, set))):
         from pyLibrary.queries.query import Query
         return Query(frum, schema=schema)
+    elif isinstance(frum, list):
+        return _ListContainer(frum)
     else:
         return frum
 

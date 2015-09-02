@@ -37,12 +37,12 @@ class TestMetadata(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
-                {"table": table_name, "name": "a", "type": "string", "depth":0}
+                {"table": table_name, "name": "a", "type": "string", "nested_path": None}
             ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["table", "name", "type", "depth"],
-                "data": [[table_name, "a", "string", 0]]
+                "header": ["table", "name", "type", "nested_path"],
+                "data": [[table_name, "a", "string", None]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -56,7 +56,7 @@ class TestMetadata(ActiveDataBaseTest):
                     "table": [table_name],
                     "name": ["a"],
                     "type": ["string"],
-                    "depth": [0]
+                    "nested_type": [None]
                 }
             }
         })
@@ -87,19 +87,19 @@ class TestMetadata(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"table": table_name, "name": "_a", "type": "nested", "depth": 0},
-                    {"table": table_name, "name": "_a.b", "type": "string", "depth": 1},
-                    {"table": table_name, "name": "_a.v", "type": "long", "depth": 1},
-                    {"table": table_name, "name": "c", "type": "string", "depth": 0},
+                    {"table": table_name, "name": "_a", "type": "nested", "nested_path": "_a"},
+                    {"table": table_name, "name": "_a.b", "type": "string", "nested_path": "_a"},
+                    {"table": table_name, "name": "_a.v", "type": "long", "nested_path": "_a"},
+                    {"table": table_name, "name": "c", "type": "string", "nested_path": None},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["table", "name", "depth", "type"],
+                "header": ["table", "name", "nested_path", "type"],
                 "data": [
-                    [table_name, "_a", 0, "nested"],
-                    [table_name, "_a.b", 1, "string"],
-                    [table_name, "_a.v", 1, "long"],
-                    [table_name, "c", 0, "string"]
+                    [table_name, "_a", "_a", "nested"],
+                    [table_name, "_a.b", "_a", "string"],
+                    [table_name, "_a.v", "_a", "long"],
+                    [table_name, "c", None, "string"]
                 ]
             }
         }

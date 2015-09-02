@@ -10,6 +10,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+from collections import namedtuple
 from copy import deepcopy
 from datetime import datetime
 
@@ -21,7 +22,7 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries import domains
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import split_field, join_field, coalesce
+from pyLibrary.dot import split_field, join_field, coalesce, Null
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap
 from pyLibrary.queries import qb
@@ -37,8 +38,8 @@ DEBUG = False
 INDEX_CACHE = {}  # MATCH NAMES TO ES URL AND COLUMNS eg {name:{"url":url, "columns":columns"}}
 
 
-def post(es, FromES, limit):
-    if not FromES.facets and FromES.size == 0 and not FromES.aggs:
+def post(es, es_query, limit):
+    if not es_query.facets and es_query.size == 0 and not es_query.aggs:
         Log.error("FromES is sending no facets")
         # DO NOT KNOW WHY THIS WAS HERE
     # if isinstance(query.select, list) or len(query.edges) and not FromES.facets.keys and FromES.size == 0:
@@ -46,7 +47,7 @@ def post(es, FromES, limit):
 
     postResult = None
     try:
-        postResult = es.search(FromES)
+        postResult = es.search(es_query)
 
         for facetName, f in postResult.facets.items():
             if f._type == "statistical":
@@ -86,6 +87,32 @@ def build_es_query(query):
     return output
 
 
+class Column(object):
+    """
+    REPRESENT A DATABASE COLUMN IN THE ELASTICSEARCH
+    """
+    __slots__ = ("name", "type", "nested_path", "useSource", "domain", "relative", "abs_name")
+
+    def __init__(self, **kwargs):
+        for s in Column.__slots__:
+            setattr(self, s, kwargs.get(s, Null))
+
+        for k in kwargs.keys():
+            if k not in Column.__slots__:
+                Log.error("{{name}} is not a valid property", name=k)
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    def __getattr__(self, item):
+        Log.error("{{item|quote}} not valid attribute", item=item)
+
+    def __copy__(self):
+        return Column(**{k: getattr(self, k) for k in Column.__slots__})
+
+    def __dict__(self):
+        return {k: getattr(self, k) for k in Column.__slots__}
+
 def parse_columns(parent_path, esProperties):
     """
     RETURN THE COLUMN DEFINITIONS IN THE GIVEN esProperties OBJECT
@@ -100,41 +127,33 @@ def parse_columns(parent_path, esProperties):
         if property.type == "nested" and property.properties:
             # NESTED TYPE IS A NEW TYPE DEFINITION
             # MARKUP CHILD COLUMNS WITH THE EXTRA DEPTH
-            child_columns = deepcopy(parse_columns(path, property.properties))
             self_columns = parse_columns(path, property.properties)
             for c in self_columns:
-                c.depth += 1
-            columns.extend(self_columns)
-            columns.append({
-                "name": join_field(split_field(path)[1::]),
-                "type": "nested",
-                "depth": 0,
-                "useSource": False
-            })
-
-            if path not in INDEX_CACHE:
-                pp = split_field(parent_path)
-                for i in qb.reverse(range(len(pp))):
-                    c = INDEX_CACHE.get(join_field(pp[:i + 1]))
-                    if c:
-                        INDEX_CACHE[path] = c.copy()
-                        break
+                if not c.nested_path:
+                    c.nested_path=[name]
                 else:
-                    Log.error("Can not find parent")
+                    c.nested_path.insert(0, ".".join((name, c.nested_path[0])))
+            columns.extend(self_columns)
+            columns.append(Column(
+                name=join_field(split_field(path)[1::]),
+                type="nested",
+                nested_path=[name],
+                useSource=False,
+                domain=Null
+            ))
 
-                INDEX_CACHE[path].name = path
-            INDEX_CACHE[path].columns = child_columns
             continue
 
         if property.properties:
             child_columns = parse_columns(path, property.properties)
             columns.extend(child_columns)
-            columns.append({
-                "name": join_field(split_field(path)[1::]),
-                "type": "object",
-                "depth": 0,
-                "useSource": False
-            })
+            columns.append(Column(
+                name=join_field(split_field(path)[1::]),
+                type="object",
+                nested_path=None,
+                useSource=False,
+                domain=Null
+            ))
 
         if property.dynamic:
             continue
@@ -151,26 +170,29 @@ def parse_columns(parent_path, esProperties):
             continue
 
         if property.type in ["string", "boolean", "integer", "date", "long", "double"]:
-            columns.append({
+            columns.append(Column(**{
                 "name": join_field(split_field(path)[1::]),
                 "type": property.type,
-                "depth": 0,
-                "useSource": property.index == "no"
-            })
+                "nested_path": Null,
+                "useSource": property.index == "no",
+                "domain": Null
+            }))
             if property.index_name and name != property.index_name:
-                columns.append({
+                columns.append(Column(**{
                     "name": property.index_name,
                     "type": property.type,
-                    "depth": 0,
-                    "useSource": property.index == "no"
-                })
+                    "nested_path": Null,
+                    "useSource": property.index == "no",
+                    "domain": Null
+                }))
         elif property.enabled == None or property.enabled == False:
-            columns.append({
+            columns.append(Column(**{
                 "name": join_field(split_field(path)[1::]),
                 "type": "object",
-                "depth": 0,
-                "useSource": True
-            })
+                "nested_path": Null,
+                "useSource": True,
+                "domain": Null
+            }))
         else:
             Log.warning("unknown type {{type}} for property {{path}}",  type= property.type,  path= path)
 

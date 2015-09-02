@@ -271,6 +271,16 @@ class ActiveDataBaseTest(FuzzyTestCase):
                     expected.data = qb.sort(expected.data, sort_order.name)
                 if isinstance(result.data, list):
                     result.data = qb.sort(result.data, sort_order.name)
+        elif result.meta.format == "cube" and len(result.edges) == 1 and result.edges[0].name == "rownum" and not query.sort:
+            header = list(result.data.keys())
+
+            result.data = cube2list(result.data)
+            result.data = qb.sort(result.data, header)
+            result.data = list2cube(result.data, header)
+
+            expected.data = cube2list(expected.data)
+            expected.data = qb.sort(expected.data, header)
+            expected.data = list2cube(expected.data, header)
 
         # CONFIRM MATCH
         self.assertAlmostEqual(result, expected)
@@ -304,6 +314,18 @@ class ActiveDataBaseTest(FuzzyTestCase):
                     Log.alert("Problem connecting")
                 else:
                     Log.error("Server raised exception", e)
+
+
+def cube2list(c):
+    rows = zip(*[[(k, v) for v in a] for k, a in c.items()])
+    rows = [dict(r) for r in rows]
+    return rows
+
+def list2cube(rows, header):
+    return {
+        h: [r[h] for r in rows]
+        for h in header
+    }
 
 
 def error(response):

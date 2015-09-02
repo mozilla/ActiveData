@@ -25,45 +25,58 @@ from pyLibrary.maths import Math
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb
 from pyLibrary.strings import utf82unicode
-from pyLibrary.dot import coalesce, Null, Dict, set_default, listwrap, literal_field, split_field, join_field
+from pyLibrary.dot import coalesce, Null, Dict, set_default, listwrap, literal_field
 from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import wrap, unwrap
+from pyLibrary.dot import wrap
 from pyLibrary.thread.threads import ThreadedQueue, Thread
-
 
 
 class Features(object):
 
-    def get_cardinality(self, columns):
+    def get_cardinality(self, columns, nested_path):
         """
         FAST AND DIRTY COUNT OF UNIQUE VALUES IN COLUMNS
         """
         columns = listwrap(columns)
 
         def counter(c):
-            if c.depth:
+            if c.nested_path:
                 return {
                     "nested": {
-                        "path": join_field(split_field(c.name)[c.depth::])
+                        "path": c.nested_path[0] # FIRST ONE IS LONGEST
                     },
                     "aggs": {
-                        c.name: {"cardinality": {"field": c.name}}
+                        "_nested": {"cardinality": {"field": c.name}}
                     }
                 }
             else:
                 return {"cardinality": {"field": c.name}}
 
         result = self.search({
-            "aggs": {c.name: counter(c) for c in columns if c.type not in ["object", "nested"]}
+            "aggs": {c.name: counter(c) for c in columns if c.type not in ["object", "nested"]},
+            "size": 0
         })
-        output = wrap({c: {"name": c, "count": r.value} for c, r in result.aggregations.items()})
+        output = wrap({c: {"name": c, "count": coalesce(r.value, r._nested.value)} for c, r in result.aggregations.items()})
 
-        result = self.search({
-            "aggs": {c.name: {"terms": {"field": c.name, "size": 0}} for c in columns if c.type not in ["object", "nested"] and output[literal_field(c.name)].count <= 1000}
-        })
+        query = Dict(size=0)
+        for c in columns:
+            if c.type in ["object", "nested"] or output[literal_field(c.name)].count > 1000:
+                continue
+            if c.nested_path:
+                query.aggs[literal_field(c.name)] = {
+                    "nested": {"path": c.nested_path[0]},
+                    "aggs": {"_nested": {"terms": {"field": c.name, "size": 0}}}
+                }
+            else:
+                query.aggs[literal_field(c.name)]={"terms": {"field": c.name, "size": 0}}
+
+        result = self.search(query)
 
         for name, aggs in result.aggregations.items():
-            output[literal_field(name)].partitions = qb.sort(aggs.buckets.key)
+            if aggs._nested:
+                output[literal_field(name)].partitions = qb.sort(aggs._nested.buckets.key)
+            else:
+                output[literal_field(name)].partitions = qb.sort(aggs.buckets.key)
 
         return output
 

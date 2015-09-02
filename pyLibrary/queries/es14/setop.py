@@ -66,7 +66,7 @@ def es_setop(es, query):
 def extract_rows(es, es_query, query):
     is_list = isinstance(query.select, list)
     new_select = DictList()
-    column_names = set(c.name for c in query.frum.get_columns() if (c.type not in ["object"] or c.useSource) and not c.depth)
+    column_names = set(c.name for c in query.frum.get_columns() if (c.type not in ["object"] or c.useSource) and not c.nested_path)
     source = "fields"
 
     i = 0
@@ -116,10 +116,20 @@ def extract_rows(es, es_query, query):
                 es_query.fields.extend([v for v in s.value])
         else:
             es_query.script_fields[literal_field(s.name)] = {"script": qb_expression_to_ruby(s.value)}
-            new_select.append({"name": s.name if is_list else ".", "value": s.name, "put": {"name": s.name, "index": i, "child": "."}})
+            new_select.append({
+                "name": s.name if is_list else ".",
+                "pull": "fields." + literal_field(s.name),
+                "put": {"name": s.name, "index": i, "child": "."}
+            })
             i += 1
 
-
+    for n in new_select:
+        if n.pull:
+            continue
+        if source == "_source":
+            n.pull = "_source." + n.value
+        else:
+            n.pull = "fields." + literal_field(n.value)
 
     with Timer("call to ES") as call_timer:
         data = es09.util.post(es, es_query, query.limit)
@@ -129,7 +139,7 @@ def extract_rows(es, es_query, query):
     try:
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]
 
-        output = formatter(T, new_select, source, query)
+        output = formatter(T, new_select, query)
         output.meta.es_response_time = call_timer.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
@@ -139,17 +149,12 @@ def extract_rows(es, es_query, query):
 
 
 
-def format_list(T, select, source, query=None):
+def format_list(T, select, query=None):
     data = []
     for row in T:
         r = Dict()
         for s in select:
-            if source == "_source":
-                r[s.name][s.put.child] = unwraplist(row[source][s.value])
-            elif isinstance(s.value, basestring):  # fields
-                r[s.name][s.put.child] = unwraplist(row[source][literal_field(s.value)])
-            else:
-                r[s.name][s.put.child] = unwraplist(row[source][literal_field(s.name)])
+            r[s.name][s.put.child] = unwraplist(row[s.pull])
         data.append(r if r else None)
     return Dict(
         meta={"format": "list"},
@@ -157,18 +162,13 @@ def format_list(T, select, source, query=None):
     )
 
 
-def format_table(T, select, source, query=None):
+def format_table(T, select, query=None):
     data = []
     num_columns=(Math.MAX(select.put.index)+1)
     for row in T:
         r = [None] * num_columns
         for s in select:
-            if source == "_source":
-                value = unwraplist(row[source][s.value])
-            elif isinstance(s.value, basestring):  # fields
-                value = unwraplist(row[source][literal_field(s.value)])
-            else:
-                value = unwraplist(row[source][literal_field(s.name)])
+            value = unwraplist(row[s.pull])
 
             if value != None:
                 i, child = s.put.index, s.put.child
@@ -192,33 +192,36 @@ def format_table(T, select, source, query=None):
     )
 
 
-def format_cube(T, select, source, query=None):
-    matricies = {s: Matrix(dims=(len(T),)) for s in set(select.put.name)}
+def format_cube(T, select, query=None):
+    names = set(select.put.name)
+    matricies = {s: [] for s in names}
     for i, t in enumerate(T):
+        m = {}
+        for n in names:
+            m[n] = v = Dict()
+            matricies[n].append(v)
+            v["."] = None
         for s in select:
             try:
-                if isinstance(s.value, list):
-                    value = tuple(unwraplist(t[source][ss]) for ss in s.value)
+                if isinstance(s.pull, list):
+                    value = tuple(unwraplist(t[ss]) for ss in s.pull)
                 else:
-                    if source == "_source":
-                        value = unwraplist(t[source][s.value])
-                    elif isinstance(s.value, basestring):  # fields
-                        value = unwraplist(t[source].get(s.value))
-                    else:
-                        value = unwraplist(t[source].get(s.name))
+                    value = unwraplist(t[s.pull])
 
                 if value == None:
                     continue
 
                 name, child = s.put.name, s.put.child
-                col = matricies[name][(i,)]
-                if col == None:
-                    matricies[name][(i,)] = Dict()
-                matricies[name][(i,)][child] = value
+                m[name][child] = value
 
             except Exception, e:
                 Log.error("", e)
-    cube = Cube(select, edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(T), "interval": 1}}], data=matricies)
+
+    cube = Cube(
+        select,
+        edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(matricies.values()[0]), "interval": 1}}],
+        data={s: Matrix(list=matricies[s]) for s in names}
+    )
     return cube
 
 

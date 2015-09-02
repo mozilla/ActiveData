@@ -11,15 +11,16 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
+from copy import deepcopy, copy
 
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb, expressions, containers
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.domains import is_keyword
+from pyLibrary.queries.domains import is_keyword, SimpleSetDomain, NumericDomain, UniqueDomain
 from pyLibrary.queries.es09 import setop as es09_setop
-from pyLibrary.queries.es09.util import parse_columns, INDEX_CACHE
+from pyLibrary.queries.es09.util import parse_columns, INDEX_CACHE, Column
 from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
 from pyLibrary.queries.es14.deep import is_deepop, es_deepop
 from pyLibrary.queries.es14.setop import is_setop, es_setop
@@ -29,7 +30,7 @@ from pyLibrary.queries.namespace.typed import Typed
 from pyLibrary.queries.query import Query, _normalize_where, _normalize_domain
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import coalesce, split_field, set_default, literal_field, unwraplist
+from pyLibrary.dot import coalesce, split_field, set_default, literal_field, unwraplist, join_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 
@@ -95,6 +96,10 @@ class FromES(Container):
             self.worker.join()
 
     @property
+    def query_path(self):
+        return join_field(split_field(self.name)[1:])
+
+    @property
     def url(self):
         return self._es.url
 
@@ -118,7 +123,7 @@ class FromES(Container):
                 q2.frum = result
                 return qb.run(q2)
 
-            if is_deepop(self, query):
+            if is_deepop(self._es, query):
                 return es_deepop(self._es, query)
             if is_aggsop(self._es, query):
                 return es_aggsop(self._es, frum, query)
@@ -167,9 +172,39 @@ class FromES(Container):
 
         path = split_field(_from_name)
         if len(path) > 1:
-            # LOAD THE PARENT (WHICH WILL FILL THE INDEX_CACHE WITH NESTED CHILDREN)
+            # LOAD THE PARENT COLUMNS
             all_columns = self.get_columns(_from_name=path[0])
-            return INDEX_CACHE[_from_name].columns
+            this_name = join_field(path[1:])
+            this = [c for c in all_columns if c.name == this_name][0]
+            this_depth = len(this.nested_path)
+            abs_columns = [
+                c
+                for c in all_columns
+                if c.type != "nested"
+            ]
+
+            this_columns = []
+            for c in abs_columns:
+                #ABS FIELD NAMES
+                c = copy(c)
+                c.abs_name = c.name
+                this_columns.append(c)
+
+                #RELATIVE FIELD NAMES
+                c = copy(c)
+                c.relative = True
+                if this_depth > len(c.nested_path):
+                    c.name = ("."*(this_depth-len(c.nested_path)+1))+c.name
+                else:
+                    c.name = c.name[len(this.nested_path[0])+1:]
+                this_columns.append(c)
+
+            INDEX_CACHE[_from_name] = Dict(
+                name=_from_name,
+                url=self._es.url,
+                columns=this_columns
+            )
+            return this_columns
 
         schema = self._es.get_schema()
         properties = schema.properties
@@ -179,7 +214,7 @@ class FromES(Container):
         output.columns = parse_columns(_from_name, properties)
 
         # CHECK CARDINALITY
-        counts = self._es.get_cardinality(output.columns)
+        counts = self._es.get_cardinality(output.columns, join_field(split_field(_from_name)[1:]))
 
         for c in output.columns:
             col = counts[literal_field(c.name)]
@@ -188,18 +223,16 @@ class FromES(Container):
 
             if c.type in ["long", "integer", "double", "float"]:
                 if col.count <= 30:
-                    c.domain.type = "set"
-                    c.domain.partitions = col.partitions
+                    c.domain = SimpleSetDomain(partitions=col.partitions)
                 else:
-                    c.domain.type = "numeric"
+                    c.domain = NumericDomain()
             elif c.type in ["boolean", "bool"]:
                 c.domain.type = "boolean"
             else:
                 if col.count <= 1000:
-                    c.domain.type = "set"
-                    c.domain.partitions = col.partitions
+                    c.domain = SimpleSetDomain(partitions=col.partitions)
                 else:
-                    c.domain.type = "uid"
+                    c.domain.type = UniqueDomain()
             c.domain = _normalize_domain(c.domain)
 
         return output.columns
@@ -375,23 +408,30 @@ class FromESMetadata(Container):
         """
         if self.name == "meta.columns":
             return wrap([
-                {
-                    "name": "table",
-                    "type": "string",
-                    "depth": 0
-                }, {
-                    "name": "name",
-                    "type": "string",
-                    "depth": 0
-                }, {
-                    "name": "type",
-                    "type": "string",
-                    "depth": 0
-                }, {
-                    "name": "depth",
-                    "type": "integer",
-                    "depth": 0
-                }
+                Column(
+                    name="table",
+                    type="string",
+                    nested_path=[],
+                    useSource=True
+                ),
+                Column(
+                    name="name",
+                    type="string",
+                    nested_path=[],
+                    useSource=True
+                ),
+                Column(
+                    name="type",
+                    type="string",
+                    nested_path=[],
+                    useSource=True
+                ),
+                Column(
+                    name="depth",
+                    type="integer",
+                    nested_path=[],
+                    useSource=True
+                )
             ])
         else:
             Log.error("Unknonw metadata: {{name}}.  Only `meta.columns` exists for now.",  name= self.settings.name)

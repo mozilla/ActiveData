@@ -69,6 +69,7 @@ class Query(object):
         self.format = query.format
 
         self.frum = wrap_from(query["from"], schema=schema)
+        query_path = join_field(split_field(self.frum.name)[1:])
 
         select = query.select
         if isinstance(select, list):
@@ -126,7 +127,7 @@ class Query(object):
 
         vars = query_get_all_vars(self, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
         for c in columns:
-            if c.name in vars and c.depth:
+            if c.name in vars and not query_path.startswith(coalesce(c.nested_path[0], "")):
                 Log.error("This query, with variable {{var_name}} is too deep", var_name=c.name)
 
     @property

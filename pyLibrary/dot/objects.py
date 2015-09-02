@@ -22,6 +22,9 @@ WRAPPED_CLASSES = set()
 
 
 class DictObject(Mapping):
+    """
+    TREAT AN OBJECT LIKE DATA
+    """
 
     def __init__(self, obj):
         _set(self, "_obj", obj)
@@ -91,7 +94,7 @@ def dictwrap(v):
         _set(m, "_dict", v)  # INJECT m.__dict__=v SO THERE IS NO COPY
         return m
     elif type_ is NoneType:
-        return None   # So we allow `is None`
+        return None   # So we allow `is None` (OFTEN USED IN PYTHON LIBRARIES)
     elif type_ is list:
         return DictList(v)
     elif type_ is GeneratorType:

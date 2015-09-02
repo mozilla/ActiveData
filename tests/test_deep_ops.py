@@ -23,30 +23,30 @@ class TestDeepOps(ActiveDataBaseTest):
     def test_deep_select_column(self):
         test = {
             "data": [
-                {"a": [
+                {"_a": [
                     {"b": "x", "v": 2},
                     {"b": "y", "v": 3}
                 ]},
-                {"a": {"b": "x", "v": 5}},
-                {"a": [
+                {"_a": {"b": "x", "v": 5}},
+                {"_a": [
                     {"b": "x", "v": 7},
                 ]},
                 {"c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a",
-                "select": {"value": "a.v", "aggregate": "sum"},
-                "edges": ["a.b"]
+                "from": base_test_class.settings.backend_es.index+"._a",
+                "select": {"value": "_a.v", "aggregate": "sum"},
+                "edges": ["_a.b"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a": {"b": "x", "v": 14}},
-                    {"a": {"b": "y", "v": 3}},
+                    {"_a": {"b": "x", "v": 14}},
+                    {"_a": {"b": "y", "v": 3}},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a.b", "a.v"],
+                "header": ["_a.b", "_a.v"],
                 "data": [
                     ["x", 14],
                     ["y", 3]
@@ -56,8 +56,8 @@ class TestDeepOps(ActiveDataBaseTest):
                 "meta": {"format": "cube"},
                 "edges": [
                     {
-                        "name": "a.b",
-                        "allowNulls": False,
+                        "name": "_a.b",
+                        "allowNulls": True,
                         "domain": {
                             "type": "set",
                             "key": "value",
@@ -66,7 +66,7 @@ class TestDeepOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "a.v": [14, 3]
+                    "_a.v": [14, 3]
                 }
             }
         }
@@ -75,30 +75,30 @@ class TestDeepOps(ActiveDataBaseTest):
     def test_deep_select_column_w_groupby(self):
         test = {
             "data": [
-                {"a": [
+                {"_a": [
                     {"b": "x", "v": 2},
                     {"b": "y", "v": 3}
                 ]},
-                {"a": {"b": "x", "v": 5}},
-                {"a": [
+                {"_a": {"b": "x", "v": 5}},
+                {"_a": [
                     {"b": "x", "v": 7},
                 ]},
                 {"c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a",
-                "select": {"value": "a.v", "aggregate": "sum"},
-                "groupby": ["a.b"]
+                "from": base_test_class.settings.backend_es.index+"._a",
+                "select": {"value": "_a.v", "aggregate": "sum"},
+                "groupby": ["_a.b"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a": {"b": "x", "v": 14}},
-                    {"a": {"b": "y", "v": 3}},
+                    {"_a": {"b": "x", "v": 14}},
+                    {"_a": {"b": "y", "v": 3}},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a.b", "a.v"],
+                "header": ["_a.b", "_a.v"],
                 "data": [
                     ["x", 14],
                     ["y", 3]
@@ -110,7 +110,7 @@ class TestDeepOps(ActiveDataBaseTest):
     def test_bad_deep_select_column_w_groupby(self):
         test = {
             "data": [  # WE NEED SOME DATA TO MAKE A NESTED COLUMN
-                {"a": {"b": "x"}}
+                {"_a": {"b": "x"}}
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
@@ -155,11 +155,9 @@ class TestDeepOps(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"o": 3, "b": "x"},
-                    {"o": 3, "b": "y"},
                     {"o": 1, "b": "x"},
                     {"o": 2, "b": "x"},
-                    {"o": 4}
+                    {"o": 3, "b": "x"}
                 ]},
             # "expecting_table": {
             #     "meta": {"format": "table"},
@@ -270,6 +268,60 @@ class TestDeepOps(ActiveDataBaseTest):
                     ],
                     "c": [None, None, None, "x"],
                     "o": [1, 2, 3, 4]
+                }
+            }
+        }
+
+    def test_select_whole_nested_document(self):
+        test = {
+            "data": [
+                {"o": 3, "_a": [
+                    {"b": "x", "v": 2},
+                    {"b": "y", "v": 3}
+                ]},
+                {"o": 1, "_a": {"b": "x", "v": 5}},
+                {"o": 2, "_a": [
+                    {"b": "x", "v": 7},
+                ]},
+                {"o": 4, "c": "x"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+"._a",
+                "select": "*"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"o": 1, "b": "x", "v": 5},
+                    {"o": 2, "b": "x", "v": 7},
+                    {"o": 3, "b": "x", "v": 2},
+                    {"o": 3, "b": "y", "v": 3},
+                    {"o": 4, "c": "x"}
+                ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["o", "b", "v", "c"],
+                "data": [
+                    [1, "x", 5, None],
+                    [2, "x", 7, None],
+                    [3, "x", 2, None],
+                    [3, "y", 3, None],
+                    [4, None, None, "x"]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 5, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "b": ["x", "x", "y", "x", None],
+                    "v": [5, 7, 3, 2, None],
+                    "c": [None, None, None, None, "x"],
+                    "o": [1, 2, 3, 3, 4]
                 }
             }
         }

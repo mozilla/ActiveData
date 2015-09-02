@@ -582,6 +582,24 @@ class NumericDomain(Domain):
         return output
 
 
+class UniqueDomain(Domain):
+    __slots__ = ()
+
+    def compare(self, a, b):
+        return value_compare(a, b)
+
+    def getCanonicalPart(self, part):
+        return part
+
+    def getPartByKey(self, key):
+        return key
+
+    def getKey(self, part):
+        return part
+
+    def getEnd(self, value):
+        return value
+
 
 class RangeDomain(Domain):
     __slots__ = ["max", "min", "interval", "partitions", "NULL"]
@@ -690,10 +708,10 @@ name_to_type = {
     "value": ValueDomain,
     "default": DefaultDomain,
     "set": SimpleSetDomain,
-    "uid": DefaultDomain,
     "time": TimeDomain,
     "duration": DurationDomain,
     "range": NumericDomain,
+    "uid": UniqueDomain,
     "numeric": NumericDomain
 }
 

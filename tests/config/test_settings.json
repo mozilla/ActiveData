@@ -11,5 +11,10 @@
 		"pyLibrary.env.http.default_headers": {
 			"From": "ActiveDataTests"
 		}
+	},
+	"debug":{
+		"trace": true
+
+
 	}
 }

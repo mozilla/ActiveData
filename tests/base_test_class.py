@@ -78,7 +78,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls, assume_server_started=True):
         if not containers.config.default:
             containers.config.default = {
                 "type": "elasticsearch",
@@ -97,7 +97,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
         #     ).start()
         # else:
         #     ActiveDataBaseTest.server_is_ready.go()
-        ActiveDataBaseTest.server_is_ready.go()
+        if assume_server_started:
+            ActiveDataBaseTest.server_is_ready.go()
 
         if not settings.fastTesting:
             ActiveDataBaseTest.server = http
@@ -131,15 +132,18 @@ class ActiveDataBaseTest(FuzzyTestCase):
         :param backend_es:   the ElasticSearch settings for filling the backend
         """
         FuzzyTestCase.__init__(self, *args, **kwargs)
-        self.service_url = settings.service_url
-        self.backend_es = settings.backend_es.copy()
-        if self.backend_es.schema==None:
+        if settings.backend_es.schema==None:
             Log.error("Expecting backed_es to have a schema defined")
+        self.service_url = None
+        self.backend_es = None
         self.es = None
         self.index = None
 
+
     def setUp(self):
         # ADD TEST RECORDS
+        self.service_url = settings.service_url
+        self.backend_es = settings.backend_es.copy()
         self.backend_es.index = "testing_" + Random.hex(10).lower()
         # self.backend_es.type = "test_result"
         self.es = elasticsearch.Cluster(self.backend_es)

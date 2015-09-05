@@ -260,7 +260,7 @@ class SetDecoder(AggsDecoder):
                 "_match": set_default({"terms": {
                     "field": self.edge.value,
                     "size": 0,
-                    "include": [p[self.edge.domain.key] for p in self.edge.domain.partitions]
+                    "include": include
                 }}, es_query)
             }})
 

@@ -29,18 +29,14 @@ from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter, query_
 DEFAULT_LIMIT = 10
 
 qb = None
-INDEX_CACHE = None
 
 
 def _late_import():
     global qb
-    global INDEX_CACHE
 
     from pyLibrary.queries import qb
-    from pyLibrary.queries.es09.util import INDEX_CACHE
 
     _ = qb
-    _ = INDEX_CACHE
 
 
 class Query(object):
@@ -439,9 +435,6 @@ def _move_nested_term(master, where, schema):
 
 
 def _get_nested_path(field, schema):
-    if not INDEX_CACHE:
-        _late_import()
-
     if is_keyword(field):
         field = join_field([schema.es.alias] + split_field(field))
         for i, f in reverse(enumerate(split_field(field))):

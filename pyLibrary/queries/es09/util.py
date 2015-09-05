@@ -31,8 +31,6 @@ from pyLibrary.times import durations
 TrueFilter = {"match_all": {}}
 DEBUG = False
 
-INDEX_CACHE = {}  # MATCH NAMES TO ES URL AND COLUMNS eg {name:{"url":url, "columns":columns"}}
-
 
 def post(es, es_query, limit):
     if not es_query.facets and es_query.size == 0 and not es_query.aggs:
@@ -83,135 +81,7 @@ def build_es_query(query):
     return output
 
 
-class Column(object):
-    """
-    REPRESENT A DATABASE COLUMN IN THE ELASTICSEARCH
-    """
-    __slots__ = ("name", "type", "nested_path", "useSource", "domain", "relative", "abs_name", "table")
 
-    def __init__(self, **kwargs):
-        for s in Column.__slots__:
-            setattr(self, s, kwargs.get(s, Null))
-
-        for k in kwargs.keys():
-            if k not in Column.__slots__:
-                Log.error("{{name}} is not a valid property", name=k)
-
-    def __getitem__(self, item):
-        return getattr(self, item)
-
-    def __getattr__(self, item):
-        Log.error("{{item|quote}} not valid attribute", item=item)
-
-    def __copy__(self):
-        return Column(**{k: getattr(self, k) for k in Column.__slots__})
-
-    def as_dict(self):
-        return wrap({k: getattr(self, k) for k in Column.__slots__})
-
-    def __dict__(self):
-        Log.error("use as_dict()")
-
-
-def parse_columns(parent_index_name, parent_query_path, esProperties):
-    """
-    RETURN THE COLUMN DEFINITIONS IN THE GIVEN esProperties OBJECT
-    """
-    columns = DictList()
-    for name, property in esProperties.items():
-        if parent_query_path:
-            index_name, query_path = parent_index_name, join_field(split_field(parent_query_path) + [name])
-        else:
-            index_name, query_path = parent_index_name, name
-
-        if property.type == "nested" and property.properties:
-            # NESTED TYPE IS A NEW TYPE DEFINITION
-            # MARKUP CHILD COLUMNS WITH THE EXTRA DEPTH
-            self_columns = parse_columns(index_name, query_path, property.properties)
-            for c in self_columns:
-                if not c.nested_path:
-                    c.nested_path = [name]
-                else:
-                    c.nested_path.insert(0, ".".join((name, c.nested_path[0])))
-            columns.extend(self_columns)
-            columns.append(Column(
-                table=index_name,
-                name=query_path,
-                type="nested",
-                nested_path=[name],
-                useSource=False,
-                domain=Null
-            ))
-
-            continue
-
-        if property.properties:
-            child_columns = parse_columns(index_name, query_path, property.properties)
-            columns.extend(child_columns)
-            columns.append(Column(
-                table=index_name,
-                name=query_path,
-                type="object",
-                nested_path=Null,
-                useSource=False,
-                domain=Null
-            ))
-
-        if property.dynamic:
-            continue
-        if not property.type:
-            continue
-        if property.type == "multi_field":
-            property.type = property.fields[name].type  # PULL DEFAULT TYPE
-            for i, (n, p) in enumerate(property.fields.items()):
-                if n == name:
-                    # DEFAULT
-                    columns.append(Column(
-                        table=index_name,
-                        name=query_path,
-                        type=p.type,
-                        useSource=p.index == "no"
-                    ))
-                else:
-                    columns.append(Column(
-                        table=index_name,
-                        name=query_path + "." + n,
-                        type=p.type,
-                        useSource=p.index == "no"
-                    ))
-            continue
-
-        if property.type in ["string", "boolean", "integer", "date", "long", "double"]:
-            columns.append(Column(
-                table=index_name,
-                name=query_path,
-                type=property.type,
-                nested_path=Null,
-                useSource=property.index == "no",
-                domain=Null
-            ))
-            if property.index_name and name != property.index_name:
-                columns.append(Column(
-                    table=index_name,
-                    name=property.index_name,
-                    type=property.type,
-                    nested_path=Null,
-                    useSource=property.index == "no",
-                    domain=Null
-                ))
-        elif property.enabled == None or property.enabled == False:
-            columns.append(Column(
-                table=index_name,
-                name=query_path,
-                type="object",
-                nested_path=Null,
-                useSource=True,
-                domain=Null
-            ))
-        else:
-            Log.warning("unknown type {{type}} for property {{path}}", type=property.type, path=query_path)
-
-    return columns
 
 
 def compileTime2Term(edge):

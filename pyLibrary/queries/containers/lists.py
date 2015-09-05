@@ -16,9 +16,9 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, wrap, listwrap, unwraplist
 from pyLibrary.queries import qb
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.es09.util import Column
 from pyLibrary.queries.expressions import TRUE_FILTER, qb_expression_to_python
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
+from pyLibrary.thread.threads import Lock
 
 
 class ListContainer(Container):
@@ -26,6 +26,7 @@ class ListContainer(Container):
         frum = list(frum)
         Container.__init__(self, frum, schema)
         self.frum = frum
+        self.locker = Lock()
         if schema == None:
             self.schema = get_schema_from_list(frum)
 
@@ -58,7 +59,25 @@ class ListContainer(Container):
 
         return frum.format(q.format)
 
+    def update(self, command):
+        """
+        EXPECTING command == {"set":term, "clear":term, "where":where}
+        THE set CLAUSE IS A DICT MAPPING NAMES TO VALUES
+        THE where CLAUSE IS AN ES FILTER
+        """
+        command = wrap(command)
+        with self.locker:
+            if command.where==None:
+                filter_ = qb_expression_to_python(command.where)
+            else:
+                filter_ = lambda: True
 
+            for c in self.data:
+                if filter_(c):
+                    for k in listwrap(command.clear):
+                        c[k] = None
+                    for k, v in command.set.items():
+                        c[k] = v
 
     def filter(self, where):
         return self.where(where)

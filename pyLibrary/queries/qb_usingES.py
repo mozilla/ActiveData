@@ -11,17 +11,16 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
-from copy import deepcopy, copy
+from copy import copy
 
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch, http
+from pyLibrary.env.elasticsearch import ES_NUMERIC_TYPES
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb, expressions, containers
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.containers.lists import ListContainer
 from pyLibrary.queries.domains import is_keyword, SimpleSetDomain, NumericDomain, UniqueDomain
 from pyLibrary.queries.es09 import setop as es09_setop
-from pyLibrary.queries.es09.util import parse_columns, INDEX_CACHE, Column
 from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
 from pyLibrary.queries.es14.deep import is_deepop, es_deepop
 from pyLibrary.queries.es14.setop import is_setop, es_setop
@@ -31,7 +30,7 @@ from pyLibrary.queries.namespace.typed import Typed
 from pyLibrary.queries.query import Query, _normalize_where, _normalize_domain
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import coalesce, split_field, set_default, literal_field, unwraplist, join_field, Null
+from pyLibrary.dot import coalesce, split_field, literal_field, unwraplist, join_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 
@@ -215,14 +214,14 @@ class FromES(Container):
         output.columns = parse_columns(_from_name, None, properties)
 
         # CHECK CARDINALITY
-        counts = self._es.get_cardinality(output.columns, join_field(split_field(_from_name)[1:]))
+        counts = self._es.get_cardinality(output.columns, self.query_path)
 
         for c in output.columns:
             col = counts[literal_field(c.name)]
             if not col:
                 continue
 
-            if c.type in ["long", "integer", "double", "float"]:
+            if c.type in ES_NUMERIC_TYPES:
                 if col.count <= 30:
                     c.domain = SimpleSetDomain(partitions=col.partitions)
                 else:
@@ -347,117 +346,3 @@ class FromES(Container):
             if response.errors:
                 Log.error("could not update: {{error}}", error=[e.error for i in response["items"] for e in i.values() if e.status not in (200, 201)])
 
-class FromESMetadata(Container):
-    """
-    QUERY THE METADATA
-    """
-
-    @use_settings
-    def __init__(self, host, index, alias=None, name=None, port=9200, settings=None):
-        Container.__init__(self, None, schema=self)
-        self.settings = settings
-        self.name = coalesce(name, alias, index)
-        self._es = elasticsearch.Cluster(settings=settings)
-        self.metadata = self._es.get_metadata()
-        self.columns = None
-
-    @property
-    def query_path(self):
-        return None
-
-    @property
-    def url(self):
-        return self._es.path + "/" + self.name.replace(".", "/")
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback):
-        pass
-
-    def _get_columns(self):
-        all_columns = []
-        alias_done = set()
-        metadata = self._es.get_metadata()
-        for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
-            for _, properties in meta.mappings.items():
-                columns = _parse_properties(index, properties.properties)
-                for c in columns:
-                    c.table = index
-                    c.useSource = None
-
-                all_columns.extend(columns)
-                for a in meta.aliases:
-                    # ONLY THE LATEST ALIAS IS CHOSEN TO GET COLUMNS
-                    if a in alias_done:
-                        continue
-                    alias_done.add(a)
-                    for c in columns:
-                        cc = copy(c)
-                        cc.table = a
-                        all_columns.append(cc)
-
-        self.columns = ListContainer([c.as_dict() for c in all_columns], {c.name: c for c in self.get_columns()})
-
-    def query(self, _query):
-        if not self.columns:
-            self._get_columns()
-
-        return self.columns.query(Query(set_default(
-            {
-                "from": self.columns,
-                "sort": ["table", "name"]
-            },
-            _query.as_dict()
-        )))
-
-    def get_columns(self, _=None):
-        """
-        RETURN METADATA COLUMNS
-        """
-        if self.name == "meta.columns":
-            return wrap([
-                Column(
-                    table="meta.columns",
-                    name="table",
-                    type="string",
-                    nested_path=Null,
-                    useSource=True
-                ),
-                Column(
-                    table="meta.columns",
-                    name="name",
-                    type="string",
-                    nested_path=Null,
-                    useSource=True
-                ),
-                Column(
-                    table="meta.columns",
-                    name="type",
-                    type="string",
-                    nested_path=Null,
-                    useSource=True
-                ),
-                Column(
-                    table="meta.columns",
-                    name="nested_path",
-                    type="string",
-                    nested_path=Null,
-                    useSource=True
-                )
-            ])
-        else:
-            Log.error("Unknonw metadata: {{name}}.  Only `meta.columns` exists for now.",  name= self.settings.name)
-
-
-def _parse_properties(index, properties):
-    """
-    ISOLATE THE DEALING WITH THE INDEX_CACHE,
-    INDEX_CACHE IS REDUNDANT WHEN YOU HAVE metadata.columns
-    """
-    backup = INDEX_CACHE.get(index)
-    INDEX_CACHE[index] = output = Dict()
-    output.name = index
-    columns = parse_columns(index, None, properties)
-    INDEX_CACHE[index] = backup
-    return columns

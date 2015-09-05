@@ -217,6 +217,21 @@ class Queue(object):
             self.queue.clear()
             return output
 
+    def pop_one(self):
+        """
+        NON-BLOCKING POP IN QUEUE, IF ANY
+        """
+        with self.lock:
+            if not self.keep_running:
+                return [Thread.STOP]
+            elif not self.queue:
+                return None
+            else:
+                v =self.queue.pop()
+                if v is Thread.STOP:  # SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
+                    self.keep_running = False
+                return v
+
     def close(self):
         with self.lock:
             self.keep_running = False

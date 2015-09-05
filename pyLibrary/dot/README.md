@@ -131,7 +131,9 @@ replaced with `None` in all cases.
 
 ###Identity and Absorbing (Zero) Elements###
 
-With closure we can realize we have defined an algebraic semigroup:  The identity element is the dot string (`"."`) and the zero element is `Null` (or `None`).
+With closure we can realize we have defined an algebraic semigroup:  The 
+identity element is the dot string (`"."`) and the zero element is `Null` 
+(or `None`).
 
  1. `a[Null] == Null`
  2. `a["."] == a`
@@ -231,9 +233,17 @@ The dot operator on a `DictList` performs a simple projection; it will return a 
 DictObject for data
 -------------------
 
-There are two major families of objects in Object Oriented programming.  The first, are ***Actors***: characterized by a number of useful instance methods and some state bundled into a package.  The second are ***Data***: Primarily a set of properties, with only (de)serialization functions, or algebraic operators defined.  Boto has many examples of these *Data* classes, [here is one](https://github.com/boto/boto/blob/4b8269562e663f090403e57ba1a3a471b6e0aa0e/boto/ec2/networkinterface.py).
+There are two major families of objects in Object Oriented programming.  The 
+first, are ***Actors***: characterized by a number of useful instance methods 
+and some state bundled into a package.  The second are ***Data***: Primarily 
+a set of properties, with only (de)serialization functions, or algebraic 
+operators defined.  Boto has many examples of these *Data* classes, 
+[here is one](https://github.com/boto/boto/blob/4b8269562e663f090403e57ba1a3a471b6e0aa0e/boto/ec2/networkinterface.py).
 
-The problem with *Data* objects is they have an useless distinction between attributes and properties.  This prevents us from using the `[]` operator for dereferencing, forcing use to use the verbose `__getattr__()` instead.  It also prevents the use of query operators over these objects.
+The problem with *Data* objects is they have an useless distinction between 
+attributes and properties.  This prevents us from using the `[]` operator for 
+dereferencing, forcing use to use the verbose `getattr()` instead.  It 
+also prevents the use of query operators over these objects.
 
 You can register a class as a *data* class, by wrapping it with `DictClass`.
 

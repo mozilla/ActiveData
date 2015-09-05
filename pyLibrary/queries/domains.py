@@ -14,15 +14,17 @@ from collections import Mapping
 from numbers import Number
 import re
 import itertools
+
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.dot import coalesce, Dict, set_default, Null, listwrap
 from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import wrap, unwrap
+from pyLibrary.dot import wrap
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
+
 
 ALGEBRAIC = {"time", "duration", "numeric", "count", "datetime"}  # DOMAINS THAT HAVE ALGEBRAIC OPERATIONS DEFINED
 KNOWN = {"set", "boolean", "duration", "time", "numeric"}  # DOMAINS THAT HAVE A KNOWN NUMBER FOR PARTS AT QUERY TIME

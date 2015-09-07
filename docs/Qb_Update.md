@@ -1,12 +1,15 @@
 Qb Changing Documents  
 =====================
 
-Qb has limited update features
+Qb has limited update features, assuming they are enabled.
 
 
 `insert` Command
 ----------------
 
+Add documents to the container
+
+	{"insert": [doc1, doc2, ...]}
 
 
 `update` Command
@@ -27,6 +30,7 @@ The `update` command accepts up to three parameters: `set`, `clear` and `where`
 * The `clear` clause is used to remove values from the document.  The path(s) can refer to specific primitive values or whole objects.  Clearing is done **before** the `set` clause.
 * The `set` clause is a dictionary that assigns leaves to the given value.  A `leaf` is a dot-separated path into the document.  The `value` can be a primitive JSON value, or an object.
 
+
 Removing Documents
 ------------------
 
@@ -39,12 +43,3 @@ Removing documents is done by clearing them
 
 The dot (`.`) refers to the whole document; by clearing it you are effectively remove it.
 
-Upsert
-
-upsert is clearing and setting "."
-delete is clearing "."
-
-
-
-Expressions are not supported at this time
- 

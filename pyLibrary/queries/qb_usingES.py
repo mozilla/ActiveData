@@ -19,13 +19,14 @@ from pyLibrary.env.elasticsearch import ES_NUMERIC_TYPES
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb, expressions, containers
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.domains import is_keyword, SimpleSetDomain, NumericDomain, UniqueDomain
+from pyLibrary.queries.domains import is_keyword, SimpleSetDomain, NumericDomain, UniqueDomain, DefaultDomain
 from pyLibrary.queries.es09 import setop as es09_setop
 from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
 from pyLibrary.queries.es14.deep import is_deepop, es_deepop
 from pyLibrary.queries.es14.setop import is_setop, es_setop
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.es14.util import aggregates1_4
+from pyLibrary.queries.meta import FromESMetadata
 from pyLibrary.queries.namespace.typed import Typed
 from pyLibrary.queries.query import Query, _normalize_where, _normalize_domain
 from pyLibrary.debugs.logs import Log, Except
@@ -59,6 +60,8 @@ class FromES(Container):
             self._es = elasticsearch.Alias(alias=coalesce(alias, index), settings=settings)
         else:
             self._es = elasticsearch.Cluster(settings=settings).get_index(read_only=read_only, settings=settings)
+
+        self.meta = FromESMetadata(settings=settings)
         self.settings.type = self._es.settings.type
         self.edges = Dict()
         self.worker = None
@@ -150,99 +153,7 @@ class FromES(Container):
 
 
     def get_columns(self, _from_name=None):
-        """
-        _from_name - NOT MEANT FOR EXTERNAL USE
-        """
-        if _from_name is None:
-            _from_name = self.name
-        if not isinstance(_from_name, basestring):
-            Log.error("Expecting string")
-
-        output = INDEX_CACHE.get(_from_name)
-        if output:
-            # VERIFY es IS CONSISTENT
-            if self.url != output.url:
-                Log.error(
-                    "Using {{name}} for two different containers\n\t{{existing}}\n\t{{new}}",
-                    name=_from_name,
-                    existing=output.url,
-                    new=self._es.url
-                )
-            return output.columns
-
-        path = split_field(_from_name)
-        if len(path) > 1:
-            # LOAD THE PARENT COLUMNS
-            all_columns = self.get_columns(_from_name=path[0])
-            this_name = join_field(path[1:])
-            this = [c for c in all_columns if c.name == this_name][0]
-            this_depth = len(this.nested_path)
-            abs_columns = [
-                c
-                for c in all_columns
-                if c.type != "nested"
-            ]
-
-            this_columns = []
-            for c in abs_columns:
-                #ABS FIELD NAMES
-                c = copy(c)
-                c.abs_name = c.name
-                this_columns.append(c)
-
-                #RELATIVE FIELD NAMES
-                c = copy(c)
-                c.relative = True
-                if this_depth > len(c.nested_path):
-                    c.name = ("."*(this_depth-len(c.nested_path)+1))+c.name
-                else:
-                    c.name = c.name[len(this.nested_path[0])+1:]
-                this_columns.append(c)
-
-            INDEX_CACHE[_from_name] = Dict(
-                name=_from_name,
-                url=self._es.url,
-                columns=this_columns
-            )
-            return this_columns
-
-        schema = self._es.get_schema()
-        properties = schema.properties
-        INDEX_CACHE[_from_name] = output = Dict()
-        output.name = _from_name
-        output.url = self._es.url
-        output.columns = parse_columns(_from_name, None, properties)
-
-        # CHECK CARDINALITY
-        counts = self._es.get_cardinality(output.columns, self.query_path)
-
-        for c in output.columns:
-            col = counts[literal_field(c.name)]
-            if not col:
-                continue
-
-            if c.type in ES_NUMERIC_TYPES:
-                if col.count <= 30:
-                    c.domain = SimpleSetDomain(partitions=col.partitions)
-                else:
-                    c.domain = NumericDomain()
-            elif c.type in ["boolean", "bool"]:
-                c.domain.type = "boolean"
-            else:
-                if col.count <= 1000:
-                    c.domain = SimpleSetDomain(partitions=col.partitions)
-                else:
-                    c.domain.type = UniqueDomain()
-            c.domain = _normalize_domain(c.domain)
-
-        return output.columns
-
-
-    def get_column_names(self):
-        # GET METADATA FOR INDEX
-        # LIST ALL COLUMNS
-        frum = self.get_columns()
-        return frum.name
+        return self.meta.get_columns(table=coalesce(_from_name, self.settings.index))
 
     def addDimension(self, dim):
         if isinstance(dim, list):

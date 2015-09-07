@@ -10,6 +10,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+from collections import Mapping
 from pyLibrary import convert
 
 from pyLibrary.debugs.logs import Log
@@ -18,6 +19,7 @@ from pyLibrary.queries import qb
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.expressions import TRUE_FILTER, qb_expression_to_python
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
+from pyLibrary.queries.meta import Column
 from pyLibrary.thread.threads import Lock
 
 
@@ -26,7 +28,6 @@ class ListContainer(Container):
         frum = list(frum)
         Container.__init__(self, frum, schema)
         self.frum = frum
-        self.locker = Lock()
         if schema == None:
             self.schema = get_schema_from_list(frum)
 
@@ -66,25 +67,29 @@ class ListContainer(Container):
         THE where CLAUSE IS AN ES FILTER
         """
         command = wrap(command)
-        with self.locker:
-            if command.where==None:
-                filter_ = qb_expression_to_python(command.where)
-            else:
-                filter_ = lambda: True
+        if command.where==None:
+            filter_ = lambda: True
+        else:
+            filter_ = _exec("temp = lambda row: "+qb_expression_to_python(command.where))
 
-            for c in self.data:
-                if filter_(c):
-                    for k in listwrap(command.clear):
-                        c[k] = None
-                    for k, v in command.set.items():
-                        c[k] = v
+
+        for c in self.data:
+            if filter_(c):
+                for k in command["clear"].keys():
+                    c[k] = None
+                for k, v in command.set.items():
+                    c[k] = v
 
     def filter(self, where):
         return self.where(where)
 
     def where(self, where):
-        temp = None
-        exec("def temp(row):\n    return "+qb_expression_to_python(where))
+        if isinstance(where, Mapping):
+            temp = None
+            exec("def temp(row):\n    return "+qb_expression_to_python(where))
+        else:
+            temp = where
+
         return ListContainer(filter(temp, self.data), self.schema)
 
     def sort(self, sort):
@@ -111,14 +116,30 @@ class ListContainer(Container):
         elif format == "cube":
             frum = convert.list2cube(self.data, self.schema.keys())
         else:
-            frum = wrap({
-                "meta": {"format": "list"},
-                "data": [{k: unwraplist(v) for k, v in row.items()} for row in self.data]
-            })
+            frum = self
+
         return frum
+
+    def insert(self, documents):
+        self.data.extend(documents)
+
+    def extend(self, documents):
+        self.data.extend(documents)
+
+    def add(self, doc):
+        self.data.append(doc)
+
+    def to_dict(self):
+        return wrap({
+            "meta": {"format": "list"},
+            "data": [{k: unwraplist(v) for k, v in row.items()} for row in self.data]
+        })
 
     def get_columns(self, query_path=None):
         return self.schema.values()
+
+    def __getitem__(self, item):
+        return self.data[item]
 
 
 def get_schema_from_list(frum):
@@ -267,3 +288,7 @@ _merge_type = {
 
 
 
+def _exec(code):
+    temp = None
+    exec code
+    return temp

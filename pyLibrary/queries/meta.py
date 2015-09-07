@@ -11,21 +11,26 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from copy import copy
+from pyLibrary import convert
 
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.elasticsearch import ES_NUMERIC_TYPES
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.containers.lists import ListContainer
+from pyLibrary.queries.domains import NumericDomain, SimpleSetDomain, DefaultDomain, UniqueDomain
 from pyLibrary.queries.query import Query
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import coalesce, set_default, Null, literal_field
 from pyLibrary.dot import wrap
-from pyLibrary.strings import Duration
-from pyLibrary.thread.threads import Queue, Thread
+from pyLibrary.strings import expand_template
+from pyLibrary.thread.threads import Queue, Thread, Lock, Signal
 from pyLibrary.times.dates import Date
+from pyLibrary.times.durations import Duration
+
+
+singlton = None
 
 
 class FromESMetadata(Container):
@@ -34,21 +39,31 @@ class FromESMetadata(Container):
     """
     singleton = None
 
+    def __new__(cls, *args, **kwargs):
+        global singlton
+        if singlton:
+            Log.error()
+            return singlton
+        else:
+            singlton = object.__new__(cls)
+            return singlton
 
     @use_settings
     def __init__(self, host, index, alias=None, name=None, port=9200, settings=None):
-        if FromESMetadata.singlton:
-            Log.error("only one metadata manager allowed")
-        FromESMetadata.singlton = self
+        from pyLibrary.queries.containers.lists import ListContainer
 
         Container.__init__(self, None, schema=self)
         self.settings = settings
-        self.name = coalesce(name, alias, index)
-        self.default_es = elasticsearch.Cluster(settings=settings)
-        self.columns = ListContainer([], {c.name: c for c in self.get_columns(table="meta.columns")})
+        self.default_name = coalesce(name, alias, index)
+        self.default_es = elasticsearch.Index(settings=settings)
+        self.tables_schema = wrap({c.name: c for c in self.get_columns(table="meta.tables")})
+        self.tables = ListContainer([], self.tables_schema)
+        self.columns_schema = wrap({c.name: c for c in self.get_columns(table="meta.columns")})
+        self.columns = ListContainer([], self.columns_schema)
         self.todo = Queue("refresh metadata")
         self.worker = Thread.run("refresh metadata", self.monitor)
         self.locker = Lock("")
+        self.done_first_pass = Signal()
         return
 
     @property
@@ -57,45 +72,51 @@ class FromESMetadata(Container):
 
     @property
     def url(self):
-        return self.default_es.path + "/" + self.name.replace(".", "/")
+        return self.default_es.path + "/" + self.default_name.replace(".", "/")
 
-    def _get_columns(self, index_name):
-        all_columns = []
-        alias_done = set()
-        metadata = self.default_es.get_metadata()
-        for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
-            for _, properties in meta.mappings.items():
-                columns = _parse_properties(index, properties.properties)
-                for c in columns:
-                    c.table = index
+    def get_table(self, table_name):
+        with self.locker:
+            return self.tables.query({"where": {"eq": {"name": table_name}}})
 
-                with self.locker():
-                    all_columns.update({
-                        "clear":".",
-                        "where":{"eq":{"table": index}}
-                    })
-                    all_columns.insert(columns)
-
-                for a in meta.aliases:
-                    # ONLY THE LATEST ALIAS IS CHOSEN TO GET COLUMNS
-                    if a in alias_done:
-                        continue
-                    alias_done.add(a)
-
+    def _get_columns(self):
+        # TODO: HANDLE MORE THEN ONE ES, MAP TABLE SHORT_NAME TO ES INSTANCE
+        with self.locker:
+            all_columns = []
+            alias_done = set()
+            metadata = self.default_es.cluster.get_metadata()
+            for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
+                for _, properties in meta.mappings.items():
+                    columns = elasticsearch.parse_properties(index, None, properties.properties)
                     for c in columns:
-                        cc = copy(c)
-                        cc.table = a
-                        all_columns.append(cc)
-                        self.todo.extend(columns)
+                        c.table = index
+                        c.domain = DefaultDomain()
 
-                    with self.locker():
-                        all_columns.update({
-                            "clear":".",
-                            "where":{"eq":{"table": a}}
-                        })
-                        all_columns.insert(columns)
-                        self.todo.extend(columns)
+                        existing_columns = filter(lambda r: r.table == index and r.abs_name == c.abs_name, self.columns.data)
+                        if not existing_columns:
+                            self.columns.add(c)
+                            self.todo.add(c)
+                        else:
+                            set_default(existing_columns[0], c)
+                            self.todo.add(c)
 
+                    for alias in meta.aliases:
+                        # ONLY THE LATEST ALIAS IS CHOSEN TO GET COLUMNS
+                        if alias in alias_done:
+                            continue
+                        alias_done.add(alias)
+
+                        for c in columns:
+                            cc = copy(c)
+                            cc.table = alias
+                            all_columns.append(cc)
+
+                        existing_columns = filter(lambda r: r.table == alias and r.abs_name == c.abs_name, self.columns.data)
+                        if not existing_columns:
+                            self.columns.add(c)
+                            self.todo.add(c)
+                        else:
+                            set_default(existing_columns[0], c)
+                            self.todo.add(c)
 
     def query(self, _query):
         return self.columns.query(Query(set_default(
@@ -112,9 +133,17 @@ class FromESMetadata(Container):
         """
         if table == "meta.columns":
             return metadata_columns()
-        else:
+        elif table == "meta.tables":
+            return metadata_tables()
 
-            Log.error("Unknonw metadata: {{name}}.  Only `meta.columns` exists for now.", name=self.settings.name)
+        with self.locker:
+            columns = qb.sort(filter(lambda r: r.table == table, self.columns.data), "name")
+            if not columns:
+                self.done_first_pass.wait_for_go()
+                columns = qb.sort(filter(lambda r: r.table == table, self.columns.data), "name")
+                if not columns:
+                    Log.error("no columns for {{table}}", table=table)
+            return columns
 
     def _update_cardinality(self, c):
         """
@@ -131,29 +160,46 @@ class FromESMetadata(Container):
         cardinaility = coalesce(r.value, r._nested.value)
 
         query = Dict(size=0)
-        if c.type in ["object", "nested"] or c.cardinality > 1000:
+        if c.type in ["object", "nested"]:
             Log.note("{{field}} has {{num}} parts", field=c.name, num=c.cardinality)
-            self.columns.update({
-                "set": {
-                    "cardinality": cardinaility,
-                    "partitions": None,
-                    "last_updated": Date.now()
-                },
-                "clear": ["partitions"],
-                "where": {"eq": {"table": c.table, "name": c.name}}
-            })
+            with self.locker:
+                self.columns.update({
+                    "set": {
+                        "cardinality": cardinaility,
+                        "partitions": None,
+                        "last_updated": Date.now()
+                    },
+                    "clear": ["partitions", "domain"],
+                    "where": {"eq": {"table": c.table, "name": c.name}}
+                })
+            return
+        elif c.cardinality > 1000:
+            Log.note("{{field}} has {{num}} parts", field=c.name, num=c.cardinality)
+            with self.locker:
+                self.columns.update({
+                    "set": {
+                        "cardinality": cardinaility,
+                        "partitions": None,
+                        "last_updated": Date.now(),
+                        "domain": UniqueDomain()
+                    },
+                    "clear": ["partitions"],
+                    "where": {"eq": {"table": c.table, "name": c.name}}
+                })
             return
         elif c.type in ES_NUMERIC_TYPES and c.cardinality > 30:
             Log.note("{{field}} has {{num}} parts", field=c.name, num=c.cardinality)
-            self.columns.update({
-                "set": {
-                    "cardinality": cardinaility,
-                    "partitions": None,
-                    "last_updated": Date.now()
-                },
-                "clear": ["partitions"],
-                "where": {"eq": {"table": c.table, "name": c.name}}
-            })
+            with self.locker:
+                self.columns.update({
+                    "set": {
+                        "cardinality": cardinaility,
+                        "partitions": None,
+                        "last_updated": Date.now(),
+                        "domain": NumericDomain()
+                    },
+                    "clear": ["partitions"],
+                    "where": {"eq": {"table": c.table, "name": c.name}}
+                })
             return
         elif c.nested_path:
             query.aggs[literal_field(c.name)] = {
@@ -172,74 +218,39 @@ class FromESMetadata(Container):
             parts = qb.sort(aggs.buckets.key)
 
         Log.note("{{field}} has {{parts}}", field=c.name, parts=parts)
-        self.columns.update({
-            "set": {
-                "cardinality": cardinaility,
-                "partitions": parts,
-                "last_updated": Date.now()
-            },
-            "where": {"eq": {"table": c.table, "name": c.name}}
-        })
+        with self.locker:
+            self.columns.update({
+                "set": {
+                    "cardinality": cardinaility,
+                    "partitions": parts,
+                    "domain": SimpleSetDomain(partitions=parts),
+                    "last_updated": Date.now()
+                },
+                "where": {"eq": {"table": c.table, "name": c.name}}
+            })
 
     def monitor(self, please_stop):
+        with self.locker:
+            Log.note("initial metadata pull")
+            self._get_columns()
+            self.done_first_pass.go()
         while not please_stop:
             if not self.todo:
-                old_columns = self.columns.query({
-                    "select": ".",
-                    "where": {"or":[
-                        {"missing":"etl.timestamp"},
-                        {"gt": {"etl.timestamp": Date.now()-Duration("2hour")}}
-                    ]}
-                })
-                self.todo.extend(old_columns)
+                Log.note("look for more metatdata to update")
+                with self.locker:
+                    old_columns = filter(lambda c: c.last_updated == None or c.last_updated >= Date.now()-Duration("2hour"), self.columns)
+                    self.todo.extend(old_columns)
 
             column = self.todo.pop(Duration.MINUTE*10)
             if column:
+                if column.type in ["object", "nested"]:
+                    continue
+
                 self._update_cardinality(column)
+                Log.note("updated {{column.name}}", column=column)
             else:
                 Thread.sleep(Duration.MINUTE)
 
-class Column(object):
-    """
-    REPRESENT A DATABASE COLUMN IN THE ELASTICSEARCH
-    """
-    __slots__ = (
-        "name",
-        "type",
-        "nested_path",
-        "useSource",
-        "domain",
-        "relative",
-        "abs_name",
-        "table",
-        "count",
-        "cardinality",
-        "partitions",
-        "last_updated"
-    )
-
-    def __init__(self, **kwargs):
-        for s in Column.__slots__:
-            setattr(self, s, kwargs.get(s, Null))
-
-        for k in kwargs.keys():
-            if k not in Column.__slots__:
-                Log.error("{{name}} is not a valid property", name=k)
-
-    def __getitem__(self, item):
-        return getattr(self, item)
-
-    def __getattr__(self, item):
-        Log.error("{{item|quote}} not valid attribute", item=item)
-
-    def __copy__(self):
-        return Column(**{k: getattr(self, k) for k in Column.__slots__})
-
-    def as_dict(self):
-        return wrap({k: getattr(self, k) for k in Column.__slots__})
-
-    def __dict__(self):
-        Log.error("use as_dict()")
 
 
 def _counting_query(c):
@@ -267,6 +278,7 @@ def metadata_columns():
             Column(
                 table="meta.columns",
                 name=c,
+                abs_name=c,
                 type="string",
                 nested_path=Null,
             )
@@ -282,6 +294,7 @@ def metadata_columns():
             Column(
                 table="meta.columns",
                 name=c,
+                abs_name=c,
                 type="object",
                 nested_path=Null,
             )
@@ -293,6 +306,7 @@ def metadata_columns():
             Column(
                 table="meta.columns",
                 name=c,
+                abs_name=c,
                 type="long",
                 nested_path=Null,
             )
@@ -304,109 +318,133 @@ def metadata_columns():
             Column(
                 table="meta.columns",
                 name="etl.timestamp",
+                abs_name="etl.timestamp",
                 type="long",
                 nested_path=Null,
             )
         ]
     )
 
-def parse_columns(parent_index_name, parent_query_path, esProperties):
+def metadata_tables():
+    return wrap(
+        [
+            Column(
+                table="meta.tables",
+                name=c,
+                abs_name=c,
+                type="string",
+                nested_path=Null
+            )
+            for c in [
+                "name",
+                "url",
+                "query_path"
+            ]
+        ]
+    )
+
+
+
+
+
+def DataClass(name, columns):
     """
-    RETURN THE COLUMN DEFINITIONS IN THE GIVEN esProperties OBJECT
+    Each column has {"name", "required", "nulls"} properties
     """
-    columns = DictList()
-    for name, property in esProperties.items():
-        if parent_query_path:
-            index_name, query_path = parent_index_name, join_field(split_field(parent_query_path) + [name])
-        else:
-            index_name, query_path = parent_index_name, name
 
-        if property.type == "nested" and property.properties:
-            # NESTED TYPE IS A NEW TYPE DEFINITION
-            # MARKUP CHILD COLUMNS WITH THE EXTRA DEPTH
-            self_columns = parse_columns(index_name, query_path, property.properties)
-            for c in self_columns:
-                if not c.nested_path:
-                    c.nested_path = [query_path]
-                else:
-                    c.nested_path.insert(0, query_path)
-            columns.extend(self_columns)
-            columns.append(Column(
-                table=index_name,
-                name=query_path,
-                type="nested",
-                nested_path=[name],
-                useSource=False,
-                domain=Null
-            ))
+    columns = wrap([{"name": c, "required": True, "nulls": False} if isinstance(c, basestring) else c for c in columns])
+    slots = columns.name
+    required = wrap(filter(lambda c: c.required and not c.nulls, columns)).name
+    nulls = wrap(filter(lambda c: c.nulls, columns)).name
 
-            continue
+    code = expand_template("""
+from __future__ import unicode_literals
+from collections import Mapping
 
-        if property.properties:
-            child_columns = parse_columns(index_name, query_path, property.properties)
-            columns.extend(child_columns)
-            columns.append(Column(
-                table=index_name,
-                name=query_path,
-                type="object",
-                nested_path=Null,
-                useSource=False,
-                domain=Null
-            ))
+class {{name}}(Mapping):
+    __slots__ = {{slots}}
 
-        if property.dynamic:
-            continue
-        if not property.type:
-            continue
-        if property.type == "multi_field":
-            property.type = property.fields[name].type  # PULL DEFAULT TYPE
-            for i, (n, p) in enumerate(property.fields.items()):
-                if n == name:
-                    # DEFAULT
-                    columns.append(Column(
-                        table=index_name,
-                        name=query_path,
-                        type=p.type,
-                        useSource=p.index == "no"
-                    ))
-                else:
-                    columns.append(Column(
-                        table=index_name,
-                        name=query_path + "." + n,
-                        type=p.type,
-                        useSource=p.index == "no"
-                    ))
-            continue
+    def __init__(self, **kwargs):
+        for s in {{slots}}:
+            setattr(self, s, kwargs.get(s, Null))
 
-        if property.type in ["string", "boolean", "integer", "date", "long", "double"]:
-            columns.append(Column(
-                table=index_name,
-                name=query_path,
-                type=property.type,
-                nested_path=Null,
-                useSource=property.index == "no",
-                domain=Null
-            ))
-            if property.index_name and name != property.index_name:
-                columns.append(Column(
-                    table=index_name,
-                    name=property.index_name,
-                    type=property.type,
-                    nested_path=Null,
-                    useSource=property.index == "no",
-                    domain=Null
-                ))
-        elif property.enabled == None or property.enabled == False:
-            columns.append(Column(
-                table=index_name,
-                name=query_path,
-                type="object",
-                nested_path=Null,
-                useSource=True,
-                domain=Null
-            ))
-        else:
-            Log.warning("unknown type {{type}} for property {{path}}", type=property.type, path=query_path)
+        missed = {{required}}-set(kwargs.keys())
+        if missed:
+            Log.error("Expecting properties {"+"{missed}}", missed=missed)
 
-    return columns
+        illegal = set(kwargs.keys())-set({{slots}})
+        if illegal:
+            Log.error("{"+"{names}} are not a valid properties", names=illegal)
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    def __setitem__(self, item, value):
+        setattr(self, item, value)
+        return self
+
+    def __getattr__(self, item):
+        Log.error("{"+"{item|quote}} not valid attribute", item=item)
+
+    def items(self):
+        return ((k, getattr(self, k)) for k in {{slots}})
+
+    def __copy__(self):
+        return Column(**{{dict}})
+
+    def __iter__(self):
+        return {{slots}}.__iter__()
+
+    def __len__(self):
+        return {{len_slots}}
+
+temp = {{name}}
+""",
+        {
+            "name": name,
+            "slots": "(" + (", ".join(convert.value2quote(s) for s in slots)) + ")",
+            "required": "{" + (", ".join(convert.value2quote(s) for s in required)) + "}",
+            "nulls": "{" + (", ".join(convert.value2quote(s) for s in nulls)) + "}",
+            "len_slots": len(slots),
+            "dict": "{" + (", ".join(convert.value2quote(s) + ": self." + s for s in slots)) + "}"
+        }
+    )
+
+    return _exec(code)
+
+
+def _exec(code):
+    temp = None
+    exec(code)
+    return temp
+
+
+class Table(DataClass("Table", [
+    "name",
+    "url",
+    "query_path"
+])):
+    @property
+    def columns(self):
+        return FromESMetadata.singlton.get_columns(table=self.name)
+
+
+Column = DataClass(
+    "Column",
+    [
+        "name",
+        "abs_name",
+        "table",
+        "type",
+        {"name": "nested_path", "nulls": True},
+        {"name": "domain", "nulls": True},
+        {"name": "relative", "nulls": True},
+        {"name": "count", "nulls": True},
+        {"name": "cardinality", "nulls": True},
+        {"name": "partitions", "nulls": True},
+        {"name": "last_updated", "nulls": True}
+    ]
+)
+
+
 

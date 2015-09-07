@@ -18,7 +18,7 @@ import time
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, Null, Dict, set_default, listwrap, literal_field
+from pyLibrary.dot import coalesce, Null, Dict, set_default, listwrap, literal_field, join_field, split_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap
 from pyLibrary.env import http
@@ -898,6 +898,100 @@ class Alias(Features):
                 query=query,
                 cause=e
             )
+
+
+def parse_properties(parent_index_name, parent_query_path, esProperties):
+    """
+    RETURN THE COLUMN DEFINITIONS IN THE GIVEN esProperties OBJECT
+    """
+    from pyLibrary.queries.meta import Column
+
+    columns = DictList()
+    for name, property in esProperties.items():
+        if parent_query_path:
+            index_name, query_path = parent_index_name, join_field(split_field(parent_query_path) + [name])
+        else:
+            index_name, query_path = parent_index_name, name
+
+        if property.type == "nested" and property.properties:
+            # NESTED TYPE IS A NEW TYPE DEFINITION
+            # MARKUP CHILD COLUMNS WITH THE EXTRA DEPTH
+            self_columns = parse_properties(index_name, query_path, property.properties)
+            for c in self_columns:
+                if not c.nested_path:
+                    c.nested_path = [query_path]
+                else:
+                    c.nested_path.insert(0, query_path)
+            columns.extend(self_columns)
+            columns.append(Column(
+                table=index_name,
+                name=query_path,
+                abs_name=query_path,
+                type="nested",
+                nested_path=[name]
+            ))
+
+            continue
+
+        if property.properties:
+            child_columns = parse_properties(index_name, query_path, property.properties)
+            columns.extend(child_columns)
+            columns.append(Column(
+                table=index_name,
+                name=query_path,
+                abs_name=query_path,
+                type="object"
+            ))
+
+        if property.dynamic:
+            continue
+        if not property.type:
+            continue
+        if property.type == "multi_field":
+            property.type = property.fields[name].type  # PULL DEFAULT TYPE
+            for i, (n, p) in enumerate(property.fields.items()):
+                if n == name:
+                    # DEFAULT
+                    columns.append(Column(
+                        table=index_name,
+                        name=query_path,
+                        type=p.type
+                    ))
+                else:
+                    columns.append(Column(
+                        table=index_name,
+                        name=query_path + "." + n,
+                        type=p.type
+                    ))
+            continue
+
+        if property.type in ["string", "boolean", "integer", "date", "long", "double"]:
+            columns.append(Column(
+                table=index_name,
+                name=query_path,
+                abs_name=query_path,
+                type=property.type,
+                nested_path=Null,
+                domain=Null
+            ))
+            if property.index_name and name != property.index_name:
+                columns.append(Column(
+                    table=index_name,
+                    name=property.index_name,
+                    type=property.type
+                ))
+        elif property.enabled == None or property.enabled == False:
+            columns.append(Column(
+                table=index_name,
+                name=query_path,
+                abs_name=query_path,
+                type="object"
+            ))
+        else:
+            Log.warning("unknown type {{type}} for property {{path}}", type=property.type, path=query_path)
+
+    return columns
+
 
 
 def _merge_mapping(a, b):

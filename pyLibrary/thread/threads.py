@@ -493,7 +493,7 @@ class Thread(object):
         return output
 
     @staticmethod
-    def sleep(seconds=None, till=None, please_stop=None):
+    def sleep(seconds=None, till=None, timeout=None, please_stop=None):
 
         if please_stop is not None or isinstance(till, Signal):
             if isinstance(till, Signal):
@@ -502,6 +502,8 @@ class Thread(object):
 
             if seconds is not None:
                 till = datetime.utcnow() + timedelta(seconds=seconds)
+            elif timeout is not None:
+                till = datetime.utcnow() + timedelta(seconds=timeout.seconds)
             elif till is None:
                 till = MAX_DATETIME
 

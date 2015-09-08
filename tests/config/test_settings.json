@@ -5,7 +5,7 @@
 		"index": "testdata",
 		"type": "test_result",
 		"host": "http://localhost",
-		"port": "9200"
+		"port": 9200
 	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {

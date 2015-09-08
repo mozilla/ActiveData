@@ -38,7 +38,7 @@ default ElasticSearch index.  You can find a few sample config files in
         },
         "elasticsearch":{
             "host":"http://localhost",
-            "port":"9200",
+            "port":9200,
             "index":"testdata",
             "type":"test_result",
             "debug":true

@@ -124,14 +124,14 @@ def use_settings(func):
 
     def wrapper(*args, **kwargs):
         try:
-            if func.func_name == "__init__" and "settings" in kwargs:
+            if func.func_name in ("__init__", "__new__") and "settings" in kwargs:
                 packed = params_pack(params, kwargs, dot.zip(params[1:], args[1:]), kwargs["settings"], defaults)
                 return func(args[0], **packed)
-            elif func.func_name == "__init__" and len(args) == 2 and len(kwargs) == 0 and isinstance(args[1], Mapping):
+            elif func.func_name in ("__init__", "__new__") and len(args) == 2 and len(kwargs) == 0 and isinstance(args[1], Mapping):
                 # ASSUME SECOND UNNAMED PARAM IS settings
                 packed = params_pack(params, args[1], defaults)
                 return func(args[0], **packed)
-            elif func.func_name == "__init__":
+            elif func.func_name in ("__init__", "__new__"):
                 # DO NOT INCLUDE self IN SETTINGS
                 packed = params_pack(params, kwargs, dot.zip(params[1:], args[1:]), defaults)
                 return func(args[0], **packed)

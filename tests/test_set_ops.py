@@ -472,7 +472,7 @@ class TestSetOps(ActiveDataBaseTest):
             self.assertEqual(len(result.data.value), query.DEFAULT_LIMIT)
         finally:
             # REMOVE CONTAINER
-            self.es.delete_index(settings.index)
+            self.es_cluster.delete_index(settings.index)
 
 
     def test_specific_limit(self):
@@ -500,7 +500,7 @@ class TestSetOps(ActiveDataBaseTest):
             self.assertEqual(len(result.data.value), 5)
         finally:
             # REMOVE CONTAINER
-            self.es.delete_index(settings.index)
+            self.es_cluster.delete_index(settings.index)
 
     def test_negative_limit(self):
         test = wrap({
@@ -518,7 +518,7 @@ class TestSetOps(ActiveDataBaseTest):
             self.assertRaises(Exception, self._execute_query, test.query)
         finally:
             # REMOVE CONTAINER
-            self.es.delete_index(settings.index)
+            self.es_cluster.delete_index(settings.index)
 
     def test_select_expression(self):
         test = {

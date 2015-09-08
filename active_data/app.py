@@ -32,7 +32,7 @@ BLANK = File("active_data/html/error.html").read()
 
 app = Flask(__name__)
 request_log_queue = None
-default_elasticsearch = None
+# default_elasticsearch = None
 config = None
 query_finder = None
 
@@ -210,7 +210,7 @@ app.wsgi_app = WSGICopyBody(app.wsgi_app)
 
 
 def main():
-    global default_elasticsearch
+    # global default_elasticsearch
     global request_log_queue
     global config
     global query_finder
@@ -225,7 +225,7 @@ def main():
             request_logger = elasticsearch.Cluster(config.request_logs).get_or_create_index(config.request_logs)
             request_log_queue = request_logger.threaded_queue(max_size=2000)
 
-        default_elasticsearch = elasticsearch.Index(config.elasticsearch)
+        # default_elasticsearch = elasticsearch.Cluster(config.elasticsearch)
 
         containers.config.default = {
             "type": "elasticsearch",

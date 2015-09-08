@@ -10,16 +10,16 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-from collections import Mapping
+
 from copy import copy
 
+from collections import Mapping
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch, http
-from pyLibrary.env.elasticsearch import ES_NUMERIC_TYPES
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb, expressions, containers
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.domains import is_keyword, SimpleSetDomain, NumericDomain, UniqueDomain, DefaultDomain
+from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09 import setop as es09_setop
 from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
 from pyLibrary.queries.es14.deep import is_deepop, es_deepop
@@ -28,7 +28,7 @@ from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.es14.util import aggregates1_4
 from pyLibrary.queries.meta import FromESMetadata
 from pyLibrary.queries.namespace.typed import Typed
-from pyLibrary.queries.query import Query, _normalize_where, _normalize_domain
+from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import coalesce, split_field, literal_field, unwraplist, join_field
@@ -153,7 +153,42 @@ class FromES(Container):
 
 
     def get_columns(self, _from_name=None):
-        return self.meta.get_columns(table=coalesce(_from_name, self.settings.index))
+        query_path = self.query_path if self.query_path != "." else None
+        abs_columns = self.meta.get_columns(table=coalesce(_from_name, self.settings.index))
+
+        columns = []
+        if query_path:
+            depth = (len(c.nested_path) for c in abs_columns if c.nested_path[0] == query_path).next()
+            # ADD RELATIVE COLUMNS
+            for c in abs_columns:
+                if c.nested_path[0] == query_path:
+                    c = copy(c)
+                    columns.append(c)
+                    c = copy(c)
+                    c.name = c.abs_name[len(query_path) + 1:] if c.type != "nested" else "."
+                    columns.append(c)
+                elif not c.nested_path:
+                    c = copy(c)
+                    columns.append(c)
+                    c = copy(c)
+                    c.name = "." + ("." * depth) + c.abs_name
+                    columns.append(c)
+                elif depth > len(c.nested_path) and query_path.startswith(c.nested_path[0]+"."):
+                    diff = depth - len(c.nested_path)
+                    c = copy(c)
+                    columns.append(c)
+                    c = copy(c)
+                    c.name = "." + ("." * diff) + (c.abs_name[len(c.nested_path[0]) + 1:] if c.type != "nested" else "")
+                    columns.append(c)
+                else:
+                    continue
+        else:
+            for c in abs_columns:
+                if not c.nested_path:
+                    c = copy(c)
+                    columns.append(c)
+
+        return columns
 
     def addDimension(self, dim):
         if isinstance(dim, list):
@@ -249,7 +284,7 @@ class FromES(Container):
                     updates.append({"update": {"_id": h._id, "_routing": unwraplist(h.fields[literal_field(schema._routing.path)])}})
                     updates.append(s)
             content = ("\n".join(convert.value2json(c) for c in updates) + "\n").encode('utf-8')
-            response = self._es.cluster._post(
+            response = self._es.cluster.post(
                 self._es.path + "/_bulk",
                 data=content,
                 headers={"Content-Type": "application/json"}

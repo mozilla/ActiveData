@@ -20,7 +20,7 @@ import itertools
 from active_data.app import replace_vars
 from pyLibrary import convert, jsons
 from pyLibrary.debugs.logs import Log, Except, constants
-from pyLibrary.dot import wrap, listwrap, coalesce, unwrap
+from pyLibrary.dot import wrap, listwrap, coalesce, unwrap, split_field, join_field
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
 from pyLibrary.queries import qb, containers
@@ -135,23 +135,24 @@ class ActiveDataBaseTest(FuzzyTestCase):
         if settings.backend_es.schema==None:
             Log.error("Expecting backed_es to have a schema defined")
         self.service_url = None
-        self.backend_es = None
-        self.es = None
+        self.es_test_settings = None
+        self.es_cluster = None
         self.index = None
 
 
     def setUp(self):
         # ADD TEST RECORDS
         self.service_url = settings.service_url
-        self.backend_es = settings.backend_es.copy()
-        self.backend_es.index = "testing_" + Random.hex(10).lower()
+        self.es_test_settings = settings.backend_es.copy()
+        self.es_test_settings.index = "testing_" + Random.hex(10).lower()
+        self.es_test_settings.alias = None
         # self.backend_es.type = "test_result"
-        self.es = elasticsearch.Cluster(self.backend_es)
-        self.index = self.es.get_or_create_index(self.backend_es)
+        self.es_cluster = elasticsearch.Cluster(self.es_test_settings)
+        self.index = self.es_cluster.get_or_create_index(self.es_test_settings)
         self.server_is_ready.wait_for_go()
 
     def tearDown(self):
-        self.es.delete_index(self.backend_es.index)
+        self.es_cluster.delete_index(self.es_test_settings.index)
 
     def not_real_service(self):
         return settings.fastTesting
@@ -161,8 +162,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
         RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
         """
         subtest = wrap(subtest)
-        _settings = self.backend_es.copy()
-        _settings.index = "testing_" + Random.hex(10).lower()
+        _settings = self.es_test_settings  # ALREADY COPIED AT setUp()
+        # _settings.index = "testing_" + Random.hex(10).lower()
         # settings.type = "test_result"
 
         try:
@@ -174,7 +175,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             _settings.schema = jsons.ref.get(url)
 
             # MAKE CONTAINER
-            container = self.es.get_or_create_index(tjson=tjson, settings=_settings)
+            container = self.es_cluster.get_or_create_index(tjson=tjson, settings=_settings)
             container.add_alias(_settings.index)
 
             # INSERT DATA
@@ -238,7 +239,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             Log.error("Failed test {{name|quote}}", {"name": subtest.name}, e)
         finally:
             # REMOVE CONTAINER
-            self.es.delete_index(settings.index)
+            self.es_cluster.delete_index(settings.index)
 
     def compare_to_expected(self, query, result, expected):
         query = wrap(query)
@@ -262,7 +263,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 result.data = qb.sort(result.data, range(len(result.header)))
                 expected.data = qb.sort(expected.data, range(len(expected.header)))
         elif result.meta.format == "list":
-            query = Query(query, schema=FromES(self.index.settings))
+            query = Query(query, schema=FromES(settings=self.index.settings))
             if not query.sort:
                 if isinstance(query.select, list):
                     sort_order = coalesce(query.edges, query.groupby) + query.select + qb.get_columns(result.data)

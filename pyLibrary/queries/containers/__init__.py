@@ -41,7 +41,6 @@ def _delayed_imports():
     from pyLibrary.queries.containers.cube import Cube as _Cube
     from pyLibrary.queries.qb import run as _run
     from pyLibrary.queries.query import Query as _Query
-    # from pyLibrary.queries.namespace.normal import Normal as _Normal
 
     set_default(type2container, {
         "elasticsearch": _FromES,

@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from copy import copy
+
 from pyLibrary import convert
 
 from pyLibrary.env import elasticsearch
@@ -27,9 +28,11 @@ from pyLibrary.dot import wrap
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Queue, Thread, Lock, Signal
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import Duration
+from pyLibrary.times.durations import Duration, HOUR
 
 
+DEBUG = True
+TOO_OLD = 2*HOUR
 singlton = None
 
 
@@ -42,7 +45,6 @@ class FromESMetadata(Container):
     def __new__(cls, *args, **kwargs):
         global singlton
         if singlton:
-            Log.error()
             return singlton
         else:
             singlton = object.__new__(cls)
@@ -55,7 +57,7 @@ class FromESMetadata(Container):
         Container.__init__(self, None, schema=self)
         self.settings = settings
         self.default_name = coalesce(name, alias, index)
-        self.default_es = elasticsearch.Index(settings=settings)
+        self.default_es = elasticsearch.Cluster(settings=settings)
         self.tables_schema = wrap({c.name: c for c in self.get_columns(table="meta.tables")})
         self.tables = ListContainer([], self.tables_schema)
         self.columns_schema = wrap({c.name: c for c in self.get_columns(table="meta.columns")})
@@ -63,7 +65,6 @@ class FromESMetadata(Container):
         self.todo = Queue("refresh metadata")
         self.worker = Thread.run("refresh metadata", self.monitor)
         self.locker = Lock("")
-        self.done_first_pass = Signal()
         return
 
     @property
@@ -78,45 +79,38 @@ class FromESMetadata(Container):
         with self.locker:
             return self.tables.query({"where": {"eq": {"name": table_name}}})
 
-    def _get_columns(self):
+    def upsert_column(self, c):
+        existing_columns = filter(lambda r: r.table == c.table and r.abs_name == c.abs_name, self.columns.data)
+        if not existing_columns:
+            self.columns.add(c)
+            self.todo.add(c)
+        else:
+            set_default(existing_columns[0], c)
+            self.todo.add(existing_columns[0])
+
+    def _get_columns(self, table=None):
         # TODO: HANDLE MORE THEN ONE ES, MAP TABLE SHORT_NAME TO ES INSTANCE
-        with self.locker:
-            all_columns = []
-            alias_done = set()
-            metadata = self.default_es.cluster.get_metadata()
-            for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
-                for _, properties in meta.mappings.items():
-                    columns = elasticsearch.parse_properties(index, None, properties.properties)
+        alias_done = set()
+        metadata = self.default_es.get_metadata(index=table)
+        for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
+            for _, properties in meta.mappings.items():
+                columns = elasticsearch.parse_properties(index, None, properties.properties)
+                with self.locker:
                     for c in columns:
+                        # ABSOLUTE
                         c.table = index
                         c.domain = DefaultDomain()
+                        self.upsert_column(c)
 
-                        existing_columns = filter(lambda r: r.table == index and r.abs_name == c.abs_name, self.columns.data)
-                        if not existing_columns:
-                            self.columns.add(c)
-                            self.todo.add(c)
-                        else:
-                            set_default(existing_columns[0], c)
-                            self.todo.add(c)
+                        for alias in meta.aliases:
+                            # ONLY THE LATEST ALIAS IS CHOSEN TO GET COLUMNS
+                            if alias in alias_done:
+                                continue
+                            alias_done.add(alias)
 
-                    for alias in meta.aliases:
-                        # ONLY THE LATEST ALIAS IS CHOSEN TO GET COLUMNS
-                        if alias in alias_done:
-                            continue
-                        alias_done.add(alias)
-
-                        for c in columns:
-                            cc = copy(c)
-                            cc.table = alias
-                            all_columns.append(cc)
-
-                        existing_columns = filter(lambda r: r.table == alias and r.abs_name == c.abs_name, self.columns.data)
-                        if not existing_columns:
-                            self.columns.add(c)
-                            self.todo.add(c)
-                        else:
-                            set_default(existing_columns[0], c)
-                            self.todo.add(c)
+                            c = copy(c)
+                            c.table = alias
+                            self.upsert_column(c)
 
     def query(self, _query):
         return self.columns.query(Query(set_default(
@@ -138,12 +132,17 @@ class FromESMetadata(Container):
 
         with self.locker:
             columns = qb.sort(filter(lambda r: r.table == table, self.columns.data), "name")
-            if not columns:
-                self.done_first_pass.wait_for_go()
-                columns = qb.sort(filter(lambda r: r.table == table, self.columns.data), "name")
-                if not columns:
-                    Log.error("no columns for {{table}}", table=table)
-            return columns
+            if columns:
+                return columns
+
+        self._get_columns(table=table)
+        with self.locker:
+            columns = qb.sort(filter(lambda r: r.table == table, self.columns.data), "name")
+            if columns:
+                return columns
+
+        self._get_columns(table=table)
+        Log.error("no columns for {{table}}", table=table)
 
     def _update_cardinality(self, c):
         """
@@ -152,7 +151,7 @@ class FromESMetadata(Container):
         if c.type in ["object", "nested"]:
             Log.error("not supported")
 
-        result = self.default_es.search({
+        result = self.default_es.post("/"+c.table+"/_search", data={
             "aggs": {c.name: _counting_query(c)},
             "size": 0
         })
@@ -209,7 +208,7 @@ class FromESMetadata(Container):
         else:
             query.aggs[literal_field(c.name)] = {"terms": {"field": c.name, "size": 0}}
 
-        result = self.default_es.search(query)
+        result = self.default_es.post("/"+c.table+"/_search", data=query)
 
         aggs = result.aggregations.values()[0]
         if aggs._nested:
@@ -230,26 +229,25 @@ class FromESMetadata(Container):
             })
 
     def monitor(self, please_stop):
-        with self.locker:
-            Log.note("initial metadata pull")
-            self._get_columns()
-            self.done_first_pass.go()
+        if DEBUG:
+            Thread.sleep(seconds=10*60)
         while not please_stop:
             if not self.todo:
                 Log.note("look for more metatdata to update")
                 with self.locker:
-                    old_columns = filter(lambda c: c.last_updated == None or c.last_updated >= Date.now()-Duration("2hour"), self.columns)
+                    old_columns = filter(lambda c: (c.last_updated == None or c.last_updated < Date.now()-TOO_OLD) and c.type not in ["object", "nested"], self.columns)
                     self.todo.extend(old_columns)
 
-            column = self.todo.pop(Duration.MINUTE*10)
+            column = self.todo.pop(till=Date.now()+(Duration.MINUTE*10))
             if column:
                 if column.type in ["object", "nested"]:
                     continue
-
+                if column.last_updated >= Date.now()-TOO_OLD:
+                    continue
                 self._update_cardinality(column)
                 Log.note("updated {{column.name}}", column=column)
             else:
-                Thread.sleep(Duration.MINUTE)
+                Thread.sleep(timeout=Duration.MINUTE)
 
 
 
@@ -398,6 +396,9 @@ class {{name}}(Mapping):
     def __len__(self):
         return {{len_slots}}
 
+    def __str__(self):
+        return str({{dict}})
+
 temp = {{name}}
 """,
         {
@@ -436,7 +437,7 @@ Column = DataClass(
         "abs_name",
         "table",
         "type",
-        {"name": "nested_path", "nulls": True},
+        {"name": "nested_path", "nulls": True},  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
         {"name": "domain", "nulls": True},
         {"name": "relative", "nulls": True},
         {"name": "count", "nulls": True},

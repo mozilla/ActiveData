@@ -68,7 +68,7 @@ different names and slightly different variations, some examples are:
  * `jinja2.environment.Environment.getattr()`  to allow convenient dot notation
  * `argparse.Environment()` - code performs `setattr(e, name, value)` on
   instances of Environment to provide dot(`.`) accessors
- * `collections.namedtuple()` - gives attribute names to tuple indicies
+ * `collections.namedtuple()` - gives attribute names to tuple indices
   effectively providing <code>a.b</code> rather than <code>a["b"]</code>
      offered by dicts
  * [configman's DotDict](https://github.com/mozilla/configman/blob/master/configman/dotdict.py)
@@ -210,7 +210,7 @@ all `a<=b`
   * Trinary slicing `[::]` uses the flat list definition
 
 When assuming a *flat-list*, we loose the *take-from-the-right* tricks gained
-from modulo arithmetic on the indicies. Therefore, we require extra methods
+from modulo arithmetic on the indices. Therefore, we require extra methods
 to perform right-based slicing:
 
   * **right()** - `flat_list.right(b)` same as `loop_list[-b:]` except when `b<=0`

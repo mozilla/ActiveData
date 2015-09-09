@@ -109,10 +109,15 @@ def query(path):
                 cols = [c for c in m.get_columns(table=data["from"]) if c.type not in ["nested", "object"]]
                 for c in cols:
                     m.todo.push(c)
-                for c in cols:
-                    while not c.last_updated:
-                        Log.note("wait for column (name=={{name}}) metadata to arrive", name=c.abs_name)
-                        Thread.sleep(seconds=1)
+
+                while True:
+                    for c in cols:
+                        if not c.last_updated:
+                            Log.note("wait for column (table={{col.table}}, name={{col.name}}) metadata to arrive", col=c)
+                            break
+                    else:
+                        break
+                    Thread.sleep(seconds=1)
             # frum = Container.new_instance(data["from"])
             result = qb.run(data)
 

@@ -10,7 +10,9 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+
 import datetime
+from decimal import Decimal
 
 from pyLibrary import regex
 from pyLibrary.vendor.dateutil.relativedelta import relativedelta
@@ -209,10 +211,10 @@ class Duration(object):
 
     @property
     def seconds(self):
-        return self.milli / 1000.0
+        return float(self.milli) / 1000.0
 
     def total_seconds(self):
-        return self.milli / 1000.0
+        return float(self.milli) / 1000.0
 
     def __str__(self):
         return str(self.__unicode__())

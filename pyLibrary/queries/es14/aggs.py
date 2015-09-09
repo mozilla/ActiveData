@@ -18,7 +18,7 @@ from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coal
 from pyLibrary.maths import Math
 from pyLibrary.queries import qb, es09
 from pyLibrary.queries.dimensions import Dimension
-from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword
+from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword, DefaultDomain
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
 from pyLibrary.queries.expressions import simplify_esfilter, qb_expression_to_ruby, get_all_vars
 from pyLibrary.queries.query import DEFAULT_LIMIT
@@ -154,6 +154,12 @@ def es_aggsop(es, frum, query):
 
 class AggsDecoder(object):
     def __new__(cls, e=None, query=None, *args, **kwargs):
+        if query.groupby:
+            # GROUPBY ASSUMES WE IGNORE THE DOMAIN RANGE
+            e.allowNulls = False
+        else:
+            e.allowNulls = coalesce(e.allowNulls, True)
+
         if e.value and e.domain.type == "default":
             if query.groupby:
                 return object.__new__(DefaultDecoder, e.copy())
@@ -165,19 +171,12 @@ class AggsDecoder(object):
                     return object.__new__(DefaultDecoder, e.copy())
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
 
-                if limit:
-                    e.domain = SimpleSetDomain(
-                        name=col.domain.name,
-                        type=col.domain.type,
-                        key=col.domain.key,
-                        partitions=col.domain.partitions[0:limit:],
-                    )
+                if col.partitions != None:
+                    e.domain = SimpleSetDomain(partitions=col.partitions[:limit:])
                 else:
-                    e.domain = set_default(col.domain, e.domain.as_dict())
+                    e.domain = set_default(DefaultDomain(limit=limit), e.domain.as_dict())
+                    return object.__new__(DefaultDecoder, e.copy())
 
-                if query.groupby:
-                    # GROUPBY ASSUMES WE IGNORE THE DOMAIN RANGE
-                    e.allowNulls = False
             elif isinstance(e.value, (list, Mapping)):
                 Log.error("Not supported yet")
             else:
@@ -237,8 +236,9 @@ class AggsDecoder(object):
 class SetDecoder(AggsDecoder):
     def append_query(self, es_query, start):
         self.start = start
+        domain = self.edge.domain
 
-        include = [p[self.edge.domain.key] for p in self.edge.domain.partitions]
+        include = [p[domain.key] for p in domain.partitions]
         if self.edge.allowNulls:
 
             return wrap({"aggs": {
@@ -424,7 +424,7 @@ class DefaultDecoder(SetDecoder):
     def __init__(self, edge, query):
         AggsDecoder.__init__(self, edge, query)
         self.edge = self.edge.copy()
-        self.edge.allowNulls = False  # SINCE WE DO NOT KNOW THE DOMAIN, WE HAVE NO SENSE OF WHAT IS OUTSIDE THAT DOMAIN, allowNulls==True MAKES NO SENSE
+        # self.edge.allowNulls = False  # SINCE WE DO NOT KNOW THE DOMAIN, WE HAVE NO SENSE OF WHAT IS OUTSIDE THAT DOMAIN, allowNulls==True MAKES NO SENSE
         self.edge.domain.partitions = set()
         self.edge.domain.limit = coalesce(self.edge.domain.limit, query.limit, 10)
 

@@ -223,9 +223,11 @@ The domain is defined as an attribute of every edge.  Each domain defines a cove
 
   - **name** – Name given to this domain definition, for use in other code in the query (default to ```type``` value).
   - **type** – One of a few predefined types  (Default ```{"type":"default"}```)
+  - **limit** - for `"type": "default"` domains; limit the number of parts that will be returned 
   - **value** – Domain partitions are technically JSON objects with descriptive attributes (name, value, max, min, etc).  The value attribute is code that will extract the value of the domain after aggregation is complete.
   - **key** – Code to extract the unique key value from any part object in a partition.  This is important so a 1-1 relationship can be established – mapping fast string hashes to slow object comparisons.
   - **isFacet** – for ES queries:  Will force each part of the domain to have it’s own facet.  Each part of the domain must be explicit, and define ```edges[].domain.partition.esfilter``` as the facet filter.  Avoid using ```{"script"...}``` filters in facets because they are WAY slow.
+
 
 edges.domain.type
 -------------------

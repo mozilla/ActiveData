@@ -143,15 +143,6 @@ class FromES(Container):
                 Log.error("Problem (Tried to clear Elasticsearch cache)", e)
             Log.error("problem", e)
 
-
-
-    def get_relative_columns(self):
-        if self._columns:
-            return self._columns
-
-        abs_columns=self._get_columns(self.settings.alias, self.path)
-
-
     def get_columns(self, _from_name=None):
         query_path = self.query_path if self.query_path != "." else None
         abs_columns = self.meta.get_columns(table=coalesce(_from_name, self.settings.index))
@@ -166,19 +157,22 @@ class FromES(Container):
                     columns.append(c)
                     c = copy(c)
                     c.name = c.abs_name[len(query_path) + 1:] if c.type != "nested" else "."
+                    c.relative = True
                     columns.append(c)
                 elif not c.nested_path:
                     c = copy(c)
                     columns.append(c)
                     c = copy(c)
                     c.name = "." + ("." * depth) + c.abs_name
+                    c.relative = True
                     columns.append(c)
-                elif depth > len(c.nested_path) and query_path.startswith(c.nested_path[0]+"."):
+                elif depth > len(c.nested_path) and query_path.startswith(c.nested_path[0] + "."):
                     diff = depth - len(c.nested_path)
                     c = copy(c)
                     columns.append(c)
                     c = copy(c)
                     c.name = "." + ("." * diff) + (c.abs_name[len(c.nested_path[0]) + 1:] if c.type != "nested" else "")
+                    c.relative = True
                     columns.append(c)
                 else:
                     continue
@@ -186,9 +180,10 @@ class FromES(Container):
             for c in abs_columns:
                 if not c.nested_path:
                     c = copy(c)
+                    c.relative = True
                     columns.append(c)
 
-        return columns
+        return wrap(columns)
 
     def addDimension(self, dim):
         if isinstance(dim, list):

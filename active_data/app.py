@@ -13,16 +13,16 @@ from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
 from active_data.save_query import SaveQueries
-from pyLibrary import convert, strings, queries
+from pyLibrary import convert, strings
 from pyLibrary.debugs import constants, startup
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import Dict, unwrap, wrap, coalesce
+from pyLibrary.dot import unwrap, wrap, coalesce
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
-from pyLibrary.queries import qb
+from pyLibrary.queries import qb, meta
 from pyLibrary.queries import containers
-from pyLibrary.queries.containers import Container
 from pyLibrary.strings import expand_template
+from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
 
@@ -103,8 +103,18 @@ def query(path):
             text = replace_vars(text, flask.request.args)
             data = convert.json2value(text)
             record_request(flask.request, data, None, None)
-            frum = Container.new_instance(data["from"])
-            result = qb.run(data, frum)
+            if data.meta.testing:
+                # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
+                m = meta.singlton
+                cols = [c for c in m.get_columns(table=data["from"]) if c.type not in ["nested", "object"]]
+                for c in cols:
+                    m.todo.push(c)
+                for c in cols:
+                    while not c.last_updated:
+                        Log.note("wait for column (name=={{name}}) metadata to arrive", name=c.abs_name)
+                        Thread.sleep(seconds=1)
+            # frum = Container.new_instance(data["from"])
+            result = qb.run(data)
 
         if data.meta.save:
             result.meta.saved_as = query_finder.save(data)

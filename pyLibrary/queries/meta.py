@@ -13,22 +13,21 @@ from __future__ import absolute_import
 from copy import copy
 
 from pyLibrary import convert
-
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.elasticsearch import ES_NUMERIC_TYPES
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.domains import NumericDomain, SimpleSetDomain, DefaultDomain, UniqueDomain
+from pyLibrary.queries.domains import NumericDomain, SimpleSetDomain, UniqueDomain
 from pyLibrary.queries.query import Query
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import coalesce, set_default, Null, literal_field
 from pyLibrary.dot import wrap
 from pyLibrary.strings import expand_template
-from pyLibrary.thread.threads import Queue, Thread, Lock, Signal
+from pyLibrary.thread.threads import Queue, Thread, Lock, Till
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import Duration, HOUR
+from pyLibrary.times.durations import HOUR, MINUTE
 
 
 DEBUG = True
@@ -40,7 +39,6 @@ class FromESMetadata(Container):
     """
     QUERY THE METADATA
     """
-    singleton = None
 
     def __new__(cls, *args, **kwargs):
         global singlton
@@ -52,6 +50,9 @@ class FromESMetadata(Container):
 
     @use_settings
     def __init__(self, host, index, alias=None, name=None, port=9200, settings=None):
+        if hasattr(self, "settings"):
+            return
+
         from pyLibrary.queries.containers.lists import ListContainer
 
         Container.__init__(self, None, schema=self)
@@ -99,7 +100,7 @@ class FromESMetadata(Container):
                     for c in columns:
                         # ABSOLUTE
                         c.table = index
-                        c.domain = DefaultDomain()
+                        # c.domain = DefaultDomain()
                         self.upsert_column(c)
 
                         for alias in meta.aliases:
@@ -141,7 +142,7 @@ class FromESMetadata(Container):
             if columns:
                 return columns
 
-        self._get_columns(table=table)
+        # self._get_columns(table=table)
         Log.error("no columns for {{table}}", table=table)
 
     def _update_cardinality(self, c):
@@ -165,10 +166,9 @@ class FromESMetadata(Container):
                 self.columns.update({
                     "set": {
                         "cardinality": cardinaility,
-                        "partitions": None,
                         "last_updated": Date.now()
                     },
-                    "clear": ["partitions", "domain"],
+                    "clear": ["partitions"],
                     "where": {"eq": {"table": c.table, "name": c.name}}
                 })
             return
@@ -178,9 +178,7 @@ class FromESMetadata(Container):
                 self.columns.update({
                     "set": {
                         "cardinality": cardinaility,
-                        "partitions": None,
-                        "last_updated": Date.now(),
-                        "domain": UniqueDomain()
+                        "last_updated": Date.now()
                     },
                     "clear": ["partitions"],
                     "where": {"eq": {"table": c.table, "name": c.name}}
@@ -192,9 +190,7 @@ class FromESMetadata(Container):
                 self.columns.update({
                     "set": {
                         "cardinality": cardinaility,
-                        "partitions": None,
-                        "last_updated": Date.now(),
-                        "domain": NumericDomain()
+                        "last_updated": Date.now()
                     },
                     "clear": ["partitions"],
                     "where": {"eq": {"table": c.table, "name": c.name}}
@@ -222,23 +218,22 @@ class FromESMetadata(Container):
                 "set": {
                     "cardinality": cardinaility,
                     "partitions": parts,
-                    "domain": SimpleSetDomain(partitions=parts),
                     "last_updated": Date.now()
                 },
                 "where": {"eq": {"table": c.table, "name": c.name}}
             })
 
     def monitor(self, please_stop):
-        if DEBUG:
-            Thread.sleep(seconds=10*60)
         while not please_stop:
             if not self.todo:
-                Log.note("look for more metatdata to update")
                 with self.locker:
                     old_columns = filter(lambda c: (c.last_updated == None or c.last_updated < Date.now()-TOO_OLD) and c.type not in ["object", "nested"], self.columns)
-                    self.todo.extend(old_columns)
+                    if old_columns:
+                        self.todo.extend(old_columns)
+                    else:
+                        Log.note("no more metatdata to update")
 
-            column = self.todo.pop(till=Date.now()+(Duration.MINUTE*10))
+            column = self.todo.pop(timeout=10*MINUTE)
             if column:
                 if column.type in ["object", "nested"]:
                     continue
@@ -246,9 +241,6 @@ class FromESMetadata(Container):
                     continue
                 self._update_cardinality(column)
                 Log.note("updated {{column.name}}", column=column)
-            else:
-                Thread.sleep(timeout=Duration.MINUTE)
-
 
 
 def _counting_query(c):
@@ -347,12 +339,12 @@ def metadata_tables():
 
 def DataClass(name, columns):
     """
-    Each column has {"name", "required", "nulls"} properties
+    Each column has {"name", "required", "nulls", "default"} properties
     """
 
     columns = wrap([{"name": c, "required": True, "nulls": False} if isinstance(c, basestring) else c for c in columns])
     slots = columns.name
-    required = wrap(filter(lambda c: c.required and not c.nulls, columns)).name
+    required = wrap(filter(lambda c: c.required and not c.nulls and not c.default, columns)).name
     nulls = wrap(filter(lambda c: c.nulls, columns)).name
 
     code = expand_template("""
@@ -363,8 +355,11 @@ class {{name}}(Mapping):
     __slots__ = {{slots}}
 
     def __init__(self, **kwargs):
+        if not kwargs:
+            return
+
         for s in {{slots}}:
-            setattr(self, s, kwargs.get(s, Null))
+            setattr(self, s, kwargs.get(s, kwargs.get('default', Null)))
 
         missed = {{required}}-set(kwargs.keys())
         if missed:
@@ -381,6 +376,11 @@ class {{name}}(Mapping):
         setattr(self, item, value)
         return self
 
+    def __setattr__(self, item, value):
+        if item not in {{slots}}:
+            Log.error("{"+"{item|quote}} not valid attribute", item=item)
+        object.__setattr__(self, item, value)
+
     def __getattr__(self, item):
         Log.error("{"+"{item|quote}} not valid attribute", item=item)
 
@@ -388,7 +388,10 @@ class {{name}}(Mapping):
         return ((k, getattr(self, k)) for k in {{slots}})
 
     def __copy__(self):
-        return Column(**{{dict}})
+        _set = object.__setattr__
+        output = object.__new__(Column)
+        {{assign}}
+        return output
 
     def __iter__(self):
         return {{slots}}.__iter__()
@@ -407,7 +410,8 @@ temp = {{name}}
             "required": "{" + (", ".join(convert.value2quote(s) for s in required)) + "}",
             "nulls": "{" + (", ".join(convert.value2quote(s) for s in nulls)) + "}",
             "len_slots": len(slots),
-            "dict": "{" + (", ".join(convert.value2quote(s) + ": self." + s for s in slots)) + "}"
+            "dict": "{" + (", ".join(convert.value2quote(s) + ": self." + s for s in slots)) + "}",
+            "assign": "; ".join("_set(output, "+convert.value2quote(s)+", self."+s+")" for s in slots)
         }
     )
 
@@ -437,8 +441,8 @@ Column = DataClass(
         "abs_name",
         "table",
         "type",
+        {"name": "useSource", "default": False},
         {"name": "nested_path", "nulls": True},  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
-        {"name": "domain", "nulls": True},
         {"name": "relative", "nulls": True},
         {"name": "count", "nulls": True},
         {"name": "cardinality", "nulls": True},

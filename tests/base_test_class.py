@@ -20,7 +20,7 @@ import itertools
 from active_data.app import replace_vars
 from pyLibrary import convert, jsons
 from pyLibrary.debugs.logs import Log, Except, constants
-from pyLibrary.dot import wrap, listwrap, coalesce, unwrap, split_field, join_field
+from pyLibrary.dot import wrap, coalesce, unwrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
 from pyLibrary.queries import qb, containers
@@ -220,6 +220,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 expected = v
 
                 subtest.query.format = format
+                subtest.query.meta.testing = True  # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
                 query = convert.unicode2utf8(convert.value2json(subtest.query))
                 # EXECUTE QUERY
                 response = self._try_till_response(self.service_url, data=query)

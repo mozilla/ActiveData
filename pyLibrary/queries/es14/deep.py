@@ -84,7 +84,7 @@ def es_deepop(es, query):
         if s.value == "*":
             # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
             for c in columns:
-                if c.relative:
+                if c.relative and c.type not in ["nested", "object"]:
                     if not c.nested_path:
                         es_query.fields.append(c.abs_name)
                     new_select.append({
@@ -102,7 +102,7 @@ def es_deepop(es, query):
                     n.name = n.put.name = n.name.lstrip(".")
         elif s.value == ".":
             for c in columns:
-                if c.relative:
+                if c.relative and c.type not in ["nested", "object"]:
                     if not c.nested_path:
                         es_query.fields.append(c.abs_name)
                     new_select.append({

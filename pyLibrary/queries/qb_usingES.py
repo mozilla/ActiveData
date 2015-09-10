@@ -144,6 +144,12 @@ class FromES(Container):
             Log.error("problem", e)
 
     def get_columns(self, table=None):
+        if table is None or table==self.settings.index or table==self.settings.alias:
+            pass
+        elif table.startswith(self.settings.index+".") or table.startswith(self.setings.alias):
+            pass
+        else:
+            Log.error("expecting `table` to be same as, or deeper, than index name")
         query_path = self.query_path if self.query_path != "." else None
         abs_columns = self.meta.get_columns(table=coalesce(table, self.settings.index))
 

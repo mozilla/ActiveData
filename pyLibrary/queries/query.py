@@ -113,7 +113,7 @@ class Query(object):
                 _late_import()
             columns = qb.get_columns(self.frum)
         elif isinstance(self.frum, Container):
-            columns = self.frum.get_columns(table=query["from"])
+            columns = self.frum.get_columns(table=self.frum.name)
         else:
             columns = []
 

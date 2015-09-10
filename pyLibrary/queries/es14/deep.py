@@ -75,7 +75,7 @@ def es_deepop(es, query):
 
     def get_pull(column):
         if column.nested_path:
-            return "_inner" + column.abs_name[len(column.nested_path[0]):]
+            return "_inner" + column.abs_name[len(listwrap(column.nested_path)[0]):]
         else:
             return "fields." + literal_field(column.abs_name)
 
@@ -94,8 +94,8 @@ def es_deepop(es, query):
                         "put": {"name": c.name, "index": i, "child": "."}
                     })
                     i += 1
-            # REMOVE DOTS IN PREFIX IF NAME NOT AMBIGUOUS
 
+            # REMOVE DOTS IN PREFIX IF NAME NOT AMBIGUOUS
             col_names = [c.name for c in columns if c.relative]
             for n in new_select:
                 if n.name.startswith("..") and n.name.lstrip(".") not in col_names:

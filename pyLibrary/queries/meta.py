@@ -22,7 +22,7 @@ from pyLibrary.queries.domains import NumericDomain, SimpleSetDomain, UniqueDoma
 from pyLibrary.queries.query import Query
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import coalesce, set_default, Null, literal_field, listwrap
+from pyLibrary.dot import coalesce, set_default, Null, literal_field, listwrap, split_field, join_field
 from pyLibrary.dot import wrap
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Queue, Thread, Lock, Till
@@ -99,15 +99,16 @@ class FromESMetadata(Container):
     def _get_columns(self, table=None):
         # TODO: HANDLE MORE THEN ONE ES, MAP TABLE SHORT_NAME TO ES INSTANCE
         alias_done = set()
-        metadata = self.default_es.get_metadata(index=table)
+        index = split_field(table)[0]
+        query_path = split_field(table)[1:]
+        metadata = self.default_es.get_metadata(index=index)
         for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
             for _, properties in meta.mappings.items():
                 columns = elasticsearch.parse_properties(index, None, properties.properties)
                 with self.locker:
                     for c in columns:
                         # ABSOLUTE
-                        c.table = index
-                        # c.domain = DefaultDomain()
+                        c.table = join_field([index]+query_path)
                         self.upsert_column(c)
 
                         for alias in meta.aliases:
@@ -117,7 +118,7 @@ class FromESMetadata(Container):
                             alias_done.add(alias)
 
                             c = copy(c)
-                            c.table = alias
+                            c.table = join_field([alias]+query_path)
                             self.upsert_column(c)
 
     def query(self, _query):
@@ -153,101 +154,114 @@ class FromESMetadata(Container):
         """
         if c.type in ["object", "nested"]:
             Log.error("not supported")
-        if c.table == "meta.columns":
+        try:
+            if c.table == "meta.columns":
+                with self.locker:
+                    partitions = qb.sort([g[c.abs_name] for g, _ in qb.groupby(self.columns, c.abs_name) if g[c.abs_name] != None])
+                    self.columns.update({
+                        "set": {
+                            "partitions": partitions,
+                            "cardinality": len(partitions),
+                            "last_updated": Date.now()
+                        },
+                        "where": {"eq": {"table": c.table, "abs_name": c.abs_name}}
+                    })
+                return
+            if c.table == "meta.tables":
+                with self.locker:
+                    partitions = qb.sort([g[c.abs_name] for g, _ in qb.groupby(self.tables, c.abs_name) if g[c.abs_name] != None])
+                    self.columns.update({
+                        "set": {
+                            "partitions": partitions,
+                            "cardinality": len(partitions),
+                            "last_updated": Date.now()
+                        },
+                        "where": {"eq": {"table": c.table, "name": c.name}}
+                    })
+                return
+
+            result = self.default_es.post("/"+c.table+"/_search", data={
+                "aggs": {c.name: _counting_query(c)},
+                "size": 0
+            })
+            r = result.aggregations.values()[0]
+            cardinaility = coalesce(r.value, r._nested.value)
+
+            query = Dict(size=0)
+            if c.type in ["object", "nested"]:
+                Log.note("{{field}} has {{num}} parts", field=c.name, num=c.cardinality)
+                with self.locker:
+                    self.columns.update({
+                        "set": {
+                            "cardinality": cardinaility,
+                            "last_updated": Date.now()
+                        },
+                        "clear": ["partitions"],
+                        "where": {"eq": {"table": c.table, "name": c.name}}
+                    })
+                return
+            elif c.cardinality > 1000:
+                Log.note("{{field}} has {{num}} parts", field=c.name, num=c.cardinality)
+                with self.locker:
+                    self.columns.update({
+                        "set": {
+                            "cardinality": cardinaility,
+                            "last_updated": Date.now()
+                        },
+                        "clear": ["partitions"],
+                        "where": {"eq": {"table": c.table, "name": c.name}}
+                    })
+                return
+            elif c.type in ES_NUMERIC_TYPES and c.cardinality > 30:
+                Log.note("{{field}} has {{num}} parts", field=c.name, num=c.cardinality)
+                with self.locker:
+                    self.columns.update({
+                        "set": {
+                            "cardinality": cardinaility,
+                            "last_updated": Date.now()
+                        },
+                        "clear": ["partitions"],
+                        "where": {"eq": {"table": c.table, "name": c.name}}
+                    })
+                return
+            elif c.nested_path:
+                query.aggs[literal_field(c.name)] = {
+                    "nested": {"path": listwrap(c.nested_path)[0]},
+                    "aggs": {"_nested": {"terms": {"field": c.name, "size": 0}}}
+                }
+            else:
+                query.aggs[literal_field(c.name)] = {"terms": {"field": c.name, "size": 0}}
+
+            result = self.default_es.post("/"+c.table+"/_search", data=query)
+
+            aggs = result.aggregations.values()[0]
+            if aggs._nested:
+                parts = qb.sort(aggs._nested.buckets.key)
+            else:
+                parts = qb.sort(aggs.buckets.key)
+
+            Log.note("{{field}} has {{parts}}", field=c.name, parts=parts)
             with self.locker:
-                partitions = qb.sort([g[c.abs_name] for g, _ in qb.groupby(self.columns, c.abs_name) if g[c.abs_name] != None])
                 self.columns.update({
                     "set": {
-                        "partitions": partitions,
-                        "cardinality": len(partitions),
+                        "cardinality": cardinaility,
+                        "partitions": parts,
                         "last_updated": Date.now()
                     },
                     "where": {"eq": {"table": c.table, "abs_name": c.abs_name}}
                 })
-            return
-        if c.table == "meta.tables":
-            with self.locker:
-                partitions = qb.sort([g[c.abs_name] for g, _ in qb.groupby(self.tables, c.abs_name) if g[c.abs_name] != None])
-                self.columns.update({
-                    "set": {
-                        "partitions": partitions,
-                        "cardinality": len(partitions),
-                        "last_updated": Date.now()
-                    },
-                    "where": {"eq": {"table": c.table, "name": c.name}}
-                })
-            return
-
-        result = self.default_es.post("/"+c.table+"/_search", data={
-            "aggs": {c.name: _counting_query(c)},
-            "size": 0
-        })
-        r = result.aggregations.values()[0]
-        cardinaility = coalesce(r.value, r._nested.value)
-
-        query = Dict(size=0)
-        if c.type in ["object", "nested"]:
-            Log.note("{{field}} has {{num}} parts", field=c.name, num=c.cardinality)
-            with self.locker:
-                self.columns.update({
-                    "set": {
-                        "cardinality": cardinaility,
-                        "last_updated": Date.now()
-                    },
-                    "clear": ["partitions"],
-                    "where": {"eq": {"table": c.table, "name": c.name}}
-                })
-            return
-        elif c.cardinality > 1000:
-            Log.note("{{field}} has {{num}} parts", field=c.name, num=c.cardinality)
-            with self.locker:
-                self.columns.update({
-                    "set": {
-                        "cardinality": cardinaility,
-                        "last_updated": Date.now()
-                    },
-                    "clear": ["partitions"],
-                    "where": {"eq": {"table": c.table, "name": c.name}}
-                })
-            return
-        elif c.type in ES_NUMERIC_TYPES and c.cardinality > 30:
-            Log.note("{{field}} has {{num}} parts", field=c.name, num=c.cardinality)
-            with self.locker:
-                self.columns.update({
-                    "set": {
-                        "cardinality": cardinaility,
-                        "last_updated": Date.now()
-                    },
-                    "clear": ["partitions"],
-                    "where": {"eq": {"table": c.table, "name": c.name}}
-                })
-            return
-        elif c.nested_path:
-            query.aggs[literal_field(c.name)] = {
-                "nested": {"path": listwrap(c.nested_path)[0]},
-                "aggs": {"_nested": {"terms": {"field": c.name, "size": 0}}}
-            }
-        else:
-            query.aggs[literal_field(c.name)] = {"terms": {"field": c.name, "size": 0}}
-
-        result = self.default_es.post("/"+c.table+"/_search", data=query)
-
-        aggs = result.aggregations.values()[0]
-        if aggs._nested:
-            parts = qb.sort(aggs._nested.buckets.key)
-        else:
-            parts = qb.sort(aggs.buckets.key)
-
-        Log.note("{{field}} has {{parts}}", field=c.name, parts=parts)
-        with self.locker:
+        except Exception, e:
             self.columns.update({
                 "set": {
-                    "cardinality": cardinaility,
-                    "partitions": parts,
                     "last_updated": Date.now()
                 },
+                "clear":[
+                    "cardinality",
+                    "partitions",
+                ],
                 "where": {"eq": {"table": c.table, "abs_name": c.abs_name}}
             })
+            Log.warning("Could not get {{col.table}}.{{col.abs_name}} info", col=c, cause=e)
 
     def monitor(self, please_stop):
         while not please_stop:

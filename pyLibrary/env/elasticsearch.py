@@ -974,7 +974,7 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                 table=index_name,
                 name=query_path,
                 abs_name=query_path,
-                type="object"
+                type="source" if property.enabled == False else "object"
             ))
 
         if property.dynamic:
@@ -1017,7 +1017,7 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                 table=index_name,
                 name=query_path,
                 abs_name=query_path,
-                type="object"
+                type="source" if property.enabled==False else "object"
             ))
         else:
             Log.warning("unknown type {{type}} for property {{path}}", type=property.type, path=query_path)

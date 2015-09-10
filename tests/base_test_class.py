@@ -241,6 +241,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
         finally:
             # REMOVE CONTAINER
             if delete_index:
+                Log.note("Delete index {{index}}", index=settings.index)
                 self.es_cluster.delete_index(settings.index)
 
     def compare_to_expected(self, query, result, expected):

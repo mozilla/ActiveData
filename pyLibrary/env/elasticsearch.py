@@ -18,7 +18,7 @@ import time
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, Null, Dict, set_default, join_field, split_field
+from pyLibrary.dot import coalesce, Null, Dict, set_default, join_field, split_field, unwraplist, listwrap
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap
 from pyLibrary.env import http
@@ -955,17 +955,14 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
             # MARKUP CHILD COLUMNS WITH THE EXTRA DEPTH
             self_columns = parse_properties(index_name, query_path, property.properties)
             for c in self_columns:
-                if not c.nested_path:
-                    c.nested_path = [query_path]
-                else:
-                    c.nested_path.insert(0, query_path)
+                c.nested_path = unwraplist([query_path] + listwrap(c.nested_path))
             columns.extend(self_columns)
             columns.append(Column(
                 table=index_name,
                 name=query_path,
                 abs_name=query_path,
                 type="nested",
-                nested_path=[name]
+                nested_path=name
             ))
 
             continue

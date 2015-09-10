@@ -106,11 +106,11 @@ def query(path):
             if data.meta.testing:
                 # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
                 m = meta.singlton
-                cols = [c for c in m.get_columns(table=data["from"]) if c.type not in ["nested", "object"]]
-                for c in cols:
-                    m.todo.push(c)
 
                 while True:
+                    cols = [c for c in m.get_columns(table=data["from"]) if c.type not in ["nested", "object"]]
+                    for c in cols:
+                        m.todo.push(c)
                     for c in cols:
                         if not c.last_updated:
                             Log.note("wait for column (table={{col.table}}, name={{col.name}}) metadata to arrive", col=c)

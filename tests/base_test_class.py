@@ -206,7 +206,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
         settings = self._fill_es(subtest, tjson=tjson)
         self._send_queries(settings, subtest)
 
-    def _send_queries(self, settings, subtest):
+    def _send_queries(self, settings, subtest, delete_index=True):
         subtest = wrap(subtest)
 
         try:
@@ -240,7 +240,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
             Log.error("Failed test {{name|quote}}", {"name": subtest.name}, e)
         finally:
             # REMOVE CONTAINER
-            self.es_cluster.delete_index(settings.index)
+            if delete_index:
+                self.es_cluster.delete_index(settings.index)
 
     def compare_to_expected(self, query, result, expected):
         query = wrap(query)
@@ -269,7 +270,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 if isinstance(query.select, list):
                     sort_order = coalesce(query.edges, query.groupby) + query.select + qb.get_columns(result.data)
                 elif wrap(query.select).value.endswith("*"):
-                    sort_order = coalesce(query.edges, query.groupby) + qb.get_columns(result.data)
+                    sort_order = coalesce(query.edges, query.groupby) + qb.sort(qb.get_columns(result.data), "name")
                 else:
                     sort_order = coalesce(query.edges, query.groupby) + [{"name": "."}]
 

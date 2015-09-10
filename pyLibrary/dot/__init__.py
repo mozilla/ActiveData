@@ -413,7 +413,7 @@ def listwrap(value):
 
     """
     if value == None:
-        return []
+        return DictList()
     elif isinstance(value, list):
         return wrap(value)
     else:

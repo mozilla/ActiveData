@@ -30,8 +30,20 @@ class TestMetadata(ActiveDataBaseTest):
 
         table_name = settings.index
 
+        # WE REQUIRE A QUERY TO FORCE LOADING OF METADATA
+        pre_test = {
+            "query": {
+                "from": table_name
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [{"a": "b"}]
+            }
+        }
+        self._send_queries(settings, pre_test, delete_index=False)
+
         test = set_default(test, {
             "query": {
+                "select": ["name", "table", "type", "nested_path"],
                 "from": "meta.columns",
                 "where": {"eq": {"table": table_name}}
             },
@@ -66,21 +78,41 @@ class TestMetadata(ActiveDataBaseTest):
         settings = self._fill_es({
             "query": {"from": "meta.columns"},  # DUMMY QUERY
             "data": [
-                {"_a": [
+                {"o": 1, "_a": [
                     {"b": "x", "v": 2},
                     {"b": "y", "v": 3}
                 ]},
-                {"_a": {"b": "x", "v": 5}},
-                {"_a": [
+                {"o": 2, "_a": {"b": "x", "v": 5}},
+                {"o": 3, "_a": [
                     {"b": "x", "v": 7},
                 ]},
-                {"c": "x"}
+                {"o": 4, "c": "x"}
             ]})
 
         table_name = settings.index
 
+        # WE REQUIRE A QUERY TO FORCE LOADING OF METADATA
+        pre_test = {
+            "query": {
+                "from": table_name,
+                "sort": "o"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                    {"o": 1, "_a": [
+                        {"b": "x", "v": 2},
+                        {"b": "y", "v": 3}
+                    ]},
+                    {"o": 2, "_a": {"b": "x", "v": 5}},
+                    {"o": 3, "_a": {"b": "x", "v": 7}},
+                    {"o": 4, "c": "x"}
+                ]}
+        }
+        self._send_queries(settings, pre_test, delete_index=False)
+
         test = {
             "query": {
+                "select": ["name", "table", "type", "nested_path"],
                 "from": "meta.columns",
                 "where": {"term": {"table": table_name}}
             },
@@ -91,6 +123,7 @@ class TestMetadata(ActiveDataBaseTest):
                     {"table": table_name, "name": "_a.b", "type": "string", "nested_path": "_a"},
                     {"table": table_name, "name": "_a.v", "type": "long", "nested_path": "_a"},
                     {"table": table_name, "name": "c", "type": "string", "nested_path": None},
+                    {"table": table_name, "name": "o", "type": "long", "nested_path": None},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -99,7 +132,8 @@ class TestMetadata(ActiveDataBaseTest):
                     [table_name, "_a", "_a", "nested"],
                     [table_name, "_a.b", "_a", "string"],
                     [table_name, "_a.v", "_a", "long"],
-                    [table_name, "c", None, "string"]
+                    [table_name, "c", None, "string"],
+                    [table_name, "o", None, "long"]
                 ]
             }
         }

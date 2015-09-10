@@ -11,25 +11,27 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
-from pyLibrary import convert
 
+from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, wrap, listwrap, unwraplist
 from pyLibrary.queries import qb
+
 from pyLibrary.queries.containers import Container
+from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expressions import TRUE_FILTER, qb_expression_to_python
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
 from pyLibrary.queries.meta import Column
-from pyLibrary.thread.threads import Lock
 
 
 class ListContainer(Container):
     def __init__(self, frum, schema=None):
+        #TODO: STORE THIS LIKE A CUBE FOR FASTER ACCESS AND TRANSFORMATION
         frum = list(frum)
-        Container.__init__(self, frum, schema)
-        self.frum = frum
         if schema == None:
             self.schema = get_schema_from_list(frum)
+        Container.__init__(self, frum, schema)
+        self.frum = frum
 
     @property
     def query_path(self):
@@ -75,7 +77,7 @@ class ListContainer(Container):
 
         for c in self.data:
             if filter_(c):
-                for k in command["clear"].keys():
+                for k in listwrap(command["clear"]):
                     c[k] = None
                 for k, v in command.set.items():
                     c[k] = v
@@ -100,7 +102,15 @@ class ListContainer(Container):
         if selects[0].value == "*" and selects[0].name == ".":
             return self
 
-        Log.error("not implemented")
+        for s in selects:
+            if not isinstance(s.value, basestring) or not is_keyword(s.value):
+                Log.error("selecting on structure, or expressions, not supported yet")
+
+        #TODO: DO THIS WITH JUST A SCHEMA TRANSFORM, DO NOT TOUCH DATA
+        #TODO: HANDLE STRUCTURE AND EXPRESSIONS
+        new_schema = {s.name: self.schema[s.value] for s in selects}
+        new_data = [{s.name: d[s.value] for s in selects} for d in self.data]
+        return ListContainer(frum=new_data, schema=new_schema)
 
     def window(self, window):
         _ = window
@@ -116,7 +126,7 @@ class ListContainer(Container):
         elif format == "cube":
             frum = convert.list2cube(self.data, self.schema.keys())
         else:
-            frum = self
+            frum = self.to_dict()
 
         return frum
 
@@ -135,7 +145,7 @@ class ListContainer(Container):
             "data": [{k: unwraplist(v) for k, v in row.items()} for row in self.data]
         })
 
-    def get_columns(self, query_path=None):
+    def get_columns(self, table=None):
         return self.schema.values()
 
     def __getitem__(self, item):
@@ -165,10 +175,9 @@ def _get_schema_from_list(frum, columns, prefix, nested_path):
             if this_type == "object":
                 _get_schema_from_list([value], columns, prefix + [name], nested_path)
             elif this_type == "nested":
-                if not nested_path:
-                    _get_schema_from_list(value, columns, prefix + [name], [name])
-                else:
-                    _get_schema_from_list(value, columns, prefix + [name], [nested_path[0]+"."+name]+nested_path)
+                np = listwrap(nested_path)
+                newpath = unwraplist([".".join((np[0], name))]+np)
+                _get_schema_from_list(value, columns, prefix + [name], newpath)
 
     for n, t in names.items():
         full_name = ".".join(prefix + [n])

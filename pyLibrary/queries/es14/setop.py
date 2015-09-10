@@ -66,7 +66,7 @@ def es_setop(es, query):
 def extract_rows(es, es_query, query):
     is_list = isinstance(query.select, list)
     new_select = DictList()
-    column_names = set(c.name for c in query.frum.get_columns() if (c.type not in ["object"]) and not c.nested_path)
+    column_names = set(c.name for c in query.frum.get_columns() if c.type not in ["object"] and (c.abs_name==c.nested_path or not c.nested_path))
     source = "fields"
 
     i = 0

@@ -39,7 +39,7 @@ def is_deepop(es, query):
 def es_deepop(es, query):
     columns = query.frum.get_columns()
     query_path = query.frum.query_path
-    columns = UniqueIndex(keys=["name"], data=sorted(columns, lambda a, b: cmp(len(b.nested_path), len(a.nested_path))), fail_on_dup=False)
+    columns = UniqueIndex(keys=["name"], data=sorted(columns, lambda a, b: cmp(len(listwrap(b.nested_path)), len(listwrap(a.nested_path)))), fail_on_dup=False)
     _map = {c.name: c.abs_name for c in columns}
     where = qb_expression_to_esfilter(expression_map(query.where, _map))
     more_filter = {
@@ -90,7 +90,7 @@ def es_deepop(es, query):
                     new_select.append({
                         "name": c.name,
                         "pull": get_pull(c),
-                        "nested_path": c.nested_path[0],
+                        "nested_path": listwrap(c.nested_path)[0],
                         "put": {"name": c.name, "index": i, "child": "."}
                     })
                     i += 1
@@ -108,7 +108,7 @@ def es_deepop(es, query):
                     new_select.append({
                         "name": c.name,
                         "pull": get_pull(c),
-                        "nested_path": c.nested_path[0],
+                        "nested_path": listwrap(c.nested_path)[0],
                         "put": {"name": ".", "index": i, "child": c.abs_name}
                     })
             i += 1
@@ -118,12 +118,13 @@ def es_deepop(es, query):
             for c in columns:
                 if c.name.startswith(parent):
                     pull = get_pull(c)
-                    if len(c.nested_path) < 0:
+                    Log.error("what's this?!!")
+                    if len(listwrap(c.nested_path)) < 0:
                         es_query.fields.append(c.abs_name)
                     new_select.append({
                         "name": s.name + "." + c.name[prefix:],
                         "pull": pull,
-                        "nested_path": c.nested_path[0],
+                        "nested_path": listwrap(c.nested_path)[0],
                         "put": {"name": s.name + "." + c[prefix:], "index": i, "child": "."}
                     })
         elif isinstance(s.value, basestring) and is_keyword(s.value):
@@ -138,7 +139,7 @@ def es_deepop(es, query):
                 new_select.append({
                     "name": s.name if is_list else ".",
                     "pull": pull,
-                    "nested_path": c.nested_path[0],
+                    "nested_path": listwrap(c.nested_path)[0],
                     "put": {"name": s.name, "index": i, "child": "."}
                 })
             else:
@@ -149,7 +150,7 @@ def es_deepop(es, query):
                     new_select.append({
                         "name": s.name if is_list else ".",
                         "pull": pull,
-                        "nested_path": n.nested_path[0],
+                        "nested_path": listwrap(n.nested_path)[0],
                         "put": {"name": s.name, "index": i, "child": n[prefix:]}
                     })
             i += 1

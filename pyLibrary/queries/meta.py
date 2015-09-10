@@ -22,7 +22,7 @@ from pyLibrary.queries.domains import NumericDomain, SimpleSetDomain, UniqueDoma
 from pyLibrary.queries.query import Query
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import coalesce, set_default, Null, literal_field
+from pyLibrary.dot import coalesce, set_default, Null, literal_field, listwrap
 from pyLibrary.dot import wrap
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Queue, Thread, Lock, Till
@@ -59,13 +59,16 @@ class FromESMetadata(Container):
         self.settings = settings
         self.default_name = coalesce(name, alias, index)
         self.default_es = elasticsearch.Cluster(settings=settings)
-        self.tables_schema = wrap({c.name: c for c in self.get_columns(table="meta.tables")})
-        self.tables = ListContainer([], self.tables_schema)
-        self.columns_schema = wrap({c.name: c for c in self.get_columns(table="meta.columns")})
-        self.columns = ListContainer([], self.columns_schema)
-        self.todo = Queue("refresh metadata")
-        self.worker = Thread.run("refresh metadata", self.monitor)
         self.locker = Lock("")
+        self.todo = Queue("refresh metadata")
+
+        table_columns = metadata_tables()
+        column_columns = metadata_columns()
+        self.tables = ListContainer([], wrap({c.name: c for c in table_columns}))
+        self.columns = ListContainer([], wrap({c.name: c for c in column_columns}))
+        self.columns.insert(column_columns)
+        self.columns.insert(table_columns)
+        self.worker = Thread.run("refresh metadata", self.monitor)
         return
 
     @property
@@ -84,7 +87,11 @@ class FromESMetadata(Container):
         existing_columns = filter(lambda r: r.table == c.table and r.abs_name == c.abs_name, self.columns.data)
         if not existing_columns:
             self.columns.add(c)
+            cols = filter(lambda r: r.table == "meta.columns", self.columns.data)
+            for c in cols:
+                c.partitions = c.cardinality = c.last_updated = None
             self.todo.add(c)
+            self.todo.extend(cols)
         else:
             set_default(existing_columns[0], c)
             self.todo.add(existing_columns[0])
@@ -126,11 +133,6 @@ class FromESMetadata(Container):
         """
         RETURN METADATA COLUMNS
         """
-        if table == "meta.columns":
-            return metadata_columns()
-        elif table == "meta.tables":
-            return metadata_tables()
-
         with self.locker:
             columns = qb.sort(filter(lambda r: r.table == table, self.columns.data), "name")
             if columns:
@@ -151,6 +153,30 @@ class FromESMetadata(Container):
         """
         if c.type in ["object", "nested"]:
             Log.error("not supported")
+        if c.table == "meta.columns":
+            with self.locker:
+                partitions = qb.sort([g[c.abs_name] for g, _ in qb.groupby(self.columns, c.abs_name) if g[c.abs_name] != None])
+                self.columns.update({
+                    "set": {
+                        "partitions": partitions,
+                        "cardinality": len(partitions),
+                        "last_updated": Date.now()
+                    },
+                    "where": {"eq": {"table": c.table, "abs_name": c.abs_name}}
+                })
+            return
+        if c.table == "meta.tables":
+            with self.locker:
+                partitions = qb.sort([g[c.abs_name] for g, _ in qb.groupby(self.tables, c.abs_name) if g[c.abs_name] != None])
+                self.columns.update({
+                    "set": {
+                        "partitions": partitions,
+                        "cardinality": len(partitions),
+                        "last_updated": Date.now()
+                    },
+                    "where": {"eq": {"table": c.table, "name": c.name}}
+                })
+            return
 
         result = self.default_es.post("/"+c.table+"/_search", data={
             "aggs": {c.name: _counting_query(c)},
@@ -198,7 +224,7 @@ class FromESMetadata(Container):
             return
         elif c.nested_path:
             query.aggs[literal_field(c.name)] = {
-                "nested": {"path": c.nested_path[0]},
+                "nested": {"path": listwrap(c.nested_path)[0]},
                 "aggs": {"_nested": {"terms": {"field": c.name, "size": 0}}}
             }
         else:
@@ -220,7 +246,7 @@ class FromESMetadata(Container):
                     "partitions": parts,
                     "last_updated": Date.now()
                 },
-                "where": {"eq": {"table": c.table, "name": c.name}}
+                "where": {"eq": {"table": c.table, "abs_name": c.abs_name}}
             })
 
     def monitor(self, please_stop):
@@ -247,7 +273,7 @@ def _counting_query(c):
     if c.nested_path:
         return {
             "nested": {
-                "path": c.nested_path[0] # FIRST ONE IS LONGEST
+                "path": listwrap(c.nested_path)[0]  # FIRST ONE IS LONGEST
             },
             "aggs": {
                 "_nested": {"cardinality": {
@@ -307,9 +333,9 @@ def metadata_columns():
         ] + [
             Column(
                 table="meta.columns",
-                name="etl.timestamp",
-                abs_name="etl.timestamp",
-                type="long",
+                name="last_updated",
+                abs_name="last_updated",
+                type="time",
                 nested_path=Null,
             )
         ]

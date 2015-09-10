@@ -143,16 +143,16 @@ class FromES(Container):
                 Log.error("Problem (Tried to clear Elasticsearch cache)", e)
             Log.error("problem", e)
 
-    def get_columns(self, _from_name=None):
+    def get_columns(self, table=None):
         query_path = self.query_path if self.query_path != "." else None
-        abs_columns = self.meta.get_columns(table=coalesce(_from_name, self.settings.index))
+        abs_columns = self.meta.get_columns(table=coalesce(table, self.settings.index))
 
         columns = []
         if query_path:
-            depth = (len(c.nested_path) for c in abs_columns if c.nested_path[0] == query_path).next()
+            depth = (len(listwrap(c.nested_path)) for c in abs_columns if listwrap(c.nested_path)[0] == query_path).next()
             # ADD RELATIVE COLUMNS
             for c in abs_columns:
-                if c.nested_path[0] == query_path:
+                if listwrap(c.nested_path)[0] == query_path:
                     c = copy(c)
                     columns.append(c)
                     c = copy(c)
@@ -166,22 +166,26 @@ class FromES(Container):
                     c.name = "." + ("." * depth) + c.abs_name
                     c.relative = True
                     columns.append(c)
-                elif depth > len(c.nested_path) and query_path.startswith(c.nested_path[0] + "."):
-                    diff = depth - len(c.nested_path)
+                elif depth > len(listwrap(c.nested_path)) and query_path.startswith(listwrap(c.nested_path)[0] + "."):
+                    diff = depth - len(listwrap(c.nested_path))
                     c = copy(c)
                     columns.append(c)
                     c = copy(c)
-                    c.name = "." + ("." * diff) + (c.abs_name[len(c.nested_path[0]) + 1:] if c.type != "nested" else "")
+                    c.name = "." + ("." * diff) + (c.abs_name[len(listwrap(c.nested_path)[0]) + 1:] if c.type != "nested" else "")
                     c.relative = True
                     columns.append(c)
-                else:
-                    continue
+                elif c.abs_name.startswith(query_path+"."):  # depth < len(c.nested_path)  - DEEP COLUMNS, ALLOWED FOR SET OPS
+                    c = copy(c)
+                    columns.append(c)
+                    c = copy(c)
+                    c.name = c.abs_name[len(query_path)+1:]
+                    c.relative = True
+                    columns.append(c)
         else:
             for c in abs_columns:
-                if not c.nested_path:
-                    c = copy(c)
-                    c.relative = True
-                    columns.append(c)
+                c = copy(c)
+                c.relative = True
+                columns.append(c)
 
         return wrap(columns)
 

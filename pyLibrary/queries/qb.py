@@ -13,6 +13,7 @@ from __future__ import division
 from __future__ import absolute_import
 import __builtin__
 from collections import Mapping
+from numbers import Number
 from types import GeneratorType
 
 from pyLibrary import dot, convert
@@ -38,6 +39,8 @@ from pyLibrary.queries.unique_index import UniqueIndex
 # START HERE: https://github.com/klahnakoski/qb/blob/master/docs/Qb_Reference.md
 # TODO: USE http://docs.sqlalchemy.org/en/latest/core/tutorial.html AS DOCUMENTATION FRAMEWORK
 
+_Column = None
+_merge_type = None
 
 def run(query, frum=None):
     """
@@ -447,6 +450,69 @@ def _select_deep_meta(field, depth):
 def get_columns(data):
     return wrap([{"name": n} for n in UNION(set(d.keys()) for d in data)])
 
+_ = """
+DEEP ITERATOR FOR NESTED DOCUMENTS
+THE columns DO NOT GET MARKED WITH NESTED (AS THEY SHOULD)
+
+type_to_name = {
+    int: "long",
+    str: "string",
+    unicode: "string",
+    float: "double",
+    Number: "double",
+    Dict: "object",
+    dict: "object",
+    list: "nested",
+    DictList: "nested"
+}
+
+def _deep_iterator(data, schema):
+    if schema:
+        Log.error("schema would be wonderful, but not implemented")
+
+    columns = {}
+    output = {}
+
+    for d in _deeper_iterator(columns, output, [""], ".", data):
+        yield d
+
+def _deeper_iterator(columns, nested_path, path, data):
+    for d in data:
+        output = {}
+        deep_leaf = None
+        deep_v = None
+
+        for k, v in d.items():
+            leaf = join_field(split_field(path) + [k])
+            c = columns.get(leaf)
+            if not c:
+                c = columns[leaf] = _Column(name=leaf, type=type_to_name[v.__class__], table=None, abs_name=leaf)
+            c.type = _merge_type[c.type][type_to_name[v.__class__]]
+            if c.type == "nested" and not nested_path[0].startswith(leaf + "."):
+                if leaf.startswith(nested_path[0] + ".") or leaf == nested_path[0] or not nested_path[0]:
+                    nested_path[0] = leaf
+                else:
+                    Log.error("nested path conflict: {{leaf}} vs {{nested}}", leaf=leaf, nested=nested_path[0])
+
+            if isinstance(v, list) and v:
+                if deep_leaf:
+                    Log.error("nested path conflict: {{leaf}} vs {{nested}}", leaf=leaf, nested=deep_leaf)
+                deep_leaf = leaf
+                deep_v = v
+            elif isinstance(v, Mapping):
+                for o in _deeper_iterator(columns, nested_path, leaf, [v]):
+                    set_default(output, o)
+            else:
+                if c.type not in ["object", "nested"]:
+                    output[leaf] = v
+
+        if deep_leaf:
+            for o in _deeper_iterator(columns, nested_path, deep_leaf, deep_v):
+                set_default(o, output)
+                yield o
+        else:
+            yield output
+"""
 
 def sort(data, fieldnames=None):
     """

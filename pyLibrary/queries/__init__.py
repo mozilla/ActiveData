@@ -28,10 +28,13 @@ def _delayed_imports():
 
     from pyLibrary.queries.qb_usingMySQL import MySQL
     from pyLibrary.queries.qb_usingES import FromES
+    from pyLibrary.queries.meta import FromESMetadata
+
     set_default(type2container, {
         "elasticsearch": FromES,
         "mysql": MySQL,
-        "memory": None
+        "memory": None,
+        "meta": FromESMetadata
     })
 
 
@@ -50,15 +53,22 @@ def wrap_from(frum, schema=None):
         if not containers.config.default.settings:
             Log.error("expecting pyLibrary.queries.query.config.default.settings to contain default elasticsearch connection info")
 
+        type_ = None
+        index = frum
+        if frum.startswith("meta."):
+            type_ = "meta"
+        else:
+            type_ = containers.config.default.type
+            index = split_field(frum)[0]
+
         settings = set_default(
             {
-                "index": split_field(frum)[0],
-                "name": frum,
+                "index": index,
+                "name": frum
             },
             containers.config.default.settings
         )
-        settings.type = None  # WE DO NOT WANT TO INFLUENCE THE TYPE BECAUSE NONE IS IN THE frum STRING ANYWAY
-        return type2container["elasticsearch"](settings)
+        return type2container[type_](settings)
     elif isinstance(frum, Mapping) and frum.type and type2container[frum.type]:
         # TODO: Ensure the frum.name is set, so we capture the deep queries
         if not frum.type:

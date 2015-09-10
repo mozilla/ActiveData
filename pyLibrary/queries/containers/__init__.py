@@ -143,7 +143,7 @@ class Container(object):
         _ = format
         Log.error("not implemented")
 
-    def get_columns(self, frum):
+    def get_columns(self, table):
         """
         USE THE frum TO DETERMINE THE COLUMNS
         """

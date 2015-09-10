@@ -15,7 +15,7 @@ from collections import Mapping
 from pyLibrary.collections import AND, reverse
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import coalesce, split_field, join_field, Null
+from pyLibrary.dot import coalesce, split_field, join_field, Null, unwraplist
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap, listwrap
 from pyLibrary.maths import Math
@@ -60,15 +60,8 @@ class Query(object):
         object.__init__(self)
         query = wrap(query)
 
-        max_depth = 1
-
         self.format = query.format
-
         self.frum = wrap_from(query["from"], schema=schema)
-        if self.frum == "meta.columns":
-            query_path = Null
-        else:
-            query_path = self.frum.query_path
 
         select = query.select
         if isinstance(select, list):
@@ -120,13 +113,14 @@ class Query(object):
                 _late_import()
             columns = qb.get_columns(self.frum)
         elif isinstance(self.frum, Container):
-            columns = self.frum.get_columns()
+            columns = self.frum.get_columns(table=query["from"])
         else:
             columns = []
 
+        query_path = coalesce(self.frum.query_path, "")
         vars = query_get_all_vars(self, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
         for c in columns:
-            if c.name in vars and not query_path.startswith(coalesce(c.nested_path[0], "")):
+            if c.name in vars and not query_path.startswith(coalesce(listwrap(c.nested_path)[0], "")):
                 Log.error("This query, with variable {{var_name}} is too deep", var_name=c.name)
 
     @property
@@ -440,7 +434,7 @@ def _get_nested_path(field, schema):
         for i, f in reverse(enumerate(split_field(field))):
             path = join_field(split_field(field)[0:i + 1:])
             if path in INDEX_CACHE:
-                return join_field(split_field(path)[1::])
+                return unwraplist(join_field(split_field(path)[1::]))
     return None
 
 

@@ -68,7 +68,7 @@ def es_aggsop(es, frum, query):
         else:
             field_name = representative.value
 
-        if len(many) > 1 or many[0].aggregate in ("median", "percentile"):
+        if len(many) > 1 or many[0].aggregate in ("median", "percentile", "cardinality"):
             # canonical_name=literal_field(many[0].name)
             for s in many:
                 if s.aggregate == "count":
@@ -89,6 +89,12 @@ def es_aggsop(es, frum, query):
                     es_query.aggs[key].percentiles.field = field_name
                     es_query.aggs[key].percentiles.percents += [percent]
                     s.pull = key + ".values." + literal_field(unicode(percent))
+                elif s.aggregate == "cardinality":
+                    #ES USES DIFFERENT METHOD FOR CARDINALITY
+                    key=literal_field(canonical_name + " cardinality")
+
+                    es_query.aggs[key].cardinality.field = field_name
+                    s.pull = key + ".value"
                 else:
                     es_query.aggs[literal_field(canonical_name)].stats.field = field_name
                     s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]

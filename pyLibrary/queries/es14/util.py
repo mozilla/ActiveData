@@ -72,6 +72,7 @@ def qb_sort_to_es_sort(sort):
 aggregates1_4 = {
     "none": "none",
     "one": "count",
+    "cardinality": "cardinality",
     "sum": "sum",
     "add": "sum",
     "count": "value_count",

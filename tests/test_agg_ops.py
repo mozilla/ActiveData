@@ -277,3 +277,30 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test, tjson=True)
 
+
+    def test_cardinality(self):
+        test = {
+            "data": [
+                {"a": 1, "b": "x"},
+                {"a": 1, "b": "x"},
+                {"a": 2, "b": "x"},
+                {"a": 2, "d": "x"},
+                {"a": 3, "d": "x"},
+                {"a": 3, "d": "x"},
+                {"a": 3, "d": "x"},
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": [
+                    {"value": "a", "aggregate": "cardinality"},
+                    {"value": "b", "aggregate": "cardinality"},
+                    {"value": "c", "aggregate": "cardinality"},
+                    {"value": "d", "aggregate": "cardinality"}
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "value"},
+                "data": {"a": 3, "b": 1, "c": 0, "d": 1}
+            }
+        }
+        self._execute_es_tests(test, tjson=False)

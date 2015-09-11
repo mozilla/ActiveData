@@ -21,6 +21,7 @@ from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.queries import qb, meta
 from pyLibrary.queries import containers
+from pyLibrary.queries.meta import FromESMetadata
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
@@ -126,8 +127,10 @@ def query(path):
 
         result.meta.active_data_response_time = active_data_timer.duration
 
+        response_data = convert.unicode2utf8(convert.value2json(result)),
+        Log.note("Response is {{num}} bytes", num=len(response_data))
         return Response(
-            convert.unicode2utf8(convert.value2json(result)),
+            response_data,
             direct_passthrough=True,  # FOR STREAMING
             status=200,
             headers={
@@ -246,6 +249,9 @@ def main():
             "type": "elasticsearch",
             "settings": config.elasticsearch.copy()
         }
+
+        # TRIGGER FIRST INSTANCE
+        FromESMetadata(config.elasticsearch)
 
         if config.saved_queries:
             query_finder = SaveQueries(config.saved_queries)

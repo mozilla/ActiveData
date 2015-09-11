@@ -80,7 +80,7 @@ class Query(object):
             if query.edges or query.groupby:
                 self.select = {"name": "count", "value": ".", "aggregate": "count"}
             else:
-                self.select = {"name": ".", "value": "*", "aggregate": "none"}
+                self.select = {"name": ".", "value": ".", "aggregate": "none"}
 
         if query.groupby and query.edges:
             Log.error("You can not use both the `groupby` and `edges` clauses in the same query!")

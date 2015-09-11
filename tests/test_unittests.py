@@ -14,7 +14,7 @@ from __future__ import division
 import os
 
 from pyLibrary import convert, jsons
-from pyLibrary.debugs.logs import Log
+from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot import wrap
 from pyLibrary.env import http
 from pyLibrary.thread.multiprocess import Process
@@ -42,26 +42,27 @@ class TestUnittests(ActiveDataBaseTest):
         settings.service_url = "http://localhost:"+unicode(app_config.flask.port)+"/query"
         ES_CLUSTER_LOCATION = app_config.elasticsearch.host
 
-        TestUnittests.process = Process(
-            "RUN APP",
-            [
-                "python",
-                "active_data/app.py",
-                "--settings=" + APP_CONFIG_FILE
-            ],
-           cwd=os.getcwd()
-        )
-        while True:
-            line = TestUnittests.process.recieve.pop()
-            if line:
-                break
+        # TestUnittests.process = Process(
+        #     "RUN APP",
+        #     [
+        #         "python",
+        #         "active_data/app.py",
+        #         "--settings=" + APP_CONFIG_FILE
+        #     ],
+        #    cwd=os.getcwd()
+        # )
+        # while True:
+        #     line = TestUnittests.process.recieve.pop()
+        #     if line:
+        #         break
         ActiveDataBaseTest.server_is_ready.go()
 
 
     @classmethod
     def tearDownClass(cls):
-        TestUnittests.process.stop()
-        TestUnittests.process.join()
+        # TestUnittests.process.stop()
+        # TestUnittests.process.join()
+        pass
 
 
     def test_chunk_timing(self):
@@ -210,6 +211,7 @@ class TestUnittests(ActiveDataBaseTest):
             "limit": 10000
         })
         if result.template:
+            result = Except.new_instance(result)
             Log.error("problem with call", cause=result)
         Log.note("Got {{num}} test failures", num=len(result.data))
 

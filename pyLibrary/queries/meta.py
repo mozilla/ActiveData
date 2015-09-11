@@ -57,7 +57,7 @@ class FromESMetadata(object):
         self.settings = settings
         self.default_name = coalesce(name, alias, index)
         self.default_es = elasticsearch.Cluster(settings=settings)
-        self.todo = Queue("refresh metadata")
+        self.todo = Queue("refresh metadata", max=100000)
 
         table_columns = metadata_tables()
         column_columns = metadata_columns()
@@ -182,39 +182,39 @@ class FromESMetadata(object):
                 "size": 0
             })
             r = result.aggregations.values()[0]
-            cardinaility = coalesce(r.value, r._nested.value)
+            cardinality = coalesce(r.value, r._nested.value)
 
             query = Dict(size=0)
             if c.type in ["object", "nested"]:
-                Log.note("{{field}} has {{num}} parts", field=c.name, num=c.cardinality)
+                Log.note("{{field}} has {{num}} parts", field=c.name, num=cardinality)
                 with self.columns.locker:
                     self.columns.update({
                         "set": {
-                            "cardinality": cardinaility,
+                            "cardinality": cardinality,
                             "last_updated": Date.now()
                         },
                         "clear": ["partitions"],
                         "where": {"eq": {"table": c.table, "name": c.name}}
                     })
                 return
-            elif c.cardinality > 1000:
-                Log.note("{{field}} has {{num}} parts", field=c.name, num=c.cardinality)
+            elif cardinality > 1000:
+                Log.note("{{field}} has {{num}} parts", field=c.name, num=cardinality)
                 with self.columns.locker:
                     self.columns.update({
                         "set": {
-                            "cardinality": cardinaility,
+                            "cardinality": cardinality,
                             "last_updated": Date.now()
                         },
                         "clear": ["partitions"],
                         "where": {"eq": {"table": c.table, "name": c.name}}
                     })
                 return
-            elif c.type in ES_NUMERIC_TYPES and c.cardinality > 30:
-                Log.note("{{field}} has {{num}} parts", field=c.name, num=c.cardinality)
+            elif c.type in ES_NUMERIC_TYPES and cardinality > 30:
+                Log.note("{{field}} has {{num}} parts", field=c.name, num=cardinality)
                 with self.columns.locker:
                     self.columns.update({
                         "set": {
-                            "cardinality": cardinaility,
+                            "cardinality": cardinality,
                             "last_updated": Date.now()
                         },
                         "clear": ["partitions"],
@@ -241,7 +241,7 @@ class FromESMetadata(object):
             with self.columns.locker:
                 self.columns.update({
                     "set": {
-                        "cardinality": cardinaility,
+                        "cardinality": cardinality,
                         "partitions": parts,
                         "last_updated": Date.now()
                     },
@@ -262,23 +262,28 @@ class FromESMetadata(object):
 
     def monitor(self, please_stop):
         while not please_stop:
-            if not self.todo:
-                with self.columns.locker:
-                    old_columns = filter(lambda c: (c.last_updated == None or c.last_updated < Date.now()-TOO_OLD) and c.type not in ["object", "nested"], self.columns)
-                    if old_columns:
-                        self.todo.extend(old_columns)
-                    else:
-                        Log.note("no more metatdata to update")
+            try:
+                if not self.todo:
+                    with self.columns.locker:
+                        old_columns = filter(lambda c: (c.last_updated == None or c.last_updated < Date.now()-TOO_OLD) and c.type not in ["object", "nested"], self.columns)
+                        if old_columns:
+                            self.todo.extend(old_columns)
+                        else:
+                            Log.note("no more metatdata to update")
 
-            column = self.todo.pop(timeout=10*MINUTE)
-            if column:
-                if column.type in ["object", "nested"]:
-                    continue
-                if column.last_updated >= Date.now()-TOO_OLD:
-                    continue
-                self._update_cardinality(column)
-                Log.note("updated {{column.name}}", column=column)
-
+                column = self.todo.pop(timeout=10*MINUTE)
+                if column:
+                    if column.type in ["object", "nested"]:
+                        continue
+                    if column.last_updated >= Date.now()-TOO_OLD:
+                        continue
+                    try:
+                        self._update_cardinality(column)
+                        Log.note("updated {{column.name}}", column=column)
+                    except Exception, e:
+                        Log.warning("problem getting cardinality for  {{column.name}}", column=column, cause=e)
+            except Exception, e:
+                Log.warning("problem in cardinality monitor", cause=e)
 
 def _counting_query(c):
     if c.nested_path:

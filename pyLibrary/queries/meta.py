@@ -18,14 +18,13 @@ from pyLibrary.env.elasticsearch import ES_NUMERIC_TYPES
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.domains import NumericDomain, SimpleSetDomain, UniqueDomain
 from pyLibrary.queries.query import Query
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import coalesce, set_default, Null, literal_field, listwrap, split_field, join_field
 from pyLibrary.dot import wrap
 from pyLibrary.strings import expand_template
-from pyLibrary.thread.threads import Queue, Thread, Lock, Till
+from pyLibrary.thread.threads import Queue, Thread, Lock
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import HOUR, MINUTE
 
@@ -35,7 +34,7 @@ TOO_OLD = 2*HOUR
 singlton = None
 
 
-class FromESMetadata(Container):
+class FromESMetadata(object):
     """
     QUERY THE METADATA
     """
@@ -493,3 +492,148 @@ Column = DataClass(
 
 
 
+
+
+a = {
+    "_id": "182553:18220451.14.179",
+    "result": {
+        "status": "OK",
+        "stats": {"action": {"test_status": 432}, "fail": 6, "pass": 426},
+        "ok": false,
+        "start_time": 1441284018.565,
+        "test": "toolkit/components/prompts/test/test_modal_prompts.html",
+        "result": "OK",
+        "expected": "OK",
+        "subtests": [
+            {
+                "status": "fail",
+                "ok": false,
+                "name": "checking button0 default",
+                "ordering": 0,
+                "timestamp": 1441284033.645,
+                "subtest": "checking button0 default",
+                "expected": "pass",
+                "message": "got false, expected true"
+            },
+            {
+                "status": "fail",
+                "ok": false,
+                "name": "checking button0 default",
+                "ordering": 1,
+                "timestamp": 1441284034.381,
+                "subtest": "checking button0 default",
+                "expected": "pass",
+                "message": "got false, expected true"
+            }
+        ],
+        "last_log_time": 1441284036.021,
+        "duration": 17.473999977111816,
+        "end_time": 1441284036.039
+    },
+    "run": {
+        "files": {
+            "url": "http://mozilla-releng-blobs.s3.amazonaws.com/blobs/mozilla-inbound/sha512/e6c834818fbbad050543c7dc5ec7ddc00b2433ea9dcfa0217bd99a3ae40daacfd74c9225a7a8945d5a4e02449af5ffc6452bc7c6a97a49592227cfca11dc1f93",
+            "name": "plain-chunked_raw.log"
+        },
+        "status": 1,
+        "stats": {
+            "status": {"skip": 18, "ok": 636},
+            "ok": 653,
+            "lines": 3705,
+            "start_time": 1441283166.06,
+            "bytes": 869394,
+            "action": {
+                "test_status": 617,
+                "log": 1718,
+                "process_exit": 30,
+                "process_start": 30
+            },
+            "end_time": 1441284124.884,
+            "duration": 958.824000120163,
+            "total": 654
+        },
+        "buildbot_status": "warnings",
+        "timestamp": 1441284143,
+        "chunk": 5,
+        "talos": false,
+        "machine": {"os": "ubuntu64_vm", "name": "tst-linux64-spot-1771"},
+        "key": "build.mozilla-inbound_ubuntu64_vm_test_pgo-mochitest-5.53.log_uploaded",
+        "suite": "mochitest",
+        "insertion_time": 1441284143,
+        "job_number": 53,
+        "logurl": "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/mozilla-inbound-linux64-pgo/1441279802/mozilla-inbound_ubuntu64_vm_test_pgo-mochitest-5-bm122-tests1-linux64-build53.txt.gz"
+    },
+    "build": {
+        "product": "firefox",
+        "revision12": "550e06c1615f",
+        "name": "Ubuntu VM 12.04 x64 mozilla-inbound pgo test mochitest-5",
+        "url": "https://queue.taskcluster.net/v1/task/T6IwwMnmQLWMHAZ3Y2Z9xA/artifacts/public/build/firefox-43.0a1.en-US.linux-x86_64.tar.bz2",
+        "platform": "linux64",
+        "branch": "mozilla-inbound",
+        "date": 1441254602,
+        "release": "production",
+        "locale": "en-US",
+        "type": "pgo",
+        "id": "20150903043002",
+        "revision": "550e06c1615f82cc82278873f8137edbdd0c3c3a"
+    },
+    "repo": {
+        "changeset": {
+            "files": [
+                "js/src/vm/HelperThreads.cpp",
+                "js/src/vm/HelperThreads.h",
+                "js/src/vm/Runtime.cpp"
+            ],
+            "description": "Bug 1201051 - Make helper thread initialization report errors rather than crashing r=terrence",
+            "author": "Jon <replaced@mozilla.com>",
+            "id12": "550e06c1615f",
+            "date": 1441278480,
+            "id": "550e06c1615f82cc82278873f8137edbdd0c3c3a"
+        },
+        "index": 260643,
+        "parents": "21e229c5ff708285d9e2c837c9679aab55ee4c48",
+        "branch": {
+            "url": "https://hg.mozilla.org/integration/mozilla-inbound",
+            "last_used": 1440115924,
+            "locale": "en-US",
+            "name": "mozilla-inbound",
+            "parent_name": "Source code integration work"
+        },
+        "push": {
+            "date": 1441278531,
+            "user": "replaced@mozilla.com",
+            "id": 64555
+        },
+        "children": "e737274a67063f673d47d1895e3008dc6d73cf9c",
+        "etl": {"timestamp": 1441286446.851573}
+    },
+    "etl": {
+        "name": "unittest",
+        "timestamp": 1441286777.499345,
+        "source": {
+            "os": "Linux3.13.0-48-generic",
+            "python": "CPython",
+            "timestamp": 1441286769.820252,
+            "source": {
+                "name": "Pulse block",
+                "timestamp": 1441284205.602198,
+                "bucket": "ekyle-pulse-logger",
+                "source": {
+                    "count": 18220475,
+                    "name": "pulse.mozilla.org",
+                    "sent": 1441255343,
+                    "id": 18220475
+                },
+                "type": "aggregation",
+                "id": 182553
+            },
+            "type": "join",
+            "id": 14,
+            "name": "plain-chunked_raw.log"
+        },
+        "duration": 7.638665000000002,
+        "type": "join",
+        "id": 179,
+        "revision": "bed2888f2ba55f32ac8792944c1ca822797cf7e3"
+    }
+}

@@ -194,7 +194,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
         return _settings
 
-    def _execute_es_tests(self, subtest, tjson=False):
+    def _execute_es_tests(self, subtest, tjson=False, delete_index=True):
         subtest = wrap(subtest)
 
         if subtest.disable:
@@ -204,7 +204,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             return
 
         settings = self._fill_es(subtest, tjson=tjson)
-        self._send_queries(settings, subtest)
+        self._send_queries(settings, subtest, delete_index=delete_index)
 
     def _send_queries(self, settings, subtest, delete_index=True):
         subtest = wrap(subtest)

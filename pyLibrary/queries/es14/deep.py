@@ -27,6 +27,9 @@ from pyLibrary.times.timer import Timer
 def is_deepop(es, query):
     if query.edges or query.groupby:
         return False
+    if all(s.aggregate not in (None, "count", "none") for s in listwrap(query.select)):
+        return False
+
     vars = query_get_all_vars(query)
     columns = query.frum.get_columns()
     if len(split_field(query.frum.name)) > 1:

@@ -327,3 +327,77 @@ class TestDeepOps(ActiveDataBaseTest):
         }
 
         self._execute_es_tests(test)
+
+
+    def test_deep_agg_on_expression(self):
+        # TEST WE CAN PERFORM AGGREGATES ON EXPRESSIONS OF DEEP VARIABLES
+        test = {
+            "data": [
+                {"o": 3, "a": {"_a": [
+                    {"v": "a string"},
+                    {"v": "another string"}
+                ]}},
+                {"o": 1, "a": {"_a": {"v": "still more"}}},
+                {"o": 2, "a": {"_a": [
+                    {"v": "string!"},
+                ]}},
+                {"o": 4, "a": {}}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._a",
+                "select": {"name": "l", "value": {"length": "v"}, "aggregate": "max"}
+            },
+            "es_query": {  # FOR REFERENCE
+               "fields": [],
+               "aggs": {"_nested": {
+                   "nested": {"path": "a._a"},
+                   "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
+               }},
+               "size": 10,
+               "sort": []
+            },
+            "expecting_list": {
+                "meta": {"format": "value"},
+                "data": 14
+            }
+        }
+
+        self._execute_es_tests(test, delete_index=False)
+
+
+
+    def test_deep_agg_on_expression_w_shallow_where(self):
+        # TEST WE CAN PERFORM AGGREGATES ON EXPRESSIONS OF DEEP VARIABLES
+        test = {
+            "data": [
+                {"o": 3, "a": {"_a": [
+                    {"v": "a string"},
+                    {"v": "another string"}
+                ]}},
+                {"o": 1, "a": {"_a": {"v": "still more"}}},
+                {"o": 2, "a": {"_a": [
+                    {"v": "string!"},
+                ]}},
+                {"o": 4, "a": {}}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._a",
+                "select": {"name": "l", "value": {"length": "v"}, "aggregate": "max"},
+                "where": {"lt": {"o": 3}}
+            },
+            "es_query": {  # FOR REFERENCE
+               "fields": [],
+               "aggs": {"_nested": {
+                   "nested": {"path": "a._a"},
+                   "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
+               }},
+               "size": 10,
+               "sort": []
+            },
+            "expecting_list": {
+                "meta": {"format": "value"},
+                "data": 14
+            }
+        }
+
+        self._execute_es_tests(test, delete_index=False)

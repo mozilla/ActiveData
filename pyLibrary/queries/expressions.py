@@ -442,8 +442,8 @@ python_multi_operators = {
 
 ruby_unary_operators = {
     "not": "! {{term}}",
-    "length": '({{term}}).length()',
-    "number": '({{term}}).to_f'
+    "length": 'if ({{term}} == null) then null else ({{term}}).length',
+    "number": '({{term}}).to_f()'
 }
 
 ruby_binary_operators = {

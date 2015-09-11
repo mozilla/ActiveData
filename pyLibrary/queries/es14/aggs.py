@@ -76,14 +76,14 @@ def es_aggsop(es, frum, query):
                     s.pull = literal_field(canonical_name) + ".count"
                 elif s.aggregate == "median":
                     #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
-                    key=literal_field(canonical_name + " percentile")
+                    key = literal_field(canonical_name + " percentile")
 
                     es_query.aggs[key].percentiles.field = field_name
                     es_query.aggs[key].percentiles.percents += [50]
                     s.pull = key + ".values.50\.0"
                 elif s.aggregate == "percentile":
                     #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
-                    key=literal_field(canonical_name + " percentile")
+                    key = literal_field(canonical_name + " percentile")
                     percent = Math.round(s.percentile * 100, decimal=6)
 
                     es_query.aggs[key].percentiles.field = field_name
@@ -91,7 +91,7 @@ def es_aggsop(es, frum, query):
                     s.pull = key + ".values." + literal_field(unicode(percent))
                 elif s.aggregate == "cardinality":
                     #ES USES DIFFERENT METHOD FOR CARDINALITY
-                    key=literal_field(canonical_name + " cardinality")
+                    key = literal_field(canonical_name + " cardinality")
 
                     es_query.aggs[key].cardinality.field = field_name
                     s.pull = key + ".value"
@@ -134,7 +134,7 @@ def es_aggsop(es, frum, query):
             )}
         })
 
-    es_query.size=0
+    es_query.size = 0
 
     with Timer("ES query time") as es_duration:
         result = es09.util.post(es, es_query, query.limit)

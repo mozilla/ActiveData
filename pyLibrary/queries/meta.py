@@ -258,7 +258,10 @@ class FromESMetadata(object):
                 ],
                 "where": {"eq": {"table": c.table, "abs_name": c.abs_name}}
             })
-            Log.warning("Could not get {{col.table}}.{{col.abs_name}} info", col=c, cause=e)
+            if "IndexMissingException" in e and c.table.startswith("testing"):
+                pass
+            else:
+                Log.warning("Could not get {{col.table}}.{{col.abs_name}} info", col=c, cause=e)
 
     def monitor(self, please_stop):
         while not please_stop:

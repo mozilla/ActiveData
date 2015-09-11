@@ -38,7 +38,7 @@ def new_instance(settings):
     """
     MAKE A PYTHON INSTANCE
 
-    settings HAS ALL THE kwargs, PLUS class ATTRIBUTE TO INDICATE THE CLASS TO CREATE
+    `settings` HAS ALL THE `kwargs`, PLUS `class` ATTRIBUTE TO INDICATE THE CLASS TO CREATE
     """
     settings = set_default({}, settings)
     if not settings["class"]:
@@ -87,8 +87,8 @@ def get_function_by_name(full_name):
 
 def use_settings(func):
     """
-    THIS DECORATOR WILL PUT ALL PARAMETERS INTO THE settings PARAMETER AND
-    PUT ALL settings PARAMETERS INTO THE FUNCTION PARAMETERS.  THIS HAS BOTH
+    THIS DECORATOR WILL PUT ALL PARAMETERS INTO THE `settings` PARAMETER AND
+    PUT ALL `settings` PARAMETERS INTO THE FUNCTION PARAMETERS.  THIS HAS BOTH
     THE BENEFIT OF HAVING ALL PARAMETERS IN ONE PLACE (settings) AND ALL
     PARAMETERS ARE EXPLICIT FOR CLARITY.
 
@@ -188,7 +188,7 @@ def params_pack(params, *args):
 class cache(object):
 
     """
-    :param func: ASSUME FIRST PARAMETER IS self
+    :param func: ASSUME FIRST PARAMETER OF `func` IS `self`
     :param duration: USE CACHE IF LAST CALL WAS LESS THAN duration AGO
     :param lock: True if you want multithreaded monitor (default False)
     :return:

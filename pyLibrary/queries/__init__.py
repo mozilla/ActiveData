@@ -56,7 +56,14 @@ def wrap_from(frum, schema=None):
         type_ = None
         index = frum
         if frum.startswith("meta."):
-            type_ = "meta"
+            from pyLibrary.queries.meta import FromESMetadata
+
+            if frum == "meta.columns":
+                return meta.singlton.columns
+            elif frum == "meta.table":
+                return meta.singlton.tables
+            else:
+                Log.error("{{name}} not a recognized table", name=frum)
         else:
             type_ = containers.config.default.type
             index = split_field(frum)[0]

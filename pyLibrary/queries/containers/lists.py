@@ -16,22 +16,24 @@ from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, wrap, listwrap, unwraplist
 from pyLibrary.queries import qb
-
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expressions import TRUE_FILTER, qb_expression_to_python
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
 from pyLibrary.queries.meta import Column
+from pyLibrary.thread.threads import Lock
 
 
 class ListContainer(Container):
-    def __init__(self, frum, schema=None):
+    def __init__(self, name, data, schema=None):
         #TODO: STORE THIS LIKE A CUBE FOR FASTER ACCESS AND TRANSFORMATION
-        frum = list(frum)
+        data = list(data)
         if schema == None:
-            self.schema = get_schema_from_list(frum)
-        Container.__init__(self, frum, schema)
-        self.frum = frum
+            self.schema = get_schema_from_list(data)
+        Container.__init__(self, data, schema)
+        self.name = name
+        self.data = data
+        self.locker = Lock()  # JUST IN CASE YOU WANT TO DO MORE THAN ONE THING
 
     @property
     def query_path(self):
@@ -92,10 +94,10 @@ class ListContainer(Container):
         else:
             temp = where
 
-        return ListContainer(filter(temp, self.data), self.schema)
+        return ListContainer("from "+self.name, filter(temp, self.data), self.schema)
 
     def sort(self, sort):
-        return ListContainer(qb.sort(self.data, sort), self.schema)
+        return ListContainer("from "+self.name, qb.sort(self.data, sort), self.schema)
 
     def select(self, select):
         selects = listwrap(select)
@@ -110,7 +112,7 @@ class ListContainer(Container):
         #TODO: HANDLE STRUCTURE AND EXPRESSIONS
         new_schema = {s.name: self.schema[s.value] for s in selects}
         new_data = [{s.name: d[s.value] for s in selects} for d in self.data]
-        return ListContainer(frum=new_data, schema=new_schema)
+        return ListContainer("from "+self.name, data=new_data, schema=new_schema)
 
     def window(self, window):
         _ = window

@@ -197,12 +197,45 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-    def test_single_alpha_no_select(self):
+    def test_single_no_select(self):
         test = {
             "data": [
                 {"a": "b"}
             ],
             "query": {
+                "from": base_test_class.settings.backend_es.index
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                {"a": "b"}
+            ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["."],
+                "data": [[{"a": "b"}]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                    }
+                ],
+                "data": {
+                    ".": [{"a": "b"}]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_single_star_select(self):
+        test = {
+            "data": [
+                {"a": "b"}
+            ],
+            "query": {
+                "select": "*",
                 "from": base_test_class.settings.backend_es.index
             },
             "expecting_list": {

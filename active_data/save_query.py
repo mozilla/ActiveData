@@ -94,7 +94,7 @@ class SaveQueries(object):
         for e in Cube(select=existing.select, edges=existing.edges, data=existing.data).values():
             if e.query == json:
                 return e.hash
-            short_hashes[e.hash] = False
+            available[e.hash] = False
 
         # THIS WILL THROW AN ERROR IF THERE ARE NONE, HOW UNLUCKY!
         best = [h for h in short_hashes if available[h]][0]

@@ -75,6 +75,7 @@ def wrap_from(frum, schema=None):
             },
             containers.config.default.settings
         )
+        settings.type = None
         return type2container[type_](settings)
     elif isinstance(frum, Mapping) and frum.type and type2container[frum.type]:
         # TODO: Ensure the frum.name is set, so we capture the deep queries

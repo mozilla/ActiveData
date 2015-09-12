@@ -10,6 +10,9 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
+import sys
+sys.path.append(".")
+
 from flask import Flask
 import flask
 from werkzeug.contrib.fixers import HeaderRewriterFix

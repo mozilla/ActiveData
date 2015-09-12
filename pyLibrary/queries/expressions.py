@@ -442,7 +442,7 @@ python_multi_operators = {
 
 ruby_unary_operators = {
     "not": "! {{term}}",
-    "length": 'if ({{term}} == null) then null else ({{term}}).length',
+    "length": 'if ({{term}} == null) then null else ({{term}}).length()',
     "number": '({{term}}).to_f()'
 }
 

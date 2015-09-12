@@ -50,7 +50,7 @@
 			},
 			{
 				"log_type": "elasticsearch",
-				"host": "http://activedata.allizom.org",
+				"host": "http://localhost",
 				"index": "debug",
 				"type": "active_data"
 			}

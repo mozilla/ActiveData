@@ -158,6 +158,7 @@ class FromESMetadata(object):
                     self.columns.update({
                         "set": {
                             "partitions": partitions,
+                            "count": len(self.columns),
                             "cardinality": len(partitions),
                             "last_updated": Date.now()
                         },
@@ -170,6 +171,7 @@ class FromESMetadata(object):
                     self.columns.update({
                         "set": {
                             "partitions": partitions,
+                            "count": len(self.tables),
                             "cardinality": len(partitions),
                             "last_updated": Date.now()
                         },
@@ -182,6 +184,7 @@ class FromESMetadata(object):
                 "size": 0
             })
             r = result.aggregations.values()[0]
+            count = result.hits.total
             cardinality = coalesce(r.value, r._nested.value)
 
             query = Dict(size=0)
@@ -190,6 +193,7 @@ class FromESMetadata(object):
                 with self.columns.locker:
                     self.columns.update({
                         "set": {
+                            "count": count,
                             "cardinality": cardinality,
                             "last_updated": Date.now()
                         },
@@ -197,11 +201,12 @@ class FromESMetadata(object):
                         "where": {"eq": {"table": c.table, "name": c.name}}
                     })
                 return
-            elif cardinality > 1000:
+            elif cardinality > 1000 or (count >= 30 and cardinality == count) or (count >= 1000 and cardinality / count > 0.99):
                 Log.note("{{field}} has {{num}} parts", field=c.name, num=cardinality)
                 with self.columns.locker:
                     self.columns.update({
                         "set": {
+                            "count": count,
                             "cardinality": cardinality,
                             "last_updated": Date.now()
                         },
@@ -214,6 +219,7 @@ class FromESMetadata(object):
                 with self.columns.locker:
                     self.columns.update({
                         "set": {
+                            "count": count,
                             "cardinality": cardinality,
                             "last_updated": Date.now()
                         },
@@ -241,6 +247,7 @@ class FromESMetadata(object):
             with self.columns.locker:
                 self.columns.update({
                     "set": {
+                        "count": count,
                         "cardinality": cardinality,
                         "partitions": parts,
                         "last_updated": Date.now()
@@ -253,6 +260,7 @@ class FromESMetadata(object):
                     "last_updated": Date.now()
                 },
                 "clear":[
+                    "count",
                     "cardinality",
                     "partitions",
                 ],

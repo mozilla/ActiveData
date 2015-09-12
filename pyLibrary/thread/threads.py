@@ -207,7 +207,7 @@ class Queue(object):
                 if self.keep_running:
                     return None
 
-        Log.note("queue stopped")
+        Log.note("{{name}} queue stopped", name=self.name)
         return Thread.STOP
 
 

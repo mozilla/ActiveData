@@ -66,7 +66,8 @@ class FromESMetadata(object):
         self.columns.insert(column_columns)
         self.columns.insert(table_columns)
         # TODO: fix monitor so it does not bring down ES
-        self.worker = Thread.run("refresh metadata", self.not_monitor)
+        self.worker = Thread.run("refresh metadata", self.monitor)
+        # self.worker = Thread.run("refresh metadata", self.not_monitor)
         return
 
     @property

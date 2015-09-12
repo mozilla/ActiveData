@@ -14,8 +14,8 @@ from collections import Mapping
 import itertools
 
 from pyLibrary import convert
-from pyLibrary.collections import OR
-from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap
+from pyLibrary.collections import OR, MAX
+from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Dict
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
@@ -654,7 +654,7 @@ class NotOp(object):
         return self.term.vars()
 
     def map(self, map):
-        return {"not": map_expression(self.term, map)}
+        return {"not": expression_map(self.term, map)}
 
 
 class RangeOp(object):
@@ -1022,3 +1022,26 @@ class CODE(object):
     """
     def __init__(self, code):
         self.code = code
+
+def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
+    """
+    It is unfortunate that ES can not handle expressions that
+    span nested indexes.  This will split your where clause
+    returning {"and": [filter_depth0, filter_depth1, ...]}
+    """
+    vars_ = get_all_vars(where)
+
+    if var_to_depth is None:
+        var_to_depth = {v: len(listwrap(schema[v].nested_path)) for v in vars_}
+    if output is None:
+        output = Dict()
+
+    all_depths = set(var_to_depth.values())
+    if len(all_depths) == 1:
+        output[list(all_depths)[0]] += [where]
+    for a in listwrap(where["and"]):
+        split_expression_by_depth(a, schema, output, var_to_depth)
+
+    return {"and": [{"and": output[i]} for i in range(MAX(all_depths))]}
+
+

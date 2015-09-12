@@ -66,7 +66,11 @@ class DictList(list):
         return wrap(_get(self, "list")[index])
 
     def __setitem__(self, i, y):
-        _get(self, "list")[i] = unwrap(y)
+        _list = _get(self, "list")
+        if i <= len(_list):
+            for i in range(len(_list), i):
+                _list.append(None)
+        _list[i] = unwrap(y)
 
     def __getattribute__(self, key):
         try:

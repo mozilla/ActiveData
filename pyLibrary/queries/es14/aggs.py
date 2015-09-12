@@ -20,7 +20,7 @@ from pyLibrary.queries import qb, es09
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword, DefaultDomain
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, qb_expression_to_ruby, get_all_vars
+from pyLibrary.queries.expressions import simplify_esfilter, qb_expression_to_ruby, get_all_vars, split_expression_by_depth
 from pyLibrary.queries.query import DEFAULT_LIMIT
 from pyLibrary.times.timer import Timer
 
@@ -115,6 +115,8 @@ def es_aggsop(es, frum, query):
 
     if query.where:
         #TODO: INCLUDE FILTERS ON EDGES
+        query.where = split_expression_by_depth(query.where)
+        
 
         filter = simplify_esfilter(query.where)
         es_query = Dict(

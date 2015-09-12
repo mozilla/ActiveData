@@ -290,26 +290,26 @@ class TestgroupBy1(ActiveDataBaseTest):
         # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
         test = {
             # d = {"a": a, "v", v}
-            "data": [{"_a": {"_b": {"_c": d.v}}, "_b": d.a} for d in wrap(simple_test_data)],
+            "data": [{"a": {"b": {"c": d.v}}, "b": d.a} for d in wrap(simple_test_data)],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
                 "select": [
-                    {"name": "maxi", "value": "_a._b._c", "aggregate": "max"},
-                    {"name": "mini", "value": "_a._b._c", "aggregate": "min"}
+                    {"name": "maxi", "value": "a.b.c", "aggregate": "max"},
+                    {"name": "mini", "value": "a.b.c", "aggregate": "min"}
                 ],
-                "groupby": "_b"
+                "groupby": "b"
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"_b": "b", "mini": 2, "maxi": 2},
-                    {"_b": "c", "mini": 7, "maxi": 13},
-                    {"_b": None, "mini": 3, "maxi": 3}
+                    {"b": "b", "mini": 2, "maxi": 2},
+                    {"b": "c", "mini": 7, "maxi": 13},
+                    {"b": None, "mini": 3, "maxi": 3}
                 ]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["_b", "mini", "maxi"],
+                "header": ["b", "mini", "maxi"],
                 "data": [
                     ["b", 2, 2],
                     ["c", 7, 13],

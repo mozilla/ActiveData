@@ -1,0 +1,60 @@
+{
+	"flask": {
+		"host": "0.0.0.0",
+		"port": 81,
+		"debug": false,
+		"threaded": true,
+		"processes": 1
+	},
+	"constants": {
+		"pyLibrary.env.http.default_headers": {
+			"From": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
+		},
+ 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000
+	},
+	"request_logs": {
+		"host": "http://localhost",
+		"port": 9200,
+		"index": "active_data_requests",
+		"type": "request_log",
+		"schema": {
+			"$ref": "//../../resources/schema/request_log.schema.json"
+		}
+	},
+	"saved_queries":{
+		"host": "http://activedata.allizom.org",
+		"port": 9200,
+		"index": "saved_queries",
+		"type": "query",
+		"debug": true
+	},
+	"elasticsearch": {
+		"host": "http://activedata.allizom.org",
+		"port": 9200,
+		"index": "unittest",
+		"type": "test_result",
+		"debug": true
+	},
+	"debug": {
+		"trace": true,
+		"log": [
+			{
+				"log_type": "console"
+			},
+			{
+				"log_type": "email",
+				"from_address": "klahnakoski@mozilla.com",
+				"to_address": "klahnakoski@mozilla.com",
+				"subject": "[ALERT][DEV]Problem with ActiveData Server",
+				"$ref": "file://~/private.json#email"
+			},
+			{
+				"log_type": "elasticsearch",
+				"host": "http://localhost",
+				"index": "debug",
+				"type": "active_data"
+			}
+		]
+	}
+
+}

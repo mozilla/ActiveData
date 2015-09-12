@@ -38,7 +38,7 @@ def new_instance(settings):
     """
     MAKE A PYTHON INSTANCE
 
-    settings HAS ALL THE kwargs, PLUS class ATTRIBUTE TO INDICATE THE CLASS TO CREATE
+    `settings` HAS ALL THE `kwargs`, PLUS `class` ATTRIBUTE TO INDICATE THE CLASS TO CREATE
     """
     settings = set_default({}, settings)
     if not settings["class"]:
@@ -87,8 +87,8 @@ def get_function_by_name(full_name):
 
 def use_settings(func):
     """
-    THIS DECORATOR WILL PUT ALL PARAMETERS INTO THE settings PARAMETER AND
-    PUT ALL settings PARAMETERS INTO THE FUNCTION PARAMETERS.  THIS HAS BOTH
+    THIS DECORATOR WILL PUT ALL PARAMETERS INTO THE `settings` PARAMETER AND
+    PUT ALL `settings` PARAMETERS INTO THE FUNCTION PARAMETERS.  THIS HAS BOTH
     THE BENEFIT OF HAVING ALL PARAMETERS IN ONE PLACE (settings) AND ALL
     PARAMETERS ARE EXPLICIT FOR CLARITY.
 
@@ -124,14 +124,14 @@ def use_settings(func):
 
     def wrapper(*args, **kwargs):
         try:
-            if func.func_name == "__init__" and "settings" in kwargs:
+            if func.func_name in ("__init__", "__new__") and "settings" in kwargs:
                 packed = params_pack(params, kwargs, dot.zip(params[1:], args[1:]), kwargs["settings"], defaults)
                 return func(args[0], **packed)
-            elif func.func_name == "__init__" and len(args) == 2 and len(kwargs) == 0 and isinstance(args[1], Mapping):
+            elif func.func_name in ("__init__", "__new__") and len(args) == 2 and len(kwargs) == 0 and isinstance(args[1], Mapping):
                 # ASSUME SECOND UNNAMED PARAM IS settings
                 packed = params_pack(params, args[1], defaults)
                 return func(args[0], **packed)
-            elif func.func_name == "__init__":
+            elif func.func_name in ("__init__", "__new__"):
                 # DO NOT INCLUDE self IN SETTINGS
                 packed = params_pack(params, kwargs, dot.zip(params[1:], args[1:]), defaults)
                 return func(args[0], **packed)
@@ -188,7 +188,7 @@ def params_pack(params, *args):
 class cache(object):
 
     """
-    :param func: ASSUME FIRST PARAMETER IS self
+    :param func: ASSUME FIRST PARAMETER OF `func` IS `self`
     :param duration: USE CACHE IF LAST CALL WAS LESS THAN duration AGO
     :param lock: True if you want multithreaded monitor (default False)
     :return:

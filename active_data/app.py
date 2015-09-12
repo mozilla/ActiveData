@@ -13,14 +13,17 @@ from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
 from active_data.save_query import SaveQueries
-from pyLibrary import convert, strings, queries
+from pyLibrary import convert, strings
 from pyLibrary.debugs import constants, startup
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import Dict, unwrap, wrap, coalesce
+from pyLibrary.dot import unwrap, wrap, coalesce
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
-from pyLibrary.queries import qb
+from pyLibrary.queries import qb, meta
+from pyLibrary.queries import containers
+from pyLibrary.queries.meta import FromESMetadata
 from pyLibrary.strings import expand_template
+from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
 
@@ -30,7 +33,7 @@ BLANK = File("active_data/html/error.html").read()
 
 app = Flask(__name__)
 request_log_queue = None
-default_elasticsearch = None
+# default_elasticsearch = None
 config = None
 query_finder = None
 
@@ -101,6 +104,22 @@ def query(path):
             text = replace_vars(text, flask.request.args)
             data = convert.json2value(text)
             record_request(flask.request, data, None, None)
+            if data.meta.testing:
+                # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
+                m = meta.singlton
+
+                while True:
+                    cols = [c for c in m.get_columns(table=data["from"]) if c.type not in ["nested", "object"]]
+                    for c in cols:
+                        m.todo.push(c)
+                    for c in cols:
+                        if not c.last_updated:
+                            Log.note("wait for column (table={{col.table}}, name={{col.name}}) metadata to arrive", col=c)
+                            break
+                    else:
+                        break
+                    Thread.sleep(seconds=1)
+            # frum = Container.new_instance(data["from"])
             result = qb.run(data)
 
         if data.meta.save:
@@ -108,8 +127,10 @@ def query(path):
 
         result.meta.active_data_response_time = active_data_timer.duration
 
+        response_data = convert.unicode2utf8(convert.value2json(result)),
+        Log.note("Response is {{num}} bytes", num=len(response_data))
         return Response(
-            convert.unicode2utf8(convert.value2json(result)),
+            response_data,
             direct_passthrough=True,  # FOR STREAMING
             status=200,
             headers={
@@ -207,7 +228,7 @@ app.wsgi_app = WSGICopyBody(app.wsgi_app)
 
 
 def main():
-    global default_elasticsearch
+    # global default_elasticsearch
     global request_log_queue
     global config
     global query_finder
@@ -222,20 +243,23 @@ def main():
             request_logger = elasticsearch.Cluster(config.request_logs).get_or_create_index(config.request_logs)
             request_log_queue = request_logger.threaded_queue(max_size=2000)
 
-        default_elasticsearch = elasticsearch.Index(config.elasticsearch)
+        # default_elasticsearch = elasticsearch.Cluster(config.elasticsearch)
 
-        if config.saved_queries:
-            query_finder = SaveQueries(config.saved_queries)
-
-        queries.config.default = {
+        containers.config.default = {
             "type": "elasticsearch",
             "settings": config.elasticsearch.copy()
         }
 
+        # TRIGGER FIRST INSTANCE
+        FromESMetadata(config.elasticsearch)
+
+        if config.saved_queries:
+            query_finder = SaveQueries(config.saved_queries)
+
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
         app.run(**unwrap(config.flask))
     except Exception, e:
-        Log.error("Problem with etl", e)
+        Log.error("Problem with etl", cause=e)
     finally:
         Log.stop()
 

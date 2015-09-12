@@ -99,7 +99,7 @@ def request(method, url, **kwargs):
         if " Read timed out." in e:
             Log.error("Timeout failure (timeout was {{timeout}}", timeout=timeout, cause=e)
         else:
-            Log.error("Request failure", e)
+            Log.error("Request failure of {{url}}", url=url, cause=e)
 
 
 def _to_ascii_dict(headers):

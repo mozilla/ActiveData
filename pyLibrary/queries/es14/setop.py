@@ -10,114 +10,31 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-from collections import Mapping
-from pyLibrary import queries, convert
 
+from collections import Mapping
+
+from pyLibrary import queries
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.collections import AND, SUM, OR, UNION
-from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, unwrap, literal_field
+from pyLibrary.collections import AND
+from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field, join_field, unwrap
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
-from pyLibrary.queries.domains import is_keyword
-from pyLibrary.queries import domains
-from pyLibrary.queries.expressions import qb_expression_to_esfilter, simplify_esfilter, TRUE_FILTER, qb_expression_to_ruby
+from pyLibrary.maths import Math
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries.cube import Cube
-from pyLibrary.queries.es14.util import aggregates1_4, qb_sort_to_es_sort
+from pyLibrary.queries import domains, es14, es09, qb
+from pyLibrary.queries.containers.cube import Cube
+from pyLibrary.queries.domains import is_keyword
+from pyLibrary.queries.es14.util import qb_sort_to_es_sort
+from pyLibrary.queries.expressions import qb_expression_to_esfilter, simplify_esfilter, qb_expression_to_ruby
+from pyLibrary.queries.query import DEFAULT_LIMIT
 from pyLibrary.times.timer import Timer
-from pyLibrary.queries import es14, es09
-
 
 
 format_dispatch = {}
 
-def is_fieldop(es, query):
-    if not any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6", "1.7"])):
-        return False
-
-    # THESE SMOOTH EDGES REQUIRE ALL DATA (SETOP)
-    select = listwrap(query.select)
-    if not query.edges:
-        isDeep = len(split_field(query.frum.name)) > 1  # LOOKING INTO NESTED WILL REQUIRE A SCRIPT
-        isSimple = AND(s.value != None and (s.value in ["*", "."] or is_keyword(s.value)) for s in select)
-        noAgg = AND(s.aggregate == "none" for s in select)
-
-        if not isDeep and isSimple and noAgg:
-            return True
-    else:
-        isSmooth = AND((e.domain.type in domains.ALGEBRAIC and e.domain.interval == "none") for e in query.edges)
-        if isSmooth:
-            return True
-
-    return False
-
-
-def es_fieldop(es, query):
-    es_query = es14.util.es_query_template()
-    select = listwrap(query.select)
-    es_query.query = {
-        "filtered": {
-            "query": {
-                "match_all": {}
-            },
-            "filter": simplify_esfilter(qb_expression_to_esfilter(query.where))
-        }
-    }
-    es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
-    es_query.sort = qb_sort_to_es_sort(query.sort)
-    es_query.fields = DictList()
-    source = "fields"
-    for s in select.value:
-        if s == "*":
-            es_query.fields=None
-            source = "_source"
-        elif s == ".":
-            es_query.fields=None
-            source = "_source"
-        elif isinstance(s, basestring) and is_keyword(s):
-            es_query.fields.append(s)
-        elif isinstance(s, list) and es_query.fields is not None:
-            es_query.fields.extend(s)
-        elif isinstance(s, Mapping) and es_query.fields is not None:
-            es_query.fields.extend(s.values())
-        elif es_query.fields is not None:
-            es_query.fields.append(s)
-    es_query.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
-
-    return extract_rows(es, es_query, source, select, query)
-
-
-def extract_rows(es, es_query, source, select, query):
-    with Timer("call to ES") as call_timer:
-        data = es09.util.post(es, es_query, query.limit)
-
-    T = data.hits.hits
-    for i, s in enumerate(select.copy()):
-        # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
-        if s.value == "*":
-            try:
-                column_names = set(c.name for c in query.frum.get_columns() if (c.type not in ["object"] or c.useSource) and not c.depth)
-            except Exception, e:
-                Log.warning("can not get columns", e)
-                column_names = UNION(*[[k for k, v in row.items()] for row in T.select(source)])
-            column_names -= set(select.name)
-            select = select[:i:] + [{"name": n, "value": n} for n in column_names] + select[i + 1::]
-            break
-
-    try:
-        formatter, groupby_formatter, mime_type = format_dispatch[query.format]
-
-        output = formatter(T, select, source)
-        output.meta.es_response_time = call_timer.duration
-        output.meta.content_type = mime_type
-        output.meta.es_query = es_query
-        return output
-    except Exception, e:
-        Log.error("problem formatting", e)
-
 
 def is_setop(es, query):
-    if not any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6", "1.7"])):
+    if not any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
         return False
 
     select = listwrap(query.select)
@@ -138,70 +55,141 @@ def is_setop(es, query):
 
 
 def es_setop(es, query):
-    es_query = es14.util.es_query_template()
-    select = listwrap(query.select)
-
+    es_query, es_filter = es14.util.es_query_template(query.frum.name)
+    es_query[es_filter] = simplify_esfilter(qb_expression_to_esfilter(query.where))
     es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
-    es_query.fields = DictList()
     es_query.sort = qb_sort_to_es_sort(query.sort)
+    es_query.fields = DictList()
+
+    return extract_rows(es, es_query, query)
+
+
+def extract_rows(es, es_query, query):
+    is_list = isinstance(query.select, list)
+    new_select = DictList()
+    column_names = set(c.name for c in query.frum.get_columns() if c.type not in ["object"] and (not c.nested_path or c.abs_name==c.nested_path or not c.nested_path))
     source = "fields"
-    for s in select:
+
+    i = 0
+    for s in listwrap(query.select):
+        # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if s.value == "*":
             es_query.fields = None
-            es_query.script_fields = None
             source = "_source"
+
+            net_columns = column_names - set(listwrap(query.select).name)
+            for n in net_columns:
+                new_select.append({"name": n, "value": n, "put": {"name": n, "index": i, "child": "."}})
+                i += 1
         elif s.value == ".":
             es_query.fields = None
-            es_query.script_fields = None
             source = "_source"
+
+            new_select.append({"name": s.name if is_list else ".", "value": s.value, "put": {"name": s.name, "index": i, "child": "."}})
+            i += 1
+        elif isinstance(s.value, basestring) and s.value.endswith(".*") and is_keyword(s.value[:-2]):
+            parent = s.value[:-1]
+            prefix = len(parent)
+            for c in column_names:
+                if c.startswith(parent):
+                    if es_query.fields is not None:
+                        es_query.fields.append(c)
+
+                    new_select.append({"name": s.name+"."+c[prefix:], "value": c, "put": {"name": s.name+"."+c[prefix:], "index": i, "child": "."}})
+                    i += 1
         elif isinstance(s.value, basestring) and is_keyword(s.value):
-            es_query.fields.append(s.value)
-        elif isinstance(s.value, list) and es_query.fields is not None:
-            es_query.fields.extend(s.value)
+            parent = s.value + "."
+            prefix = len(parent)
+            net_columns = [c for c in column_names if c.startswith(parent)]
+            if not net_columns:
+                if es_query.fields is not None:
+                    es_query.fields.append(s.value)
+                new_select.append({"name": s.name if is_list else ".", "value": s.value, "put": {"name": s.name, "index": i, "child": "."}})
+            else:
+                for n in net_columns:
+                    if es_query.fields is not None:
+                        es_query.fields.append(n)
+                    new_select.append({"name": s.name if is_list else ".", "value": n, "put": {"name": s.name, "index": i, "child": n[prefix:]}})
+            i += 1
+        elif isinstance(s.value, list):
+            Log.error("need an example")
+            if es_query.fields is not None:
+                es_query.fields.extend([v for v in s.value])
         else:
             es_query.script_fields[literal_field(s.name)] = {"script": qb_expression_to_ruby(s.value)}
+            new_select.append({
+                "name": s.name if is_list else ".",
+                "pull": "fields." + literal_field(s.name),
+                "put": {"name": s.name, "index": i, "child": "."}
+            })
+            i += 1
 
-    return extract_rows(es, es_query, source, select, query)
+    for n in new_select:
+        if n.pull:
+            continue
+        if source == "_source":
+            n.pull = join_field(["_source"] + split_field(n.value))
+        else:
+            n.pull = "fields." + literal_field(n.value)
+
+    with Timer("call to ES") as call_timer:
+        data = es09.util.post(es, es_query, query.limit)
+
+    T = data.hits.hits
+
+    try:
+        formatter, groupby_formatter, mime_type = format_dispatch[query.format]
+
+        output = formatter(T, new_select, query)
+        output.meta.es_response_time = call_timer.duration
+        output.meta.content_type = mime_type
+        output.meta.es_query = es_query
+        return output
+    except Exception, e:
+        Log.error("problem formatting", e)
 
 
-def format_list(T, select, source):
+
+def format_list(T, select, query=None):
     data = []
     for row in T:
-        r = Dict(_id=row._id)
+        r = Dict()
         for s in select:
-            if s.value == ".":
-                r[s.name] = row[source]
-            else:
-                if source=="_source":
-                    r[s.name] = unwraplist(row[source][s.value])
-                elif isinstance(s.value, basestring):  # fields
-                    r[s.name] = unwraplist(row[source][literal_field(s.value)])
-                else:
-                    r[s.name] = unwraplist(row[source][literal_field(s.name)])
-        data.append(r)
+            r[s.name][s.put.child] = unwraplist(row[s.pull])
+        data.append(r if r else None)
     return Dict(
         meta={"format": "list"},
         data=data
     )
 
 
-def format_table(T, select, source):
-    header = [s.name for s in select]
-    map = {s.name: i for i, s in enumerate(select)}  # MAP FROM name TO COLUMN INDEX
+def format_table(T, select, query=None):
     data = []
+    num_columns = (Math.MAX(select.put.index)+1)
     for row in T:
-        r = [None] * len(header)
+        r = [None] * num_columns
         for s in select:
-            if s.value == ".":
-                r[map[s.name]] = row[source]
+            value = unwraplist(row[s.pull])
+
+            if value == None:
+                continue
+
+            index, child = s.put.index, s.put.child
+            if child == ".":
+                r[index] = value
             else:
-                if source == "_source":
-                    r[map[s.name]] = unwraplist(row[source][s.value])
-                elif isinstance(s.value, basestring):  # fields
-                    r[map[s.name]] = unwraplist(row[source][literal_field(s.value)])
-                else:
-                    r[map[s.name]] = unwraplist(row[source][literal_field(s.name)])
+                if r[index] is None:
+                    r[index] = Dict()
+                r[index][child] = value
+
         data.append(r)
+
+    header = [None]*num_columns
+    for s in select:
+        if header[s.put.index]:
+            continue
+        header[s.put.index] = s.put.name
+
     return Dict(
         meta={"format": "table"},
         header=header,
@@ -209,26 +197,22 @@ def format_table(T, select, source):
     )
 
 
-def format_cube(T, select, source):
-    matricies = {}
-    for s in select:
-        try:
-            if s.value == ".":
-                matricies[s.name] = Matrix.wrap(T.select(source))
-            elif isinstance(s.value, list):
-                matricies[s.name] = Matrix.wrap([tuple(unwraplist(t[source][ss]) for ss in s.value) for t in T])
-            else:
-                if source == "_source":
-                    matricies[s.name] = Matrix.wrap([unwraplist(t[source][s.value]) for t in T])
+def format_cube(T, select, query=None):
+    table = format_table(T, select, query)
 
-                elif isinstance(s.value, basestring):  # fields
-                    matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.value)) for t in T])
-                else:
-                    matricies[s.name] = Matrix.wrap([unwraplist(t[source].get(s.name)) for t in T])
-        except Exception, e:
-            Log.error("", e)
-    cube = Cube(select, edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(T), "interval": 1}}], data=matricies)
-    return cube
+    if len(table.data) == 0:
+        return Cube(
+            select,
+            edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": 0, "interval": 1}}],
+            data={h: Matrix(list=[]) for i, h in enumerate(table.header)}
+        )
+
+    cols = zip(*unwrap(table.data))
+    return Cube(
+        select,
+        edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(table.data), "interval": 1}}],
+        data={h: Matrix(list=cols[i]) for i, h in enumerate(table.header)}
+    )
 
 
 set_default(format_dispatch, {

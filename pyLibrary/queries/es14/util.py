@@ -11,27 +11,58 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary.dot import wrap
+from pyLibrary.dot import wrap, split_field, join_field
 
 
-def es_query_template():
-    output = wrap({
-        "query": {"match_all": {}},
-        "from": 0,
-        "size": 0,
-        "sort": []
-    })
+def es_query_template(path):
+    """
+    RETURN TEMPLATE AND PATH-TO-FILTER AS A 2-TUPLE
+    :param path:
+    :return:
+    """
+    sub_path = split_field(path)[1:]
 
-    return output
+    if sub_path:
+        output = wrap({
+            "query": {
+                "nested": {
+                    "path": join_field(sub_path),
+                    "filter": {},
+                    "inner_hits": {}
+                }
+            },
+            "from": 0,
+            "size": 0,
+            "sort": []
+        })
+        return output, "query.nested.filter"
+    else:
+        output = wrap({
+            "query": {
+                "filtered": {
+                    "query": {"match_all": {}},
+                    "filter": {}
+                }
+            },
+            "from": 0,
+            "size": 0,
+            "sort": []
+        })
+        return output, "query.filtered.filter"
+
+
 
 
 def qb_sort_to_es_sort(sort):
+    if not sort:
+        return []
+
     output = []
     for s in sort:
         if s.sort == 1:
-            output.append(s.field)
+            output.append(s.value)
         elif s.sort == -1:
-            output.append({s.field: "desc"})
+            output.append({s.value: "desc"})
         else:
             pass
     return output
@@ -41,6 +72,7 @@ def qb_sort_to_es_sort(sort):
 aggregates1_4 = {
     "none": "none",
     "one": "count",
+    "cardinality": "cardinality",
     "sum": "sum",
     "add": "sum",
     "count": "value_count",
@@ -51,6 +83,8 @@ aggregates1_4 = {
     "mean": "avg",
     "average": "avg",
     "avg": "avg",
+    "median": "median",
+    "percentile": "percentile",
     "N": "count",
     "X0": "count",
     "X1": "sum",
@@ -60,4 +94,6 @@ aggregates1_4 = {
     "var": "variance",
     "variance": "variance"
 }
+
+NON_STATISTICAL_AGGS = {"none", "one", "count"}
 

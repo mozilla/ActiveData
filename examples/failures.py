@@ -21,7 +21,7 @@ config = wrap({
     "Bugzilla":{
         "url": "http://elasticsearch-zlb.bugs.scl3.mozilla.com:9200/public_bugs",
         "host": "http://elasticsearch-zlb.bugs.scl3.mozilla.com",
-        "port": "9200",
+        "port": 9200,
         "index": "public_bugs",
         "type": "bug_version",
         "debug": False

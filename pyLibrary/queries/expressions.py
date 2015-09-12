@@ -15,7 +15,7 @@ import itertools
 
 from pyLibrary import convert
 from pyLibrary.collections import OR
-from pyLibrary.dot import coalesce, wrap, set_default, literal_field
+from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
@@ -24,6 +24,16 @@ from pyLibrary.times.dates import Date
 
 TRUE_FILTER = True
 FALSE_FILTER = False
+
+_Query = None
+
+def _late_import():
+    global _Query
+
+    from pyLibrary.queries.query import Query as _Query
+
+    _=_Query
+
 
 
 
@@ -53,7 +63,7 @@ def qb_expression(expr):
 
 
 def qb_expression_to_function(expr):
-    if expr!=None and not isinstance(expr, (Mapping, list)) and  hasattr(expr, "__call__"):
+    if expr != None and not isinstance(expr, (Mapping, list)) and hasattr(expr, "__call__"):
         return expr
     return compile_expression(qb_expression_to_python(expr))
 
@@ -115,11 +125,11 @@ def qb_expression_to_ruby(expr):
         elif isinstance(term, Mapping):
             if op == "eq":
                 # eq CAN ACCEPT A WHOLE OBJECT OF key:value PAIRS TO COMPARE
-                output = " and ".join("(" + qb_expression_to_ruby(a) + ")" + bop + "(" + qb_expression_to_ruby(b) + ")" for a, b in term.items())
+                output = " and ".join("(" + qb_expression_to_ruby(var) + bop + convert.value2quote(val) + ")" for var, val in term.items())
                 return output
             else:
-                a, b = term.items()[0]
-                output = "(" + qb_expression_to_ruby(a) + ")" + bop + "(" + qb_expression_to_ruby(b) + ")"
+                var, val = term.items()[0]
+                output = "(" + qb_expression_to_ruby(var) + bop + convert.value2quote(val) + ")"
                 return output
         else:
             Log.error("Expecting binary term")
@@ -183,11 +193,11 @@ def qb_expression_to_python(expr):
         elif isinstance(term, Mapping):
             if op == "eq":
                 # eq CAN ACCEPT A WHOLE OBJECT OF key:value PAIRS TO COMPARE
-                output = " and ".join("(" + qb_expression_to_python(a) + ")" + bop + "(" + qb_expression_to_python(b) + ")" for a, b in term.items())
+                output = " and ".join("(" + qb_expression_to_python(a) + ")" + bop + convert.value2json(b) for a, b in term.items())
                 return output
             else:
                 a, b = term.items()[0]
-                output = "(" + qb_expression_to_python(a) + ")" + bop + "(" + qb_expression_to_python(b) + ")"
+                output = "(" + qb_expression_to_python(a) + ")" + bop + convert.value2json(b)
                 return output
         else:
             Log.error("Expecting binary term")
@@ -201,8 +211,13 @@ def qb_expression_to_python(expr):
 
 
 def get_all_vars(expr):
+    if not _Query:
+        _late_import()
+
     if expr == None:
         return set()
+    elif isinstance(expr, _Query):
+        return query_get_all_vars(expr)
     elif isinstance(expr, unicode):
         if expr == "." or is_keyword(expr):
             return set([expr])
@@ -260,9 +275,142 @@ def get_all_vars(expr):
     Log.error("`{{op}}` is not a recognized operation",  op= op)
 
 
+def expression_map(expr, map):
+    """
+    USE map TO MAP VARIABLES NAMES TO SOME OTHER
+    """
+    if expr == None:
+        return expr
+    elif Math.is_number(expr):
+        return expr
+    elif isinstance(expr, Date):
+        return expr
+    elif isinstance(expr, unicode):
+        if expr == ".":
+            return expr
+        elif is_keyword(expr):
+            return map.get(expr, expr)
+        else:
+            Log.error("Expecting a json path")
+    elif isinstance(expr, CODE):
+        return expr.code
+    elif expr is True:
+        return expr
+    elif expr is False:
+        return expr
+
+    op, term = expr.items()[0]
+
+    mop = python_multi_operators.get(op)
+    if mop:
+        output = map(expression_map, term)
+        return output
+
+    bop = python_binary_operators.get(op)
+    if bop:
+        if isinstance(term, list):
+            output = {op: map(expression_map, term)}
+            return output
+        elif isinstance(term, Mapping):
+            output = {op: {expression_map(k, map): v for k, v, in term.items()}}
+            return output
+        else:
+            Log.error("Expecting binary term")
+
+    uop = python_unary_operators.get(op)
+    if uop:
+        output = {op: expression_map(term, map)}
+        return output
+
+    Log.error("`{{op}}` is not a recognized operation", op=op)
+
+
+
+
+def query_get_all_vars(query, exclude_where=False):
+    """
+    :param query:
+    :param exclude_where: Sometimes we do not what to look at the where clause
+    :return: all variables in use by query
+    """
+    output = set()
+    for s in listwrap(query.select):
+        output |= select_get_all_vars(s)
+    for s in listwrap(query.edges):
+        output |= edges_get_all_vars(s)
+    for s in listwrap(query.groupby):
+        output |= edges_get_all_vars(s)
+    if not exclude_where:
+        output |= get_all_vars(query.where)
+    return output
+
+
+def select_get_all_vars(s):
+    if isinstance(s.value, list):
+        return set(s.value)
+    elif isinstance(s.value, basestring):
+        return set([s.value])
+    elif s.value == None or s.value == ".":
+        return set()
+    else:
+        if s.value == "*":
+            return set(["*"])
+        return get_all_vars(s.value)
+
+
+def edges_get_all_vars(e):
+    output = set()
+    if isinstance(e.value, basestring):
+        output.add(e.value)
+    if e.domain.key:
+        output.add(e.domain.key)
+    if e.domain.where:
+        output |= get_all_vars(e.domain.where)
+    if e.domain.partitions:
+        for p in e.domain.partitions:
+            if p.where:
+                output |= get_all_vars(p.where)
+    return output
+
+
+def where_get_all_vars(w):
+    if w in [True, False, None]:
+        return []
+
+    output = set()
+    key = list(w.keys())[0]
+    val = w[key]
+    if key in ["and", "or"]:
+        for ww in val:
+            output |= get_all_vars(ww)
+        return output
+
+    if key == "not":
+        return get_all_vars(val)
+
+    if key in ["exists", "missing"]:
+        if isinstance(val, unicode):
+            return {val}
+        else:
+            return {val.field}
+
+    if key in ["gte", "gt", "eq", "ne", "term", "terms", "lt", "lte", "range", "prefix"]:
+        if not isinstance(val, Mapping):
+            Log.error("Expecting `{{key}}` to have a dict value, not a {{type}}",
+                key= key,
+                type= val.__class__.__name__)
+        return val.keys()
+
+    if key == "match_all":
+        return set()
+
+    Log.error("do not know how to handle where {{where|json}}", {"where", w})
+
 
 python_unary_operators = {
     "not": "not {{term}}",
+    "length": 'len({{term}})',
+    "number": 'float({{term}})',
 }
 
 python_binary_operators = {
@@ -294,6 +442,8 @@ python_multi_operators = {
 
 ruby_unary_operators = {
     "not": "! {{term}}",
+    "length": 'if ({{term}} == null) then null else ({{term}}).length()',
+    "number": '({{term}}).to_f()'
 }
 
 ruby_binary_operators = {
@@ -334,34 +484,31 @@ default_multi_operators = {
 }
 
 
-
-
-
-
-class BinaryOp(object):
-    def __init__(self, op, term):
-        self.op = op
-        if isinstance(term, list):
-            self.a, self.b = qb_expression(term[0]), qb_expression(term[1])
-        elif isinstance(term, Mapping):
-            self.a, self.b = map(qb_expression, term.items()[0])
-
-    def to_ruby(self):
-        symbol = ruby_multi_operators[self.op][0]
-        return "(" + self.a.to_ruby() + ")" + symbol + "(" + self.b.to_ruby() + ")"
-
-    def to_python(self):
-        symbol = python_multi_operators[self.op][0]
-        return "(" + self.a.to_python() + ")" + symbol + "(" + self.b.to_python() + ")"
-
-    def to_esfilter(self):
-        if self.op in ["gt", "gte", "lte", "lt"]:
-            return {"range":{self.op: {self.a: self.b}}}
-        else:
-            Log.error("Operator {{op}} is not supported by ES",  op=self.op)
-
-    def vars(self):
-        return self.a.vars() | self.b.vars()
+# class BinaryOp(object):
+#     def __init__(self, op, term):
+#         self.op = op
+#         if isinstance(term, list):
+#             self.a, self.b = qb_expression(term[0]), qb_expression(term[1])
+#         elif isinstance(term, Mapping):
+#             self.a, self.b = map(qb_expression, term.items()[0])
+#
+#     def to_ruby(self):
+#         symbol = ruby_multi_operators[self.op][0]
+#         return "(" + self.a.to_ruby() + ")" + symbol + "(" + self.b.to_ruby() + ")"
+#
+#     def to_python(self):
+#         symbol = python_multi_operators[self.op][0]
+#         return "(" + self.a.to_python() + ")" + symbol + "(" + self.b.to_python() + ")"
+#
+#     def to_esfilter(self):
+#         if self.op in ["gt", "gte", "lte", "lt"]:
+#             return {"range": {self.op: {self.a: self.b}}}
+#         else:
+#             Log.error("Operator {{op}} is not supported by ES",  op=self.op)
+#
+#     def vars(self):
+#         return self.a.vars() | self.b.vars()
+#
 
 class MultiOp(object):
     def __init__(self, op, terms):
@@ -420,6 +567,9 @@ class TermsOp(object):
     def vars(self):
         return {self.var}
 
+    def map(self, map):
+        return {"terms": {map.get(self.var, self.var): self.vals}}
+
 
 class ExistsOp(object):
     def __init__(self, op, term):
@@ -440,6 +590,9 @@ class ExistsOp(object):
     def vars(self):
         return set([self.field])
 
+    def map(self, map):
+        return {"exists": map.get(self.field, self.field)}
+
 
 class PrefixOp(object):
     def __init__(self, op, term):
@@ -456,6 +609,9 @@ class PrefixOp(object):
 
     def vars(self):
         return set([self.field])
+
+    def map(self, map):
+        return {"prefix": {map.get(self.field, self.field): self.prefix}}
 
 
 class MissingOp(object):
@@ -477,6 +633,9 @@ class MissingOp(object):
     def vars(self):
         return set([self.field])
 
+    def map(self, map):
+        return {"missing": map.get(self.field, self.field)}
+
 
 class NotOp(object):
     def __init__(self, op, term):
@@ -494,6 +653,9 @@ class NotOp(object):
     def vars(self):
         return self.term.vars()
 
+    def map(self, map):
+        return {"not": map_expression(self.term, map)}
+
 
 class RangeOp(object):
     def __init__(self, op, term):
@@ -510,6 +672,10 @@ class RangeOp(object):
 
     def vars(self):
         return set([self.field])
+
+    def map(self, map):
+        return {"range": {map.get(self.field, self.field): self.cmp}}
+
 
 
 class DocOp(object):

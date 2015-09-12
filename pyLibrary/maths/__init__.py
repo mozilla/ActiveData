@@ -234,7 +234,7 @@ class Math(object):
 
     @staticmethod
     def MAX(values):
-        output = None
+        output = Null
         for v in values:
             if v == None:
                 continue

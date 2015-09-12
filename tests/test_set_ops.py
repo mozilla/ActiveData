@@ -20,7 +20,6 @@ lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
 class TestSetOps(ActiveDataBaseTest):
-
     def test_simplest(self):
         test = {
             "data": [
@@ -31,9 +30,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": "a"
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                {"a": "b"}
-            ]},
+                "meta": {"format": "list"}, "data": ["b"]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a"],
@@ -58,15 +55,15 @@ class TestSetOps(ActiveDataBaseTest):
     def test_select_on_missing_field(self):
         test = {
             "data": [  # PROPERTIES STARTING WITH _ ARE NOT NESTED AUTOMATICALLY
-                {"_a": {"_b": {"_c": 1}}},
-                {"_a": {"_b": {"_c": 2}}},
-                {"_a": {"_b": {"_c": 3}}},
-                {"_a": {"_b": {"_c": 4}}},
-                {"_a": {"_b": {"_c": 5}}}
+                       {"a": {"b": {"c": 1}}},
+                       {"a": {"b": {"c": 2}}},
+                       {"a": {"b": {"c": 3}}},
+                       {"a": {"b": {"c": 4}}},
+                       {"a": {"b": {"c": 5}}}
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
-                "select": "_a._b._d"
+                "select": "a.b.d"
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
@@ -78,7 +75,7 @@ class TestSetOps(ActiveDataBaseTest):
             ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["_a._b._d"],
+                "header": ["a.b.d"],
                 "data": [[None], [None], [None], [None], [None]]
             },
             "expecting_cube": {
@@ -90,7 +87,7 @@ class TestSetOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "_a._b._d": [None,None,None,None,None]
+                    "a.b.d": [None, None, None, None, None]
                 }
             }
         }
@@ -101,28 +98,23 @@ class TestSetOps(ActiveDataBaseTest):
 
         test = {
             "data": [  # PROPERTIES STARTING WITH _ ARE NOT NESTED AUTOMATICALLY
-                {"_a": {"_b": {"_c": 1}}},
-                {"_a": {"_b": {"_c": 2}}},
-                {"_a": {"_b": {"_c": 3}}},
-                {"_a": {"_b": {"_c": 4}}},
-                {"_a": {"_b": {"_c": 5}}}
+                       {"a": {"b": {"c": 1}}},
+                       {"a": {"b": {"c": 2}}},
+                       {"a": {"b": {"c": 3}}},
+                       {"a": {"b": {"c": 4}}},
+                       {"a": {"b": {"c": 5}}}
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
-                "select": "_a._b._c",
-                "sort": "_a._b._c"  # SO THE CUBE COMPARISON WILL PASS
+                "select": "a.b.c",
+                "sort": "a.b.c"  # SO THE CUBE COMPARISON WILL PASS
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                {"_a": {"_b": {"_c": 1}}},
-                {"_a": {"_b": {"_c": 2}}},
-                {"_a": {"_b": {"_c": 3}}},
-                {"_a": {"_b": {"_c": 4}}},
-                {"_a": {"_b": {"_c": 5}}}
-            ]},
+                "meta": {"format": "list"}, "data": [1, 2, 3, 4, 5]
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["_a._b._c"],
+                "header": ["a.b.c"],
                 "data": [[1], [2], [3], [4], [5]]
             },
             "expecting_cube": {
@@ -134,7 +126,7 @@ class TestSetOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "_a._b._c": [1, 2, 3, 4, 5]
+                    "a.b.c": [1, 2, 3, 4, 5]
                 }
             }
         }
@@ -151,9 +143,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": "a"
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                {"a": "b"}
-            ]},
+                "meta": {"format": "list"}, "data": ["b"]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a"],
@@ -186,9 +176,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": {"name": "value", "value": "a"}
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                {"value": "b"}
-            ]},
+                "meta": {"format": "list"}, "data": ["b"]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["value"],
@@ -209,13 +197,45 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-    def test_single_alpha_no_select(self):
+    def test_single_no_select(self):
         test = {
-            "name": "singleton_alpha no select (select *)",
             "data": [
                 {"a": "b"}
             ],
             "query": {
+                "from": base_test_class.settings.backend_es.index
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                {"a": "b"}
+            ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["."],
+                "data": [[{"a": "b"}]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                    }
+                ],
+                "data": {
+                    ".": [{"a": "b"}]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_single_star_select(self):
+        test = {
+            "data": [
+                {"a": "b"}
+            ],
+            "query": {
+                "select": "*",
                 "from": base_test_class.settings.backend_es.index
             },
             "expecting_list": {
@@ -244,7 +264,6 @@ class TestSetOps(ActiveDataBaseTest):
 
     def test_dot_select(self):
         test = {
-            "name": "singleton_alpha dot select",
             "data": [
                 {"a": "b"}
             ],
@@ -254,7 +273,7 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [{"value": {"a": "b"}}]
+                "data": [{"a": "b"}]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -415,7 +434,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a.b",
+                "from": base_test_class.settings.backend_es.index + ".a.b",
                 "select": ["...x", "c"]
             },
             "expecting_list": {
@@ -486,8 +505,7 @@ class TestSetOps(ActiveDataBaseTest):
             self.assertEqual(len(result.data.value), query.DEFAULT_LIMIT)
         finally:
             # REMOVE CONTAINER
-            self.es.delete_index(settings.index)
-
+            self.es_cluster.delete_index(settings.index)
 
 
     def test_specific_limit(self):
@@ -496,7 +514,7 @@ class TestSetOps(ActiveDataBaseTest):
             "query": {
                 "from": base_test_class.settings.backend_es.index,
                 "select": {"name": "value", "value": "a"},
-                "limit":5
+                "limit": 5
             },
         })
 
@@ -515,7 +533,7 @@ class TestSetOps(ActiveDataBaseTest):
             self.assertEqual(len(result.data.value), 5)
         finally:
             # REMOVE CONTAINER
-            self.es.delete_index(settings.index)
+            self.es_cluster.delete_index(settings.index)
 
     def test_negative_limit(self):
         test = wrap({
@@ -533,23 +551,23 @@ class TestSetOps(ActiveDataBaseTest):
             self.assertRaises(Exception, self._execute_query, test.query)
         finally:
             # REMOVE CONTAINER
-            self.es.delete_index(settings.index)
+            self.es_cluster.delete_index(settings.index)
 
     def test_select_expression(self):
         test = {
             "data": [  # PROPERTIES STARTING WITH _ ARE NOT NESTED AUTOMATICALLY
-                       {"_a": {"_b": 0, "_c": 0}},
-                       {"_a": {"_b": 0, "_c": 1}},
-                       {"_a": {"_b": 1, "_c": 0}},
-                       {"_a": {"_b": 1, "_c": 1}},
+                       {"a": {"b": 0, "c": 0}},
+                       {"a": {"b": 0, "c": 1}},
+                       {"a": {"b": 1, "c": 0}},
+                       {"a": {"b": 1, "c": 1}},
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
                 "select": [
-                    {"name": "sum", "value": {"add": ["_a._b", "_a._c"]}},
-                    {"name": "sub", "value": {"sub": ["_a._b", "_a._c"]}}
+                    {"name": "sum", "value": {"add": ["a.b", "a.c"]}},
+                    {"name": "sub", "value": {"sub": ["a.b", "a.c"]}}
                 ],
-                "sort": ["_a._b", "_a._c"]
+                "sort": ["a.b", "a.c"]
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
@@ -574,6 +592,324 @@ class TestSetOps(ActiveDataBaseTest):
                 "data": {
                     "sum": [0, 1, 1, 2],
                     "sub": [0, -1, 1, 0]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_select_object(self):
+        """
+        ES DOES NOT ALLOW YOU TO SELECT AN OBJECT, ONLY THE LEAVES
+        THIS SHOULD USE THE SCHEMA TO SELECT-ON-OBJECT TO MANY SELECT ON LEAVES
+        """
+        test = {
+            "data": [
+                {"o": 3, "a": {"b": "x", "v": 2}},
+                {"o": 1, "a": {"b": "x", "v": 5}},
+                {"o": 2, "a": {"b": "x", "v": 7}},
+                {"o": 4, "c": "x"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["a"],
+                "sort": "a.v"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": {"b": "x", "v": 2}},
+                    {"a": {"b": "x", "v": 5}},
+                    {"a": {"b": "x", "v": 7}},
+                    None
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [
+                    [{"b": "x", "v": 2}],
+                    [{"b": "x", "v": 5}],
+                    [{"b": "x", "v": 7}],
+                    [None]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a": [
+                        {"b": "x", "v": 2},
+                        {"b": "x", "v": 5},
+                        {"b": "x", "v": 7},
+                        None
+                    ]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_select_leaves(self):
+        """
+        ES DOES NOT ALLOW YOU TO SELECT AN OBJECT, ONLY THE LEAVES
+        THIS SHOULD USE THE SCHEMA TO SELECT-ON-OBJECT TO MANY SELECT ON LEAVES
+        """
+        test = {
+            "data": [
+                {"o": 3, "a": {"b": "x", "v": 2}},
+                {"o": 1, "a": {"b": "x", "v": 5}},
+                {"o": 2, "a": {"b": "x", "v": 7}},
+                {"o": 4, "c": "x"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["a.*"],
+                "sort": "a.v"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": {"b": "x", "v": 2}},
+                    {"a": {"b": "x", "v": 5}},
+                    {"a": {"b": "x", "v": 7}},
+                    None
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a.b", "a.v"],
+                "data": [
+                    ["x", 2],
+                    ["x", 5],
+                    ["x", 7],
+                    [None, None]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a.b": ["x", "x", "x", None],
+                    "a.v": [2, 5, 7, None]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_select_value_object(self):
+        """
+        ES DOES NOT ALLOW YOU TO SELECT AN OBJECT, ONLY THE LEAVES
+        THIS SHOULD USE THE SCHEMA TO SELECT-ON-OBJECT TO MANY SELECT ON LEAVES
+        """
+        test = {
+            "data": [
+                {"o": 3, "a": {"b": "x", "v": 2}},
+                {"o": 1, "a": {"b": "x", "v": 5}},
+                {"o": 2, "a": {"b": "x", "v": 7}},
+                {"o": 4, "c": "x"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": "a",
+                "sort": "a.v"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"b": "x", "v": 2},
+                    {"b": "x", "v": 5},
+                    {"b": "x", "v": 7},
+                    None
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [
+                    [{"b": "x", "v": 2}],
+                    [{"b": "x", "v": 5}],
+                    [{"b": "x", "v": 7}],
+                    [None]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a": [
+                        {"b": "x", "v": 2},
+                        {"b": "x", "v": 5},
+                        {"b": "x", "v": 7},
+                        None
+                    ]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_select2_object(self):
+        """
+        ES DOES NOT ALLOW YOU TO SELECT AN OBJECT, ONLY THE LEAVES
+        THIS SHOULD USE THE SCHEMA TO SELECT-ON-OBJECT TO MANY SELECT ON LEAVES
+        """
+        test = {
+            "data": [
+                {"o": 3, "a": {"b": "x", "v": 2}},
+                {"o": 1, "a": {"b": "x", "v": 5}},
+                {"o": 2, "a": {"b": "x", "v": 7}},
+                {"o": 4, "c": "x"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["o", "a"],
+                "sort": "a.v"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"o": 3, "a": {"b": "x", "v": 2}},
+                    {"o": 1, "a": {"b": "x", "v": 5}},
+                    {"o": 2, "a": {"b": "x", "v": 7}},
+                    {"o": 4}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["o", "a"],
+                "data": [
+                    [3, {"b": "x", "v": 2}],
+                    [1, {"b": "x", "v": 5}],
+                    [2, {"b": "x", "v": 7}],
+                    [4, None]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a": [
+                        {"b": "x", "v": 2},
+                        {"b": "x", "v": 5},
+                        {"b": "x", "v": 7},
+                        None
+                    ],
+                    "o": [3, 1, 2, 4]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_select3_object(self):
+        """
+        ES DOES NOT ALLOW YOU TO SELECT AN OBJECT, ONLY THE LEAVES
+        THIS SHOULD USE THE SCHEMA TO SELECT-ON-OBJECT TO MANY SELECT ON LEAVES
+        """
+        test = {
+            "data": [
+                {"o": 3, "a": {"b": "x", "v": 2}},
+                {"o": 1, "a": {"b": "x", "v": 5}},
+                {"o": 2, "a": {"b": "x", "v": 7}},
+                {"o": 4, "c": "x"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["o", "a.*"],
+                "sort": "a.v"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"o": 3, "a": {"b": "x", "v": 2}},
+                    {"o": 1, "a": {"b": "x", "v": 5}},
+                    {"o": 2, "a": {"b": "x", "v": 7}},
+                    {"o": 4}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["o", "a.b", "a.v"],
+                "data": [
+                    [3, "x", 2],
+                    [1, "x", 5],
+                    [2, "x", 7],
+                    [4, None, None]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a.b": ["x", "x", "x", None],
+                    "a.v": [2, 5, 7, None],
+                    "o": [3, 1, 2, 4]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_length(self):
+        test = {
+            "data": [
+                {"v": "1"},
+                {"v": "22"},
+                {"v": "333"},
+                {"v": "4444"},
+                {"v": "55555"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"name": "l", "value": {"length": "v"}},
+                "sort": "v"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [1, 2, 3, 4, 5]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["l"],
+                "data": [
+                    [1],
+                    [2],
+                    [3],
+                    [4],
+                    [5]
+                ]
+           },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 5, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "l": [1, 2, 3, 4, 5]
                 }
             }
         }

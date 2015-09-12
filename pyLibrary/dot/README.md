@@ -4,7 +4,7 @@ Consistent dicts, lists and Nones
 
 This library is solves Python's lack of consistency (lack of closure) under the dot (`.`)
 and slice `[::]` operators.  The most significant differences involve dealing
-with None, missing keys, and missing items in lists.
+with None, missing property names, and missing items in lists.
 
 Dict replaces dict
 --------------------
@@ -16,7 +16,7 @@ readable.  In many ways, `dict()` can act as an anonymous type, but it does
 not have the features listed here.
 
  1. `a.b == a["b"]`
- 2. missing keys are handled gracefully, which is beneficial when being used in
+ 2. missing property names are handled gracefully, which is beneficial when being used in
     set operations (database operations) without raising exceptions <pre>
 a = wrap({})
 &gt;&gt;&gt; a == {}
@@ -26,7 +26,7 @@ a.b.c == None
 &gt;&gt;&gt; True
 a[None] == None
 &gt;&gt;&gt; True</pre>
-    missing keys are common when dealing with JSON, which is often almost anything.
+    missing property names are common when dealing with JSON, which is often almost anything.
     Unfortunately, you do loose the ability to perform <code>a is None</code>
     checks:  **You must always use <code>a == None</code> instead**.
  3. remove an attribute by assigning `None` (eg `a.b = None`)
@@ -54,7 +54,7 @@ a.b.c += [1]
 a.b.c += [42]
 &gt;&gt;&gt; a == {"b": {"c": [1, 42]}}
 </pre>
- 8. property names (keys) are coerced to unicode - it appears Python's
+ 8. property names are coerced to unicode - it appears Python's
  object.getattribute() is called with str() even when using `from __future__
  import unicode_literals`
  9. by allowing dot notation, the IDE does tab completion, plus my spelling
@@ -68,7 +68,7 @@ different names and slightly different variations, some examples are:
  * `jinja2.environment.Environment.getattr()`  to allow convenient dot notation
  * `argparse.Environment()` - code performs `setattr(e, name, value)` on
   instances of Environment to provide dot(`.`) accessors
- * `collections.namedtuple()` - gives attribute names to tuple indicies
+ * `collections.namedtuple()` - gives attribute names to tuple indices
   effectively providing <code>a.b</code> rather than <code>a["b"]</code>
      offered by dicts
  * [configman's DotDict](https://github.com/mozilla/configman/blob/master/configman/dotdict.py)
@@ -131,7 +131,9 @@ replaced with `None` in all cases.
 
 ###Identity and Absorbing (Zero) Elements###
 
-With closure we can realize we have defined an algebraic semigroup:  The identity element is the dot string (`"."`) and the zero element is `Null` (or `None`).
+With closure we can realize we have defined an algebraic semigroup:  The 
+identity element is the dot string (`"."`) and the zero element is `Null` 
+(or `None`).
 
  1. `a[Null] == Null`
  2. `a["."] == a`
@@ -208,7 +210,7 @@ all `a<=b`
   * Trinary slicing `[::]` uses the flat list definition
 
 When assuming a *flat-list*, we loose the *take-from-the-right* tricks gained
-from modulo arithmetic on the indicies. Therefore, we require extra methods
+from modulo arithmetic on the indices. Therefore, we require extra methods
 to perform right-based slicing:
 
   * **right()** - `flat_list.right(b)` same as `loop_list[-b:]` except when `b<=0`
@@ -231,9 +233,17 @@ The dot operator on a `DictList` performs a simple projection; it will return a 
 DictObject for data
 -------------------
 
-There are two major families of objects in Object Oriented programming.  The first, are ***Actors***: characterized by a number of useful instance methods and some state bundled into a package.  The second are ***Data***: Primarily a set of properties, with only (de)serialization functions, or algebraic operators defined.  Boto has many examples of these *Data* classes, [here is one](https://github.com/boto/boto/blob/4b8269562e663f090403e57ba1a3a471b6e0aa0e/boto/ec2/networkinterface.py).
+There are two major families of objects in Object Oriented programming.  The 
+first, are ***Actors***: characterized by a number of useful instance methods 
+and some state bundled into a package.  The second are ***Data***: Primarily 
+a set of properties, with only (de)serialization functions, or algebraic 
+operators defined.  Boto has many examples of these *Data* classes, 
+[here is one](https://github.com/boto/boto/blob/4b8269562e663f090403e57ba1a3a471b6e0aa0e/boto/ec2/networkinterface.py).
 
-The problem with *Data* objects is they have an useless distinction between attributes and properties.  This prevents us from using the `[]` operator for dereferencing, forcing use to use the verbose `__getattr__()` instead.  It also prevents the use of query operators over these objects.
+The problem with *Data* objects is they have an useless distinction between 
+attributes and properties.  This prevents us from using the `[]` operator for 
+dereferencing, forcing use to use the verbose `getattr()` instead.  It 
+also prevents the use of query operators over these objects.
 
 You can register a class as a *data* class, by wrapping it with `DictClass`.
 
@@ -298,7 +308,7 @@ reveal itself.
 ```
 
 So, clearly, `[-num:]` can not be understood as a suffix slice, rather
-something more complicated; especially considering that `num` could be
+something more complicated; consider that `num` could be
 negative.
 
 I advocate never using negative indices in the slice operator.  Rather, use the

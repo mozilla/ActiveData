@@ -10,22 +10,61 @@
 
 from __future__ import unicode_literals
 from __future__ import division
-from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
+
+import os
+
+from pyLibrary import convert, jsons
+from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot import wrap
 from pyLibrary.env import http
+from pyLibrary.thread.multiprocess import Process
 from pyLibrary.times.dates import Date, Duration
 from pyLibrary.times.durations import DAY
 from pyLibrary.times.timer import Timer
+from tests.base_test_class import ActiveDataBaseTest, error, settings
 
-from tests.base_test_class import ActiveDataBaseTest, error
 
-
-ACTIVE_DATA_URL = "http://activedata.allizom.org/query"
-ES_CLUSTER_LOCATION = "http://54.149.35.214"
+APP_CONFIG_FILE = "tests/config/app_staging_settings.json"
+ES_CLUSTER_LOCATION = None
 
 
 class TestUnittests(ActiveDataBaseTest):
+    process = None
+
+    @classmethod
+    def setUpClass(cls):
+        ActiveDataBaseTest.setUpClass(assume_server_started=False)
+
+        # START DIRECT-TO-ACTIVEDATA-ES SERVICE
+        global ES_CLUSTER_LOCATION
+
+        app_config = jsons.ref.get("file://"+APP_CONFIG_FILE)
+        settings.service_url = "http://localhost:"+unicode(app_config.flask.port)+"/query"
+        ES_CLUSTER_LOCATION = app_config.elasticsearch.host
+
+        # TestUnittests.process = Process(
+        #     "RUN APP",
+        #     [
+        #         "python",
+        #         "active_data/app.py",
+        #         "--settings=" + APP_CONFIG_FILE
+        #     ],
+        #    cwd=os.getcwd()
+        # )
+        # while True:
+        #     line = TestUnittests.process.recieve.pop()
+        #     if line:
+        #         break
+        ActiveDataBaseTest.server_is_ready.go()
+
+
+    @classmethod
+    def tearDownClass(cls):
+        # TestUnittests.process.stop()
+        # TestUnittests.process.join()
+        pass
+
+
     def test_chunk_timing(self):
         if self.not_real_service():
             return
@@ -56,7 +95,7 @@ class TestUnittests(ActiveDataBaseTest):
         query = convert.unicode2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
-            response = http.get(self.service_url, data=query)
+            response = self._try_till_response(self.service_url, data=query)
             if response.status_code != 200:
                 error(response)
         result = convert.json2value(convert.utf82unicode(response.all_content))
@@ -99,7 +138,8 @@ class TestUnittests(ActiveDataBaseTest):
         result = convert.json2value(convert.utf82unicode(response.all_content))
 
         Log.note("result\n{{result|indent}}", {"result": result})
-    #TODO: ES WILL NOT ACCEPT THESE TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM
+
+    # TODO: ES WILL NOT ACCEPT THESE TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM
 
 
     #TODO: IT SEEMS TOO MANY COLUMNS RETURNED, ONLY RETURN SHALLOW COLUMNS?
@@ -160,7 +200,7 @@ class TestUnittests(ActiveDataBaseTest):
         Log.note("result\n{{result|indent}}", {"result": result})
 
     def test_big_result_works(self):
-        result = http.post_json(ACTIVE_DATA_URL, data={
+        result = http.post_json(settings.service_url, data={
             "from": "unittest",
             "where": {"and": [
                 {"gte": {"run.timestamp": Date.today() - DAY}},
@@ -171,6 +211,7 @@ class TestUnittests(ActiveDataBaseTest):
             "limit": 10000
         })
         if result.template:
+            result = Except.new_instance(result)
             Log.error("problem with call", cause=result)
         Log.note("Got {{num}} test failures", num=len(result.data))
 

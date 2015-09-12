@@ -238,9 +238,9 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 		if (pathLength == 1) {  //EG http://host/indexname/_mapping
 			//CHOOSE AN INDEX
 			prefix = URL.split("/")[3];
-			indicies = Object.keys(schema);
-			if (indicies.length == 1) {
-				schema = schema[indicies[0]]
+			indices = Object.keys(schema);
+			if (indices.length == 1) {
+				schema = schema[indices[0]]
 			} else {
 				schema = Map.map(function(k, v){
 					if (k.startsWith(prefix)) return v;

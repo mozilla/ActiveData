@@ -39,9 +39,7 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
                 "meta": {
                     "format": "list"
                 },
-                "data": [
-                    {"a": "b"}
-                ]
+                "data": ["b"]
             }
         }
 
@@ -52,10 +50,10 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
             "select": "a",
             "format": "list"
         }))
-        expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6])
+        expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
         wrap(test).expecting_list.meta.saved_as = expected_hash
 
-        self._send_queries(settings, test)
+        self._send_queries(settings, test, delete_index=False)
 
         #ENSURE THE QUERY HAS BEEN INDEXED
         container = elasticsearch.Index(index="saved_queries", settings=settings)

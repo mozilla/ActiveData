@@ -12,13 +12,15 @@ from __future__ import division
 import hashlib
 
 from pyLibrary import convert
+from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
-from pyLibrary.queries.cube import Cube
+from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.qb_usingES import FromES
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
+from pyLibrary.times.durations import SECOND
 
 
 HASH_BLOCK_SIZE = 100
@@ -43,30 +45,30 @@ class SaveQueries(object):
             "query": ""
         }})
         es.add_alias(es.settings.alias)
-        self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size)
+        self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size, period=SECOND)
         self.es = FromES(es.settings)
 
 
 
     def find(self, hash):
-        with self.es:
-            result = self.es.query({
-                "from": {"type": "elasticsearch", "settings": self.es.settings},
-                "where": {"prefix": {"hash": hash}}
-            })
+        result = self.es.query({
+            "select": "*",
+            "from": {"type": "elasticsearch", "settings": self.es.settings},
+            "where": {"prefix": {"hash": hash}}
+        })
 
-            try:
-                query = wrap(result.data).query
-                if len(query) != 1:
-                    return None
-            except Exception, e:
+        try:
+            query = wrap(result.data).query
+            if len(query) != 1:
                 return None
+        except Exception, e:
+            return None
 
-            self.es.update({
-                "update": {"type": "elasticsearch", "settings": self.es.settings},
-                "set": {"last_used": Date.now()},
-                "where": {"eq": {"hash": hash}}
-            })
+        self.es.update({
+            "update": {"type": "elasticsearch", "settings": self.es.settings},
+            "set": {"last_used": Date.now()},
+            "where": {"eq": {"hash": hash}}
+        })
 
         return query[0]
 
@@ -84,16 +86,15 @@ class SaveQueries(object):
         short_hashes = [convert.bytes2base64(h[0:6]).replace("/", "_") for h in hashes]
         available = {h: True for h in short_hashes}
 
-        with self.es:
-            existing = self.es.query({
-                "from": {"type": "elasticsearch", "settings": self.es.settings},
-                "where": {"terms": {"hash": short_hashes}}
-            })
+        existing = self.es.query({
+            "from": {"type": "elasticsearch", "settings": self.es.settings},
+            "where": {"terms": {"hash": short_hashes}}
+        })
 
         for e in Cube(select=existing.select, edges=existing.edges, data=existing.data).values():
             if e.query == json:
                 return e.hash
-            short_hashes[e.hash] = False
+            available[e.hash] = False
 
         # THIS WILL THROW AN ERROR IF THERE ARE NONE, HOW UNLUCKY!
         best = [h for h in short_hashes if available[h]][0]
@@ -107,6 +108,8 @@ class SaveQueries(object):
                 "query": json
             }
         })
+
+        Log.note("Saved query as {{hash}}", hash=best)
 
         return best
 

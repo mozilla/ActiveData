@@ -1,1 +1,151 @@
-__author__ = 'kyle'
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+
+from collections import Mapping
+from copy import copy
+from types import GeneratorType
+
+from pyLibrary.debugs.logs import Log
+from pyLibrary.dot import set_default, split_field, wrap, DictList
+from pyLibrary.dot.dicts import Dict
+
+type2container = Dict()
+config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
+_ListContainer = None
+_Cube = None
+_run = None
+_Query = None
+_Normal = None
+
+def _delayed_imports():
+    global type2container
+    global _ListContainer
+    global _Cube
+    global _run
+    global _Query
+    global _Normal
+
+    from pyLibrary.queries.qb_usingMySQL import MySQL as _MySQL
+    from pyLibrary.queries.qb_usingES import FromES as _FromES
+    from pyLibrary.queries.containers.lists import ListContainer as _ListContainer
+    from pyLibrary.queries.containers.cube import Cube as _Cube
+    from pyLibrary.queries.qb import run as _run
+    from pyLibrary.queries.query import Query as _Query
+
+    set_default(type2container, {
+        "elasticsearch": _FromES,
+        "mysql": _MySQL,
+        "memory": None
+    })
+
+    _ = _run
+    _ = _Query
+    _ = _Normal
+
+
+class Container(object):
+    __slots__ = ["data", "schema", "namespaces"]
+
+    @classmethod
+    def new_instance(type, frum, schema=None):
+        """
+        Factory!
+        """
+        if not type2container:
+            _delayed_imports()
+
+        if isinstance(frum, Container):
+            return frum
+        elif isinstance(frum, _Cube):
+            return frum
+        elif isinstance(frum, _Query):
+            return _run(frum)
+        elif isinstance(frum, (list, set, GeneratorType)):
+            return _ListContainer(frum)
+        elif isinstance(frum, basestring):
+            # USE DEFAULT STORAGE TO FIND Container
+            if not config.default.settings:
+                Log.error("expecting pyLibrary.queries.query.config.default.settings to contain default elasticsearch connection info")
+
+            settings = set_default(
+                {
+                    "index": split_field(frum)[0],
+                    "name": frum,
+                },
+                config.default.settings
+            )
+            settings.type = None  # WE DO NOT WANT TO INFLUENCE THE TYPE BECAUSE NONE IS IN THE frum STRING ANYWAY
+            return type2container["elasticsearch"](settings)
+        elif isinstance(frum, Mapping):
+            frum = wrap(frum)
+            if frum.type and type2container[frum.type]:
+                return type2container[frum.type](frum.settings)
+            elif frum["from"]:
+                frum = copy(frum)
+                frum["from"] = Container(frum["from"])
+                return _Query(frum)
+            else:
+                Log.error("Do not know how to handle {{frum|json}}", frum=frum)
+        else:
+            Log.error("Do not know how to handle {{type}}", type=frum.__class__.__name__)
+
+
+    def __init__(self, frum, schema=None):
+        object.__init__(self)
+        if not type2container:
+            _delayed_imports()
+
+        self.data = frum
+        if isinstance(schema, list):
+            Log.error("expecting map from abs_name to column object")
+        self.schema = schema
+        # self.namespaces = wrap([_Normal()])
+
+    def query(self, query):
+        if query.frum != self:
+            Log.error("not expected")
+        Log.error("Not implemented")
+
+    def filter(self, where):
+        return self.where(where)
+
+    def where(self, where):
+        _ = where
+        Log.error("not implemented")
+
+    def sort(self, sort):
+        _ = sort
+        Log.error("not implemented")
+
+    def select(self, select):
+        _ = select
+        Log.error("not implemented")
+
+    def window(self, window):
+        _ = window
+        Log.error("not implemented")
+
+    def having(self, having):
+        _ = having
+        Log.error("not implemented")
+
+    def format(self, format):
+        _ = format
+        Log.error("not implemented")
+
+    def get_columns(self, table):
+        """
+        USE THE frum TO DETERMINE THE COLUMNS
+        """
+        Log.error("Not implemented")
+

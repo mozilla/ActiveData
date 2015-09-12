@@ -11,6 +11,8 @@
 from __future__ import unicode_literals
 from __future__ import division
 from active_data.app import OVERVIEW
+import base_test_class
+from pyLibrary.dot import wrap, set_default
 from pyLibrary.parsers import URL
 
 from tests.base_test_class import ActiveDataBaseTest
@@ -32,8 +34,3 @@ class TestBasicRequests(ActiveDataBaseTest):
         response = self._try_till_response(url, data=b"")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.all_content, OVERVIEW)
-
-
-
-
-

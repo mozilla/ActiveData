@@ -36,7 +36,7 @@ json_decoder = json.JSONDecoder().decode
 # THE DEFAULT JSON ENCODERS CAN NOT HANDLE A DIVERSITY OF TYPES *AND* BE FAST
 #
 # 1) WHEN USING cPython, WE HAVE NO COMPILER OPTIMIZATIONS: THE BEST STRATEGY IS TO
-#    CONVERT THE MEMORY STRUCTURE TO STANDARD TYPES AND SEND TO THE INSANELY FAST
+# CONVERT THE MEMORY STRUCTURE TO STANDARD TYPES AND SEND TO THE INSANELY FAST
 #    DEFAULT JSON ENCODER
 # 2) WHEN USING PYPY, WE USE CLEAR-AND-SIMPLE PROGRAMMING SO THE OPTIMIZER CAN DO
 #    ITS JOB.  ALONG WITH THE UnicodeBuilder WE GET NEAR C SPEEDS
@@ -67,11 +67,14 @@ except Exception, e:
 
 append = UnicodeBuilder.append
 
+_dealing_with_problem = False
+
 
 def pypy_json_encode(value, pretty=False):
     """
     pypy DOES NOT OPTIMIZE GENERATOR CODE WELL
     """
+    global _dealing_with_problem
     if pretty:
         return pretty_json(value)
 
@@ -83,13 +86,22 @@ def pypy_json_encode(value, pretty=False):
     except Exception, e:
         # THE PRETTY JSON WILL PROVIDE MORE DETAIL ABOUT THE SERIALIZATION CONCERNS
         from pyLibrary.debugs.logs import Log
-        Log.warning("Serialization of JSON problems", e)
+
+        if _dealing_with_problem:
+            Log.error("Serialization of JSON problems", e)
+        else:
+            Log.warning("Serialization of JSON problems", e)
+        _dealing_with_problem = True
         try:
             return pretty_json(value)
         except Exception, f:
             Log.error("problem serializing object", f)
+        finally:
+            _dealing_with_problem = False
+
 
 almost_pattern = r"(?:\.(\d*)999)|(?:\.(\d*)000)"
+
 
 def float_repr(value):
     output = repr(value)
@@ -107,12 +119,13 @@ def float_repr(value):
     else:
         return output
 
+
 json_encoder_module.FLOAT_REPR = float_repr
+
 
 class cPythonJSONEncoder(object):
     def __init__(self):
         object.__init__(self)
-
 
         self.encoder = json.JSONEncoder(
             skipkeys=False,
@@ -135,6 +148,7 @@ class cPythonJSONEncoder(object):
             return unicode(self.encoder.encode(scrubbed))
         except Exception, e:
             from pyLibrary.debugs.logs import Log, Except
+
             e = Except.wrap(e)
             Log.warning("problem serializing {{type}}", type=_repr(value), cause=e)
             raise e
@@ -242,7 +256,6 @@ def _dict2json(value, _buffer):
     append(_buffer, u"}")
 
 
-
 ARRAY_ROW_LENGTH = 80
 ARRAY_ITEM_MAX_LENGTH = 30
 ARRAY_MAX_COLUMNS = 10
@@ -262,7 +275,7 @@ def pretty_json(value):
                 from pyLibrary.debugs.logs import Log
 
                 try:
-                    Log.note("try explicit convert of string with length {{length}}",  length= len(value))
+                    Log.note("try explicit convert of string with length {{length}}", length=len(value))
                     acc = [u"\""]
                     for c in value:
                         try:
@@ -277,7 +290,7 @@ def pretty_json(value):
                             # Log.warning("odd character {{ord}} found in string.  Ignored.",  ord= ord(c)}, cause=g)
                     acc.append(u"\"")
                     output = u"".join(acc)
-                    Log.note("return value of length {{length}}",  length= len(output))
+                    Log.note("return value of length {{length}}", length=len(output))
                     return output
                 except BaseException, f:
                     Log.warning("can not even explicit convert", f)
@@ -291,8 +304,8 @@ def pretty_json(value):
                     return "{" + quote(unicode(items[0][0])) + ": " + pretty_json(items[0][1]).strip() + "}"
 
                 items = sorted(items, lambda a, b: value_compare(a[0], b[0]))
-                values = [quote(unicode(k))+": " + indent(pretty_json(v)).strip() for k, v in items if v != None]
-                return "{\n" + INDENT + (",\n"+INDENT).join(values) + "\n}"
+                values = [quote(unicode(k)) + ": " + indent(pretty_json(v)).strip() for k, v in items if v != None]
+                return "{\n" + INDENT + (",\n" + INDENT).join(values) + "\n}"
             except Exception, e:
                 from pyLibrary.debugs.logs import Log
                 from pyLibrary.collections import OR
@@ -309,7 +322,7 @@ def pretty_json(value):
             if not value:
                 return "[]"
 
-            if ARRAY_MAX_COLUMNS==1:
+            if ARRAY_MAX_COLUMNS == 1:
                 return "[\n" + ",\n".join([indent(pretty_json(v)) for v in value]) + "\n]"
 
             if len(value) == 1:
@@ -323,14 +336,14 @@ def pretty_json(value):
             max_len = max(*[len(j) for j in js])
             if max_len <= ARRAY_ITEM_MAX_LENGTH and max(*[j.find("\n") for j in js]) == -1:
                 # ALL TINY VALUES
-                num_columns = max(1, min(ARRAY_MAX_COLUMNS, int(floor((ARRAY_ROW_LENGTH + 2.0)/float(max_len+2)))))  # +2 TO COMPENSATE FOR COMMAS
-                if len(js)<=num_columns:  # DO NOT ADD \n IF ONLY ONE ROW
+                num_columns = max(1, min(ARRAY_MAX_COLUMNS, int(floor((ARRAY_ROW_LENGTH + 2.0) / float(max_len + 2)))))  # +2 TO COMPENSATE FOR COMMAS
+                if len(js) <= num_columns:  # DO NOT ADD \n IF ONLY ONE ROW
                     return "[" + ", ".join(js) + "]"
                 if num_columns == 1:  # DO NOT rjust IF THERE IS ONLY ONE COLUMN
                     return "[\n" + ",\n".join([indent(pretty_json(v)) for v in value]) + "\n]"
 
                 content = ",\n".join(
-                    ", ".join(j.rjust(max_len) for j in js[r:r+num_columns])
+                    ", ".join(j.rjust(max_len) for j in js[r:r + num_columns])
                     for r in xrange(0, len(js), num_columns)
                 )
                 return "[\n" + indent(content) + "\n]"
@@ -363,13 +376,13 @@ def pretty_json(value):
             return "null"
         else:
             try:
-                if int(value)==value:
+                if int(value) == value:
                     return str(int(value))
             except Exception, e:
                 pass
 
             try:
-                if float(value)==value:
+                if float(value) == value:
                     return str(float(value))
             except Exception, e:
                 pass
@@ -450,11 +463,9 @@ def datetime2milli(d, type):
 _repr_ = Repr()
 _repr_.maxlevel = 2
 
+
 def _repr(obj):
     return _repr_.repr(obj)
-
-
-
 
 
 # OH HUM, cPython with uJSON, OR pypy WITH BUILTIN JSON?

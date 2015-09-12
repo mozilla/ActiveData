@@ -12,10 +12,12 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 import smtplib
 import sys
+
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap
 from pyLibrary.dot import coalesce

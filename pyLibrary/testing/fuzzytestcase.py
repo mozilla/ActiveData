@@ -8,13 +8,12 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from collections import Mapping
-
 import unittest
+
 from pyLibrary import dot
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, Dict, literal_field
+from pyLibrary.dot import coalesce, literal_field
 from pyLibrary.maths import Math
-from pyLibrary.dot import wrap
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.strings import expand_template
 
@@ -68,7 +67,7 @@ def zipall(*args):
     while True:
         output = zip(*(_next(a) for a in iters))
         if all(output[0]):
-            return
+            raise StopIteration
         else:
             yield output[1]
 

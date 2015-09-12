@@ -10,7 +10,6 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-from copy import deepcopy
 from datetime import datetime
 
 from pyLibrary import convert
@@ -21,11 +20,9 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries import domains
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import split_field, join_field, coalesce
+from pyLibrary.dot import split_field, join_field, coalesce, Null
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap
-from pyLibrary.queries import qb
-from pyLibrary.queries.es09 import expressions
 from pyLibrary.queries.es09.expressions import value2MVEL, isKeyword
 from pyLibrary.queries.expressions import simplify_esfilter
 from pyLibrary.times import durations
@@ -34,21 +31,19 @@ from pyLibrary.times import durations
 TrueFilter = {"match_all": {}}
 DEBUG = False
 
-INDEX_CACHE = {}  # MATCH NAMES TO ES URL AND COLUMNS eg {name:{"url":url, "columns":columns"}}
 
-
-def post(es, FromES, limit):
-    if not FromES.facets and FromES.size == 0 and not FromES.aggs:
+def post(es, es_query, limit):
+    if not es_query.facets and es_query.size == 0 and not es_query.aggs:
         Log.error("FromES is sending no facets")
         # DO NOT KNOW WHY THIS WAS HERE
     # if isinstance(query.select, list) or len(query.edges) and not FromES.facets.keys and FromES.size == 0:
     #     Log.error("FromES is sending no facets")
 
-    postResult = None
+    post_result = None
     try:
-        postResult = es.search(FromES)
+        post_result = es.search(es_query)
 
-        for facetName, f in postResult.facets.items():
+        for facetName, f in post_result.facets.items():
             if f._type == "statistical":
                 continue
             if not f.terms:
@@ -59,7 +54,7 @@ def post(es, FromES, limit):
     except Exception, e:
         Log.error("Error with FromES", e)
 
-    return postResult
+    return post_result
 
 
 def build_es_query(query):
@@ -86,90 +81,7 @@ def build_es_query(query):
     return output
 
 
-def parse_columns(parent_path, esProperties):
-    """
-    RETURN THE COLUMN DEFINITIONS IN THE GIVEN esProperties OBJECT
-    """
-    columns = DictList()
-    for name, property in esProperties.items():
-        if parent_path:
-            path = join_field(split_field(parent_path) + [name])
-        else:
-            path = name
 
-        if property.type == "nested" and property.properties:
-            # NESTED TYPE IS A NEW TYPE DEFINITION
-            # MARKUP CHILD COLUMNS WITH THE EXTRA DEPTH
-            child_columns = deepcopy(parse_columns(path, property.properties))
-            self_columns = deepcopy(child_columns)
-            for c in self_columns:
-                c.depth += 1
-            columns.extend(self_columns)
-            columns.append({
-                "name": join_field(split_field(path)[1::]),
-                "type": "nested",
-                "useSource": False
-            })
-
-            if path not in INDEX_CACHE:
-                pp = split_field(parent_path)
-                for i in qb.reverse(range(len(pp))):
-                    c = INDEX_CACHE.get(join_field(pp[:i + 1]), None)
-                    if c:
-                        INDEX_CACHE[path] = c.copy()
-                        break
-                else:
-                    Log.error("Can not find parent")
-
-                INDEX_CACHE[path].name = path
-            INDEX_CACHE[path].columns = child_columns
-            continue
-
-        if property.properties:
-            child_columns = parse_columns(path, property.properties)
-            columns.extend(child_columns)
-            columns.append({
-                "name": join_field(split_field(path)[1::]),
-                "type": "object",
-                "useSource": False
-            })
-
-        if property.dynamic:
-            continue
-        if not property.type:
-            continue
-        if property.type == "multi_field":
-            property.type = property.fields[name].type  # PULL DEFAULT TYPE
-            for i, (n, p) in enumerate(property.fields.items()):
-                if n == name:
-                    # DEFAULT
-                    columns.append({"name": join_field(split_field(path)[1::]), "type": p.type, "useSource": p.index == "no"})
-                else:
-                    columns.append({"name": join_field(split_field(path)[1::]) + "." + n, "type": p.type, "useSource": p.index == "no"})
-            continue
-
-        if property.type in ["string", "boolean", "integer", "date", "long", "double"]:
-            columns.append({
-                "name": join_field(split_field(path)[1::]),
-                "type": property.type,
-                "useSource": property.index == "no"
-            })
-            if property.index_name and name != property.index_name:
-                columns.append({
-                    "name": property.index_name,
-                    "type": property.type,
-                    "useSource": property.index == "no"
-                })
-        elif property.enabled == None or property.enabled == False:
-            columns.append({
-                "name": join_field(split_field(path)[1::]),
-                "type": "object",
-                "useSource": True
-            })
-        else:
-            Log.warning("unknown type {{type}} for property {{path}}",  type= property.type,  path= path)
-
-    return columns
 
 
 def compileTime2Term(edge):
@@ -200,7 +112,7 @@ def compileTime2Term(edge):
             if Math.round(value) == 0:
                 return edge.domain.NULL
 
-            d = datetime(str(value)[:4:], str(value).right(2), 1)
+            d = datetime(str(value)[:4:], str(value)[-2:], 1)
             d = d.addMilli(offset)
             return edge.domain.getPartByKey(d)
     else:

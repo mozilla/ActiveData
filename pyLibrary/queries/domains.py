@@ -14,15 +14,17 @@ from collections import Mapping
 from numbers import Number
 import re
 import itertools
+
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.dot import coalesce, Dict, set_default, Null, listwrap
 from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import wrap, unwrap
+from pyLibrary.dot import wrap
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
+
 
 ALGEBRAIC = {"time", "duration", "numeric", "count", "datetime"}  # DOMAINS THAT HAVE ALGEBRAIC OPERATIONS DEFINED
 KNOWN = {"set", "boolean", "duration", "time", "numeric"}  # DOMAINS THAT HAVE A KNOWN NUMBER FOR PARTS AT QUERY TIME
@@ -132,6 +134,7 @@ class DefaultDomain(Domain):
         self.partitions = DictList()
         self.map = dict()
         self.map[None] = self.NULL
+        self.limit = desc.get('limit')
 
     def compare(self, a, b):
         return value_compare(a.value, b.value)
@@ -162,6 +165,7 @@ class DefaultDomain(Domain):
     def as_dict(self):
         output = Domain.as_dict(self)
         output.partitions = self.partitions
+        output.limit = self.limit
         return output
 
 
@@ -284,6 +288,8 @@ class SimpleSetDomain(Domain):
         return self.partitions[index]
 
     def getKeyByIndex(self, index):
+        if index < 0 or index >= len(self.partitions):
+            return None
         return self.partitions[index][self.key]
 
     def getKey(self, part):
@@ -533,6 +539,70 @@ class DurationDomain(Domain):
         return output
 
 
+
+class NumericDomain(Domain):
+    __slots__ = ["max", "min"]
+
+    def __new__(cls, **desc):
+        if not desc.get('partitions') and not desc.get('interval'):
+            return object.__new__(cls)
+        else:
+            return object.__new__(RangeDomain)
+
+    def __init__(self, **desc):
+        Domain.__init__(self, **desc)
+        self.min = desc.get('min')
+        self.max = desc.get('max')
+
+    def compare(self, a, b):
+        return value_compare(a, b)
+
+    def getCanonicalPart(self, part):
+        return part
+
+    def getIndexByKey(self, key):
+        return key
+
+    def getPartByKey(self, key):
+        if self.min!=None and key < self.min:
+            return self.NULL
+        if self.max!=None and key >= self.max:
+            return self.NULL
+        return key
+
+    def getKey(self, part):
+        return part
+
+    def getKeyByIndex(self, index):
+        return index
+
+    def as_dict(self):
+        output = Domain.as_dict(self)
+
+        output.min = self.min
+        output.max = self.max
+        return output
+
+
+class UniqueDomain(Domain):
+    __slots__ = ()
+
+    def compare(self, a, b):
+        return value_compare(a, b)
+
+    def getCanonicalPart(self, part):
+        return part
+
+    def getPartByKey(self, key):
+        return key
+
+    def getKey(self, part):
+        return part
+
+    def getEnd(self, value):
+        return value
+
+
 class RangeDomain(Domain):
     __slots__ = ["max", "min", "interval", "partitions", "NULL"]
 
@@ -640,9 +710,10 @@ name_to_type = {
     "value": ValueDomain,
     "default": DefaultDomain,
     "set": SimpleSetDomain,
-    "uid": DefaultDomain,
     "time": TimeDomain,
     "duration": DurationDomain,
-    "range": RangeDomain
+    "range": NumericDomain,
+    "uid": UniqueDomain,
+    "numeric": NumericDomain
 }
 

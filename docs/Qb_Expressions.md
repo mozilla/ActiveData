@@ -180,6 +180,10 @@ Multiply multiple values.  Also known as `multiply` and `mul`
 
 		{"mult": [expr1, expr2, ... exprN]}
 
+expressions evaluating to `null` are ignored.  The empty list evaluates to `null`.
+
+		{"mult": []} ⇒ null
+
 
 ###`div` Operator###
 
@@ -194,10 +198,13 @@ Raise the base to given exponent.  Also known as `pow` and `power`
 
 		{"exp": [base, exponent]} ⇒ base ** exponent
 
+to resolve ambiguity, we define 0<sup>0</sup> as `null`
+
+		{"exp": [0, 0]} ⇒ null
 
 ###`mod` Operator###
 
-Calculate the modulo, always results in a positive integer.
+Calculate the modulo, always results in a non-negative integer
 	
 		{"mod": [dividend, divisor]}  ⇒ dividend % divisor
 
@@ -249,7 +256,7 @@ Test is a property is not `null`
 
 ###`match_all` Operator###
 
-Dummy operator that always returns `true`.  It is an artifact of Elasticsearch filter expressions.
+Dummy operator that always returns `true`.  It is an artifact of ElasticSearch filter expressions.
 
 		{"match_all": {}}
 
@@ -266,6 +273,22 @@ Test if a property has the given prefix.  Only the *simple* form exists.
 Return `true` if a property matches a given regular expression.  The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term.  Also be sure you escape special characters:  This is a JSON string of a regular expression, not a regular expression itself.  Only the *simple* form exists.
 
 		{"regexp": {variable: regular_expression}}
+
+
+String Operators
+----------------
+
+###`length` Operator###
+
+Return the length of a string.
+
+		{"length": variable}
+
+###`number` Operator###
+
+Convert a string to a numeric value.
+
+		{"number": variable}
 
 
 

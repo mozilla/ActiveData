@@ -13,6 +13,7 @@ from __future__ import division
 from __future__ import absolute_import
 import __builtin__
 from collections import Mapping
+from numbers import Number
 from types import GeneratorType
 
 from pyLibrary import dot, convert
@@ -24,13 +25,13 @@ from pyLibrary.dot import listwrap, wrap, unwrap
 from pyLibrary.dot.objects import DictClass, DictObject
 from pyLibrary.maths import Math
 from pyLibrary.queries import flat_list, query, group_by
-from pyLibrary.queries.container import Container
+from pyLibrary.queries.containers import Container
 from pyLibrary.queries.cubes.aggs import cube_aggs
-from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, compile_expression, qb_expression_to_function
+from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, compile_expression, qb_expression_to_function, qb_expression_to_python
 from pyLibrary.queries.flat_list import FlatList
 from pyLibrary.queries.index import Index
 from pyLibrary.queries.query import Query, _normalize_selects, sort_direction, _normalize_select
-from pyLibrary.queries.cube import Cube
+from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.unique_index import UniqueIndex
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
@@ -38,17 +39,18 @@ from pyLibrary.queries.unique_index import UniqueIndex
 # START HERE: https://github.com/klahnakoski/qb/blob/master/docs/Qb_Reference.md
 # TODO: USE http://docs.sqlalchemy.org/en/latest/core/tutorial.html AS DOCUMENTATION FRAMEWORK
 
+_Column = None
+_merge_type = None
 
-def run(query):
+def run(query, frum=None):
     """
     THIS FUNCTION IS SIMPLY SWITCHING BASED ON THE query["from"] CONTAINER,
     BUT IT IS ALSO PROCESSING A list CONTAINER; SEPARATE TO A ListContainer
     """
     query = Query(query)
-    frum = query["from"]
+    frum = coalesce(frum, query["from"])
     if isinstance(frum, Container):
-        with frum:
-            return frum.query(query)
+        return frum.query(query)
     elif isinstance(frum, (list, set, GeneratorType)):
         frum = wrap(list(frum))
     elif isinstance(frum, Cube):
@@ -63,11 +65,11 @@ def run(query):
     if is_aggs(query):
         frum = list_aggs(frum, query)
     else:  # SETOP
-        try:
-            if query.filter != None or query.esfilter != None:
-                Log.error("use 'where' clause")
-        except AttributeError, e:
-            pass
+        # try:
+        #     if query.filter != None or query.esfilter != None:
+        #         Log.error("use 'where' clause")
+        # except AttributeError:
+        #     pass
 
         if query.where is not TRUE_FILTER:
             frum = filter(frum, query.where)
@@ -86,7 +88,9 @@ def run(query):
             window(frum, param)
 
     # AT THIS POINT frum IS IN LIST FORMAT, NOW PACKAGE RESULT
-    if query.format == "table":
+    if query.format == "cube":
+        frum = convert.list2cube(frum)
+    elif query.format == "table":
         frum = convert.list2table(frum)
         frum.meta.format = "table"
     else:
@@ -268,7 +272,7 @@ def select_one(record, selection):
         output = Dict()
         for f in selection:
             f = _normalize_select(f)
-            output[f.name]=record[f.value]
+            output[f.name] = record[f.value]
         return output
     else:
         Log.error("Do not know how to handle")
@@ -446,6 +450,69 @@ def _select_deep_meta(field, depth):
 def get_columns(data):
     return wrap([{"name": n} for n in UNION(set(d.keys()) for d in data)])
 
+_ = """
+DEEP ITERATOR FOR NESTED DOCUMENTS
+THE columns DO NOT GET MARKED WITH NESTED (AS THEY SHOULD)
+
+type_to_name = {
+    int: "long",
+    str: "string",
+    unicode: "string",
+    float: "double",
+    Number: "double",
+    Dict: "object",
+    dict: "object",
+    list: "nested",
+    DictList: "nested"
+}
+
+def _deep_iterator(data, schema):
+    if schema:
+        Log.error("schema would be wonderful, but not implemented")
+
+    columns = {}
+    output = {}
+
+    for d in _deeper_iterator(columns, output, [""], ".", data):
+        yield d
+
+def _deeper_iterator(columns, nested_path, path, data):
+    for d in data:
+        output = {}
+        deep_leaf = None
+        deep_v = None
+
+        for k, v in d.items():
+            leaf = join_field(split_field(path) + [k])
+            c = columns.get(leaf)
+            if not c:
+                c = columns[leaf] = _Column(name=leaf, type=type_to_name[v.__class__], table=None, abs_name=leaf)
+            c.type = _merge_type[c.type][type_to_name[v.__class__]]
+            if c.type == "nested" and not nested_path[0].startswith(leaf + "."):
+                if leaf.startswith(nested_path[0] + ".") or leaf == nested_path[0] or not nested_path[0]:
+                    nested_path[0] = leaf
+                else:
+                    Log.error("nested path conflict: {{leaf}} vs {{nested}}", leaf=leaf, nested=nested_path[0])
+
+            if isinstance(v, list) and v:
+                if deep_leaf:
+                    Log.error("nested path conflict: {{leaf}} vs {{nested}}", leaf=leaf, nested=deep_leaf)
+                deep_leaf = leaf
+                deep_v = v
+            elif isinstance(v, Mapping):
+                for o in _deeper_iterator(columns, nested_path, leaf, [v]):
+                    set_default(output, o)
+            else:
+                if c.type not in ["object", "nested"]:
+                    output[leaf] = v
+
+        if deep_leaf:
+            for o in _deeper_iterator(columns, nested_path, deep_leaf, deep_v):
+                set_default(o, output)
+                yield o
+        else:
+            yield output
+"""
 
 def sort(data, fieldnames=None):
     """
@@ -462,23 +529,25 @@ def sort(data, fieldnames=None):
         if len(fieldnames) == 1:
             fieldnames = fieldnames[0]
             # SPECIAL CASE, ONLY ONE FIELD TO SORT BY
+            if fieldnames == ".":
+                return wrap(sorted(data))
             if isinstance(fieldnames, (basestring, int)):
-                fieldnames = wrap({"field": fieldnames, "sort": 1})
+                fieldnames = wrap({"value": fieldnames, "sort": 1})
 
             # EXPECTING {"field":f, "sort":i} FORMAT
             fieldnames.sort = sort_direction.get(fieldnames.sort, 1)
-            fieldnames.field = coalesce(fieldnames.field, fieldnames.value)
-            if fieldnames.field==None:
-                Log.error("Expecting sort to have 'field' attribute")
+            fieldnames.value = coalesce(fieldnames.value, fieldnames.field)
+            if fieldnames.value==None:
+                Log.error("Expecting sort to have 'value' attribute")
 
-            if fieldnames.field == ".":
+            if fieldnames.value == ".":
                 #VALUE COMPARE
                 def _compare_v(l, r):
                     return value_compare(l, r, fieldnames.sort)
                 return DictList([unwrap(d) for d in sorted(data, cmp=_compare_v)])
             else:
                 def _compare_o(left, right):
-                    return value_compare(coalesce(left)[fieldnames.field], coalesce(right)[fieldnames.field], fieldnames.sort)
+                    return value_compare(coalesce(left)[fieldnames.value], coalesce(right)[fieldnames.value], fieldnames.sort)
                 return DictList([unwrap(d) for d in sorted(data, cmp=_compare_o)])
 
         formal = query._normalize_sort(fieldnames)
@@ -488,7 +557,7 @@ def sort(data, fieldnames=None):
             right = coalesce(right)
             for f in formal:
                 try:
-                    result = value_compare(left[f.field], right[f.field], f.sort)
+                    result = value_compare(left[f.value], right[f.value], f.sort)
                     if result != 0:
                         return result
                 except Exception, e:
@@ -505,7 +574,7 @@ def sort(data, fieldnames=None):
 
         return output
     except Exception, e:
-        Log.error("Problem sorting\n{{data}}",  data= data, cause=e)
+        Log.error("Problem sorting\n{{data}}",  data=data, cause=e)
 
 
 def value_compare(l, r, ordering=1):
@@ -547,9 +616,13 @@ def filter(data, where):
     if isinstance(data, Cube):
         data.filter(where)
 
+    temp = None
+    exec("def temp(row):\n    return "+qb_expression_to_python(where))
+    return data.filter(temp)
+
     try:
         return drill_filter(where, data)
-    except Exception, e:
+    except Exception, _:
         # WOW!  THIS IS INEFFICIENT!
         return wrap([unwrap(d) for d in drill_filter(where, [DictObject(d) for d in data])])
 
@@ -572,7 +645,10 @@ def drill_filter(esfilter, data):
         col = split_field(fieldname)
         d = data
         for i, c in enumerate(col):
-            d = d[c]
+            try:
+                d = d[c]
+            except Exception, e:
+                Log.error("{{name}} does not exist", name=fieldname)
             if isinstance(d, list) and len(col) > 1:
                 if len(primary_column) <= depth+i:
                     primary_nested.append(True)
@@ -637,10 +713,11 @@ def drill_filter(esfilter, data):
                 return True
             else:
                 return {"not": f}
-        elif filter.term:
+        elif filter.term or filter.eq:
+            eq = coalesce(filter.term, filter.eq)
             result = True
             output = {}
-            for col, val in filter["term"].items():
+            for col, val in eq.items():
                 first, rest = parse_field(col, data, depth)
                 d = data[first]
                 if not rest:
@@ -952,4 +1029,4 @@ def reverse(vals):
 
     return wrap(output)
 
-from pyLibrary.queries.list.aggs import is_aggs, list_aggs
+from pyLibrary.queries.lists.aggs import is_aggs, list_aggs

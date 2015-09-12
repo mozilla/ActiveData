@@ -67,7 +67,7 @@ class Lock(object):
 
     def wait(self, timeout=None, till=None):
         if till:
-            timeout = (datetime.utcnow() - till).total_seconds()
+            timeout = (till - Date.now()).seconds
             if timeout < 0:
                 return
         self.monitor.wait(timeout=float(timeout) if timeout else None)
@@ -94,7 +94,6 @@ class Queue(object):
         self.lock = Lock("lock for queue " + name)
         self.queue = deque()
         self.next_warning = datetime.utcnow()  # FOR DEBUGGING
-        self.gc_count = 0
 
     def __iter__(self):
         while self.keep_running:
@@ -114,6 +113,18 @@ class Queue(object):
             if self.keep_running:
                 self.queue.append(value)
         return self
+
+    def push(self, value):
+        """
+        SNEAK value TO FRONT OF THE QUEUE
+        """
+        with self.lock:
+            self._wait_for_queue_space()
+            if self.keep_running:
+                self.queue.appendleft(value)
+        return self
+
+
 
     def extend(self, values):
         with self.lock:
@@ -156,20 +167,21 @@ class Queue(object):
         with self.lock:
             return any(r != Thread.STOP for r in self.queue)
 
-    def pop(self, till=None):
+    def pop(self, till=None, timeout=None):
         """
         WAIT FOR NEXT ITEM ON THE QUEUE
         RETURN Thread.STOP IF QUEUE IS CLOSED
         IF till IS PROVIDED, THEN pop() CAN TIMEOUT AND RETURN None
         """
+
+        if timeout:
+            till = Date.now() + timeout
+
         with self.lock:
-            if till == None:
+            if not till:
                 while self.keep_running:
                     if self.queue:
                         value = self.queue.popleft()
-                        self.gc_count += 1
-                        if self.gc_count % 1000 == 0:
-                            gc.collect()
                         if value is Thread.STOP:  # SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
                             self.keep_running = False
                         return value
@@ -216,6 +228,21 @@ class Queue(object):
             output = list(self.queue)
             self.queue.clear()
             return output
+
+    def pop_one(self):
+        """
+        NON-BLOCKING POP IN QUEUE, IF ANY
+        """
+        with self.lock:
+            if not self.keep_running:
+                return [Thread.STOP]
+            elif not self.queue:
+                return None
+            else:
+                v =self.queue.pop()
+                if v is Thread.STOP:  # SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
+                    self.keep_running = False
+                return v
 
     def close(self):
         with self.lock:
@@ -478,7 +505,7 @@ class Thread(object):
         return output
 
     @staticmethod
-    def sleep(seconds=None, till=None, please_stop=None):
+    def sleep(seconds=None, till=None, timeout=None, please_stop=None):
 
         if please_stop is not None or isinstance(till, Signal):
             if isinstance(till, Signal):
@@ -487,6 +514,8 @@ class Thread(object):
 
             if seconds is not None:
                 till = datetime.utcnow() + timedelta(seconds=seconds)
+            elif timeout is not None:
+                till = datetime.utcnow() + timedelta(seconds=timeout.seconds)
             elif till is None:
                 till = MAX_DATETIME
 
@@ -788,3 +817,34 @@ def _wait_for_interrupt(please_stop):
             Thread.sleep(please_stop=please_stop)
         except Exception, _:
             pass
+
+
+
+class Till(Signal):
+    """
+    MANAGE THE TIMEOUT LOGIC
+    """
+    def __init__(self, till=None, timeout=None, seconds=None):
+        Signal.__init__(self)
+
+        timers = []
+
+        def go():
+            self.go()
+            for t in timers:
+                t.cancel()
+
+        if isinstance(till, Date):
+            t = threading.Timer((till - Date.now()).seconds, go)
+            t.start()
+            timers.append(t)
+        if timeout:
+            t = threading.Timer(timeout.seconds, go)
+            t.start()
+            timers.append(t)
+        if seconds:
+            t = threading.Timer(seconds, go)
+            t.start()
+            timers.append(t)
+        if isinstance(till, Signal):
+            till.on_go(go)

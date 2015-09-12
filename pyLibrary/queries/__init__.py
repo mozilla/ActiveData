@@ -13,21 +13,28 @@ from collections import Mapping
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, set_default, split_field
 from pyLibrary.dot.dicts import Dict
-
+from pyLibrary.queries import containers
 
 type2container = Dict()
 config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
-
+_ListContainer = None
 
 def _delayed_imports():
     global type2container
+    global _ListContainer
+
+    from pyLibrary.queries.containers.lists import ListContainer as _ListContainer
+    _ = _ListContainer
 
     from pyLibrary.queries.qb_usingMySQL import MySQL
     from pyLibrary.queries.qb_usingES import FromES
+    from pyLibrary.queries.meta import FromESMetadata
+
     set_default(type2container, {
         "elasticsearch": FromES,
         "mysql": MySQL,
-        "memory": None
+        "memory": None,
+        "meta": FromESMetadata
     })
 
 
@@ -43,18 +50,33 @@ def wrap_from(frum, schema=None):
     frum = wrap(frum)
 
     if isinstance(frum, basestring):
-        if not config.default.settings:
+        if not containers.config.default.settings:
             Log.error("expecting pyLibrary.queries.query.config.default.settings to contain default elasticsearch connection info")
+
+        type_ = None
+        index = frum
+        if frum.startswith("meta."):
+            from pyLibrary.queries.meta import FromESMetadata
+
+            if frum == "meta.columns":
+                return meta.singlton.columns
+            elif frum == "meta.table":
+                return meta.singlton.tables
+            else:
+                Log.error("{{name}} not a recognized table", name=frum)
+        else:
+            type_ = containers.config.default.type
+            index = split_field(frum)[0]
 
         settings = set_default(
             {
-                "index": split_field(frum)[0],
-                "name": frum,
+                "index": index,
+                "name": frum
             },
-            config.default.settings
+            containers.config.default.settings
         )
-        settings.type = None  # WE DO NOT WANT TO INFLUENCE THE TYPE BECAUSE NONE IS IN THE frum STRING ANYWAY
-        return type2container["elasticsearch"](settings)
+        settings.type = None
+        return type2container[type_](settings)
     elif isinstance(frum, Mapping) and frum.type and type2container[frum.type]:
         # TODO: Ensure the frum.name is set, so we capture the deep queries
         if not frum.type:
@@ -63,6 +85,8 @@ def wrap_from(frum, schema=None):
     elif isinstance(frum, Mapping) and (frum["from"] or isinstance(frum["from"], (list, set))):
         from pyLibrary.queries.query import Query
         return Query(frum, schema=schema)
+    elif isinstance(frum, list):
+        return _ListContainer(frum)
     else:
         return frum
 

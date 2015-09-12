@@ -36,7 +36,7 @@ Qb.cube.newInstance = function(edges, depth, select){
 	return data;
 };//method
 
-//MAKE THE MAP ARRAY FROM NEW TO OLD COLUMN INDICIES
+//MAKE THE MAP ARRAY FROM NEW TO OLD COLUMN indices
 //newColumns[i]==oldColumns[smap[i]]
 function remap(oldColumns, newColumns){
 	var smap = [];
@@ -128,7 +128,7 @@ Qb.cube.union=function(cubeA, cubeB){
 		if (cubeA.edges[i].name!=cubeB.edges[i].name) Log.error("Expecting both cubes to have edges in the same order");
 	}//for
 
-		
+
 
 
 

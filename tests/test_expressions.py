@@ -84,4 +84,3 @@ class TestExpressions(FuzzyTestCase):
         where = {"neq": {"a": 1}}
         result = simplify_esfilter(qb_expression_to_esfilter(where))
         self.assertEqual(result, {"not": {"term": {"a": 1}}})
-

@@ -18,17 +18,18 @@ import signal
 import itertools
 
 from active_data.app import replace_vars
-from pyLibrary import convert, jsons, queries
+from pyLibrary import convert, jsons
 from pyLibrary.debugs.logs import Log, Except, constants
-from pyLibrary.dot import wrap, listwrap, coalesce, unwrap
+from pyLibrary.dot import wrap, coalesce, unwrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
-from pyLibrary.queries import qb
-from pyLibrary.queries.query import _normalize_edges, _normalize_selects
+from pyLibrary.queries import qb, containers
+from pyLibrary.queries.qb_usingES import FromES
+from pyLibrary.queries.query import Query
 from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
-from pyLibrary.thread.threads import Signal, Thread
+from pyLibrary.thread.threads import Signal
 
 
 settings = jsons.ref.get("file://tests/config/test_simple_settings.json")
@@ -77,7 +78,13 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls, assume_server_started=True):
+        if not containers.config.default:
+            containers.config.default = {
+                "type": "elasticsearch",
+                "settings": settings.backend_es
+            }
+
         ActiveDataBaseTest.server_is_ready = Signal()
         ActiveDataBaseTest.please_stop = Signal()
         # if settings.startServer:
@@ -90,7 +97,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
         #     ).start()
         # else:
         #     ActiveDataBaseTest.server_is_ready.go()
-        ActiveDataBaseTest.server_is_ready.go()
+        if assume_server_started:
+            ActiveDataBaseTest.server_is_ready.go()
 
         if not settings.fastTesting:
             ActiveDataBaseTest.server = http
@@ -100,7 +108,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             # THIS MAKES FOR SLIGHTLY FASTER TEST TIMES BECAUSE THE PROXY IS
             # MISSING
             ActiveDataBaseTest.server = FakeHttp()
-            queries.config.default = {
+            containers.config.default = {
                 "type": "elasticsearch",
                 "settings": settings.backend_es.copy()
             }
@@ -124,31 +132,38 @@ class ActiveDataBaseTest(FuzzyTestCase):
         :param backend_es:   the ElasticSearch settings for filling the backend
         """
         FuzzyTestCase.__init__(self, *args, **kwargs)
-        self.service_url = settings.service_url
-        self.backend_es = settings.backend_es.copy()
-        if self.backend_es.schema==None:
+        if settings.backend_es.schema==None:
             Log.error("Expecting backed_es to have a schema defined")
-        self.es = None
+        self.service_url = None
+        self.es_test_settings = None
+        self.es_cluster = None
         self.index = None
+
 
     def setUp(self):
         # ADD TEST RECORDS
-        self.backend_es.index = "testing_" + Random.hex(10).lower()
+        self.service_url = settings.service_url
+        self.es_test_settings = settings.backend_es.copy()
+        self.es_test_settings.index = "testing_" + Random.hex(10).lower()
+        self.es_test_settings.alias = None
         # self.backend_es.type = "test_result"
-        self.es = elasticsearch.Cluster(self.backend_es)
-        self.index = self.es.get_or_create_index(self.backend_es)
+        self.es_cluster = elasticsearch.Cluster(self.es_test_settings)
+        self.index = self.es_cluster.get_or_create_index(self.es_test_settings)
         self.server_is_ready.wait_for_go()
 
     def tearDown(self):
-        self.es.delete_index(self.backend_es.index)
+        self.es_cluster.delete_index(self.es_test_settings.index)
 
     def not_real_service(self):
         return settings.fastTesting
 
-    def _fill_es(self, subtest):
+    def _fill_es(self, subtest, tjson=False):
+        """
+        RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
+        """
         subtest = wrap(subtest)
-        _settings = self.backend_es.copy()
-        _settings.index = "testing_" + Random.hex(10).lower()
+        _settings = self.es_test_settings  # ALREADY COPIED AT setUp()
+        # _settings.index = "testing_" + Random.hex(10).lower()
         # settings.type = "test_result"
 
         try:
@@ -160,8 +175,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
             _settings.schema = jsons.ref.get(url)
 
             # MAKE CONTAINER
-            container = self.es.get_or_create_index(_settings)
-            container.add_alias()
+            container = self.es_cluster.get_or_create_index(tjson=tjson, settings=_settings)
+            container.add_alias(_settings.index)
 
             # INSERT DATA
             container.extend([
@@ -179,7 +194,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
         return _settings
 
-    def _execute_es_tests(self, subtest):
+    def _execute_es_tests(self, subtest, tjson=False, delete_index=True):
         subtest = wrap(subtest)
 
         if subtest.disable:
@@ -188,10 +203,10 @@ class ActiveDataBaseTest(FuzzyTestCase):
         if "elasticsearch" in subtest["not"]:
             return
 
-        settings = self._fill_es(subtest)
-        self._send_queries(settings, subtest)
+        settings = self._fill_es(subtest, tjson=tjson)
+        self._send_queries(settings, subtest, delete_index=delete_index)
 
-    def _send_queries(self, settings, subtest):
+    def _send_queries(self, settings, subtest, delete_index=True):
         subtest = wrap(subtest)
 
         try:
@@ -205,6 +220,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 expected = v
 
                 subtest.query.format = format
+                subtest.query.meta.testing = True  # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
                 query = convert.unicode2utf8(convert.value2json(subtest.query))
                 # EXECUTE QUERY
                 response = self._try_till_response(self.service_url, data=query)
@@ -214,28 +230,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 result = convert.json2value(convert.utf82unicode(response.all_content))
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
-                if format == "table":
-                    self.assertEqual(set(result.header), set(expected.header))
-
-                    # MAP FROM expected COLUMN TO result COLUMN
-                    mapping = zip(*zip(*filter(
-                        lambda v: v[0][1] == v[1][1],
-                        itertools.product(enumerate(expected.header), enumerate(result.header))
-                    ))[1])[0]
-                    result.header = [result.header[m] for m in mapping]
-
-                    if result.data:
-                        columns = zip(*unwrap(result.data))
-                        result.data = zip(*[columns[m] for m in mapping])
-                        result.data = qb.sort(result.data, range(len(result.header)))
-                    expected.data = qb.sort(expected.data, range(len(expected.header)))
-                elif format == "list":
-                    sort_order = wrap(_normalize_edges(coalesce(subtest.query.edges, subtest.query.groupby)) + _normalize_selects(listwrap(subtest.query.select))).name
-                    expected.data = qb.sort(expected.data, sort_order)
-                    result.data = qb.sort(result.data, sort_order)
-
-                # CONFIRM MATCH
-                self.assertAlmostEqual(result, expected)
+                self.compare_to_expected(subtest.query, result, expected)
 
             if num_expectations == 0:
                 Log.error("Expecting test {{name|quote}} to have property named 'expecting_*' for testing the various format clauses", {
@@ -245,8 +240,58 @@ class ActiveDataBaseTest(FuzzyTestCase):
             Log.error("Failed test {{name|quote}}", {"name": subtest.name}, e)
         finally:
             # REMOVE CONTAINER
-            self.es.delete_index(settings.index)
+            if delete_index:
+                Log.note("Delete index {{index}}", index=settings.index)
+                self.es_cluster.delete_index(settings.index)
 
+    def compare_to_expected(self, query, result, expected):
+        query = wrap(query)
+        expected = wrap(expected)
+
+        if result.meta.format == "table":
+            self.assertEqual(set(result.header), set(expected.header))
+
+            # MAP FROM expected COLUMN TO result COLUMN
+            mapping = zip(*zip(*filter(
+                lambda v: v[0][1] == v[1][1],
+                itertools.product(enumerate(expected.header), enumerate(result.header))
+            ))[1])[0]
+            result.header = [result.header[m] for m in mapping]
+
+            if result.data:
+                columns = zip(*unwrap(result.data))
+                result.data = zip(*[columns[m] for m in mapping])
+
+            if not query.sort:
+                result.data = qb.sort(result.data, range(len(result.header)))
+                expected.data = qb.sort(expected.data, range(len(expected.header)))
+        elif result.meta.format == "list":
+            query = Query(query, schema=FromES(settings=self.index.settings))
+            if not query.sort:
+                if isinstance(query.select, list):
+                    sort_order = coalesce(query.edges, query.groupby) + query.select + qb.get_columns(result.data)
+                elif wrap(query.select).value.endswith("*"):
+                    sort_order = coalesce(query.edges, query.groupby) + qb.sort(qb.get_columns(result.data), "name")
+                else:
+                    sort_order = coalesce(query.edges, query.groupby) + [{"name": "."}]
+
+                if isinstance(expected.data, list):
+                    expected.data = qb.sort(expected.data, sort_order.name)
+                if isinstance(result.data, list):
+                    result.data = qb.sort(result.data, sort_order.name)
+        elif result.meta.format == "cube" and len(result.edges) == 1 and result.edges[0].name == "rownum" and not query.sort:
+            header = list(result.data.keys())
+
+            result.data = cube2list(result.data)
+            result.data = qb.sort(result.data, header)
+            result.data = list2cube(result.data, header)
+
+            expected.data = cube2list(expected.data)
+            expected.data = qb.sort(expected.data, header)
+            expected.data = list2cube(expected.data, header)
+
+        # CONFIRM MATCH
+        self.assertAlmostEqual(result, expected)
 
 
     def _execute_query(self, query):
@@ -277,6 +322,18 @@ class ActiveDataBaseTest(FuzzyTestCase):
                     Log.alert("Problem connecting")
                 else:
                     Log.error("Server raised exception", e)
+
+
+def cube2list(c):
+    rows = zip(*[[(k, v) for v in a] for k, a in c.items()])
+    rows = [dict(r) for r in rows]
+    return rows
+
+def list2cube(rows, header):
+    return {
+        h: [r[h] for r in rows]
+        for h in header
+    }
 
 
 def error(response):

@@ -42,7 +42,7 @@ class SaveQueries(object):
             "hash": "dummy",
             "create_time": Date.now(),
             "last_used": Date.now(),
-            "query": ""
+            "query": {}
         }})
         es.add_alias(es.settings.alias)
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size, period=SECOND)

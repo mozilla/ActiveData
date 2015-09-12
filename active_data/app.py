@@ -257,7 +257,7 @@ def main():
             query_finder = SaveQueries(config.saved_queries)
 
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
-        app.run(**unwrap(config.flask))
+        app.run(**config.flask)
     except Exception, e:
         Log.error("Problem with etl", cause=e)
     finally:

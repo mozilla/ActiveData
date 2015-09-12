@@ -39,12 +39,15 @@ class SaveQueries(object):
             settings=settings
         )
         #ENSURE THE TYPE EXISTS FOR PROBING
-        es.add({"id": "dummy", "value": {
-            "hash": "dummy",
-            "create_time": Date.now(),
-            "last_used": Date.now(),
-            "query": ""
-        }})
+        try:
+            es.add({"id": "dummy", "value": {
+                "hash": "dummy",
+                "create_time": Date.now(),
+                "last_used": Date.now(),
+                "query": ""
+            }})
+        except Exception, e:
+            Log.warning("Problem saving query", cause=e)
         es.add_alias(es.settings.alias)
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size, period=SECOND)
         self.es = FromES(es.settings)

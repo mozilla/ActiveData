@@ -448,6 +448,12 @@ class Cluster(object):
         elif settings.alias == None:
             settings.alias = settings.index
             settings.index = best.index
+
+        index = settings.index
+        meta = self.get_metadata(index=index)
+        columns = parse_properties(index, [], meta.indices[index].mappings.values()[0].properties)
+        settings.tjson = any(c.name.endswith("$value") for c in columns)
+
         return Index(settings)
 
     def _get_best(self, settings):

@@ -314,14 +314,14 @@ def wrap(v):
         return v
 
 
-def wrap_dot(value):
+def wrap_leaves(value):
     """
     dict WITH DOTS IN KEYS IS INTERPRETED AS A PATH
     """
-    return wrap(_wrap_dot(value))
+    return wrap(_wrap_leaves(value))
 
 
-def _wrap_dot(value):
+def _wrap_leaves(value):
     if value == None:
         return None
     if isinstance(value, (basestring, int, float)):
@@ -332,7 +332,7 @@ def _wrap_dot(value):
 
         output = {}
         for key, value in value.iteritems():
-            value = _wrap_dot(value)
+            value = _wrap_leaves(value)
 
             if key == "":
                 from pyLibrary.debugs.logs import Log
@@ -363,7 +363,7 @@ def _wrap_dot(value):
     if hasattr(value, '__iter__'):
         output = []
         for v in value:
-            v = wrap_dot(v)
+            v = wrap_leaves(v)
             output.append(v)
         return output
     return value

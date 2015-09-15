@@ -14,7 +14,7 @@ from collections import Mapping
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, wrap, listwrap, unwraplist
+from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList
 from pyLibrary.queries import qb
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import is_keyword
@@ -203,7 +203,8 @@ _type_to_name = {
     Dict: "object",
     dict: "object",
     set: "nested",
-    list: "nested"
+    list: "nested",
+    DictList: "nested"
 }
 
 _merge_type = {

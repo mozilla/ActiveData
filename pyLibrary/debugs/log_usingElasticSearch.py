@@ -26,7 +26,7 @@ class Log_usingElasticSearch(BaseLog):
         settings ARE FOR THE ELASTICSEARCH INDEX
         """
         self.es = Cluster(settings).get_or_create_index(
-            schema=convert.json2value(convert.value2json(SCHEMA), paths=True),
+            schema=convert.json2value(convert.value2json(SCHEMA), leaves=True),
             limit_replicas=True,
             tjson=True,
             settings=settings
@@ -58,15 +58,10 @@ class Log_usingElasticSearch(BaseLog):
             pass
 
 
-
 SCHEMA = {
     "settings": {
         "index.number_of_shards": 1,
-        "index.number_of_replicas": 2,
-        "index.store.throttle.type": "merge",
-        "index.store.throttle.max_bytes_per_sec": "2mb",
-        "index.cache.filter.expire": "1m",
-        "index.cache.field.type": "soft",
+        "index.number_of_replicas": 2
     },
     "mappings": {
         "_default_": {
@@ -125,12 +120,6 @@ SCHEMA = {
                             "doc_values": True
                         }
                     }
-                },
-                "params": {  # JUST IN CASE WE ARE NOT USING TYPED JSON
-                    "type": "object",
-                    "enabled": False,
-                    "index": "no",
-                    "store": "yes"
                 }
             }
         }

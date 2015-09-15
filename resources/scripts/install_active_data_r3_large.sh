@@ -98,13 +98,14 @@ sudo cp ~/ActiveData/resources/config/elasticsearch.in.sh /usr/local/elasticsear
 sudo cp ~/ActiveData/resources/config/supervisord.conf /etc/supervisord.conf
 
 
-sudo mkdir /dev/sdb/logs
-sudo ln -s /dev/sdb/logs /logs
+mkdir ~/logs
+cd /
+sudo ln -s /home/ec2-user/logs logs
 
 
 # START DAEMON (OR THROW ERROR IF RUNNING ALREADY)
 sudo /usr/local/bin/supervisord -c /etc/supervisord.conf
 
 # READ CONFIG
-sudo /usr/local/bin/supervisorctl reread
-sudo /usr/local/bin/supervisorctl update
+sudo supervisorctl reread
+sudo supervisorctl update

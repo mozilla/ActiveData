@@ -78,7 +78,7 @@ class TestUnittests(ActiveDataBaseTest):
                     "type": "test_result"
                 }
             },
-            "select": {"value": "run.duration", "aggregate": "average"},
+            "select": {"value": "run.stats.duration", "aggregate": "average"},
             "edges": [
                 {"name": "chunk", "value": ["run.suite", "run.chunk"]}
             ],

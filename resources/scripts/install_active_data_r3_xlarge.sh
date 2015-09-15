@@ -31,19 +31,21 @@ java -version
 
 # INSTALL ELASTICSEARCH
 cd /home/ec2-user/
-wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.4.2.tar.gz
-tar zxfv elasticsearch-1.4.2.tar.gz
+wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.7.1.tar.gz
+tar zxfv elasticsearch-1.7.1.tar.gz
 sudo mkdir /usr/local/elasticsearch
-sudo cp -R elasticsearch-1.4.2/* /usr/local/elasticsearch/
+sudo cp -R elasticsearch-1.7.1/* /usr/local/elasticsearch/
+
+
 cd /usr/local/elasticsearch/
 
 # BE SURE TO MATCH THE PULGIN WITH ES VERSION
 # https://github.com/elasticsearch/elasticsearch-cloud-aws
-sudo bin/plugin -install elasticsearch/elasticsearch-cloud-aws/2.4.1
+sudo bin/plugin install elasticsearch/elasticsearch-cloud-aws/2.7.1
 
 
 #ES HEAD IS WONDERFUL!
-sudo bin/plugin -install mobz/elasticsearch-head
+sudo bin/plugin install mobz/elasticsearch-head
 
 
 #INSTALL GIT
@@ -66,11 +68,13 @@ sudo yum install -y openssl-devel
 sudo yum groupinstall -y "Development tools"
 
 sudo pip install pyopenssl
-sudo pip install ndg-httpclient
+sudo pip install ndg-httpsclient
 sudo pip install pyasn1
 sudo pip install requests
 sudo pip install supervisor-plus-cron
 
+cd /usr/bin
+sudo ln -s /usr/local/bin/supervisorctl supervisorctl
 
 
 # CLONE ACTIVEDATA

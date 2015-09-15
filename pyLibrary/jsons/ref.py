@@ -21,16 +21,18 @@ from pyLibrary.parsers import URL
 DEBUG = False
 _convert = None
 _Log = None
-
+_Except = None
 
 def _late_import():
     global _convert
     global _Log
     from pyLibrary import convert as _convert
     from pyLibrary.debugs.logs import Log as _Log
+    from pyLibrary.debugs.logs import Except as _Except
 
     _ = _convert
     _ = _Log
+    _ = _Except
 
 
 def get(url):
@@ -203,8 +205,9 @@ def get_file(ref, url):
         _Log.error("Could not read file {{filename}}",  filename= path, cause=e)
 
     try:
-        new_value = _convert.json2value(content, params=ref.query, flexible=True, paths=True)
+        new_value = _convert.json2value(content, params=ref.query, flexible=True, leaves=True)
     except Exception, e:
+        e = _Except.wrap(e)
         try:
             new_value = _convert.ini2value(content)
         except Exception, f:
@@ -217,7 +220,7 @@ def get_http(ref, url):
     from pyLibrary.env import http
 
     params = url.query
-    new_value = _convert.json2value(http.get(ref), params=params, flexible=True, paths=True)
+    new_value = _convert.json2value(http.get(ref), params=params, flexible=True, leaves=True)
     return new_value
 
 

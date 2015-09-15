@@ -153,6 +153,8 @@ class ListContainer(Container):
     def __getitem__(self, item):
         return self.data[item]
 
+    def __len__(self):
+        return len(self.data)
 
 def get_schema_from_list(frum):
     """

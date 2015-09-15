@@ -65,7 +65,9 @@ class FromESMetadata(object):
         self.columns = ListContainer("meta.columns", [], wrap({c.name: c for c in column_columns}))
         self.columns.insert(column_columns)
         self.columns.insert(table_columns)
-        self.worker = Thread.run("refresh metadata", self.monitor)
+        # TODO: fix monitor so it does not bring down ES
+        # self.worker = Thread.run("refresh metadata", self.monitor)
+        self.worker = Thread.run("refresh metadata", self.not_monitor)
         return
 
     @property
@@ -158,6 +160,7 @@ class FromESMetadata(object):
                     self.columns.update({
                         "set": {
                             "partitions": partitions,
+                            "count": len(self.columns),
                             "cardinality": len(partitions),
                             "last_updated": Date.now()
                         },
@@ -170,6 +173,7 @@ class FromESMetadata(object):
                     self.columns.update({
                         "set": {
                             "partitions": partitions,
+                            "count": len(self.tables),
                             "cardinality": len(partitions),
                             "last_updated": Date.now()
                         },
@@ -182,6 +186,7 @@ class FromESMetadata(object):
                 "size": 0
             })
             r = result.aggregations.values()[0]
+            count = result.hits.total
             cardinality = coalesce(r.value, r._nested.value)
 
             query = Dict(size=0)
@@ -190,6 +195,7 @@ class FromESMetadata(object):
                 with self.columns.locker:
                     self.columns.update({
                         "set": {
+                            "count": count,
                             "cardinality": cardinality,
                             "last_updated": Date.now()
                         },
@@ -197,11 +203,12 @@ class FromESMetadata(object):
                         "where": {"eq": {"table": c.table, "name": c.name}}
                     })
                 return
-            elif cardinality > 1000:
+            elif cardinality > 1000 or (count >= 30 and cardinality == count) or (count >= 1000 and cardinality / count > 0.99):
                 Log.note("{{field}} has {{num}} parts", field=c.name, num=cardinality)
                 with self.columns.locker:
                     self.columns.update({
                         "set": {
+                            "count": count,
                             "cardinality": cardinality,
                             "last_updated": Date.now()
                         },
@@ -214,6 +221,7 @@ class FromESMetadata(object):
                 with self.columns.locker:
                     self.columns.update({
                         "set": {
+                            "count": count,
                             "cardinality": cardinality,
                             "last_updated": Date.now()
                         },
@@ -241,6 +249,7 @@ class FromESMetadata(object):
             with self.columns.locker:
                 self.columns.update({
                     "set": {
+                        "count": count,
                         "cardinality": cardinality,
                         "partitions": parts,
                         "last_updated": Date.now()
@@ -253,6 +262,7 @@ class FromESMetadata(object):
                     "last_updated": Date.now()
                 },
                 "clear":[
+                    "count",
                     "cardinality",
                     "partitions",
                 ],
@@ -287,6 +297,23 @@ class FromESMetadata(object):
                         Log.warning("problem getting cardinality for  {{column.name}}", column=column, cause=e)
             except Exception, e:
                 Log.warning("problem in cardinality monitor", cause=e)
+
+    def not_monitor(self, please_stop):
+        while not please_stop:
+            c = self.todo.pop()
+            self.columns.update({
+                "set": {
+                    "last_updated": Date.now()
+                },
+                "clear":[
+                    "count",
+                    "cardinality",
+                    "partitions",
+                ],
+                "where": {"eq": {"table": c.table, "abs_name": c.abs_name}}
+            })
+            Log.note("Could not get {{col.table}}.{{col.abs_name}} info", col=c)
+
 
 def _counting_query(c):
     if c.nested_path:

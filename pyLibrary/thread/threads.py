@@ -140,7 +140,10 @@ class Queue(object):
         wait_time = 5
 
         now = datetime.utcnow()
-        time_to_stop_waiting = now + timeout
+        if timeout:
+            time_to_stop_waiting = now + timeout
+        else:
+            time_to_stop_waiting = Date.MAX
 
         if self.next_warning < now:
             self.next_warning = now + timedelta(seconds=wait_time)

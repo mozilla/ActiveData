@@ -28,7 +28,7 @@ class Log_usingElasticSearch(BaseLog):
         self.es = Cluster(settings).get_or_create_index(
             schema=convert.json2value(convert.value2json(SCHEMA), leaves=True),
             limit_replicas=True,
-            tjson=True,
+            tjson=False,
             settings=settings
         )
         self.queue = self.es.threaded_queue(max_size=max_size, batch_size=batch_size)
@@ -60,7 +60,7 @@ class Log_usingElasticSearch(BaseLog):
 
 SCHEMA = {
     "settings": {
-        "index.number_of_shards": 1,
+        "index.number_of_shards": 2,
         "index.number_of_replicas": 2
     },
     "mappings": {
@@ -99,8 +99,25 @@ SCHEMA = {
                         "match_pattern": "regex",
                         "path_match": ".*"
                     }
+                },
+                {
+                    "default_param_values": {
+                        "mapping": {
+                            "index": "not_analyzed",
+                            "doc_values": True
+                        },
+                        "match": "*$value"
+                    }
+                },
+                {
+                    "default_params": {
+                        "mapping": {
+                            "enabled": False,
+                            "source": "yes"
+                        },
+                        "path_match": "params.*"
+                    }
                 }
-
             ],
             "_all": {
                 "enabled": False
@@ -110,16 +127,8 @@ SCHEMA = {
                 "enabled": True
             },
             "properties": {
-                "timestamp": {
-                    "type": "object",
-                    "properties": {
-                        "$value": {
-                            "type": "double",
-                            "index": "not_analyzed",
-                            "store": "yes",
-                            "doc_values": True
-                        }
-                    }
+                "params": {
+                    "enabled": False
                 }
             }
         }

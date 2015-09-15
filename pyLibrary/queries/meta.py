@@ -66,8 +66,8 @@ class FromESMetadata(object):
         self.columns.insert(column_columns)
         self.columns.insert(table_columns)
         # TODO: fix monitor so it does not bring down ES
-        self.worker = Thread.run("refresh metadata", self.monitor)
-        # self.worker = Thread.run("refresh metadata", self.not_monitor)
+        # self.worker = Thread.run("refresh metadata", self.monitor)
+        self.worker = Thread.run("refresh metadata", self.not_monitor)
         return
 
     @property
@@ -299,6 +299,7 @@ class FromESMetadata(object):
                 Log.warning("problem in cardinality monitor", cause=e)
 
     def not_monitor(self, please_stop):
+        Log.warning("metadata scan has been disabled")
         while not please_stop:
             c = self.todo.pop()
             self.columns.update({

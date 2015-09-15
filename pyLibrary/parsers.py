@@ -3,16 +3,17 @@ from pyLibrary.dot import Null, coalesce, wrap
 from pyLibrary.dot.dicts import Dict
 
 
-convert = None
-Log = None
+_convert = None
+_Log = None
 
 
 def _late_import():
-    global convert
-    global Log
-    from pyLibrary import convert
-    from pyLibrary.debugs.logs import Log
-
+    global _convert
+    global _Log
+    from pyLibrary import convert as _convert
+    from pyLibrary.debugs.logs import Log as _Log
+    _ = _convert
+    _ = _Log
 
 names = ["path", "query", "fragment"]
 indicator = ["/", "?", "#"]
@@ -49,7 +50,7 @@ class URL(object):
         if value == None:
             return
 
-        if not convert:
+        if not _convert:
             _late_import()
         if value.startswith("file://") or value.startswith("//"):
             # urlparse DOES NOT WORK IN THESE CASES
@@ -57,7 +58,7 @@ class URL(object):
             self.scheme = scheme.rstrip(":")
             parse(self, suffix, 0, 1)
 
-            self.query = wrap(convert.url_param2value(self.query))
+            self.query = wrap(_convert.url_param2value(self.query))
             self.fragment = self.fragment
         else:
             output = urlparse(value)
@@ -65,7 +66,7 @@ class URL(object):
             self.port = output.port
             self.host = output.netloc.split(":")[0]
             self.path = output.path
-            self.query = wrap(convert.url_param2value(output.query))
+            self.query = wrap(_convert.url_param2value(output.query))
             self.fragment = output.fragment
 
     def __nonzero__(self):
@@ -89,7 +90,7 @@ class URL(object):
         if self.path:
             url += str(self.path)
         if self.query:
-            url = url + '?' + convert.value2url(self.query)
+            url = url + '?' + _convert.value2url(self.query)
         if self.fragment:
             url = url + '#' + convert.value2url(self.fragment)
         return url

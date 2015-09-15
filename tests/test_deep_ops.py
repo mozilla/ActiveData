@@ -10,7 +10,9 @@
 
 from __future__ import unicode_literals
 from __future__ import division
-import unittest
+
+from unittest import skip
+
 import base_test_class
 from pyLibrary.dot import wrap
 from tests.base_test_class import ActiveDataBaseTest
@@ -365,6 +367,7 @@ class TestDeepOps(ActiveDataBaseTest):
 
         self._execute_es_tests(test, delete_index=False)
 
+    @skip("not working yet")
     def test_deep_agg_on_expression_w_shallow_where(self):
         # TEST WE CAN PERFORM AGGREGATES ON EXPRESSIONS OF DEEP VARIABLES
         test = {

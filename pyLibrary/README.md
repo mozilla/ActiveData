@@ -18,7 +18,7 @@ Module `meta`
 
 **Description** 
 
-`@use_settings` will decorate a function to accept a `settings` parameter which is just like `**kwargs`, but the other parameters can override the properties in `settings`, rather than raise duplicate keyname exceptions.
+`@use_settings` will decorate a function to accept a `settings` parameter which is just like `**kwargs`, but the named parameters can override the properties in `settings`, rather than raise duplicate keyname exceptions.
 
 
 **Example**

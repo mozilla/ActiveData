@@ -9,13 +9,19 @@ Motivation
 Exception handling and logging are undeniably linked.  There are many instances
 where exceptions are raised and must be logged, except when a subsuming system 
 can compensate.  Exception handling semantics are great because they 
-decoupling the cause from the solution, but this is at odds with clean logging -
+decouple the cause from the solution, but this is at odds with clean logging -
 which couples raising and catching to make appropriate decisions about what to
 emit to the log.  
 
 This logging module is additionally responsible for raising exceptions, 
 collecting the trace and context, and then deducing if it must be logged, or 
 if it can be ignored because something can handle it.
+
+**More Reading**
+
+* https://sites.google.com/site/steveyegge2/the-emacs-problem
+
+
 
 Basic Forms
 -----------
@@ -61,7 +67,7 @@ All logs are structured logs; the parameters will be included, unchanged, in the
     Log.error("This will throw an error")
 ```
 
-The actual call will always raise an exception, and it manipulates the stack trace to ensure the caller is approriatly blamed.  Feel free to use the `raise` keyword (as in `raise Log.error("")`), if that looks nicer to you. 
+The actual call will always raise an exception, and it manipulates the stack trace to ensure the caller is appropriately blamed.  Feel free to use the `raise` keyword (as in `raise Log.error("")`), if that looks nicer to you. 
 
 **Always chain your exceptions**
 

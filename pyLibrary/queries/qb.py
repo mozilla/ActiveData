@@ -12,6 +12,8 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 import __builtin__
+
+from __builtin__ import filter as builtin_filter
 from collections import Mapping
 from numbers import Number
 from types import GeneratorType
@@ -614,11 +616,14 @@ def filter(data, where):
         return data
 
     if isinstance(data, Cube):
-        data.filter(where)
+        return data.filter(where)
 
-    temp = None
-    exec("def temp(row):\n    return "+qb_expression_to_python(where))
-    return data.filter(temp)
+    if isinstance(data, list):
+        temp = qb_expression_to_function(where)
+        dd = wrap(data)
+        return [d for i, d in enumerate(data) if temp(wrap(d), i, dd)]
+    else:
+        Log.error("Do not know how to handle")
 
     try:
         return drill_filter(where, data)

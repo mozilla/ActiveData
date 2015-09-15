@@ -86,7 +86,7 @@ def wrap_from(frum, schema=None):
         from pyLibrary.queries.query import Query
         return Query(frum, schema=schema)
     elif isinstance(frum, list):
-        return _ListContainer(frum)
+        return _ListContainer("test_list", frum)
     else:
         return frum
 

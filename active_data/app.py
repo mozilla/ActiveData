@@ -133,7 +133,7 @@ def query(path):
 
         result.meta.active_data_response_time = active_data_timer.duration
 
-        response_data = convert.unicode2utf8(convert.value2json(result)),
+        response_data = convert.unicode2utf8(convert.value2json(result))
         Log.note("Response is {{num}} bytes", num=len(response_data))
         return Response(
             response_data,
@@ -263,7 +263,7 @@ def main():
             query_finder = SaveQueries(config.saved_queries)
 
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
-        app.run(**unwrap(config.flask))
+        app.run(**config.flask)
     except Exception, e:
         Log.error("Problem with etl", cause=e)
     finally:

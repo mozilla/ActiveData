@@ -67,6 +67,10 @@ class Queue(object):
         m.set_body(convert.value2json(message))
         self.queue.write(m)
 
+    @property
+    def name(self):
+        return self.settings.name
+
     def extend(self, messages):
         for m in messages:
             self.add(m)

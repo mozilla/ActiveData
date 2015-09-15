@@ -312,6 +312,8 @@ class Index(Features):
             if self.debug:
                 Log.note("{{num}} documents added", num=len(items))
         except Exception, e:
+            if e.message.startswith("sequence item "):
+                Log.error("problem with {{data}}", data=repr(lines[int(e.message[14:16].strip())]), cause=e)
             Log.error("problem sending to ES", e)
 
     # RECORDS MUST HAVE id AND json AS A STRING OR
@@ -367,7 +369,7 @@ class Index(Features):
                 Log.note("Query:\n{{query|indent}}", query=show_query)
             return self.cluster.post(
                 self.path + "/_search",
-                data=query,
+                data=convert.value2json(query).encode("utf8"),
                 timeout=coalesce(timeout, self.settings.timeout)
             )
         except Exception, e:
@@ -452,7 +454,8 @@ class Cluster(object):
         index = settings.index
         meta = self.get_metadata(index=index)
         columns = parse_properties(index, [], meta.indices[index].mappings.values()[0].properties)
-        settings.tjson = any(c.name.endswith("$value") for c in columns)
+        if len(columns)!=0:
+            settings.tjson = any(c.name.endswith("$value") for c in columns)
 
         return Index(settings)
 
@@ -463,8 +466,8 @@ class Cluster(object):
             a
             for a in aliases
             if (a.alias == settings.index and settings.alias == None) or
-               (re.match(re.escape(settings.index) + r'\d{8}_\d{6}', a.index) and settings.alias == None) or
-            (a.index == settings.index and (a.alias == None or a.alias == settings.alias ))
+            (re.match(re.escape(settings.index) + r'\d{8}_\d{6}', a.index) and settings.alias == None) or
+            (a.index == settings.index and (a.alias == None or a.alias == settings.alias))
         ], "index")
         return indexes.last()
 
@@ -547,9 +550,9 @@ class Cluster(object):
         if schema == None:
             Log.error("Expecting a schema")
         elif isinstance(schema, basestring):
-            schema = convert.json2value(schema, paths=True)
+            schema = convert.json2value(schema, leaves=True)
         else:
-            schema = convert.json2value(convert.value2json(schema), paths=True)
+            schema = convert.json2value(convert.value2json(schema), leaves=True)
 
         if limit_replicas:
             # DO NOT ASK FOR TOO MANY REPLICAS
@@ -1037,7 +1040,7 @@ def _merge_mapping(a, b):
     MERGE TWO MAPPINGS, a TAKES PRECEDENCE
     """
     for name, b_details in b.items():
-        a_details = a[name]
+        a_details = a[literal_field(name)]
         if a_details.properties and not a_details.type:
             a_details.type = "object"
         if b_details.properties and not b_details.type:
@@ -1049,7 +1052,7 @@ def _merge_mapping(a, b):
             if b_details.type in ["object", "nested"]:
                 _merge_mapping(a_details.properties, b_details.properties)
         else:
-            a[name] = deepcopy(b_details)
+            a[literal_field(name)] = deepcopy(b_details)
 
     return a
 

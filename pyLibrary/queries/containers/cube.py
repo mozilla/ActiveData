@@ -18,7 +18,7 @@ from pyLibrary.collections import MAX, OR
 from pyLibrary.queries.containers import Container
 from pyLibrary.dot import Null, Dict
 from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import wrap, wrap_dot, listwrap
+from pyLibrary.dot import wrap, wrap_leaves, listwrap
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.query import _normalize_edge
 
@@ -349,7 +349,7 @@ class Cube(Container):
         lookup = [[getKey[i](p) for p in e.domain.partitions+([None] if e.allowNulls else [])] for i, e in enumerate(self.edges)]
 
         def coord2term(coord):
-            output = wrap_dot({keys[i]: lookup[i][c] for i, c in enumerate(coord)})
+            output = wrap_leaves({keys[i]: lookup[i][c] for i, c in enumerate(coord)})
             return output
 
         if isinstance(self.select, list):

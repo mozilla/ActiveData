@@ -602,9 +602,13 @@ class Log_usingMulti(BaseLog):
                 m.write(template, params)
             except Exception, e:
                 bad.append(m)
+                sys.stdout.write("a logger failed")
                 Log.warning("Logger failed!  It will be removed: {{type}}", type=m.__class__.__name__, cause=e)
-        for b in bad:
-            self.many.remove(b)
+        try:
+            for b in bad:
+                self.many.remove(b)
+        except Exception:
+            pass
 
         return self
 

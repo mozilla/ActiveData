@@ -18,7 +18,7 @@ import time
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, Null, Dict, set_default, join_field, split_field, unwraplist, listwrap
+from pyLibrary.dot import coalesce, Null, Dict, set_default, join_field, split_field, unwraplist, listwrap, literal_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap
 from pyLibrary.env import http
@@ -566,7 +566,7 @@ class Cluster(object):
 
         self.post(
             "/" + settings.index,
-            data=convert.value2json(schema).encode("utf8"),
+            data=schema,
             headers={"Content-Type": "application/json"}
         )
         while True:
@@ -934,7 +934,7 @@ class Alias(Features):
                 Log.note("Query:\n{{query|indent}}", query=show_query)
             return self.cluster.post(
                 self.path + "/_search",
-                data=convert.value2json(query).encode("utf8"),
+                data=query,
                 timeout=coalesce(timeout, self.settings.timeout)
             )
         except Exception, e:

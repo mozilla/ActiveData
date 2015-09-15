@@ -454,7 +454,8 @@ class Cluster(object):
         index = settings.index
         meta = self.get_metadata(index=index)
         columns = parse_properties(index, [], meta.indices[index].mappings.values()[0].properties)
-        settings.tjson = any(c.name.endswith("$value") for c in columns)
+        if len(columns)!=0:
+            settings.tjson = any(c.name.endswith("$value") for c in columns)
 
         return Index(settings)
 

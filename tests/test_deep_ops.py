@@ -367,7 +367,7 @@ class TestDeepOps(ActiveDataBaseTest):
 
         self._execute_es_tests(test, delete_index=False)
 
-    @skip
+    @skip("not working yet")
     def test_deep_agg_on_expression_w_shallow_where(self):
         # TEST WE CAN PERFORM AGGREGATES ON EXPRESSIONS OF DEEP VARIABLES
         test = {

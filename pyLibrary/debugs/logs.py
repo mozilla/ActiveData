@@ -595,11 +595,16 @@ class Log_usingMulti(BaseLog):
         self.many = []
 
     def write(self, template, params):
+        bad = []
         for m in self.many:
             try:
                 m.write(template, params)
             except Exception, e:
-                pass
+                bad.append(m)
+                Log.warning("Logger failed!  It will be removed: {{type}}", type=m.__class__.__name__, cause=e)
+        for b in bad:
+            self.many.remove(b)
+
         return self
 
     def add_log(self, logger):

@@ -21,18 +21,17 @@ import thread
 import threading
 import time
 import sys
-import gc
 
 from pyLibrary import strings
 from pyLibrary.dot import coalesce, Dict
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import SECOND
+from pyLibrary.times.durations import SECOND, MINUTE
 
 
 _Log = None
 DEBUG = True
 MAX_DATETIME = datetime(2286, 11, 20, 17, 46, 39)
-
+DEFAULT_WAIT_TIME = 5*MINUTE
 
 def _late_import():
     global _Log
@@ -107,9 +106,9 @@ class Queue(object):
         _Log.note("queue iterator is done")
 
 
-    def add(self, value):
+    def add(self, value, timeout=None):
         with self.lock:
-            self._wait_for_queue_space()
+            self._wait_for_queue_space(timeout=None)
             if self.keep_running:
                 self.queue.append(value)
         return self
@@ -134,17 +133,24 @@ class Queue(object):
                 self.queue.extend(values)
         return self
 
-    def _wait_for_queue_space(self):
+    def _wait_for_queue_space(self, timeout=DEFAULT_WAIT_TIME):
         """
         EXPECT THE self.lock TO BE HAD, WAITS FOR self.queue TO HAVE A LITTLE SPACE
         """
         wait_time = 5
 
         now = datetime.utcnow()
+        time_to_stop_waiting = now + timeout
+
         if self.next_warning < now:
             self.next_warning = now + timedelta(seconds=wait_time)
 
         while self.keep_running and len(self.queue) > self.max:
+            if now > time_to_stop_waiting:
+                if not _Log:
+                    _late_import()
+                _Log.error(Thread.TIMEOUT)
+
             if self.silent:
                 self.lock.wait()
             else:
@@ -751,9 +757,9 @@ class ThreadedQueue(Queue):
 
         self.thread = Thread.run("threaded queue for " + name, worker_bee, parent_thread=self)
 
-    def add(self, value):
+    def add(self, value, timeout=None):
         with self.lock:
-            self._wait_for_queue_space()
+            self._wait_for_queue_space(timeout=timeout)
             if self.keep_running:
                 self.queue.append(value)
         return self

@@ -14,6 +14,7 @@ from __future__ import absolute_import
 from copy import copy
 
 from collections import Mapping
+import sys
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.meta import use_settings
@@ -271,7 +272,7 @@ class FromES(Container):
             }},
             "size": 200000
         })
-
+        sys.stdout.write("got query")
         # SCRIPT IS SAME FOR ALL (CAN ONLY HANDLE ASSIGNMENT TO CONSTANT)
         scripts = DictList()
         for k, v in command.set.items():
@@ -282,7 +283,9 @@ class FromES(Container):
             else:
                 scripts.append({"script": "ctx._source." + k + " = " + expressions.qb_expression_to_ruby(v)})
 
+        sys.stdout.write("don prep")
         if results.hits.hits:
+            sys.stdout.write("sending hits")
             updates = []
             for h in results.hits.hits:
                 for s in scripts:

@@ -369,7 +369,7 @@ class Index(Features):
                 Log.note("Query:\n{{query|indent}}", query=show_query)
             return self.cluster.post(
                 self.path + "/_search",
-                data=convert.value2json(query).encode("utf8"),
+                data=query,
                 timeout=coalesce(timeout, self.settings.timeout)
             )
         except Exception, e:

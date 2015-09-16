@@ -520,6 +520,9 @@ def _normalize_sort(sort=None):
     for s in listwrap(sort):
         if isinstance(s, basestring) or Math.is_integer(s):
             output.append({"value": s, "sort": 1})
+        elif list(set(s.values()))[0] == "desc" and not s.sort and not s.value:
+            for v, d in s.items():
+                output.append({"value": v, "sort": -1})
         else:
             output.append({"value": coalesce(s.value, s.field), "sort": coalesce(sort_direction[s.sort], 1)})
     return wrap(output)

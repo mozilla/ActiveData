@@ -13,8 +13,6 @@ from __future__ import absolute_import
 from copy import copy
 
 from pyLibrary import convert
-from pyLibrary.env import elasticsearch
-from pyLibrary.env.elasticsearch import ES_NUMERIC_TYPES
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb
 from pyLibrary.queries.query import Query
@@ -27,6 +25,7 @@ from pyLibrary.thread.threads import Queue, Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import HOUR, MINUTE
 
+_elasticsearch = None
 
 DEBUG = True
 TOO_OLD = 2*HOUR
@@ -48,14 +47,16 @@ class FromESMetadata(object):
 
     @use_settings
     def __init__(self, host, index, alias=None, name=None, port=9200, settings=None):
+        global _elasticsearch
         if hasattr(self, "settings"):
             return
 
         from pyLibrary.queries.containers.lists import ListContainer
+        from pyLibrary.env import elasticsearch as _elasticsearch
 
         self.settings = settings
         self.default_name = coalesce(name, alias, index)
-        self.default_es = elasticsearch.Cluster(settings=settings)
+        self.default_es = _elasticsearch.Cluster(settings=settings)
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
         table_columns = metadata_tables()
@@ -102,7 +103,7 @@ class FromESMetadata(object):
         metadata = self.default_es.get_metadata(index=index)
         for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
             for _, properties in meta.mappings.items():
-                columns = elasticsearch.parse_properties(index, None, properties.properties)
+                columns = _elasticsearch.parse_properties(index, None, properties.properties)
                 with self.columns.locker:
                     for c in columns:
                         # ABSOLUTE
@@ -215,7 +216,7 @@ class FromESMetadata(object):
                         "where": {"eq": {"table": c.table, "name": c.name}}
                     })
                 return
-            elif c.type in ES_NUMERIC_TYPES and cardinality > 30:
+            elif c.type in _elasticsearch.ES_NUMERIC_TYPES and cardinality > 30:
                 Log.note("{{field}} has {{num}} parts", field=c.name, num=cardinality)
                 with self.columns.locker:
                     self.columns.update({
@@ -324,7 +325,7 @@ def _counting_query(c):
             "aggs": {
                 "_nested": {"cardinality": {
                     "field": c.name,
-                    "precision_threshold": 10 if c.type in ES_NUMERIC_TYPES else 100
+                    "precision_threshold": 10 if c.type in _elasticsearch.ES_NUMERIC_TYPES else 100
                 }}
             }
         }

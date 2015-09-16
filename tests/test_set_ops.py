@@ -930,7 +930,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "where": {
                     "gt": [
                         {
-                            "length": "name"
+                            "length": "v"
                         },
                         2
                     ]
@@ -939,7 +939,7 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [3, 4, 5]
+                "data": ["333", "4444", "55555"]
             }
         }
         self._execute_es_tests(test)

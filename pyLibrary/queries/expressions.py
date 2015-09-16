@@ -15,7 +15,7 @@ import itertools
 
 from pyLibrary import convert
 from pyLibrary.collections import OR, MAX
-from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Dict
+from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Dict, unwrap, DictList
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
@@ -445,7 +445,7 @@ python_multi_operators = {
 
 ruby_unary_operators = {
     "not": "! {{term}}",
-    "length": '({{term}}).empty ? -1 : ({{term}}).length()',
+    "length": '(({{term}}) == null) ? null : ({{term}}).length()',  # (doc[\"result.subtests.name\"].value == null) ? null : doc[\"result.subtests.name\"].value.length()
     "number": '({{term}}).to_f()'
 }
 
@@ -1035,16 +1035,21 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
     vars_ = get_all_vars(where)
 
     if var_to_depth is None:
+        # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
         var_to_depth = {v: len(listwrap(schema[v].nested_path)) for v in vars_}
-    if output is None:
-        output = Dict()
+        all_depths = set(var_to_depth.values())
+        output = wrap([[] for _ in range(MAX(all_depths)+1)])
+    else:
+        all_depths = set(var_to_depth[v] for v in vars_)
 
-    all_depths = set(var_to_depth.values())
     if len(all_depths) == 1:
         output[list(all_depths)[0]] += [where]
-    for a in listwrap(where["and"]):
-        split_expression_by_depth(a, schema, output, var_to_depth)
+    elif where["and"]:
+        for a in listwrap(where["and"]):
+            split_expression_by_depth(a, schema, output, var_to_depth)
+    else:
+        Log.error("Can not handle complex where clause")
 
-    return {"and": [{"and": output[i]} for i in range(MAX(all_depths))]}
+    return output
 
 

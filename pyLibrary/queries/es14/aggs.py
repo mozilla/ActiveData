@@ -105,7 +105,7 @@ def es_aggsop(es, frum, query):
     for i, s in enumerate(formula):
         new_select[unicode(i)] = s
         s.pull = literal_field(s.name) + ".value"
-        abs_value = expression_map(s.value, {c.name: c.abs_name for c in frum._columns})
+        abs_value = expression_map({c.name: c.abs_name for c in frum._columns}, s.value)
         es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].script = qb_expression_to_ruby(abs_value)
 
     decoders = [AggsDecoder(e, query) for e in coalesce(query.edges, query.groupby, [])]

@@ -15,7 +15,7 @@ import itertools
 
 from pyLibrary import convert
 from pyLibrary.collections import OR, MAX
-from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Dict, unwrap, DictList
+from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Dict, unwrap, DictList, Null
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
@@ -81,12 +81,12 @@ def qb_expression_to_esfilter(expr):
         return False
 
     k, v = expr.items()[0]
-    return converter_map.get(k, _no_convert)(k, v)
+    return qb_to_es_map.get(k, _no_convert)(k, v)
 
 
 def qb_expression_to_ruby(expr):
     if expr == None:
-        return "nil"
+        return "null"
     elif Math.is_number(expr):
         return unicode(expr)
     elif is_keyword(expr):
@@ -123,7 +123,8 @@ def qb_expression_to_ruby(expr):
     bop = ruby_binary_operators.get(op)
     if bop:
         if isinstance(term, list):
-            output = bop.join(["(" + qb_expression_to_ruby(t) + ")" for t in term])
+            e = [qb_expression_to_ruby(t) for t in term]
+            output = "(" + (" || ".join(["(" + ee + " == null)" for ee in e])) + ") ? null : (" + bop.join(["(" + ee + ")" for ee in e]) + ")"
             return output
         elif isinstance(term, Mapping):
             if op == "eq":
@@ -278,9 +279,9 @@ def get_all_vars(expr):
     Log.error("`{{op}}` is not a recognized operation",  op= op)
 
 
-def expression_map(expr, map):
+def expression_map(_map, expr):
     """
-    USE map TO MAP VARIABLES NAMES TO SOME OTHER
+    USE _map TO MAP VARIABLES NAMES TO SOME OTHER
     """
     if expr == None:
         return expr
@@ -292,7 +293,7 @@ def expression_map(expr, map):
         if expr == ".":
             return expr
         elif is_keyword(expr):
-            return map.get(expr, expr)
+            return _map.get(expr, expr)
         else:
             Log.error("Expecting a json path")
     elif isinstance(expr, CODE):
@@ -312,17 +313,17 @@ def expression_map(expr, map):
     bop = python_binary_operators.get(op)
     if bop:
         if isinstance(term, list):
-            output = {op: map(expression_map, term)}
+            output = {op: [expression_map(_map, t) for t in term]}
             return output
         elif isinstance(term, Mapping):
-            output = {op: {expression_map(k, map): v for k, v, in term.items()}}
+            output = {op: {expression_map(_map, k): v for k, v, in term.items()}}
             return output
         else:
             Log.error("Expecting binary term")
 
     uop = python_unary_operators.get(op)
     if uop:
-        output = {op: expression_map(term, map)}
+        output = {op: expression_map(_map, term)}
         return output
 
     Log.error("`{{op}}` is not a recognized operation", op=op)
@@ -446,6 +447,7 @@ python_multi_operators = {
 ruby_unary_operators = {
     "not": "! {{term}}",
     "length": '(({{term}}) == null) ? null : ({{term}}).length()',  # (doc[\"result.subtests.name\"].value == null) ? null : doc[\"result.subtests.name\"].value.length()
+    # THIS WORKS:  "length": 'a = {{term}};\n(a == null) ? null : a.length()',
     "number": '({{term}}).to_f()'
 }
 
@@ -657,7 +659,7 @@ class NotOp(object):
         return self.term.vars()
 
     def map(self, map):
-        return {"not": expression_map(self.term, map)}
+        return {"not": expression_map(map, self.term)}
 
 
 class RangeOp(object):
@@ -983,6 +985,9 @@ def _convert_in(op, term):
 
 
 def _convert_inequality(ine, term):
+    if isinstance(term, list):
+        return {"script": {"script": qb_expression_to_ruby({ine: term})}}
+
     var, val = term.items()[0]
     return {"range": {var: {ine: val}}}
 
@@ -999,7 +1004,7 @@ def _convert_field(k, var):
     Log.error("do not know how to handle {{value}}",  value= {k: var})
 
 
-converter_map = {
+qb_to_es_map = {
     "and": _convert_many,
     "or": _convert_many,
     "not": _convert_not,
@@ -1035,6 +1040,8 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
     vars_ = get_all_vars(where)
 
     if var_to_depth is None:
+        if not vars_:
+            return Null
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
         var_to_depth = {v: len(listwrap(schema[v].nested_path)) for v in vars_}
         all_depths = set(var_to_depth.values())

@@ -871,3 +871,76 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_length(self):
+        test = {
+            "data": [
+                {"v": "1"},
+                {"v": "22"},
+                {"v": "333"},
+                {"v": "4444"},
+                {"v": "55555"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"name": "l", "value": {"length": "v"}},
+                "sort": "v"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [1, 2, 3, 4, 5]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["l"],
+                "data": [
+                    [1],
+                    [2],
+                    [3],
+                    [4],
+                    [5]
+                ]
+           },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 5, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "l": [1, 2, 3, 4, 5]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_length_w_inequality(self):
+        test = {
+            "data": [
+                {"v": "1"},
+                {"v": "22"},
+                {"v": "333"},
+                {"v": "4444"},
+                {"v": "55555"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": "v",
+                "where": {
+                    "gt": [
+                        {
+                            "length": "name"
+                        },
+                        2
+                    ]
+                },
+                "sort": "v"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [3, 4, 5]
+            }
+        }
+        self._execute_es_tests(test)
+

@@ -44,7 +44,7 @@ def es_deepop(es, query):
     query_path = query.frum.query_path
     columns = UniqueIndex(keys=["name"], data=sorted(columns, lambda a, b: cmp(len(listwrap(b.nested_path)), len(listwrap(a.nested_path)))), fail_on_dup=False)
     _map = {c.name: c.abs_name for c in columns}
-    where = qb_expression_to_esfilter(expression_map(query.where, _map))
+    where = qb_expression_to_esfilter(expression_map(_map, query.where))
     more_filter = {
         "and": [
             where,

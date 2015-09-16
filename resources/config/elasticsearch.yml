@@ -4,7 +4,7 @@ node.name: coordinator
 node.master: true
 node.data: false
 
-cluster.routing.allocation.awareness.force.zone.values: primary,spot
+cluster.routing.allocation.awareness.force.zone.values: primary,secondary,spot
 cluster.routing.allocation.awareness.attributes: zone
 cluster.routing.allocation.cluster_concurrent_rebalance: 1
 cluster.routing.allocation.balance.shard: 0.70

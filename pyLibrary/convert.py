@@ -27,7 +27,7 @@ import re
 from tempfile import TemporaryFile
 
 from pyLibrary import strings, meta
-from pyLibrary.dot import wrap, wrap_dot, unwrap, unwraplist
+from pyLibrary.dot import wrap, wrap_leaves, unwrap, unwraplist
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.env.big_data import FileString, safe_size
@@ -78,12 +78,12 @@ def remove_line_comment(line):
 
 
 
-def json2value(json_string, params={}, flexible=False, paths=False):
+def json2value(json_string, params={}, flexible=False, leaves=False):
     """
     :param json_string: THE JSON
     :param params: STANDARD JSON PARAMS
     :param flexible: REMOVE COMMENTS
-    :param paths: ASSUME JSON KEYS ARE DOT-DELIMITED
+    :param leaves: ASSUME JSON KEYS ARE DOT-DELIMITED
     :return: Python value
     """
     if isinstance(json_string, str):
@@ -107,8 +107,8 @@ def json2value(json_string, params={}, flexible=False, paths=False):
         # LOOKUP REFERENCES
         value = wrap(json_decoder(json_string))
 
-        if paths:
-            value = wrap_dot(value)
+        if leaves:
+            value = wrap_leaves(value)
 
         return value
 
@@ -117,7 +117,7 @@ def json2value(json_string, params={}, flexible=False, paths=False):
         if "Expecting '" in e and "' delimiter: line" in e:
             line_index = int(strings.between(e.message, " line ", " column ")) - 1
             column = int(strings.between(e.message, " column ", " ")) - 1
-            line = json_string.split("\n")[line_index]
+            line = json_string.split("\n")[line_index].replace("\t", " ")
             if column > 20:
                 sample = "..." + line[column - 20:]
                 pointer = "   " + (" " * 20) + "^"

@@ -21,12 +21,12 @@ from pyLibrary.maths import Math
 from pyLibrary.dot import wrap
 
 
-Date = None
-Log = None
+_Date = None
+_Log = None
 def _delayed_import():
-    global Date
-    from pyLibrary.times.dates import Date
-    _ = Date(None)
+    global _Date
+    from pyLibrary.times.dates import Date as _Date
+    _ = _Date(None)
 
 
 class Duration(object):
@@ -70,7 +70,7 @@ class Duration(object):
     @staticmethod
     def range(start, stop, step):
         if not step:
-            Log.error("Expecting a non-zero duration for interval")
+            _Log.error("Expecting a non-zero duration for interval")
         output = []
         c = start
         while c < stop:
@@ -87,11 +87,11 @@ class Duration(object):
         return output
 
     def __radd__(self, other):
-        if not Date:
+        if not _Date:
             _delayed_import()
 
         if isinstance(other, datetime.datetime):
-            return Date(other).add(self)
+            return _Date(other).add(self)
         elif isinstance(other, Date):
             return other.add(self)
         return self + other

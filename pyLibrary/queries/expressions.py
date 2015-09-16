@@ -63,6 +63,9 @@ def qb_expression(expr):
 
 
 def qb_expression_to_function(expr):
+    """
+    RETURN FUNCTION THAT REQUIRES PARAMETERS (row, rownum=None, rows=None):
+    """
     if expr != None and not isinstance(expr, (Mapping, list)) and hasattr(expr, "__call__"):
         return expr
     return compile_expression(qb_expression_to_python(expr))
@@ -442,7 +445,7 @@ python_multi_operators = {
 
 ruby_unary_operators = {
     "not": "! {{term}}",
-    "length": 'if ({{term}} == null) then null else ({{term}}).length',
+    "length": '({{term}}).empty ? -1 : ({{term}}).length()',
     "number": '({{term}}).to_f()'
 }
 

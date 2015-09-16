@@ -236,7 +236,9 @@ var importScript;
 		setTimeout(function(){
 			if (numLoaded.length>0){
 				var list = "";
-				numLoaded.forall(function(v){list+="\t"+v+"\n";});
+				for (var i = 0; i < numLoaded.length; i++){
+					list += "\t" + numLoaded[i] + "\n";
+				}//for
 				Log.error("Scripts not imported!\n"+list)
 			}//endif
 		}, 15000);

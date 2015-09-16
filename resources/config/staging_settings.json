@@ -36,7 +36,7 @@
 		"debug": true
 	},
 	"debug": {
-		"trace": false,
+		"trace": true,
 		"log": [
 			{
 				"log_type": "console"

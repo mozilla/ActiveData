@@ -12,10 +12,10 @@ from __future__ import division
 from __future__ import absolute_import
 
 import datetime
+from socket import timeout as socket_timeout
 
 from kombu import Connection, Producer, Exchange
 from pytz import timezone
-
 from mozillapulse.utils import time_to_string
 
 from pyLibrary.debugs import constants
@@ -26,7 +26,6 @@ from pyLibrary.meta import use_settings
 from pyLibrary.thread.threads import Thread
 from mozillapulse.consumers import GenericConsumer
 
-constants.set({"mozillapulse": {"consumers": {"logging": Log}}})
 
 class Consumer(Thread):
     @use_settings
@@ -62,7 +61,7 @@ class Consumer(Thread):
         settings.applabel = coalesce(settings.applable, settings.queue, settings.queue_name)
         settings.topic = topic
 
-        self.pulse = GenericConsumer(settings, connect=True, **settings)
+        self.pulse = ModifiedGenericConsumer(settings, connect=True, **settings)
         self.count = coalesce(start, 0)
         self.start()
 
@@ -201,3 +200,17 @@ class Publisher(object):
 
         producer.publish(jsons.scrub(final_data), serializer=self.settings.serializer)
         self.count += 1
+
+
+class ModifiedGenericConsumer(GenericConsumer):
+    def _drain_events_loop(self):
+        while True:
+            try:
+                self.connection.drain_events(timeout=self.timeout)
+            except socket_timeout, e:
+                Log.warning("timeout! Restarting pulse consumer.", cause=e)
+                try:
+                    self.disconnect()
+                except Exception, f:
+                    Log.warning("Problem with disconnect()", cause=f)
+                break

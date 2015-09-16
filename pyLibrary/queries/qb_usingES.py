@@ -14,6 +14,7 @@ from __future__ import absolute_import
 from copy import copy
 
 from collections import Mapping
+import sys
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.meta import use_settings

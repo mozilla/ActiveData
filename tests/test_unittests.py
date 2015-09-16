@@ -78,7 +78,7 @@ class TestUnittests(ActiveDataBaseTest):
                     "type": "test_result"
                 }
             },
-            "select": {"value": "run.duration", "aggregate": "average"},
+            "select": {"value": "run.stats.duration", "aggregate": "average"},
             "edges": [
                 {"name": "chunk", "value": ["run.suite", "run.chunk"]}
             ],
@@ -291,4 +291,31 @@ class TestUnittests(ActiveDataBaseTest):
         result = convert.json2value(convert.utf82unicode(response.all_content))
 
         Log.note("result\n{{result|indent}}", {"result": result})
+
+
+
+    def test_longest_running_tests(self):
+        test = wrap({"query": {
+            "sort": {"sort": -1, "field": "avg"},
+            "from": {
+                "from": "unittest",
+                "where": {"and": [{"gt": {"build.date": "1439337600"}}]},
+                "groupby": ["build.platform", "build.type", "run.suite", "result.test"],
+                "select": [{"aggregate": "avg", "name": "avg", "value": "result.duration"}],
+                "format": "table",
+                "limit": 100
+            },
+            "limit": 100,
+            "format": "list"
+        }})
+        query = convert.unicode2utf8(convert.value2json(test.query))
+        # EXECUTE QUERY
+        with Timer("query"):
+            response = http.get(self.service_url, data=query)
+            if response.status_code != 200:
+                error(response)
+        result = convert.json2value(convert.utf82unicode(response.all_content))
+
+        Log.note("result\n{{result|indent}}", {"result": result})
+
 

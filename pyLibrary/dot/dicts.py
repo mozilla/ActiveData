@@ -233,7 +233,8 @@ class Dict(MutableMapping):
         return Dict(**self)
 
     def __copy__(self):
-        return Dict(**self)
+        d = _get(self, "_dict")
+        return Dict(**d)
 
     def __deepcopy__(self, memo):
         d = _get(self, "_dict")

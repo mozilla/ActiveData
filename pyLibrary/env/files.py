@@ -155,7 +155,7 @@ class File(object):
         from pyLibrary.jsons import ref
 
         content = self.read(encoding=encoding)
-        value = convert.json2value(content, flexible=True, paths=True)
+        value = convert.json2value(content, flexible=True, leaves=True)
         abspath = self.abspath
         if os.sep == "\\":
             abspath = "/" + abspath.replace(os.sep, "/")

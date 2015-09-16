@@ -567,6 +567,7 @@ class Log_usingThread(BaseLog):
             self.queue.add({"template": template, "params": params})
             return self
         except Exception, e:
+            e = Except.wrap(e)
             sys.stdout.write("IF YOU SEE THIS, IT IS LIKELY YOU FORGOT TO RUN Log.start() FIRST\n")
             raise e  # OH NO!
 
@@ -595,11 +596,20 @@ class Log_usingMulti(BaseLog):
         self.many = []
 
     def write(self, template, params):
+        bad = []
         for m in self.many:
             try:
                 m.write(template, params)
             except Exception, e:
-                pass
+                bad.append(m)
+                sys.stdout.write("a logger failed")
+                Log.warning("Logger failed!  It will be removed: {{type}}", type=m.__class__.__name__, cause=e)
+        try:
+            for b in bad:
+                self.many.remove(b)
+        except Exception:
+            pass
+
         return self
 
     def add_log(self, logger):

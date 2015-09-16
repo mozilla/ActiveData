@@ -1,8 +1,8 @@
 {
 	"flask": {
 		"host": "0.0.0.0",
-		"port": 81,
-		"debug": false,
+		"port": 5000,
+		"debug": true,
 		"threaded": true,
 		"processes": 1
 	},
@@ -36,7 +36,11 @@
 		"debug": true
 	},
 	"debug": {
-		"trace": false,
+		"trace": true,
+//		"cprofile": {
+//			"enabled":true,
+//			"filename":"./results/profile.tab"
+//		},
 		"log": [
 			{
 				"log_type": "console"

@@ -19,6 +19,7 @@ from pyLibrary.dot import unwrap, tuplewrap, wrap
 from pyLibrary.dot.objects import dictwrap
 
 
+DEBUG = False
 class UniqueIndex(BaseSet, Mapping):
     """
     DEFINE A SET OF ATTRIBUTES THAT UNIQUELY IDENTIFIES EACH OBJECT IN A list.
@@ -38,14 +39,14 @@ class UniqueIndex(BaseSet, Mapping):
     def __getitem__(self, key):
         try:
             _key = value2key(self._keys, key)
-            if len(self._keys) == 1 or len(key) == len(self._keys):
+            if len(self._keys) == 1 or len(_key) == len(self._keys):
                 d = self._data.get(_key)
                 return wrap(d)
             else:
                 output = wrap([
                     d
                     for d in self._data.values()
-                    if all(d[k] == v for k, v in _key.items())
+                    if all(wrap(d)[k] == v for k, v in _key.items())
                 ])
                 return output
         except Exception, e:
@@ -67,6 +68,11 @@ class UniqueIndex(BaseSet, Mapping):
     def keys(self):
         return self._data.keys()
 
+    def pop(self):
+        output = self._data.iteritems().next()[1]
+        self.remove(output)
+        return wrap(output)
+
     def add(self, val):
         val = dictwrap(val)
         key = value2key(self._keys, val)
@@ -79,8 +85,8 @@ class UniqueIndex(BaseSet, Mapping):
             self.count += 1
         elif d is not val:
             if self.fail_on_dup:
-                Log.error("key {{key|json}} already filled", key=key)
-            else:
+                Log.error("{{new|json}} with key {{key|json}} already filled with {{old|json}}", key=key, new=val, old=self[val])
+            elif DEBUG:
                 Log.warning("key {{key|json}} already filled\nExisting\n{{existing|json|indent}}\nValue\n{{value|json|indent}}",
                     key=key,
                     existing=d,
@@ -111,7 +117,7 @@ class UniqueIndex(BaseSet, Mapping):
         return (wrap(v) for v in self._data.itervalues())
 
     def __sub__(self, other):
-        output = UniqueIndex(self._keys)
+        output = UniqueIndex(self._keys, fail_on_dup=self.fail_on_dup)
         for v in self:
             if v not in other:
                 output.add(v)
@@ -134,6 +140,14 @@ class UniqueIndex(BaseSet, Mapping):
             except Exception, e:
                 pass
         return output
+
+    def __ior__(self, other):
+        for v in other:
+            try:
+                self.add(v)
+            except Exception, e:
+                pass
+        return self
 
     def __xor__(self, other):
         if not isinstance(other, Iterable):

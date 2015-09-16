@@ -114,7 +114,7 @@ importScript([], function(){
 			if (queryTool.showMode=="showTable"){
 				var list = convert.List2Tab(response2list(queryTool.response));
 				var c=$("#tableContent");
-				c.html(list.toString());
+				c.val(list.toString());
 				$("#tableDialog").dialog({
 				    width:850,
 					height:350

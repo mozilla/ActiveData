@@ -1,12 +1,18 @@
 # encoding: utf-8
 #
-#
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+
+import sys
+sys.path.append(".")
+
 from flask import Flask
 import flask
 from werkzeug.contrib.fixers import HeaderRewriterFix
@@ -62,27 +68,40 @@ def download_file(filename):
 
 @app.route('/find/<path:hash>')
 def find_query(hash):
-    hash = hash.split("/")[0]
-    query = query_finder.find(hash)
+    try:
+        hash = hash.split("/")[0]
+        query = query_finder.find(hash)
 
-    if not query:
+        if not query:
+            return Response(
+                b'{"type": "ERROR", "template": "not found"}',
+                status=404,
+                headers={
+                    "access-control-allow-origin": "*",
+                    "Content-type": "application/json"
+                }
+            )
+        else:
+            return Response(
+                convert.unicode2utf8(query),
+                status=200,
+                headers={
+                    "access-control-allow-origin": "*",
+                    "Content-type": "application/json"
+                }
+            )
+    except Exception, e:
+        e = Except.wrap(e)
         return Response(
-            b'{"type":"ERROR", "template":"not found"}',
+            convert.unicode2utf8(convert.value2json(e)),
             status=400,
             headers={
                 "access-control-allow-origin": "*",
                 "Content-type": "application/json"
             }
         )
-    else:
-        return Response(
-            convert.unicode2utf8(query),
-            status=200,
-            headers={
-                "access-control-allow-origin": "*",
-                "Content-type": "application/json"
-            }
-        )
+
+
 
 @app.route('/query', defaults={'path': ''}, methods=['GET', 'POST'])
 def query(path):
@@ -127,7 +146,7 @@ def query(path):
 
         result.meta.active_data_response_time = active_data_timer.duration
 
-        response_data = convert.unicode2utf8(convert.value2json(result)),
+        response_data = convert.unicode2utf8(convert.value2json(result))
         Log.note("Response is {{num}} bytes", num=len(response_data))
         return Response(
             response_data,
@@ -257,7 +276,7 @@ def main():
             query_finder = SaveQueries(config.saved_queries)
 
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
-        app.run(**unwrap(config.flask))
+        app.run(**config.flask)
     except Exception, e:
         Log.error("Problem with etl", cause=e)
     finally:

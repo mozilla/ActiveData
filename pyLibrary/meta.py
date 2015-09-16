@@ -274,13 +274,14 @@ def wrap_function(cache_store, func_):
     return output
 
 
-_repr = Repr()
-_repr.maxlevel = 3
+# _repr = Repr()
+# _repr.maxlevel = 3
 
 def repr(obj):
     """
     JUST LIKE __builtin__.repr(), BUT WITH SOME REASONABLE LIMITS
     """
+    return repr(obj)
     return _repr.repr(obj)
 
 

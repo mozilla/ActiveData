@@ -81,14 +81,16 @@ class Queue(object):
      IS DIFFICULT TO USE JUST BETWEEN THREADS (SERIALIZATION REQUIRED)
     """
 
-    def __init__(self, name, max=None, silent=False):
+    def __init__(self, name, max=None, silent=False, unique=False):
         """
         max - LIMIT THE NUMBER IN THE QUEUE, IF TOO MANY add() AND extend() WILL BLOCK
         silent - COMPLAIN IF THE READERS ARE TOO SLOW
+        unique - SET True IF YOU WANT ONLY ONE INSTANCE IN THE QUEUE AT A TIME
         """
         self.name = name
         self.max = coalesce(max, 2 ** 10)
         self.silent = silent
+        self.unique = unique
         self.keep_running = True
         self.lock = Lock("lock for queue " + name)
         self.queue = deque()
@@ -110,7 +112,11 @@ class Queue(object):
         with self.lock:
             self._wait_for_queue_space(timeout=None)
             if self.keep_running:
-                self.queue.append(value)
+                if self.unique:
+                    if value not in self.queue:
+                        self.queue.append(value)
+                else:
+                    self.queue.append(value)
         return self
 
     def push(self, value):
@@ -123,14 +129,17 @@ class Queue(object):
                 self.queue.appendleft(value)
         return self
 
-
-
     def extend(self, values):
         with self.lock:
             # ONCE THE queue IS BELOW LIMIT, ALLOW ADDING MORE
             self._wait_for_queue_space()
             if self.keep_running:
-                self.queue.extend(values)
+                if self.unique:
+                    for v in values:
+                        if v not in self.queue:
+                            self.queue.append(v)
+                else:
+                    self.queue.extend(values)
         return self
 
     def _wait_for_queue_space(self, timeout=DEFAULT_WAIT_TIME):

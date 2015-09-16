@@ -17,14 +17,13 @@ from pyLibrary.env import elasticsearch
 from pyLibrary.env.elasticsearch import ES_NUMERIC_TYPES
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb
-from pyLibrary.queries.containers import Container
 from pyLibrary.queries.query import Query
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import coalesce, set_default, Null, literal_field, listwrap, split_field, join_field
 from pyLibrary.dot import wrap
 from pyLibrary.strings import expand_template
-from pyLibrary.thread.threads import Queue, Thread, Lock
+from pyLibrary.thread.threads import Queue, Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import HOUR, MINUTE
 
@@ -57,7 +56,7 @@ class FromESMetadata(object):
         self.settings = settings
         self.default_name = coalesce(name, alias, index)
         self.default_es = elasticsearch.Cluster(settings=settings)
-        self.todo = Queue("refresh metadata", max=100000)
+        self.todo = Queue("refresh metadata", max=100000, unique=True)
 
         table_columns = metadata_tables()
         column_columns = metadata_columns()

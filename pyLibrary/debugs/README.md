@@ -1,6 +1,11 @@
 
-Logging and Exceptions
-======================
+Structured Logging and Exception Handling
+=========================================
+
+This library provides two main features
+
+* **Structured logging** - output is all JSON (with options to serialize to text)
+* **Exception handling weaved in** - Good logs must represent what happened, and that can not be done if the logging library is not intimately familiar with the (exceptional) code paths taken.
 
 
 Motivation
@@ -9,8 +14,8 @@ Motivation
 Exception handling and logging are undeniably linked.  There are many instances
 where exceptions are raised and must be logged, except when a subsuming system 
 can compensate.  Exception handling semantics are great because they 
-decouple the cause from the solution, but this is at odds with clean logging -
-which couples raising and catching to make appropriate decisions about what to
+decouple the cause from the solution, but this can be at odds with clean logging
+- which couples raising and catching to make appropriate decisions about what to
 emit to the log.  
 
 This logging module is additionally responsible for raising exceptions, 
@@ -19,11 +24,11 @@ if it can be ignored because something can handle it.
 
 **More Reading**
 
-* https://sites.google.com/site/steveyegge2/the-emacs-problem
+* **Structured Logging is Good** - https://sites.google.com/site/steveyegge2/the-emacs-problem
 
 
 
-Basic Forms
+Basic Usage
 -----------
 
 **Use `Log.note()` for all logging**
@@ -86,11 +91,10 @@ Catching all exceptions is preferred over the *only-catch-what-you-can-handle* s
 
 To repeat:  When using dependency injection, callers can not reasonably be expected to know about the types of failures that can happen deep down the call chain.  This makes it vitally important that methods summarize all exceptions, both known and unknown, so their callers have the information to make better decisions on appropriate action.  
 
-
 **Use named parameters in your error descriptions too**
 
 Error logging accepts keyword parameters just like `Log.note()` does
-
+  i
 ```python
     def worker(value):
         try:
@@ -120,6 +124,21 @@ Error logging accepts keyword parameters just like `Log.note()` does
         except Exception, e:
             Log.warning("Failure to work with {{key4}}", key4=value4, cause=e)
 ```
+**Don't loose your stack trace!**
+
+Be aware your `except` clause can also throw exceptions:  In the event you catch a vanilla Python Exception, you run the risk of loosing its stack trace.  To prevent this, wrap your exception in an `Except` object, which will capture your trace for later use.  Exceptions thrown from this `Log` library need not be wrapped because they already captured their trace.  If you wrap an `Except` object, you simply get back the object you passed.
+
+```python
+	try:
+		# DO SOME WORK		
+    except Exception, e:
+        e = Except.wrap(e)
+        # DO SOME FANCY ERROR RECOVERY
+ ```
+
+
+
+
 
 Other forms
 -----------

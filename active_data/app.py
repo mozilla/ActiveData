@@ -68,27 +68,40 @@ def download_file(filename):
 
 @app.route('/find/<path:hash>')
 def find_query(hash):
-    hash = hash.split("/")[0]
-    query = query_finder.find(hash)
+    try:
+        hash = hash.split("/")[0]
+        query = query_finder.find(hash)
 
-    if not query:
+        if not query:
+            return Response(
+                b'{"type": "ERROR", "template": "not found"}',
+                status=404,
+                headers={
+                    "access-control-allow-origin": "*",
+                    "Content-type": "application/json"
+                }
+            )
+        else:
+            return Response(
+                convert.unicode2utf8(query),
+                status=200,
+                headers={
+                    "access-control-allow-origin": "*",
+                    "Content-type": "application/json"
+                }
+            )
+    except Exception, e:
+        e = Except.wrap(e)
         return Response(
-            b'{"type":"ERROR", "template":"not found"}',
+            convert.unicode2utf8(convert.value2json(e)),
             status=400,
             headers={
                 "access-control-allow-origin": "*",
                 "Content-type": "application/json"
             }
         )
-    else:
-        return Response(
-            convert.unicode2utf8(query),
-            status=200,
-            headers={
-                "access-control-allow-origin": "*",
-                "Content-type": "application/json"
-            }
-        )
+
+
 
 @app.route('/query', defaults={'path': ''}, methods=['GET', 'POST'])
 def query(path):

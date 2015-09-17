@@ -820,6 +820,8 @@ class Alias(Features):
             # FIND MAPPING WITH MOST PROPERTIES (AND ASSUME THAT IS THE CANONICAL TYPE)
             max_prop = -1
             for _type, mapping in index.mappings.items():
+                if _type == "_default_":
+                    continue
                 num_prop = len(mapping.properties.keys())
                 if max_prop < num_prop:
                     max_prop = num_prop
@@ -931,7 +933,7 @@ class Alias(Features):
                     show_query.facets = {k: "..." for k in query.facets.keys()}
                 else:
                     show_query = query
-                Log.note("Query:\n{{query|indent}}", query=show_query)
+                Log.note("Query {{path}}\n{{query|indent}}", path=self.path + "/_search", query=show_query)
             return self.cluster.post(
                 self.path + "/_search",
                 data=query,

@@ -992,6 +992,10 @@ def _convert_inequality(ine, term):
     return {"range": {var: {ine: val}}}
 
 
+def _convert_regex(op, term):
+    return {"regexp": term}
+
+
 def _no_convert(op, term):
     return {op: term}
 
@@ -1019,7 +1023,9 @@ qb_to_es_map = {
     "gt": _convert_inequality,
     "gte": _convert_inequality,
     "lt": _convert_inequality,
-    "lte": _convert_inequality
+    "lte": _convert_inequality,
+    "regexp": _convert_regex,
+    "regex": _convert_regex
 }
 
 

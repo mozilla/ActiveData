@@ -74,9 +74,6 @@ class Index(Features):
 
         self.cluster_state = None
         self.debug = debug
-        if self.debug:
-            Log.alert("elasticsearch debugging for index {{index}} is on", index=settings.index)
-
         self.settings = settings
         self.cluster = Cluster(settings)
 
@@ -107,6 +104,9 @@ class Index(Features):
             Log.error("not allowed")
 
         self.path = "/" + full_index + "/" + type
+
+        if self.debug:
+            Log.alert("elasticsearch debugging for index {{url}} is on", index=self.url)
 
     @property
     def url(self):
@@ -608,7 +608,11 @@ class Cluster(object):
                     self.version = self.cluster_state.version.number
                 elif index:  # UPDATE THE MAPPING FOR ONE INDEX ONLY
                     response = self.get("/"+index+"/_mapping")
-                    self._metadata.indices[index].mappings = qb.sort(response.items(), 0).last()[1].mappings
+                    if self.version.startswith("0.90."):
+                        best = qb.sort(response.items(), 0).last()
+                        self._metadata.indices[index].mappings = best[1]
+                    else:
+                        self._metadata.indices[index].mappings = qb.sort(response.items(), 0).last()[1].mappings
                     return Dict(indices={index: self._metadata.indices[index]})
             else:
                 Log.error("Metadata exploration has been disabled")
@@ -1000,12 +1004,14 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                     columns.append(Column(
                         table=index_name,
                         name=query_path,
+                        abs_name=query_path,
                         type=p.type
                     ))
                 else:
                     columns.append(Column(
                         table=index_name,
-                        name=query_path + "." + n,
+                        name=query_path + "\\." + n,
+                        abs_name=query_path + "\\." + n,
                         type=p.type
                     ))
             continue
@@ -1020,7 +1026,8 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
             if property.index_name and name != property.index_name:
                 columns.append(Column(
                     table=index_name,
-                    name=property.index_name,
+                    abs_name=query_path,
+                    name=query_path,
                     type=property.type
                 ))
         elif property.enabled == None or property.enabled == False:

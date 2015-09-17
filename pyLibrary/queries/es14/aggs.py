@@ -145,7 +145,7 @@ def es_aggsop(es, frum, query):
 
     if split_where[0]:
         #TODO: INCLUDE FILTERS ON EDGES
-        filter = simplify_esfilter({"and":split_where[0]})
+        filter = simplify_esfilter({"and": split_where[0]})
         es_query = Dict(
             aggs={"_filter": set_default({"filter": filter}, es_query)}
         )

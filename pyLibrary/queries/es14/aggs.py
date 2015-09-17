@@ -96,12 +96,12 @@ def es_aggsop(es, frum, query):
                     es_query.aggs[key].cardinality.field = field_name
                     s.pull = key + ".value"
                 else:
+                    # PULL VALUE OUT OF THE stats AGGREGATE
                     es_query.aggs[literal_field(canonical_name)].stats.field = field_name
                     s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
         else:
             es_query.aggs[literal_field(canonical_name)][aggregates1_4[representative.aggregate]].field = field_name
             representative.pull = literal_field(canonical_name) + ".value"
-
     for i, s in enumerate(formula):
         new_select[unicode(i)] = s
         s.pull = literal_field(s.name) + ".value"
@@ -151,12 +151,17 @@ def es_aggsop(es, frum, query):
         )
     # </TERRIBLE SECTION>
 
+    if not es_query:
+        es_query = wrap({"query": {"match_all": {}}})
+
     es_query.size = 0
 
     with Timer("ES query time") as es_duration:
         result = es09.util.post(es, es_query, query.limit)
 
     try:
+        result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE
+
         formatter, groupby_formatter, aggop_formatter, mime_type = format_dispatch[query.format]
         if query.edges:
             output = formatter(decoders, result.aggregations, start, query, select)

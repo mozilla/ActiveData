@@ -440,8 +440,8 @@ class TestDeepOps(ActiveDataBaseTest):
                "sort": []
             },
             "expecting_list": {
-                "meta": {"format": "value"},
-                "data": 14
+                "meta": {"format": "list"},
+                "data": [{"o": 1, "v": "still more"}]
             }
         }
 

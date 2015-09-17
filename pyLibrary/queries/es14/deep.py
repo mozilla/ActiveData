@@ -186,10 +186,10 @@ def es_deepop(es, query):
     with Timer("call to ES") as call_timer:
         data = es09.util.post(es, es_query, query.limit)
 
-    # RETURN A LIST OF INNER OBJECTS
+    # EACH A HIT IS RETURNED MULTIPLE TIMES FOR EACH INNER HIT, WITH INNER HIT INCLUDED
     def inners():
         for t in data.hits.hits:
-            for i in t.inner_hits[query_path].hits.hits:
+            for i in t.inner_hits[literal_field(query_path)].hits.hits:
                 t._inner = i._source
                 yield t
         Thread.join(need_more)

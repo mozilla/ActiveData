@@ -230,11 +230,21 @@ def _normalize_edges(edges, schema=None):
 
 
 def _normalize_edge(edge, schema=None):
+    if not _Column:
+        _late_import()
+
     if isinstance(edge, basestring):
         if schema:
             e = schema[edge]
             if e:
-                if isinstance(e.fields, list) and len(e.fields) == 1:
+                if isinstance(e, _Column):
+                    return Dict(
+                        name=edge,
+                        value=edge,
+                        allowNulls=True,
+                        domain=_normalize_domain(schema=schema)
+                    )
+                elif isinstance(e.fields, list) and len(e.fields) == 1:
                     return Dict(
                         name=e.name,
                         value=e.fields[0],

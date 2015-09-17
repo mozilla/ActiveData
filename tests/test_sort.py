@@ -19,7 +19,7 @@ lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
 class TestSorting(ActiveDataBaseTest):
-    @skip
+
     def test_name_and_direction_sort(self):
         test = {
             "data": [
@@ -36,7 +36,7 @@ class TestSorting(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": ["b"]
+                "data": [6, 4, 3, 2, 1]
             }
         }
         self._execute_es_tests(test)

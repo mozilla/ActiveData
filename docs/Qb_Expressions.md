@@ -136,8 +136,8 @@ Returns `true` if two expressions are not equal
 
 Compare two expressions, and return a Boolean
 
-		{"gt": {variable: value}}
-		{"gt": [expr1, expr2]}
+		{"gt": {variable: value}}   ⇒  variable > value
+		{"lte": [expr1, expr2]}     ⇒  expr1 <= expr2
 
 
 
@@ -328,7 +328,7 @@ Evaluates a list of `when` sub-clauses in order, if one evaluates to `true` the 
 		]}
 
 The last item in the list can be a plain expression, called the `default_expression`.  It is  evaluated-and-returned only if all previous conditions evaluate to `false`.  If the `default_expression` is missing, and all conditions evaluate to `false`, `null` is returned.  
-***If any `when` sub-clauses contain an `else` clause, it is ignored.***
+***If any `when` sub-clauses contain an `else` clause, the `else` clause is ignored.***
 
 Value Operators
 ---------------

@@ -33,12 +33,6 @@ DEBUG = False
 
 
 def post(es, es_query, limit):
-    if not es_query.facets and es_query.size == 0 and not es_query.aggs:
-        Log.error("FromES is sending no facets")
-        # DO NOT KNOW WHY THIS WAS HERE
-    # if isinstance(query.select, list) or len(query.edges) and not FromES.facets.keys and FromES.size == 0:
-    #     Log.error("FromES is sending no facets")
-
     post_result = None
     try:
         post_result = es.search(es_query)

@@ -29,14 +29,18 @@ from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter, query_
 DEFAULT_LIMIT = 10
 
 qb = None
+_Column = None
 
 
 def _late_import():
     global qb
+    global _Column
 
+    from pyLibrary.queries.meta import Column as _Column
     from pyLibrary.queries import qb
 
     _ = qb
+    _ = _Column
 
 
 class Query(object):
@@ -167,6 +171,9 @@ def _normalize_selects(selects, schema=None):
 
 
 def _normalize_select(select, schema=None):
+    if not _Column:
+        _late_import()
+
     if isinstance(select, basestring):
         select = select.rstrip(".")
         if not select:
@@ -178,7 +185,15 @@ def _normalize_select(select, schema=None):
         if schema:
             s = schema[select]
             if s:
-                return s.getSelect()
+                if isinstance(s, _Column):
+                    return Dict(
+                        name=select,
+                        value=select,
+                        aggregate="none"
+                    )
+                else:
+                    #EXPECTING DIMENSION
+                    return s.getSelect()
 
         if select.endswith(".*"):
             name = select[:-2]
@@ -215,11 +230,21 @@ def _normalize_edges(edges, schema=None):
 
 
 def _normalize_edge(edge, schema=None):
+    if not _Column:
+        _late_import()
+
     if isinstance(edge, basestring):
         if schema:
             e = schema[edge]
             if e:
-                if isinstance(e.fields, list) and len(e.fields) == 1:
+                if isinstance(e, _Column):
+                    return Dict(
+                        name=edge,
+                        value=edge,
+                        allowNulls=True,
+                        domain=_normalize_domain(schema=schema)
+                    )
+                elif isinstance(e.fields, list) and len(e.fields) == 1:
                     return Dict(
                         name=e.name,
                         value=e.fields[0],
@@ -428,15 +453,15 @@ def _move_nested_term(master, where, schema):
     return where
 
 
-def _get_nested_path(field, schema):
-    if is_keyword(field):
-        field = join_field([schema.es.alias] + split_field(field))
-        for i, f in reverse(enumerate(split_field(field))):
-            path = join_field(split_field(field)[0:i + 1:])
-            if path in INDEX_CACHE:
-                return unwraplist(join_field(split_field(path)[1::]))
-    return None
-
+# def _get_nested_path(field, schema):
+#     if is_keyword(field):
+#         field = join_field([schema.es.alias] + split_field(field))
+#         for i, f in reverse(enumerate(split_field(field))):
+#             path = join_field(split_field(field)[0:i + 1:])
+#             if path in INDEX_CACHE:
+#                 return unwraplist(join_field(split_field(path)[1::]))
+#     return None
+#
 
 def _where_terms(master, where, schema):
     """
@@ -505,6 +530,9 @@ def _normalize_sort(sort=None):
     for s in listwrap(sort):
         if isinstance(s, basestring) or Math.is_integer(s):
             output.append({"value": s, "sort": 1})
+        elif list(set(s.values()))[0] == "desc" and not s.sort and not s.value:
+            for v, d in s.items():
+                output.append({"value": v, "sort": -1})
         else:
             output.append({"value": coalesce(s.value, s.field), "sort": coalesce(sort_direction[s.sort], 1)})
     return wrap(output)

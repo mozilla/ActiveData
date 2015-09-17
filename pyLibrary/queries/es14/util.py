@@ -95,5 +95,5 @@ aggregates1_4 = {
     "variance": "variance"
 }
 
-NON_STATISTICAL_AGGS = {"none", "one", "count"}
+NON_STATISTICAL_AGGS = {"none", "one"}
 

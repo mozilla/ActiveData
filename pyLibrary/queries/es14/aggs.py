@@ -20,7 +20,7 @@ from pyLibrary.queries import qb, es09
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword, DefaultDomain
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, qb_expression_to_ruby, get_all_vars
+from pyLibrary.queries.expressions import simplify_esfilter, qb_expression_to_ruby, get_all_vars, split_expression_by_depth, expression_map
 from pyLibrary.queries.query import DEFAULT_LIMIT
 from pyLibrary.times.timer import Timer
 
@@ -96,16 +96,17 @@ def es_aggsop(es, frum, query):
                     es_query.aggs[key].cardinality.field = field_name
                     s.pull = key + ".value"
                 else:
+                    # PULL VALUE OUT OF THE stats AGGREGATE
                     es_query.aggs[literal_field(canonical_name)].stats.field = field_name
                     s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
         else:
             es_query.aggs[literal_field(canonical_name)][aggregates1_4[representative.aggregate]].field = field_name
             representative.pull = literal_field(canonical_name) + ".value"
-
     for i, s in enumerate(formula):
         new_select[unicode(i)] = s
         s.pull = literal_field(s.name) + ".value"
-        es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].script = qb_expression_to_ruby(s.value)
+        abs_value = expression_map({c.name: c.abs_name for c in frum._columns}, s.value)
+        es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].script = qb_expression_to_ruby(abs_value)
 
     decoders = [AggsDecoder(e, query) for e in coalesce(query.edges, query.groupby, [])]
     start = 0
@@ -113,17 +114,22 @@ def es_aggsop(es, frum, query):
         es_query = d.append_query(es_query, start)
         start += d.num_columns
 
-    if query.where:
-        #TODO: INCLUDE FILTERS ON EDGES
 
-        filter = simplify_esfilter(query.where)
-        es_query = Dict(
-            aggs={"_filter": set_default({"filter": filter}, es_query)}
-        )
+    #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
+    split_where = split_expression_by_depth(query.where, schema=frum)
 
     if len(split_field(frum.name)) > 1:
+        if any(split_where[2:]):
+            Log.error("Where clause is too deep")
+
+        if split_where[1]:
+            #TODO: INCLUDE FILTERS ON EDGES
+            filter = simplify_esfilter({"and":split_where[1]})
+            es_query = Dict(
+                aggs={"_filter": set_default({"filter": filter}, es_query)}
+            )
+
         es_query = wrap({
-            "size": 0,
             "aggs": {"_nested": set_default(
                 {
                     "nested": {
@@ -133,6 +139,20 @@ def es_aggsop(es, frum, query):
                 es_query
             )}
         })
+    else:
+        if any(split_where[1:]):
+            Log.error("Where clause is too deep")
+
+    if split_where[0]:
+        #TODO: INCLUDE FILTERS ON EDGES
+        filter = simplify_esfilter({"and":split_where[0]})
+        es_query = Dict(
+            aggs={"_filter": set_default({"filter": filter}, es_query)}
+        )
+    # </TERRIBLE SECTION>
+
+    if not es_query:
+        es_query = wrap({"query": {"match_all": {}}})
 
     es_query.size = 0
 
@@ -140,6 +160,8 @@ def es_aggsop(es, frum, query):
         result = es09.util.post(es, es_query, query.limit)
 
     try:
+        result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE
+
         formatter, groupby_formatter, aggop_formatter, mime_type = format_dispatch[query.format]
         if query.edges:
             output = formatter(decoders, result.aggregations, start, query, select)

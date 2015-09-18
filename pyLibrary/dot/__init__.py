@@ -304,6 +304,10 @@ def wrap(v):
     if type_ is dict:
         m = Dict(v)
         return m
+        # m = object.__new__(Dict)
+        # object.__setattr__(m, "_dict", v)
+        # return m
+
     elif type_ is NoneType:
         return Null
     elif type_ is list:

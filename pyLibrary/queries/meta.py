@@ -66,8 +66,8 @@ class FromESMetadata(object):
         self.columns.insert(column_columns)
         self.columns.insert(table_columns)
         # TODO: fix monitor so it does not bring down ES
-        # self.worker = Thread.run("refresh metadata", self.monitor)
-        self.worker = Thread.run("refresh metadata", self.not_monitor)
+        self.worker = Thread.run("refresh metadata", self.monitor)
+        # self.worker = Thread.run("refresh metadata", self.not_monitor)
         return
 
     @property
@@ -87,8 +87,8 @@ class FromESMetadata(object):
         if not existing_columns:
             self.columns.add(c)
             cols = filter(lambda r: r.table == "meta.columns", self.columns.data)
-            for c in cols:
-                c.partitions = c.cardinality = c.last_updated = None
+            for cc in cols:
+                cc.partitions = cc.cardinality = cc.last_updated = None
             self.todo.add(c)
             self.todo.extend(cols)
         else:
@@ -302,17 +302,18 @@ class FromESMetadata(object):
         Log.warning("metadata scan has been disabled")
         while not please_stop:
             c = self.todo.pop()
-            self.columns.update({
-                "set": {
-                    "last_updated": Date.now()
-                },
-                "clear":[
-                    "count",
-                    "cardinality",
-                    "partitions",
-                ],
-                "where": {"eq": {"table": c.table, "abs_name": c.abs_name}}
-            })
+            with self.columns.locker:
+                self.columns.update({
+                    "set": {
+                        "last_updated": Date.now()
+                    },
+                    "clear":[
+                        "count",
+                        "cardinality",
+                        "partitions",
+                    ],
+                    "where": {"eq": {"table": c.table, "abs_name": c.abs_name}}
+                })
             Log.note("Could not get {{col.table}}.{{col.abs_name}} info", col=c)
 
 

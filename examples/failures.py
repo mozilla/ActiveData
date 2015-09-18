@@ -1,6 +1,6 @@
 from pyLibrary import strings, convert
 from pyLibrary.debugs import constants
-from pyLibrary.debugs.logs import Log
+from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot import wrap, Dict, coalesce, unwraplist
 from pyLibrary.env import http
 from pyLibrary.queries import qb
@@ -10,6 +10,8 @@ from pyLibrary.strings import edit_distance
 from pyLibrary.times.dates import Date
 
 # DATE RANGE
+from pyLibrary.times.timer import Timer
+
 FROM_DATE = Date("today-2day")
 TO_DATE = Date("today-1day")
 
@@ -50,17 +52,27 @@ while True:
 
 
 # SIMPLE LIST OF ALL TEST FAILURES
-result = http.post_json(config.ActiveData.url, data={
-    "from": "unittest",
-    "select": "*",
-    "where": {"and": [
-        {"gte": {"run.timestamp": FROM_DATE}},
-        {"lt": {"run.timestamp": TO_DATE}},
-        {"eq": {"result.ok": False}}
-    ]},
-    "limit": 10000,
-    "format": "list"
-})
+with Timer("get failures"):
+    result = http.post_json(config.ActiveData.url, data={
+        "from": "unittest.result.subtests",
+        "select": ["_id", "name", "message", "run.suite", "run.chunk", "result.test", "build_date", "build.branch"],
+        "where": {"and": [
+            {"gte": {"run.timestamp": FROM_DATE}},
+            {"lt": {"run.timestamp": TO_DATE}},
+            {"eq": {"result.ok": False}},
+            {"eq": {"ok", False}}
+        ]},
+        "limit": 10000,
+        "format": "list"
+    })
+
+
+
+
+
+
+if result.type == "ERROR":
+    Log.error("problem", cause=Except.wrap(result))
 
 # PULL THE SPECIFIC SUB-TESTS THAT FAILED
 for r in result.data:
@@ -91,18 +103,19 @@ for r in result.data:
 # test_words = [{"and": [{"term": {"short_desc.lowercase": word}} for word in strings.wordify(t.split("/")[-1])]} for t in result.data.result.test]
 # tests = set(t.split("/")[-1] for t in result.data.result.test)
 
-with FromES(settings=config.Bugzilla) as es:
-    #PULL ALL INTERMITTENTS, I CAN NOT FIGURE OUT HOW TO LIMIT TO JUST FOUND FAILURES
-    bugs = es.query({
-        "from": "public_bugs",
-        "select": ["bug_id", "short_desc"],
-        "where": {"and": [
-            {"gt": {"expires_on": Date.now().milli}},
-            {"eq": {"keyword": "intermittent-failure"}},
-            {"not": {"eq": {"bug_status": ["resolved", "verified", "closed"]}}},
-        ]},
-        "limit": 100000
-    })
+with Timer("pull from bzETL"):
+    with FromES(settings=config.Bugzilla) as es:
+        #PULL ALL INTERMITTENTS, I CAN NOT FIGURE OUT HOW TO LIMIT TO JUST FOUND FAILURES
+        bugs = es.query({
+            "from": "public_bugs",
+            "select": ["bug_id", "short_desc"],
+            "where": {"and": [
+                {"gt": {"expires_on": Date.now().milli}},
+                {"eq": {"keyword": "intermittent-failure"}},
+                {"not": {"eq": {"bug_status": ["resolved", "verified", "closed"]}}},
+            ]},
+            "limit": 100000
+        })
 
 # FIND BEST MATCH FOR EACH TEST FAILURE
 for r in groups:

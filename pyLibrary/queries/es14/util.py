@@ -23,32 +23,31 @@ def es_query_template(path):
     sub_path = split_field(path)[1:]
 
     if sub_path:
+        f0 = {}
+        f1 = {}
         output = wrap({
-            "query": {
-                "nested": {
+            "filter": {"and": [
+                f0,
+                {"nested": {
                     "path": join_field(sub_path),
-                    "filter": {},
+                    "filter": f1,
                     "inner_hits": {}
-                }
-            },
+                }}
+            ]},
             "from": 0,
             "size": 0,
             "sort": []
         })
-        return output, "query.nested.filter"
+        return output, wrap([f0, f1])
     else:
+        f0 = {}
         output = wrap({
-            "query": {
-                "filtered": {
-                    "query": {"match_all": {}},
-                    "filter": {}
-                }
-            },
+            "filter": f0,
             "from": 0,
             "size": 0,
             "sort": []
         })
-        return output, "query.filtered.filter"
+        return output, wrap([f0])
 
 
 

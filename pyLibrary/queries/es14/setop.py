@@ -55,8 +55,8 @@ def is_setop(es, query):
 
 
 def es_setop(es, query):
-    es_query, es_filter = es14.util.es_query_template(query.frum.name)
-    es_query[es_filter] = simplify_esfilter(qb_expression_to_esfilter(query.where))
+    es_query, filters = es14.util.es_query_template(query.frum.name)
+    set_default(filters[0], simplify_esfilter(qb_expression_to_esfilter(query.where)))
     es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
     es_query.sort = qb_sort_to_es_sort(query.sort)
     es_query.fields = DictList()

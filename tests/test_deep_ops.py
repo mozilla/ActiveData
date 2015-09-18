@@ -403,7 +403,7 @@ class TestDeepOps(ActiveDataBaseTest):
 
         self._execute_es_tests(test, delete_index=False)
 
-    def test_complicated_where(self):
+    def test_agg_w_complicated_where(self):
 
         # TEST WE CAN PERFORM AGGREGATES ON EXPRESSIONS OF DEEP VARIABLES
         test = {
@@ -447,5 +447,40 @@ class TestDeepOps(ActiveDataBaseTest):
 
         self._execute_es_tests(test, delete_index=False)
 
+    def test_setop_w_complicated_where(self):
+        # TEST WE CAN PERFORM AGGREGATES ON EXPRESSIONS OF DEEP VARIABLES
+        test = {
+            "data": [
+                {"o": 3, "a": {"_a": [
+                    {"v": "a string", "s": False},
+                    {"v": "another string"}
+                ]}},
+                {"o": 1, "a": {"_a": {
+                    "v": "still more",
+                    "s": False
+                }}},
+                {"o": 2, "a": {"_a": [
+                    {"v": "string!", "s": True},
+                ]}},
+                {"o": 4, "a": {"_a": {"s": False}}}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._a",
+                "select": ["o", "v"],
+                "where": {"and": [
+                    {"gte": {"o": 2}},
+                    {"eq": {"s": False}}
+                ]}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"o": 3, "v": "a string"},
+                    {"o": 4}
+                ]
+            }
+        }
+
+        self._execute_es_tests(test, delete_index=False)
 
 

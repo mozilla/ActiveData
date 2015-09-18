@@ -79,6 +79,8 @@ def qb_expression_to_esfilter(expr):
         return {"match_all": {}}
     if expr is False:
         return False
+    if not expr:
+        return Null
 
     k, v = expr.items()[0]
     return qb_to_es_map.get(k, _no_convert)(k, v)
@@ -307,7 +309,7 @@ def expression_map(_map, expr):
 
     mop = python_multi_operators.get(op)
     if mop:
-        output = map(expression_map, term)
+        output = {op: [expression_map(_map, t) for t in term]}
         return output
 
     bop = python_binary_operators.get(op)
@@ -910,8 +912,11 @@ def _normalize(esfilter):
     return esfilter
 
 
-def _convert_many(k, v):
-    return {k: [qb_expression_to_esfilter(vv) for vv in v]}
+def _convert_many(k, v, zero):
+    arr = [vv for vv in map(qb_expression_to_esfilter, v) if vv != None]
+    if not arr:
+        return zero
+    return {k: arr}
 
 
 def _convert_not(k, v):
@@ -1009,8 +1014,8 @@ def _convert_field(k, var):
 
 
 qb_to_es_map = {
-    "and": _convert_many,
-    "or": _convert_many,
+    "and": lambda o, t: _convert_many(o, t, {"match_all": {}}),
+    "or": lambda o, t: _convert_many(o, t, {"not": {"match_all": {}}}),
     "not": _convert_not,
     "term": _convert_in,
     "terms": _convert_in,
@@ -1022,8 +1027,10 @@ qb_to_es_map = {
     "exists": _convert_field,
     "gt": _convert_inequality,
     "gte": _convert_inequality,
+    "ge": lambda o, t: _convert_inequality("gte", t),
     "lt": _convert_inequality,
     "lte": _convert_inequality,
+    "le": lambda o, t: _convert_inequality("lte", t),
     "regexp": _convert_regex,
     "regex": _convert_regex
 }

@@ -52,7 +52,7 @@ def es_deepop(es, query):
     wheres = split_expression_by_depth(where, query.frum)
     for i, f in enumerate(es_filters):
         # PROBLEM IS {"match_all": {}} DOES NOT SURVIVE set_default()
-        for k, v in unwrap(simplify_esfilter(qb_expression_to_esfilter(wheres[i]))).items():
+        for k, v in unwrap(simplify_esfilter(qb_expression_to_esfilter({"and": wheres[i]}))).items():
             f[k] = v
 
 

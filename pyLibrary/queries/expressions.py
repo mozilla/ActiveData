@@ -448,8 +448,7 @@ python_multi_operators = {
 
 ruby_unary_operators = {
     "not": "! {{term}}",
-    "length": '(({{term}}) == null) ? null : ({{term}}).length()',  # (doc[\"result.subtests.name\"].value == null) ? null : doc[\"result.subtests.name\"].value.length()
-    # THIS WORKS:  "length": 'a = {{term}};\n(a == null) ? null : a.length()',
+    "length": '(({{term}}) == null) ? null : ({{term}}).length()',
     "number": '({{term}}).to_f()'
 }
 
@@ -1067,6 +1066,9 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
     elif where["and"]:
         for a in listwrap(where["and"]):
             split_expression_by_depth(a, schema, output, var_to_depth)
+    elif where.eq and len(where.eq.items()) > 1:
+        for var, val in where.eq.items():
+            split_expression_by_depth({"eq": {var: val}}, schema, output, var_to_depth)
     else:
         Log.error("Can not handle complex where clause")
 

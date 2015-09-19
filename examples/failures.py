@@ -64,13 +64,15 @@ with Timer("get failures"):
             {"name": "chunk", "value": "run.chunk"},
             {"name": "test", "value": "result.test"},
             {"name": "build_date", "value": "build_date"},
-            {"name": "branch", "value": "build.branch"}
+            {"name": "branch", "value": "build.branch"},
+            {"name": "revision", "value":"build.revision12"}
         ],
         "where": {"and": [
             {"gte": {"run.timestamp": FROM_DATE}},
             {"lt": {"run.timestamp": TO_DATE}},
             {"eq": {"result.ok": False}},
-            {"eq": {"ok": False}}
+            {"eq": {"ok": False}},
+            {"eq": {"build.branch": "mozilla-inbound"}}
         ]},
         "limit": 100,
         "format": "list"
@@ -84,25 +86,8 @@ Log.note("got {{num}} errors", num=len(result.data))
 
 #GROUP TESTS, AND COUNT
 groups = Index(keys=["suite", "test", "subtest_name"], data=result.data)
-for r in result.data:
-    g = groups[r]
-    if not g:
-        g = r
-        groups.add(r)
 
-    g.others += [r]
-
-    #MARK UP FIRST BRANCH SEEN
-    if g.first_seen > r.build_date:
-        pass
-    else:
-        g.first_seen = r.build_date
-        g.first_branch = r.branch
-
-
-# test_words = [{"and": [{"term": {"short_desc.lowercase": word}} for word in strings.wordify(t.split("/")[-1])]} for t in result.data.result.test]
-# tests = set(t.split("/")[-1] for t in result.data.result.test)
-
+# WE NEED THE BUGZILLA TO INDICATE THE PROBLEMS THAT HAVE BEEN SOLVED
 with Timer("pull from bzETL"):
     with FromES(settings=config.Bugzilla) as es:
         #PULL ALL INTERMITTENTS, I CAN NOT FIGURE OUT HOW TO LIMIT TO JUST FOUND FAILURES

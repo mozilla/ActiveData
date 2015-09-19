@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
+from copy import copy
 from pyLibrary.debugs.logs import Log
 
 from pyLibrary.queries.unique_index import UniqueIndex
@@ -23,11 +24,7 @@ class Index(object):
     USING DATABASE TERMINOLOGY, THIS IS A NON-UNIQUE INDEX
     """
 
-    def __init__(self, data, keys=None):
-        if keys is None:
-            keys=data
-            data=None
-
+    def __init__(self, keys, data=None):
         self._data = {}
         self._keys = tuplewrap(keys)
         self.count = 0
@@ -40,45 +37,22 @@ class Index(object):
         try:
             if isinstance(key, (list, tuple)) and len(key) < len(self._keys):
                 # RETURN ANOTHER Index
-                filter_key = tuple(self._keys[0:len(key):])
-                key = value2key(filter_key, key)
-                key = key[:len(filter_key)]
-                d = self._data
-                for k in key:
-                    d = d.get(k, {})
-                output = Index(filter_key)
-                output._data = d
-                return output
+                Log.error("not implemented")
 
             key = value2key(self._keys, key)
-            d = self._data
-            for k in key:
-                d = d.get(k, {})
-            return wrap(list(d))
+            return wrap(copy(self._data.get(key, [])))
         except Exception, e:
             Log.error("something went wrong", e)
 
     def __setitem__(self, key, value):
         raise NotImplementedError
 
-
     def add(self, val):
         key = value2key(self._keys, val)
-        d = self._data
-        for k in key[:-1]:
-            e = d.get(k)
-            if e is None:
-                e = {}
-                d[k] = e
-            d = e
-        k = key[-1]
-        e = d.get(k)
-        if e is None:
-            e = []
-            d[k] = e
+        e = self._data.get(key, [])
+        self._data[key] = e
         e.append(unwrap(val))
         self.count += 1
-
 
     def __contains__(self, key):
         expected = True if self[key] else False

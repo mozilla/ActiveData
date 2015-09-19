@@ -137,7 +137,7 @@ Returns `true` if two expressions are not equal
 Compare two expressions, and return a Boolean
 
 		{"gt": {variable: value}}   ⇒  variable > value
-		{"lte": [expr1, expr2]}     ⇒  expr1 <= expr2
+		{"lte": [expr1, expr2]}     ⇒  expr1 ≤ expr2
 
 
 

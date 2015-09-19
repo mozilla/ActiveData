@@ -22,7 +22,7 @@ from json import encoder as json_encoder_module
 from math import floor
 from repr import Repr
 
-from pyLibrary.dot import Dict, DictList, NullType
+from pyLibrary.dot import Dict, DictList, NullType, Null
 from pyLibrary.jsons import quote, ESCAPE_DCT, scrub
 from pyLibrary.strings import utf82unicode
 from pyLibrary.times.dates import Date
@@ -264,7 +264,11 @@ INDENT = "    "
 
 def pretty_json(value):
     try:
-        if scrub(value) is None:
+        if value is False:
+            return "false"
+        elif value is True:
+            return "true"
+        elif value in (None, Null):
             return "null"
         elif isinstance(value, basestring):
             if isinstance(value, str):
@@ -370,6 +374,8 @@ def pretty_json(value):
             if j == None:
                 return "   null   "  # TODO: FIND OUT WHAT CAUSES THIS
             return pretty_json(json_decoder(j))
+        elif scrub(value) is None:
+            return "null"
         elif hasattr(value, '__iter__'):
             return pretty_json(list(value))
         elif hasattr(value, '__call__'):

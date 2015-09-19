@@ -1,7 +1,7 @@
 Time
 ====
 
-All points in time are referenced as seconds since epoch GMT.  UTC is not used due to the irregular leap seconds, plus UTC is not needed unless you need accuracy over 7 digits.   The regularity of GMT allows us to define a vector space over 
+All points in time are referenced as seconds since epoch GMT.  UTC is not used due to the irregular leap seconds, plus UTC is not needed unless you need accuracy over 7 digits.   The regularity of GMT allows us to define a vector space.
 
 
 Absolute Time

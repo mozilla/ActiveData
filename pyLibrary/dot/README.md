@@ -4,7 +4,7 @@ Consistent dicts, lists and Nones
 
 This library is solves Python's lack of consistency (lack of closure) under the dot (`.`)
 and slice `[::]` operators.  The most significant differences involve dealing
-with None, missing property names, and missing items in lists.
+with None, missing property names, and missing items.
 
 Dict replaces dict
 --------------------
@@ -93,7 +93,7 @@ Null is the new None
 In many applications the meaning of None (or null) is always in the context of
 a known type:  Each type has a list of expected properties, and if an instance
 is missing one of those properties we set it to None.  Let us call it this the
-"*Missing Value*" definition.
+"*Missing Value*" definition.  Also known as ["my billion dollar mistake"](https://en.wikipedia.org/wiki/Tony_Hoare).
 
 Another interpretation for None (or null), is that the instance simply does not
 have that property: Asking for the physical height of poem is nonsense, and
@@ -131,7 +131,7 @@ replaced with `None` in all cases.
 
 ###Identity and Absorbing (Zero) Elements###
 
-With closure we can realize we have defined an algebraic semigroup:  The 
+With closure we can realize we have defined an [algebraic semigroup](https://en.wikipedia.org/wiki/Semigroup):  The 
 identity element is the dot string (`"."`) and the zero element is `Null` 
 (or `None`).
 
@@ -167,8 +167,8 @@ in `Null`:
  * `a ∘ Null == Null`
  * `Null ∘ a == Null`
 
-where `∘` is most binary operators.  `and` and `or` are exceptions, and behave
-as expected:
+where `∘` is standing in for most binary operators.  Operators `and` and `or` 
+are exceptions, and behave as expected:
 
  * `True or Null == True`
  * `False or Null == Null`
@@ -245,15 +245,14 @@ attributes and properties.  This prevents us from using the `[]` operator for
 dereferencing, forcing use to use the verbose `getattr()` instead.  It 
 also prevents the use of query operators over these objects.
 
-You can register a class as a *data* class, by wrapping it with `DictClass`.
+You can wrap any object to make it appear like a Dict.
 
 ```python
-	SomeDataClass = DictClass(SomeDataClass)
+	d = DictObject(my_data_object)
 ```
 
-This does two things:
-* It will wrap all objects referenced by `Dict` and all items found in `DictList` so they can be used in queries.   
-* It decorates the constructor to add a `settings` parameter, which can be used to pass default parameters, like [`@use_settings`](https://github.com/klahnakoski/pyLibrary/blob/6e3233abe6e68d00020907d9d630c9a57c14e8a2/pyLibrary/meta.py#L80) 
+This allows you to use the query operators of this `dot` library on this object.  Care is required though:  Your object may not be a pure data object, and there can be conflicts between the object methods and the properties it is expected to have.
+
 
 Mapping Leaves
 --------------
@@ -311,7 +310,7 @@ Upon importing such files, it is good practice to convert it to standard form im
 
 When accepting input from other automations and users, your property names can potentially contain dots; which must be properly escaped to produce the JSON you are expecting.  Specifically, this happens with URLs:
 
-**BAD**
+**BAD** - dots in url are interpreted as paths
 
 ```python
 	>>> from pyLibrary.dot.dicts import Dict
@@ -326,7 +325,7 @@ When accepting input from other automations and users, your property names can p
 	Dict({u'example': {'html': 3}})
 ```
 
-**GOOD**
+**GOOD** - Notice the added `literal_field()` wrapping
 
 ```python
 	>>> def update(summary, url, count):
@@ -402,11 +401,10 @@ reveal itself.
 ```
 
 So, clearly, `[-num:]` can not be understood as a suffix slice, rather
-something more complicated; consider that `num` could be
-negative.
+something more complicated; given `num` <= 0.
 
 I advocate never using negative indices in the slice operator.  Rather, use the
-`right()` method instead which is consistent for a range `num`:
+`right()` method instead which is consistent for `num` ∈ ℤ:
 
 ```python
     def right(_list, num):

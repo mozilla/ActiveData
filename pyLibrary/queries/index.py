@@ -23,11 +23,7 @@ class Index(object):
     USING DATABASE TERMINOLOGY, THIS IS A NON-UNIQUE INDEX
     """
 
-    def __init__(self, data, keys=None):
-        if keys is None:
-            keys=data
-            data=None
-
+    def __init__(self, keys, data=None):
         self._data = {}
         self._keys = tuplewrap(keys)
         self.count = 0

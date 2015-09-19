@@ -4,6 +4,7 @@ from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot import wrap, Dict, coalesce, unwraplist
 from pyLibrary.env import http
 from pyLibrary.queries import qb
+from pyLibrary.queries.index import Index
 from pyLibrary.queries.qb_usingES import FromES
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.strings import edit_distance
@@ -55,35 +56,34 @@ while True:
 with Timer("get failures"):
     result = http.post_json(config.ActiveData.url, data={
         "from": "unittest.result.subtests",
-        "select": ["_id", "name", "message", "run.suite", "run.chunk", "result.test", "build_date", "build.branch"],
+        "select": [
+            "_id",
+            {"name": "subtest_name", "value": "name"},
+            "message",
+            {"name": "suite", "value": "run.suite"},
+            {"name": "chunk", "value": "run.chunk"},
+            {"name": "test", "value": "result.test"},
+            {"name": "build_date", "value": "build_date"},
+            {"name": "branch", "value": "build.branch"}
+        ],
         "where": {"and": [
             {"gte": {"run.timestamp": FROM_DATE}},
             {"lt": {"run.timestamp": TO_DATE}},
             {"eq": {"result.ok": False}},
-            {"eq": {"ok", False}}
+            {"eq": {"ok": False}}
         ]},
-        "limit": 10000,
+        "limit": 100,
         "format": "list"
     })
-
-
-
-
-
 
 if result.type == "ERROR":
     Log.error("problem", cause=Except.wrap(result))
 
-# PULL THE SPECIFIC SUB-TESTS THAT FAILED
-for r in result.data:
-    for s in r.result.subtests:
-        if not s.ok:
-            m = coalesce(s.message, s.name)
-            r.first_message = coalesce(r.first_message, m)
-            r.message += [m]
+
+Log.note("got {{num}} errors", num=len(result.data))
 
 #GROUP TESTS, AND COUNT
-groups = UniqueIndex(["run.suite", "result.test", "first_message"])
+groups = Index(keys=["suite", "test", "subtest_name"], data=result.data)
 for r in result.data:
     g = groups[r]
     if not g:
@@ -93,11 +93,11 @@ for r in result.data:
     g.others += [r]
 
     #MARK UP FIRST BRANCH SEEN
-    if g.first_seen > r.build.date:
+    if g.first_seen > r.build_date:
         pass
     else:
-        g.first_seen = r.build.date
-        g.first_branch = r.build.branch
+        g.first_seen = r.build_date
+        g.first_branch = r.branch
 
 
 # test_words = [{"and": [{"term": {"short_desc.lowercase": word}} for word in strings.wordify(t.split("/")[-1])]} for t in result.data.result.test]

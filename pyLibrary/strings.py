@@ -25,6 +25,33 @@ from datetime import datetime as builtin_datetime
 from pyLibrary.dot import coalesce, wrap
 
 
+_json_encoder = None
+_convert = None
+_Log = None
+_Except = None
+_Duration = None
+
+
+def _late_import():
+    global _json_encoder
+    global _convert
+    global _Log
+    global _Except
+    global _Duration
+
+    from pyLibrary.jsons.encoder import json_encoder as _json_encoder
+    from pyLibrary import convert as _convert
+    from pyLibrary.debugs.logs import Log as _Log
+    from pyLibrary.debugs.logs import Except as _Except
+    from pyLibrary.times.durations import Duration as _Duration
+
+    _ = _json_encoder
+    _ = _convert
+    _ = _Log
+    _ = _Except
+    _ = _Duration
+
+
 def datetime(value):
     if not _convert:
         _late_import()
@@ -378,12 +405,12 @@ def _simple_expand(template, seq):
             val = seq[-depth]
             if var:
                 val = val[var]
-            for filter in ops[1:]:
-                parts = filter.split('(')
+            for func_name in ops[1:]:
+                parts = func_name.split('(')
                 if len(parts) > 1:
                     val = eval(parts[0] + "(val, " + ("(".join(parts[1::])))
                 else:
-                    val = globals()[filter](val)
+                    val = globals()[func_name](val)
             val = toString(val)
             return val
         except Exception, e:
@@ -432,9 +459,7 @@ def toString(val):
     if val == None:
         return ""
     elif isinstance(val, (Mapping, list, set)):
-        from pyLibrary.jsons.encoder import json_encoder
-
-        return json_encoder(val, pretty=True)
+        return _json_encoder(val, pretty=True)
     elif hasattr(val, "__json__"):
         return val.__json__()
     elif isinstance(val, _Duration):
@@ -580,25 +605,4 @@ def wordify(value):
     return [w for w in re.split(r"[\W_]", value) if strip(w)]
 
 
-
-_convert = None
-_Log = None
-_Except = None
-_Duration = None
-
-def _late_import():
-    global _convert
-    global _Log
-    global _Except
-    global _Duration
-
-    from pyLibrary import convert as _convert
-    from pyLibrary.debugs.logs import Log as _Log
-    from pyLibrary.debugs.logs import Except as _Except
-    from pyLibrary.times.durations import Duration as _Duration
-
-    _ = _convert
-    _ = _Log
-    _ = _Except
-    _ = _Duration
 

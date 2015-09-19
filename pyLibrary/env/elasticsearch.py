@@ -927,7 +927,6 @@ class Alias(Features):
                             message=status._shards.failures[0].reason
                         )
 
-
     def search(self, query, timeout=None):
         query = wrap(query)
         try:

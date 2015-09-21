@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from copy import copy
+from itertools import product
 
 from pyLibrary import convert
 from pyLibrary.meta import use_settings
@@ -66,8 +67,8 @@ class FromESMetadata(object):
         self.columns.insert(column_columns)
         self.columns.insert(table_columns)
         # TODO: fix monitor so it does not bring down ES
-        self.worker = Thread.run("refresh metadata", self.monitor)
-        # self.worker = Thread.run("refresh metadata", self.not_monitor)
+        # self.worker = Thread.run("refresh metadata", self.monitor)
+        self.worker = Thread.run("refresh metadata", self.not_monitor)
         return
 
     @property
@@ -94,6 +95,12 @@ class FromESMetadata(object):
         else:
             set_default(existing_columns[0], c)
             self.todo.add(existing_columns[0])
+
+            # TEST CONSISTENCY
+            for c, d in product(list(self.todo.queue), list(self.todo.queue)):
+                if c.abs_name==d.abs_name and c.table==d.table and c!=d:
+                    Log.error("")
+
 
     def _get_columns(self, table=None):
         # TODO: HANDLE MORE THEN ONE ES, MAP TABLE SHORT_NAME TO ES INSTANCE
@@ -278,9 +285,18 @@ class FromESMetadata(object):
             try:
                 if not self.todo:
                     with self.columns.locker:
-                        old_columns = filter(lambda c: (c.last_updated == None or c.last_updated < Date.now()-TOO_OLD) and c.type not in ["object", "nested"], self.columns)
+                        old_columns = filter(
+                            lambda c: (c.last_updated == None or c.last_updated < Date.now()-TOO_OLD) and c.type not in ["object", "nested"],
+                            self.columns
+                        )
                         if old_columns:
                             self.todo.extend(old_columns)
+                            # TEST CONSISTENCY
+                            for c, d in product(list(self.todo.queue), list(self.todo.queue)):
+                                if c.abs_name==d.abs_name and c.table==d.table and c!=d:
+                                    Log.error("")
+
+
                         else:
                             Log.note("no more metatdata to update")
 
@@ -288,7 +304,7 @@ class FromESMetadata(object):
                 if column:
                     if column.type in ["object", "nested"]:
                         continue
-                    if column.last_updated >= Date.now()-TOO_OLD:
+                    elif column.last_updated >= Date.now()-TOO_OLD:
                         continue
                     try:
                         self._update_cardinality(column)

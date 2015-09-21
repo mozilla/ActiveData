@@ -39,7 +39,8 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
     if isinstance(data, Cube):
         return data.groupby(keys)
 
-    keys = listwrap(keys)
+    if not isinstance(keys, (tuple, list)):
+        keys = (keys,)
     def get_keys(d):
         output = Dict()
         for k in keys:

@@ -39,7 +39,7 @@ default_timeout = 600
 _warning_sent = False
 
 
-def request(method, url, **kwargs):
+def request(method, url, zip=False, **kwargs):
     """
      JUST LIKE requests.request() BUT WITH DEFAULT HEADERS AND FIXES
      DEMANDS data IS ONE OF:
@@ -83,7 +83,7 @@ def request(method, url, **kwargs):
     timeout = kwargs[b'timeout'] = coalesce(kwargs.get(b'timeout'), default_timeout)
 
     try:
-        if len(coalesce(kwargs.get(b"data"))) > 1000:
+        if zip and len(coalesce(kwargs.get(b"data"))) > 1000:
             compressed = convert.bytes2zip(kwargs[b"data"])
             if b"headers" not in kwargs:
                 kwargs[b"headers"] = {}

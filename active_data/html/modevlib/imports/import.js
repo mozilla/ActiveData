@@ -142,7 +142,7 @@ var importScript;
 						if (DEBUG) Log.note("GOT " + url);
 						callback(request.responseText);
 					} else {
-						Log.error("What!?!");
+						Log.error("Problem loading "+url+", error status: "+request.status);
 						callback(null);
 					}//endif
 				}//endif
@@ -154,7 +154,7 @@ var importScript;
 					if (DEBUG) Log.note("GOT " + url);
 					callback(request.responseText);
 				} else {
-					Log.error("What!?!");
+					Log.error("Problem loading "+url+", error status: "+request.status);
 					callback(null);
 				}//endif
 			};

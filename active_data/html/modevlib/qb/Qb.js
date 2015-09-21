@@ -1182,7 +1182,6 @@ Qb.sort.compile=function(sortOrder, columns, useNames){
 };//method
 
 
-
 //RETURN A NEW QUERY WITH ADDITIONAL FILTERS LIMITING VALUES
 //TO series AND category SELECTION *AND* TRANSFORMING TO AN SET OPERATION
 Qb.specificBugs=function(query, filterParts){

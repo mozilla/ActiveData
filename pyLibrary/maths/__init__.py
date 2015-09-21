@@ -170,12 +170,28 @@ class Math(object):
     @staticmethod
     def floor(value, mod=1):
         """
-        x == floor(x, a) + mod(x, a)  FOR ALL a
+        x == Math.floor(x, a) + Math.mod(x, a)  FOR ALL a
         """
         if value == None:
             return None
         v = int(math.floor(value))
-        return v - (v % mod)
+        if v < 0:
+            _Log.error("")
+        else:
+            return v - (v % mod)
+
+    @staticmethod
+    def mod(value, mod=1):
+        """
+        RETURN NON-NEGATIVE VALUE
+        """
+        if value == None:
+            return None
+        elif value < 0:
+            return value % mod + mod
+        else:
+            return value % mod
+
 
 
     # RETURN A VALUE CLOSE TO value, BUT WITH SHORTER len(unicode(value))<len(unicode(value)):

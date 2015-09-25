@@ -465,10 +465,9 @@ class DefaultDecoder(SetDecoder):
                     "size": self.edge.domain.limit
                 }},
                 es_query
-            )
+            ),
+            "_missing": set_default({"missing": {"field": self.edge.value}}, es_query)
         }})
-        if self.edge.allowNulls:
-            output.aggs._missing = set_default({"missing": {"field": self.edge.value}}, es_query)
         return output
 
     def count(self, row):

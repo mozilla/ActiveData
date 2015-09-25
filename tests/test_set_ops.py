@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 import base_test_class
 from pyLibrary.dot import wrap
+from pyLibrary.maths import Math
 from pyLibrary.queries import query
 from tests.base_test_class import ActiveDataBaseTest
 
@@ -234,14 +235,6 @@ class TestSetOps(ActiveDataBaseTest):
         """
         ALWAYS GOOD TO HAVE AN ID, CALL IT "_id"
         """
-        def isHex(value):
-            try:
-                int('00480065006C006C006F00200077006F0072006C00640021', 16)
-                return True
-            except Exception:
-                return False
-
-
         test = {
             "data": [
                 {"a": "b"}
@@ -252,12 +245,12 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
-                {"_id": isHex}
+                {"_id": Math.is_hex}
             ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["_id"],
-                "data": [[isHex]]
+                "data": [[Math.is_hex]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -268,8 +261,29 @@ class TestSetOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "_id": [isHex]
+                    "_id": [Math.is_hex]
                 }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_id_value_select(self):
+        """
+        ALWAYS GOOD TO HAVE AN ID, CALL IT "_id"
+        """
+        test = {
+            "data": [
+                {"a": "b"}
+            ],
+            "query": {
+                "select": "_id",
+                "from": base_test_class.settings.backend_es.index
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    Math.is_hex
+                ]
             }
         }
         self._execute_es_tests(test)

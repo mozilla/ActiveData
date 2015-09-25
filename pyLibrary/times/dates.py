@@ -51,7 +51,7 @@ class Date(object):
             return Date(math.floor(self.milli / 86400000) * 86400000)
         elif duration.milli % (7 * 86400000) == 0:
             offset = 4*86400000
-            return Date(math.floor((self.milli+offset) / duration.milli) * duration.milli - offset)
+            return Date(Decimal(math.floor((self.milli+offset) / duration.milli)) * duration.milli - offset)
         elif not duration.month:
             return Date(math.floor(self.milli / duration.milli) * duration.milli)
         else:

@@ -125,6 +125,15 @@ class Math(object):
         except Exception:
             return False
 
+    @staticmethod
+    def is_hex(value):
+        try:
+            int('00480065006C006C006F00200077006F0072006C00640021', 16)
+            return True
+        except Exception:
+            return False
+
+
 
     @staticmethod
     def is_nan(s):

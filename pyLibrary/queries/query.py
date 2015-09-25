@@ -300,6 +300,7 @@ def _normalize_group(edge, schema=None):
         return wrap({
             "name": edge,
             "value": edge,
+            "allowNulls": True,
             "domain": {"type": "default"}
         })
     else:
@@ -313,6 +314,7 @@ def _normalize_group(edge, schema=None):
         return wrap({
             "name": coalesce(edge.name, edge.value),
             "value": edge.value,
+            "allowNulls": True,
             "domain": {"type": "default"}
         })
 

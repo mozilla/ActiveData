@@ -28,6 +28,7 @@ from pyLibrary.times.durations import HOUR, MINUTE
 
 _elasticsearch = None
 
+ENABLE_META_SCAN = False
 DEBUG = True
 TOO_OLD = 2*HOUR
 singlton = None
@@ -67,8 +68,10 @@ class FromESMetadata(object):
         self.columns.insert(column_columns)
         self.columns.insert(table_columns)
         # TODO: fix monitor so it does not bring down ES
-        # self.worker = Thread.run("refresh metadata", self.monitor)
-        self.worker = Thread.run("refresh metadata", self.not_monitor)
+        if ENABLE_META_SCAN:
+            self.worker = Thread.run("refresh metadata", self.monitor)
+        else:
+            self.worker = Thread.run("refresh metadata", self.not_monitor)
         return
 
     @property

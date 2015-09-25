@@ -199,7 +199,7 @@ Qb.aggregate.one = function(select){
 		if (v === undefined || v == null) return total;
 		if (total == null) return v;
 		if (total==v) return total;
-		Log.error("Expecting only one value to aggregate");
+		Log.error("Expecting only one value to aggregate got "+convert.value2json(total)+" encountered "+convert.value2json(v));
 		return null;
 	};//method
 
@@ -387,6 +387,7 @@ Qb.aggregate.maximum = function(select){
 		return value;
 	};//method
 };
+Qb.aggregate.max = Qb.aggregate.maximum;
 
 Qb.aggregate.minimum = function(select){
 	select.defaultValue = function(){
@@ -407,6 +408,7 @@ Qb.aggregate.minimum = function(select){
 	};//method
 
 };
+Qb.aggregate.min = Qb.aggregate.minimum;
 
 
 Qb.aggregate.percentile = function(select){
@@ -641,6 +643,8 @@ Qb.aggregate.array = function(select){
 		}
 	};
 };
+Qb.aggregate.append = Qb.aggregate.array;
+Qb.aggregate.list = Qb.aggregate.array;
 
 Qb.aggregate.union = function(select){
 	select.defaultValue = function(){

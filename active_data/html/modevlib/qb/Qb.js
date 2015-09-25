@@ -94,7 +94,18 @@ Qb.compile = function(query, sourceColumns, useMVEL){
 	var select = Array.newInstance(query.select);
 	for(var s = 0; s < select.length; s++){
 		if (typeof(select[s])=="string") select[s]={"value":select[s]};
-		if (select[s].name===undefined) select[s].name=splitField(select[s].value).last();
+		if (select[s].name===undefined){
+			if (select[s].value===undefined) {
+				select[s].name = select[s].aggregate;
+				select[s].value = ".";
+			}else{
+				select[s].name=splitField(select[s].value).last();
+			}//endif
+		}else{
+			if (select[s].value===undefined) {
+				select[s].value = ".";
+			}//endif
+		}//endif
 		if (uniqueColumns[select[s].name]!==undefined)
 			Log.error("Column with name "+select[s].name+" appeared more than once");
 		select[s].columnIndex=s+edges.length;
@@ -933,9 +944,14 @@ Qb.getColumnsFromQuery=function*(query){
 		} else if (query.from.cube){
 			query.from.list = Qb.Cube2List(query.from);
 			sourceColumns = query.from.columns;
-		}else if (query.from.from!=undefined){
-			query.from=yield (Qb.calc2List(query.from));
-			sourceColumns=yield (Qb.getColumnsFromQuery(query));
+		}else if (query.from.from!=undefined) {
+			query.from = yield (Qb.calc2List(query.from));
+			sourceColumns = yield (Qb.getColumnsFromQuery(query));
+		}else if (query.select !==undefined && query.edges !== undefined){
+			var output = [];
+			output.extend(query.edges.map(Qb.column.normalize));
+			output.extend(query.select.map(Qb.column.normalize));
+			return output;
 		}else{
 			Log.error("Do not know how to handle this");
 		}//endif
@@ -1180,6 +1196,7 @@ Qb.sort.compile=function(sortOrder, columns, useNames){
 		Log.error("eval gone wrong", e)
 	}//try
 };//method
+
 
 
 //RETURN A NEW QUERY WITH ADDITIONAL FILTERS LIMITING VALUES

@@ -131,6 +131,7 @@ var Map = {};
 		}//for
 		return output;
 	};//method
+	Map.values = Map.codomain;
 
 	//RETURN KEYS
 	Map.domain = function(map){

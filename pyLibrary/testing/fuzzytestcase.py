@@ -8,6 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from collections import Mapping
+import types
 import unittest
 
 from pyLibrary import dot
@@ -85,12 +86,14 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                 if isinstance(k, basestring):
                     v1 = dot.get_attr(test, literal_field(k))
                 else:
-                    show_deta=False
+                    show_deta =False
                     v1 = test[k]
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
         elif isinstance(test, set) and isinstance(expected, set):
             if test ^ expected:
                 Log.error("Sets do not match")
+        elif isinstance(expected, types.FunctionType):
+            return expected(test)
         elif hasattr(test, "__iter__") and hasattr(expected, "__iter__"):
             for a, b in zipall(test, expected):
                 assertAlmostEqual(a, b, msg=msg, digits=digits, places=places, delta=delta)

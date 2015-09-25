@@ -88,8 +88,8 @@ Here is an example counting the current number of bugs (open and closed) in the 
     "from":"bugs",
     "select":{"name":"num bugs", "value":"bug_id", "aggregate":"count"},
     "where": {"and":[
-        {"range":{"expires_on":{"gte":NOW}}},
-        {"term":{"cf_blocking_b2g":"koi+"}}
+        {"gte":{"expires_on":"{{now}}"},
+        {"eq":{"cf_blocking_b2g":"koi+"}}
     ]}
     }
 
@@ -102,8 +102,8 @@ We can pull some details on those bugs
         {"name":"owner", "value":"assigned_to"}
     ],
     "where": {"and":[
-        {"range":{"expires_on":{"gte":NOW}}},
-        {"term":{"cf_blocking_b2g":"koi+"}}
+        {"gte":{"expires_on":"{{now}}"}},
+        {"eq":{"cf_blocking_b2g":"koi+"}}
     ]}
     }
 
@@ -114,8 +114,8 @@ replaced with simply the value:
     "from":"bugs",
     "select":["bug_id", "assigned_to", "modified_ts"],
     "where": {"and":[
-        {"range":{"expires_on":{"gte":NOW}}},
-        {"term":{"cf_blocking_b2g":"koi+"}}
+        {"gte":{"expires_on":"{{now}}"}},
+        {"eq":{"cf_blocking_b2g":"koi+"}}
     ]}
     }
 

@@ -6,7 +6,7 @@
 Introduction
 ------------
 
-Comparing the Qb `select` clause is easiest done by comparing to SQL.  Just like SQL, the select clause is used for renaming.
+Getting a feel for the Qb `select` clause is easiest done by comparing to SQL.  Just like SQL, the `select` clause is used for renaming:
 
 <table><tr><td>
 <b>Qb</b><br>
@@ -436,4 +436,19 @@ The star can be used on the end of a path.  The path is not flattened, but the s
 
 
 </td></tr></table>
+
+
+Aggregation
+-----------
+
+When a Qb query includes a `groupby` or `edges` clause, the members of the `select` clause must include the `aggregate` property; which indicates what to do with the many possible values being assigned to the `name`.
+
+
+
+
+
+
+
+  
+
 

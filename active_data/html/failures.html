@@ -8,38 +8,9 @@
 </HEAD>
 <BODY>
 
-<div id="sidebar" style="width:300px;">
-	<br>
-	<br>
-	<div style="height: 30px; text-align: center;vertical-align:middle;">
-		<span id="status" style="height:30px">Page Loading...</span><span class="loading"><img src="images/spinner.gif" alt=""></span>
-	</div>
-
-	<hr>
-	<div id="description">Summarize number of of bugs over the sample given<br><br>
-		This is best used on a small number of bugs because details must be
-		brought to the client for further processing<br><br>
-		<span class="warning">Only bugs that had activity in the year prior to the Start Date are counted</span>
-	</div>
-	<hr>
-	<div id="testMessage"></div>
-	<hr>
-	<div id="stats"></div>
-	<hr>
-	<div id="parameters" class="parameters">
-	</div>
-	<div id="filters" class="menu"></div>
-</div>
-
-<div style="float:right;display: inline;">
-	<a href="http://people.mozilla.com/~klahnakoski/" class="button">HOME</a>
-</div>
 <div style="align:left;position:relative;float:left;width:800px;">
-	<h3 id="title"></h3>
-	<div id="chartCount"  class="chart" style="float:none;width:800px;height:300px;"></div>
-	<div id="chartChurn"  class="chart" style="float:none;width:800px;height:300px;"></div>
-	<div id="chart"       class="chart" style="float:none;width:800px;height:300px;"></div>
-	<br><br>
+	<h3 id="title">Past week of Test Failures<span id="status" style="height:30px">Page Loading...</span><span class="loading"><img src="images/spinner.gif" alt=""></span></h3>
+	<div id="chart" class="chart" style="float:none;width:800px;height:300px;"></div>
 	<div id="info"></div>
 	<div id="details"></div>
 </div>
@@ -50,352 +21,263 @@
 
 importScript('js/util.js', function(){
 
+	Thread.showWorking = function(numThread) {
+		var l = $(".loading");
+		l.show();
+	};//function
 
-
-var thread;
-var createChart=function(){
-	if (thread!==undefined)
-		thread.kill();
-	thread=Thread.run( __createChart());
-};
-
-var search=function*(query){
-	var output=yield (Rest.post({
-		url: "http://localhost:5000/query",
-		data: convert.value2json(query),
-		dataType: "json"
-	}));
-
-	yield (output);
-};
+	Thread.hideWorking = function() {
+		var l = $(".loading");
+		l.hide();
+	};//function
 
 
 
-var __createChart = function*(){
+	var thread;
+	var createChart = function(){
+		if (thread !== undefined)
+			thread.kill();
+		thread = Thread.run(__createChart());
+	};
 
-	var FROM_DATE = Date.newInstance("today-2day");
-	var TO_DATE = Date.newInstance("tomorrow");
-
-	var raw_failures = null;
-	var success = null;
-
-	var a = Log.action("pull failures", true);
-	try {
-
-		//PULL FAILURES
-		var result = yield (search({
-			"from": "unittest.result.subtests",
-			"select": [
-				"_id",
-				{"name": "subtest_name", "value": "name"},
-				"message",
-				{"name": "suite", "value": "run.suite"},
-				{"name": "chunk", "value": "run.chunk"},
-				{"name": "test", "value": "result.test"},
-				{"name": "build_date", "value": "build_date"},
-				{"name": "branch", "value": "build.branch"},
-				{"name": "revision", "value": "build.revision12"}
-			],
-			"where": {"and": [
-				{"gte": {"run.timestamp": FROM_DATE}},
-				{"lt": {"run.timestamp": TO_DATE}},
-				{"eq": {"result.ok": false}},
-				{"eq": {"ok": false}},
-				{"eq": {"build.branch": "mozilla-inbound"}}
-			]},
-			"limit": 100,
-			"format": "list"
+	var search = function*(query){
+		var output = yield (Rest.post({
+			url: "http://localhost:5000/query",
+			data: convert.value2json(query),
+			dataType: "json"
 		}));
-		Log.actionDone(a);
 
-		raw_failures = result.data;
+		yield (output);
+	};
 
-		//PULL SUCCESS
-		a = Log.action("count successes", true);
-		success = yield (search({
-			"from": "unittest",
+
+	var __createChart = function*(){
+
+		var FROM_DATE = Date.today().subtract(Duration.WEEK);
+		var RECENT_DATE = Date.today().subtract(Duration.DAY);
+		var TO_DATE = Date.now().floor(Duration.DAY);
+		var NOW = Date.now();
+
+		var raw_failures = null;
+		var success = null;
+
+		var a = Log.action("find test failures", true);
+		try {
+
+			//PULL FAILURE DETAILS
+			var result = yield (search({
+				"from": "unittest.result.subtests",
+				"select": [
+					"_id",
+					{"name": "subtest_name", "value": "name"},
+					"message",
+					{"name": "suite", "value": "run.suite"},
+					{"name": "chunk", "value": "run.chunk"},
+					{"name": "test", "value": "result.test"},
+//					{"name": "test_status", "value": "result.status"},
+					{"name": "platform", "value":"build.platform"},
+					{"name": "build_type", "value":"build.type"},
+					{"name": "build_date", "value": "build.date"},
+					{"name": "branch", "value": "build.branch"},
+					{"name": "revision", "value": "build.revision12"}
+				],
+				"where": {"and": [
+					{"gte": {"run.timestamp": RECENT_DATE.unix()}},
+					{"lt": {"run.timestamp": TO_DATE.unix()}},
+					{"eq": {"result.ok": false}},
+					{"eq": {"ok": false}},
+					{"eq": {"build.branch": "mozilla-inbound"}}
+				]},
+				"limit": 10000,
+				"format": "list"
+			}));
+
+			raw_failures = result.data;
+		} catch (e) {
+			Log.error("Problem collecting test failures from ActiveData", e);
+		} finally {
+			Log.actionDone(a);
+		}//try
+
+		Log.alert(raw_failures.length+" failures found since "+RECENT_DATE.format("MMM dd, yyyy"));
+
+		var testGroups = (yield (Qb.calc2List({
+			"from": raw_failures,
 			"select": [
-				{"aggregate": "count"}
-			],
-			"edges": [
-				{"name": "test", "value": ["run.suite", "result.test"]},
-				"result.ok",
+				{"name": "subtests", "value": "subtest_name", "aggregate": "union"},
 				{
-					"name": "build.date",
-					"value": "build.date",
-					"domain": {"type": "time", "min": FROM_DATE, "max": TO_DATE, "interval": HOUR}
-				}
+					"name": "score",
+					"value": "1 - Date.now().subtract(Date.newInstance(build_date)).divideBy(Duration.DAY)/7",
+					"aggregate": "sum"
+				},
+				{"name": "last_seen", "value": "build_date", "aggregate":"max"},
+				{"aggregate":"count"},
+//				{"value":"test_status", "aggregate":"union"}
 			],
-			"where": {"and": [
-				{"gte": {"build.date": FROM_DATE}},
-				{"lt": {"build.date": TO_DATE}},
-				{"eq": {"build.branch": "mozilla-inbound"}},
-				{"or": [
-					(yield (Qb.calc2List({
-						"from": raw_failures,
-						"select": {"name": "d", "value": ".", "aggregate": "append"},
-						"edges": ["suite", "test"]
-					}))).map(function(r){
-							return {"run.suite": r.suite, "result.test": r.test}
-						})
-				]}
-			]},
-			"limit": 100000,
-			"format": "cube"
-		}));
-		Log.actionDone(a);
-	}catch(e){
-		Log.error("Problem collecting errors from ACtivData", e);
-	}finally{
-		Log.actionDone(a);
-	}//try
+			"edges": ["suite", "test", "platform", "build_type"]
+		}))).list;
 
-	//CHART OVER TIME
+		Log.alert(testGroups.length+" unique combinations");
 
-	//LIST OF FAILURES
+		testGroups = Qb.sort(testGroups, {"value": "count", "sort":-1});//.substring(0, 40);
+
+		$("#details").html(convert.List2HTMLTable(testGroups));
 
 
 
 
+		//CHART OVER TIME
 
-	var sampleMin=Date.newInstance(GUI.state.sampleMin);
-	var tooOld=sampleMin.subtract(Duration.newInstance("year"));
-	var sampleMax=Date.newInstance(GUI.state.sampleMax).addDay(1);
-	var sampleInterval=Duration.newInstance(GUI.state.sampleInterval);
+		//LIST OF FAILURES
+		var timelineThread = Thread.run(function*(){
+			///////////////////////////////////////////////////////////////////////
+			// THREAD TO GET BUG AGE, OVER TIME
+			///////////////////////////////////////////////////////////////////////
+			var a = Log.action("count successes", true);
+			try {
 
-	var createTime="doc[\"create_time\"].value";
-//	var idTime=GUI.state.programFilter.bugStatusMinimum_fromSource();
-//	var testValue=GUI.state.programFilter.bugStatusMinimum_fromDoc();
+				//PULL SUCCESS
+				success = yield (search({
+					"from": "unittest",
+					"select": [
+						{"aggregate": "count"}
+					],
+					"edges": [
+						{
+							"name": "test",
+							"value": ["build.platform", "build.type", "run.suite", "result.test"],
+							"allowNulls":false
+						},
+						{
+							"name": "date",
+							"value": "build.date",
+							"allowNulls": false,
+							"domain": {"type": "time", "min": FROM_DATE.unix(), "max": TO_DATE.unix(), "interval": "4hour"}
+						},
+						"result.ok"
+					],
+					"where": {"and": [
+						{"gte": {"build.date": FROM_DATE.unix()}},
+						{"lt": {"build.date": TO_DATE.unix()}},
+						{"eq": {"build.branch": "mozilla-inbound"}},
+						{"or": testGroups.map(function(r){
+							return {"eq": {
+								"run.suite": r.suite,
+								"result.test": r.test,
+								"build.platform": r.platform,
+								"build.type": r.build_type
+							}}
+						})}
+					]},
+					"limit": 100000,
+					"format": "cube"
+				}));
+				Log.actionDone(a);
 
-
-
-//	var closeTime="minimum("+sampleMax.getMilli()+", coalesce(zero2null(close_time), "+sampleMax.getMilli()+"))";
-
-	var mainFilter={"and":[
-		GUI.getFilters("bugs"),
-		Mozilla.BugStatus.Open.esfilter,
-		{"range":{"modified_ts":{"gte":tooOld.getMilli()}}}
-	]};
-
-	//COMPLICATED TITLE LOGIC
-	if (GUI.state.programFilter.selected.length==0){
-		if (GUI.state.componentFilter.selected.length==0){
-			if (GUI.state.productFilter.selected.length==0){
-				$("#title").html("No Program, Product or Component Selected.");
-				yield (null)
-			}else{
-				$("#title").html("Programs: "+GUI.state.productFilter.selected.join(" & "));
-			}//endif
-		}else{
-			$("#title").html("Components: "+GUI.state.productFilter.selected.join(" & "));
-		}//endif
-	}else{
-		if (GUI.state.componentFilter.selected.length==0){
-			if (GUI.state.productFilter.selected.length==0){
-				$("#title").html(GUI.state.programFilter.selected.join(" and "));
-			}else{
-				$("#title").html(GUI.state.programFilter.selected.join(" and ")+" - "+GUI.state.productFilter.selected.join(" & "));
-			}//endif
-		}else{
-			$("#title").html(GUI.state.programFilter.selected.join(" and ")+" - "+GUI.state.componentFilter.selected.join(" & "));
-		}//endif
-
-
-	}//endif
-
-
-	var allBugs;
-	var allBugsThread=Thread.run(function*(){
-        ///////////////////////////////////////////////////////////////////////
-        // THREAD TO GET BUG AGE, OVER TIME
-        ///////////////////////////////////////////////////////////////////////
-		Log.action("Request Bugs");
-
-		allBugs=yield (ElasticSearch.getMinMax(mainFilter));
-
-		var chart=yield(Q({
-			"name":"Age (Days)",
-			"from":allBugs,
-			"select":[
-				{"name":"Average", "value":"(aMath.min(max, time.min.getMilli())-min)/Duration.DAY.milli", "aggregate":"average", "default":0, "style":{"color":"darkgreen"}},
-				{"name":"50th Percentile", "value":"(aMath.min(max, time.min.getMilli())-min)/Duration.DAY.milli", "aggregate":"percentile", "percentile":0.50, "default":0, "style":{"color":"blue"}},
-				{"name":"Maximum",         "value":"(aMath.min(max, time.min.getMilli())-min)/Duration.DAY.milli", "aggregate":"maximum", "default":0, "style":{"color":"#00d6ff", "visibility":"hidden"}}
-			],
-			"edges":[
-				{"name":"date",
-					"range":{"min":"min", "max":"max"},
-					"allowNulls":false,
-					domain:{"type":"time", "min":sampleMin, "max":sampleMax.add(sampleInterval), "interval":sampleInterval}
-				}
-			]
-		}));
-
-
-		var a=Log.action("Make chart", true);
-		aChart.show({
-			"id":"chart",
-			"sheetDiv":"info",
-			"type":"line",
-			"stacked":false,
-			"cube":chart,
-			"height":"300",
-			xAxisSize: 50
-		});
-		Log.actionDone(a);
-	});
-
-
-	Thread.run(function*(){
-        ///////////////////////////////////////////////////////////////////////
-        // THREAD TO GET LIST OF OPEN BUGS, AND THEIR DETAILS
-        ///////////////////////////////////////////////////////////////////////
-
-		var details=yield (ESQuery.run({
-			"from":"bugs",
-			"select":[
-				"bug_id",
-				"product",
-				"component",
-				"created_ts",
-				"assigned_to"
-			],
-			"esfilter":{"and":[
-				mainFilter,
-				{"range":{"expires_on":{"gt":Date.eod().getMilli()}}}
-			]}
-
-		}));
-
-		yield (Thread.join(allBugsThread));
-		//INSERT allBugs MIN/MAX VALUES INTO details
-		details.list.forall(function(v, i){
-			var mm=allBugs.get("bug_id", v.bug_id);
-			v.max=mm.max;
-			v.min=mm.min;
-		});
-		details.columns.push({"name":"min"});
-		details.columns.push({"name":"max"});
-
-		details=yield (Qb.calc2List({
-			"from":details,
-			"select":[
-				{"name":"ID", "value":"Bugzilla.linkToBug(bug_id)"},
-				{"name":"Product", "value":"product"},
-				{"name":"Component", "value":"component"},
-				{"name":"Created Date", "value":"Date.newInstance(created_ts).floorDay()"},
-				{"name":"Match Date", "value":"Date.newInstance(min).floorDay()"},
-				{"name":"Age (Days)", "value":"Date.eod().subtract(Date.newInstance(min)).round(Duration.DAY, 1)", "sort":"descending"},
-				{"name":"Assigned To", "value":"assigned_to"}
-			],
-			"sort":["Age (Days)"]
-		}));
-
-
-		$("#details").html(CNV.List2HTMLTable(details));
-
-
-	});
-
-
-	Thread.run(function*(){
-        ///////////////////////////////////////////////////////////////////////
-        // SIMPLE OPEN BUG COUNT, OVER TIME
-        ///////////////////////////////////////////////////////////////////////
-
-		var chart=yield (ESQuery.run({
-			"name":"Open Bug Count",
-			"from":"bugs",
-			"select":{
-				"name":"num_bug",
-				"value":"bug_id",
-				"aggregate":"count"
-			},
-			"edges":[
-				{"name":"date",
-					"range":{
-						"min":"modified_ts",
-						"max":"expires_on"
-					},
-					"allowNulls":false,
-					"domain":{
-						"type":"time",
-						"min":sampleMin,
-						"max":sampleMax.add(sampleInterval),
-						"interval":sampleInterval
-					}
-				}
-			],
-			"esfilter":mainFilter
-		}));
-
-		aChart.show({
-			"id":"chartCount",
-			"sheetDiv":"info",
-			"type":"line",
-			"stacked":false,
-			"cube":chart,
-			"height":"300",
-			xAxisSize: 50,
-			"width":800
-		});
-	});
-
-
-	Thread.run(function*(){
-        ///////////////////////////////////////////////////////////////////////
-        // THREAD TO GET OPEN AND CLOSE RATES
-        ///////////////////////////////////////////////////////////////////////
-
-		yield (Thread.join(allBugsThread));
-
-		var churn=yield(Q({
-			"from":allBugs,
-			"name":"New and Closed Bugs",
-			"select":[
-				{"name":"New", "value":"min.between(time.min, time.max) ? 1 : 0", "aggregate":"sum", "default":"0", "style":{"color":"seagreen"}},
-				{"name":"Closed", "value":"(max!==undefined && max.between(time.min, time.max)) ? -1 : 0", "aggregate":"sum", "default":"0", "style":{"color":"goldenrod"}}
-			],
-			"edges":[
-				{"name":"date",
-					"test":"min.between(time.min, time.max) || (max!==undefined && max.between(time.min, time.max))",
-					"domain":{"type":"time", "min":sampleMin, "max":sampleMax, "interval":sampleInterval}
-				}
-			]
-		}));
-
-		aChart.show({
-			"id":"chartChurn",
-			"sheetDiv":"info",
-			"type":"bar",
-			"stacked":false,
-			"cube":churn,
-			"height":"300",
-			xAxisSize: 50,
-			"width":800,
-			"clickAction":function(series, x, d){
-				var part=churn.edges[0].domain.getPartByKey(x);
-				var field = {"New":"min", "Closed":"max"}[series];
-
-				Thread.run(function*(){
-					var buglist=(yield (Qb.calc2List({
-						"from":allBugs,
-						"select":{"value":"bug_id"},
-						"where":""+field+"!==undefined && "+field+".between("+CNV.Date2Code(part.min)+", "+CNV.Date2Code(part.max)+")"
-					})));
-
-					Bugzilla.showBugs(buglist.list);
+				var fail_rates = Map.copy(success);
+				fail_rates.data = Map.copy(success.data);
+				fail_rates.data.fails = success.data.count.map(function(d, dd){
+					return d.map(function(t, tt){
+						if (t[0] + t[1] == 0) {
+							return -1;  //MARK AS MISSING
+						} else {
+							return Math.pow(t[0] / (t[0] + t[1]), Math.LN2/Math.LN10);
+						}//endif
+					})
 				});
-			}//click
+				//FILL NULL VALUES, EXCEPT THE LAST CONTIGUOUS BLOCK
+				fail_rates.data.fails.forall(function(test, testIndex, m){
+					var firstNull=-1;
+					test.forall(function(pointInTime, timeIndex){
+						if (pointInTime ==-1 && firstNull==-1) {
+							firstNull=timeIndex;
+						}else if (pointInTime !=-1 && firstNull!=-1) {
+							if (firstNull == 0) {
+								for (var i = firstNull; i < timeIndex; i++) {
+									m[testIndex][i] = 0;  //INVENT A VALUE
+								}//for
+							} else {
+								for (var i = firstNull; i < timeIndex; i++) {
+									m[testIndex][i] = m[testIndex][firstNull - 1];
+								}//for
+							}//endif
+							firstNull = -1
+						}//endif
+					});
+
+					//REMOVE THE -1 NULL MARKER
+					if (firstNull!=-1){
+						for(var i=firstNull;i<test.length;i++) {
+							m[testIndex][i] = null
+						}//for
+					}//endif
+				});
+				fail_rates.data.total = success.data.count.map(function(d){
+					return d.map(function(t){
+						return t[0] + t[1];
+					})
+				});
+
+				//PARTS ARE IN FORM ON [suite, test] PAIRS
+				fail_rates.edges[0].domain.partitions.forall(function(p, i){
+					p.name = p.value.join("::");
+				});
+				fail_rates.edges = fail_rates.edges.substring(0, 2);
+				fail_rates.select = {"name": "fails"};
+
+				var a = Log.action("Make chart", true);
+				aChart.show({
+					"id": "chart",
+					"sheetDiv": "info",
+					"type": "line",
+					"stacked": false,
+					"cube": fail_rates,
+					"height": "300",
+					xAxisSize: 50,
+					"legend": false,
+					extensionPoints: {
+						line_lineWidth: 2,
+//						line_strokeStyle: "none",
+						dot_shapeRadius: 4, //USEd IN LEGEND (VERSION 2)
+						dot_shape:"circle"
+					}
+				});
+				Log.actionDone(a);
+			} finally {
+				Log.actionDone(a);
+			}//try
 		});
-	});
 
 
+//	Thread.run(function*(){
+//        ///////////////////////////////////////////////////////////////////////
+//        // THREAD TO GET LIST OF OPEN BUGS, AND THEIR DETAILS
+//        ///////////////////////////////////////////////////////////////////////
+//
+//
+//		details=yield (Qb.calc2List({
+//			"from":details,
+//			"select":[
+//				{"name":"ID", "value":"Bugzilla.linkToBug(bug_id)"},
+//				{"name":"Product", "value":"product"},
+//				{"name":"Component", "value":"component"},
+//				{"name":"Created Date", "value":"Date.newInstance(created_ts).floorDay()"},
+//				{"name":"Match Date", "value":"Date.newInstance(min).floorDay()"},
+//				{"name":"Age (Days)", "value":"Date.eod().subtract(Date.newInstance(min)).round(Duration.DAY, 1)", "sort":"descending"},
+//				{"name":"Assigned To", "value":"assigned_to"}
+//			],
+//			"sort":["Age (Days)"]
+//		}));
+//
+//
+//		$("#details").html(CNV.List2HTMLTable(details));
+//
+//
+//	});
 
-	yield (null);
-};
-
-
-
+		yield (Thread.join(timelineThread));
+		yield (null);
+	};
 
 
 	$(document).ready(function(){

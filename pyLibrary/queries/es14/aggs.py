@@ -458,16 +458,18 @@ class DefaultDecoder(SetDecoder):
 
     def append_query(self, es_query, start):
         self.start = start
-        return wrap({"aggs": {
+        output = wrap({"aggs": {
             "_match": set_default(
                 {"terms": {
                     "field": self.edge.value,
                     "size": self.edge.domain.limit
                 }},
                 es_query
-            ),
-            "_missing": set_default({"missing": {"field": self.edge.value}}, es_query),
+            )
         }})
+        if self.edge.allowNulls:
+            output.aggs._missing = set_default({"missing": {"field": self.edge.value}}, es_query)
+        return output
 
     def count(self, row):
         part = row[self.start]
@@ -494,13 +496,15 @@ class DimFieldListDecoder(DefaultDecoder):
     def append_query(self, es_query, start):
         self.start = start
         for i, v in enumerate(self.fields):
-            es_query = wrap({"aggs": {
+            nest = wrap({"aggs": {
                 "_match": set_default({"terms": {
                     "field": v,
                     "size": self.edge.domain.limit
-                }}, es_query),
-                "_missing": set_default({"missing": {"field": v}}, es_query),
+                }}, es_query)
             }})
+            if self.edge.allowNulls:
+                nest.aggs._missing = set_default({"missing": {"field": v}}, es_query)
+            es_query = nest
 
         if self.edge.domain.where:
             filter = simplify_esfilter(self.edge.domain.where)

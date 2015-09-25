@@ -229,6 +229,52 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+
+    def test_id_select(self):
+        """
+        ALWAYS GOOD TO HAVE AN ID, CALL IT "_id"
+        """
+        def isHex(value):
+            try:
+                int('00480065006C006C006F00200077006F0072006C00640021', 16)
+                return True
+            except Exception:
+                return False
+
+
+        test = {
+            "data": [
+                {"a": "b"}
+            ],
+            "query": {
+                "select": "_id",
+                "from": base_test_class.settings.backend_es.index
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                {"_id": isHex}
+            ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["_id"],
+                "data": [[isHex]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "_id": [isHex]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
     def test_single_star_select(self):
         test = {
             "data": [

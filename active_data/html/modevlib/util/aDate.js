@@ -37,8 +37,11 @@ Date.newInstance = function(value){
 	}//endif
 	if (aMath.isNumeric(value)){
 		value=value-0;
-		if (value>9990000000000) return null;
-		return new Date(value)
+		if (value <= 9999999999) {  //TOO SMALL, MUST BE A UNIX TIMESTAMP
+			return new Date(value * 1000);
+		}else{
+			return new Date(value);
+		}//endif
 	}//endif
 
 	return new Date(value);
@@ -66,10 +69,12 @@ Date.max=function(){
 };//method
 
 
-
-
 Date.prototype.getMilli = Date.prototype.getTime;
 Date.prototype.milli = Date.prototype.getTime;
+Date.prototype.unix = function(){
+	// RETURN NUMBER OF SECONDS SINCE EPOCH
+	return this.milli()/1000.0;
+};//function
 
 Date.prototype.between=function(min, max){
 	if (min==null) return null;	//NULL MEANS UNKNOWN, SO between() IS UNKNOWN
@@ -97,8 +102,6 @@ Date.prototype.add = function(interval){
 	var addMilli = i.milli - (Duration.MILLI_VALUES.month * i.month);
 	return this.addMonth(i.month).addMilli(addMilli);
 };//method
-
-
 
 Date.prototype.subtract=function(time, interval){
 	if (typeof(time)=="string") Log.error("expecting to subtract a Duration or Date object, not a string");

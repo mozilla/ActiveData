@@ -90,16 +90,17 @@ class Log(object):
         if settings.constants:
             constants.set(settings.constants)
 
-        if not settings.log:
-            return
+        if settings.log:
+            cls.logging_multi = Log_usingMulti()
+            if cls.main_log:
+                cls.main_log.stop()
+            cls.main_log = Log_usingThread(cls.logging_multi)
 
-        cls.logging_multi = Log_usingMulti()
-        if cls.main_log:
-            cls.main_log.stop()
-        cls.main_log = Log_usingThread(cls.logging_multi)
+            for log in listwrap(settings.log):
+                Log.add_log(Log.new_instance(log))
 
-        for log in listwrap(settings.log):
-            Log.add_log(Log.new_instance(log))
+        if settings.cprofile:
+            Log.alert("cprofiling is enabled")
 
     @classmethod
     def stop(cls):

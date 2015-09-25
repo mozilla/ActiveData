@@ -250,7 +250,8 @@ aChart.showPie=function(params){
 	var type=params.type;
 	var chartCube=params.cube;
 
-	if (chartCube.cube.length==0){
+	var cube = coalesce(chartCube.cube, chartCube.data);
+	if (cube.length==0){
 		Log.warning("Nothing to pie-chart");
 		return;
 	}//endif
@@ -267,9 +268,9 @@ aChart.showPie=function(params){
 			var other = 0;
 
 			//COLAPSE INTO 'OTHER' CATEEGORY
-			var total = aMath.SUM(chartCube.cube);
+			var total = aMath.SUM(cube);
 			values = [];
-			chartCube.cube.forall(function(v, i){
+			cube.forall(function(v, i){
 				if (v/total >= params.minPercent){
 					values.append({"name":seriesLabels[i], "value":v, "style":chartCube.edges[0].domain.partitions[i].style})
 				}else{
@@ -279,7 +280,7 @@ aChart.showPie=function(params){
 			values = Qb.sort(values, {"value" : "value", "sort" : -1});
 			if (other > 0) values.append({"name" : "Other", "value" : other, "style":params.otherStyle});
 		} else {
-			values = chartCube.cube.map(function(v, i){
+			values = cube.map(function(v, i){
 				return {"name" : seriesLabels[i], "value" : v, "style":chartCube.edges[0].domain.partitions[i].style}
 			});
 			values = Qb.sort(values, {"value" : "value", "sort" : -1});
@@ -292,9 +293,9 @@ aChart.showPie=function(params){
 			var allOther = 0;
 
 			//COLAPSE INTO 'OTHER' CATEEGORY
-			var total = aMath.SUM(chartCube.cube.map(aMath.SUM));
+			var total = aMath.SUM(cube.map(aMath.SUM));
 			values = [];
-			chartCube.cube.forall(function(s, i){
+			cube.forall(function(s, i){
 				var other = 0;
 				var hasSpecific = false;
 				s.forall(function(v, j){
@@ -406,6 +407,7 @@ aChart.showScatter=function(params){
 	var divName=params.id;
 
 	var chartCube=params.cube;
+	var cube = coalesce(chartCube.list, chartCube.cube, chartCube.data);
 	var type="scatter";
 	var stacked=coalesce(params.stacked, false);
 
@@ -424,7 +426,7 @@ aChart.showScatter=function(params){
 			chartCube.edges[0].domain.partitions.forall(function(part,i){
 				var total=0;
 				Array.newInstance(chartCube.select).forall(function(s){
-					total+=coalesce(chartCube.cube[i][s.name], 0);
+					total+=coalesce(cube[i][s.name], 0);
 				});
 				max=aMath.max(max, total);
 			});
@@ -468,9 +470,6 @@ aChart.showScatter=function(params){
 		}//for
 	}//endif
 
-
-
-
 	var height=$("#"+divName).height();
 	var width=$("#"+divName).width();
 
@@ -494,7 +493,7 @@ aChart.showScatter=function(params){
 		yAxisPosition: "right",
 		yAxisSize: 50,
 		xAxisSize: 50,
-		"colors":styles.map(function(s){return s.color;}),
+		"colors":styles.select("color"),
 		plotFrameVisible: false,
 //		"colorNormByCategory": false,        //FOR HEAT CHARTS
 		extensionPoints: {
@@ -550,7 +549,7 @@ aChart.showScatter=function(params){
 		seriesFormatter=xaxis.domain.label;
 		columns=["placeholder", seriesName, valueName];
 		//GIVE EACH SELECT A ROW
-		data=chartCube.list.map(function(v, i){
+		data=cube.map(function(v, i){
 			return [
 				"",
 				seriesFormatter(v[seriesName]),
@@ -558,27 +557,31 @@ aChart.showScatter=function(params){
 			];
 		});
 	}else{
-		categoryName=chartCube.edges[0].name;
-		categoryLabels=chartCube.edges[0].domain.partitions.map(function(v){
-			return chartCube.edges[0].domain.label(v)
-		});
-
+		categoryLabels=getAxisLabels(chartCube.edges[0]);
+		seriesLabels=xaxis.domain.partitions.map(xaxis.domain.label);
 		valueName=Array.newInstance(chartCube.select)[0].name;
-		seriesName=xaxis.name;
-		seriesFormatter=xaxis.domain.label;
-		columns=[categoryName, seriesName, valueName];
+		columns=[chartCube.edges[0].name, xaxis.name, valueName];
 		//GIVE EACH SELECT A ROW
-		data=chartCube.list.map(function(v, i){
-			return [
-				chartCube.edges[0].domain.label(v[categoryName]),
-				seriesFormatter(v[seriesName]),
-				v[valueName]
-			];
+		data = [];
+		cube.forall(function(row, category){
+			var temp=row.map(function(v, i){
+				var val=v[valueName];
+				if (val!==undefined && val!=null){
+					return [
+						i, //seriesLabels[i],
+						val,
+						categoryLabels[category]
+					];
+				}//endif
+			});
+			data.extend(temp);
 		});
 	}//endif
 
 	//CCC2 - metadata MUST BE IN x, y, category ORDER!
-	var metadata=columns.map(function(v, i){ return {"colIndex":i, "colName":v, "colType":i==0?"String":"Numeric"};});
+	var metadata=columns.map(function(v, i){
+		return {"colIndex":i, "colName":v, "colType":i==0?"String":"Numeric"};
+	});
 
 	var cccData = {
 		"resultset":data,
@@ -633,6 +636,26 @@ aChart.show=function(params){
 	var divName=params.id;
 
 	var chartCube=params.cube;
+	var cube=coalesce(chartCube.cube, chartCube.data);
+
+	if (typeof(cube)=="object"){
+		//THE ActiveData CUBE
+		//do nothing
+	}else{
+		//MoDevMetric CUBE
+		var m =new Matrix({"data":cube});
+		cube = Map.zip(Array.newInstance(chartCube.select).map(function(s){
+			return [
+				s.name,
+				m.map(function(v){
+					return v[s.name];
+				})
+			];
+		}));
+	}//endif
+
+
+
 	var type=params.type;
 	var stacked=coalesce(params.stacked, false);
 	////////////////////////////////////////////////////////////////////////////
@@ -681,19 +704,16 @@ aChart.show=function(params){
 	var categoryLabels;
 	if (chartCube.edges.length==1 || chartCube.edges[0].domain.partitions.length==0){
 		categoryAxis={"domain":{"type":"set", "partitions":Array.newInstance(chartCube.select)}};
-		categoryLabels=Array.newInstance(chartCube.select).map(function(v, i){
+		categoryLabels=Array.newInstance(chartCube.select).map(function(v){
 			return v.name;
 		});
 	}else if (chartCube.edges.length==2){
 		if (chartCube.select instanceof Array){
-			if (chartCube.length>1) {
+			if (chartCube.select.length>1) {
 				Log.error("Can not chart when select clause is an array");
 			}else{
 				chartCube.select = chartCube.select[0];
-				chartCube.cube = new Matrix({"data":chartCube.cube}).map(function(v, c){
-					return v[chartCube.select.name];
-				});
-
+				cube = new Matrix({"data":cube[chartCube.select.name]})
 			}//endif
 		}//endif
 		categoryAxis=chartCube.edges[0];
@@ -709,7 +729,7 @@ aChart.show=function(params){
 //			chartCube.edges[0].domain.partitions.forall(function(part,i){
 //				var total=0;
 //				Array.newInstance(chartCube.select).forall(function(s){
-//					total+=coalesce(chartCube.cube[i][s.name], 0);
+//					total+=coalesce(cube[i][s.name], 0);
 //				});
 //				max=aMath.max(max, total);
 //			});
@@ -825,7 +845,7 @@ aChart.show=function(params){
 			dot_shapeRadius: 4, //USEd IN LEGEND (VERSION 2)
 			dot_shape:"circle",
 			line_lineWidth: 4
-//			line_strokeStyle:
+//			line_strokeStyle: "none",
 		},
 		"clickable": true,
 		"clickAction":function(series, x, d, elem){
@@ -870,23 +890,20 @@ aChart.show=function(params){
 			//GIVE EACH SELECT A ROW
 			data=[];
 			for(var s=0;s<chartCube.select.length;s++){
-				var row=chartCube.cube.map(function(v, i){
-					return v[chartCube.select[s].name];
-				});
-				data.push(row);
+				data.push(cube[select[s].name]);
 			}//for
 		}else if (Qb.domain.ALGEBRAIC.contains(chartCube.edges[0].domain.type)){
 			//ALGEBRAIC DOMAINS ARE PROBABLY NOT MULTICOLORED
-			data=[chartCube.cube]
+			data=[cube]
 		}else{
 			//SWAP DIMENSIONS ON CATEGORICAL DOMAIN SO WE CAN USE COLOR
 			var temp=seriesLabels;
 			seriesLabels=categoryLabels;
 			categoryLabels=temp;
-			data=chartCube.cube.map(function(v){return [v];});
+			data=cube.map(function(v){return [v];});
 		}//endif
 	}else{
-		data=chartCube.cube.copy();
+		data=cube[Array.newInstance(chartCube.select)[0].name];
 	}//endif
 
 
@@ -1104,11 +1121,13 @@ function JavaDateFormat2ProtoVisDateFormat(format){
 function getAxisLabels(axis){
 	var labels;
 	if (axis.domain.type == "time"){
-		if (axis.domain.allowNulls) Log.error("Charting lib can not handle NULL domain value.");
+		if (axis.allowNulls) Log.error("Charting lib can not handle NULL domain value.");
 		var format=Qb.domain.time.DEFAULT_FORMAT;
 		labels=axis.domain.partitions.map(function(v, i){
-			if (v.value!=undefined){
-				return v.value.format(format);
+			if (v.value!==undefined) {
+				return Date.newInstance(v.value).format(format);
+			}else if (v.min!==undefined){
+				return Date.newInstance(v.min).format(format);
 			}else{
 				return Date.newInstance(v).format(format);
 			}//endif
@@ -1136,13 +1155,24 @@ function getAxisLabels(axis){
 				if (axis.domain.label!==undefined){
 					//ALL DOMAINS EXPECTED TO HAVE LABELS
 					return ""+axis.domain.label(v);
+				}else if (axis.domain.end) {
+					return "" + axis.domain.end(v);
+				}else if (isString(v.name)) {
+					return v.name;
 				}else{
-					return ""+axis.domain.end(v);
+					Log.error("Expecting domain to have label() function, or part to have a name property");
 				}//endif
 			}//endif
 		});
 	}//endif
-	if (axis.allowNulls) labels.push(axis.domain.NULL.name);
+	if (axis.allowNulls){
+		if (axis.domain.NULL===undefined){
+			// TODO: all domains should have a NULL part describing it
+			labels.push("NULL");
+		}else{
+			labels.push(axis.domain.NULL.name);
+		}
+	}
 	return labels;
 }//method
 

@@ -235,6 +235,8 @@ def get_all_vars(expr):
         return set()
     elif Math.is_number(expr):
         return set()
+    elif not isinstance(expr, Mapping):
+        Log.error("Expecting an expression, not a list")
 
     op, term = expr.items()[0]
 

@@ -118,6 +118,14 @@ def es_deepop(es, query):
                         "put": {"name": ".", "index": i, "child": c.abs_name}
                     })
             i += 1
+        elif s.value == "_id":
+            new_select.append({
+                "name": s.name,
+                "value": s.value,
+                "pull": "_id",
+                "put": {"name": s.name, "index": i, "child": "."}
+            })
+            i += 1
         elif isinstance(s.value, basestring) and s.value.endswith(".*") and is_keyword(s.value[:-2]):
             parent = s.value[:-1]
             prefix = len(parent)

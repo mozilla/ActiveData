@@ -58,8 +58,11 @@ MVEL.compile={};
 MVEL.compile.UID=1000;
 
 MVEL.compile.uniqueFunction=function(){
-	return "_"+MVEL.compile.UID;
-	MVEL.compile.UID++;
+	try {
+		return "_" + MVEL.compile.UID;
+	} finally {
+		MVEL.compile.UID++;
+	}//try
 };//method
 
 MVEL.compile.setValues=function(expression, constants){

@@ -76,7 +76,7 @@ def _scrub(value, is_done):
     elif type_ is Date:
         return float(value.unix)
     elif type_ is Duration:
-        return value.seconds
+        return float(value.seconds)
     elif type_ is str:
         return utf82unicode(value)
     elif type_ is Decimal:
@@ -94,7 +94,7 @@ def _scrub(value, is_done):
             if not isinstance(k, basestring):
                 _Log.error("keys must be strings")
             v = _scrub(v, is_done)
-            if v != None:
+            if v != None or isinstance(v, Mapping):
                 output[k] = v
 
         is_done.discard(_id)

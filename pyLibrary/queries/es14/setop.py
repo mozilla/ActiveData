@@ -41,7 +41,7 @@ def is_setop(es, query):
 
     if not query.edges:
         isDeep = len(split_field(query.frum.name)) > 1  # LOOKING INTO NESTED WILL REQUIRE A SCRIPT
-        simpleAgg = AND([s.aggregate in ("count", "none") for s in select])   # CONVERTING esfilter DEFINED PARTS WILL REQUIRE SCRIPT
+        simpleAgg = AND([s.aggregate in ("count", "none") for s in select])  # CONVERTING esfilter DEFINED PARTS WILL REQUIRE SCRIPT
 
         # NO EDGES IMPLIES SIMPLER QUERIES: EITHER A SET OPERATION, OR RETURN SINGLE AGGREGATE
         if simpleAgg or isDeep:
@@ -67,7 +67,7 @@ def es_setop(es, query):
 def extract_rows(es, es_query, query):
     is_list = isinstance(query.select, list)
     new_select = DictList()
-    column_names = set(c.name for c in query.frum.get_columns() if c.type not in ["object"] and (not c.nested_path or c.abs_name==c.nested_path or not c.nested_path))
+    column_names = set(c.name for c in query.frum.get_columns() if c.type not in ["object"] and (not c.nested_path or c.abs_name == c.nested_path or not c.nested_path))
     source = "fields"
 
     i = 0
@@ -87,6 +87,14 @@ def extract_rows(es, es_query, query):
 
             new_select.append({"name": s.name if is_list else ".", "value": s.value, "put": {"name": s.name, "index": i, "child": "."}})
             i += 1
+        elif s.value == "_id":
+            new_select.append({
+                "name": s.name if is_list else ".",
+                "value": s.value,
+                "pull": "_id",
+                "put": {"name": s.name, "index": i, "child": "."}
+            })
+            i += 1
         elif isinstance(s.value, basestring) and s.value.endswith(".*") and is_keyword(s.value[:-2]):
             parent = s.value[:-1]
             prefix = len(parent)
@@ -95,7 +103,7 @@ def extract_rows(es, es_query, query):
                     if es_query.fields is not None:
                         es_query.fields.append(c)
 
-                    new_select.append({"name": s.name+"."+c[prefix:], "value": c, "put": {"name": s.name+"."+c[prefix:], "index": i, "child": "."}})
+                    new_select.append({"name": s.name + "." + c[prefix:], "value": c, "put": {"name": s.name + "." + c[prefix:], "index": i, "child": "."}})
                     i += 1
         elif isinstance(s.value, basestring) and is_keyword(s.value):
             parent = s.value + "."
@@ -149,7 +157,6 @@ def extract_rows(es, es_query, query):
         Log.error("problem formatting", e)
 
 
-
 def format_list(T, select, query=None):
     data = []
     for row in T:
@@ -165,7 +172,7 @@ def format_list(T, select, query=None):
 
 def format_table(T, select, query=None):
     data = []
-    num_columns = (Math.MAX(select.put.index)+1)
+    num_columns = (Math.MAX(select.put.index) + 1)
     for row in T:
         r = [None] * num_columns
         for s in select:
@@ -184,7 +191,7 @@ def format_table(T, select, query=None):
 
         data.append(r)
 
-    header = [None]*num_columns
+    header = [None] * num_columns
     for s in select:
         if header[s.put.index]:
             continue

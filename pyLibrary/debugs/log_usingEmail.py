@@ -19,10 +19,10 @@ from pyLibrary.meta import use_settings
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Lock
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import Duration
+from pyLibrary.times.durations import Duration, HOUR, YEAR
 
 
-WAIT_TO_SEND_MORE = Duration.HOUR
+WAIT_TO_SEND_MORE = HOUR
 
 
 
@@ -61,7 +61,7 @@ class Log_usingEmail(BaseLog):
         assert settings.log_type == "email", "Expecing settings to be of type 'email'"
         self.settings = settings
         self.accumulation = []
-        self.last_sent = Date.now()-Duration.YEAR
+        self.last_sent = Date.now()-YEAR
         self.locker = Lock()
 
     def write(self, template, params):

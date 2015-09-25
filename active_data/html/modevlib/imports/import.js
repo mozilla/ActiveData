@@ -14,8 +14,8 @@ var importScript;
 (function () {
 
 	var METHOD_NAME = "importScript";
-	var FORCE_RELOAD = true;  //COMPENSATE FOR BUG https://bugzilla.mozilla.org/show_bug.cgi?id=991252
-	var DEBUG = true;
+	var FORCE_RELOAD = false;  //COMPENSATE FOR BUG https://bugzilla.mozilla.org/show_bug.cgi?id=991252
+	var DEBUG = false;
 
 	if (typeof(window.Log) == "undefined") {
 		window.Log = {
@@ -142,7 +142,7 @@ var importScript;
 						if (DEBUG) Log.note("GOT " + url);
 						callback(request.responseText);
 					} else {
-						Log.error("What!?!");
+						Log.error("Problem loading "+url+", error status: "+request.status);
 						callback(null);
 					}//endif
 				}//endif
@@ -154,7 +154,7 @@ var importScript;
 					if (DEBUG) Log.note("GOT " + url);
 					callback(request.responseText);
 				} else {
-					Log.error("What!?!");
+					Log.error("Problem loading "+url+", error status: "+request.status);
 					callback(null);
 				}//endif
 			};

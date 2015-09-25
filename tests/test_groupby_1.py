@@ -104,7 +104,6 @@ class TestgroupBy1(ActiveDataBaseTest):
 
     def test_count_other(self):
         test = {
-            "name": "count column",
             "metadata": {},
             "data": simple_test_data,
             "query": {

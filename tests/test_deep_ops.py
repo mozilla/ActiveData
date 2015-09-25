@@ -10,13 +10,12 @@
 
 from __future__ import unicode_literals
 from __future__ import division
-
-from unittest import skip
+from __future__ import absolute_import
 
 import base_test_class
 from pyLibrary.dot import wrap
 from tests.base_test_class import ActiveDataBaseTest
-
+from pyLibrary.maths import Math
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
@@ -482,5 +481,101 @@ class TestDeepOps(ActiveDataBaseTest):
         }
 
         self._execute_es_tests(test, delete_index=False)
+
+    def test_id_select(self):
+        """
+        ALWAYS GOOD TO HAVE AN ID, CALL IT "_id"
+        """
+        test = {
+            "data": [
+                {"o": 3, "a": {"_a": [
+                    {"v": "a string", "s": False},
+                    {"v": "another string"}
+                ]}},
+                {"o": 1, "a": {"_a": {
+                    "v": "still more",
+                    "s": False
+                }}},
+                {"o": 2, "a": {"_a": [
+                    {"v": "string!", "s": True},
+                ]}},
+                {"o": 4, "a": {"_a": {"s": False}}}
+            ],
+            "query": {
+                "select": ["_id"],
+                "from": base_test_class.settings.backend_es.index+".a._a",
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"_id": Math.is_hex},
+                    {"_id": Math.is_hex},
+                    {"_id": Math.is_hex},
+                    {"_id": Math.is_hex},
+                    {"_id": Math.is_hex}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["_id"],
+                "data": [
+                    [Math.is_hex],
+                    [Math.is_hex],
+                    [Math.is_hex],
+                    [Math.is_hex],
+                    [Math.is_hex]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 5, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "_id": [Math.is_hex, Math.is_hex, Math.is_hex, Math.is_hex, Math.is_hex]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_id_value_select(self):
+        """
+        ALWAYS GOOD TO HAVE AN ID, CALL IT "_id"
+        """
+
+        test = {
+            "data": [
+                {"o": 3, "a": {"_a": [
+                    {"v": "a string", "s": False},
+                    {"v": "another string"}
+                ]}},
+                {"o": 1, "a": {"_a": {
+                    "v": "still more",
+                    "s": False
+                }}},
+                {"o": 2, "a": {"_a": [
+                    {"v": "string!", "s": True},
+                ]}},
+                {"o": 4, "a": {"_a": {"s": False}}}
+            ],
+            "query": {
+                "select": "_id",
+                "from": base_test_class.settings.backend_es.index+".a._a",
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    Math.is_hex,
+                    Math.is_hex,
+                    Math.is_hex,
+                    Math.is_hex,
+                    Math.is_hex
+                ]
+            }
+        }
+        self._execute_es_tests(test)
 
 

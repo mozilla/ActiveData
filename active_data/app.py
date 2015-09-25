@@ -9,6 +9,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+import os
 
 import sys
 sys.path.append(".")
@@ -64,7 +65,10 @@ def record_request(request, query_, data, error):
 
 @app.route('/tools/<path:filename>')
 def download_file(filename):
-    return flask.send_from_directory(File("active_data/html").abspath, filename)
+    try:
+        return flask.send_from_directory(File("active_data/html").abspath.replace(os.sep, "/"), filename)
+    except Exception, e:
+        Log.error("Could not get file {{file}}", file=filename, cause=e)
 
 @app.route('/find/<path:hash>')
 def find_query(hash):
@@ -106,9 +110,9 @@ def find_query(hash):
 @app.route('/query', defaults={'path': ''}, methods=['GET', 'POST'])
 def query(path):
     active_data_timer = Timer("total duration")
+    body = flask.request.environ['body_copy']
     try:
         with active_data_timer:
-            body = flask.request.environ['body_copy']
             if not body.strip():
                 return Response(
                     convert.unicode2utf8(BLANK),
@@ -160,7 +164,7 @@ def query(path):
     except Exception, e:
         e = Except.wrap(e)
 
-        record_request(flask.request, None, flask.request.environ['body_copy'], e)
+        record_request(flask.request, None, body, e)
         Log.warning("Problem sent back to client", e)
         e = e.as_dict()
         e.meta.active_data_response_time = active_data_timer.duration

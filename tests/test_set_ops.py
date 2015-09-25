@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 import base_test_class
 from pyLibrary.dot import wrap
+from pyLibrary.maths import Math
 from pyLibrary.queries import query
 from tests.base_test_class import ActiveDataBaseTest
 
@@ -228,6 +229,65 @@ class TestSetOps(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test)
+
+
+    def test_id_select(self):
+        """
+        ALWAYS GOOD TO HAVE AN ID, CALL IT "_id"
+        """
+        test = {
+            "data": [
+                {"a": "b"}
+            ],
+            "query": {
+                "select": "_id",
+                "from": base_test_class.settings.backend_es.index
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                {"_id": Math.is_hex}
+            ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["_id"],
+                "data": [[Math.is_hex]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "_id": [Math.is_hex]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_id_value_select(self):
+        """
+        ALWAYS GOOD TO HAVE AN ID, CALL IT "_id"
+        """
+        test = {
+            "data": [
+                {"a": "b"}
+            ],
+            "query": {
+                "select": "_id",
+                "from": base_test_class.settings.backend_es.index
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    Math.is_hex
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
 
     def test_single_star_select(self):
         test = {

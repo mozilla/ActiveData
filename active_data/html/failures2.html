@@ -1,0 +1,313 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<HTML>
+<HEAD>
+	<script type="text/javascript" src="modevlib/imports/import.js"></script>
+</HEAD>
+<BODY>
+
+<div style="align:left;position:relative;float:left;width:800px;">
+	<h3 id="title">Past week of Test Failures<span id="status" style="height:30px">Page Loading...</span><span class="loading"><img src="images/spinner.gif" alt=""></span></h3>
+
+	<div id="chart" class="chart" style="float:none;width:800px;height:300px;"></div>
+	<div id="info"></div>
+	<div id="details"></div>
+</div>
+
+
+<script type="application/javascript">
+
+
+importScript('js/util.js', function(){
+
+
+	var FROM_DATE = Date.today().subtract(Duration.WEEK);
+	var RECENT_DATE = Date.today().subtract(Duration.DAY);
+	var TO_DATE = Date.now().floor(Duration.DAY);
+	var NOW = Date.now();
+
+	var tests = {};  //MAP FROM FULL NAME TO UNIQUE TEST
+
+	var __main = function*(){
+		var raw_failures = null;
+		var success = null;
+
+		var a = Log.action("find test failures", true);
+		try {
+			//PULL FAILURE DETAILS
+			var result = yield (search({
+				"from": "unittest.result.subtests",
+				"select": [
+					"_id",
+					{"name": "subtest_name", "value": "name"},
+					"message",
+					{"name": "suite", "value": "run.suite"},
+					{"name": "chunk", "value": "run.chunk"},
+					{"name": "duration", "value": "result.duration"},
+					{"name": "test", "value": "result.test"},
+					{"name": "platform", "value":"build.platform"},
+					{"name": "build_type", "value":"build.type"},
+					{"name": "build_date", "value": "build.date"},
+					{"name": "branch", "value": "build.branch"},
+					{"name": "revision", "value": "build.revision12"},
+					{"name": "ok", "value": "result.ok"}
+				],
+				"where": {"and": [
+					{"gte": {"run.timestamp": RECENT_DATE.unix()}},
+					{"lt": {"run.timestamp": TO_DATE.unix()}},
+					{"eq": {"result.ok": false}},
+					{"eq": {"ok": false}},
+					{"eq": {"build.branch": "mozilla-inbound"}}
+				]},
+				"limit": 100,
+				"format": "list"
+			}));
+
+			raw_failures = result.data;
+		} catch (e) {
+			Log.error("Problem collecting test failures from ActiveData", e);
+		} finally {
+			Log.actionDone(a);
+		}//try
+
+		addGroupId(result, ["suite", "test", "platform", "build_type"]);
+
+		Log.alert(raw_failures.length+" failures found since "+RECENT_DATE.format("MMM dd, yyyy"));
+
+		var testGroups = (yield (Qb.calc2List({
+			"from": raw_failures,
+			"select": [
+				{"name": "subtests", "value": "subtest_name", "aggregate": "union"},
+				{"name": "last_fail", "value": "build_date", "aggregate":"max"},
+				{"name":"details", "value":".", "aggregate":"list"},
+				{"value": "_group_id", "aggregate": "one"},
+				{"name":"failure_count", "value": ".", "aggregate": "count"}
+			],
+			"edges": ["suite", "test", "platform", "build_type"]
+		}))).list;
+
+		Log.alert(testGroups.length+" unique combinations");
+
+		tests = Map.zip(testGroups.map(function(t){
+			return [t._group_id, t];
+		}));
+
+		testGroups = Qb.sort(testGroups, {"value": "failure_count", "sort":-1});
+
+		$("#details").html(convert.List2HTMLTable(testGroups));
+
+		testGroups.groupBy({size:5}, function(g, d){
+
+			if (g>0) return;
+
+			var failThread = new Thread(function*(){
+				yield (getDetails(g, d));
+			});
+			d.forall(function(dd){
+				dd.thread=failThread;
+			});
+			failThread.start()
+		});
+
+		//SCHEDULE THE REST OF THE SUCCESSFUL INFO
+
+
+
+		//ON CLICK, LOAD SUCCESSFUL INFO
+
+		//CHART OVER TIME
+		yield (chart(testGroups[0]));
+
+		yield (null);
+	};
+
+	var chart=function*(testGroup){
+
+		var a = Log.action("Wait for detailed data", true);
+		try {
+			yield (Thread.join(testGroup.thread));
+		}finally{
+			Log.actionDone(a)
+		}//try
+
+		a = Log.action("Make chart", true);
+		try{
+			var revisions = (yield(Qb.calc2List({
+				"from": testGroup.details,
+				"select": {"value": "build_date", "aggregate": "min"},
+				"edges": ["revision"],
+				"sort": "build_date"
+			})));
+			revisions = revisions.list.select("revision");
+
+			var duration = (yield(Q({
+				"from": testGroup.details,
+				"select": [
+					{"value": "duration", "aggregate": "average"},
+					{"value": "build_date", "aggregate": "min"}
+				],
+				"edges": [
+					"ok",
+					{"value":"revision", "domain":{"partitions":revisions}}
+				]
+			})));
+
+//			duration.edges[0].domain.partitions[0].style={"color":"red"};
+//			duration.edges[0].domain.partitions[1].style={"color":"blue"};
+
+			aChart.showScatter({
+				"id": "chart",
+				"type": "line",
+				"stacked": false,
+				"cube": duration,
+				xAxisSize: 50,
+				"legend": false,
+				extensionPoints: {
+					line_lineWidth: 0
+				}
+			});
+		} finally {
+			Log.actionDone(a);
+		}//try
+	};//function
+
+
+	// ALL TESTS RESUTLS FOR TESTS IN LIST testGroups
+	var getDetails = function*(group, testGroups){
+		var a = Log.action("get details #"+group, true);
+		try {
+			//PULL SUCCESS
+			var success = yield (search({
+				"from": "unittest",
+				"select": [
+					"_id",
+					{"name": "duration", "value": "result.duration"},
+					{"name": "suite", "value": "run.suite"},
+					{"name": "chunk", "value": "run.chunk"},
+					{"name": "test", "value": "result.test"},
+					{"name": "platform", "value": "build.platform"},
+					{"name": "build_type", "value": "build.type"},
+					{"name": "build_date", "value": "build.date"},
+					{"name": "branch", "value": "build.branch"},
+					{"name": "revision", "value": "build.revision12"},
+					{"name": "ok", "value": "result.ok"}
+				],
+				"where": {"and": [
+					{"gte": {"build.date": FROM_DATE.unix()}},
+					{"lt": {"build.date": TO_DATE.unix()}},
+					{"eq": {"build.branch": "mozilla-inbound"}},
+					{"or": testGroups.map(function(r){
+						return {"eq": {
+							"run.suite": r.suite,
+							"result.test": r.test,
+							"build.platform": r.platform,
+							"build.type": r.build_type
+						}}
+					})}
+				]},
+				"limit": 100000,
+				"format": "list"
+			}));
+
+			addGroupId(success, ["suite", "test", "platform", "build_type"]);
+
+			var groupedSuccesses = (yield (Qb.calc2List({
+				"from": success.data,
+				"select": [
+					{"name": "last_good", "value": "build_date", "aggregate":"max"},
+					{"name":"details", "value":".", "aggregate":"list"},
+					{"value":"_group_id", "aggregate":"one"},
+					{"name":"success_count", "value":".", "aggregate":"count"}
+				],
+				"edges": ["suite", "test", "platform", "build_type"]
+			}))).list;
+
+
+			//CALCULATE THE TOTAL WEIGHT TO NORMALIZE THE TEST SCORES {1 - (age/7)}
+			//INSERT THIS NEW INFO TO OUR MAIN DATA STRUCTURE
+			groupedSuccesses.forall(function(s){
+				var test_group = tests[s._group_id];
+				test_group.last_good = s.last_good;
+				test_group.details.extend(s.details);
+				test_group.success_count = s.success_count;
+
+				var is_done = {};  //THERE ARE SUBTESTS IN THE details, ONLY COUNT THE TEST ONCE
+				var failure_score = 0;
+				var total_score = 0;
+				test_group.details.forall(function(d){
+					if (!is_done[d._id]){
+						is_done[d._id]=true;
+						var score = 1 - NOW.subtract(Date.newInstance(d.build_date)).divideBy(Duration.DAY)/7;
+						if (score < 0) score = 0;
+						if (d.ok){
+							failure_score += score;
+						}//endif
+						total_score += score;
+					}//endif
+				});
+				test_group.total_score = total_score;
+				test_group.failure_score = failure_score;
+				if (total_score != 0) {
+					test_group.score = failure_score / total_score;
+				}//endif
+			});
+		} finally {
+			Log.actionDone(a);
+		}//try
+		yield (null);
+	};//function
+
+
+
+
+
+	Thread.showWorking = function(numThread) {
+		var l = $(".loading");
+		l.show();
+	};//function
+
+	Thread.hideWorking = function() {
+		var l = $(".loading");
+		l.hide();
+	};//function
+
+
+	var thread;
+	var main = function(){
+		if (thread !== undefined)
+			thread.kill();
+		thread = Thread.run(__main());
+	};
+
+	var search = function*(query){
+		var output = yield (Rest.post({
+			url: "http://localhost:5000/query",
+			data: convert.value2json(query),
+			dataType: "json"
+		}));
+
+		yield (output);
+	};
+
+	var addGroupId = function(g, edges){
+		g.data.forall(function(t){
+			t._group_id = edges.map(function(e){
+				return t[e];
+			}).join("::");
+		});
+	};
+
+	$(document).ready(function(){
+		main();
+	});
+
+});
+
+</script>
+
+
+</BODY>
+</HTML>
+

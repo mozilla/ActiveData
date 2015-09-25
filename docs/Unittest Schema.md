@@ -49,6 +49,7 @@ Properties that describe the run of this test suite, and the many tests that are
 
 * `run.suite` - *string* name of the suite
 * `run.chunk` - *integer* each suite is broken into chucks to parallelize the run, each chunk is given a number
+* `run.type` - *string* either "e10s" or `null`
 * ~~`run.insertion_time` - *timestamp* time inserted into the `exchange/build/normalized` Pulse exchange~~
 * ~~`run.status` - *integer* buildbot's end status~~
 * `run.buildbot_status` - *string* buildbot's end status

@@ -4,10 +4,16 @@
 
 
 
+importScript("../modevlib/aLibrary.js");
+importScript("../modevlib/Settings.js");
 
-function* getMetadata(url){
-	//MAKE CALL
+importScript("../modevlib/MozillaPrograms.js");
+importScript("../modevlib/qb/ESQuery.js");
+importScript("../modevlib/charts/aChart.js");
+importScript("../modevlib/charts/aColor.js");
+importScript([
+	"../css/menu.css"
+]);
+importScript("../modevlib/math/Stats.js");
+importScript("../modevlib/qb/Qb.js");
 
-
-
-}//method

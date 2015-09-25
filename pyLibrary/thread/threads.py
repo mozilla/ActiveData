@@ -452,7 +452,11 @@ class Thread(object):
         finally:
             children = copy(self.children)
             for c in children:
-                c.stop()
+                try:
+                    c.stop()
+                except Exception:
+                    pass
+
             for c in children:
                 try:
                     c.join()
@@ -464,12 +468,12 @@ class Thread(object):
             with ALL_LOCK:
                 del ALL[self.id]
 
-        if self.cprofiler:
-            import pstats
+            if self.cprofiler:
+                import pstats
 
-            self.cprofiler.disable()
-            _Log.cprofiler_stats.add(pstats.Stats(self.cprofiler))
-            del self.cprofiler
+                self.cprofiler.disable()
+                _Log.cprofiler_stats.add(pstats.Stats(self.cprofiler))
+                del self.cprofiler
 
     def is_alive(self):
         return not self.stopped

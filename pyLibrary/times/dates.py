@@ -51,7 +51,7 @@ class Date(object):
             return Date(math.floor(self.milli / 86400000) * 86400000)
         elif duration.milli % (7 * 86400000) == 0:
             offset = 4*86400000
-            return Date(math.floor((self.milli+offset) / duration.milli) * duration.milli - offset)
+            return Date(Decimal(math.floor((self.milli+offset) / duration.milli)) * duration.milli - offset)
         elif not duration.month:
             return Date(math.floor(self.milli / duration.milli) * duration.milli)
         else:
@@ -274,8 +274,9 @@ def add_month(offset, months):
     month = offset.month+months-1
     year = offset.year
     if not 0 <= month < 12:
-        year += int((month - (month % 12)) / 12)
-        month = (month % 12)
+        r = Math.mod(month, 12)
+        year += int((month - r) / 12)
+        month = r
     month += 1
 
     output = datetime(

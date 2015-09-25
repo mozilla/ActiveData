@@ -11,10 +11,11 @@ from pyLibrary.strings import edit_distance
 from pyLibrary.times.dates import Date
 
 # DATE RANGE
+from pyLibrary.times.durations import HOUR
 from pyLibrary.times.timer import Timer
 
 FROM_DATE = Date("today-2day")
-TO_DATE = Date("today-1day")
+TO_DATE = Date("tomorrow")
 
 config = wrap({
     "ActiveData":{
@@ -38,18 +39,19 @@ constants.set(_set)
 
 
 #WAIT FOR SERVICE TO BE ACTIVE
-while True:
-    try:
-        result = http.post_json(config.ActiveData.url, data={
-            "from": "unittest",
-            "limit": 1
-        })
-        break
-    except Exception, e:
-        if "No connection could be made because the target machine actively refused it" in e:
-            Log.note("wait for AD to respond")
-        else:
-            Log.warning("problem", e)
+with Timer("wait for service to respond"):
+    while True:
+        try:
+            result = http.post_json(config.ActiveData.url, data={
+                "from": "unittest",
+                "limit": 1
+            })
+            break
+        except Exception, e:
+            if "No connection could be made because the target machine actively refused it" in e:
+                Log.note("wait for AD to respond")
+            else:
+                Log.warning("problem", e)
 
 
 # SIMPLE LIST OF ALL TEST FAILURES
@@ -65,7 +67,7 @@ with Timer("get failures"):
             {"name": "test", "value": "result.test"},
             {"name": "build_date", "value": "build_date"},
             {"name": "branch", "value": "build.branch"},
-            {"name": "revision", "value":"build.revision12"}
+            {"name": "revision", "value": "build.revision12"}
         ],
         "where": {"and": [
             {"gte": {"run.timestamp": FROM_DATE}},
@@ -81,59 +83,45 @@ with Timer("get failures"):
 if result.type == "ERROR":
     Log.error("problem", cause=Except.wrap(result))
 
+raw_failures = result.data
+Log.note("got {{num}} errors", num=len(raw_failures))
 
-Log.note("got {{num}} errors", num=len(result.data))
+if not raw_failures:
+    exit()
 
 #GROUP TESTS, AND COUNT
-groups = Index(keys=["suite", "test", "subtest_name"], data=result.data)
+failures = Index(keys=["suite", "test"], data=raw_failures)
 
-# WE NEED THE BUGZILLA TO INDICATE THE PROBLEMS THAT HAVE BEEN SOLVED
-with Timer("pull from bzETL"):
-    with FromES(settings=config.Bugzilla) as es:
-        #PULL ALL INTERMITTENTS, I CAN NOT FIGURE OUT HOW TO LIMIT TO JUST FOUND FAILURES
-        bugs = es.query({
-            "from": "public_bugs",
-            "select": ["bug_id", "short_desc"],
-            "where": {"and": [
-                {"gt": {"expires_on": Date.now().milli}},
-                {"eq": {"keyword": "intermittent-failure"}},
-                {"not": {"eq": {"bug_status": ["resolved", "verified", "closed"]}}},
-            ]},
-            "limit": 100000
-        })
 
-# FIND BEST MATCH FOR EACH TEST FAILURE
-for r in groups:
-    test_name = r.result.test
-    if not r.message:
-        for b in bugs.data:
-            if b.short_desc.find(test_name) >= 0:
-                r.best += [b]
-    else:
-        for b in bugs.data:
-            desc = b.short_desc.split("|")[-1].strip()
-            if b.short_desc.find(test_name) >= 0:
-                for m in r.message:
-                    score = edit_distance(m, desc)
-                    if r.score < score:
-                        pass
-                    else:
-                        r.score = score
-                        r.best = b
+#FIND ALL THE SUCCESSES OF THE SAME
+with Timer("get success"):
+    success = http.post_json(config.ActiveData.url, zip=False, data={
+        "from": "unittest",
+        "select": [
+            {"aggregate": "count"}
+        ],
+        "edges": [
+            {"name": "test", "value": ["run.suite", "result.test"]},
+            "result.ok",
+            {
+                "name": "build.date",
+                "value": "build.date",
+                "domain": {"type": "time", "min": FROM_DATE, "max": TO_DATE, "interval": HOUR}
+            }
+        ],
+        "where": {"and": [
+            {"gte": {"build.date": FROM_DATE}},
+            {"lt": {"build.date": TO_DATE}},
+            {"eq": {"build.branch": "mozilla-inbound"}},
+            {"or": [
+                {"eq": {"run.suite": g.suite, "result.test": g.test}}
+                for g, d in qb.groupby(raw_failures, ("suite", "test"))
+            ]}
+        ]},
+        "limit": 100000,
+        "format": "cube"
+    })
 
-data = qb.sort([
-    Dict(
-        count=len(r.others),
-        chunk=r.run.chunk,
-        suite=r.run.suite,
-        test=r.result.test,
-        message=coalesce(r.first_message, "missing test end" if r.result.missing_test_end else None),
-        bug_id=unwraplist(r.best.bug_id),
-        bug_desc=unwraplist(r.best.short_desc),
-        first_seen_branch=r.first_branch,
-        first_seen_timestamp=r.first_seen
-    )
-    for r in groups
-], {"value": "count", "sort": -1})
-tab = convert.list2tab(data, columns=["count", "suite", "test", "chunk", "message", "bug_id", "bug_desc", "first_seen_branch", "first_seen_timestamp"])
-Log.note("\n{{tab}}", tab=tab)
+if success.type == "ERROR":
+    Log.error("problem", cause=Except.wrap(success))
+

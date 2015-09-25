@@ -168,7 +168,7 @@ in `Null`:
  * `Null ∘ a == Null`
 
 where `∘` is standing in for most binary operators.  Operators `and` and `or` 
-are exceptions, and behave as expected:
+are exceptions, and behave as expected with [three-valued logic](https://en.wikipedia.org/wiki/Three-valued_logic):
 
  * `True or Null == True`
  * `False or Null == Null`

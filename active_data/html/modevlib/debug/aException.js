@@ -24,7 +24,7 @@ importScript("../util/convert.js");
 	function pythonExcept2Exception(except){
 		var output = new Exception(
 			new Template(except.template).expand(except.params),
-			except.cause===undefined ? undefined : Array.newInstance(except.cause).map(pythonExcept2Exception)
+			Array.newInstance(except.cause).map(pythonExcept2Exception).unwrap()
 		);
 		output.stack = pythonTrace2Stack(except.trace);
 		return output;

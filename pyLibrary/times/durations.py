@@ -30,17 +30,6 @@ def _delayed_import():
 
 
 class Duration(object):
-    ZERO = None
-    SECOND = None
-    MINUTE = None
-    HOUR = None
-    DAY = None
-    WEEK = None
-    MONTH = None
-    QUARTER = None
-    YEAR = None
-
-
     def __new__(cls, value=None, **kwargs):
         output = object.__new__(cls)
         if value == None:
@@ -51,8 +40,8 @@ class Duration(object):
             else:
                 return None
         if Math.is_number(value):
-            output.milli = value*1000
-            output.month = 0
+            output._milli = Decimal(value*1000)
+            output.month = Decimal(0)
             return output
         elif isinstance(value, basestring):
             return parse(value)
@@ -92,7 +81,7 @@ class Duration(object):
 
         if isinstance(other, datetime.datetime):
             return _Date(other).add(self)
-        elif isinstance(other, Date):
+        elif isinstance(other, _Date):
             return other.add(self)
         return self + other
 
@@ -151,10 +140,10 @@ class Duration(object):
         return self.__rdiv__(other)
 
     def __sub__(self, duration):
-            output = Duration(0)
-            output.milli = self.milli - duration.milli
-            output.month = self.month - duration.month
-            return output
+        output = Duration(0)
+        output.milli = self.milli - duration.milli
+        output.month = self.month - duration.month
+        return output
 
     def __rsub__(self, time):
         if isinstance(time, Duration):
@@ -211,10 +200,21 @@ class Duration(object):
 
     @property
     def seconds(self):
-        return float(self.milli) / 1000.0
+        return Decimal(self.milli) / 1000
+
+    @property
+    def milli(self):
+        return self._milli
+
+    @milli.setter
+    def milli(self, value):
+        if not isinstance(value, Decimal):
+            from pyLibrary.debugs.logs import Log
+            Log.error("not allowed")
+        self._milli = value
 
     def total_seconds(self):
-        return float(self.milli) / 1000.0
+        return Decimal(self.milli) / 1000
 
     def __str__(self):
         return str(self.__unicode__())
@@ -305,7 +305,7 @@ def _string2Duration(text):
     CONVERT SIMPLE <float><type> TO A DURATION OBJECT
     """
     if text == "" or text == "zero":
-        return Duration(0)
+        return ZERO
 
     amount, interval = regex.match(r"([\d\.]*)(.*)", text)
     amount = int(amount) if amount else 1
@@ -338,15 +338,16 @@ def parse(value):
 
 
 MILLI_VALUES = wrap({
-    "year": 52 * 7 * 24 * 60 * 60 * 1000, # 52weeks
-    "quarter": 13 * 7 * 24 * 60 * 60 * 1000, # 13weeks
-    "month": 28 * 24 * 60 * 60 * 1000, # 4weeks
-    "week": 7 * 24 * 60 * 60 * 1000,
-    "day": 24 * 60 * 60 * 1000,
-    "hour": 60 * 60 * 1000,
-    "minute": 60 * 1000,
-    "second": 1000,
-    "milli": 1
+    "year": Decimal(52 * 7 * 24 * 60 * 60 * 1000),  # 52weeks
+    "quarter": Decimal(13 * 7 * 24 * 60 * 60 * 1000),  # 13weeks
+    "month": Decimal(28 * 24 * 60 * 60 * 1000),  # 4weeks
+    "week": Decimal(7 * 24 * 60 * 60 * 1000),
+    "day": Decimal(24 * 60 * 60 * 1000),
+    "hour": Decimal(60 * 60 * 1000),
+    "minute": Decimal(60 * 1000),
+    "second": Decimal(1000),
+    "milli": Decimal(1),
+    "zero": Decimal(0)
 })
 
 MONTH_VALUES = wrap({
@@ -383,19 +384,6 @@ WEEK = Duration("week")
 MONTH = Duration("month")
 QUARTER = Duration("quarter")
 YEAR = Duration("year")
-
-Duration.ZERO = ZERO
-Duration.SECOND = SECOND
-Duration.MINUTE = MINUTE
-Duration.HOUR = HOUR
-Duration.DAY = DAY
-Duration.WEEK = WEEK
-Duration.MONTH = MONTH
-Duration.QUARTER = QUARTER
-Duration.YEAR = YEAR
-
-
-
 
 COMMON_INTERVALS = [
     Duration("second"),

@@ -181,7 +181,9 @@ function* calc2Tree(query){
 	var tree = {};
 	query.tree = tree;
 	FROM: for(var i = 0; i < from.length; i++){
-		yield (Thread.yield());
+		if (i%1000==0) {
+			yield (Thread.yield());
+		}//endif
 
 		var row = from[i];
 		//CALCULATE THE GROUP COLUMNS TO PLACE RESULT

@@ -100,7 +100,7 @@ class Log(object):
                 Log.add_log(Log.new_instance(log))
 
         if settings.cprofile:
-            Log.alert("cprofiling is enabled")
+            Log.alert("cprofiling is enabled, writing to {{filename}}", filename=os.path.abspath(settings.cprofile.filename))
 
     @classmethod
     def stop(cls):

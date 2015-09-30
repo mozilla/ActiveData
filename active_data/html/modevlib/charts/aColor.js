@@ -28,6 +28,11 @@ Color = function (L, h, s) {
 	// ...AFTER AN HOUR OF LOOKING, THIS IS THE ONLY NATURAL LOOKING COLOUR
 	// WHEEL THANKS TO http://www.realcolorwheel.com/colorwheel.htm
 	//
+	//      19        20        21        22        23        24        25        26        27        28        29        30        31        32        33        34        35        36         1         2         3         4         5         6         7         8         9        10        11        12        13        14        15        16        17        18
+	var light_color = [
+	    ["e2ecf8", "dff0fa", "dff0fa", "e2f0fb", "e7f5fe", "e7f5fe", "e6f4fd", "e6f5fa", "e6f4f5", "e6f5f2", "e1f2ec", "e1f0e9", "e1f1e7", "e5f3e6", "e8f3e5", "eff6e4", "f6f8e2", "fbfbdf", "fcfbdf", "fcfbdf", "fff9d9", "fff4e2", "fff3e5", "fff0e9", "feebef", "feebef", "feebef", "fdedf0", "fdecf4", "fdecf4", "fdecf4", "f8edf5", "f7ecf4", "f2eaf5", "ece914", "e9e7f4"],
+		[]
+	];
 	var hex_color = [
 		["0000FF", "004DFF", "0077FF", "00A0FF", "00C4FF", "00E3FF", "4dfeff", "00FFDF", "00FFB2", "00FF8C", "00FF79", "00FF31", "00FF00", "17FF00", "70FF00", "A0FF00", "C8FF00", "EBFF00", "FFFF00", "FFDC00", "FFB000", "FF8400", "FF5D00", "FF3600", "FF0000", "FF0034", "FF006B", "FF0091", "FF00AA", "FF00D0", "FF00FF", "CC19FF", "9500F9", "7A00FF", "6100FF", "4700FF"],
 		["0000EC", "0049F3", "0070F3", "0091E9", "00B8F3", "00D0EF", "24e3ec", "00EFD4", "00EDA8", "00E680", "00EE73", "00EE2D", "00e700", "16EE00", "68EB00", "94E900", "B8EB00", "DCED00", "FFEB01", "F6C800", "F09E00", "EC7700", "ED5300", "ED2E00", "df1b00", "EF072B", "E90068", "E60084", "df1d96", "EC00D9", "e020e4", "BB16EC", "8A00E6", "7000EA", "6100FF", "4700FF"],
@@ -74,7 +79,11 @@ Color = function (L, h, s) {
 	};
 
 	function toHTML(){
-		return hex({"r":this.rgb[0], "g":this.rgb[1], "b":this.rgb[2]});
+		try {
+			return hex({"r": this.rgb[0], "g": this.rgb[1], "b": this.rgb[2]});
+		}catch(e){
+			return "#000000";
+		}//try
 	}
 	ColorSRGB.prototype.toHTML=toHTML;
 	ColorSRGB.prototype.toString=toHTML;

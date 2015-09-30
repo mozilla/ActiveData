@@ -547,7 +547,11 @@ aChart.showScatter=function(params){
 		valueName=Array.newInstance(chartCube.select)[0].name;
 		seriesName=xaxis.name;
 		seriesFormatter=xaxis.domain.label;
-		columns=["placeholder", seriesName, valueName];
+		metadata=[
+			{"colIndex":0, "colName":"placeholder", "colType":"String"},
+			{"colIndex":1, "colName":seriesName, "colType":"String"},
+			{"colIndex":2, "colName":valueName, "colType":"Numeric"}
+		];
 		//GIVE EACH SELECT A ROW
 		data=cube.map(function(v, i){
 			return [
@@ -560,7 +564,12 @@ aChart.showScatter=function(params){
 		categoryLabels=getAxisLabels(chartCube.edges[0]);
 		seriesLabels=xaxis.domain.partitions.map(xaxis.domain.label);
 		valueName=Array.newInstance(chartCube.select)[0].name;
-		columns=[chartCube.edges[0].name, xaxis.name, valueName];
+		metadata=[
+			{"colIndex":0, "colName":chartCube.edges[0].name, "colType":"String"},
+			{"colIndex":1, "colName":xaxis.name, "colType":"String"},
+			{"colIndex":2, "colName":valueName, "colType":"Numeric"}
+		];
+
 		//GIVE EACH SELECT A ROW
 		data = [];
 		cube.forall(function(row, category){
@@ -568,20 +577,16 @@ aChart.showScatter=function(params){
 				var val=v[valueName];
 				if (val!==undefined && val!=null){
 					return [
+						categoryLabels[category],
 						i, //seriesLabels[i],
 						val,
-						categoryLabels[category]
+						seriesLabels[i]
 					];
 				}//endif
 			});
 			data.extend(temp);
 		});
 	}//endif
-
-	//CCC2 - metadata MUST BE IN x, y, category ORDER!
-	var metadata=columns.map(function(v, i){
-		return {"colIndex":i, "colName":v, "colType":i==0?"String":"Numeric"};
-	});
 
 	var cccData = {
 		"resultset":data,

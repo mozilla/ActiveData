@@ -44,7 +44,9 @@ aMath = {};
 	aMath.round = function(value, rounding){
 		if (rounding === undefined) return Math.round(value);
 		var d;
-		if (rounding.digits !== undefined) {
+		if (value==0) {
+			return 0.0;
+		} else if (rounding.digits !== undefined) {
 			d = Math.pow(10, rounding.digits - aMath.ceiling(aMath.log10(value)));
 		} else {
 			d = Math.pow(10, rounding);

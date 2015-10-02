@@ -285,6 +285,14 @@ class Math(object):
                 pass
         return output
 
+    @staticmethod
+    def range(start, stop, interval):
+        i = start
+        while i<stop:
+            yield i
+            i+=interval
+
+
 
 def almost_equal(first, second, digits=None, places=None, delta=None):
     if first == second:

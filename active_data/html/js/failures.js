@@ -1,6 +1,7 @@
 
 importScript("../modevlib/layouts/dynamic.js");
 importScript("../modevlib/layouts/layout.js");
+importScript("../modevlib/collections/aMatrix.js");
 
 
 var FAIL_PREFIX = "failure_";
@@ -144,21 +145,27 @@ var chart = function*(testGroup){
 		var duration = (yield(Q({
 			"from": testGroup.details,
 			"select": [
-				{"value": "duration", "aggregate": "average"},
+				{"value": "((build_date!=null && duration==null) ? -1 : duration)", "aggregate": "average"},
 				{"value": "build_date", "aggregate": "min"}
 			],
 			"edges": [
-				{"name":"result", "value":"ok", "domain":{"type":"set", "partitions":[
-					{"name":"pass", "value":true, "style":{"color": "#ff7f0e"}},
-					{"name":"fail", "value":false, "style": {"color": "#1f77b4"}}
-				]}},
+				{
+					"name":"result",
+					"value": //{"when":{"missing":"duration"}, "then":{"literal":"incomplete"}, "else":"ok"}
+					"(duration==null ? 'incomplete' : ok)",
+					"domain":{"type":"set", "partitions":[
+						{"name":"pass", "value":true, "style":{"color": "#1f77b4"}},
+						{"name":"fail", "value":false, "style": {"color": "#ff7f0e"}},
+						{"name":"incomplete", "value":"incomplete", "style": {"color": "#d62728"}}
+					]}
+				},
 				{"value": "revision", "domain": {"partitions": revisions}}
 			]
 		})));
 
-		Matrix({"data":duration.cube}).forall(function(v){
-			if (v.build_date){
-				v.duration=-1;
+		new Matrix({"data":duration.cube}).forall(function(v){
+			if (v.build_date != null){
+				v.duration = -1;
 			}//endif
 		});
 

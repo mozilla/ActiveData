@@ -177,6 +177,8 @@ def _dict2json(value, _buffer):
         prefix = u", \""
         if isinstance(k, str):
             k = utf82unicode(k)
+        if not isinstance(k, unicode):
+            Log.error("Expecting property name to be a string")
         for c in k:
             append(_buffer, ESCAPE_DCT.get(c, c))
         append(_buffer, u"\": ")

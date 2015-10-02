@@ -268,6 +268,29 @@ def pretty_json(value):
             return "false"
         elif value is True:
             return "true"
+        elif isinstance(value, Mapping):
+            try:
+                if not value:
+                    return "{}"
+                items = list(value.items())
+                if len(items) == 1:
+                    return "{" + unicode_key(items[0][0]) + ": " + pretty_json(items[0][1]).strip() + "}"
+
+                items = sorted(items, lambda a, b: value_compare(a[0], b[0]))
+                values = [unicode_key(k) + ": " + indent(pretty_json(v)).strip() for k, v in items if v != None]
+                return "{\n" + INDENT + (",\n" + INDENT).join(values) + "\n}"
+            except Exception, e:
+                from pyLibrary.debugs.logs import Log
+                from pyLibrary.collections import OR
+
+                if OR(not isinstance(k, basestring) for k in value.keys()):
+                    Log.error("JSON must have string keys: {{keys}}:", {
+                        "keys": [k for k in value.keys()]
+                    }, e)
+
+                Log.error("problem making dict pretty: keys={{keys}}:", {
+                    "keys": [k for k in value.keys()]
+                }, e)
         elif value in (None, Null):
             return "null"
         elif isinstance(value, basestring):
@@ -299,29 +322,6 @@ def pretty_json(value):
                 except BaseException, f:
                     Log.warning("can not even explicit convert {{type}}", type=f.__class__.__name__, cause=f)
                     return "null"
-        elif isinstance(value, Mapping):
-            try:
-                if not value:
-                    return "{}"
-                items = list(value.items())
-                if len(items) == 1:
-                    return "{" + quote(unicode(items[0][0])) + ": " + pretty_json(items[0][1]).strip() + "}"
-
-                items = sorted(items, lambda a, b: value_compare(a[0], b[0]))
-                values = [quote(unicode(k)) + ": " + indent(pretty_json(v)).strip() for k, v in items if v != None]
-                return "{\n" + INDENT + (",\n" + INDENT).join(values) + "\n}"
-            except Exception, e:
-                from pyLibrary.debugs.logs import Log
-                from pyLibrary.collections import OR
-
-                if OR(not isinstance(k, basestring) for k in value.keys()):
-                    Log.error("JSON must have string keys: {{keys}}:", {
-                        "keys": [k for k in value.keys()]
-                    }, e)
-
-                Log.error("problem making dict pretty: keys={{keys}}:", {
-                    "keys": [k for k in value.keys()]
-                }, e)
         elif isinstance(value, list):
             if not value:
                 return "[]"
@@ -466,6 +466,16 @@ def datetime2milli(d, type):
         problem_serializing(d, e)
 
 
+def unicode_key(key):
+    """
+    CONVERT PROPERTY VALUE TO QUOTED NAME OF SAME
+    """
+    if not isinstance(key, basestring):
+        from pyLibrary.debugs.logs import Log
+        Log.error("{{key|quote}} is not a valid key", key=key)
+    return quote(unicode(key))
+
+
 _repr_ = Repr()
 _repr_.maxlevel = 2
 
@@ -481,3 +491,5 @@ if use_pypy:
     json_encoder = pypy_json_encode
 else:
     json_encoder = cPythonJSONEncoder().encode
+
+

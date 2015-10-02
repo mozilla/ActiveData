@@ -665,6 +665,27 @@ class NotOp(object):
         return {"not": expression_map(map, self.term)}
 
 
+class InOp(object):
+    def __init__(self, op, term):
+        self.field, self.values = term.items()[0]
+
+    def to_ruby(self):
+        return convert.value2json(self.values)+".include? "+self.field
+
+    def to_python(self):
+        return self.field + " in " + convert.value2json(self.values)
+
+    def to_esfilter(self):
+        return {"terms": {self.field: self.values}}
+
+    def vars(self):
+        return set([self.field])
+
+    def map(self, map):
+        return {"in": {map.get(self.field, self.field): self.values}}
+
+
+
 class RangeOp(object):
     def __init__(self, op, term):
         self.field, self.cmp = term.items()[0]
@@ -727,6 +748,7 @@ class DocOp(object):
 
 
 complex_operators = {
+    "in": InOp,
     "terms": TermsOp,
     "exists": ExistsOp,
     "missing": MissingOp,

@@ -20,6 +20,8 @@ from pyLibrary.dot.objects import dictwrap
 
 
 DEBUG = False
+
+
 class UniqueIndex(BaseSet, Mapping):
     """
     DEFINE A SET OF ATTRIBUTES THAT UNIQUELY IDENTIFIES EACH OBJECT IN A list.

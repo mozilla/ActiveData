@@ -37,7 +37,7 @@ class Log(object):
     """
     FOR STRUCTURED LOGGING AND EXCEPTION CHAINING
     """
-    trace = False  # SHOW MACHINE AND LINE NUMBER
+    trace = False
     main_log = None
     logging_multi = None
     profiler = None   # simple pypy-friendly profiler

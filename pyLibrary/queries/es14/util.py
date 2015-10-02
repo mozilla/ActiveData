@@ -50,8 +50,6 @@ def es_query_template(path):
         return output, wrap([f0])
 
 
-
-
 def qb_sort_to_es_sort(sort):
     if not sort:
         return []

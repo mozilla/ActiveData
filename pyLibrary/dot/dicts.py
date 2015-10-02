@@ -108,7 +108,6 @@ class Dict(MutableMapping):
             v = unwrap(value)
             _set(self, "_dict", v)
             return v
-
         if isinstance(key, str):
             key = key.decode("utf8")
 
@@ -472,6 +471,7 @@ class _DictUsingSelf(dict):
             return "Dict("+dict.__repr__(self)+")"
         except Exception, e:
             return "Dict()"
+
 
 
 # KEEP TRACK OF WHAT ATTRIBUTES ARE REQUESTED, MAYBE SOME (BUILTIN) ARE STILL USEFUL

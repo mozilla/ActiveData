@@ -19,7 +19,6 @@ _emit_slice_warning = True
 
 _get = object.__getattribute__
 _set = object.__setattr__
-
 _Log = None
 _dictwrap = None
 

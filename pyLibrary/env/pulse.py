@@ -148,7 +148,7 @@ class Publisher(object):
         broker_timezone='GMT',
         settings=None
     ):
-        self.settings=settings
+        self.settings = settings
         self.connection = None
         self.count = 0
 

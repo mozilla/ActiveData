@@ -449,8 +449,11 @@ def _select_deep_meta(field, depth):
             return assign
 
 
-def get_columns(data):
-    return wrap([{"name": n} for n in UNION(set(d.keys()) for d in data)])
+def get_columns(data, leaves=False):
+    if not leaves:
+        return wrap([{"name": n} for n in UNION(set(d.keys()) for d in data)])
+    else:
+        return wrap([{"name": leaf} for leaf in set(leaf for row in data for leaf, _ in row.leaves())])
 
 _ = """
 DEEP ITERATOR FOR NESTED DOCUMENTS

@@ -10,9 +10,9 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-from pyLibrary import queries
+from pyLibrary import queries, convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import split_field, DictList, listwrap, literal_field, wrap, coalesce, Dict, set_default, unwrap
+from pyLibrary.dot import split_field, DictList, listwrap, literal_field, coalesce, Dict, unwrap
 from pyLibrary.queries import es09, es14
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es14.setop import format_dispatch
@@ -23,6 +23,7 @@ from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.timer import Timer
 
+_ = convert
 
 def is_deepop(es, query):
     if query.edges or query.groupby:
@@ -130,17 +131,18 @@ def es_deepop(es, query):
             parent = s.value[:-1]
             prefix = len(parent)
             for c in columns:
-                if c.name.startswith(parent):
+                if c.name.startswith(parent) and c.type not in ["object", "nested"]:
                     pull = get_pull(c)
-                    Log.error("what's this?!!")
-                    if len(listwrap(c.nested_path)) < 0:
-                        es_query.fields [c.abs_name]
-                    new_select.append({
-                        "name": s.name + "." + c.name[prefix:],
-                        "pull": pull,
-                        "nested_path": listwrap(c.nested_path)[0],
-                        "put": {"name": s.name + "." + c[prefix:], "index": i, "child": "."}
-                    })
+                    if len(listwrap(c.nested_path)) == 0:
+                        es_query.fields += [c.abs_name]
+                    else:
+                        new_select.append({
+                            "name": s.name + "." + c.name[prefix:],
+                            "pull": pull,
+                            "nested_path": listwrap(c.nested_path)[0],
+                            "put": {"name": s.name + "." + c.name[prefix:], "index": i, "child": "."}
+                        })
+                    i += 1
         elif isinstance(s.value, basestring) and is_keyword(s.value):
             parent = s.value + "."
             prefix = len(parent)

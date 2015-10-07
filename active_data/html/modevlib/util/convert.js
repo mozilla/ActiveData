@@ -376,7 +376,7 @@ convert.Value2Text=function(value){
 	}//endif
 
 	var json = JSON.stringify(value);
-	return convert.String2Quote(json);
+	return json;
 };//method
 
 

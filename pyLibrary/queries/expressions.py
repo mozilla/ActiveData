@@ -330,6 +330,11 @@ def expression_map(_map, expr):
         output = {op: expression_map(_map, term)}
         return output
 
+    cop = complex_operators.get(op)
+    if cop:
+        output = cop(op, term).map(_map)
+        return output
+
     Log.error("`{{op}}` is not a recognized operation", op=op)
 
 

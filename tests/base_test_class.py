@@ -269,9 +269,9 @@ class ActiveDataBaseTest(FuzzyTestCase):
             query = Query(query, schema=FromES(settings=self.index.settings))
             if not query.sort:
                 if isinstance(query.select, list):
-                    sort_order = coalesce(query.edges, query.groupby) + query.select + qb.get_columns(result.data)
+                    sort_order = coalesce(query.edges, query.groupby) + query.select + qb.get_columns(result.data, leaves=True)
                 elif wrap(query.select).value.endswith("*"):
-                    sort_order = coalesce(query.edges, query.groupby) + qb.sort(qb.get_columns(result.data), "name")
+                    sort_order = coalesce(query.edges, query.groupby) + qb.sort(qb.get_columns(result.data, leaves=True), "name")
                 else:
                     sort_order = coalesce(query.edges, query.groupby) + [{"name": "."}]
 

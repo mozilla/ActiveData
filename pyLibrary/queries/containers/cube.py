@@ -384,6 +384,12 @@ class Cube(Container):
 
         return output
 
+    def format(self, format):
+        if format == "cube":
+            return self
+        else:
+            Log.error("Do not know how to handle")
+
     def __str__(self):
         if self.is_value:
             return str(self.data)

@@ -82,9 +82,9 @@ class Query(object):
             self.select = _normalize_select(select, schema=schema)
         else:
             if query.edges or query.groupby:
-                self.select = {"name": "count", "value": ".", "aggregate": "count"}
+                self.select = Dict(name="count", value=".", aggregate="count")
             else:
-                self.select = {"name": ".", "value": ".", "aggregate": "none"}
+                self.select = Dict(name=".", value=".", aggregate="none")
 
         if query.groupby and query.edges:
             Log.error("You can not use both the `groupby` and `edges` clauses in the same query!")

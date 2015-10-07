@@ -273,10 +273,14 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 elif wrap(query.select).value.endswith("*"):
                     sort_order = coalesce(query.edges, query.groupby) + qb.sort(qb.get_columns(result.data, leaves=True), "name")
                 else:
-                    sort_order = coalesce(query.edges, query.groupby) + qb.sort(qb.get_columns(result.data, leaves=True), "name")
+                    #VALUE ARRAY, NO NAMED COLUMNS
+                    sort_order = coalesce(query.edges, query.groupby) #+ qb.sort(qb.get_columns(result.data, leaves=True), "name")
 
                 if isinstance(expect.data, list):
-                    expect.data = qb.sort(expect.data, sort_order.name)
+                    try:
+                        expect.data = qb.sort(expect.data, sort_order.name)
+                    except Exception:
+                        pass
                 if isinstance(result.data, list):
                     result.data = qb.sort(result.data, sort_order.name)
         elif result.meta.format == "cube" and len(result.edges) == 1 and result.edges[0].name == "rownum" and not query.sort:

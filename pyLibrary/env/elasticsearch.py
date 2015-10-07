@@ -250,7 +250,7 @@ class Index(Features):
                 id = r.get("id")
 
                 if id == None:
-                    id = Random.hex(40)
+                    id = random_id()
 
                 if "json" in r:
                     # if id != coalesce(wrap(convert.json2value(r["json"])).value._id, id):
@@ -1042,6 +1042,8 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
     return columns
 
 
+def random_id():
+    return Random.hex(40)
 
 def _merge_mapping(a, b):
     """

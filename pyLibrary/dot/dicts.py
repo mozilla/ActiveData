@@ -88,7 +88,12 @@ class Dict(MutableMapping):
         if key.find(".") >= 0:
             seq = split_field(key)
             for n in seq:
-                d = _getdefault(d, n)
+                if isinstance(d, NullType):
+                    d = NullType(d, n)  # OH DEAR, Null TREATS n AS PATH, NOT LITERAL
+                else:
+                    d = _getdefault(d, n)  # EVERYTHING ELSE TREATS n AS LITERAL
+
+
             return wrap(d)
         else:
             o = d.get(key)

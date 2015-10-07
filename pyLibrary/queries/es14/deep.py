@@ -76,6 +76,7 @@ def es_deepop(es, query):
 
     es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
     es_query.sort = qb_sort_to_es_sort(query.sort)
+    es_query.fields = []
 
     is_list = isinstance(query.select, list)
     new_select = DictList()
@@ -135,13 +136,13 @@ def es_deepop(es, query):
                     pull = get_pull(c)
                     if len(listwrap(c.nested_path)) == 0:
                         es_query.fields += [c.abs_name]
-                    else:
-                        new_select.append({
-                            "name": s.name + "." + c.name[prefix:],
-                            "pull": pull,
-                            "nested_path": listwrap(c.nested_path)[0],
-                            "put": {"name": s.name + "." + c.name[prefix:], "index": i, "child": "."}
-                        })
+
+                    new_select.append({
+                        "name": s.name + "." + c.name[prefix:],
+                        "pull": pull,
+                        "nested_path": listwrap(c.nested_path)[0],
+                        "put": {"name": s.name + "." + literal_field(c.name[prefix:]), "index": i, "child": "."}
+                    })
                     i += 1
         elif isinstance(s.value, basestring) and is_keyword(s.value):
             parent = s.value + "."
@@ -153,7 +154,7 @@ def es_deepop(es, query):
                 if not c.nested_path:
                     es_query.fields += [s.value]
                 new_select.append({
-                    "name": s.name if is_list else ".",
+                    "name": s.name,
                     "pull": pull,
                     "nested_path": listwrap(c.nested_path)[0],
                     "put": {"name": s.name, "index": i, "child": "."}
@@ -164,10 +165,10 @@ def es_deepop(es, query):
                     if not n.nested_path:
                         es_query.fields += [n.abs_name]
                     new_select.append({
-                        "name": s.name if is_list else ".",
+                        "name": s.name,
                         "pull": pull,
                         "nested_path": listwrap(n.nested_path)[0],
-                        "put": {"name": s.name, "index": i, "child": n.abs_name[prefix:]}
+                        "put": {"name": s.name, "index": i, "child": n.name[prefix:]}
                     })
             i += 1
         elif isinstance(s.value, list):

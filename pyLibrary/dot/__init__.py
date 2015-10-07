@@ -151,6 +151,8 @@ def _all_default(d, default, seen=None):
 
 def _getdefault(obj, key):
     """
+    obj MUST BE A DICT
+    key IS EXPECTED TO BE LITERAL (NO ESCAPING)
     TRY BOTH ATTRIBUTE AND ITEM ACCESS, OR RETURN Null
     """
     try:

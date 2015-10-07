@@ -679,7 +679,7 @@ class TestDeepOps(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    Math.is_hex,
+                    Math.is_hex,  #DUE TO NATURE OF THE _id AUTO-ASSIGN LOGIC IN pyLibrary.env.elasticsearch.Index, WE KNOW _id WILL BE HEX
                     Math.is_hex,
                     Math.is_hex,
                     Math.is_hex,

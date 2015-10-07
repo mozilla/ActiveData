@@ -330,10 +330,9 @@ class TestDeepOps(ActiveDataBaseTest):
 
         self._execute_es_tests(test)
 
-
-    def test_deep_names(self):
+    def test_deep_names_w_star(self):
         test = {
-            "data": [ # LETTERS FROM action, timing, builder, harness, step
+            "data": [  # LETTERS FROM action, timing, builder, harness, step
                 {"a": {"_t": [
                     {"b": {"s": 1}, "h": {"s": "a-a"}},
                     {"b": {"s": 2}, "h": {"s": "a-b"}},
@@ -355,9 +354,9 @@ class TestDeepOps(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a": {"_t": {"b": {"s": 1}, "h": {"s": "a-a"}}}},
-                    {"a": {"_t": {"b": {"s": 2}, "h": {"s": "a-b"}}}},
-                    {"a": {"_t": {"b": {"s": 3}, "h": {"s": "a-c"}}}}
+                    {"a": {"_t": {"b.s": 1, "h.s": "a-a"}}},
+                    {"a": {"_t": {"b.s": 2, "h.s": "a-b"}}},
+                    {"a": {"_t": {"b.s": 3, "h.s": "a-c"}}}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -386,6 +385,62 @@ class TestDeepOps(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
+    def test_deep_names(self):
+        test = {
+            "data": [  # LETTERS FROM action, timing, builder, harness, step
+                {"a": {"_t": [
+                    {"b": {"s": 1}, "h": {"s": "a-a"}},
+                    {"b": {"s": 2}, "h": {"s": "a-b"}},
+                    {"b": {"s": 3}, "h": {"s": "a-c"}},
+                    {"b": {"s": 4}, "h": {"s": "b-d"}},
+                    {"b": {"s": 5}, "h": {"s": "b-e"}},
+                    {"b": {"s": 6}, "h": {"s": "b-f"}},
+                ]}}
+            ],
+            "query": {
+                "select": "a._t",
+                "from": base_test_class.settings.backend_es.index + ".a._t",
+                "where": {
+                    "prefix": {
+                        "h.s": "a-"
+                    }
+                }
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": {"_t": {"b": {"s": 1}, "h": {"s": "a-a"}}}},
+                    {"a": {"_t": {"b": {"s": 2}, "h": {"s": "a-b"}}}},
+                    {"a": {"_t": {"b": {"s": 3}, "h": {"s": "a-c"}}}}
+                ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a._t"],
+                "data": [
+                    [{"b": {"s": 1}, "h": {"s": "a-a"}}],
+                    [{"b": {"s": 2}, "h": {"s": "a-b"}}],
+                    [{"b": {"s": 3}, "h": {"s": "a-c"}}]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 3, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "a._t": [
+                        {"b": {"s": 1}, "h": {"s": "a-a"}},
+                        {"b": {"s": 2}, "h": {"s": "a-b"}},
+                        {"b": {"s": 3}, "h": {"s": "a-c"}}
+                    ],
+                }
+            }
+        }
+
+        self._execute_es_tests(test)
 
     def test_deep_agg_on_expression(self):
         # TEST WE CAN PERFORM AGGREGATES ON EXPRESSIONS OF DEEP VARIABLES

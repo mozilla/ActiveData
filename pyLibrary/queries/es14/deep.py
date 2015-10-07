@@ -146,7 +146,7 @@ def es_deepop(es, query):
         elif isinstance(s.value, basestring) and is_keyword(s.value):
             parent = s.value + "."
             prefix = len(parent)
-            net_columns = [c for c in columns if c.name.startswith(parent)]
+            net_columns = [c for c in columns if c.name.startswith(parent) and c.type not in ["object", "nested"]]
             if not net_columns:
                 c = columns[(s.value,)]
                 pull = get_pull(c)
@@ -167,7 +167,7 @@ def es_deepop(es, query):
                         "name": s.name if is_list else ".",
                         "pull": pull,
                         "nested_path": listwrap(n.nested_path)[0],
-                        "put": {"name": s.name, "index": i, "child": n[prefix:]}
+                        "put": {"name": s.name, "index": i, "child": n.abs_name[prefix:]}
                     })
             i += 1
         elif isinstance(s.value, list):

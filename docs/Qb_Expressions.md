@@ -335,11 +335,20 @@ Value Operators
 
 Value operators are meant to convert the JSON argument into some useful abstract value. 
 
-###`doc` Operator###
+###`literal` Operator###
 
-By default Qb, interprets JSON as an expression.  Sometimes you just want the literal JSON value.  `doc` simply returns the property value, unchanged.
+Except for the right-hand-side of simple form operations, Qb will interpret JSON as an expression.  Sometimes you just want the literal JSON value.  `literal` simply returns the property value, unchanged.
 
-		{"doc": {"name":"Kyle Lahnakoski", "age": 41}}
+		{"eq": {"test", 42}}
+
+Can be stated in a more complicated form 
+
+		{"eq": ["test", {"literal":42}]}
+
+The literal ca be primitive, or whole objects
+
+		{"literal": 42}
+		{"literal": {"name":"Kyle Lahnakoski", "age": 41}}
 
 
 ### `ref` Operator ###

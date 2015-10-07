@@ -739,7 +739,7 @@ class RangeOp(object):
 
 
 
-class DocOp(object):
+class LiteralOp(object):
     """
     A literal JSON document
     """
@@ -788,7 +788,7 @@ complex_operators = {
     "range": RangeOp,
     "regexp": RegExpOp,
     "regex": RegExpOp,
-    "doc": DocOp,
+    "literal": LiteralOp,
     "coalesce": CoalesceOp
 }
 

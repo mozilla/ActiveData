@@ -42,7 +42,7 @@ class Timer(object):
     def __enter__(self):
         if self.debug:
             if not self.silent:
-                Log.note("Timer start: " + self.template, self.param, stack_depth=1)
+                Log.note("Timer start: " + self.template, stack_depth=1, **self.param)
         self.start = clock()
         return self
 

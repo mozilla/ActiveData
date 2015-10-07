@@ -86,3 +86,9 @@ class TestExpressions(FuzzyTestCase):
         result = simplify_esfilter(qb_expression_to_esfilter(where))
         self.assertEqual(result, {"not": {"term": {"a": 1}}})
 
+    def test_in(self):
+        where = {"in": {"a": [1, 2]}}
+        result = simplify_esfilter(qb_expression_to_esfilter(where))
+        self.assertEqual(result, {"terms": {"a": [1, 2]}})
+
+

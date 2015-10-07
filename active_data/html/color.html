@@ -1,0 +1,37 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<HTML>
+<HEAD>
+	<script type="text/javascript" src="modevlib/imports/import.js"></script>
+</HEAD>
+<BODY style="position:relative;">
+
+<div style="position:absolute;left:10px;right:10px;">
+</div>
+
+
+<script type="application/javascript">
+
+
+importScript(['lib/jquery.js', 'modevlib/charts/aColor.js'], function(){
+
+	$(document).ready(function(){
+		var grid = TEST_COLOR.map(function(y){
+			return y.map(function(x){
+				return '<div style="display:inline-block;height:30px;width:30px;background-color: #'+x+'"></div>'
+			}).join("")+"<br>"
+		}).join("");
+
+		$("body").html(grid);
+	});
+
+});
+
+</script>
+
+
+</BODY>
+</HTML>
+

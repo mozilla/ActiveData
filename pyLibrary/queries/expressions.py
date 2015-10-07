@@ -156,8 +156,8 @@ def qb_expression_to_ruby(expr):
 def qb_expression_to_python(expr):
     if expr == None:
         return "None"
-    elif Math.is_number(expr):
-        return unicode(expr)
+    elif Math.is_integer(expr):
+        return "row[" + unicode(expr) + "]"
     elif isinstance(expr, Date):
         return unicode(expr.unix)
     elif isinstance(expr, unicode):
@@ -212,6 +212,10 @@ def qb_expression_to_python(expr):
     if uop:
         output = uop + "(" + qb_expression_to_python(term) + ")"
         return output
+
+    cop = complex_operators.get(op)
+    if cop:
+        return cop(op, term).to_python()
 
     Log.error("`{{op}}` is not a recognized operation",  op= op)
 
@@ -328,6 +332,11 @@ def expression_map(_map, expr):
     uop = python_unary_operators.get(op)
     if uop:
         output = {op: expression_map(_map, term)}
+        return output
+
+    cop = complex_operators.get(op)
+    if cop:
+        output = cop(op, term).map(_map)
         return output
 
     Log.error("`{{op}}` is not a recognized operation", op=op)
@@ -579,6 +588,29 @@ class TermsOp(object):
         return {"terms": {map.get(self.var, self.var): self.vals}}
 
 
+class CoalesceOp(object):
+    def __init__(self, op, term):
+        self.vals = unwrap(term)
+
+    def to_ruby(self):
+        raise NotImplementedError
+
+    def to_python(self):
+        return "coalesce(" + (",".join(map(qb_expression_to_python, self.vals))) + ")"
+
+    def to_esfilter(self):
+        return {"or": [{"exists": {"field": v}} for v in self.vals]}
+
+    def vars(self):
+        output = set()
+        for v in self.vals:
+            output |= v
+        return output
+
+    def map(self, map):
+        return {"coalesce": [map.get(v, v) for v in self.vals]}
+
+
 class ExistsOp(object):
     def __init__(self, op, term):
         if isinstance(term, basestring):
@@ -665,6 +697,27 @@ class NotOp(object):
         return {"not": expression_map(map, self.term)}
 
 
+class InOp(object):
+    def __init__(self, op, term):
+        self.field, self.values = term.items()[0]
+
+    def to_ruby(self):
+        return convert.value2json(self.values)+".include? "+self.field
+
+    def to_python(self):
+        return self.field + " in " + convert.value2json(self.values)
+
+    def to_esfilter(self):
+        return {"terms": {self.field: self.values}}
+
+    def vars(self):
+        return set([self.field])
+
+    def map(self, map):
+        return {"in": {map.get(self.field, self.field): self.values}}
+
+
+
 class RangeOp(object):
     def __init__(self, op, term):
         self.field, self.cmp = term.items()[0]
@@ -686,7 +739,7 @@ class RangeOp(object):
 
 
 
-class DocOp(object):
+class LiteralOp(object):
     """
     A literal JSON document
     """
@@ -727,6 +780,7 @@ class DocOp(object):
 
 
 complex_operators = {
+    "in": InOp,
     "terms": TermsOp,
     "exists": ExistsOp,
     "missing": MissingOp,
@@ -734,7 +788,8 @@ complex_operators = {
     "range": RangeOp,
     "regexp": RegExpOp,
     "regex": RegExpOp,
-    "doc": DocOp
+    "literal": LiteralOp,
+    "coalesce": CoalesceOp
 }
 
 

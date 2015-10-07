@@ -22,15 +22,16 @@ from pyLibrary.queries.expressions import TRUE_FILTER, qb_expression_to_python
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
 from pyLibrary.queries.meta import Column
 from pyLibrary.thread.threads import Lock
+from pyLibrary.times.dates import Date
 
 
 class ListContainer(Container):
     def __init__(self, name, data, schema=None):
         #TODO: STORE THIS LIKE A CUBE FOR FASTER ACCESS AND TRANSFORMATION
         data = list(data)
+        Container.__init__(self, data, schema)
         if schema == None:
             self.schema = get_schema_from_list(data)
-        Container.__init__(self, data, schema)
         self.name = name
         self.data = data
         self.locker = Lock()  # JUST IN CASE YOU WANT TO DO MORE THAN ONE THING
@@ -62,7 +63,7 @@ class ListContainer(Container):
         for param in q.window:
             frum = frum.window(param)
 
-        return frum.format(q.format)
+        return frum
 
     def update(self, command):
         """
@@ -101,7 +102,7 @@ class ListContainer(Container):
 
     def select(self, select):
         selects = listwrap(select)
-        if selects[0].value == "*" and selects[0].name == ".":
+        if selects[0].value == "." and selects[0].name == ".":
             return self
 
         for s in selects:
@@ -153,6 +154,9 @@ class ListContainer(Container):
     def __getitem__(self, item):
         return self.data[item]
 
+    def __iter__(self):
+        return self.data.__iter__()
+
     def __len__(self):
         return len(self.data)
 
@@ -186,11 +190,13 @@ def _get_schema_from_list(frum, columns, prefix, nested_path):
     for n, t in names.items():
         full_name = ".".join(prefix + [n])
         column = Column(
+            table=".",
             name=full_name,
+            abs_name=full_name,
             type=t,
             nested_path=nested_path
         )
-        columns[columns.name] = column
+        columns[column.name] = column
 
 
 _type_to_name = {
@@ -204,7 +210,8 @@ _type_to_name = {
     dict: "object",
     set: "nested",
     list: "nested",
-    DictList: "nested"
+    DictList: "nested",
+    Date: "double"
 }
 
 _merge_type = {

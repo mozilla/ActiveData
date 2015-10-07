@@ -288,7 +288,7 @@ convert.URLParam2Object = function(param){
 
 	convert.String2HTML = function String2HTML(value) {
 		if (value==null) return "";
-		return value.translate(entityMap);
+		return (""+value).translate(entityMap);
 	};//method
 
 	var attrMap = {
@@ -315,6 +315,18 @@ convert.String2HTMLTable = function(value){
 convert.String2Quote = function(str){
 	return "\"" + (str + '').replaceAll("\n", "\\n").replace(/([\n\t\\"'])/g, "\\$1").replace(/\0/g, "\\0") + "\"";
 };//method
+
+convert.string2quote = convert.String2Quote;
+convert.value2quote = function(value){
+	if (isString(value)) {
+		return convert.String2Quote(value);
+	} else if (value === undefined || value == null) {
+		return "null";
+	} else {
+		return "" + value;
+	}//endif
+};//method
+
 
 convert.Date2Code = function(date){
 	return "Date.newInstance("+date.getMilli()+")";
@@ -364,7 +376,7 @@ convert.Value2Text=function(value){
 	}//endif
 
 	var json = JSON.stringify(value);
-	return convert.String2Quote(json);
+	return json;
 };//method
 
 
@@ -574,10 +586,15 @@ convert.List2HTMLTable = function(data, options){
 	});
 	header = "<thead><tr><div>" + header + "</div></tr></thead>";
 
-
 	var output = "";
 	var numRows=data.length;
-	if (options!==undefined && options.limit!==undefined && numRows>options.limit) numRows=options.limit;
+	if (options!==undefined) {
+		if (options.limit !== undefined && numRows > options.limit){
+			numRows = options.limit;
+		}//endif
+	}//endif
+
+
 	//WRITE DATA
 	for(var i = 0; i < data.length; i++){
 		var row = "";
@@ -787,7 +804,8 @@ TRUE_FILTER = function(row, i, rows){return true;};
 FALSE_FILTER = function(row, i, rows){return false;};
 
 convert.esFilter2function=function(esFilter){
-	if (esFilter === undefined) return TRUE_FILTER;
+	if (esFilter === undefined || esFilter==null || esFilter==true) return TRUE_FILTER;
+	if (esFilter == false) return FALSE_FILTER;
 
 	var keys = Object.keys(esFilter);
 	if (keys.length != 1)
@@ -864,12 +882,39 @@ convert.esFilter2function=function(esFilter){
 			var val =row[field];
 			return (val!==undefined && val!=null);
 		};
-	}else if (op=="missing"){
+	}else if (op=="missing") {
 		var field = coalesce(esFilter[op].field, esFilter[op]);
 		return function(row, i, rows){
-			var val =row[field];
-			return (val===undefined || val==null);
+			var val = row[field];
+			return (val === undefined || val == null);
 		};
+	}else if (['gt', 'gte', 'lt', 'lte'].contains(op)){
+		var pair = esFilter[op];
+		var variableName = Object.keys(pair)[0];
+		var value = pair[variableName];
+
+		return {
+			"gt":function(row, i, rows){
+				var v = Map.get(row, variableName);
+				if (v===undefined) return false;
+				return v > value;
+			},
+			"gte":function(row, i, rows){
+				var v = Map.get(row, variableName);
+				if (v===undefined) return false;
+				return v >= value;
+			},
+			"lt":function(row, i, rows){
+				var v = Map.get(row, variableName);
+				if (v===undefined) return false;
+				return v < value;
+			},
+			"lte": function(row, i, rows){
+				var v = Map.get(row, variableName);
+				if (v === undefined) return false;
+				return v <= value;
+			}
+		}[op];
 	} else if (op == "range"){
 		var pair = esFilter[op];
 		var variableName = Object.keys(pair)[0];

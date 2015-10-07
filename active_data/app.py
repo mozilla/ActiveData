@@ -12,6 +12,8 @@ from __future__ import absolute_import
 import os
 
 import sys
+from pyLibrary.queries.containers import Container
+
 sys.path.append(".")
 
 from flask import Flask
@@ -144,9 +146,11 @@ def query(path):
                     Thread.sleep(seconds=1)
             # frum = Container.new_instance(data["from"])
             result = qb.run(data)
+            if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, qb SHOULD ALWAYS RETURN Containers
+                result = result.format(data.format)
 
-        if data.meta.save:
-            result.meta.saved_as = query_finder.save(data)
+            if data.meta.save:
+                result.meta.saved_as = query_finder.save(data)
 
         result.meta.active_data_response_time = active_data_timer.duration
 

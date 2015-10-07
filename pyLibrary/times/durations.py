@@ -10,7 +10,6 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-
 import datetime
 from decimal import Decimal
 
@@ -23,10 +22,17 @@ from pyLibrary.dot import wrap
 
 _Date = None
 _Log = None
+
+
 def _delayed_import():
     global _Date
+    global _Log
+
     from pyLibrary.times.dates import Date as _Date
-    _ = _Date(None)
+    from pyLibrary.debugs.logs import Log as _Log
+
+    _ = _Date
+    _ = _Log
 
 
 class Duration(object):
@@ -59,6 +65,8 @@ class Duration(object):
     @staticmethod
     def range(start, stop, step):
         if not step:
+            if not _Log:
+                _delayed_import()
             _Log.error("Expecting a non-zero duration for interval")
         output = []
         c = start

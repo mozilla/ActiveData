@@ -28,7 +28,7 @@ def format_cube(decoders, aggs, start, query, select):
         coord = tuple(d.get_index(row) for d in decoders)
         for s, m in matricies:
             try:
-                if m[coord]:  # THIS CAN HAPPEN WHEN THE SET QUERIED IS SMALLER THAN THE AVAILABLE IN ES
+                if m[coord]:
                     Log.error("Not expected")
                 m[coord] = agg[s.pull]
             except Exception, e:

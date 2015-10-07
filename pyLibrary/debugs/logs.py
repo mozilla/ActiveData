@@ -37,7 +37,7 @@ class Log(object):
     """
     FOR STRUCTURED LOGGING AND EXCEPTION CHAINING
     """
-    trace = False  # SHOW MACHINE AND LINE NUMBER
+    trace = False
     main_log = None
     logging_multi = None
     profiler = None   # simple pypy-friendly profiler
@@ -99,8 +99,8 @@ class Log(object):
             for log in listwrap(settings.log):
                 Log.add_log(Log.new_instance(log))
 
-        if settings.cprofile:
-            Log.alert("cprofiling is enabled")
+        if settings.cprofile.enabled==True:
+            Log.alert("cprofiling is enabled, writing to {{filename}}", filename=os.path.abspath(settings.cprofile.filename))
 
     @classmethod
     def stop(cls):
@@ -476,7 +476,7 @@ class Except(Exception):
                     return True
         return False
 
-    def __str__(self):
+    def __unicode__(self):
         output = self.type + ": " + self.template + "\n"
         if self.params:
             output = expand_template(output, self.params)
@@ -489,15 +489,15 @@ class Except(Exception):
             for c in listwrap(self.cause):
                 try:
                     cause_strings.append(unicode(c))
-                except Exception, e:
+                except Exception:
                     pass
 
             output += "caused by\n\t" + "and caused by\n\t".join(cause_strings)
 
         return output
 
-    def __unicode__(self):
-        return unicode(str(self))
+    def __str__(self):
+        return self.__unicode__().encode('latin1', 'replace')
 
     def as_dict(self):
         return Dict(

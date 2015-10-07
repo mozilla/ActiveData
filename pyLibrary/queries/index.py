@@ -54,6 +54,7 @@ class Index(object):
         e.append(unwrap(val))
         self.count += 1
 
+
     def __contains__(self, key):
         expected = True if self[key] else False
         testing = self._test_contains(key)

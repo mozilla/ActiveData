@@ -82,9 +82,9 @@ class Query(object):
             self.select = _normalize_select(select, schema=schema)
         else:
             if query.edges or query.groupby:
-                self.select = {"name": "count", "value": ".", "aggregate": "count"}
+                self.select = Dict(name="count", value=".", aggregate="count")
             else:
-                self.select = {"name": ".", "value": ".", "aggregate": "none"}
+                self.select = Dict(name=".", value=".", aggregate="none")
 
         if query.groupby and query.edges:
             Log.error("You can not use both the `groupby` and `edges` clauses in the same query!")
@@ -432,27 +432,27 @@ def _map_term_using_schema(master, path, term, schema_edges):
     return {"and": output}
 
 
-def _move_nested_term(master, where, schema):
-    """
-    THE WHERE CLAUSE CAN CONTAIN NESTED PROPERTY REFERENCES, THESE MUST BE MOVED
-    TO A NESTED FILTER
-    """
-    items = where.term.items()
-    if len(items) != 1:
-        Log.error("Expecting only one term")
-    k, v = items[0]
-    nested_path = _get_nested_path(k, schema)
-    if nested_path:
-        return {"nested": {
-            "path": nested_path,
-            "query": {"filtered": {
-                "query": {"match_all": {}},
-                "filter": {"and": [
-                    {"term": {k: v}}
-                ]}
-            }}
-        }}
-    return where
+# def _move_nested_term(master, where, schema):
+#     """
+#     THE WHERE CLAUSE CAN CONTAIN NESTED PROPERTY REFERENCES, THESE MUST BE MOVED
+#     TO A NESTED FILTER
+#     """
+#     items = where.term.items()
+#     if len(items) != 1:
+#         Log.error("Expecting only one term")
+#     k, v = items[0]
+#     nested_path = _get_nested_path(k, schema)
+#     if nested_path:
+#         return {"nested": {
+#             "path": nested_path,
+#             "query": {"filtered": {
+#                 "query": {"match_all": {}},
+#                 "filter": {"and": [
+#                     {"term": {k: v}}
+#                 ]}
+#             }}
+#         }}
+#     return where
 
 
 # def _get_nested_path(field, schema):

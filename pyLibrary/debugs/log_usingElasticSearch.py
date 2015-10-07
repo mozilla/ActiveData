@@ -56,6 +56,7 @@ class Log_usingElasticSearch(BaseLog):
             pass
 
 
+
 SCHEMA = {
     "settings": {
         "index.number_of_shards": 2,
@@ -67,7 +68,7 @@ SCHEMA = {
                 {
                     "values_strings": {
                         "match": "*",
-                        "match_mapping_type": "string",
+                        "match_mapping_type" : "string",
                         "mapping": {
                             "type": "string",
                             "index": "not_analyzed",

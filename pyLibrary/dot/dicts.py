@@ -88,7 +88,12 @@ class Dict(MutableMapping):
         if key.find(".") >= 0:
             seq = split_field(key)
             for n in seq:
-                d = _getdefault(d, n)
+                if isinstance(d, NullType):
+                    d = NullType(d, n)  # OH DEAR, Null TREATS n AS PATH, NOT LITERAL
+                else:
+                    d = _getdefault(d, n)  # EVERYTHING ELSE TREATS n AS LITERAL
+
+
             return wrap(d)
         else:
             o = d.get(key)
@@ -108,7 +113,6 @@ class Dict(MutableMapping):
             v = unwrap(value)
             _set(self, "_dict", v)
             return v
-
         if isinstance(key, str):
             key = key.decode("utf8")
 
@@ -472,6 +476,7 @@ class _DictUsingSelf(dict):
             return "Dict("+dict.__repr__(self)+")"
         except Exception, e:
             return "Dict()"
+
 
 
 # KEEP TRACK OF WHAT ATTRIBUTES ARE REQUESTED, MAYBE SOME (BUILTIN) ARE STILL USEFUL

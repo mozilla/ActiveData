@@ -244,17 +244,17 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 Log.note("Delete index {{index}}", index=settings.index)
                 self.es_cluster.delete_index(settings.index)
 
-    def compare_to_expected(self, query, result, expected):
+    def compare_to_expected(self, query, result, expect):
         query = wrap(query)
-        expected = wrap(expected)
+        expect = wrap(expect)
 
         if result.meta.format == "table":
-            self.assertEqual(set(result.header), set(expected.header))
+            self.assertEqual(set(result.header), set(expect.header))
 
             # MAP FROM expected COLUMN TO result COLUMN
             mapping = zip(*zip(*filter(
                 lambda v: v[0][1] == v[1][1],
-                itertools.product(enumerate(expected.header), enumerate(result.header))
+                itertools.product(enumerate(expect.header), enumerate(result.header))
             ))[1])[0]
             result.header = [result.header[m] for m in mapping]
 
@@ -263,20 +263,24 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 result.data = zip(*[columns[m] for m in mapping])
 
             if not query.sort:
-                result.data = qb.sort(result.data, range(len(result.header)))
-                expected.data = qb.sort(expected.data, range(len(expected.header)))
+                sort_table(result)
+                sort_table(expect)
         elif result.meta.format == "list":
             query = Query(query, schema=FromES(settings=self.index.settings))
             if not query.sort:
-                if isinstance(query.select, list):
-                    sort_order = coalesce(query.edges, query.groupby) + query.select + qb.get_columns(result.data)
-                elif wrap(query.select).value.endswith("*"):
-                    sort_order = coalesce(query.edges, query.groupby) + qb.sort(qb.get_columns(result.data), "name")
-                else:
-                    sort_order = coalesce(query.edges, query.groupby) + [{"name": "."}]
+                try:
+                    #result.data MAY BE A LIST OF VALUES, NOT OBJECTS
+                    data_columns = qb.sort(set(qb.get_columns(result.data, leaves=True)) | set(qb.get_columns(expect.data, leaves=True)), "name")
+                except Exception:
+                    data_columns = []
 
-                if isinstance(expected.data, list):
-                    expected.data = qb.sort(expected.data, sort_order.name)
+                sort_order = coalesce(query.edges, query.groupby) + data_columns
+
+                if isinstance(expect.data, list):
+                    try:
+                        expect.data = qb.sort(expect.data, sort_order.name)
+                    except Exception:
+                        pass
                 if isinstance(result.data, list):
                     result.data = qb.sort(result.data, sort_order.name)
         elif result.meta.format == "cube" and len(result.edges) == 1 and result.edges[0].name == "rownum" and not query.sort:
@@ -286,12 +290,12 @@ class ActiveDataBaseTest(FuzzyTestCase):
             result.data = qb.sort(result.data, header)
             result.data = list2cube(result.data, header)
 
-            expected.data = cube2list(expected.data)
-            expected.data = qb.sort(expected.data, header)
-            expected.data = list2cube(expected.data, header)
+            expect.data = cube2list(expect.data)
+            expect.data = qb.sort(expect.data, header)
+            expect.data = list2cube(expect.data, header)
 
         # CONFIRM MATCH
-        self.assertAlmostEqual(result, expected)
+        self.assertAlmostEqual(result, expect)
 
 
     def _execute_query(self, query):
@@ -334,6 +338,19 @@ def list2cube(rows, header):
         h: [r[h] for r in rows]
         for h in header
     }
+
+
+def sort_table(result):
+    """
+    SORT ROWS IN TABLE, EVEN IF ROWS ARE JSON
+    """
+    data = qb.sort(result.data, range(len(result.header)))
+    result.data = data
+
+    # data = wrap([{unicode(i): v for i, v in enumerate(row)} for row in result.data])
+    # sort_columns = qb.sort(set(qb.get_columns(data, leaves=True).name))
+    # data = qb.sort(data, sort_columns)
+    # result.data = [tuple(row[unicode(i)] for i in range(len(result.header))) for row in data]
 
 
 def error(response):

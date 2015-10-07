@@ -68,7 +68,7 @@ def zipall(*args):
     while True:
         output = zip(*(_next(a) for a in iters))
         if all(output[0]):
-            raise StopIteration
+            return
         else:
             yield output[1]
 

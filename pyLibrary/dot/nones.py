@@ -55,6 +55,8 @@ class NullType(object):
         try:
             d = _get(self, "__dict__")
             o = d["_obj"]
+            if o is None:
+                return self
             key = d["__key__"]
 
             _assign(o, [key], other)

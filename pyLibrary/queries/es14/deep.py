@@ -10,9 +10,9 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-from pyLibrary import queries
+from pyLibrary import queries, convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import split_field, DictList, listwrap, literal_field, wrap, coalesce, Dict, set_default, unwrap
+from pyLibrary.dot import split_field, DictList, listwrap, literal_field, coalesce, Dict, unwrap
 from pyLibrary.queries import es09, es14
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es14.setop import format_dispatch
@@ -23,6 +23,7 @@ from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.timer import Timer
 
+_ = convert
 
 def is_deepop(es, query):
     if query.edges or query.groupby:
@@ -75,6 +76,7 @@ def es_deepop(es, query):
 
     es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
     es_query.sort = qb_sort_to_es_sort(query.sort)
+    es_query.fields = []
 
     is_list = isinstance(query.select, list)
     new_select = DictList()
@@ -130,28 +132,29 @@ def es_deepop(es, query):
             parent = s.value[:-1]
             prefix = len(parent)
             for c in columns:
-                if c.name.startswith(parent):
+                if c.name.startswith(parent) and c.type not in ["object", "nested"]:
                     pull = get_pull(c)
-                    Log.error("what's this?!!")
-                    if len(listwrap(c.nested_path)) < 0:
-                        es_query.fields [c.abs_name]
+                    if len(listwrap(c.nested_path)) == 0:
+                        es_query.fields += [c.abs_name]
+
                     new_select.append({
                         "name": s.name + "." + c.name[prefix:],
                         "pull": pull,
                         "nested_path": listwrap(c.nested_path)[0],
-                        "put": {"name": s.name + "." + c[prefix:], "index": i, "child": "."}
+                        "put": {"name": s.name + "." + literal_field(c.name[prefix:]), "index": i, "child": "."}
                     })
+                    i += 1
         elif isinstance(s.value, basestring) and is_keyword(s.value):
             parent = s.value + "."
             prefix = len(parent)
-            net_columns = [c for c in columns if c.name.startswith(parent)]
+            net_columns = [c for c in columns if c.name.startswith(parent) and c.type not in ["object", "nested"]]
             if not net_columns:
                 c = columns[(s.value,)]
                 pull = get_pull(c)
                 if not c.nested_path:
                     es_query.fields += [s.value]
                 new_select.append({
-                    "name": s.name if is_list else ".",
+                    "name": s.name,
                     "pull": pull,
                     "nested_path": listwrap(c.nested_path)[0],
                     "put": {"name": s.name, "index": i, "child": "."}
@@ -162,10 +165,10 @@ def es_deepop(es, query):
                     if not n.nested_path:
                         es_query.fields += [n.abs_name]
                     new_select.append({
-                        "name": s.name if is_list else ".",
+                        "name": s.name,
                         "pull": pull,
                         "nested_path": listwrap(n.nested_path)[0],
-                        "put": {"name": s.name, "index": i, "child": n[prefix:]}
+                        "put": {"name": s.name, "index": i, "child": n.name[prefix:]}
                     })
             i += 1
         elif isinstance(s.value, list):

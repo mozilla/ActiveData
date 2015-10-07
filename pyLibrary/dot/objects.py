@@ -96,7 +96,7 @@ def dictwrap(v):
     elif type_ is Dict:
         return v
     elif type_ is NoneType:
-        return None   # So we allow `is None` (OFTEN USED IN PYTHON LIBRARIES)
+        return None   # So we allow `is None`
     elif type_ is list:
         return DictList(v)
     elif type_ is GeneratorType:

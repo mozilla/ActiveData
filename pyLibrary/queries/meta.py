@@ -13,18 +13,17 @@ from __future__ import absolute_import
 from copy import copy
 from itertools import product
 
-from pyLibrary import convert
-from pyLibrary.meta import use_settings
+from pyLibrary.meta import use_settings, DataClass
 from pyLibrary.queries import qb
 from pyLibrary.queries.query import Query
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import coalesce, set_default, Null, literal_field, listwrap, split_field, join_field
 from pyLibrary.dot import wrap
-from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Queue, Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import HOUR, MINUTE
+
 
 _elasticsearch = None
 
@@ -125,7 +124,6 @@ class FromESMetadata(object):
                             if alias in alias_done:
                                 continue
                             alias_done.add(alias)
-
                             c = copy(c)
                             c.table = join_field([alias]+query_path)
                             self.upsert_column(c)
@@ -430,93 +428,6 @@ def metadata_tables():
 
 
 
-def DataClass(name, columns):
-    """
-    Each column has {"name", "required", "nulls", "default"} properties
-    """
-
-    columns = wrap([{"name": c, "required": True, "nulls": False} if isinstance(c, basestring) else c for c in columns])
-    slots = columns.name
-    required = wrap(filter(lambda c: c.required and not c.nulls and not c.default, columns)).name
-    nulls = wrap(filter(lambda c: c.nulls, columns)).name
-
-    code = expand_template("""
-from __future__ import unicode_literals
-from collections import Mapping
-
-class {{name}}(Mapping):
-    __slots__ = {{slots}}
-
-    def __init__(self, **kwargs):
-        if not kwargs:
-            return
-
-        for s in {{slots}}:
-            setattr(self, s, kwargs.get(s, kwargs.get('default', Null)))
-
-        missed = {{required}}-set(kwargs.keys())
-        if missed:
-            Log.error("Expecting properties {"+"{missed}}", missed=missed)
-
-        illegal = set(kwargs.keys())-set({{slots}})
-        if illegal:
-            Log.error("{"+"{names}} are not a valid properties", names=illegal)
-
-    def __getitem__(self, item):
-        return getattr(self, item)
-
-    def __setitem__(self, item, value):
-        setattr(self, item, value)
-        return self
-
-    def __setattr__(self, item, value):
-        if item not in {{slots}}:
-            Log.error("{"+"{item|quote}} not valid attribute", item=item)
-        object.__setattr__(self, item, value)
-
-    def __getattr__(self, item):
-        Log.error("{"+"{item|quote}} not valid attribute", item=item)
-
-    def items(self):
-        return ((k, getattr(self, k)) for k in {{slots}})
-
-    def __copy__(self):
-        _set = object.__setattr__
-        output = object.__new__(Column)
-        {{assign}}
-        return output
-
-    def __iter__(self):
-        return {{slots}}.__iter__()
-
-    def __len__(self):
-        return {{len_slots}}
-
-    def __str__(self):
-        return str({{dict}})
-
-temp = {{name}}
-""",
-        {
-            "name": name,
-            "slots": "(" + (", ".join(convert.value2quote(s) for s in slots)) + ")",
-            "required": "{" + (", ".join(convert.value2quote(s) for s in required)) + "}",
-            "nulls": "{" + (", ".join(convert.value2quote(s) for s in nulls)) + "}",
-            "len_slots": len(slots),
-            "dict": "{" + (", ".join(convert.value2quote(s) + ": self." + s for s in slots)) + "}",
-            "assign": "; ".join("_set(output, "+convert.value2quote(s)+", self."+s+")" for s in slots)
-        }
-    )
-
-    return _exec(code)
-
-
-def _exec(code):
-    temp = None
-    exec(code)
-    return temp
-
-
 class Table(DataClass("Table", [
     "name",
     "url",
@@ -543,7 +454,6 @@ Column = DataClass(
         {"name": "last_updated", "nulls": True}
     ]
 )
-
 
 
 

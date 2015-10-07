@@ -344,10 +344,13 @@ def sort_table(result):
     """
     SORT ROWS IN TABLE, EVEN IF ROWS ARE JSON
     """
-    data = wrap([{unicode(i): v for i, v in enumerate(row)} for row in result.data])
-    sort_columns = qb.sort(set(qb.get_columns(data, leaves=True).name))
-    data = qb.sort(data, sort_columns)
-    result.data = [tuple(row[unicode(i)] for i in range(len(result.header))) for row in data]
+    data = qb.sort(result.data, range(len(result.header)))
+    result.data = data
+
+    # data = wrap([{unicode(i): v for i, v in enumerate(row)} for row in result.data])
+    # sort_columns = qb.sort(set(qb.get_columns(data, leaves=True).name))
+    # data = qb.sort(data, sort_columns)
+    # result.data = [tuple(row[unicode(i)] for i in range(len(result.header))) for row in data]
 
 
 def error(response):

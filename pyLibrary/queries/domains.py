@@ -700,7 +700,7 @@ def value_compare(a, b):
         return 0
 
 
-keyword_pattern = re.compile(r"\w+(?:\.\w+)*")
+keyword_pattern = re.compile(r"\w+(?:(\\\.|\.)\w+)*")
 
 
 def is_keyword(value):

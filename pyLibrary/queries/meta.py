@@ -12,9 +12,7 @@ from __future__ import division
 from __future__ import absolute_import
 from copy import copy
 from itertools import product
-import dis
 
-from pyLibrary import convert
 from pyLibrary.meta import use_settings, DataClass
 from pyLibrary.queries import qb
 from pyLibrary.queries.query import Query
@@ -22,10 +20,10 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import coalesce, set_default, Null, literal_field, listwrap, split_field, join_field
 from pyLibrary.dot import wrap
-from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Queue, Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import HOUR, MINUTE
+
 
 _elasticsearch = None
 
@@ -126,10 +124,7 @@ class FromESMetadata(object):
                             if alias in alias_done:
                                 continue
                             alias_done.add(alias)
-
-                            temp = dis.dis(c.__copy__.func_code)
                             c = copy(c)
-
                             c.table = join_field([alias]+query_path)
                             self.upsert_column(c)
 

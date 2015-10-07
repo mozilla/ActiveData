@@ -156,8 +156,8 @@ def qb_expression_to_ruby(expr):
 def qb_expression_to_python(expr):
     if expr == None:
         return "None"
-    elif Math.is_number(expr):
-        return unicode(expr)
+    elif Math.is_integer(expr):
+        return "row[" + unicode(expr) + "]"
     elif isinstance(expr, Date):
         return unicode(expr.unix)
     elif isinstance(expr, unicode):

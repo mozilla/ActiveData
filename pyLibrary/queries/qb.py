@@ -542,7 +542,7 @@ def sort(data, fieldnames=None):
             # EXPECTING {"field":f, "sort":i} FORMAT
             fieldnames.sort = sort_direction.get(fieldnames.sort, 1)
             fieldnames.value = coalesce(fieldnames.value, fieldnames.field)
-            if fieldnames.value==None:
+            if fieldnames.value == None:
                 Log.error("Expecting sort to have 'value' attribute")
 
             if fieldnames.value == ".":

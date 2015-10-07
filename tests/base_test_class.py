@@ -268,13 +268,13 @@ class ActiveDataBaseTest(FuzzyTestCase):
         elif result.meta.format == "list":
             query = Query(query, schema=FromES(settings=self.index.settings))
             if not query.sort:
-                if isinstance(query.select, list):
-                    sort_order = coalesce(query.edges, query.groupby) + query.select + qb.get_columns(result.data, leaves=True)
-                elif wrap(query.select).value.endswith("*"):
-                    sort_order = coalesce(query.edges, query.groupby) + qb.sort(qb.get_columns(result.data, leaves=True), "name")
-                else:
-                    #VALUE ARRAY, NO NAMED COLUMNS
-                    sort_order = coalesce(query.edges, query.groupby) #+ qb.sort(qb.get_columns(result.data, leaves=True), "name")
+                try:
+                    #result.data MAY BE A LIST OF VALUES, NOT OBJECTS
+                    data_columns = qb.sort(set(qb.get_columns(result.data, leaves=True)) | set(qb.get_columns(expect.data, leaves=True)), "name")
+                except Exception:
+                    data_columns = []
+
+                sort_order = coalesce(query.edges, query.groupby) + data_columns
 
                 if isinstance(expect.data, list):
                     try:

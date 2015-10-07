@@ -26,7 +26,7 @@ import json
 import re
 from tempfile import TemporaryFile
 
-from pyLibrary import strings, meta
+from pyLibrary import strings
 from pyLibrary.dot import wrap, wrap_leaves, unwrap, unwraplist
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.debugs.logs import Log, Except
@@ -48,7 +48,7 @@ def value2json(obj, pretty=False):
             Log.error("Not valid JSON: " + str(obj) + " of type " + str(type(obj)))
         return json
     except Exception, e:
-        Log.error("Can not encode into JSON: {{value}}", value=meta.repr(obj), cause=e)
+        Log.error("Can not encode into JSON: {{value}}", value=repr(obj), cause=e)
 
 
 def remove_line_comment(line):
@@ -302,7 +302,7 @@ def value2quote(value):
     if isinstance(value, basestring):
         return string2quote(value)
     else:
-        return meta.meta.repr(value)
+        return repr(value)
 
 
 def string2quote(value):
@@ -413,7 +413,7 @@ def quote2string(value):
 # RETURN PYTHON CODE FOR THE SAME
 
 def value2code(value):
-    return meta.repr(value)
+    return repr(value)
 
 
 def DataFrame2string(df, columns=None):

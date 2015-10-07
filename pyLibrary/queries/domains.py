@@ -706,7 +706,10 @@ keyword_pattern = re.compile(r"\w+(?:\.\w+)*")
 def is_keyword(value):
     if not value or not isinstance(value, basestring):
         return False  # _a._b
-    return keyword_pattern.match(value).group(0) == value
+    match = keyword_pattern.match(value)
+    if not match:
+        return False
+    return match.group(0) == value
 
 
 name_to_type = {

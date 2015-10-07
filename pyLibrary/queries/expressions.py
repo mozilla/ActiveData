@@ -213,6 +213,10 @@ def qb_expression_to_python(expr):
         output = uop + "(" + qb_expression_to_python(term) + ")"
         return output
 
+    cop = complex_operators.get(op)
+    if cop:
+        return cop(op, term).to_python()
+
     Log.error("`{{op}}` is not a recognized operation",  op= op)
 
 
@@ -584,6 +588,29 @@ class TermsOp(object):
         return {"terms": {map.get(self.var, self.var): self.vals}}
 
 
+class CoalesceOp(object):
+    def __init__(self, op, term):
+        self.vals = unwrap(term)
+
+    def to_ruby(self):
+        raise NotImplementedError
+
+    def to_python(self):
+        return "coalesce(" + (",".join(map(qb_expression_to_python, self.vals))) + ")"
+
+    def to_esfilter(self):
+        return {"or": [{"exists": {"field": v}} for v in self.vals]}
+
+    def vars(self):
+        output = set()
+        for v in self.vals:
+            output |= v
+        return output
+
+    def map(self, map):
+        return {"coalesce": [map.get(v, v) for v in self.vals]}
+
+
 class ExistsOp(object):
     def __init__(self, op, term):
         if isinstance(term, basestring):
@@ -761,7 +788,8 @@ complex_operators = {
     "range": RangeOp,
     "regexp": RegExpOp,
     "regex": RegExpOp,
-    "doc": DocOp
+    "doc": DocOp,
+    "coalesce": CoalesceOp
 }
 
 

@@ -11,15 +11,16 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
-from repr import Repr
 from types import FunctionType
-from pyLibrary import dot
+
+from pyLibrary import dot, convert
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import unwrap, set_default, wrap, _get_attr, Null, Dict
+from pyLibrary.dot import set_default, wrap, _get_attr, Null
 from pyLibrary.maths.randoms import Random
+from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Lock
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import SECOND, DAY
+from pyLibrary.times.durations import DAY
 
 
 def get_class(path):
@@ -293,3 +294,95 @@ class _FakeLock():
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
+
+
+def DataClass(name, columns):
+    """
+    Each column has {"name", "required", "nulls", "default"} properties
+    """
+
+    columns = wrap([{"name": c, "required": True, "nulls": False} if isinstance(c, basestring) else c for c in columns])
+    slots = columns.name
+    required = wrap(filter(lambda c: c.required and not c.nulls and not c.default, columns)).name
+    nulls = wrap(filter(lambda c: c.nulls, columns)).name
+
+    code = expand_template("""
+from __future__ import unicode_literals
+from collections import Mapping
+
+meta = None
+
+class {{name}}(Mapping):
+    __slots__ = {{slots}}
+
+    def __init__(self, **kwargs):
+        if not kwargs:
+            return
+
+        for s in {{slots}}:
+            setattr(self, s, kwargs.get(s, kwargs.get('default', Null)))
+
+        missed = {{required}}-set(kwargs.keys())
+        if missed:
+            Log.error("Expecting properties {"+"{missed}}", missed=missed)
+
+        illegal = set(kwargs.keys())-set({{slots}})
+        if illegal:
+            Log.error("{"+"{names}} are not a valid properties", names=illegal)
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    def __setitem__(self, item, value):
+        setattr(self, item, value)
+        return self
+
+    def __setattr__(self, item, value):
+        if item not in {{slots}}:
+            Log.error("{"+"{item|quote}} not valid attribute", item=item)
+        object.__setattr__(self, item, value)
+
+    def __getattr__(self, item):
+        Log.error("{"+"{item|quote}} not valid attribute", item=item)
+
+    def items(self):
+        return ((k, getattr(self, k)) for k in {{slots}})
+
+    def __copy__(self):
+        _set = object.__setattr__
+        output = object.__new__({{name}})
+        {{assign}}
+        return output
+
+    def __iter__(self):
+        return {{slots}}.__iter__()
+
+    def __len__(self):
+        return {{len_slots}}
+
+    def __str__(self):
+        return str({{dict}})
+
+temp = {{name}}
+""",
+        {
+            "name": name,
+            "slots": "(" + (", ".join(convert.value2quote(s) for s in slots)) + ")",
+            "required": "{" + (", ".join(convert.value2quote(s) for s in required)) + "}",
+            "nulls": "{" + (", ".join(convert.value2quote(s) for s in nulls)) + "}",
+            "len_slots": len(slots),
+            "dict": "{" + (", ".join(convert.value2quote(s) + ": self." + s for s in slots)) + "}",
+            "assign": "; ".join("_set(output, "+convert.value2quote(s)+", self."+s+")" for s in slots)
+        }
+    )
+
+    return _exec(code, name)
+
+def _exec(code, name):
+    temp = None
+    exec(code)
+    globals()[name]=temp
+    return temp
+
+
+

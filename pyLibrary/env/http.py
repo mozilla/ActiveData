@@ -22,13 +22,16 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from copy import copy
+from numbers import Number
 
 from requests import sessions, Response
 
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, coalesce
+from pyLibrary.debugs.logs import Log, Except
+from pyLibrary.dot import Dict, coalesce, wrap
 from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines
+from pyLibrary.thread.threads import Thread
+from pyLibrary.times.durations import SECOND
 
 
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
@@ -39,7 +42,7 @@ default_timeout = 600
 _warning_sent = False
 
 
-def request(method, url, zip=False, **kwargs):
+def request(method, url, zip=False, retry=None, **kwargs):
     """
      JUST LIKE requests.request() BUT WITH DEFAULT HEADERS AND FIXES
      DEMANDS data IS ONE OF:
@@ -82,6 +85,13 @@ def request(method, url, zip=False, **kwargs):
     _to_ascii_dict(kwargs)
     timeout = kwargs[b'timeout'] = coalesce(kwargs.get(b'timeout'), default_timeout)
 
+    if retry is None:
+        retry = Dict(times=1, sleep=0)
+    elif isinstance(retry, Number):
+        retry = Dict(times=retry, sleep=SECOND)
+    else:
+        retry = wrap(retry)
+
     try:
         if zip and len(coalesce(kwargs.get(b"data"))) > 1000:
             compressed = convert.bytes2zip(kwargs[b"data"])
@@ -91,15 +101,25 @@ def request(method, url, zip=False, **kwargs):
             kwargs[b"data"] = compressed
 
             _to_ascii_dict(kwargs[b"headers"])
-            return session.request(method=method, url=url, **kwargs)
         else:
             _to_ascii_dict(kwargs.get(b"headers"))
-            return session.request(method=method, url=url, **kwargs)
     except Exception, e:
-        if " Read timed out." in e:
-            Log.error("Timeout failure (timeout was {{timeout}}", timeout=timeout, cause=e)
-        else:
-            Log.error("Request failure of {{url}}", url=url, cause=e)
+        Log.error("Request setup failure on {{url}}", url=url, cause=e)
+
+    errors = []
+    for r in range(retry.times):
+        if r:
+            Thread.sleep(retry.sleep)
+
+        try:
+            return session.request(method=method, url=url, **kwargs)
+        except Exception, e:
+            errors.append(Except.wrap(e))
+
+    if " Read timed out." in errors[0]:
+        Log.error("Tried {{times}} times: Timeout failure (timeout was {{timeout}}", timeout=timeout, times=retry.times, cause=errors[0])
+    else:
+        Log.error("Tried {{times}} times: Request failure of {{url}}", url=url, times=retry.times, cause=errors[0])
 
 
 def _to_ascii_dict(headers):
@@ -204,15 +224,18 @@ class HttpResponse(Response):
 
     @property
     def all_lines(self):
+        return self._all_lines()
+
+    def _all_lines(self, encoding="utf8"):
         try:
             content = self.raw.read(decode_content=False)
             if self.headers.get('content-encoding') == 'gzip':
-                return CompressedLines(content)
+                return CompressedLines(content, encoding=encoding)
             elif self.headers.get('content-type') == 'application/zip':
-                return ZipfileLines(content)
+                return ZipfileLines(content, encoding=encoding)
             else:
-                return convert.utf82unicode(content).split("\n")
+                return content.decode(encoding).split("\n")
         except Exception, e:
-            Log.error("Not JSON", e)
+            Log.error("Can not read content", cause=e)
         finally:
             self.close()

@@ -53,7 +53,7 @@ class Date(object):
             offset = 4*86400000
             return Date(Decimal(math.floor((self.milli+offset) / duration.milli)) * duration.milli - offset)
         elif not duration.month:
-            return Date(math.floor(self.milli / duration.milli) * duration.milli)
+            return Date(Decimal(math.floor(self.milli / duration.milli)) * duration.milli)
         else:
             month = int(math.floor(self.value.month / duration.month) * duration.month)
             return Date(datetime(self.value.year, month, 1))
@@ -166,6 +166,12 @@ class Date(object):
     def __lt__(self, other):
         other = Date(other)
         return self.value < other.value
+
+    def __eq__(self, other):
+        if other == None:
+            return Null
+        other = Date(other)
+        return self.value==other.value
 
     def __le__(self, other):
         other = Date(other)
@@ -372,6 +378,8 @@ def unicode2datetime(value, format=None):
 
     if format != None:
         try:
+            if format.endswith("%S.%f") and "." not in value:
+                value += ".000"
             return datetime.strptime(value, format)
         except Exception, e:
             from pyLibrary.debugs.logs import Log

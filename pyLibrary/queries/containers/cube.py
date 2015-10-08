@@ -385,7 +385,7 @@ class Cube(Container):
         return output
 
     def format(self, format):
-        if format == "cube":
+        if format == None or format == "cube":
             return self
         else:
             Log.error("Do not know how to handle")

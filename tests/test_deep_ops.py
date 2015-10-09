@@ -773,7 +773,7 @@ class TestDeepOps(ActiveDataBaseTest):
                     ]}}
                 ],
                 "data": {
-                    "count": [1, 1, 2, 1]
+                    "count": [1, 1, 2, 1, 0]
                 }
             }
         }

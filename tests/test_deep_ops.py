@@ -723,22 +723,125 @@ class TestDeepOps(ActiveDataBaseTest):
 
 
     def test_aggs_on_parent(self):
-        example = {
-            "from": "jobs.action.timings",
-            "edges": [
-                "build.platform"
-            ]
+        test = {
+            "data": [
+                {"o": 3, "a": {"_a": [
+                    {"v": "a string", "s": False},
+                    {"v": "another string"}
+                ]}},
+                {"o": 1, "a": {"_a": {
+                    "v": "still more",
+                    "s": False
+                }}},
+                {"o": 2, "a": {"_a": [
+                    {"v": "string!", "s": True},
+                ]}},
+                {"o": 4, "a": {"_a": {"s": False}}}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index + ".a._a",
+                "edges": ["o"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"o": 1, "count": 1},
+                    {"o": 2, "count": 1},
+                    {"o": 3, "count": 2},
+                    {"o": 4, "count": 1}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["o", "count"],
+                "data": [
+                    [1, 1],
+                    [2, 1],
+                    [3, 2],
+                    [4, 1]
+                ]
+
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {"name": "o", "value": "o", "domain": {"type": "set", "partitions": [
+                        {"value": 1, "dataIndex": 0},
+                        {"value": 2, "dataIndex": 1},
+                        {"value": 3, "dataIndex": 2},
+                        {"value": 4, "dataIndex": 3}
+                    ]}}
+                ],
+                "data": {
+                    "count": [1, 1, 2, 1, 0]
+                }
+            }
         }
+        self._execute_es_tests(test)
+
 
     def test_aggs_on_parent_and_child(self):
-        example = {
-        "select": {"value": "order", "aggregate": "average"},
-        "from": "jobs.action.timings",
-        "edges": [
-            "build.platform",
-            {"name": "step", "value": ["builder.step", "harness.step"]}
-        ]
+        test = {
+            "data": [
+                {"o": 1, "a": {"_a": [
+                    {"v": "b", "s": False},
+                    {"v": "c"}
+                ]}},
+                {"o": 1, "a": {"_a": {
+                    "v": "b",
+                    "s": False
+                }}},
+                {"o": 2, "a": {"_a": [
+                    {"v": "b", "s": True},
+                ]}},
+                {"o": 2, "a": {"_a": {"s": False}}}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index + ".a._a",
+                "edges": ["o", "v"],
+                "select": {"aggregate": "count", "value": "s"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"o": 1, "v": "b", "s": 2},
+                    {"o": 1, "v": "c", "s": 0},
+                    {"o": 2, "v": "b", "s": 1},
+                    {"o": 2, "s": 1},
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["o", "v", "s"],
+                "data": [
+                    [1, "b", 2],
+                    [1, "c", 0],
+                    [2, "b", 1],
+                    [2, None, 1]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {"name": "o", "domain": {"type": "set", "partitions": [
+                        {"value": 1, "dataIndex": 0},
+                        {"value": 2, "dataIndex": 1},
+                    ]}},
+                    {"name": "v", "domain": {"type": "set", "partitions": [
+                        {"value": "b", "dataIndex": 0},
+                        {"value": "c", "dataIndex": 1},
+                    ]}}
+                ],
+                "data": {
+                    "s": [
+                        [2, 0, 0],
+                        [1, 0, 1],
+                        [0, 0, 0]
+                    ]
+                }
+            }
         }
+        self._execute_es_tests(test)
 
     def test_setop_w_select_deep_value(self):
         example = {

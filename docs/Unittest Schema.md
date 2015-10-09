@@ -2,7 +2,7 @@
 Unittest Logs
 =============
 
-The Unittest logs are deep JSON structures describing each of the individual test results.  There are five major properties
+The Unittest logs are deep JSON structures describing each of the individual test results.  There are seven major properties.
 
 `result` Columns
 ----------------
@@ -30,7 +30,7 @@ Describes properties exclusive to an individual test result
 `result.subtests` Columns
 -------------------------
 
-Some test types have multiple individual results per top-level test, these are represented as *subtests*
+Some test types have multiple individual results per top-level test, these are represented as *subtests*.  To query the subtests use `{"from":"unittest.result.subtests"}`
 
 * `result.subtests.ordering` - *integer* for maintaining the original log ordering
 * `result.subtests.name` - *string* name of the subtest
@@ -118,14 +118,6 @@ Properties of the changeset, revision and push
 * `repo.parents` - *strings* ids of any parents
 * `repo.children` - *strings* ids of any children
 
-
-`machine` Columns
------------------
-
-See `run.machine` instead ~~Properties of the machine that ran the suite~~
-
-* ~~`machine.os` - *string* operating system~~
-* ~~`machine.name` - *string* the particular piece of hardware that ran suite~~
 
 `other` Columns
 ---------------

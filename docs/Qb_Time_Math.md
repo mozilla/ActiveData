@@ -15,7 +15,7 @@ Time can be
 Relative Time
 -------------
 
-There are a couple of relative time values that
+There are a couple of relative time values:
 
 * `now` - current time with millisecond accuracy 
 * `today` - beginning of the current day (GMT)
@@ -44,7 +44,7 @@ Time Expressions
 
 Time expressions are simplified with the floor function, denoted by pipe (`|`).   Floor only works on time points, and rounds down to closest time that is a multiple of the given duration since epoch GMT:
 
-* `June 30, 2015  19:50:10 | houry ⇒ June 30, 2015 19:00:00` 
+* `June 30, 2015  19:50:10 | hour  ⇒ June 30, 2015 19:00:00` 
 * `June 30, 2015  19:50:10 | day   ⇒ June 30, 2015 00:00:00`
 * `June 30, 2015  19:50:10 | week  ⇒ June 28, 2015 00:00:00`
 * `June 30, 2015  19:50:10 | month ⇒ June 1, 2015 00:00:00` 

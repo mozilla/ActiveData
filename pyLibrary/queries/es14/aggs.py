@@ -14,7 +14,7 @@ from collections import Mapping
 
 from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, join_field
+from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, join_field, DictList
 from pyLibrary.maths import Math
 from pyLibrary.queries import qb, es09
 from pyLibrary.queries.dimensions import Dimension
@@ -30,6 +30,27 @@ def is_aggsop(es, query):
     if any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])) and (query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate)):
         return True
     return False
+
+
+def get_decoders_by_depth(query):
+    """
+    RETURN A LIST OF DECODER ARRAYS, ONE ARRAY FOR EACH NESTED DEPTH
+    """
+    schema = query.frum
+    output = DictList()
+    for e in coalesce(query.edges, query.groupby, []):
+        e=e.copy()
+        vars_ = get_all_vars(e.value)
+        map_ = {v: schema[v].abs_name for v in vars_}
+        e.value = expression_map(map_, e.value)
+        depths = set(len(listwrap(schema[v].nested_path)) for v in vars_)
+        if len(depths)>1:
+            Log.error("expression {{expr}} spans tables, can not handle", expr=e.value)
+        depth = list(depths)[0]
+        while len(output) <= depth:
+            output.append([])
+        output[depth].append(AggsDecoder(e, query))
+    return output
 
 
 def es_aggsop(es, frum, query):
@@ -108,12 +129,8 @@ def es_aggsop(es, frum, query):
         abs_value = expression_map({c.name: c.abs_name for c in frum._columns}, s.value)
         es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].script = qb_expression_to_ruby(abs_value)
 
-    decoders = [AggsDecoder(e, query) for e in coalesce(query.edges, query.groupby, [])]
+    decoders = get_decoders_by_depth(query)
     start = 0
-    for d in decoders:
-        es_query = d.append_query(es_query, start)
-        start += d.num_columns
-
 
     #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
     split_where = split_expression_by_depth(query.where, schema=frum)
@@ -121,6 +138,10 @@ def es_aggsop(es, frum, query):
     if len(split_field(frum.name)) > 1:
         if any(split_where[2:]):
             Log.error("Where clause is too deep")
+
+        for d in decoders[1]:
+            es_query = d.append_query(es_query, start)
+            start += d.num_columns
 
         if split_where[1]:
             #TODO: INCLUDE FILTERS ON EDGES
@@ -143,6 +164,10 @@ def es_aggsop(es, frum, query):
         if any(split_where[1:]):
             Log.error("Where clause is too deep")
 
+    for d in decoders[0]:
+        es_query = d.append_query(es_query, start)
+        start += d.num_columns
+
     if split_where[0]:
         #TODO: INCLUDE FILTERS ON EDGES
         filter = simplify_esfilter({"and": split_where[0]})
@@ -160,6 +185,7 @@ def es_aggsop(es, frum, query):
         result = es09.util.post(es, es_query, query.limit)
 
     try:
+        decoders = [d for ds in decoders for d in ds]
         result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE
 
         formatter, groupby_formatter, aggop_formatter, mime_type = format_dispatch[query.format]
@@ -190,25 +216,25 @@ class AggsDecoder(object):
 
         if e.value and e.domain.type == "default":
             if query.groupby:
-                return object.__new__(DefaultDecoder, e.copy())
+                return object.__new__(DefaultDecoder, e)
 
             if is_keyword(e.value):
                 cols = query.frum.get_columns()
                 col = cols.filter(lambda c: c.name == e.value)[0]
                 if not col:
-                    return object.__new__(DefaultDecoder, e.copy())
+                    return object.__new__(DefaultDecoder, e)
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
 
                 if col.partitions != None:
                     e.domain = SimpleSetDomain(partitions=col.partitions[:limit:])
                 else:
                     e.domain = set_default(DefaultDomain(limit=limit), e.domain.as_dict())
-                    return object.__new__(DefaultDecoder, e.copy())
+                    return object.__new__(DefaultDecoder, e)
 
             elif isinstance(e.value, (list, Mapping)):
                 Log.error("Not supported yet")
             else:
-                return object.__new__(DefaultDecoder, e.copy())
+                return object.__new__(DefaultDecoder, e)
 
         if e.value and e.domain.type in PARTITION:
             return object.__new__(SetDecoder, e)
@@ -226,7 +252,7 @@ class AggsDecoder(object):
             # JUST PULL THE FIELDS
             fields = e.domain.dimension.fields
             if isinstance(fields, Mapping):
-                return object.__new__(DimFieldDictDecoder, e)
+                Log.error("No longer allowed: All objects are expressions")
             else:
                 return object.__new__(DimFieldListDecoder, e)
         else:
@@ -451,8 +477,6 @@ class DefaultDecoder(SetDecoder):
 
     def __init__(self, edge, query):
         AggsDecoder.__init__(self, edge, query)
-        self.edge = self.edge.copy()
-        # self.edge.allowNulls = False  # SINCE WE DO NOT KNOW THE DOMAIN, WE HAVE NO SENSE OF WHAT IS OUTSIDE THAT DOMAIN, allowNulls==True MAKES NO SENSE
         self.edge.domain.partitions = set()
         self.edge.domain.limit = coalesce(self.edge.domain.limit, query.limit, 10)
 
@@ -493,6 +517,8 @@ class DimFieldListDecoder(DefaultDecoder):
         self.fields = edge.domain.dimension.fields
 
     def append_query(self, es_query, start):
+        #TODO: USE "reverse_nested" QUERY TO PULL THESE
+
         self.start = start
         for i, v in enumerate(self.fields):
             nest = wrap({"aggs": {
@@ -604,7 +630,7 @@ def aggs_iterator(aggs, decoders):
     DIG INTO ES'S RECURSIVE aggs DATA-STRUCTURE:
     RETURN AN ITERATOR OVER THE EFFECTIVE ROWS OF THE RESULTS
     """
-    depth = decoders[-1].start + decoders[-1].num_columns
+    depth = max(d.start + d.num_columns for d in decoders)
     parts = [None] * depth
 
     def _aggs_iterator(agg, d):
@@ -628,14 +654,20 @@ def aggs_iterator(aggs, decoders):
                     yield a
         else:
             for b in agg._match.buckets:
+                if b._nested:
+                    b.doc_count = b._nested.doc_count
                 parts[d] = b
                 if b.doc_count:
                     yield b
             parts[d] = Null
             for b in agg._other.buckets:
+                if b._nested:
+                    b.doc_count = b._nested.doc_count
                 if b.doc_count:
                     yield b
             b = agg._missing
+            if b._nested:
+                b.doc_count = b._nested.doc_count
             if b.doc_count:
                 yield b
 

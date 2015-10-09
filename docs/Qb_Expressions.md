@@ -1,4 +1,4 @@
-Qb Expressions (INCOMPLETE)
+Qb Expressions
 ==============
 
 Summary
@@ -8,15 +8,14 @@ Qb has a limited expression language to increase the number of useful queries th
 
 	{operator_name: parameters}
 
-As a side note, Qb queries are also expressions: `from` is the operator, and other name/value pairs act as operation modifiers. 
+As a side note, Qb queries are also expressions: `from` is the operator, and other name/value pairs act as modifiers. 
 
 
 Expressions are composed of 
 
 * primitive values `true`, `false`, `null`
 * strings representing dot-separated property names (with format of `\w+(?:\.\w+)*`)
-* objects representing operators on compound expressions
-
+* objects representing compound expressions
 
 
 Example: `eq` Operator
@@ -225,11 +224,11 @@ Identical to the `eq` operator, but exists for Elasticsearch compatibility.
 		{"term": {variable, value}} 
 
 
-###`terms` Operator###
+###`in` Operator###
 
-The `terms` operator (*note it's plural*) has been borrowed from Elasticsearch; it compares a property to any number of constants:
+The `in` operator tests if property can be found in a list of constants.  
 
-		{"terms": {"a": [1, 2, 3, 4]}}
+		{"in": {"a": [1, 2, 3, 4]}}
 
 and is logically the same as 
 
@@ -292,8 +291,8 @@ Convert a string to a numeric value.
 
 
 
-Conditional Operators (Not Yet Implemented)
--------------------------------------------
+Conditional Operators
+---------------------
 
 ###`coalesce` Operator###
 
@@ -371,8 +370,8 @@ Evaluate the given JSON as an expression:
  
 
 
-Operator Philosophy
--------------------
+Appendix: Operator Philosophy
+-----------------------------
 
 Put at bottom of document because it only explains general design choices
 
@@ -384,7 +383,7 @@ Many operators have a *simple* form and a *formal* form which use parameter obje
 
 Simple form uses a simple parameter object, and is for comparing a property (a variable) to a constant value.
 	
-		{"op": {variable: value}}
+		{"op": {variable: constant}}
 
 **Formal:**
 
@@ -405,6 +404,6 @@ Commutative operators can compound many expressions, and therefore only have a *
 
 ###Expressions involving `null`###
 
-As a general rule, the commutative operators will ignore expressions that evaluate to `null`, and the binary operators usually return `null` if any parameter is `null`.  Specific behaviour of each operator on `null` is included below.
+As a general rule, the commutative operators will ignore expressions that evaluate to `null`, and the binary operators usually return `null` if any parameter is `null`.
 
 

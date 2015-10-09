@@ -12,10 +12,10 @@ These can be found at the top of each logfile.  Use the `run` properties
 for finer grained querying
 
 * `action.builder` - *string* full build name given to this job.  Same as 
-  `run.machine.name`
+  `run.key`
 * `action.start_time` - *timestamp* name of the subtest
 * `action.builduid` - *hex* some unique hex value
-* `action.results` - *string* BuildBot end status; same as `run.BuildBot_status`
+* `action.results` - *string* BuildBot end status; same as `run.buildbot_status`
 
 `jobs.action.timings` Columns
 ----------------------------
@@ -56,9 +56,7 @@ Properties that describe the run of this job.
 * `run.chunk` - *integer* each suite is broken into chucks to parallelize the 
 run, each chunk is given a number
 * `run.type` - *string* either "e10s" or `null`
-* ~~`run.insertion_time` - *timestamp* time inserted into the `exchange/build/normalized` Pulse exchange~~
-* ~~`run.status` - *integer* BuildBot's end status~~
-* `run.BuildBot_status` - *string* buildbot's end status
+* `run.buildbot_status` - *string* BuildBot's end status
 * `run.timestamp` - *timestamp*
 * `run.job_number` - *string*
 * `run.files` - *array* of files recorded for this suite, one or more of which  

@@ -722,3 +722,58 @@ class TestDeepOps(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
+    def test_aggs_on_parent(self):
+        example = {
+            "from": "jobs.action.timings",
+            "edges": [
+                "build.platform"
+            ]
+        }
+
+    def test_aggs_on_parent_and_child(self):
+        example = {
+        "select": {"value": "order", "aggregate": "average"},
+        "from": "jobs.action.timings",
+        "edges": [
+            "build.platform",
+            {"name": "step", "value": ["builder.step", "harness.step"]}
+        ]
+        }
+
+    def test_setop_w_select_deep_value(self):
+        example = {
+            "select": [
+                "run.timestamp",
+                "build.revision",
+                "build.date",
+                "run.stats.median",
+                "run.stats.mean",
+                "run.stats.variance",
+                {
+                    "name": "replicate",
+                    "value": "."
+                }
+            ],
+            "from": "perf.result.samples",
+            "where": {
+                "and": [
+                    {
+                        "eq": {
+                            "result.test": "tcheck2"
+                        }
+                    },
+                    {
+                        "gte": {
+                            "run.timestamp": "{{29sep2015}}"
+                        }
+                    },
+                    {
+                        "lt": {
+                            "run.timestamp": "{{1oct2015}}"
+                        }
+                    }
+                ]
+            },
+            "limit": 1000,
+            "sort": "run.timestamp"
+        }

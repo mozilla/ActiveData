@@ -149,7 +149,7 @@ class TestDeepOps(ActiveDataBaseTest):
             "es_query": {  # FOR REFERENCE
                 "query": {"nested": {
                     "path": "_a",
-                    "inner_hits": {},
+                    "inner_hits": {"size": 100000},
                     "filter": {"term": {"_a.b": "x"}}
                 }},
                 "fields": ["o"]

@@ -92,3 +92,4 @@ class TestExpressions(FuzzyTestCase):
         self.assertEqual(result, {"terms": {"a": [1, 2]}})
 
 
+

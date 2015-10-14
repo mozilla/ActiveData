@@ -39,12 +39,12 @@ def get_decoders_by_depth(query):
     schema = query.frum
     output = DictList()
     for e in coalesce(query.edges, query.groupby, []):
-        e=e.copy()
+        e = e.copy()
         vars_ = get_all_vars(e.value)
         map_ = {v: schema[v].abs_name for v in vars_}
         e.value = expression_map(map_, e.value)
         depths = set(len(listwrap(schema[v].nested_path)) for v in vars_)
-        if len(depths)>1:
+        if len(depths) > 1:
             Log.error("expression {{expr}} spans tables, can not handle", expr=e.value)
         depth = list(depths)[0]
         while len(output) <= depth:

@@ -487,7 +487,7 @@ using distinct to determine what the partitions are
 
 ###Quazi-LogScale Tables
 
-SQL demands I build a table that represents the irregular, but intuitive, data partitions.  Tables seem heavy-weight compared to a domain definition; if only because the details are realized as data, and that data must be constructed explicitly.
+SQL demands I build a table that represents the irregular, but intuitive, data partitions.  Tables seem heavy-weight compared to a domain definition; if only because the details are realized as records, and those records must be constructed explicitly.
 
     CREATE PROCEDURE temp_fill_log_performance_ranges ()
     BEGIN

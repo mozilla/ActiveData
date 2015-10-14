@@ -880,3 +880,65 @@ class TestDeepOps(ActiveDataBaseTest):
             "limit": 1000,
             "sort": "run.timestamp"
         }
+
+{
+    "from": "jobs.action.timings",
+    "where": {
+        "eq": {
+            "build.platform": "win32"
+        }
+    },
+    "edges": [
+        "build.step"
+    ],
+    "select": {
+        "aggregate": "average",
+        "value": "action.timings.harness.duration"
+    },
+    "format": "table"
+}
+
+
+#TODO:  missing DOES NOT SEEM TO WORK FOR DEEP OPS
+example = {
+    "where": {"exists": "builder.elapsedTime"},
+    "edges": ["builder.step"],
+    "from": "jobs.action.timings",
+    "select": [
+        {
+        "aggregate": "average",
+        "name": "delay",
+        "value": {"subtract": ["builder.duration", "builder.elapsedTime"]}
+        },
+        {"value": "builder.duration", "aggregate": "average"},
+        {"value": "builder.elapsedTime", "aggregate": "average"}
+    ],
+    "format": "table"
+}
+
+#TODO: builder.duration DOES NOT EXIST? -> NOT EXPANDED TO action.timings.builder.duration
+example={
+	"from":"jobs.action.timings",
+	"limit":1000000,
+	"where":{"and":[
+		{"eq":{"build.platform":"win32"}},
+		{"eq":{"build.type":"opt"}},
+		{"eq":{"run.suite":"mochitest"}}
+	]},
+	"edges":[
+		"builder.step",
+		{
+			"value":"builder.start_time",
+			"domain":{
+				"type":"time",
+				"min":"today-month",
+				"max":"today",
+				"interval":"day"
+			}
+		}
+	],
+	"select":[
+		{"aggregate":"sum","value":"builder.duration"},
+		{"aggregate":"count"}
+	]
+}

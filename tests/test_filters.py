@@ -100,4 +100,33 @@ class TestFilters(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-
+    def test_regexp_expression(self):
+        test = {
+            "data": [{"_a":[
+                {"a": "abba"},
+                {"a": "aaba"},
+                {"a": "aaaa"},
+                {"a": "aa"},
+                {"a": "aba"},
+                {"a": "aa"},
+                {"a": "ab"},
+                {"a": "ba"},
+                {"a": "a"},
+                {"a": "b"}
+            ]}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+"._a",
+                "select": "*",
+                "where": {"regex": {"a": ".*b.*"}},
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [
+                {"a": "abba"},
+                {"a": "aaba"},
+                {"a": "aba"},
+                {"a": "ab"},
+                {"a": "ba"},
+                {"a": "b"}
+            ]}
+        }
+        self._execute_es_tests(test)

@@ -301,7 +301,7 @@ def expression_map(_map, expr):
         if expr == ".":
             return expr
         elif is_keyword(expr):
-            return _map.get(expr, expr)
+            return coalesce(_map.get(expr), expr)
         else:
             Log.error("Expecting a json path")
     elif isinstance(expr, CODE):
@@ -558,14 +558,21 @@ class MultiOp(object):
 class RegExpOp(object):
     def __init__(self, op, term):
         self.var, self.pattern = term.items()[0]
+
     def to_ruby(self):
         Log.error("do not know how to hanlde")
+
     def to_python(self):
-        return "re.match("+convert.string2quote(self.pattern)+", "+qb_expression_to_python(self.var)+")"
+        return "re.match(" + convert.string2quote(self.pattern) + ", " + qb_expression_to_python(self.var) + ")"
+
     def to_esfilter(self):
         return {"regexp": {self.var: self.pattern}}
+
     def vars(self):
         return {self.var}
+
+    def map(self, map):
+        return {"regex": {map.get(self.var, self.var): self.pattern}}
 
 
 class TermsOp(object):

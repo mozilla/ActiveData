@@ -32,13 +32,14 @@ from pyLibrary.collections.multiset import Multiset
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.env.big_data import FileString, safe_size
 from pyLibrary.jsons import quote
-from pyLibrary.jsons.encoder import json_encoder
+from pyLibrary.jsons.encoder import json_encoder, pypy_json_encode
 from pyLibrary.strings import expand_template
 from pyLibrary.times.dates import Date
 
 
 """
 DUE TO MY POOR MEMORY, THIS IS A LIST OF ALL CONVERSION ROUTINES
+IN <from_type> "2" <to_type> FORMAT
 """
 def value2json(obj, pretty=False):
     try:
@@ -48,6 +49,13 @@ def value2json(obj, pretty=False):
             Log.error("Not valid JSON: " + str(obj) + " of type " + str(type(obj)))
         return json
     except Exception, e:
+        e = Except.wrap(e)
+        try:
+            json = pypy_json_encode(obj)
+            return json
+        except Exception:
+            pass
+
         Log.error("Can not encode into JSON: {{value}}", value=repr(obj), cause=e)
 
 

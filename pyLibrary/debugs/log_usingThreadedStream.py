@@ -15,13 +15,13 @@ from __future__ import absolute_import
 
 from datetime import datetime, timedelta
 import sys
-from .logs import BaseLog, DEBUG_LOGGING, Log
+from .logs import TextLog, DEBUG_LOGGING, Log
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Thread
 
 
 
-class Log_usingThreadedStream(BaseLog):
+class TextLog_usingThreadedStream(TextLog):
     # stream CAN BE AN OBJCET WITH write() METHOD, OR A STRING
     # WHICH WILL eval() TO ONE
     def __init__(self, stream):
@@ -66,11 +66,11 @@ class Log_usingThreadedStream(BaseLog):
     def stop(self):
         try:
             if DEBUG_LOGGING:
-                sys.stdout.write("Log_usingThreadedStream sees stop, adding stop to queue\n")
+                sys.stdout.write("TextLog_usingThreadedStream sees stop, adding stop to queue\n")
             self.queue.add(Thread.STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
             if DEBUG_LOGGING:
-                sys.stdout.write("Log_usingThreadedStream done\n")
+                sys.stdout.write("TextLog_usingThreadedStream done\n")
         except Exception, e:
             if DEBUG_LOGGING:
                 raise e

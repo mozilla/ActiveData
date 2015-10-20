@@ -12,9 +12,12 @@ from __future__ import division
 from __future__ import absolute_import
 
 import json
+from types import GeneratorType
+
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import split_field, join_field, unwrap, Dict
+from pyLibrary.dot import split_field, join_field
 from pyLibrary.env.http import MIN_READ_SIZE
+
 
 DEBUG = False
 
@@ -56,6 +59,8 @@ def parse(json, path, expected_vars=NO_VARS):
         json = List_usingStream(get_more)
     elif hasattr(json, "__call__"):
         json = List_usingStream(json)
+    elif isinstance(json, GeneratorType):
+        json = List_usingStream(json.next)
     else:
         Log.error("Expecting json to be a stream, or a function that will return more bytes")
 
@@ -96,7 +101,7 @@ def parse(json, path, expected_vars=NO_VARS):
                 index = jump_to_end(index, c)
                 value = None
             elif expected_vars[0] == ".":
-                json.mark(index)
+                json.mark(index-1)
                 index = jump_to_end(index, c)
                 value = json_decoder(json.release(index).decode("utf8"))
             else:
@@ -135,7 +140,6 @@ def parse(json, path, expected_vars=NO_VARS):
                 continue
             elif c == b'"':
                 name, index = simple_token(index, c)
-                full_path = join_field(split_field(parent_path)+ [name])
 
                 c, index = skip_whitespace(index)
                 if c != b':':
@@ -146,6 +150,7 @@ def parse(json, path, expected_vars=NO_VARS):
                 if child_expected and nested_done:
                     Log.error("Expected property found after nested json.  Iteration failed.")
 
+                full_path = join_field(split_field(parent_path)+ [name])
                 if path and (path[0] == full_path or path[0].startswith(full_path+".")):
                     # THE NESTED PROPERTY WE ARE LOOKING FOR
                     if path[0] == full_path:
@@ -164,7 +169,7 @@ def parse(json, path, expected_vars=NO_VARS):
 
                 if child_expected:
                     # SOME OTHER PROPERTY
-                    value, index = _decode_token(index, c, full_path, path, name2index, destination, expected_vars=child_expected)
+                    value, index = _decode_token(index, c, full_path, path, name2index, None, expected_vars=child_expected)
                     destination[name] = value
                 else:
                     # WE DO NOT NEED THIS VALUE
@@ -191,11 +196,11 @@ def parse(json, path, expected_vars=NO_VARS):
                 elif c == b'"':
                     break
             return index
-        elif c not in "[{":
+        elif c not in b"[{":
             while True:
                 c = json[index]
                 index += 1
-                if c in ',]}':
+                if c in b',]}':
                     break
             return index
 
@@ -227,7 +232,7 @@ def parse(json, path, expected_vars=NO_VARS):
 
     def simple_token(index, c):
         if c == b'"':
-            json.mark(index-1)
+            json.mark(index - 1)
             while True:
                 c = json[index]
                 index += 1
@@ -238,17 +243,17 @@ def parse(json, path, expected_vars=NO_VARS):
             return json_decoder(json.release(index).decode("utf8")), index
         elif c in b"{[":
             Log.error("Expecting a primitive value")
-        elif c == b"t" and json[index:index + 3] == "rue":
+        elif c == b"t" and json.slice(index, index + 3) == "rue":
             return True, index + 3
-        elif c == b"n" and json[index:index + 3] == "ull":
+        elif c == b"n" and json.slice(index, index + 3) == "ull":
             return None, index + 3
-        elif c == b"f" and json[index:index + 4] == "alse":
+        elif c == b"f" and json.slice(index, index + 4) == "alse":
             return False, index + 4
         else:
             json.mark(index-1)
             while True:
                 c = json[index]
-                if c in ',]}':
+                if c in b',]}':
                     break
                 index += 1
             return float(json.release(index)), index
@@ -296,7 +301,7 @@ class List_usingStream(object):
     """
     def __init__(self, get_more_bytes):
         """
-        get_more_bytes() SHOUD RETURN AN ARRAY OF BYTES
+        get_more_bytes() SHOULD RETURN AN ARRAY OF BYTES
         """
         if not hasattr(get_more_bytes, "__call__"):
             Log.error("Expecting a function that will return bytes")
@@ -305,23 +310,32 @@ class List_usingStream(object):
         self.start = 0
         self._mark = -1
         self.buffer = self.get_more()
+        self.buffer_length = len(self.buffer)
+        pass
 
     def __getitem__(self, index):
-        if isinstance(index, slice):
-            self.mark(index.start)
-            return self.release(index.stop)
-
-        if index < self.start:
+        offset = index - self.start
+        if offset < 0:
             Log.error("Can not go in reverse on stream index=={{index}}", index=index)
 
-        if self._mark >= 0:
-            self._get_more(index)
-        else:
-            while len(self.buffer) <= index - self.start:
+        if self._mark == -1:
+            while self.buffer_length <= offset:
                 self.start += len(self.buffer)
+                offset = index - self.start
                 self.buffer = self.get_more()
+                self.buffer_length = len(self.buffer)
+        else:
+            while self.buffer_length <= offset:
+                self.buffer += self.get_more()
+                self.buffer_length = len(self.buffer)
 
-        return self.buffer[index - self.start]
+
+        return self.buffer[offset]
+
+    def slice(self, start, stop):
+        self.mark(start)
+        return self.release(stop)
+
 
     def mark(self, index):
         """
@@ -335,11 +349,13 @@ class List_usingStream(object):
         if self._mark == -1:
             Log.error("Must mark() this stream before release")
 
-        self._get_more(end-1)
+        self._get_more(end - 1)
         output = self.buffer[self._mark - self.start:end - self.start]
         self._mark = -1
         return output
 
     def _get_more(self, index):
-        while len(self.buffer) <= index - self.start:
+        while self.buffer_length <= index - self.start:
             self.buffer += self.get_more()
+            self.buffer_length = len(self.buffer)
+

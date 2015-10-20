@@ -121,7 +121,7 @@ class Query(object):
         else:
             columns = []
 
-        query_path = coalesce(self.frum.query_path, "")
+        query_path = coalesce(self.frum.query_path, ".")
         vars = query_get_all_vars(self, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
         for c in columns:
             if c.name in vars and not query_path.startswith(coalesce(listwrap(c.nested_path)[0], "")):
@@ -130,6 +130,10 @@ class Query(object):
     @property
     def columns(self):
         return listwrap(self.select) + coalesce(self.edges, self.groupby)
+
+    @property
+    def query_path(self):
+        return "."
 
     def __getitem__(self, item):
         if item == "from":

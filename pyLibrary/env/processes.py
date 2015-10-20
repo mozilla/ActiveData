@@ -60,6 +60,9 @@ class Process(object):
                 bufsize=-1
             )
 
+    def communicate(self):
+        return self.proc.communicate()
+
     def readline(self):
         return self.proc.stdout.readline()
 

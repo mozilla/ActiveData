@@ -57,7 +57,7 @@ def run(query, frum=None):
             return cube_aggs(frum, query)
 
     elif isinstance(frum, Query):
-        frum = run(frum).data
+        frum = run(frum)
     else:
         Log.error("Do not know how to handle {{type}}",  type=frum.__class__.__name__)
 
@@ -623,15 +623,15 @@ def filter(data, where):
     if len(data) == 0 or where == None or where == TRUE_FILTER:
         return data
 
-    if isinstance(data, Cube):
+    if isinstance(data, Container):
         return data.filter(where)
 
-    if isinstance(data, list):
+    if isinstance(data, (list, set)):
         temp = qb_expression_to_function(where)
         dd = wrap(data)
         return [d for i, d in enumerate(data) if temp(wrap(d), i, dd)]
     else:
-        Log.error("Do not know how to handle")
+        Log.error("Do not know how to handle type {{type}}", type=data.__class__.__name__)
 
     try:
         return drill_filter(where, data)

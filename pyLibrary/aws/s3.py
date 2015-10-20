@@ -329,13 +329,13 @@ class Bucket(object):
                 cause=e
             )
 
-    def write_lines(self, key, *lines):
+    def write_lines(self, key, lines):
         self._verify_key_format(key)
         storage = self.bucket.new_key(key + ".json.gz")
 
         buff = BytesIO()
         archive = gzip.GzipFile(fileobj=buff, mode='w')
-        count=0
+        count = 0
         for l in lines:
             if hasattr(l, "__iter__"):
                 for ll in l:

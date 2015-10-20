@@ -189,6 +189,16 @@ class Date(object):
         return self.add(other)
 
 
+    @classmethod
+    def min(cls, *values):
+        output = Null
+        for v in values:
+            if output == None and v != None:
+                output = v
+            elif v < output:
+                output = v
+        return output
+
 def _cpython_value2date(*args):
     try:
         if len(args) == 1:

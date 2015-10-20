@@ -20,13 +20,13 @@ import platform
 import sys
 
 from pyLibrary.debugs import constants
-from pyLibrary.dot import coalesce, Dict, listwrap, wrap, unwrap, unwraplist, Null
+from pyLibrary.debugs.text_logs import TextLog_usingMulti, TextLog_usingThread, TextLog_usingStream, TextLog_usingFile
+from pyLibrary.dot import coalesce, Dict, listwrap, wrap, unwrap, unwraplist, Null, set_default
 from pyLibrary.jsons.encoder import json_encoder
 from pyLibrary.thread.threads import Thread, Lock, Queue
 from pyLibrary.strings import indent, expand_template
 
 
-DEBUG_LOGGING = False
 ERROR = "ERROR"
 WARNING = "WARNING"
 UNEXPECTED = "UNEXPECTED"
@@ -68,7 +68,9 @@ class Log(object):
         if cls.trace:
             from pyLibrary.thread.threads import Thread
 
-        if settings.cprofile is True or (isinstance(settings.cprofile, Mapping) and settings.cprofile.enabled):
+        if settings.cprofile is False:
+            settings.cprofile = {"enabled": False}
+        elif settings.cprofile is True or (isinstance(settings.cprofile, Mapping) and settings.cprofile.enabled):
             if isinstance(settings.cprofile, bool):
                 settings.cprofile = {"enabled": True, "filename": "cprofile.tab"}
 
@@ -91,10 +93,10 @@ class Log(object):
             constants.set(settings.constants)
 
         if settings.log:
-            cls.logging_multi = Log_usingMulti()
+            cls.logging_multi = TextLog_usingMulti()
             if cls.main_log:
                 cls.main_log.stop()
-            cls.main_log = Log_usingThread(cls.logging_multi)
+            cls.main_log = TextLog_usingThread(cls.logging_multi)
 
             for log in listwrap(settings.log):
                 Log.add_log(Log.new_instance(log))
@@ -114,7 +116,7 @@ class Log(object):
         if profiles.ON and hasattr(cls, "settings"):
             profiles.write(cls.settings.profile)
         cls.main_log.stop()
-        cls.main_log = Log_usingStream(sys.stdout)
+        cls.main_log = TextLog_usingStream(sys.stdout)
 
     @classmethod
     def new_instance(cls, settings):
@@ -122,9 +124,9 @@ class Log(object):
 
         if settings["class"]:
             if settings["class"].startswith("logging.handlers."):
-                from .log_usingLogger import Log_usingLogger
+                from .log_usingLogger import TextLog_usingLogger
 
-                return Log_usingLogger(settings)
+                return TextLog_usingLogger(settings)
             else:
                 try:
                     from .log_usingLogger import make_log_from_settings
@@ -134,39 +136,46 @@ class Log(object):
                     pass  # OH WELL :(
 
         if settings.log_type == "file" or settings.file:
-            return Log_usingFile(settings.file)
+            return TextLog_usingFile(settings.file)
         if settings.log_type == "file" or settings.filename:
-            return Log_usingFile(settings.filename)
+            return TextLog_usingFile(settings.filename)
         if settings.log_type == "console":
-            from .log_usingThreadedStream import Log_usingThreadedStream
-            return Log_usingThreadedStream(sys.stdout)
+            from .log_usingThreadedStream import TextLog_usingThreadedStream
+            return TextLog_usingThreadedStream(sys.stdout)
         if settings.log_type == "stream" or settings.stream:
-            from .log_usingThreadedStream import Log_usingThreadedStream
-            return Log_usingThreadedStream(settings.stream)
+            from .log_usingThreadedStream import TextLog_usingThreadedStream
+            return TextLog_usingThreadedStream(settings.stream)
         if settings.log_type == "elasticsearch" or settings.stream:
-            from .log_usingElasticSearch import Log_usingElasticSearch
-            return Log_usingElasticSearch(settings)
+            from .log_usingElasticSearch import TextLog_usingElasticSearch
+            return TextLog_usingElasticSearch(settings)
         if settings.log_type == "email":
-            from .log_usingEmail import Log_usingEmail
-            return Log_usingEmail(settings)
+            from .log_usingEmail import TextLog_usingEmail
+            return TextLog_usingEmail(settings)
 
     @classmethod
     def add_log(cls, log):
         cls.logging_multi.add_log(log)
 
     @classmethod
-    def note(cls, template, default_params={}, stack_depth=0, **more_params):
+    def note(
+        cls,
+        template,
+        default_params={},
+        stack_depth=0,
+        log_context=None,
+        **more_params
+    ):
         if len(template) > 10000:
             template = template[:10000]
 
         params = dict(unwrap(default_params), **more_params)
 
-        log_params = Dict(
-            template=template,
-            params=params,
-            timestamp=datetime.utcnow(),
-            machine=machine_metadata.name
-        )
+        log_params = set_default({
+            "template": template,
+            "params": params,
+            "timestamp": datetime.utcnow(),
+            "machine": machine_metadata.name
+        }, log_context)
 
         if not template.startswith("\n") and template.find("\n") > -1:
             template = "\n" + template
@@ -187,7 +196,15 @@ class Log(object):
         cls.main_log.write(log_template, log_params)
 
     @classmethod
-    def unexpected(cls, template, default_params={}, cause=None, **more_params):
+    def unexpected(
+        cls,
+        template,
+        default_params={},
+        cause=None,
+        stack_depth=0,
+        log_context=None,
+        **more_params
+    ):
         if isinstance(default_params, BaseException):
             cause = default_params
             default_params = {}
@@ -212,15 +229,29 @@ class Log(object):
         )
 
     @classmethod
-    def alarm(cls, template, params={}, stack_depth=0, **more_params):
+    def alarm(
+        cls,
+        template,
+        default_params={},
+        stack_depth=0,
+        log_context=None,
+        **more_params
+    ):
         # USE replace() AS POOR MAN'S CHILD TEMPLATE
 
         template = ("*" * 80) + "\n" + indent(template, prefix="** ").strip() + "\n" + ("*" * 80)
-        Log.note(template, params=params, stack_depth=stack_depth + 1, **more_params)
+        Log.note(template, params=default_params, stack_depth=stack_depth + 1, log_context=log_context, **more_params)
 
     @classmethod
-    def alert(cls, template, params={}, stack_depth=0, **more_params):
-        return Log.alarm(template, params, stack_depth+1, **more_params)
+    def alert(
+        cls,
+        template,
+        default_params={},
+        stack_depth=0,
+        log_context=None,
+        **more_params
+    ):
+        return Log.alarm(template, default_params, stack_depth+1, log_context=log_context, **more_params)
 
     @classmethod
     def warning(
@@ -228,7 +259,7 @@ class Log(object):
         template,
         default_params={},
         cause=None,
-        stack_depth=0,       # stack trace offset (==1 if you do not want to report self)
+        stack_depth=0,
         **more_params
     ):
         if isinstance(default_params, BaseException):
@@ -241,8 +272,8 @@ class Log(object):
 
         e = Except(WARNING, template, params, cause, trace)
         Log.note(
-            unicode(e),
-            {
+            template=unicode(e),
+            default_params={
                 "warning": {# REDUNDANT INFO
                     "template": template,
                     "params": params,
@@ -260,7 +291,7 @@ class Log(object):
         template, # human readable template
         default_params={}, # parameters for template
         cause=None, # pausible cause
-        stack_depth=0,        # stack trace offset (==1 if you do not want to report self)
+        stack_depth=0,
         **more_params
     ):
         """
@@ -299,7 +330,7 @@ class Log(object):
         template,  # human readable template
         default_params={},  # parameters for template
         cause=None,  # pausible cause
-        stack_depth=0,  # stack trace offset (==1 if you do not want to report self)
+        stack_depth=0,
         **more_params
     ):
         """
@@ -345,9 +376,6 @@ class Log(object):
 
     def write(self):
         raise NotImplementedError
-
-
-
 
 
 def extract_stack(start=0):
@@ -512,141 +540,6 @@ class Except(Exception):
         return json_encoder(self.as_dict())
 
 
-class BaseLog(object):
-    def write(self, template, params):
-        pass
-
-    def stop(self):
-        pass
-
-
-class Log_usingFile(BaseLog):
-    def __init__(self, file):
-        assert file
-
-        from pyLibrary.env.files import File
-
-        self.file = File(file)
-        if self.file.exists:
-            self.file.backup()
-            self.file.delete()
-
-        self.file_lock = Lock("file lock for logging")
-
-    def write(self, template, params):
-        with self.file_lock:
-            self.file.append(expand_template(template, params))
-
-
-class Log_usingThread(BaseLog):
-
-    def __init__(self, logger):
-        # DELAYED LOAD FOR THREADS MODULE
-        from pyLibrary.thread.threads import Queue
-
-        self.queue = Queue("logs", max=10000, silent=True)
-        self.logger = logger
-
-        def worker(please_stop):
-            while not please_stop:
-                Thread.sleep(1)
-                logs = self.queue.pop_all()
-                for log in logs:
-                    if log is Thread.STOP:
-                        if DEBUG_LOGGING:
-                            sys.stdout.write("Log_usingThread.worker() sees stop, filling rest of queue\n")
-                        please_stop.go()
-                    else:
-                        self.logger.write(**log)
-
-        self.thread = Thread("log thread", worker)
-        self.thread.parent.remove_child(self.thread)  # LOGGING WILL BE RESPONSIBLE FOR THREAD stop()
-        self.thread.start()
-
-    def write(self, template, params):
-        try:
-            self.queue.add({"template": template, "params": params})
-            return self
-        except Exception, e:
-            e = Except.wrap(e)
-            sys.stdout.write("IF YOU SEE THIS, IT IS LIKELY YOU FORGOT TO RUN Log.start() FIRST\n")
-            raise e  # OH NO!
-
-    def stop(self):
-        try:
-            if DEBUG_LOGGING:
-                sys.stdout.write("injecting stop into queue\n")
-            self.queue.add(Thread.STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
-            self.thread.join()
-            if DEBUG_LOGGING:
-                sys.stdout.write("Log_usingThread telling logger to stop\n")
-            self.logger.stop()
-        except Exception, e:
-            if DEBUG_LOGGING:
-                raise e
-
-        try:
-            self.queue.close()
-        except Exception, f:
-            if DEBUG_LOGGING:
-                raise f
-
-
-class Log_usingMulti(BaseLog):
-    def __init__(self):
-        self.many = []
-
-    def write(self, template, params):
-        bad = []
-        for m in self.many:
-            try:
-                m.write(template, params)
-            except Exception, e:
-                bad.append(m)
-                sys.stdout.write("a logger failed")
-                Log.warning("Logger failed!  It will be removed: {{type}}", type=m.__class__.__name__, cause=e)
-        try:
-            for b in bad:
-                self.many.remove(b)
-        except Exception:
-            pass
-
-        return self
-
-    def add_log(self, logger):
-        self.many.append(logger)
-        return self
-
-    def remove_log(self, logger):
-        self.many.remove(logger)
-        return self
-
-    def clear_log(self):
-        self.many = []
-
-    def stop(self):
-        for m in self.many:
-            try:
-                m.stop()
-            except Exception, e:
-                pass
-
-
-class Log_usingStream(BaseLog):
-    def __init__(self, stream):
-        assert stream
-        self.stream = stream
-
-    def write(self, template, params):
-        value = expand_template(template, params)
-        if isinstance(value, unicode):
-            value = value.encode('utf8')
-        self.stream.write(value+b"\n")
-
-    def stop(self):
-        pass
-
-
 def write_profile(profile_settings, stats):
     from pyLibrary import convert
     from pyLibrary.env.files import File
@@ -689,6 +582,6 @@ machine_metadata = wrap({
 
 
 if not Log.main_log:
-    Log.main_log = Log_usingStream(sys.stdout)
+    Log.main_log = TextLog_usingStream(sys.stdout)
 
 

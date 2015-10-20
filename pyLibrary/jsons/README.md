@@ -68,15 +68,19 @@ We will iterate through the array found on property `a`, and return both `a` and
 
 **Bad - Property follows array**
 
-	json = {"a": [1, 2, 3], "b": "done"}
-	parse(json, path="a", ["a", "b"]}
+The same query, but different JSON with `b` following `a`:
 
-Since the `b` property follows the array we're iterating over, this will error out. 
+	json = {"a": [1, 2, 3], "b": "done"}
+	parse(json, path="a", required_vars=["a", "b"]}
+
+Since property `b` follows the array we're iterating over, this will raise an error. 
 
 **Good - No need for following properties**
 
+The same JSON, but different query, which does not require `b`:
+
 	json = {"a": [1, 2, 3], "b": "done"}
-	parse(json, path="a", ["a"]}
+	parse(json, path="a", required_vars=["a"]}
 
 If we do not require `b`, then streaming will proceed just fine:
 
@@ -89,9 +93,9 @@ If we do not require `b`, then streaming will proceed just fine:
 This streamer was meant for very long lists of complex objects.  Use dot-delimited naming to refer to full name of the property
 
 	json = [{"a": {"b": 1, "c": 2}}, {"a": {"b": 3, "c": 4}}, ...
-	parse(json, path=".", ["a.c"])
+	parse(json, path=".", required_vars=["a.c"])
 
-The dot (`.`) can be used to refer to the top-most array.  Notice the structure is maintained, minus the variables not requested.
+The dot (`.`) can be used to refer to the top-most array.  Notice the structure is maintained, but only includes the required variables.
 
 	{"a": {"c": 2}}
 	{"a": {"c": 4}}
@@ -99,12 +103,15 @@ The dot (`.`) can be used to refer to the top-most array.  Notice the structure 
 
 **Nested Arrays**
 
+Nested array iteration is meant to mimic a left-join from parent to child table; 
+as such, it includes every record in the parent. 
+
 	json = [
 		{"o": 1: "a": [{"b": 1}: {"b": 2}: {"b": 3}: {"b": 4}]},
 		{"o": 2: "a": {"b": 5}},
 		{"o": 3}
 	]
-	parse(json, path=[".", "a"], ["o", "a.b"])
+	parse(json, path=[".", "a"], required_vars=["o", "a.b"])
 
 The `path` parameter can be a list, which is used to indicate which properties 
 are expected to have an array, and to iterate over them.  Please notice if no 
@@ -132,9 +139,9 @@ Load your settings easily:
 
 The file format is JSON, with three important features.
 
-* Comments
-* References (using `$ref`)
-* Parameterization
+1. Comments
+2. References (using `$ref`)
+3. Parameterization
 
 
 Comments
@@ -255,7 +262,7 @@ property is not overwritten by the target's.
 **Relative File Reference**
 
 Here is the same, using a relative file reference; which is relative to the
-file that contains
+file that contains this JSON
 
 ```python
     {#LOCATED IN C:\users\kyle\dev-debug.json
@@ -355,7 +362,7 @@ Parametrized JSON
 JSON documents are allowed named parameters, which are surrounded by moustaches `{{.}}`.
 
 ```javascript
-	{
+	{//above_example.json
 	 	{{var_name}}: "value"
 	}
 ```
@@ -395,10 +402,8 @@ The `quote` transformation will deal with quoting, so ...
 	}
 ```
 
-Please see [`exapand_template`](../README.md) for more on the parameter replacement, and transformations available
+Please see [`expand_template`](../README.md) for more on the parameter replacement, and transformations available
 
-
-
-
+---
 
 also see [http://tools.ietf.org/id/draft-pbryan-zyp-json-ref-03.html](http://tools.ietf.org/id/draft-pbryan-zyp-json-ref-03.html)

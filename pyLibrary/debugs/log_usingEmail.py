@@ -12,7 +12,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-from pyLibrary.debugs.logs import BaseLog, Log
+from pyLibrary.debugs.logs import TextLog, Log
 
 from pyLibrary.env.emailer import Emailer
 from pyLibrary.meta import use_settings
@@ -26,7 +26,7 @@ WAIT_TO_SEND_MORE = HOUR
 
 
 
-class Log_usingEmail(BaseLog):
+class TextLog_usingEmail(TextLog):
 
     @use_settings
     def __init__(

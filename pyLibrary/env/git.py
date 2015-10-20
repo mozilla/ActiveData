@@ -35,3 +35,24 @@ def get_git_revision():
             proc.join()
         except Exception:
             pass
+
+@cache
+def get_remote_revision(url, branch):
+    """
+    GET REVISION OF A REMOTE BRANCH
+    """
+    #git ls-remote https://github.com/klahnakoski/TestLog-ETL.git refs/heads/etl
+    proc = Process(["git", "ls-remote", url, "refs/head/" + branch])
+
+    try:
+        while True:
+            lines = proc.communicate()
+            if not lines:
+                return None
+            if line.startswith("commit "):
+                return line[7:]
+    finally:
+        try:
+            proc.join()
+        except Exception:
+            pass

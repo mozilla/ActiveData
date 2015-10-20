@@ -15,11 +15,11 @@ from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.threads import Thread
-from .logs import BaseLog
+from .logs import TextLog
 from pyLibrary.times.durations import MINUTE
 
 
-class Log_usingElasticSearch(BaseLog):
+class TextLog_usingElasticSearch(TextLog):
 
     @use_settings
     def __init__(self, host, index, type="log", max_size=1000, batch_size=100, settings=None):

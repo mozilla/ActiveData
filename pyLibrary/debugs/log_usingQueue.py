@@ -13,12 +13,12 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary.debugs.logs import BaseLog
+from pyLibrary.debugs.logs import TextLog
 from pyLibrary.strings import expand_template, between
 from pyLibrary.thread.threads import Queue
 
 
-class Log_usingQueue(BaseLog):
+class TextLog_usingQueue(TextLog):
 
     def __init__(self):
         self.queue = Queue("log messages")

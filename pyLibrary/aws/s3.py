@@ -176,9 +176,10 @@ class Bucket(object):
                     if simple == key:
                         perfect = m
                         too_many = False
-                    if favorite and not perfect:
-                        too_many = True
-                    favorite = m
+                    if simple.startswith(key + ".") or simple.startswith(key + ":"):
+                        if favorite and not perfect:
+                            too_many = True
+                        favorite = m
                 except Exception, e:
                     error = e
 

@@ -15,7 +15,7 @@ from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.threads import Thread
-from .logs import TextLog
+from pyLibrary.debugs.text_logs import TextLog
 from pyLibrary.times.durations import MINUTE
 
 

@@ -12,14 +12,15 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-from pyLibrary.debugs.logs import TextLog, Log
 
+from pyLibrary.debugs.text_logs import TextLog
+from pyLibrary.debugs.logs import Log
 from pyLibrary.env.emailer import Emailer
 from pyLibrary.meta import use_settings
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Lock
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import Duration, HOUR, YEAR
+from pyLibrary.times.durations import HOUR, YEAR
 
 
 WAIT_TO_SEND_MORE = HOUR

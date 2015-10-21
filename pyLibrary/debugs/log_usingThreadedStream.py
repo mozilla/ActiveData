@@ -15,7 +15,8 @@ from __future__ import absolute_import
 
 from datetime import datetime, timedelta
 import sys
-from .logs import TextLog, DEBUG_LOGGING, Log
+from pyLibrary.debugs.text_logs import TextLog, DEBUG_LOGGING
+from pyLibrary.debugs.logs import Log
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Thread
 

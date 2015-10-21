@@ -202,7 +202,7 @@ def parse(json, path, expected_vars=NO_VARS):
                 index += 1
                 if c in b',]}':
                     break
-            return index
+            return index - 1
 
         # OBJECTS AND ARRAYS ARE MORE INVOLVED
         stack = [None] * 1024

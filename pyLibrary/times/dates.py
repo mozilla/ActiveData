@@ -267,7 +267,7 @@ def _pypy_value2date(*args):
         return output
     except Exception, e:
         from pyLibrary.debugs.logs import Log
-        Log.error("Can not convert {{args}} to Date",  args= args, cause=e)
+        Log.error("Can not convert {{args}} to Date", args=args, cause=e)
 
 
 if platform.python_implementation() == "PyPy":

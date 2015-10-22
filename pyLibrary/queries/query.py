@@ -270,9 +270,9 @@ def _normalize_edge(edge, schema=None):
     else:
         edge = wrap(edge)
         if not edge.name and not isinstance(edge.value, basestring):
-            Log.error("You must name compound edges: {{edge}}",  edge= edge)
+            Log.error("You must name compound edges: {{edge}}", edge=edge)
 
-        if isinstance(edge.value, (Mapping, list)) and not edge.domain:
+        if isinstance(edge.value, (list, set)) and not edge.domain:
             # COMPLEX EDGE IS SHORT HAND
             domain = _normalize_domain(schema=schema)
             domain.dimension = Dict(fields=edge.value)

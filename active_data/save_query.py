@@ -58,7 +58,8 @@ class SaveQueries(object):
         result = self.es.query({
             "select": "*",
             "from": {"type": "elasticsearch", "settings": self.es.settings},
-            "where": {"prefix": {"hash": hash}}
+            "where": {"prefix": {"hash": hash}},
+            "format": "list"
         })
 
         try:

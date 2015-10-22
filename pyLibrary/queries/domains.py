@@ -706,6 +706,8 @@ keyword_pattern = re.compile(r"\w+(?:(\\\.|\.)\w+)*")
 def is_keyword(value):
     if not value or not isinstance(value, basestring):
         return False  # _a._b
+    if value == ".":
+        return True
     match = keyword_pattern.match(value)
     if not match:
         return False

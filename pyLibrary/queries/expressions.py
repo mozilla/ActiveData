@@ -91,6 +91,8 @@ def qb_expression_to_ruby(expr):
         return "null"
     elif Math.is_number(expr):
         return unicode(expr)
+    elif expr == ".":
+        return "_source"
     elif is_keyword(expr):
         return "doc[" + convert.string2quote(expr) + "].value"
     elif isinstance(expr, basestring):
@@ -147,10 +149,49 @@ def qb_expression_to_ruby(expr):
 
     cop = complex_operators.get(op)
     if cop:
-        output = cop(term).to_ruby()
+        output = cop(op, term).to_ruby()
         return output
 
     Log.error("`{{op}}` is not a recognized operation",  op= op)
+
+def qb_expression_to_missing(expr):
+    if expr == None:
+        return True
+    elif isinstance(expr, unicode):
+        if expr == ".":
+            return False
+        elif is_keyword(expr):
+            return {"missing": expr}
+        else:
+            Log.error("Expecting a json path")
+    elif Math.is_integer(expr):
+        return False
+    elif isinstance(expr, Date):
+        return False
+    elif expr is True:
+        return False
+    elif expr is False:
+        return False
+
+    op, term = expr.items()[0]
+
+    mop = python_multi_operators.get(op)
+    if mop:
+        raise NotImplementedError
+
+    bop = python_binary_operators.get(op)
+    if bop:
+        raise NotImplementedError
+
+    uop = python_unary_operators.get(op)
+    if uop:
+        raise NotImplementedError
+
+    cop = complex_operators.get(op)
+    if cop:
+        return cop(op, term).missing()
+
+    Log.error("`{{op}}` is not a recognized operation", op=op)
 
 
 def qb_expression_to_python(expr):
@@ -229,8 +270,8 @@ def get_all_vars(expr):
     elif isinstance(expr, _Query):
         return query_get_all_vars(expr)
     elif isinstance(expr, unicode):
-        if expr == "." or is_keyword(expr):
-            return set([expr])
+        if is_keyword(expr):
+            return {expr}
         else:
             Log.error("Expecting a json path")
     elif expr is True:
@@ -600,7 +641,11 @@ class CoalesceOp(object):
         self.vals = unwrap(term)
 
     def to_ruby(self):
-        raise NotImplementedError
+        acc = qb_expression_to_ruby(self.vals[-1])
+        for v in reversed(self.vals[:-1]):
+            r = qb_expression_to_ruby(v)
+            acc = "if ((" + r + ") != null) { " + r + "} else {" + acc + "}"
+        return acc
 
     def to_python(self):
         return "coalesce(" + (",".join(map(qb_expression_to_python, self.vals))) + ")"
@@ -608,10 +653,14 @@ class CoalesceOp(object):
     def to_esfilter(self):
         return {"or": [{"exists": {"field": v}} for v in self.vals]}
 
+    def missing(self):
+        # RETURN true FOR RECORDS THE WOULD RETURN NULL
+        return {"and": [qb_expression_to_missing(v) for v in self.vals]}
+
     def vars(self):
         output = set()
         for v in self.vals:
-            output |= v
+            output |= get_all_vars(v)
         return output
 
     def map(self, map):

@@ -350,6 +350,19 @@ The literal ca be primitive, or whole objects
 		{"literal": {"name":"Kyle Lahnakoski", "age": 41}}
 
 
+### `select` Operator ###
+
+`select` can stand alone as an operator; with similar semantics to the select clause in the `from` operator.  It returns an object where each `path` is assigned `expression`.
+
+		{"select": [
+            {"name": path1, "value": expression1},
+			{"name": path2, "value": expression2},
+			...
+		]}
+
+This operator is certainly not needed in the he `select` clause of a query, but does find use in the `edges` clause; where each coordinate is not just a value, but a complex object.
+
+
 ### `ref` Operator ###
 
 **Not implemented.  Security risk if not done properly (eg file://)**

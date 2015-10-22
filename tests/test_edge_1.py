@@ -1063,6 +1063,84 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_edge_using_list(self):
+        data = [
+            {"r": "a", "s": "aa"},
+            {"s": "bb"},
+            {"r": "bb", "s": "bb"},
+            {"r": "c", "s": "cc"},
+            {"s": "dd"},
+            {"r": "e", "s": "ee"},
+            {"r": "e", "s": "ee"},
+            {"r": "f"},
+            {"r": "f"},
+            {"k": 1}
+        ]
+
+        test = {
+            "data": data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "edges": [{
+                    "name": "v",
+                    "value": ["r", "s"]
+                }]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"v": ["a", "aa"], "count": 1},
+                    {"v": [null, "bb"], "count": 1},
+                    {"v": ["bb", "bb"], "count": 1},
+                    {"v": ["c", "cc"], "count": 1},
+                    {"v": [null, "dd"], "count": 1},
+                    {"v": ["e", "ee"], "count": 2},
+                    {"v": ["f", null], "count": 2},
+                    {"v": [null, null], "count": 1}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["v", "count"],
+                "data": [
+                    [["a", "aa"], 1],
+                    [[null, "bb"], 1],
+                    [["bb", "bb"], 1],
+                    [["c", "cc"], 1],
+                    [[null, "dd"], 1],
+                    [["e", "ee"], 2],
+                    [["f", null], 2],
+                    [[null, null], 1]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "v",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "partitions": [
+                                {"dataIndex": 0, "value": ["a", "aa"]},
+                                {"dataIndex": 1, "value": [null, "bb"]},
+                                {"dataIndex": 2, "value": ["e", "ee"]},
+                                {"dataIndex": 3, "value": [null, "dd"]},
+                                {"dataIndex": 4, "value": ["c", "cc"]},
+                                {"dataIndex": 5, "value": ["bb", "bb"]},
+                                {"dataIndex": 6, "value": ["f", null]},
+                                {"dataIndex": 7, "value": [null, null]}
+                            ]
+                        }
+                    }
+                ],
+                "data": {
+                    "count": [1, 1, 2, 1, 1, 1, 2, 1, 0]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
 
 
 simple_test_data = [

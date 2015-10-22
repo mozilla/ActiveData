@@ -594,6 +594,22 @@ def value_compare(l, r, ordering=1):
             return - ordering
     elif r == None:
         return ordering
+
+    if isinstance(l, list) or isinstance(r, list):
+        for a, b in zip(listwrap(l), listwrap(r)):
+            c = value_compare(a, b) * ordering
+            if c != 0:
+                return c
+    elif isinstance(l, Mapping):
+        if isinstance(r, Mapping):
+            for k in set(l.keys()) | set(r.keys()):
+                c = value_compare(l[k], r[k]) * ordering
+                if c != 0:
+                    return c
+        else:
+            return 1
+    elif isinstance(r, Mapping):
+        return -1
     else:
         return cmp(l, r) * ordering
 

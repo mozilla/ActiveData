@@ -24,77 +24,37 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 	var DEBUG = true;  // TAKES A SMALLER SAMPLE FOR FASTER ITERATION
 
 	var __main = function*(){
-		var raw_failures = null;
-		var success = null;
+		var all_steps = null;
 
 		var a = Log.action("find test failures", true);
 		try {
 			//PULL FAILURE DETAILS
 			var result = yield (search({
-			    "select": [
-			        {
-			            "value": "order",
-			            "aggregate": "average"
-			        }
-			    ],
-			    "edges": [
-			        {
-			            "name": "step",
-			            "value": {
-			                "coalesce": [
-			                    "builder.step",
-			                    "harness.step"
-			                ]
-			            }
-			        }
-			    ],
-			    "from": "jobs.action.timings",
-			    "where": {
-			        "eq": {
-			            "build.platform": "win32"
-			        }
-			    }
+				"select":[
+					{"value":"order","aggregate":"average"},
+					{"aggregate":"count"}
+				],
+				"edges":[{
+					"name":"step",
+					"value":{"coalesce":["builder.step","harness.step"]}
+				}],
+				"from":"jobs.action.timings",
+				"where":{"eq":{"build.platform":"win32"}},
+				"limit":1000,
+				"format":"list"
 			}));
-			raw_failures = result.data;
+			all_steps = result.data;
 		} catch (e) {
-			Log.error("Problem collecting test failures from ActiveData", e);
+			Log.error("Find steps", e);
 		} finally {
 			Log.actionDone(a);
 		}//try
 
-		addGroupId(result, ["suite", "test", "platform", "build_type"]);
-
-		Log.alert(raw_failures.length + " failures found since " + RECENT_DATE.format("MMM dd, yyyy"));
-
-		a = Log.action("calculating...", true);
-		try {
 
 
-			var testGroups = (yield (Qb.calc2List({
-				"from": raw_failures,
-				"select": [
-//					{"name": "subtests", "value": "subtest_name", "aggregate": "union"},
-					{"name": "last_fail", "value": "build_date", "aggregate": "max"},
-					{"name": "details", "value": ".", "aggregate": "list"},
-					{"value": "_group_id", "aggregate": "one"},
-					{"name": "failure_count", "value": ".", "aggregate": "count"}
-				],
-				"edges": ["suite", "test", "platform", "build_type"]
-			}))).list;
 
-			Log.alert(testGroups.length + " unique combinations");
 
-			tests = Map.zip(testGroups.map(function(t){
-				return [t._group_id, t];
-			}));
 
-			testGroups = (yield (Qb.calc2List({
-				"from": testGroups,
-				"where": (DEBUG ? true : {"gt": {"failure_count": 1}}),
-				"sort": {"value": "failure_count", "sort": -1}
-			}))).list;
-
-			showFailureTable(testGroups);
 
 		} finally {
 			Log.actionDone(a);

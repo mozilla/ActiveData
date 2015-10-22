@@ -40,7 +40,11 @@ def get_decoders_by_depth(query):
     output = DictList()
     for e in coalesce(query.edges, query.groupby, []):
         e = e.copy()
-        vars_ = get_all_vars(e.value)
+        if e.value:
+            vars_ = get_all_vars(e.value)
+        else:
+            vars_ = set(e.domain.dimension.fields)
+
         map_ = {v: schema[v].abs_name for v in vars_}
         e.value = expression_map(map_, e.value)
         depths = set(len(listwrap(schema[v].nested_path)) for v in vars_)
@@ -493,7 +497,7 @@ class DefaultDecoder(SetDecoder):
                     }},
                     es_query
                 ),
-                "_missing": {"filter": set_default(missing, es_query)}
+                "_missing": set_default({"filter": missing}, es_query)
             }})
             return output
 

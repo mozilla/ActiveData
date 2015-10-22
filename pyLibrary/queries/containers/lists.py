@@ -59,9 +59,9 @@ class ListContainer(Container):
 
             if q.select:
                 frum = frum.select(q.select)
-
+        #TODO: ADD EXTRA COLUMN DESCRIPTIONS TO RESULTING SCHEMA
         for param in q.window:
-            frum = frum.window(param)
+            frum.window(param)
 
         return frum
 
@@ -117,7 +117,8 @@ class ListContainer(Container):
 
     def window(self, window):
         _ = window
-        Log.error("not implemented")
+        qb.window(self.data, window)
+        return self
 
     def having(self, having):
         _ = having
@@ -165,7 +166,7 @@ def get_schema_from_list(frum):
     SCAN THE LIST FOR COLUMN TYPES
     """
     columns = {}
-    _get_schema_from_list(frum, columns, [], 0)
+    _get_schema_from_list(frum, columns, prefix=[], nested_path=[])
     return columns
 
 def _get_schema_from_list(frum, columns, prefix, nested_path):

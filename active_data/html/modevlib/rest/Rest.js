@@ -35,6 +35,11 @@ Rest.send=function*(ajaxParam){
 	//FILL IN THE OPTIONAL VALUES
 	if (ajaxParam.type===undefined) ajaxParam.type="POST";
 	ajaxParam.type=ajaxParam.type.toUpperCase();
+	if (ajaxParam.json){
+		ajaxParam.data = convert.value2json(ajaxParam.json);
+		ajaxParam.dataType = "json";
+		ajaxParam.json = undefined;
+	}
 	if (ajaxParam.dataType===undefined) ajaxParam.dataType="json";
 	if (ajaxParam.error===undefined){
 		ajaxParam.error=function(errorData){

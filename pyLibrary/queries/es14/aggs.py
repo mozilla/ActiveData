@@ -20,7 +20,7 @@ from pyLibrary.queries import qb, es09
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword, DefaultDomain
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, qb_expression_to_ruby, get_all_vars, split_expression_by_depth, expression_map
+from pyLibrary.queries.expressions import simplify_esfilter, qb_expression_to_ruby, get_all_vars, split_expression_by_depth, expression_map, qb_expression_to_esfilter, qb_expression_to_missing
 from pyLibrary.queries.query import DEFAULT_LIMIT
 from pyLibrary.times.timer import Timer
 
@@ -231,8 +231,6 @@ class AggsDecoder(object):
                     e.domain = set_default(DefaultDomain(limit=limit), e.domain.as_dict())
                     return object.__new__(DefaultDecoder, e)
 
-            elif isinstance(e.value, (list, Mapping)):
-                Log.error("Not supported yet")
             else:
                 return object.__new__(DefaultDecoder, e)
 
@@ -482,6 +480,23 @@ class DefaultDecoder(SetDecoder):
 
     def append_query(self, es_query, start):
         self.start = start
+
+        if isinstance(self.edge.value, Mapping):
+            script_field = qb_expression_to_ruby(self.edge.value)
+            missing = qb_expression_to_esfilter(qb_expression_to_missing(self.edge.value))
+
+            output = wrap({"aggs": {
+                "_match": set_default(
+                    {"terms": {
+                        "script_field": script_field,
+                        "size": self.edge.domain.limit
+                    }},
+                    es_query
+                ),
+                "_missing": {"filter": set_default(missing, es_query)}
+            }})
+            return output
+
         output = wrap({"aggs": {
             "_match": set_default(
                 {"terms": {

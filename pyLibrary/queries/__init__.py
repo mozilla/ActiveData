@@ -85,7 +85,7 @@ def wrap_from(frum, schema=None):
     elif isinstance(frum, Mapping) and (frum["from"] or isinstance(frum["from"], (list, set))):
         from pyLibrary.queries.query import Query
         return Query(frum, schema=schema)
-    elif isinstance(frum, list):
+    elif isinstance(frum, (list, set)):
         return _ListContainer("test_list", frum)
     else:
         return frum

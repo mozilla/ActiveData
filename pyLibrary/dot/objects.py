@@ -69,6 +69,8 @@ class DictObject(Mapping):
                     yield k, getattr(obj, k, None)
             return output()
 
+    def as_dict(self):
+        return self
 
     def __iter__(self):
         return (k for k in self.keys())
@@ -94,6 +96,8 @@ def dictwrap(v):
         _set(m, "_dict", v)  # INJECT m.__dict__=v SO THERE IS NO COPY
         return m
     elif type_ is Dict:
+        return v
+    elif type_ is DictObject:
         return v
     elif type_ is NoneType:
         return None   # So we allow `is None`

@@ -126,6 +126,19 @@ def json(value):
     return _convert.value2json(value, pretty=True)
 
 
+def tab(value):
+    if not _convert:
+        _late_import()
+
+    if isinstance(value, Mapping):
+        h, d = zip(*wrap(value).leaves())
+        return \
+            "\t".join(map(_convert.value2json, h)) + \
+            "\n" + \
+            "\t".join(map(_convert.value2json, d))
+    else:
+        unicode(value)
+
 def indent(value, prefix=u"\t", indent=None):
     if indent != None:
         prefix = prefix * indent

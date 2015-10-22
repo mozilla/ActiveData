@@ -170,8 +170,11 @@ class Date(object):
     def __eq__(self, other):
         if other == None:
             return Null
-        other = Date(other)
-        return self.value==other.value
+        try:
+            other = Date(other)
+        except Exception:
+            return False
+        return self.value == other.value
 
     def __le__(self, other):
         other = Date(other)
@@ -188,6 +191,16 @@ class Date(object):
     def __add__(self, other):
         return self.add(other)
 
+
+    @classmethod
+    def min(cls, *values):
+        output = Null
+        for v in values:
+            if output == None and v != None:
+                output = v
+            elif v < output:
+                output = v
+        return output
 
 def _cpython_value2date(*args):
     try:
@@ -226,7 +239,8 @@ def _cpython_value2date(*args):
         return output
     except Exception, e:
         from pyLibrary.debugs.logs import Log
-        Log.error("Can not convert {{args}} to Date",  args= args, cause=e)
+
+        Log.error("Can not convert {{args}} to Date", args=args, cause=e)
 
 
 def _pypy_value2date(*args):
@@ -257,7 +271,7 @@ def _pypy_value2date(*args):
         return output
     except Exception, e:
         from pyLibrary.debugs.logs import Log
-        Log.error("Can not convert {{args}} to Date",  args= args, cause=e)
+        Log.error("Can not convert {{args}} to Date", args=args, cause=e)
 
 
 if platform.python_implementation() == "PyPy":

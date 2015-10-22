@@ -16,15 +16,16 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.thread.threads import Queue, Thread, Signal
 
 
-DEBUG=True
+DEBUG = True
+
 
 class Process(object):
-
-    def __init__(self, name, params, cwd=None):
+    def __init__(self, name, params, cwd=None, env=None):
         self.name = name
         self.service_stopped = Signal()
-        self.send = Queue("send")
-        self.recieve = Queue("recieve")
+        self.stdin = Queue("stdin")
+        self.stdout = Queue("stdout")
+        self.stderr = Queue("stderr")
 
         try:
             self.service = service = subprocess.Popen(
@@ -33,48 +34,47 @@ class Process(object):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 bufsize=-1,
-                cwd=cwd
+                cwd=cwd,
+                env=env
             )
 
             self.stopper = Signal()
             self.stopper.on_go(lambda: service.kill())
-            Thread.run(self.name+" waiter", waiter, self)
-            Thread.run(self.name+" stdout", reader, service.stdout, self.recieve, please_stop=self.stopper)
-            Thread.run(self.name+" stderr", reader, service.stderr, self.recieve, please_stop=self.stopper)
-            Thread.run(self.name+" stdin", writer, service.stdin, self.recieve, please_stop=self.stopper)
+            Thread.run(self.name + " waiter", self.waiter, self)
+            Thread.run(self.name + " stdin", self.writer, service.stdin, self.stdin, please_stop=self.stopper)
+            Thread.run(self.name + " stdout", self.reader, service.stdout, self.stdout, please_stop=self.stopper)
+            Thread.run(self.name + " stderr", self.reader, service.stderr, self.stderr, please_stop=self.stopper)
         except Exception, e:
             Log.error("Can not call", e)
 
     def stop(self):
         self.stopper.go()
-        self.send.add("exit")
+        self.stdin.add("exit")  # ONE MORE SEND
 
     def join(self):
         self.service_stopped.wait_for_go()
 
+    def waiter(self, please_stop):
+        self.service.wait()
+        if DEBUG:
+            Log.alert("{{name}} stopped with returncode={{returncode}}", name=self.name, returncode=self.service.returncode)
+        self.service_stopped.go()
 
-def waiter(this, please_stop):
-    this.service.wait()
-    if DEBUG:
-        Log.alert("{{name}} stopped", name=this.name)
-    this.service_stopped.go()
+    def reader(self, pipe, recieve, please_stop):
+        while not please_stop:
+            line = pipe.readline()
+            if self.service.returncode is not None:
+                return
 
-def reader(stdout, recieve, please_stop):
-    while not please_stop:
-        line = stdout.readline()
-        if line:
             recieve.add(line)
-            Log.note("FROM PROCESS: {{line}}", line=line.rstrip())
-        else:
-            Thread.sleep(1)
-    stdout.close()
+            Log.note("FROM {{process}}: {{line}}", process=self.name, line=line.rstrip())
+        pipe.close()
 
-
-def writer(stdin, send, please_stop):
-    while not please_stop:
-        line = send.pop()
-        if line:
-            stdin.write(line+"\n")
-    stdin.close()
+    def writer(self, pipe, send, please_stop):
+        while not please_stop:
+            line = send.pop()
+            if line:
+                pipe.write(line + "\n")
+        pipe.close()
 
 

@@ -989,6 +989,81 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_edge_using_expression(self):
+        data = [
+            {"r": "a", "s": "aa"},
+            {"s": "bb"},
+            {"r": "bb", "s": "bb"},
+            {"r": "c", "s": "cc"},
+            {"s": "dd"},
+            {"r": "e", "s": "ee"},
+            {"r": "e", "s": "ee"},
+            {"r": "f"},
+            {"r": "f"},
+            {"k": 1}
+        ]
+
+        test = {
+            "data": data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "edges": [{
+                    "name": "v",
+                    "value": {"coalesce": ["r", "s"]}
+                }]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"v": "a", "count": 1},
+                    {"v": "bb", "count": 2},
+                    {"v": "c", "count": 1},
+                    {"v": "dd", "count": 1},
+                    {"v": "e", "count": 2},
+                    {"v": "f", "count": 2},
+                    {"v": null, "count": 1}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["v", "count"],
+                "data": [
+                    ["a", 1],
+                    ["bb", 2],
+                    ["c", 1],
+                    ["dd", 1],
+                    ["e", 2],
+                    ["f", 2],
+                    [null, 1]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "v",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "partitions": [
+                                {"value": "a", "dataIndex": 0},
+                                {"value": "bb", "dataIndex": 1},
+                                {"value": "c", "dataIndex": 2},
+                                {"value": "dd", "dataIndex": 3},
+                                {"value": "e", "dataIndex": 4},
+                                {"value": "f", "dataIndex": 5},
+                            ]
+                        }
+                    }
+                ],
+                "data": {
+                    "count": [1, 2, 1, 1, 2, 2, 1]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
 
 simple_test_data = [
     {"a": "c", "v": 13},

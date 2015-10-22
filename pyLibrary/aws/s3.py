@@ -176,9 +176,10 @@ class Bucket(object):
                     if simple == key:
                         perfect = m
                         too_many = False
-                    if favorite and not perfect:
-                        too_many = True
-                    favorite = m
+                    if simple.startswith(key + ".") or simple.startswith(key + ":"):
+                        if favorite and not perfect:
+                            too_many = True
+                        favorite = m
                 except Exception, e:
                     error = e
 
@@ -329,13 +330,13 @@ class Bucket(object):
                 cause=e
             )
 
-    def write_lines(self, key, *lines):
+    def write_lines(self, key, lines):
         self._verify_key_format(key)
         storage = self.bucket.new_key(key + ".json.gz")
 
         buff = BytesIO()
         archive = gzip.GzipFile(fileobj=buff, mode='w')
-        count=0
+        count = 0
         for l in lines:
             if hasattr(l, "__iter__"):
                 for ll in l:

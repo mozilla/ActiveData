@@ -31,34 +31,30 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 		try {
 			//PULL FAILURE DETAILS
 			var result = yield (search({
-//				"from": "unittest.result.subtests",
-				"from": "unittest",
-				"select": [
-					"_id",
-//					{"name": "subtest_name", "value": "name"},
-//					"message",
-					{"name": "suite", "value": "run.suite"},
-					{"name": "chunk", "value": "run.chunk"},
-					{"name": "duration", "value": "result.duration"},
-					{"name": "test", "value": "result.test"},
-					{"name": "platform", "value": "build.platform"},
-					{"name": "build_type", "value": "build.type"},
-					{"name": "build_date", "value": "build.date"},
-					{"name": "branch", "value": "build.branch"},
-					{"name": "revision", "value": "build.revision12"},
-					{"name": "ok", "value": "result.ok"}
-				],
-				"where": {"and": [
-					{"gte": {"run.timestamp": RECENT_DATE.unix()}},
-					{"lt": {"run.timestamp": TO_DATE.unix()}},
-					{"eq": {"result.ok": false}},
-//					{"eq": {"ok": false}},
-					{"eq": {"build.branch": "mozilla-inbound"}}
-				]},
-				"limit": (DEBUG ? 100 : 100000),
-				"format": "list"
+			    "select": [
+			        {
+			            "value": "order",
+			            "aggregate": "average"
+			        }
+			    ],
+			    "edges": [
+			        {
+			            "name": "step",
+			            "value": {
+			                "coalesce": [
+			                    "builder.step",
+			                    "harness.step"
+			                ]
+			            }
+			        }
+			    ],
+			    "from": "jobs.action.timings",
+			    "where": {
+			        "eq": {
+			            "build.platform": "win32"
+			        }
+			    }
 			}));
-
 			raw_failures = result.data;
 		} catch (e) {
 			Log.error("Problem collecting test failures from ActiveData", e);

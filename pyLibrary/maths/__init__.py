@@ -10,11 +10,12 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+from decimal import Decimal
 import math
 import __builtin__
 
 
-from pyLibrary.strings import find_first
+from pyLibrary.strings import find_first, _Log
 from pyLibrary.dot import Null, coalesce
 
 
@@ -179,7 +180,7 @@ class Math(object):
     @staticmethod
     def floor(value, mod=1):
         """
-        x == Math.floor(x, a) + Math.mod(x, a)  FOR ALL a
+        x == Math.floor(x, a) + Math.mod(x, a)  FOR ALL a, x
         """
         if value == None:
             return None
@@ -227,7 +228,9 @@ class Math(object):
         """
         if value == None:
             return None
-        v = int(math.floor(value+mod))
+        mod = int(mod)
+
+        v = int(math.floor(value + mod))
         return v - (v % mod)
 
     @staticmethod

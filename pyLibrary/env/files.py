@@ -229,6 +229,9 @@ class File(object):
         return output()
 
     def append(self, content):
+        """
+        add a line to file
+        """
         if not self.parent.exists:
             self.parent.create()
         with open(self._filename, "ab") as output_file:

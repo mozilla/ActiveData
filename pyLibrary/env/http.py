@@ -28,7 +28,7 @@ from requests import sessions, Response
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import Dict, coalesce, wrap
+from pyLibrary.dot import Dict, coalesce, wrap, set_default
 from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.durations import SECOND
@@ -91,6 +91,11 @@ def request(method, url, zip=False, retry=None, **kwargs):
         retry = Dict(times=retry, sleep=SECOND)
     else:
         retry = wrap(retry)
+        set_default(retry.sleep, {"times": 1, "sleep": 0})
+
+    if b'json' in kwargs:
+        kwargs[b'data'] = convert.value2json(kwargs[b'json']).encode("utf8")
+        del kwargs[b'json']
 
     try:
         if zip and len(coalesce(kwargs.get(b"data"))) > 1000:

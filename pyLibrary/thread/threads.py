@@ -152,7 +152,7 @@ class Queue(object):
         if timeout:
             time_to_stop_waiting = now + timeout
         else:
-            time_to_stop_waiting = Date.MAX
+            time_to_stop_waiting = datetime(2286, 11, 20, 17, 46, 39)
 
         if self.next_warning < now:
             self.next_warning = now + timedelta(seconds=wait_time)
@@ -550,9 +550,9 @@ class Thread(object):
                     break
             return
 
-        if seconds is not None:
+        if seconds != None:
             time.sleep(seconds)
-        elif till is not None:
+        elif till != None:
             if isinstance(till, datetime):
                 duration = (till - datetime.utcnow()).total_seconds()
             else:

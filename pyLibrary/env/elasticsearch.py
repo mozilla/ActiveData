@@ -106,7 +106,7 @@ class Index(Features):
         self.path = "/" + full_index + "/" + type
 
         if self.debug:
-            Log.alert("elasticsearch debugging for index {{url}} is on", index=self.url)
+            Log.alert("elasticsearch debugging for {{url}} is on", url=self.url)
 
     @property
     def url(self):
@@ -357,7 +357,7 @@ class Index(Features):
         else:
             Log.error("Do not know how to handle ES version {{version}}",  version=self.cluster.version)
 
-    def search(self, query, timeout=None):
+    def search(self, query, timeout=None, retry=None):
         query = wrap(query)
         try:
             if self.debug:
@@ -370,7 +370,8 @@ class Index(Features):
             return self.cluster.post(
                 self.path + "/_search",
                 data=query,
-                timeout=coalesce(timeout, self.settings.timeout)
+                timeout=coalesce(timeout, self.settings.timeout),
+                retry=retry
             )
         except Exception, e:
             Log.error(

@@ -568,8 +568,8 @@ convert.List2HTMLTable = function(data, options){
 		data = data.list;
 	} else if (data.meta && data.meta.format=="list" && data.data){
 		//CONVERT FROM ActiveData LIST
+		options = {"columns": data.header};
 		data = data.data;
-		options = undefined;
 	}//endif
 
 	if (data.length==0){

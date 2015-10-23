@@ -9,9 +9,9 @@
 <BODY style="position:relative;">
 
 <div style="position:absolute;left:10px;right:10px;">
-	<h3 id="title">Buildbot Timings<span id="status" style="height:30px">Page Loading...</span><span class="loading"><img src="images/spinner.gif" alt=""></span></h3>
+	<h3 id="title">Buildbot Timings (past 2 days, win32 only)<span id="status" style="height:30px">Page Loading...</span><span class="loading"><img src="images/spinner.gif" alt=""></span></h3>
 
-	<div id="details" style="overflow-y: scroll;height:300px;position:absolute;right:10px;left:10px;"></div>
+	<div id="details" style="overflow-y: scroll;position:absolute;left:10px;"></div>
 	<!--<div id="chart" class="chart" style="text-align:center;width:800px;height:300px;"></div>-->
 </div>
 
@@ -21,7 +21,10 @@
 
 importScript(['js/util.js'], function(){
 
-	var focusFilter = {"eq": {"build.platform": "win32"}};
+	var focusFilter = {"and": [
+		{"eq": {"build.platform": "win32"}},
+		{"gt": {"action.start_time": Date.now().subtract(Duration.DAY.multiply(2)).unix()}}
+	]};
 
 
 	var __main = function*(){
@@ -71,11 +74,11 @@ importScript(['js/util.js'], function(){
 
 			var a = Log.action("find durations", true);
 			try {
-				//PULL FAILURE DETAILS
 				var result = yield (search({
 					"select": [
 						{"value": "order", "aggregate": "average"},
-						{"name":"duration", "value": {"coalesce":["builder.duration", "harness.duration"]}, "aggregate": "average"},
+						{"name":"b_duration", "value": "builder.duration", "aggregate": "average"},
+						{"name":"h_duration", "value": "harness.duration", "aggregate": "average"},
 						{"aggregate":"count"}
 					],
 					"groupby": ["builder.step", "harness.step"],
@@ -83,11 +86,17 @@ importScript(['js/util.js'], function(){
 					"where": {"and": [
 						focusFilter,
 						{"or": steps.select("step").map(function(v){
-							return {"eq": {"action.timings.builder.step": v[0], "action.timings.harness.step": v[1]}};
+							if (v[1]){
+								return {"eq": {"builder.step": v[0], "harness.step": v[1]}};
+							}else{
+								return {"and":[
+									{"eq": {"builder.step": v[0]}},
+									{"missing":"harness.step"}
+								]};
+							}//endif
 						})}
 					]},
 					"limit": 1000,
-					"sort":"order",
 					"format": "list"
 				}));
 				step_timings = result;
@@ -96,6 +105,30 @@ importScript(['js/util.js'], function(){
 			} finally {
 				Log.actionDone(a);
 			}//try
+
+			step_timings.data = Qb.sort(step_timings.data, "order");
+			step_timings.data.forall(function(v, i){
+				//DO NOT SHOW BUILDER STEP THAT HAS HARNESS SUB-STEPS (TO MINIMIZE CONFUSION)
+				next = step_timings.data[i+1];
+				if (next && next.harness && !v.harness){
+					v.b_duration=null;
+				}//endif
+
+				//FORMAT STEP
+				v.step = v.builder.step;
+				if (v.harness) {
+					v.step = v.step + "::" + v.harness.step;
+				}//endif
+
+				//COALESCE DURATION
+				v.duration = coalesce(aMath.round(v.h_duration, 0), aMath.round(v.b_duration, 0));
+			});
+
+			//ONLY SHOW step AND duration
+			step_timings.header = [
+				{"name": "step"},
+				{"name": "duration"},
+			];
 
 			$("#details").html(convert.List2HTMLTable(step_timings));
 

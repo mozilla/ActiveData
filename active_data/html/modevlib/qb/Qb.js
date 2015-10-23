@@ -970,20 +970,15 @@ Qb.getColumnsFromList = function(data){
 	if (data.length==0 || typeof(data[0])=="string")
 		return [];
 
-	var output = [];
-	for(var i = 0; i < data.length; i++){
-		//WHAT ABOUT LISTS OF VALUES, WHAT IS THE COLUMN "NAME"
-//		if (typeof data[i] != "object") return ["value"];
-		var keys = Object.keys(data[i]);
-		kk: for(var k = 0; k < keys.length; k++){
-			for(var c = 0; c < output.length; c++){
-				if (output[c].name == keys[k]) continue kk;
-			}//for
-			var column={"name":keys[k], "domain":Qb.domain.value};
-			output.push(column);
-		}//for
+	var output = {};
+	for(var i = 0; i < data.length; i++) {
+		Map.forall(data[i], function(k, v){
+			if (v === undefined || v == null) return;
+			if (output[k]) return;
+			output[k] = {"name": k, "domain": Qb.domain.value};
+		});
 	}//for
-	return output;
+	return Map.values(output);
 };//method
 
 

@@ -16,7 +16,7 @@ from collections import Mapping
 from pyLibrary import queries
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND
-from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field, join_field, unwrap
+from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field, join_field, unwrap, wrap
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
 from pyLibrary.maths import Math
@@ -66,18 +66,19 @@ def es_setop(es, query):
 
 def extract_rows(es, es_query, query):
     is_list = isinstance(query.select, list)
+    select = wrap([s.copy() for s in listwrap(query.select)])
     new_select = DictList()
     column_names = set(c.name for c in query.frum.get_columns() if c.type not in ["object"] and (not c.nested_path or c.abs_name == c.nested_path or not c.nested_path))
     source = "fields"
 
     i = 0
-    for s in listwrap(query.select):
+    for s in select:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if s.value == "*":
             es_query.fields = None
             source = "_source"
 
-            net_columns = column_names - set(listwrap(query.select).name)
+            net_columns = column_names - set(select.name)
             for n in net_columns:
                 new_select.append({
                     "name": n,

@@ -17,6 +17,8 @@ from pyLibrary.dot import wrap
 from tests.base_test_class import ActiveDataBaseTest
 from pyLibrary.maths import Math
 
+
+null = None
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
@@ -843,60 +845,190 @@ class TestDeepOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-    def test_setop_w_select_deep_value(self):
-        example = {
-            "select": [
-                "run.timestamp",
-                "build.revision",
-                "build.date",
-                "run.stats.median",
-                "run.stats.mean",
-                "run.stats.variance",
-                {
-                    "name": "replicate",
-                    "value": "."
-                }
-            ],
-            "from": "perf.result.samples",
-            "where": {
-                "and": [
-                    {
-                        "eq": {
-                            "result.test": "tcheck2"
-                        }
-                    },
-                    {
-                        "gte": {
-                            "run.timestamp": "{{29sep2015}}"
-                        }
-                    },
-                    {
-                        "lt": {
-                            "run.timestamp": "{{1oct2015}}"
-                        }
-                    }
+    def test_deep_edge_using_list(self):
+        data = [{"a": {"_b": [
+            {"r": "a", "s": "aa"},
+            {"s": "bb"},
+            {"r": "bb", "s": "bb"},
+            {"r": "c", "s": "cc"},
+            {"s": "dd"},
+            {"r": "e", "s": "ee"},
+            {"r": "e", "s": "ee"},
+            {"r": "f"},
+            {"r": "f"},
+            {"k": 1}
+        ]}}]
+
+        test = {
+            "data": data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "edges": [{
+                    "name": "v",
+                    "value": ["r", "s"]
+                }]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"v": ["a", "aa"], "count": 1},
+                    {"v": [null, "bb"], "count": 1},
+                    {"v": ["bb", "bb"], "count": 1},
+                    {"v": ["c", "cc"], "count": 1},
+                    {"v": [null, "dd"], "count": 1},
+                    {"v": ["e", "ee"], "count": 2},
+                    {"v": ["f", null], "count": 2},
+                    {"v": [null, null], "count": 1}
                 ]
             },
-            "limit": 1000,
-            "sort": "run.timestamp"
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["v", "count"],
+                "data": [
+                    [["a", "aa"], 1],
+                    [[null, "bb"], 1],
+                    [["bb", "bb"], 1],
+                    [["c", "cc"], 1],
+                    [[null, "dd"], 1],
+                    [["e", "ee"], 2],
+                    [["f", null], 2],
+                    [[null, null], 1]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "v",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "partitions": [
+                                {"dataIndex": 0, "value": ["a", "aa"]},
+                                {"dataIndex": 1, "value": [null, "bb"]},
+                                {"dataIndex": 2, "value": ["e", "ee"]},
+                                {"dataIndex": 3, "value": [null, "dd"]},
+                                {"dataIndex": 4, "value": ["c", "cc"]},
+                                {"dataIndex": 5, "value": ["bb", "bb"]},
+                                {"dataIndex": 6, "value": ["f", null]},
+                                {"dataIndex": 7, "value": [null, null]}
+                            ]
+                        }
+                    }
+                ],
+                "data": {
+                    "count": [1, 1, 2, 1, 1, 1, 2, 1, 0]
+                }
+            }
         }
+        self._execute_es_tests(test)
 
-{
-    "from": "jobs.action.timings",
-    "where": {
-        "eq": {
-            "build.platform": "win32"
+    def test_deep_agg_w_deeper_select_relative_name(self):
+        data = [{"a": {"_b": [
+            {"r": {"s": "a"}, "v": {"u": 1}},
+            {"r": {"s": "a"}, "v": {"u": 2}},
+            {"r": {"s": "b"}, "v": {"u": 3}},
+            {"r": {"s": "b"}, "v": {"u": 4}},
+            {"r": {"s": "c"}, "v": {"u": 5}},
+            {"v": {"u": 6}}
+        ]}}]
+
+        test = {
+            "data": data,
+            "query": {
+                "select": {"value": "v.u", "aggregate": "sum"},  # TEST RELATIVE NAME IN select
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "edges": ["r.s"],  # TEST RELATIVE NAME IN edges
+                "where": {"not": {"eq": {"r.s": "b"}}}  # TEST RELATIVE NAME IN where
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"r": {"s": "a"}, "v": {"u": 3}},
+                    {"r": {"s": "c"}, "v": {"u": 5}},
+                    {"v": {"u": 6}}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["r.s", "v.u"],
+                "data": [
+                    ["a", 3],
+                    ["c", 5],
+                    [null, 6]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {"name": "r.s", "domain": {"type": "set", "partitions": [
+                        {"value": "a"},
+                        {"value": "b"},
+                        {"value": "c"}
+                    ]}}
+                ],
+                "data": {
+                    "v.u": [3, null, 5, 6]
+                }
+            }
         }
-    },
-    "edges": [
-        "build.step"
-    ],
-    "select": {
-        "aggregate": "average",
-        "value": "action.timings.harness.duration"
-    },
-    "format": "table"
-}
+        self._execute_es_tests(test)
+
+
+    def test_setop_w_deep_select_value(self):
+        data = [{"a": {"_b": [
+            {"r": {"s": "a"}, "v": {"u": 1}},
+            {"r": {"s": "a"}, "v": {"u": 2}},
+            {"r": {"s": "b"}, "v": {"u": 3}},
+            {"r": {"s": "b"}, "v": {"u": 4}},
+            {"r": {"s": "c"}, "v": {"u": 5}},
+            {"v": {"u": 6}}
+        ]}}]
+
+        test = {
+            "data": data,
+            "query": {
+                "select": ["r.s", "v.u"],
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "where": {"not": {"eq": {"r.s": "b"}}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"r": {"s": "a"}, "v": {"u": 1}},
+                    {"r": {"s": "a"}, "v": {"u": 2}},
+                    {"r": {"s": "c"}, "v": {"u": 5}},
+                    {"v": {"u": 6}}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["r.s", "v.u"],
+                "data": [
+                    ["a", 1],
+                    ["a", 2],
+                    ["c", 5],
+                    [null, 6]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {"name": "rownum", "domain": {
+                        "type": "rownum",
+                        "min": 0,
+                        "max": 4,
+                        "interval": 1
+                    }}
+                ],
+                "data": {
+                    "v.u": [1, 2, 5, 6],
+                    "r.s": ["a", "a", "c", null]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
 
 
 #TODO:  missing DOES NOT SEEM TO WORK FOR DEEP OPS

@@ -17,3 +17,13 @@ importScript([
 importScript("../modevlib/math/Stats.js");
 importScript("../modevlib/qb/Qb.js");
 
+
+var search = function*(query){
+	var output = yield (Rest.post({
+		url: "http://localhost:5000/query",
+		json: query
+	}));
+
+	yield (output);
+};
+

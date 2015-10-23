@@ -710,6 +710,32 @@ class PrefixOp(object):
         return {"prefix": {map.get(self.field, self.field): self.prefix}}
 
 
+class LeftOp(object):
+    def __init__(self, op, term):
+        if isinstance(term, Mapping):
+            self.value, self.length = term.items()[0]
+        else:
+            self.value, self.length = term
+
+    def to_ruby(self):
+        v = qb_expression_to_ruby(self.value)
+        expr = "((" + v + ") == null) ? null : (" + v + ".substring(0, min("+v+".length(), " + qb_expression_to_python(self.length) + ")))"
+        return expr
+
+    def to_python(self):
+        v = qb_expression_to_python(self.value)
+        return "None if " + v + " == None else " + v + "[0:" + qb_expression_to_python(self.length) + "]"
+
+    def to_esfilter(self):
+        raise NotImplementedError
+
+    def vars(self):
+        return get_all_vars(self.value) | get_all_vars(self.length)
+
+    def map(self, map):
+        return {"left": {map.get(self.value, self.value): self.length}}
+
+
 class MissingOp(object):
     def __init__(self, op, term):
         if isinstance(term, basestring):
@@ -845,7 +871,8 @@ complex_operators = {
     "regexp": RegExpOp,
     "regex": RegExpOp,
     "literal": LiteralOp,
-    "coalesce": CoalesceOp
+    "coalesce": CoalesceOp,
+    "left": LeftOp
 }
 
 

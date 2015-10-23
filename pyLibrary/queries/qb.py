@@ -524,8 +524,8 @@ def sort(data, fieldnames=None):
         if data == None:
             return Null
 
-        if fieldnames == None:
-            return wrap(sorted(data))
+        if not fieldnames:
+            return wrap(sorted(data, value_compare))
 
         fieldnames = listwrap(fieldnames)
         if len(fieldnames) == 1:

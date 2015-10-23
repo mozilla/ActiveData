@@ -1004,3 +1004,22 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_left(self):
+        test = {
+            "data": [
+                {},
+                {"v": "1"},
+                {"v": "22"},
+                {"v": "333"},
+                {"v": "4444"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"name": "v", "value": {"left": {"v": 2}}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [None, "1", "22", "33", "44"]
+            }
+        }
+        self._execute_es_tests(test)

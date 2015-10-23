@@ -566,7 +566,7 @@ convert.List2HTMLTable = function(data, options){
 		//CONVERT FROM QUERY TO EXPECTED FORM
 		options = data;
 		data = data.list;
-	} else if (data.meta.format=="list" && data.data){
+	} else if (data.meta && data.meta.format=="list" && data.data){
 		//CONVERT FROM ActiveData LIST
 		data = data.data;
 		options = undefined;

@@ -562,12 +562,15 @@ convert.Cube2HTMLTable=function(query){
 
 
 convert.List2HTMLTable = function(data, options){
-	if (data.list && data.columns){
+	if (data.list && data.columns) {
 		//CONVERT FROM QUERY TO EXPECTED FORM
-		options=data;
-		data=data.list;
+		options = data;
+		data = data.list;
+	} else if (data.meta.format=="list" && data.data){
+		//CONVERT FROM ActiveData LIST
+		data = data.data;
+		options = undefined;
 	}//endif
-
 
 	if (data.length==0){
 		return "<table class='table'><tbody><tr><td>no records to show</td></tr></tbody></table>";

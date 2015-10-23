@@ -39,14 +39,16 @@ def get_decoders_by_depth(query):
     schema = query.frum
     output = DictList()
     for e in coalesce(query.edges, query.groupby, []):
-        e = e.copy()
         if e.value:
             vars_ = get_all_vars(e.value)
+            e = e.copy()
+            map_ = {v: schema[v].abs_name for v in vars_}
+            e.value = expression_map(map_, e.value)
         else:
-            vars_ = set(e.domain.dimension.fields)
+            vars_ = e.domain.dimension.fields
+            e.domain.dimension = e.domain.dimension.copy()
+            e.domain.dimension.fields = [schema[v].abs_name for v in vars_]
 
-        map_ = {v: schema[v].abs_name for v in vars_}
-        e.value = expression_map(map_, e.value)
         depths = set(len(listwrap(schema[v].nested_path)) for v in vars_)
         if len(depths) > 1:
             Log.error("expression {{expr}} spans tables, can not handle", expr=e.value)
@@ -58,10 +60,10 @@ def get_decoders_by_depth(query):
 
 
 def es_aggsop(es, frum, query):
-    select = listwrap(query.select)
+    select = wrap([s.copy() for s in listwrap(query.select)])
 
     es_query = Dict()
-    new_select = Dict()
+    new_select = Dict()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
     formula = []
     for s in select:
         if s.aggregate == "count" and (s.value == None or s.value == "."):
@@ -82,8 +84,11 @@ def es_aggsop(es, frum, query):
                 else:
                     Log.error('Not expecting ES to have a value at "." which {{agg}} can be applied', agg=s.aggregate)
         elif is_keyword(s.value):
+            s.value = coalesce(frum[s.value].abs_name, s.value)
             new_select[literal_field(s.value)] += [s]
         else:
+            vars_ = get_all_vars(s.value)
+            s.value = expression_map({v: frum[v].abs_name for v in vars_}, s.value)
             formula.append(s)
 
     for canonical_name, many in new_select.items():
@@ -136,8 +141,11 @@ def es_aggsop(es, frum, query):
     decoders = get_decoders_by_depth(query)
     start = 0
 
+    vars_ = get_all_vars(query.where)
+    abs_where = expression_map({v: frum[v].abs_name for v in vars_}, query.where)
+
     #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
-    split_where = split_expression_by_depth(query.where, schema=frum)
+    split_where = split_expression_by_depth(abs_where, schema=frum)
 
     if len(split_field(frum.name)) > 1:
         if any(split_where[2:]):
@@ -149,7 +157,7 @@ def es_aggsop(es, frum, query):
 
         if split_where[1]:
             #TODO: INCLUDE FILTERS ON EDGES
-            filter = simplify_esfilter({"and":split_where[1]})
+            filter = simplify_esfilter({"and": split_where[1]})
             es_query = Dict(
                 aggs={"_filter": set_default({"filter": filter}, es_query)}
             )
@@ -206,7 +214,7 @@ def es_aggsop(es, frum, query):
         return output
     except Exception, e:
         if query.format not in format_dispatch:
-            Log.error("Format {{format|quote}} not supported yet",  format= query.format, cause=e)
+            Log.error("Format {{format|quote}} not supported yet", format=query.format, cause=e)
         Log.error("Some problem", e)
 
 

@@ -9,39 +9,41 @@
 <BODY style="position:relative;">
 
 <div style="position:absolute;left:10px;right:10px;">
-	<h3 id="title">Past week of Test Failures<span id="status" style="height:30px">Page Loading...</span><span class="loading"><img src="images/spinner.gif" alt=""></span></h3>
+	<h3 id="title">Buildbot Timings<span id="status" style="height:30px">Page Loading...</span><span class="loading"><img src="images/spinner.gif" alt=""></span></h3>
 
-	<div id="chart" class="chart" style="text-align:center;width:800px;height:300px;"></div>
 	<div id="details" style="overflow-y: scroll;height:300px;position:absolute;right:10px;left:10px;"></div>
+	<!--<div id="chart" class="chart" style="text-align:center;width:800px;height:300px;"></div>-->
 </div>
 
 
 <script type="application/javascript">
 
 
-importScript(['js/util.js', 'js/failures.js'], function(){
+importScript(['js/util.js'], function(){
 
-	var DEBUG = true;  // TAKES A SMALLER SAMPLE FOR FASTER ITERATION
+	var focusFilter = {"eq": {"build.platform": "win32"}};
+
 
 	var __main = function*(){
 		var all_steps = null;
 
-		var a = Log.action("find test failures", true);
+		var a = Log.action("find steps", true);
 		try {
-			//PULL FAILURE DETAILS
 			var result = yield (search({
-				"select":[
-					{"value":"order","aggregate":"average"},
-					{"aggregate":"count"}
+				"select": [
+					{"value": "order", "aggregate": "average"},
+					{"aggregate": "count"}
 				],
-				"edges":[{
-					"name":"step",
-					"value":{"coalesce":["builder.step","harness.step"]}
-				}],
-				"from":"jobs.action.timings",
-				"where":{"eq":{"build.platform":"win32"}},
-				"limit":1000,
-				"format":"list"
+				"edges": [
+					{
+						"name": "step",
+						"value": ["builder.step", "harness.step"]
+					}
+				],
+				"from": "jobs.action.timings",
+				"where": focusFilter,
+				"limit": 1000,
+				"format": "list"
 			}));
 			all_steps = result.data;
 		} catch (e) {
@@ -50,15 +52,62 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 			Log.actionDone(a);
 		}//try
 
+		// DETERMINE THE MOST POPULAR STEPS
+		var populous = Qb.sort(all_steps, {"value": "count", "sort": -1});
+		var population = populous[0].count;
+		var stop = 0;
+		populous.forall(function(v, i){
+			if (stop == 0 && i > 0 && v.count * 10 < population){
+				stop = i;
+			}//endif
+		});
+		populous=populous.slice(0, stop);
+
+		var steps = Qb.sort(populous, "order");
+
+		Thread.run(function*(){
+			//PULL THE AVERAGE TIME FOR EACH STEP
+			var step_timings=null;
+
+			var a = Log.action("find durations", true);
+			try {
+				//PULL FAILURE DETAILS
+				var result = yield (search({
+					"select": [
+						{"value": "order", "aggregate": "average"},
+						{"name":"duration", "value": {"coalesce":["builder.duration", "harness.duration"]}, "aggregate": "average"},
+						{"aggregate":"count"}
+					],
+					"groupby": ["builder.step", "harness.step"],
+					"from": "jobs.action.timings",
+					"where": {"and": [
+						focusFilter,
+						{"or": steps.select("step").map(function(v){
+							return {"eq": {"action.timings.builder.step": v[0], "action.timings.harness.step": v[1]}};
+						})}
+					]},
+					"limit": 1000,
+					"sort":"order",
+					"format": "list"
+				}));
+				step_timings = result;
+			} catch (e) {
+				Log.error("Find steps", e);
+			} finally {
+				Log.actionDone(a);
+			}//try
+
+			$("#details").html(convert.List2HTMLTable(step_timings));
+
+			yield (null);
+		});
+
+		Thread.run(function*(){
+			//SHOW TIMES OVER PAST FEW WEEKS
 
 
+		});
 
-
-
-
-		} finally {
-			Log.actionDone(a);
-		}//try
 
 		yield (null);
 	};

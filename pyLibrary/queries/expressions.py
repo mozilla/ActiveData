@@ -719,12 +719,14 @@ class LeftOp(object):
 
     def to_ruby(self):
         v = qb_expression_to_ruby(self.value)
-        expr = "((" + v + ") == null) ? null : (" + v + ".substring(0, min("+v+".length(), " + qb_expression_to_python(self.length) + ")))"
+        l = qb_expression_to_python(self.length)
+        expr = "((" + v + ") == null || (" + l + ") == null) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + "))))"
         return expr
 
     def to_python(self):
         v = qb_expression_to_python(self.value)
-        return "None if " + v + " == None else " + v + "[0:" + qb_expression_to_python(self.length) + "]"
+        l = qb_expression_to_python(self.length)
+        return "None if " + v + " == None or " + l + " == None else " + v + "[0:min(0, " + l + ")]"
 
     def to_esfilter(self):
         raise NotImplementedError

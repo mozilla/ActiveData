@@ -260,6 +260,48 @@ Dummy operator that always returns `true`.  It is an artifact of ElasticSearch f
 		{"match_all": {}}
 
 
+String Operators
+----------------
+
+###`length` Operator###
+
+Return the length of a string.
+
+		{"length": expression}
+
+###`left` Operator###
+
+Return the left-part of given string.  `null` parameters result in `null`; negative length results in the empty string.  
+
+		{"left": {variable: length}}
+		{"left": [expression, length]}
+
+###`not_left` Operator###
+
+Removes the `length` left-most characters from the given string.  `null` parameters result in `null`; negative `length` returns the whole string.  Notice that concatenating `left` and `not_left` will return the original expression for all integer `length`.    
+
+		{"not_left": {variable: length}}
+		{"not_left": [expression, length]}
+
+###`right` Operator###
+
+Return the right-part of given string.  `null` parameters result in `null`; negative length results in the empty string.  
+
+		{"right": {variable: length}}
+		{"right": [expression, length]}
+
+###`not_right` Operator###
+
+Removes the `length` right-most characters from the given string.  `null` parameters result in `null`; negative `length` returns the whole string.  Notice that concatenating `right` and `not_right` will return the original expression for all integer `length`.    
+
+		{"not_right": {variable: length}}
+		{"not_right": [expression, length]}
+
+###`number` Operator###
+
+Convert a string to a numeric value.
+
+		{"number": variable}
 
 ###`prefix` Operator###
 
@@ -273,21 +315,6 @@ Return `true` if a property matches a given regular expression.  The whole term 
 
 		{"regexp": {variable: regular_expression}}
 
-
-String Operators
-----------------
-
-###`length` Operator###
-
-Return the length of a string.
-
-		{"length": variable}
-
-###`number` Operator###
-
-Convert a string to a numeric value.
-
-		{"number": variable}
 
 
 
@@ -332,7 +359,7 @@ The last item in the list can be a plain expression, called the `default_express
 Value Operators
 ---------------
 
-Value operators are meant to convert the JSON argument into some useful abstract value. 
+Value operators are meant to convert the operands into some useful abstract value. 
 
 ###`literal` Operator###
 

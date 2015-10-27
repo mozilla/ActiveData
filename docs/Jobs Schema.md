@@ -64,8 +64,12 @@ are the structured log digested to make this record
 	* `run.files.name` - *string* name of the file
 	* `run.files.url` - *string* url where he contents can/could be found
 * `run.machine` - *object* properties of the machine that ran the suite
-	* `machine.os` - *string* operating system
-	* `machine.name` - *string* the particular piece of hardware that ran suite
+	* `run.machine.os` - *string* operating system
+	* `run.machine.name` - *string* the particular piece of hardware that this jobs ran
+	* `run.machine.pool` - *string* the buildbot/task cluster pool that this machine belongs
+	* `run.machine.type` - *string* indicator if a "vm", or emulator", or other that may affect performance of this test
+	* `run.machine.aws_type` - *string* AWS instance type
+	* `run.machine.aws_id` - *string* machine ID, for correlating possible problems  
 * `run.talos` - *boolean* indicates if Talos performance results can be found 
 in the text log
 * `run.logurl` - *string* url to find the text log

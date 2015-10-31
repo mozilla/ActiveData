@@ -1074,3 +1074,49 @@ example={
 		{"aggregate":"count"}
 	]
 }
+
+
+# TODO:  EXPRESSIONS USING DEEP SET OPERATIONS
+
+{
+    "from": "jobs.action.timings",
+    "select": [
+        "builder.step",
+        "builder.duration",
+        "builder.elapsedTime",
+        {
+            "name": "lag",
+            "value": {
+                "sub": [
+                    "builder.duration",
+                    "builder.elapsedTime"
+                ]
+            }
+        },
+        "run.logurl"
+    ],
+    "where": {
+        "and": [
+            {
+                "exists": "builder.elapsedTime"
+            },
+            {
+                "gt": {
+                    "action.start_time": "{{today-week}}"
+                }
+            },
+            {
+                "gt": [
+                    {
+                        "subtract": [
+                            "builder.duration",
+                            "builder.elapsedTime"
+                        ]
+                    },
+                    60
+                ]
+            }
+        ]
+    },
+    "limit": 100
+}

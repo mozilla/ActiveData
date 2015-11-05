@@ -145,7 +145,6 @@ class TestSetOps(ActiveDataBaseTest):
 
 
 
-
 # TEST THAT ne WORKS
 q = {
     "from": "jobs",

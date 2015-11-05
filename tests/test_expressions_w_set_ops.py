@@ -146,13 +146,55 @@ class TestSetOps(ActiveDataBaseTest):
 
 
 
+# TEST THAT ne WORKS
+q = {
+    "from": "jobs",
+    "where": {
+        "ne": [
+            "run.machine.name",
+            "action.slave"
+        ]
+    }
+}
 
+# SELECT CLAUSE WITH SOMETHING A BIT MORE COMPLICATED
+q = {
+    "select": [
         {
-            "from": "jobs",
-            "where": {
-                "ne": [
-                    "run.machine.name",
-                    "action.slave"
-                ]
-            }
-        }
+            "value": {"when": {"eq": {"harness.step": "run-tests"}, "then": "harness.duration"}},
+            "aggregate": "average"
+        },
+        {
+            "value": {"when": {"neq": {"harness.step": "run-tests"}, "then": {"add": ["builder.duration", "harness.duration"]}}},
+            "aggregate": "average"
+        },
+        {"name": "b_duration", "value": "builder.duration", "aggregate": "average"},
+        {"name": "h_duration", "value": "harness.duration", "aggregate": "average"},
+        {"aggregate":"count"}
+    ],
+    "edges": [
+        {"name":"date", "value":"action.start_time", "domain":{
+            "min": GUI.state.sampleMin,
+            "max": GUI.state.sampleMax,
+            "interval": GUI.state.sampleInterval
+        }}
+    ],
+    "from": "jobs.action.timings",
+    "where": {"and": [
+        focusFilter,
+        {"gte":{"action.start_time": GUI.state.sampleMin}},
+        {"lt": {"action.start_time": GUI.state.sampleMax}},
+        {"or": steps.select("step").map(function(v){
+            if (v[1]){
+                return {"eq": {"builder.step": v[0], "harness.step": v[1]}};
+            }else{
+                return {"and":[
+                    {"eq": {"builder.step": v[0]}},
+                    {"missing":"harness.step"}
+                ]};
+            }//endif
+        })}
+    ]},
+    "limit": 1000,
+    "format": "list"
+}

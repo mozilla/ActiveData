@@ -1116,3 +1116,26 @@ example = {
     },
     "limit": 100
 }
+
+
+# WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?
+# THIS SHOULD RETURN SOMETHING, NOT FAIL
+{
+    "select": [
+        "*",
+        "action.*"
+    ],
+    "from": "jobs.action.timings",
+    "format": "list"
+}
+
+
+# DOES NOT SEEM TO FLATTEN THE PROPERTIES
+{
+	"select":["*"],
+	"from":"jobs.action.timings",
+	"format":"list"
+}
+
+
+

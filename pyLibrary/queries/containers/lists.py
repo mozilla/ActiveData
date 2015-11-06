@@ -18,7 +18,7 @@ from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList
 from pyLibrary.queries import qb
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import is_keyword
-from pyLibrary.queries.expressions import TRUE_FILTER, qb_expression_to_python
+from pyLibrary.queries.expressions import TRUE_FILTER, qb_expression
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
 from pyLibrary.queries.meta import Column
 from pyLibrary.thread.threads import Lock
@@ -69,13 +69,13 @@ class ListContainer(Container):
         """
         EXPECTING command == {"set":term, "clear":term, "where":where}
         THE set CLAUSE IS A DICT MAPPING NAMES TO VALUES
-        THE where CLAUSE IS AN ES FILTER
+        THE where CLAUSE IS A QB FILTER
         """
         command = wrap(command)
         if command.where==None:
             filter_ = lambda: True
         else:
-            filter_ = _exec("temp = lambda row: "+qb_expression_to_python(command.where))
+            filter_ = _exec("temp = lambda row: " + qb_expression(command.where).to_python())
 
 
         for c in self.data:
@@ -91,7 +91,7 @@ class ListContainer(Container):
     def where(self, where):
         if isinstance(where, Mapping):
             temp = None
-            exec("def temp(row):\n    return "+qb_expression_to_python(where))
+            exec("def temp(row):\n    return "+qb_expression(where).to_python())
         else:
             temp = where
 
@@ -311,6 +311,9 @@ _merge_type = {
 
 
 def _exec(code):
-    temp = None
-    exec code
-    return temp
+    try:
+        temp = None
+        exec code
+        return temp
+    except Exception, e:
+        Log.error("Could not execute {{code|quote}}", code=code, cause=e)

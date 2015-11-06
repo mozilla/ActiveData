@@ -14,7 +14,7 @@ from collections import Mapping
 import itertools
 
 from pyLibrary import convert
-from pyLibrary.collections import OR, MAX
+from pyLibrary.collections import OR, MAX, UNION
 from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
@@ -65,7 +65,7 @@ def qb_expression(expr):
         terms = map(qb_expression, term)
         return class_(op, terms, **clauses)
     elif isinstance(term, Mapping):
-        return class_(op, {k: qb_expression(v) for k, v in term.items()}, **clauses)
+        return class_(op, {Variable(k): Literal(v) for k, v in term.items()}, **clauses)
 
 
 def compile_expression(source):
@@ -147,7 +147,7 @@ class Expression(object):
                 Log.error("Expecting an expression")
         if isinstance(terms, Mapping):
             if not all(isinstance(k, Variable) and isinstance(v, Literal) for k, v in terms.items()):
-                Log.error("Expecting an {<variable>: <expression>}")
+                Log.error("Expecting an {<variable>: <literal}")
 
     def to_ruby(self):
         raise NotImplementedError
@@ -198,6 +198,12 @@ class Variable(Expression):
         # RETURN FILTER THAT INDICATE THIS EXPRESSIOn RETURNS null
         return MissingOp("missing", self)
 
+    def __hash__(self):
+        return self.var.__hash__()
+
+    def __eq__(self, other):
+        return self.var.__eq__(other)
+
 
 class Literal(Expression):
     """
@@ -233,7 +239,7 @@ class Literal(Expression):
         return self.json
 
     def vars(self):
-        return {}
+        return set()
 
     def map(self, map_):
         return self
@@ -253,8 +259,9 @@ class BinaryOp(Expression):
         "mod": " % ",
         "gt": " > ",
         "gte": " >= ",
-        "eq": " == ",
+        "eq": "==",
         "ne": " != ",
+        "neq": " != ",
         "lte": " <= ",
         "lt": " < ",
         "term": " == "
@@ -267,14 +274,13 @@ class BinaryOp(Expression):
         if isinstance(terms, list):
             self.rhs, self.lhs = terms
         elif isinstance(terms, Mapping):
-            rhs, self.lhs = terms.items()[0]
-            self.rhs = Variable(rhs)
+            self.rhs, self.lhs = terms.items()[0]
 
     def to_ruby(self):
-        return "(" + self.lhs.to_ruby() + ") " + self.op + " (" + self.rhs.to_ruby()
+        return "(" + self.lhs.to_ruby() + ") " + self.op + " (" + self.rhs.to_ruby()+")"
 
     def to_python(self):
-        return "(" + self.lhs.to_python() + ") " + self.op + " (" + self.rhs.to_python()
+        return "(" + self.lhs.to_python() + ") " + self.op + " (" + self.rhs.to_python()+")"
 
     def vars(self):
         return self.lhs.vars() | self.rhs.vars()
@@ -284,6 +290,24 @@ class BinaryOp(Expression):
 
     def missing(self):
         return MultiOp("or", [self.lhs.missing(), self.rhs.missing()])
+
+
+
+class EqOp(Expression):
+
+    def __new__(cls, op, terms):
+        if isinstance(terms, list):
+            return BinaryOp("eq", terms)
+
+        items = terms.items()
+        if len(items) == 1:
+            return BinaryOp("eq", items[0])
+        else:
+            return AndOp("and", [BinaryOp("eq", [a, b]) for a, b in items])
+
+    def __init__(self, op, terms):
+        Expression.__init__(self, op, terms)
+        raise NotImplementedError
 
 
 class NotOp(Expression):
@@ -610,7 +634,7 @@ class MissingOp(Expression):
     def vars(self):
         return {self.field.var}
 
-    def map(self, map):
+    def map(self, map_):
         return MissingOp("missing", self.field.map(map_))
 
 
@@ -636,28 +660,18 @@ class InOp(Expression):
 
 
 class RangeOp(Expression):
+    def __new__(cls, op, term, *args, **kwargs):
+        Expression.__new__(cls, *args, **kwargs)
+        field, cmps = term.items()[0]
+        return AndOp("and", [{op: {field: value}} for op, value in cmps.items()])
+
     def __init__(self, op, term):
-        self.field, self.cmp = term.items()[0]
-
-    def to_ruby(self):
-        return " and ".join(qb_expression_to_ruby([{o: {self.field: v}} for o, v in self.cmp.items()]))
-
-    def to_python(self):
-        return " and ".join(qb_expression_to_python([{o: {self.field: v}} for o, v in self.cmp.items()]))
-
-    def to_esfilter(self):
-        return {"range": {self.field, self.cmp}}
-
-    def vars(self):
-        return set([self.field])
-
-    def map(self, map):
-        return {"range": {map.get(self.field, self.field): self.cmp}}
+        Log.error("Should never happen!")
 
 
 def simplify_esfilter(esfilter):
     try:
-        output = normalize_esfilter(qb_expression_to_esfilter(esfilter))
+        output = normalize_esfilter(qb_expression(esfilter).to_esfilter())
         if output is TRUE_FILTER:
             return {"match_all": {}}
         output.isNormal = None
@@ -878,11 +892,11 @@ operators = {
     "mod": BinaryOp,
     "gt": BinaryOp,
     "gte": BinaryOp,
-    "eq": BinaryOp,
+    "eq": EqOp,
     "lte": BinaryOp,
     "lt": BinaryOp,
     "ne": BinaryOp,
-    "term": BinaryOp,
+    "term": EqOp,
     "not": NotOp,
     "and": AndOp,
     "or": OrOp,

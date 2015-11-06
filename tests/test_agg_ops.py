@@ -307,12 +307,12 @@ class TestAggOps(ActiveDataBaseTest):
 
 #TODO: AGGREGATING ON CONSTANT DOES NOT SEEM TO WORK
 
-{
-    "from": dim.index._id,
+test = {
+    "from": base_test_class.settings.backend_es.index,
     "select": {"name": "count", "value": "1", "aggregate": "count"},
-    "edges": edges,
-    "esfilter": dim.esfilter,
-    "limit": dim.limit
+    "edges": ["a"],
+    "esfilter": True,
+    "limit": 10
 }
 
 #TODO: SIMPLE COUNT NOT WORKING

@@ -14,13 +14,13 @@ from collections import Mapping
 
 from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, join_field, DictList
+from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, DictList
 from pyLibrary.maths import Math
 from pyLibrary.queries import qb, es09
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword, DefaultDomain
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, qb_expression_to_ruby, get_all_vars, split_expression_by_depth, expression_map, qb_expression_to_esfilter, qb_expression_to_missing
+from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, qb_expression
 from pyLibrary.queries.query import DEFAULT_LIMIT
 from pyLibrary.times.timer import Timer
 
@@ -40,10 +40,10 @@ def get_decoders_by_depth(query):
     output = DictList()
     for e in coalesce(query.edges, query.groupby, []):
         if e.value:
-            vars_ = get_all_vars(e.value)
+            vars_ = qb_expression(e.value).vars()
             e = e.copy()
             map_ = {v: schema[v].abs_name for v in vars_}
-            e.value = expression_map(map_, e.value)
+            e.value = qb_expression(e.value).map(map_)
         else:
             vars_ = e.domain.dimension.fields
             e.domain.dimension = e.domain.dimension.copy()
@@ -87,8 +87,8 @@ def es_aggsop(es, frum, query):
             s.value = coalesce(frum[s.value].abs_name, s.value)
             new_select[literal_field(s.value)] += [s]
         else:
-            vars_ = get_all_vars(s.value)
-            s.value = expression_map({v: frum[v].abs_name for v in vars_}, s.value)
+            vars_ = qb_expression(s.value).vars()
+            s.value = qb_expression(s.value).map({v: frum[v].abs_name for v in vars_})
             formula.append(s)
 
     for canonical_name, many in new_select.items():
@@ -135,14 +135,14 @@ def es_aggsop(es, frum, query):
     for i, s in enumerate(formula):
         new_select[unicode(i)] = s
         s.pull = literal_field(s.name) + ".value"
-        abs_value = expression_map({c.name: c.abs_name for c in frum._columns}, s.value)
-        es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].script = qb_expression_to_ruby(abs_value)
+        abs_value = qb_expression(s.value).map({c.name: c.abs_name for c in frum._columns})
+        es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].script = qb_expression(abs_value).to_ruby()
 
     decoders = get_decoders_by_depth(query)
     start = 0
 
-    vars_ = get_all_vars(query.where)
-    abs_where = expression_map({v: frum[v].abs_name for v in vars_}, query.where)
+    vars_ = qb_expression(query.where).vars()
+    abs_where = qb_expression(query.where).map({v: frum[v].abs_name for v in vars_})
 
     #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
     split_where = split_expression_by_depth(abs_where, schema=frum)
@@ -266,7 +266,7 @@ class AggsDecoder(object):
             else:
                 return object.__new__(DimFieldListDecoder, e)
         else:
-            Log.error("domain type of {{type}} is not supported yet",  type= e.domain.type)
+            Log.error("domain type of {{type}} is not supported yet", type=e.domain.type)
 
 
     def __init__(self, edge, query):
@@ -356,7 +356,7 @@ def _range_composer(edge, domain, es_query, to_float):
     if is_keyword(edge.value):
         calc = {"field": edge.value}
     else:
-        calc = {"script": qb_expression_to_ruby(edge.value)}
+        calc = {"script": qb_expression(edge.value).to_ruby()}
 
     if edge.allowNulls:
         if is_keyword(edge.value):
@@ -365,14 +365,14 @@ def _range_composer(edge, domain, es_query, to_float):
                 {"range": {edge.value: {"gte": to_float(_max)}}}
             ]}
         else:
-            missing_range = {"script": {"script": qb_expression_to_ruby({"or": [
+            missing_range = {"script": {"script": qb_expression({"or": [
                 {"lt": [edge.value, to_float(_min)]},
                 {"gt": [edge.value, to_float(_max)]},
-            ]})}}
+            ]}).to_ruby()}}
         missing_filter = set_default(
             {"filter": {"or": [
                 missing_range,
-                {"or": [{"missing": {"field": v}} for v in get_all_vars(edge.value)]}
+                {"or": [{"missing": {"field": v}} for v in qb_expression(edge.value).vars()]}
             ]}},
             es_query
         )
@@ -494,8 +494,8 @@ class DefaultDecoder(SetDecoder):
         self.start = start
 
         if isinstance(self.edge.value, Mapping):
-            script_field = qb_expression_to_ruby(self.edge.value)
-            missing = qb_expression_to_esfilter(qb_expression_to_missing(self.edge.value))
+            script_field = qb_expression(self.edge.value).to_ruby()
+            missing = qb_expression(self.edge.value).to_missing().to_esfilter()
 
             output = wrap({"aggs": {
                 "_match": set_default(

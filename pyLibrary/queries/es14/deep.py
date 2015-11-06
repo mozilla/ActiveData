@@ -17,8 +17,7 @@ from pyLibrary.queries import es09, es14
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es14.setop import format_dispatch
 from pyLibrary.queries.es14.util import qb_sort_to_es_sort
-
-from pyLibrary.queries.expressions import query_get_all_vars, qb_expression_to_ruby, expression_map, qb_expression_to_esfilter, split_expression_by_depth, simplify_esfilter
+from pyLibrary.queries.expressions import query_get_all_vars, split_expression_by_depth, simplify_esfilter, qb_expression
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.timer import Timer
@@ -45,7 +44,7 @@ def es_deepop(es, query):
     query_path = query.frum.query_path
     columns = UniqueIndex(keys=["name"], data=sorted(columns, lambda a, b: cmp(len(listwrap(b.nested_path)), len(listwrap(a.nested_path)))), fail_on_dup=False)
     _map = {c.name: c.abs_name for c in columns}
-    where = expression_map(_map, query.where)
+    where = qb_expression(query.where).map(_map)
 
     es_query, es_filters = es14.util.es_query_template(query.frum.name)
 
@@ -53,14 +52,14 @@ def es_deepop(es, query):
     wheres = split_expression_by_depth(where, query.frum)
     for i, f in enumerate(es_filters):
         # PROBLEM IS {"match_all": {}} DOES NOT SURVIVE set_default()
-        for k, v in unwrap(simplify_esfilter(qb_expression_to_esfilter({"and": wheres[i]}))).items():
+        for k, v in unwrap(simplify_esfilter(qb_expression({"and": wheres[i]}).to_esfilter())).items():
             f[k] = v
 
 
     if not wheres[1]:
         more_filter = {
             "and": [
-                qb_expression_to_esfilter({"and": wheres[0]}),
+                qb_expression({"and": wheres[0]}).to_esfilter(),
                 {"not": {
                     "nested": {
                         "path": query_path,
@@ -176,7 +175,7 @@ def es_deepop(es, query):
             es_query.fields += [v for v in s.value]
         else:
             Log.error("need an example")
-            es_query.script_fields[literal_field(s.name)] = {"script": qb_expression_to_ruby(s.value)}
+            es_query.script_fields[literal_field(s.name)] = {"script": qb_expression(s.value).to_ruby()}
             new_select.append({
                 "name": s.name if is_list else ".",
                 "value": s.name,

@@ -432,11 +432,6 @@ class JSONList(object):
             return pypy_json_encode(self)
 
 
-
-
-
-
-
 if use_pypy:
     json_decoder = decode
 else:

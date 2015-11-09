@@ -17,7 +17,7 @@ from pyLibrary.queries import es09, es14
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es14.setop import format_dispatch
 from pyLibrary.queries.es14.util import qb_sort_to_es_sort
-from pyLibrary.queries.expressions import query_get_all_vars, split_expression_by_depth, simplify_esfilter, qb_expression
+from pyLibrary.queries.expressions import query_get_all_vars, split_expression_by_depth, simplify_esfilter, qb_expression, AndOp
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.timer import Timer
@@ -52,7 +52,7 @@ def es_deepop(es, query):
     wheres = split_expression_by_depth(where, query.frum)
     for i, f in enumerate(es_filters):
         # PROBLEM IS {"match_all": {}} DOES NOT SURVIVE set_default()
-        for k, v in unwrap(simplify_esfilter(qb_expression({"and": wheres[i]}).to_esfilter())).items():
+        for k, v in unwrap(simplify_esfilter(AndOp("and", wheres[i]).to_esfilter())).items():
             f[k] = v
 
 

@@ -217,7 +217,7 @@ def _value2json(value, _buffer):
     except Exception, e:
         from pyLibrary.debugs.logs import Log
 
-        Log.error(_repr(value) + " is not JSON serializable", e)
+        Log.error(_repr(value) + " is not JSON serializable", cause=e)
 
 
 def _list2json(value, _buffer):

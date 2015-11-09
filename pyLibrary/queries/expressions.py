@@ -66,6 +66,8 @@ def qb_expression(expr):
         return class_(op, terms, **clauses)
     elif isinstance(term, Mapping):
         return class_(op, {Variable(k): Literal(v) for k, v in term.items()}, **clauses)
+    else:
+        return class_(op, qb_expression(term), **clauses)
 
 
 def compile_expression(source):
@@ -158,6 +160,12 @@ class Expression(object):
     def to_esfilter(self):
         raise NotImplementedError
 
+    def to_dict(self):
+        raise NotImplementedError
+
+    def __json__(self):
+        return convert.value2json(self.to_dict())
+
     def vars(self):
         raise NotImplementedError
 
@@ -188,11 +196,14 @@ class Variable(Expression):
         else:
             return "row[" + convert.value2quote(self.var) + "]"
 
+    def to_dict(self):
+        return self.var
+
     def vars(self):
         return {self.var}
 
-    def map(self, map):
-        return Variable(map.get(self.var, self.var))
+    def map(self, map_):
+        return Variable(coalesce(map_.get(self.var), self.var))
 
     def missing(self):
         # RETURN FILTER THAT INDICATE THIS EXPRESSIOn RETURNS null
@@ -213,6 +224,12 @@ class Literal(Expression):
     def __init__(self, term):
         self.json = convert.value2json(term)
 
+    def __nonzero__(self):
+        if self.json == "null":
+            return False
+        else:
+            return True
+
     def to_ruby(self):
         def _convert(v):
             if v is None:
@@ -226,7 +243,7 @@ class Literal(Expression):
             if isinstance(v, (int, long, float)):
                 return unicode(v)
             if isinstance(v, dict):
-                return "{" + ", ".join(convert.string2quote(k) + "=>" + _convert(vv) for k, vv in v.items()) + "}"
+                return "[" + ", ".join(convert.string2quote(k) + ": " + _convert(vv) for k, vv in v.items()) + "]"
             if isinstance(v, list):
                 return "[" + ", ".join(_convert(vv) for vv in v) + "]"
 
@@ -236,7 +253,10 @@ class Literal(Expression):
         return self.json
 
     def to_esfilter(self):
-        return self.json
+        return convert.json2value(self.json)
+
+    def to_dict(self):
+        return {"literal": convert.json2value(self.json)}
 
     def vars(self):
         return set()
@@ -250,6 +270,7 @@ class Literal(Expression):
 
 class BinaryOp(Expression):
     operators = {
+        "add": " + ",
         "sub": " - ",
         "subtract": " - ",
         "minus": " - ",
@@ -259,7 +280,7 @@ class BinaryOp(Expression):
         "mod": " % ",
         "gt": " > ",
         "gte": " >= ",
-        "eq": "==",
+        "eq": " == ",
         "ne": " != ",
         "neq": " != ",
         "lte": " <= ",
@@ -267,20 +288,46 @@ class BinaryOp(Expression):
         "term": " == "
     }
 
+    ineq_to_es = {
+        " > ": "gt",
+        " >= ": "gte",
+        " <= ": "lte",
+        " < ": "lt"
+    }
+
+
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
         self.op = BinaryOp.operators.get(op, op)
 
-        if isinstance(terms, list):
+        if isinstance(terms, (list, tuple)):
             self.rhs, self.lhs = terms
         elif isinstance(terms, Mapping):
             self.rhs, self.lhs = terms.items()[0]
+        else:
+            Log.error("logic error")
 
     def to_ruby(self):
         return "(" + self.lhs.to_ruby() + ") " + self.op + " (" + self.rhs.to_ruby()+")"
 
     def to_python(self):
         return "(" + self.lhs.to_python() + ") " + self.op + " (" + self.rhs.to_python()+")"
+
+    def to_esfilter(self):
+        if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal) or self.op in [" + ", " - ", " * ", " / ", " % ", " ** "]:
+            return {"script": {"script": self.to_ruby()}}
+
+        if self.op == " == ":
+            return {"term": {self.lhs.var: self.rhs.to_esfilter()}}
+        elif self.op == " != ":
+            return {"not": {"term": {self.lhs.var: self.rhs.to_esfilter()}}}
+        elif self.op in BinaryOp.ineq_to_es:
+            return {"range": {self.lhs.var: {BinaryOp.ineq_to_es[self.op]: self.rhs.to_esfilter()}}}
+        else:
+            Log.error("Logic error")
+
+    def to_dict(self):
+        return {self.op, [self.lhs.to_dict(), self.rhs.to_dict()]}
 
     def vars(self):
         return self.lhs.vars() | self.rhs.vars()
@@ -326,6 +373,9 @@ class NotOp(Expression):
     def to_esfilter(self):
         return {"not": self.term.to_esfilter()}
 
+    def to_dict(self):
+        return {"not": self.term.to_dict()}
+
     def map(self, map_):
         return NotOp("not", self.term.map(map_))
 
@@ -343,6 +393,12 @@ class AndOp(Expression):
 
     def to_python(self):
         return " and ".join("(" + t.to_python() + ")" for t in self.terms)
+
+    def to_esfilter(self):
+        return {"and": [t.to_esfilter() for t in self.terms]}
+
+    def to_dict(self):
+        return {"and": [t.to_dict() for t in self.terms]}
 
     def vars(self):
         output = set()
@@ -367,6 +423,12 @@ class OrOp(Expression):
 
     def to_python(self):
         return " or ".join("(" + t.to_python() + ")" for t in self.terms)
+
+    def to_esfilter(self):
+        return {"or": [t.to_esfilter() for t in self.terms]}
+
+    def to_dict(self):
+        return {"or": [t.to_dict() for t in self.terms]}
 
     def vars(self):
         output = set()
@@ -394,6 +456,9 @@ class LengthOp(Expression):
         value = self.term.to_python()
         return "len(" + value + ") if (" + value + ") != None else None"
 
+    def to_dict(self):
+        return {"length": self.term.to_dict()}
+
     def vars(self):
         return self.term.vars()
 
@@ -417,6 +482,9 @@ class NumberOp(Expression):
         value = self.term.to_python()
         return "float(" + value + ") if (" + value + ") != None else None"
 
+    def to_dict(self):
+        return {"number": self.term.to_dict()}
+
     def vars(self):
         return self.term.vars()
 
@@ -439,7 +507,9 @@ class MultiOp(Expression):
     def __init__(self, op, terms, **clauses):
         # TODO: ADD default CLAUSE
         Expression.__init__(self, op, terms, **clauses)
-        self.op = MultiOp.operators.get(op, op)
+        self.op = op
+        if not MultiOp.operators.get(op):
+            Log.error("{{op}} is not recognized", op=op)
         if isinstance(terms, list):
             self.terms = terms
         elif isinstance(terms, Mapping):
@@ -448,10 +518,13 @@ class MultiOp(Expression):
         self.default = clauses.get("default", None)
 
     def to_ruby(self):
-        return self.op.join("(" + t.to_ruby() + ")" for t in self.terms)
+        return MultiOp.operators[self.op].join("(" + t.to_ruby() + ")" for t in self.terms)
 
     def to_python(self):
-        return self.op.join("(" + t.to_python() + ")" for t in self.terms)
+        return MultiOp.operators[self.op].join("(" + t.to_python() + ")" for t in self.terms)
+
+    def to_dict(self):
+        return {self.op: [t.to_dict() for t in self.terms]}
 
     def vars(self):
         output = set()
@@ -480,6 +553,9 @@ class RegExpOp(Expression):
     def to_esfilter(self):
         return {"regexp": {self.var.var: convert.json_decoder(self.pattern)}}
 
+    def to_dict(self):
+        return {"regexp": {self.var.var: self.pattern}}
+
     def vars(self):
         return {self.var}
 
@@ -500,6 +576,9 @@ class TermsOp(Expression):
 
     def to_esfilter(self):
         return {"terms": {self.var: self.vals}}
+
+    def to_dict(self):
+        return {"terms": {self.var.var: self.vals}}
 
     def vars(self):
         return {self.var}
@@ -525,6 +604,9 @@ class CoalesceOp(Expression):
 
     def to_esfilter(self):
         return {"or": [{"exists": {"field": v}} for v in self.terms]}
+
+    def to_dict(self):
+        return {"coalesce": [t.to_dict() for t in self.terms]}
 
     def missing(self):
         # RETURN true FOR RECORDS THE WOULD RETURN NULL
@@ -557,6 +639,9 @@ class ExistsOp(Expression):
     def to_esfilter(self):
         return {"exists": {"field": self.field}}
 
+    def to_dict(self):
+        return {"exists": self.field.var}
+
     def vars(self):
         return self.field.vars()
 
@@ -577,6 +662,12 @@ class PrefixOp(Expression):
 
     def to_esfilter(self):
         return {"prefix": {self.field.var: self.prefix.to_es_filter()}}
+
+    def to_dict(self):
+        if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
+            return {"prefix": {self.field.var: convert.json2value(self.prefix.json)}}
+        else:
+            return {"prefix": [self.field.to_dict(), self.prefix.to_dict()]}
 
     def vars(self):
         return {self.field.var}
@@ -607,6 +698,12 @@ class LeftOp(Expression):
     def to_esfilter(self):
         raise NotImplementedError
 
+    def to_dict(self):
+        if isinstance(self.value, Variable) and isinstance(self.length, Literal):
+            return {"prefix": {self.value.var: convert.json2value(self.length.json)}}
+        else:
+            return {"prefix": [self.value.to_dict(), self.length.to_dict()]}
+
     def vars(self):
         return self.value.vars() | self.length.vars()
 
@@ -631,6 +728,9 @@ class MissingOp(Expression):
     def to_esfilter(self):
         return {"missing": {"field": self.field.var}}
 
+    def to_dict(self):
+        return {"missing": self.field.var}
+
     def vars(self):
         return {self.field.var}
 
@@ -652,11 +752,14 @@ class InOp(Expression):
     def to_esfilter(self):
         return {"terms": {self.field: self.values}}
 
+    def to_dict(self):
+        return {"in": {self.field.var, self.values}}
+
     def vars(self):
         return {self.field}
 
     def map(self, map):
-        return {"in": {map.get(self.field, self.field): self.values}}
+        return InOp("in", {coalesce(map.get(self.field), self.field): self.values})
 
 
 class RangeOp(Expression):
@@ -669,9 +772,77 @@ class RangeOp(Expression):
         Log.error("Should never happen!")
 
 
+class WhenOp(Expression):
+    def __init__(self, op, term, **clauses):
+        Expression.__init__(self, op, [term])
+        self.when = term
+        self.then = coalesce(clauses.get("then"), Literal(None))
+        self.else_ = coalesce(clauses.get("else"), Literal(None))
+
+    def to_ruby(self):
+        return "(" + self.when.to_ruby() + ") ? (" + self.then.to_ruby() + ") : (" + self.else_.to_ruby() + ")"
+
+    def to_python(self):
+        return "(" + self.when.to_python() + ") ? (" + self.then.to_python() + ") : (" + self.else_.to_python() + ")"
+
+    def to_esfilter(self):
+        return {"script": {"script": self.to_ruby()}}
+
+    def to_dict(self):
+        return {"when": self.when.to_dict(), "then": self.then.to_dict() if self.then else None, "else": self.else_.to_dict() if self.else_ else None}
+
+    def vars(self):
+        return self.when.vars() | self.then.vars() | self.else_.vars()
+
+    def map(self, map_):
+        return WhenOp("when", self.when.map(map_), **{"then": self.then.map(map_), "else": self.else_.map(map_)})
+
+
+class CaseOp(Expression):
+    def __init__(self, op, term, **clauses):
+        if not isinstance(term, (list, tuple)):
+            Log.error("case expression requires a list of `when` sub-clauses")
+        Expression.__init__(self, op, term)
+        if len(term) == 0:
+            self.whens = [Literal(None)]
+        else:
+            for w in term:
+                if w.else_:
+                    Log.error("case expression does not allow `else` clause in `when` sub-clause")
+            self.whens = term
+
+    def to_ruby(self):
+        acc = self.whens[-1].to_ruby()
+        for w in reversed(self.whens[0:-1]):
+            acc = "(" + w.when.to_ruby() + ") ? (" + w.then.to_ruby() + ") : (" + acc + ")"
+        return acc
+
+    def to_python(self):
+        acc = self.whens[-1].to_python()
+        for w in reversed(self.whens[0:-1]):
+            acc = "(" + w.when.to_python() + ") ? (" + w.then.to_python() + ") : (" + acc + ")"
+        return acc
+
+    def to_esfilter(self):
+        return {"script": {"script": self.to_ruby()}}
+
+    def to_dict(self):
+        return {"case": [w.to_dict() for w in self.whens]}
+
+    def vars(self):
+        output = set()
+        for w in self.whens:
+            output |= w.vars()
+        return output
+
+    def map(self, map_):
+        return CaseOp("case", [w.map(map_) for w in self.whens])
+
+
+
 def simplify_esfilter(esfilter):
     try:
-        output = normalize_esfilter(qb_expression(esfilter).to_esfilter())
+        output = normalize_esfilter(esfilter)
         if output is TRUE_FILTER:
             return {"match_all": {}}
         output.isNormal = None
@@ -907,5 +1078,6 @@ operators = {
     "mul": MultiOp,
     "mult": MultiOp,
     "multiply": MultiOp,
-
+    "when": WhenOp,
+    "case": CaseOp
 }

@@ -91,8 +91,13 @@ def _scrub(value, is_done):
 
         output = {}
         for k, v in value.iteritems():
-            if not isinstance(k, basestring):
+            if isinstance(k, basestring):
+                pass
+            elif hasattr(k, "__unicode__"):
+                k = unicode(k)
+            else:
                 _Log.error("keys must be strings")
+
             v = _scrub(v, is_done)
             if v != None or isinstance(v, Mapping):
                 output[k] = v

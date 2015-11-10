@@ -189,13 +189,16 @@ class FromESMetadata(object):
                     })
                 return
 
-            result = self.default_es.post("/"+c.table+"/_search", data={
+            es_index = c.table.split(".")[0]
+            result = self.default_es.post("/"+es_index+"/_search", data={
                 "aggs": {c.name: _counting_query(c)},
                 "size": 0
             })
             r = result.aggregations.values()[0]
             count = result.hits.total
             cardinality = coalesce(r.value, r._nested.value)
+            if cardinality == None:
+                Log.error("logic error")
 
             query = Dict(size=0)
             if c.type in ["object", "nested"]:
@@ -240,12 +243,12 @@ class FromESMetadata(object):
             elif c.nested_path:
                 query.aggs[literal_field(c.name)] = {
                     "nested": {"path": listwrap(c.nested_path)[0]},
-                    "aggs": {"_nested": {"terms": {"field": c.name, "size": 0}}}
+                    "aggs": {"_nested": {"terms": {"field": c.abs_name, "size": 0}}}
                 }
             else:
-                query.aggs[literal_field(c.name)] = {"terms": {"field": c.name, "size": 0}}
+                query.aggs[literal_field(c.name)] = {"terms": {"field": c.abs_name, "size": 0}}
 
-            result = self.default_es.post("/"+c.table+"/_search", data=query)
+            result = self.default_es.post("/"+es_index+"/_search", data=query)
 
             aggs = result.aggregations.values()[0]
             if aggs._nested:
@@ -265,20 +268,20 @@ class FromESMetadata(object):
                     "where": {"eq": {"table": c.table, "abs_name": c.abs_name}}
                 })
         except Exception, e:
-            self.columns.update({
-                "set": {
-                    "last_updated": Date.now()
-                },
-                "clear":[
-                    "count",
-                    "cardinality",
-                    "partitions",
-                ],
-                "where": {"eq": {"table": c.table, "abs_name": c.abs_name}}
-            })
             if "IndexMissingException" in e and c.table.startswith("testing"):
-                pass
+                Log.alert("{{col.table}} does not exist", col=c)
             else:
+                self.columns.update({
+                    "set": {
+                        "last_updated": Date.now()
+                    },
+                    "clear":[
+                        "count",
+                        "cardinality",
+                        "partitions",
+                    ],
+                    "where": {"eq": {"table": c.table, "abs_name": c.abs_name}}
+                })
                 Log.warning("Could not get {{col.table}}.{{col.abs_name}} info", col=c, cause=e)
 
     def monitor(self, please_stop):

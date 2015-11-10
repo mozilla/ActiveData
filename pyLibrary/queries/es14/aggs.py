@@ -20,7 +20,7 @@ from pyLibrary.queries import qb, es09
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword, DefaultDomain
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, qb_expression
+from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, qb_expression, AndOp, Variable
 from pyLibrary.queries.query import DEFAULT_LIMIT
 from pyLibrary.times.timer import Timer
 
@@ -40,10 +40,10 @@ def get_decoders_by_depth(query):
     output = DictList()
     for e in coalesce(query.edges, query.groupby, []):
         if e.value:
-            vars_ = qb_expression(e.value).vars()
             e = e.copy()
-            map_ = {v: schema[v].abs_name for v in vars_}
-            e.value = qb_expression(e.value).map(map_)
+            e.value = qb_expression(e.value)
+            vars_ = e.value.vars()
+            e.value = e.value.map({schema[v].name: schema[v].abs_name for v in vars_})
         else:
             vars_ = e.domain.dimension.fields
             e.domain.dimension = e.domain.dimension.copy()
@@ -87,8 +87,6 @@ def es_aggsop(es, frum, query):
             s.value = coalesce(frum[s.value].abs_name, s.value)
             new_select[literal_field(s.value)] += [s]
         else:
-            vars_ = qb_expression(s.value).vars()
-            s.value = qb_expression(s.value).map({v: frum[v].abs_name for v in vars_})
             formula.append(s)
 
     for canonical_name, many in new_select.items():
@@ -136,7 +134,7 @@ def es_aggsop(es, frum, query):
         new_select[unicode(i)] = s
         s.pull = literal_field(s.name) + ".value"
         abs_value = qb_expression(s.value).map({c.name: c.abs_name for c in frum._columns})
-        es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].script = qb_expression(abs_value).to_ruby()
+        es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].script = abs_value.to_ruby()
 
     decoders = get_decoders_by_depth(query)
     start = 0
@@ -157,9 +155,9 @@ def es_aggsop(es, frum, query):
 
         if split_where[1]:
             #TODO: INCLUDE FILTERS ON EDGES
-            filter = simplify_esfilter({"and": split_where[1]})
+            filter_ = simplify_esfilter(AndOp("and", split_where[1]).to_esfilter())
             es_query = Dict(
-                aggs={"_filter": set_default({"filter": filter}, es_query)}
+                aggs={"_filter": set_default({"filter": filter_}, es_query)}
             )
 
         es_query = wrap({
@@ -182,7 +180,7 @@ def es_aggsop(es, frum, query):
 
     if split_where[0]:
         #TODO: INCLUDE FILTERS ON EDGES
-        filter = simplify_esfilter({"and": split_where[0]})
+        filter = simplify_esfilter(AndOp("and", split_where[0]).to_esfilter())
         es_query = Dict(
             aggs={"_filter": set_default({"filter": filter}, es_query)}
         )
@@ -230,9 +228,15 @@ class AggsDecoder(object):
             if query.groupby:
                 return object.__new__(DefaultDecoder, e)
 
-            if is_keyword(e.value):
+            if isinstance(e.value, Variable):
+                field_name = unicode(e.value)
+            else:
+                # NOT EXPECTED WITH Expressions
+                field_name = e.value
+
+            if is_keyword(field_name):
                 cols = query.frum.get_columns()
-                col = cols.filter(lambda c: c.name == e.value)[0]
+                col = cols.filter(lambda c: c.name == field_name)[0]
                 if not col:
                     return object.__new__(DefaultDecoder, e)
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
@@ -301,20 +305,21 @@ class SetDecoder(AggsDecoder):
     def append_query(self, es_query, start):
         self.start = start
         domain = self.edge.domain
+        field_name = unicode(self.edge.value)
 
         include = [p[domain.key] for p in domain.partitions]
         if self.edge.allowNulls:
 
             return wrap({"aggs": {
                 "_match": set_default({"terms": {
-                    "field": self.edge.value,
+                    "field": field_name,
                     "size": 0,
                     "include": include
                 }}, es_query),
                 "_missing": set_default(
                     {"filter": {"or": [
-                        {"missing": {"field": self.edge.value}},
-                        {"not": {"terms": {self.edge.value: include}}}
+                        {"missing": {"field": field_name}},
+                        {"not": {"terms": {field_name: include}}}
                     ]}},
                     es_query
                 ),
@@ -322,7 +327,7 @@ class SetDecoder(AggsDecoder):
         else:
             return wrap({"aggs": {
                 "_match": set_default({"terms": {
-                    "field": self.edge.value,
+                    "field": field_name,
                     "size": 0,
                     "include": include
                 }}, es_query)

@@ -59,7 +59,7 @@ def es_deepop(es, query):
     if not wheres[1]:
         more_filter = {
             "and": [
-                qb_expression({"and": wheres[0]}).to_esfilter(),
+                simplify_esfilter(qb_expression({"and": wheres[0]}).to_esfilter()),
                 {"not": {
                     "nested": {
                         "path": query_path,

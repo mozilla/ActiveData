@@ -72,7 +72,7 @@ class ListContainer(Container):
         THE where CLAUSE IS A QB FILTER
         """
         command = wrap(command)
-        if command.where==None:
+        if command.where == None:
             filter_ = lambda: True
         else:
             filter_ = _exec("temp = lambda row: " + qb_expression(command.where).to_python())

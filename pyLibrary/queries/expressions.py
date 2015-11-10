@@ -11,13 +11,13 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
+from decimal import Decimal
 import itertools
 
 from pyLibrary import convert
 from pyLibrary.collections import OR, MAX, UNION
 from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null
 from pyLibrary.debugs.logs import Log
-from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.times.dates import Date
 
@@ -40,7 +40,7 @@ def qb_expression(expr):
     """
     WRAP A QB EXPRESSION WITH OBJECT REPRESENTATION
     """
-    if expr in (True, False, None) or expr == None or Math.is_number(expr) or isinstance(expr, Date):
+    if expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal)) or isinstance(expr, Date):
         return Literal(expr)
     elif is_keyword(expr):
         return Variable(expr)
@@ -61,11 +61,21 @@ def qb_expression(expr):
         else:
             raise Log.error("{{operator|quote}} is not a known operator", operator=op)
 
-    if isinstance(term, list):
+    if term == None:
+        return class_(op, [], **clauses)
+    elif isinstance(term, list):
         terms = map(qb_expression, term)
         return class_(op, terms, **clauses)
     elif isinstance(term, Mapping):
-        return class_(op, {Variable(k): Literal(v) for k, v in term.items()}, **clauses)
+        items = term.items()
+        if class_.has_simple_form:
+            if len(items) == 1:
+                k, v = items[0]
+                return class_(op, [Variable(k), Literal(v)], **clauses)
+            else:
+                return class_(op, {k: Literal(v) for k, v in items}, **clauses)
+        else:
+            return class_(op, qb_expression(term), **clauses)
     else:
         return class_(op, qb_expression(term), **clauses)
 
@@ -143,13 +153,21 @@ def edges_get_all_vars(e):
 
 
 class Expression(object):
+    has_simple_form = False
+
+
     def __init__(self, op, terms):
-        if isinstance(terms, list):
+        if isinstance(terms, (list, tuple)):
             if not all(isinstance(t, Expression) for t in terms):
                 Log.error("Expecting an expression")
-        if isinstance(terms, Mapping):
+        elif isinstance(terms, Mapping):
             if not all(isinstance(k, Variable) and isinstance(v, Literal) for k, v in terms.items()):
                 Log.error("Expecting an {<variable>: <literal}")
+        elif terms == None:
+            pass
+        else:
+            if not isinstance(terms, Expression):
+                Log.error("Expecting an expression")
 
     def to_ruby(self):
         raise NotImplementedError
@@ -178,6 +196,7 @@ class Expression(object):
 
 
 class Variable(Expression):
+
     def __init__(self, var):
         Expression.__init__(self, "", {})
         if not is_keyword(var):
@@ -203,6 +222,9 @@ class Variable(Expression):
         return {self.var}
 
     def map(self, map_):
+        if not isinstance(map_, Mapping):
+            Log.error("Expecting Mapping")
+
         return Variable(coalesce(map_.get(self.var), self.var))
 
     def missing(self):
@@ -214,6 +236,12 @@ class Variable(Expression):
 
     def __eq__(self, other):
         return self.var.__eq__(other)
+
+    def __unicode__(self):
+        return self.var
+
+    def __str__(self):
+        return str(self.var)
 
 
 class Literal(Expression):
@@ -267,8 +295,17 @@ class Literal(Expression):
     def missing(self):
         return False
 
+    def __unicode__(self):
+        return self.json
+
+    def __str__(self):
+        return str(self.json)
+
+
 
 class BinaryOp(Expression):
+    has_simple_form = True
+
     operators = {
         "add": " + ",
         "sub": " - ",
@@ -301,7 +338,7 @@ class BinaryOp(Expression):
         self.op = BinaryOp.operators.get(op, op)
 
         if isinstance(terms, (list, tuple)):
-            self.rhs, self.lhs = terms
+            self.lhs, self.rhs = terms
         elif isinstance(terms, Mapping):
             self.rhs, self.lhs = terms.items()[0]
         else:
@@ -322,12 +359,15 @@ class BinaryOp(Expression):
         elif self.op == " != ":
             return {"not": {"term": {self.lhs.var: self.rhs.to_esfilter()}}}
         elif self.op in BinaryOp.ineq_to_es:
-            return {"range": {self.lhs.var: {BinaryOp.ineq_to_es[self.op]: self.rhs.to_esfilter()}}}
+            return {"range": {self.lhs.var: {BinaryOp.ineq_to_es[self.op]: convert.json2value(self.rhs.json)}}}
         else:
             Log.error("Logic error")
 
     def to_dict(self):
-        return {self.op, [self.lhs.to_dict(), self.rhs.to_dict()]}
+        if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
+            return {self.op: {self.lhs.var, convert.json2value(self.rhs.json)}}
+        else:
+            return {self.op, [self.lhs.to_dict(), self.rhs.to_dict()]}
 
     def vars(self):
         return self.lhs.vars() | self.rhs.vars()
@@ -341,6 +381,7 @@ class BinaryOp(Expression):
 
 
 class EqOp(Expression):
+    has_simple_form = True
 
     def __new__(cls, op, terms):
         if isinstance(terms, list):
@@ -350,7 +391,7 @@ class EqOp(Expression):
         if len(items) == 1:
             return BinaryOp("eq", items[0])
         else:
-            return AndOp("and", [BinaryOp("eq", [a, b]) for a, b in items])
+            return AndOp("and", [BinaryOp("eq", [Variable(a), b]) for a, b in items])
 
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
@@ -359,6 +400,7 @@ class EqOp(Expression):
 
 class NotOp(Expression):
     def __init__(self, op, term):
+        Expression.__init__(self, op, term)
         self.term = term
 
     def to_ruby(self):
@@ -386,7 +428,12 @@ class NotOp(Expression):
 class AndOp(Expression):
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
-        self.terms = terms
+        if terms == None:
+            self.terms = []
+        elif isinstance(terms, list):
+            self.terms = terms
+        else:
+            self.terms = [terms]
 
     def to_ruby(self):
         return " && ".join("(" + t.to_ruby() + ")" for t in self.terms)
@@ -496,6 +543,8 @@ class NumberOp(Expression):
 
 
 class MultiOp(Expression):
+    has_simple_form = True
+
     operators = {
         "add": (" + ", "0"),  # (operator, zero-array default value) PAIR
         "sum": (" + ", "0"),
@@ -513,7 +562,7 @@ class MultiOp(Expression):
         if isinstance(terms, list):
             self.terms = terms
         elif isinstance(terms, Mapping):
-            self.terms = [[Variable(k), v] for k, v in terms.items()][0]
+            Log.error("logic error")
 
         self.default = clauses.get("default", None)
 
@@ -543,6 +592,8 @@ class MultiOp(Expression):
 
 
 class RegExpOp(Expression):
+    has_simple_form = True
+
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
         self.var, self.pattern = term.items()[0]
@@ -564,6 +615,8 @@ class RegExpOp(Expression):
 
 
 class TermsOp(Expression):
+    has_simple_form = True
+
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
         self.var, self.vals = term.items()[0]
@@ -575,7 +628,7 @@ class TermsOp(Expression):
         return self.var.to_python() + " in [" + (",".join(v.to_python() for v in self.vals)) + "]"
 
     def to_esfilter(self):
-        return {"terms": {self.var: self.vals}}
+        return {"terms": {self.var.var: self.vals}}
 
     def to_dict(self):
         return {"terms": {self.var.var: self.vals}}
@@ -584,7 +637,7 @@ class TermsOp(Expression):
         return {self.var}
 
     def map(self, map):
-        return {"terms": {map.get(self.var, self.var): self.vals}}
+        return {"terms": {coalesce(map.get(self.var), self.var): self.vals}}
 
 
 class CoalesceOp(Expression):
@@ -650,9 +703,14 @@ class ExistsOp(Expression):
 
 
 class PrefixOp(Expression):
+    has_simple_form = True
+
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
-        self.field, self.prefix = term.items()[0]
+        if isinstance(term, Mapping):
+            self.field, self.prefix = term.items()[0]
+        else:
+            self.field, self.prefix = term
 
     def to_ruby(self):
         return "(" + self.field.to_ruby() + ").startsWith(" + self.prefix.to_ruby() + ")"
@@ -661,7 +719,10 @@ class PrefixOp(Expression):
         return "(" + self.field.to_python() + ").startswith(" + self.prefix.to_python() + ")"
 
     def to_esfilter(self):
-        return {"prefix": {self.field.var: self.prefix.to_es_filter()}}
+        if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
+            return {"prefix": {self.field.var: convert.json2value(self.prefix.json)}}
+        else:
+            return {"script": {"script": self.to_ruby()}}
 
     def to_dict(self):
         if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
@@ -673,10 +734,12 @@ class PrefixOp(Expression):
         return {self.field.var}
 
     def map(self, map_):
-        return PrefixOp("prefix", {self.field.map(map_), self.prefix})
+        return PrefixOp("prefix", [self.field.map(map_), self.prefix.map(map_)])
 
 
 class LeftOp(Expression):
+    has_simple_form = True
+
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
         if isinstance(term, Mapping):
@@ -739,6 +802,8 @@ class MissingOp(Expression):
 
 
 class InOp(Expression):
+    has_simple_form = True
+
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
         self.field, self.values = term.items()[0]
@@ -763,6 +828,8 @@ class InOp(Expression):
 
 
 class RangeOp(Expression):
+    has_simple_form = True
+
     def __new__(cls, op, term, *args, **kwargs):
         Expression.__new__(cls, *args, **kwargs)
         field, cmps = term.items()[0]
@@ -1030,12 +1097,9 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
 
     if len(all_depths) == 1:
         output[list(all_depths)[0]] += [where]
-    elif where["and"]:
-        for a in listwrap(where["and"]):
+    elif isinstance(where, AndOp):
+        for a in where.terms:
             split_expression_by_depth(a, schema, output, var_to_depth)
-    elif where.eq and len(where.eq.items()) > 1:
-        for var, val in where.eq.items():
-            split_expression_by_depth({"eq": {var: val}}, schema, output, var_to_depth)
     else:
         Log.error("Can not handle complex where clause")
 

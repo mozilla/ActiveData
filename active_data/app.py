@@ -138,7 +138,7 @@ def query(path):
                     for c in cols:
                         m.todo.push(c)
                     for c in cols:
-                        if not c.last_updated:
+                        if not c.last_updated or not c.cardinality:
                             Log.note("wait for column (table={{col.table}}, name={{col.name}}) metadata to arrive", col=c)
                             break
                     else:

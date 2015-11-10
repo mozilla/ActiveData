@@ -284,13 +284,17 @@ def pretty_json(value):
                 from pyLibrary.collections import OR
 
                 if OR(not isinstance(k, basestring) for k in value.keys()):
-                    Log.error("JSON must have string keys: {{keys}}:", {
-                        "keys": [k for k in value.keys()]
-                    }, e)
+                    Log.error(
+                        "JSON must have string keys: {{keys}}:",
+                        keys=[k for k in value.keys()],
+                        cause=e
+                    )
 
-                Log.error("problem making dict pretty: keys={{keys}}:", {
-                    "keys": [k for k in value.keys()]
-                }, e)
+                Log.error(
+                    "problem making dict pretty: keys={{keys}}:",
+                    keys=[k for k in value.keys()],
+                    cause=e
+                )
         elif value in (None, Null):
             return "null"
         elif isinstance(value, basestring):
@@ -384,13 +388,13 @@ def pretty_json(value):
             try:
                 if int(value) == value:
                     return str(int(value))
-            except Exception, e:
+            except Exception:
                 pass
 
             try:
                 if float(value) == value:
                     return str(float(value))
-            except Exception, e:
+            except Exception:
                 pass
 
             return pypy_json_encode(value)
@@ -416,9 +420,11 @@ def problem_serializing(value, e=None):
         rep = None
 
     if rep == None:
-        Log.error("Problem turning value of type {{type}} to json", {
-            "type": typename
-        }, e)
+        Log.error(
+            "Problem turning value of type {{type}} to json",
+            type=typename,
+            cause=e
+        )
     else:
         Log.error(
             "Problem turning value ({{value}}) of type {{type}} to json",

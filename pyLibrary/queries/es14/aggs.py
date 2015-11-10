@@ -20,7 +20,7 @@ from pyLibrary.queries import qb, es09
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword, DefaultDomain
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, qb_expression, AndOp, Variable
+from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, qb_expression, AndOp, Variable, Literal, OrOp
 from pyLibrary.queries.query import DEFAULT_LIMIT
 from pyLibrary.times.timer import Timer
 
@@ -358,26 +358,26 @@ def _range_composer(edge, domain, es_query, to_float):
     _min = coalesce(domain.min, MAX(domain.partitions.min))
     _max = coalesce(domain.max, MAX(domain.partitions.max))
 
-    if is_keyword(edge.value):
-        calc = {"field": edge.value}
+    if isinstance(edge.value, Variable):
+        calc = {"field": edge.value.var}
     else:
-        calc = {"script": qb_expression(edge.value).to_ruby()}
+        calc = {"script": edge.value.to_ruby()}
 
     if edge.allowNulls:
-        if is_keyword(edge.value):
+        if isinstance(edge.value, Variable):
             missing_range = {"or": [
-                {"range": {edge.value: {"lt": to_float(_min)}}},
-                {"range": {edge.value: {"gte": to_float(_max)}}}
+                {"range": {edge.value.var: {"lt": to_float(_min)}}},
+                {"range": {edge.value.var: {"gte": to_float(_max)}}}
             ]}
         else:
-            missing_range = {"script": {"script": qb_expression({"or": [
-                {"lt": [edge.value, to_float(_min)]},
-                {"gt": [edge.value, to_float(_max)]},
-            ]}).to_ruby()}}
+            missing_range = {"script": {"script": OrOp("or", [
+                {"lt": [edge.value, Literal(to_float(_min))]},
+                {"gt": [edge.value, Literal(to_float(_max))]},
+            ]).to_ruby()}}
         missing_filter = set_default(
             {"filter": {"or": [
                 missing_range,
-                {"or": [{"missing": {"field": v}} for v in qb_expression(edge.value).vars()]}
+                edge.value.missing()
             ]}},
             es_query
         )

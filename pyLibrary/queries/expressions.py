@@ -50,6 +50,8 @@ def qb_expression(expr):
 
     if len(items) == 1:
         class_ = operators.get(op)
+        if not class_:
+            Log.error("{{operator|quote}} is not a known operator", operator=op)
         clauses = {}
     else:
         for item in items:
@@ -198,7 +200,7 @@ class Expression(object):
 class Variable(Expression):
 
     def __init__(self, var):
-        Expression.__init__(self, "", {})
+        Expression.__init__(self, "", None)
         if not is_keyword(var):
             Log.error("Expecting a variable")
         self.var = var
@@ -250,6 +252,7 @@ class Literal(Expression):
     """
 
     def __init__(self, term):
+        Expression.__init__(self, "", None)
         self.json = convert.value2json(term)
 
     def __nonzero__(self):
@@ -300,7 +303,6 @@ class Literal(Expression):
 
     def __str__(self):
         return str(self.json)
-
 
 
 class BinaryOp(Expression):
@@ -389,9 +391,18 @@ class EqOp(Expression):
 
         items = terms.items()
         if len(items) == 1:
-            return BinaryOp("eq", items[0])
+            if isinstance(items[0][1], list):
+                return InOp("in", items[0])
+            else:
+                return BinaryOp("eq", items[0])
         else:
-            return AndOp("and", [BinaryOp("eq", [Variable(a), b]) for a, b in items])
+            acc = []
+            for a, b in items:
+                if b.json.startswith("["):
+                    acc.append(InOp("in", [Variable(a), b]))
+                else:
+                    acc.append(BinaryOp("eq", [Variable(a), b]))
+            return AndOp("and", acc)
 
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
@@ -805,23 +816,26 @@ class InOp(Expression):
     has_simple_form = True
 
     def __init__(self, op, term):
-        Expression.__init__(self, op, [term])
-        self.field, self.values = term.items()[0]
+        Expression.__init__(self, op, term)
+        self.field, self.values = term
 
     def to_ruby(self):
-        return convert.value2json(self.values) + ".include? " + self.field
+        return self.values.to_ruby() + ".contains(" + self.field.to_ruby() + ")"
 
     def to_python(self):
-        return self.field + " in " + convert.value2json(self.values)
+        return self.field.to_python() + " in " + self.values.to_python()
 
     def to_esfilter(self):
-        return {"terms": {self.field: self.values}}
+        return {"terms": {self.field.var: convert.json2value(self.values.json)}}
 
     def to_dict(self):
-        return {"in": {self.field.var, self.values}}
+        if isinstance(self.field, Variable) and isinstance(self.values, Literal):
+            return {"in": {self.field.var, convert.json2value(self.values.json)}}
+        else:
+            return {"in": [self.field.to_dict(), self.values.to_dict()]}
 
     def vars(self):
-        return {self.field}
+        return self.field.vars()
 
     def map(self, map):
         return InOp("in", {coalesce(map.get(self.field), self.field): self.values})
@@ -1131,6 +1145,7 @@ operators = {
     "lte": BinaryOp,
     "lt": BinaryOp,
     "ne": BinaryOp,
+    "neq": BinaryOp,
     "term": EqOp,
     "not": NotOp,
     "and": AndOp,

@@ -46,7 +46,7 @@ class TestExpressions(FuzzyTestCase):
             {"lt": {"build.date": 1429920000}}
         ]}
 
-        result = simplify_esfilter(qb_expression(where).to_esfilter)
+        result = simplify_esfilter(qb_expression(where).to_esfilter())
         self.assertEqual(result, {"range": {"build.date": {"gte": Date("23 APR 2015").unix, "lt": Date("25 APR 2015").unix}}})
 
     def test_value_not_a_variable(self):

@@ -305,39 +305,120 @@ class Literal(Expression):
         return str(self.json)
 
 
+class TrueOp(Expression):
+    def __init__(self, op, term):
+        Expression.__init__(self, "", None)
+
+    def to_ruby(self):
+        return "true"
+
+    def to_python(self):
+        return "True"
+
+    def to_esfilter(self):
+        return {"match_all": {}}
+
+    def to_dict(self):
+        return True
+
+    def vars(self):
+        return set()
+
+    def map(self, map_):
+        return self
+
+    def missing(self):
+        return FalseOp("", None)
+
+    def __unicode__(self):
+        return "true"
+
+    def __str__(self):
+        return b"true"
+
+
+class FalseOp(Expression):
+    def __init__(self, op, term):
+        Expression.__init__(self, "", None)
+
+    def to_ruby(self):
+        return "false"
+
+    def to_python(self):
+        return "False"
+
+    def to_esfilter(self):
+        return {"not": {"match_all": {}}}
+
+    def to_dict(self):
+        return False
+
+    def vars(self):
+        return set()
+
+    def map(self, map_):
+        return self
+
+    def missing(self):
+        return self
+
+    def __unicode__(self):
+        return "false"
+
+    def __str__(self):
+        return b"false"
+
+
 class BinaryOp(Expression):
     has_simple_form = True
 
     operators = {
-        "add": " + ",
-        "sub": " - ",
-        "subtract": " - ",
-        "minus": " - ",
-        "div": " / ",
-        "divide": " / ",
-        "exp": " ** ",
-        "mod": " % ",
-        "gt": " > ",
-        "gte": " >= ",
-        "eq": " == ",
-        "ne": " != ",
-        "neq": " != ",
-        "lte": " <= ",
-        "lt": " < ",
-        "term": " == "
+        "add": "+",
+        "sub": "-",
+        "subtract": "-",
+        "minus": "-",
+        "mul": "*",
+        "mult": "*",
+        "multiply": "*",
+        "div": "/",
+        "divide": "/",
+        "exp": "**",
+        "mod": "%",
+        "gt": ">",
+        "gte": ">=",
+        "eq": "==",
+        "lte": "<=",
+        "lt": "<",
+        "term": "=="
     }
 
-    ineq_to_es = {
-        " > ": "gt",
-        " >= ": "gte",
-        " <= ": "lte",
-        " < ": "lt"
+    algebra_ops = {
+        "add",
+        "sub",
+        "subtract",
+        "minus",
+        "mul",
+        "mult",
+        "multiply",
+        "div",
+        "divide",
+        "exp",
+        "mod",
+    }
+
+    ineq_ops = {
+        "gt",
+        "gte",
+        "lte",
+        "lt"
     }
 
 
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
-        self.op = BinaryOp.operators.get(op, op)
+        if op not in BinaryOp.operators:
+            Log.error("{{op|quote}} not a recognized operator", op=op)
+        self.op = op
 
         if isinstance(terms, (list, tuple)):
             self.lhs, self.rhs = terms
@@ -347,21 +428,21 @@ class BinaryOp(Expression):
             Log.error("logic error")
 
     def to_ruby(self):
-        return "(" + self.lhs.to_ruby() + ") " + self.op + " (" + self.rhs.to_ruby()+")"
+        return "(" + self.lhs.to_ruby() + ") " + BinaryOp.operators[self.op] + " (" + self.rhs.to_ruby()+")"
 
     def to_python(self):
-        return "(" + self.lhs.to_python() + ") " + self.op + " (" + self.rhs.to_python()+")"
+        return "(" + self.lhs.to_python() + ") " + BinaryOp.operators[self.op] + " (" + self.rhs.to_python()+")"
 
     def to_esfilter(self):
-        if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal) or self.op in [" + ", " - ", " * ", " / ", " % ", " ** "]:
+        if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal) or self.op in BinaryOp.algebra_ops:
             return {"script": {"script": self.to_ruby()}}
 
-        if self.op == " == ":
+        if self.op in ["eq", "term"]:
             return {"term": {self.lhs.var: self.rhs.to_esfilter()}}
-        elif self.op == " != ":
+        elif self.op in ["ne", "neq"]:
             return {"not": {"term": {self.lhs.var: self.rhs.to_esfilter()}}}
-        elif self.op in BinaryOp.ineq_to_es:
-            return {"range": {self.lhs.var: {BinaryOp.ineq_to_es[self.op]: convert.json2value(self.rhs.json)}}}
+        elif self.op in BinaryOp.ineq_ops:
+            return {"range": {self.lhs.var: {self.op: convert.json2value(self.rhs.json)}}}
         else:
             Log.error("Logic error")
 
@@ -369,7 +450,7 @@ class BinaryOp(Expression):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
             return {self.op: {self.lhs.var, convert.json2value(self.rhs.json)}}
         else:
-            return {self.op, [self.lhs.to_dict(), self.rhs.to_dict()]}
+            return {self.op: [self.lhs.to_dict(), self.rhs.to_dict()]}
 
     def vars(self):
         return self.lhs.vars() | self.rhs.vars()
@@ -378,7 +459,7 @@ class BinaryOp(Expression):
         return BinaryOp(self.op, [self.lhs.map(map_), self.rhs.map(map_)])
 
     def missing(self):
-        return MultiOp("or", [self.lhs.missing(), self.rhs.missing()])
+        return OrOp("or", [self.lhs.missing(), self.rhs.missing()])
 
 
 
@@ -407,6 +488,54 @@ class EqOp(Expression):
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
         raise NotImplementedError
+
+class NeOp(Expression):
+    has_simple_form = True
+
+    def __init__(self, op, terms):
+        Expression.__init__(self, op, terms)
+        if isinstance(terms, (list, tuple)):
+            self.lhs, self.rhs = terms
+        elif isinstance(terms, Mapping):
+            self.rhs, self.lhs = terms.items()[0]
+        else:
+            Log.error("logic error")
+
+    def to_ruby(self):
+        lhs = self.lhs.to_ruby()
+        rhs = self.rhs.to_ruby()
+        return "((" + lhs + ")!=null) && ((" + rhs + ")!=null) && ((" + lhs + ")!=(" + rhs + "))"
+
+    def to_python(self):
+        lhs = self.lhs.to_python()
+        rhs = self.rhs.to_python()
+        return "((" + lhs + ") != None and (" + rhs + ") != None and (" + lhs + ") != (" + rhs + "))"
+
+    def to_esfilter(self):
+        if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
+            return {"not": {"term": {self.lhs.var: self.rhs.to_esfilter()}}}
+        else:
+            return {"and": [
+                {"and": [{"exists": {"field": v}} for v in self.vars()]},
+                {"script": {"script": self.to_ruby()}}
+            ]}
+
+
+    def to_dict(self):
+        if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
+            return {"ne": {self.lhs.var, convert.json2value(self.rhs.json)}}
+        else:
+            return {"ne": [self.lhs.to_dict(), self.rhs.to_dict()]}
+
+    def vars(self):
+        return self.lhs.vars() | self.rhs.vars()
+
+    def map(self, map_):
+        return NeOp("ne", [self.lhs.map(map_), self.rhs.map(map_)])
+
+    def missing(self):
+        return OrOp("or", [self.lhs.missing(), self.rhs.missing()])
+
 
 
 class NotOp(Expression):
@@ -578,10 +707,10 @@ class MultiOp(Expression):
         self.default = clauses.get("default", None)
 
     def to_ruby(self):
-        return MultiOp.operators[self.op].join("(" + t.to_ruby() + ")" for t in self.terms)
+        return MultiOp.operators[self.op][0].join("(" + t.to_ruby() + ")" for t in self.terms)
 
     def to_python(self):
-        return MultiOp.operators[self.op].join("(" + t.to_python() + ")" for t in self.terms)
+        return MultiOp.operators[self.op][0].join("(" + t.to_python() + ")" for t in self.terms)
 
     def to_dict(self):
         return {self.op: [t.to_dict() for t in self.terms]}
@@ -606,23 +735,23 @@ class RegExpOp(Expression):
     has_simple_form = True
 
     def __init__(self, op, term):
-        Expression.__init__(self, op, [term])
-        self.var, self.pattern = term.items()[0]
+        Expression.__init__(self, op, term)
+        self.var, self.pattern = term
 
     def to_python(self):
         return "re.match(" + self.pattern + ", " + self.var.to_python() + ")"
 
     def to_esfilter(self):
-        return {"regexp": {self.var.var: convert.json_decoder(self.pattern)}}
+        return {"regexp": {self.var.var: convert.json2value(self.pattern.json)}}
 
     def to_dict(self):
         return {"regexp": {self.var.var: self.pattern}}
 
     def vars(self):
-        return {self.var}
+        return {self.var.var}
 
-    def map(self, map):
-        return {"regex": {map.get(self.var, self.var): self.pattern}}
+    def map(self, map_):
+        return RegExpOp("regex", [self.var.map(map_), self.pattern])
 
 
 class TermsOp(Expression):
@@ -674,7 +803,7 @@ class CoalesceOp(Expression):
 
     def missing(self):
         # RETURN true FOR RECORDS THE WOULD RETURN NULL
-        return {"and": [v.missing() for v in self.terms]}
+        return AndOp("and", [v.missing() for v in self.terms])
 
     def vars(self):
         output = set()
@@ -787,11 +916,8 @@ class LeftOp(Expression):
 
 class MissingOp(Expression):
     def __init__(self, op, term):
-        Expression.__init__(self, op, [term])
-        if isinstance(term, basestring):
-            self.field = term
-        else:
-            self.field = term.field
+        Expression.__init__(self, op, term)
+        self.field = term
 
     def to_ruby(self):
         return self.field.to_ruby() + " == null"
@@ -926,6 +1052,9 @@ def simplify_esfilter(esfilter):
         output = normalize_esfilter(esfilter)
         if output is TRUE_FILTER:
             return {"match_all": {}}
+        elif output is FALSE_FILTER:
+            return {"not": {"match_all": {}}}
+
         output.isNormal = None
         return output
     except Exception, e:
@@ -1144,8 +1273,8 @@ operators = {
     "eq": EqOp,
     "lte": BinaryOp,
     "lt": BinaryOp,
-    "ne": BinaryOp,
-    "neq": BinaryOp,
+    "ne": NeOp,
+    "neq": NeOp,
     "term": EqOp,
     "not": NotOp,
     "and": AndOp,
@@ -1158,5 +1287,6 @@ operators = {
     "mult": MultiOp,
     "multiply": MultiOp,
     "when": WhenOp,
-    "case": CaseOp
+    "case": CaseOp,
+    "match_all": TrueOp
 }

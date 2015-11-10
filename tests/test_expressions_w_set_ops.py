@@ -136,7 +136,10 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [None, "1", "22", "33", "44"]
+                "data": [
+                    {"a": 0, "b": 1},
+                    {"a": 1, "b": 0}
+                ]
             }
         }
         self._execute_es_tests(test)

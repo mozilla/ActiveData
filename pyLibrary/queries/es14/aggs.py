@@ -20,7 +20,7 @@ from pyLibrary.queries import qb, es09
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword, DefaultDomain
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, qb_expression, AndOp, Variable, Literal, OrOp
+from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, qb_expression, AndOp, Variable, Literal, OrOp, BinaryOp
 from pyLibrary.queries.query import DEFAULT_LIMIT
 from pyLibrary.times.timer import Timer
 
@@ -228,15 +228,12 @@ class AggsDecoder(object):
             if query.groupby:
                 return object.__new__(DefaultDecoder, e)
 
-            if isinstance(e.value, Variable):
-                field_name = unicode(e.value)
-            else:
-                # NOT EXPECTED WITH Expressions
-                field_name = e.value
+            if isinstance(e.value, basestring):
+                Log.error("Not expected anymore")
 
-            if is_keyword(field_name):
+            if isinstance(e.value, Variable):
                 cols = query.frum.get_columns()
-                col = cols.filter(lambda c: c.name == field_name)[0]
+                col = cols.filter(lambda c: c.name == e.value.var)[0]
                 if not col:
                     return object.__new__(DefaultDecoder, e)
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
@@ -371,13 +368,13 @@ def _range_composer(edge, domain, es_query, to_float):
             ]}
         else:
             missing_range = {"script": {"script": OrOp("or", [
-                {"lt": [edge.value, Literal(to_float(_min))]},
-                {"gt": [edge.value, Literal(to_float(_max))]},
+                BinaryOp("lt", [edge.value, Literal(to_float(_min))]),
+                BinaryOp("gt", [edge.value, Literal(to_float(_max))]),
             ]).to_ruby()}}
         missing_filter = set_default(
             {"filter": {"or": [
                 missing_range,
-                edge.value.missing()
+                edge.value.missing().to_esfilter()
             ]}},
             es_query
         )
@@ -498,9 +495,9 @@ class DefaultDecoder(SetDecoder):
     def append_query(self, es_query, start):
         self.start = start
 
-        if isinstance(self.edge.value, Mapping):
-            script_field = qb_expression(self.edge.value).to_ruby()
-            missing = qb_expression(self.edge.value).to_missing().to_esfilter()
+        if not isinstance(self.edge.value, Variable):
+            script_field = self.edge.value.to_ruby()
+            missing = self.edge.value.missing().to_esfilter()
 
             output = wrap({"aggs": {
                 "_match": set_default(
@@ -517,7 +514,7 @@ class DefaultDecoder(SetDecoder):
         output = wrap({"aggs": {
             "_match": set_default(
                 {"terms": {
-                    "field": self.edge.value,
+                    "field": self.edge.value.var,
                     "size": self.edge.domain.limit
                 }},
                 es_query

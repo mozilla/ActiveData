@@ -19,8 +19,9 @@ from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
 from pyLibrary.maths import Math
 from pyLibrary.debugs.logs import Log
+from pyLibrary.queries import es14, es09
 from pyLibrary.queries.containers.cube import Cube
-from pyLibrary.queries.domains import is_keyword
+from pyLibrary.queries.domains import is_keyword, ALGEBRAIC
 from pyLibrary.queries.es14.util import qb_sort_to_es_sort
 from pyLibrary.queries.expressions import simplify_esfilter, qb_expression
 from pyLibrary.queries.query import DEFAULT_LIMIT
@@ -44,7 +45,7 @@ def is_setop(es, query):
         if simpleAgg or isDeep:
             return True
     else:
-        isSmooth = AND((e.domain.type in domains.ALGEBRAIC and e.domain.interval == "none") for e in query.edges)
+        isSmooth = AND((e.domain.type in ALGEBRAIC and e.domain.interval == "none") for e in query.edges)
         if isSmooth:
             return True
 

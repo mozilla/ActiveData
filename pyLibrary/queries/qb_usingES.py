@@ -157,7 +157,11 @@ class FromES(Container):
 
         columns = []
         if query_path:
-            depth = (len(listwrap(c.nested_path)) for c in abs_columns if listwrap(c.nested_path)[0] == query_path).next()
+            try:
+                depth = (len(listwrap(c.nested_path)) for c in abs_columns if listwrap(c.nested_path)[0] == query_path).next()
+            except Exception:
+                Log.error("{{path}} does not exist", path=query_path)
+
             # ADD RELATIVE COLUMNS
             for c in abs_columns:
                 if listwrap(c.nested_path)[0] == query_path:

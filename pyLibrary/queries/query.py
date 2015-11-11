@@ -366,6 +366,7 @@ def _normalize_range(range):
 
 
 def _normalize_where(where, schema=None):
+    where = wrap(where)
     if where == None:
         return TRUE_FILTER
     if schema == None:

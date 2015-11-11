@@ -754,32 +754,6 @@ class RegExpOp(Expression):
         return RegExpOp("regex", [self.var.map(map_), self.pattern])
 
 
-class TermsOp(Expression):
-    has_simple_form = True
-
-    def __init__(self, op, term):
-        Expression.__init__(self, op, [term])
-        self.var, self.vals = term.items()[0]
-
-    def to_ruby(self):
-        return "[" + (",".join(v.to_python() for v in self.vals)) + "].include?(" + self.var.to_ruby() + ")"
-
-    def to_python(self):
-        return self.var.to_python() + " in [" + (",".join(v.to_python() for v in self.vals)) + "]"
-
-    def to_esfilter(self):
-        return {"terms": {self.var.var: self.vals}}
-
-    def to_dict(self):
-        return {"terms": {self.var.var: self.vals}}
-
-    def vars(self):
-        return {self.var}
-
-    def map(self, map):
-        return {"terms": {coalesce(map.get(self.var), self.var): self.vals}}
-
-
 class CoalesceOp(Expression):
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
@@ -1251,7 +1225,7 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
 
 operators = {
     "in": InOp,
-    "terms": TermsOp,
+    "terms": InOp,
     "exists": ExistsOp,
     "missing": MissingOp,
     "prefix": PrefixOp,

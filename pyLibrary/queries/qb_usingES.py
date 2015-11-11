@@ -27,6 +27,7 @@ from pyLibrary.queries.es14.deep import is_deepop, es_deepop
 from pyLibrary.queries.es14.setop import is_setop, es_setop
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.es14.util import aggregates1_4
+from pyLibrary.queries.expressions import qb_expression
 from pyLibrary.queries.meta import FromESMetadata
 from pyLibrary.queries.namespace.typed import Typed
 from pyLibrary.queries.query import Query, _normalize_where
@@ -277,7 +278,7 @@ class FromES(Container):
             "fields": listwrap(schema._routing.path),
             "query": {"filtered": {
                 "query": {"match_all": {}},
-                "filter": _normalize_where(command.where, self)
+                "filter": _normalize_where(qb_expression(command.where).to_esfilter(), self)
             }},
             "size": 200000
         })
@@ -290,7 +291,7 @@ class FromES(Container):
             if isinstance(v, Mapping) and v.doc:
                 scripts.append({"doc": v.doc})
             else:
-                scripts.append({"script": "ctx._source." + k + " = " + expressions.qb_expression_to_ruby(v)})
+                scripts.append({"script": "ctx._source." + k + " = " + qb_expression(v).to_ruby()})
 
         if results.hits.hits:
             updates = []

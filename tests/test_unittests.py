@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 
 import os
+from unittest import skip
 
 from pyLibrary import convert, jsons
 from pyLibrary.debugs.logs import Log, Except
@@ -27,7 +28,7 @@ from tests.base_test_class import ActiveDataBaseTest, error, settings
 APP_CONFIG_FILE = "tests/config/app_staging_settings.json"
 ES_CLUSTER_LOCATION = None
 
-
+@skip("not usually run")
 class TestUnittests(ActiveDataBaseTest):
     process = None
 

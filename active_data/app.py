@@ -98,6 +98,7 @@ def find_query(hash):
             )
     except Exception, e:
         e = Except.wrap(e)
+        Log.warning("problem finding query with hash={{hash}}", hash=hash, cause=e)
         return Response(
             convert.unicode2utf8(convert.value2json(e)),
             status=400,
@@ -138,7 +139,7 @@ def query(path):
                     for c in cols:
                         m.todo.push(c)
                     for c in cols:
-                        if not c.last_updated or not c.cardinality:
+                        if not c.last_updated or c.cardinality == None:
                             Log.note("wait for column (table={{col.table}}, name={{col.name}}) metadata to arrive", col=c)
                             break
                     else:

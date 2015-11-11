@@ -144,20 +144,74 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_select_when(self):
+        test = {
+            "data": [
+                {"a": 0, "b": 0},
+                {"a": 0, "b": 1},
+                {"a": 0},
+                {"a": 1, "b": 0},
+                {"a": 1, "b": 1},
+                {"a": 1},
+                {"b": 0},
+                {"b": 1},
+                {}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["a", "b", {"name": "i/o", "value": {"when": {"eq": ["a", "b"]}, "then": 1, "else": 2}}],
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 0, "b": 0, "i/o": 1},
+                    {"a": 0, "b": 1, "i/o": 2},
+                    {"a": 0, "i/o": 2},
+                    {"a": 1, "b": 0, "i/o": 2},
+                    {"a": 1, "b": 1, "i/o": 1},
+                    {"a": 1, "i/o": 2},
+                    {"b": 0, "i/o": 2},
+                    {"b": 1, "i/o": 2},
+                    {"i/o": 1}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
 
+    def test_select_add(self):
+        test = {
+            "data": [
+                {"a": 0, "b": 0},
+                {"a": 0, "b": 1},
+                {"a": 0},
+                {"a": 1, "b": 0},
+                {"a": 1, "b": 1},
+                {"a": 1},
+                {"b": 0},
+                {"b": 1},
+                {}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["a", "b", {"name": "t", "value": {"add": ["a", "b"]}}]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 0, "b": 0, "t": 0},
+                    {"a": 0, "b": 1, "t": 1},
+                    {"a": 0, "t": 0},
+                    {"a": 1, "b": 0, "t": 1},
+                    {"a": 1, "b": 1, "t": 2},
+                    {"a": 1, "t": 1},
+                    {"b": 0, "t": 0},
+                    {"b": 1, "t": 1},
+                    {}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
 
-
-
-# TEST THAT ne WORKS
-q = {
-    "from": "jobs",
-    "where": {
-        "ne": [
-            "run.machine.name",
-            "action.slave"
-        ]
-    }
-}
 
 # SELECT CLAUSE WITH SOMETHING A BIT MORE COMPLICATED
 # q = {

@@ -113,6 +113,8 @@ class FromESMetadata(object):
         for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
             for _, properties in meta.mappings.items():
                 columns = _elasticsearch.parse_properties(index, None, properties.properties)
+                if DEBUG:
+                    Log.note("upserting {{num}} columns", num=len(columns))
                 with self.columns.locker:
                     for c in columns:
                         # ABSOLUTE

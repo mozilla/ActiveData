@@ -957,26 +957,26 @@ class WhenOp(Expression):
     def __init__(self, op, term, **clauses):
         Expression.__init__(self, op, [term])
         self.when = term
-        self.then = coalesce(clauses.get("then"), Literal(None))
-        self.else_ = coalesce(clauses.get("else"), Literal(None))
+        self.then = qb_expression(clauses.get("then"))
+        self.els_ = qb_expression(clauses.get("else"))
 
     def to_ruby(self):
-        return "(" + self.when.to_ruby() + ") ? (" + self.then.to_ruby() + ") : (" + self.else_.to_ruby() + ")"
+        return "(" + self.when.to_ruby() + ") ? (" + self.then.to_ruby() + ") : (" + self.els_.to_ruby() + ")"
 
     def to_python(self):
-        return "(" + self.when.to_python() + ") ? (" + self.then.to_python() + ") : (" + self.else_.to_python() + ")"
+        return "(" + self.when.to_python() + ") ? (" + self.then.to_python() + ") : (" + self.els_.to_python() + ")"
 
     def to_esfilter(self):
         return {"script": {"script": self.to_ruby()}}
 
     def to_dict(self):
-        return {"when": self.when.to_dict(), "then": self.then.to_dict() if self.then else None, "else": self.else_.to_dict() if self.else_ else None}
+        return {"when": self.when.to_dict(), "then": self.then.to_dict() if self.then else None, "else": self.els_.to_dict() if self.els_ else None}
 
     def vars(self):
-        return self.when.vars() | self.then.vars() | self.else_.vars()
+        return self.when.vars() | self.then.vars() | self.els_.vars()
 
     def map(self, map_):
-        return WhenOp("when", self.when.map(map_), **{"then": self.then.map(map_), "else": self.else_.map(map_)})
+        return WhenOp("when", self.when.map(map_), **{"then": self.then.map(map_), "else": self.els_.map(map_)})
 
 
 class CaseOp(Expression):

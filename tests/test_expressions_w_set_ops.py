@@ -212,6 +212,64 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_select_add_w_default(self):
+        test = {
+            "data": [
+                {"a": 1, "b": -1},  # DUMMY VALUE TO CREATE COLUMNS
+                {}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": ["a", "b", {"name": "t", "value": {"add": ["a", "b"], "default": 0}}]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 1, "b": -1, "t": 0},
+                    {"t": 0}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
+
+    def test_select_average(self):
+        test = {
+            "data": [{"a": {"_b": [
+                {"a": 0, "b": 0},
+                {"a": 0, "b": 1},
+                {"a": 0},
+                {"a": 1, "b": 0},
+                {"a": 1, "b": 1},
+                {"a": 1},
+                {"b": 0},
+                {"b": 1},
+                {}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": [
+                    {"aggregate": "count"},
+                    {"name": "t", "value": {"add": ["a", "b"]}, "aggregate": "average"}
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 0, "b": 0, "t": 0},
+                    {"a": 0, "b": 1, "t": 0.5},
+                    {"a": 0, "t": 0},
+                    {"a": 1, "b": 0, "t": 0.5},
+                    {"a": 1, "b": 1, "t": 2},
+                    {"a": 1, "t": 1},
+                    {"b": 0, "t": 0},
+                    {"b": 1, "t": 1},
+                    {}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
 
 # SELECT CLAUSE WITH SOMETHING A BIT MORE COMPLICATED
 # q = {

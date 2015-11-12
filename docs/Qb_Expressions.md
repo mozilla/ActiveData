@@ -143,6 +143,13 @@ Compare two expressions, and return a Boolean
 Math Operators
 --------------
 
+All the math operators, except `count`, return `null` if all the operands are `null`.  This behaviour can be changed by including a `default` clause:  
+
+		{"sum": [expr1, expr2, ... exprN], "default": 0}
+
+In this example, if all expressions evaluate to `null` then `sum` will return zero (`0`).
+
+
 ###`count` Operator###
 
 For counting the number of not-null values.

@@ -43,8 +43,8 @@ def es_deepop(es, query):
     columns = query.frum.get_columns()
     query_path = query.frum.query_path
     columns = UniqueIndex(keys=["name"], data=sorted(columns, lambda a, b: cmp(len(listwrap(b.nested_path)), len(listwrap(a.nested_path)))), fail_on_dup=False)
-    _map = {c.name: c.abs_name for c in columns}
-    where = qb_expression(query.where).map(_map)
+    map_ = {c.name: c.abs_name for c in columns}
+    where = qb_expression(query.where).map(map_)
 
     es_query, es_filters = es14.util.es_query_template(query.frum.name)
 
@@ -174,8 +174,8 @@ def es_deepop(es, query):
             Log.error("need an example")
             es_query.fields += [v for v in s.value]
         else:
-            Log.error("need an example")
-            es_query.script_fields[literal_field(s.name)] = {"script": qb_expression(s.value).to_ruby()}
+            expr = qb_expression(s.value).map(map_).to_ruby()
+            es_query.script_fields[literal_field(s.name)] = {"script": expr}
             new_select.append({
                 "name": s.name if is_list else ".",
                 "value": s.name,

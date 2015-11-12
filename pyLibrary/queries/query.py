@@ -212,7 +212,10 @@ def _normalize_select(select, schema=None):
     else:
         select = wrap(select)
         output = select.copy()
-        if not select.value or isinstance(select.value, basestring):
+        if not select.value:
+            output.value = "."
+            output.name = coalesce(select.name, select.aggregate)
+        elif isinstance(select.value, basestring):
             if select.value == ".":
                 output.name = coalesce(select.name, select.aggregate)
             else:

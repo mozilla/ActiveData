@@ -572,13 +572,13 @@ class TestDeepOps(ActiveDataBaseTest):
                 }
             },
             "es_query": {  # FOR REFERENCE
-                           "fields": [],
-                           "aggs": {"_nested": {
-                               "nested": {"path": "a._a"},
-                               "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
-                           }},
-                           "size": 10,
-                           "sort": []
+                "fields": [],
+                "aggs": {"_nested": {
+                    "nested": {"path": "a._a"},
+                    "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
+                }},
+                "size": 10,
+                "sort": []
             },
             "expecting_list": {
                 "meta": {"format": "list"},

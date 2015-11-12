@@ -23,6 +23,7 @@ from pyLibrary.dot import wrap
 from pyLibrary.thread.threads import Queue, Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import HOUR, MINUTE
+from pyLibrary.times.timer import Timer
 
 
 _elasticsearch = None
@@ -113,22 +114,22 @@ class FromESMetadata(object):
         for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
             for _, properties in meta.mappings.items():
                 columns = _elasticsearch.parse_properties(index, None, properties.properties)
-                if DEBUG:
-                    Log.note("upserting {{num}} columns", num=len(columns))
-                with self.columns.locker:
-                    for c in columns:
-                        # ABSOLUTE
-                        c.table = join_field([index]+query_path)
-                        self.upsert_column(c)
-
-                        for alias in meta.aliases:
-                            # ONLY THE LATEST ALIAS IS CHOSEN TO GET COLUMNS
-                            if alias in alias_done:
-                                continue
-                            alias_done.add(alias)
-                            c = copy(c)
-                            c.table = join_field([alias]+query_path)
+                columns = columns.filter(lambda r: not r.abs_name.startswith("other."))
+                with Timer("upserting {{num}} columns", {"num":len(columns)}, debug=DEBUG):
+                    with self.columns.locker:
+                        for c in columns:
+                            # ABSOLUTE
+                            c.table = join_field([index]+query_path)
                             self.upsert_column(c)
+
+                            for alias in meta.aliases:
+                                # ONLY THE LATEST ALIAS IS CHOSEN TO GET COLUMNS
+                                if alias in alias_done:
+                                    continue
+                                alias_done.add(alias)
+                                c = copy(c)
+                                c.table = join_field([alias]+query_path)
+                                self.upsert_column(c)
 
     def query(self, _query):
         return self.columns.query(Query(set_default(

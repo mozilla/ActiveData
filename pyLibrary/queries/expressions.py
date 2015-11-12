@@ -16,7 +16,7 @@ import itertools
 
 from pyLibrary import convert
 from pyLibrary.collections import OR, MAX, UNION
-from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null
+from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null, Dict
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.times.dates import Date
@@ -58,7 +58,7 @@ def qb_expression(expr):
             op, term = item
             class_ = operators.get(op)
             if class_:
-                clauses = {k: v for k, v in expr.items() if k != op}
+                clauses = {k: qb_expression(v) for k, v in expr.items() if k != op}
                 break
         else:
             raise Log.error("{{operator|quote}} is not a known operator", operator=op)
@@ -373,7 +373,6 @@ class BinaryOp(Expression):
     has_simple_form = True
 
     operators = {
-        "add": "+",
         "sub": "-",
         "subtract": "-",
         "minus": "-",
@@ -694,20 +693,16 @@ class MultiOp(Expression):
     }
 
     def __init__(self, op, terms, **clauses):
-        # TODO: ADD default CLAUSE
-        Expression.__init__(self, op, terms, **clauses)
+        Expression.__init__(self, op, terms)
         self.op = op
-        if not MultiOp.operators.get(op):
-            Log.error("{{op}} is not recognized", op=op)
-        if isinstance(terms, list):
-            self.terms = terms
-        elif isinstance(terms, Mapping):
-            Log.error("logic error")
-
-        self.default = clauses.get("default", None)
+        self.terms = terms
+        self.default = coalesce(clauses.get("default"), Literal(None))
 
     def to_ruby(self):
-        return MultiOp.operators[self.op][0].join("(" + t.to_ruby() + ")" for t in self.terms)
+        op, unit = MultiOp.operators[self.op]
+        null_test = CoalesceOp(None, self.terms).missing().to_ruby()
+        acc = op.join("((" + t.to_ruby() + "!=null) ? (" + t.to_ruby() + ") : " + unit + ")" for t in self.terms)
+        return "((" + null_test + ") ? (" + self.default.to_ruby() + ") : (" + acc + "))"
 
     def to_python(self):
         return MultiOp.operators[self.op][0].join("(" + t.to_python() + ")" for t in self.terms)
@@ -763,7 +758,7 @@ class CoalesceOp(Expression):
         acc = self.terms[-1].to_ruby()
         for v in reversed(self.terms[:-1]):
             r = v.to_ruby()
-            acc = "if ((" + r + ") != null) { " + r + "} else {" + acc + "}"
+            acc = "(((" + r + ") != null) ? (" + r + ") : (" + acc + "))"
         return acc
 
     def to_python(self):
@@ -957,8 +952,8 @@ class WhenOp(Expression):
     def __init__(self, op, term, **clauses):
         Expression.__init__(self, op, [term])
         self.when = term
-        self.then = qb_expression(clauses.get("then"))
-        self.els_ = qb_expression(clauses.get("else"))
+        self.then = coalesce(clauses.get("then"), Literal(None))
+        self.els_ = coalesce(clauses.get("else"), Literal(None))
 
     def to_ruby(self):
         return "(" + self.when.to_ruby() + ") ? (" + self.then.to_ruby() + ") : (" + self.els_.to_ruby() + ")"
@@ -1235,13 +1230,6 @@ operators = {
     "literal": Literal,
     "coalesce": CoalesceOp,
     "left": LeftOp,
-    "sub": BinaryOp,
-    "subtract": BinaryOp,
-    "minus": BinaryOp,
-    "div": BinaryOp,
-    "divide": BinaryOp,
-    "exp": BinaryOp,
-    "mod": BinaryOp,
     "gt": BinaryOp,
     "gte": BinaryOp,
     "eq": EqOp,
@@ -1257,9 +1245,16 @@ operators = {
     "number": NumberOp,
     "add": MultiOp,
     "sum": MultiOp,
+    "sub": BinaryOp,
+    "subtract": BinaryOp,
+    "minus": BinaryOp,
     "mul": MultiOp,
     "mult": MultiOp,
     "multiply": MultiOp,
+    "div": BinaryOp,
+    "divide": BinaryOp,
+    "exp": BinaryOp,
+    "mod": BinaryOp,
     "when": WhenOp,
     "case": CaseOp,
     "match_all": TrueOp

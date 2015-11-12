@@ -27,7 +27,7 @@ _ = convert
 def is_deepop(es, query):
     if query.edges or query.groupby:
         return False
-    if all(s.aggregate not in (None, "count", "none") for s in listwrap(query.select)):
+    if all(s.aggregate not in (None, "none") for s in listwrap(query.select)):
         return False
 
     vars = query_get_all_vars(query)

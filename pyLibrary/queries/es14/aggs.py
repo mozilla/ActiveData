@@ -96,45 +96,42 @@ def es_aggsop(es, frum, query):
         else:
             field_name = representative.value
 
-        if len(many) > 1 or many[0].aggregate in ("median", "percentile", "cardinality"):
-            # canonical_name=literal_field(many[0].name)
-            for s in many:
-                if s.aggregate == "count":
-                    es_query.aggs[literal_field(canonical_name)].stats.field = field_name
-                    s.pull = literal_field(canonical_name) + ".count"
-                elif s.aggregate == "median":
-                    #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
-                    key = literal_field(canonical_name + " percentile")
+        # canonical_name=literal_field(many[0].name)
+        for s in many:
+            if s.aggregate == "count":
+                es_query.aggs[literal_field(canonical_name)].stats.field = field_name
+                s.pull = literal_field(canonical_name) + ".count"
+            elif s.aggregate == "median":
+                #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
+                key = literal_field(canonical_name + " percentile")
 
-                    es_query.aggs[key].percentiles.field = field_name
-                    es_query.aggs[key].percentiles.percents += [50]
-                    s.pull = key + ".values.50\.0"
-                elif s.aggregate == "percentile":
-                    #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
-                    key = literal_field(canonical_name + " percentile")
-                    percent = Math.round(s.percentile * 100, decimal=6)
+                es_query.aggs[key].percentiles.field = field_name
+                es_query.aggs[key].percentiles.percents += [50]
+                s.pull = key + ".values.50\.0"
+            elif s.aggregate == "percentile":
+                #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
+                key = literal_field(canonical_name + " percentile")
+                percent = Math.round(s.percentile * 100, decimal=6)
 
-                    es_query.aggs[key].percentiles.field = field_name
-                    es_query.aggs[key].percentiles.percents += [percent]
-                    s.pull = key + ".values." + literal_field(unicode(percent))
-                elif s.aggregate == "cardinality":
-                    #ES USES DIFFERENT METHOD FOR CARDINALITY
-                    key = literal_field(canonical_name + " cardinality")
+                es_query.aggs[key].percentiles.field = field_name
+                es_query.aggs[key].percentiles.percents += [percent]
+                s.pull = key + ".values." + literal_field(unicode(percent))
+            elif s.aggregate == "cardinality":
+                #ES USES DIFFERENT METHOD FOR CARDINALITY
+                key = literal_field(canonical_name + " cardinality")
 
-                    es_query.aggs[key].cardinality.field = field_name
-                    s.pull = key + ".value"
-                else:
-                    # PULL VALUE OUT OF THE stats AGGREGATE
-                    es_query.aggs[literal_field(canonical_name)].stats.field = field_name
-                    s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
-        else:
-            es_query.aggs[literal_field(canonical_name)][aggregates1_4[representative.aggregate]].field = field_name
-            representative.pull = literal_field(canonical_name) + ".value"
+                es_query.aggs[key].cardinality.field = field_name
+                s.pull = key + ".value"
+            else:
+                # PULL VALUE OUT OF THE stats AGGREGATE
+                es_query.aggs[literal_field(canonical_name)].stats.field = field_name
+                s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
+
     for i, s in enumerate(formula):
         new_select[unicode(i)] = s
-        s.pull = literal_field(s.name) + ".value"
+        s.pull = literal_field(s.name) + "." + aggregates1_4[s.aggregate]
         abs_value = qb_expression(s.value).map({c.name: c.abs_name for c in frum._columns})
-        es_query.aggs[literal_field(s.name)][aggregates1_4[s.aggregate]].script = abs_value.to_ruby()
+        es_query.aggs[literal_field(s.name)].stats.script = abs_value.to_ruby()
 
     decoders = get_decoders_by_depth(query)
     start = 0

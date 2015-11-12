@@ -251,20 +251,21 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": [
                     {"aggregate": "count"},
                     {"name": "t", "value": {"add": ["a", "b"]}, "aggregate": "average"}
-                ]
+                ],
+                "edges": ["a", "b"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a": 0, "b": 0, "t": 0},
-                    {"a": 0, "b": 1, "t": 0.5},
-                    {"a": 0, "t": 0},
-                    {"a": 1, "b": 0, "t": 0.5},
-                    {"a": 1, "b": 1, "t": 2},
-                    {"a": 1, "t": 1},
-                    {"b": 0, "t": 0},
-                    {"b": 1, "t": 1},
-                    {}
+                    {"a": 0, "b": 0, "count": 1, "t": 0},
+                    {"a": 0, "b": 1, "count": 1, "t": 1},
+                    {"a": 0, "count": 1, "t": 0},
+                    {"a": 1, "b": 0, "count": 1, "t": 1},
+                    {"a": 1, "b": 1, "count": 1, "t": 2},
+                    {"a": 1, "count": 1, "t": 1},
+                    {"b": 0, "count": 1, "t": 0},
+                    {"b": 1, "count": 1, "t": 1},
+                    {"count": 1}
                 ]
             }
         }

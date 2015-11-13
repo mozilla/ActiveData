@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from pyLibrary.dot import wrap
+from pyLibrary.queries.expressions import NullOp
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import WEEK, DAY
 
@@ -80,15 +81,15 @@ test_data_3 = [
 ]
 
 expected3 = wrap([
-    {"since": -7 * DAY.seconds, "v": None},
-    {"since": -6 * DAY.seconds, "v": None},
+    {"since": -7 * DAY.seconds, "v": NullOp()},
+    {"since": -6 * DAY.seconds, "v": NullOp()},
     {"since": -5 * DAY.seconds, "v": 34},
     {"since": -4 * DAY.seconds, "v": 26},
     {"since": -3 * DAY.seconds, "v": 5},
     {"since": -2 * DAY.seconds, "v": 20},
     {"since": -1 * DAY.seconds, "v": 15},
     {"since": 0, "v": 2},
-    {"since": None, "v": 27}
+    {"since": NullOp(), "v": 27}
 ])
 
 

@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import base_test_class
 from pyLibrary.dot import wrap
+from pyLibrary.queries.expressions import NullOp
 from tests.base_test_class import ActiveDataBaseTest
 from pyLibrary.maths import Math
 
@@ -1027,6 +1028,32 @@ class TestDeepOps(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
+    def test_select_average_on_none(self):
+        test = {
+            "data": [{"a": {"_b": [
+                {"a": 0},
+                {}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": [
+                    {"name": "t", "value": {"add": ["a", "a"]}, "aggregate": "average"}
+                ],
+                "edges": ["a"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 0, "t": 0},
+                    {"t": NullOp()}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
+
+
+
 # TODO:  missing DOES NOT SEEM TO WORK FOR DEEP OPS
 example = {
     "where": {"exists": "builder.elapsedTime"},
@@ -1044,32 +1071,6 @@ example = {
     "format": "table"
 }
 
-#TODO: builder.duration DOES NOT EXIST? -> NOT EXPANDED TO action.timings.builder.duration
-example = {
-"from": "jobs.action.timings",
-"limit": 1000000,
-"where": {"and": [
-    {"eq": {"build.platform": "win32"}},
-    {"eq": {"build.type": "opt"}},
-    {"eq": {"run.suite": "mochitest"}}
-]},
-"edges": [
-    "builder.step",
-    {
-    "value": "builder.start_time",
-    "domain": {
-    "type": "time",
-    "min": "today-month",
-    "max": "today",
-    "interval": "day"
-    }
-    }
-],
-"select": [
-    {"aggregate": "sum", "value": "builder.duration"},
-    {"aggregate": "count"}
-]
-}
 
 
 # TODO:  EXPRESSIONS USING DEEP SET OPERATIONS

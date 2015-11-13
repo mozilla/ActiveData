@@ -378,25 +378,21 @@ Can be stated in a more complicated form
 
 		{"eq": ["test", {"literal":42}]}
 
-The literal ca be primitive, or whole objects
+The literal can be primitive, or whole objects
 
 		{"literal": 42}
 		{"literal": {"name":"Kyle Lahnakoski", "age": 41}}
 
 
-### `select` Operator ###
+### `script` Operator ###
 
-`select` can stand alone as an operator; with similar semantics to the select clause in the `from` operator.  It returns an object where each `path` is assigned `expression`.
+**For testing only** - Used to deliver a string, representing code, to the backend container.  ActiveData uses ElasticSearch, where scripting is a security vulnerability, so it is turned off. 
 
-		{"select": [
-            {"name": path1, "value": expression1},
-			{"name": path2, "value": expression2},
-			...
-		]}
+		{"script": "doc['build.date'].value"}
 
-This operator is certainly not needed in the he `select` clause of a query, but does find use in the `edges` clause; where each coordinate is not just a value, but a complex object.
+This is useful during development and debugging of ActiveData, and exploring ElasticSearch's responses in more detail.
 
-
+ 
 ### `ref` Operator ###
 
 **Not implemented.  Security risk if not done properly (eg file://)**

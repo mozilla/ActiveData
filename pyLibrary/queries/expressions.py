@@ -72,6 +72,7 @@ def qb_expression(expr):
         return class_(op, term)
     elif class_ is ScriptOp:
         if ALLOW_SCRIPTING:
+            Log.warning("Scripting has been activated:  This has known security holes!!\nscript = {{script||quote}}", script=term)
             return class_(op, term)
         else:
             Log.error("scripting is disabled")
@@ -266,6 +267,7 @@ class Variable(Expression):
 
 
 class ScriptOp(Expression):
+
     def __init__(self, op, script):
         Expression.__init__(self, "", None)
         self.script = script
@@ -537,7 +539,16 @@ class BinaryOp(Expression):
         self.lhs, self.rhs = terms
 
     def to_ruby(self):
-        return "(" + self.lhs.to_ruby() + ") " + BinaryOp.operators[self.op] + " (" + self.rhs.to_ruby()+")"
+        output = WhenOp(
+            "when",
+            OrOp("or", [MissingOp("missing", self.lhs), MissingOp("missing", self.rhs)]),
+            **{
+                "then": NullOp(),
+                "else":
+                    ScriptOp(None, "(" + self.lhs.to_ruby() + ") " + BinaryOp.operators[self.op] + " (" + self.rhs.to_ruby()+")")
+            }
+        ).to_ruby()
+        return output
 
     def to_python(self):
         return "(" + self.lhs.to_python() + ") " + BinaryOp.operators[self.op] + " (" + self.rhs.to_python()+")"
@@ -601,13 +612,6 @@ class EqOp(Expression):
         self.lhs, self.rhs = terms
 
     def to_ruby(self):
-        # ES WILL RETURN true ON null==0
-        # output = CaseOp("case", [
-        #     WhenOp("when", AndOp("and", [MissingOp("missing", self.lhs), MissingOp("missing", self.rhs)]), **{"then": TrueOp()}),
-        #     WhenOp("when", OrOp("or", [MissingOp("missing", self.lhs), MissingOp("missing", self.rhs)]), **{"then": FalseOp()}),
-        #     ScriptOp("script", "(" + self.lhs.to_ruby() + ") == (" + self.rhs.to_ruby()+")")
-        # ]).to_ruby()
-        # return output
         return "(" + self.lhs.to_ruby() + ") == (" + self.rhs.to_ruby()+")"
 
     def to_python(self):

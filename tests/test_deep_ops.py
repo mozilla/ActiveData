@@ -113,7 +113,7 @@ class TestDeepOps(ActiveDataBaseTest):
     def test_bad_deep_select_column_w_groupby(self):
         test = {
             "data": [  # WE NEED SOME DATA TO MAKE A NESTED COLUMN
-                       {"_a": {"b": "x"}}
+                {"_a": {"b": "x"}}
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
@@ -121,8 +121,8 @@ class TestDeepOps(ActiveDataBaseTest):
                 "groupby": ["a.b"]
             },
             "expecting_list": {  # DUMMY: SO AN QUERY ATTEMPT IS MADE
-                                 "meta": {"format": "list"},
-                                 "data": []
+                "meta": {"format": "list"},
+                "data": []
             }
         }
         self.assertRaises(Exception, self._execute_es_tests, test)

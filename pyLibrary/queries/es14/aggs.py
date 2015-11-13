@@ -43,6 +43,11 @@ def get_decoders_by_depth(query):
             e = e.copy()
             e.value = qb_expression(e.value)
             vars_ = e.value.vars()
+
+            for v in vars_:
+                if not schema[v]:
+                    Log.error("{{var}} does not exist in schema", var=v)
+
             e.value = e.value.map({schema[v].name: schema[v].abs_name for v in vars_})
         else:
             vars_ = e.domain.dimension.fields
@@ -83,6 +88,9 @@ def es_aggsop(es, frum, query):
                     Log.error("do not know how to handle")
                 else:
                     Log.error('Not expecting ES to have a value at "." which {{agg}} can be applied', agg=s.aggregate)
+        elif is_keyword(s.value) and s.aggregate=="count":
+            s.value = coalesce(frum[s.value].abs_name, s.value)
+            new_select["count_"+literal_field(s.value)] += [s]
         elif is_keyword(s.value):
             s.value = coalesce(frum[s.value].abs_name, s.value)
             new_select[literal_field(s.value)] += [s]
@@ -99,8 +107,8 @@ def es_aggsop(es, frum, query):
         # canonical_name=literal_field(many[0].name)
         for s in many:
             if s.aggregate == "count":
-                es_query.aggs[literal_field(canonical_name)].stats.field = field_name
-                s.pull = literal_field(canonical_name) + ".count"
+                es_query.aggs[literal_field(canonical_name)].value_count.field = field_name
+                s.pull = literal_field(canonical_name) + ".value"
             elif s.aggregate == "median":
                 #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
                 key = literal_field(canonical_name + " percentile")
@@ -129,8 +137,15 @@ def es_aggsop(es, frum, query):
 
     for i, s in enumerate(formula):
         new_select[unicode(i)] = s
-        s.pull = literal_field(s.name) + "." + aggregates1_4[s.aggregate]
+        # PULL VALUE OUT OF THE stats AGGREGATE
         abs_value = qb_expression(s.value).map({c.name: c.abs_name for c in frum._columns})
+        # null IS AGGREGATED AS ZERO (0) https://github.com/elastic/elasticsearch/issues/14740
+        # SO WE ADD AN INLINE (_filter.) TO PREVENT THAT
+        # s.pull = "_filter." + literal_field(s.name) + "." + aggregates1_4[s.aggregate]
+        # es_query.aggs._filter.filter = {"not": simplify_esfilter(abs_value.missing().to_esfilter())}
+        # es_query.aggs._filter.aggs[literal_field(s.name)].stats.script = abs_value.to_ruby()
+
+        s.pull = literal_field(s.name) + "." + aggregates1_4[s.aggregate]
         es_query.aggs[literal_field(s.name)].stats.script = abs_value.to_ruby()
 
     decoders = get_decoders_by_depth(query)
@@ -365,8 +380,8 @@ def _range_composer(edge, domain, es_query, to_float):
             ]}
         else:
             missing_range = {"script": {"script": OrOp("or", [
-                BinaryOp("lt", [edge.value, Literal(to_float(_min))]),
-                BinaryOp("gt", [edge.value, Literal(to_float(_max))]),
+                BinaryOp("lt", [edge.value, Literal(None, to_float(_min))]),
+                BinaryOp("gt", [edge.value, Literal(None, to_float(_max))]),
             ]).to_ruby()}}
         missing_filter = set_default(
             {"filter": {"or": [

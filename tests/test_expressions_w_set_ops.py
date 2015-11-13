@@ -10,10 +10,11 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+
 import base_test_class
+
 from pyLibrary.dot import wrap
-from pyLibrary.maths import Math
-from pyLibrary.queries import query
+from pyLibrary.queries.expressions import NullOp
 from tests.base_test_class import ActiveDataBaseTest
 
 
@@ -159,20 +160,29 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
-                "select": ["a", "b", {"name": "i/o", "value": {"when": {"eq": ["a", "b"]}, "then": 1, "else": 2}}],
+                "select": ["a", "b", {"name": "io", "value": {"when": {"eq": ["a", "b"]}, "then": 1, "else": 2}}]
+                # "select": [
+                #     "a",
+                #     "b",
+                #     {"name": "meta", "value": {"script": "doc['a'].isEmpty()"}},
+                #     {"name": "meta_class", "value": {"script": "doc['a'].class.name"}},
+                #     {"name": "v", "value": {"script": "doc['a'].value"}},
+                #     {"name": "class", "value": {"script": "doc['a'].value.class.name"}},
+                #     {"name": "missing", "value": {"missing": "a"}}
+                # ],
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a": 0, "b": 0, "i/o": 1},
-                    {"a": 0, "b": 1, "i/o": 2},
-                    {"a": 0, "i/o": 2},
-                    {"a": 1, "b": 0, "i/o": 2},
-                    {"a": 1, "b": 1, "i/o": 1},
-                    {"a": 1, "i/o": 2},
-                    {"b": 0, "i/o": 2},
-                    {"b": 1, "i/o": 2},
-                    {"i/o": 1}
+                    {"a": 0, "b": 0, "io": 1},
+                    {"a": 0, "b": 1, "io": 2},
+                    {"a": 0, "io": 2},
+                    {"a": 1, "b": 0, "io": 2},
+                    {"a": 1, "b": 1, "io": 1},
+                    {"a": 1, "io": 2},
+                    {"b": 0, "io": 2},
+                    {"b": 1, "io": 2},
+                    {"io": 1}
                 ]
             }
         }
@@ -265,7 +275,30 @@ class TestSetOps(ActiveDataBaseTest):
                     {"a": 1, "count": 1, "t": 1},
                     {"b": 0, "count": 1, "t": 0},
                     {"b": 1, "count": 1, "t": 1},
-                    {"count": 1}
+                    {"t": NullOp(), "count": 1}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_select_average_on_none(self):
+        test = {
+            "data": [{"a": {"_b": [
+                {"a": 0},
+                {}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": [
+                    {"name": "t", "value": {"add": ["a", "a"]}, "aggregate": "average"}
+                ],
+                "edges": ["a"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 0, "t": 0},
+                    {"t": NullOp()}
                 ]
             }
         }

@@ -19,9 +19,11 @@ from pyLibrary.collections import OR, MAX, UNION
 from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null, Dict
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.domains import is_keyword
+from pyLibrary.testing.fuzzytestcase import assertAlmostEqual
 from pyLibrary.times.dates import Date
 
 
+ALLOW_SCRIPTING = False
 TRUE_FILTER = True
 FALSE_FILTER = False
 
@@ -41,11 +43,14 @@ def qb_expression(expr):
     WRAP A QB EXPRESSION WITH OBJECT REPRESENTATION
     """
     if expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal)) or isinstance(expr, Date):
-        return Literal(expr)
+        return Literal(None, expr)
     elif is_keyword(expr):
         return Variable(expr)
 
-    items = expr.items()
+    try:
+        items = expr.items()
+    except Exception, e:
+        Log.error("programmer error expr = {{value|quote}}", value=expr, cause=e)
     op, term = items[0]
 
     if len(items) == 1:
@@ -63,7 +68,14 @@ def qb_expression(expr):
         else:
             raise Log.error("{{operator|quote}} is not a known operator", operator=op)
 
-    if term == None:
+    if class_ is Literal:
+        return class_(op, term)
+    elif class_ is ScriptOp:
+        if ALLOW_SCRIPTING:
+            return class_(op, term)
+        else:
+            Log.error("scripting is disabled")
+    elif term == None:
         return class_(op, [], **clauses)
     elif isinstance(term, list):
         terms = map(qb_expression, term)
@@ -73,9 +85,9 @@ def qb_expression(expr):
         if class_.has_simple_form:
             if len(items) == 1:
                 k, v = items[0]
-                return class_(op, [Variable(k), Literal(v)], **clauses)
+                return class_(op, [Variable(k), Literal(None, v)], **clauses)
             else:
-                return class_(op, {k: Literal(v) for k, v in items}, **clauses)
+                return class_(op, {k: Literal(None, v) for k, v in items}, **clauses)
         else:
             return class_(op, qb_expression(term), **clauses)
     else:
@@ -196,6 +208,9 @@ class Expression(object):
         # RETURN FILTER THAT INDICATE THIS EXPRESSIOn RETURNS null
         raise NotImplementedError
 
+    def exists(self):
+        return NotOp("not", self.missing())
+
 
 class Variable(Expression):
 
@@ -209,7 +224,8 @@ class Variable(Expression):
         if self.var == ".":
             return "_source"
         else:
-            return "doc[" + convert.string2quote(self.var) + "].value"
+            q = convert.string2quote(self.var)
+            return "(doc[" + q + "].isEmpty() ? null : doc[" + q + "].value)"
 
     def to_python(self):
         if self.var == ".":
@@ -233,6 +249,9 @@ class Variable(Expression):
         # RETURN FILTER THAT INDICATE THIS EXPRESSIOn RETURNS null
         return MissingOp("missing", self)
 
+    def exists(self):
+        return ExistsOp("exists", self)
+
     def __hash__(self):
         return self.var.__hash__()
 
@@ -246,20 +265,54 @@ class Variable(Expression):
         return str(self.var)
 
 
+class ScriptOp(Expression):
+    def __init__(self, op, script):
+        Expression.__init__(self, "", None)
+        self.script = script
+
+    def to_ruby(self):
+        return self.script
+
+    def vars(self):
+        return set()
+
+    def map(self, map_):
+        return self
+
+    def __unicode__(self):
+        return self.script
+
+    def __str__(self):
+        return str(self.script)
+
+
 class Literal(Expression):
     """
     A literal JSON document
     """
 
-    def __init__(self, term):
+    def __new__(cls, op, term):
+        if term == None:
+            return NullOp()
+        if term is True:
+            return TrueOp()
+        if term is False:
+            return FalseOp()
+        return object.__new__(cls, op, term)
+
+    def __init__(self, op, term):
         Expression.__init__(self, "", None)
         self.json = convert.value2json(term)
 
     def __nonzero__(self):
-        if self.json == "null":
-            return False
-        else:
+        return True
+
+    def __eq__(self, other):
+        try:
+            assertAlmostEqual(convert.json2value(self.json), other)
             return True
+        except Exception:
+            return False
 
     def to_ruby(self):
         def _convert(v):
@@ -296,7 +349,7 @@ class Literal(Expression):
         return self
 
     def missing(self):
-        return False
+        return FalseOp()
 
     def __unicode__(self):
         return self.json
@@ -305,9 +358,63 @@ class Literal(Expression):
         return str(self.json)
 
 
-class TrueOp(Expression):
-    def __init__(self, op, term):
-        Expression.__init__(self, "", None)
+class NullOp(Literal):
+
+    def __new__(cls, *args, **kwargs):
+        return object.__new__(cls, *args, **kwargs)
+
+    def __init__(self, op=None, term=None):
+        Literal.__init__(self, op, None)
+
+    def __nonzero__(self):
+        return False
+
+    def __eq__(self, other):
+        return other == None
+
+    def to_ruby(self):
+        return "null"
+
+    def to_python(self):
+        return "None"
+
+    def to_esfilter(self):
+        return {"not": {"match_all": {}}}
+
+    def to_dict(self):
+        return {"null": {}}
+
+    def vars(self):
+        return set()
+
+    def map(self, map_):
+        return self
+
+    def missing(self):
+        return TrueOp()
+
+    def exists(self):
+        return FalseOp()
+
+    def __unicode__(self):
+        return "null"
+
+    def __str__(self):
+        return b"null"
+
+
+class TrueOp(Literal):
+    def __new__(cls, *args, **kwargs):
+        return object.__new__(cls, *args, **kwargs)
+
+    def __init__(self, op=None, term=None):
+        Literal.__init__(self, op, True)
+
+    def __nonzero__(self):
+        return True
+
+    def __eq__(self, other):
+        return other == True
 
     def to_ruby(self):
         return "true"
@@ -328,7 +435,7 @@ class TrueOp(Expression):
         return self
 
     def missing(self):
-        return FalseOp("", None)
+        return FalseOp()
 
     def __unicode__(self):
         return "true"
@@ -337,9 +444,18 @@ class TrueOp(Expression):
         return b"true"
 
 
-class FalseOp(Expression):
-    def __init__(self, op, term):
-        Expression.__init__(self, "", None)
+class FalseOp(Literal):
+    def __new__(cls, *args, **kwargs):
+        return object.__new__(cls, *args, **kwargs)
+
+    def __init__(self, op=None, term=None):
+        Literal.__init__(self, op, False)
+
+    def __nonzero__(self):
+        return True
+
+    def __eq__(self, other):
+        return other == False
 
     def to_ruby(self):
         return "false"
@@ -418,13 +534,7 @@ class BinaryOp(Expression):
         if op not in BinaryOp.operators:
             Log.error("{{op|quote}} not a recognized operator", op=op)
         self.op = op
-
-        if isinstance(terms, (list, tuple)):
-            self.lhs, self.rhs = terms
-        elif isinstance(terms, Mapping):
-            self.rhs, self.lhs = terms.items()[0]
-        else:
-            Log.error("logic error")
+        self.lhs, self.rhs = terms
 
     def to_ruby(self):
         return "(" + self.lhs.to_ruby() + ") " + BinaryOp.operators[self.op] + " (" + self.rhs.to_ruby()+")"
@@ -462,31 +572,72 @@ class BinaryOp(Expression):
 
 
 
+
 class EqOp(Expression):
     has_simple_form = True
 
     def __new__(cls, op, terms):
         if isinstance(terms, list):
-            return BinaryOp("eq", terms)
+            return object.__new__(cls, op, terms)
 
         items = terms.items()
         if len(items) == 1:
             if isinstance(items[0][1], list):
                 return InOp("in", items[0])
             else:
-                return BinaryOp("eq", items[0])
+                return EqOp("eq", items[0])
         else:
             acc = []
             for a, b in items:
                 if b.json.startswith("["):
                     acc.append(InOp("in", [Variable(a), b]))
                 else:
-                    acc.append(BinaryOp("eq", [Variable(a), b]))
+                    acc.append(EqOp("eq", [Variable(a), b]))
             return AndOp("and", acc)
 
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
-        raise NotImplementedError
+        self.op = op
+        self.lhs, self.rhs = terms
+
+    def to_ruby(self):
+        # ES WILL RETURN true ON null==0
+        # output = CaseOp("case", [
+        #     WhenOp("when", AndOp("and", [MissingOp("missing", self.lhs), MissingOp("missing", self.rhs)]), **{"then": TrueOp()}),
+        #     WhenOp("when", OrOp("or", [MissingOp("missing", self.lhs), MissingOp("missing", self.rhs)]), **{"then": FalseOp()}),
+        #     ScriptOp("script", "(" + self.lhs.to_ruby() + ") == (" + self.rhs.to_ruby()+")")
+        # ]).to_ruby()
+        # return output
+        return "(" + self.lhs.to_ruby() + ") == (" + self.rhs.to_ruby()+")"
+
+    def to_python(self):
+        return "(" + self.lhs.to_python() + ") == (" + self.rhs.to_python()+")"
+
+    def to_esfilter(self):
+        if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
+            return {"term": {self.lhs.var: convert.json2value(self.rhs.json)}}
+        else:
+            return {"script": {"script": self.to_ruby()}}
+
+    def to_dict(self):
+        if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
+            return {"eq": {self.lhs.var, convert.json2value(self.rhs.json)}}
+        else:
+            return {"eq": [self.lhs.to_dict(), self.rhs.to_dict()]}
+
+    def vars(self):
+        return self.lhs.vars() | self.rhs.vars()
+
+    def map(self, map_):
+        return EqOp(self.op, [self.lhs.map(map_), self.rhs.map(map_)])
+
+    def missing(self):
+        return FalseOp()
+
+    def exists(self):
+        return TrueOp()
+
+
 
 class NeOp(Expression):
     has_simple_form = True
@@ -696,7 +847,7 @@ class MultiOp(Expression):
         Expression.__init__(self, op, terms)
         self.op = op
         self.terms = terms
-        self.default = coalesce(clauses.get("default"), Literal(None))
+        self.default = coalesce(clauses.get("default"), NullOp())
 
     def to_ruby(self):
         op, unit = MultiOp.operators[self.op]
@@ -720,10 +871,14 @@ class MultiOp(Expression):
         return MultiOp(self.op, [t.map(map_) for t in self.terms])
 
     def missing(self):
-        if self.default is None:
+        if self.default == None:
             return AndOp("and", [t.missing() for t in self.terms])
         else:
-            return FALSE_FILTER
+            return FalseOp
+
+    def exists(self):
+        return OrOp("or", [t.exists() for t in self.terms])
+
 
 
 class RegExpOp(Expression):
@@ -889,7 +1044,10 @@ class MissingOp(Expression):
         self.field = term
 
     def to_ruby(self):
-        return self.field.to_ruby() + " == null"
+        if isinstance(self.field, Variable):
+            return "doc["+convert.string2quote(self.field.var)+"].isEmpty()"
+        else:
+            return self.field.to_ruby() + " == null"
 
     def to_python(self):
         return self.field.to_python() + " == None"
@@ -905,6 +1063,13 @@ class MissingOp(Expression):
 
     def map(self, map_):
         return MissingOp("missing", self.field.map(map_))
+
+    def missing(self):
+        return FalseOp()
+
+    def exists(self):
+        return TrueOp()
+
 
 
 class InOp(Expression):
@@ -952,8 +1117,8 @@ class WhenOp(Expression):
     def __init__(self, op, term, **clauses):
         Expression.__init__(self, op, [term])
         self.when = term
-        self.then = coalesce(clauses.get("then"), Literal(None))
-        self.els_ = coalesce(clauses.get("else"), Literal(None))
+        self.then = coalesce(clauses.get("then"), NullOp())
+        self.els_ = coalesce(clauses.get("else"), NullOp())
 
     def to_ruby(self):
         return "(" + self.when.to_ruby() + ") ? (" + self.then.to_ruby() + ") : (" + self.els_.to_ruby() + ")"
@@ -980,10 +1145,10 @@ class CaseOp(Expression):
             Log.error("case expression requires a list of `when` sub-clauses")
         Expression.__init__(self, op, term)
         if len(term) == 0:
-            self.whens = [Literal(None)]
+            self.whens = [NullOp()]
         else:
-            for w in term:
-                if w.else_:
+            for w in term[:-1]:
+                if not isinstance(w, WhenOp) or w.els_:
                     Log.error("case expression does not allow `else` clause in `when` sub-clause")
             self.whens = term
 
@@ -1014,6 +1179,8 @@ class CaseOp(Expression):
     def map(self, map_):
         return CaseOp("case", [w.map(map_) for w in self.whens])
 
+    def missing(self):
+        return self.whens[-1].missing()
 
 
 def simplify_esfilter(esfilter):
@@ -1228,6 +1395,7 @@ operators = {
     "regexp": RegExpOp,
     "regex": RegExpOp,
     "literal": Literal,
+    "null": NullOp,
     "coalesce": CoalesceOp,
     "left": LeftOp,
     "gt": BinaryOp,
@@ -1257,5 +1425,7 @@ operators = {
     "mod": BinaryOp,
     "when": WhenOp,
     "case": CaseOp,
-    "match_all": TrueOp
+    "match_all": TrueOp,
+    "script": ScriptOp
 }
+

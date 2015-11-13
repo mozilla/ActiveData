@@ -118,17 +118,20 @@ As detailed above, `eq` has two main forms.  The *simple* form:
 
 and the `formal` form
 
-
 		{"eq": [expr1, expr2, ... expr3]}
 
 
 ###`ne` Operator###
 
-Returns `true` if two expressions are not equal
+Returns `true` if two expressions are not null *and* not equal.
 
 		{"ne": {variable: value}}
 		{"ne": [expr1, expr2]}
 
+`eq` and `ne` are not complements: For example, they both return `false` when only one expression is `null`:
+
+		{"ne": [{"literal": null}, {"literal": 1}]} ⇒ False
+		{"eq": [{"literal": null}, {"literal": 1}]} ⇒ False
 
 
 ###`gt`, `gte`, `lte`, `lt` Operators###

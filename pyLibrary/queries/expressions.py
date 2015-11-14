@@ -247,7 +247,7 @@ class Variable(Expression):
         return Variable(coalesce(map_.get(self.var), self.var))
 
     def missing(self):
-        # RETURN FILTER THAT INDICATE THIS EXPRESSIOn RETURNS null
+        # RETURN FILTER THAT INDICATE THIS EXPRESSION RETURNS null
         return MissingOp("missing", self)
 
     def exists(self):
@@ -943,31 +943,80 @@ class CoalesceOp(Expression):
         return CoalesceOp("coalesce", [v.map(map_) for v in self.terms])
 
 
+class MissingOp(Expression):
+    def __init__(self, op, term):
+        Expression.__init__(self, op, term)
+        self.field = term
+
+    def to_ruby(self):
+        if isinstance(self.field, Variable):
+            return "doc["+convert.string2quote(self.field.var)+"].isEmpty()"
+        elif isinstance(self.field, Literal):
+            return self.field.missing().to_ruby()
+        else:
+            return self.field.to_ruby() + " == null"
+
+    def to_python(self):
+        return self.field.to_python() + " == None"
+
+    def to_esfilter(self):
+        if isinstance(self.field, Variable):
+            return {"missing": {"field": self.field.var}}
+        else:
+            return {"script": {"script": self.to_ruby()}}
+
+    def to_dict(self):
+        return {"missing": self.field.var}
+
+    def vars(self):
+        return {self.field.var}
+
+    def map(self, map_):
+        return MissingOp("missing", self.field.map(map_))
+
+    def missing(self):
+        return FalseOp()
+
+    def exists(self):
+        return TrueOp()
+
+
 class ExistsOp(Expression):
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
-        if isinstance(term, basestring):
-            self.field = term
-        else:
-            self.field = term.field
+        self.field = term
 
     def to_ruby(self):
-        return "!(" + self.field.to_ruby() + " == null)"
+        if isinstance(self.field, Variable):
+            return "!doc["+convert.string2quote(self.field.var)+"].isEmpty()"
+        elif isinstance(self.field, Literal):
+            return self.field.exists().to_ruby()
+        else:
+            return self.field.to_ruby() + " != null"
 
     def to_python(self):
         return self.field.to_python() + " != None"
 
     def to_esfilter(self):
-        return {"exists": {"field": self.field}}
+        if isinstance(self.field, Variable):
+            return {"exists": {"field": self.field.var}}
+        else:
+            return {"script": {"script": self.to_ruby()}}
 
     def to_dict(self):
-        return {"exists": self.field.var}
+        return {"exists": self.field.to_dict()}
 
     def vars(self):
         return self.field.vars()
 
     def map(self, map_):
         return ExistsOp("exists", self.field.map(map_))
+
+    def missing(self):
+        return FalseOp()
+
+    def exists(self):
+        return TrueOp()
 
 
 class PrefixOp(Expression):
@@ -1040,40 +1089,6 @@ class LeftOp(Expression):
 
     def map(self, map_):
         return LeftOp("left", [self.value.map(map_), self.length.map(map_)])
-
-
-class MissingOp(Expression):
-    def __init__(self, op, term):
-        Expression.__init__(self, op, term)
-        self.field = term
-
-    def to_ruby(self):
-        if isinstance(self.field, Variable):
-            return "doc["+convert.string2quote(self.field.var)+"].isEmpty()"
-        else:
-            return self.field.to_ruby() + " == null"
-
-    def to_python(self):
-        return self.field.to_python() + " == None"
-
-    def to_esfilter(self):
-        return {"missing": {"field": self.field.var}}
-
-    def to_dict(self):
-        return {"missing": self.field.var}
-
-    def vars(self):
-        return {self.field.var}
-
-    def map(self, map_):
-        return MissingOp("missing", self.field.map(map_))
-
-    def missing(self):
-        return FalseOp()
-
-    def exists(self):
-        return TrueOp()
-
 
 
 class InOp(Expression):
@@ -1360,12 +1375,13 @@ def _normalize(esfilter):
     return esfilter
 
 
-def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
+def split_expression_by_depth(where, schema, map_, output=None, var_to_depth=None):
     """
     It is unfortunate that ES can not handle expressions that
     span nested indexes.  This will split your where clause
     returning {"and": [filter_depth0, filter_depth1, ...]}
     """
+    where = qb_expression(where)
     vars_ = where.vars()
 
     if var_to_depth is None:
@@ -1379,10 +1395,10 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
         all_depths = set(var_to_depth[v] for v in vars_)
 
     if len(all_depths) == 1:
-        output[list(all_depths)[0]] += [where]
+        output[list(all_depths)[0]] += [where.map(map_)]
     elif isinstance(where, AndOp):
         for a in where.terms:
-            split_expression_by_depth(a, schema, output, var_to_depth)
+            split_expression_by_depth(a, schema, map_, output, var_to_depth)
     else:
         Log.error("Can not handle complex where clause")
 

@@ -130,8 +130,8 @@ Returns `true` if two expressions are not null *and* not equal.
 
 `eq` and `ne` are not complements: For example, they both return `false` when only one expression is `null`:
 
-		{"ne": [{"literal": null}, {"literal": 1}]} ⇒ False
-		{"eq": [{"literal": null}, {"literal": 1}]} ⇒ False
+		{"ne": [null, 1]} ⇒ False
+		{"eq": [null, 1]} ⇒ False
 
 
 ###`gt`, `gte`, `lte`, `lt` Operators###

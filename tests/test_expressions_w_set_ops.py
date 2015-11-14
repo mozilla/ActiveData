@@ -305,6 +305,40 @@ class TestSetOps(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
+    def test_select_gt_on_sub(self):
+        test = {
+            "data": [{"a": {"_b": [
+                {"a": 0, "b": 0},
+                {"a": 0, "b": 1},
+                {"a": 0},
+                {"a": 1, "b": 0},
+                {"a": 1, "b": 1},
+                {"a": 1},
+                {"b": 0},
+                {"b": 1},
+                {}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": [
+                    "a",
+                    "b",
+                    {"name": "diff", "value": {"sub": ["a", "b"]}}
+                ],
+                "where": {"gt": [{"sub": ["a", "b"]}, 0]},
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 1, "b": 0, "diff": 1}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
+
+
+
 # SELECT CLAUSE WITH SOMETHING A BIT MORE COMPLICATED
 # q = {
 #     "select": [

@@ -12,17 +12,21 @@ from __future__ import division
 from __future__ import absolute_import
 from pyLibrary import queries, convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import split_field, DictList, listwrap, literal_field, coalesce, Dict, unwrap
+from pyLibrary.dot import split_field, DictList, listwrap, literal_field, coalesce, Dict, unwrap, set_default
 from pyLibrary.queries import es09, es14
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es14.setop import format_dispatch
 from pyLibrary.queries.es14.util import qb_sort_to_es_sort
-from pyLibrary.queries.expressions import query_get_all_vars, split_expression_by_depth, simplify_esfilter, qb_expression, AndOp
+from pyLibrary.queries.expressions import query_get_all_vars, split_expression_by_depth, simplify_esfilter, qb_expression, AndOp, qb_expression_to_function, compile_expression
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.timer import Timer
 
+
+EXPRESSION_PREFIX = "_expr."
+
 _ = convert
+
 
 def is_deepop(es, query):
     if query.edges or query.groupby:
@@ -44,12 +48,15 @@ def es_deepop(es, query):
     query_path = query.frum.query_path
     columns = UniqueIndex(keys=["name"], data=sorted(columns, lambda a, b: cmp(len(listwrap(b.nested_path)), len(listwrap(a.nested_path)))), fail_on_dup=False)
     map_ = {c.name: c.abs_name for c in columns}
-    where = qb_expression(query.where).map(map_)
-
+    map_to_local = {
+        c.name: "_inner" + c.abs_name[len(listwrap(c.nested_path)[0]):] if c.nested_path else "fields." + literal_field(c.abs_name)
+        for c in columns
+    }
+    post_expressions = {}
     es_query, es_filters = es14.util.es_query_template(query.frum.name)
 
     # SPLIT WHERE CLAUSE BY DEPTH
-    wheres = split_expression_by_depth(where, query.frum)
+    wheres = split_expression_by_depth(query.where, query.frum, map_)
     for i, f in enumerate(es_filters):
         # PROBLEM IS {"match_all": {}} DOES NOT SURVIVE set_default()
         for k, v in unwrap(simplify_esfilter(AndOp("and", wheres[i]).to_esfilter())).items():
@@ -59,7 +66,7 @@ def es_deepop(es, query):
     if not wheres[1]:
         more_filter = {
             "and": [
-                simplify_esfilter(qb_expression({"and": wheres[0]}).to_esfilter()),
+                simplify_esfilter(AndOp("and", wheres[0]).to_esfilter()),
                 {"not": {
                     "nested": {
                         "path": query_path,
@@ -170,15 +177,22 @@ def es_deepop(es, query):
                         "put": {"name": s.name, "index": i, "child": n.name[prefix:]}
                     })
             i += 1
-        elif isinstance(s.value, list):
-            Log.error("need an example")
-            es_query.fields += [v for v in s.value]
         else:
-            expr = qb_expression(s.value).map(map_).to_ruby()
-            es_query.script_fields[literal_field(s.name)] = {"script": expr}
+            expr = qb_expression(s.value)
+            for v in expr.vars():
+                for n in columns:
+                    if n.name==v:
+                        if not n.nested_path:
+                            es_query.fields += [n.abs_name]
+
+            pull = EXPRESSION_PREFIX + s.name
+            post_expressions[pull] = compile_expression(expr.map(map_to_local).to_python())
+
+
             new_select.append({
                 "name": s.name if is_list else ".",
-                "value": s.name,
+                "pull": pull,
+                "value": expr.to_dict(),
                 "put": {"name": s.name, "index": i, "child": "."}
             })
             i += 1
@@ -205,6 +219,8 @@ def es_deepop(es, query):
         for t in data.hits.hits:
             for i in t.inner_hits[literal_field(query_path)].hits.hits:
                 t._inner = i._source
+                for k, e in post_expressions.items():
+                    t[k] = e(t)
                 yield t
         if more_filter:
             Thread.join(need_more)

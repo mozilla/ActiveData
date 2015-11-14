@@ -157,49 +157,70 @@ class FromES(Container):
         abs_columns = self.meta.get_columns(table=coalesce(table, self.settings.index))
 
         columns = []
+        shadowed_columns = []
+
+        def add_column(c):
+            columns.append(c)
+            if c.relative:
+                for a in abs_columns:
+                    if a.name.startswith(c.name + ".") or a.name == c.name:
+                        shadowed_columns.append(a)
+
         if query_path:
             try:
-                depth = (len(listwrap(c.nested_path)) for c in abs_columns if listwrap(c.nested_path)[0] == query_path).next()
+                query_depth = (len(listwrap(c.nested_path)) for c in abs_columns if listwrap(c.nested_path)[0] == query_path).next()
             except Exception:
                 Log.error("{{path}} does not exist", path=query_path)
 
             # ADD RELATIVE COLUMNS
             for c in abs_columns:
-                if listwrap(c.nested_path)[0] == query_path:
+                full_path = listwrap(c.nested_path)
+                nested_path = full_path[0]
+                if nested_path == query_path:
                     c = copy(c)
-                    columns.append(c)
+                    add_column(c)
                     c = copy(c)
                     c.name = c.abs_name[len(query_path) + 1:] if c.type != "nested" else "."
                     c.relative = True
-                    columns.append(c)
-                elif not c.nested_path:
+                    add_column(c)
+                elif not full_path:
                     c = copy(c)
-                    columns.append(c)
+                    add_column(c)
                     c = copy(c)
-                    c.name = "." + ("." * depth) + c.abs_name
+                    c.name = "." + ("." * query_depth) + c.abs_name
                     c.relative = True
-                    columns.append(c)
-                elif depth > len(listwrap(c.nested_path)) and query_path.startswith(listwrap(c.nested_path)[0] + "."):
-                    diff = depth - len(listwrap(c.nested_path))
+                    add_column(c)
+                elif query_depth > len(full_path) and query_path.startswith(nested_path + "."):
+                    diff = query_depth - len(full_path)
                     c = copy(c)
-                    columns.append(c)
+                    add_column(c)
                     c = copy(c)
-                    c.name = "." + ("." * diff) + (c.abs_name[len(listwrap(c.nested_path)[0]) + 1:] if c.type != "nested" else "")
+                    c.name = "." + ("." * diff) + (c.abs_name[len(nested_path) + 1:] if c.type != "nested" else "")
                     c.relative = True
-                    columns.append(c)
-                elif c.abs_name.startswith(query_path+"."):  # depth < len(c.nested_path)  - DEEP COLUMNS, ALLOWED FOR SET OPS
+                    add_column(c)
+                elif c.abs_name.startswith(query_path + "."):
                     c = copy(c)
-                    columns.append(c)
+                    add_column(c)
                     c = copy(c)
                     c.name = c.abs_name[len(query_path)+1:]
                     c.relative = True
-                    columns.append(c)
+                    add_column(c)
+                elif c.abs_name == query_path:
+                    c = copy(c)
+                    add_column(c)
+                    c = copy(c)
+                    c.name = "."
+                    c.relative = True
+                    add_column(c)
+                else:
+                    Log.error("logic error")
         else:
             for c in abs_columns:
                 c = copy(c)
                 c.relative = True
-                columns.append(c)
+                add_column(c)
 
+        columns = [c for c in columns if c not in shadowed_columns]
         return wrap(columns)
 
     def addDimension(self, dim):

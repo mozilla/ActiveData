@@ -1051,6 +1051,73 @@ class TestDeepOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_missing(self):
+        test = {
+            "data": [{"a": {"_b": [
+                {"a": 0, "b": 0},
+                {"a": 0, "b": 1},
+                {"a": 0},
+                {"a": 1, "b": 0},
+                {"a": 1, "b": 1},
+                {"a": 1},
+                {"b": 0},
+                {"b": 1},
+                {}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": [
+                    "a",
+                    "b"
+                ],
+                "where": {"missing": "a"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"b": 0},
+                    {"b": 1},
+                    {}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_exists(self):
+        test = {
+            "data": [{"a": {"_b": [
+                {"a": 0, "b": 0},
+                {"a": 0, "b": 1},
+                {"a": 0},
+                {"a": 1, "b": 0},
+                {"a": 1, "b": 1},
+                {"a": 1},
+                {"b": 0},
+                {"b": 1},
+                {}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": [
+                    "a",
+                    "b"
+                ],
+                "where": {"exists": "a"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 0, "b": 0},
+                    {"a": 0, "b": 1},
+                    {"a": 0},
+                    {"a": 1, "b": 0},
+                    {"a": 1, "b": 1},
+                    {"a": 1}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
 
 
 
@@ -1074,7 +1141,6 @@ example = {
 
 
 # TODO:  EXPRESSIONS USING DEEP SET OPERATIONS
-
 {
     "from": "jobs.action.timings",
     "select": [

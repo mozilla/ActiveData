@@ -116,6 +116,34 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_eq(self):
+        test = {
+            "data": [
+                {"a": 0, "b": 0},
+                {"a": 0, "b": 1},
+                {"a": 0},
+                {"a": 1, "b": 0},
+                {"a": 1, "b": 1},
+                {"a": 1},
+                {"b": 0},
+                {"b": 1},
+                {}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": ".",
+                "where": {"eq": ["a", "b"]}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 0, "b": 0},
+                    {"a": 1, "b": 1},
+                    {}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
 
     def test_ne(self):
         test = {
@@ -161,15 +189,6 @@ class TestSetOps(ActiveDataBaseTest):
             "query": {
                 "from": base_test_class.settings.backend_es.index,
                 "select": ["a", "b", {"name": "io", "value": {"when": {"eq": ["a", "b"]}, "then": 1, "else": 2}}]
-                # "select": [
-                #     "a",
-                #     "b",
-                #     {"name": "meta", "value": {"script": "doc['a'].isEmpty()"}},
-                #     {"name": "meta_class", "value": {"script": "doc['a'].class.name"}},
-                #     {"name": "v", "value": {"script": "doc['a'].value"}},
-                #     {"name": "class", "value": {"script": "doc['a'].value.class.name"}},
-                #     {"name": "missing", "value": {"missing": "a"}}
-                # ],
             },
             "expecting_list": {
                 "meta": {"format": "list"},

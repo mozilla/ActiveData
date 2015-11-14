@@ -52,11 +52,15 @@ def es_deepop(es, query):
         c.name: "_inner" + c.abs_name[len(listwrap(c.nested_path)[0]):] if c.nested_path else "fields." + literal_field(c.abs_name)
         for c in columns
     }
+    # TODO: FIX THE GREAT SADNESS CAUSED BY EXECUTING post_expressions
+    # THE EXPRESSIONS SHOULD BE PUSHED TO THE CONTAINER:  ES ALLOWS
+    # {"inner_hit":{"script_fields":[{"script":""}...]}}, BUT THEN YOU
+    # LOOSE "_source" BUT GAIN "fields", FORCING ALL FIELDS TO BE EXPLICIT
     post_expressions = {}
     es_query, es_filters = es14.util.es_query_template(query.frum.name)
 
     # SPLIT WHERE CLAUSE BY DEPTH
-    wheres = split_expression_by_depth(query.where, query.frum, map_)
+    wheres = split_expression_by_depth(qb_expression(query.where), query.frum, map_)
     for i, f in enumerate(es_filters):
         # PROBLEM IS {"match_all": {}} DOES NOT SURVIVE set_default()
         for k, v in unwrap(simplify_esfilter(AndOp("and", wheres[i]).to_esfilter())).items():

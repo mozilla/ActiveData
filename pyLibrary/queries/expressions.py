@@ -1381,7 +1381,6 @@ def split_expression_by_depth(where, schema, map_, output=None, var_to_depth=Non
     span nested indexes.  This will split your where clause
     returning {"and": [filter_depth0, filter_depth1, ...]}
     """
-    where = qb_expression(where)
     vars_ = where.vars()
 
     if var_to_depth is None:

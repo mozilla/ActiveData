@@ -155,7 +155,7 @@ def es_aggsop(es, frum, query):
     map_ = {v: frum[v].abs_name for v in vars_}
 
     #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
-    split_where = split_expression_by_depth(query.where, schema=frum, map_=map_)
+    split_where = split_expression_by_depth(qb_expression(query.where), schema=frum, map_=map_)
 
     if len(split_field(frum.name)) > 1:
         if any(split_where[2:]):

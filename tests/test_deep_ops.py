@@ -1121,68 +1121,7 @@ class TestDeepOps(ActiveDataBaseTest):
 
 
 
-# TODO:  missing DOES NOT SEEM TO WORK FOR DEEP OPS
-example = {
-    "where": {"exists": "builder.elapsedTime"},
-    "edges": ["builder.step"],
-    "from": "jobs.action.timings",
-    "select": [
-        {
-            "aggregate": "average",
-            "name": "delay",
-            "value": {"subtract": ["builder.duration", "builder.elapsedTime"]}
-        },
-        {"value": "builder.duration", "aggregate": "average"},
-        {"value": "builder.elapsedTime", "aggregate": "average"}
-    ],
-    "format": "table"
-}
 
-
-
-# TODO:  EXPRESSIONS USING DEEP SET OPERATIONS
-{
-    "from": "jobs.action.timings",
-    "select": [
-        "builder.step",
-        "builder.duration",
-        "builder.elapsedTime",
-        {
-            "name": "lag",
-            "value": {
-                "sub": [
-                    "builder.duration",
-                    "builder.elapsedTime"
-                ]
-            }
-        },
-        "run.logurl"
-    ],
-    "where": {
-        "and": [
-            {
-                "exists": "builder.elapsedTime"
-            },
-            {
-                "gt": {
-                    "action.start_time": "{{today-week}}"
-                }
-            },
-            {
-                "gt": [
-                    {
-                        "subtract": [
-                            "builder.duration",
-                            "builder.elapsedTime"
-                        ]
-                    },
-                    60
-                ]
-            }
-        ]
-    },
-    "limit": 100
-}
 
 
 # WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?

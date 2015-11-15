@@ -12,23 +12,26 @@ from __future__ import division
 from __future__ import absolute_import
 from pyLibrary import queries, convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import split_field, DictList, listwrap, literal_field, coalesce, Dict, unwrap
+from pyLibrary.dot import split_field, DictList, listwrap, literal_field, coalesce, Dict, unwrap, set_default
 from pyLibrary.queries import es09, es14
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es14.setop import format_dispatch
 from pyLibrary.queries.es14.util import qb_sort_to_es_sort
-
-from pyLibrary.queries.expressions import query_get_all_vars, qb_expression_to_ruby, expression_map, qb_expression_to_esfilter, split_expression_by_depth, simplify_esfilter
+from pyLibrary.queries.expressions import query_get_all_vars, split_expression_by_depth, simplify_esfilter, qb_expression, AndOp, qb_expression_to_function, compile_expression
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.timer import Timer
 
+
+EXPRESSION_PREFIX = "_expr."
+
 _ = convert
+
 
 def is_deepop(es, query):
     if query.edges or query.groupby:
         return False
-    if all(s.aggregate not in (None, "count", "none") for s in listwrap(query.select)):
+    if all(s.aggregate not in (None, "none") for s in listwrap(query.select)):
         return False
 
     vars = query_get_all_vars(query)
@@ -44,23 +47,30 @@ def es_deepop(es, query):
     columns = query.frum.get_columns()
     query_path = query.frum.query_path
     columns = UniqueIndex(keys=["name"], data=sorted(columns, lambda a, b: cmp(len(listwrap(b.nested_path)), len(listwrap(a.nested_path)))), fail_on_dup=False)
-    _map = {c.name: c.abs_name for c in columns}
-    where = expression_map(_map, query.where)
-
+    map_ = {c.name: c.abs_name for c in columns}
+    map_to_local = {
+        c.name: "_inner" + c.abs_name[len(listwrap(c.nested_path)[0]):] if c.nested_path else "fields." + literal_field(c.abs_name)
+        for c in columns
+    }
+    # TODO: FIX THE GREAT SADNESS CAUSED BY EXECUTING post_expressions
+    # THE EXPRESSIONS SHOULD BE PUSHED TO THE CONTAINER:  ES ALLOWS
+    # {"inner_hit":{"script_fields":[{"script":""}...]}}, BUT THEN YOU
+    # LOOSE "_source" BUT GAIN "fields", FORCING ALL FIELDS TO BE EXPLICIT
+    post_expressions = {}
     es_query, es_filters = es14.util.es_query_template(query.frum.name)
 
     # SPLIT WHERE CLAUSE BY DEPTH
-    wheres = split_expression_by_depth(where, query.frum)
+    wheres = split_expression_by_depth(qb_expression(query.where), query.frum, map_)
     for i, f in enumerate(es_filters):
         # PROBLEM IS {"match_all": {}} DOES NOT SURVIVE set_default()
-        for k, v in unwrap(simplify_esfilter(qb_expression_to_esfilter({"and": wheres[i]}))).items():
+        for k, v in unwrap(simplify_esfilter(AndOp("and", wheres[i]).to_esfilter())).items():
             f[k] = v
 
 
     if not wheres[1]:
         more_filter = {
             "and": [
-                qb_expression_to_esfilter({"and": wheres[0]}),
+                simplify_esfilter(AndOp("and", wheres[0]).to_esfilter()),
                 {"not": {
                     "nested": {
                         "path": query_path,
@@ -171,15 +181,22 @@ def es_deepop(es, query):
                         "put": {"name": s.name, "index": i, "child": n.name[prefix:]}
                     })
             i += 1
-        elif isinstance(s.value, list):
-            Log.error("need an example")
-            es_query.fields += [v for v in s.value]
         else:
-            Log.error("need an example")
-            es_query.script_fields[literal_field(s.name)] = {"script": qb_expression_to_ruby(s.value)}
+            expr = qb_expression(s.value)
+            for v in expr.vars():
+                for n in columns:
+                    if n.name==v:
+                        if not n.nested_path:
+                            es_query.fields += [n.abs_name]
+
+            pull = EXPRESSION_PREFIX + s.name
+            post_expressions[pull] = compile_expression(expr.map(map_to_local).to_python())
+
+
             new_select.append({
                 "name": s.name if is_list else ".",
-                "value": s.name,
+                "pull": pull,
+                "value": expr.to_dict(),
                 "put": {"name": s.name, "index": i, "child": "."}
             })
             i += 1
@@ -206,6 +223,8 @@ def es_deepop(es, query):
         for t in data.hits.hits:
             for i in t.inner_hits[literal_field(query_path)].hits.hits:
                 t._inner = i._source
+                for k, e in post_expressions.items():
+                    t[k] = e(t)
                 yield t
         if more_filter:
             Thread.join(need_more)

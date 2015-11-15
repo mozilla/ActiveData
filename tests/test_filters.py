@@ -102,7 +102,7 @@ class TestFilters(ActiveDataBaseTest):
 
     def test_regexp_expression(self):
         test = {
-            "data": [{"_a":[
+            "data": [{"_a": [
                 {"a": "abba"},
                 {"a": "aaba"},
                 {"a": "aaaa"},
@@ -136,7 +136,7 @@ class TestFilters(ActiveDataBaseTest):
         test = {
             "data": [{"a": 1}],
             "query": {
-                "from": base_test_class.settings.backend_es.index + "._a",
+                "from": base_test_class.settings.backend_es.index,
                 "select": "*",
                 "where": {"or": []}
             },
@@ -151,7 +151,7 @@ class TestFilters(ActiveDataBaseTest):
         test = {
             "data": [{"a": 1}],
             "query": {
-                "from": base_test_class.settings.backend_es.index + "._a",
+                "from": base_test_class.settings.backend_es.index,
                 "select": "*",
                 "where": {"and": []}
             },
@@ -166,7 +166,7 @@ class TestFilters(ActiveDataBaseTest):
         test = {
             "data": [{"a": 1}],
             "query": {
-                "from": base_test_class.settings.backend_es.index + "._a",
+                "from": base_test_class.settings.backend_es.index,
                 "select": "*",
                 "where": {"match_all": {}}
             },

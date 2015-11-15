@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import base_test_class
 from pyLibrary.dot import wrap
+from pyLibrary.queries.expressions import NullOp
 from tests.base_test_class import ActiveDataBaseTest
 from pyLibrary.maths import Math
 
@@ -113,7 +114,7 @@ class TestDeepOps(ActiveDataBaseTest):
     def test_bad_deep_select_column_w_groupby(self):
         test = {
             "data": [  # WE NEED SOME DATA TO MAKE A NESTED COLUMN
-                       {"_a": {"b": "x"}}
+                {"_a": {"b": "x"}}
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
@@ -121,8 +122,8 @@ class TestDeepOps(ActiveDataBaseTest):
                 "groupby": ["a.b"]
             },
             "expecting_list": {  # DUMMY: SO AN QUERY ATTEMPT IS MADE
-                                 "meta": {"format": "list"},
-                                 "data": []
+                "meta": {"format": "list"},
+                "data": []
             }
         }
         self.assertRaises(Exception, self._execute_es_tests, test)
@@ -332,15 +333,16 @@ class TestDeepOps(ActiveDataBaseTest):
 
     def test_deep_names_w_star(self):
         test = {
-            "data": [  # LETTERS FROM action, timing, builder, harness, step
-                       {"a": {"_t": [
-                           {"b": {"s": 1}, "h": {"s": "a-a"}},
-                           {"b": {"s": 2}, "h": {"s": "a-b"}},
-                           {"b": {"s": 3}, "h": {"s": "a-c"}},
-                           {"b": {"s": 4}, "h": {"s": "b-d"}},
-                           {"b": {"s": 5}, "h": {"s": "b-e"}},
-                           {"b": {"s": 6}, "h": {"s": "b-f"}},
-                       ]}}
+            "data": [
+                # LETTERS FROM action, timing, builder, harness, step
+                {"a": {"_t": [
+                    {"b": {"s": 1}, "h": {"s": "a-a"}},
+                    {"b": {"s": 2}, "h": {"s": "a-b"}},
+                    {"b": {"s": 3}, "h": {"s": "a-c"}},
+                    {"b": {"s": 4}, "h": {"s": "b-d"}},
+                    {"b": {"s": 5}, "h": {"s": "b-e"}},
+                    {"b": {"s": 6}, "h": {"s": "b-f"}},
+                   ]}}
             ],
             "query": {
                 "select": "a._t.*",
@@ -387,15 +389,16 @@ class TestDeepOps(ActiveDataBaseTest):
 
     def test_deep_names_select_value(self):
         test = {
-            "data": [  # LETTERS FROM action, timing, builder, harness, step
-                       {"a": {"_t": [
-                           {"b": {"s": 1}, "h": {"s": "a-a"}},
-                           {"b": {"s": 2}, "h": {"s": "a-b"}},
-                           {"b": {"s": 3}, "h": {"s": "a-c"}},
-                           {"b": {"s": 4}, "h": {"s": "b-d"}},
-                           {"b": {"s": 5}, "h": {"s": "b-e"}},
-                           {"b": {"s": 6}, "h": {"s": "b-f"}},
-                       ]}}
+            "data": [
+                # LETTERS FROM action, timing, builder, harness, step
+                {"a": {"_t": [
+                    {"b": {"s": 1}, "h": {"s": "a-a"}},
+                    {"b": {"s": 2}, "h": {"s": "a-b"}},
+                    {"b": {"s": 3}, "h": {"s": "a-c"}},
+                    {"b": {"s": 4}, "h": {"s": "b-d"}},
+                    {"b": {"s": 5}, "h": {"s": "b-e"}},
+                    {"b": {"s": 6}, "h": {"s": "b-f"}},
+                ]}}
             ],
             "query": {
                 "select": "a._t",
@@ -444,14 +447,15 @@ class TestDeepOps(ActiveDataBaseTest):
 
     def test_deep_names(self):
         test = {
-            "data": [  # LETTERS FROM action, timing, builder, harness, step
-                       {"a": {"_t": [
-                           {"b": {"s": 1}, "h": {"s": "a-a"}},
-                           {"b": {"s": 2}, "h": {"s": "a-b"}},
-                           {"b": {"s": 3}, "h": {"s": "a-c"}},
-                           {"b": {"s": 4}, "h": {"s": "b-d"}},
-                           {"b": {"s": 5}, "h": {"s": "b-e"}},
-                           {"b": {"s": 6}, "h": {"s": "b-f"}},
+            "data": [
+                # LETTERS FROM action, timing, builder, harness, step
+                {"a": {"_t": [
+                    {"b": {"s": 1}, "h": {"s": "a-a"}},
+                    {"b": {"s": 2}, "h": {"s": "a-b"}},
+                    {"b": {"s": 3}, "h": {"s": "a-c"}},
+                    {"b": {"s": 4}, "h": {"s": "b-d"}},
+                    {"b": {"s": 5}, "h": {"s": "b-e"}},
+                    {"b": {"s": 6}, "h": {"s": "b-f"}},
                        ]}}
             ],
             "query": {
@@ -492,18 +496,31 @@ class TestDeepOps(ActiveDataBaseTest):
                 "from": base_test_class.settings.backend_es.index + ".a._a",
                 "select": {"name": "l", "value": {"length": "v"}, "aggregate": "max"}
             },
-            "es_query": {  # FOR REFERENCE
-                           "fields": [],
-                           "aggs": {"_nested": {
-                               "nested": {"path": "a._a"},
-                               "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
-                           }},
-                           "size": 10,
-                           "sort": []
+            "es_query": {
+                # FOR REFERENCE
+                "fields": [],
+                "aggs": {"_nested": {
+                    "nested": {"path": "a._a"},
+                    "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
+                }},
+                "size": 10,
+                "sort": []
             },
             "expecting_list": {
                 "meta": {"format": "value"},
                 "data": 14
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header":["l"],
+                "data": [[14]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "select": {
+                    "name": "l"
+                },
+                "data": {"l": 14}
             }
         }
 
@@ -572,13 +589,13 @@ class TestDeepOps(ActiveDataBaseTest):
                 }
             },
             "es_query": {  # FOR REFERENCE
-                           "fields": [],
-                           "aggs": {"_nested": {
-                               "nested": {"path": "a._a"},
-                               "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
-                           }},
-                           "size": 10,
-                           "sort": []
+                "fields": [],
+                "aggs": {"_nested": {
+                    "nested": {"path": "a._a"},
+                    "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
+                }},
+                "size": 10,
+                "sort": []
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -1027,92 +1044,120 @@ class TestDeepOps(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
-# TODO:  missing DOES NOT SEEM TO WORK FOR DEEP OPS
-example = {
-    "where": {"exists": "builder.elapsedTime"},
-    "edges": ["builder.step"],
-    "from": "jobs.action.timings",
+    def test_select_average_on_none(self):
+        test = {
+            "data": [{"a": {"_b": [
+                {"a": 0},
+                {}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": [
+                    {"name": "t", "value": {"add": ["a", "a"]}, "aggregate": "average"}
+                ],
+                "edges": ["a"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 0, "t": 0},
+                    {"t": NullOp()}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_missing(self):
+        test = {
+            "data": [{"a": {"_b": [
+                {"a": 0, "b": 0},
+                {"a": 0, "b": 1},
+                {"a": 0},
+                {"a": 1, "b": 0},
+                {"a": 1, "b": 1},
+                {"a": 1},
+                {"b": 0},
+                {"b": 1},
+                {}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": [
+                    "a",
+                    "b"
+                ],
+                "where": {"missing": "a"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"b": 0},
+                    {"b": 1},
+                    {}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_exists(self):
+        test = {
+            "data": [{"a": {"_b": [
+                {"a": 0, "b": 0},
+                {"a": 0, "b": 1},
+                {"a": 0},
+                {"a": 1, "b": 0},
+                {"a": 1, "b": 1},
+                {"a": 1},
+                {"b": 0},
+                {"b": 1},
+                {}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": [
+                    "a",
+                    "b"
+                ],
+                "where": {"exists": "a"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 0, "b": 0},
+                    {"a": 0, "b": 1},
+                    {"a": 0},
+                    {"a": 1, "b": 0},
+                    {"a": 1, "b": 1},
+                    {"a": 1}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
+
+
+
+
+
+
+# TODO: WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?
+# THIS SHOULD RETURN SOMETHING, NOT FAIL
+todo = {
     "select": [
-        {
-            "aggregate": "average",
-            "name": "delay",
-            "value": {"subtract": ["builder.duration", "builder.elapsedTime"]}
-        },
-        {"value": "builder.duration", "aggregate": "average"},
-        {"value": "builder.elapsedTime", "aggregate": "average"}
+        "*",
+        "action.*"
     ],
-    "format": "table"
+    "from": "jobs.action.timings",
+    "format": "list"
 }
 
-#TODO: builder.duration DOES NOT EXIST? -> NOT EXPANDED TO action.timings.builder.duration
-example = {
+
+# TODO: DOES NOT SEEM TO FLATTEN THE PROPERTIES
+todo = {
+"select": ["*"],
 "from": "jobs.action.timings",
-"limit": 1000000,
-"where": {"and": [
-    {"eq": {"build.platform": "win32"}},
-    {"eq": {"build.type": "opt"}},
-    {"eq": {"run.suite": "mochitest"}}
-]},
-"edges": [
-    "builder.step",
-    {
-    "value": "builder.start_time",
-    "domain": {
-    "type": "time",
-    "min": "today-month",
-    "max": "today",
-    "interval": "day"
-    }
-    }
-],
-"select": [
-    {"aggregate": "sum", "value": "builder.duration"},
-    {"aggregate": "count"}
-]
+"format": "list"
 }
 
 
-# TODO:  EXPRESSIONS USING DEEP SET OPERATIONS
 
-{
-    "from": "jobs.action.timings",
-    "select": [
-        "builder.step",
-        "builder.duration",
-        "builder.elapsedTime",
-        {
-            "name": "lag",
-            "value": {
-                "sub": [
-                    "builder.duration",
-                    "builder.elapsedTime"
-                ]
-            }
-        },
-        "run.logurl"
-    ],
-    "where": {
-        "and": [
-            {
-                "exists": "builder.elapsedTime"
-            },
-            {
-                "gt": {
-                    "action.start_time": "{{today-week}}"
-                }
-            },
-            {
-                "gt": [
-                    {
-                        "subtract": [
-                            "builder.duration",
-                            "builder.elapsedTime"
-                        ]
-                    },
-                    60
-                ]
-            }
-        ]
-    },
-    "limit": 100
-}

@@ -600,12 +600,14 @@ def value_compare(l, r, ordering=1):
             c = value_compare(a, b) * ordering
             if c != 0:
                 return c
+        return 0
     elif isinstance(l, Mapping):
         if isinstance(r, Mapping):
             for k in set(l.keys()) | set(r.keys()):
                 c = value_compare(l[k], r[k]) * ordering
                 if c != 0:
                     return c
+            return 0
         else:
             return 1
     elif isinstance(r, Mapping):

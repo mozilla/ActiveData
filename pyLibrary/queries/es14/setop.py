@@ -11,8 +11,6 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from collections import Mapping
-
 from pyLibrary import queries
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND
@@ -21,11 +19,11 @@ from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import listwrap
 from pyLibrary.maths import Math
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import domains, es14, es09, qb
+from pyLibrary.queries import es14, es09
 from pyLibrary.queries.containers.cube import Cube
-from pyLibrary.queries.domains import is_keyword
+from pyLibrary.queries.domains import is_keyword, ALGEBRAIC
 from pyLibrary.queries.es14.util import qb_sort_to_es_sort
-from pyLibrary.queries.expressions import qb_expression_to_esfilter, simplify_esfilter, qb_expression_to_ruby
+from pyLibrary.queries.expressions import simplify_esfilter, qb_expression
 from pyLibrary.queries.query import DEFAULT_LIMIT
 from pyLibrary.times.timer import Timer
 
@@ -47,7 +45,7 @@ def is_setop(es, query):
         if simpleAgg or isDeep:
             return True
     else:
-        isSmooth = AND((e.domain.type in domains.ALGEBRAIC and e.domain.interval == "none") for e in query.edges)
+        isSmooth = AND((e.domain.type in ALGEBRAIC and e.domain.interval == "none") for e in query.edges)
         if isSmooth:
             return True
 
@@ -56,7 +54,7 @@ def is_setop(es, query):
 
 def es_setop(es, query):
     es_query, filters = es14.util.es_query_template(query.frum.name)
-    set_default(filters[0], simplify_esfilter(qb_expression_to_esfilter(query.where)))
+    set_default(filters[0], simplify_esfilter(qb_expression(query.where).to_esfilter()))
     es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
     es_query.sort = qb_sort_to_es_sort(query.sort)
     es_query.fields = DictList()
@@ -145,7 +143,7 @@ def extract_rows(es, es_query, query):
             if es_query.fields is not None:
                 es_query.fields.extend([v for v in s.value])
         else:
-            es_query.script_fields[literal_field(s.name)] = {"script": qb_expression_to_ruby(s.value)}
+            es_query.script_fields[literal_field(s.name)] = {"script": qb_expression(s.value).to_ruby()}
             new_select.append({
                 "name": s.name,
                 "pull": "fields." + literal_field(s.name),

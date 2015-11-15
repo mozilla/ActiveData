@@ -80,7 +80,10 @@ class File(object):
 
             return home_path + self._filename[1::]
         else:
-            return os.path.abspath(self._filename)
+            if os.sep == "\\":
+                return os.path.abspath(self._filename).replace(os.sep, "/")
+            else:
+                return os.path.abspath(self._filename)
 
     @staticmethod
     def add_suffix(filename, suffix):

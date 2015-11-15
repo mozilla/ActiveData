@@ -704,6 +704,10 @@ keyword_pattern = re.compile(r"\w+(?:(\\\.|\.)\w+)*")
 
 
 def is_keyword(value):
+    if value.__class__.__name__ == "Variable":
+        Log.warning("not expected")
+        return True
+
     if not value or not isinstance(value, basestring):
         return False  # _a._b
     if value == ".":

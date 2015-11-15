@@ -333,15 +333,16 @@ class TestDeepOps(ActiveDataBaseTest):
 
     def test_deep_names_w_star(self):
         test = {
-            "data": [  # LETTERS FROM action, timing, builder, harness, step
-                       {"a": {"_t": [
-                           {"b": {"s": 1}, "h": {"s": "a-a"}},
-                           {"b": {"s": 2}, "h": {"s": "a-b"}},
-                           {"b": {"s": 3}, "h": {"s": "a-c"}},
-                           {"b": {"s": 4}, "h": {"s": "b-d"}},
-                           {"b": {"s": 5}, "h": {"s": "b-e"}},
-                           {"b": {"s": 6}, "h": {"s": "b-f"}},
-                       ]}}
+            "data": [
+                # LETTERS FROM action, timing, builder, harness, step
+                {"a": {"_t": [
+                    {"b": {"s": 1}, "h": {"s": "a-a"}},
+                    {"b": {"s": 2}, "h": {"s": "a-b"}},
+                    {"b": {"s": 3}, "h": {"s": "a-c"}},
+                    {"b": {"s": 4}, "h": {"s": "b-d"}},
+                    {"b": {"s": 5}, "h": {"s": "b-e"}},
+                    {"b": {"s": 6}, "h": {"s": "b-f"}},
+                   ]}}
             ],
             "query": {
                 "select": "a._t.*",
@@ -388,15 +389,16 @@ class TestDeepOps(ActiveDataBaseTest):
 
     def test_deep_names_select_value(self):
         test = {
-            "data": [  # LETTERS FROM action, timing, builder, harness, step
-                       {"a": {"_t": [
-                           {"b": {"s": 1}, "h": {"s": "a-a"}},
-                           {"b": {"s": 2}, "h": {"s": "a-b"}},
-                           {"b": {"s": 3}, "h": {"s": "a-c"}},
-                           {"b": {"s": 4}, "h": {"s": "b-d"}},
-                           {"b": {"s": 5}, "h": {"s": "b-e"}},
-                           {"b": {"s": 6}, "h": {"s": "b-f"}},
-                       ]}}
+            "data": [
+                # LETTERS FROM action, timing, builder, harness, step
+                {"a": {"_t": [
+                    {"b": {"s": 1}, "h": {"s": "a-a"}},
+                    {"b": {"s": 2}, "h": {"s": "a-b"}},
+                    {"b": {"s": 3}, "h": {"s": "a-c"}},
+                    {"b": {"s": 4}, "h": {"s": "b-d"}},
+                    {"b": {"s": 5}, "h": {"s": "b-e"}},
+                    {"b": {"s": 6}, "h": {"s": "b-f"}},
+                ]}}
             ],
             "query": {
                 "select": "a._t",
@@ -445,14 +447,15 @@ class TestDeepOps(ActiveDataBaseTest):
 
     def test_deep_names(self):
         test = {
-            "data": [  # LETTERS FROM action, timing, builder, harness, step
-                       {"a": {"_t": [
-                           {"b": {"s": 1}, "h": {"s": "a-a"}},
-                           {"b": {"s": 2}, "h": {"s": "a-b"}},
-                           {"b": {"s": 3}, "h": {"s": "a-c"}},
-                           {"b": {"s": 4}, "h": {"s": "b-d"}},
-                           {"b": {"s": 5}, "h": {"s": "b-e"}},
-                           {"b": {"s": 6}, "h": {"s": "b-f"}},
+            "data": [
+                # LETTERS FROM action, timing, builder, harness, step
+                {"a": {"_t": [
+                    {"b": {"s": 1}, "h": {"s": "a-a"}},
+                    {"b": {"s": 2}, "h": {"s": "a-b"}},
+                    {"b": {"s": 3}, "h": {"s": "a-c"}},
+                    {"b": {"s": 4}, "h": {"s": "b-d"}},
+                    {"b": {"s": 5}, "h": {"s": "b-e"}},
+                    {"b": {"s": 6}, "h": {"s": "b-f"}},
                        ]}}
             ],
             "query": {
@@ -493,18 +496,31 @@ class TestDeepOps(ActiveDataBaseTest):
                 "from": base_test_class.settings.backend_es.index + ".a._a",
                 "select": {"name": "l", "value": {"length": "v"}, "aggregate": "max"}
             },
-            "es_query": {  # FOR REFERENCE
-                           "fields": [],
-                           "aggs": {"_nested": {
-                               "nested": {"path": "a._a"},
-                               "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
-                           }},
-                           "size": 10,
-                           "sort": []
+            "es_query": {
+                # FOR REFERENCE
+                "fields": [],
+                "aggs": {"_nested": {
+                    "nested": {"path": "a._a"},
+                    "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
+                }},
+                "size": 10,
+                "sort": []
             },
             "expecting_list": {
                 "meta": {"format": "value"},
                 "data": 14
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header":["l"],
+                "data": [[14]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "select": {
+                    "name": "l"
+                },
+                "data": {"l": 14}
             }
         }
 
@@ -1124,9 +1140,9 @@ class TestDeepOps(ActiveDataBaseTest):
 
 
 
-# WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?
+# TODO: WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?
 # THIS SHOULD RETURN SOMETHING, NOT FAIL
-{
+todo = {
     "select": [
         "*",
         "action.*"
@@ -1136,11 +1152,11 @@ class TestDeepOps(ActiveDataBaseTest):
 }
 
 
-# DOES NOT SEEM TO FLATTEN THE PROPERTIES
-{
-	"select":["*"],
-	"from":"jobs.action.timings",
-	"format":"list"
+# TODO: DOES NOT SEEM TO FLATTEN THE PROPERTIES
+todo = {
+"select": ["*"],
+"from": "jobs.action.timings",
+"format": "list"
 }
 
 

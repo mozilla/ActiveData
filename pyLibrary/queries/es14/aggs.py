@@ -665,6 +665,13 @@ class DimFieldDictDecoder(DefaultDecoder):
         return len(self.fields.values())
 
 
+def drill(agg):
+    deeper = coalesce(agg._filter, agg._nested)
+    while deeper:
+        agg = deeper
+        deeper = coalesce(agg._filter, agg._nested)
+    return agg
+
 
 def aggs_iterator(aggs, decoders):
     """
@@ -675,10 +682,7 @@ def aggs_iterator(aggs, decoders):
     parts = [None] * depth
 
     def _aggs_iterator(agg, d):
-        deeper = coalesce(agg._filter, agg._nested)
-        while deeper:
-            agg = deeper
-            deeper = coalesce(agg._filter, agg._nested)
+        agg = drill(agg)
 
         if d > 0:
             for b in agg._match.buckets:
@@ -689,26 +693,22 @@ def aggs_iterator(aggs, decoders):
             for b in agg._other.buckets:
                 for a in _aggs_iterator(b, d - 1):
                     yield a
-            b = agg._missing
+            b = drill(agg._missing)
             if b.doc_count:
                 for a in _aggs_iterator(b, d - 1):
                     yield a
         else:
             for b in agg._match.buckets:
-                if b._nested:
-                    b.doc_count = b._nested.doc_count
                 parts[d] = b
+                b = drill(b)
                 if b.doc_count:
                     yield b
             parts[d] = Null
             for b in agg._other.buckets:
-                if b._nested:
-                    b.doc_count = b._nested.doc_count
+                b = drill(b)
                 if b.doc_count:
                     yield b
-            b = agg._missing
-            if b._nested:
-                b.doc_count = b._nested.doc_count
+            b = drill(agg._missing)
             if b.doc_count:
                 yield b
 

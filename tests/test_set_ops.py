@@ -55,12 +55,12 @@ class TestSetOps(ActiveDataBaseTest):
 
     def test_select_on_missing_field(self):
         test = {
-            "data": [  # PROPERTIES STARTING WITH _ ARE NOT NESTED AUTOMATICALLY
-                       {"a": {"b": {"c": 1}}},
-                       {"a": {"b": {"c": 2}}},
-                       {"a": {"b": {"c": 3}}},
-                       {"a": {"b": {"c": 4}}},
-                       {"a": {"b": {"c": 5}}}
+            "data": [
+                {"a": {"b": {"c": 1}}},
+                {"a": {"b": {"c": 2}}},
+                {"a": {"b": {"c": 3}}},
+                {"a": {"b": {"c": 4}}},
+                {"a": {"b": {"c": 5}}}
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
@@ -98,12 +98,12 @@ class TestSetOps(ActiveDataBaseTest):
     def test_single_deep_select(self):
 
         test = {
-            "data": [  # PROPERTIES STARTING WITH _ ARE NOT NESTED AUTOMATICALLY
-                       {"a": {"b": {"c": 1}}},
-                       {"a": {"b": {"c": 2}}},
-                       {"a": {"b": {"c": 3}}},
-                       {"a": {"b": {"c": 4}}},
-                       {"a": {"b": {"c": 5}}}
+            "data": [
+                {"a": {"b": {"c": 1}}},
+                {"a": {"b": {"c": 2}}},
+                {"a": {"b": {"c": 3}}},
+                {"a": {"b": {"c": 4}}},
+                {"a": {"b": {"c": 5}}}
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
@@ -615,7 +615,7 @@ class TestSetOps(ActiveDataBaseTest):
 
     def test_select_expression(self):
         test = {
-            "data": [  # PROPERTIES STARTING WITH _ ARE NOT NESTED AUTOMATICALLY
+            "data": [
                        {"a": {"b": 0, "c": 0}},
                        {"a": {"b": 0, "c": 1}},
                        {"a": {"b": 1, "c": 0}},

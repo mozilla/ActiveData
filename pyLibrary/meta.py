@@ -349,6 +349,8 @@ class {{name}}(Mapping):
         return object.__hash__(self)
 
     def __eq__(self, other):
+        if isinstance(other, {{name}}) and dict(self)==dict(other) and self is not other:
+            Log.error("expecting to be same object")
         return self is other
 
     def __dict__(self):

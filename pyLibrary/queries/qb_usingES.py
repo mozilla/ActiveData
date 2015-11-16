@@ -33,7 +33,7 @@ from pyLibrary.queries.namespace.typed import Typed
 from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import coalesce, split_field, literal_field, unwraplist, join_field
+from pyLibrary.dot import coalesce, split_field, literal_field, unwraplist, join_field, unwrap
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 
@@ -154,17 +154,17 @@ class FromES(Container):
         else:
             Log.error("expecting `table` to be same as, or deeper, than index name")
         query_path = self.query_path if self.query_path != "." else None
-        abs_columns = self.meta.get_columns(table=coalesce(table, self.settings.index))
+        abs_columns = unwrap(self.meta.get_columns(table=coalesce(table, self.settings.index)))
 
         columns = []
-        shadowed_columns = []
+        shadowed_columns = set()
 
         def add_column(c):
             columns.append(c)
             if c.relative:
                 for a in abs_columns:
                     if a.name.startswith(c.name + ".") or a.name == c.name:
-                        shadowed_columns.append(a)
+                        shadowed_columns.add(a)
 
         if query_path:
             try:

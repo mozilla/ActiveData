@@ -112,6 +112,15 @@ def find_query(hash):
 
 @app.route('/query', defaults={'path': ''}, methods=['GET', 'POST'])
 def query(path):
+    cprofiler = None
+
+    if Log.cprofiler:
+        import cProfile
+        Log.note("starting cprofile for query")
+
+        cprofiler = cProfile.Profile()
+        cprofiler.enable()
+
     active_data_timer = Timer("total duration")
     body = flask.request.environ['body_copy']
     try:
@@ -145,8 +154,16 @@ def query(path):
                     else:
                         break
                     Thread.sleep(seconds=1)
-            # frum = Container.new_instance(data["from"])
-            result = qb.run(data)
+
+            if Log.profiler:
+                #THREAD CREATION IS DONE TO CAPTURE THE PROFILING DATA
+                def run(please_stop):
+                    return qb.run(data)
+                thread = Thread.run("run query", run)
+                result = thread.join()
+            else:
+                result = qb.run(data)
+
             if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, qb SHOULD ALWAYS RETURN Containers
                 result = result.format(data.format)
 
@@ -290,6 +307,8 @@ def main():
         Log.error("Problem with etl", cause=e)
     finally:
         Log.stop()
+
+    sys.exit(0)
 
 
 if __name__ == "__main__":

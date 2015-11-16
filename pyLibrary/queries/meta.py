@@ -288,6 +288,7 @@ class FromESMetadata(object):
                 Log.warning("Could not get {{col.table}}.{{col.abs_name}} info", col=c, cause=e)
 
     def monitor(self, please_stop):
+        please_stop.on_go(lambda: self.todo.add(Thread.STOP))
         while not please_stop:
             try:
                 if not self.todo:
@@ -323,8 +324,11 @@ class FromESMetadata(object):
 
     def not_monitor(self, please_stop):
         Log.warning("metadata scan has been disabled")
+        please_stop.on_go(lambda: self.todo.add(Thread.STOP))
         while not please_stop:
             c = self.todo.pop()
+            if c == Thread.STOP:
+                break
             with self.columns.locker:
                 self.columns.update({
                     "set": {

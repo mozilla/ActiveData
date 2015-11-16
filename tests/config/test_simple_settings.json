@@ -12,7 +12,8 @@
 	"constants": {
 		"pyLibrary.env.http.default_headers": {
 			"From": "ActiveDataTests"
-		}
+		},
+		"pyLibrary.queries.expressions.ALLOW_SCRIPTING": true
 	},
 	"flask": {
 		"host": "0.0.0.0",

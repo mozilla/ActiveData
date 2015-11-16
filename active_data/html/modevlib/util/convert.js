@@ -637,7 +637,7 @@ wrapWithHtmlTag = function(tagName, value){
 		return prefix + value + suffix;
 	} else if (typeof(value) == "string") {
 		return prefix + convert.String2HTML(value) + suffix;
-	} else if (aMath.isNumeric(value) && ("" + value).length == 10 && ("" + value).startsWith("1") && value>1200000000) {
+	} else if (aMath.isNumeric(value) && ("" + value).split(".")[0].length == 10 && ("" + value).startsWith("1") && value>1200000000) {
 		//PROBABLY A UNIX TIMESTAMP
 		value = new Date(value*1000);
 		if (value.floorDay().getMilli() == value.getMilli()) {
@@ -646,7 +646,7 @@ wrapWithHtmlTag = function(tagName, value){
 			return prefix + new Date(value).format("dd-NNN-yyyy HH:mm:ss") + suffix;
 		}//endif
 	} else if (aMath.isNumeric(value)) {
-		if (("" + value).length == 13) {
+		if (("" + value).split(".")[0].length == 13) {
 			//PROBABLY A TIMESTAMP
 			value = new Date(value);
 			if (value.floorDay().getMilli() == value.getMilli()) {

@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import base_test_class
 from pyLibrary.dot import wrap
+from pyLibrary.queries.expressions import NullOp
 from tests.base_test_class import ActiveDataBaseTest
 from pyLibrary.maths import Math
 
@@ -23,7 +24,6 @@ lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
 class TestDeepOps(ActiveDataBaseTest):
-
     def test_deep_select_column(self):
         test = {
             "data": [
@@ -38,7 +38,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index+"._a",
+                "from": base_test_class.settings.backend_es.index + "._a",
                 "select": {"value": "_a.v", "aggregate": "sum"},
                 "edges": ["_a.b"]
             },
@@ -90,7 +90,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index+"._a",
+                "from": base_test_class.settings.backend_es.index + "._a",
                 "select": {"value": "_a.v", "aggregate": "sum"},
                 "groupby": ["_a.b"]
             },
@@ -143,18 +143,18 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 4, "c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index+"._a",
+                "from": base_test_class.settings.backend_es.index + "._a",
                 "select": ["b", "o"],
                 "where": {"eq": {"b": "x"}},
                 "sort": ["o"]
             },
             "es_query": {  # FOR REFERENCE
-                "query": {"nested": {
-                    "path": "_a",
-                    "inner_hits": {"size": 100000},
-                    "filter": {"term": {"_a.b": "x"}}
-                }},
-                "fields": ["o"]
+                           "query": {"nested": {
+                               "path": "_a",
+                               "inner_hits": {"size": 100000},
+                               "filter": {"term": {"_a.b": "x"}}
+                           }},
+                           "fields": ["o"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -164,7 +164,7 @@ class TestDeepOps(ActiveDataBaseTest):
                     {"o": 3, "b": "x"}
                 ]},
             # "expecting_table": {
-            #     "meta": {"format": "table"},
+            # "meta": {"format": "table"},
             #     "header": ["o", "a", "c"],
             #     "data": [
             #         [1, {"b": "x", "v": 5}, None],
@@ -206,7 +206,6 @@ class TestDeepOps(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
-
     def test_select_whole_document(self):
         test = {
             "data": [
@@ -243,11 +242,11 @@ class TestDeepOps(ActiveDataBaseTest):
                     [1, {"b": "x", "v": 5}, None],
                     [2, {"b": "x", "v": 7}, None],
                     [3,
-                        [
-                            {"b": "x", "v": 2},
-                            {"b": "y", "v": 3}
-                        ],
-                        None
+                     [
+                         {"b": "x", "v": 2},
+                         {"b": "y", "v": 3}
+                     ],
+                     None
                     ],
                     [4, None, "x"]
                 ]
@@ -290,7 +289,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 4, "c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index+"._a",
+                "from": base_test_class.settings.backend_es.index + "._a",
                 "select": "*"
             },
             "expecting_list": {
@@ -334,7 +333,8 @@ class TestDeepOps(ActiveDataBaseTest):
 
     def test_deep_names_w_star(self):
         test = {
-            "data": [  # LETTERS FROM action, timing, builder, harness, step
+            "data": [
+                # LETTERS FROM action, timing, builder, harness, step
                 {"a": {"_t": [
                     {"b": {"s": 1}, "h": {"s": "a-a"}},
                     {"b": {"s": 2}, "h": {"s": "a-b"}},
@@ -342,7 +342,7 @@ class TestDeepOps(ActiveDataBaseTest):
                     {"b": {"s": 4}, "h": {"s": "b-d"}},
                     {"b": {"s": 5}, "h": {"s": "b-e"}},
                     {"b": {"s": 6}, "h": {"s": "b-f"}},
-                ]}}
+                   ]}}
             ],
             "query": {
                 "select": "a._t.*",
@@ -389,7 +389,8 @@ class TestDeepOps(ActiveDataBaseTest):
 
     def test_deep_names_select_value(self):
         test = {
-            "data": [  # LETTERS FROM action, timing, builder, harness, step
+            "data": [
+                # LETTERS FROM action, timing, builder, harness, step
                 {"a": {"_t": [
                     {"b": {"s": 1}, "h": {"s": "a-a"}},
                     {"b": {"s": 2}, "h": {"s": "a-b"}},
@@ -446,7 +447,8 @@ class TestDeepOps(ActiveDataBaseTest):
 
     def test_deep_names(self):
         test = {
-            "data": [  # LETTERS FROM action, timing, builder, harness, step
+            "data": [
+                # LETTERS FROM action, timing, builder, harness, step
                 {"a": {"_t": [
                     {"b": {"s": 1}, "h": {"s": "a-a"}},
                     {"b": {"s": 2}, "h": {"s": "a-b"}},
@@ -454,7 +456,7 @@ class TestDeepOps(ActiveDataBaseTest):
                     {"b": {"s": 4}, "h": {"s": "b-d"}},
                     {"b": {"s": 5}, "h": {"s": "b-e"}},
                     {"b": {"s": 6}, "h": {"s": "b-f"}},
-                ]}}
+                       ]}}
             ],
             "query": {
                 "select": ["a._t"],
@@ -491,21 +493,34 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 4, "a": {}}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a._a",
+                "from": base_test_class.settings.backend_es.index + ".a._a",
                 "select": {"name": "l", "value": {"length": "v"}, "aggregate": "max"}
             },
-            "es_query": {  # FOR REFERENCE
-               "fields": [],
-               "aggs": {"_nested": {
-                   "nested": {"path": "a._a"},
-                   "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
-               }},
-               "size": 10,
-               "sort": []
+            "es_query": {
+                # FOR REFERENCE
+                "fields": [],
+                "aggs": {"_nested": {
+                    "nested": {"path": "a._a"},
+                    "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
+                }},
+                "size": 10,
+                "sort": []
             },
             "expecting_list": {
                 "meta": {"format": "value"},
                 "data": 14
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header":["l"],
+                "data": [[14]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "select": {
+                    "name": "l"
+                },
+                "data": {"l": 14}
             }
         }
 
@@ -526,18 +541,18 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 4, "a": {}}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a._a",
+                "from": base_test_class.settings.backend_es.index + ".a._a",
                 "select": {"name": "l", "value": {"length": "v"}, "aggregate": "max"},
                 "where": {"lt": {"o": 3}}
             },
             "es_query": {  # FOR REFERENCE
-               "fields": [],
-               "aggs": {"_nested": {
-                   "nested": {"path": "a._a"},
-                   "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
-               }},
-               "size": 10,
-               "sort": []
+                           "fields": [],
+                           "aggs": {"_nested": {
+                               "nested": {"path": "a._a"},
+                               "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
+                           }},
+                           "size": 10,
+                           "sort": []
             },
             "expecting_list": {
                 "meta": {"format": "value"},
@@ -548,7 +563,6 @@ class TestDeepOps(ActiveDataBaseTest):
         self._execute_es_tests(test, delete_index=False)
 
     def test_agg_w_complicated_where(self):
-
         # TEST WE CAN PERFORM AGGREGATES ON EXPRESSIONS OF DEEP VARIABLES
         test = {
             "data": [
@@ -575,13 +589,13 @@ class TestDeepOps(ActiveDataBaseTest):
                 }
             },
             "es_query": {  # FOR REFERENCE
-               "fields": [],
-               "aggs": {"_nested": {
-                   "nested": {"path": "a._a"},
-                   "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
-               }},
-               "size": 10,
-               "sort": []
+                "fields": [],
+                "aggs": {"_nested": {
+                    "nested": {"path": "a._a"},
+                    "aggs": {"max_length": {"max": {"script": "(doc[\"v\"].value).length()"}}}
+                }},
+                "size": 10,
+                "sort": []
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -609,7 +623,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 4, "a": {"_a": {"s": False}}}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a._a",
+                "from": base_test_class.settings.backend_es.index + ".a._a",
                 "select": ["o", "v"],
                 "where": {"and": [
                     {"gte": {"o": 2}},
@@ -648,7 +662,7 @@ class TestDeepOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": ["_id"],
-                "from": base_test_class.settings.backend_es.index+".a._a",
+                "from": base_test_class.settings.backend_es.index + ".a._a",
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -708,12 +722,12 @@ class TestDeepOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": "_id",
-                "from": base_test_class.settings.backend_es.index+".a._a",
+                "from": base_test_class.settings.backend_es.index + ".a._a",
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    Math.is_hex,  #DUE TO NATURE OF THE _id AUTO-ASSIGN LOGIC IN pyLibrary.env.elasticsearch.Index, WE KNOW _id WILL BE HEX
+                    Math.is_hex,  # DUE TO NATURE OF THE _id AUTO-ASSIGN LOGIC IN pyLibrary.env.elasticsearch.Index, WE KNOW _id WILL BE HEX
                     Math.is_hex,
                     Math.is_hex,
                     Math.is_hex,
@@ -862,11 +876,11 @@ class TestDeepOps(ActiveDataBaseTest):
         test = {
             "data": data,
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a._b",
+                "from": base_test_class.settings.backend_es.index + ".a._b",
                 "edges": [{
-                    "name": "v",
-                    "value": ["r", "s"]
-                }]
+                              "name": "v",
+                              "value": ["r", "s"]
+                          }]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -937,7 +951,7 @@ class TestDeepOps(ActiveDataBaseTest):
             "data": data,
             "query": {
                 "select": {"value": "v.u", "aggregate": "sum"},  # TEST RELATIVE NAME IN select
-                "from": base_test_class.settings.backend_es.index+".a._b",
+                "from": base_test_class.settings.backend_es.index + ".a._b",
                 "edges": ["r.s"],  # TEST RELATIVE NAME IN edges
                 "where": {"not": {"eq": {"r.s": "b"}}}  # TEST RELATIVE NAME IN where
             },
@@ -989,7 +1003,7 @@ class TestDeepOps(ActiveDataBaseTest):
             "data": data,
             "query": {
                 "select": ["r.s", "v.u"],
-                "from": base_test_class.settings.backend_es.index+".a._b",
+                "from": base_test_class.settings.backend_es.index + ".a._b",
                 "where": {"not": {"eq": {"r.s": "b"}}}
             },
             "expecting_list": {
@@ -1030,47 +1044,120 @@ class TestDeepOps(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
+    def test_select_average_on_none(self):
+        test = {
+            "data": [{"a": {"_b": [
+                {"a": 0},
+                {}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": [
+                    {"name": "t", "value": {"add": ["a", "a"]}, "aggregate": "average"}
+                ],
+                "edges": ["a"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 0, "t": 0},
+                    {"t": NullOp()}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
 
-#TODO:  missing DOES NOT SEEM TO WORK FOR DEEP OPS
-example = {
-    "where": {"exists": "builder.elapsedTime"},
-    "edges": ["builder.step"],
-    "from": "jobs.action.timings",
+    def test_missing(self):
+        test = {
+            "data": [{"a": {"_b": [
+                {"a": 0, "b": 0},
+                {"a": 0, "b": 1},
+                {"a": 0},
+                {"a": 1, "b": 0},
+                {"a": 1, "b": 1},
+                {"a": 1},
+                {"b": 0},
+                {"b": 1},
+                {}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": [
+                    "a",
+                    "b"
+                ],
+                "where": {"missing": "a"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"b": 0},
+                    {"b": 1},
+                    {}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_exists(self):
+        test = {
+            "data": [{"a": {"_b": [
+                {"a": 0, "b": 0},
+                {"a": 0, "b": 1},
+                {"a": 0},
+                {"a": 1, "b": 0},
+                {"a": 1, "b": 1},
+                {"a": 1},
+                {"b": 0},
+                {"b": 1},
+                {}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": [
+                    "a",
+                    "b"
+                ],
+                "where": {"exists": "a"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 0, "b": 0},
+                    {"a": 0, "b": 1},
+                    {"a": 0},
+                    {"a": 1, "b": 0},
+                    {"a": 1, "b": 1},
+                    {"a": 1}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
+
+
+
+
+
+
+# TODO: WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?
+# THIS SHOULD RETURN SOMETHING, NOT FAIL
+todo = {
     "select": [
-        {
-        "aggregate": "average",
-        "name": "delay",
-        "value": {"subtract": ["builder.duration", "builder.elapsedTime"]}
-        },
-        {"value": "builder.duration", "aggregate": "average"},
-        {"value": "builder.elapsedTime", "aggregate": "average"}
+        "*",
+        "action.*"
     ],
-    "format": "table"
+    "from": "jobs.action.timings",
+    "format": "list"
 }
 
-#TODO: builder.duration DOES NOT EXIST? -> NOT EXPANDED TO action.timings.builder.duration
-example={
-	"from":"jobs.action.timings",
-	"limit":1000000,
-	"where":{"and":[
-		{"eq":{"build.platform":"win32"}},
-		{"eq":{"build.type":"opt"}},
-		{"eq":{"run.suite":"mochitest"}}
-	]},
-	"edges":[
-		"builder.step",
-		{
-			"value":"builder.start_time",
-			"domain":{
-				"type":"time",
-				"min":"today-month",
-				"max":"today",
-				"interval":"day"
-			}
-		}
-	],
-	"select":[
-		{"aggregate":"sum","value":"builder.duration"},
-		{"aggregate":"count"}
-	]
+
+# TODO: DOES NOT SEEM TO FLATTEN THE PROPERTIES
+todo = {
+"select": ["*"],
+"from": "jobs.action.timings",
+"format": "list"
 }
+
+
+

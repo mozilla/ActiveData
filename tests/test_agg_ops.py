@@ -305,7 +305,15 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test, tjson=False)
 
+#TODO: AGGREGATING ON CONSTANT DOES NOT SEEM TO WORK
 
+test = {
+    "from": base_test_class.settings.backend_es.index,
+    "select": {"name": "count", "value": "1", "aggregate": "count"},
+    "edges": ["a"],
+    "esfilter": True,
+    "limit": 10
+}
 
 #TODO: SIMPLE COUNT NOT WORKING
 example = {

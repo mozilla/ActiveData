@@ -524,8 +524,8 @@ def sort(data, fieldnames=None):
         if data == None:
             return Null
 
-        if fieldnames == None:
-            return wrap(sorted(data))
+        if not fieldnames:
+            return wrap(sorted(data, value_compare))
 
         fieldnames = listwrap(fieldnames)
         if len(fieldnames) == 1:
@@ -600,12 +600,14 @@ def value_compare(l, r, ordering=1):
             c = value_compare(a, b) * ordering
             if c != 0:
                 return c
+        return 0
     elif isinstance(l, Mapping):
         if isinstance(r, Mapping):
             for k in set(l.keys()) | set(r.keys()):
                 c = value_compare(l[k], r[k]) * ordering
                 if c != 0:
                     return c
+            return 0
         else:
             return 1
     elif isinstance(r, Mapping):

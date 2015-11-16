@@ -102,7 +102,7 @@ class TestFilters(ActiveDataBaseTest):
 
     def test_regexp_expression(self):
         test = {
-            "data": [{"_a":[
+            "data": [{"_a": [
                 {"a": "abba"},
                 {"a": "aaba"},
                 {"a": "aaaa"},
@@ -130,3 +130,50 @@ class TestFilters(ActiveDataBaseTest):
             ]}
         }
         self._execute_es_tests(test)
+
+
+    def test_empty_or(self):
+        test = {
+            "data": [{"a": 1}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": "*",
+                "where": {"or": []}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": []
+            }
+        }
+        self._execute_es_tests(test)
+
+
+    def test_empty_and(self):
+        test = {
+            "data": [{"a": 1}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": "*",
+                "where": {"and": []}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [{"a": 1}]
+            }
+        }
+        self._execute_es_tests(test)
+
+
+    def test_empty_match_all(self):
+        test = {
+            "data": [{"a": 1}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": "*",
+                "where": {"match_all": {}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [{"a": 1}]
+            }
+        }
+        self._execute_es_tests(test)
+
+

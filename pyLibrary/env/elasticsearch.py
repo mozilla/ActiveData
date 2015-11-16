@@ -977,7 +977,7 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                 name=query_path,
                 abs_name=query_path,
                 type="nested",
-                nested_path=name
+                nested_path=query_path
             ))
 
             continue

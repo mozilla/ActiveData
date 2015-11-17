@@ -1142,6 +1142,57 @@ class TestEdge1(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
+    def test_percentile(self):
+        test = {
+            "data": [
+                {"k": "a", "v": 1, "u": 5},
+                {"k": "a", "v": 2, "u": 5},
+                {"k": "a", "v": 3, "u": 5},
+                {"k": "a", "v": 4, "u": 5},
+                {"k": "a", "v": 5, "u": 5},
+                {"k": "a", "v": 6, "u": 5},
+                {"k": "b", "v": 7, "u": 5},
+                {"k": "b", "v": 8, "u": 5},
+                {"k": "b", "v": 9, "u": 5},
+                {"k": "b", "v": 10, "u": 5},
+                {"k": "b", "v": 11, "u": 5},
+                {"k": "b", "v": 12, "u": 5},
+                {"k": "b", "v": 13, "u": 5}
+            ],
+            "query": {
+                "select": {"name": "v", "value": {"add": ["v", "u"]}, "aggregate": "percentile", "percentile": 0.70},
+                "from": base_test_class.settings.backend_es.index,
+                "edges": ["k"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"k": "a", "v": 9.5},
+                    {"k": "b", "v": 16.2}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["k", "v"],
+                "data": [
+                    ["a", 9.5],
+                    ["b", 16.2]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "select": {"name": "v"},
+                "edges": [
+                    {"name": "k", "domain": {"type": "set", "partitions": [{"value": "a"}, {"value": "b"}]}}
+                ],
+                "data": {
+                    "v": [9.5, 16.2]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
 
 simple_test_data = [
     {"a": "c", "v": 13},

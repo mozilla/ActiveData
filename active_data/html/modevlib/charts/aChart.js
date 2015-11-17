@@ -1229,4 +1229,21 @@ aChart.addPredictionLine = function(param){
 		}//for
 	};
 
+
+	aChart.replaceNulls = function(result){
+		//REPLACE NULLS WITH ZERO (SHOULD BE DONE BY ACTIVE DATA)
+		Map.forall(result.data, function(k,v){
+			v = new Matrix({"data":v});
+			v.forall(function(vv, c){
+				if (vv==null){
+					v.set(c, 0);
+				}//endif
+			})
+		});
+	};//function
+
 })();
+
+
+
+

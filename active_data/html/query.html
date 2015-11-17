@@ -252,7 +252,7 @@ var queryTool = {};
 				query.meta = {};
 				query.meta.save = true;
 
-				self.response = yield(ESQueryRunner(query));
+				self.response = yield(ActiveDataQuery(query));
 				self[self.showMode]();
 				$("#cube").val(convert.value2json(convert.json2value(code))).focus();
 				$("#success").show();

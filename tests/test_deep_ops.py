@@ -1134,10 +1134,32 @@ class TestDeepOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+# TODO: The or:[] IS "too complicated"
+todo = {
+"from": "jobs.action.timings",
+"where": {"or": [
+    {"exists": "builder.elapsedTime"},
+    {"exists": "builder.elapsedtime"}
+]}
+}
 
 
 
 
+# TODO: THE builder.elapsetime IS NOT PROPERLY PULLED!
+todo = {
+"from": "jobs.action.timings",
+"select": [
+    "builder.elapsetime",
+    "builder.elapseTime",
+    "builder.start_time",
+    "run.key"
+],
+"where": {"and": [
+    {"exists": "builder.elapsedtime"},
+    {"gt": {"action.start_time": "{{today-week}}"}}
+]}
+}
 
 
 # TODO: WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?

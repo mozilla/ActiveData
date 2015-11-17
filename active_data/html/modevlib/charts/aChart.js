@@ -895,7 +895,7 @@ aChart.show=function(params){
 			//GIVE EACH SELECT A ROW
 			data=[];
 			for(var s=0;s<chartCube.select.length;s++){
-				data.push(cube[select[s].name]);
+				data.push(cube[chartCube.select[s].name]);
 			}//for
 		}else if (Qb.domain.ALGEBRAIC.contains(chartCube.edges[0].domain.type)){
 			//ALGEBRAIC DOMAINS ARE PROBABLY NOT MULTICOLORED

@@ -1328,7 +1328,22 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 			}//for
 		}//for
 
+		//OLD MoDevLib FORM
 		this.query.cube = cube;
+
+		//A BETTER FORM IS COLUMNAR
+		if (select instanceof Array){
+			this.query.data = Map.zip(select.map(function(s){
+				return [
+					s.name,
+					cube.map(function(d, i){
+						return d[s.name];
+					})
+				]
+			}));
+		}else{
+			this.query.data = Map.newInstance(select.name, cube);
+		}//endif
 	};
 
 	//PROCESS RESULTS FROM THE ES STATISTICAL FACETS
@@ -1574,6 +1589,11 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 			return v[select.name];
 		});
 	};//method
+
+	//SET ESQuery AS DEFAULT
+	Settings.host_types["undefined"]=ESQuery.run;
+	Settings.host_types["null"]=ESQuery.run;
+	Settings.host_types["ElasticSearch"]=ESQuery.run;
 
 })();
 

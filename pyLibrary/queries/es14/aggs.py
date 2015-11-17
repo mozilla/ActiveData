@@ -136,17 +136,38 @@ def es_aggsop(es, frum, query):
                 s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
 
     for i, s in enumerate(formula):
-        new_select[unicode(i)] = s
-        # PULL VALUE OUT OF THE stats AGGREGATE
+        canonical_name = literal_field(s.name)
         abs_value = qb_expression(s.value).map({c.name: c.abs_name for c in frum._columns})
-        # null IS AGGREGATED AS ZERO (0) https://github.com/elastic/elasticsearch/issues/14740
-        # SO WE ADD AN INLINE (_filter.) TO PREVENT THAT
-        # s.pull = "_filter." + literal_field(s.name) + "." + aggregates1_4[s.aggregate]
-        # es_query.aggs._filter.filter = {"not": simplify_esfilter(abs_value.missing().to_esfilter())}
-        # es_query.aggs._filter.aggs[literal_field(s.name)].stats.script = abs_value.to_ruby()
 
-        s.pull = literal_field(s.name) + "." + aggregates1_4[s.aggregate]
-        es_query.aggs[literal_field(s.name)].stats.script = abs_value.to_ruby()
+        if s.aggregate == "count":
+            es_query.aggs[literal_field(canonical_name)].value_count.script = abs_value.to_ruby()
+            s.pull = literal_field(canonical_name) + ".value"
+        elif s.aggregate == "median":
+            #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
+            key = literal_field(canonical_name + " percentile")
+
+            es_query.aggs[key].percentiles.script = abs_value.to_ruby()
+            es_query.aggs[key].percentiles.percents += [50]
+            s.pull = key + ".values.50\.0"
+        elif s.aggregate == "percentile":
+            #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
+            key = literal_field(canonical_name + " percentile")
+            percent = Math.round(s.percentile * 100, decimal=6)
+
+            es_query.aggs[key].percentiles.script = abs_value.to_ruby()
+            es_query.aggs[key].percentiles.percents += [percent]
+            s.pull = key + ".values." + literal_field(unicode(percent))
+        elif s.aggregate == "cardinality":
+            #ES USES DIFFERENT METHOD FOR CARDINALITY
+            key = canonical_name + " cardinality"
+
+            es_query.aggs[key].cardinality.script = abs_value.to_ruby()
+            s.pull = key + ".value"
+        else:
+            # PULL VALUE OUT OF THE stats AGGREGATE
+            s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
+            es_query.aggs[canonical_name].stats.script = abs_value.to_ruby()
+
 
     decoders = get_decoders_by_depth(query)
     start = 0

@@ -13,7 +13,10 @@ for finer grained querying
 
 * `action.builder` - *string* full build name given to this job.  Same as 
   `run.key`
-* `action.start_time` - *timestamp* name of the subtest
+* `action.start_time` - *timestamp* when buildbot started this action
+* `action.end_time` - *timestamp* when buildbot completed this action
+* `action.duration` - *seconds* duration of this action
+* `action.elapsedTime` - *seconds* some steps self-report their execution duration; separate from buildbot
 * `action.builduid` - *hex* some unique hex value
 * `action.results` - *string* BuildBot end status; same as `run.buildbot_status`
 
@@ -52,13 +55,11 @@ prefix with `action.timings.` for the absolute name.
 
 Properties that describe the run of this job.
 
-* `run.suite` - *string* name of the suite
+* `run.suite` - *string* name of the suite (if a test)
 * `run.chunk` - *integer* each suite is broken into chucks to parallelize the 
 run, each chunk is given a number
-* `run.type` - *string* either "e10s" or `null`
+* `run.type` - *string* one of many build options
 * `run.buildbot_status` - *string* BuildBot's end status
-* `run.timestamp` - *timestamp*
-* `run.job_number` - *string*
 * `run.files` - *array* of files recorded for this suite, one or more of which  
 are the structured log digested to make this record
 	* `run.files.name` - *string* name of the file

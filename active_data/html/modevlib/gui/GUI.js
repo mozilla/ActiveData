@@ -15,9 +15,6 @@ importScript([
 ]);
 
 importScript("Filter.js");
-importScript("ComponentFilter.js");
-importScript("ProductFilter.js");
-importScript("ProgramFilter.js");
 importScript("PartitionFilter.js");
 importScript("TeamFilter.js");
 importScript("RadioFilter.js");
@@ -102,36 +99,44 @@ GUI = {};
 				}
 			});
 
+			function post_filter_functions(){
+				GUI.showLastUpdated(indexName);
+				GUI.AddParameters(parameters, relations); //ADD PARAM AND SET DEFAULTS
+				GUI.Parameter2State();			//UPDATE STATE OBJECT WITH THOSE DEFAULTS
+
+				GUI.makeSelectionPanel();
+
+				GUI.relations = coalesce(relations, []);
+				GUI.FixState();
+
+				GUI.URL2State();				//OVERWRITE WITH URL PARAM
+				GUI.State2URL.isEnabled = true;	//DO NOT ALLOW URL TO UPDATE UNTIL WE HAVE GRABBED IT
+
+				GUI.FixState();
+				GUI.State2URL();
+				GUI.State2Parameter();
+
+				if (!GUI.pleaseRefreshLater) {
+					//SOMETIMES SETUP NEEDS TO BE DELAYED A BIT MORE
+					GUI.refresh();
+				}//endif
+			}//function
+
 			if (((showDefaultFilters === undefined) && !isCustom) || showDefaultFilters) {
 				//USE DEFAULT FILTERS
-				GUI.state.programFilter = new ProgramFilter();
-				GUI.state.productFilter = new ProductFilter();
-				GUI.state.componentFilter = new ComponentFilter();
+				importScript(["ComponentFilter.js", "ProductFilter.js", "ProgramFilter.js"], function(){
+					GUI.state.programFilter = new ProgramFilter();
+					GUI.state.productFilter = new ProductFilter();
+					GUI.state.componentFilter = new ComponentFilter();
 
-				GUI.customFilters.push(GUI.state.programFilter);
-				GUI.customFilters.push(GUI.state.productFilter);
-				GUI.customFilters.push(GUI.state.componentFilter);
-			}//endif
+					GUI.customFilters.push(GUI.state.programFilter);
+					GUI.customFilters.push(GUI.state.productFilter);
+					GUI.customFilters.push(GUI.state.componentFilter);
 
-			GUI.showLastUpdated(indexName);
-			GUI.AddParameters(parameters, relations); //ADD PARAM AND SET DEFAULTS
-			GUI.Parameter2State();			//UPDATE STATE OBJECT WITH THOSE DEFAULTS
-
-			GUI.makeSelectionPanel();
-
-			GUI.relations = coalesce(relations, []);
-			GUI.FixState();
-
-			GUI.URL2State();				//OVERWRITE WITH URL PARAM
-			GUI.State2URL.isEnabled = true;	//DO NOT ALLOW URL TO UPDATE UNTIL WE HAVE GRABBED IT
-
-			GUI.FixState();
-			GUI.State2URL();
-			GUI.State2Parameter();
-
-			if (!GUI.pleaseRefreshLater) {
-				//SOMETIMES SETUP NEEDS TO BE DELAYED A BIT MORE
-				GUI.refresh();
+					post_filter_functions();
+				});
+			}else{
+				post_filter_functions();
 			}//endif
 		};
 

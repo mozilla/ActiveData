@@ -33,7 +33,7 @@ from pyLibrary.queries.namespace.typed import Typed
 from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import coalesce, split_field, literal_field, unwraplist, join_field
+from pyLibrary.dot import coalesce, split_field, literal_field, unwraplist, join_field, unwrap
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
 
@@ -154,17 +154,17 @@ class FromES(Container):
         else:
             Log.error("expecting `table` to be same as, or deeper, than index name")
         query_path = self.query_path if self.query_path != "." else None
-        abs_columns = self.meta.get_columns(table=coalesce(table, self.settings.index))
+        abs_columns = [copy(c) for c in unwrap(self.meta.get_columns(table=coalesce(table, self.settings.index)))]
 
         columns = []
-        shadowed_columns = []
+        shadowed_columns = set()
 
         def add_column(c):
             columns.append(c)
             if c.relative:
                 for a in abs_columns:
                     if a.name.startswith(c.name + ".") or a.name == c.name:
-                        shadowed_columns.append(a)
+                        shadowed_columns.add(a)
 
         if query_path:
             try:
@@ -177,14 +177,12 @@ class FromES(Container):
                 full_path = listwrap(c.nested_path)
                 nested_path = full_path[0]
                 if nested_path == query_path:
-                    c = copy(c)
                     add_column(c)
                     c = copy(c)
                     c.name = c.abs_name[len(query_path) + 1:] if c.type != "nested" else "."
                     c.relative = True
                     add_column(c)
                 elif not full_path:
-                    c = copy(c)
                     add_column(c)
                     c = copy(c)
                     c.name = "." + ("." * query_depth) + c.abs_name
@@ -192,21 +190,18 @@ class FromES(Container):
                     add_column(c)
                 elif query_depth > len(full_path) and query_path.startswith(nested_path + "."):
                     diff = query_depth - len(full_path)
-                    c = copy(c)
                     add_column(c)
                     c = copy(c)
                     c.name = "." + ("." * diff) + (c.abs_name[len(nested_path) + 1:] if c.type != "nested" else "")
                     c.relative = True
                     add_column(c)
                 elif c.abs_name.startswith(query_path + "."):
-                    c = copy(c)
                     add_column(c)
                     c = copy(c)
                     c.name = c.abs_name[len(query_path)+1:]
                     c.relative = True
                     add_column(c)
                 elif c.abs_name == query_path:
-                    c = copy(c)
                     add_column(c)
                     c = copy(c)
                     c.name = "."

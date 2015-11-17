@@ -3,7 +3,8 @@ var layoutAll;
 
 
 (function(){
-	var DELAY_JAVASCRIPT=200;
+	var DELAY_JAVASCRIPT = 200;
+	var DEBUG = true;
 
 	var allFormula = [];
 	var mapSelf2DynamicFormula = {"v": {}, "h": {}};
@@ -174,6 +175,11 @@ var layoutAll;
 			});
 		});
 		layoutFunction += "};";
+
+		if (DEBUG){
+			Log.note("dynamicLayout="+layoutFunction)
+		}//endif
+
 		var dynamicLayout;
 		eval("dynamicLayout=" + layoutFunction);
 		dynamicLayout();

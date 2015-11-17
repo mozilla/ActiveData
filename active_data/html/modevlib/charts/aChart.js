@@ -895,7 +895,7 @@ aChart.show=function(params){
 			//GIVE EACH SELECT A ROW
 			data=[];
 			for(var s=0;s<chartCube.select.length;s++){
-				data.push(cube[select[s].name]);
+				data.push(cube[chartCube.select[s].name]);
 			}//for
 		}else if (Qb.domain.ALGEBRAIC.contains(chartCube.edges[0].domain.type)){
 			//ALGEBRAIC DOMAINS ARE PROBABLY NOT MULTICOLORED
@@ -1229,4 +1229,21 @@ aChart.addPredictionLine = function(param){
 		}//for
 	};
 
+
+	aChart.replaceNulls = function(result){
+		//REPLACE NULLS WITH ZERO (SHOULD BE DONE BY ACTIVE DATA)
+		Map.forall(result.data, function(k,v){
+			v = new Matrix({"data":v});
+			v.forall(function(vv, c){
+				if (vv==null){
+					v.set(c, 0);
+				}//endif
+			})
+		});
+	};//function
+
 })();
+
+
+
+

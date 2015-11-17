@@ -345,6 +345,17 @@ class {{name}}(Mapping):
     def __getattr__(self, item):
         Log.error("{"+"{item|quote}} not valid attribute", item=item)
 
+    def __hash__(self):
+        return object.__hash__(self)
+
+    def __eq__(self, other):
+        if isinstance(other, {{name}}) and dict(self)==dict(other) and self is not other:
+            Log.error("expecting to be same object")
+        return self is other
+
+    def __dict__(self):
+        return {k: getattr(self, k) for k in {{slots}}}
+
     def items(self):
         return ((k, getattr(self, k)) for k in {{slots}})
 

@@ -198,6 +198,11 @@ Dimension.prototype = {
 		}
 
 		function convertDim(dim) {
+			if (isString(dim.index)){
+				dim.index = window.Settings.indexes[dim.index];
+				dim.index.source= window.Settings.host_types[dim.index.host_type]
+			}//endif
+
 			if (dim.edges) {
 				//ALLOW ACCESS TO SUB-PART BY NAME (IF ONLY THERE IS NO NAME COLLISION)
 				dim.edges.forall(function (e, i) {
@@ -223,8 +228,8 @@ Dimension.prototype = {
 
 					if (dim.path !== undefined) {
 						var a = Log.action("Get parts of " + dim.name, true);
-						var parts = yield (ESQuery.run({
-							"from": dim.index,
+						var parts = yield (dim.index.source({
+							"from": dim.index._id,
 							"select": {"name": "count", "value": "1", "aggregate": "count"},
 							"edges": edges,
 							"esfilter": dim.esfilter,
@@ -237,7 +242,7 @@ Dimension.prototype = {
 						if (edges.length > 1) Log.error("Not supported yet");
 						//EACH TERM RETURNED IS A PATH INTO A PARTITION TREE
 						var temp = {"partitions": []};
-						parts.cube.forall(function (count, i) {
+						parts.data.count.forall(function (count, i) {
 							var a = dim.path(d.end(d.partitions[i]));
 							if (!(a instanceof Array)) Log.error("The path function on " + dim.name + " must return an ARRAY of parts");
 							addParts(
@@ -252,8 +257,8 @@ Dimension.prototype = {
 					} else if (edges.length == 1) {
 						var a = Log.action("Get parts of " + dim.name, true);
 						try{
-							var parts = yield (ESQuery.run({
-								"from": dim.index,
+							var parts = yield (dim.index.source({
+								"from": dim.index._id,
 								"select": {"name": "count", "value": "1", "aggregate": "count"},
 								"edges": edges,
 								"esfilter": dim.esfilter,
@@ -263,17 +268,17 @@ Dimension.prototype = {
 							Log.actionDone(a);
 						}
 
-						var d = parts.edges[0].domain;
+						var temp_domain = parts.edges[0].domain;
 
 						dim.value = "name";  //USE THE "name" ATTRIBUTE OF PARTS
 
 						//SIMPLE LIST OF PARTS RETURNED, BE SURE TO INTERRELATE THEM
-						dim.partitions = parts.cube.map(function (count, i) {
+						dim.partitions = temp_domain.partitions.map(function (p, i) {
 							var part = {
-								"name": "" + d.partitions[i].name,  //CONVERT TO STRING
-								"value": d.end(d.partitions[i]),
-								"esfilter": {"term": Map.newInstance(dim.field[0], d.partitions[i].value)},
-								"count": count
+								"name": "" + p.name,  //CONVERT TO STRING
+								"value": temp_domain.end(p),
+								"esfilter": {"term": Map.newInstance(dim.field[0], p.value)},
+								"count": parts.data.count[i]
 							};
 							return part;
 						});
@@ -283,8 +288,8 @@ Dimension.prototype = {
 						//TODO: THIS IS REALLY SLOW!!
 						var a = Log.action("Get parts of " + dim.name, true);
 						try{
-							var parts = yield (ESQuery.run({
-								"from": dim.index,
+							var parts = yield (dim.index.source({
+								"from": dim.index._id,
 								"select": {"name": "count", "value": "1", "aggregate": "count"},
 								"edges": edges,
 								"esfilter": dim.esfilter,
@@ -299,7 +304,7 @@ Dimension.prototype = {
 						var d2 = parts.edges[1].domain;
 
 						//SIMPLE LIST OF PARTS RETURNED, BE SURE TO INTERRELATE THEM
-						dim.partitions = parts.cube.map(function (subcube, i) {
+						dim.partitions = parts.data.count.map(function (subcube, i) {
 							var part = {
 								"name": "" + d.partitions[i].name,  //CONVERT TO STRING
 								"value": d.end(d.partitions[i]),

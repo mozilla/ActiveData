@@ -584,4 +584,3 @@ machine_metadata = wrap({
 if not Log.main_log:
     Log.main_log = TextLog_usingStream(sys.stdout)
 
-

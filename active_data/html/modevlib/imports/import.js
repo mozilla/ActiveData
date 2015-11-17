@@ -113,7 +113,11 @@ var importScript;
 			var e = src.indexOf(")", s);	//HOPEFULLY THIS WILL CATCH THE PARAMETERS (FAILS WHEN COMMENTS EXIST)
 
 			var f = "addDependency(" + quote(parentPath) + ", " + src.substring(s + 1, e + 1);
-			eval(f);
+			try {
+				eval(f);
+			}catch (e){
+				//DO NOTHING
+			}//try
 
 			found = src.indexOf(METHOD_NAME, e);
 		}//while

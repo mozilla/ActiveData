@@ -84,7 +84,7 @@ class TestMetadata(ActiveDataBaseTest):
                 ]},
                 {"o": 2, "_a": {"b": "x", "v": 5}},
                 {"o": 3, "_a": [
-                    {"b": "x", "v": 7},
+                    {"b": "x", "v": 7}
                 ]},
                 {"o": 4, "c": "x"}
             ]})

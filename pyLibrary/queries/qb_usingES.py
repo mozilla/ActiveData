@@ -235,6 +235,8 @@ class FromES(Container):
              return c
 
         e = self.edges[item]
+        if not c:
+            Log.warning("Column with name {{column|quote}} can not be found in {{table}}", column=item, table=self.name)
         return e
 
     def __getattr__(self, item):

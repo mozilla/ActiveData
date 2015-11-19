@@ -1134,32 +1134,49 @@ class TestDeepOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-# TODO: The or:[] IS "too complicated"
-todo = {
-"from": "jobs.action.timings",
-"where": {"or": [
-    {"exists": "builder.elapsedTime"},
-    {"exists": "builder.elapsedtime"}
-]}
-}
+
+    def test_deep_or(self):
+        test = {
+            "data": [{"a": {"_b": [
+                {"q": {"a": 0, "b": 0}},
+                {"q": {"a": 0, "b": 1}},
+                {"q": {"a": 0}},
+                {"q": {"a": 1, "b": 0}},
+                {"q": {"a": 1, "b": 1}},
+                {"q": {"a": 1}},
+                {"q": {"b": 0}},
+                {"q": {"b": 1}},
+                {"q": {}}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": [
+                    "q.a",
+                    "q.b"
+                ],
+                "where": {"or": [
+                    {"exists": "q.b"},
+                    {"exists": "q.a"}
+                ]}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"q": {"a": 0, "b": 0}},
+                    {"q": {"a": 0, "b": 1}},
+                    {"q": {"a": 0}},
+                    {"q": {"a": 1, "b": 0}},
+                    {"q": {"a": 1, "b": 1}},
+                    {"q": {"a": 1}},
+                    {"q": {"b": 0}},
+                    {"q": {"b": 1}}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
 
 
 
-
-# TODO: THE builder.elapsetime IS NOT PROPERLY PULLED!
-todo = {
-"from": "jobs.action.timings",
-"select": [
-    "builder.elapsetime",
-    "builder.elapseTime",
-    "builder.start_time",
-    "run.key"
-],
-"where": {"and": [
-    {"exists": "builder.elapsedtime"},
-    {"gt": {"action.start_time": "{{today-week}}"}}
-]}
-}
 
 
 # TODO: WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?

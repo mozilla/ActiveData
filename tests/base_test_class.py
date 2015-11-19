@@ -266,7 +266,11 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 sort_table(result)
                 sort_table(expect)
         elif result.meta.format == "list":
-            query = Query(query, schema=FromES(settings=self.index.settings))
+            if query["from"].startswith("meta."):
+                pass
+            else:
+                query = Query(query, schema=FromES(name=query["from"], settings=self.index.settings))
+
             if not query.sort:
                 try:
                     #result.data MAY BE A LIST OF VALUES, NOT OBJECTS

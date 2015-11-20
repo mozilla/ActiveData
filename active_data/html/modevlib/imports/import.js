@@ -248,14 +248,19 @@ var importScript;
 		}, 15000);
 
 		function onLoadCallback() {
-			var path = "/"+between(between(this.src, "://", "?"), "/");
+			var path;
+			if (this.src.startsWith(window.location.origin)) {
+				path = this.src.slice(window.location.origin.length);
+			}else{
+				path = this.src
+			}//endif
 			remove(numLoaded, path);
 			if (numLoaded.length == 0) {
 				doneCallback();
 			}else{
 				if (DEBUG) Log.note("Loaded: "+this.outerHTML+ " remaining: "+numLoaded.length)
 			}//endif
-		}
+		}//endif
 
 		var frag = document.createDocumentFragment();   //http://ejohn.org/blog/dom-documentfragments/
 		for (var i = 0; i < netPaths.length; i++) {
@@ -423,6 +428,22 @@ var importScript;
 		return processed;
 	}//method
 
+	var stackPattern=/(.*)@(.*):(\d+):(\d+)/;
+	function parseStack(stackString){
+		var output = [];
+		if (stackString===undefined || stackString==null) return output;
+		stackString.split("\n").forEach(function(l){
+			var parts=stackPattern.exec(l);
+			if (parts==null) return;
+			output.push({
+				"function":parts[1],
+				"fileName":parts[2],
+				"lineNumber":parts[3],
+				"columnNumber":parts[4]
+			});
+		});
+		return output;
+	}//function
 
 	////////////////////////////////////////////////////////////////////////////////
 	// IMPORT ALL SCRIPTS
@@ -488,18 +509,37 @@ var importScript;
 	//AN ARRAY WILL DEMAND LOAD ORDER
 	function __importScript__(importFile, code) {
 		if (code !== undefined) pending.push(code);
-		addDependency(window.location.pathname, importFile);
-		importScript = function (i, code) {
+
+		var path = window.location.pathname;
+		try{
+			throw Error();
+		}catch (e){
+			//THIS IS A BETTER PATH, GIVEN SOME IMPORTED JS FILE CAN CALL importScript() DIRECTLY
+			var trace = parseStack(e.stack)[1].fileName;
+			path = "/" + trace.split("?")[0].split("#")[0].split("/").slice(3).join("/");
+		}//try
+
+		addDependency(path, importFile);
+		window.importScript = function (i, code) {
+			// importScript() WILL CERTAINLY BE CALLED, BECAUSE IT IS IN THE SOURCES
+			// IT PROBABLY DOES NOT HAVE code, BUT IF IT DOES IT WILL BE RUN AFTER
+			// ALL IMPORTS ARE COMPLETE
 			if (code !== undefined) pending.push(code);
 		};
 		_importScript_(function () {
-			//WHEN ALL DONE AUTOMATICALLY
-			for (var i = 0; i < pending.length; i++) {
-				pending[i]();
+			window.importScript = __importScript__;
+			var p = pending;
+			pending = [];
+			for (var i = 0; i < p.length; i++) {
+				p[i]();
 			}//for
-			window.importScript = __importScript__
 		});
 	}//method
+
+
+
+
+
 
 	__importScript__.DEBUG=DEBUG;
 	__importScript__.sort=sort;     //FOR TESTING

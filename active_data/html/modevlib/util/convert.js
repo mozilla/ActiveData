@@ -657,15 +657,15 @@ wrapWithHtmlTag = function(tagName, value){
 		} else {
 			return prefix.leftBut(1) + " style='text-align:right;'>" + value + suffix;
 		}
-	} else if (value.milli) {
-		//DURATION
-		return prefix + value.toString() + suffix;
 	} else if (value.getTime) {
 		if (value.floorDay().getMilli() == value.getMilli()) {
 			return prefix + new Date(value).format("dd-NNN-yyyy") + suffix;
 		} else {
 			return prefix + new Date(value).format("dd-NNN-yyyy HH:mm:ss") + suffix;
 		}//endif
+	} else if (value.milli) {
+		//DURATION
+		return prefix + value.toString() + suffix;
 //	} else if (value.toString !== undefined){
 //		return prefix + convert.String2HTML(value.toString()) + suffix;
 	}//endif
@@ -864,7 +864,9 @@ convert.esFilter2function=function(esFilter){
 	} else if (op == "terms"){
 		var terms = esFilter[op];
 		var variables = Object.keys(terms);
-		if (variables.length>1) Log.error("not allowed");
+		if (variables.length>1){
+			Log.error("not allowed");
+		}//endif
 		var variable = variables[0];
 		return function(row){
 			var value = row[variable];

@@ -12,6 +12,9 @@ var MozillaPrograms = {
 			["e10s Noms", "cf_tracking_e10s", "?"],
 			["e10s Later", "cf_tracking_e10s", "later"],
 
+			["B2G 2.6", "cf_blocking_b2g", "2.6+"],
+			["B2G 2.5", "cf_blocking_b2g", "2.5+"],
+			["B2G 2.2", "cf_blocking_b2g", "2.2+"],
 			["B2G 2.1", "cf_blocking_b2g", "2.1+"],
 			["B2G 2.0", "cf_blocking_b2g", ["2.0+", "1.5+"]],
 			["B2G 1.4", "cf_blocking_b2g", "1.4+"],

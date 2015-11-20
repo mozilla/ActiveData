@@ -75,6 +75,7 @@ var Log = new function(){
 		});
 	};
 
+
 	try{
 		$(document).ready(function(){
 			var id=$.bbq.getState("log");

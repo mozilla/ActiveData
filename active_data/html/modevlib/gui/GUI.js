@@ -85,8 +85,11 @@ GUI = {};
 			if (typeof(refreshChart) != "function") {
 				Log.error("Expecting first parameter to be a refresh (creatChart) function");
 			}//endif
-			GUI.refreshChart = refreshChart;
 			GUI.pleaseRefreshLater = coalesce(GUI.pleaseRefreshLater, false);
+			GUI.refreshChart = function(){
+				if (GUI.pleaseRefreshLater) return;
+				refreshChart();
+			};
 
 			//IF THERE ARE ANY CUSTOM FILTERS, THEN TURN OFF THE DEFAULTS
 			var isCustom = false;
@@ -122,7 +125,8 @@ GUI = {};
 				}//endif
 			}//function
 
-			if (((showDefaultFilters === undefined) && !isCustom) || showDefaultFilters) {
+			if (window.ProgramFilter===undefined && (((showDefaultFilters === undefined) && !isCustom) || showDefaultFilters)) {
+				GUI.pleaseRefreshLater=true;
 				//USE DEFAULT FILTERS
 				importScript(["ComponentFilter.js", "ProductFilter.js", "ProgramFilter.js"], function(){
 					GUI.state.programFilter = new ProgramFilter();
@@ -133,6 +137,7 @@ GUI = {};
 					GUI.customFilters.push(GUI.state.productFilter);
 					GUI.customFilters.push(GUI.state.componentFilter);
 
+					GUI.pleaseRefreshLater=false;
 					post_filter_functions();
 				});
 			}else{
@@ -549,7 +554,11 @@ GUI = {};
 						GUI.state[param.id]=v.split(",").map(String.trim);
 					}//endif
 				} else {
-					GUI.state[param.id] = $("#" + param.id).val();
+					v = $("#" + param.id).val();
+					if (v===undefined){
+						Log.error("not expected")
+					}//endif
+					GUI.state[param.id] = v;
 				}//endif
 			});
 		};
@@ -631,16 +640,15 @@ GUI = {};
 			$("#summary").html(html);
 		};
 
-		GUI.refreshRequested = false;	//TRY TO AGGREGATE MULTIPLE refresh() REQUESTS INTO ONE
+		GUI.refreshInProgress = false;	//TRY TO AGGREGATE MULTIPLE refresh() REQUESTS INTO ONE
 
 		GUI.refresh = function (refresh) {
-			if (GUI.refreshRequested) return;
-			GUI.refreshRequested = true;
+			if (GUI.refreshInProgress) return;
+			GUI.refreshInProgress = true;
 
 			Thread.run("refresh gui", function*() {
 				yield (Thread.sleep(200));
-				GUI.refreshRequested = false;
-
+				GUI.refreshInProgress = false;
 				GUI.State2URL();
 
 				var threads = [];

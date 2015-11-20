@@ -641,22 +641,27 @@ aChart.show=function(params){
 	var divName=params.id;
 
 	var chartCube=params.cube;
-	var cube=coalesce(chartCube.cube, chartCube.data);
+	var cube = coalesce(chartCube.cube, chartCube.data);
 
-	if (typeof(cube)=="object"){
+	if (!(cube instanceof Array)){
 		//THE ActiveData CUBE
 		//do nothing
 	}else{
 		//MoDevMetric CUBE
-		var m =new Matrix({"data":cube});
-		cube = Map.zip(Array.newInstance(chartCube.select).map(function(s){
-			return [
-				s.name,
-				m.map(function(v){
-					return v[s.name];
-				})
-			];
-		}));
+		if (chartCube.select instanceof Array) {
+			var m = new Matrix({"data": cube});
+			cube = Map.zip(Array.newInstance(chartCube.select).map(function(s){
+				return [
+					s.name,
+					m.map(function(v){
+						return v[s.name];
+					})
+				];
+			}));
+		}else{
+			cube = Map.newInstance(chartCube.select.name, cube);
+		}//endif
+
 	}//endif
 
 
@@ -899,13 +904,13 @@ aChart.show=function(params){
 			}//for
 		}else if (Qb.domain.ALGEBRAIC.contains(chartCube.edges[0].domain.type)){
 			//ALGEBRAIC DOMAINS ARE PROBABLY NOT MULTICOLORED
-			data=[cube]
+			data=[cube[chartCube.select.name]]
 		}else{
 			//SWAP DIMENSIONS ON CATEGORICAL DOMAIN SO WE CAN USE COLOR
 			var temp=seriesLabels;
 			seriesLabels=categoryLabels;
 			categoryLabels=temp;
-			data=cube.map(function(v){return [v];});
+			data=cube[chartCube.select].map(function(v){return [v];});
 		}//endif
 	}else{
 		data=cube[Array.newInstance(chartCube.select)[0].name];
@@ -915,7 +920,11 @@ aChart.show=function(params){
 	//
 	//
 	data.forall(function(v,i,d){
-		v=v.copy();
+		try{
+			v=v.copy();
+		}catch(e){
+			Log.error("Not expected")
+		}//try
 		var isNull=false;  //true IF SEEN A NULL IN THIS SERIES
 		for(var j=0;j<v.length;j++){
 			if (v[j]!=null && isNull){

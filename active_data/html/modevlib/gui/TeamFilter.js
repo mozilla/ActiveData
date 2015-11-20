@@ -99,7 +99,7 @@ TeamFilter.newInstance=function(field_name){
 				}//endif
 				return v;
 			});
-			others.children = others.children.filter({"not":{"terms":hier.select("id")}});
+			others.children = others.children.filter({"not":{"terms":{"id": hier.select("id")}}});
 		}//endif
 
 		self.injectHTML(hier);

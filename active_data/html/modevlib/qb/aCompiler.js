@@ -22,7 +22,7 @@ aCompile.method_usingObjects=function(code, contextObjects){
 
 ////////////////////////////////////////////////////////////////////////////////
 // EXECUTE SIMPLE CODE IN THE CONTEXT OF AN OBJECT'S VARIABLES
-// contextTypes ARE TABLES 
+// contextTypes ARE TABLES
 ////////////////////////////////////////////////////////////////////////////////
 aCompile.method=function(code, contextTypes){
 	if (!(contextTypes instanceof Array)) contextTypes=[contextTypes];
@@ -55,7 +55,11 @@ aCompile.method=function(code, contextTypes){
 		});
 
 		f += "}";
-		eval(f);
+		try{
+			eval(f);
+		}catch(e){
+			Log.error("Expression does not eval():\n\t"+f, e)
+		}//try
 
 	return output;
 

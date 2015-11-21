@@ -206,7 +206,7 @@ The *flat list* assumption reduces exception handling and simplifies code for
 window functions.  For example, `Math.min(flat_list[a:b:])` is valid for
 all `a<=b`
 
-  * Python 2.x binary slicing `[:]` is disabled (see implementation issues below)
+  * Python 2.x binary slicing `[:]` throws a warning if used on a DictList (see implementation issues below)
   * Trinary slicing `[::]` uses the flat list definition
 
 When assuming a *flat-list*, we loose the *take-from-the-right* tricks gained
@@ -214,13 +214,13 @@ from modulo arithmetic on the indices. Therefore, we require extra methods
 to perform right-based slicing:
 
   * **right()** - `flat_list.right(b)` same as `loop_list[-b:]` except when `b<=0`
-  * **leftBut()** - `flat_list.leftBut(b)` same as `loop_list[:-b]` except
+  * **not_right()** - `flat_list.not_right(b)` same as `loop_list[:-b]` except
   when `b<=0` (read as "left, but for ...")
 
 For the sake of completeness, we have two more convenience methods:
 
   * `flat_list.left(b)` same as `flat_list[:b:]`
-  * `flat_list.rightBut(b)` same as `flat_list[b::]`
+  * `flat_list.not_left(b)` same as `flat_list[b::]`
 
 ###DictList Dot (.) Operator###
 

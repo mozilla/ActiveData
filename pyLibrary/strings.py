@@ -323,6 +323,20 @@ def quote(value):
     return _convert.string2quote(value)
 
 
+_SNIP = "...<snip>..."
+
+def limit(value, length):
+    # LIMIT THE STRING value TO GIVEN LENGTH
+    if len(value) <= length:
+        return value
+    elif length < len(_SNIP) * 2:
+        return value[0:length]
+    else:
+        lhs = int(round((length - len(_SNIP)) / 2, 0))
+        rhs = length - len(_SNIP) - lhs
+        return value[:lhs] + _SNIP + value[-rhs:]
+
+
 def split(value, sep="\n"):
     # GENERATOR VERSION OF split()
     # SOMETHING TERRIBLE HAPPENS, SOMETIMES, IN PYPY

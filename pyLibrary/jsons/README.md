@@ -33,7 +33,7 @@ restrictions:
    data into. 
 2. **Array values must be the last object property** - If you query into a 
    nested array, all sibling properties found after that array must be ignored 
-   (must no be in the `expected_vars`).  If not, then those arrays will not 
+   (must not be in the `expected_vars`).  If not, then those arrays will not 
    benefit from streaming, and will reside in memory.   
 
 

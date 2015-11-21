@@ -165,14 +165,25 @@ class Math(object):
             value = float(value)
 
         if digits != None:
-            if value ==0:
-                return __builtin__.round(value, digits)
-            try:
-                m = pow(10, math.ceil(math.log10(abs(value))))
-                return __builtin__.round(value / m, digits) * m
-            except Exception, e:
-                from pyLibrary.debugs.logs import Log
-                Log.error("not expected", e)
+            if digits <= 0:
+                if value == 0:
+                    return int(__builtin__.round(value, digits))
+                try:
+                    m = pow(10, math.ceil(math.log10(abs(value))))
+                    return int(__builtin__.round(value / m, digits) * m)
+                except Exception, e:
+                    from pyLibrary.debugs.logs import Log
+
+                    Log.error("not expected", e)
+            else:
+                if value == 0:
+                    return __builtin__.round(value, digits)
+                try:
+                    m = pow(10, math.ceil(math.log10(abs(value))))
+                    return __builtin__.round(value / m, digits) * m
+                except Exception, e:
+                    from pyLibrary.debugs.logs import Log
+                    Log.error("not expected", e)
 
         return __builtin__.round(value, decimal)
 

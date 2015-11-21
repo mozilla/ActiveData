@@ -16,7 +16,7 @@ from datetime import datetime
 import re
 import time
 
-from pyLibrary import convert
+from pyLibrary import convert, strings
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, Null, Dict, set_default, join_field, split_field, unwraplist, listwrap, literal_field
 from pyLibrary.dot.lists import DictList
@@ -29,6 +29,7 @@ from pyLibrary.meta import use_settings
 from pyLibrary.queries import qb
 from pyLibrary.strings import utf82unicode
 from pyLibrary.thread.threads import ThreadedQueue, Thread, Lock
+from pyLibrary.times.durations import MINUTE
 
 
 ES_NUMERIC_TYPES = ["long", "integer", "double", "float"]
@@ -300,14 +301,15 @@ class Index(Features):
                 elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
                     if item.index.status not in [200, 201]:
                         Log.error(
-                            "{{num}} {{error}} while loading line into {{index}}:\n{{line}}",
+                            "{{num}} {{error}} while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
                             num=item.index.status,
                             error=item.index.error,
-                            line=lines[i * 2 + 1],
-                            index=self.settings.index
+                            line=strings.limit(lines[i * 2 + 1], 300),
+                            index=self.settings.index,
+                            id=item.index._id
                         )
                 else:
-                    Log.error("version not supported {{version}}",  version=self.cluster.version)
+                    Log.error("version not supported {{version}}", version=self.cluster.version)
 
             if self.debug:
                 Log.note("{{num}} documents added", num=len(items))

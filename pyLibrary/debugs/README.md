@@ -1,6 +1,6 @@
 
-Structured Logging and Exception Handling
-=========================================
+MoLogs - Structured Logging and Exception Handling
+==================================================
 
 This library provides two main features
 
@@ -91,10 +91,13 @@ Catching all exceptions is preferred over the *only-catch-what-you-can-handle* s
 
 To repeat:  When using dependency injection, callers can not reasonably be expected to know about the types of failures that can happen deep down the call chain.  This makes it vitally important that methods summarize all exceptions, both known and unknown, so their callers have the information to make better decisions on appropriate action.  
 
+
+
+
 **Use named parameters in your error descriptions too**
 
 Error logging accepts keyword parameters just like `Log.note()` does
-  i
+
 ```python
     def worker(value):
         try:
@@ -103,6 +106,25 @@ Error logging accepts keyword parameters just like `Log.note()` does
         except Exception, e:
             Log.error("Failure to work with {{key2}}", key2=value2, cause=e)
 ```
+
+**No need to formally type your exceptions**
+
+An exception can be uniquely identified by the first-parameter string template it is given; exceptions raised with the same template are the same type.  You should have no need to create new exception sub-types.
+
+**Testing for exception "types"**
+
+This library advocates chaining exceptions early and often.  This could hide important exception types in a long causal chain, but MoLogs allows you to easily test if a type (or string, or template) can be found in the causal chain.   
+
+```python
+    def worker(value):
+        try:
+            # Do something that might raise exception
+        except Exception, e:
+            if "Failure to work with {{key2}}" in e:
+				# Deal with exception thrown in above code, no matter
+				# how many other exception handlers where in the chain
+```
+
 
 **If you can deal with an exception, then it will never be logged**
 

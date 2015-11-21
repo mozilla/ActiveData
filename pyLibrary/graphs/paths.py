@@ -101,7 +101,7 @@ class Path(list):
             self._build_list()
         return self.list[-num:]
 
-    def leftBut(self, num):
+    def not_right(self, num):
         """
         WITH SLICES BEING FLAT, WE NEED A SIMPLE WAY TO SLICE FROM THE LEFT [:-num:]
         """

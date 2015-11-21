@@ -25,14 +25,14 @@ import sys
 from pyLibrary import strings
 from pyLibrary.dot import coalesce, Dict
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import SECOND, MINUTE
+from pyLibrary.times.durations import SECOND, MINUTE, Duration
 
 
 _Log = None
 _Except = None
 DEBUG = True
 MAX_DATETIME = datetime(2286, 11, 20, 17, 46, 39)
-DEFAULT_WAIT_TIME = 5*MINUTE
+DEFAULT_WAIT_TIME = timedelta(minutes=5)
 
 def _late_import():
     global _Log
@@ -73,6 +73,9 @@ class Lock(object):
             timeout = (till - Date.now()).seconds
             if timeout < 0:
                 return
+        if isinstance(timeout, Duration):
+            timeout = timeout.seconds
+
         self.monitor.wait(timeout=float(timeout) if timeout else None)
 
     def notify_all(self):
@@ -98,7 +101,7 @@ class Queue(object):
         self.keep_running = True
         self.lock = Lock("lock for queue " + name)
         self.queue = deque()
-        self.next_warning = datetime.utcnow()  # FOR DEBUGGING
+        self.next_warning = Date.now()  # FOR DEBUGGING
 
     def __iter__(self):
         while self.keep_running:
@@ -150,19 +153,19 @@ class Queue(object):
         """
         EXPECT THE self.lock TO BE HAD, WAITS FOR self.queue TO HAVE A LITTLE SPACE
         """
-        wait_time = 5
+        wait_time = 5 * SECOND
 
-        now = datetime.utcnow()
+        now = Date.now()
         if timeout:
             time_to_stop_waiting = now + timeout
         else:
             time_to_stop_waiting = datetime(2286, 11, 20, 17, 46, 39)
 
         if self.next_warning < now:
-            self.next_warning = now + timedelta(seconds=wait_time)
+            self.next_warning = now + wait_time
 
         while self.keep_running and len(self.queue) > self.max:
-            if now > time_to_stop_waiting:
+            if time_to_stop_waiting < now:
                 if not _Log:
                     _late_import()
                 _Log.error(Thread.TIMEOUT)
@@ -172,10 +175,11 @@ class Queue(object):
             else:
                 self.lock.wait(wait_time)
                 if len(self.queue) > self.max:
-                    now = datetime.utcnow()
+                    now = Date.now()
                     if self.next_warning < now:
-                        self.next_warning = now + timedelta(seconds=wait_time)
-                        _Log.alert("Queue {{name}} is full ({{num}} items), thread(s) have been waiting {{wait_time}} sec",
+                        self.next_warning = now + wait_time
+                        _Log.alert(
+                            "Queue by name of {{name|quote}} is full with ({{num}} items), thread(s) have been waiting {{wait_time}} sec",
                             name=self.name,
                             num=len(self.queue),
                             wait_time=wait_time

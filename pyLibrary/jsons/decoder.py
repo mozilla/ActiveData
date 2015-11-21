@@ -398,7 +398,7 @@ class JSONList(object):
             return Null
         return DictList(self.list[-num])
 
-    def leftBut(self, num):
+    def not_right(self, num):
         """
         WITH SLICES BEING FLAT, WE NEED A SIMPLE WAY TO SLICE FROM THE LEFT [:-num:]
         """

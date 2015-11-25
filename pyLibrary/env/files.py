@@ -16,8 +16,7 @@ import shutil
 
 from pyLibrary.strings import utf82unicode
 from pyLibrary.maths import crypto
-from pyLibrary.dot import coalesce, set_default, split_field, join_field
-from pyLibrary.dot import listwrap, wrap
+from pyLibrary.dot import coalesce
 from pyLibrary import convert
 
 

@@ -12,10 +12,11 @@
 var importScript;
 
 (function () {
+	"use strict";
 
 	var METHOD_NAME = "importScript";
 	var FORCE_RELOAD = true;  //COMPENSATE FOR BUG https://bugzilla.mozilla.org/show_bug.cgi?id=991252
-	var DEBUG = false;
+	var DEBUG = true;
 
 	if (typeof(window.Log) == "undefined") {
 		window.Log = {
@@ -515,8 +516,8 @@ var importScript;
 			throw Error();
 		}catch (e){
 			//THIS IS A BETTER PATH, GIVEN SOME IMPORTED JS FILE CAN CALL importScript() DIRECTLY
-			var trace = parseStack(e.stack)[1].fileName;
-			path = "/" + trace.split("?")[0].split("#")[0].split("/").slice(3).join("/");
+			var caller = parseStack(e.stack)[1].fileName;
+			path = "/" + caller.split("?")[0].split("#")[0].split("/").slice(3).join("/");
 		}//try
 
 		addDependency(path, importFile);

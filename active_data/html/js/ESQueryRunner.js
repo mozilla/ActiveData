@@ -36,8 +36,8 @@ function* ActiveDataQuery(query){
 
 
 importScript([
-	"modevlib/aLibrary.js",
-	"modevlib/qb/ESQuery.js"
+	"../modevlib/aLibrary.js",
+	"../modevlib/qb/ESQuery.js"
 ], function(){
 	return "done";
 });

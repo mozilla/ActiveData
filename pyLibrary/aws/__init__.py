@@ -114,7 +114,7 @@ class Queue(object):
                 self.queue.delete_message(p)
 
             if self.settings.debug:
-                Log.alert("{{num}} messages returned to queue",  num= len(pending))
+                Log.alert("{{num}} messages returned to queue", num=len(pending))
 
     def close(self):
         self.commit()

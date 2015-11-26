@@ -39,6 +39,7 @@ def coalesce(*args):
 def zip(keys, values):
     """
     CONVERT LIST OF KEY/VALUE PAIRS TO A DICT
+    PLEASE `import dot`, AND CALL `dot.zip()`
     """
     output = Dict()
     for i, k in enumerate(keys):

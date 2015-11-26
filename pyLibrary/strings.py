@@ -13,6 +13,8 @@ from __future__ import division
 from __future__ import absolute_import
 
 import __builtin__
+from __builtin__ import unicode as _unicode
+
 
 import re
 import math
@@ -65,6 +67,11 @@ def datetime(value):
 
     return _convert.datetime2string(value, "%Y-%m-%d %H:%M:%S")
 
+
+def unicode(value):
+    if value == None:
+        return ""
+    return _unicode(value)
 
 def unix(value):
     if not _convert:
@@ -137,7 +144,7 @@ def tab(value):
             "\n" + \
             "\t".join(map(_convert.value2json, d))
     else:
-        unicode(value)
+        _unicode(value)
 
 def indent(value, prefix=u"\t", indent=None):
     if indent != None:
@@ -150,7 +157,7 @@ def indent(value, prefix=u"\t", indent=None):
         lines = content.splitlines()
         return prefix + (u"\n" + prefix).join(lines) + suffix
     except Exception, e:
-        raise Exception(u"Problem with indent of value (" + e.message + u")\n" + unicode(toString(value)))
+        raise Exception(u"Problem with indent of value (" + e.message + u")\n" + _unicode(toString(value)))
 
 
 def outdent(value):
@@ -187,7 +194,7 @@ def round(value, decimal=None, digits=None, places=None):
         decimal = digits - left_of_decimal
 
     right_of_decimal = max(decimal, 0)
-    format = "{:." + unicode(right_of_decimal) + "f}"
+    format = "{:." + _unicode(right_of_decimal) + "f}"
     return format.format(__builtin__.round(value, decimal))
 
 
@@ -203,7 +210,7 @@ def percent(value, decimal=None, digits=None, places=None):
 
     decimal = coalesce(decimal, 0)
     right_of_decimal = max(decimal, 0)
-    format = "{:." + unicode(right_of_decimal) + "%}"
+    format = "{:." + _unicode(right_of_decimal) + "%}"
     return format.format(__builtin__.round(value, decimal + 2))
 
 
@@ -287,7 +294,7 @@ def right_align(value, length):
     if length <= 0:
         return u""
 
-    value = unicode(value)
+    value = _unicode(value)
 
     if len(value) < length:
         return (" " * (length - len(value))) + value
@@ -311,7 +318,7 @@ def comma(value):
         else:
             output = "{:,}".format(float(value))
     except Exception:
-        output = unicode(value)
+        output = _unicode(value)
 
     return output
 
@@ -490,13 +497,13 @@ def toString(val):
     elif hasattr(val, "__json__"):
         return val.__json__()
     elif isinstance(val, _Duration):
-        return unicode(round(val.seconds, places=4)) + " seconds"
+        return _unicode(round(val.seconds, places=4)) + " seconds"
     elif isinstance(val, timedelta):
         duration = val.total_seconds()
-        return unicode(round(duration, 3)) + " seconds"
+        return _unicode(round(duration, 3)) + " seconds"
 
     try:
-        return unicode(val)
+        return _unicode(val)
     except Exception, e:
         if not _Log:
             _late_import()
@@ -615,13 +622,13 @@ def utf82unicode(value):
                 _Log.error("Can not _convert charcode {{c}} in string  index {{i}}", i=i, c=ord(c), cause=[e, _Except.wrap(f)])
 
         try:
-            latin1 = unicode(value.decode("latin1"))
+            latin1 = _unicode(value.decode("latin1"))
             _Log.error("Can not explain conversion failure, but seems to be latin1", e)
         except Exception, f:
             pass
 
         try:
-            a = unicode(value.decode("iso-8859-1"))
+            a = _unicode(value.decode("iso-8859-1"))
             _Log.error("Can not explain conversion failure, but seems to be iso-8859-1", e)
         except Exception, f:
             pass

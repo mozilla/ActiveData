@@ -19,7 +19,6 @@ from pyLibrary.collections import OR, MAX, UNION
 from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null, Dict
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.domains import is_keyword
-from pyLibrary.testing.fuzzytestcase import assertAlmostEqual
 from pyLibrary.times.dates import Date
 
 
@@ -310,6 +309,10 @@ class Literal(Expression):
         return True
 
     def __eq__(self, other):
+        Log.warning("expensive")
+
+        from pyLibrary.testing.fuzzytestcase import assertAlmostEqual
+
         try:
             assertAlmostEqual(convert.json2value(self.json), other)
             return True

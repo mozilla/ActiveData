@@ -15,10 +15,10 @@ from copy import deepcopy
 from pyLibrary.dot.nones import Null
 from pyLibrary.dot import wrap, unwrap, coalesce
 
-_emit_slice_warning = True
 
 _get = object.__getattribute__
 _set = object.__setattr__
+_emit_slice_warning = True
 _Log = None
 _dictwrap = None
 
@@ -32,6 +32,7 @@ def _late_import():
 
     _ = _Log
     _ = _dictwrap
+
 
 class DictList(list):
     """

@@ -3,7 +3,6 @@ Multithreading
 ==============
 
 
-
 Module `threads`
 ----------------
 
@@ -63,22 +62,22 @@ These three aspects can be combined to give us 8 synchronization primitives:
 * `R - I` - ?limited usefulness?
 * `R B I` - ?limited usefulness?
 
-##Class `Signal`##
+##Class `Signal`
 
 An irreversible binary semaphore used to signal state progression.
 
-###Method `wait_for_go(self, timeout=None, till=None)`
+**Method `wait_for_go(self, timeout=None, till=None)`**
 
 Put a thread into a waiting state until the signal is activated
 
-###Method `go(self)`
+**Method `go(self)`**
 
 Activate the signal.  Does nothing if already activated.
 
-###Method `is_go(self)`
+**Method `is_go(self)`**
 
 Test if the signal is activated, do not wait
 
-###Method `on_go(self, target)`
+**Method `on_go(self, target)`**
 
 Run the `target` method when the signal is activated.  The activating thread will be running the target method, so be sure you are not accessing resources.

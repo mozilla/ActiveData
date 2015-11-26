@@ -1,6 +1,3 @@
-Module `pyLibrary`
-==================
-
 
 Module `convert`
 ---------------
@@ -77,7 +74,7 @@ Module `strings`
 ----------------
 
 Contains several more string functions.  None of them are intended for direct 
-use in a python program, rather for use in the `expand_template` function.
+use in a Python program, rather for use in the `expand_template` function.
 
 
 ###Function `expand_template()`###
@@ -112,7 +109,7 @@ performed by feeding properties to functions using the pipe (`|`) symbol:
             [10, 11, 14, 80]
 ```
 
-Look into the [`pyLibrary.strings.py`](https://github.com/klahnakoski/pyLibrary/blob/master/pyLibrary/strings.py) to see a full list of transformation
+Look into the [`pyLibrary.strings.py`](https://github.com/klahnakoski/pyLibrary/blob/dev/pyLibrary/strings.py) to see a full list of transformation
 functions.
 
 Variables are not limited to simple names: You may use dot (`.`) to specify
@@ -124,7 +121,9 @@ paths into the properties
     Kyle Lahnakoski is 40 years old
 ```
 
+**Nested Objects and Template Expansion**
+
 Templates are not limited to strings, but can also be queries to expand lists
 found in property paths:
 
-<incomplete>
+<incomplete, add more docs here>

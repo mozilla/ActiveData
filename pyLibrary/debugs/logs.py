@@ -13,7 +13,6 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
-
 from datetime import datetime
 import os
 import platform
@@ -23,12 +22,14 @@ from pyLibrary.debugs import constants
 from pyLibrary.debugs.text_logs import TextLog_usingMulti, TextLog_usingThread, TextLog_usingStream, TextLog_usingFile
 from pyLibrary.dot import coalesce, Dict, listwrap, wrap, unwrap, unwraplist, Null, set_default
 from pyLibrary.jsons.encoder import json_encoder
-from pyLibrary.thread.threads import Thread, Lock, Queue
+from pyLibrary.thread.threads import Thread, Queue
 from pyLibrary.strings import indent, expand_template
 
 
+FATAL = "FATAL"
 ERROR = "ERROR"
 WARNING = "WARNING"
+ALARM = "ALARM"
 UNEXPECTED = "UNEXPECTED"
 NOTE = "NOTE"
 
@@ -175,7 +176,7 @@ class Log(object):
             "params": params,
             "timestamp": datetime.utcnow(),
             "machine": machine_metadata.name
-        }, log_context)
+        }, log_context, {"context": NOTE})
 
         if not template.startswith("\n") and template.find("\n") > -1:
             template = "\n" + template
@@ -212,20 +213,15 @@ class Log(object):
         params = dict(unwrap(default_params), **more_params)
 
         if cause and not isinstance(cause, Except):
-            cause = Except(UNEXPECTED, unicode(cause), trace=extract_tb(0))
+            cause = Except(UNEXPECTED, unicode(cause), trace=_extract_traceback(0))
 
         trace = extract_stack(1)
         e = Except(UNEXPECTED, template, params, cause, trace)
         Log.note(
-            unicode(e),
-            {
-                "warning": {
-                    "template": template,
-                    "params": params,
-                    "cause": cause,
-                    "trace": trace
-                }
-            }
+            "{{error}}",
+            error=e,
+            log_context=set_default({"context": WARNING}, log_context),
+            stack_depth=stack_depth + 1
         )
 
     @classmethod
@@ -240,7 +236,13 @@ class Log(object):
         # USE replace() AS POOR MAN'S CHILD TEMPLATE
 
         template = ("*" * 80) + "\n" + indent(template, prefix="** ").strip() + "\n" + ("*" * 80)
-        Log.note(template, params=default_params, stack_depth=stack_depth + 1, log_context=log_context, **more_params)
+        Log.note(
+            template,
+            default_params=default_params,
+            stack_depth=stack_depth + 1,
+            log_context=set_default({"context": ALARM}, log_context),
+            **more_params
+        )
 
     @classmethod
     def alert(
@@ -251,7 +253,13 @@ class Log(object):
         log_context=None,
         **more_params
     ):
-        return Log.alarm(template, default_params, stack_depth+1, log_context=log_context, **more_params)
+        return Log.alarm(
+            template,
+            default_params=default_params,
+            stack_depth=stack_depth + 1,
+            log_context=set_default({"context": ALARM}, log_context),
+            **more_params
+        )
 
     @classmethod
     def warning(
@@ -260,6 +268,7 @@ class Log(object):
         default_params={},
         cause=None,
         stack_depth=0,
+        log_context=None,
         **more_params
     ):
         if isinstance(default_params, BaseException):
@@ -272,15 +281,9 @@ class Log(object):
 
         e = Except(WARNING, template, params, cause, trace)
         Log.note(
-            template=unicode(e),
-            default_params={
-                "warning": {# REDUNDANT INFO
-                    "template": template,
-                    "params": params,
-                    "cause": cause,
-                    "trace": trace
-                }
-            },
+            "{{error|unicode}}",
+            error=e,
+            log_context=set_default({"context": WARNING}, log_context),
             stack_depth=stack_depth + 1
         )
 
@@ -288,9 +291,9 @@ class Log(object):
     @classmethod
     def error(
         cls,
-        template, # human readable template
-        default_params={}, # parameters for template
-        cause=None, # pausible cause
+        template,  # human readable template
+        default_params={},  # parameters for template
+        cause=None,  # pausible cause
         stack_depth=0,
         **more_params
     ):
@@ -304,20 +307,9 @@ class Log(object):
         params = dict(unwrap(default_params), **more_params)
 
         add_to_trace = False
-        if cause == None:
-            cause = []
-        elif isinstance(cause, list):
-            pass
-        elif isinstance(cause, Except):
-            cause = [cause]
-        else:
-            add_to_trace = True
-            if hasattr(cause, "message") and cause.message:
-                cause = [Except(ERROR, unicode(cause.message), trace=extract_tb(stack_depth))]
-            else:
-                cause = [Except(ERROR, unicode(cause), trace=extract_tb(stack_depth))]
+        cause = unwraplist([Except.wrap(c, stack_depth=1) for c in listwrap(cause)])
+        trace = extract_stack(stack_depth + 1)
 
-        trace = extract_stack(1 + stack_depth)
         if add_to_trace:
             cause[0].trace.extend(trace[1:])
 
@@ -342,16 +334,9 @@ class Log(object):
 
         params = dict(unwrap(default_params), **more_params)
 
-        if cause == None:
-            cause = []
-        elif isinstance(cause, list):
-            pass
-        elif isinstance(cause, Except):
-            cause = [cause]
-        else:
-            cause = [Except(ERROR, unicode(cause), trace=extract_tb(stack_depth))]
+        cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
+        trace = extract_stack(stack_depth + 1)
 
-        trace = extract_stack(1 + stack_depth)
         e = Except(ERROR, template, params, cause, trace)
         str_e = unicode(e)
 
@@ -359,15 +344,13 @@ class Log(object):
         try:
             if not error_mode:
                 cls.error_mode = True
-                Log.note(str_e, {
-                    "error": {
-                        "template": template,
-                        "params": params,
-                        "cause": cause,
-                        "trace": trace
-                    }
-                })
-        except Exception, f:
+                Log.note(
+                    "{{error}}",
+                    error=e,
+                    log_context={"context": WARNING},
+                    stack_depth=stack_depth + 1
+                )
+        except Exception:
             pass
         cls.error_mode = error_mode
 
@@ -410,17 +393,11 @@ def extract_stack(start=0):
     return stack
 
 
-def extract_tb(start):
+def _extract_traceback(start):
     """
     SNAGGED FROM traceback.py
 
-    Return list of up to limit pre-processed entries from traceback.
-
-    This is useful for alternate formatting of stack traces.  If
-    'limit' is omitted or None, all entries are extracted.  A
-    pre-processed stack trace entry is a quadruple (filename, line
-    number, function name, text) representing the information that is
-    usually printed for a stack trace.
+    RETURN list OF dicts DESCRIBING THE STACK TRACE
     """
     tb = sys.exc_info()[2]
     for i in range(start):
@@ -472,18 +449,18 @@ class Except(Exception):
         self.trace = trace
 
     @classmethod
-    def wrap(cls, e):
+    def wrap(cls, e, stack_depth=0):
         if e == None:
             return None
         elif isinstance(e, (list, Except)):
             return e
         else:
             if hasattr(e, "message"):
-                cause = Except(ERROR, unicode(e.message), trace=extract_tb(0))
+                cause = Except(ERROR, unicode(e.message), trace=_extract_traceback(0))
             else:
-                cause = Except(ERROR, unicode(e), trace=extract_tb(0))
+                cause = Except(ERROR, unicode(e), trace=_extract_traceback(0))
 
-            trace = extract_stack(2)
+            trace = extract_stack(stack_depth + 2)  # +2 = to remove the caller, and it's call to this' Except.wrap()
             cause.trace.extend(trace)
             return cause
 

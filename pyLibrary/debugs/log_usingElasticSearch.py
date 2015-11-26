@@ -32,6 +32,7 @@ class TextLog_usingElasticSearch(TextLog):
             tjson=False,
             settings=settings
         )
+        self.es.add_alias("debug")
         self.queue = self.es.threaded_queue(max_size=max_size, batch_size=batch_size)
 
     def write(self, template, params):
@@ -88,6 +89,15 @@ SCHEMA = {
                     }
                 },
                 {
+                    "default_nested": {
+                        "mapping": {
+                            "enabled": False
+                        },
+                        "match_mapping_type": "nested",
+                        "match": "*"
+                    }
+                },
+                {
                     "default_longs": {
                         "mapping": {
                             "index": "not_analyzed",
@@ -126,9 +136,6 @@ SCHEMA = {
                 "enabled": True
             },
             "properties": {
-                "params": {
-                    "enabled": False
-                }
             }
         }
     }

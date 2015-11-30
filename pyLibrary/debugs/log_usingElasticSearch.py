@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary import convert
+from pyLibrary import convert, strings
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.threads import Thread
@@ -40,8 +40,7 @@ class TextLog_usingElasticSearch(TextLog):
             # DETECTED INNER TEMPLATE, ASSUME TRACE IS ON, SO DO NOT NEED THE OUTER TEMPLATE
             self.queue.add({"value": params})
         else:
-            if len(template) > 2000:
-                template = template[:1997] + "..."
+            template = strings.limit(template, 2000)
             self.queue.add({"value": {"template": template, "params": params}}, timeout=3*MINUTE)
         return self
 
@@ -89,15 +88,6 @@ SCHEMA = {
                     }
                 },
                 {
-                    "default_nested": {
-                        "mapping": {
-                            "enabled": False
-                        },
-                        "match_mapping_type": "nested",
-                        "match": "*"
-                    }
-                },
-                {
                     "default_longs": {
                         "mapping": {
                             "index": "not_analyzed",
@@ -110,21 +100,29 @@ SCHEMA = {
                     }
                 },
                 {
+                    "default_trace": {
+                        "mapping": {
+                            "type": "nested"
+                        },
+                        "match": "*trace"
+                    }
+                },
+                {
+                    "default_nested": {
+                        "mapping": {
+                            "enabled": False
+                        },
+                        "match_mapping_type": "nested",
+                        "match": "*"
+                    }
+                },
+                {
                     "default_param_values": {
                         "mapping": {
                             "index": "not_analyzed",
                             "doc_values": True
                         },
                         "match": "*$value"
-                    }
-                },
-                {
-                    "default_params": {
-                        "mapping": {
-                            "enabled": False,
-                            "source": "yes"
-                        },
-                        "path_match": "params.*"
                     }
                 }
             ],
@@ -136,6 +134,10 @@ SCHEMA = {
                 "enabled": True
             },
             "properties": {
+                "params": {
+                    "type": "object",
+                    "dynamic": True
+                }
             }
         }
     }

@@ -7,14 +7,13 @@ importScript([
 	"../../lib/jquery.js",
 	"../../lib/jquery-ui/js/jquery-ui-1.10.2.custom.js",
 	"../../lib/jquery-ui/css/start/jquery-ui-1.10.2.custom.css",
-	"../../lib/jquery.ba-bbq/jquery.ba-bbq.js",
 	"../../lib/jquery-linedtextarea/jquery-linedtextarea.css",
 	"../../lib/jquery-linedtextarea/jquery-linedtextarea.js",
 	"../../lib/jsonlint/jsl.parser.js",
 	"../../lib/jsonlint/jsl.format.js"
 ]);
 
-importScript("Filter.js");
+importScript("../util/State.js");
 importScript("PartitionFilter.js");
 importScript("TeamFilter.js");
 importScript("RadioFilter.js");
@@ -34,6 +33,11 @@ importScript("../aFormat.js");
 
 GUI = {};
 (function () {
+	if (window.GUI === undefined) {
+		window.GUI = {};
+	}//endif
+	var GUI = window.GUI;
+
 		GUI.state = {};
 		GUI.customFilters = [];
 
@@ -289,26 +293,14 @@ GUI = {};
 				}//endif
 			});
 
-			{//bbq REALY NEEDS TO KNOW WHAT ATTRIBUTES TO REMOVE FROM URL
-				var removeList = [];
-				var keys = Object.keys(simplestate);
-				for (var i = keys.length; i--;) {
-					var key = keys[i];
-					var val = simplestate[key];
-					if (val === undefined) removeList.push(key);
-				}//for
-
-				jQuery.bbq.removeState(removeList);
-				jQuery.bbq.pushState(Map.copy(simplestate));
-			}
-
+			Session.URL.setFragment(simpleState);
 		};
 
 		GUI.State2URL.isEnabled = false;
 
 
 		GUI.URL2State = function () {
-			var urlState = jQuery.bbq.getState();
+			var urlState = Session.URL.getFragment();
 			Map.forall(urlState, function (k, v) {
 				if (GUI.state[k] === undefined) return;
 

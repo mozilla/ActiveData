@@ -25,7 +25,7 @@ var ESQuery = function(query){
 
 ESQuery.TrueFilter = {"match_all": {}};
 ESQuery.DEBUG = false;
-ESQuery.INDEXES = Settings.indexes;
+ESQuery.INDEXES = window.Settings.indexes;
 ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 
 

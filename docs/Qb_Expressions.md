@@ -8,12 +8,12 @@ Qb has a limited expression language to increase the number of useful queries th
 
 	{operator_name: parameters}
 
-As a side note, Qb queries are also expressions: `from` is the operator, and other name/value pairs act as modifiers. 
+As a side note, Qb queries are also expressions: `from` is the operator, and other properties act as modifiers. 
 
 
 Expressions are composed of 
 
-* primitive values `true`, `false`, `null`
+* primitive values: `true`, `false`, `null`, numbers and strings
 * strings representing dot-separated property names (with format of `\w+(?:\.\w+)*`)
 * objects representing compound expressions
 
@@ -265,7 +265,7 @@ Test is a property is not `null`
 
 ###`match_all` Operator###
 
-Dummy operator that always returns `true`.  It is an artifact of ElasticSearch filter expressions.
+Dummy operator that always returns `true`.  It is an artifact of ElasticSearch filter expressions.  Use `true` instead.
 
 		{"match_all": {}}
 
@@ -288,7 +288,7 @@ Return the left-part of given string.  `null` parameters result in `null`; negat
 
 ###`not_left` Operator###
 
-Removes the `length` left-most characters from the given string.  `null` parameters result in `null`; negative `length` returns the whole string.  Notice that concatenating `left` and `not_left` will return the original expression for all integer `length`.    
+Removes the `length` left-most characters from the given string, returning the rest.  `null` parameters result in `null`; negative `length` returns the whole string.  Notice that concatenating `left` and `not_left` will return the original expression for all integer `length`.    
 
 		{"not_left": {variable: length}}
 		{"not_left": [expression, length]}
@@ -302,7 +302,7 @@ Return the right-part of given string.  `null` parameters result in `null`; nega
 
 ###`not_right` Operator###
 
-Removes the `length` right-most characters from the given string.  `null` parameters result in `null`; negative `length` returns the whole string.  Notice that concatenating `right` and `not_right` will return the original expression for all integer `length`.    
+Removes the `length` right-most characters from the given string, returning the rest.  `null` parameters result in `null`; negative `length` returns the whole string.  Notice that concatenating `right` and `not_right` will return the original expression for all integer `length`.    
 
 		{"not_right": {variable: length}}
 		{"not_right": [expression, length]}
@@ -412,44 +412,4 @@ Evaluate the given JSON as an expression:
 
 		{"eval": {"gt": {"build.date": "{{today}}"}}}
 
-`eval` can be useful within the context of `ref`.   
- 
-
-
-Appendix: Operator Philosophy
------------------------------
-
-Put at bottom of document because it only explains general design choices
-
-###Operator forms###
-
-Many operators have a *simple* form and a *formal* form which use parameter objects or parameter lists respectively.    
-
-**Simple:**
-
-Simple form uses a simple parameter object, and is for comparing a property (a variable) to a constant value.
-	
-		{"op": {variable: constant}}
-
-**Formal:**
-
-Formal form requires a parameter list with two items.  It is useful for building compound expressions.
-
-		{"op": [expr1, expr2]}
-
-**Constant**
-
-The JSON values `true`, `false`, and `null` are also legitimate expressions. 
-
-
-###Commutative Operators###
-
-Commutative operators can compound many expressions, and therefore only have a *formal* version:
-
-		{"op": [term1, term2, ... termN]}
-
-###Expressions involving `null`###
-
-As a general rule, the commutative operators will ignore expressions that evaluate to `null`, and the binary operators usually return `null` if any parameter is `null`.
-
-
+`eval` can be useful within the context of `ref`.

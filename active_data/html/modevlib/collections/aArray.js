@@ -19,6 +19,7 @@ importScript("../util/aUtil.js");
 
 
 	Array.newRange=function(min, max, interval){
+		//RETURN AN ARRAY OF NUMBERS
 		if (interval===undefined) interval=1;
 		if (min>max) Log.error();
 
@@ -58,6 +59,14 @@ importScript("../util/aUtil.js");
 		return b;
 	};//method
 
+	Array.reverse = function(array){
+		var b = [];
+		var t = array.length - 1;
+		for (var i = t + 1; i--;) {
+			b[i] = array[t - i];
+		}//for
+		return b;
+	};//method
 
 	Array.prototype.forall=function(func){
 		for(var i=0;i<this.length;i++){
@@ -69,8 +78,6 @@ importScript("../util/aUtil.js");
 	Array.prototype.insert=function(index, value){
 		this.splice(index, 0, value);
 	};//method
-
-
 
 	Array.prototype.map=function(func){
 		var output=[];

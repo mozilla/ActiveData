@@ -62,8 +62,8 @@ var Map = {};
 	};
 
 
-	//IF dest[k]==undefined THEN ASSIGN source[k]
 	Map.setDefault = function(dest){
+	//IF dest[k]==undefined THEN ASSIGN source[k]
 		for (var s = 1; s < arguments.length; s++) {
 			var source = arguments[s];
 			if (source === undefined) continue;
@@ -108,8 +108,10 @@ var Map = {};
 	// (ESCAPE "." WITH "\\.", IF REQUIRED)
 	Map.get = function(obj, fieldName){
 		if (obj === undefined || obj == null) return obj;
+		if (fieldName==".") return obj;
+
 		var path = splitField(fieldName);
-		for (var i = 0; i < path.length - 1; i++) {
+		for (var i = 0; i < path.length; i++) {
 			var step = path[i];
 			if (step == "length") {
 				obj = eval("obj.length");
@@ -118,9 +120,28 @@ var Map = {};
 			}//endif
 			if (obj === undefined || obj == null) return undefined;
 		}//endif
-		return obj[path.last()];
+		return obj;
 	};//method
 
+	Map.set = function(obj, field, value){
+		if (obj === undefined || obj == null || fieldName=="."){
+			Log.error("must be given an object ad field");
+		}//endif
+
+		var path = splitField(fieldName);
+		var o = obj;
+		for (var i = 0; i < path.length-1; i++) {
+			var step = path[i];
+			var val = o[step];
+			if (val===undefined || val==null){
+				val={};
+				o[step]=val;
+			}//endif
+			o=val;
+		}//endif
+		o[path[i]]=value;
+		return obj;
+	};//method
 
 	Map.codomain = function(map){
 		var output = [];
@@ -217,7 +238,7 @@ var Map = {};
 			}//endif
 		}//for
 		return output;
-	}//function
+	};//function
 
 
 	Map.getValues = function getValues(map){
@@ -299,3 +320,7 @@ Util.GUID = function(){
 
 
 
+function isObject(val) {
+    if (val === null) { return false;}
+    return ( (typeof val === 'function') || (typeof val === 'object') );
+}

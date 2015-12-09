@@ -159,6 +159,75 @@ function calcAgg(row, result, query, select){
 }//method
 
 
+function* calc2Matrix(query){
+	//RETURN ObjectWITH Matrix VALUES
+	if (query.edges.length == 0)
+		Log.error("Tree processing requires an edge");
+	if (query.where=="bug!=null")
+		Log.note("");
+
+	var sourceColumns  = yield (Qb.getColumnsFromQuery(query));
+	if (sourceColumns===undefined){
+		Log.error("Can not get column definitions from query:\n"+convert.value2json(query).indent(1))
+	}//endif
+	var from = query.from.list;
+
+	query.columns = Qb.compile(query, sourceColumns);
+	//ASSIGN dataIndex TO ALL PARTITIONS
+	var edges = query.edges;
+	edges.forall(function(edge){
+		edge.domain.partitions.forall(function(p, i){
+			p.dataIndex=i;
+		});
+		edge.domain.NULL.dataIndex=edge.domain.partitions.length;
+	});//for
+
+	var select = Array.newInstance(query.select);
+
+	var shape = edges.map(function(e){return e.domain.partitions.length+1;});
+	var data = Map.zip(select.map(function(s){
+		Qb.aggregate[s.aggregate](s);  //ANNOTATE select COLUMN
+		return [s.name, new Matrix({"dim":shape, "constructor":s.defaultValue})];
+	}));
+
+	for(var f=from.length;f--;){
+		if (f%1000==0) {
+			yield (Thread.yield());
+		}//endif
+
+		var row = from[f];
+		var coord = edges.map(function(e){
+			var v = e.calc(row);
+
+			//STANDARD 1-1 MATCH VALUE TO DOMAIN
+			var p = e.domain.getPartByKey(v);
+			if (p === undefined){
+				Log.error("getPartByKey() must return a partition, or null");
+			}//endif
+			return p.dataIndex;
+		});
+
+		select.forall(function(s, i){
+			var total = data[s.name].get(coord);
+			s.add(total, s.calc(row));
+		})
+	}//for
+
+
+	var doneData = Map.zip(select.map(function(s, i){
+		var m = data[s.name];
+		return [
+			s.name,
+			m.map(function(v){
+				return s.domain.end(v);
+			})
+		];
+	}));
+
+	yield (doneData);
+}//function
+
+
 function* calc2Tree(query){
 	if (query.edges.length == 0)
 		Log.error("Tree processing requires an edge");
@@ -272,7 +341,6 @@ Qb.calc2List = function*(query){
 		Qb.listAlert=true;
 	}//endif
 
-
 	if (query.edges===undefined) query.edges=[];
 	var select = Array.newInstance(query.select);
 
@@ -351,6 +419,21 @@ function* calc2Cube(query){
 		}//endif
 	}//endif
 
+	if (query.meta){
+		if (query.meta.format=="cube") {
+			query.data = yield (calc2Matrix(query));
+			Map.set(output, "meta.format", "cube");
+			yield (query);
+		}else if (query.meta.format=="list"){
+			var output = yield (Qb.calc2List(query));
+			output.data = output.list;
+			Map.set(output, "meta.format", "list");
+			yield (output);
+		}else{
+			Log.error("format not aupported, yet")
+		}//endif
+	}//endif
+
 	yield (calc2Tree(query));
 
 	//ASSIGN dataIndex TO ALL PARTITIONS
@@ -369,12 +452,8 @@ function* calc2Cube(query){
 
 	//MAKE THE EMPTY DATA GRID
 	query.cube = Qb.cube.newInstance(edges, 0, query.select);
-
 	Tree2Cube(query, query.cube, query.tree, 0);
-
 	Qb.analytic.run(query);
-
-
 	Map.copy(Qb.query.prototype, query);
 
 	yield (query);
@@ -384,7 +463,6 @@ function* calc2Cube(query){
 
 //CONVERT LIST TO Qb
 Qb.List2Cube=function(query){
-
 	if (query.list!==undefined) Log.error("Can only convert list to a cube at this time");
 
 	//ASSIGN dataIndex TO ALL PARTITIONS
@@ -399,7 +477,6 @@ Qb.List2Cube=function(query){
 
 	//MAKE THE EMPTY DATA GRID
 	query.cube = Qb.cube.newInstance(edges, 0, query.select);
-
 
 	for(var i=query.list.length;i--;){
 		var cube=query.cube;
@@ -874,8 +951,8 @@ function Tree2List(output, tree, select, edges, coordinates, depth){
 
 
 
-// CONVERT THE tree STRUCTURE TO A cube
 function Tree2Cube(query, cube, tree, depth){
+// CONVERT THE tree STRUCTURE TO A cube
 	var edge=query.edges[depth];
 	var domain=edge.domain;
 
@@ -895,11 +972,6 @@ function Tree2Cube(query, cube, tree, depth){
 		var keys=Object.keys(tree);
 		for(var k=keys.length;k--;){
 			var p=domain.getPartByKey(keys[k]).dataIndex;
-			//I AM CONFUSED: ARE Qb ELEMENTS ARRAYS OR OBJECTS?
-//			var tuple=[];
-//			for(var s = 0; s < query.select.length; s++){
-//				tuple[s] = tree[keys[k]][s];
-//			}//for
 			var tuple={};
 			for(var s = 0; s < query.select.length; s++){
 				tuple[query.select[s].name] = query.select[s].domain.end(tree[keys[k]][s]);

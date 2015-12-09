@@ -7,9 +7,9 @@ importScript([
 		"../../lib/jquery.js",
 		"../../lib/jquery-ui/js/jquery-ui-1.10.2.custom.js",
 		"../../lib/jquery-ui/css/start/jquery-ui-1.10.2.custom.css",
-		"../../lib/jquery.ba-bbq/jquery.ba-bbq.js"
 ]);
 importScript("aException.js");
+importScript("../util/State.js");
 importScript("../util/aTemplate.js");
 importScript("../charts/aColor.js");
 
@@ -78,7 +78,7 @@ var Log = new function(){
 
 	try{
 		$(document).ready(function(){
-			var id=$.bbq.getState("log");
+			var id=window.Session.URL.getFragment()["log"];
 			Log.addInvisibleLog(id);
 		});
 	}catch(e){

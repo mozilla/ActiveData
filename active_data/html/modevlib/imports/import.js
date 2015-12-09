@@ -15,8 +15,8 @@ var importScript;
 	"use strict";
 
 	var METHOD_NAME = "importScript";
-	var FORCE_RELOAD = true;  //COMPENSATE FOR BUG https://bugzilla.mozilla.org/show_bug.cgi?id=991252
-	var DEBUG = true;
+	var FORCE_RELOAD = false;  //COMPENSATE FOR BUG https://bugzilla.mozilla.org/show_bug.cgi?id=991252
+	var DEBUG = false;
 
 	if (typeof(window.Log) == "undefined") {
 		window.Log = {
@@ -131,15 +131,15 @@ var importScript;
 		var request = new XMLHttpRequest();
 		try {
 			var url;
-			if (window.location.protocol=="file:") {
+			if (window.location.protocol == "file:") {
 				url = window.location.protocol + "//" + fullPath;
-			}else{
+			} else {
 				url = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + fullPath;
 			}//endif
 			request.open('GET', url);
-			request.responseType="text";
+			request.responseType = "text";
 			request.isDone = false;
-			request.onreadystatechange = function () {
+			request.onreadystatechange = function(){
 				if (request.readyState == 4) {
 					if (request.status == 200 || request.status == 0) {
 						if (request.isDone) return;
@@ -147,19 +147,19 @@ var importScript;
 						if (DEBUG) Log.note("GOT " + url);
 						callback(request.responseText);
 					} else {
-						Log.error("Problem loading "+url+", error status: "+request.status);
+						Log.error("Problem loading " + url + ", error status: " + request.status);
 						callback(null);
 					}//endif
 				}//endif
 			};
-			request.onload = function () {
+			request.onload = function(){
 				if (request.status == 200 || request.status == 0) {
 					if (request.isDone) return;
 					request.isDone = true;
 					if (DEBUG) Log.note("GOT " + url);
 					callback(request.responseText);
 				} else {
-					Log.error("Problem loading "+url+", error status: "+request.status);
+					Log.error("Problem loading " + url + ", error status: " + request.status);
 					callback(null);
 				}//endif
 			};
@@ -169,7 +169,7 @@ var importScript;
 			Log.error("Can not read " + fullPath + " (" + e.message + ")");
 			callback(null);
 		}//try
-	}
+	}//method
 
 	function shortPath(fullPath) {
 		return fullPath.substring(fullPath.lastIndexOf("/") + 1);
@@ -251,9 +251,9 @@ var importScript;
 		function onLoadCallback() {
 			var path;
 			if (this.src.startsWith(window.location.origin)) {
-				path = this.src.slice(window.location.origin.length);
+				path = this.src.slice(window.location.origin.length).split("?")[0].split("#")[0];
 			}else{
-				path = this.src
+				path = this.src.split("?")[0].split("#")[0];
 			}//endif
 			remove(numLoaded, path);
 			if (numLoaded.length == 0) {
@@ -429,7 +429,14 @@ var importScript;
 		return processed;
 	}//method
 
-	var stackPattern=/(.*)@(.*):(\d+):(\d+)/;
+	var stackPattern;
+	if (!!window.chrome){
+		//GOOGLE CHROME
+		stackPattern=/(\d*)(.*):(\d+):(\d+)/; //(\d*) is a dummy placeholder
+	}else{
+		//FIREFOX
+		stackPattern=/(.*)@(.*):(\d+):(\d+)/;
+	}//endif
 	function parseStack(stackString){
 		var output = [];
 		if (stackString===undefined || stackString==null) return output;
@@ -466,9 +473,9 @@ var importScript;
 
 			numRemaining++;
 			(function (fullPath) {
-				readfile(fullPath, function (code) {
-					var scriptBegin = preprocess(fullPath, code);
-					code[fullPath] = code.substring(scriptBegin);
+				readfile(fullPath, function (c) {
+					var scriptBegin = preprocess(fullPath, c);
+					code[fullPath] = c.substring(scriptBegin);
 
 					numRemaining--;
 					//CHECK FOR MORE WORK

@@ -188,7 +188,7 @@ def query(path):
         e = Except.wrap(e)
 
         record_request(flask.request, None, body, e)
-        Log.warning("Problem sent back to client", e)
+        Log.warning("Could not process\n{{body}}", body=body, cause=e)
         e = e.as_dict()
         e.meta.active_data_response_time = active_data_timer.duration
 

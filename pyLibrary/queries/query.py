@@ -7,17 +7,18 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 from collections import Mapping
 
-from pyLibrary.collections import AND, reverse
+from pyLibrary.collections import AND
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import coalesce, split_field, join_field, Null, unwraplist
-from pyLibrary.dot.lists import DictList
+from pyLibrary.dot import coalesce, Null
 from pyLibrary.dot import wrap, unwrap, listwrap
+from pyLibrary.dot.dicts import Dict
+from pyLibrary.dot.lists import DictList
 from pyLibrary.maths import Math
 from pyLibrary.queries import wrap_from
 from pyLibrary.queries.containers import Container
@@ -25,8 +26,8 @@ from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain, is_keyword
 from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter, query_get_all_vars
 
-
 DEFAULT_LIMIT = 10
+MAX_LIMIT = 10000
 
 qb = None
 _Column = None
@@ -102,7 +103,7 @@ class Query(object):
         self.window = [_normalize_window(w) for w in listwrap(query.window)]
         self.having = None
         self.sort = _normalize_sort(query.sort)
-        self.limit = coalesce(query.limit, DEFAULT_LIMIT)
+        self.limit = Math.min(MAX_LIMIT, coalesce(query.limit, DEFAULT_LIMIT))
         if not Math.is_integer(self.limit) or self.limit < 0:
             Log.error("Expecting limit >= 0")
 

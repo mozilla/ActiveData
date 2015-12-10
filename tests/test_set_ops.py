@@ -541,6 +541,24 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_max_limit(self):
+        test = wrap({
+            "data": lots_of_data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"name": "value", "value": "a"},
+                "limit": 1000000000
+            }
+        })
+
+        settings = self._fill_es(test)
+        try:
+            result = self._execute_query(test.query)
+            self.assertEqual(result.meta.es_query.size, query.MAX_LIMIT)
+        finally:
+            # REMOVE CONTAINER
+            self.es_cluster.delete_index(settings.index)
+
     def test_default_limit(self):
         test = wrap({
             "data": lots_of_data,
@@ -566,7 +584,6 @@ class TestSetOps(ActiveDataBaseTest):
         finally:
             # REMOVE CONTAINER
             self.es_cluster.delete_index(settings.index)
-
 
     def test_specific_limit(self):
         test = wrap({

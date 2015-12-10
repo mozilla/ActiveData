@@ -554,7 +554,7 @@ class TestSetOps(ActiveDataBaseTest):
         settings = self._fill_es(test)
         try:
             result = self._execute_query(test.query)
-            self.assertEqual(len(result.meta.es_query.size), query.MAX_LIMIT)
+            self.assertEqual(result.meta.es_query.size, query.MAX_LIMIT)
         finally:
             # REMOVE CONTAINER
             self.es_cluster.delete_index(settings.index)

@@ -15,6 +15,7 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
+from pyLibrary.queries import qb
 
 
 def assign_shards(settings):
@@ -47,8 +48,8 @@ def assign_shards(settings):
     # debug20150915_172538                1  p STARTED        37624   9.6mb 172.31.0.39  secondary
     # debug20150915_172538                1  r UNASSIGNED
     shards = wrap(list(convert_table_to_list(http.get(path + "/_cat/shards").content, ["index", "i", "type", "status", "num", "size", "ip", "node"])))
-    Log.note("Shards:\n{{shards}}", shards=shards)
-    for shard in shards:
+    # Log.note("Shards:\n{{shards}}", shards=shards)
+    for shard in qb.sort(shards, "index"):
         if shard.status=="UNASSIGNED":
             i = Random.weight(nodes.disk)
             command = wrap({"allocate":{

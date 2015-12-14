@@ -1175,7 +1175,26 @@ class TestDeepOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-
+    def test_sibling_nested_column(self):
+        test = {
+            "data": [{"a": {
+                "_b": [{"f": "a"}, {"f": "b"}],
+                "_c": [{"f": "c"}, {"f": "d"}]
+            }
+            }],
+            "query": {
+                "from": base_test_class.settings.backend_es.index + ".a._b",
+                "select": ["f"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"f": "a"},
+                    {"f": "b"}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
 
 
 
@@ -1197,6 +1216,10 @@ todo = {
 "from": "jobs.action.timings",
 "format": "list"
 }
+
+
+
+
 
 
 # TODO: ENDS IN LOGIC ERROR?

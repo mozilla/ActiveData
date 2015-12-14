@@ -1199,4 +1199,38 @@ todo = {
 }
 
 
-
+# TODO: ENDS IN LOGIC ERROR?
+todo = {
+    "from": "unittest.result.subtests",
+    "select": [
+        "build.revision",
+        "result.test",
+        {
+            "name": "subtest",
+            "value": "unittest.result.name"
+        },
+        "unittest.result.ok",
+        "unittest.result.status",
+        "unittest.result.expected",
+        "result.ok"
+    ],
+    "where": {
+        "and": [
+            {
+                "eq": {
+                    "run.suite": "web-platform-tests"
+                }
+            },
+            {
+                "gt": {
+                    "build.date": "{{today-7day}}"
+                }
+            },
+            {
+                "regex": {
+                    "result.test": ".*gradient.*"
+                }
+            }
+        ]
+    }
+}

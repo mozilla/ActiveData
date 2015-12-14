@@ -33,7 +33,7 @@ config = wrap({
 })
 
 _set = Dict()
-_set.pyLibrary.env.http.default_headers = {"From": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"}
+_set.pyLibrary.env.http.default_headers = {"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"}
 _set.pyLibrary.env.big_data.MAX_STRING_SIZE = 100 * 1000 * 1000
 constants.set(_set)
 

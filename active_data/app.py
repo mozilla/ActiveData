@@ -9,9 +9,10 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-import os
 
+import os
 import sys
+
 from pyLibrary.queries.containers import Container
 
 sys.path.append(".")

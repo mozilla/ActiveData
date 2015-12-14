@@ -918,20 +918,20 @@ class TestDeepOps(ActiveDataBaseTest):
                         "domain": {
                             "type": "set",
                             "partitions": [
-                                {"dataIndex": 0, "value": ["a", "aa"]},
+                                {"dataIndex": 0, "value": [null, null]},
                                 {"dataIndex": 1, "value": [null, "bb"]},
-                                {"dataIndex": 2, "value": ["e", "ee"]},
-                                {"dataIndex": 3, "value": [null, "dd"]},
-                                {"dataIndex": 4, "value": ["c", "cc"]},
-                                {"dataIndex": 5, "value": ["bb", "bb"]},
-                                {"dataIndex": 6, "value": ["f", null]},
-                                {"dataIndex": 7, "value": [null, null]}
+                                {"dataIndex": 2, "value": [null, "dd"]},
+                                {"dataIndex": 3, "value": ["a", "aa"]},
+                                {"dataIndex": 4, "value": ["bb", "bb"]},
+                                {"dataIndex": 5, "value": ["c", "cc"]},
+                                {"dataIndex": 6, "value": ["e", "ee"]},
+                                {"dataIndex": 7, "value": ["f", null]}
                             ]
                         }
                     }
                 ],
                 "data": {
-                    "count": [1, 1, 2, 1, 1, 1, 2, 1, 0]
+                    "count": [1, 1, 1, 1, 1, 1, 2, 2, 0]
                 }
             }
         }
@@ -1227,15 +1227,14 @@ todo = {
     "from": "unittest.result.subtests",
     "select": [
         "build.revision",
-        "result.test",
-        {
-            "name": "subtest",
-            "value": "unittest.result.name"
-        },
-        "unittest.result.ok",
-        "unittest.result.status",
-        "unittest.result.expected",
-        "result.ok"
+        {"name": "test", "value": "result.test"},
+        {"name": "test_ok", "value": "result.ok"},
+        {"name": "test_status", "value": "result.status"},
+        {"name": "test_expected", "value": "result.expected"},
+        {"name": "subtest", "value": "name"},
+        {"name": "subtest_ok", "value": "ok"},
+        {"name": "subtest_status", "value": "status"},
+        {"name": "subtest_expected", "value": "expected"}
     ],
     "where": {
         "and": [

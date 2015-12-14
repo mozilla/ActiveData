@@ -29,30 +29,38 @@ from requests import sessions, Response
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot import Dict, coalesce, wrap, set_default
-from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines
+from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines, GzipLines
+from pyLibrary.maths import Math
+from pyLibrary.queries import qb
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.durations import SECOND
 
 
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
 MIN_READ_SIZE = 8 * 1024
+ZIP_REQUEST = False
 default_headers = Dict()  # TODO: MAKE THIS VARIABLE A SPECIAL TYPE OF EXPECTED MODULE PARAMETER SO IT COMPLAINS IF NOT SET
 default_timeout = 600
 
 _warning_sent = False
 
 
-def request(method, url, zip=False, retry=None, **kwargs):
+def request(method, url, zip=None, retry=None, **kwargs):
     """
-     JUST LIKE requests.request() BUT WITH DEFAULT HEADERS AND FIXES
-     DEMANDS data IS ONE OF:
-      * A JSON-SERIALIZABLE STRUCTURE, OR
-      * LIST OF JSON-SERIALIZABLE STRUCTURES, OR
-      * None
+    JUST LIKE requests.request() BUT WITH DEFAULT HEADERS AND FIXES
+    DEMANDS data IS ONE OF:
+    * A JSON-SERIALIZABLE STRUCTURE, OR
+    * LIST OF JSON-SERIALIZABLE STRUCTURES, OR
+    * None
 
-     THE BYTE_STRINGS (b"") ARE NECESSARY TO PREVENT httplib.py FROM **FREAKING OUT**
-     IT APPEARS requests AND httplib.py SIMPLY CONCATENATE STRINGS BLINDLY, WHICH
-     INCLUDES url AND headers
+    Parameters
+     * zip - ZIP THE REQUEST BODY, IF BIG ENOUGH
+     * json - JSON-SERIALIZABLE STRUCTURE
+     * retry - {"times": x, "sleep": y} STRUCTURE
+
+    THE BYTE_STRINGS (b"") ARE NECESSARY TO PREVENT httplib.py FROM **FREAKING OUT**
+    IT APPEARS requests AND httplib.py SIMPLY CONCATENATE STRINGS BLINDLY, WHICH
+    INCLUDES url AND headers
     """
     global _warning_sent
     if not default_headers and not _warning_sent:
@@ -63,24 +71,30 @@ def request(method, url, zip=False, retry=None, **kwargs):
                     "Use the constants.set() function to set pyLibrary.env.http.default_headers"
         )
 
+    if isinstance(url, list):
+        # TRY MANY URLS
+        failures = []
+        for remaining, u in qb.countdown(url):
+            try:
+                response = request(method, u, zip=zip, retry=retry, **kwargs)
+                if Math.round(response.status_code, decimal=-2) not in [400, 500]:
+                    return response
+                if not remaining:
+                    return response
+            except Exception, e:
+                e = Except.wrap(e)
+                failures.append(e)
+        Log.error("Tried {{num}} urls", num=len(url), cause=failures)
+
     session = sessions.Session()
     session.headers.update(default_headers)
+
+    if zip is None:
+        zip = ZIP_REQUEST
 
     if isinstance(url, unicode):
         # httplib.py WILL **FREAK OUT** IF IT SEES ANY UNICODE
         url = url.encode("ascii")
-
-    # if "data" not in kwargs:
-    #     pass
-    # elif kwargs["data"] == None:
-    #     pass
-    # elif isinstance(kwargs["data"], basestring):
-    #     Log.error("Expecting `data` to be a structure")
-    # elif isinstance(kwargs["data"], list):
-    #     #CR-DELIMITED JSON IS ALSO ACCEPTABLE
-    #     kwargs["data"] = b"\n".join(convert.unicode2utf8(convert.value2json(d)) for d in kwargs["data"])
-    # else:
-    #     kwargs["data"] = convert.unicode2utf8(convert.value2json(kwargs["data"]))
 
     _to_ascii_dict(kwargs)
     timeout = kwargs[b'timeout'] = coalesce(kwargs.get(b'timeout'), default_timeout)
@@ -238,6 +252,8 @@ class HttpResponse(Response):
                 return CompressedLines(content, encoding=encoding)
             elif self.headers.get('content-type') == 'application/zip':
                 return ZipfileLines(content, encoding=encoding)
+            elif self.url.endswith(".gz"):
+                return GzipLines(content, encoding)
             else:
                 return content.decode(encoding).split("\n")
         except Exception, e:

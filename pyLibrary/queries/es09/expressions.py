@@ -20,7 +20,6 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.dot import split_field, Dict, Null, join_field, coalesce
 from pyLibrary.dot import listwrap
-from pyLibrary.queries.expressions import TRUE_FILTER
 from pyLibrary.times.durations import Duration
 
 
@@ -388,7 +387,7 @@ def unpack_terms(facet, selects):
 #  PASS esFilter SIMPLIFIED ElasticSearch FILTER OBJECT
 #  RETURN MVEL EXPRESSION
 def _where(esFilter, _translate):
-    if not esFilter or esFilter is TRUE_FILTER:
+    if not esFilter or esFilter is True:
         return "true"
 
     keys = esFilter.keys()

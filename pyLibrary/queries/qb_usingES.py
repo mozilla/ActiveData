@@ -207,6 +207,9 @@ class FromES(Container):
                     c.name = "."
                     c.relative = True
                     add_column(c)
+                elif query_path and nested_path != query_path:
+                    # SIBLING NESTED PATHS ARE INVISIBLE
+                    pass
                 else:
                     Log.error("logic error")
         else:

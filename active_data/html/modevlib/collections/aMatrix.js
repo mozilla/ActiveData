@@ -3,21 +3,51 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 
-//THIS IS A DATA CUBE, WITH ONLY INTEGER INDICES
-//THIS IS NOT A STANDARD MATHEMATICAL MATRIX
 Matrix=function(arg){
-	if (arg.data){
-		this.dim=[];
-		var d=arg.data;
+	//THIS IS A DATA CUBE, WITH ONLY INTEGER INDICES
+	//THIS IS NOT A STANDARD MATHEMATICAL MATRIX
+	//
+	// data - If you alreay have an Array (or Array of Arrays) and want to index it as volume
+	//
+	// OR
+	//
+	// dim - Array of integers for the shape
+	// constructor - parameter-free function to generate cell values
+	//
+
+	function makeArray(length, constructor){
+		return function(){
+			var output = [];
+			for(var i=length;i--;){
+				output[i]=constructor();
+			}//for
+			return output;
+		};//function
+	}//for
+
+	if (arg.data) {
+		this.dim = [];
+		var d = arg.data;
 		while (d instanceof Array) {
 			this.dim.append(d.length);
 			d = d[0];
 		}//while
-		this.num=this.dim.length;
-		if (this.num==0 && typeof(arg.data)=="object"){
+		this.num = this.dim.length;
+		if (this.num == 0 && typeof(arg.data) == "object") {
 			Log.error("Expecting an array");
 		}//endif
-		this.data=arg.data;
+		this.data = arg.data;
+	}else if (arg.dim instanceof Array){
+		var self=this;
+		this.num=arg.dim.length;
+		this.dim=arg.dim;
+		var c = arg.constructor;
+		if (c){
+			Array.reverse(Array.newRange(0, this.num)).forall(function(i){
+				c = makeArray(self.dim[i], c);
+			});
+			this.data=c();
+		}
 	}else if (arg instanceof Array){
 		//EXPECTING COORDINATES ARRAY
 		this.num=arg.length;
@@ -25,6 +55,7 @@ Matrix=function(arg){
 	}else{
 		Log.error("not supported")
 	}//endif
+	return this;
 };//function
 
 
@@ -38,7 +69,7 @@ Matrix=function(arg){
 function forall1(edge, func){
 	var data = this.data;
 	var num = this.num;
-	var c = Uint32Array(this.num);
+	var c = new Uint32Array(this.num);
 
 	function iter(v, d){
 		if (d == num) {
@@ -81,15 +112,15 @@ Matrix.prototype.forall = function(func, other){
 };
 
 
+Matrix.prototype.map = function (func) {
 //PROVIDE func(v, c, cube) WHERE
 // v - IS A VALUE IN THE CUBE
 // c - AN ARRAY OF COORDINATES v IS FOUND AT
 // cube - THE WHOLE CUBE
 // func MUST RETURN A NEW VALUE
-Matrix.prototype.map = function (func) {
 	var data=this.data;
 	var num = this.num;
-	var c = Uint32Array(this.num);
+	var c = new Uint32Array(this.num);
 
 	function iter(v, d) {
 		if (d == num) {

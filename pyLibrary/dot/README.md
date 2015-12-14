@@ -206,7 +206,7 @@ The *flat list* assumption reduces exception handling and simplifies code for
 window functions.  For example, `Math.min(flat_list[a:b:])` is valid for
 all `a<=b`
 
-  * Python 2.x binary slicing `[:]` is disabled (see implementation issues below)
+  * Python 2.x binary slicing `[:]` throws a warning if used on a DictList (see implementation issues below)
   * Trinary slicing `[::]` uses the flat list definition
 
 When assuming a *flat-list*, we loose the *take-from-the-right* tricks gained
@@ -214,13 +214,13 @@ from modulo arithmetic on the indices. Therefore, we require extra methods
 to perform right-based slicing:
 
   * **right()** - `flat_list.right(b)` same as `loop_list[-b:]` except when `b<=0`
-  * **leftBut()** - `flat_list.leftBut(b)` same as `loop_list[:-b]` except
+  * **not_right()** - `flat_list.not_right(b)` same as `loop_list[:-b]` except
   when `b<=0` (read as "left, but for ...")
 
 For the sake of completeness, we have two more convenience methods:
 
   * `flat_list.left(b)` same as `flat_list[:b:]`
-  * `flat_list.rightBut(b)` same as `flat_list[b::]`
+  * `flat_list.not_left(b)` same as `flat_list[b::]`
 
 ###DictList Dot (.) Operator###
 
@@ -241,9 +241,9 @@ operators defined.  Boto has many examples of these *Data* classes,
 [here is one](https://github.com/boto/boto/blob/4b8269562e663f090403e57ba1a3a471b6e0aa0e/boto/ec2/networkinterface.py).
 
 The problem with *Data* objects is they have an useless distinction between 
-attributes and properties.  This prevents us from using the `[]` operator for 
-dereferencing, forcing use to use the verbose `getattr()` instead.  It 
-also prevents the use of query operators over these objects.
+attributes and properties.  This prevents us from using the dot (`.`) operator for 
+dereferencing, forcing us to use the verbose `getattr()` for parametric 
+dereferencing.  It also prevents the use of query operators over these objects.
 
 You can wrap any object to make it appear like a Dict.
 
@@ -251,19 +251,27 @@ You can wrap any object to make it appear like a Dict.
 	d = DictObject(my_data_object)
 ```
 
-This allows you to use the query operators of this `dot` library on this object.  Care is required though:  Your object may not be a pure data object, and there can be conflicts between the object methods and the properties it is expected to have.
+This allows you to use the query operators of this `dot` library on this 
+object.  Care is required though:  Your object may not be a pure data object, 
+and there can be conflicts between the object methods and the properties it 
+is expected to have.
 
 
 Mapping Leaves
 --------------
 
-The implications of allowing `a["b.c"] == a.b.c` opens up two different Dict forms: *standard form* and *leaf form*
+The implications of allowing `a["b.c"] == a.b.c` opens up two different Dict 
+forms: *standard form* and *leaf form*
 
 ###Standard Form
 
-The `[]` operator in `Dict` has been overridden to assume dots (`.`) represent paths rather than literal string values; but, the internal representation of `Dict` is the same as `dict`; the property names are treated as black box strings.  `[]` just provides convenience.
+The `[]` operator in `Dict` has been overridden to assume dots (`.`) represent 
+paths rather than literal string values; but, the internal representation of 
+`Dict` is the same as `dict`; the property names are treated as black box 
+strings.  `[]` just provides convenience.
 
-When wrapping `dict`, the property names are **NOT** interpreted as paths; property names can include dots (`.`).
+When wrapping `dict`, the property names are **NOT** interpreted as paths; 
+property names can include dots (`.`).
 
 ```python
 	>>> from pyLibrary.dot import wrap
@@ -272,15 +280,16 @@ When wrapping `dict`, the property names are **NOT** interpreted as paths; prope
 	set(['b.c'])
 
 	>>> a["b.c"]
-	Null    # BECAUSE b.c PATH LEADS TO NOTHING
+	Null    # because b.c path does not exist
 
 	>>> a["b\.c"]
-	42
+	42      # escaping the dot (`.`) makes it literal 
 ```
 
 ###Leaf form
 
-Leaf form is used in some JSON, or YAML, configuration files.  Here is an example from my ElasticSearch configuration:
+Leaf form is used in some JSON, or YAML, configuration files.  Here is an 
+example from my ElasticSearch configuration:
 
 **YAML**
 
@@ -300,15 +309,19 @@ Both are intended to represent the deeply nested JSON
 	{"discovery": {"zen": {"ping": {"multicast": {"enabled": true}}}}}
 ```
 
-Upon importing such files, it is good practice to convert it to standard form immediately:
+Upon importing such files, it is good practice to convert it to standard form 
+immediately:
 
 ```python
 	config = wrap_leaves(config)
 ```
 
-`wrap_leaves()` assumes any dots found in JSON names are referring to paths into objects, not a literal dots.
+`wrap_leaves()` assumes any dots found in JSON names are referring to paths 
+into objects, not a literal dots.
 
-When accepting input from other automations and users, your property names can potentially contain dots; which must be properly escaped to produce the JSON you are expecting.  Specifically, this happens with URLs:
+When accepting input from other automations and users, your property names 
+can potentially contain dots; which must be properly escaped to produce the 
+JSON you are expecting.  Specifically, this happens with URLs:
 
 **BAD** - dots in url are interpreted as paths
 
@@ -338,7 +351,8 @@ When accepting input from other automations and users, your property names can p
 	Dict({u'example.html': 3})
 ```
 
-You can produce leaf form by iterating over all leaves.  This is good for simplifying iteration over deep object structures.
+You can produce leaf form by iterating over all leaves.  This is good for 
+simplifying iteration over deep object structures.
 
 ```python
 	>>> from pyLibrary.dot import wrap

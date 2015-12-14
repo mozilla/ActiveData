@@ -301,7 +301,7 @@ class List_usingStream(object):
     """
     def __init__(self, get_more_bytes):
         """
-        get_more_bytes() SHOULD RETURN AN ARRAY OF BYTES
+        get_more_bytes() SHOULD RETURN AN ARRAY OF BYTES OF ANY SIZE
         """
         if not hasattr(get_more_bytes, "__call__"):
             Log.error("Expecting a function that will return bytes")

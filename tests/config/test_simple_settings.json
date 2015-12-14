@@ -11,7 +11,7 @@
 	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {
-			"From": "ActiveDataTests"
+			"Referer": "ActiveDataTests"
 		},
 		"pyLibrary.queries.expressions.ALLOW_SCRIPTING": true
 	},

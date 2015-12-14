@@ -9,9 +9,10 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-import os
 
+import os
 import sys
+
 from pyLibrary.queries.containers import Container
 
 sys.path.append(".")
@@ -68,7 +69,8 @@ def record_request(request, query_, data, error):
 @app.route('/tools/<path:filename>')
 def download_file(filename):
     try:
-        return flask.send_from_directory(File("active_data/html").abspath.replace(os.sep, "/"), filename)
+        filename = File.new_instance("active_data/html", filename).abspath
+        return flask.send_file(filename)
     except Exception, e:
         Log.error("Could not get file {{file}}", file=filename, cause=e)
 

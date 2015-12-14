@@ -13,12 +13,12 @@ from __future__ import absolute_import
 from copy import deepcopy
 
 from pyLibrary.dot.nones import Null
-from pyLibrary.dot import wrap, unwrap
+from pyLibrary.dot import wrap, unwrap, coalesce
 
-_emit_slice_warning = True
 
 _get = object.__getattribute__
 _set = object.__setattr__
+_emit_slice_warning = True
 _Log = None
 _dictwrap = None
 
@@ -32,6 +32,7 @@ def _late_import():
 
     _ = _Log
     _ = _dictwrap
+
 
 class DictList(list):
     """
@@ -96,7 +97,7 @@ class DictList(list):
         if not _dictwrap:
             _late_import()
 
-        return DictList(vals=[unwrap(_dictwrap(v)[key]) for v in _get(self, "list")])
+        return DictList(vals=[unwrap(coalesce(_dictwrap(v), Null)[key]) for v in _get(self, "list")])
 
     def filter(self, _filter):
         return DictList(vals=[unwrap(u) for u in (wrap(v) for v in _get(self, "list")) if _filter(u)])
@@ -197,7 +198,7 @@ class DictList(list):
 
         return DictList(_get(self, "list")[:num])
 
-    def leftBut(self, num):
+    def not_right(self, num):
         """
         WITH SLICES BEING FLAT, WE NEED A SIMPLE WAY TO SLICE FROM THE LEFT [:-num:]
         """
@@ -208,9 +209,9 @@ class DictList(list):
 
         return DictList(_get(self, "list")[:-num:])
 
-    def rightBut(self, num):
+    def not_left(self, num):
         """
-        NOT REQUIRED, EXISTS AS OPPOSITE OF leftBut()
+        NOT REQUIRED, EXISTS AS OPPOSITE OF not_right()
         """
         if num == None:
             return DictList([_get(self, "list")[-1]])

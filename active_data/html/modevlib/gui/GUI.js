@@ -7,14 +7,13 @@ importScript([
 	"../../lib/jquery.js",
 	"../../lib/jquery-ui/js/jquery-ui-1.10.2.custom.js",
 	"../../lib/jquery-ui/css/start/jquery-ui-1.10.2.custom.css",
-	"../../lib/jquery.ba-bbq/jquery.ba-bbq.js",
 	"../../lib/jquery-linedtextarea/jquery-linedtextarea.css",
 	"../../lib/jquery-linedtextarea/jquery-linedtextarea.js",
 	"../../lib/jsonlint/jsl.parser.js",
 	"../../lib/jsonlint/jsl.format.js"
 ]);
 
-importScript("Filter.js");
+importScript("../util/State.js");
 importScript("PartitionFilter.js");
 importScript("TeamFilter.js");
 importScript("RadioFilter.js");
@@ -34,6 +33,11 @@ importScript("../aFormat.js");
 
 GUI = {};
 (function () {
+	if (window.GUI === undefined) {
+		window.GUI = {};
+	}//endif
+	var GUI = window.GUI;
+
 		GUI.state = {};
 		GUI.customFilters = [];
 
@@ -85,8 +89,11 @@ GUI = {};
 			if (typeof(refreshChart) != "function") {
 				Log.error("Expecting first parameter to be a refresh (creatChart) function");
 			}//endif
-			GUI.refreshChart = refreshChart;
 			GUI.pleaseRefreshLater = coalesce(GUI.pleaseRefreshLater, false);
+			GUI.refreshChart = function(){
+				if (GUI.pleaseRefreshLater) return;
+				refreshChart();
+			};
 
 			//IF THERE ARE ANY CUSTOM FILTERS, THEN TURN OFF THE DEFAULTS
 			var isCustom = false;
@@ -122,7 +129,8 @@ GUI = {};
 				}//endif
 			}//function
 
-			if (((showDefaultFilters === undefined) && !isCustom) || showDefaultFilters) {
+			if (window.ProgramFilter===undefined && (((showDefaultFilters === undefined) && !isCustom) || showDefaultFilters)) {
+				GUI.pleaseRefreshLater=true;
 				//USE DEFAULT FILTERS
 				importScript(["ComponentFilter.js", "ProductFilter.js", "ProgramFilter.js"], function(){
 					GUI.state.programFilter = new ProgramFilter();
@@ -133,6 +141,7 @@ GUI = {};
 					GUI.customFilters.push(GUI.state.productFilter);
 					GUI.customFilters.push(GUI.state.componentFilter);
 
+					GUI.pleaseRefreshLater=false;
 					post_filter_functions();
 				});
 			}else{
@@ -284,26 +293,14 @@ GUI = {};
 				}//endif
 			});
 
-			{//bbq REALY NEEDS TO KNOW WHAT ATTRIBUTES TO REMOVE FROM URL
-				var removeList = [];
-				var keys = Object.keys(simplestate);
-				for (var i = keys.length; i--;) {
-					var key = keys[i];
-					var val = simplestate[key];
-					if (val === undefined) removeList.push(key);
-				}//for
-
-				jQuery.bbq.removeState(removeList);
-				jQuery.bbq.pushState(Map.copy(simplestate));
-			}
-
+			Session.URL.setFragment(simpleState);
 		};
 
 		GUI.State2URL.isEnabled = false;
 
 
 		GUI.URL2State = function () {
-			var urlState = jQuery.bbq.getState();
+			var urlState = Session.URL.getFragment();
 			Map.forall(urlState, function (k, v) {
 				if (GUI.state[k] === undefined) return;
 
@@ -549,7 +546,11 @@ GUI = {};
 						GUI.state[param.id]=v.split(",").map(String.trim);
 					}//endif
 				} else {
-					GUI.state[param.id] = $("#" + param.id).val();
+					v = $("#" + param.id).val();
+					if (v===undefined){
+						Log.error("not expected")
+					}//endif
+					GUI.state[param.id] = v;
 				}//endif
 			});
 		};
@@ -631,16 +632,15 @@ GUI = {};
 			$("#summary").html(html);
 		};
 
-		GUI.refreshRequested = false;	//TRY TO AGGREGATE MULTIPLE refresh() REQUESTS INTO ONE
+		GUI.refreshInProgress = false;	//TRY TO AGGREGATE MULTIPLE refresh() REQUESTS INTO ONE
 
 		GUI.refresh = function (refresh) {
-			if (GUI.refreshRequested) return;
-			GUI.refreshRequested = true;
+			if (GUI.refreshInProgress) return;
+			GUI.refreshInProgress = true;
 
 			Thread.run("refresh gui", function*() {
 				yield (Thread.sleep(200));
-				GUI.refreshRequested = false;
-
+				GUI.refreshInProgress = false;
 				GUI.State2URL();
 
 				var threads = [];

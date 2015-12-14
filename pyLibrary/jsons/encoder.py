@@ -165,14 +165,15 @@ def _value2json(value, _buffer):
         elif value is False:
             append(_buffer, u"false")
             return
-
-        type = value.__class__
-        if type in (dict, Dict):
+        elif isinstance(value, Mapping):
             if value:
                 _dict2json(value, _buffer)
             else:
                 append(_buffer, u"{}")
-        elif type is str:
+            return
+
+        type = value.__class__
+        if type is str:
             append(_buffer, u"\"")
             try:
                 v = utf82unicode(value)

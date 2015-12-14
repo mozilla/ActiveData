@@ -61,7 +61,7 @@ Example: Patches are pulled from the BZ
     {
     "from":"bugs.attachments",
     "select":"_source",
-    "where": {"term":{"bugs.attachments[\"attachments.ispatch\"]":"1"}}
+    "where":{"eq":{"ispatch": "1"}}
     }
 
 Example: Pull review requests from BZ:
@@ -69,18 +69,14 @@ Example: Pull review requests from BZ:
     {
     "from":"bugs.attachments.flags",
     "select":"_source",
-    "where": {"term":{"bugs.attachments.flags.request_status" : "?"}}
+    "where":{"eq":{"request_status":"?"}}
     }
-
-ESQuery.js can pull individual nested documents from ES.  ES on it’s own can only return a document once.  Aggregation
-over nested documents is not supported.
 
 `select` Clause
 ---------------
 
-The select clause can be a single object, or an array of object.  The former will result
-in nameless value inside each cell of the resulting cube.  The latter will result in an object, with given
-attributes, in each cell.
+The select clause can be a single object, or an array of objects.  The former will result
+in nameless value inside each cell of the resulting cube.  The latter will result in an object, with given attributes, in each cell.
 
 Here is an example counting the current number of bugs (open and closed) in the KOI project:
 
@@ -101,13 +97,13 @@ We can pull some details on those bugs
         {"name":"bug number", "value":"bug_id"},
         {"name":"owner", "value":"assigned_to"}
     ],
-    "where": {"and":[
+    "where":{"and":[
         {"gte":{"expires_on":"{{now}}"}},
         {"eq":{"cf_blocking_b2g":"koi+"}}
     ]}
     }
 
-if you find the ```select``` objects are a little verbose, and you have no need to rename the attribute, they can be
+if you find the `select` objects are a little verbose, and you have no need to rename the attribute, they can be
 replaced with simply the value:
 
     {
@@ -121,17 +117,16 @@ replaced with simply the value:
 
 
 
-  - **name** – The name given to the resulting attribute.   Optional if ```value``` is a simple variable name.
-  - **value** – Name of the attribute, or list of attributes, or lambda, or source code to generate the attribute value (MVEL for ES)
+  - **name** – The name given to the resulting attribute. Optional if `value` is a simple variable name.
+  - **value** – Expression to calculate the result value
   - **aggregate** – one of many aggregate operations
   - **default** to replace null in the event there is no data
-  - **sort** – one of ```increasing```, ```decreasing``` or ```none``` (default).  Only meaningful when the output of the query is a list, not a cube.
+  - **sort** – one of `increasing`, `decreasing` or `none` (default).  Only meaningful when the output of the query is a list, not a cube.
 
 `select.aggregate` Subclause
 ----------------------------
 
-The ```aggregate``` sub-clause has many options.  Unfortunately not all of them are available to queries destined for
-ES.  ES only supports (count, sum, mean, variance).
+The ```aggregate``` sub-clause has many options. 
 
   - **none** – when expecting only one value
   - **one** – when expecting all values to be identical
@@ -175,12 +170,12 @@ The edges clause is used to produce pivot tables and data cubes; each edge defin
 Each edge is a column which SQL group-by will be applied; with the additional stipulation that all parts of all domains are represented, even if null (count==0).
 
   - **name** – The name given to the resulting edge (optional, if the value is a simple attribute name)
-  - **value** – The code to generate the edge value before grouping
-  - **range** – Can be used instead of value,  but only for algebraic fields: In which case, if the minimum of a domain part is in the range, it will be used in the aggregate.
-      - **min** – The code that defined the minimum value
-      - **max** – The code defining the supremum (of all values greater than the range, pick the smallest)
-  - **mode** – ```inclusive``` will ensure any domain part that intersects with the range will be used in the aggregate.  ```snapshot`` (default) will only count ranges that contain the domain part key value.
-  - **test** – Can be used instead of value: Code that is responsible for returning true/false on whether the data will match the domain parts.  Use this to simulate a SQL join.
+  - **value** – The expression to generate the edge value before grouping
+  - **range** – Can be used instead of value, but only for algebraic fields: In which case, if the minimum of a domain part is in the range, it will be used in the aggregate.
+      - **min** – The expression that defines the minimum value
+      - **max** – The expression defining the supremum (of all values greater than the range, pick the smallest)
+      - **mode** – `inclusive` will ensure any domain part that intersects with the range will be used in the aggregate.  `snapshot` (default) will only count ranges that contain the domain part key value.
+  - **test** – Expression to be used instead of value: It must return a boolean indicating if the data will match the domain parts.  Use this to simulate a SQL join.
   - **domain** – The range of values to be part of the aggregation
   - **allowNulls** – Set to `true` (default) if you want to aggregate all values outside the domain
 
@@ -194,7 +189,6 @@ The domain is defined as an attribute of every edge.  Each domain defines a cove
   - **limit** - for `"type": "default"` domains; limit the number of parts that will be returned 
   - **value** – Domain partitions are technically JSON objects with descriptive attributes (name, value, max, min, etc).  The value attribute is code that will extract the value of the domain after aggregation is complete.
   - **key** – Code to extract the unique key value from any part object in a partition.  This is important so a 1-1 relationship can be established – mapping fast string hashes to slow object comparisons.
-  - **isFacet** – for ES queries:  Will force each part of the domain to have it’s own facet.  Each part of the domain must be explicit, and define ```edges[].domain.partition.esfilter``` as the facet filter.  Avoid using ```{"script"...}``` filters in facets because they are WAY slow.
 
 
 `edges.domain.type` Subclause
@@ -242,7 +236,7 @@ The `window` clause defines a sequence of window functions to be applied to the 
 having
 ------
 
-The `having` clause is a filter that uses aggregates and partitions to determine inclusion in the resultcube.
+The `having` clause is a filter that uses aggregates and partitions to determine inclusion in the resultant cube.
 
   - **edges** – an array of column names used to determine how the rows are partitioned
   - **sort** – a single attribute name, or array of attribute names, used to declare the rank of every row in the group

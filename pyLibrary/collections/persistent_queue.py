@@ -175,7 +175,7 @@ class PersistentQueue(object):
                 for i in range(self.db.status.start, self.start):
                     self._add_pending({"remove": str(i)})
 
-                if self.db.status.end - self.start < 10 or Random.range(1000) == 0:  # FORCE RE-WRITE TO LIMIT FILE SIZE
+                if self.db.status.end - self.start < 10 or Random.range(0, 1000) == 0:  # FORCE RE-WRITE TO LIMIT FILE SIZE
                     # SIMPLY RE-WRITE FILE
                     if DEBUG:
                         Log.note("Re-write {{num_keys}} keys to persistent queue", num_keys=self.db.status.end - self.start)

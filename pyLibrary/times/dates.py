@@ -184,6 +184,10 @@ class Date(object):
         other = Date(other)
         return self.value > other.value
 
+    def __gt__(self, other):
+        other = Date(other)
+        return self.value > other.value
+
     def __ge__(self, other):
         other = Date(other)
         return self.value >= other.value

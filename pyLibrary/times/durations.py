@@ -107,6 +107,7 @@ class Duration(object):
 
 
     def __rmul__(self, amount):
+        amount = Decimal(amount)
         output = Duration(0)
         output.milli = self.milli * amount
         output.month = self.month * amount

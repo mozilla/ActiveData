@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import HTMLParser
 import StringIO
+import ast
 import base64
 import cgi
 from collections import Mapping
@@ -138,10 +139,12 @@ def json2value(json_string, params={}, flexible=False, leaves=False):
 
             Log.error("Can not decode JSON at:\n\t" + sample + "\n\t" + pointer + "\n")
 
-        strings.limit(json_string, 1000)
-        base_str = unicode2utf8(json_string)
+        base_str = unicode2utf8(strings.limit(json_string, 1000))
         hexx_str = bytes2hex(base_str, " ")
-        char_str = " " + ("  ".join((latin12unicode(c) if ord(c) >= 32 else ".") for c in base_str))
+        try:
+            char_str = " " + ("  ".join(c.decode("latin1") if ord(c) >= 32 else ".") for c in base_str)
+        except Exception:
+            char_str = " "
         Log.error("Can not decode JSON:\n" + char_str + "\n" + hexx_str + "\n", e)
 
 
@@ -412,10 +415,10 @@ def unicode2latin1(value):
 
 
 def quote2string(value):
-    if value[0] == "\"" and value[-1] == "\"":
-        value = value[1:-1]
-
-    return value.replace("\\\\", "\\").replace("\\\"", "\"").replace("\\'", "'").replace("\\\n", "\n").replace("\\\t", "\t")
+    try:
+        return ast.literal_eval(value)
+    except Exception:
+        pass
 
 # RETURN PYTHON CODE FOR THE SAME
 
@@ -524,7 +527,7 @@ def latin12unicode(value):
     try:
         return unicode(value.decode('iso-8859-1'))
     except Exception, e:
-        Log.error("Can not convert {{value|quote}} to unicode",  value= value)
+        Log.error("Can not convert {{value|quote}} to unicode", value=value)
 
 
 def pipe2value(value):

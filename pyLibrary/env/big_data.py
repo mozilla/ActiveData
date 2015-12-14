@@ -148,7 +148,10 @@ class LazyLines(object):
     def __iter__(self):
         def output(encoding):
             for v in self.source:
-                self._last = v.decode(encoding)
+                if not encoding:
+                    self._last = v
+                else:
+                    self._last = v.decode(encoding)
                 self._next += 1
                 yield self._last
 
@@ -282,8 +285,8 @@ class GzipLines(CompressedLines):
     SAME AS CompressedLines, BUT USING THE GzipFile FORMAT FOR COMPRESSED BYTES
     """
 
-    def __init__(self, compressed):
-        CompressedLines.__init__(self, compressed)
+    def __init__(self, compressed, encoding="utf8"):
+        CompressedLines.__init__(self, compressed, encoding=encoding)
 
     def __iter__(self):
         buff = BytesIO(self.compressed)

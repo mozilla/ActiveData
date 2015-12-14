@@ -8,7 +8,7 @@
 	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {
-			"From": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
+			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
 		},
  		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000
 	},

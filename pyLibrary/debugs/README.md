@@ -1,12 +1,13 @@
 
-Structured Logging and Exception Handling
-=========================================
+MoLogs - Structured Logging and Exception Handling
+==================================================
 
 This library provides two main features
 
 * **Structured logging** - output is all JSON (with options to serialize to text)
-* **Exception handling weaved in** - Good logs must represent what happened, and that can not be done if the logging library is not intimately familiar with the (exceptional) code paths taken.
-
+* **Exception handling weaved in** - Good logs must represent what happened, 
+and that can not be done if the logging library is not intimately familiar with 
+the (exceptional) code paths taken.
 
 Motivation
 ----------
@@ -27,7 +28,6 @@ if it can be ignored because something can handle it.
 * **Structured Logging is Good** - https://sites.google.com/site/steveyegge2/the-emacs-problem
 
 
-
 Basic Usage
 -----------
 
@@ -37,18 +37,23 @@ Basic Usage
     Log.note("Hello, World!")
 ```
 
-There is no need to create logger objects.  The `Log` module will keep track of what, where and who of every call.
+There is no need to create logger objects.  The `Log` module will keep track of 
+what, where and who of every call.
 
 
 **Use named parameters**
 
-Do not use Python's formatting operator "`%`" nor it's `format()` function. Using them will create a string at call time, which is a parsing nightmare for log analysis tools.
+Do not use Python's formatting operator "`%`" nor it's `format()` function. 
+Using them will create a string at call time, which is a parsing nightmare 
+for log analysis tools.
 
 ```python
     Log.note("Hello, {{name}}!", name="World!")
 ```
 
-All logs are structured logs; the parameters will be included, unchanged, in the log structure.  This library also expects all parameter values to be JSON-serializable so they can be stored/processed by downstream JSON tools.
+All logs are structured logs; the parameters will be included, unchanged, in 
+the log structure.  This library also expects all parameter values to be JSON-
+serializable so they can be stored/processed by downstream JSON tools.
   
 ```javascript
 	{//EXAMPLE STRUCTURED LOG
@@ -72,11 +77,15 @@ All logs are structured logs; the parameters will be included, unchanged, in the
     Log.error("This will throw an error")
 ```
 
-The actual call will always raise an exception, and it manipulates the stack trace to ensure the caller is appropriately blamed.  Feel free to use the `raise` keyword (as in `raise Log.error("")`), if that looks nicer to you. 
+The actual call will always raise an exception, and it manipulates the stack 
+trace to ensure the caller is appropriately blamed.  Feel free to use the 
+`raise` keyword (as in `raise Log.error("")`), if that looks nicer to you. 
 
 **Always chain your exceptions**
 
-The `cause` parameter accepts an `Exception`, or a list of exceptions.  Chaining is generally good practice that helps you find the root cause of a failure. 
+The `cause` parameter accepts an `Exception`, or a list of exceptions.  
+Chaining is generally good practice that helps you find the root cause of 
+a failure. 
 
 ```python
     try:
@@ -87,14 +96,23 @@ The `cause` parameter accepts an `Exception`, or a list of exceptions.  Chaining
 
 **Always catch all `Exceptions`**
 
-Catching all exceptions is preferred over the *only-catch-what-you-can-handle* strategy.  First, exceptions are not lost because we are chaining.  Second, we catch unexpected `Exceptions` early and we annotate them with a description of what the local code was intending to do.  This annotation effectively groups the possible errors (known, or not) into a class, which can be used by callers to decide on appropriate mitigation.  
+Catching all exceptions is preferred over the *only-catch-what-you-can-handle* 
+strategy.  First, exceptions are not lost because we are chaining.  Second, 
+we catch unexpected `Exceptions` early and we annotate them with a 
+description of what the local code was intending to do.  This annotation 
+effectively groups the possible errors (known, or not) into a class, which 
+can be used by callers to decide on appropriate mitigation.  
 
-To repeat:  When using dependency injection, callers can not reasonably be expected to know about the types of failures that can happen deep down the call chain.  This makes it vitally important that methods summarize all exceptions, both known and unknown, so their callers have the information to make better decisions on appropriate action.  
+To repeat:  When using dependency injection, callers can not reasonably be 
+expected to know about the types of failures that can happen deep down the 
+call chain.  This makes it vitally important that methods summarize all 
+exceptions, both known and unknown, so their callers have the information to 
+make better decisions on appropriate action.  
 
 **Use named parameters in your error descriptions too**
 
 Error logging accepts keyword parameters just like `Log.note()` does
-  i
+
 ```python
     def worker(value):
         try:
@@ -104,7 +122,35 @@ Error logging accepts keyword parameters just like `Log.note()` does
             Log.error("Failure to work with {{key2}}", key2=value2, cause=e)
 ```
 
+**No need to formally type your exceptions**
+
+An exception can be uniquely identified by the first-parameter string template 
+it is given; exceptions raised with the same template are the same type.  You 
+should have no need to create new exception sub-types.
+
+**Testing for exception "types"**
+
+This library advocates chaining exceptions early and often, and this hides  
+important exception types in a long causal chain.   MoLogs allows you to easily 
+test if a type (or string, or template) can be found in the causal chain by using 
+the `in` keyword:   
+
+```python
+    def worker(value):
+        try:
+            # Do something that might raise exception
+        except Exception, e:
+            if "Failure to work with {{key2}}" in e:
+				# Deal with exception thrown in above code, no matter
+				# how many other exception handlers where in the chain
+```
+
 **If you can deal with an exception, then it will never be logged**
+
+When a caller catches an exception from a callee, it is the caller's 
+responsibility to handle that exception, or re-raise it.  There are many 
+situations a caller can be expected to handle exceptions; and in those cases 
+logging an error would be deceptive. 
 
 ```python
     def worker(value):
@@ -126,7 +172,12 @@ Error logging accepts keyword parameters just like `Log.note()` does
 ```
 **Don't loose your stack trace!**
 
-Be aware your `except` clause can also throw exceptions:  In the event you catch a vanilla Python Exception, you run the risk of loosing its stack trace.  To prevent this, wrap your exception in an `Except` object, which will capture your trace for later use.  Exceptions thrown from this `Log` library need not be wrapped because they already captured their trace.  If you wrap an `Except` object, you simply get back the object you passed.
+Be aware your `except` clause can also throw exceptions:  In the event you 
+catch a vanilla Python Exception, you run the risk of loosing its stack trace.  
+To prevent this, wrap your exception in an `Except` object, which will capture 
+your trace for later use.  Exceptions thrown from this `Log` library need not 
+be wrapped because they already captured their trace.  If you wrap an `Except` 
+object, you simply get back the object you passed.
 
 ```python
 	try:
@@ -137,19 +188,19 @@ Be aware your `except` clause can also throw exceptions:  In the event you catch
  ```
 
 
-
-
-
 Other forms
 -----------
 
-All the `Log` functions all accept a `default_params` as a second parameter, like so: 
+All the `Log` functions accept a `default_params` as a second parameter, like so: 
 
 ```python
     Log.note("Hello, {{name}}!", {"name": "World!"})
 ```
 
-this is meant for the situation your code already has a bundled structure you wish to use as a source of parameters.  If keyword parameters are used, they will override the default values.  Be careful when sending whole data structures, they will be logged!
+this is meant for the situation your code already has a bundled structure you 
+wish to use as a source of parameters.  If keyword parameters are used, they 
+will override the default values.  Be careful when sending whole data 
+structures, they will be logged!
 
 **Please, never use locals()**
 
@@ -160,7 +211,10 @@ this is meant for the situation your code already has a bundled structure you wi
         Log.note("Hello, {{name}}", locals())  	# DO NOT DO THIS!
 ```
 
-Despite the fact using `locals()` is a wonderful shortcut for logging it is dangerous because it also picks up sensitive local variables.  Even if `{{name}}` is the only value in the template, the whole `locals()` dict will be sent to the structured loggers for recording. 
+Despite the fact using `locals()` is a wonderful shortcut for logging it is 
+dangerous because it also picks up sensitive local variables.  Even if 
+`{{name}}` is the only value in the template, the whole `locals()` dict will 
+be sent to the structured loggers for recording. 
 
 
 Configuration
@@ -194,7 +248,6 @@ structure:
         finally:
             Log.stop()
 ```
-
 
 Log 'Levels'
 ------------
@@ -244,7 +297,8 @@ These debug variables can be set by configuration file:
 Problems with Python Logging
 ----------------------------
 
-[Python's default `logging` module](https://docs.python.org/2/library/logging.html#logging.debug) is deceptively close to doing the right thing:  
+[Python's default `logging` module](https://docs.python.org/2/library/logging.html#logging.debug) 
+is deceptively close to doing the right thing:  
   * It has  keyword parameters, but they are expanded at call time so the values are lost in a string.  
   * It has `extra` parameters, but they are lost if not used by the matching `Formatter`.  
   * It even has stack trace with `exc_info` parameter, but only if an exception is being handled.

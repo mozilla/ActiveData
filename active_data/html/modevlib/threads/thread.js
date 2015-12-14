@@ -141,7 +141,11 @@ build = function(){
 		var result = thread.start();
 		if (result === Suspend)
 			Log.error("Suspend was called while trying to synchronously run generator");
-		return result.threadResponse;
+		if (result instanceof Exception){
+			throw result;
+		}else{
+			return result;
+		}//endif
 	};//method
 
 
@@ -208,21 +212,23 @@ build = function(){
 					this.addChild(retval.request)
 				}//endif
 				if (!this.keepRunning) this.kill(new Exception("thread aborted"));
-				this.stack.pop();//THE suspend() CALL MUST BE REMOVED FROM STACK
 				if (this.stack.length == 0)
 					Log.error("Should not happen");
 				return Suspend;
 			} else if (retval === Thread.Resume) {
 				var self = this;
 				retval = function(retval){
+					if (DEBUG){
+						Log.note("Resuming thread " + self.name)
+					}//endif
 					self.nextYield = currentTimestamp() + NEXT_BLOCK_TIME;
 					self.currentRequest = undefined;
 					self.resume(retval);
 				};
 			} else { //RETURNING A VALUE/OBJECT/FUNCTION TO CALLER
-				var g = this.stack.pop();
-				if (g.close !== undefined)
-					g.close(); //ONLY HAPPENS WHEN EXCEPTION IN THREAD IS NOT CAUGHT
+				var expendedGenerator = this.stack.pop();
+				if (expendedGenerator.close !== undefined)
+					expendedGenerator.close(); //ONLY HAPPENS WHEN EXCEPTION IN THREAD IS NOT CAUGHT
 
 				if (this.stack.length == 0) {
 					return this.shutdown(retval);
@@ -259,7 +265,7 @@ build = function(){
 	//retval instanceof Exception - THROW SPECIFIC THREAD EXCEPTION
 	Thread.prototype.kill = function(retval){
 
-		var children = this.children.copy();  //CHILD THREAD WILL REMOVE THEMSELVES FROM THIS LIST
+		var children = this.children.slice();  //CHILD THREAD WILL REMOVE THEMSELVES FROM THIS LIST
 //		Log.note("Killing "+convert.value2json(children.select("name"))+" child threads");
 		for (var c = 0; c < children.length; c++) {
 			var child = children[c];
@@ -330,7 +336,7 @@ build = function(){
 			}//endif
 		}//endif
 
-		return {"threadResponse": retval};
+		return retval;
 	};
 
 
@@ -344,7 +350,18 @@ build = function(){
 
 	//DO NOT RESUME FOR A WHILE
 	Thread.sleep = function*(millis){
-		var to = setTimeout((yield(Thread.Resume)), millis);
+		var resume = yield(Thread.Resume);
+
+		if (DEBUG){
+			var threadName = Thread.currentThread.name;
+			var temp = resume;
+			resume=function(){
+				Log.note("done timeout of "+millis+", resuming thread "+threadName);
+				temp()
+			};
+		}//endif
+
+		var to = setTimeout(resume, millis);
 		yield (Thread.suspend({"kill": function(){
 			clearTimeout(to);
 		}}))
@@ -356,27 +373,36 @@ build = function(){
 		yield (YIELD);
 	};
 
-	Thread.suspend = function*(request){
-		if (request !== undefined && request.kill === undefined && request.abort === undefined) {
-			Log.error("Expecting an object with kill() or abort() function");
+	//NEW SUSPEND OBJECT
+	Thread.suspend = function(request){
+		if (request !== undefined){
+			if (request.kill === undefined) {
+				if (request.abort === undefined) {
+					Log.error("Expecting an object with kill() or abort() function");
+				} else {
+					request.kill = function(){
+						this.abort();
+					};//function
+				}//endif
+			}//endif
 		}//endif
-		yield (new Suspend(request));
+		return new Suspend(request);
 	};
 
 
-	//RETURNS THREAD EXCEPTION
-	Thread.prototype.join = function*(timeout){
+	//RETURNS A GENERATOR, BE SURE TO yield IT
+	Thread.prototype.join = function(timeout){
 		return Thread.join(this, timeout);
 	};
 
 	//WAIT FOR OTHER THREAD TO FINISH
 	Thread.join = function*(otherThread, timeout){
-		var children = otherThread.children.copy();
+		var children = otherThread.children.slice(); //copy
 		for (var c = 0; c < children.length; c++) {
 			var childThread = children[c];
 			if (!(childThread instanceof Thread)) continue;
 
-			Thread.join(childThread, timeout);
+			yield Thread.join(childThread, timeout);
 		}//for
 
 
@@ -397,9 +423,12 @@ build = function(){
 				});
 				gen.next();  //THE FIRST CALL TO next()
 				otherThread.stack.unshift(gen);
+				if (DEBUG){
+					Log.note("pausing thread " + Thread.currentThread.name + " while joining " + otherThread.name)
+				}
 				yield (Thread.suspend());
 			} else {
-				yield ({"threadResponse": otherThread.threadResponse});
+				yield (otherThread.threadResponse);
 			}//endif
 		} else {
 			//WE SHOULD USE A REAL SIGNAL, BUT I AM LAZY SO WE BUSY-WAIT
@@ -428,7 +457,7 @@ build = function(){
 
 			result = e
 		}//try
-		resumeFunction({"threadResponse": result});  //PACK TO HIDE EXCEPTION
+		resumeFunction(result);  //PACK TO HIDE EXCEPTION
 	}//method
 
 	//CALL THE funcTION WITH THE GIVEN PARAMETERS
@@ -471,12 +500,14 @@ if (window.Exception === undefined) {
 
 }
 
-if (window.Log === undefined) {
-	window.Log = {
-		"error": console.error,
-		"warning": console.warn,
-		"note": console.note
+if (!window.Log) {
+	Log = {};
+	Log.error = function(mess, cause){
+		console.error(mess);
+		throw new Exception(mess, cause);
 	};
+	Log.warning = console.warn;
+	Log.note = 	Log.note = function(v){console.log(v);};
 }//endif
 
 

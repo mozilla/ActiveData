@@ -605,9 +605,13 @@ class DimFieldListDecoder(DefaultDecoder):
         self.edge.domain.partitions.add(value)
 
     def done_count(self):
+        columns = map(unicode, range(len(self.fields)))
+        parts = wrap([{unicode(i): p for i, p in enumerate(part)} for part in self.edge.domain.partitions])
+        sorted_parts = qb.sort(parts, columns)
+
         self.edge.domain = SimpleSetDomain(
             key="value",
-            partitions=[{"value": v, "dataIndex": i} for i, v in enumerate(qb.sort(self.edge.domain.partitions, range(len(self.fields))))]
+            partitions=[{"value": tuple(v[k] for k in columns), "dataIndex": i} for i, v in enumerate(sorted_parts)]
         )
 
     def get_index(self, row):

@@ -947,3 +947,15 @@ class TestSetOps(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test)
+
+# TODO: problem selecing nested columns
+# nested: ElasticsearchIllegalArgumentException[field [action.timings] isn't a leaf field];
+# {
+#     "from": "jobs",
+#     "select": [
+#         "action"
+#     ],
+#     "where": {
+#         "exists": "action.start_time"
+#     }
+# }

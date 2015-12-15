@@ -37,6 +37,7 @@
 	},
 	"debug": {
 		"trace": true,
+		"cprofile": false,
 		"log": [
 			{
 				"log_type": "console"

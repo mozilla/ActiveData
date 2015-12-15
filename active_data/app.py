@@ -157,8 +157,8 @@ def query(path):
                         break
                     Thread.sleep(seconds=1)
 
-            if Log.profiler:
-                #THREAD CREATION IS DONE TO CAPTURE THE PROFILING DATA
+            if Log.profiler or Log.cprofiler:
+                # THREAD CREATION IS DONE TO CAPTURE THE PROFILING DATA
                 def run(please_stop):
                     return qb.run(data)
                 thread = Thread.run("run query", run)

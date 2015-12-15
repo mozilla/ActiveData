@@ -8,8 +8,6 @@ The ETL is covered by two projects
 * [TestLog-ETL](https://github.com/klahnakoski/TestLog-ETL) (using the `etl` branch) - is the workhorse
 * [SpotManager](https://github.com/klahnakoski/SpotManager) (using the `beta` branch) - responsible for deploying the above
 
-  
-
 
 Production Deployment Steps
 ---------------------------
@@ -38,6 +36,23 @@ The ActiveData service is a relatively simple, stateless, query translation serv
 Production Deployment Steps
 ---------------------------
 
-1. On the frontend machine run `git pull origin master`
+1. On the `frontend` machine run `git pull origin master`
 2. Use supervisor to restart service
+
+Fixing Cluster
+--------------
+
+ES still breaks, sometimes.  All problems encountered so far only require a 
+bounce, but that bounce must be controlled. 
+ 
+ 1. Disable shard movement `curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}"  http://localhost:9200/_cluster/settings`
+ 2. Bounce the nodes as you see fit
+ 3. Enable shard movement `curl -XPUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"all\"}}"  http://localhost:9200/_cluster/settings`
+
+
+Config and Logs 
+---------------
+
+Configuration is `~/ActiveData/resources/config/supervisord.conf`
+Logs are `/logs/active_data.log`
 

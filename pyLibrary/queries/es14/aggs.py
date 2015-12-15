@@ -690,7 +690,7 @@ def aggs_iterator(aggs, decoders):
 
 
 def count_dim(aggs, decoders):
-    if any(isinstance(d, DefaultDecoder) for d in decoders):
+    if any(isinstance(d, (DefaultDecoder, DimFieldListDecoder)) for d in decoders):
         # ENUMERATE THE DOMAINS, IF UNKNOWN AT QUERY TIME
         for row, agg in aggs_iterator(aggs, decoders):
             for d in decoders:

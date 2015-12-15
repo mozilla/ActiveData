@@ -332,9 +332,15 @@ class AggsDecoder(object):
 
 
 class SetDecoder(AggsDecoder):
+
+    def __init__(self, edge, query):
+        AggsDecoder.__init__(self, edge, query)
+        self.domain = edge.domain
+
+
     def append_query(self, es_query, start):
         self.start = start
-        domain = self.edge.domain
+        domain = self.domain
         field_name = unicode(self.edge.value)
 
         include = [p[domain.key] for p in domain.partitions]
@@ -364,7 +370,7 @@ class SetDecoder(AggsDecoder):
             }})
 
     def get_value(self, index):
-        return self.edge.domain.getKeyByIndex(index)
+        return self.domain.getKeyByIndex(index)
 
     def get_value_from_row(self, row):
         return row[self.start].key
@@ -372,11 +378,9 @@ class SetDecoder(AggsDecoder):
     def get_index(self, row):
         try:
             part = row[self.start]
-            if part == None:
-                return len(self.edge.domain.partitions)
-            return self.edge.domain.getIndexByKey(part.key)
+            return self.domain.getIndexByKey(part.key)
         except Exception, e:
-            Log.error("problem", e)
+            Log.error("problem", cause=e)
 
     @property
     def num_columns(self):
@@ -522,8 +526,9 @@ class DefaultDecoder(SetDecoder):
 
     def __init__(self, edge, query):
         AggsDecoder.__init__(self, edge, query)
-        self.edge.domain.partitions = set()
-        self.edge.domain.limit =Math.min(coalesce(self.edge.domain.limit, query.limit, 10), MAX_LIMIT)
+        self.domain = edge.domain
+        self.domain.limit =Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
+        self.parts = list()
 
     def append_query(self, es_query, start):
         self.start = start
@@ -536,7 +541,7 @@ class DefaultDecoder(SetDecoder):
                 "_match": set_default(
                     {"terms": {
                         "script_field": script_field,
-                        "size": self.edge.domain.limit
+                        "size": self.domain.limit
                     }},
                     es_query
                 ),
@@ -548,7 +553,7 @@ class DefaultDecoder(SetDecoder):
             "_match": set_default(
                 {"terms": {
                     "field": self.edge.value.var,
-                    "size": self.edge.domain.limit
+                    "size": self.domain.limit
                 }},
                 es_query
             ),
@@ -561,24 +566,26 @@ class DefaultDecoder(SetDecoder):
         if part == None:
             self.edge.allowNulls = True  # OK! WE WILL ALLOW NULLS
         else:
-            self.edge.domain.partitions.add(part.key)
+            self.parts.append(part.key)
 
     def done_count(self):
-        self.edge.domain = SimpleSetDomain(
-            partitions=qb.sort(self.edge.domain.partitions)
+        self.edge.domain = self.domain = SimpleSetDomain(
+            partitions=qb.sort(set(self.parts))
         )
+        self.parts = None
 
     @property
     def num_columns(self):
         return 1
 
 
-class DimFieldListDecoder(DefaultDecoder):
+class DimFieldListDecoder(SetDecoder):
     def __init__(self, edge, query):
-        DefaultDecoder.__init__(self, edge, query)
+        AggsDecoder.__init__(self, edge, query)
         self.fields = edge.domain.dimension.fields
         self.domain = self.edge.domain
-        self.domain.partitions = list()
+        self.domain.limit =Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
+        self.parts = list()
 
 
     def append_query(self, es_query, start):
@@ -589,15 +596,15 @@ class DimFieldListDecoder(DefaultDecoder):
             nest = wrap({"aggs": {
                 "_match": set_default({"terms": {
                     "field": v,
-                    "size": self.edge.domain.limit
+                    "size": self.domain.limit
                 }}, es_query)
             }})
             if self.edge.allowNulls:
                 nest.aggs._missing = set_default({"missing": {"field": v}}, es_query)
             es_query = nest
 
-        if self.edge.domain.where:
-            filter = simplify_esfilter(self.edge.domain.where)
+        if self.domain.where:
+            filter = simplify_esfilter(self.domain.where)
             es_query = {"aggs": {"_filter": set_default({"filter": filter}, es_query)}}
 
         return es_query
@@ -605,11 +612,12 @@ class DimFieldListDecoder(DefaultDecoder):
     def count(self, row):
         part = row[self.start:self.start + len(self.fields):]
         value = tuple(p.key for p in part)
-        self.domain.partitions.append(value)
+        self.parts.append(value)
 
     def done_count(self):
         columns = map(unicode, range(len(self.fields)))
-        parts = wrap([{unicode(i): p for i, p in enumerate(part)} for part in set(self.edge.domain.partitions)])
+        parts = wrap([{unicode(i): p for i, p in enumerate(part)} for part in set(self.parts)])
+        self.parts = None
         sorted_parts = qb.sort(parts, columns)
 
         self.edge.domain = self.domain = SimpleSetDomain(
@@ -621,81 +629,20 @@ class DimFieldListDecoder(DefaultDecoder):
         find = tuple(p.key for p in row[self.start:self.start + self.num_columns:])
         return self.domain.getIndexByKey(find)
 
-    def _get_sub(self, aggs, coord):
-        domain = self.edge.domain
-        buckets = aggs[self.name].buckets
-        for b in buckets:
-            c = domain.getIndexByKey(b.key)
-            yield (c, b)
-
     @property
     def num_columns(self):
         return len(self.fields)
 
 
-
-class DimFieldDictDecoder(DefaultDecoder):
-    def __init__(self, edge, query):
-        DefaultDecoder.__init__(self, edge, query)
-        self.fields = edge.domain.dimension.fields.items()
-
-    def append_query(self, es_query, start):
-        self.start = start
-        for i, (k, v) in enumerate(self.fields):
-            es_query = wrap({"aggs": {
-                "_match": set_default({"terms": {
-                    "field": v,
-                    "size": self.edge.domain.limit
-                }}, es_query),
-                "_missing": set_default({"missing": {"field": v}}, es_query),
-            }})
-
-        if self.edge.domain.where:
-            filter = simplify_esfilter(self.edge.domain.where)
-            es_query = {"aggs": {"_filter": set_default({"filter": filter}, es_query)}}
-
-        return es_query
-
-    def count(self, row):
-        part = row[self.start:self.start + len(self.fields):]
-        value = {k: p.key for (k, v), p in zip(self.fields, part)}
-        self.edge.domain.partitions.add(value)
-
-    def done_count(self):
-        self.edge.domain = SimpleSetDomain(
-            key="value",
-            partitions=[{"value": v, "dataIndex": i} for i, v in enumerate(qb.sort(self.edge.domain.partitions, [k for k, v in self.fields]))]
-        )
-
-    def get_index(self, row):
-        parts = self.edge.domain.partitions
-        find = tuple(p.key for p in row[self.start:self.start + self.num_columns:])
-        for p in parts:
-            if p.value == find:
-                return p.dataIndex
-        else:
-            return len(parts)
-
-    def _get_sub(self, aggs, coord):
-        domain = self.edge.domain
-        buckets = aggs[self.name].buckets
-        for b in buckets:
-            c = domain.getIndexByKey(b.key)
-            yield (c, b)
-
-    @property
-    def num_columns(self):
-        return len(self.fields.values())
-
-
 EMPTY = {}
 EMPTY_LIST = []
 
+
 def drill(agg):
-    deeper = coalesce(agg.get("_filter", EMPTY), agg.get("_nested", EMPTY))
+    deeper = coalesce(agg.get("_filter"), agg.get("_nested"))
     while deeper:
         agg = deeper
-        deeper = coalesce(agg.get("_filter", EMPTY), agg.get("_nested", EMPTY))
+        deeper = coalesce(agg.get("_filter"), agg.get("_nested"))
     return agg
 
 

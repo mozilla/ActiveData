@@ -11,9 +11,10 @@ before_install:
   - whereis elasticsearch
 
 before_script:
+  - "sudo cp -f tests/travis/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml"
   - "pwd"
   - "echo ~"
-  - "elasticsearch -v -Des.config=/home/travis/build/klahnakoski/ActiveData/tests/travis/elasticsearch.yml"
+  - "elasticsearch -v"
   - "curl http://localhost:9200/"
 
 # command to run tests

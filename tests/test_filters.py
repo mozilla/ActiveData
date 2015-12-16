@@ -162,6 +162,21 @@ class TestFilters(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
+    def test_empty_in(self):
+        test = {
+            "data": [{"a": 1}],
+            "query": {
+                "select": "a",
+                "from": base_test_class.settings.backend_es.index,
+                "where": {"in": {"a": []}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": []
+            }
+        }
+        self._execute_es_tests(test)
+
+
     def test_empty_match_all(self):
         test = {
             "data": [{"a": 1}],
@@ -175,5 +190,6 @@ class TestFilters(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test)
+
 
 

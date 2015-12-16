@@ -1113,15 +1113,15 @@ class InOp(Expression):
 
     def to_dict(self):
         if isinstance(self.field, Variable) and isinstance(self.values, Literal):
-            return {"in": {self.field.var, convert.json2value(self.values.json)}}
+            return {"in": {self.field.var: convert.json2value(self.values.json)}}
         else:
             return {"in": [self.field.to_dict(), self.values.to_dict()]}
 
     def vars(self):
         return self.field.vars()
 
-    def map(self, map):
-        return InOp("in", {coalesce(map.get(self.field), self.field): self.values})
+    def map(self, map_):
+        return InOp("in", [self.field.map(map_), self.values])
 
 
 class RangeOp(Expression):

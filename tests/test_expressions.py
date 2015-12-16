@@ -91,3 +91,7 @@ class TestExpressions(FuzzyTestCase):
         self.assertEqual(result, {"terms": {"a": [1, 2]}})
 
 
+    def test_in_map(self):
+        where = {"in": {"a": [1, 2]}}
+        result = qb_expression(where).map({"a": "c"}).to_dict()
+        self.assertEqual(result, {"in": {"c": [1, 2]}})

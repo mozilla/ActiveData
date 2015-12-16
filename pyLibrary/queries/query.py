@@ -187,6 +187,13 @@ def _normalize_select(select, schema=None):
                 value="*",
                 aggregate="none"
             )
+        if select == "*":
+            return Dict(
+                name=".",
+                value="*",
+                aggregate="none"
+            )
+
         if schema:
             s = schema[select]
             if s:

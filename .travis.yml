@@ -13,7 +13,7 @@ before_install:
 before_script:
   - "pwd"
   - "echo ~"
-  - "elasticsearch -v -Des.config=tests/travis/elasticsearch.yml"
+  - "elasticsearch -v -Des.config=/home/travis/build/klahnakoski/ActiveData/tests/travis/elasticsearch.yml"
   - "curl http://localhost:9200/"
 
 # command to run tests

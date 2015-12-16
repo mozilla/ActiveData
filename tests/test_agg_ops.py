@@ -277,7 +277,6 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test, tjson=True)
 
-
     def test_cardinality(self):
         test = {
             "data": [

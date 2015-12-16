@@ -7,13 +7,20 @@ install: "pip install -r requirements.txt"
 env:
   - PYTHONPATH=.
 
-services:
-  - elasticsearch
+
+before_install:
+  - whereis elasticsearch
+
+before_script:
+  - "elasticsearch -v"
+  - "curl http://localhost:9200/"
 
 
 # command to run tests
 script: tests/scripts/run.sh
 
+services:
+  - elasticsearch
 
 addons:
   apt:

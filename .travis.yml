@@ -2,9 +2,6 @@ language: python
 python:
   - "2.7"
 
-before_install:
-  - curl -O https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.7.3.deb && sudo dpkg -i --force-confnew elasticsearch-1.7.3.deb
-
 install: "pip install -r requirements.txt"
 
 env:
@@ -17,4 +14,11 @@ services:
 # command to run tests
 script: tests/scripts/run.sh
 
+
+addons:
+  apt:
+    sources:
+      - elasticsearch-1.7
+    packages:
+      - elasticsearch
 

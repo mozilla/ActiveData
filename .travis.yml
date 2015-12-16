@@ -3,13 +3,12 @@ python:
   - "2.7"
 
 install:
-  - sudo service elasticsearch stop
+  - "sudo service elasticsearch stop"
   - "sudo cp -f tests/travis/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml"
-  - sudo service elasticsearch start
+  - "sudo service elasticsearch start"
   - "pip install -r requirements.txt"
-  - sleep 10
-  #- "elasticsearch -v -Des.config=tests/travis/elasticsearch.yml"
-  - whereis elasticsearch
+  - "sleep 10"
+  - "whereis elasticsearch"
   - "curl http://localhost:9200/"
 
 env:

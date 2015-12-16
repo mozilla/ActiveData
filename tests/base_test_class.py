@@ -11,7 +11,6 @@
 from __future__ import unicode_literals
 from __future__ import division
 
-from _subprocess import CREATE_NEW_PROCESS_GROUP
 import os
 import subprocess
 import signal
@@ -374,8 +373,8 @@ def run_app(please_stop, server_is_ready):
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        bufsize=-1,
-        creationflags=CREATE_NEW_PROCESS_GROUP
+        bufsize=-1
+        #creationflags=CREATE_NEW_PROCESS_GROUP
     )
 
     while not please_stop:

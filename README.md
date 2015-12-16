@@ -2,6 +2,12 @@
 
 Provide high speed filtering and aggregation over data see [ActiveData Wiki Page](https://wiki.mozilla.org/Auto-tools/Projects/ActiveData) for project details
 
+## Use it now!
+
+ActiveData is a service!  You can certainly setup your own service, but it is easier to use Mozilla's!
+
+	curl -XPOST -d "{\"from\":\"unittest\"}" http://activedata.allizom.org/query
+
 ## Requirements
 
 * Python2.7 installed
@@ -22,7 +28,7 @@ and install your requirements:
 ## Configuration
 
 The ActiveData service requires a configuration file that will point to the
-default ElasticSearch index.  You can find a few sample config files in
+default Elasticsearch index.  You can find a few sample config files in
 `resources/config`.  `simple_settings.json` is simplest one:
 
 ```javascript

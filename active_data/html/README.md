@@ -5,7 +5,7 @@ ActiveData Query Tool
 Requirements
 ------------
 
-Access to one of the bug clusters is required.  Use [ElasticSearch Head](https://github.com/mobz/elasticsearch-head) to
+Access to one of the bug clusters is required.  Use [Elasticsearch Head](https://github.com/mobz/elasticsearch-head) to
 test connectivity.
 
 
@@ -17,7 +17,7 @@ test connectivity.
 Documentation
 -------------
 
-  - [Tutorial on querying ElasticSearch](../docs/BZ_Tutorial.md)
+  - [Tutorial on querying Elasticsearch](../docs/BZ_Tutorial.md)
   - [Tutorial on MVEL and advanced querying](../docs/MVEL_Tutorial.md)
   - [Reference document covering the query format](../docs/Qb_Reference.md)
   - [Dimension Definitions](../docs/Dimension Definitions.md)

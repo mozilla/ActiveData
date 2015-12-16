@@ -1,8 +1,6 @@
-# ActiveData
+# ActiveData [![Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=dev)](https://travis-ci.org/klahnakoski/ActiveData)
 
 Provide high speed filtering and aggregation over data see [ActiveData Wiki Page](https://wiki.mozilla.org/Auto-tools/Projects/ActiveData) for project details
-
-[![Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=dev)](https://travis-ci.org/klahnakoski/ActiveData)
 
 ## Requirements
 

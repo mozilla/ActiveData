@@ -7,14 +7,14 @@ install: "pip install -r requirements.txt"
 env:
   - PYTHONPATH=.
 
-
 before_install:
   - whereis elasticsearch
 
 before_script:
+  - "pwd"
+  - "echo ~"
   - "elasticsearch -v -Des.config=tests/travis/elasticsearch.yml"
   - "curl http://localhost:9200/"
-
 
 # command to run tests
 script: tests/travis/run.sh

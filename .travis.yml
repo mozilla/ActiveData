@@ -12,12 +12,12 @@ before_install:
   - whereis elasticsearch
 
 before_script:
-  - "elasticsearch -v"
+  - "elasticsearch -v -Des.config=/tests/travis/elasticsearch.yml"
   - "curl http://localhost:9200/"
 
 
 # command to run tests
-script: tests/scripts/run.sh
+script: tests/travis/run.sh
 
 services:
   - elasticsearch

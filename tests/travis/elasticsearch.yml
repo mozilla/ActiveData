@@ -1,0 +1,6 @@
+script.inline: on
+script.indexed: on
+
+http.compression: true
+http.cors.allow-origin: "/.*/"
+http.cors.enabled: true

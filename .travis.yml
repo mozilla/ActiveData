@@ -1,0 +1,28 @@
+language: python
+python:
+  - "2.7"
+
+install:
+  - "sudo service elasticsearch stop"
+  - "sudo cp -f tests/travis/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml"
+  - "sudo service elasticsearch start"
+  - "pip install -r requirements.txt"
+  - "sleep 10"
+  - "whereis elasticsearch"
+  - "curl http://localhost:9200/"
+
+env:
+  - PYTHONPATH=.
+
+# command to run tests
+script:
+  - tests/travis/run.sh
+
+
+addons:
+  apt:
+    sources:
+      - elasticsearch-1.7
+    packages:
+      - elasticsearch
+

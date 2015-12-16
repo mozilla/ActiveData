@@ -1,0 +1,4 @@
+script.inline: on
+script.indexed: on
+
+http.compression: true

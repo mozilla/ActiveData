@@ -306,7 +306,7 @@ def main():
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
         app.run(**config.flask)
     except Exception, e:
-        Log.error("Problem with etl", cause=e)
+        Log.error("Problem with ActiveData service", cause=e)
     finally:
         Log.stop()
 

@@ -21,6 +21,20 @@ lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
 class TestSetOps(ActiveDataBaseTest):
+
+    def test_star(self):
+       test = {
+           "data": [{"a": 1}],
+           "query": {
+               "select": "*",
+               "from": base_test_class.settings.backend_es.index
+           },
+           "expecting_list": {
+               "meta": {"format": "list"}, "data": [{"a": 1}]
+           }
+       }
+       self._execute_es_tests(test)
+
     def test_simplest(self):
         test = {
             "data": [

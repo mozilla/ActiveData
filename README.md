@@ -19,6 +19,7 @@ ActiveData is a service!  You can certainly setup your own service, but it is ea
 It is still too early for PyPi install, so please clone *master* off of github:
 
     git clone https://github.com/klahnakoski/ActiveData.git
+    git checkout master
 
 and install your requirements:
 
@@ -46,7 +47,7 @@ default Elasticsearch index.  You can find a few sample config files in
         "elasticsearch":{
             "host":"http://localhost",
             "port":9200,
-            "index":"testdata",
+            "index":"unittest",
             "type":"test_result",
             "debug":true
         }

@@ -313,6 +313,13 @@ Convert a string to a numeric value.
 
 		{"number": variable}
 
+###`contains` Operator###
+
+Test if property contains given substring.  
+
+		{"contains": {variable, substring}}
+
+
 ###`prefix` Operator###
 
 Test if a property has the given prefix.  Only the *simple* form exists.

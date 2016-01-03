@@ -209,7 +209,7 @@ class Math(object):
         if value == None:
             return None
         elif value < 0:
-            return value % mod + mod
+            return (value % mod + mod) % mod
         else:
             return value % mod
 

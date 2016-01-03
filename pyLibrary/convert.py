@@ -28,12 +28,13 @@ import re
 from tempfile import TemporaryFile
 
 from pyLibrary import strings
-from pyLibrary.dot import wrap, wrap_leaves, unwrap, unwraplist
+from pyLibrary.dot import wrap, wrap_leaves, unwrap, unwraplist, split_field, join_field
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.env.big_data import FileString, safe_size
 from pyLibrary.jsons import quote
 from pyLibrary.jsons.encoder import json_encoder, pypy_json_encode
+from pyLibrary.queries import qb
 from pyLibrary.strings import expand_template
 from pyLibrary.times.dates import Date
 
@@ -640,3 +641,44 @@ def _unPipe(value):
     return result + value[e::]
 
 json_decoder = json.JSONDecoder().decode
+
+
+def json_schema_to_markdown(schema):
+    def _md_code(code):
+        return "`"+code+"`"
+
+    def _md_italic(value):
+        return "*"+value+"*"
+
+    def _inner(schema, parent_name, indent):
+        more_lines = []
+        for k,v in schema.items():
+            full_name = join_field(split_field(parent_name)+[k])
+            more_lines.append(
+                indent+"* "+_md_code(full_name)+" - "+_md_italic(v.type)+" "+v.description
+            )
+            if v.type in ["object", "array", "nested"]:
+                more_lines.extend(_inner(v.properties, full_name, indent+"  "))
+        return more_lines
+
+    lines = []
+    if schema.title:
+        lines.append("#"+schema.title)
+
+    lines.append(schema.description)
+    lines.append("")
+
+    for k, v in qb.sort(schema.properties.items(), 0):
+        full_name = k
+        if v.type in ["object", "array", "nested"]:
+            lines.append("##"+_md_code(full_name)+" Property")
+            lines.append(v.description)
+            lines.append("")
+
+            if v.type in ["object", "array", "nested"]:
+                lines.extend(_inner(v.properties, full_name, "  "))
+        else:
+            lines.append("##"+_md_code(full_name)+" ("+v.type+")")
+            lines.append(v.description)
+
+    return "\n".join(lines)

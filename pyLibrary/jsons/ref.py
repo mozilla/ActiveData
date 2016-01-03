@@ -26,6 +26,7 @@ _Except = None
 def _late_import():
     global _convert
     global _Log
+    global _Except
     from pyLibrary import convert as _convert
     from pyLibrary.debugs.logs import Log as _Log
     from pyLibrary.debugs.logs import Except as _Except
@@ -207,6 +208,9 @@ def get_file(ref, url):
     try:
         new_value = _convert.json2value(content, params=ref.query, flexible=True, leaves=True)
     except Exception, e:
+        if not _Except:
+            _late_import()
+
         e = _Except.wrap(e)
         try:
             new_value = _convert.ini2value(content)

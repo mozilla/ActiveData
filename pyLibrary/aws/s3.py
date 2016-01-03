@@ -77,10 +77,8 @@ class Connection(object):
         except Exception, e:
             Log.error("Problem connecting to S3", e)
 
-
     def __enter__(self):
         return self
-
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.connection:

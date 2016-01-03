@@ -65,10 +65,11 @@ def request(method, url, zip=None, retry=None, **kwargs):
     global _warning_sent
     if not default_headers and not _warning_sent:
         _warning_sent = True
-        Log.warning("The pyLibrary.env.http module was meant to add extra "
-                    "default headers to all requests, specifically the 'From' "
-                    "header with a URL to the project, or email of developer. "
-                    "Use the constants.set() function to set pyLibrary.env.http.default_headers"
+        Log.warning(
+            "The pyLibrary.env.http module was meant to add extra "
+            "default headers to all requests, specifically the 'Referer' "
+            "header with a URL to the project. Use the `constants.set()` "
+            "function to set `pyLibrary.env.http.default_headers`"
         )
 
     if isinstance(url, list):

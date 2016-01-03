@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from collections import Mapping
 
 import os
-from pyLibrary.dot import set_default, wrap
+from pyLibrary.dot import set_default, wrap, unwrap
 from pyLibrary.parsers import URL
 
 
@@ -131,41 +131,40 @@ def _replace_ref(node, url):
 
 def _replace_locals(node, doc_path):
     if isinstance(node, Mapping):
-        ref, node["$ref"] = node["$ref"], None
-
-        # RECURS
-        new_node = node
-        candidate = {}
+        # RECURS, DEEP COPY
+        ref = None
+        output = {}
         for k, v in node.items():
-            new_v = _replace_locals(v, [v] + doc_path)
-            candidate[k] = new_v
-            if new_v is not v:
-                new_node = candidate
+            if k == "$ref":
+                ref = v
+            else:
+                output[k] = _replace_locals(v, [v] + doc_path)
 
         if not ref:
-            return new_node
-        else:
-            node = new_node
-            # REFER TO SELF
-            frag=ref.fragment
-            if frag[0] == ".":
-                # RELATIVE
-                for i, p in enumerate(frag):
-                    if p != ".":
-                        if i>len(doc_path):
-                            _Log.error("{{frag|quote}} reaches up past the root document",  frag=frag)
-                        new_value = doc_path[i-1][frag[i::]]
-                        break
-                else:
-                    new_value = doc_path[len(frag) - 1]
-            else:
-                # ABSOLUTE
-                new_value = doc_path[-1][frag]
+            return output
 
-        if node:
-            return set_default({}, node, new_value)
+        # REFER TO SELF
+        frag = ref.fragment
+        if frag[0] == ".":
+            # RELATIVE
+            for i, p in enumerate(frag):
+                if p != ".":
+                    if i>len(doc_path):
+                        _Log.error("{{frag|quote}} reaches up past the root document",  frag=frag)
+                    new_value = doc_path[i-1][frag[i::]]
+                    break
+            else:
+                new_value = doc_path[len(frag) - 1]
         else:
-            return wrap(new_value)
+            # ABSOLUTE
+            new_value = doc_path[-1][frag]
+
+        new_value = _replace_locals(new_value, [new_value] + doc_path)
+
+        if not output:
+            return new_value  # OPTIMIZATION FOR CASE WHEN node IS {}
+        else:
+            return unwrap(set_default(output, new_value))
 
     elif isinstance(node, list):
         candidate = [_replace_locals(n, [n] + doc_path) for n in node]
@@ -203,7 +202,7 @@ def get_file(ref, url):
         content = File(path).read()
     except Exception, e:
         content = None
-        _Log.error("Could not read file {{filename}}",  filename= path, cause=e)
+        _Log.error("Could not read file {{filename}}", filename=path, cause=e)
 
     try:
         new_value = _convert.json2value(content, params=ref.query, flexible=True, leaves=True)

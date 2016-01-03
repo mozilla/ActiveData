@@ -12,8 +12,8 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary.env.processes import Process
 from pyLibrary.meta import cache
+from pyLibrary.thread.multiprocess import Process
 
 
 @cache
@@ -21,11 +21,11 @@ def get_git_revision():
     """
     GET THE CURRENT GIT REVISION
     """
-    proc = Process(["git", "log", "-1"])
+    proc = Process("git log", ["git", "log", "-1"])
 
     try:
         while True:
-            line = proc.readline().strip()
+            line = proc.stdout.pop().strip()
             if not line:
                 continue
             if line.startswith("commit "):
@@ -41,12 +41,20 @@ def get_remote_revision(url, branch):
     """
     GET REVISION OF A REMOTE BRANCH
     """
-    from fabric.api import local
 
-    result = local("git ls-remote " + url + " ref/head/" + branch, capture=True)
-    for line in list(result.split("\n")):
-        if not line:
-            continue
-        if line.startswith("commit "):
-            return line[7:]
+    proc = Process("git remote revision", ["git", "ls-remote", url, "refs/heads/" + branch])
+
+    try:
+        while True:
+            line = proc.stdout.pop().strip()
+            if not line:
+                continue
+            return line.split("\t")[0]
+    finally:
+        try:
+            proc.join()
+        except Exception:
+            pass
+
     return None
+

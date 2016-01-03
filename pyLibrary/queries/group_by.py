@@ -14,6 +14,8 @@ from __future__ import absolute_import
 import sys
 import math
 
+import itertools
+
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.index import value2key
 from pyLibrary.dot.dicts import Dict

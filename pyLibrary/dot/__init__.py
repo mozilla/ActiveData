@@ -128,28 +128,38 @@ def _all_default(d, default, seen=None):
     """
     if default is None:
         return
-    for k, default_value in wrap(default).items():
+    for k, default_value in default.items():
         # existing_value = d.get(k)
         existing_value = _get_attr(d, [k])
 
         if existing_value == None:
             if default_value != None:
-                try:
-                    _set_attr(d, [k], default_value)
-                except Exception, e:
-                    if PATH_NOT_FOUND not in e:
-                        from pyLibrary.debugs.logs import Log
-                        Log.error("Can not set attribute {{name}}", name=k, cause=e)
+                if isinstance(default_value, Mapping):
+                    df = seen.get(id(default_value))
+                    if df:
+                        _set_attr(d, [k], df)
+                    else:
+                        copy_dict = {}
+                        seen[id(default_value)] = copy_dict
+                        _set_attr(d, [k], copy_dict)
+                        _all_default(copy_dict, default_value, seen)
+                else:
+                    # ASSUME PRIMITIVE (OR LIST, WHICH WE DO NOT COPY)
+                    try:
+                        _set_attr(d, [k], default_value)
+                    except Exception, e:
+                        if PATH_NOT_FOUND not in e:
+                            from pyLibrary.debugs.logs import Log
+                            Log.error("Can not set attribute {{name}}", name=k, cause=e)
         elif isinstance(existing_value, list) or isinstance(default_value, list):
             _set_attr(d, [k], listwrap(existing_value) + listwrap(default_value))
         elif (hasattr(existing_value, "__setattr__") or isinstance(existing_value, Mapping)) and isinstance(default_value, Mapping):
-            df = seen.get(id(existing_value))
+            df = seen.get(id(default_value))
             if df:
                 _set_attr(d, [k], df)
             else:
-                seen[id(existing_value)] = default_value
+                seen[id(default_value)] = existing_value
                 _all_default(existing_value, default_value, seen)
-                del seen[id(existing_value)]
 
 
 def _getdefault(obj, key):

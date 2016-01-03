@@ -147,7 +147,7 @@ A JSON-like storage format intended for configuration files.
 Motivation
 ----------
 
-This module has superficial similarity to the [JSON Reference Draft](https://tools.ietf.org/html/draft-pbryan-zyp-json-ref-03), which seems inspired by the committee-driven XPath specification.  Of course, there are a few differences:
+This module has superficial similarity to the [JSON Reference Draft](https://tools.ietf.org/html/draft-pbryan-zyp-json-ref-03), which seems inspired by the committee-driven XPath specification.  Of course, there are a few improvements:
 
 1. This `jsons.ref` module uses the dot (`.`) as a path separator in the URL fragment.  For example, an absolute reference looks like `{"$ref": "#message.type.name"}`, and a relative reference looks like `{"$ref": "#..type.name"}`.   This syntax better matches that used by Javascript.  
 2. The additional properties founf in a `$ref` object are used to override the referenced object. This allows you to reference a default document, and override the particular  properties needed. *more below*
@@ -426,9 +426,9 @@ Module `typed_encoder`
 =====================
 
 
-One reason NoSQL documents stores are wonderful is the fact their schema can automatically expand to accept new properties.   Unfortunately, this flexibility is not limitless:  A string assigned to property prevents object being assigned to the same, or visa-versa.
+One reason NoSQL documents stores are wonderful is the fact their schema can automatically expand to accept new properties.   Unfortunately, this flexibility is not limitless:  A string assigned to property prevents an object being assigned to the same, or visa-versa.
 
-This module translates JSON documents into "typed" form; which allows document stores to store both objects and primitives in the same property value.  This allows storage of values with no containing object! 
+This module translates JSON documents into "typed" form; which allows document containers to store both objects and primitives in the same property value.  This allows storage of values with no containing object! 
 
 ###How it works
 

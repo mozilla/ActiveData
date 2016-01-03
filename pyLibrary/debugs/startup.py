@@ -11,7 +11,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-import argparse
+import argparse as _argparse
 import os
 import tempfile
 import sys
@@ -40,8 +40,8 @@ from pyLibrary.env.files import File
 # dest - The name of the attribute to be added to the object returned by parse_args().
 
 
-def _argparse(defs):
-    parser = argparse.ArgumentParser()
+def argparse(defs):
+    parser = _argparse.ArgumentParser()
     for d in listwrap(defs):
         args = d.copy()
         name = args.name
@@ -62,7 +62,7 @@ def read_settings(filename=None, defs=None):
             })
         settings = ref.get("file://" + settings_file.abspath)
         if defs:
-            settings.args = _argparse(defs)
+            settings.args = argparse(defs)
         return settings
     else:
         defs = listwrap(defs)
@@ -74,7 +74,7 @@ def read_settings(filename=None, defs=None):
             "default": "./settings.json",
             "required": False
         })
-        args = _argparse(defs)
+        args = argparse(defs)
         settings = ref.get("file://" + args.filename.replace(os.sep, "/"))
         settings.args = args
         return settings

@@ -13,6 +13,7 @@ from __future__ import absolute_import
 from collections import Mapping
 from types import GeneratorType, NoneType, ModuleType
 
+
 _get = object.__getattribute__
 
 
@@ -268,6 +269,13 @@ def _get_attr(obj, path):
             Log.error(AMBIGUOUS_PATH_FOUND+" {{paths}}",  paths=attr_name)
         else:
             return _get_attr(obj[attr_name[0]], path[1:])
+
+
+    try:
+        obj = obj[int(attr_name)]
+        return _get_attr(obj, path[1:])
+    except Exception, e:
+        pass
 
     try:
         obj = getattr(obj, attr_name)

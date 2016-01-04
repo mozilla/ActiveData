@@ -18,7 +18,7 @@ importScript("charts/aColor.js");
 		// POINTERS TO THE MANY SYSTEMS
 		"indexes" : {
 
-			// BUGZILLA TABLES (ElasticSearch Indexes)
+			// BUGZILLA TABLES (Elasticsearch Indexes)
 			"bugs" : {"name" : "private bugs cluster", "style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "path" : "/private_bugs/bug_version"},
 			"public_bugs" : {"name" : "Mozilla public bugs cluster", "style" : {"color" : "white", "background-color" : green}, "host" : "https://esfrontline.bugzilla.mozilla.org:443", "path" : "/public_bugs/bug_version"},
 			"public_bugs_backend" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch1.bugs.scl3.mozilla.com:9200", "path" : "/public_bugs/bug_version"},

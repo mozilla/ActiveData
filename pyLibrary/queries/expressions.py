@@ -911,6 +911,53 @@ class RegExpOp(Expression):
     def map(self, map_):
         return RegExpOp("regex", [self.var.map(map_), self.pattern])
 
+    def missing(self):
+        return FalseOp()
+
+    def exists(self):
+        return TrueOp()
+
+
+
+class ContainsOp(Expression):
+    """
+    RETURN true IF substring CAN BE FOUND IN var, ELSE RETURN false
+    """
+    has_simple_form = True
+
+    def __init__(self, op, term):
+        Expression.__init__(self, op, term)
+        self.var, self.substring = term
+
+    def to_python(self):
+        return "((" + convert.string2quote(self.substring) + " in " + self.var.to_python() + ") if " + self.var.to_python() + "!=None else False)"
+
+    def to_ruby(self):
+        v = self.var.to_ruby()
+        c = self.substring.to_ruby()
+        return "((" + v + ") == null ? false : q.indexOf(" + c + ")>=0)"
+
+    def to_esfilter(self):
+        if isinstance(self.var, Variable) and isinstance(self.substring, Literal):
+            return {"regexp": {self.var.var: ".*" + convert.string2regexp(convert.json2value(self.substring.json)) + ".*"}}
+        else:
+            return {"script": {"script": self.to_ruby()}}
+
+    def to_dict(self):
+        return {"contains": {self.var.var: self.substring}}
+
+    def vars(self):
+        return {self.var.var}
+
+    def map(self, map_):
+        return ContainsOp(None, [self.var.map(map_), self.substring])
+
+    def missing(self):
+        return FalseOp()
+
+    def exists(self):
+        return TrueOp()
+
 
 class CoalesceOp(Expression):
     def __init__(self, op, terms):
@@ -1433,6 +1480,7 @@ operators = {
     "and": AndOp,
     "or": OrOp,
     "length": LengthOp,
+    "contains": ContainsOp,
     "number": NumberOp,
     "add": MultiOp,
     "sum": MultiOp,

@@ -20,8 +20,11 @@ from pyLibrary.thread.threads import Queue
 
 class TextLog_usingQueue(TextLog):
 
-    def __init__(self):
-        self.queue = Queue("log messages")
+    def __init__(self, name=None):
+        queue_name = "log messages to queue"
+        if name:
+            queue_name += " "+name
+        self.queue = Queue(queue_name)
 
     def write(self, template, params):
         self.queue.add(expand_template(template, params))

@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
 
+from pyLibrary import convert
 from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, DictList, unwrap

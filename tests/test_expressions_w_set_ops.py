@@ -355,6 +355,29 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_contains(self):
+        test = {
+            "data": [
+                {"v": "test"},
+                {"v": "not test"},
+                {"v": None},
+                {},
+                {"v": "a"}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "where": {"contains": {"v": "test"}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"v": "test"},
+                    {"v": "not test"}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
+
 
 
 

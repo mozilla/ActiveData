@@ -177,7 +177,7 @@ Each edge is a column which SQL group-by will be applied; with the additional st
       - **mode** – `inclusive` will ensure any domain part that intersects with the range will be used in the aggregate.  `snapshot` (default) will only count ranges that contain the domain part key value.
   - **test** – Expression to be used instead of value: It must return a boolean indicating if the data will match the domain parts.  Use this to simulate a SQL join.
   - **domain** – The range of values to be part of the aggregation
-  - **allowNulls** – Set to `true` (default) if you want to aggregate all values outside the domain
+  - **allowNulls** – Set to `true` (default) if you want to aggregate all values outside the domain. 
 
 `edges.domain` Subclause
 ------------------------

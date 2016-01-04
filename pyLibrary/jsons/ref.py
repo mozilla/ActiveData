@@ -14,7 +14,9 @@ from __future__ import absolute_import
 from collections import Mapping
 
 import os
-from pyLibrary.dot import set_default, wrap
+
+from pyLibrary import dot
+from pyLibrary.dot import set_default, wrap, unwrap
 from pyLibrary.parsers import URL
 
 
@@ -26,6 +28,7 @@ _Except = None
 def _late_import():
     global _convert
     global _Log
+    global _Except
     from pyLibrary import convert as _convert
     from pyLibrary.debugs.logs import Log as _Log
     from pyLibrary.debugs.logs import Except as _Except
@@ -78,25 +81,23 @@ def _replace_ref(node, url):
         url.path = url.path[:-1]
 
     if isinstance(node, Mapping):
-        ref, raw_ref, node["$ref"] = URL(node["$ref"]), node["$ref"], None
-
-        # RECURS
-        return_value = node
-        candidate = {}
+        ref = None
+        output = {}
         for k, v in node.items():
-            new_v = _replace_ref(v, url)
-            candidate[k] = new_v
-            if new_v is not v:
-                return_value = candidate
+            if k == "$ref":
+                ref = URL(v)
+            else:
+                output[k] = _replace_ref(v, url)
+
         if not ref:
-            return return_value
-        else:
-            node = return_value
+            return output
+
+        node = output
 
         if not ref.scheme and not ref.path:
             # DO NOT TOUCH LOCAL REF YET
-            node["$ref"] = ref
-            return node
+            output["$ref"] = ref
+            return output
 
         if not ref.scheme:
             # SCHEME RELATIVE IMPLIES SAME PROTOCOL AS LAST TIME, WHICH
@@ -107,64 +108,61 @@ def _replace_ref(node, url):
         if ref.scheme in scheme_loaders:
             new_value = scheme_loaders[ref.scheme](ref, url)
         else:
-            raise _Log.error("unknown protocol {{scheme}}",  scheme= ref.scheme)
+            raise _Log.error("unknown protocol {{scheme}}", scheme=ref.scheme)
 
         if ref.fragment:
-            new_value = new_value[ref.fragment]
+            new_value = dot.get_attr(new_value, ref.fragment)
 
-        if isinstance(new_value, Mapping):
-            return set_default({}, node, new_value)
-        elif node.keys() and new_value == None:
-            return node
+        if not output:
+            return new_value
         else:
-            return wrap(new_value)
+            return unwrap(set_default(output, new_value))
 
     elif isinstance(node, list):
-        candidate = [_replace_ref(n, url) for n in node]
-        if all(p[0] is p[1] for p in zip(candidate, node)):
+        output = [_replace_ref(n, url) for n in node]
+        if all(p[0] is p[1] for p in zip(output, node)):
             return node
-        return candidate
+        return output
 
     return node
 
 
 def _replace_locals(node, doc_path):
     if isinstance(node, Mapping):
-        ref, node["$ref"] = node["$ref"], None
-
-        # RECURS
-        new_node = node
-        candidate = {}
+        # RECURS, DEEP COPY
+        ref = None
+        output = {}
         for k, v in node.items():
-            new_v = _replace_locals(v, [v] + doc_path)
-            candidate[k] = new_v
-            if new_v is not v:
-                new_node = candidate
+            if k == "$ref":
+                ref = v
+            else:
+                output[k] = _replace_locals(v, [v] + doc_path)
 
         if not ref:
-            return new_node
-        else:
-            node = new_node
-            # REFER TO SELF
-            frag=ref.fragment
-            if frag[0] == ".":
-                # RELATIVE
-                for i, p in enumerate(frag):
-                    if p != ".":
-                        if i>len(doc_path):
-                            _Log.error("{{frag|quote}} reaches up past the root document",  frag=frag)
-                        new_value = doc_path[i-1][frag[i::]]
-                        break
-                else:
-                    new_value = doc_path[len(frag) - 1]
-            else:
-                # ABSOLUTE
-                new_value = doc_path[-1][frag]
+            return output
 
-        if node:
-            return set_default({}, node, new_value)
+        # REFER TO SELF
+        frag = ref.fragment
+        if frag[0] == ".":
+            # RELATIVE
+            for i, p in enumerate(frag):
+                if p != ".":
+                    if i>len(doc_path):
+                        _Log.error("{{frag|quote}} reaches up past the root document",  frag=frag)
+                    new_value = dot.get_attr(doc_path[i-1], frag[i::])
+                    break
+            else:
+                new_value = doc_path[len(frag) - 1]
         else:
-            return wrap(new_value)
+            # ABSOLUTE
+            new_value = dot.get_attr(doc_path[-1], frag)
+
+        new_value = _replace_locals(new_value, [new_value] + doc_path)
+
+        if not output:
+            return new_value  # OPTIMIZATION FOR CASE WHEN node IS {}
+        else:
+            return unwrap(set_default(output, new_value))
 
     elif isinstance(node, list):
         candidate = [_replace_locals(n, [n] + doc_path) for n in node]
@@ -202,11 +200,14 @@ def get_file(ref, url):
         content = File(path).read()
     except Exception, e:
         content = None
-        _Log.error("Could not read file {{filename}}",  filename= path, cause=e)
+        _Log.error("Could not read file {{filename}}", filename=path, cause=e)
 
     try:
         new_value = _convert.json2value(content, params=ref.query, flexible=True, leaves=True)
     except Exception, e:
+        if not _Except:
+            _late_import()
+
         e = _Except.wrap(e)
         try:
             new_value = _convert.ini2value(content)

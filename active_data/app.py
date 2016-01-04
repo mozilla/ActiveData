@@ -14,6 +14,7 @@ import os
 import sys
 
 from pyLibrary.queries.containers import Container
+from pyLibrary.times.durations import MINUTE
 
 sys.path.append(".")
 
@@ -144,8 +145,9 @@ def query(path):
             if data.meta.testing:
                 # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
                 m = meta.singlton
+                end_time = Date.now() + MINUTE
 
-                while True:
+                while end_time > Date.now():
                     cols = [c for c in m.get_columns(table=data["from"]) if c.type not in ["nested", "object"]]
                     for c in cols:
                         m.todo.push(c)
@@ -306,7 +308,7 @@ def main():
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
         app.run(**config.flask)
     except Exception, e:
-        Log.error("Problem with ActiveData service", cause=e)
+        Log.error("Serious problem with ActiveData service!  Shutdown completed!", cause=e)
     finally:
         Log.stop()
 

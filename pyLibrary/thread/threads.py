@@ -233,7 +233,8 @@ class Queue(object):
                 if self.keep_running:
                     return None
 
-        _Log.note("queue stopped")
+        if DEBUG or not self.silent:
+            _Log.note(self.name + " queue stopped")
         return Thread.STOP
 
 

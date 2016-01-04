@@ -206,7 +206,7 @@ def set_attr(obj, path, value):
     except Exception, e:
         from pyLibrary.debugs.logs import Log
         if PATH_NOT_FOUND in e:
-            Log.warning(PATH_NOT_FOUND + ": {{path}}", path=path)
+            Log.warning(PATH_NOT_FOUND + ": {{path}}",  path= path)
         else:
             Log.error("Problem setting value", e)
 

@@ -128,15 +128,19 @@ def _all_default(d, default, seen=None):
     """
     if default is None:
         return
+    if isinstance(default, Dict):
+        from pyLibrary.debugs.logs import Log
+        Log.error("strictly dict (or object) allowed")
+
     for k, default_value in default.items():
-        # existing_value = d.get(k)
+        default_value = unwrap(default_value)  # TWO DIFFERENT Dicts CAN SHARE id() BECAUSE THEY ARE SHORT LIVED
         existing_value = _get_attr(d, [k])
 
         if existing_value == None:
             if default_value != None:
                 if isinstance(default_value, Mapping):
                     df = seen.get(id(default_value))
-                    if df:
+                    if df is not None:
                         _set_attr(d, [k], df)
                     else:
                         copy_dict = {}
@@ -155,7 +159,7 @@ def _all_default(d, default, seen=None):
             _set_attr(d, [k], listwrap(existing_value) + listwrap(default_value))
         elif (hasattr(existing_value, "__setattr__") or isinstance(existing_value, Mapping)) and isinstance(default_value, Mapping):
             df = seen.get(id(default_value))
-            if df:
+            if df is not None:
                 _set_attr(d, [k], df)
             else:
                 seen[id(default_value)] = existing_value

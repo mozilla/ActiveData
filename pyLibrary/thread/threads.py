@@ -678,7 +678,7 @@ class Signal(object):
             try:
                 j()
             except Exception, e:
-                _Log.warning("Trigger on Signal.go() failed!", e)
+                _Log.warning("Trigger on Signal.go() failed!", cause=e)
 
     def is_go(self):
         """
@@ -691,6 +691,9 @@ class Signal(object):
         """
         RUN target WHEN SIGNALED
         """
+        if not target:
+            _Log.error("expecting target")
+
         with self.lock:
             if self._go:
                 target()

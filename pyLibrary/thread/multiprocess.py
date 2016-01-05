@@ -13,7 +13,7 @@ from __future__ import absolute_import
 import subprocess
 
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
+from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.thread.threads import Queue, Thread, Signal, Lock
 
 DEBUG = True
@@ -39,7 +39,7 @@ class Process(object):
             )
 
             self.stopper = Signal()
-            self.stopper.on_go(lambda: service.kill())
+            self.stopper.on_go(self._kill)
             self.thread_locker = Lock()
             self.child_threads = [
                 Thread.run(self.name + " waiter", self._monitor, parent_thread=self),
@@ -91,8 +91,21 @@ class Process(object):
     def _writer(self, pipe, send, please_stop):
         while not please_stop:
             line = send.pop()
+            if line == Thread.STOP:
+                please_stop.go()
+                break
+
             if line:
                 pipe.write(line + "\n")
         pipe.close()
 
 
+    def _kill(self):
+        try:
+            self.service.kill()
+        except Exception, e:
+            ee = Except.wrap(e)
+            if 'The operation completed successfully' in ee:
+                return
+
+            Log.warning("Failure to kill process {{process|quote}}", process=self.name, cause=ee)

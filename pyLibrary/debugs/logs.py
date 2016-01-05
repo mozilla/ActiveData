@@ -455,7 +455,7 @@ class Except(Exception):
         elif isinstance(e, (list, Except)):
             return e
         else:
-            if hasattr(e, "message"):
+            if hasattr(e, "message") and e.message:
                 cause = Except(ERROR, unicode(e.message), trace=_extract_traceback(0))
             else:
                 cause = Except(ERROR, unicode(e), trace=_extract_traceback(0))

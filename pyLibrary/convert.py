@@ -481,6 +481,7 @@ def bytes2sha1(value):
     sha = hashlib.sha1(value)
     return sha.hexdigest()
 
+
 def value2intlist(value):
     if value == None:
         return None

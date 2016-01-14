@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
+from pyLibrary.debugs.exceptions import ALARM, NOTE
 from pyLibrary.debugs.text_logs import TextLog
 from pyLibrary.debugs.logs import Log
 from pyLibrary.env.emailer import Emailer
@@ -20,8 +21,7 @@ from pyLibrary.meta import use_settings
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Lock
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import HOUR, YEAR
-
+from pyLibrary.times.durations import HOUR, YEAR, MINUTE
 
 WAIT_TO_SEND_MORE = HOUR
 
@@ -62,16 +62,16 @@ class TextLog_usingEmail(TextLog):
         assert settings.log_type == "email", "Expecing settings to be of type 'email'"
         self.settings = settings
         self.accumulation = []
-        self.last_sent = Date.now()-YEAR
+        self.next_send = Date.now() + MINUTE
         self.locker = Lock()
 
     def write(self, template, params):
         with self.locker:
-            if params.params.warning.template or params.params.warning.template:
+            if params.context not in [NOTE, ALARM]:  # SEND ONLY THE NOT BORING STUFF
                 self.accumulation.append(expand_template(template, params))
 
-                if Date.now() > self.last_sent + WAIT_TO_SEND_MORE:
-                    self._send_email()
+            if Date.now() > self.next_send:
+                self._send_email()
 
     def stop(self):
         with self.locker:
@@ -87,10 +87,10 @@ class TextLog_usingEmail(TextLog):
                         subject=self.settings.subject,
                         text_data="\n\n".join(self.accumulation)
                     )
-            self.last_sent = Date.now()
+            self.next_send = Date.now() + WAIT_TO_SEND_MORE
             self.accumulation = []
         except Exception, e:
-            self.last_sent = Date.now()
+            self.next_send = Date.now() + WAIT_TO_SEND_MORE
             Log.warning("Could not send", e)
 
 

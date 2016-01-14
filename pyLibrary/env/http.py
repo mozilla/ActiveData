@@ -27,7 +27,8 @@ from numbers import Number
 from requests import sessions, Response
 
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log, Except
+from pyLibrary.debugs.exceptions import Except
+from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, coalesce, wrap, set_default
 from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines, GzipLines
 from pyLibrary.maths import Math
@@ -68,7 +69,7 @@ def request(method, url, zip=None, retry=None, **kwargs):
         Log.warning(
             "The pyLibrary.env.http module was meant to add extra "
             "default headers to all requests, specifically the 'Referer' "
-            "header with a URL to the project. Use the `constants.set()` "
+            "header with a URL to the project. Use the `pyLibrary.debug.constants.set()` "
             "function to set `pyLibrary.env.http.default_headers`"
         )
 

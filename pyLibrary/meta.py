@@ -14,7 +14,8 @@ from collections import Mapping
 from types import FunctionType
 
 from pyLibrary import dot, convert
-from pyLibrary.debugs.logs import Log, Except
+from pyLibrary.debugs.exceptions import Except
+from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import set_default, wrap, _get_attr, Null
 from pyLibrary.maths.randoms import Random
 from pyLibrary.strings import expand_template

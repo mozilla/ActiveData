@@ -147,7 +147,8 @@ class cPythonJSONEncoder(object):
             scrubbed = scrub(value)
             return unicode(self.encoder.encode(scrubbed))
         except Exception, e:
-            from pyLibrary.debugs.logs import Log, Except
+            from pyLibrary.debugs.exceptions import Except
+            from pyLibrary.debugs.logs import Log
 
             e = Except.wrap(e)
             Log.warning("problem serializing {{type}}", type=_repr(value), cause=e)

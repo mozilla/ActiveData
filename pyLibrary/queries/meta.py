@@ -114,8 +114,8 @@ class FromESMetadata(object):
         for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
             for _, properties in meta.mappings.items():
                 columns = _elasticsearch.parse_properties(index, None, properties.properties)
-                columns = columns.filter(lambda r: not r.abs_name.startswith("other."))  #TODO: REMOVE WHEN jobs PROPERTY EXPLOSION IS CONTAINED
-                with Timer("upserting {{num}} columns", {"num":len(columns)}, debug=DEBUG):
+                columns = columns.filter(lambda r: not r.abs_name.startswith("other.") and not r.abs_name.startswith("previous_values.cf_"))  # TODO: REMOVE WHEN jobs PROPERTY EXPLOSION IS CONTAINED
+                with Timer("upserting {{num}} columns", {"num": len(columns)}, debug=DEBUG):
                     with self.columns.locker:
                         for c in columns:
                             # ABSOLUTE

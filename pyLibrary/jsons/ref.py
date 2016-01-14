@@ -31,7 +31,7 @@ def _late_import():
     global _Except
     from pyLibrary import convert as _convert
     from pyLibrary.debugs.logs import Log as _Log
-    from pyLibrary.debugs.logs import Except as _Except
+    from pyLibrary.debugs.exceptions import Except as _Except
 
     _ = _convert
     _ = _Log
@@ -39,28 +39,30 @@ def _late_import():
 
 
 def get(url):
-    if not _Log:
-        _late_import()
-
     """
     USE json.net CONVENTIONS TO LINK TO INLINE OTHER JSON
     """
+    if not _Log:
+        _late_import()
+
     if url.find("://") == -1:
-        _Log.error("{{url}} must have a prototcol (eg http://) declared",  url= url)
+        _Log.error("{{url}} must have a prototcol (eg http://) declared", url=url)
+
+    base = URL("")
     if url.startswith("file://") and url[7] != "/":
-        # RELATIVE
-        if os.sep == "\\":
-            url = "file:///" + os.getcwd().replace(os.sep, "/") + "/" + url[7:]
+        if os.sep=="\\":
+            base = URL("file:///" + os.getcwd().replace(os.sep, "/").rstrip("/") + "/.")
         else:
-            url = "file://" + os.getcwd() + "/" + url[7:]
+            base = URL("file://" + os.getcwd().rstrip("/") + "/.")
+    elif url[url.find("://") + 3] != "/":
+        _Log.error("{{url}} must be absolute", url=url)
 
-    if url[url.find("://") + 3] != "/":
-        _Log.error("{{url}} must be absolute",  url= url)
-    doc = wrap({"$ref": url})
-
-    phase1 = _replace_ref(doc, URL(""))  # BLANK URL ONLY WORKS IF url IS ABSOLUTE
-    phase2 = _replace_locals(phase1, [phase1])
-    return wrap(phase2)
+    phase1 = _replace_ref(wrap({"$ref": url}), base)  # BLANK URL ONLY WORKS IF url IS ABSOLUTE
+    try:
+        phase2 = _replace_locals(phase1, [phase1])
+        return wrap(phase2)
+    except Exception, e:
+        _Log.error("problem replacing locals in\n{{phase1}}", phase1=phase1)
 
 
 def expand(doc, doc_url):
@@ -113,15 +115,22 @@ def _replace_ref(node, url):
         if ref.fragment:
             new_value = dot.get_attr(new_value, ref.fragment)
 
-        if not output:
-            return new_value
-        else:
-            return unwrap(set_default(output, new_value))
+        if DEBUG:
+            _Log.note("Replace {{ref}} with {{new_value}}", ref=ref, new_value=new_value)
 
+        if not output:
+            output = new_value
+        else:
+            output = unwrap(set_default(output, new_value))
+
+        if DEBUG:
+            _Log.note("Return {{output}}", output=output)
+
+        return output
     elif isinstance(node, list):
         output = [_replace_ref(n, url) for n in node]
-        if all(p[0] is p[1] for p in zip(output, node)):
-            return node
+        # if all(p[0] is p[1] for p in zip(output, node)):
+        #     return node
         return output
 
     return node
@@ -166,8 +175,8 @@ def _replace_locals(node, doc_path):
 
     elif isinstance(node, list):
         candidate = [_replace_locals(n, [n] + doc_path) for n in node]
-        if all(p[0] is p[1] for p in zip(candidate, node)):
-            return node
+        # if all(p[0] is p[1] for p in zip(candidate, node)):
+        #     return node
         return candidate
 
     return node
@@ -183,14 +192,24 @@ def get_file(ref, url):
     if ref.path.startswith("~"):
         home_path = os.path.expanduser("~")
         if os.sep == "\\":
-            home_path = "/"+home_path.replace(os.sep, "/")
+            home_path = "/" + home_path.replace(os.sep, "/")
         if home_path.endswith("/"):
             home_path = home_path[:-1]
 
         ref.path = home_path + ref.path[1::]
     elif not ref.path.startswith("/"):
         # CONVERT RELATIVE TO ABSOLUTE
-        ref.path = "/".join(url.path.split("/")[:-1]) + "/" + ref.path
+        if ref.path[0] == ".":
+            num_dot = 1
+            while ref.path[num_dot] == ".":
+                num_dot += 1
+
+            parent = url.path.rstrip("/").split("/")[:-num_dot]
+            ref.path = "/".join(parent) + ref.path[num_dot:]
+        else:
+            parent = url.path.rstrip("/").split("/")[:-1]
+            ref.path = "/".join(parent) + "/" + ref.path
+
 
     path = ref.path if os.sep != "\\" else ref.path[1::].replace("/", "\\")
 

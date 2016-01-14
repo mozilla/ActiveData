@@ -22,6 +22,7 @@ from pyLibrary.queries import qb, expressions, containers
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09 import setop as es09_setop
+from pyLibrary.queries.es09 import aggop as es09_aggop
 from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
 from pyLibrary.queries.es14.deep import is_deepop, es_deepop
 from pyLibrary.queries.es14.setop import is_setop, es_setop
@@ -31,7 +32,8 @@ from pyLibrary.queries.expressions import qb_expression
 from pyLibrary.queries.meta import FromESMetadata
 from pyLibrary.queries.namespace.typed import Typed
 from pyLibrary.queries.query import Query, _normalize_where
-from pyLibrary.debugs.logs import Log, Except
+from pyLibrary.debugs.exceptions import Except
+from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import coalesce, split_field, literal_field, unwraplist, join_field, unwrap
 from pyLibrary.dot.lists import DictList
@@ -137,7 +139,8 @@ class FromES(Container):
                 return es_setop(self._es, query)
             if es09_setop.is_setop(query):
                 return es09_setop.es_setop(self._es, None, query)
-
+            if es09_aggop.is_aggop(query):
+                return es09_aggop.es_aggop(self._es, None, query)
             Log.error("Can not handle")
         except Exception, e:
             e = Except.wrap(e)

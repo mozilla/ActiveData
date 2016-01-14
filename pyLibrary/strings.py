@@ -44,7 +44,7 @@ def _late_import():
     from pyLibrary.jsons.encoder import json_encoder as _json_encoder
     from pyLibrary import convert as _convert
     from pyLibrary.debugs.logs import Log as _Log
-    from pyLibrary.debugs.logs import Except as _Except
+    from pyLibrary.debugs.exceptions import Except as _Except
     from pyLibrary.times.durations import Duration as _Duration
 
     _ = _json_encoder

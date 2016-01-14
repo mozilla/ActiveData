@@ -13,14 +13,15 @@ from __future__ import absolute_import
 import subprocess
 
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log, Except
+from pyLibrary.debugs.exceptions import Except
+from pyLibrary.debugs.logs import Log
 from pyLibrary.thread.threads import Queue, Thread, Signal, Lock
 
 DEBUG = True
 
 
 class Process(object):
-    def __init__(self, name, params, cwd=None, env=None):
+    def __init__(self, name, params, cwd=None, env=None, debug=False):
         self.name = name
         self.service_stopped = Signal()
         self.stdin = Queue("stdin for process " + convert.string2quote(name), silent=True)
@@ -28,6 +29,7 @@ class Process(object):
         self.stderr = Queue("stderr for process " + convert.string2quote(name), silent=True)
 
         try:
+            self.debug=debug or DEBUG
             self.service = service = subprocess.Popen(
                 params,
                 stdin=subprocess.PIPE,
@@ -70,7 +72,7 @@ class Process(object):
 
     def _monitor(self, please_stop):
         self.service.wait()
-        if DEBUG:
+        if self.debug:
             Log.alert("{{name}} stopped with returncode={{returncode}}", name=self.name, returncode=self.service.returncode)
         self.stdin.add(Thread.STOP)
         self.service_stopped.go()
@@ -80,10 +82,20 @@ class Process(object):
             while not please_stop:
                 line = pipe.readline()
                 if self.service.returncode is not None:
+                    # GRAB A FEW MORE LINES
+                    for i in range(100):
+                        try:
+                            line = pipe.readline()
+                            if line:
+                                recieve.add(line)
+                                if self.debug:
+                                    Log.note("FROM {{process}}: {{line}}", process=self.name, line=line.rstrip())
+                        except Exception:
+                            break
                     return
 
                 recieve.add(line)
-                if DEBUG:
+                if self.debug:
                     Log.note("FROM {{process}}: {{line}}", process=self.name, line=line.rstrip())
         finally:
             pipe.close()
@@ -106,6 +118,8 @@ class Process(object):
         except Exception, e:
             ee = Except.wrap(e)
             if 'The operation completed successfully' in ee:
+                return
+            if 'No such process' in ee:
                 return
 
             Log.warning("Failure to kill process {{process|quote}}", process=self.name, cause=ee)

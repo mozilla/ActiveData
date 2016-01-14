@@ -36,7 +36,14 @@ class File(object):
             Log.error("File must be given a filename")
         elif isinstance(filename, basestring):
             self.key = None
-            self._filename = "/".join(filename.split(os.sep))  # USE UNIX STANDARD
+            if filename.startswith("~"):
+                home_path = os.path.expanduser("~")
+                if os.sep == "\\":
+                    home_path = home_path.replace(os.sep, "/")
+                if home_path.endswith("/"):
+                    home_path = home_path[:-1]
+                filename = home_path + filename[1::]
+            self._filename = filename.replace(os.sep, "\\")  # USE UNIX STANDARD
         else:
             self.key = convert.base642bytearray(filename.key)
             self._filename = "/".join(filename.path.split(os.sep))  # USE UNIX STANDARD
@@ -176,7 +183,7 @@ class File(object):
         except Exception, e:
             from pyLibrary.debugs.logs import Log
 
-            Log.error("roblem reading file {{filename}}", self.abspath)
+            Log.error("Problem reading file {{filename}}", self.abspath)
 
     def write_bytes(self, content):
         if not self.parent.exists:
@@ -325,3 +332,7 @@ class File(object):
             return os.path.exists(self._filename)
         except Exception, e:
             return False
+
+    @classmethod
+    def copy(cls, from_, to_):
+        File.new_instance(to_).write_bytes(File.new_instance(from_).read_bytes())

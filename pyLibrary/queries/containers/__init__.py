@@ -35,7 +35,11 @@ def _delayed_imports():
     global _Query
     global _Normal
 
-    from pyLibrary.queries.qb_usingMySQL import MySQL as _MySQL
+    try:
+        from pyLibrary.queries.qb_usingMySQL import MySQL as _MySQL
+    except Exception:
+        _MySQL = None
+
     from pyLibrary.queries.qb_usingES import FromES as _FromES
     from pyLibrary.queries.containers.lists import ListContainer as _ListContainer
     from pyLibrary.queries.containers.cube import Cube as _Cube

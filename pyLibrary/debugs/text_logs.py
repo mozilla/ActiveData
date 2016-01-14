@@ -29,7 +29,7 @@ def _delayed_imports():
     global _Except
 
     from pyLibrary.debugs.logs import Log as _Log
-    from pyLibrary.debugs.logs import Except as _Except
+    from pyLibrary.debugs.exceptions import Except as _Except
 
     _ = _Log
     _ = _Except

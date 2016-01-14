@@ -1174,10 +1174,10 @@ class InOp(Expression):
 class RangeOp(Expression):
     has_simple_form = True
 
-    def __new__(cls, op, term, *args, **kwargs):
-        Expression.__new__(cls, *args, **kwargs)
-        field, cmps = term.items()[0]
-        return AndOp("and", [{op: {field: value}} for op, value in cmps.items()])
+    def __new__(cls, op, term, *args):
+        Expression.__new__(cls, *args)
+        field, comparisons = term  # comparisons IS A Literal()
+        return AndOp("and", [operators[op](op, [field, Literal(None, value)]) for op, value in convert.json2value(comparisons.json).items()])
 
     def __init__(self, op, term):
         Log.error("Should never happen!")

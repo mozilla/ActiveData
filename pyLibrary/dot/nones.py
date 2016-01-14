@@ -197,7 +197,8 @@ class NullType(object):
         return hash(None)
 
 
-Null = NullType()
+
+Null = NullType()   # INSTEAD OF None!!!
 
 
 def _assign(obj, path, value, force=True):

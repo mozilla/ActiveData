@@ -41,9 +41,11 @@ class Dict(MutableMapping):
                 d[literal_field(k)] = unwrap(v)
         else:
             if args:
-                args0=args[0]
-                if isinstance(args0, Mapping):
+                args0 = args[0]
+                if isinstance(args0, dict):
                     _set(self, "_dict", args0)
+                elif isinstance(args0, Dict):
+                    _set(self, "_dict", _get(args0, "_dict"))
                 else:
                     _set(self, "_dict", _get(args[0], "__dict__"))
             elif kwargs:

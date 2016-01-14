@@ -378,6 +378,30 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-
-
+    def test_left_in_edge(self):
+        test = {
+            "data": [
+                {"v": "test"},
+                {"v": "not test"},
+                {"v": None},
+                {},
+                {"v": "a"}
+            ],
+            "query": {
+                "edges": [{"name": "a", "value": {"left": {"v": 1}}}],
+                "from": base_test_class.settings.backend_es.index
+            },
+            "expecting_cube": {
+                "meta": {"format": "list"},
+                "edges": [{"name": "a", "domain": {"type": "set", "partitions": [
+                    {"value": "a"},
+                    {"value": "n"},
+                    {"value": "t"},
+                ]}}],
+                "data": {
+                    "count": [1, 1, 1, 2]
+                }
+            }
+        }
+        self._execute_es_tests(test)
 

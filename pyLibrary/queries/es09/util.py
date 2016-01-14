@@ -37,7 +37,7 @@ DEBUG = False
 def post(es, es_query, limit):
     post_result = None
     try:
-        post_result = es.search(elasticsearch.scrub(es_query))
+        post_result = es.search(es_query)
 
         for facetName, f in post_result.facets.items():
             if f._type == "statistical":

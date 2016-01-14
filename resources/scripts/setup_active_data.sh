@@ -2,8 +2,7 @@
 # 2.7 IS ALREADY DEFAULT
 
 sudo apt-get update
-sudo apt-get -y install python-pip python-dev nginx
-sudo apt-get -y install git-core
+sudo apt-get -y install python-pip python-dev nginx git-core
 
 
 mkdir  ~/temp
@@ -11,9 +10,6 @@ cd  ~/temp
 wget https://bootstrap.pypa.io/get-pip.py
 sudo python get-pip.py
 cd  ~
-
-
-
 
 
 git clone https://github.com/klahnakoski/ActiveData.git

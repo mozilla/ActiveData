@@ -188,10 +188,10 @@ class Expression(object):
         raise NotImplementedError
 
     def to_python(self):
-        raise NotImplementedError
+        raise Log.error("{{type}} has no `to_python` method", type=self.__class__.__name__)
 
     def to_esfilter(self):
-        raise NotImplementedError
+        raise Log.error("{{type}} has no `to_esfilter` method", type=self.__class__.__name__)
 
     def to_dict(self):
         raise NotImplementedError
@@ -200,14 +200,14 @@ class Expression(object):
         return convert.value2json(self.to_dict())
 
     def vars(self):
-        raise NotImplementedError
+        raise Log.error("{{type}} has no `vars` method", type=self.__class__.__name__)
 
     def map(self, map):
-        raise NotImplementedError
+        raise Log.error("{{type}} has no `map` method", type=self.__class__.__name__)
 
     def missing(self):
         # RETURN FILTER THAT INDICATE THIS EXPRESSIOn RETURNS null
-        raise NotImplementedError
+        raise Log.error("{{type}} has no `missing` method", type=self.__class__.__name__)
 
     def exists(self):
         return NotOp("not", self.missing())
@@ -1118,7 +1118,7 @@ class LeftOp(Expression):
     def to_ruby(self):
         v = self.value.to_ruby()
         l = self.length.to_ruby()
-        expr = "((" + v + ") == null || (" + l + ") == null) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + "))))"
+        expr = "((" + v + ") == null || (" + l + ") == null) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
         return expr
 
     def to_python(self):
@@ -1126,20 +1126,145 @@ class LeftOp(Expression):
         l = self.length.to_python()
         return "None if " + v + " == None or " + l + " == None else " + v + "[0:min(0, " + l + ")]"
 
-    def to_esfilter(self):
-        raise NotImplementedError
-
     def to_dict(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return {"prefix": {self.value.var: convert.json2value(self.length.json)}}
+            return {"left": {self.value.var: convert.json2value(self.length.json)}}
         else:
-            return {"prefix": [self.value.to_dict(), self.length.to_dict()]}
+            return {"left": [self.value.to_dict(), self.length.to_dict()]}
 
     def vars(self):
         return self.value.vars() | self.length.vars()
 
     def map(self, map_):
         return LeftOp("left", [self.value.map(map_), self.length.map(map_)])
+
+    def missing(self):
+        if isinstance(self.value, Variable) and isinstance(self.length, Literal):
+            return MissingOp(None, self.value)
+        else:
+            return OrOp(None, [self.value.missing(), self.length.missing()])
+
+
+class NotLeftOp(Expression):
+    has_simple_form = True
+
+    def __init__(self, op, term):
+        Expression.__init__(self, op, term)
+        if isinstance(term, Mapping):
+            self.value, self.length = term.items()[0]
+        else:
+            self.value, self.length = term
+
+    def to_ruby(self):
+        v = self.value.to_ruby()
+        l = self.length.to_ruby()
+        expr = "((" + v + ") == null || (" + l + ") == null) ? null : (" + v + ".substring(max(0, min(" + v + ".length(), " + l + ")).intValue()))"
+        return expr
+
+    def to_python(self):
+        v = self.value.to_python()
+        l = self.length.to_python()
+        return "None if " + v + " == None or " + l + " == None else " + v + "[max(0, " + l + "):]"
+
+    def to_dict(self):
+        if isinstance(self.value, Variable) and isinstance(self.length, Literal):
+            return {"not_left": {self.value.var: convert.json2value(self.length.json)}}
+        else:
+            return {"not_left": [self.value.to_dict(), self.length.to_dict()]}
+
+    def vars(self):
+        return self.value.vars() | self.length.vars()
+
+    def map(self, map_):
+        return NotLeftOp(None, [self.value.map(map_), self.length.map(map_)])
+
+    def missing(self):
+        if isinstance(self.value, Variable) and isinstance(self.length, Literal):
+            return MissingOp(None, self.value)
+        else:
+            return OrOp(None, [self.value.missing(), self.length.missing()])
+
+
+class RightOp(Expression):
+    has_simple_form = True
+
+    def __init__(self, op, term):
+        Expression.__init__(self, op, term)
+        if isinstance(term, Mapping):
+            self.value, self.length = term.items()[0]
+        else:
+            self.value, self.length = term
+
+    def to_ruby(self):
+        v = self.value.to_ruby()
+        l = self.length.to_ruby()
+        expr = "((" + v + ") == null || (" + l + ") == null) ? null : (" + v + ".substring(min("+v+".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
+        return expr
+
+    def to_python(self):
+        v = self.value.to_python()
+        l = self.length.to_python()
+        return "None if " + v + " == None or " + l + " == None else " + v + "[max(0, len(" + v + ")-(" + l + ")):]"
+
+    def to_dict(self):
+        if isinstance(self.value, Variable) and isinstance(self.length, Literal):
+            return {"right": {self.value.var: convert.json2value(self.length.json)}}
+        else:
+            return {"right": [self.value.to_dict(), self.length.to_dict()]}
+
+    def vars(self):
+        return self.value.vars() | self.length.vars()
+
+    def map(self, map_):
+        return RightOp("right", [self.value.map(map_), self.length.map(map_)])
+
+    def missing(self):
+        if isinstance(self.value, Variable) and isinstance(self.length, Literal):
+            return MissingOp(None, self.value)
+        else:
+            return OrOp(None, [self.value.missing(), self.length.missing()])
+
+class NotRightOp(Expression):
+    has_simple_form = True
+
+    def __init__(self, op, term):
+        Expression.__init__(self, op, term)
+        if isinstance(term, Mapping):
+            self.value, self.length = term.items()[0]
+        else:
+            self.value, self.length = term
+
+    def to_ruby(self):
+        v = self.value.to_ruby()
+        l = self.length.to_ruby()
+        expr = "((" + v + ") == null || (" + l + ") == null) ? null : (" + v + ".substring(0, min("+v+".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
+        return expr
+
+    def to_python(self):
+        v = self.value.to_python()
+        l = self.length.to_python()
+        return "None if " + v + " == None or " + l + " == None else " + v + "[0:max(0, len("+v+")-(" + l + "))]"
+
+    def to_dict(self):
+        if isinstance(self.value, Variable) and isinstance(self.length, Literal):
+            return {"not_right": {self.value.var: convert.json2value(self.length.json)}}
+        else:
+            return {"not_right": [self.value.to_dict(), self.length.to_dict()]}
+
+    def vars(self):
+        return self.value.vars() | self.length.vars()
+
+    def map(self, map_):
+        return NotRightOp(None, [self.value.map(map_), self.length.map(map_)])
+
+    def missing(self):
+        if isinstance(self.value, Variable) and isinstance(self.length, Literal):
+            return MissingOp(None, self.value)
+        else:
+            return OrOp(None, [self.value.missing(), self.length.missing()])
+
+
+
 
 
 class InOp(Expression):
@@ -1468,6 +1593,9 @@ operators = {
     "null": NullOp,
     "coalesce": CoalesceOp,
     "left": LeftOp,
+    "not_left": NotLeftOp,
+    "right": RightOp,
+    "not_right": NotRightOp,
     "gt": BinaryOp,
     "gte": BinaryOp,
     "eq": EqOp,

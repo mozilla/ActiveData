@@ -310,6 +310,15 @@ class Literal(Expression):
         return True
 
     def __eq__(self, other):
+        if other == None:
+            if self.json == "null":
+                return True
+            else:
+                return False
+        elif self.json == "null":
+            return False
+
+
         Log.warning("expensive")
 
         from pyLibrary.testing.fuzzytestcase import assertAlmostEqual

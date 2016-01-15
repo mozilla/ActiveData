@@ -392,7 +392,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "from": base_test_class.settings.backend_es.index
             },
             "expecting_cube": {
-                "meta": {"format": "list"},
+                "meta": {"format": "cube"},
                 "edges": [{"name": "a", "domain": {"type": "set", "partitions": [
                     {"value": "a"},
                     {"value": "n"},

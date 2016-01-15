@@ -66,6 +66,14 @@ SCHEMA = {
         "_default_": {
             "dynamic_templates": [
                 {
+                    "default_deep_params": {
+                        "path_match": "params.*.*.*",
+                        "mapping": {
+                            "index": "no"
+                        }
+                    }
+                },
+                {
                     "values_strings": {
                         "match": "*",
                         "match_mapping_type" : "string",
@@ -118,11 +126,11 @@ SCHEMA = {
                 },
                 {
                     "default_param_values": {
+                        "match": "*$value",
                         "mapping": {
                             "index": "not_analyzed",
                             "doc_values": True
-                        },
-                        "match": "*$value"
+                        }
                     }
                 }
             ],

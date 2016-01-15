@@ -32,6 +32,8 @@ ENABLE_META_SCAN = False
 DEBUG = True
 TOO_OLD = 2*HOUR
 singlton = None
+TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
+
 
 
 class FromESMetadata(object):
@@ -114,8 +116,8 @@ class FromESMetadata(object):
         for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
             for _, properties in meta.mappings.items():
                 columns = _elasticsearch.parse_properties(index, None, properties.properties)
-                columns = columns.filter(lambda r: not r.abs_name.startswith("other."))  #TODO: REMOVE WHEN jobs PROPERTY EXPLOSION IS CONTAINED
-                with Timer("upserting {{num}} columns", {"num":len(columns)}, debug=DEBUG):
+                columns = columns.filter(lambda r: not r.abs_name.startswith("other.") and not r.abs_name.startswith("previous_values.cf_"))  # TODO: REMOVE WHEN jobs PROPERTY EXPLOSION IS CONTAINED
+                with Timer("upserting {{num}} columns", {"num": len(columns)}, debug=DEBUG):
                     with self.columns.locker:
                         for c in columns:
                             # ABSOLUTE
@@ -271,14 +273,14 @@ class FromESMetadata(object):
                     "where": {"eq": {"table": c.table, "abs_name": c.abs_name}}
                 })
         except Exception, e:
-            if "IndexMissingException" in e and c.table.startswith("testing"):
-                Log.alert("{{col.table}} does not exist", col=c)
+            if "IndexMissingException" in e and c.table.startswith(TEST_TABLE_PREFIX):
+                pass  # DO NOT COMPLAIN ABOUT TESTING STUFF
             else:
                 self.columns.update({
                     "set": {
                         "last_updated": Date.now()
                     },
-                    "clear":[
+                    "clear": [
                         "count",
                         "cardinality",
                         "partitions",
@@ -316,7 +318,8 @@ class FromESMetadata(object):
                         continue
                     try:
                         self._update_cardinality(column)
-                        Log.note("updated {{column.name}}", column=column)
+                        if DEBUG and not column.table.startswith(TEST_TABLE_PREFIX):
+                            Log.note("updated {{column.name}}", column=column)
                     except Exception, e:
                         Log.warning("problem getting cardinality for  {{column.name}}", column=column, cause=e)
             except Exception, e:

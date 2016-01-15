@@ -4,7 +4,12 @@
 		"port": 80,
 		"debug": false,
 		"threaded": true,
-		"processes": 1
+		"processes": 1,
+		"ssl_context":{
+			"privatekey_file": "yourserver.key",
+			"certificate_file": "yourserver.crt",
+			"certificate_chain_file": "file"
+		}
 	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {

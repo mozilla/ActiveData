@@ -378,6 +378,83 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_left_in_edge(self):
+        test = {
+            "data": [
+                {"v": "test"},
+                {"v": "not test"},
+                {"v": None},
+                {},
+                {"v": "a"}
+            ],
+            "query": {
+                "edges": [{"name": "a", "value": {"left": {"v": 1}}}],
+                "from": base_test_class.settings.backend_es.index
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [{"name": "a", "domain": {"type": "set", "partitions": [
+                    {"value": "a"},
+                    {"value": "n"},
+                    {"value": "t"},
+                ]}}],
+                "data": {
+                    "count": [1, 1, 1, 2]
+                }
+            }
+        }
+        self._execute_es_tests(test)
 
-
-
+    def test_left_and_right(self):
+        test = {
+            "data": [
+                {"i": 0, "t": -1, "v": None},
+                {"i": 1, "t": -1, "v": ""},
+                {"i": 2, "t": -1, "v": "a"},
+                {"i": 3, "t": -1, "v": "abcdefg"},
+                {"i": 4, "t": 0, "v": None},
+                {"i": 5, "t": 0, "v": ""},
+                {"i": 6, "t": 0, "v": "a"},
+                {"i": 7, "t": 0, "v": "abcdefg"},
+                {"i": 8, "t": 3, "v": None},
+                {"i": 9, "t": 3, "v": ""},
+                {"i": 10, "t": 3, "v": "a"},
+                {"i": 11, "t": 3, "v": "abcdefg"},
+                {"i": 12, "t": 7, "v": None},
+                {"i": 13, "t": 7, "v": ""},
+                {"i": 14, "t": 7, "v": "a"},
+                {"i": 15, "t": 7, "v": "abcdefg"}
+            ],
+            "query": {
+                "select": [
+                    "i",
+                    {"name": "a", "value": {"left": ["v", "t"]}},
+                    {"name": "b", "value": {"not_left": ["v", "t"]}},
+                    {"name": "c", "value": {"right": ["v", "t"]}},
+                    {"name": "d", "value": {"not_right": ["v", "t"]}}
+                ],
+                "from": base_test_class.settings.backend_es.index,
+                "limit": 100
+            },
+            "expecting_list": {
+                "data": [
+                    {"i": 0},
+                    {"i": 1, "a": "", "b": "", "c": "", "d": ""},
+                    {"i": 2, "a": "", "b": "a", "c": "", "d": "a"},
+                    {"i": 3, "a": "", "b": "abcdefg", "c": "", "d": "abcdefg"},
+                    {"i": 4},
+                    {"i": 5, "a": "", "b": "", "c": "", "d": ""},
+                    {"i": 6, "a": "", "b": "a", "c": "", "d": "a"},
+                    {"i": 7, "a": "", "b": "abcdefg", "c": "", "d": "abcdefg"},
+                    {"i": 8},
+                    {"i": 9, "a": "", "b": "", "c": "", "d": ""},
+                    {"i": 10, "a": "a", "b": "", "c": "a", "d": ""},
+                    {"i": 11, "a": "abc", "b": "defg", "c": "efg", "d": "abcd"},
+                    {"i": 12},
+                    {"i": 13, "a": "", "b": "", "c": "", "d": ""},
+                    {"i": 14, "a": "a", "b": "", "c": "a", "d": ""},
+                    {"i": 15, "a": "abcdefg", "b": "", "c": "abcdefg", "d": ""}
+                ]
+            }
+        }
+        self._execute_es_tests(test)

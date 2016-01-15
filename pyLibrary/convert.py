@@ -7,36 +7,36 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import absolute_import
 from __future__ import division
-from __future__ import absolute_import
-from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import HTMLParser
 import StringIO
 import ast
 import base64
 import cgi
-from collections import Mapping
 import datetime
-from decimal import Decimal
 import gzip
 import hashlib
-from io import BytesIO
 import json
 import re
+from collections import Mapping
+from decimal import Decimal
+from io import BytesIO
 from tempfile import TemporaryFile
 
 from pyLibrary import strings
-from pyLibrary.dot import wrap, wrap_leaves, unwrap, unwraplist, split_field, join_field, coalesce
 from pyLibrary.collections.multiset import Multiset
-from pyLibrary.debugs.logs import Log, Except
+from pyLibrary.debugs.exceptions import Except
+from pyLibrary.debugs.logs import Log
+from pyLibrary.dot import wrap, wrap_leaves, unwrap, unwraplist, split_field, join_field
 from pyLibrary.env.big_data import FileString, safe_size
 from pyLibrary.jsons import quote
 from pyLibrary.jsons.encoder import json_encoder, pypy_json_encode
 from pyLibrary.strings import expand_template
 from pyLibrary.times.dates import Date
-
 
 """
 DUE TO MY POOR MEMORY, THIS IS A LIST OF ALL CONVERSION ROUTINES
@@ -480,6 +480,7 @@ def bytes2sha1(value):
         Log.error("can not convert unicode to sha1")
     sha = hashlib.sha1(value)
     return sha.hexdigest()
+
 
 def value2intlist(value):
     if value == None:

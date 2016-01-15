@@ -6,20 +6,16 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 import os
 import sys
-
-from pyLibrary.queries.containers import Container
-from pyLibrary.times.durations import MINUTE
-
-sys.path.append(".")
-
-from flask import Flask
+from collections import Mapping
+from tempfile import TemporaryFile, NamedTemporaryFile
 import flask
+from flask import Flask
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
@@ -27,17 +23,18 @@ from active_data.save_query import SaveQueries
 from pyLibrary import convert, strings
 from pyLibrary.debugs import constants, startup
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import unwrap, wrap, coalesce
+from pyLibrary.dot import wrap, coalesce
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
-from pyLibrary.queries import qb, meta
 from pyLibrary.queries import containers
+from pyLibrary.queries import qb, meta
+from pyLibrary.queries.containers import Container
 from pyLibrary.queries.meta import FromESMetadata
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
+from pyLibrary.times.durations import MINUTE
 from pyLibrary.times.timer import Timer
-
 
 OVERVIEW = File("active_data/html/index.html").read()
 BLANK = File("active_data/html/error.html").read()
@@ -276,6 +273,9 @@ class WSGICopyBody(object):
 app.wsgi_app = WSGICopyBody(app.wsgi_app)
 
 
+
+
+
 def main():
     # global default_elasticsearch
     global request_log_queue
@@ -306,6 +306,47 @@ def main():
             query_finder = SaveQueries(config.saved_queries)
 
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
+
+
+        if config.flask.ssl_context and isinstance(config.flask.ssl_context, Mapping):
+            # EXPECTED PEM ENCODED FILE NAMES
+            try:
+                from _ssl import PROTOCOL_SSLv23
+                from ssl import SSLContext
+
+                context = SSLContext(PROTOCOL_SSLv23)
+                ssl_flask = config.flask.copy()
+                ssl_flask.debug = False
+                ssl_flask.port = 443
+                tempfile = NamedTemporaryFile(delete=False, suffix=".pem")
+                tempfile.write(File(ssl_flask.ssl_context.certificate_file).read_bytes())
+                if ssl_flask.ssl_context.certificate_chain_file:
+                    # tempfile.write("\n")
+                    tempfile.write(File(ssl_flask.ssl_context.certificate_chain_file).read_bytes())
+                tempfile.flush()
+                tempfile.close()
+                context.load_cert_chain(tempfile.name, keyfile=File(ssl_flask.ssl_context.privatekey_file).abspath)
+                ssl_flask.ssl_context = context
+            except Exception, e:
+                Log.error("Could not handle ssl context construction", cause=e)
+            finally:
+                try:
+                    tempfile.delete()
+                except Exception:
+                    pass
+
+            def runner(please_stop):
+                Log.alert("ActiveData listening on encrypted port {{port}}", port=ssl_flask.port)
+                app.run(**ssl_flask)
+
+            Thread.run("SSL Server", runner)
+
+        if config.flask.debug:
+            Log.warning("ActiveData is in debug mode")
+
+        if config.flask.ssl_context:
+            Log.warning("ActiveData has SSL context, but is still listening on non-encrypted http port {{port}}", port=config.flask.port)
+        config.flask.ssl_context = None
         app.run(**config.flask)
     except Exception, e:
         Log.error("Serious problem with ActiveData service!  Shutdown completed!", cause=e)

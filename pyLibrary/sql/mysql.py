@@ -26,7 +26,8 @@ from pyLibrary.sql import SQL
 from pyLibrary.strings import expand_template
 from pyLibrary.dot import coalesce, wrap, listwrap, unwrap
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log, Except
+from pyLibrary.debugs.exceptions import Except
+from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import qb
 from pyLibrary.strings import indent
 from pyLibrary.strings import outdent

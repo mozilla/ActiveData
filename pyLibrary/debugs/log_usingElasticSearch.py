@@ -29,7 +29,7 @@ class TextLog_usingElasticSearch(TextLog):
         self.es = Cluster(settings).get_or_create_index(
             schema=convert.json2value(convert.value2json(SCHEMA), leaves=True),
             limit_replicas=True,
-            tjson=False,
+            tjson=True,
             settings=settings
         )
         self.es.add_alias("debug")
@@ -65,6 +65,14 @@ SCHEMA = {
     "mappings": {
         "_default_": {
             "dynamic_templates": [
+                {
+                    "default_deep_params": {
+                        "path_match": "params.*.*.*",
+                        "mapping": {
+                            "index": "no"
+                        }
+                    }
+                },
                 {
                     "values_strings": {
                         "match": "*",
@@ -118,11 +126,11 @@ SCHEMA = {
                 },
                 {
                     "default_param_values": {
+                        "match": "*$value",
                         "mapping": {
                             "index": "not_analyzed",
                             "doc_values": True
-                        },
-                        "match": "*$value"
+                        }
                     }
                 }
             ],

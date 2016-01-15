@@ -26,15 +26,19 @@ def _delayed_imports():
     from pyLibrary.queries.containers.lists import ListContainer as _ListContainer
     _ = _ListContainer
 
-    from pyLibrary.queries.qb_usingMySQL import MySQL
-    from pyLibrary.queries.qb_usingES import FromES
-    from pyLibrary.queries.meta import FromESMetadata
+    try:
+        from pyLibrary.queries.qb_usingMySQL import MySQL as _MySQL
+    except Exception:
+        _MySQL = None
+
+    from pyLibrary.queries.qb_usingES import FromES as _FromES
+    from pyLibrary.queries.meta import FromESMetadata as _FromESMetadata
 
     set_default(type2container, {
-        "elasticsearch": FromES,
-        "mysql": MySQL,
+        "elasticsearch": _FromES,
+        "mysql": _MySQL,
         "memory": None,
-        "meta": FromESMetadata
+        "meta": _FromESMetadata
     })
 
 
@@ -89,7 +93,3 @@ def wrap_from(frum, schema=None):
         return _ListContainer("test_list", frum)
     else:
         return frum
-
-
-
-import es09.util

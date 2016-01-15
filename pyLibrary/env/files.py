@@ -43,7 +43,7 @@ class File(object):
                 if home_path.endswith("/"):
                     home_path = home_path[:-1]
                 filename = home_path + filename[1::]
-            self._filename = filename.replace(os.sep, "\\")  # USE UNIX STANDARD
+            self._filename = filename.replace(os.sep, "/")  # USE UNIX STANDARD
         else:
             self.key = convert.base642bytearray(filename.key)
             self._filename = "/".join(filename.path.split(os.sep))  # USE UNIX STANDARD

@@ -248,7 +248,7 @@ def wrap_function(cache_store, func_):
 
             if Random.int(100) == 0:
                 # REMOVE OLD CACHE
-                _cache = {k: v for k, v in _cache.items() if v[0]==None or v[0] < now}
+                _cache = {k: v for k, v in _cache.items() if v[0]==None or v[0] > now}
                 setattr(self, attr_name, _cache)
 
             timeout, key, value, exception = _cache.get(args, (Null, Null, Null, Null))

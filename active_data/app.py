@@ -28,6 +28,7 @@ from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot import wrap, coalesce
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
+from pyLibrary.meta import cache
 from pyLibrary.queries import containers
 from pyLibrary.queries import qb, meta
 from pyLibrary.queries.containers import Container
@@ -35,8 +36,10 @@ from pyLibrary.queries.meta import FromESMetadata
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import MINUTE
+from pyLibrary.times.durations import MINUTE, DAY
 from pyLibrary.times.timer import Timer
+
+
 
 OVERVIEW = File("active_data/html/index.html").read()
 BLANK = File("active_data/html/error.html").read()
@@ -47,32 +50,47 @@ request_log_queue = None
 config = None
 query_finder = None
 
-def record_request(request, query_, data, error):
-    if request_log_queue == None:
-        return
-
-    log = wrap({
-        "timestamp": Date.now(),
-        "http_user_agent": request.headers.get("user_agent"),
-        "http_accept_encoding": request.headers.get("accept_encoding"),
-        "path": request.headers.environ["werkzeug.request"].full_path,
-        "content_length": request.headers.get("content_length"),
-        "remote_addr": request.remote_addr,
-        "query": query_,
-        "data": data,
-        "error": error
-    })
-    log["from"] = request.headers.get("from")
-    request_log_queue.add({"value": log})
 
 
 @app.route('/tools/<path:filename>')
 def download_file(filename):
     try:
-        filename = File.new_instance("active_data/html", filename).abspath
-        return flask.send_file(filename)
+        content, status, mimetype = read_file(filename)
+        return Response(
+            content,
+            status=status,
+            headers={
+                "Content-type": mimetype
+            }
+        )
     except Exception, e:
         Log.error("Could not get file {{file}}", file=filename, cause=e)
+
+
+mimetype = {
+    "js": "application/javascript",
+    "json": "application/json",
+    "html": "text/html",
+    "css": "text/css",
+    "png": "image/png",
+    "gif": "image/gif",
+}
+static_directory = File.new_instance("active_data/html")
+
+
+@cache(duration=DAY)
+def read_file(filename):
+    try:
+        file = File.new_instance(static_directory, filename)
+        if not file.abspath.startswith(static_directory.abspath):
+            return "", 404, "text/html"
+
+        Log.note("Read {{file}}", file=file.abspath)
+        return file.read_bytes(), 200, mimetype.get(file.extension, "application/binary")
+    except Exception:
+        return "", 404, "text/html"
+
+
 
 @app.route('/find/<path:hash>')
 def find_query(hash):
@@ -270,6 +288,32 @@ class WSGICopyBody(object):
             start_response(status, headers, exc_info)
 
         return callback
+
+
+
+def record_request(request, query_, data, error):
+    if request_log_queue == None:
+        return
+
+    log = wrap({
+        "timestamp": Date.now(),
+        "http_user_agent": request.headers.get("user_agent"),
+        "http_accept_encoding": request.headers.get("accept_encoding"),
+        "path": request.headers.environ["werkzeug.request"].full_path,
+        "content_length": request.headers.get("content_length"),
+        "remote_addr": request.remote_addr,
+        "query": query_,
+        "data": data,
+        "error": error
+    })
+    log["from"] = request.headers.get("from")
+    request_log_queue.add({"value": log})
+
+
+
+
+
+
 
 
 app.wsgi_app = WSGICopyBody(app.wsgi_app)

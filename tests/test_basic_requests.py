@@ -32,3 +32,19 @@ class TestBasicRequests(ActiveDataBaseTest):
         response = self._try_till_response(url, data=b"")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.all_content, OVERVIEW)
+
+    def test_bad_file_request(self):
+        url = URL(self.service_url)
+        url.path = "/tools/../../README.md"
+
+        response = self._try_till_response(str(url), data=b"")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.all_content, OVERVIEW)
+
+    def test_query_on_static_file(self):
+        url = URL(self.service_url)
+        url.path = "/tools/index.html?123"
+
+        response = self._try_till_response(str(url), data=b"")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.all_content, OVERVIEW)

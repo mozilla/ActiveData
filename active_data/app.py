@@ -10,10 +10,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import os
 import sys
+from _ssl import PROTOCOL_SSLv23
 from collections import Mapping
-from tempfile import TemporaryFile, NamedTemporaryFile
+from ssl import SSLContext
+from tempfile import NamedTemporaryFile
+
 import flask
 from flask import Flask
 from werkzeug.contrib.fixers import HeaderRewriterFix
@@ -301,39 +303,38 @@ def main():
 
         # TRIGGER FIRST INSTANCE
         FromESMetadata(config.elasticsearch)
-
         if config.saved_queries:
             query_finder = SaveQueries(config.saved_queries)
-
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
 
 
-        if config.flask.ssl_context and isinstance(config.flask.ssl_context, Mapping):
-            # EXPECTED PEM ENCODED FILE NAMES
-            try:
-                from _ssl import PROTOCOL_SSLv23
-                from ssl import SSLContext
+        if config.flask.ssl_context:
+            ssl_flask = config.flask.copy()
+            ssl_flask.debug = False
+            ssl_flask.port = 443
 
-                context = SSLContext(PROTOCOL_SSLv23)
-                ssl_flask = config.flask.copy()
-                ssl_flask.debug = False
-                ssl_flask.port = 443
+            if isinstance(config.flask.ssl_context, Mapping):
+                # EXPECTED PEM ENCODED FILE NAMES
+                # `load_cert_chain` REQUIRES CONCATENATED LIST OF CERTS
                 tempfile = NamedTemporaryFile(delete=False, suffix=".pem")
-                tempfile.write(File(ssl_flask.ssl_context.certificate_file).read_bytes())
-                if ssl_flask.ssl_context.certificate_chain_file:
-                    # tempfile.write("\n")
-                    tempfile.write(File(ssl_flask.ssl_context.certificate_chain_file).read_bytes())
-                tempfile.flush()
-                tempfile.close()
-                context.load_cert_chain(tempfile.name, keyfile=File(ssl_flask.ssl_context.privatekey_file).abspath)
-                ssl_flask.ssl_context = context
-            except Exception, e:
-                Log.error("Could not handle ssl context construction", cause=e)
-            finally:
                 try:
-                    tempfile.delete()
-                except Exception:
-                    pass
+                    tempfile.write(File(ssl_flask.ssl_context.certificate_file).read_bytes())
+                    if ssl_flask.ssl_context.certificate_chain_file:
+                        tempfile.write(File(ssl_flask.ssl_context.certificate_chain_file).read_bytes())
+                    tempfile.flush()
+                    tempfile.close()
+
+                    context = SSLContext(PROTOCOL_SSLv23)
+                    context.load_cert_chain(tempfile.name, keyfile=File(ssl_flask.ssl_context.privatekey_file).abspath)
+
+                    ssl_flask.ssl_context = context
+                except Exception, e:
+                    Log.error("Could not handle ssl context construction", cause=e)
+                finally:
+                    try:
+                        tempfile.delete()
+                    except Exception:
+                        pass
 
             def runner(please_stop):
                 Log.alert("ActiveData listening on encrypted port {{port}}", port=ssl_flask.port)

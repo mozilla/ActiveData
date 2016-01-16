@@ -5,12 +5,12 @@
 		"debug": true,
 		"threaded": true,
 		"processes": 1,
-//		"ssl_context":"adhoc"
-		"ssl_context": {
-			"privatekey_file": "~/keys/activedata.allizom.org/activedata.allizom.org.key",
-			"certificate_file": "~/keys/activedata.allizom.org/activedata_allizom_org.crt",
-			"certificate_chain_file": "~/keys/activedata.allizom.org/DigiCertCA.crt"
-		}
+		"ssl_context":"adhoc"
+//		"ssl_context": {
+//			"privatekey_file": "~/keys/activedata.allizom.org/activedata.allizom.org.key",
+//			"certificate_file": "~/keys/activedata.allizom.org/activedata_allizom_org.crt",
+//			"certificate_chain_file": "~/keys/activedata.allizom.org/DigiCertCA.crt"
+//		}
 	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {

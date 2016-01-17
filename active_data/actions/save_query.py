@@ -12,7 +12,10 @@ from __future__ import absolute_import
 
 import hashlib
 
+from flask import Response
+
 from pyLibrary import convert
+from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
 from pyLibrary.env.elasticsearch import Cluster
@@ -25,6 +28,50 @@ from pyLibrary.times.durations import SECOND
 
 
 HASH_BLOCK_SIZE = 100
+
+
+query_finder = None
+
+
+def find_query(hash):
+    """
+    FIND QUERY BY HASH, RETURN Response OBJECT
+    :param hash:
+    :return: Response OBJECT
+    """
+    try:
+        hash = hash.split("/")[0]
+        query = query_finder.find(hash)
+
+        if not query:
+            return Response(
+                b'{"type": "ERROR", "template": "not found"}',
+                status=404,
+                headers={
+                    "access-control-allow-origin": "*",
+                    "content-type": "application/json"
+                }
+            )
+        else:
+            return Response(
+                convert.unicode2utf8(query),
+                status=200,
+                headers={
+                    "access-control-allow-origin": "*",
+                    "content-type": "application/json"
+                }
+            )
+    except Exception, e:
+        e = Except.wrap(e)
+        Log.warning("problem finding query with hash={{hash}}", hash=hash, cause=e)
+        return Response(
+            convert.unicode2utf8(convert.value2json(e)),
+            status=400,
+            headers={
+                "access-control-allow-origin": "*",
+                "content-type": "application/json"
+            }
+        )
 
 
 class SaveQueries(object):
@@ -128,6 +175,8 @@ class SaveQueries(object):
             self.queue.close()
         except Exception, f:
             pass
+
+
 
 
 SCHEMA = {

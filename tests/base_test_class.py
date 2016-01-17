@@ -31,7 +31,7 @@ from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 from pyLibrary.thread.threads import Signal
 
 
-settings = jsons.ref.get("file://tests/config/test_simple_settings.json")
+settings = jsons.ref.get("file://tests/config/test_settings.json")
 constants.set(settings.constants)
 
 
@@ -369,7 +369,7 @@ def error(response):
 
 def run_app(please_stop, server_is_ready):
     proc = subprocess.Popen(
-        ["python", "active_data\\app.py", "--settings", "tests/config/test_simple_settings.json"],
+        ["python", "active_data\\app.py", "--settings", "tests/config/test_settings.json"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

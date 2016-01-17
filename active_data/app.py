@@ -21,14 +21,15 @@ from flask import Flask
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
-from active_data.save_query import SaveQueries
+from active_data.actions import save_query
+from active_data.actions.save_query import SaveQueries, find_query
+from active_data.actions.static import download
 from pyLibrary import convert, strings
 from pyLibrary.debugs import constants, startup
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot import wrap, coalesce
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
-from pyLibrary.meta import cache
 from pyLibrary.queries import containers
 from pyLibrary.queries import qb, meta
 from pyLibrary.queries.containers import Container
@@ -36,97 +37,19 @@ from pyLibrary.queries.meta import FromESMetadata
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import MINUTE, DAY
+from pyLibrary.times.durations import MINUTE
 from pyLibrary.times.timer import Timer
-
-
 
 OVERVIEW = File("active_data/html/index.html").read()
 BLANK = File("active_data/html/error.html").read()
 
 app = Flask(__name__)
 request_log_queue = None
-# default_elasticsearch = None
 config = None
-query_finder = None
 
 
-
-@app.route('/tools/<path:filename>')
-def download_file(filename):
-    try:
-        content, status, mimetype = read_file(filename)
-        return Response(
-            content,
-            status=status,
-            headers={
-                "Content-type": mimetype
-            }
-        )
-    except Exception, e:
-        Log.error("Could not get file {{file}}", file=filename, cause=e)
-
-
-mimetype = {
-    "js": "application/javascript",
-    "json": "application/json",
-    "html": "text/html",
-    "css": "text/css",
-    "png": "image/png",
-    "gif": "image/gif",
-}
-static_directory = File.new_instance("active_data/html")
-
-
-@cache(duration=DAY)
-def read_file(filename):
-    try:
-        file = File.new_instance(static_directory, filename)
-        if not file.abspath.startswith(static_directory.abspath):
-            return "", 404, "text/html"
-
-        Log.note("Read {{file}}", file=file.abspath)
-        return file.read_bytes(), 200, mimetype.get(file.extension, "application/binary")
-    except Exception:
-        return "", 404, "text/html"
-
-
-
-@app.route('/find/<path:hash>')
-def find_query(hash):
-    try:
-        hash = hash.split("/")[0]
-        query = query_finder.find(hash)
-
-        if not query:
-            return Response(
-                b'{"type": "ERROR", "template": "not found"}',
-                status=404,
-                headers={
-                    "access-control-allow-origin": "*",
-                    "Content-type": "application/json"
-                }
-            )
-        else:
-            return Response(
-                convert.unicode2utf8(query),
-                status=200,
-                headers={
-                    "access-control-allow-origin": "*",
-                    "Content-type": "application/json"
-                }
-            )
-    except Exception, e:
-        e = Except.wrap(e)
-        Log.warning("problem finding query with hash={{hash}}", hash=hash, cause=e)
-        return Response(
-            convert.unicode2utf8(convert.value2json(e)),
-            status=400,
-            headers={
-                "access-control-allow-origin": "*",
-                "Content-type": "application/json"
-            }
-        )
+app.add_url_rule('/tools/<path:filename>', 'download', download)
+app.add_url_rule('/find/<path:hash>', 'find_query', find_query)
 
 
 
@@ -142,7 +65,7 @@ def query(path):
         cprofiler.enable()
 
     active_data_timer = Timer("total duration")
-    body = flask.request.environ['body_copy']
+    body = flask.request.data
     try:
         with active_data_timer:
             if not body.strip():
@@ -151,7 +74,7 @@ def query(path):
                     status=400,
                     headers={
                         "access-control-allow-origin": "*",
-                        "Content-type": "text/html"
+                        "content-type": "text/html"
                     }
                 )
 
@@ -189,7 +112,7 @@ def query(path):
                 result = result.format(data.format)
 
             if data.meta.save:
-                result.meta.saved_as = query_finder.save(data)
+                result.meta.saved_as = save_query.query_finder.save(data)
 
         result.meta.active_data_response_time = active_data_timer.duration
 
@@ -201,7 +124,7 @@ def query(path):
             status=200,
             headers={
                 "access-control-allow-origin": "*",
-                "Content-type": result.meta.content_type
+                "content-type": result.meta.content_type
             }
         )
     except Exception, e:
@@ -217,7 +140,7 @@ def query(path):
             status=400,
             headers={
                 "access-control-allow-origin": "*",
-                "Content-type": "application/json"
+                "content-type": "application/json"
             }
         )
 
@@ -225,14 +148,17 @@ def query(path):
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
 @app.route('/<path:path>')
 def overview(path):
-    record_request(flask.request, None, flask.request.environ['body_copy'], None)
+    try:
+        record_request(flask.request, None, flask.request.data, None)
+    except Exception, e:
+        Log.warning("Can not record", cause=e)
 
     return Response(
         convert.unicode2utf8(OVERVIEW),
         status=400,
         headers={
             "access-control-allow-origin": "*",
-            "Content-type": "text/html"
+            "content-type": "text/html"
         }
     )
 
@@ -261,36 +187,6 @@ def replace_vars(text, params=None):
     return text
 
 
-# Snagged from http://stackoverflow.com/questions/10999990/python-flask-how-to-get-whole-raw-post-body
-class WSGICopyBody(object):
-    def __init__(self, application):
-        self.application = application
-
-    def __call__(self, environ, start_response):
-        from cStringIO import StringIO
-
-        length = environ.get('CONTENT_LENGTH', '0')
-        length = 0 if length == '' else int(length)
-
-        body = environ['wsgi.input'].read(length)
-        environ['body_copy'] = body
-        environ['wsgi.input'] = StringIO(body)
-
-        # Call the wrapped application
-        app_iter = self.application(environ, self._sr_callback(start_response))
-
-        # Return modified response
-        return app_iter
-
-    def _sr_callback(self, start_response):
-        def callback(status, headers, exc_info=None):
-            # Call upstream start_response
-            start_response(status, headers, exc_info)
-
-        return callback
-
-
-
 def record_request(request, query_, data, error):
     if request_log_queue == None:
         return
@@ -312,21 +208,10 @@ def record_request(request, query_, data, error):
 
 
 
-
-
-
-
-app.wsgi_app = WSGICopyBody(app.wsgi_app)
-
-
-
-
-
 def main():
     # global default_elasticsearch
     global request_log_queue
     global config
-    global query_finder
 
     try:
         config = startup.read_settings()
@@ -338,8 +223,6 @@ def main():
             request_logger = elasticsearch.Cluster(config.request_logs).get_or_create_index(config.request_logs)
             request_log_queue = request_logger.threaded_queue(max_size=2000)
 
-        # default_elasticsearch = elasticsearch.Cluster(config.elasticsearch)
-
         containers.config.default = {
             "type": "elasticsearch",
             "settings": config.elasticsearch.copy()
@@ -348,9 +231,8 @@ def main():
         # TRIGGER FIRST INSTANCE
         FromESMetadata(config.elasticsearch)
         if config.saved_queries:
-            query_finder = SaveQueries(config.saved_queries)
+            setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
-
 
         if config.flask.ssl_context:
             ssl_flask = config.flask.copy()

@@ -2,7 +2,7 @@
 	"flask": {
 		"host": "0.0.0.0",
 		"port": 5000,
-		"debug": true,
+		"debug": false,
 		"threaded": true,
 		"processes": 1
 	},
@@ -28,14 +28,14 @@
 		"port": 9200,
 		"index": "saved_queries",
 		"type": "query",
-		"debug": true
+		"debug": false
 	},
 	"elasticsearch": {
 		"host": "http://localhost",
 		"port": 9200,
 		"index": "testdata",
 		"type": "test_result",
-		"debug": true
+		"debug": false
 	},
 	"debug": {
 		"trace": true

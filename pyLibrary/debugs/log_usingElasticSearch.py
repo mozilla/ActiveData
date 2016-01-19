@@ -12,11 +12,14 @@ from __future__ import division
 from __future__ import absolute_import
 
 from pyLibrary import convert, strings
+from pyLibrary.debugs.logs import Log
+from pyLibrary.dot import wrap, unwrap
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
-from pyLibrary.thread.threads import Thread
+from pyLibrary.queries import qb
+from pyLibrary.thread.threads import Thread, Queue
 from pyLibrary.debugs.text_logs import TextLog
-from pyLibrary.times.durations import MINUTE
+from pyLibrary.times.durations import MINUTE, SECOND
 
 
 class TextLog_usingElasticSearch(TextLog):
@@ -32,8 +35,10 @@ class TextLog_usingElasticSearch(TextLog):
             tjson=True,
             settings=settings
         )
+        self.batch_size=batch_size
         self.es.add_alias("debug")
-        self.queue = self.es.threaded_queue(max_size=max_size, batch_size=batch_size)
+        self.queue = Queue("debug logs to es", max=max_size, silent=True)
+        Thread.run("add debug logs to es", self._insert_loop)
 
     def write(self, template, params):
         if params.get("template"):
@@ -43,6 +48,35 @@ class TextLog_usingElasticSearch(TextLog):
             template = strings.limit(template, 2000)
             self.queue.add({"value": {"template": template, "params": params}}, timeout=3*MINUTE)
         return self
+
+    def _insert_loop(self, please_stop=None):
+        bad_count = 0
+        while not please_stop:
+            try:
+                Thread.sleep(seconds=1)
+                messages = wrap(self.queue.pop_all())
+                if messages:
+                    for m in messages:
+                        m.value.params = leafer(m.value.params)
+                        m.value.error = leafer(m.value.error)
+                    for g, mm in qb.groupby(messages, size=self.batch_size):
+                        self.es.extend(mm)
+                    bad_count = 0
+            except Exception, e:
+                Log.warning("Problem inserting logs into ES", cause=e)
+                bad_count += 1
+                if bad_count > 5:
+                    break
+
+        Log.warning("Given up trying to write debug logs to ES index {{index}}", index=self.es.settings.index)
+
+        # CONTINUE TO DRAIN THIS QUEUE
+        while not please_stop:
+            try:
+                Thread.sleep(seconds=1)
+                self.queue.pop_all()
+            except Exception, e:
+                Log.warning("Should not happen", cause=e)
 
     def stop(self):
         try:
@@ -56,6 +90,13 @@ class TextLog_usingElasticSearch(TextLog):
             pass
 
 
+def leafer(param):
+    temp = unwrap(param.leaves())
+    if temp:
+        return dict(temp)
+    else:
+        return None
+
 
 SCHEMA = {
     "settings": {
@@ -66,68 +107,10 @@ SCHEMA = {
         "_default_": {
             "dynamic_templates": [
                 {
-                    "default_deep_params": {
-                        "path_match": "params.*.*.*",
-                        "mapping": {
-                            "index": "no"
-                        }
-                    }
-                },
-                {
-                    "values_strings": {
-                        "match": "*",
-                        "match_mapping_type" : "string",
+                    "default_param_values": {
+                        "match": "$value",
                         "mapping": {
                             "type": "string",
-                            "index": "not_analyzed",
-                            "doc_values": True
-                        }
-                    }
-                },
-                {
-                    "default_doubles": {
-                        "mapping": {
-                            "index": "not_analyzed",
-                            "type": "double",
-                            "doc_values": True
-                        },
-                        "match_mapping_type": "double",
-                        "match": "*"
-                    }
-                },
-                {
-                    "default_longs": {
-                        "mapping": {
-                            "index": "not_analyzed",
-                            "type": "long",
-                            "doc_values": True
-                        },
-                        "match_mapping_type": "long|integer",
-                        "match_pattern": "regex",
-                        "path_match": ".*"
-                    }
-                },
-                {
-                    "default_trace": {
-                        "mapping": {
-                            "type": "nested"
-                        },
-                        "match": "*trace"
-                    }
-                },
-                {
-                    "default_nested": {
-                        "mapping": {
-                            "enabled": False
-                        },
-                        "match_mapping_type": "nested",
-                        "match": "*"
-                    }
-                },
-                {
-                    "default_param_values": {
-                        "match": "*$value",
-                        "mapping": {
                             "index": "not_analyzed",
                             "doc_values": True
                         }

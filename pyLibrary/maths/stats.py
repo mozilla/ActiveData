@@ -208,13 +208,6 @@ class Stats(Dict):
     def std(self):
         return sqrt(self.variance)
 
-    @property
-    def __class__(self):
-        """
-        TRICK JSON SERIALIZATION (AND OTHERS) THAT THIS IS JUST ANOTHER Dict
-        """
-        return Dict
-
 
 class ZeroMoment(object):
     """

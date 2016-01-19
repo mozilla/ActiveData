@@ -29,7 +29,8 @@ from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 from pyLibrary.thread.threads import Signal
-
+from pyLibrary.times.dates import Date
+from pyLibrary.times.durations import HOUR, MINUTE
 
 settings = jsons.ref.get("file://tests/config/test_settings.json")
 constants.set(settings.constants)
@@ -70,34 +71,17 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
     """
 
-    server_is_ready = None
-    please_stop = None
-    thread = None
     server = None
+    indexes = []
 
 
     @classmethod
-    def setUpClass(cls, assume_server_started=True):
+    def setUpClass(cls):
         if not containers.config.default:
             containers.config.default = {
                 "type": "elasticsearch",
                 "settings": settings.backend_es
             }
-
-        ActiveDataBaseTest.server_is_ready = Signal()
-        ActiveDataBaseTest.please_stop = Signal()
-        # if settings.startServer:
-        #     # THIS DEADLOCKS TOO MUCH TO GET THROUGH TESTS
-        #     ActiveDataBaseTest.thread = Thread(
-        #         "watch server",
-        #         run_app,
-        #         please_stop=ActiveDataBaseTest.please_stop,
-        #         server_is_ready=ActiveDataBaseTest.server_is_ready
-        #     ).start()
-        # else:
-        #     ActiveDataBaseTest.server_is_ready.go()
-        if assume_server_started:
-            ActiveDataBaseTest.server_is_ready.go()
 
         if not settings.fastTesting:
             ActiveDataBaseTest.server = http
@@ -115,15 +99,20 @@ class ActiveDataBaseTest(FuzzyTestCase):
         cluster = elasticsearch.Cluster(settings.backend_es)
         aliases = cluster.get_aliases()
         for a in aliases:
-            if a.index.startswith("testing_"):
+            # testing_0ef53e45b320160118_180420
+            create_time = Date(a.index[-15:], "%Y%m%d_%H%M%S")
+            if a.index.startswith("testing_") and create_time < Date.now() - (10*MINUTE):
                 cluster.delete_index(a.index)
+
 
     @classmethod
     def tearDownClass(cls):
-        ActiveDataBaseTest.please_stop.go()
+        cluster = elasticsearch.Cluster(settings.backend_es)
+        for i in ActiveDataBaseTest.indexes:
+            Log.note("remove index {{index}}", index=i)
+            cluster.delete_index(i)
         Log.stop()
-        if ActiveDataBaseTest.thread:
-            ActiveDataBaseTest.thread.stopped.wait_for_go()
+
 
     def __init__(self, *args, **kwargs):
         """
@@ -140,15 +129,16 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
 
     def setUp(self):
+        index_name = "testing_" + Random.hex(10).lower()
+        ActiveDataBaseTest.indexes.append(index_name)
+
         # ADD TEST RECORDS
         self.service_url = settings.service_url
         self.es_test_settings = settings.backend_es.copy()
-        self.es_test_settings.index = "testing_" + Random.hex(10).lower()
+        self.es_test_settings.index = index_name
         self.es_test_settings.alias = None
-        # self.backend_es.type = "test_result"
         self.es_cluster = elasticsearch.Cluster(self.es_test_settings)
         self.index = self.es_cluster.get_or_create_index(self.es_test_settings)
-        self.server_is_ready.wait_for_go()
 
     def tearDown(self):
         self.es_cluster.delete_index(self.es_test_settings.index)

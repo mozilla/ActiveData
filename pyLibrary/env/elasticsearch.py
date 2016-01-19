@@ -254,12 +254,8 @@ class Index(Features):
                     id = random_id()
 
                 if "json" in r:
-                    # if id != coalesce(wrap(convert.json2value(r["json"])).value._id, id):
-                    #     Log.error("expecting _id to match")
                     json = r["json"]
                 elif "value" in r:
-                    # if id != coalesce(wrap(r).value._id, id):
-                    #     Log.error("expecting _id to match")
                     json = convert.value2json(r["value"])
                 else:
                     json = None
@@ -290,26 +286,28 @@ class Index(Features):
             )
             items = response["items"]
 
-            for i, item in enumerate(items):
-                if self.cluster.version.startswith("0.90."):
+            fails = []
+            if self.cluster.version.startswith("0.90."):
+                for i, item in enumerate(items):
                     if not item.index.ok:
-                        Log.error(
-                            "{{error}} while loading line:\n{{line}}",
-                            error=item.index.error,
-                            line=lines[i * 2 + 1]
-                        )
-                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
+                        fails.append(i)
+            elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
+                for i, item in enumerate(items):
                     if item.index.status not in [200, 201]:
-                        Log.error(
-                            "{{num}} {{error}} while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
-                            num=item.index.status,
-                            error=item.index.error,
-                            line=strings.limit(lines[i * 2 + 1], 300),
-                            index=self.settings.index,
-                            id=item.index._id
-                        )
-                else:
-                    Log.error("version not supported {{version}}", version=self.cluster.version)
+                        fails.append(i)
+            else:
+                Log.error("version not supported {{version}}", version=self.cluster.version)
+            if fails:
+                item = items[fails[0]]
+                Log.error(
+                    "{{num}} {{error}} while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
+                    num=item.index.status,
+                    error=item.index.error,
+                    line=strings.limit(lines[fails[0] * 2 + 1], 500),
+                    index=self.settings.index,
+                    all_fails=fails,
+                    id=item.index._id
+                )
 
             if self.debug:
                 Log.note("{{num}} documents added", num=len(items))

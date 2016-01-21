@@ -99,10 +99,13 @@ class ActiveDataBaseTest(FuzzyTestCase):
         cluster = elasticsearch.Cluster(settings.backend_es)
         aliases = cluster.get_aliases()
         for a in aliases:
-            # testing_0ef53e45b320160118_180420
-            create_time = Date(a.index[-15:], "%Y%m%d_%H%M%S")
-            if a.index.startswith("testing_") and create_time < Date.now() - (10*MINUTE):
-                cluster.delete_index(a.index)
+            try:
+                # testing_0ef53e45b320160118_180420
+                create_time = Date(a.index[-15:], "%Y%m%d_%H%M%S")
+                if a.index.startswith("testing_") and create_time < Date.now() - (10*MINUTE):
+                    cluster.delete_index(a.index)
+            except Exception, e:
+                Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
 
 
     @classmethod

@@ -8,13 +8,13 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
+from __future__ import unicode_literals
 
-import os
-import subprocess
-import signal
 import itertools
+import os
+import signal
+import subprocess
 
 from active_data.app import replace_vars
 from pyLibrary import convert, jsons
@@ -28,9 +28,8 @@ from pyLibrary.queries.query import Query
 from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
-from pyLibrary.thread.threads import Signal
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import HOUR, MINUTE
+from pyLibrary.times.durations import MINUTE
 
 settings = jsons.ref.get("file://tests/config/test_settings.json")
 constants.set(settings.constants)
@@ -105,7 +104,10 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 if a.index.startswith("testing_") and create_time < Date.now() - (10*MINUTE):
                     cluster.delete_index(a.index)
             except Exception, e:
-                Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
+                if a.index == "twitter":  # travis-ci has a twitter index now
+                    cluster.delete_index(a.index)
+                else:
+                    Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
 
 
     @classmethod

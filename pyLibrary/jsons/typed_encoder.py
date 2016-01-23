@@ -26,6 +26,7 @@ from pyLibrary.jsons.encoder import \
     problem_serializing, \
     _repr, \
     UnicodeBuilder
+from pyLibrary.maths.stats import Stats
 from pyLibrary.strings import utf82unicode
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
@@ -34,7 +35,7 @@ from pyLibrary.times.durations import Duration
 json_decoder = json.JSONDecoder().decode
 
 append = UnicodeBuilder.append
-
+_ = Stats
 
 def typed_encode(value):
     """

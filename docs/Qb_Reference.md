@@ -212,6 +212,9 @@ Every edge must be limited to one of a few basic domain types.  Which further de
   - **count** – just like numeric, but limited to integers >= 0
   - **set** – An explicit set of unique values
       - **edge.domain.partitions** – the set of values allowed.  These can be compound objects, but ```edge.test``` and ```edge.domain.value``` need to be defined.
+  - **range** - A list of ranges, probably not of the same interval, over some algebraic field.  The ranges can have holes, but can not overlap.
+      - **edge.domain.partitions.N.min** - minimum value for this partition
+      - **edge.domain.partitions.N.max** - supremum value for this partition
 
 `window` Clause
 ---------------

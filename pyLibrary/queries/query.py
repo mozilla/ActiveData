@@ -29,18 +29,18 @@ from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter, query_
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 10000
 
-qb = None
+_qb = None
 _Column = None
 
 
 def _late_import():
-    global qb
+    global _qb
     global _Column
 
     from pyLibrary.queries.meta import Column as _Column
     from pyLibrary.queries import qb
 
-    _ = qb
+    _ = _qb
     _ = _Column
 
 
@@ -114,9 +114,9 @@ class Query(object):
         # THE from SOURCE IS.
         # TODO: IGNORE REACHING INTO THE NON-NESTED TYPES
         if isinstance(self.frum, list):
-            if not qb:
+            if not _qb:
                 _late_import()
-            columns = qb.get_columns(self.frum)
+            columns = _qb.get_columns(self.frum)
         elif isinstance(self.frum, Container):
             columns = self.frum.get_columns(table=self.frum.name)
         else:

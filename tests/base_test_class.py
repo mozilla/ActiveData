@@ -8,13 +8,13 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
+from __future__ import unicode_literals
 
-import os
-import subprocess
-import signal
 import itertools
+import os
+import signal
+import subprocess
 
 from active_data.app import replace_vars
 from pyLibrary import convert, jsons
@@ -28,10 +28,10 @@ from pyLibrary.queries.query import Query
 from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
-from pyLibrary.thread.threads import Signal
+from pyLibrary.times.dates import Date
+from pyLibrary.times.durations import MINUTE
 
-
-settings = jsons.ref.get("file://tests/config/test_simple_settings.json")
+settings = jsons.ref.get("file://tests/config/test_settings.json")
 constants.set(settings.constants)
 
 
@@ -51,8 +51,8 @@ read_alternate_settings()
 
 class ActiveDataBaseTest(FuzzyTestCase):
     """
-    RESPONSIBLE FOR SETTING UP THE RAW CONTAINER, STARTING THE SERVICE,
-    AND EXECUTING QUERIES, AND CONFIRMING EXPECTED RESULTS
+    RESPONSIBLE FOR SETTING UP THE RAW CONTAINER,
+    EXECUTING QUERIES, AND CONFIRMING EXPECTED RESULTS
 
     BASIC TEST FORMAT:
     {
@@ -70,34 +70,17 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
     """
 
-    server_is_ready = None
-    please_stop = None
-    thread = None
     server = None
+    indexes = []
 
 
     @classmethod
-    def setUpClass(cls, assume_server_started=True):
+    def setUpClass(cls):
         if not containers.config.default:
             containers.config.default = {
                 "type": "elasticsearch",
                 "settings": settings.backend_es
             }
-
-        ActiveDataBaseTest.server_is_ready = Signal()
-        ActiveDataBaseTest.please_stop = Signal()
-        # if settings.startServer:
-        #     # THIS DEADLOCKS TOO MUCH TO GET THROUGH TESTS
-        #     ActiveDataBaseTest.thread = Thread(
-        #         "watch server",
-        #         run_app,
-        #         please_stop=ActiveDataBaseTest.please_stop,
-        #         server_is_ready=ActiveDataBaseTest.server_is_ready
-        #     ).start()
-        # else:
-        #     ActiveDataBaseTest.server_is_ready.go()
-        if assume_server_started:
-            ActiveDataBaseTest.server_is_ready.go()
 
         if not settings.fastTesting:
             ActiveDataBaseTest.server = http
@@ -115,15 +98,26 @@ class ActiveDataBaseTest(FuzzyTestCase):
         cluster = elasticsearch.Cluster(settings.backend_es)
         aliases = cluster.get_aliases()
         for a in aliases:
-            if a.index.startswith("testing_"):
-                cluster.delete_index(a.index)
+            try:
+                # testing_0ef53e45b320160118_180420
+                create_time = Date(a.index[-15:], "%Y%m%d_%H%M%S")
+                if a.index.startswith("testing_") and create_time < Date.now() - (10*MINUTE):
+                    cluster.delete_index(a.index)
+            except Exception, e:
+                if a.index == "twitter":  # Remove when resolved: https://github.com/travis-ci/packer-templates/issues/148
+                    cluster.delete_index(a.index)
+                else:
+                    Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
+
 
     @classmethod
     def tearDownClass(cls):
-        ActiveDataBaseTest.please_stop.go()
+        cluster = elasticsearch.Cluster(settings.backend_es)
+        for i in ActiveDataBaseTest.indexes:
+            Log.note("remove index {{index}}", index=i)
+            cluster.delete_index(i)
         Log.stop()
-        if ActiveDataBaseTest.thread:
-            ActiveDataBaseTest.thread.stopped.wait_for_go()
+
 
     def __init__(self, *args, **kwargs):
         """
@@ -140,15 +134,16 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
 
     def setUp(self):
+        index_name = "testing_" + Random.hex(10).lower()
+        ActiveDataBaseTest.indexes.append(index_name)
+
         # ADD TEST RECORDS
         self.service_url = settings.service_url
         self.es_test_settings = settings.backend_es.copy()
-        self.es_test_settings.index = "testing_" + Random.hex(10).lower()
+        self.es_test_settings.index = index_name
         self.es_test_settings.alias = None
-        # self.backend_es.type = "test_result"
         self.es_cluster = elasticsearch.Cluster(self.es_test_settings)
         self.index = self.es_cluster.get_or_create_index(self.es_test_settings)
-        self.server_is_ready.wait_for_go()
 
     def tearDown(self):
         self.es_cluster.delete_index(self.es_test_settings.index)
@@ -369,7 +364,7 @@ def error(response):
 
 def run_app(please_stop, server_is_ready):
     proc = subprocess.Popen(
-        ["python", "active_data\\app.py", "--settings", "tests/config/test_simple_settings.json"],
+        ["python", "active_data\\app.py", "--settings", "tests/config/test_settings.json"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -405,7 +400,7 @@ class FakeHttp(object):
         result = qb.run(data)
         output_bytes = convert.unicode2utf8(convert.value2json(result))
         return wrap({
-            "status_code":200,
+            "status_code": 200,
             "all_content": output_bytes,
             "content": output_bytes
         })

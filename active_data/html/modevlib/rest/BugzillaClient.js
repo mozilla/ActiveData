@@ -108,7 +108,7 @@ BugzillaClient.prototype = {
 			req.open(method, url, true);
 			req.setRequestHeader("Accept", "application/json");
 			if (method.toUpperCase() !== "GET") {
-				req.setRequestHeader("Content-type", "application/json");
+				req.setRequestHeader("content-type", "application/json");
 			}
 			req.onreadystatechange = function (event) {
 				if (req.readyState == 4 && req.status != 0) {
@@ -131,7 +131,7 @@ BugzillaClient.prototype = {
 				uri: url,
 				method: method,
 				body: body,
-				headers: {'Content-type': 'application/json'}
+				headers: {'content-type': 'application/json'}
 			};
 			if (this.timeout > 0)
 				requestParams.timeout = this.timeout;

@@ -205,14 +205,7 @@ class Dict(MutableMapping):
         """
         LIKE items() BUT RECURSIVE, AND ONLY FOR THE LEAVES (non dict) VALUES
         """
-        prefix = coalesce(prefix, "")
-        output = []
-        for k, v in self.items():
-            if isinstance(v, Mapping):
-                output.extend(wrap(v).leaves(prefix=prefix + literal_field(k) + "."))
-            else:
-                output.append((prefix + literal_field(k), v))
-        return output
+        return leaves(self, prefix)
 
     def iteritems(self):
         # LOW LEVEL ITERATION, NO WRAPPING
@@ -284,6 +277,31 @@ class Dict(MutableMapping):
             return "Dict("+dict.__repr__(_get(self, "_dict"))+")"
         except Exception, e:
             return "Dict()"
+
+
+def leaves(value, prefix=None):
+    """
+    LIKE items() BUT RECURSIVE, AND ONLY FOR THE LEAVES (non dict) VALUES
+    :param value: THE Mapping TO TRAVERSE
+    :param prefix:  OPTIONAL PREFIX GIVEN TO EACH KEY
+    :return: Dict, WHICH EACH KEY BEING A PATH INTO value TREE
+    """
+    prefix = coalesce(prefix, "")
+    output = []
+    for k, v in value.items():
+        try:
+            if isinstance(v, Mapping):
+                output.extend(leaves(v, prefix=prefix + literal_field(k) + "."))
+            else:
+                output.append((prefix + literal_field(k), unwrap(v)))
+        except Exception, e:
+            from pyLibrary.debugs.logs import Log
+
+            Log.error("Do not know how to handle", cause=e)
+    return wrap(output)
+
+
+
 
 
 class _DictUsingSelf(dict):

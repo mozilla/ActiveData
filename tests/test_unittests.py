@@ -43,22 +43,6 @@ class TestUnittests(ActiveDataBaseTest):
         settings.service_url = "http://localhost:"+unicode(app_config.flask.port)+"/query"
         ES_CLUSTER_LOCATION = app_config.elasticsearch.host
 
-        # TestUnittests.process = Process(
-        #     "RUN APP",
-        #     [
-        #         "python",
-        #         "active_data/app.py",
-        #         "--settings=" + APP_CONFIG_FILE
-        #     ],
-        #    cwd=os.getcwd()
-        # )
-        # while True:
-        #     line = TestUnittests.process.recieve.pop()
-        #     if line:
-        #         break
-        ActiveDataBaseTest.server_is_ready.go()
-
-
     @classmethod
     def tearDownClass(cls):
         # TestUnittests.process.stop()

@@ -1193,6 +1193,9 @@ class TestEdge1(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
+# TODO: TEST DOMAINS WITH PARTITIONS DEFINED BY FILTERS
+
+
 
 simple_test_data = [
     {"a": "c", "v": 13},

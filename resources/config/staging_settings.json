@@ -6,9 +6,9 @@
 		"threaded": true,
 		"processes": 1,
 		"ssl_context":{
-			"privatekey_file": "yourserver.key",
-			"certificate_file": "yourserver.crt",
-			"certificate_chain_file": "file"
+			"privatekey_file": "",
+			"certificate_file": "~/.ssh/activedata_allizom_org.crt",
+			"certificate_chain_file": "~/.ssh/DigiCertCA.crt"
 		}
 	},
 	"constants": {

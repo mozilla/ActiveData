@@ -1,3 +1,6 @@
+sudo export HISTCONTROL=ignorespace
+export HISTCONTROL=ignorespace
+
 cd /home/ubuntu/ActiveData/
 sudo git checkout master
 sudo git stash clear
@@ -11,3 +14,5 @@ sudo supervisorctl reread
 sudo supervisorctl update
 sudo supervisorctl restart all
 sudo supervisorctl
+
+

@@ -51,8 +51,8 @@ read_alternate_settings()
 
 class ActiveDataBaseTest(FuzzyTestCase):
     """
-    RESPONSIBLE FOR SETTING UP THE RAW CONTAINER, STARTING THE SERVICE,
-    AND EXECUTING QUERIES, AND CONFIRMING EXPECTED RESULTS
+    RESPONSIBLE FOR SETTING UP THE RAW CONTAINER,
+    EXECUTING QUERIES, AND CONFIRMING EXPECTED RESULTS
 
     BASIC TEST FORMAT:
     {
@@ -104,7 +104,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 if a.index.startswith("testing_") and create_time < Date.now() - (10*MINUTE):
                     cluster.delete_index(a.index)
             except Exception, e:
-                if a.index == "twitter":  # travis-ci has a twitter index now
+                if a.index == "twitter":  # Remove when resolved: https://github.com/travis-ci/packer-templates/issues/148
                     cluster.delete_index(a.index)
                 else:
                     Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
@@ -400,7 +400,7 @@ class FakeHttp(object):
         result = qb.run(data)
         output_bytes = convert.unicode2utf8(convert.value2json(result))
         return wrap({
-            "status_code":200,
+            "status_code": 200,
             "all_content": output_bytes,
             "content": output_bytes
         })

@@ -1,7 +1,7 @@
 ActiveData: Qb Query Tutorial
 =============================
 
-Qb queries are JSON structures that attempt to mimic SQL queries, where property names correspond to SQL clauses.  There are some differences from SQL, especially when it comes to using default clauses, but I hope your knowledge of SQL can jump-start your use of Qb.
+Qb queries are JSON structures that mimic SQL query semantics; each property corresponds to a SQL clause.  There are some differences from SQL, especially when it comes to using default clauses, but I hope your knowledge of SQL can jump-start your use of Qb.
 
 
 Simple `from` Clause 
@@ -77,13 +77,13 @@ Use the `where` clause to restrict our results to those that match.
 }
 ```
 
-In this case, we limit ourselves to test results on `linux64` platform.  You have a [variety of other expressions available](Qb_Expressions.md). 
+In this case, we limit ourselves to test results on `linux64` platform.  You can see [a full list of `unittest` properties](Unittest Schema.md), and you have a [variety of other expressions available](Qb_Expressions.md). 
 
 
 `select` Clause
 ---------------
 
-The `unittest` records are quite large, and in most cases you will not be interested in all the properties.  Let's look at how big some test result files can be; list all files over 600 megabytes!  
+The `unittest` records are quite large, and in most cases you will not be interested in all the properties.  Let's look at how big some test result files can be; list some files over 600 megabytes!  It is best to view the raw JSON response with this query; some files are over a gigabyte, so big the Query Tool interprets the number as a unix timestamp!!
 
 ```javascript
 {
@@ -115,7 +115,7 @@ A couple of things you should notice: First, the `run.files` property in the `un
 Grouping
 ----------
 
-Pulling individual records is unexciting, and it will take forever to get an understanding of the 3billion records behind it.  ActiveData's objective is to provide aggregates fast.
+Pulling individual records is unexciting, and it will take forever to get an understanding of the billions records behind it. ActiveData's objective is to provide aggregates fast.
 
 `groupby` Clause
 ----------------

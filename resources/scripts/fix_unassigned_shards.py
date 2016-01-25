@@ -34,11 +34,10 @@ def assign_shards(settings):
     Log.note("get nodes")
     nodes = wrap(list(convert_table_to_list(http.get(path + "/_cat/nodes?bytes=b&h=n,r,d").content, ["name", "role", "disk"])))
     for n in nodes:
+        n.disk = float(n.disk)
         # ASSIGN SHARDS TO SPOT NODES ONLY
-        if n.name.startswith("spot_"):
-            n.disk = float(n.disk)
-        else:
-            n.disk = 0.0
+    #     if not n.name.startswith("spot_"):
+    #         n.disk = 0.0
     Log.note("Nodes:\n{{nodes}}", nodes=nodes)
 
 
@@ -50,16 +49,19 @@ def assign_shards(settings):
     shards = wrap(list(convert_table_to_list(http.get(path + "/_cat/shards").content, ["index", "i", "type", "status", "num", "size", "ip", "node"])))
     # Log.note("Shards:\n{{shards}}", shards=shards)
     for shard in qb.sort(shards, "index"):
-        if shard.status=="UNASSIGNED":
+        if shard.status=="UNASSIGNED" and shard.index=="saved_queries20150510_160318" and shard.i=='0':
             i = Random.weight(nodes.disk)
             command = wrap({"allocate":{
                 "index": shard.index,
                 "shard": shard.i,
-                "node": nodes[i].name,
-                "allow_primary": False
+                "node": "tertiary", # nodes[i].name,
+                "allow_primary": True
             }})
             result = convert.json2value(convert.utf82unicode(http.post(path + "/_cluster/reroute", json={"commands": [command]}).content))
-            Log.note("index={{shard.index}}, shard={{shard.i}}, assign_to={{node}}, ok={{result.acknowledged}}", shard=shard, result=result, node=nodes[i].name)
+            if not result.acknowledged:
+                Log.warning("Can not allocate: {{error}}", error=result.error)
+            else:
+                Log.note("index={{shard.index}}, shard={{shard.i}}, assign_to={{node}}, ok={{result.acknowledged}}", shard=shard, result=result, node=nodes[i].name)
 
 
 def convert_table_to_list(table, column_names):

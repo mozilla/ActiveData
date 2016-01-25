@@ -3,8 +3,11 @@ git checkout master
 git stash
 git pull origin master
 
-cd ~/ActiveData/
+
+sudo -i
 export PYTHONPATH=.
+export HOME=/home/ec2-user
+cd ~/ActiveData/
 python active_data/app.py --settings=resources/config/staging_settings.json &
 disown -h
 tail -f  results/logs/etl.log

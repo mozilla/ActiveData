@@ -198,7 +198,7 @@ var queryTool = {};
 					self.executeCube();
 					yield (response);
 				} catch (e) {
-					Log.error("Call to ActiveData failed", e)
+					$("#cube").prop('disabled', false).val("Query "+anchor.query_id+" not found");
 				}//try
 			});
 		}//endif

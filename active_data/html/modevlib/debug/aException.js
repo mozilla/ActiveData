@@ -61,6 +61,11 @@ importScript("../util/convert.js");
 	}//function
 	Exception.wrap = wrap;
 
+
+
+
+
+
 	//window.Exception@file:///C:/Users/klahnakoski/git/MoDevMetrics/html/modevlib/debug/aException.js:14:4
 	//build@file:///C:/Users/klahnakoski/git/MoDevMetrics/html/modevlib/threads/thread.js:76:2
 	//@file:///C:/Users/klahnakoski/git/MoDevMetrics/html/modevlib/threads/thread.js:442:1
@@ -68,6 +73,23 @@ importScript("../util/convert.js");
 	//@file:///C:/Users/klahnakoski/git/MoDevMetrics/html/modevlib/debug/aException.js:77:2
 	//@file:///C:/Users/klahnakoski/git/MoDevMetrics/html/modevlib/debug/aException.js:9:2
 	var stackPattern=/(.*)@(.*):(\d+):(\d+)/;
+
+	//IS THIS GOOGLE CHROME?
+	if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1){
+		//TypeError: Converting circular structure to JSON
+		//    at Object.stringify (native)
+		//    at Object.Map.jsonCopy (http://localhost:63342/charts/platform/modevlib/util/aUtil.js:83:26)
+		//    at http://localhost:63342/charts/platform/modevlib/Dimension.js:58:22
+		//    at Array.map (http://localhost:63342/charts/platform/modevlib/collections/aArray.js:85:10)
+		//    at Object.Dimension.getDomain (http://localhost:63342/charts/platform/modevlib/Dimension.js:53:33)
+		//    at __createChart (http://localhost:63342/charts/platform/release-history.html:167:75)
+		//    at next (native)
+		//    at Thread_prototype_resume [as resume] (http://localhost:63342/charts/platform/modevlib/threads/thread.js:248:24)
+		//    at Object.Thread.resume.retval [as success] (http://localhost:63342/charts/platform/modevlib/threads/thread.js:226:11)
+		//    at XMLHttpRequest.request.onreadystatechange (http://localhost:63342/charts/platform/modevlib/rest/Rest.js:93:15)"
+
+		stackPattern=/\s*at (.*) \((.*):(\d+):(\d+)\)/;
+	}//endif
 
 	function parseStack(stackString){
 		var output = [];

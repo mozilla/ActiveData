@@ -8,7 +8,7 @@
 				}))) {
 				Log.error("Expecting an expression");
 			}//endif
-		} else if (isObject(terms)) {
+		} else if (Map.isObject(terms)) {
 			if (!Array.AND(Map.map(terms, function(k, v){
 					return (k instanceof Variable) && (v instanceof Literal);
 				}))) {

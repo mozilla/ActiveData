@@ -82,7 +82,7 @@ importScript("../util/aUtil.js");
 	Array.prototype.map=function(func){
 		var output=[];
 		for(var i=0;i<this.length;i++){
-			var v=func(this[i], i);
+			var v=func(this[i], i, this);
 			if (v===undefined || v==null) continue;
 			output.push(v);
 		}//for
@@ -120,16 +120,21 @@ importScript("../util/aUtil.js");
 	Array.prototype.select = function(attrName){
 		var output=[];
 		if (typeof(attrName)=="string"){
-			for(var i=0;i<this.length;i++)
-				output.push(this[i][attrName]);
+			if (attrName.indexOf(".")==-1){
+				for(var i=0;i<this.length;i++)
+					output.push(this[i][attrName]);
+			}else{
+				for(var i=0;i<this.length;i++)
+					output.push(Map.get(this[i], attrName));
+			}//endif
 		}else if (attrName instanceof Array){
 			//SELECT MANY VALUES INTO NEW OBJECT
 			for(var i=0;i<this.length;i++){
 				var v=this[i];
 				var o={};
-				for(var a=0;a<attrName.length;a++){
-					var n=attrName[a];
-					o[n]=v[n];
+				for (var a = 0; a < attrName.length; a++) {
+					var n = attrName[a];
+					Map.set(o, n, Map.get(v, n));
 				}//for
 				output.push(o);
 			}//for
@@ -313,6 +318,15 @@ importScript("../util/aUtil.js");
 		return true;
 	}
 	Array.AND=AND;
+
+	function OR(values){
+		for(var i=values.length;i--;){
+			var v=values[i];
+			if (v==true) return true;
+		}//for
+		return false;
+	}
+	Array.OR=OR;
 
 
 	Array.extend=function extend(){

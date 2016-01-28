@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 importScript("Dimension.js");
-importScript("qb/Qb.js");
 importScript("qb/ESQuery.js");
+importScript("qb/Qb.js");
 
 if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 
@@ -18,15 +18,6 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 		"name": "Release",
 		"isFacet": true,
 		"edges": [
-			{
-				"name": "Firefox32",
-				"version": 32,
-				"releaseDate": "2014-09-02",
-				"esfilter": {"and": [
-					{"not": {"terms": {"cf_status_firefox32": SOLVED}}},
-					{"term": {"cf_tracking_firefox32": "+"}}
-				]}
-			},
 			{
 				"name": "Firefox33",
 				"version": 33,
@@ -84,19 +75,103 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 			{
 				"name": "Firefox39",
 				"version": 39,
+				"releaseDate": "July 2, 2015",
 				"esfilter": {"and": [
 					{"not": {"terms": {"cf_status_firefox39": SOLVED}}},
 					{"term": {"cf_tracking_firefox39": "+"}}
 				]}
 			},
 			{
-				"name": "Firefox40",
+				"name": "Firefox40",   //https://wiki.mozilla.org/RapidRelease/Calendar#Future_branch_dates
 				"version": 40,
+				"releaseDate": "Aug 11, 2015",
 				"esfilter": {"and": [
 					{"not": {"terms": {"cf_status_firefox40": SOLVED}}},
 					{"term": {"cf_tracking_firefox40": "+"}}
 				]}
+			},
+			{
+				"name": "Firefox41",
+				"version": 41,
+				"releaseDate": "Sep 22, 2015",
+				"esfilter": {"and": [
+					{"not": {"terms": {"cf_status_firefox41": SOLVED}}},
+					{"term": {"cf_tracking_firefox41": "+"}}
+				]}
+			},
+			{
+				"name": "Firefox42",
+				"version": 42,
+				"releaseDate": "Nov 3, 2015",
+				"esfilter": {"and": [
+					{"not": {"terms": {"cf_status_firefox42": SOLVED}}},
+					{"term": {"cf_tracking_firefox42": "+"}}
+				]}
+			},
+			{
+				"name": "Firefox43",
+				"version": 43,
+				"releaseDate": "Dec 15, 2015",
+				"esfilter": {"and": [
+					{"not": {"terms": {"cf_status_firefox43": SOLVED}}},
+					{"term": {"cf_tracking_firefox43": "+"}}
+				]}
+			},
+			{
+				"name": "Firefox44",
+				"version": 44,
+				"releaseDate": "Jan 26, 2016",
+				"esfilter": {"and": [
+					{"not": {"terms": {"cf_status_firefox44": SOLVED}}},
+					{"term": {"cf_tracking_firefox44": "+"}}
+				]}
+			},
+			{
+				"name": "Firefox45",
+				"version": 45,
+				"releaseDate": "Mar 8, 2016",
+				"esfilter": {"and": [
+					{"not": {"terms": {"cf_status_firefox45": SOLVED}}},
+					{"term": {"cf_tracking_firefox45": "+"}}
+				]}
+			},
+			{
+				"name": "Firefox46",
+				"version": 46,
+				"releaseDate": "Apr 19, 2016",
+				"esfilter": {"and": [
+					{"not": {"terms": {"cf_status_firefox46": SOLVED}}},
+					{"term": {"cf_tracking_firefox46": "+"}}
+				]}
+			},
+			{
+				"name": "Firefox47",
+				"version": 47,
+				"releaseDate": "May 31, 2016",
+				"esfilter": {"and": [
+					{"not": {"terms": {"cf_status_firefox47": SOLVED}}},
+					{"term": {"cf_tracking_firefox47": "+"}}
+				]}
+			},
+			{
+				"name": "Firefox48",
+				"version": 48,
+				"releaseDate": "Jul 12, 2016",
+				"esfilter": {"and": [
+					{"not": {"terms": {"cf_status_firefox48": SOLVED}}},
+					{"term": {"cf_tracking_firefox48": "+"}}
+				]}
+			},
+			{//SOURCE https://wiki.mozilla.org/RapidRelease/Calendar
+				"name": "Firefox49",
+				"version": 49,
+				"releaseDate": "Aug 23, 2016",
+				"esfilter": {"and": [
+					{"not": {"terms": {"cf_status_firefox49": SOLVED}}},
+					{"term": {"cf_tracking_firefox49": "+"}}
+				]}
 			}
+
 		]
 	};
 	releaseTracking.requiredFields = Array.union(releaseTracking.edges.select("esfilter").map(Qb.requiredFields));
@@ -108,6 +183,7 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 			if (e.releaseDate && Date.newInstance(e.releaseDate) <= Date.today()) {
 				currentRelease = e;
 			}//endif
+			e.retireDate=Map.get(releaseTracking.edges[i+1], "releaseDate")
 		});
 
 		if (!currentRelease) Log.error("What's the next release!?  Please add more to Dimension-Platform.js");
@@ -181,6 +257,37 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 				trainTrackingRel,
 
 				{
+					"name": "ReleaseManagementCategories",
+					"allowNulls": false,
+					"partitions": [
+						{
+							"name": "Security",
+							//"style":{"color":"#ff7f0e"},
+							"esfilter":{"or":[
+								{"term": {"keywords": "sec-critical"}},
+								{"term": {"keywords": "sec-high"}}
+							]}
+						},
+						{
+							"name": "Stability",
+							//"style": {"color":"#2ca02c"},
+							"esfilter": {"or":[
+								{"prefix": {"keywords": "topcrash"}},
+								{"prefix": {"keywords": "crash"}}
+							]}
+						},
+						{
+							"name": "Regressions",
+							//"style": {"color": "#d62728"},
+							"esfilter": {"term": {"keywords": "regression"}}
+						},
+						{   "name":"other",
+							"style": {"color": "#CCCCCC"},
+							"esfilter": {"match_all":{}}
+						}
+					]
+				},
+				{
 					"name": "Categories",
 					"edges": [
 						{
@@ -203,7 +310,10 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 							"name": "Stability",
 							"columnName": "stability",
 							"style": {"color": "#777777"},
-							"esfilter": {"terms": {"keywords": ["topcrash"]}}
+							"esfilter": {"or":[
+								{"terms": {"keywords": ["topcrash"]}},
+								{"prefix": {"keywords": "topcrash"}}
+							]}
 						},
 						{
 							"name": "Priority",
@@ -228,16 +338,16 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 							"esfilter": {"regexp": {"cf_blocking_b2g": ".*\\+"}},
 							"edges": [
 								{
-									"name": "2.1",
-									"columnName": "b2g2_1",
-									"style": {"color": "#00539F"},
-									"esfilter": {"term": {"cf_blocking_b2g": "2.1+"}}
-								},
-								{
 									"name": "2.2",
 									"columnName": "b2g2_2",
-									"style": {"color": "#0095DD"},
+									"style": {"color": "#00539F"},
 									"esfilter": {"term": {"cf_blocking_b2g": "2.2+"}}
+								},
+								{
+									"name": "2.5",
+									"columnName": "b2g2_5",
+									"style": {"color": "#0095DD"},
+									"esfilter": {"terms": {"cf_blocking_b2g": ["2.5+", "3.0+"]}}
 								}
 							]
 						},
@@ -403,6 +513,7 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 						]}},
 						{
 							"name": "Other",
+							"style": {"color": "#CCCCCC"},
 							"esfilter": {"match_all": {}} // Any tracked bug not in one of the product/component combinations above.
 						}
 					]

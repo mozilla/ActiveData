@@ -411,6 +411,7 @@ aChart.show=function(params){
 	var chartCube=params.cube;
 	var cube = coalesce(chartCube.cube, chartCube.data);
 
+	//EXPECTING cube TO BE AN OBJECT WITH cube[chartCube.select] BEING AN ARRAY
 	if (!(cube instanceof Array)){
 		//THE ActiveData CUBE
 		//do nothing
@@ -486,12 +487,11 @@ aChart.show=function(params){
 			return v.name;
 		});
 	}else if (chartCube.edges.length==2){
-		if (chartCube.select instanceof Array){
-			if (chartCube.select.length>1) {
+		if (chartCube.select instanceof Array) {
+			if (chartCube.select.length > 1) {
 				Log.error("Can not chart when select clause is an array");
-			}else{
+			} else {
 				chartCube.select = chartCube.select[0];
-				cube = new Matrix({"data":cube[chartCube.select.name]})
 			}//endif
 		}//endif
 		categoryAxis=chartCube.edges[0];
@@ -583,7 +583,6 @@ aChart.show=function(params){
 		legend: (chartCube.edges.length!=1 || Array.newInstance(chartCube.select).length>1),		//DO NOT SHOW LEGEND IF NO CATEGORIES
 		legendPosition: "bottom",
 		legendAlign: "center",
-
 		orientation: 'vertical',
 		timeSeries: (xaxis.domain.type=="time"),
 		timeSeriesFormat: JavaDateFormat2ProtoVisDateFormat(Qb.domain.time.DEFAULT_FORMAT),
@@ -678,7 +677,7 @@ aChart.show=function(params){
 			var temp=seriesLabels;
 			seriesLabels=categoryLabels;
 			categoryLabels=temp;
-			data=cube[chartCube.select].map(function(v){return [v];});
+			data=cube[chartCube.select.name].map(function(v){return [v];});
 		}//endif
 	}else{
 		data=cube[Array.newInstance(chartCube.select)[0].name];
@@ -756,6 +755,7 @@ aChart.show=function(params){
 	}//endif
 
 
+	return chart;
 };
 
 
@@ -780,10 +780,10 @@ function fixAction(chartParams, actionName){
 				c = c.addTimezone();
 			}//endif
 
-			return action(s, c, v, elem, series.dataIndex);
+			return action.call(this, s, c, v, elem, series.dataIndex);
 		} else{
 			//CCC VERSION 1
-			return action(series, x, d, elem);
+			return action.call(this, series, x, d, elem);
 		}//endif
 	};//method
 }

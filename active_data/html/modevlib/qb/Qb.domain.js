@@ -1198,7 +1198,6 @@ Qb.domain.set.compileMappedLookup2 = function(column, d, sourceColumns, lookupVa
 };
 
 
-
 Qb.domain.set.compileKey=function(domain){
 	if (domain.key === undefined) domain.key = "value";
 	var key=domain.key;
@@ -1306,3 +1305,80 @@ Qb.domain.algebraic2numeric=function(domain){
 	}//endif
 	return output;
 };//method
+
+
+Qb.domain.range = function(column, sourceColumns){
+
+	var d = column.domain;
+	if (d.name === undefined) d.name = d.type;
+	d.NULL = {"min":null, "name":"null"};
+
+	d.compare = function(a, b){
+		if (a.min<b.min) {
+			if (b.min < a.max) {
+				Log.error("Overlapping ranges not allowed");
+			} else {
+				return -1;
+			}//endif
+		}else if (a.min==b.min){
+			if (a.max==b.max) return 0;
+			Log.error("Overlapping ranges not allowed");
+		}else{
+			if (a.min<b.max){
+				Log.error("Overlapping ranges not allowed");
+			}else{
+				return 1;
+			}//endif
+		}//endif
+		return Qb.domain.value.compare(a.value, b.value);
+	};//method
+
+	//PROVIDE FORMATTING FUNCTION
+	d.label = function(part){
+		return part.name;
+	};//method
+
+	if (column.test){
+		Log.error("not implemented");
+	}else if (column.range){
+		Log.error("not implemented");
+	}else{
+		d.getCanonicalPart = function(part){
+			return this.getPartByKey(part.min);
+		};//method
+	}//endif
+
+
+	d.getPartByKey = function(key){
+		var output = d.NULL;
+		d.partitions.forall(function(r){
+			if (r.min <= key < r.max) output = r;
+		});
+		return output;
+	};//method
+
+
+	if (d.partitions === undefined) {
+		Log.error("Range domain must have `partitions` defined")
+	} else {
+		d.partitions.forall(function(p){
+			if (!p.name) p.name = ""+p.min+".."+p.max;
+		});
+	}//endif
+
+
+	d.columns = [
+		{"name": "value", "type": "number"}
+	];
+
+
+	//RETURN CANONICAL KEY VALUE FOR INDEXING
+	d.getKey = function(partition){
+		return partition.min;
+	};//method
+
+	d.end = function(p){
+		return p.min;
+	};
+
+};//method;

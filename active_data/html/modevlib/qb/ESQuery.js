@@ -144,7 +144,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 		//WE MANAGE ALL THE REQUESTS FOR THE SAME SCHEMA, DELAYING THEM IF THEY COME IN TOO FAST
 		if (indexInfo.fetcher === undefined) {
 			indexInfo.fetcher = Thread.run(function*(){
-				currInfo = indexInfo;
+				var currInfo = indexInfo;
 				var depth = 0;
 				var attempts = [];
 				var schemas = [];
@@ -210,7 +210,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 			yield(null);
 
 		var URL = coalesce(query.url, indexInfo.host + indexPath) + "/_mapping";
-		var path = parse.URL(URL).pathname.split("/").rightBut(1);
+		var path = parse.URL(URL).path.split("/").rightBut(1);
 		var pathLength = path.length - 1;  //ASSUME /indexname.../_mapping
 
 		var cluster_info = null;
@@ -351,9 +351,6 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 					url: this.query.index.url,
 					data: convert.value2json(this.esQuery),
 					dataType: "json",
-					headers: {
-						"Accept-Encoding": "gzip,deflate"
-					},
 					timeout: this.query.timeout
 				}));
 

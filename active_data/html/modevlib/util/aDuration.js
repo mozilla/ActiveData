@@ -13,6 +13,7 @@ importScript("../math/aMath.js");
 var Duration = function(){
 	this.milli = 0;	//INCLUDES THE MONTH VALUE AS MILLISECONDS
 	this.month = 0;
+	return this;
 };
 
 

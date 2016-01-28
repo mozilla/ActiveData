@@ -1,0 +1,343 @@
+{
+	"$schema": "http://charts.mozilla.org/schema.json",
+	"title": "A Standard Chart Schema",
+	"description": "chart definition",
+	"type": "object",
+	"properties": {
+		"data": {
+			"description": "an array of objects",
+			"type": "nested"
+		},
+		"target": {
+			"description": "name of dom elements to insert chart",
+			"type": "string"
+		},
+		"axis": {
+			"description": "list of axis, property names not limited to 'x' and 'y', ",
+			"type": "object",
+			"properties": {
+				"x": {
+					"$ref": "#definitions.axis"
+				},
+				"y": {
+					"$ref": "#definitions.axis"
+				}
+			}
+		},
+		"area": {
+			"description": "details regarding the plot area, but nothing about the series",
+			"type": "object",
+			"properties": {
+				"style": {
+					"$ref": "#definitions.object_style"
+				}
+			}
+		},
+		"title": {
+			"description": "details regarding the title.  Can also be a simple string.",
+			"type": "object",
+			"properties": {
+				"position": {
+					"description": "location of title relative to area (default=top)",
+					"type": "string"
+				},
+				"label": {
+					"description": "actual text of the title",
+					"type": "string"
+				},
+				"description": {
+					"description": "detail text shown while hovering over title (default=null)",
+					"type": "string"
+				}
+			},
+			"style": {
+				"$ref": "#definitions.object_style"
+			}
+		},
+		"legend": {
+			"description": "more configuration for ledgend",
+			"type": "object",
+			"properties": {
+				"label": {
+					"description": "name the legend",
+					"type": "string"
+				},
+				"position": {
+					"description": "position of legend relative to plot area (top/left/bottom/right)",
+					"type": "string"
+				},
+				"style": {
+					"$ref": "#definitions.object_style"
+				}
+			}
+		},
+		"series": {
+			"description": "what is ploted ",
+			"type": "object",
+			"properties": {
+				"value": {
+					"description": "expression to extract from data and chart, use tuple if plotting more than one dimension",
+					"type": "string"
+				},
+				"axis": {
+					"description": "name of the axis to apply against: can be any #chart.axis property name.  Use tuple if plotting more than one dimension.",
+					"type": "string"
+				},
+				"type": {
+					"description": "the chart type to show as (bar/line/dot)",
+					"type": "string"
+				},
+				"label": {
+					"description": "name of the series",
+					"type": "string"
+				},
+				"marker": {
+					"description":"single-value mark on one axis only",
+					"type":"object",
+					"properties": {
+						"size": {
+							"description": "size of the datapoint",
+							"type": "number"
+						},
+						"symbol": {
+							"description": "shape of datapoint",
+							"type": "string"
+						},
+						"style": {
+							"$ref": "#definitions.object_style"
+						}
+					}
+				},
+				"hoverStyle": {
+					"description": "for when hovering over datapoint",
+					"type": "object",
+					"properties": {
+						"size": {
+							"description": "size while hovering",
+							"type": "number"
+						},
+						"symbol": {
+							"description": "shape while hovering",
+							"type": "string"
+						},
+						"style": {
+							"$ref": "#definitions.object_style"
+						}
+					}
+				}
+			}
+		}
+	},
+	"definitions": {
+		"axis": {
+			"description": "details on a visual axis",
+			"type": "object",
+			"properties": {
+				"position": {
+					"description": "where to place the axis, relative to plot area (top/right/bottom/left)",
+					"type": "string"
+				},
+				"rug": {
+					"description": "show projection as a series of ticks along the axis",
+					"type": "boolean",
+					"default": false
+				},
+				"label": {
+					"description": "name of axis",
+					"type": "string"
+				},
+				"value": {
+					"description": "expression to evaluate, or name of the property",
+					"type": "string"
+				},
+				"unit": {
+					"description": "the measurement unit, using multiply (`*`) and divide (`/`) operators",
+					"type": "string"
+				},
+				"format": {
+					"description": "format of the reference values on the axis",
+					"type": "string"
+				},
+				"normalized": {
+					"description": "Convert to % of total",
+					"type": "boolean",
+					"default": true
+				},
+				"range": {
+					"description": "define the range of values on axis",
+					"type": "object",
+					"properties": {
+						"min": {
+							"description": "minimum axis value shown",
+							"type": "number"
+						},
+						"max": {
+							"description": "maximum axis value shown",
+							"type": "number"
+						},
+						"showZero": {
+							"description": "show zero coordinate, even if calculated range would not",
+							"type": "bolean"
+						}
+					}
+				}
+			},
+			"ticks": {
+				"description": "describe the axis ticks",
+				"type": "object",
+				"properties": {
+					"interval": {
+						"description": "distance between ticks, or ...",
+						"type": "number"
+					},
+					"quantity": {
+						"description": "total number of ticks to show, not including right-most",
+						"type": "number"
+					},
+					"style": {
+						"$ref": "#definitions.style"
+					}
+				}
+			},
+			"lines": {
+				"description": "",
+				"type": "nested",
+				"properties": {
+					"style": {
+						"$ref": "#definitions.style"
+					},
+					"label": ""
+				}
+			},
+			"bands": {
+				"description": "axis range that should be marked",
+				"type": "nested",
+				"properties": {
+					"label": {
+						"description": "name given to this band",
+						"type": "string"
+					},
+					"id": {
+						"description": "id for programatic reference",
+						"type": "string"
+					},
+					"min": {
+						"description": "minimum value in band",
+						"type": "number"
+					},
+					"max": {
+						"description": "maximum value of band",
+						"type": "number"
+					},
+					"style": {
+						"$ref": "#definitions.object_style"
+					}
+				}
+			},
+			"marks": {
+				"description": "axis values that should be marked",
+				"type": "nested",
+				"properties": {
+					"value": {
+						"description": "value to mark",
+						"type": "number"
+					},
+					"label": {
+						"description": "name shown on chart and given to mark",
+						"type": "string"
+					},
+					"id": {
+						"description": "machine-used id for mark",
+						"type": "string"
+					},
+					"style": {
+						"$ref": "#definitions.style"
+					}
+
+				}
+			},
+			"style": {
+				"$ref": "#definitions.object_style"
+			}
+		},
+		"object_style": {
+			"type": "object",
+			"properties": {
+				"$ref":"#definitions.style.properties",
+				"line": {
+					"$ref": "#definitions.style"
+				}
+			}
+		},
+		"style": {
+			"type": "object",
+			"properties": {
+				"font": {
+					"description": "css font",
+					"type": "string"
+				},
+				"format": {
+					"description": "text format string",
+					"type": "string"
+				},
+				"width": {
+					"description": "css width",
+					"type": "number"
+				},
+				"height": {
+					"description": "css height",
+					"type": "number"
+				},
+				"color": {
+					"description": "css color",
+					"type": "string"
+				},
+				"visibility": {
+					"description": "initial visibility",
+					"type": "string",
+					"default": "visible",
+					"enum": [
+						"visible",
+						"hidden"
+					]
+				},
+				"style": {
+					"description": "css line style descriptions",
+					"type": "string",
+					"enum": [
+						"solid",
+						"dotted"
+					]
+				},
+				"z-index": {
+					"description": "css z-depth",
+					"type": "number"
+				},
+				"padding": {
+					"description": "css padding",
+					"type": "string"
+				},
+				"border": {
+					"description": "css border",
+					"type": "string"
+				}
+			}
+		},
+		"hover": {
+			"description": "what to do when hovering over chart value",
+			"type": "object",
+			"properties": {
+				"format": {
+					"description": "formatting rules when hovering over point",
+					"type": "object",
+					"properties": {
+						"x": {
+							"description": "formatting the x coordinate value",
+							"type": "string"
+						}
+					}
+				}
+			}
+		}
+	}
+}

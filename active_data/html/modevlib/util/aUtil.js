@@ -15,16 +15,6 @@ var Map = {};
 // null IS A VALID VALUE INDICATING THE VALUE IS UNKNOWN
 ////////////////////////////////////////////////////////////////////////////////
 (function(){
-	function splitField(fieldname){
-		try {
-			return fieldname.replaceAll("\\.", "\b").split(".").map(function(v){
-				return v.replaceAll("\b", ".");
-			});
-		} catch (e) {
-			Log.error("Can not split field", e);
-		}//try
-	}//method
-
 	Map.newInstance = function(key, value){
 		var output = {};
 		output[key] = value;
@@ -106,13 +96,13 @@ var Map = {};
 	// ASSUME THE DOTS (.) IN fieldName ARE SEPARATORS
 	// AND THE RESULTING LIST IS A PATH INTO THE STRUCTURE
 	// (ESCAPE "." WITH "\\.", IF REQUIRED)
-	Map.get = function(obj, fieldName){
+	Map.get = function(obj, path){
 		if (obj === undefined || obj == null) return obj;
-		if (fieldName==".") return obj;
+		if (path==".") return obj;
 
-		var path = splitField(fieldName);
-		for (var i = 0; i < path.length; i++) {
-			var step = path[i];
+		var pathArray = splitField(path);
+		for (var i = 0; i < pathArray.length; i++) {
+			var step = pathArray[i];
 			if (step == "length") {
 				obj = eval("obj.length");
 			} else {
@@ -123,15 +113,15 @@ var Map = {};
 		return obj;
 	};//method
 
-	Map.set = function(obj, field, value){
-		if (obj === undefined || obj == null || fieldName=="."){
+	Map.set = function(obj, path, value){
+		if (obj === undefined || obj == null || path=="."){
 			Log.error("must be given an object ad field");
 		}//endif
 
-		var path = splitField(fieldName);
+		var pathArray = splitField(path);
 		var o = obj;
-		for (var i = 0; i < path.length-1; i++) {
-			var step = path[i];
+		for (var i = 0; i < pathArray.length-1; i++) {
+			var step = pathArray[i];
 			var val = o[step];
 			if (val===undefined || val==null){
 				val={};
@@ -139,7 +129,7 @@ var Map = {};
 			}//endif
 			o=val;
 		}//endif
-		o[path[i]]=value;
+		o[pathArray[i]]=value;
 		return obj;
 	};//method
 
@@ -219,7 +209,7 @@ var Map = {};
 			var val = map[key];
 			if (val !== undefined) {
 				var result = func(key, val, i);
-				if (result !== undefined) output.push(result);
+				if (result !== undefined) output[i]=result;
 			}//endif
 		}//for
 		return output;
@@ -256,6 +246,12 @@ var Map = {};
 
 	Map.getKeys = Object.keys;
 
+
+	Map.isObject = function (val) {
+	    if (val === null) { return false;}
+	    return ( (typeof val === 'function') || (typeof val === 'object') );
+	};
+	Map.isMap = Map.isObject;
 
 
 })();
@@ -311,6 +307,9 @@ Util.returnNull = function(__row){
 
 
 //POOR IMPLEMENTATION
+/*
+ * @return {string} A Random GUID
+ */
 Util.GUID = function(){
 	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
 		var r = aMath.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -319,8 +318,34 @@ Util.GUID = function(){
 };//method
 
 
+function splitField(fieldname){
+	try {
+		return fieldname.replaceAll("\\.", "\b").split(".").map(function(v){
+			return v.replaceAll("\b", ".");
+		});
+	} catch (e) {
+		Log.error("Can not split field", e);
+	}//try
+}//method
 
-function isObject(val) {
-    if (val === null) { return false;}
-    return ( (typeof val === 'function') || (typeof val === 'object') );
-}
+
+
+deepCopy = function(value) {
+    if (typeof value !== "object" || !value)
+        return value;
+
+	var copy;
+	var k;
+    if (Array.isArray(value)){
+        copy = [];
+        for (k=value.length;k--;) copy[k] = deepCopy(value[k]);
+        return copy;
+    }//endif
+
+    var cons = value.constructor;
+    if (cons === RegExp || cons === Date) return value;
+
+    copy = cons();
+	Map.forall(value, function(k, v){copy[k]=deepCopy(v);});
+	return copy;
+};

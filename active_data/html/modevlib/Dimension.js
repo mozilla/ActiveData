@@ -11,128 +11,136 @@ var Dimension = {};
 
 var DEFAULT_QUERY_LIMIT = 20;
 
-Dimension.prototype = {
-	"getDomain": function (param) {
-		//param.fullFilter  SET TO true TO HAVE FULL FILTER IN PARTITIONS
-		//param.depth IS MEANT TO REACH INTO SUB-PARTITIONS
-		if (param === undefined) {
-			param = {
-				"depth": 0,
-				"separator": "."
-			};
-		}//endif
-		param.depth = coalesce(param.depth, 0);
-		param.separator = coalesce(param.separator, ".");
-
-		var useFullFilter = coalesce(param.fullFilter, false);
-
-		var self = this;
-		var partitions = null;
-
-		if (!this.partitions && this.edges) {
-			//USE EACH EDGE AS A PARTITION, BUT isFacet==true SO IT ALLOWS THE OVERLAP
-			partitions = this.edges.map(function (v, i) {
-				if (i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT))
-					return undefined;
-				if (v.esfilter === undefined) return;
-				v.style = coalesce(v.style, {});
-				var temp = v.parent;
-				v.parent=undefined;
-				var output = Map.clone(v);
-				v.parent=temp;
-				output.esfilter = useFullFilter ? v.fullFilter : v.esfilter;
-				return output;
-			});
-			self.isFacet = true;
-		} else if (param.depth == 0) {
-			partitions = this.partitions.map(function (v, i) {
-				if (i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT)) return undefined;
-				v.style = coalesce(v.style, {});
-				var temp = v.parent;
-				v.parent=undefined;
-				var output = Map.clone(v);
-				v.parent=temp;
-				output.esfilter = useFullFilter ? v.fullFilter : v.esfilter;
-				return output;
-			})
-		} else if (param.depth == 1) {
-			partitions = [];
-			var rownum = 0;
-			self.partitions.forall(function (part, i) {
-				if (i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT)) return undefined;
-				rownum++;
-				part.partitions.forall(function (subpart, j) {
-					var temp = subpart.parent;
-					subpart.parent=undefined;
-					var newPart= Map.clone(subpart);
-					subpart.parent=temp;
-
-					newPart.name = [subpart.name, subpart.parent.name].join(param.separator);
-					newPart.esfilter = useFullFilter ? subpart.fullFilter : subpart.esfilter;
-					newPart.style = Map.setDefault({}, subpart.style, subpart.parent.style);
-					partitions.append(newPart);
-				})
-			})
-		} else {
-			Log.error("deeper than 2 is not supported yet")
-		}//endif
-
-		var output = {
-			"type": this.type,
-			"name": this.name,
-			"partitions": partitions,
-			"min": this.min,
-			"max": this.max,
-			"interval": this.interval,
-			//THE COMPLICATION IS THAT SOMETIMES WE WANT SIMPLE PARTITIONS, LIKE
-			//STRINGS, DATES, OR NUMBERS.  OTHER TIMES WE WANT PARTITION OBJECTS
-			//WITH NAME, VALUE, AND OTHER MARKUP.
-			//USUALLY A "set" IS MEANT TO BE SIMPLE, BUT THE end() FUNCTION IS
-			//OVERRIDES EVERYTHING AND IS EXPLICIT.  - NOT A GOOD SOLUTION BECAUSE
-			//end() IS USED BOTH TO INDICATE THE QUERY PARTITIONS *AND* DISPLAY
-			//COORDINATES ON CHARTS
-
-			//PLEASE SPLIT end() INTO value() (replacing the string value) AND
-			//label() (for presentation)
-			"value": (!this.value && this.partitions) ? "name" : this.value,
-			"label": coalesce(this.label, (this.type == "set" && this.name !== undefined) ? function (v) {
-				return v.name;
-			} : undefined),
-			"end": coalesce(this.end, (this.type == "set" && this.name !== undefined) ? function (v) {
-				return v;
-			} : undefined),  //I DO NOT KNOW WHY IS NOT return v.name
-//			"value":(!this.value && this.partitions) ? "name" : this.value,
-			"isFacet": this.isFacet
-
-		};
-		return output;
-
-
-//		var output=Map.copy(this);
-//		output.field=undefined;
-//		output.parent=undefined;
-//		output["default"]=undefined;
-//		output.index=undefined;
-//		return Map.copy(output);
-	},//method
-
-	"getSelect": function (param) {
-		var domain = this.getDomain(param);
-		if (domain.getKey === undefined) domain.getKey = function (v) {
-			return v.name;
-		}; //BASIC COMPILE
-		if (domain.NULL === undefined) domain.NULL = {"name": "Other"};
-
-		var output = {
-			"name": this.name,
-			"value": MVEL.Parts2TermScript(coalesce(param !== undefined ? param.index : null, this.index), domain)
-		};
-		return output;
-	}
-};
-
 
 (function () {
+
+	Dimension.prototype = {
+		"getDomain": function (param) {
+			//param.fullFilter  SET TO true TO HAVE FULL FILTER IN PARTITIONS
+			//param.depth IS MEANT TO REACH INTO SUB-PARTITIONS
+			if (param === undefined) {
+				param = {
+					"depth": 0,
+					"separator": "."
+				};
+			}//endif
+			param.depth = coalesce(param.depth, 0);
+			param.separator = coalesce(param.separator, ".");
+
+			var useFullFilter = coalesce(param.fullFilter, false);
+
+			var self = this;
+			var partitions = null;
+
+			if (!this.partitions && this.edges) {
+				//USE EACH EDGE AS A PARTITION, BUT isFacet==true SO IT ALLOWS THE OVERLAP
+				partitions = this.edges.map(function (v, i) {
+					if (i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT))
+						return undefined;
+					if (v.esfilter === undefined) return;
+					v.style = coalesce(v.style, {});
+					output = clonePart(v);
+					output.esfilter = useFullFilter ? v.fullFilter : v.esfilter;
+					return output;
+				});
+				self.isFacet = true;
+			} else if (param.depth == 0) {
+				partitions = this.partitions.map(function (v, i) {
+					if (i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT)) return undefined;
+					v.style = coalesce(v.style, {});
+					var output = clonePart(v);
+					output.esfilter = useFullFilter ? v.fullFilter : v.esfilter;
+					return output;
+				})
+			} else if (param.depth == 1) {
+				partitions = [];
+				var rownum = 0;
+				self.partitions.forall(function (part, i) {
+					if (i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT)) return undefined;
+					rownum++;
+					part.partitions.forall(function (subpart, j) {
+						var temp = subpart.parent;
+						subpart.parent=undefined;
+						var newPart= Map.clone(subpart);
+						subpart.parent=temp;
+
+						newPart.name = [subpart.name, subpart.parent.name].join(param.separator);
+						newPart.esfilter = useFullFilter ? subpart.fullFilter : subpart.esfilter;
+						newPart.style = Map.setDefault({}, subpart.style, subpart.parent.style);
+						partitions.append(newPart);
+					})
+				})
+			} else {
+				Log.error("deeper than 2 is not supported yet")
+			}//endif
+
+			var output = {
+				"type": this.type,
+				"name": this.name,
+				"partitions": partitions,
+				"min": this.min,
+				"max": this.max,
+				"interval": this.interval,
+				//THE COMPLICATION IS THAT SOMETIMES WE WANT SIMPLE PARTITIONS, LIKE
+				//STRINGS, DATES, OR NUMBERS.  OTHER TIMES WE WANT PARTITION OBJECTS
+				//WITH NAME, VALUE, AND OTHER MARKUP.
+				//USUALLY A "set" IS MEANT TO BE SIMPLE, BUT THE end() FUNCTION IS
+				//OVERRIDES EVERYTHING AND IS EXPLICIT.  - NOT A GOOD SOLUTION BECAUSE
+				//end() IS USED BOTH TO INDICATE THE QUERY PARTITIONS *AND* DISPLAY
+				//COORDINATES ON CHARTS
+
+				//PLEASE SPLIT end() INTO value() (replacing the string value) AND
+				//label() (for presentation)
+				"value": (!this.value && this.partitions) ? "name" : this.value,
+				"label": coalesce(this.label, (this.type == "set" && this.name !== undefined) ? function (v) {
+					return v.name;
+				} : undefined),
+				"end": coalesce(this.end, (this.type == "set" && this.name !== undefined) ? function (v) {
+					return v;
+				} : undefined),  //I DO NOT KNOW WHY IS NOT return v.name
+	//			"value":(!this.value && this.partitions) ? "name" : this.value,
+				"isFacet": this.isFacet
+
+			};
+			return output;
+
+
+	//		var output=Map.copy(this);
+	//		output.field=undefined;
+	//		output.parent=undefined;
+	//		output["default"]=undefined;
+	//		output.index=undefined;
+	//		return Map.copy(output);
+		},//method
+
+		"getSelect": function (param) {
+			var domain = this.getDomain(param);
+			if (domain.getKey === undefined) domain.getKey = function (v) {
+				return v.name;
+			}; //BASIC COMPILE
+			if (domain.NULL === undefined) domain.NULL = {"name": "Other"};
+
+			var output = {
+				"name": this.name,
+				"value": MVEL.Parts2TermScript(coalesce(param !== undefined ? param.index : null, this.index), domain)
+			};
+			return output;
+		}
+	};
+
+
+
+	function clonePart(v){
+    	var parent = v.parent;
+		var index = v.index;
+		v.parent = undefined;
+		v.index = undefined;
+		var output = Map.clone(v);
+		v.parent = parent;
+		v.index = index;
+
+		return output;
+	}
 
 
 

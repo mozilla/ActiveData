@@ -168,7 +168,7 @@ var TEST_COLOR;
 	};
 
 	Color.prototype.toHTML = function () {
-		if (this.L==1.0){
+		if (this.L>=1.0){
 			var Lfloor = COLOR_MESH.length-1;
 			var Lfloor_2 = Lfloor;
 			var Lpart = 1.0;

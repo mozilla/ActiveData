@@ -1,0 +1,287 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<HTML>
+<HEAD>
+	<script type="text/javascript" src="modevlib/imports/import.js"></script>
+</HEAD>
+<BODY>
+
+<h3 id="title">ElasticSearch Cluster Status</h3>
+<div id="content"></div>
+
+<script type="application/javascript">
+
+importScript([
+	'modevlib/collections/aMatrix.js',
+	'modevlib/aLibrary.js',
+	'modevlib/rest/Rest.js',
+	"css/menu.css",
+	"css/es.css"
+], function(){
+
+	var KILO_WIDTH = 30;
+	var MIN_TEXT_HEIGHT = 10;
+	var MAX_TEXT_HEIGHT = 34;
+	var EMPTY_SLOT='&nbsp;';
+	var SUGGESTED_SIZE = 20*1000*1000*1000;
+	var WINDOW_PADDING = 50;  //ESTIMATE OF TOTAL HORIZONTAL PADDING ACROSS SCREEN (SO WE CAN PICK A MAX WIDTH)
+
+	var SCI_PREFIX = [
+		"one ", "10 ", "100 ",
+		"one kilo", "10 kilo", "100 kilo",
+		"one mega", "10 mega", "100 mega",
+		"one giga", "10 giga", "100 giga",
+		"one tera", "10 tera", "100 tera"
+	];
+
+	Thread.showWorking = function(numThread){
+		var l = $(".loading");
+		l.show();
+	};//function
+
+	Thread.hideWorking = function(){
+		var l = $(".loading");
+		l.hide();
+	};//function
+
+
+
+
+	var INDEX = new Template(
+			'<div class="index" style="position:relative;">' +
+			'<table style="position:relative;width:100%">' +
+			'<tr><td>' +
+			'	<table>' +
+			'		<tr><td colspan="2"><h2>{{index_name}}</h2></td></tr>' +
+			'		<tr><td style="text-align: right;">{{count|comma}}</td><td> documents</td></tr>' +
+			'		<tr><td style="text-align: right;">{{size|comma}}</td><td> bytes</td></tr>' +
+			'	</table>' +
+			'</td><td>' +
+			'	<h2><span class="{{status}}">{{status_message}}</span></h2>'+
+			'</td><td>' +
+			'</td><td>' +
+			'	{{suggested_size}}' +
+			'</td><td>' +
+			'	<div style="text-align: center">' +
+			'		{{example_size}}byte<br>' +
+			'		<div class="example" style="display:inline-block;box-sizing:border-box;width:{{example_width}}px;height:{{example_width}}px;"></div><br>' +
+			'		({{bytes_per_pixel|metric}}bytes per pixel)' +
+			'	</div>' +
+			'</td></tr>' +
+			'</table>' +
+			'<div>' +
+			'	<table>' +
+			'		<thead>' +
+			'			<tr>{{node_headers}}</tr>' +
+			'		</thead>' +
+			'		<tbody>' +
+			'			<tr>{{node_bodies}}</tr>' +
+			'		</tbody>' +
+			'	</table>' +
+			'</div>' +
+			'</div>'
+	);
+
+	var NODE_HEADER = new Template('<td style="text-align: center;"><h3>{{node_name}}</h3></td>');
+	var NODE_BODY = new Template('<td><div class="node" style="min-width:40px">{{shards}}</div></td>');
+	var SUGGESTED = new Template(
+			'	<div style="text-align: center">' +
+			'		Suggested Size<br>' +
+			'		<div class="warning" style="display:inline-block;width:{{width}};height:{{width}};box-sizing:border-box;"></div><br>' +
+			'		{{size|metric}}bytes'+
+			'	</div>'
+	);
+	var SLOT = new Template('<td><div class="slot" style="position:relative;width:{{width}}px;height:{{width}}px;">{{shard}}</div></td>');
+	var SHARD = new Template('<div class="{{shard_class}}" style="{{shard_style}}"><div>{{shard_number}}</div></div>');
+
+
+	function show(){
+		Thread.run(function * ()
+		{
+			//ALL NODES
+			var result = yield Rest.get({"url":"http://activedata.allizom.org:9200/_nodes"});
+
+			var lookupNode = {};
+			var nodes = Map.map(result.nodes, function(nodeID, node, i){
+				lookupNode[nodeID] = node;
+				node.index = i;
+				node.shardCount=0;
+				return node;
+			});
+
+			//ALL INDEXES
+			var response = yield Rest.get({"url":"http://activedata.allizom.org:9200/_status"});
+
+			var displayOptions = Session.URL.getFragment();
+			Map.forall(response.indices, function(index, indexDetails){
+				if (displayOptions.index) {
+					if (!Array.OR(Array.newInstance(displayOptions.index).map(function(i){
+								return index.startsWith(i);
+							}))){
+						return;
+					}//endif
+				}//endif
+
+				//CONVERT FROM OBJECT OF ARRAYS TO 1D ARRAY
+				var shards = [];
+				var minCopies = null;
+				Map.forall(indexDetails.shards, function(i, s){
+					var startedCount=0;
+					s.forall(function(ss){
+						ss.i=convert.String2Integer(i);  //LET i BE THE SHARD NUMBER
+						if (ss.state=="STARTED") startedCount++;
+					});
+					shards.extend(s);
+					minCopies = aMath.min(startedCount, minCopies);
+				});
+
+				//SUMMARY ON SHARDS
+				var max_size = aMath.MAX(shards.select("index.size_in_bytes"));
+				var num_shards = Map.getKeys(indexDetails.shards).length;
+
+				var VISUAL_RATIO = 1/2;  //OUR TARGET RATIO FOR PRESENTING THE INDEX
+				var shardRatio = VISUAL_RATIO * nodes.length;  //OF COURSE EACH NODE COLUMN IS LESS WIDE (READ PROPORTIONALLY HIGHER)
+				var shardsPerRow = aMath.ceiling(Math.sqrt(num_shards / shardRatio));
+				var shardsPerColumn = aMath.ceiling(num_shards / shardsPerRow);
+				var slots = new Matrix({"dim": [nodes.length, shardsPerColumn, shardsPerRow], "constructor":EMPTY_SLOT});
+				var largeShardCount=0;
+
+				//FIND A LOGARITHMIC WIDTH, WITH A NICE ROUND bytes_per_pixel
+				var maxWidth = (window.innerWidth-WINDOW_PADDING)/shardsPerRow/nodes.length;  //DON'T GO OFF THE SCREEN
+//				var maxWidth = 1000000;  //SOME BIG NUMBER
+
+				var estimateWidth = aMath.min(maxWidth, aMath.max(KILO_WIDTH, Math.log10(max_size)*KILO_WIDTH/3));
+				var targetBPP = max_size / estimateWidth / estimateWidth;
+				var bytes_per_pixel = aMath.ceiling(targetBPP, {"digits":1});
+				var slotWidth = aMath.round(Math.sqrt(max_size/bytes_per_pixel));
+
+				//ACCUMULATE THE SHARD HTML IN THE slots MATRIX
+				shards.forall(function(shard){
+					var column = aMath.floor(shard.i / shardsPerColumn);
+					var row = aMath.mod(shard.i, shardsPerColumn);
+					var shardHeight = shard.index.size_in_bytes / slotWidth / bytes_per_pixel;
+					var shardWidth = slotWidth;
+					// IF WE ARE JUST A PIXEL HIGH, SHOW LESS WIDTH
+					if (shardHeight<1){
+						shardHeight = 1;
+						shardWidth = aMath.max(1, shard.index.size_in_bytes / bytes_per_pixel);
+					}else{
+						shardHeight = aMath.ceiling(shardHeight);
+					}//endif
+					var textHeight = aMath.min(MAX_TEXT_HEIGHT, aMath.max(shardHeight*0.7, MIN_TEXT_HEIGHT));
+					var node = lookupNode[shard.routing.node];
+					node.shardCount++;
+					var nodeIndex = node.index;
+
+					var shardStyleClass;
+					if (shard.state=="STARTED"){
+						shardStyleClass=coalesce(shard.routing.state, shard.state);
+					}else{
+						shardStyleClass=shard.state;
+					}//endif
+					var shardHtml = SHARD.replace({
+						"shard_class": shardStyleClass + (shard.routing.primary ? " PRIMARY" : ""),
+						"shard_style": convert.Object2style({
+							"width": shardWidth + "px",
+							"height": shardHeight + "px",
+							"font-size": textHeight + "px",
+							"box-sizing": "border-box"
+						}),
+						"shard_number": shard.i
+					});
+					if (shard.index.size_in_bytes > SUGGESTED_SIZE){
+						largeShardCount++;
+					}//endif
+
+					slots.set([nodeIndex, row, column], shardHtml);
+				});
+
+				//SERIALIZE THE HTML FOR EACH NODE
+				var nodesHtml = nodes.map(function(node, nodeIndex){
+					var shardsHtml = [];
+					if (node.shardCount){
+						shardsHtml.append('<table>');
+						for (var r = 0; r < shardsPerColumn; r++) {
+							shardsHtml.append('<tr>');
+							for (var c = 0; c < shardsPerRow; c++) {
+								shardsHtml.append(SLOT.replace({
+									"width": slotWidth,
+									"shard": slots.get([nodeIndex, r, c])
+								}));
+							}//for
+							shardsHtml.append('</tr>');
+						}//for
+						shardsHtml.append('</table>');
+
+						return NODE_BODY.replace({
+							"shards": shardsHtml.join("\n")
+						});
+					}else{
+						//SPACE FILLING TABLE
+						shardsHtml.append('<table>');
+						for (var r = 0; r < shardsPerColumn; r++) {
+							shardsHtml.append('<tr>');
+							shardsHtml.append(SLOT.replace({
+								"width": slotWidth,
+								"shard": EMPTY_SLOT
+							}));
+							shardsHtml.append('</tr>');
+						}//for
+						shardsHtml.append('</table>');
+
+						return NODE_BODY.replace({
+							"shards": shardsHtml.join("\n")
+						});
+
+					}//endif
+				}).join("\n");
+
+
+				var size = aMath.ceiling(Math.log10(KILO_WIDTH*KILO_WIDTH*bytes_per_pixel));
+				var example_width = Math.sqrt(Math.pow(10, size)/bytes_per_pixel);
+				if (largeShardCount){
+					suggestedSize = SUGGESTED.replace({
+						"width": Math.sqrt(SUGGESTED_SIZE/bytes_per_pixel),
+						"size": SUGGESTED_SIZE
+					});
+				}else{
+					suggestedSize="&nbsp;"
+				}//endif
+
+				var indexHtml = INDEX.replace({
+					"index_name": index,
+					"count": indexDetails.docs.num_docs,
+					"size": indexDetails.index.size_in_bytes,
+					"status": ["red", "yellow", "green"][Math.min(2, minCopies)],
+					"status_message": ["Missing Shards", "Missing Replicas", (minCopies - 1) + " Replicas"][Math.min(2, minCopies)],
+					"suggested_size":suggestedSize,
+					"example_width":example_width,
+					"example_size":SCI_PREFIX[size],
+					"bytes_per_pixel": aMath.round(bytes_per_pixel, {"digits":3}),
+					"node_headers": nodes.map(function(node){
+						return NODE_HEADER.replace({"node_name": node.name});
+					}).join(""),
+					"node_bodies": nodesHtml
+				});
+
+				$("#content").append(indexHtml);
+			});
+		}
+	)
+		;
+	}//function
+
+	$(document).ready(function(){
+		show();
+	});
+
+});
+
+</script>
+
+
+</BODY>
+</HTML>
+

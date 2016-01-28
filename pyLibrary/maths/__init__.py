@@ -195,11 +195,15 @@ class Math(object):
         """
         if value == None:
             return None
-        v = int(math.floor(value))
-        if v < 0:
-            _Log.error("")
+
+        if mod == 1:
+            return int(math.floor(value))
+        elif Math.is_integer(mod):
+            return int(math.floor(value/mod))*mod
         else:
-            return v - (v % mod)
+            return math.floor(value/mod)*mod
+
+
 
     @staticmethod
     def mod(value, mod=1):

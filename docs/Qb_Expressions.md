@@ -196,9 +196,12 @@ expressions evaluating to `null` are ignored.  The empty list evaluates to `null
 
 ###`div` Operator###
 
-For division.  There is no *simple* form.
+For division.
 
+		{"div": {variable: denominator}} 
 		{"div": [numerator, denominator]} 
+
+division by zero will return `null`
 
 
 ###`exp` Operator###
@@ -210,6 +213,12 @@ Raise the base to given exponent.  Also known as `pow` and `power`
 to resolve ambiguity, we define 0<sup>0</sup> as `null`
 
 		{"exp": [0, 0]} ⇒ null
+
+of course, the default clause allows you to provide the definition that suites you best:
+
+		{"exp": [base, exponent], "default": 0}     // {"exp": [0, x]} == 0 for all x
+		{"exp": [base, exponent], "default": base}  // {"exp": [x, 1]} == x for all x
+
 
 ###`mod` Operator###
 
@@ -340,11 +349,12 @@ Conditional Operators
 
 ###`coalesce` Operator###
 
-Return the first not `null` value in the list of evaluated expressions 
+Return the first not `null` value in the list of evaluated expressions. 
 
+		{"coalesce": {variable, constant}}
 		{"coalesce": [expr1, expr2, ... exprN]}
 
-If all expressions evaluate to `null`, or the list is empty, then the result is `null` 
+For the *simple* form; `null` is a legitimate `constant`.  Generally, if all expressions evaluate to `null`, or the expression list is empty, then the result is `null` 
 
 ###`when` Operator###
 
@@ -386,12 +396,12 @@ Except for the right-hand-side of simple form operations, Qb will interpret JSON
 
 Can be stated in a more complicated form 
 
-		{"eq": ["test", {"literal":42}]}
+		{"eq": ["test", {"literal": 42}]}
 
 The literal can be primitive, or whole objects
 
 		{"literal": 42}
-		{"literal": {"name":"Kyle Lahnakoski", "age": 41}}
+		{"literal": {"name": "Kyle Lahnakoski", "age": 41}}
 
 
 ### `script` Operator ###

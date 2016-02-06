@@ -90,7 +90,10 @@ class URL(object):
         if self.port:
             url = url + ":" + str(self.port)
         if self.path:
-            url += str(self.path)
+            if self.path[0]=="/":
+                url += str(self.path)
+            else:
+                url += b"/"+str(self.path)
         if self.query:
             url = url + '?' + _convert.value2url(self.query)
         if self.fragment:

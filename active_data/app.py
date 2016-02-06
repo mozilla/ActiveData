@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 import sys
 from _ssl import PROTOCOL_SSLv23
 from collections import Mapping
+from copy import copy
 from ssl import SSLContext
 from tempfile import NamedTemporaryFile
 
@@ -27,7 +28,7 @@ from active_data.actions.static import download
 from pyLibrary import convert, strings
 from pyLibrary.debugs import constants, startup
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import wrap, coalesce
+from pyLibrary.dot import wrap, coalesce, Dict
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.queries import containers
@@ -129,24 +130,63 @@ def query(path):
         )
     except Exception, e:
         e = Except.wrap(e)
+        send_error(active_data_timer, body, e)
 
-        record_request(flask.request, None, body, e)
-        Log.warning("Could not process\n{{body}}", body=body, cause=e)
-        e = e.as_dict()
-        e.meta.active_data_response_time = active_data_timer.duration
 
+@app.route('/json/<path:path>', methods=['GET'])
+def get_raw_json(path):
+    active_data_timer = Timer("total duration")
+    body = flask.request.data
+    try:
+        with active_data_timer:
+            args = wrap(Dict(**flask.request.args))
+            limit = args.limit if args.limit else 10
+            args.limit = None
+            result = qb.run({
+                "from": path,
+                "where": {"eq": args},
+                "limit": limit,
+                "format": "list"
+            })
+
+            if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, qb SHOULD ALWAYS RETURN Containers
+                result = result.format("list")
+
+        result.meta.active_data_response_time = active_data_timer.duration
+
+        response_data = convert.unicode2utf8(convert.value2json(result.data, pretty=True))
+        Log.note("Response is {{num}} bytes", num=len(response_data))
         return Response(
-            convert.unicode2utf8(convert.value2json(e)),
-            status=400,
+            response_data,
+            direct_passthrough=True,  # FOR STREAMING
+            status=200,
             headers={
                 "access-control-allow-origin": "*",
-                "content-type": "application/json"
+                "content-type": "text/plain"
             }
         )
+    except Exception, e:
+        e = Except.wrap(e)
+        return send_error(active_data_timer, body, e)
+
+
+def send_error(active_data_timer, body, e):
+    record_request(flask.request, None, body, e)
+    Log.warning("Could not process\n{{body}}", body=body, cause=e)
+    e = e.as_dict()
+    e.meta.active_data_response_time = active_data_timer.duration
+    return Response(
+        convert.unicode2utf8(convert.value2json(e)),
+        status=400,
+        headers={
+            "access-control-allow-origin": "*",
+            "content-type": "application/json"
+        }
+    )
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
-@app.route('/<path:path>')
+@app.route('/<path:path>', methods=['GET', 'POST'])
 def overview(path):
     try:
         record_request(flask.request, None, flask.request.data, None)
@@ -204,8 +244,6 @@ def record_request(request, query_, data, error):
     })
     log["from"] = request.headers.get("from")
     request_log_queue.add({"value": log})
-
-
 
 
 def main():

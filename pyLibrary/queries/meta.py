@@ -326,7 +326,7 @@ class FromESMetadata(object):
                 Log.warning("problem in cardinality monitor", cause=e)
 
     def not_monitor(self, please_stop):
-        Log.warning("metadata scan has been disabled")
+        Log.alert("metadata scan has been disabled")
         please_stop.on_go(lambda: self.todo.add(Thread.STOP))
         while not please_stop:
             c = self.todo.pop()

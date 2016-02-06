@@ -201,6 +201,60 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+
+    def test_sum_default(self):
+        test = {
+            "name": "count column",
+            "metadata": {},
+            "data": [
+                {"a": "c", "v": 13},
+                {"a": "b"},
+                {"v": 3},
+                {"a": "b"},
+                {"a": "c", "v": 7},
+                {"a": "c", "v": 11}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"name": "sum_v", "value": "v", "aggregate": "sum", "default":-1},
+                "edges": ["a"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b", "sum_v": -1},
+                    {"a": "c", "sum_v": 21},
+                    {"sum_v": 3}
+                ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a", "sum_v"],
+                "data": [
+                    ["b", -1],
+                    ["c", 21],
+                    [null, 3]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "a",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [{"value": "b"}, {"value": "c"}]
+                        }
+                    }
+                ],
+                "data": {
+                    "count_v": [-1, 21, 3]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
     def test_select_2(self):
         test = {
             "name": "count column",

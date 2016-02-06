@@ -210,11 +210,11 @@ Raise the base to given exponent.  Also known as `pow` and `power`
 
 		{"exp": [base, exponent]} ⇒ base ** exponent
 
-to resolve ambiguity, we define 0<sup>0</sup> as `null`
+to resolve ambiguity, we define 0<sup>0</sup> as `null`:
 
 		{"exp": [0, 0]} ⇒ null
 
-of course, the default clause allows you to provide the definition that suites you best:
+of course, the `default` clause allows you to provide the definition that suites you best:
 
 		{"exp": [base, exponent], "default": 0}     // {"exp": [0, x]} == 0 for all x
 		{"exp": [base, exponent], "default": base}  // {"exp": [x, 1]} == x for all x

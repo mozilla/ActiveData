@@ -717,8 +717,8 @@ class Cluster(object):
         except Exception, e:
             Log.error("Problem with call to {{url}}",  url= url, cause=e)
 
-    def delete(self, path, **kwargs):
-        url = self.settings.host + ":" + unicode(self.settings.port) + path
+    def delete(self, index_name, **kwargs):
+        url = self.settings.host + ":" + unicode(self.settings.port) + "/" + index_name
         try:
             response = convert.json2value(utf82unicode(http.delete(url, **kwargs).content))
             if self.debug:

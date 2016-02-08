@@ -11,7 +11,6 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-import inspect
 import itertools
 import os
 import signal
@@ -116,7 +115,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             try:
                 cluster.delete_index(i)
                 Log.note("remove index {{index}}", index=i)
-            finally:
+            except Exception, e:
                 pass
         Log.stop()
 

@@ -106,7 +106,6 @@ class FromESMetadata(object):
                 if c.abs_name==d.abs_name and c.table==d.table and c!=d:
                     Log.error("")
 
-
     def _get_columns(self, table=None):
         # TODO: HANDLE MORE THEN ONE ES, MAP TABLE SHORT_NAME TO ES INSTANCE
         alias_done = set()
@@ -303,10 +302,8 @@ class FromESMetadata(object):
                             self.todo.extend(old_columns)
                             # TEST CONSISTENCY
                             for c, d in product(list(self.todo.queue), list(self.todo.queue)):
-                                if c.abs_name==d.abs_name and c.table==d.table and c!=d:
+                                if c.abs_name == d.abs_name and c.table == d.table and c != d:
                                     Log.error("")
-
-
                         else:
                             Log.note("no more metatdata to update")
 

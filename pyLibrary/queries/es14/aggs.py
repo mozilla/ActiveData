@@ -182,7 +182,7 @@ def es_aggsop(es, frum, query):
     split_where = split_expression_by_depth(qb_expression(query.where), schema=frum, map_=map_)
 
     if len(split_field(frum.name)) > 1:
-        if any(split_where[2:]):
+        if any(split_where[2::]):
             Log.error("Where clause is too deep")
 
         for d in decoders[1]:

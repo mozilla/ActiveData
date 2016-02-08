@@ -33,7 +33,7 @@ from pyLibrary.env.files import File
 from pyLibrary.queries import containers
 from pyLibrary.queries import qb, meta
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.meta import FromESMetadata
+from pyLibrary.queries.meta import FromESMetadata, TOO_OLD
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
@@ -85,15 +85,37 @@ def query(path):
             if data.meta.testing:
                 # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
                 m = meta.singlton
-                end_time = Date.now() + MINUTE
+                now = Date.now()
+                end_time = now + MINUTE
 
-                while end_time > Date.now():
+                # MARK COLUMNS DIRTY
+                with m.columns.locker:
+                    m.columns.update({
+                        "clear": [
+                            "partitions",
+                            "count",
+                            "cardinality",
+                            "last_updated"
+                        ],
+                        "where": {"eq": {"table": data["from"]}}
+                    })
+
+                # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
+                cols = [c for c in m.get_columns(table=data["from"]) if c.type not in ["nested", "object"]]
+                for c in cols:
+                    Log.note("Mark {{column}} dirty", column=c.name)
+                    c.last_updated = now - TOO_OLD
+                    m.todo.push(c)
+
+                while end_time > now:
+                    # GET FRESH VERSIONS
                     cols = [c for c in m.get_columns(table=data["from"]) if c.type not in ["nested", "object"]]
                     for c in cols:
-                        m.todo.push(c)
-                    for c in cols:
-                        if not c.last_updated or c.cardinality == None:
-                            Log.note("wait for column (table={{col.table}}, name={{col.name}}) metadata to arrive", col=c)
+                        if not c.last_updated or c.cardinality == None :
+                            Log.note(
+                                "wait for column (table={{col.table}}, name={{col.name}}) metadata to arrive",
+                                col=c
+                            )
                             break
                     else:
                         break

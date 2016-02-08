@@ -7,12 +7,12 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 from collections import Mapping
 
-from pyLibrary import convert
 from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, DictList, unwrap
@@ -40,7 +40,7 @@ def get_decoders_by_depth(query):
     schema = query.frum
     output = DictList()
     for e in coalesce(query.edges, query.groupby, []):
-        if e.value:
+        if e.value != None:
             e = e.copy()
             e.value = qb_expression(e.value)
             vars_ = e.value.vars()
@@ -120,6 +120,8 @@ def es_aggsop(es, frum, query):
             elif s.aggregate == "percentile":
                 #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
                 key = literal_field(canonical_name + " percentile")
+                if isinstance(s.percentile, basestring) or s.percetile < 0 or 1 < s.percentile:
+                    Log.error("Expecting percentile to be a float from 0.0 to 1.0")
                 percent = Math.round(s.percentile * 100, decimal=6)
 
                 es_query.aggs[key].percentiles.field = field_name
@@ -263,7 +265,7 @@ class AggsDecoder(object):
                 return object.__new__(DefaultDecoder, e)
 
             if isinstance(e.value, basestring):
-                Log.error("Not expected anymore")
+                Log.error("Expecting Variable or Expression, not plain string")
 
             if isinstance(e.value, Variable):
                 cols = query.frum.get_columns()

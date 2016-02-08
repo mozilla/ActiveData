@@ -46,6 +46,8 @@ def qb_expression(expr):
         return Literal(None, expr)
     elif is_keyword(expr):
         return Variable(expr)
+    elif expr == "":
+        Log.error("expression is empty")
 
     try:
         items = expr.items()

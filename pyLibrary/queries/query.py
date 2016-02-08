@@ -122,11 +122,12 @@ class Query(object):
         else:
             columns = []
 
-        query_path = coalesce(self.frum.query_path, ".")
-        vars = query_get_all_vars(self, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
-        for c in columns:
-            if c.name in vars and not query_path.startswith(coalesce(listwrap(c.nested_path)[0], "")):
-                Log.error("This query, with variable {{var_name}} is too deep", var_name=c.name)
+        if self.edges or self.groupby:
+            query_path = coalesce(self.frum.query_path, ".")
+            vars = query_get_all_vars(self, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
+            for c in columns:
+                if c.name in vars and not query_path.startswith(coalesce(listwrap(c.nested_path)[0], "")):
+                    Log.error("This query, with variable {{var_name}} is too deep", var_name=c.name)
 
     @property
     def columns(self):

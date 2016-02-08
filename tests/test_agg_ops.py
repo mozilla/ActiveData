@@ -120,101 +120,19 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_bad_percentile(self):
+        test = {
+            "data": [{"a": i**2} for i in range(30)],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": "a", "aggregate": "percentile", "percentile": "0.90"}
+            },
+            "expecting_list": {
+                "meta": {"format": "value"}, "data": 681.3
+            }
+        }
 
-# TODO:  FIX WHATEVER IS HAPPENING HERE
-#
-#     {
-#         "select": [
-#             {
-#                 "name": "average",
-#                 "value": "result.duration",
-#                 "aggregate": "average"
-#             },
-#             {
-#                 "name": "95percentile",
-#                 "value": "result.duration",
-#                 "aggregate": "percentile",
-#                 "percentile": "0.95"
-#             }
-#         ],
-#         "from": "unittest",
-#         "edges": [
-#             "result.result",
-#             "build.branch"
-#         ],
-#         "where": {
-#             "and": [
-#                 {
-#                     "eq": {
-#                         "result.test": "browser/base/content/test/general/browser_aboutHealthReport.js"
-#                     }
-#                 },
-#                 {
-#                     "gt": {
-#                         "run.timestamp": "{{today-week}}"
-#                     }
-#                 },
-#                 {
-#                     "neq": {
-#                         "result.result": "SKIP"
-#                     }
-#                 }
-#             ]
-#         },
-#         "limit": 10000
-#     }
-
-# Call to ActiveData failed
-# 	File ESQueryRunner.js, line 33, in ActiveDataQuery
-# 	File thread.js, line 246, in Thread_prototype_resume
-# 	File thread.js, line 226, in Thread_prototype_resume/retval
-# 	File Rest.js, line 46, in Rest.send/ajaxParam.error
-# 	File Rest.js, line 104, in Rest.send/request.onreadystatechange
-# caused by Error while calling /query
-# caused by Bad response (400)
-# caused by problem
-# 	File qb_usingES.py, line 150, in query
-# 	File qb.py, line 52, in run
-# 	File app.py, line 109, in query
-# 	File app.py, line 1461, in dispatch_request
-# 	File app.py, line 1475, in full_dispatch_request
-# 	File app.py, line 1817, in wsgi_app
-# 	File app.py, line 1836, in __call__
-# 	File serving.py, line 168, in execute
-# 	File serving.py, line 180, in run_wsgi
-# 	File serving.py, line 238, in handle_one_request
-# 	File BaseHTTPServer.py, line 340, in handle
-# 	File serving.py, line 203, in handle
-# 	File SocketServer.py, line 655, in __init__
-# 	File SocketServer.py, line 334, in finish_request
-# 	File SocketServer.py, line 599, in process_request_thread
-# 	File threading.py, line 766, in run
-# 	File threading.py, line 813, in __bootstrap_inner
-# 	File threading.py, line 786, in __bootstrap
-# caused by invalid literal for float(): 0.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.950.95
-# 	File __init__.py, line 165, in round
-# 	File aggs.py, line 123, in es_aggsop
-# 	File qb_usingES.py, line 137, in query
-# 	File qb.py, line 52, in run
-# 	File app.py, line 109, in query
-# 	File app.py, line 1461, in dispatch_request
-# 	File app.py, line 1475, in full_dispatch_request
-# 	File app.py, line 1817, in wsgi_app
-# 	File app.py, line 1836, in __call__
-# 	File serving.py, line 168, in execute
-# 	File serving.py, line 180, in run_wsgi
-# 	File serving.py, line 238, in handle_one_request
-# 	File BaseHTTPServer.py, line 340, in handle
-# 	File serving.py, line 203, in handle
-# 	File SocketServer.py, line 655, in __init__
-# 	File SocketServer.py, line 334, in finish_request
-# 	File SocketServer.py, line 599, in process_request_thread
-# 	File threading.py, line 766, in run
-# 	File threading.py, line 813, in __bootstrap_inner
-# 	File threading.py, line 786, in __bootstrap
-
-
-
+        self.assertRaises("Expecting percentile to be a float", self._execute_es_tests, test)
 
     def test_many_aggs_on_one_column(self):
         # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
@@ -398,16 +316,6 @@ class TestAggOps(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test, tjson=False)
-
-#TODO: AGGREGATING ON CONSTANT DOES NOT SEEM TO WORK
-
-test = {
-    "from": base_test_class.settings.backend_es.index,
-    "select": {"name": "count", "value": "1", "aggregate": "count"},
-    "edges": ["a"],
-    "esfilter": True,
-    "limit": 10
-}
 
 #TODO: SIMPLE COUNT NOT WORKING
 example = {

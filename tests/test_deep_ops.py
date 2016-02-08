@@ -1196,7 +1196,28 @@ class TestDeepOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-
+    def test_deep_star(self):
+        test = {
+            "data": [{"x": 1, "a": {"_b": [
+                {"q": {"a": 0, "b": 1}},
+                {"q": {"a": 0}},
+                {"q": {}}
+            ]}}],
+            "query": {
+                "from": base_test_class.settings.backend_es.index+".a._b",
+                "select": ["*"],
+                "format": "list"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"q.a": 0, "q.b": 1, "x": 1},
+                    {"q.a": 0, "x": 1},
+                    {"x": 1}
+                ]
+            }
+        }
+        self._execute_es_tests(test)
 
 # TODO: WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?
 # THIS SHOULD RETURN SOMETHING, NOT FAIL
@@ -1207,14 +1228,6 @@ todo = {
     ],
     "from": "jobs.action.timings",
     "format": "list"
-}
-
-
-# TODO: DOES NOT SEEM TO FLATTEN THE PROPERTIES
-todo = {
-"select": ["*"],
-"from": "jobs.action.timings",
-"format": "list"
 }
 
 

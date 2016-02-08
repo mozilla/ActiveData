@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+import inspect
 import itertools
 import os
 import signal
@@ -18,6 +19,7 @@ import subprocess
 
 from active_data.app import replace_vars
 from pyLibrary import convert, jsons
+from pyLibrary.debugs.exceptions import extract_stack
 from pyLibrary.debugs.logs import Log, Except, constants
 from pyLibrary.dot import wrap, coalesce, unwrap
 from pyLibrary.env import http
@@ -190,6 +192,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
     def _execute_es_tests(self, subtest, tjson=False, delete_index=True):
         subtest = wrap(subtest)
+        subtest.name = extract_stack()[1]['method']
 
         if subtest.disable:
             return
@@ -207,10 +210,14 @@ class ActiveDataBaseTest(FuzzyTestCase):
             # EXECUTE QUERY
             num_expectations = 0
             for k, v in subtest.items():
-                if not k.startswith("expecting_"):
+                if k.startswith("expecting_"):  # WHAT FORMAT ARE WE REQUESTING
+                    format = k[len("expecting_"):]
+                elif k == "expecting":  # NO FORMAT REQUESTED (TO TEST DEFAULT FORMATS)
+                    format = None
+                else:
                     continue
+
                 num_expectations += 1
-                format = k[len("expecting_"):]
                 expected = v
 
                 subtest.query.format = format
@@ -225,7 +232,6 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
                 self.compare_to_expected(subtest.query, result, expected)
-
             if num_expectations == 0:
                 Log.error("Expecting test {{name|quote}} to have property named 'expecting_*' for testing the various format clauses", {
                     "name": subtest.name

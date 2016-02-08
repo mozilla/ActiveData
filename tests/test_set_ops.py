@@ -405,8 +405,6 @@ class TestSetOps(ActiveDataBaseTest):
 
     def test_select_all_from_list_of_objects(self):
         test = {
-            "disable": True,  # TODO: PLEASE ENABLE, ES CAN NOT BE EXPECTED TO KEEP ORDER OF data
-            "name": "select * from list of objects",
             "data": [
                 {"a": "b"},
                 {"a": "d"}
@@ -962,14 +960,46 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-# TODO: problem selecing nested columns
-# nested: ElasticsearchIllegalArgumentException[field [action.timings] isn't a leaf field];
-# {
-#     "from": "jobs",
-#     "select": [
-#         "action"
-#     ],
-#     "where": {
-#         "exists": "action.start_time"
-#     }
-# }
+    def test_select_nested_column(self):
+        test = {
+            "data": [
+                {"_a": [{"b": 1, "c": 1}, {"b": 2, "c": 1}]},
+                {"_a": [{"b": 1, "c": 2}, {"b": 2, "c": 2}]}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": "_a"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    [{"b": 1, "c": 1}, {"b": 2, "c": 1}],
+                    [{"b": 1, "c": 2}, {"b": 2, "c": 2}]
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["_a"],
+                "data": [
+                    [[{"b": 1, "c": 1}, {"b": 2, "c": 1}]],
+                    [[{"b": 1, "c": 2}, {"b": 2, "c": 2}]]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 2, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "_a": [
+                        [{"b": 1, "c": 1}, {"b": 2, "c": 1}],
+                        [{"b": 1, "c": 2}, {"b": 2, "c": 2}]
+                    ]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+

@@ -33,13 +33,14 @@ def is_deepop(es, query):
         return False
     if all(s.aggregate not in (None, "none") for s in listwrap(query.select)):
         return False
-
-    vars = query_get_all_vars(query)
-    columns = query.frum.get_columns()
     if len(split_field(query.frum.name)) > 1:
         return True
-    if any(c for c in columns if c.nested_path and c.name in vars):
-        return True
+
+    # ASSUME IT IS NESTED IF WE ARE ASKING FOR NESTED COLUMNS
+    # vars_ = query_get_all_vars(query)
+    # columns = query.frum.get_columns()
+    # if any(c for c in columns if c.nested_path and c.name in vars_):
+    #    return True
     return False
 
 
@@ -109,7 +110,7 @@ def es_deepop(es, query):
                         "name": c.name,
                         "pull": get_pull(c),
                         "nested_path": listwrap(c.nested_path)[0],
-                        "put": {"name": c.name, "index": i, "child": "."}
+                        "put": {"name": literal_field(c.name), "index": i, "child": "."}
                     })
                     i += 1
 

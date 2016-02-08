@@ -13,7 +13,6 @@ from __future__ import unicode_literals
 import sys
 from _ssl import PROTOCOL_SSLv23
 from collections import Mapping
-from copy import copy
 from ssl import SSLContext
 from tempfile import NamedTemporaryFile
 
@@ -130,7 +129,7 @@ def query(path):
         )
     except Exception, e:
         e = Except.wrap(e)
-        send_error(active_data_timer, body, e)
+        return send_error(active_data_timer, body, e)
 
 
 @app.route('/json/<path:path>', methods=['GET'])

@@ -32,7 +32,8 @@ def format_cube(decoders, aggs, start, query, select):
             try:
                 if m[coord]:
                     Log.error("Not expected")
-                m[coord] = agg[s.pull]
+                v = coalesce(agg[s.pull], s.default)
+                m[coord] = v
             except Exception, e:
                 tuple(d.get_index(row) for d in decoders)
                 Log.error("", e)
@@ -45,7 +46,7 @@ def format_cube_from_aggop(decoders, aggs, start, query, select):
     agg = drill(aggs)
     matricies = [(s, Matrix(dims=[], zeros=(s.aggregate == "count"))) for s in select]
     for s, m in matricies:
-        m[tuple()] = agg[s.pull]
+        m[tuple()] = coalesce(agg[s.pull], s.default)
     cube = Cube(query.select, [], {s.name: m for s, m in matricies})
     cube.frum = query
     return cube
@@ -64,7 +65,7 @@ def format_table(decoders, aggs, start, query, select):
 
             output = [d.get_value(c) for c, d in zip(coord, decoders)]
             for s in select:
-                output.append(agg[s.pull])
+                output.append(coalesce(agg[s.pull], s.default))
             yield output
 
         # EMIT THE MISSING CELLS IN THE CUBE
@@ -92,7 +93,7 @@ def format_table_from_groupby(decoders, aggs, start, query, select):
         for row, agg in aggs_iterator(aggs, decoders):
             output = [d.get_value_from_row(row) for d in decoders]
             for s in select:
-                output.append(agg[s.pull])
+                output.append(coalesce(agg[s.pull], s.default))
             yield output
 
     return Dict(
@@ -109,7 +110,7 @@ def format_table_from_aggop(decoders, aggs, start, query, select):
     for s in select:
         if not s.pull:
             Log.error("programmer error")
-        row.append(agg[s.pull])
+        row.append(coalesce(agg[s.pull], s.default))
 
     return Dict(
         meta={"format": "table"},
@@ -148,7 +149,7 @@ def format_list_from_groupby(decoders, aggs, start, query, select):
                 output[g.name] = d.get_value_from_row(row)
 
             for s in select:
-                output[s.name] = agg[s.pull]
+                output[s.name] = coalesce(agg[s.pull], s.default)
             yield output
 
     output = Dict(
@@ -173,7 +174,7 @@ def format_list(decoders, aggs, start, query, select):
                 output[e.name] = d.get_value(c)
 
             for s in select:
-                output[s.name] = agg[s.pull]
+                output[s.name] = coalesce(agg[s.pull], s.default)
             yield output
 
     output = Dict(
@@ -189,7 +190,7 @@ def format_list_from_aggop(decoders, aggs, start, query, select):
     if isinstance(query.select, list):
         item = Dict()
         for s in select:
-            item[s.name] = agg[s.pull]
+            item[s.name] = coalesce(agg[s.pull], s.default)
     else:
         item = agg[select[0].pull]
 

@@ -66,17 +66,19 @@ def extract_rows(es, es_query, query):
     is_list = isinstance(query.select, list)
     select = wrap([s.copy() for s in listwrap(query.select)])
     new_select = DictList()
-    column_names = set(c.name for c in query.frum.get_columns() if c.type not in ["object"] and (not c.nested_path or c.abs_name == c.nested_path or not c.nested_path))
-    source = "fields"
+    columns = query.frum.get_columns()
+    leaf_columns = set(c.name for c in columns if c.type not in ["object", "nested"] and (not c.nested_path or c.abs_name == c.nested_path))
+    nested_columns = set(c.name for c in columns if c.nested_path)
 
     i = 0
+    source = "fields"
     for s in select:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if s.value == "*":
             es_query.fields = None
             source = "_source"
 
-            net_columns = column_names - set(select.name)
+            net_columns = leaf_columns - set(select.name)
             for n in net_columns:
                 new_select.append({
                     "name": n,
@@ -102,10 +104,20 @@ def extract_rows(es, es_query, query):
                 "put": {"name": s.name, "index": i, "child": "."}
             })
             i += 1
+        elif isinstance(s.value, basestring) and s.value in nested_columns:
+            es_query.fields = None
+            source = "_source"
+
+            new_select.append({
+                "name": s.name,
+                "value": s.value,
+                "put": {"name": s.name, "index": i, "child": "."}
+            })
+            i += 1
         elif isinstance(s.value, basestring) and s.value.endswith(".*") and is_keyword(s.value[:-2]):
             parent = s.value[:-1]
             prefix = len(parent)
-            for c in column_names:
+            for c in leaf_columns:
                 if c.startswith(parent):
                     if es_query.fields is not None:
                         es_query.fields.append(c)
@@ -119,8 +131,9 @@ def extract_rows(es, es_query, query):
         elif isinstance(s.value, basestring) and is_keyword(s.value):
             parent = s.value + "."
             prefix = len(parent)
-            net_columns = [c for c in column_names if c.startswith(parent)]
+            net_columns = [c for c in leaf_columns if c.startswith(parent)]
             if not net_columns:
+                # LEAF
                 if es_query.fields is not None:
                     es_query.fields.append(s.value)
                 new_select.append({
@@ -129,6 +142,7 @@ def extract_rows(es, es_query, query):
                     "put": {"name": s.name, "index": i, "child": "."}
                 })
             else:
+                # LEAVES OF OBJECT
                 for n in net_columns:
                     if es_query.fields is not None:
                         es_query.fields.append(n)

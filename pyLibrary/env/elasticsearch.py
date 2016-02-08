@@ -202,7 +202,7 @@ class Index(Features):
         return True
 
     def flush(self):
-        self.cluster.post("/" + self.settings.index + "/_refresh")
+        self.cluster.post("/" + self.settings.index + "/_flush", data={"wait_if_ongoing": True, "forced": True})
 
     def delete_record(self, filter):
         if self.settings.read_only:

@@ -113,8 +113,11 @@ class ActiveDataBaseTest(FuzzyTestCase):
     def tearDownClass(cls):
         cluster = elasticsearch.Cluster(settings.backend_es)
         for i in ActiveDataBaseTest.indexes:
-            Log.note("remove index {{index}}", index=i)
-            cluster.delete_index(i)
+            try:
+                cluster.delete_index(i)
+                Log.note("remove index {{index}}", index=i)
+            finally:
+                pass
         Log.stop()
 
 

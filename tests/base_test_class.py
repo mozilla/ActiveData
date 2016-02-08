@@ -134,7 +134,6 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
     def setUp(self):
         index_name = "testing_" + Random.hex(10).lower()
-        ActiveDataBaseTest.indexes.append(index_name)
 
         # ADD TEST RECORDS
         self.service_url = settings.service_url
@@ -143,6 +142,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
         self.es_test_settings.alias = None
         self.es_cluster = elasticsearch.Cluster(self.es_test_settings)
         self.index = self.es_cluster.get_or_create_index(self.es_test_settings)
+        ActiveDataBaseTest.indexes.append(self.index.settings.index)
+
 
     def tearDown(self):
         if self.es_test_settings.index in ActiveDataBaseTest.indexes:
@@ -238,12 +239,6 @@ class ActiveDataBaseTest(FuzzyTestCase):
                 })
         except Exception, e:
             Log.error("Failed test {{name|quote}}", {"name": subtest.name}, e)
-        finally:
-            # REMOVE CONTAINER
-            if delete_index:
-                if self.es_test_settings.index in ActiveDataBaseTest.indexes:
-                    self.es_cluster.delete_index(self.es_test_settings.index)
-                    ActiveDataBaseTest.indexes.remove(self.es_test_settings.index)
 
 
     def compare_to_expected(self, query, result, expect):

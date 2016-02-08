@@ -581,8 +581,19 @@ class Cluster(object):
         es = Index(settings=settings)
         return es
 
-    def delete_index(self, index=None):
-        self.delete("/" + index)
+    def delete_index(self, index_name):
+        url = self.settings.host + ":" + unicode(self.settings.port) + "/" + index_name
+        try:
+            response = http.delete(url)
+            if response.status_code != 200:
+                Log.error("Expecting a 200")
+            details = convert.json2value(utf82unicode(response.content))
+            if self.debug:
+                Log.note("delete response {{response}}", response=details)
+            return response
+        except Exception, e:
+            Log.error("Problem with call to {{url}}", url=url, cause=e)
+
 
     def get_aliases(self):
         """
@@ -713,16 +724,6 @@ class Cluster(object):
                 Log.error(response.reason+": "+response.all_content)
             if self.debug:
                 Log.note("response: {{response}}",  response= utf82unicode(response.all_content)[0:300:])
-            return response
-        except Exception, e:
-            Log.error("Problem with call to {{url}}",  url= url, cause=e)
-
-    def delete(self, index_name, **kwargs):
-        url = self.settings.host + ":" + unicode(self.settings.port) + "/" + index_name
-        try:
-            response = convert.json2value(utf82unicode(http.delete(url, **kwargs).content))
-            if self.debug:
-                Log.note("delete response {{response}}",  response= response)
             return response
         except Exception, e:
             Log.error("Problem with call to {{url}}",  url= url, cause=e)

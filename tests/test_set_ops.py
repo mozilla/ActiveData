@@ -569,7 +569,9 @@ class TestSetOps(ActiveDataBaseTest):
             self.assertEqual(result.meta.es_query.size, query.MAX_LIMIT)
         finally:
             # REMOVE CONTAINER
-            self.es_cluster.delete_index(settings.index)
+            if self.es_test_settings.index in ActiveDataBaseTest.indexes:
+                self.es_cluster.delete_index(self.es_test_settings.index)
+                ActiveDataBaseTest.indexes.remove(self.es_test_settings.index)
 
     def test_default_limit(self):
         test = wrap({
@@ -595,7 +597,9 @@ class TestSetOps(ActiveDataBaseTest):
             self.assertEqual(len(result.data.value), query.DEFAULT_LIMIT)
         finally:
             # REMOVE CONTAINER
-            self.es_cluster.delete_index(settings.index)
+            if self.es_test_settings.index in ActiveDataBaseTest.indexes:
+                self.es_cluster.delete_index(self.es_test_settings.index)
+                ActiveDataBaseTest.indexes.remove(self.es_test_settings.index)
 
     def test_specific_limit(self):
         test = wrap({
@@ -622,7 +626,9 @@ class TestSetOps(ActiveDataBaseTest):
             self.assertEqual(len(result.data.value), 5)
         finally:
             # REMOVE CONTAINER
-            self.es_cluster.delete_index(settings.index)
+            if self.es_test_settings.index in ActiveDataBaseTest.indexes:
+                self.es_cluster.delete_index(self.es_test_settings.index)
+                ActiveDataBaseTest.indexes.remove(self.es_test_settings.index)
 
     def test_negative_limit(self):
         test = wrap({
@@ -640,7 +646,9 @@ class TestSetOps(ActiveDataBaseTest):
             self.assertRaises(Exception, self._execute_query, test.query)
         finally:
             # REMOVE CONTAINER
-            self.es_cluster.delete_index(settings.index)
+            if self.es_test_settings.index in ActiveDataBaseTest.indexes:
+                self.es_cluster.delete_index(self.es_test_settings.index)
+                ActiveDataBaseTest.indexes.remove(self.es_test_settings.index)
 
     def test_select_expression(self):
         test = {

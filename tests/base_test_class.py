@@ -101,15 +101,12 @@ class ActiveDataBaseTest(FuzzyTestCase):
         aliases = cluster.get_aliases()
         for a in aliases:
             try:
-                # testing_0ef53e45b320160118_180420
-                create_time = Date(a.index[-15:], "%Y%m%d_%H%M%S")
-                if a.index.startswith("testing_") and create_time < Date.now() - (10*MINUTE):
-                    cluster.delete_index(a.index)
+                if a.index.startswith("testing_"):
+                    create_time = Date(a.index[-15:], "%Y%m%d_%H%M%S")  # EXAMPLE testing_0ef53e45b320160118_180420
+                    if create_time < Date.now() - (10*MINUTE):
+                        cluster.delete_index(a.index)
             except Exception, e:
-                if a.index == "twitter":  # Remove when resolved: https://github.com/travis-ci/packer-templates/issues/148
-                    cluster.delete_index(a.index)
-                else:
-                    Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
+                Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
 
 
     @classmethod
@@ -148,7 +145,10 @@ class ActiveDataBaseTest(FuzzyTestCase):
         self.index = self.es_cluster.get_or_create_index(self.es_test_settings)
 
     def tearDown(self):
-        self.es_cluster.delete_index(self.es_test_settings.index)
+        if self.es_test_settings.index in ActiveDataBaseTest.indexes:
+            self.es_cluster.delete_index(self.es_test_settings.index)
+            ActiveDataBaseTest.indexes.remove(self.es_test_settings.index)
+
 
     def not_real_service(self):
         return settings.fastTesting
@@ -241,8 +241,10 @@ class ActiveDataBaseTest(FuzzyTestCase):
         finally:
             # REMOVE CONTAINER
             if delete_index:
-                Log.note("Delete index {{index}}", index=settings.index)
-                self.es_cluster.delete_index(settings.index)
+                if self.es_test_settings.index in ActiveDataBaseTest.indexes:
+                    self.es_cluster.delete_index(self.es_test_settings.index)
+                    ActiveDataBaseTest.indexes.remove(self.es_test_settings.index)
+
 
     def compare_to_expected(self, query, result, expect):
         query = wrap(query)

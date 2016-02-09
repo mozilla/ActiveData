@@ -9,7 +9,7 @@ importScript("../modevlib/Settings.js");
 
 importScript("../modevlib/MozillaPrograms.js");
 importScript("../modevlib/qb/ESQuery.js");
-importScript("../modevlib/charts/aChart.js");
+importScript("../modevlib/charts/mgChart.js");
 importScript("../modevlib/charts/aColor.js");
 importScript([
 	"../css/menu.css"

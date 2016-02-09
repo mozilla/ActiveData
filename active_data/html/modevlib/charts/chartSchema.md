@@ -57,7 +57,7 @@ list of axis, property names not limited to 'x' and 'y',
 an array of objects
 
 ##`legend` Property
-more configuration for ledgend
+more configuration for legend
 
   * `legend.position` - *string* position of legend relative to plot area (top/left/bottom/right)
   * `legend.style` - *object*

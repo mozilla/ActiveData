@@ -216,15 +216,16 @@ build = function(){
 					Log.error("Should not happen");
 				return Suspend;
 			} else if (retval === Thread.Resume) {
-				var self = this;
-				retval = function(retval){
-					if (DEBUG){
-						Log.note("Resuming thread " + self.name)
-					}//endif
-					self.nextYield = currentTimestamp() + NEXT_BLOCK_TIME;
-					self.currentRequest = undefined;
-					self.resume(retval);
-				};
+				(function(self){
+					retval = function(retval){
+						if (DEBUG) {
+							Log.note("Resuming thread " + self.name)
+						}//endif
+						self.nextYield = currentTimestamp() + NEXT_BLOCK_TIME;
+						self.currentRequest = undefined;
+						self.resume(retval);
+					};
+				})(this);
 			} else { //RETURNING A VALUE/OBJECT/FUNCTION TO CALLER
 				var expendedGenerator = this.stack.pop();
 				if (expendedGenerator.close !== undefined)

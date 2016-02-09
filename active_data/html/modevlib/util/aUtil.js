@@ -21,8 +21,9 @@ var Map = {};
 		return output;
 	};//method
 
-	//LIST OF [k, v] TUPLES EXPECTED
 	Map.zip = function(keys, values){
+		// LIST OF [k, v] TUPLES EXPECTED
+		// OR LIST OF keys AND LIST OF values
 		var output = {};
 
 		if (values === undefined) {
@@ -133,29 +134,6 @@ var Map = {};
 		return obj;
 	};//method
 
-	Map.codomain = function(map){
-		var output = [];
-		var keys = Object.keys(map);
-		for (var i = keys.length; i--;) {
-			var val = map[keys[i]];
-			if (val !== undefined) output.push(val);
-		}//for
-		return output;
-	};//method
-	Map.values = Map.codomain;
-
-	//RETURN KEYS
-	Map.domain = function(map){
-		var output = [];
-		var keys = Object.keys(map);
-		for (var i = keys.length; i--;) {
-			var key = keys[i];
-			var val = map[key];
-			if (val !== undefined) output.push(key);
-		}//for
-		return output;
-	};//method
-
 
 	//RETURN TRUE IF MAPS LOOK IDENTICAL
 	Map.equals = function(a, b){
@@ -204,12 +182,12 @@ var Map = {};
 		//func MUST ACCEPT key, value, index PARAMETERS
 		var output = [];
 		var keys = Object.keys(map);
-		for (var i = keys.length; i--;) {
+		for (var i = 0; i < keys.length; i++) {
 			var key = keys[i];
 			var val = map[key];
 			if (val !== undefined) {
 				var result = func(key, val, i);
-				if (result !== undefined) output[i]=result;
+				if (result !== undefined) output.append(result);
 			}//endif
 		}//for
 		return output;
@@ -235,16 +213,28 @@ var Map = {};
 		var output = [];
 		var keys = Object.keys(map);
 		for (var i = keys.length; i--;) {
-			var key = keys[i];
-			var val = map[key];
-			if (val !== undefined) {
-				output.push(val);
-			}//endif
+			var val = map[keys[i]];
+			if (val !== undefined) output.push(val);
 		}//for
 		return output;
 	};
+	Map.codomain = Map.getValues;
+	Map.values = Map.getValues;
 
-	Map.getKeys = Object.keys;
+
+	//RETURN KEYS
+	Map.domain = function(map){
+		var output = [];
+		var keys = Object.keys(map);
+		for (var i = keys.length; i--;) {
+			var key = keys[i];
+			var val = map[key];
+			if (val !== undefined) output.push(key);
+		}//for
+		return output;
+	};//method
+	Map.keys = Map.domain;
+	Map.getKeys = Map.domain;
 
 
 	Map.isObject = function (val) {
@@ -348,4 +338,9 @@ deepCopy = function(value) {
     copy = cons();
 	Map.forall(value, function(k, v){copy[k]=deepCopy(v);});
 	return copy;
+};
+
+
+function isFunction(f){
+	return typeof f === 'function'
 };

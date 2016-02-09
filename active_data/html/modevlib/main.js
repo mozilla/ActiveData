@@ -7,7 +7,7 @@ importScript("rest/BugzillaClient.js");
 importScript("rest/ElasticSearch.js");
 importScript("qb/ESQuery.js");
 importScript("Bugzilla.js");
-importScript("charts/mgChart.js");
+importScript("charts/cccChart.js");
 importScript("charts/aColor.js");
 importScript([
 	"gui/GUI.js",
@@ -15,6 +15,6 @@ importScript([
 ]);
 importScript("Hierarchy.js");
 importScript("math/Stats.js");
-importScript("qb/Qb.js");
+importScript("qb/qb.js");
 importScript("ScrumBugs.js");
 

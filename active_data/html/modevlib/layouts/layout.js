@@ -1,6 +1,6 @@
 
-var layoutAll;
-var dynamicLayout;
+var layoutAll;       //INITIAL LAYOUT
+var dynamicLayout;   //SUBSEQUENT LAYOUT WHEN DOM CHANGES
 
 (function(){
 	var DELAY_JAVASCRIPT = 200;

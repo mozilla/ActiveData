@@ -315,9 +315,14 @@ Duration.prototype.toString = function(){
 };//method
 
 
-Duration.prototype.format=function(interval, rounding){
-	return this.round(Duration.newInstance(interval), rounding)+interval;
+
+Duration.prototype.format=function(format_){
+	return new Date(this.milli).format(format_);
 };//method
+
+//Duration.prototype.format=function(interval, rounding){
+//	return this.round(Duration.newInstance(interval), rounding)+interval;
+//};//method
 
 Duration.prototype.round=function(interval, rounding){
 	if (rounding===undefined) rounding=0;

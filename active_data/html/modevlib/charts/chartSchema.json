@@ -55,7 +55,7 @@
 			}
 		},
 		"legend": {
-			"description": "more configuration for ledgend",
+			"description": "more configuration for legend",
 			"type": "object",
 			"properties": {
 				"label": {
@@ -67,6 +67,20 @@
 					"type": "string"
 				},
 				"style": {
+					"$ref": "#definitions.object_style"
+				}
+			}
+		},
+		"tip": {
+			"description": "Tooltip to show over chart values",
+			"type": "object",
+			"properties": {
+				"format": {
+					"description": "html template to show",
+					"type": "string"
+				},
+				"style": {
+					"description": "styling for the tooltip box",
 					"$ref": "#definitions.object_style"
 				}
 			}
@@ -124,6 +138,20 @@
 							"$ref": "#definitions.object_style"
 						}
 					}
+				},
+				"tip":{
+					"description": "override the general tip, for this series only",
+					"type": "object",
+					"properties": {
+						"format": {
+							"description": "html template to show",
+							"type": "string"
+						},
+						"style": {
+							"description": "styling for the tooltip box",
+							"$ref": "#definitions.object_style"
+						}
+					}
 				}
 			}
 		}
@@ -163,8 +191,22 @@
 					"type": "boolean",
 					"default": true
 				},
+				"domain":{"$ref": "#definitions.domain"},
+				"missing": {
+					"description": "information on behaviour when outside the domain or range.  Has no meaning when using the default domain.",
+					"type": "object",
+					"properties": {
+						"style": {
+							"$ref": "#defiinitions.style"
+						}
+					}
+				},
+				"showZero": {
+					"description": "show zero coordinate, even if calculated range would not",
+					"type": "boolean"
+				},
 				"range": {
-					"description": "define the range of values on axis",
+					"description": "optional, instead of a formal `domain`; define the range of values on axis",
 					"type": "object",
 					"properties": {
 						"min": {
@@ -174,10 +216,6 @@
 						"max": {
 							"description": "maximum axis value shown",
 							"type": "number"
-						},
-						"showZero": {
-							"description": "show zero coordinate, even if calculated range would not",
-							"type": "bolean"
 						}
 					}
 				}
@@ -260,6 +298,30 @@
 				"$ref": "#definitions.object_style"
 			}
 		},
+		"domain":{
+
+			"domain":{"$ref": "#definitions.domain"},
+			"range": {
+				"description": "define the range of values on axis",
+				"type": "object",
+				"properties": {
+					"min": {
+						"description": "minimum axis value shown",
+						"type": "number"
+					},
+					"max": {
+						"description": "maximum axis value shown",
+						"type": "number"
+					},
+					"showZero": {
+						"description": "show zero coordinate, even if calculated range would not",
+						"type": "bolean"
+					}
+				}
+			}
+
+
+		},
 		"object_style": {
 			"type": "object",
 			"properties": {
@@ -320,22 +382,6 @@
 				"border": {
 					"description": "css border",
 					"type": "string"
-				}
-			}
-		},
-		"hover": {
-			"description": "what to do when hovering over chart value",
-			"type": "object",
-			"properties": {
-				"format": {
-					"description": "formatting rules when hovering over point",
-					"type": "object",
-					"properties": {
-						"x": {
-							"description": "formatting the x coordinate value",
-							"type": "string"
-						}
-					}
 				}
 			}
 		}

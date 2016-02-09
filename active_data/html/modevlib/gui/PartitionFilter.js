@@ -3,6 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 
+importScript("../util/aString.js");
+
 PartitionFilter = function(){};
 
 
@@ -59,16 +61,22 @@ PartitionFilter.newInstance=function(param){
 
 function convertToTreeLater(self, treeNode, dimension){
 	self.numLater++;
+	var refreshNow = GUI.pleaseRefreshLater;
 	GUI.pleaseRefreshLater=true;
 	Thread.run(function*(){
 		//DO THIS ONE LATER
 //		treeNode.children = [];
-		if (dimension.partitions instanceof Thread){
-			var threadResult = yield (Thread.join(dimension.partitions));
-			if (threadResult.threadResponse instanceof Exception){
-				Log.error("Can not setup PartitionFilter", threadResult.threadResponse);
-			}//endif
-		}//while
+		if (dimension.partitions instanceof Thread) {
+			try {
+				yield (Thread.join(dimension.partitions));
+			} catch (e) {
+				Log.error("Can not setup PartitionFilter", e);
+			}finally{
+				GUI.pleaseRefreshLater = refreshNow;
+			}//try
+		}else{
+			GUI.pleaseRefreshLater = refreshNow;
+		}//endif
 		var pleaseUpdate = (treeNode.children==WAITING_FOR_RESULTS);
 		treeNode.children = dimension.partitions.map(function (v, i) {
 			if (i < coalesce(dimension.limit, DEFAULT_CHILD_LIMIT)){

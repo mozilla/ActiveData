@@ -96,12 +96,12 @@ Rest.send=function*(ajaxParam){
 			} else {
 				var resp;
 				try {
-					resp = convert.json2value(request.responseText)
+					resp = convert.json2value(request.responseText);
+					ajaxParam.error(new Exception("Bad response ("+request.status+")", resp));
 				}catch(e){
-					resp = convert.String2Quote(request.responseText)
+					ajaxParam.error(new Exception("Bad response ("+request.status+"): "+convert.value2quote(request.responseText)));
 				}
 
-				ajaxParam.error(new Exception("Bad response ("+request.status+")", resp));
 			}//endif
 		} else if (request.readyState == 3){
 			//RESPONSE IS ARRIVING, DISABLE TIMEOUT
@@ -145,7 +145,11 @@ Rest.send=function*(ajaxParam){
 	}
 
 	request.name="XMLHttpRequest";  //FOR DEBUGGING
-	request.send(ajaxParam.data);
+	try{
+		request.send(ajaxParam.data);
+	}catch(e){
+		Log.error("Can not send request", e)
+	}//try
 	yield (Thread.suspend((ajaxParam.doNotKill) ? undefined : request));
 };//method
 

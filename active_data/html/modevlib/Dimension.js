@@ -15,7 +15,7 @@ var DEFAULT_QUERY_LIMIT = 20;
 (function () {
 
 	Dimension.prototype = {
-		"getDomain": function (param) {
+		"getDomain": function (param){
 			//param.fullFilter  SET TO true TO HAVE FULL FILTER IN PARTITIONS
 			//param.depth IS MEANT TO REACH INTO SUB-PARTITIONS
 			if (param === undefined) {
@@ -34,7 +34,7 @@ var DEFAULT_QUERY_LIMIT = 20;
 
 			if (!this.partitions && this.edges) {
 				//USE EACH EDGE AS A PARTITION, BUT isFacet==true SO IT ALLOWS THE OVERLAP
-				partitions = this.edges.map(function (v, i) {
+				partitions = this.edges.map(function(v, i){
 					if (i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT))
 						return undefined;
 					if (v.esfilter === undefined) return;
@@ -45,7 +45,7 @@ var DEFAULT_QUERY_LIMIT = 20;
 				});
 				self.isFacet = true;
 			} else if (param.depth == 0) {
-				partitions = this.partitions.map(function (v, i) {
+				partitions = this.partitions.map(function(v, i){
 					if (i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT)) return undefined;
 					v.style = coalesce(v.style, {});
 					var output = clonePart(v);
@@ -55,14 +55,14 @@ var DEFAULT_QUERY_LIMIT = 20;
 			} else if (param.depth == 1) {
 				partitions = [];
 				var rownum = 0;
-				self.partitions.forall(function (part, i) {
+				self.partitions.forall(function(part, i){
 					if (i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT)) return undefined;
 					rownum++;
-					part.partitions.forall(function (subpart, j) {
+					part.partitions.forall(function(subpart, j){
 						var temp = subpart.parent;
-						subpart.parent=undefined;
-						var newPart= Map.clone(subpart);
-						subpart.parent=temp;
+						subpart.parent = undefined;
+						var newPart = Map.clone(subpart);
+						subpart.parent = temp;
 
 						newPart.name = [subpart.name, subpart.parent.name].join(param.separator);
 						newPart.esfilter = useFullFilter ? subpart.fullFilter : subpart.esfilter;
@@ -74,43 +74,46 @@ var DEFAULT_QUERY_LIMIT = 20;
 				Log.error("deeper than 2 is not supported yet")
 			}//endif
 
-			var output = {
-				"type": this.type,
-				"name": this.name,
-				"partitions": partitions,
-				"min": this.min,
-				"max": this.max,
-				"interval": this.interval,
-				//THE COMPLICATION IS THAT SOMETIMES WE WANT SIMPLE PARTITIONS, LIKE
-				//STRINGS, DATES, OR NUMBERS.  OTHER TIMES WE WANT PARTITION OBJECTS
-				//WITH NAME, VALUE, AND OTHER MARKUP.
-				//USUALLY A "set" IS MEANT TO BE SIMPLE, BUT THE end() FUNCTION IS
-				//OVERRIDES EVERYTHING AND IS EXPLICIT.  - NOT A GOOD SOLUTION BECAUSE
-				//end() IS USED BOTH TO INDICATE THE QUERY PARTITIONS *AND* DISPLAY
-				//COORDINATES ON CHARTS
+			var output;
+			if (!param.simple) {
+				output = {
+					"type": this.type,
+					"name": this.name,
+					"partitions": partitions,
+					"min": this.min,
+					"max": this.max,
+					"interval": this.interval,
+					//THE COMPLICATION IS THAT SOMETIMES WE WANT SIMPLE PARTITIONS, LIKE
+					//STRINGS, DATES, OR NUMBERS.  OTHER TIMES WE WANT PARTITION OBJECTS
+					//WITH NAME, VALUE, AND OTHER MARKUP.
+					//USUALLY A "set" IS MEANT TO BE SIMPLE, BUT THE end() FUNCTION IS
+					//OVERRIDES EVERYTHING AND IS EXPLICIT.  - NOT A GOOD SOLUTION BECAUSE
+					//end() IS USED BOTH TO INDICATE THE QUERY PARTITIONS *AND* DISPLAY
+					//COORDINATES ON CHARTS
 
-				//PLEASE SPLIT end() INTO value() (replacing the string value) AND
-				//label() (for presentation)
-				"value": (!this.value && this.partitions) ? "name" : this.value,
-				"label": coalesce(this.label, (this.type == "set" && this.name !== undefined) ? function (v) {
-					return v.name;
-				} : undefined),
-				"end": coalesce(this.end, (this.type == "set" && this.name !== undefined) ? function (v) {
-					return v;
-				} : undefined),  //I DO NOT KNOW WHY IS NOT return v.name
-	//			"value":(!this.value && this.partitions) ? "name" : this.value,
-				"isFacet": this.isFacet
-
-			};
+					//PLEASE SPLIT end() INTO value() (replacing the string value) AND
+					//label() (for presentation)
+					"value": (!this.value && this.partitions) ? "name" : this.value,
+					"label": coalesce(this.label, (this.type == "set" && this.name !== undefined) ? function(v){
+						return v.name;
+					} : undefined),
+					"end": coalesce(this.end, (this.type == "set" && this.name !== undefined) ? function(v){
+						return v;
+					} : undefined),  //I DO NOT KNOW WHY IS NOT return v.name
+					//			"value":(!this.value && this.partitions) ? "name" : this.value,
+					"isFacet": this.isFacet
+				};
+			} else {
+				output = {
+					"type": this.type,
+					"name": this.name,
+					"partitions": partitions,
+					"value": (!this.value && this.partitions) ? "name" : this.value,
+					"isFacet": this.isFacet
+				};
+			}//endif
 			return output;
 
-
-	//		var output=Map.copy(this);
-	//		output.field=undefined;
-	//		output.parent=undefined;
-	//		output["default"]=undefined;
-	//		output.index=undefined;
-	//		return Map.copy(output);
 		},//method
 
 		"getSelect": function (param) {
@@ -225,7 +228,7 @@ var DEFAULT_QUERY_LIMIT = 20;
 
 			if (dim.limit === undefined) dim.limit = DEFAULT_QUERY_LIMIT;
 
-			if (dim.field !== undefined && Qb.domain.PARTITION.contains(dim.type) && dim.partitions === undefined) {
+			if (dim.field !== undefined && qb.domain.PARTITION.contains(dim.type) && dim.partitions === undefined) {
 				dim.field = Array.newInstance(dim.field);
 
 				dim.partitions = Thread.run(function*() {

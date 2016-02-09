@@ -9,6 +9,9 @@ importScript("../util/convert.js");
 (function(){
 	var Exception=function(description, cause, offset){
 		Error.call(this);
+		if (!isString(description)){
+			description = convert.value2json(description)
+		}//endif
 		this.message=description;
 		this.cause=wrap(cause);
 		if (offset!==undefined){

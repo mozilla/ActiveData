@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 
-if (Qb === undefined) var Qb = {};
+if (qb === undefined) var qb = {};
 
 
 importScript("../util/convert.js");
@@ -12,11 +12,11 @@ importScript("../util/aUtil.js");
 importScript("../debug/aLog.js");
 importScript("../collections/aMatrix.js");
 importScript("MVEL.js");
-importScript("Qb.aggregate.js");
-importScript("Qb.column.js");
-importScript("Qb.cube.js");
-importScript("Qb.domain.js");
-importScript("Qb.analytic.js");
+importScript("qb.aggregate.js");
+importScript("qb.column.js");
+importScript("qb.cube.js");
+importScript("qb.domain.js");
+importScript("qb.analytic.js");
 
 importScript("../threads/thread.js");
 
@@ -45,7 +45,7 @@ function joinField(path){
 	var DEBUG = true;
 
 
-	Qb.reverse = function reverse(list){
+	qb.reverse = function reverse(list){
 		var output = list.copy();
 		output.reverse();
 		return output;
@@ -53,7 +53,7 @@ function joinField(path){
 
 
 	//COMPILE COLUMN CALCULATION CODE
-	Qb.compile = function(query, sourceColumns, useMVEL){
+	qb.compile = function(query, sourceColumns, useMVEL){
 		var columns = [];
 		var uniqueColumns = {};
 
@@ -84,7 +84,7 @@ function joinField(path){
 
 			//EDGES DEFAULT TO A STRUCTURED TYPE, OTHER COLUMNS DEFAULT TO VALUE TYPE
 			if (e.domain === undefined) e.domain = {"type": "default"};
-			Qb.column.compile(e, sourceColumns, undefined, useMVEL);
+			qb.column.compile(e, sourceColumns, undefined, useMVEL);
 			e.outOfDomainCount = 0;
 		}//for
 
@@ -113,8 +113,8 @@ function joinField(path){
 			select[s].columnIndex = s + edges.length;
 			columns[select[s].columnIndex] = select[s];
 			uniqueColumns[select[s].name] = select[s];
-			Qb.column.compile(select[s], sourceColumns, edges, useMVEL);
-			Qb.aggregate.compile(select[s]);
+			qb.column.compile(select[s], sourceColumns, edges, useMVEL);
+			qb.aggregate.compile(select[s]);
 		}//for
 
 		query.columns = columns;
@@ -165,13 +165,13 @@ function joinField(path){
 		if (query.edges.length == 0)
 			Log.error("Tree processing requires an edge");
 
-		var sourceColumns = yield (Qb.getColumnsFromQuery(query));
+		var sourceColumns = yield (qb.getColumnsFromQuery(query));
 		if (sourceColumns === undefined) {
 			Log.error("Can not get column definitions from query:\n" + convert.value2json(query).indent(1))
 		}//endif
 		var from = query.from.list;
 
-		query.columns = Qb.compile(query, sourceColumns);
+		query.columns = qb.compile(query, sourceColumns);
 
 		//ASSIGN dataIndex TO ALL PARTITIONS
 		var edges = query.edges;
@@ -189,11 +189,11 @@ function joinField(path){
 			return e.domain.partitions.length + (e.allowNulls === false ? 0 : 1);
 		});
 		var data = Map.zip(select.map(function(s){
-			Qb.aggregate[s.aggregate](s);  //ANNOTATE select COLUMN
+			qb.aggregate[s.aggregate](s);  //ANNOTATE select COLUMN
 			return [s.name, new Matrix({"dim": shape, "constructor": s.defaultValue})];
 		}));
 
-		var where = Qb.where.compile(coalesce(query.where, query.esfilter), sourceColumns, query.edges);
+		var where = qb.where.compile(coalesce(query.where, query.esfilter), sourceColumns, query.edges);
 
 		for (var f = from.length; f--;) {
 			if (f % 1000 == 0) {
@@ -244,16 +244,16 @@ function joinField(path){
 		if (query.where == "bug!=null")
 			Log.note("");
 
-		var sourceColumns = yield (Qb.getColumnsFromQuery(query));
+		var sourceColumns = yield (qb.getColumnsFromQuery(query));
 		if (sourceColumns === undefined) {
 			Log.error("Can not get column definitions from query:\n" + convert.value2json(query).indent(1))
 		}//endif
 		var from = query.from.list;
 
 		var edges = query.edges;
-		query.columns = Qb.compile(query, sourceColumns);
+		query.columns = qb.compile(query, sourceColumns);
 		var select = Array.newInstance(query.select);
-		var _where = Qb.where.compile(coalesce(query.where, query.esfilter), sourceColumns, edges);
+		var _where = qb.where.compile(coalesce(query.where, query.esfilter), sourceColumns, edges);
 		var numWhereFalse = 0;
 
 
@@ -341,12 +341,12 @@ function joinField(path){
 	}
 
 
-	Qb.listAlert = false;
+	qb.listAlert = false;
 
-	Qb.calc2List = function*(query){
-		if (!Qb.listAlert) {
-//		Log.alert("Please do not use Qb.calc2List()");
-			Qb.listAlert = true;
+	qb.calc2List = function*(query){
+		if (!qb.listAlert) {
+//		Log.alert("Please do not use qb.calc2List()");
+			qb.listAlert = true;
 		}//endif
 
 		if (query.edges === undefined) query.edges = [];
@@ -379,7 +379,7 @@ function joinField(path){
 
 		//ORDER THE OUTPUT
 		query.sort = Array.newInstance(query.sort);
-		output = Qb.sort(output, query.sort, query.columns);
+		output = qb.sort(output, query.sort, query.columns);
 
 		//COLLAPSE OBJECTS TO SINGLE VALUE
 		for (var ci = 0; ci < query.columns.length; ci++) {
@@ -399,9 +399,9 @@ function joinField(path){
 
 		query.list = output;
 
-		Qb.analytic.run(query);
+		qb.analytic.run(query);
 
-		Map.copy(Qb.query.prototype, query);
+		Map.copy(qb.query.prototype, query);
 
 		yield (query);
 	};//method
@@ -434,7 +434,7 @@ function joinField(path){
 
 				yield (output);
 			} else if (query.meta.format == "list") {
-				output = yield (Qb.calc2List(query));
+				output = yield (qb.calc2List(query));
 				output.data = output.list;
 				Map.set(output, "meta.format", "list");
 				yield (output);
@@ -460,17 +460,17 @@ function joinField(path){
 		});
 
 		//MAKE THE EMPTY DATA GRID
-		query.cube = Qb.cube.newInstance(edges, 0, query.select);
+		query.cube = qb.cube.newInstance(edges, 0, query.select);
 		Tree2Cube(query, query.cube, query.tree, 0);
-		Qb.analytic.run(query);
-		Map.copy(Qb.query.prototype, query);
+		qb.analytic.run(query);
+		Map.copy(qb.query.prototype, query);
 
 		yield (query);
 	}//method
 
 
-	//CONVERT LIST TO Qb
-	Qb.List2Cube = function(query){
+	//CONVERT LIST TO qb
+	qb.List2Cube = function(query){
 		if (query.list !== undefined) Log.error("Can only convert list to a cube at this time");
 
 		//ASSIGN dataIndex TO ALL PARTITIONS
@@ -484,7 +484,7 @@ function joinField(path){
 		});//for
 
 		//MAKE THE EMPTY DATA GRID
-		query.cube = Qb.cube.newInstance(edges, 0, query.select);
+		query.cube = qb.cube.newInstance(edges, 0, query.select);
 
 		for (var i = query.list.length; i--;) {
 			var cube = query.cube;
@@ -509,10 +509,10 @@ function joinField(path){
 	function* aggOP(query){
 		var select = Array.newInstance(query.select);
 
-		var sourceColumns = yield(Qb.getColumnsFromQuery(query));
+		var sourceColumns = yield(qb.getColumnsFromQuery(query));
 		var from = query.from.list;
-		var columns = Qb.compile(query, sourceColumns);
-		var where = Qb.where.compile(query.where, sourceColumns, []);
+		var columns = qb.compile(query, sourceColumns);
+		var where = qb.where.compile(query.where, sourceColumns, []);
 
 		var result = {};
 		//ADD SELECT DEFAULTS
@@ -553,7 +553,7 @@ function joinField(path){
 	//  DO NOTHING TO TRANSFORM LIST OF OBJECTS
 	////////////////////////////////////////////////////////////////////////////////
 	function* noOP(query){
-		var sourceColumns = yield(Qb.getColumnsFromQuery(query));
+		var sourceColumns = yield(qb.getColumnsFromQuery(query));
 		var from = query.from.list;
 
 
@@ -562,7 +562,7 @@ function joinField(path){
 			output = from;
 		} else {
 			output = [];
-			var where = Qb.where.compile(query.where, sourceColumns, []);
+			var where = qb.where.compile(query.where, sourceColumns, []);
 
 			var output = [];
 			for (t = from.length; t--;) {
@@ -574,12 +574,12 @@ function joinField(path){
 		query.list = output;
 
 		query.columns = sourceColumns.copy();
-		Qb.analytic.run(query);
+		qb.analytic.run(query);
 
 		//ORDER THE OUTPUT
 		if (query.sort === undefined) query.sort = [];
 
-		query.list = Qb.sort(query.list, query.sort, query.columns);
+		query.list = qb.sort(query.list, query.sort, query.columns);
 
 		yield (query);
 
@@ -590,7 +590,7 @@ function joinField(path){
 	//  SIMPLE TRANSFORMATION ON A LIST OF OBJECTS
 	////////////////////////////////////////////////////////////////////////////////
 	function* setOP(query){
-		var sourceColumns = yield (Qb.getColumnsFromQuery(query));
+		var sourceColumns = yield (qb.getColumnsFromQuery(query));
 		var from = query.from.list;
 
 		var select = Array.newInstance(query.select);
@@ -598,9 +598,9 @@ function joinField(path){
 
 		select.forall(function(s, i){
 			if (typeof(s) == 'string') select[i] = {"value": s};
-			Qb.column.compile(select[i], sourceColumns, undefined);
+			qb.column.compile(select[i], sourceColumns, undefined);
 		});
-		var where = Qb.where.compile(query.where, sourceColumns, []);
+		var where = qb.where.compile(query.where, sourceColumns, []);
 
 		var output = [];
 		for (t = 0; t < from.length; t++) {
@@ -617,13 +617,13 @@ function joinField(path){
 
 		//ORDER THE OUTPUT
 		if (query.sort === undefined) query.sort = [];
-		output = Qb.sort(output, query.sort, columns);
+		output = qb.sort(output, query.sort, columns);
 
 		query.columns = columns;
 
 		if (query.select instanceof Array || query.analytic) {
 			query.list = output;
-			Qb.analytic.run(query);
+			qb.analytic.run(query);
 		} else {
 			//REDUCE TO ARRAY
 			query.list = output.map(function(v, i){
@@ -640,7 +640,7 @@ function joinField(path){
 	////////////////////////////////////////////////////////////////////////////////
 	// TABLES ARE LIKE LISTS, ONLY ATTRIBUTES ARE INDEXED BY COLUMN NUMBER
 	////////////////////////////////////////////////////////////////////////////////
-	Qb.toTable = function(query){
+	qb.toTable = function(query){
 
 		if (query.cube === undefined) Log.error("Can only turn a cube into a table at this time");
 		if (query.edges.length != 2) Log.error("can only handle 2D cubes right now.");
@@ -681,7 +681,7 @@ function joinField(path){
 	};//method
 
 
-	Qb.ActiveDataCube2List = function(query, options){
+	qb.ActiveDataCube2List = function(query, options){
 		//ActiveData CUBE IS A MAP OF CUBES   {"a": [[]], "b":[[]]}
 		//MoDevLib CUBE IS A CUBE OF MAPS   [[{"a":v, "b":w}]]  which I now know as wrong
 
@@ -769,9 +769,9 @@ function joinField(path){
 		return output;
 	};
 
-	Qb.Cube2List = function(query, options){
+	qb.Cube2List = function(query, options){
 		if (query.meta) { //ActiveData INDICATOR
-			return Qb.ActiveDataCube2List(query, options);
+			return qb.ActiveDataCube2List(query, options);
 		}//endif
 
 		//WILL end() ALL PARTS UNLESS options.useStruct==true OR options.useLabels==true
@@ -838,7 +838,7 @@ function joinField(path){
 	////////////////////////////////////////////////////////////////////////////////
 	// ASSUME THE FIRST DIMESION IS THE COHORT, AND NORMALIZE (DIVIDE BY SUM(ABS(Xi))
 	////////////////////////////////////////////////////////////////////////////////
-	Qb.normalizeByCohort = function(query, multiple){
+	qb.normalizeByCohort = function(query, multiple){
 		if (multiple === undefined) multiple = 1.0;
 		if (query.cube === undefined) Log.error("Can only normalize a cube into a table at this time");
 
@@ -854,7 +854,7 @@ function joinField(path){
 	////////////////////////////////////////////////////////////////////////////////
 	// ASSUME THE SECOND DIMESION IS THE XAXIS, AND NORMALIZE (DIVIDE BY SUM(ABS(Ci))
 	////////////////////////////////////////////////////////////////////////////////
-	Qb.normalizeByX = function(query, multiple){
+	qb.normalizeByX = function(query, multiple){
 		if (multiple === undefined) multiple = 1;
 		if (query.cube === undefined) Log.error("Can only normalize a cube into a table at this time");
 
@@ -871,7 +871,7 @@ function joinField(path){
 	};//method
 
 
-	Qb.normalize = function(query, edgeIndex, multiple){
+	qb.normalize = function(query, edgeIndex, multiple){
 		if (multiple === undefined) multiple = 1;
 		if (query.cube === undefined) Log.error("Can only normalize a cube into a table at this time");
 
@@ -892,7 +892,7 @@ function joinField(path){
 
 
 	//selectValue - THE FIELD TO USE TO CHECK FOR ZEROS (REQUIRED IF RECORDS ARE OBJECTS INSTEAD OF VALUES)
-	Qb.removeZeroParts = function(query, edgeIndex, selectValue){
+	qb.removeZeroParts = function(query, edgeIndex, selectValue){
 		if (query.cube === undefined) Log.error("Can only normalize a cube into a table at this time");
 		if (selectValue === undefined) Log.error("method now requires third parameter");
 
@@ -997,7 +997,7 @@ function joinField(path){
 
 
 	////ADD THE MISSING DOMAIN VALUES
-	//Qb.nullToList=function(output, edges, depth){
+	//qb.nullToList=function(output, edges, depth){
 	//	if ()
 	//
 	//
@@ -1005,26 +1005,26 @@ function joinField(path){
 
 	//RETURN THE COLUMNS FROM THE GIVEN QUERY
 	//ALSO NORMALIZE THE ARRAY OF OBJECTS TO BE AT query.from.list
-	Qb.getColumnsFromQuery = function*(query){
+	qb.getColumnsFromQuery = function*(query){
 		//FROM CLAUSE MAY BE A SUB QUERY
 
 		try {
 			var sourceColumns;
 			if (query.from instanceof Array) {
-				sourceColumns = Qb.getColumnsFromList(query.from);
+				sourceColumns = qb.getColumnsFromList(query.from);
 				query.from.list = query.from;	//NORMALIZE SO query.from.list ALWAYS POINTS TO AN OBJECT
 			} else if (query.from.list) {
 				sourceColumns = query.from.columns;
 			} else if (query.from.cube) {
-				query.from.list = Qb.Cube2List(query.from);
+				query.from.list = qb.Cube2List(query.from);
 				sourceColumns = query.from.columns;
 			} else if (query.from.from != undefined) {
-				query.from = yield (Qb.calc2List(query.from));
-				sourceColumns = yield (Qb.getColumnsFromQuery(query));
+				query.from = yield (qb.calc2List(query.from));
+				sourceColumns = yield (qb.getColumnsFromQuery(query));
 			} else if (query.select !== undefined && query.edges !== undefined) {
 				var output = [];
-				output.extend(query.edges.map(Qb.column.normalize));
-				output.extend(query.select.map(Qb.column.normalize));
+				output.extend(query.edges.map(qb.column.normalize));
+				output.extend(query.select.map(qb.column.normalize));
 				return output;
 			} else {
 				Log.error("Do not know how to handle this");
@@ -1038,7 +1038,7 @@ function joinField(path){
 
 
 // PULL COLUMN DEFINITIONS FROM LIST OF OBJECTS
-	Qb.getColumnsFromList = function(data){
+	qb.getColumnsFromList = function(data){
 		if (data.length == 0 || typeof(data[0]) == "string")
 			return [];
 
@@ -1047,7 +1047,7 @@ function joinField(path){
 			Map.forall(data[i], function(k, v){
 				if (v === undefined || v == null) return;
 				if (output[k]) return;
-				output[k] = {"name": k, "domain": Qb.domain.value};
+				output[k] = {"name": k, "domain": qb.domain.value};
 			});
 		}//for
 		return Map.values(output);
@@ -1057,13 +1057,13 @@ function joinField(path){
 	//
 	// EXPECTING AN ARRAY OF CUBES, AND THE NAME OF THE EDGES TO MERGE
 	// THERE IS NO LOGICAL DIFFERENCE BETWEEN A SET OF CUBES, WITH IDENTICAL EDGES, EACH CELL A VALUE AND
-	// A SINGLE Qb WITH EACH CELL BEING AN OBJECT: EACH ATTRIBUTE VALUE CORRESPONDING TO A Qb IN THE SET
-	//	var chart=Qb.merge([
+	// A SINGLE qb WITH EACH CELL BEING AN OBJECT: EACH ATTRIBUTE VALUE CORRESPONDING TO A qb IN THE SET
+	//	var chart=qb.merge([
 	//		{"from":requested, "edges":["time"]},
 	//		{"from":reviewed, "edges":["time"]},
 	//		{"from":open, "edges":["time"]}
 	//	]);
-	Qb.merge = function(query){
+	qb.merge = function(query){
 		//MAP THE EDGE NAMES TO ACTUAL EDGES IN THE from QUERY
 		query.forall(function(item){
 			if (item.edges.length != item.from.edges.length) Log.error("do not know how to join just some of the edges");
@@ -1089,8 +1089,8 @@ function joinField(path){
 		output.columns = [];
 		output.columns.appendArray(commonEdges);
 
-		output.cube = Qb.cube.newInstance(output.edges, 0, []);
-		Map.copy(Qb.query.prototype, output);
+		output.cube = qb.cube.newInstance(output.edges, 0, []);
+		Map.copy(qb.query.prototype, output);
 
 		query.forall(function(item, index){
 			//COPY SELECT DEFINITIONS
@@ -1102,16 +1102,16 @@ function joinField(path){
 			if (item.edges.length != commonEdges.length) Log.error("Expecting all partitions to have same number of (common) edges declared");
 			item.edges.forall(function(edge, i){
 				if (typeof(edge) == "string") Log.error("can not find edge named '" + edge + "'");
-				if (!Qb.domain.equals(commonEdges[i].domain, edge.domain))
+				if (!qb.domain.equals(commonEdges[i].domain, edge.domain))
 					Log.error("Edges domains (" + item.from.name + ", edge=" + edge.name + ") and (" + query[0].from.name + ", edge=" + commonEdges[i].name + ") are different");
 			});
 
 
-			//CONVERT TO Qb FOR COPYING
+			//CONVERT TO qb FOR COPYING
 			if (item.from.cube !== undefined) {
 				//DO NOTHING
 			} else if (item.from.list !== undefined) {
-				item.cube = Qb.List2Cube(item.from).cube;
+				item.cube = qb.List2Cube(item.from).cube;
 			} else {
 				Log.error("do not know how to handle");
 			}//endif
@@ -1163,7 +1163,7 @@ function joinField(path){
 	//TAKE data LIST OF OBJECTS
 	//sortOrder IS THE sort CLAUSE
 	//columns ARE OPTIONAL, TO MAP SORT value TO column NAME
-	Qb.sort = function(data, sortOrder, columns){
+	qb.sort = function(data, sortOrder, columns){
 		if (sortOrder instanceof Function) {
 			try {
 				data = data.copy();
@@ -1177,7 +1177,7 @@ function joinField(path){
 
 		sortOrder = Array.newInstance(sortOrder);
 		if (sortOrder.length == 0) return data;
-		var totalSort = Qb.sort.compile(sortOrder, columns, true);
+		var totalSort = qb.sort.compile(sortOrder, columns, true);
 		try {
 			data = data.copy();
 			data.sort(totalSort);
@@ -1188,25 +1188,25 @@ function joinField(path){
 	};//method
 
 
-	Qb.sort.compile = function(sortOrder, columns, useNames){
+	qb.sort.compile = function(sortOrder, columns, useNames){
 		var orderedColumns;
 		if (columns === undefined) {
 			orderedColumns = sortOrder.map(function(v){
 				if (v.value !== undefined && v.sort !== undefined) {
-					return {"name": v.value, "sortOrder": coalesce(v.sort, 1), "domain": Qb.domain.value};
+					return {"name": v.value, "sortOrder": coalesce(v.sort, 1), "domain": qb.domain.value};
 				} else {
-					return {"name": v, "sortOrder": 1, "domain": Qb.domain.value};
+					return {"name": v, "sortOrder": 1, "domain": qb.domain.value};
 				}//endif
 			});
 		} else {
 			orderedColumns = sortOrder.map(function(v){
 				if (v.value !== undefined) {
 					for (var i = columns.length; i--;) {
-						if (columns[i].name == v.value && !(columns[i].sortOrder == 0)) return {"name": v.value, "sortOrder": coalesce(v.sort, 1), "domain": Qb.domain.value};
+						if (columns[i].name == v.value && !(columns[i].sortOrder == 0)) return {"name": v.value, "sortOrder": coalesce(v.sort, 1), "domain": qb.domain.value};
 					}//for
 				} else {
 					for (var i = columns.length; i--;) {
-						if (columns[i].name == v && !(columns[i].sortOrder == 0)) return {"name": v, "sortOrder": 1, "domain": Qb.domain.value};
+						if (columns[i].name == v && !(columns[i].sortOrder == 0)) return {"name": v, "sortOrder": 1, "domain": qb.domain.value};
 					}//for
 				}
 				Log.error("Sorting can not find column named '" + v + "'");
@@ -1223,16 +1223,18 @@ function joinField(path){
 
 			var index;
 			if (!useNames) {
-				index = col.columnIndex;
+				index = "["+col.columnIndex+"]";
+			}else if (col.name=="."){
+				index = "";
 			} else if (MVEL.isKeyword(col.name)) {
-				index = splitField(col.name).map(convert.String2Quote).join("][");
+				index = "["+splitField(col.name).map(convert.String2Quote).join("][")+"]";
 			} else if (columns.select("name").contains(col.name)) {
-				index = convert.String2Quote(col.name);
+				index = "["+convert.String2Quote(col.name)+"]";
 			} else {
 				Log.error("Can not handle");
 			}//endif
 
-			f += "diff = orderedColumns[" + o + "].domain.compare(a[" + index + "], b[" + index + "]);\n";
+			f += "diff = orderedColumns[" + o + "].domain.compare(a" + index + ", b" + index + ");\n";
 			if (o == orderedColumns.length - 1) {
 				if (col.sortOrder === undefined || col.sortOrder == 1) {
 					f += "return diff;\n";
@@ -1261,9 +1263,9 @@ function joinField(path){
 
 	//RETURN A NEW QUERY WITH ADDITIONAL FILTERS LIMITING VALUES
 	//TO series AND category SELECTION *AND* TRANSFORMING TO AN SET OPERATION
-	Qb.specificBugs = function(query, filterParts){
+	qb.specificBugs = function(query, filterParts){
 
-		var newQuery = Qb.drill(query, filterParts);
+		var newQuery = qb.drill(query, filterParts);
 		newQuery.edges = [];
 
 		newQuery.select = {"name": "bug_id", "value": "bug_id"};
@@ -1272,7 +1274,7 @@ function joinField(path){
 
 
 	//parts IS AN ARRAY OF PART NAMES CORRESPONDING TO EACH QUERY EDGE
-	Qb.drill = function(query, parts){
+	qb.drill = function(query, parts){
 		if (query.analytic) Log.error("Do not know how to drill down on an analytic");
 
 		var newQuery = {};
@@ -1322,8 +1324,8 @@ function joinField(path){
 
 	//SELECT ARE JUST ANOTHER DIMENSION (ALTHOUGH DIMENSION OF MANY TYPES)
 	//HERE WE CONVERT IT EXPLICITLY
-	Qb.stack = function(query, newEdgeName, newSelectName){
-		//ADD ANOTHER DIMENSION TO EDGE, AND ALTER Qb
+	qb.stack = function(query, newEdgeName, newSelectName){
+		//ADD ANOTHER DIMENSION TO EDGE, AND ALTER qb
 		if (!query.select instanceof Array) Log.error("single cube with no objects does not need to be stacked");
 
 		//GET select NAMES
@@ -1367,7 +1369,7 @@ function joinField(path){
 	 aggBy - THE ONE COLUMN THAT WILL BE PARTIALLY AGGREGATED
 	 min - OBJECT WITH ONE OF ["count", "percent", "value"]
 	 */
-	Qb.minPercent = function(cube, value, aggBy, min){
+	qb.minPercent = function(cube, value, aggBy, min){
 		//FIND VALUE WE WILL BE USING TO GROUP
 		var select;
 		Array.newInstance(cube.select).forall(function(s){
@@ -1403,7 +1405,7 @@ function joinField(path){
 			Log.error("can not handle percent yet");
 		} else if (min.count) {
 			output = m.mapN(m.dim.map(function(d, i){ if (i!=edgeIndex) return i;}), function(values){
-				var rank = Qb.sort(values);
+				var rank = qb.sort(values);
 				var minValue = Math.max(rank[min.count-1], 2);
 				values.forall(function(v, i){
 					if (i==otherIndex) {
@@ -1458,7 +1460,7 @@ function joinField(path){
 	};
 
 
-	Qb.requiredFields = function requiredFields(esfilter){
+	qb.requiredFields = function requiredFields(esfilter){
 		//THIS LOOKS INTO DIMENSION DEFINITIONS, AS WELL AS ES FILTERS
 
 		if (esfilter === undefined) return [];
@@ -1492,10 +1494,10 @@ function joinField(path){
 	};//method
 
 
-	Qb.query = {};
-	Qb.query.prototype = {};
-	//GET THE SUB-Qb THE HAD name=value
-	Qb.query.prototype.get = function(name, value){
+	qb.query = {};
+	qb.query.prototype = {};
+	//GET THE SUB-qb THE HAD name=value
+	qb.query.prototype.get = function(name, value){
 		if (value === undefined && typeof(name) == "object") {
 			//EXPECTING A SET OF TERMS TO FILTER BY
 			var term = this.cube;
@@ -1521,17 +1523,20 @@ function joinField(path){
 		return this.cube[edge.domain.getPartByKey(value).dataIndex];
 	};
 
-	Qb.query.prototype.indexOf = function(name, value){
+	qb.query.prototype.indexOf = function(name, value){
 		var edge = this.getEdge(name);
 		return edge.domain.getPartByKey(value).dataIndex;
 	};
 
-	Qb.query.prototype.getEdge = function(name){
+	qb.query.prototype.getEdge = function(name){
 		return this.edges.map(function(e, i){
 			if (e.name == name) return e;
 		})[0];
 	};
 
+	qb.get = function(expr){
+		return qb2function(expr);
+	};//method
 
 	Q = calc2Cube;
 

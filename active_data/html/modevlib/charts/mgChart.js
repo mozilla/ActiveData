@@ -4,12 +4,13 @@
 
 importScript("../../lib/metrics-graphics/import.js");
 importScript("../../lib/jquery.js");
+importScript("../qb/Expressions.js");
 
 
 
 
 (function(){
-	var DEBUG = true;
+	var DEBUG = false;
 
 
 	window.aChart = window.aChart || {};
@@ -17,7 +18,7 @@ importScript("../../lib/jquery.js");
 	////////////////////////////////////////////////////////////////////////////
 	// STYLES
 	////////////////////////////////////////////////////////////////////////////
-	var STYLES = [
+	aChart.STYLES = [
 		{"color": "#1f77b4"},
 		{"color": "#ff7f0e"},
 		{"color": "#2ca02c"},
@@ -31,18 +32,43 @@ importScript("../../lib/jquery.js");
 	];
 
 
+
+
 	/*
 	 * SCATTER USES THE `select` COLUMNS FOR x AND y RESPECTIVELY
 	 * THE FIRST EDGE IS USED FOR CATEGORIES
 	 */
 	aChart.showScatter = function(params){
 		Map.expecting(params, ["target", "data"]);
+		var styles = Map.clone(aChart.STYLES);
+
+
 
 		var data;
-		if (params.data instanceof Array) {
-			data = params.data;
+		if (isArray(params.data) || Map.get(params, "data.meta.format")=="list") {
+			data = coalesce(params.data.data, params.data);
+
+			params.series.forall(function(s){
+				var getter = qb2function(s.value);
+				var edge = params.axis[s.axis];
+				qb.domain.compile(edge);
+				edge.domain.NULL.style = Map.get(edge, "missing.style");
+
+				if (s.axis=="color"){
+					//ASSIGN THE _colorIndex FOR metrics-graphics ACCESSOR
+					params.data.forall(function(d){
+						var part = edge.domain.getPartByKey(getter(d));
+						if (Map.get(part, "style.color")){
+							styles[part.dataIndex]=part.style;
+						}//endif
+						d["_colorIndex"] = part.dataIndex;
+					});
+				}else{
+					Log.error("do not know how to handle")
+				}//endif
+			});
 		} else if (params.data.meta) {
-			//ASSUME Qb QUERY RESULT
+			//ASSUME qb QUERY RESULT
 			var chartCube = params.data;
 			if (!(chartCube.select instanceof Array) || chartCube.select.length != 2) {
 				Log.error("Expecting `select` clause to have two columns");
@@ -53,8 +79,6 @@ importScript("../../lib/jquery.js");
 			////////////////////////////////////////////////////////////////////////////
 			var xaxis = chartCube.select[0];
 			var yaxis = chartCube.select[1];
-
-			var styles = Map.clone(STYLES);
 
 			if (chartCube.edges.length >= 1) {
 				chartCube.edges[0].domain.partitions.forall(function(p, i){
@@ -93,44 +117,87 @@ importScript("../../lib/jquery.js");
 		var height = coalesce(Map.get(params, "style.height"), $('#' + params.target).height(), 400);
 		var width = coalesce(Map.get(params, "style.width"), $('#' + params.target).width(), 300);
 
-		var x_accessor = coalesce(Map.get(params, "axis.x.value"), xaxis.name);
-		var y_accessor = coalesce(Map.get(params, "axis.y.value"), yaxis.name);
+		var x_accessor = coalesce(Map.get(params, "axis.x.value"), Map.get(xaxis, "name"));
+		var y_accessor = coalesce(Map.get(params, "axis.y.value"), Map.get(yaxis, "name"));
 
+		//CHAIN mouseover WITH SOME HOVER STYLE
+		var mouseover=undefined;
+		var mouseout=undefined;
+		(function(){
 
-		//POPUP FORMATTING
-		var format = Map.get(params, "hover.format");
-		var mouseover;
-		var y_rollover_format;
-		var x_rollover_format;
-		if (format && isString()) {
-			mouseover = function(d, i){
-				d3
-				.select('#' + params.target + ' svg .mg-active-datapoint')
-				.text(new Template(format).expand(d.point));
+			//STYLE THE TOOL TIPS
+			var DEFAULT_TIP_STYLE = {
+				"padding": "5px 10px 5px 10px",
+				"position": "absolute",
+				"visibility": "hidden",
+				"background-color": "black",
+				"color": "white",
+				"font-weight": "bold",
+				"align-text": "center"
 			};
-		}else if (format) {
-			if (!format.x) format.x="{{.}}";
-			x_rollover_format =(function(t){
-				return function(d){
-					return t.expand(d);
-				};
-			})(new Template(format.x));
 
-			if (!format.y) format.y="{{.}}";
-			y_rollover_format = (function(t){
-				return function(d){
-					return t.expand(d);
-				};
-			})(new Template(format.y));
+
+			var tip;
+			var format;
+			if (params.tip) {
+				if (!params.tip.style) params.tip.style = DEFAULT_TIP_STYLE;
+				format = new Template(coalesce(Map.get(params, "tip.format"), ""));
+
+				//THE TOOLTIP OBJECT
+				tip = d3.select("body").append("div")
+					.attr("id", "tip")
+					.style(params.tip.style)
+					;
+			}//endif
 
 			mouseover = function(d, i){
-				var point = d.point;
-				var text = x_rollover_format(Map.get(point, x_accessor))+" "+y_rollover_format(Map.get(point, y_accessor));
-				d3.select('#' + params.target + ' svg .mg-active-datapoint').text(text);
+				//SHOW TOOLTIP
+				if (tip) {
+					tip.style({
+								"top": (d3.event.pageY + 10) + "px",
+								"left": (d3.event.pageX + 10) + "px",
+								"visibility": "visible"
+							})
+							.html(format.expand(d))
+					;
+				}//endif
+
+				//HIGHLIGHT POINT
+				chartParams.hoverLayer.append("circle")
+						.cx(chartParams.scalefns.xf(d))
+						.cy(chartParams.scalefns.yf(d))
+						.attr("r", 7)
+						.attr("fill", "none")
+						.attr("stroke", "gray")
+						.attr("stroke-width", 3)
+				;
+				mouseoverOld(d, i);
 			};
-		}else{
-			//AUTO FORMAT
-		}//endif
+
+			mouseout = function(d, i){
+				if (tip) {
+					tip.style("visibility", "hidden");
+				}
+				chartParams.hoverLayer.html("")
+			};//function
+
+		})();
+
+		//CHAIN click TO HIGHLIGHT POINT
+		(function(clickOld){
+			params.click = function(d, i){
+				chartParams.selectLayer.html("");
+				chartParams.selectLayer.append("circle")
+						.cx(chartParams.scalefns.xf(d))
+						.cy(chartParams.scalefns.yf(d))
+						.attr("r", 7)
+						.attr("fill", "none")
+						.attr("stroke", "red")
+						.attr("stroke-width", 3)
+				;
+				clickOld(d, i);
+			};
+		})(params.click);
 
 		//X-AXIS FORMAT
 		var xax_format=Map.get(params, "axis.x.format");
@@ -145,6 +212,7 @@ importScript("../../lib/jquery.js");
 		if (DEBUG){
 			Log.note(convert.value2json(data));
 		}//endif
+
 		var chartParams = {
 			title: Map.get(params, "title.label"),
 			description: Map.get(params, "title.description"),
@@ -161,23 +229,40 @@ importScript("../../lib/jquery.js");
 			color_domain: styles.map(function(v, i){
 				return i;
 			}),
-			color_range: styles.map(function(v){
-				return v.color;
-			}),
+			color_range: styles.select("color"),
+			legend: Map.getValues(params.axis).first().domain.partitions.select("name"),
 			color_type: 'category',
+
+			min_y: coalesce(Map.get(params, "axis.y.range.min"), Map.get(params, "axis.y.domain.min")),
+			max_y: coalesce(Map.get(params, "axis.y.range.max"), Map.get(params, "axis.y.domain.max")),
+			min_x: coalesce(Map.get(params, "axis.x.range.min"), Map.get(params, "axis.x.domain.min")),
+			max_x: coalesce(Map.get(params, "axis.x.range.max"), Map.get(params, "axis.x.domain.max")),
+
 			x_rug: Map.get(params, "axis.x.rug"),
-			mouseover: mouseover
+			show_rollover_text: false,
+			mouseover: mouseover,
+			mouseout: mouseout,
+			click: params.click
 		};
 		MG.data_graphic(chartParams);
 
 	};
 
 
-	aChart.show = function(params){
+	/*
+	RETURN A NICE MAX VALUE, THAT INCLUDES THE IMPORTANT CHART VALUES
+	 */
+	aChart.maxNice=function(values){
+		var sorted = qb.sort(values, ".");
+		var mostlyMax = sorted[aMath.ceiling(values.length*0.90)];
+		var max = sorted.last();
+
+		if (max <=mostlyMax*1.1){
+			return aMath.niceCeiling(max);
+		}else{
+			return aMath.niceCeiling(mostlyMax);
+		}//endif
 
 
-
-
-	};
-
+	}
 })();

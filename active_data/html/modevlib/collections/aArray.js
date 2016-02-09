@@ -7,6 +7,8 @@ importScript("../util/aUtil.js");
 
 
 
+
+
 (function(){
 	var DEBUG=true;
 
@@ -39,6 +41,11 @@ importScript("../util/aUtil.js");
 		return output;
 	};//method
 
+	Array.unwrap = function(value){
+		if (isArray(value)) return value.unwrap();
+		if (value==null) return null;
+		return value;
+	};//method
 
 	Array.prototype.unwrap = function(){
 		if (this.length==0) {
@@ -48,7 +55,7 @@ importScript("../util/aUtil.js");
 		}else{
 			return this;
 		}//endif
-	}//method
+	};//method
 
 
 	Array.prototype.copy = function(){
@@ -352,3 +359,8 @@ importScript("../util/aUtil.js");
 		return c;
 	};//method
 })();
+
+
+function isArray(value){
+	return value instanceof Array;
+}

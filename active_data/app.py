@@ -103,7 +103,7 @@ def query(path):
                 # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
                 cols = [c for c in m.get_columns(table=data["from"]) if c.type not in ["nested", "object"]]
                 for c in cols:
-                    Log.note("Mark {{column}} dirty", column=c.name)
+                    Log.note("Mark {{column}} dirty at {{time}}", column=c.name, time=now)
                     c.last_updated = now - TOO_OLD
                     m.todo.push(c)
 
@@ -120,6 +120,13 @@ def query(path):
                     else:
                         break
                     Thread.sleep(seconds=1)
+                for c in cols:
+                    Log.note(
+                        "fresh column name={{column.name}} updated={{column.last_updated|date}} parts={{column.partitions}}",
+                        column=c
+                    )
+
+
 
             if Log.profiler or Log.cprofiler:
                 # THREAD CREATION IS DONE TO CAPTURE THE PROFILING DATA

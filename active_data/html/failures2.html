@@ -72,7 +72,7 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 		try {
 
 
-			var testGroups = (yield (Qb.calc2List({
+			var testGroups = (yield (qb.calc2List({
 				"from": raw_failures,
 				"select": [
 //					{"name": "subtests", "value": "subtest_name", "aggregate": "union"},
@@ -90,7 +90,7 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 				return [t._group_id, t];
 			}));
 
-			testGroups = (yield (Qb.calc2List({
+			testGroups = (yield (qb.calc2List({
 				"from": testGroups,
 				"where": (DEBUG ? true : {"gt": {"failure_count": 1}}),
 				"sort": {"value": "failure_count", "sort": -1}

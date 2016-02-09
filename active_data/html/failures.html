@@ -101,7 +101,7 @@ importScript('js/util.js', function(){
 
 		Log.alert(raw_failures.length+" failures found since "+RECENT_DATE.format("MMM dd, yyyy"));
 
-		var testGroups = (yield (Qb.calc2List({
+		var testGroups = (yield (qb.calc2List({
 			"from": raw_failures,
 			"select": [
 				{"name": "subtests", "value": "subtest_name", "aggregate": "union"},
@@ -119,7 +119,7 @@ importScript('js/util.js', function(){
 
 		Log.alert(testGroups.length+" unique combinations");
 
-		testGroups = Qb.sort(testGroups, {"value": "count", "sort":-1});//.substring(0, 40);
+		testGroups = qb.sort(testGroups, {"value": "count", "sort":-1});//.substring(0, 40);
 
 		$("#details").html(convert.List2HTMLTable(testGroups));
 
@@ -255,7 +255,7 @@ importScript('js/util.js', function(){
 //        ///////////////////////////////////////////////////////////////////////
 //
 //
-//		details=yield (Qb.calc2List({
+//		details=yield (qb.calc2List({
 //			"from":details,
 //			"select":[
 //				{"name":"ID", "value":"Bugzilla.linkToBug(bug_id)"},

@@ -207,6 +207,47 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_select_mult_w_when(self):
+        test = {
+            "data": [
+                {"a": 0, "b": False},
+                {"a": 1, "b": False},
+                {"a": 2, "b": True},
+                {"a": 3, "b": False},
+                {"a": 4, "b": True},
+                {"a": 5, "b": False},
+                {"a": 6, "b": True},
+                {"a": 7, "b": True},
+                {"a": 8},  # COUNTED, "b" IS NOT true
+                {"b": True},  # NOT COUNTED
+                {"b": False},  # NOT COUNTED
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {
+                    "name": "ab",
+                    "value": {
+                        "mult": [
+                            "a",
+                            {
+                                "when": "b",
+                                "then": 0,
+                                "else": 1
+                            }
+                        ]
+                    },
+                    "aggregate": "sum"
+                }
+            },
+            "expecting_list": {
+                "meta": {"format": "value"},
+                "data": 17
+            }
+        }
+        self._execute_es_tests(test)
+
+
+
     def test_select_add(self):
         test = {
             "data": [
@@ -222,7 +263,7 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "from": base_test_class.settings.backend_es.index,
-                "select": ["a", "b", {"name": "t", "value": {"add": ["a", "b"]}}]
+                "select": ["a", "b", {"name": "t", "value": {"add": ["a", "b"], "nulls":True}}]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -279,7 +320,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "from": base_test_class.settings.backend_es.index+".a._b",
                 "select": [
                     {"aggregate": "count"},
-                    {"name": "t", "value": {"add": ["a", "b"]}, "aggregate": "average"}
+                    {"name": "t", "value": {"add": ["a", "b"], "nulls":True}, "aggregate": "average"}
                 ],
                 "edges": ["a", "b"]
             },

@@ -51,7 +51,8 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 					{"lt": {"run.timestamp": TO_DATE.unix()}},
 					{"eq": {"result.ok": false}},
 //					{"eq": {"ok": false}},
-					{"eq": {"build.branch": "mozilla-inbound"}}
+					{"eq": {"build.branch": "mozilla-inbound"}},
+					{"not":{"in":{"build.platform":["emulator", "android-api-9"]}}}
 				]},
 				"limit": (DEBUG ? 100 : 100000),
 				"format": "list"

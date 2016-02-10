@@ -67,6 +67,7 @@ class Query(object):
 
         self.format = query.format
         self.frum = wrap_from(query["from"], schema=schema)
+        schema = coalesce(schema, self.frum)
 
         select = query.select
         if isinstance(select, list):

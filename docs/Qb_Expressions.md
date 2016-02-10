@@ -146,35 +146,39 @@ Compare two expressions, and return a Boolean
 Math Operators
 --------------
 
-All the math operators, except `count`, return `null` if all the operands are `null`.  This behaviour can be changed by including a `default` clause:  
+All the math operators, except `count`, return `null` if *any* the operands are `null`. You can change the return value by including a `default`. 
 
+		# if **any** expressions evaluate to `null` then return zero
 		{"sum": [expr1, expr2, ... exprN], "default": 0}
 
-In this example, if all expressions evaluate to `null` then `sum` will return zero (`0`).
 
-
-###`count` Operator###
+###`count` Operator (commutative)###
 
 For counting the number of not-null values.
 
 		{"count": [expr1, expr2, ... exprN]}
 	
-`nulls` are not counted
+`nulls` are not counted, and the empty list returns zero:
 
 		{"count": []} ⇒ 0
 
 
-###`sum` Operator###
+###`sum` Operator (commutative)###
 
 For adding the result of many expressions.  Also known as `add`.
 
 		{"sum": [expr1, expr2, ... exprN]}
-	
-expressions evaluating to `null` are ignored.  The empty list evaluates to `null`.
+		
+By default, if **any** expressions evaluate to `null`, then `null` is returned.  You can change this with `"nulls":true`; so `nulls` are ignored during summation, returning `null` only if **all** expressions evaluate to `null`:  
+
+		# `null` expressions are ignored
+		{"sum": [expr1, expr2, ... exprN], "nulls": true}
+
+The empty list always evaluates to the default value, or `null`.
 
 		{"sum": []} ⇒ null
 
- 
+
 ###`sub` Operator###
 
 Subtract two expressions.  Also known as `subtract` and `minus`
@@ -183,15 +187,22 @@ Subtract two expressions.  Also known as `subtract` and `minus`
 		{"sub": [expr_a, expr_b]}
 
 
-###`mult` Operator###
+###`mult` Operator (commutative)###
 
 Multiply multiple values.  Also known as `multiply` and `mul`
 
 		{"mult": [expr1, expr2, ... exprN]}
 
-expressions evaluating to `null` are ignored.  The empty list evaluates to `null`.
+By default, if **any** expressions evaluate to `null`, then `null` is returned.  You can change this with `"nulls":true`; so `nulls` are ignored during summation, returning `null` only if **all** expressions evaluate to `null`:  
+
+		# `null` expressions are ignored
+		{"mult": [expr1, expr2, ... exprN], "nulls": true}
+
+The empty list always evaluates to the default value, or `null`.
 
 		{"mult": []} ⇒ null
+
+
 
 
 ###`div` Operator###

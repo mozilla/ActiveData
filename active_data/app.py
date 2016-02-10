@@ -135,7 +135,7 @@ def query(path):
                 thread = Thread.run("run query", run)
                 result = thread.join()
             else:
-                result = qb.run(data, meta.singlton)
+                result = qb.run(data)
 
             if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, qb SHOULD ALWAYS RETURN Containers
                 result = result.format(data.format)

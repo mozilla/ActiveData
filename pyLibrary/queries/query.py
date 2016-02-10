@@ -24,7 +24,7 @@ from pyLibrary.queries import wrap_from
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain, is_keyword
-from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter, query_get_all_vars, qb_expression
+from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter, query_get_all_vars, qb_expression, TrueOp
 
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 10000
@@ -379,6 +379,8 @@ def _normalize_range(range):
 
 
 def _normalize_where(where, schema=None):
+    if where == None:
+        return TrueOp()
     return qb_expression(where)
 
 

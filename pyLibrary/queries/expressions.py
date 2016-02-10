@@ -1220,9 +1220,12 @@ class LeftOp(Expression):
             self.value, self.length = term
 
     def to_ruby(self, not_null=False, boolean=False):
-        v = self.value.to_ruby()
-        l = self.length.to_ruby()
-        expr = "((" + v + ") == null || (" + l + ") == null) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
+        test_v = self.value.missing().to_ruby(boolean=True)
+        test_l = self.length.missing().to_ruby(boolean=True)
+        v = self.value.to_ruby(not_null=True)
+        l = self.length.to_ruby(not_null=True)
+
+        expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
         return expr
 
     def to_python(self, not_null=False, boolean=False):
@@ -1260,9 +1263,12 @@ class NotLeftOp(Expression):
             self.value, self.length = term
 
     def to_ruby(self, not_null=False, boolean=False):
-        v = self.value.to_ruby()
-        l = self.length.to_ruby()
-        expr = "((" + v + ") == null || (" + l + ") == null) ? null : (" + v + ".substring(max(0, min(" + v + ".length(), " + l + ")).intValue()))"
+        test_v = self.value.missing().to_ruby(boolean=True)
+        test_l = self.length.missing().to_ruby(boolean=True)
+        v = self.value.to_ruby(not_null=True)
+        l = self.length.to_ruby(not_null=True)
+
+        expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(max(0, min(" + v + ".length(), " + l + ")).intValue()))"
         return expr
 
     def to_python(self, not_null=False, boolean=False):
@@ -1300,9 +1306,12 @@ class RightOp(Expression):
             self.value, self.length = term
 
     def to_ruby(self, not_null=False, boolean=False):
-        v = self.value.to_ruby()
-        l = self.length.to_ruby()
-        expr = "((" + v + ") == null || (" + l + ") == null) ? null : (" + v + ".substring(min("+v+".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
+        test_v = self.value.missing().to_ruby(boolean=True)
+        test_l = self.length.missing().to_ruby(boolean=True)
+        v = self.value.to_ruby(not_null=True)
+        l = self.length.to_ruby(not_null=True)
+
+        expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(min("+v+".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
         return expr
 
     def to_python(self, not_null=False, boolean=False):
@@ -1339,9 +1348,12 @@ class NotRightOp(Expression):
             self.value, self.length = term
 
     def to_ruby(self, not_null=False, boolean=False):
-        v = self.value.to_ruby()
-        l = self.length.to_ruby()
-        expr = "((" + v + ") == null || (" + l + ") == null) ? null : (" + v + ".substring(0, min("+v+".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
+        test_v = self.value.missing().to_ruby(boolean=True)
+        test_l = self.length.missing().to_ruby(boolean=True)
+        v = self.value.to_ruby(not_null=True)
+        l = self.length.to_ruby(not_null=True)
+
+        expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, min("+v+".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
         return expr
 
     def to_python(self, not_null=False, boolean=False):
@@ -1423,7 +1435,7 @@ class WhenOp(Expression):
         return "(" + self.when.to_ruby(boolean=True) + ") ? (" + self.then.to_ruby(not_null=not_null) + ") : (" + self.els_.to_ruby(not_null=not_null) + ")"
 
     def to_python(self, not_null=False, boolean=False):
-        return "(" + self.when.to_python() + ") ? (" + self.then.to_python() + ") : (" + self.els_.to_python() + ")"
+        return "(" + self.when.to_python(boolean=True) + ") ? (" + self.then.to_python(not_null=not_null) + ") : (" + self.els_.to_python(not_null=not_null) + ")"
 
     def to_esfilter(self):
         return {"or": [

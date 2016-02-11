@@ -18,7 +18,7 @@ from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList
 from pyLibrary.queries import qb
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import is_keyword
-from pyLibrary.queries.expressions import TRUE_FILTER, qb_expression
+from pyLibrary.queries.expressions import TRUE_FILTER, qb_expression, Expression
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
 from pyLibrary.queries.meta import Column
 from pyLibrary.thread.threads import Lock
@@ -89,9 +89,11 @@ class ListContainer(Container):
         return self.where(where)
 
     def where(self, where):
+        temp = None
         if isinstance(where, Mapping):
-            temp = None
             exec("def temp(row):\n    return "+qb_expression(where).to_python())
+        elif isinstance(where, Expression):
+            exec("def temp(row):\n    return "+where.to_python())
         else:
             temp = where
 

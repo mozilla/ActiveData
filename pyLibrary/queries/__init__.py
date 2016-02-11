@@ -93,3 +93,10 @@ def wrap_from(frum, schema=None):
         return _ListContainer("test_list", frum)
     else:
         return frum
+
+
+
+class Schema(object):
+
+    def get_column(self, name, table):
+        raise NotImplementedError()

@@ -14,7 +14,7 @@ from copy import copy
 from itertools import product
 
 from pyLibrary.meta import use_settings, DataClass
-from pyLibrary.queries import qb
+from pyLibrary.queries import qb, Schema
 from pyLibrary.queries.query import Query
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
@@ -36,7 +36,7 @@ TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
 
 
 
-class FromESMetadata(object):
+class FromESMetadata(Schema):
     """
     QUERY THE METADATA
     """

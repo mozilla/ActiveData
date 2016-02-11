@@ -20,7 +20,7 @@ from pyLibrary.dot import wrap, unwrap, listwrap
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.maths import Math
-from pyLibrary.queries import wrap_from
+from pyLibrary.queries import wrap_from, Schema
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain, is_keyword
@@ -38,7 +38,7 @@ def _late_import():
     global _Column
 
     from pyLibrary.queries.meta import Column as _Column
-    from pyLibrary.queries import qb
+    from pyLibrary.queries import qb as _qb
 
     _ = _qb
     _ = _Column
@@ -67,7 +67,8 @@ class Query(object):
 
         self.format = query.format
         self.frum = wrap_from(query["from"], schema=schema)
-        schema = coalesce(schema, self.frum)
+        if not schema and isinstance(self.frum, Schema):
+            schema = self.frum
 
         select = query.select
         if isinstance(select, list):
@@ -197,7 +198,7 @@ def _normalize_select(select, schema=None):
             )
 
         if schema:
-            s = schema[select]
+            s = schema.get_column(select)
             if s:
                 if isinstance(s, _Column):
                     return Dict(

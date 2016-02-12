@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pytest import skip
+from unittest import skipIf
 
 import base_test_class
 from pyLibrary.dot import wrap
@@ -939,7 +939,7 @@ class TestDeepOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-    @skip("travis is too fast, must reconfigure the metadata management routines")
+    @skipIf(base_test_class.settings.is_travis, "travis is too fast, must reconfigure the metadata management routines")
     def test_deep_agg_w_deeper_select_relative_name(self):
         data = [{"a": {"_b": [
             {"r": {"s": "a"}, "v": {"u": 1}},

@@ -343,7 +343,7 @@ PickDim.prototype.getQuery=function(){
 
 				edges.push(edge);
 			}//endif
-		}else if (numSelected>0 && currentSelection[0].field&& Qb.domain.ALGEBRAIC.contains(currentSelection[0].type)){
+		}else if (numSelected>0 && currentSelection[0].field&& qb.domain.ALGEBRAIC.contains(currentSelection[0].type)){
 			//ONLY ONE DIMENSION CAN EVER BE SELECTED
 			//ADD SOME min/max/interval ATTRIBUTES
 			var s=currentSelection[0];
@@ -357,7 +357,7 @@ PickDim.prototype.getQuery=function(){
 					"interval":s.interval
 				}
 			});
-		}else if (numSelected>0 && currentSelection[0].field && Qb.domain.PARTITION.contains(currentSelection[0].type)){
+		}else if (numSelected>0 && currentSelection[0].field && qb.domain.PARTITION.contains(currentSelection[0].type)){
 			var s=currentSelection[0];
 			edges.push({
 				"name":s.name,

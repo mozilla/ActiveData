@@ -31,7 +31,6 @@ importScript("../aFormat.js");
 // * FORM VALUE - CURRENT VALUE SHOWN IN THE HTML FORM ELEMENTS
 // * GUI.state - VARIABLE VALUES IN THE GUI.state OBJECT
 
-GUI = {};
 (function () {
 	if (window.GUI === undefined) {
 		window.GUI = {};
@@ -78,7 +77,7 @@ GUI = {};
 			parameters,    //LIST OF PARAMETERS (see GUI.AddParameters FOR DETAILS)
 			relations,     //SOME RULES TO APPLY TO PARAMETERS, IN CASE THE HUMAN MAKES SMALL MISTAKES
 			indexName,     //PERFORM CHECKS ON THIS INDEX
-			showDefaultFilters,  //SHOW THE Product/Compoentn/Team FILTERS
+			showDefaultFilters,  //SHOW THE Product/Component/Team FILTERS
 			performChecks,       //PERFORM SOME CONSISTENCY CHECKS TOO
 			checkLastUpdated     //SEND QUERY TO GET THE LAST DATA?
 		) {
@@ -202,7 +201,7 @@ GUI = {};
 						"from": "perfy",
 						"select": {"name": "max_date", "value": "info.started", "aggregate": "maximum"}
 					}))).cube.max_date);
-					$("#testMessage").html("Perfy Last Updated " + time.addTimezone().format("NNN dd @ HH:mm") + Date.getTimezone());
+					$("#testMessage").html("Builds Last Updated " + time.addTimezone().format("NNN dd @ HH:mm") + Date.getTimezone());
 				}else if (indexName == "talos"){
 					esHasErrorInIndex = false;
 					time = new Date((yield(ESQuery.run({
@@ -268,7 +267,7 @@ GUI = {};
 		GUI.State2URL = function () {
 			if (!GUI.State2URL.isEnabled) return;
 
-			var simplestate = {};
+			var simpleState = {};
 			Map.forall(GUI.state, function (k, v) {
 
 				var p = GUI.parameters.map(function (v, i) {
@@ -276,20 +275,22 @@ GUI = {};
 				})[0];
 
 				if (v.isFilter) {
-					simplestate[k] = v.getSimpleState();
+					simpleState[k] = v.getSimpleState();
 				} else if (jQuery.isArray(v)) {
 					if (v.length > 0) {
-						simplestate[k] = v.join(",");
+						simpleState[k] = v.join(",");
 					}else{
-						simplestate[k] = undefined;
+						simpleState[k] = undefined;
 					}//endif
+				} else if (p && p.type == "boolean") {
+					simpleState[k] = convert.value2json(v == true);
 				} else if (p && p.type == "json") {
 					v = convert.value2json(v);
 					v = v.escape(GUI.urlMap);
-					simplestate[k] = v;
+					simpleState[k] = v;
 				} else if (typeof(v) == "string" || aMath.isNumeric(k)) {
 					v = v.escape(GUI.urlMap);
-					simplestate[k] = v;
+					simpleState[k] = v;
 				}//endif
 			});
 
@@ -308,7 +309,7 @@ GUI = {};
 					if (v.id == k) return v;
 				})[0];
 
-				if (p && Qb.domain.ALGEBRAIC.contains(p.type)) {
+				if (p && qb.domain.ALGEBRAIC.contains(p.type)) {
 					v = v.escape(Map.inverse(GUI.urlMap));
 					GUI.state[k] = v;
 				} else if (p && p.type == "json") {
@@ -318,6 +319,8 @@ GUI = {};
 					} catch (e) {
 						Log.error("Malformed JSON: " + v);
 					}//try
+				} else if (p && p.type == "boolean") {
+					GUI.state[k] = convert.json2value(v);
 				} else if (p && p.type == "text") {
 					v = v.escape(Map.inverse(GUI.urlMap));
 					GUI.state[k] = v;
@@ -494,7 +497,7 @@ GUI = {};
 							GUI.refreshChart();
 						}
 					});
-					$("#" + param.id).val(defaultValue.join(","));
+					$("#" + param.id).val(Array.newInstance(defaultValue).join(","));
 				} else {
 					if (param.type == "string") param.type = "text";
 					$("#" + param.id).change(function () {

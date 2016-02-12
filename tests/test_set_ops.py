@@ -405,8 +405,6 @@ class TestSetOps(ActiveDataBaseTest):
 
     def test_select_all_from_list_of_objects(self):
         test = {
-            "disable": True,  # TODO: PLEASE ENABLE, ES CAN NOT BE EXPECTED TO KEEP ORDER OF data
-            "name": "select * from list of objects",
             "data": [
                 {"a": "b"},
                 {"a": "d"}
@@ -566,12 +564,8 @@ class TestSetOps(ActiveDataBaseTest):
         })
 
         settings = self._fill_es(test)
-        try:
-            result = self._execute_query(test.query)
-            self.assertEqual(result.meta.es_query.size, query.MAX_LIMIT)
-        finally:
-            # REMOVE CONTAINER
-            self.es_cluster.delete_index(settings.index)
+        result = self._execute_query(test.query)
+        self.assertEqual(result.meta.es_query.size, query.MAX_LIMIT)
 
     def test_default_limit(self):
         test = wrap({
@@ -583,21 +577,17 @@ class TestSetOps(ActiveDataBaseTest):
         })
 
         settings = self._fill_es(test)
-        try:
-            test.query.format = "list"
-            result = self._execute_query(test.query)
-            self.assertEqual(len(result.data), query.DEFAULT_LIMIT)
+        test.query.format = "list"
+        result = self._execute_query(test.query)
+        self.assertEqual(len(result.data), query.DEFAULT_LIMIT)
 
-            test.query.format = "table"
-            result = self._execute_query(test.query)
-            self.assertEqual(len(result.data), query.DEFAULT_LIMIT)
+        test.query.format = "table"
+        result = self._execute_query(test.query)
+        self.assertEqual(len(result.data), query.DEFAULT_LIMIT)
 
-            test.query.format = "cube"
-            result = self._execute_query(test.query)
-            self.assertEqual(len(result.data.value), query.DEFAULT_LIMIT)
-        finally:
-            # REMOVE CONTAINER
-            self.es_cluster.delete_index(settings.index)
+        test.query.format = "cube"
+        result = self._execute_query(test.query)
+        self.assertEqual(len(result.data.value), query.DEFAULT_LIMIT)
 
     def test_specific_limit(self):
         test = wrap({
@@ -610,21 +600,17 @@ class TestSetOps(ActiveDataBaseTest):
         })
 
         settings = self._fill_es(test)
-        try:
-            test.query.format = "list"
-            result = self._execute_query(test.query)
-            self.assertEqual(len(result.data), 5)
+        test.query.format = "list"
+        result = self._execute_query(test.query)
+        self.assertEqual(len(result.data), 5)
 
-            test.query.format = "table"
-            result = self._execute_query(test.query)
-            self.assertEqual(len(result.data), 5)
+        test.query.format = "table"
+        result = self._execute_query(test.query)
+        self.assertEqual(len(result.data), 5)
 
-            test.query.format = "cube"
-            result = self._execute_query(test.query)
-            self.assertEqual(len(result.data.value), 5)
-        finally:
-            # REMOVE CONTAINER
-            self.es_cluster.delete_index(settings.index)
+        test.query.format = "cube"
+        result = self._execute_query(test.query)
+        self.assertEqual(len(result.data.value), 5)
 
     def test_negative_limit(self):
         test = wrap({
@@ -637,12 +623,8 @@ class TestSetOps(ActiveDataBaseTest):
         })
 
         settings = self._fill_es(test)
-        try:
-            test.query.format = "list"
-            self.assertRaises(Exception, self._execute_query, test.query)
-        finally:
-            # REMOVE CONTAINER
-            self.es_cluster.delete_index(settings.index)
+        test.query.format = "list"
+        self.assertRaises(Exception, self._execute_query, test.query)
 
     def test_select_expression(self):
         test = {
@@ -962,14 +944,46 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-# TODO: problem selecing nested columns
-# nested: ElasticsearchIllegalArgumentException[field [action.timings] isn't a leaf field];
-# {
-#     "from": "jobs",
-#     "select": [
-#         "action"
-#     ],
-#     "where": {
-#         "exists": "action.start_time"
-#     }
-# }
+    def test_select_nested_column(self):
+        test = {
+            "data": [
+                {"_a": [{"b": 1, "c": 1}, {"b": 2, "c": 1}]},
+                {"_a": [{"b": 1, "c": 2}, {"b": 2, "c": 2}]}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": "_a"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    [{"b": 1, "c": 1}, {"b": 2, "c": 1}],
+                    [{"b": 1, "c": 2}, {"b": 2, "c": 2}]
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["_a"],
+                "data": [
+                    [[{"b": 1, "c": 1}, {"b": 2, "c": 1}]],
+                    [[{"b": 1, "c": 2}, {"b": 2, "c": 2}]]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 2, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "_a": [
+                        [{"b": 1, "c": 1}, {"b": 2, "c": 1}],
+                        [{"b": 1, "c": 2}, {"b": 2, "c": 2}]
+                    ]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+

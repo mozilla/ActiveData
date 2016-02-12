@@ -23,19 +23,28 @@ TeamFilter.newInstance=function(field_name){
 	self.selectedEmails=[];
 
 	Thread.run("get people", function*(){
-		//GET ALL PEOPLE
-		var people=(yield (ESQuery.run({
-			"from":"org_chart",
-			"select":[
-				{"name":"id", "value":"id"},
-				{"name":"name", "value":"name"},
-				{"name":"email", "value":"email"},
-				{"name":"manager", "value":"manager"}
-			],
-			"esfilter":{"and":[
-				{"exists":{"field":"id"}},
-			]}
-		}))).list;
+		var people=null;
+		try {
+			//GET ALL PEOPLE
+			people = (yield (ESQuery.run({
+				"from": "org_chart",
+				"select": [
+					{"name": "id", "value": "id"},
+					{"name": "name", "value": "name"},
+					{"name": "email", "value": "email"},
+					{"name": "manager", "value": "manager"}
+				],
+				"esfilter": {
+					"and": [
+						{"exists": {"field": "id"}},
+					]
+				}
+			}))).list;
+		}catch(e){
+			//EXPECTED WHEN NO PRIVATE CLUSTER
+			Log.note("Can not get people");
+			people = [];
+		}
 
 		var others={
 			"email":"other@mozilla.com",

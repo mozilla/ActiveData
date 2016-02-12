@@ -51,7 +51,8 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 					{"lt": {"run.timestamp": TO_DATE.unix()}},
 					{"eq": {"result.ok": false}},
 //					{"eq": {"ok": false}},
-					{"eq": {"build.branch": "mozilla-inbound"}}
+					{"eq": {"build.branch": "mozilla-inbound"}},
+					{"not":{"in":{"build.platform":["emulator", "android-api-9"]}}}
 				]},
 				"limit": (DEBUG ? 100 : 100000),
 				"format": "list"
@@ -72,7 +73,7 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 		try {
 
 
-			var testGroups = (yield (Qb.calc2List({
+			var testGroups = (yield (qb.calc2List({
 				"from": raw_failures,
 				"select": [
 //					{"name": "subtests", "value": "subtest_name", "aggregate": "union"},
@@ -90,7 +91,7 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 				return [t._group_id, t];
 			}));
 
-			testGroups = (yield (Qb.calc2List({
+			testGroups = (yield (qb.calc2List({
 				"from": testGroups,
 				"where": (DEBUG ? true : {"gt": {"failure_count": 1}}),
 				"sort": {"value": "failure_count", "sort": -1}

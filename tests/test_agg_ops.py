@@ -120,6 +120,74 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_stats(self):
+        test = {
+            "data": [{"a": i**2} for i in range(30)],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": "a", "aggregate": "stats"}
+            },
+            "expecting_list": {
+                "meta": {"format": "value"}, "data": {
+                    "count": 30,
+                    "std": 259.76901064,
+                    "min": 0,
+                    "max": 841,
+                    "sum": 8555,
+                    "median": 210.5,
+                    "sos": 4463999,
+                    "var": 67479.93889,
+                    "avg": 285.1666667
+                }
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [[{
+                    "count": 30,
+                    "std": 259.76901064,
+                    "min": 0,
+                    "max": 841,
+                    "sum": 8555,
+                    "median": 210.5,
+                    "sos": 4463999,
+                    "var": 67479.93889,
+                    "avg": 285.1666667
+                }]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [],
+                "data": {
+                    "a": {
+                        "count": 30,
+                        "std": 259.76901064,
+                        "min": 0,
+                        "max": 841,
+                        "sum": 8555,
+                        "median": 210.5,
+                        "sos": 4463999,
+                        "var": 67479.93889,
+                        "avg": 285.1666667
+                    }
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_bad_percentile(self):
+        test = {
+            "data": [{"a": i**2} for i in range(30)],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": "a", "aggregate": "percentile", "percentile": "0.90"}
+            },
+            "expecting_list": {
+                "meta": {"format": "value"}, "data": 681.3
+            }
+        }
+
+        self.assertRaises("Expecting percentile to be a float", self._execute_es_tests, test)
 
     def test_many_aggs_on_one_column(self):
         # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
@@ -303,28 +371,3 @@ class TestAggOps(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test, tjson=False)
-
-#TODO: AGGREGATING ON CONSTANT DOES NOT SEEM TO WORK
-
-test = {
-    "from": base_test_class.settings.backend_es.index,
-    "select": {"name": "count", "value": "1", "aggregate": "count"},
-    "edges": ["a"],
-    "esfilter": True,
-    "limit": 10
-}
-
-#TODO: SIMPLE COUNT NOT WORKING
-example = {
-    "from": "jobs.action.timings",
-    "where": {"eq": {"build.name": "Windows XP 32-bit try opt test mochitest-1"}},
-    "select": [
-        {
-            "name": "duration",
-            "aggregate": "average",
-            "value": "action.timings.builder.duration"
-        },
-        {"aggregate": "count"}
-    ],
-    "format": "table"
-}

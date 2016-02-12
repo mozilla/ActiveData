@@ -18,6 +18,7 @@ import subprocess
 
 from active_data.app import replace_vars
 from pyLibrary import convert, jsons
+from pyLibrary.debugs.exceptions import extract_stack
 from pyLibrary.debugs.logs import Log, Except, constants
 from pyLibrary.dot import wrap, coalesce, unwrap
 from pyLibrary.env import http
@@ -99,23 +100,23 @@ class ActiveDataBaseTest(FuzzyTestCase):
         aliases = cluster.get_aliases()
         for a in aliases:
             try:
-                # testing_0ef53e45b320160118_180420
-                create_time = Date(a.index[-15:], "%Y%m%d_%H%M%S")
-                if a.index.startswith("testing_") and create_time < Date.now() - (10*MINUTE):
-                    cluster.delete_index(a.index)
+                if a.index.startswith("testing_"):
+                    create_time = Date(a.index[-15:], "%Y%m%d_%H%M%S")  # EXAMPLE testing_0ef53e45b320160118_180420
+                    if create_time < Date.now() - (10*MINUTE):
+                        cluster.delete_index(a.index)
             except Exception, e:
-                if a.index == "twitter":  # Remove when resolved: https://github.com/travis-ci/packer-templates/issues/148
-                    cluster.delete_index(a.index)
-                else:
-                    Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
+                Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
 
 
     @classmethod
     def tearDownClass(cls):
         cluster = elasticsearch.Cluster(settings.backend_es)
         for i in ActiveDataBaseTest.indexes:
-            Log.note("remove index {{index}}", index=i)
-            cluster.delete_index(i)
+            try:
+                cluster.delete_index(i)
+                Log.note("remove index {{index}}", index=i)
+            except Exception, e:
+                pass
         Log.stop()
 
 
@@ -135,7 +136,6 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
     def setUp(self):
         index_name = "testing_" + Random.hex(10).lower()
-        ActiveDataBaseTest.indexes.append(index_name)
 
         # ADD TEST RECORDS
         self.service_url = settings.service_url
@@ -144,9 +144,14 @@ class ActiveDataBaseTest(FuzzyTestCase):
         self.es_test_settings.alias = None
         self.es_cluster = elasticsearch.Cluster(self.es_test_settings)
         self.index = self.es_cluster.get_or_create_index(self.es_test_settings)
+        ActiveDataBaseTest.indexes.append(self.index.settings.index)
+
 
     def tearDown(self):
-        self.es_cluster.delete_index(self.es_test_settings.index)
+        if self.es_test_settings.index in ActiveDataBaseTest.indexes:
+            self.es_cluster.delete_index(self.es_test_settings.index)
+            ActiveDataBaseTest.indexes.remove(self.es_test_settings.index)
+
 
     def not_real_service(self):
         return settings.fastTesting
@@ -190,6 +195,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
     def _execute_es_tests(self, subtest, tjson=False, delete_index=True):
         subtest = wrap(subtest)
+        subtest.name = extract_stack()[1]['method']
 
         if subtest.disable:
             return
@@ -207,10 +213,14 @@ class ActiveDataBaseTest(FuzzyTestCase):
             # EXECUTE QUERY
             num_expectations = 0
             for k, v in subtest.items():
-                if not k.startswith("expecting_"):
+                if k.startswith("expecting_"):  # WHAT FORMAT ARE WE REQUESTING
+                    format = k[len("expecting_"):]
+                elif k == "expecting":  # NO FORMAT REQUESTED (TO TEST DEFAULT FORMATS)
+                    format = None
+                else:
                     continue
+
                 num_expectations += 1
-                format = k[len("expecting_"):]
                 expected = v
 
                 subtest.query.format = format
@@ -225,18 +235,13 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
                 self.compare_to_expected(subtest.query, result, expected)
-
             if num_expectations == 0:
                 Log.error("Expecting test {{name|quote}} to have property named 'expecting_*' for testing the various format clauses", {
                     "name": subtest.name
                 })
         except Exception, e:
             Log.error("Failed test {{name|quote}}", {"name": subtest.name}, e)
-        finally:
-            # REMOVE CONTAINER
-            if delete_index:
-                Log.note("Delete index {{index}}", index=settings.index)
-                self.es_cluster.delete_index(settings.index)
+
 
     def compare_to_expected(self, query, result, expect):
         query = wrap(query)
@@ -293,7 +298,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             expect.data = list2cube(expect.data, header)
 
         # CONFIRM MATCH
-        self.assertAlmostEqual(result, expect)
+        self.assertAlmostEqual(result, expect, places=6)
 
 
     def _execute_query(self, query):

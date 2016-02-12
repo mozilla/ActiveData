@@ -302,7 +302,7 @@ class FromES(Container):
             "fields": listwrap(schema._routing.path),
             "query": {"filtered": {
                 "query": {"match_all": {}},
-                "filter": _normalize_where(qb_expression(command.where).to_esfilter(), self)
+                "filter": qb_expression(command.where).to_esfilter()
             }},
             "size": 200000
         })

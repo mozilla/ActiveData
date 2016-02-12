@@ -67,7 +67,6 @@ class TextLog_usingElasticSearch(TextLog):
                 bad_count += 1
                 if bad_count > 5:
                     break
-
         Log.warning("Given up trying to write debug logs to ES index {{index}}", index=self.es.settings.index)
 
         # CONTINUE TO DRAIN THIS QUEUE

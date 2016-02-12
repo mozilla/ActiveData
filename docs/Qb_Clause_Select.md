@@ -155,9 +155,9 @@ If the name of the name, or path, of the value is not changed, a string will do 
     "select": [
         {"name":"person", "value":"person"},
         {"name":"years", "value":"years"}
-    ]
+    ],
+    "format": "list"
 }
-"format": "list"
 </pre>
 </td></tr></table>
 
@@ -299,24 +299,17 @@ The star (`*`) can be used to refer to all leaves of a path.  This behaviour is 
 }
 </pre>
 
-<b>Result (shallow list of objects)</b><br><br>
+<b>Result (list of shallow objects)</b><br><br>
 <pre>
-test = [{
-    "build.branch.name": "mozilla-inbound",
-    "build.branch.locale": "en-US",
-    "build.date": "2015-09-18",
-    "run.suite": "mochitest",
-    "run.chunk": 2
-}]
-
-
-
-
-
-
-
-
-
+{
+    "data": [{
+        "build.branch.name": "mozilla-inbound",
+        "build.branch.locale": "en-US",
+        "build.date": "2015-09-18",
+        "run.suite": "mochitest",
+        "run.chunk": 2
+    }]
+}
 </pre>
 
 </td><td>
@@ -332,7 +325,7 @@ test = [{
 </pre>
 <b>Result (many primitive-value columns)</b><br>
 <pre>
-test = {
+{
     "header": [
         "build.branch.name",
         "build.branch.locale",
@@ -351,7 +344,7 @@ test = {
 </pre>
 
 </td><td>
-<b>Select Self as Table</b><br>
+<b>Select all as Table</b><br>
 <pre>
 {
     "from": test,

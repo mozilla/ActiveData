@@ -85,13 +85,14 @@ aggregates1_4 = {
     "median": "median",
     "percentile": "percentile",
     "N": "count",
-    "X0": "count",
-    "X1": "sum",
-    "X2": "sum_of_squares",
+    "s0": "count",
+    "s1": "sum",
+    "s2": "sum_of_squares",
     "std": "std_deviation",
     "stddev": "std_deviation",
     "var": "variance",
-    "variance": "variance"
+    "variance": "variance",
+    "stats": "stats"
 }
 
 NON_STATISTICAL_AGGS = {"none", "one"}

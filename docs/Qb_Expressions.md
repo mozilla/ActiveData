@@ -146,35 +146,39 @@ Compare two expressions, and return a Boolean
 Math Operators
 --------------
 
-All the math operators, except `count`, return `null` if all the operands are `null`.  This behaviour can be changed by including a `default` clause:  
+All the math operators, except `count`, return `null` if *any* the operands are `null`. You can change the return value by including a `default`. 
 
+		# if **any** expressions evaluate to `null` then return zero
 		{"sum": [expr1, expr2, ... exprN], "default": 0}
 
-In this example, if all expressions evaluate to `null` then `sum` will return zero (`0`).
 
-
-###`count` Operator###
+###`count` Operator (commutative)###
 
 For counting the number of not-null values.
 
 		{"count": [expr1, expr2, ... exprN]}
 	
-`nulls` are not counted
+`nulls` are not counted, and the empty list returns zero:
 
 		{"count": []} ⇒ 0
 
 
-###`sum` Operator###
+###`sum` Operator (commutative)###
 
 For adding the result of many expressions.  Also known as `add`.
 
 		{"sum": [expr1, expr2, ... exprN]}
-	
-expressions evaluating to `null` are ignored.  The empty list evaluates to `null`.
+		
+By default, if **any** expressions evaluate to `null`, then `null` is returned.  You can change this with `"nulls":true`; so `nulls` are ignored during summation, returning `null` only if **all** expressions evaluate to `null`:  
+
+		# `null` expressions are ignored
+		{"sum": [expr1, expr2, ... exprN], "nulls": true}
+
+The empty list always evaluates to the default value, or `null`.
 
 		{"sum": []} ⇒ null
 
- 
+
 ###`sub` Operator###
 
 Subtract two expressions.  Also known as `subtract` and `minus`
@@ -183,22 +187,32 @@ Subtract two expressions.  Also known as `subtract` and `minus`
 		{"sub": [expr_a, expr_b]}
 
 
-###`mult` Operator###
+###`mult` Operator (commutative)###
 
 Multiply multiple values.  Also known as `multiply` and `mul`
 
 		{"mult": [expr1, expr2, ... exprN]}
 
-expressions evaluating to `null` are ignored.  The empty list evaluates to `null`.
+By default, if **any** expressions evaluate to `null`, then `null` is returned.  You can change this with `"nulls":true`; so `nulls` are ignored during summation, returning `null` only if **all** expressions evaluate to `null`:  
+
+		# `null` expressions are ignored
+		{"mult": [expr1, expr2, ... exprN], "nulls": true}
+
+The empty list always evaluates to the default value, or `null`.
 
 		{"mult": []} ⇒ null
 
 
+
+
 ###`div` Operator###
 
-For division.  There is no *simple* form.
+For division.
 
+		{"div": {variable: denominator}} 
 		{"div": [numerator, denominator]} 
+
+division by zero will return `null`
 
 
 ###`exp` Operator###
@@ -207,9 +221,15 @@ Raise the base to given exponent.  Also known as `pow` and `power`
 
 		{"exp": [base, exponent]} ⇒ base ** exponent
 
-to resolve ambiguity, we define 0<sup>0</sup> as `null`
+to resolve ambiguity, we define 0<sup>0</sup> as `null`:
 
 		{"exp": [0, 0]} ⇒ null
+
+of course, the `default` clause allows you to provide the definition that suites you best:
+
+		{"exp": [base, exponent], "default": 0}     // {"exp": [0, x]} == 0 for all x
+		{"exp": [base, exponent], "default": base}  // {"exp": [x, 1]} == x for all x
+
 
 ###`mod` Operator###
 
@@ -340,11 +360,12 @@ Conditional Operators
 
 ###`coalesce` Operator###
 
-Return the first not `null` value in the list of evaluated expressions 
+Return the first not `null` value in the list of evaluated expressions. 
 
+		{"coalesce": {variable, constant}}
 		{"coalesce": [expr1, expr2, ... exprN]}
 
-If all expressions evaluate to `null`, or the list is empty, then the result is `null` 
+For the *simple* form; `null` is a legitimate `constant`.  Generally, if all expressions evaluate to `null`, or the expression list is empty, then the result is `null` 
 
 ###`when` Operator###
 
@@ -386,12 +407,12 @@ Except for the right-hand-side of simple form operations, Qb will interpret JSON
 
 Can be stated in a more complicated form 
 
-		{"eq": ["test", {"literal":42}]}
+		{"eq": ["test", {"literal": 42}]}
 
 The literal can be primitive, or whole objects
 
 		{"literal": 42}
-		{"literal": {"name":"Kyle Lahnakoski", "age": 41}}
+		{"literal": {"name": "Kyle Lahnakoski", "age": 41}}
 
 
 ### `script` Operator ###

@@ -18,9 +18,6 @@ from tests.base_test_class import ActiveDataBaseTest
 class TestGroupBy2(ActiveDataBaseTest):
     def test_count_rows(self):
         test = {
-            "disable": True,  # TODO: PLEASE ENABLE, TOO COMPLICATED FOR v1
-            "name": "count rows, 2d",
-            "metadata": {},
             "data": two_dim_test_data,
             "query": {
                 "from": base_test_class.settings.backend_es.index,

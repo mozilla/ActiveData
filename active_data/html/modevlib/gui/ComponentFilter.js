@@ -35,7 +35,7 @@ ComponentFilter.prototype.refresh = function(){
 				]}
 			}));
 
-			components = Qb.Cube2List(components);
+			components = qb.Cube2List(components);
 			var terms = components.map(function(v, i){return v.term;});
 
 			self.selected = self.selected.intersect(terms);

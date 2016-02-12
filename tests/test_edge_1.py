@@ -201,6 +201,60 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+
+    def test_sum_default(self):
+        test = {
+            "name": "count column",
+            "metadata": {},
+            "data": [
+                {"a": "c", "v": 13},
+                {"a": "b"},
+                {"v": 3},
+                {"a": "b"},
+                {"a": "c", "v": 7},
+                {"a": "c", "v": 11}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"name": "sum_v", "value": "v", "aggregate": "sum", "default": -1},
+                "edges": ["a"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b", "sum_v": -1},
+                    {"a": "c", "sum_v": 31},
+                    {"sum_v": 3}
+                ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a", "sum_v"],
+                "data": [
+                    ["b", -1],
+                    ["c", 31],
+                    [null, 3]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "a",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [{"value": "b"}, {"value": "c"}]
+                        }
+                    }
+                ],
+                "data": {
+                    "sum_v": [-1, 31, 3]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
     def test_select_2(self):
         test = {
             "name": "count column",
@@ -1191,6 +1245,83 @@ class TestEdge1(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test)
+
+    def test_count_constant(self):
+        test = {
+            "data": [
+                {"k": "a", "v": 1},
+                {"k": "a", "v": 2},
+                {"k": "a"},
+                {"k": "b", "v": 3},
+                {"k": "b"},
+                {"k": "b"},
+                {"v": 4}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": [
+                    {"name":"count", "value": 1, "aggregate": "count"},
+                    {"value": "v", "aggregate": "count"}
+                ],
+                "edges": ["k"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"k": "a", "count": 3, "v":2},
+                    {"k": "b", "count": 3, "v":1},
+                    {"count": 1, "v":1}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["k", "count", "v"],
+                "data": [
+                    ["a", 3, 2],
+                    ["b", 3, 1],
+                    [null, 1, 1]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "select": [
+                    {"name": "count"},
+                    {"name": "v"}
+                ],
+                "edges": [
+                    {"name": "k", "domain": {"type": "set", "partitions": [{"value": "a"}, {"value": "b"}]}}
+                ],
+                "data": {
+                    "v": [2, 1, 1],
+                    "count": [3, 3, 1]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_bad_edge_name(self):
+        test = {
+            "data": [
+                {"k": "a", "v": 1},
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": "v",
+                "edges": [""]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"k": "a", "count": 3, "v": 2},
+                    {"k": "b", "count": 3, "v": 1},
+                    {"count": 1, "v": 1}
+                ]
+            },
+        }
+
+        self.assertRaises("expression is empty", self._execute_es_tests, test)
+
+
 
 
 # TODO: TEST DOMAINS WITH PARTITIONS DEFINED BY FILTERS

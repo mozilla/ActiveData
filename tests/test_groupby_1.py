@@ -337,43 +337,27 @@ class TestgroupBy1(ActiveDataBaseTest):
         }
         self.assertRaises(Exception, self._execute_es_tests, test)
 
-
-    # TODO: ADD TEST TO VERIFY groupby DEFAULTS TO table FORMAT
-
-
-
-    # {
-    #     "from": "unittest",
-    #     "select": [
-    #         {
-    #             "value": "run.stats.bytes",
-    #             "aggregate": "max"
-    #         },
-    #         {
-    #             "value": "run.stats.bytes",
-    #             "aggregate": "count"
-    #         }
-    #     ],
-    #     "groupby": [
-    #         "build.platform"
-    #     ],
-    #     "where": {
-    #         "and": [
-    #             {
-    #                 "eq": {
-    #                     "etl.id": 0
-    #                 }
-    #             },
-    #             {
-    #                 "gt": {
-    #                     "run.stats.bytes": 600000000
-    #                 }
-    #             }
-    #         ]
-    #     }
-    # }
-
-
+    def test_groupby_is_table(self):
+        test = {
+            "data": simple_test_data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": [
+                    {"value": "v", "aggregate": "sum"}
+                ],
+                "groupby": "a"
+            },
+            "expecting": {
+                "meta": {"format": "table"},
+                "header": ["a", "v"],
+                "data": [
+                    ["b", 2],
+                    ["c", 31],
+                    [None, 3]
+                ]
+            }
+        }
+        self._execute_es_tests(test)
 
 
 simple_test_data = [

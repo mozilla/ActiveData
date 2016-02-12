@@ -90,7 +90,7 @@ ElasticSearch.getMinMax=function*(esfilter){
 		if (u2.cube[i]==null) u2.cube[i]=undefined;		//NULL MEANS UNKNOWN, WHEREAS undefined MEANS NOT DEFINED
 	});
 
-	var u = Qb.merge([
+	var u = qb.merge([
 		{"from":u1, "edges":["bug_id"]},
 		{"from":u2, "edges":["bug_id"]}
 	]);

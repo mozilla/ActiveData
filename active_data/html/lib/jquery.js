@@ -4152,10 +4152,10 @@ Expr = Sizzle.selectors = {
 	},
 
 	relative: {
-		">": { dir: "parentNode", first: true },
-		" ": { dir: "parentNode" },
-		"+": { dir: "previousSibling", first: true },
-		"~": { dir: "previousSibling" }
+		">":{ dir: "parentNode", first: true },
+		" ":{ dir: "parentNode" },
+		"+":{ dir: "previousSibling", first: true },
+		"~":{ dir: "previousSibling" }
 	},
 
 	preFilter: {

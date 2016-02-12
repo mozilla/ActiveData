@@ -12,7 +12,7 @@ if (Date.now) {
 }else{
 	Date.currentTimestamp = function currentTimestamp(){
 		new Date().getTime();
-	}//method
+	};//method
 }//endif
 
 Date.now = function(){

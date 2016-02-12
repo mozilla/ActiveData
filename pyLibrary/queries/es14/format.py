@@ -7,17 +7,16 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from flask import request
+from collections import Mapping
 
 from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, set_default, coalesce, wrap
-from pyLibrary.maths import Math
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.es14.aggs import count_dim, aggs_iterator, format_dispatch, drill
 
@@ -32,7 +31,8 @@ def format_cube(decoders, aggs, start, query, select):
             try:
                 if m[coord]:
                     Log.error("Not expected")
-                m[coord] = agg[s.pull]
+                v = _pull(s, agg)
+                m[coord] = v
             except Exception, e:
                 tuple(d.get_index(row) for d in decoders)
                 Log.error("", e)
@@ -45,7 +45,7 @@ def format_cube_from_aggop(decoders, aggs, start, query, select):
     agg = drill(aggs)
     matricies = [(s, Matrix(dims=[], zeros=(s.aggregate == "count"))) for s in select]
     for s, m in matricies:
-        m[tuple()] = agg[s.pull]
+        m[tuple()] = _pull(s, agg)
     cube = Cube(query.select, [], {s.name: m for s, m in matricies})
     cube.frum = query
     return cube
@@ -64,7 +64,7 @@ def format_table(decoders, aggs, start, query, select):
 
             output = [d.get_value(c) for c, d in zip(coord, decoders)]
             for s in select:
-                output.append(agg[s.pull])
+                output.append(_pull(s, agg))
             yield output
 
         # EMIT THE MISSING CELLS IN THE CUBE
@@ -92,7 +92,7 @@ def format_table_from_groupby(decoders, aggs, start, query, select):
         for row, agg in aggs_iterator(aggs, decoders):
             output = [d.get_value_from_row(row) for d in decoders]
             for s in select:
-                output.append(agg[s.pull])
+                output.append(_pull(s, agg))
             yield output
 
     return Dict(
@@ -107,9 +107,7 @@ def format_table_from_aggop(decoders, aggs, start, query, select):
     agg = drill(aggs)
     row = []
     for s in select:
-        if not s.pull:
-            Log.error("programmer error")
-        row.append(agg[s.pull])
+        row.append(_pull(s, agg))
 
     return Dict(
         meta={"format": "table"},
@@ -148,7 +146,7 @@ def format_list_from_groupby(decoders, aggs, start, query, select):
                 output[g.name] = d.get_value_from_row(row)
 
             for s in select:
-                output[s.name] = agg[s.pull]
+                output[s.name] = _pull(s, agg)
             yield output
 
     output = Dict(
@@ -173,7 +171,7 @@ def format_list(decoders, aggs, start, query, select):
                 output[e.name] = d.get_value(c)
 
             for s in select:
-                output[s.name] = agg[s.pull]
+                output[s.name] = _pull(s, agg)
             yield output
 
     output = Dict(
@@ -189,9 +187,9 @@ def format_list_from_aggop(decoders, aggs, start, query, select):
     if isinstance(query.select, list):
         item = Dict()
         for s in select:
-            item[s.name] = agg[s.pull]
+            item[s.name] = _pull(s, agg)
     else:
-        item = agg[select[0].pull]
+        item = _pull(select[0], agg)
 
     if query.edges or query.groupby:
         return wrap({
@@ -230,3 +228,23 @@ set_default(format_dispatch, {
     # "tab": (format_tab, format_tab_from_groupby,  "text/tab-separated-values"),
     # "line": (format_line, format_line_from_groupby,  "application/json")
 })
+
+
+def _pull(s, agg):
+    """
+    USE s.pull TO GET VALUE OUT OF agg
+    :param s: THE QB SELECT CLAUSE
+    :param agg: THE ES AGGREGATE OBJECT
+    :return:
+    """
+    p = s.pull
+    if not p:
+        Log.error("programmer error")
+    elif isinstance(p, Mapping):
+        v = {k: agg[v] for k, v in p.items()}
+    else:
+        v = agg[p]
+
+    if v == None:
+        v = s.default
+    return v

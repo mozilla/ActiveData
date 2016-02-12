@@ -11,6 +11,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 from active_data.app import OVERVIEW
+from pyLibrary import convert
 from pyLibrary.parsers import URL
 
 from tests.base_test_class import ActiveDataBaseTest
@@ -48,4 +49,34 @@ class TestBasicRequests(ActiveDataBaseTest):
         response = self._try_till_response(str(url), data=b"")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, OVERVIEW)
+
+    def test_rest_get(self):
+        settings = self._fill_es({
+            "data":[
+                {"a": 0, "b": 0},
+                {"a": 0, "b": 1},
+                {"a": 1, "b": 0},
+                {"a": 1, "b": 1}
+            ],
+            "query": {"from": ""}  # DUMMY LINE
+        })
+
+        url = URL(self.service_url)
+        url.path = "json/" + settings.index
+        url.query = {"a": 1}
+
+        response = self._try_till_response(str(url), data=b"")
+        self.assertEqual(response.status_code, 200)
+
+        # ORDER DOES NOT MATTER, TEST EITHER
+        expected1 = convert.unicode2utf8(convert.value2json([{"a": 1, "b": 0}, {"a": 1, "b": 1}], pretty=True))
+        expected2 = convert.unicode2utf8(convert.value2json([{"a": 1, "b": 1}, {"a": 1, "b": 0}], pretty=True))
+
+        try:
+            self.assertEqual(response.all_content, expected1)
+        except Exception:
+            self.assertEqual(response.all_content, expected2)
+
+
+
 

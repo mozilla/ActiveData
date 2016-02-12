@@ -10,27 +10,33 @@ importScript("rest/BugzillaClient.js");
 Bugzilla={};
 Bugzilla.URL="https://bugzilla.mozilla.org/buglist.cgi";
 
-Bugzilla.showBugs=function(bugList){
-	var url=Bugzilla.searchBugsURL(bugList);
+Bugzilla.showBugs=function(bugList, columnList){
+	var url=Bugzilla.searchBugsURL(bugList, columnList);
 	window.open(url);
 };//method
 
 
-Bugzilla.searchBugsURL=function(bugList){
+Bugzilla.searchBugsURL=function(bugList, columnList){
+	var url = "";
 	if (bugList instanceof Array){
-		return Bugzilla.URL+"?quicksearch="+bugList.join('%2C');
-	}else if (typeof(bugList)=="string"){
-		return Bugzilla.URL+"?quicksearch="+bugList.replaceAll(", ", "%2C");
+		url += Bugzilla.URL+"?quicksearch="+bugList.join('%2C');
+	}else if (isString(bugList)){
+		url += Bugzilla.URL+"?quicksearch="+bugList.replaceAll(", ", "%2C");
 	}else{
-		return Bugzilla.URL+"?quicksearch="+bugList;
+		url += Bugzilla.URL+"?quicksearch="+bugList;
 	}//endif
+
+	if (columnList){
+		url += "&columnlist=" + Array.newInstance(columnList).join('%2C')
+	}//endif
+
+	return url;
 };//method
+
 
 Bugzilla.linkToBug=function(bugList){
 	return new HTML("<a href='"+Bugzilla.searchBugsURL(bugList)+"'>"+bugList+"</a>");
 };//method
-
-
 
 
 Bugzilla.search=function*(bugList, fields){

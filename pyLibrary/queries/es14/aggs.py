@@ -7,12 +7,12 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 from collections import Mapping
 
-from pyLibrary import convert
 from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, DictList, unwrap
@@ -40,7 +40,7 @@ def get_decoders_by_depth(query):
     schema = query.frum
     output = DictList()
     for e in coalesce(query.edges, query.groupby, []):
-        if e.value:
+        if e.value != None:
             e = e.copy()
             e.value = qb_expression(e.value)
             vars_ = e.value.vars()
@@ -111,15 +111,17 @@ def es_aggsop(es, frum, query):
                 es_query.aggs[literal_field(canonical_name)].value_count.field = field_name
                 s.pull = literal_field(canonical_name) + ".value"
             elif s.aggregate == "median":
-                #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
+                #ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
 
                 es_query.aggs[key].percentiles.field = field_name
                 es_query.aggs[key].percentiles.percents += [50]
                 s.pull = key + ".values.50\.0"
             elif s.aggregate == "percentile":
-                #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
+                #ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
+                if isinstance(s.percentile, basestring) or s.percetile < 0 or 1 < s.percentile:
+                    Log.error("Expecting percentile to be a float from 0.0 to 1.0")
                 percent = Math.round(s.percentile * 100, decimal=6)
 
                 es_query.aggs[key].percentiles.field = field_name
@@ -131,9 +133,30 @@ def es_aggsop(es, frum, query):
 
                 es_query.aggs[key].cardinality.field = field_name
                 s.pull = key + ".value"
+            elif s.aggregate == "stats":
+                # REGULAR STATS
+                stats_name = literal_field(canonical_name)
+                es_query.aggs[stats_name].extended_stats.field = field_name
+
+                # GET MEDIAN TOO!
+                median_name = literal_field(canonical_name + " percentile")
+                es_query.aggs[median_name].percentiles.field = field_name
+                es_query.aggs[median_name].percentiles.percents += [50]
+
+                s.pull = {
+                    "count": stats_name + ".count",
+                    "sum": stats_name + ".sum",
+                    "min": stats_name + ".min",
+                    "max": stats_name + ".max",
+                    "avg": stats_name + ".avg",
+                    "sos": stats_name + ".sum_of_squares",
+                    "std": stats_name + ".std_deviation",
+                    "var": stats_name + ".variance",
+                    "median": median_name + ".values.50\.0"
+                }
             else:
                 # PULL VALUE OUT OF THE stats AGGREGATE
-                es_query.aggs[literal_field(canonical_name)].stats.field = field_name
+                es_query.aggs[literal_field(canonical_name)].extended_stats.field = field_name
                 s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
 
     for i, s in enumerate(formula):
@@ -164,23 +187,44 @@ def es_aggsop(es, frum, query):
 
             es_query.aggs[key].cardinality.script = abs_value.to_ruby()
             s.pull = key + ".value"
+        elif s.aggregate == "stats":
+            # REGULAR STATS
+            stats_name = literal_field(canonical_name)
+            es_query.aggs[stats_name].extended_stats.script = abs_value.to_ruby()
+
+            # GET MEDIAN TOO!
+            median_name = literal_field(canonical_name + " percentile")
+            es_query.aggs[median_name].percentiles.script = abs_value.to_ruby()
+            es_query.aggs[median_name].percentiles.percents += [50]
+
+            s.pull = {
+                "count": stats_name + ".count",
+                "sum": stats_name + ".sum",
+                "min": stats_name + ".min",
+                "max": stats_name + ".max",
+                "avg": stats_name + ".avg",
+                "sos": stats_name + ".sum_of_squares",
+                "std": stats_name + ".std_deviation",
+                "var": stats_name + ".variance",
+                "median": median_name + ".values.50\.0"
+            }
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
-            es_query.aggs[canonical_name].stats.script = abs_value.to_ruby()
+            es_query.aggs[canonical_name].extended_stats.script = abs_value.to_ruby()
 
 
     decoders = get_decoders_by_depth(query)
     start = 0
 
-    vars_ = qb_expression(query.where).vars()
+    vars_ = query.where.vars()
     map_ = {v: frum[v].abs_name for v in vars_}
 
     #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
-    split_where = split_expression_by_depth(qb_expression(query.where), schema=frum, map_=map_)
+    split_where = split_expression_by_depth(query.where, schema=frum, map_=map_)
 
     if len(split_field(frum.name)) > 1:
-        if any(split_where[2:]):
+        if any(split_where[2::]):
             Log.error("Where clause is too deep")
 
         for d in decoders[1]:
@@ -263,7 +307,7 @@ class AggsDecoder(object):
                 return object.__new__(DefaultDecoder, e)
 
             if isinstance(e.value, basestring):
-                Log.error("Not expected anymore")
+                Log.error("Expecting Variable or Expression, not plain string")
 
             if isinstance(e.value, Variable):
                 cols = query.frum.get_columns()

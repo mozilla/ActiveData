@@ -337,8 +337,6 @@ class TestgroupBy1(ActiveDataBaseTest):
         }
         self.assertRaises(Exception, self._execute_es_tests, test)
 
-
-    # TODO: ADD TEST TO VERIFY groupby DEFAULTS TO table FORMAT
     def test_groupby_is_table(self):
         test = {
             "data": simple_test_data,

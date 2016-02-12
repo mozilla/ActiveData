@@ -371,23 +371,3 @@ class TestAggOps(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test, tjson=False)
-
-
-
-
-
-
-#TODO: SIMPLE COUNT NOT WORKING
-example = {
-    "from": "jobs.action.timings",
-    "where": {"eq": {"build.name": "Windows XP 32-bit try opt test mochitest-1"}},
-    "select": [
-        {
-            "name": "duration",
-            "aggregate": "average",
-            "value": "action.timings.builder.duration"
-        },
-        {"aggregate": "count"}
-    ],
-    "format": "table"
-}

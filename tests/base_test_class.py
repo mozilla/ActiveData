@@ -298,7 +298,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             expect.data = list2cube(expect.data, header)
 
         # CONFIRM MATCH
-        self.assertAlmostEqual(result, expect)
+        self.assertAlmostEqual(result, expect, places=6)
 
 
     def _execute_query(self, query):

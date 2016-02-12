@@ -120,6 +120,61 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_stats(self):
+        test = {
+            "data": [{"a": i**2} for i in range(30)],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": "a", "aggregate": "stats"}
+            },
+            "expecting_list": {
+                "meta": {"format": "value"}, "data": {
+                    "count": 30,
+                    "std": 259.76901064,
+                    "min": 0,
+                    "max": 841,
+                    "sum": 8555,
+                    "median": 210.5,
+                    "sos": 4463999,
+                    "var": 67479.93889,
+                    "avg": 285.1666667
+                }
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [[{
+                    "count": 30,
+                    "std": 259.76901064,
+                    "min": 0,
+                    "max": 841,
+                    "sum": 8555,
+                    "median": 210.5,
+                    "sos": 4463999,
+                    "var": 67479.93889,
+                    "avg": 285.1666667
+                }]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [],
+                "data": {
+                    "a": {
+                        "count": 30,
+                        "std": 259.76901064,
+                        "min": 0,
+                        "max": 841,
+                        "sum": 8555,
+                        "median": 210.5,
+                        "sos": 4463999,
+                        "var": 67479.93889,
+                        "avg": 285.1666667
+                    }
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
     def test_bad_percentile(self):
         test = {
             "data": [{"a": i**2} for i in range(30)],
@@ -316,6 +371,11 @@ class TestAggOps(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test, tjson=False)
+
+
+
+
+
 
 #TODO: SIMPLE COUNT NOT WORKING
 example = {

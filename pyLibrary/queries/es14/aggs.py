@@ -111,14 +111,14 @@ def es_aggsop(es, frum, query):
                 es_query.aggs[literal_field(canonical_name)].value_count.field = field_name
                 s.pull = literal_field(canonical_name) + ".value"
             elif s.aggregate == "median":
-                #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
+                #ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
 
                 es_query.aggs[key].percentiles.field = field_name
                 es_query.aggs[key].percentiles.percents += [50]
                 s.pull = key + ".values.50\.0"
             elif s.aggregate == "percentile":
-                #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
+                #ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
                 if isinstance(s.percentile, basestring) or s.percetile < 0 or 1 < s.percentile:
                     Log.error("Expecting percentile to be a float from 0.0 to 1.0")
@@ -133,9 +133,30 @@ def es_aggsop(es, frum, query):
 
                 es_query.aggs[key].cardinality.field = field_name
                 s.pull = key + ".value"
+            elif s.aggregate == "stats":
+                # REGULAR STATS
+                stats_name = literal_field(canonical_name)
+                es_query.aggs[stats_name].extended_stats.field = field_name
+
+                # GET MEDIAN TOO!
+                median_name = literal_field(canonical_name + " percentile")
+                es_query.aggs[median_name].percentiles.field = field_name
+                es_query.aggs[median_name].percentiles.percents += [50]
+
+                s.pull = {
+                    "count": stats_name + ".count",
+                    "sum": stats_name + ".sum",
+                    "min": stats_name + ".min",
+                    "max": stats_name + ".max",
+                    "avg": stats_name + ".avg",
+                    "sos": stats_name + ".sum_of_squares",
+                    "std": stats_name + ".std_deviation",
+                    "var": stats_name + ".variance",
+                    "median": median_name + ".values.50\.0"
+                }
             else:
                 # PULL VALUE OUT OF THE stats AGGREGATE
-                es_query.aggs[literal_field(canonical_name)].stats.field = field_name
+                es_query.aggs[literal_field(canonical_name)].extended_stats.field = field_name
                 s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
 
     for i, s in enumerate(formula):
@@ -166,10 +187,31 @@ def es_aggsop(es, frum, query):
 
             es_query.aggs[key].cardinality.script = abs_value.to_ruby()
             s.pull = key + ".value"
+        elif s.aggregate == "stats":
+            # REGULAR STATS
+            stats_name = literal_field(canonical_name)
+            es_query.aggs[stats_name].extended_stats.script = abs_value.to_ruby()
+
+            # GET MEDIAN TOO!
+            median_name = literal_field(canonical_name + " percentile")
+            es_query.aggs[median_name].percentiles.script = abs_value.to_ruby()
+            es_query.aggs[median_name].percentiles.percents += [50]
+
+            s.pull = {
+                "count": stats_name + ".count",
+                "sum": stats_name + ".sum",
+                "min": stats_name + ".min",
+                "max": stats_name + ".max",
+                "avg": stats_name + ".avg",
+                "sos": stats_name + ".sum_of_squares",
+                "std": stats_name + ".std_deviation",
+                "var": stats_name + ".variance",
+                "median": median_name + ".values.50\.0"
+            }
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
-            es_query.aggs[canonical_name].stats.script = abs_value.to_ruby()
+            es_query.aggs[canonical_name].extended_stats.script = abs_value.to_ruby()
 
 
     decoders = get_decoders_by_depth(query)

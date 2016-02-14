@@ -1,0 +1,203 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<HTML>
+<HEAD>
+	<title>Talos Test Results</title>
+	<script type="application/javascript" src="modevlib/imports/import.js"></script>
+</HEAD>
+<BODY>
+
+<div id="sidebar" style="width:300px;">
+	<br>
+	<br>
+
+	<div style="height: 30px; text-align: center;vertical-align:middle;">
+		<span id="status" style="height:30px">Page Loading...</span><span class="loading"><img src="images/spinner.gif" alt=""></span>
+	</div>
+
+	<hr>
+	<div id="description"></div>
+	<hr>
+	<div id="testMessage"></div>
+	<hr>
+	<div id="stats"></div>
+	<hr>
+	<div id="parameters" class="parameters">
+	</div>
+	<div id="filters" class="menu"></div>
+</div>
+
+<div style="float:right;display: inline;">
+	<a href="http://people.mozilla.com/~klahnakoski/" class="button">HOME</a>
+</div>
+<div style="align:left;position:relative;float:left;width:800px;">
+	<h3 id="title0">Talos Test Results</h3>
+
+	<div id="chart0" class="chart" style="float:none;width:800px;height:300px;"></div>
+	<h3 id="title1">Talos Test Results</h3>
+
+	<div id="chart1" class="chart" style="float:none;width:800px;height:300px;"></div>
+	<h3 id="title2">Talos Test Results</h3>
+
+	<div id="chart2" class="chart" style="float:none;width:800px;height:300px;"></div>
+	<h3 id="title3">Talos Test Results</h3>
+
+	<div id="chart3" class="chart" style="float:none;width:800px;height:300px;"></div>
+	<div id="info"></div>
+</div>
+
+
+<script type="application/javascript">
+
+
+importScript(['modevlib/main.js', 'modevlib/Dimension-Performance.js'], function(){
+	$("#description").html(
+		"Simple look at time series"
+	);
+
+
+	var thread;
+	var createChart = function(){
+		if (thread !== undefined)
+			thread.kill();
+		thread = Thread.run("createChart", __createChart);
+	};
+
+	var __createChart = function*(){
+		var DATE_FIELD;
+		if (ESQuery.INDEXES["talos"].host.indexOf("67.55.30.33") >= 0) {
+			DATE_FIELD = "datazilla.date_loaded";
+		} else {
+			DATE_FIELD = "test_build.push_date";
+		}//endif
+
+
+		var sampleMin = Date.newInstance(GUI.state.sampleMin);
+		var sampleMax = Date.newInstance(GUI.state.sampleMax).add(Duration.DAY);
+
+		var tests = ["traverse.html", "attr.html", "modify.html", "query.html"];
+
+		function oneTest(testName, testNum){
+			$("#title" + testNum).html(testName);
+
+			Thread.run(testName, function*(){
+				var esfilter = {"and": [
+					{"exists": {"field": DATE_FIELD}},
+					{"range": Map.newInstance(DATE_FIELD, {"gte": sampleMin.getMilli(), "lt": sampleMax.getMilli()})},
+					{"term": {"testrun.suite": "dromaeo_dom"}},
+					{"prefix": {"result.test_name": testName}},
+					GUI.getFilters("talos")
+				]};
+				if (Mozilla.Talos.Branch.partitions instanceof Thread) {
+					Thread.join(Mozilla.Talos.Branch.partitions);
+				}//while
+
+				var a = Log.action("Pull "+testName+" data", true);
+				try {
+					var chart = yield(ESQuery.run({
+						"from": "talos",
+						"select": [
+							{"name": "median", "value": "result.stats.median"},
+							{"name": "test", "value": "result.test_name"},
+							{"name": "revision", "value": "test_build.revision"}
+						],
+						"edges": [
+							{"name": "date", "value": DATE_FIELD, "domain": {"type": "time", "min": sampleMin, "max": sampleMax, "interval": "none"}}
+						],
+						"esfilter": esfilter
+					}));
+				}catch(e){
+					Log.note("query "+testName+" cancelled");
+					return;
+				} finally {
+					Log.actionDone(a);
+				}//try
+
+				var geomean = yield(Qb.calc2List({
+					"from": chart,
+					"select": [
+						{"value": "median", "aggregate": "geomean"},
+						{"name": "date", "value": '{"value":Date.newInstance(date.value)}', "aggregate": "minimum"}
+					],
+					"edges": [
+						{"name": "test", "value": "joinField(splitField(test).leftBut(1))"},
+						"revision"
+					]
+				}));
+				//HACK!!!
+				//INJECT AGGREGATE RESULTS BACK INTO THE chart METADATA
+				chart.list = Qb.sort(geomean.list, ["date.value"]);
+				aChart.showScatter({
+					"id": "chart" + testNum,
+					"sheetDiv": "info",
+					"cube": chart,
+					"height": "400",
+					xAxisSize: 50,
+					extensionPoints: {
+						line_lineWidth: 0
+					},
+					tooltipFormat: function(category, x, y, elem, index){
+						//FIND THE MATCHING ELEMENT
+//				var item = chart.list.filter(function(v){return v.median==y && v.date==x}).first();
+						var item = chart.list[index];
+						return "<div style='text-align:left'>" +
+							"<b>Revision</b>: " + item.revision + "<br/>" +
+							"<b>Push Date</b>: " + x.format("MMM dd HH:mm:ss") + "<br/>" +
+							"<b>Median</b>: " + y +
+							"</div>";
+					}
+				});
+				yield (null);
+			});
+		}//function
+
+		tests.forall(oneTest);
+	};
+
+
+	$(document).ready(function(){
+		GUI.setup(createChart, [
+			{"id": "sampleMin", "name": "Start Date", "type": "date", "default": Date.eod().subtract(Duration.newInstance("3month"))},
+			{"id": "sampleMax", "name": "End Date", "type": "date", "default": Date.today()},
+			{"id": "sampleInterval", "name": "Interval", "type": "duration", "default": Duration.WEEK},
+			{"id": "branch", "name": "Branch", "type": PartitionFilter.newInstance({
+				"id": "branch",
+				"name": "Branches",
+				"dimension": Mozilla.Talos.Branch,
+				"onlyOne": false,
+				"expandAll": true
+			})},
+			{"id": "os", "name": "OS", "type": PartitionFilter.newInstance({
+				"id": "os",
+				"name": "OS",
+				"dimension": Mozilla.Talos.OS,
+				"onlyOne": true,
+				"expandAll": true
+			})},
+			{"id": "platform", "name": "Platform", "type": PartitionFilter.newInstance({
+				"id": "platform",
+				"name": "Platform",
+				"dimension": Mozilla.Talos.Platform,
+				"onlyOne": true,
+				"expandAll": true
+			})}
+
+		],
+			[
+				'sampleInterval=Date.getBestInterval(Date.newInstance(sampleMin), Date.newInstance(sampleMax), Duration.newInstance(sampleInterval), {"min":10, "max":100})'
+			],
+			"talos",
+			false
+		);
+	});
+
+});
+
+</script>
+
+
+</BODY>
+</HTML>
+

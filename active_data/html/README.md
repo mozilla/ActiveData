@@ -17,7 +17,10 @@ test connectivity.
 Documentation
 -------------
 
-  - [Tutorial on querying Elasticsearch](../docs/BZ_Tutorial.md)
-  - [Tutorial on MVEL and advanced querying](../docs/MVEL_Tutorial.md)
-  - [Reference document covering the query format](../docs/Qb_Reference.md)
-  - [Dimension Definitions](../docs/Dimension Definitions.md)
+- [Using this Query Tool](../docs/ActiveData Query Tool.pdf)
+- [Unittest Tutorial](../docs/Qb_Tutorial.md)
+- [qb Expressions](../docs/Qb_Expressions.md)
+- [Reference Documentation](../docs/Qb_Reference.md)
+- [Bugzilla Tutorial](../docs/BZ_Tutorial.md)
+- [ActiveData code on Github](https://github.com/klahnakoski/ActiveData)
+

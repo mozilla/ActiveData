@@ -7,8 +7,9 @@ importScript("Dimension.js");
 if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 
 Dimension.addEdges(false, Mozilla, [
-	{"name": "Talos", "index": "unittests", "edges": [
+	{"name": "Performance", "index": "perf", "edges": [
 		{"name": "Product", "field": "build.product", "type": "set", "limit": 1000},
+		{"name": "BuildType", "field": "build.type", "type": "set", "limit": 1000},
 		{"name": "Branch", "field": "build.branch", "type": "set", "limit": 1000},
 		{"name": "Platform", "field": "build.platform", "type": "set", "limit": 1000},
 		{

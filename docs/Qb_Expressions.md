@@ -327,12 +327,6 @@ Removes the `length` right-most characters from the given string, returning the 
 		{"not_right": {variable: length}}
 		{"not_right": [expression, length]}
 
-###`number` Operator###
-
-Convert a string to a numeric value.
-
-		{"number": variable}
-
 ###`contains` Operator###
 
 Test if property contains given substring.  
@@ -351,7 +345,6 @@ Test if a property has the given prefix.  Only the *simple* form exists.
 Return `true` if a property matches a given regular expression.  The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term.  Also be sure you escape special characters:  This is a JSON string of a regular expression, not a regular expression itself.  Only the *simple* form exists.
 
 		{"regexp": {variable: regular_expression}}
-
 
 
 
@@ -394,10 +387,30 @@ Evaluates a list of `when` sub-clauses in order, if one evaluates to `true` the 
 The last item in the list can be a plain expression, called the `default_expression`.  It is  evaluated-and-returned only if all previous conditions evaluate to `false`.  If the `default_expression` is missing, and all conditions evaluate to `false`, `null` is returned.  
 ***If any `when` sub-clauses contain an `else` clause, the `else` clause is ignored.***
 
-Value Operators
+
+Type Conversion
 ---------------
 
-Value operators are meant to convert the operands into some useful abstract value. 
+###`number` Operator###
+
+Convert a string to a numeric value.
+
+		{"number": expression}
+
+###`string` Operator###
+
+Convert a number to a string value
+
+		{"string": expression}
+
+###`date` Operator###
+
+Convert a literal value to an absolute, or relative, unix datestamp.   Only literal values, and not qb expressions, are acceptable operands. 
+
+		{"date": literal}
+
+The literal is parsed according to a [date and time mini language](Qb_Time_Math.md).
+
 
 ###`literal` Operator###
 

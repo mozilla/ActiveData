@@ -896,6 +896,58 @@ class NumberOp(Expression):
         return self.term.missing()
 
 
+class StringOp(Expression):
+    def __init__(self, op, term):
+        Expression.__init__(self, op, [term])
+        self.term = term
+
+    def to_ruby(self, not_null=False, boolean=False):
+        value = self.term.to_ruby(not_null=True)
+        missing = self.term.missing().to_ruby()
+        return "(" + missing + ") ? null : String.valueOf(" + value + ")"
+
+    def to_python(self, not_null=False, boolean=False):
+        value = self.term.to_python(not_null=True)
+        missing = self.term.missing().to_python()
+        return "null if (" + missing + ") else unicode(" + value + ")"
+
+    def to_dict(self):
+        return {"string": self.term.to_dict()}
+
+    def vars(self):
+        return self.term.vars()
+
+    def map(self, map_):
+        return StringOp("string", self.term.map(map_))
+
+    def missing(self):
+        return self.term.missing()
+
+
+class DateOp(Expression):
+    def __init__(self, op, term):
+        Expression.__init__(self, op, [term])
+        self.term = term
+
+    def to_ruby(self, not_null=False, boolean=False):
+        return unicode(Date(self.term).unix)
+
+    def to_python(self, not_null=False, boolean=False):
+        return "Date("+convert.value2quote(self.term)+")"
+
+    def to_dict(self):
+        return {"date": self.term.to_dict()}
+
+    def vars(self):
+        return set()
+
+    def map(self, map_):
+        return self
+
+    def missing(self):
+        return False
+
+
 class CountOp(Expression):
     has_simple_form = False
 
@@ -1103,13 +1155,16 @@ class MissingOp(Expression):
         Expression.__init__(self, op, term)
         self.field = term
 
-    def to_ruby(self, not_null=False, boolean=False):
-        if isinstance(self.field, Variable):
-            return "doc["+convert.string2quote(self.field.var)+"].isEmpty()"
-        elif isinstance(self.field, Literal):
-            return self.field.missing().to_ruby()
+    def to_ruby(self, not_null=False, boolean=True):
+        if not_null:
+            return "false"
         else:
-            return self.field.to_ruby() + " == null"
+            if isinstance(self.field, Variable):
+                return "doc[" + convert.string2quote(self.field.var) + "].isEmpty()"
+            elif isinstance(self.field, Literal):
+                return self.field.missing().to_ruby()
+            else:
+                return self.field.to_ruby() + " == null"
 
     def to_python(self, not_null=False, boolean=False):
         return self.field.to_python() + " == None"
@@ -1742,6 +1797,7 @@ operators = {
     "length": LengthOp,
     "contains": ContainsOp,
     "number": NumberOp,
+    "string": StringOp,
     "count": CountOp,
     "add": MultiOp,
     "sum": MultiOp,

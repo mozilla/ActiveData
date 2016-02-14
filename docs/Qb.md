@@ -6,19 +6,35 @@ Qb queries are JSON structures that mimic SQL query semantics; each property cor
 Motivation
 ----------
 
-Qb is motivated to provide ...
+Qb provides ...
 
 * Simplified query expressions over unclean data.
-* expressions to translate shape of the data.
-* expressions that extract data as pivot tables and data frames
+* Ability to translate shape of the data.
+* Extract data as pivot tables and data frames
+* Some language independence
+
+
+Non Goals and Limitations
+-------------------------
+
+Is Qb for you?
+
+Non-Goals
+---------
+
+* **Use something better than JSON** - Qb is deliberately a JSON specification; and avoids the complexities of defining a DSL syntax.  Using another language is not an option, because each language makes a design choice that conflicts with Qb somewhere.  SQL has a lot of overlap:  Mapping a subset of SQL to a subset of Qb may be useful.      
+* **Extend to a procedural language** - Qb is meant to be purely functional, adding procedural features is much more work, and outside the objective of providing concise data transformation expressions.
+* **Joins** - There is currently no attempt to provide clauses for joins.  Although, there are some Qb expression forms that can be abused to perform joins.
+* **Graph Operations** - Graph traversal, aggregation, or SQL's `CONNECT BY` are not implemented.
+* **Under development** - The Qb specification is not fully implemented, and the specification itself is incomplete.  What does exist has tests to maintain stability.
 
 ### Expression Simplification
 
 Qb provides data transformation and expressions over multi-dimensional and unclean data.  It simplifies expressions by defining [`null` as out-of-context](https://github.com/klahnakoski/pyLibrary/tree/dev/pyLibrary/dot#null-is-the-new-none).  The *out-of-context* definition is different than the definition used by many other languages; which means every operator and expression must be translated from Qb to the destination language.  This translation is not complicated, just annoying.  Here is a definition of the `add` function:
 
-#### Adding with `nulls`
+#### Summation with `nulls`
 
-The add function is probably the simplest example of how the definition of `null` impacts the definition of all other functions.  Databases use this definition.
+The summation aggregate is probably the simplest example of how the definition of `null` impacts the definition of all other functions.  Databases use this definition.
 
 Qb Expression
 
@@ -58,7 +74,7 @@ Using the *out-of-context* definition,  expressions, list comprehensions, and qu
 
 ### Translating Data Shape
 
-Qb operates on JSON, a focus on translating arrays of JSON, which is still just JSON.  Qb is not limited to arrays, and works on other (un)ordered sets that come out of databases and document stores.  The [`select` clause](Qb_Clause_Select.md) is responsible for record-wise translation.
+Qb operates on JSON, with a focus on translating arrays of JSON, which is still just JSON.  Qb is not limited to arrays, and works on other (un)ordered sets that come out of databases and document stores.  The [`select` clause](Qb_Clause_Select.md) is responsible for record-wise translation.
 
 
 ### Pivot Tables and Data Frames
@@ -127,16 +143,7 @@ An inspection of this table may have you conclude AL (Alaska) does not exist.  A
 </pre>
 </td></tr></table>
 
-Alaska will show, despite it has no employees.  Furthermore, filtering employees by some criterion will continue to return the same number of rows, only with the `count` changed.  
-
-
-Non-Goals
----------
-
-* **Use something better than JSON** - Qb is deliberately a JSON specification; and avoids the complexities of defining a DSL syntax.  Using another language is not an option, because each language makes a design choice that conflicts with Qb somewhere.  SQL has a lot of overlap:  Mapping a subset of SQL to a subset of Qb may be useful.      
-* **Extend to a procedural language** - Qb is meant to be purely functional, adding procedural features is much more work, and outside the objective of providing concise data transformation expressions.
-* **Joins** - There is currently no attempt to provide clauses for joins.  Although, there are some Qb expression forms that can be abused to perform joins.
-* **Graph Operations** - Graph traversal, aggregation, or SQL's `CONNECT BY` are not implemented.
+Alaska will show, despite it having no employees.  Furthermore, filtering employees by some criterion will continue to return the same number of rows, only with the `count` changed.  
 
 
 History
@@ -155,4 +162,3 @@ ElasticSearch now has aggregations, and the Qb translation layer is simplified, 
 * [Time Math](Qb_Time_Math.md) - Writing expressions in the time domain
 * [Commands](Qb_Update.md) - Update data with Qb
 * [Reference](Reference.md) - A bare list of allowed clauses and options for Qb query expressions
-* [Motivation](Qb_Motivation.md) - More about the problems Qb solves.

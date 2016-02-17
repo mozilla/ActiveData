@@ -130,8 +130,8 @@ Returns `true` if two expressions are not null *and* not equal.
 
 `eq` and `ne` are not complements: For example, they both return `false` when only one expression is `null`:
 
-		{"ne": [null, 1]} ⇒ False
-		{"eq": [null, 1]} ⇒ False
+		{"ne": [null, 1]} ⇒ false
+		{"eq": [null, 1]} ⇒ false
 
 
 ###`gt`, `gte`, `lte`, `lt` Operators###
@@ -141,6 +141,7 @@ Compare two expressions, and return a Boolean
 		{"gt": {variable: value}}   ⇒  variable > value
 		{"lte": [expr1, expr2]}     ⇒  expr1 ≤ expr2
 
+If either operand is `null` then the result is `null`; which is effectively `false` in a comparison.
 
 
 Math Operators
@@ -202,9 +203,6 @@ The empty list always evaluates to the default value, or `null`.
 
 		{"mult": []} ⇒ null
 
-
-
-
 ###`div` Operator###
 
 For division.
@@ -212,7 +210,9 @@ For division.
 		{"div": {variable: denominator}} 
 		{"div": [numerator, denominator]} 
 
-division by zero will return `null`
+If either operand is `null`, or if the denominator is zero, the operator will return `null`.  The `default` clause can be used to replace that.
+
+		{"div": [numerator, denominator], "default": 0}  // {"div": ["x", 0]} == 0 for all x
 
 
 ###`exp` Operator###
@@ -350,6 +350,8 @@ Return `true` if a property matches a given regular expression.  The whole term 
 
 Conditional Operators
 ---------------------
+
+Conditional operators expect a Boolean value to decide on.  If the value provided is not Boolean, it is considered `true`; if the value is missing or `null`, it is considered `false`.  This is different than many other languages: ***Numeric zero (0) is truthy***  
 
 ###`coalesce` Operator###
 

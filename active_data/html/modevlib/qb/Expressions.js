@@ -19,22 +19,22 @@ function qb2function(expr){
         return Map.get(value, expr);
       }
     }//endif
-  };
+  }
 
-  if (expr.eq) {
-    if (isArray(expr.eq)) {
-      var exprs = expr.eq.map(qb2function);
-      return function(value){
-        return exprs[0](value) == exprs[1](value);
-      };
-    } else {
-      return function(value){
-        return Array.AND(Map.map(expr.eq, function(k, v){
-          return Map.get(value, k) == v;
-        }));
-      };
-    }//endif
-  } else if (expr.when) {
+  var keys = Object.keys(expr);
+  for (var i = keys.length; i--;) {
+    var key = keys[i];
+    var val = map[key];
+    if (expr[key]) return val(expr);
+  }//for
+
+  Log.error("Can not handle expression `{{name}}`", {"name": keys[0]});
+}//method
+
+
+expressions = {};
+
+expressions.when = function(expr){
     var test = qb2function(expr.when);
     var pass = qb2function(expr.then);
     var fail = qb2function(expr.else);
@@ -45,8 +45,26 @@ function qb2function(expr){
         return fail(value);
       }//endif
     };
+};
+
+
+expressions.eq = function (expr) {
+  if (isArray(expr.eq)) {
+    var exprs = expr.eq.map(qb2function);
+    return function (value) {
+      return exprs[0](value) == exprs[1](value);
+    };
   } else {
-    var key = Map.getItems(expr).first();
-    Log.error("Can not handle expression `{{name}}`", {"name": key});
+    return function (value) {
+      return Array.AND(Map.map(expr.eq, function (k, v) {
+        return Map.get(value, k) == v;
+      }));
+    };
   }//endif
-}//method
+};
+
+
+expressions.literal=function(expr) {
+  return expr.literal;
+};
+

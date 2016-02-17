@@ -293,6 +293,14 @@ def main():
             "settings": config.elasticsearch.copy()
         }
 
+        # TURN ON /exit FOR WINDOWS DEBUGGING
+        if config.flask.debug or config.flask.allow_exit:
+            config.flask.allow_exit = None
+            Log.warning("ActiveData is in debug mode")
+            app.add_url_rule('/exit', 'exit', exit)
+
+
+
         # TRIGGER FIRST INSTANCE
         FromESMetadata(config.elasticsearch)
         if config.saved_queries:
@@ -332,10 +340,6 @@ def main():
                 app.run(**ssl_flask)
 
             Thread.run("SSL Server", runner)
-
-        if config.flask.debug or config.debug.cprofile:
-            Log.warning("ActiveData is in debug mode")
-            app.add_url_rule('/exit', 'exit', exit)
 
         if config.flask.ssl_context:
             Log.warning("ActiveData has SSL context, but is still listening on non-encrypted http port {{port}}", port=config.flask.port)

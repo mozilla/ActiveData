@@ -21,7 +21,7 @@
 		"index": "active_data_requests",
 		"type": "request_log",
 		"schema": {
-			"$ref": "//../../resources/schema/request_log.schema.json"
+			"$ref": "//.../resources/schema/request_log.schema.json"
 		}
 	},
 	"saved_queries":{

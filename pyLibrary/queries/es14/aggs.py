@@ -273,18 +273,21 @@ def es_aggsop(es, frum, query):
         result = es09.util.post(es, es_query, query.limit)
 
     try:
-        decoders = [d for ds in decoders for d in ds]
-        result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE
+        format_time = Timer("formatting")
+        with format_time:
+            decoders = [d for ds in decoders for d in ds]
+            result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE
 
-        formatter, groupby_formatter, aggop_formatter, mime_type = format_dispatch[query.format]
-        if query.edges:
-            output = formatter(decoders, result.aggregations, start, query, select)
-        elif query.groupby:
-            output = groupby_formatter(decoders, result.aggregations, start, query, select)
-        else:
-            output = aggop_formatter(decoders, result.aggregations, start, query, select)
+            formatter, groupby_formatter, aggop_formatter, mime_type = format_dispatch[query.format]
+            if query.edges:
+                output = formatter(decoders, result.aggregations, start, query, select)
+            elif query.groupby:
+                output = groupby_formatter(decoders, result.aggregations, start, query, select)
+            else:
+                output = aggop_formatter(decoders, result.aggregations, start, query, select)
 
-        output.meta.es_response_time = es_duration.duration
+        output.meta.timing.formatting = format_time.duration
+        output.meta.timing.es_search = es_duration.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
         return output

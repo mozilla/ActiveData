@@ -143,7 +143,7 @@ def query(path):
             if data.meta.save:
                 result.meta.saved_as = save_query.query_finder.save(data)
 
-        result.meta.active_data_response_time = active_data_timer.duration
+        result.meta.timing.total = active_data_timer.duration
 
         response_data = convert.unicode2utf8(convert.value2json(result))
         Log.note("Response is {{num}} bytes", num=len(response_data))

@@ -38,8 +38,15 @@
 		"type": "test_result",
 		"debug": false
 	},
+	"backend_es": {
+		"index": "testdata",
+		"type": "test_result",
+		"host": "http://localhost",
+		"port": 9200,
+		"schema":{"$ref":"//.../resources/schema/basic_schema.json.template?type=test_result"},
+		"debug":true
+	},
 	"debug": {
 		"trace": true
 	}
-
 }

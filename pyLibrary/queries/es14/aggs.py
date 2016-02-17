@@ -249,7 +249,7 @@ def es_aggsop(es, frum, query):
             )}
         })
     else:
-        if any(split_where[1:]):
+        if any(split_where[1::]):
             Log.error("Where clause is too deep")
 
     for d in decoders[0]:

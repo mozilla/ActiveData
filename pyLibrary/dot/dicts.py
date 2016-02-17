@@ -58,7 +58,10 @@ class Dict(MutableMapping):
 
     def __nonzero__(self):
         d = _get(self, "_dict")
-        return True if d else False
+        if isinstance(d, dict):
+            return True if d else False
+        else:
+            return d != None
 
     def __contains__(self, item):
         if Dict.__getitem__(self, item):
@@ -175,6 +178,9 @@ class Dict(MutableMapping):
             return True
 
         d = _get(self, "_dict")
+        if not isinstance(d, dict):
+            return d == other
+
         if not d and other == None:
             return True
 

@@ -130,8 +130,8 @@ Returns `true` if two expressions are not null *and* not equal.
 
 `eq` and `ne` are not complements: For example, they both return `false` when only one expression is `null`:
 
-		{"ne": [null, 1]} ⇒ False
-		{"eq": [null, 1]} ⇒ False
+		{"ne": [null, 1]} ⇒ false
+		{"eq": [null, 1]} ⇒ false
 
 
 ###`gt`, `gte`, `lte`, `lt` Operators###
@@ -141,6 +141,7 @@ Compare two expressions, and return a Boolean
 		{"gt": {variable: value}}   ⇒  variable > value
 		{"lte": [expr1, expr2]}     ⇒  expr1 ≤ expr2
 
+If either operand is `null` then the result is `null`; which is effectively `false` in a comparison.
 
 
 Math Operators
@@ -202,9 +203,6 @@ The empty list always evaluates to the default value, or `null`.
 
 		{"mult": []} ⇒ null
 
-
-
-
 ###`div` Operator###
 
 For division.
@@ -212,7 +210,9 @@ For division.
 		{"div": {variable: denominator}} 
 		{"div": [numerator, denominator]} 
 
-division by zero will return `null`
+If either operand is `null`, or if the denominator is zero, the operator will return `null`.  The `default` clause can be used to replace that.
+
+		{"div": [numerator, denominator], "default": 0}  // {"div": ["x", 0]} == 0 for all x
 
 
 ###`exp` Operator###
@@ -327,12 +327,6 @@ Removes the `length` right-most characters from the given string, returning the 
 		{"not_right": {variable: length}}
 		{"not_right": [expression, length]}
 
-###`number` Operator###
-
-Convert a string to a numeric value.
-
-		{"number": variable}
-
 ###`contains` Operator###
 
 Test if property contains given substring.  
@@ -354,9 +348,10 @@ Return `true` if a property matches a given regular expression.  The whole term 
 
 
 
-
 Conditional Operators
 ---------------------
+
+Conditional operators expect a Boolean value to decide on.  If the value provided is not Boolean, it is considered `true`; if the value is missing or `null`, it is considered `false`.  This is different than many other languages: ***Numeric zero (0) is truthy***  
 
 ###`coalesce` Operator###
 
@@ -394,10 +389,30 @@ Evaluates a list of `when` sub-clauses in order, if one evaluates to `true` the 
 The last item in the list can be a plain expression, called the `default_expression`.  It is  evaluated-and-returned only if all previous conditions evaluate to `false`.  If the `default_expression` is missing, and all conditions evaluate to `false`, `null` is returned.  
 ***If any `when` sub-clauses contain an `else` clause, the `else` clause is ignored.***
 
-Value Operators
+
+Type Conversion
 ---------------
 
-Value operators are meant to convert the operands into some useful abstract value. 
+###`number` Operator###
+
+Convert a string to a numeric value.
+
+		{"number": expression}
+
+###`string` Operator###
+
+Convert a number to a string value
+
+		{"string": expression}
+
+###`date` Operator###
+
+Convert a literal value to an absolute, or relative, unix datestamp.   Only literal values, and not qb expressions, are acceptable operands. 
+
+		{"date": literal}
+
+The literal is parsed according to a [date and time mini language](Qb_Time_Math.md).
+
 
 ###`literal` Operator###
 

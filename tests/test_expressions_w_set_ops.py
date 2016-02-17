@@ -532,3 +532,66 @@ class TestSetOps(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test)
+
+    def test_string(self):
+        test = {
+            "data": [
+                {"v": 1},
+                {"v": "2"},
+                {"v": 3},
+                {"v": "4"},
+                {}
+            ],
+            "query": {
+                "select": {"name": "v", "value": {"string": "v"}},
+                "from": base_test_class.settings.backend_es.index
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": ["1", "2", "3", "4", None]
+            }
+        }
+        self._execute_es_tests(test)
+
+    def test_number(self):
+        test = {
+            "data": [
+                {"v": 1},
+                {"v": "2"},
+                {"v": 3},
+                {"v": "4"},
+                {}
+            ],
+            "query": {
+                "select": {"name": "v", "value": {"number": "v"}},
+                "from": base_test_class.settings.backend_es.index
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [1, 2, 3, 4, None]
+            }
+        }
+        self._execute_es_tests(test)
+
+
+    def test_div_with_default(self):
+        test = {
+            "data": [
+                {"v": 0},
+                {"v": 1},
+                {"v": 2},
+                {}
+            ],
+            "query": {
+                "select": {"name": "v", "value": {"div": {"v": 2}, "default": 0}},
+                "from": base_test_class.settings.backend_es.index
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [0, 0.5, 1, 0]
+            }
+        }
+        self._execute_es_tests(test)
+
+
+

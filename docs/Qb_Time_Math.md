@@ -1,7 +1,7 @@
 Time
 ====
 
-All points in time are referenced as seconds since epoch GMT.  UTC is not used due to the irregular leap seconds, plus UTC is not needed unless you need accuracy over 7 digits.   The regularity of GMT allows us to define a vector space.
+All points in time are referenced as seconds since epoch GMT.  UTC is not used due to the irregular leap seconds.  No one needs UTC unless you need accuracy over 7 digits (measuring duration of months with accuracy of seconds).  The regularity of GMT allows us to define a vector space.
 
 
 Absolute Time
@@ -20,6 +20,7 @@ There are a couple of relative time values:
 * `now` - current time with millisecond accuracy 
 * `today` - beginning of the current day (GMT)
 * `tomorrow` - beginning of tomorrow 
+* `eod` - end of day (same as tomorrow) 
 
 Duration
 --------
@@ -58,8 +59,8 @@ You can also perform modulo arithmetic with the following identity:
 
 	mod(x, d) = x - x|d
 
-* `now - now|day` for current time into this day 
-*  
+For example, `now - now|day` for current time into this day 
+
 
 
  

@@ -52,7 +52,6 @@ app.add_url_rule('/tools/<path:filename>', 'download', download)
 app.add_url_rule('/find/<path:hash>', 'find_query', find_query)
 
 
-
 @app.route('/query', defaults={'path': ''}, methods=['GET', 'POST'])
 def query(path):
     cprofiler = None
@@ -329,13 +328,14 @@ def main():
                         pass
 
             def runner(please_stop):
-                Log.alert("ActiveData listening on encrypted port {{port}}", port=ssl_flask.port)
+                Log.warning("ActiveData listening on encrypted port {{port}}", port=ssl_flask.port)
                 app.run(**ssl_flask)
 
             Thread.run("SSL Server", runner)
 
-        if config.flask.debug:
+        if config.flask.debug or config.debug.cprofile:
             Log.warning("ActiveData is in debug mode")
+            app.add_url_rule('/exit', 'exit', exit)
 
         if config.flask.ssl_context:
             Log.warning("ActiveData has SSL context, but is still listening on non-encrypted http port {{port}}", port=config.flask.port)
@@ -347,6 +347,22 @@ def main():
         Log.stop()
 
     sys.exit(0)
+
+
+def exit():
+    shutdown = flask.request.environ.get('werkzeug.server.shutdown')
+    if shutdown:
+        shutdown()
+
+    return Response(
+        convert.unicode2utf8(OVERVIEW),
+        status=400,
+        headers={
+            "access-control-allow-origin": "*",
+            "content-type": "text/html"
+        }
+    )
+
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ import sys
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import qb, expressions, containers
+from pyLibrary.queries import jx, expressions, containers
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09 import setop as es09_setop
@@ -28,7 +28,7 @@ from pyLibrary.queries.es14.deep import is_deepop, es_deepop
 from pyLibrary.queries.es14.setop import is_setop, es_setop
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.es14.util import aggregates1_4
-from pyLibrary.queries.expressions import qb_expression
+from pyLibrary.queries.expressions import jx_expression
 from pyLibrary.queries.meta import FromESMetadata
 from pyLibrary.queries.namespace.typed import Typed
 from pyLibrary.queries.query import Query, _normalize_where
@@ -42,7 +42,7 @@ from pyLibrary.dot import wrap, listwrap
 
 class FromES(Container):
     """
-    SEND GENERAL qb QUERIES TO ElasticSearch
+    SEND GENERAL jx QUERIES TO ElasticSearch
     """
 
     def __new__(cls, *args, **kwargs):
@@ -129,7 +129,7 @@ class FromES(Container):
                 result = self.query(frum)
                 q2 = query.copy()
                 q2.frum = result
-                return qb.run(q2)
+                return jx.run(q2)
 
             if is_deepop(self._es, query):
                 return es_deepop(self._es, query)
@@ -302,7 +302,7 @@ class FromES(Container):
             "fields": listwrap(schema._routing.path),
             "query": {"filtered": {
                 "query": {"match_all": {}},
-                "filter": qb_expression(command.where).to_esfilter()
+                "filter": jx_expression(command.where).to_esfilter()
             }},
             "size": 200000
         })
@@ -315,7 +315,7 @@ class FromES(Container):
             if isinstance(v, Mapping) and v.doc:
                 scripts.append({"doc": v.doc})
             else:
-                scripts.append({"script": "ctx._source." + k + " = " + qb_expression(v).to_ruby()})
+                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_ruby()})
 
         if results.hits.hits:
             updates = []

@@ -24,23 +24,23 @@ from pyLibrary.queries import wrap_from, Schema
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain, is_keyword
-from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter, query_get_all_vars, qb_expression, TrueOp
+from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter, query_get_all_vars, jx_expression, TrueOp
 
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 10000
 
-_qb = None
+_jx = None
 _Column = None
 
 
 def _late_import():
-    global _qb
+    global _jx
     global _Column
 
     from pyLibrary.queries.meta import Column as _Column
-    from pyLibrary.queries import qb as _qb
+    from pyLibrary.queries import jx as _jx
 
-    _ = _qb
+    _ = _jx
     _ = _Column
 
 
@@ -116,9 +116,9 @@ class Query(object):
         # THE from SOURCE IS.
         # TODO: IGNORE REACHING INTO THE NON-NESTED TYPES
         if isinstance(self.frum, list):
-            if not _qb:
+            if not _jx:
                 _late_import()
-            columns = _qb.get_columns(self.frum)
+            columns = _jx.get_columns(self.frum)
         elif isinstance(self.frum, Container):
             columns = self.frum.get_columns(table=self.frum.name)
         else:
@@ -382,7 +382,7 @@ def _normalize_range(range):
 def _normalize_where(where, schema=None):
     if where == None:
         return TrueOp()
-    return qb_expression(where)
+    return jx_expression(where)
 
 
 def _map_term_using_schema(master, path, term, schema_edges):

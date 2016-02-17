@@ -1,11 +1,11 @@
-Qb Reference
+JSON Expressions Reference
 ============
 
 Intended Audience
 -----------------
 
 This document is only a reference document.  It is expected the reader already
-knows how to write Qb queries.  For a tutorial, start [here](Qb_Tutorial.md)
+knows how to write JSON query expressions.  For a tutorial, start [here](jx_Tutorial.md)
 
 Nomenclature
 ------------
@@ -52,7 +52,7 @@ Queries are complex operators over sets, tables, and lists.  Technically, querie
 
 The `from` clause states the table, index, or relation that is being processed
 by the query.  In Javascript this can be an array of objects, a cube, or
-another Qb query.  In the case of ES, this is the name of the index being
+another JSON query expressions.  In the case of ES, this is the name of the index being
 scanned. Nested ES documents can be pulled by using a dots (.) as a path
 separator to nested property.
 
@@ -161,7 +161,7 @@ All aggregates ignore the null values; If all values are null, it is the same as
 `where` Clause
 ------------
 
-The `where` clause is [an expression](Qb_Expresions.md) that returns a boolean indicating whether the document will be included in the aggregate.  If the query is returning a pivot-table, or data cube, the where clause does not affect the dimensions' domains.
+The `where` clause is [an expression](jx_Expresions.md) that returns a boolean indicating whether the document will be included in the aggregate.  If the query is returning a pivot-table, or data cube, the where clause does not affect the dimensions' domains.
 
 `edges` Clause
 --------------
@@ -234,7 +234,7 @@ The `window` clause defines a sequence of window functions to be applied to the 
       - **max** - offset from ```rownum``` where window ends (```rows[rownum + max] == null```)
   - **aggregate** - an aggregate function to apply on **value** over the **range**, (or whole group if range is not defined)
 
-**Please note: The javascript Qb library uses "analytic" instead of "window".**
+**Please note: The javascript JSON Expressions library uses "analytic" instead of "window".**
 
 having
 ------

@@ -30,9 +30,9 @@
 		Sends given query to <code style="font-size: 0.9em">/query</code> endpoint, and shows response.
 		<ul>
 			<li><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/ActiveData Query Tool.pdf">Using this Query Tool</a></li><br>
-			<li><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/Qb_Tutorial.md">Unittest Tutorial</a></li>
-			<li><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/Qb_Expressions.md">qb Expressions</a></li>
-			<li><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/Qb_Reference.md">Reference Documentation</a></li>
+			<li><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_Tutorial.md">Unittest Tutorial</a></li>
+			<li><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_Expressions.md">jx Expressions</a></li>
+			<li><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_Reference.md">Reference Documentation</a></li>
 			<li><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/BZ_Tutorial.md">Bugzilla Tutorial</a></li>
 			<li><a href="https://github.com/klahnakoski/ActiveData">ActiveData code on Github</a></li>
 		</ul>
@@ -152,7 +152,7 @@ function response2list(response){
 	var rows;
 	if (response.meta && response.meta.format == "cube") {
 		response.cube = response.data;
-		rows = qb.Cube2List(response);
+		rows = jx.Cube2List(response);
 		response.cube = undefined;
 	} else if (response.meta && response.meta.format == "table") {
 		response.columns = response.header;
@@ -161,7 +161,7 @@ function response2list(response){
 	} else if (response.meta && response.meta.format == "list") {
 		rows = response.data;
 	} else if (response.cube !== undefined) {
-		rows = qb.Cube2List(response);
+		rows = jx.Cube2List(response);
 	} else if (response.list !== undefined) {
 		rows = response.list
 	} else {
@@ -206,7 +206,7 @@ var queryTool = {};
 	};//function
 
 	queryTool.hideAll=function hideAll(){
-		//EVAL THE qb
+		//EVAL THE jx
 		this.shareLink=undefined;
 		$("#notes").hide();
 		$("#success").hide();
@@ -235,7 +235,7 @@ var queryTool = {};
 	queryTool.executeCube = function(event){
 		var self = this;
 
-		//EVAL THE qb
+		//EVAL THE jx
 		self.hideAll();
 
 		var code = $("#cube").val();

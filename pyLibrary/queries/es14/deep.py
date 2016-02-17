@@ -16,8 +16,8 @@ from pyLibrary.dot import split_field, DictList, listwrap, literal_field, coales
 from pyLibrary.queries import es09, es14
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es14.setop import format_dispatch
-from pyLibrary.queries.es14.util import qb_sort_to_es_sort
-from pyLibrary.queries.expressions import query_get_all_vars, split_expression_by_depth, simplify_esfilter, qb_expression, AndOp, qb_expression_to_function, compile_expression
+from pyLibrary.queries.es14.util import jx_sort_to_es_sort
+from pyLibrary.queries.expressions import query_get_all_vars, split_expression_by_depth, simplify_esfilter, jx_expression, AndOp, jx_expression_to_function, compile_expression
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.timer import Timer
@@ -86,7 +86,7 @@ def es_deepop(es, query):
         more_filter = None
 
     es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
-    es_query.sort = qb_sort_to_es_sort(query.sort)
+    es_query.sort = jx_sort_to_es_sort(query.sort)
     es_query.fields = []
 
     is_list = isinstance(query.select, list)
@@ -183,7 +183,7 @@ def es_deepop(es, query):
                     })
             i += 1
         else:
-            expr = qb_expression(s.value)
+            expr = jx_expression(s.value)
             for v in expr.vars():
                 for n in columns:
                     if n.name==v:

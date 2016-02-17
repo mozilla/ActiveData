@@ -115,7 +115,7 @@ importScript(['modevlib/main.js', 'modevlib/Dimension-Performance.js'], function
 					Log.actionDone(a);
 				}//try
 
-				var geomean = yield(Qb.calc2List({
+				var geomean = yield(jx.calc2List({
 					"from": chart,
 					"select": [
 						{"value": "median", "aggregate": "geomean"},
@@ -128,7 +128,7 @@ importScript(['modevlib/main.js', 'modevlib/Dimension-Performance.js'], function
 				}));
 				//HACK!!!
 				//INJECT AGGREGATE RESULTS BACK INTO THE chart METADATA
-				chart.list = Qb.sort(geomean.list, ["date.value"]);
+				chart.list = jx.sort(geomean.list, ["date.value"]);
 				aChart.showScatter({
 					"id": "chart" + testNum,
 					"sheetDiv": "info",

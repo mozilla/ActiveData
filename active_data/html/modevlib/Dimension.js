@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 importScript("aLibrary.js");
-importScript("qb/ESQuery.js");
+importScript("jx/ESQuery.js");
 
 
 var Dimension = {};
@@ -228,7 +228,7 @@ var DEFAULT_QUERY_LIMIT = 20;
 
 			if (dim.limit === undefined) dim.limit = DEFAULT_QUERY_LIMIT;
 
-			if (dim.field !== undefined && qb.domain.PARTITION.contains(dim.type) && dim.partitions === undefined) {
+			if (dim.field !== undefined && jx.domain.PARTITION.contains(dim.type) && dim.partitions === undefined) {
 				dim.field = Array.newInstance(dim.field);
 
 				dim.partitions = Thread.run(function*() {

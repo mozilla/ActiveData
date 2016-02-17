@@ -20,7 +20,7 @@ from psycopg2.extensions import adapt
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import qb
+from pyLibrary.queries import jx
 from pyLibrary.sql import SQL
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Lock
@@ -105,7 +105,7 @@ class Redshift(object):
         columns = set()
         for r in records:
             columns |= set(r.keys())
-        columns = qb.sort(columns)
+        columns = jx.sort(columns)
 
         try:
             self.execute(

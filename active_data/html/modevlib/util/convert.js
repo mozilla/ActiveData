@@ -603,7 +603,7 @@ var convert = function(){
 		if (options && options.columns) {
 			columns = options.columns;
 		} else {
-			columns = qb.getColumnsFromList(data);
+			columns = jx.getColumnsFromList(data);
 		}//endif
 		columns.forall(function(v, i){
 			header += wrapWithHtmlTag("td", v.name);
@@ -643,7 +643,7 @@ var convert = function(){
 		var prefix = tagName.map(function(t){
 			return "<" + t + ">"
 		}).join("");
-		var suffix = qb.reverse(tagName).map(function(t){
+		var suffix = jx.reverse(tagName).map(function(t){
 			return "</" + t + ">"
 		}).join("");
 
@@ -702,7 +702,7 @@ var convert = function(){
 		var output = "";
 
 		//WRITE HEADER
-		var columns = qb.getColumnsFromList(data);
+		var columns = jx.getColumnsFromList(data);
 		for (var cc = 0; cc < columns.length; cc++) output += convert.String2Quote(columns[cc].name) + "\t";
 		output = output.substring(0, output.length - 1) + "\n";
 
@@ -750,7 +750,7 @@ var convert = function(){
 
 
 	convert.List2Table = function(list, columnOrder){
-		var columns = qb.getColumnsFromList(list);
+		var columns = jx.getColumnsFromList(list);
 		if (columnOrder !== undefined) {
 			var newOrder = [];
 			OO: for (var o = 0; o < columnOrder.length; o++) {

@@ -17,11 +17,11 @@ from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, DictList, unwrap
 from pyLibrary.maths import Math
-from pyLibrary.queries import qb, es09
+from pyLibrary.queries import jx, es09
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword, DefaultDomain
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, qb_expression, AndOp, Variable, Literal, OrOp, BinaryOp
+from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, jx_expression, AndOp, Variable, Literal, OrOp, BinaryOp
 from pyLibrary.queries.query import DEFAULT_LIMIT, MAX_LIMIT
 from pyLibrary.times.timer import Timer
 
@@ -42,7 +42,7 @@ def get_decoders_by_depth(query):
     for e in coalesce(query.edges, query.groupby, []):
         if e.value != None:
             e = e.copy()
-            e.value = qb_expression(e.value)
+            e.value = jx_expression(e.value)
             vars_ = e.value.vars()
 
             for v in vars_:
@@ -161,7 +161,7 @@ def es_aggsop(es, frum, query):
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
-        abs_value = qb_expression(s.value).map({c.name: c.abs_name for c in frum._columns})
+        abs_value = jx_expression(s.value).map({c.name: c.abs_name for c in frum._columns})
 
         if s.aggregate == "count":
             es_query.aggs[literal_field(canonical_name)].value_count.script = abs_value.to_ruby()
@@ -618,7 +618,7 @@ class DefaultDecoder(SetDecoder):
 
     def done_count(self):
         self.edge.domain = self.domain = SimpleSetDomain(
-            partitions=qb.sort(set(self.parts))
+            partitions=jx.sort(set(self.parts))
         )
         self.parts = None
 
@@ -666,7 +666,7 @@ class DimFieldListDecoder(SetDecoder):
         columns = map(unicode, range(len(self.fields)))
         parts = wrap([{unicode(i): p for i, p in enumerate(part)} for part in set(self.parts)])
         self.parts = None
-        sorted_parts = qb.sort(parts, columns)
+        sorted_parts = jx.sort(parts, columns)
 
         self.edge.domain = self.domain = SimpleSetDomain(
             key="value",

@@ -4,16 +4,16 @@
 
 importScript("../util/aDate.js");
 
-if (qb===undefined) var qb = {};
-qb.domain = {};
+if (jx===undefined) var jx = {};
+jx.domain = {};
 
-qb.domain.ALGEBRAIC=["time", "duration", "numeric", "count", "datetime"];  //DOMAINS THAT HAVE ALGEBRAIC OPERATIONS DEFINED
-qb.domain.KNOWN=["set", "boolean", "duration", "time", "numeric"];    //DOMAINS THAT HAVE A KNOWN NUMBER FOR PARTS AT QUERY TIME
-qb.domain.PARTITION=["set", "boolean"];    //DIMENSIONS WITH CLEAR PARTS
+jx.domain.ALGEBRAIC=["time", "duration", "numeric", "count", "datetime"];  //DOMAINS THAT HAVE ALGEBRAIC OPERATIONS DEFINED
+jx.domain.KNOWN=["set", "boolean", "duration", "time", "numeric"];    //DOMAINS THAT HAVE A KNOWN NUMBER FOR PARTS AT QUERY TIME
+jx.domain.PARTITION=["set", "boolean"];    //DIMENSIONS WITH CLEAR PARTS
 
-qb.domain.compile = function(column, sourceColumns){
+jx.domain.compile = function(column, sourceColumns){
 	if (column.domain === undefined){
-		qb.domain["default"](column, sourceColumns);
+		jx.domain["default"](column, sourceColumns);
 		return;
 	}//endif
 
@@ -37,20 +37,20 @@ qb.domain.compile = function(column, sourceColumns){
 		Log.error("Expecting a domain to have a 'type' attribute");
 
 	if (type=="value"){
-		domain=qb.domain.value;
+		domain=jx.domain.value;
 	}else if (type=="count"){
-		qb.domain[type](column, sourceColumns);
-	}else if ((domain.interval===undefined || domain.interval=="none") && qb.domain.ALGEBRAIC.contains(type)){
+		jx.domain[type](column, sourceColumns);
+	}else if ((domain.interval===undefined || domain.interval=="none") && jx.domain.ALGEBRAIC.contains(type)){
 		domain.interval="none";
 		//CONTINUOUS ALGEBRAIC EDGE MEANS COMPILATION IS NOT POSSIBLE
 		if (type=="time"){
-			qb.domain["continuousTime"](column, sourceColumns);
+			jx.domain["continuousTime"](column, sourceColumns);
 		}else{
 			Log.error("Continuous algebraic domain of type "+type+", not supported yet.");
 		}//endif
 
-	}else if (qb.domain[type]){
-		qb.domain[type](column, sourceColumns);
+	}else if (jx.domain[type]){
+		jx.domain[type](column, sourceColumns);
 	} else{
 		Log.error("Do not know how to compile a domain of type '" + type + "'");
 	}//endif
@@ -60,7 +60,7 @@ qb.domain.compile = function(column, sourceColumns){
 
 
 //COMPARE TWO DOMAINS, RETURN true IF IDENTICAL
-qb.domain.equals=function(a, b){
+jx.domain.equals=function(a, b){
 	if ((a.type=="default" || a.type=="set") && (b.type=="default" || b.type=="set")){
 		if (a.partitions.length!=b.partitions.length) return false;
 		for(i=0;i<a.partitions.length;i++){
@@ -92,7 +92,7 @@ qb.domain.equals=function(a, b){
 ////////////////////////////////////////////////////////////////////////////////
 // JUST ALL VALUES, USUALLY PRIMITIVE VALUES
 ////////////////////////////////////////////////////////////////////////////////
-qb.domain.value = {
+jx.domain.value = {
 
 	"name":"value",
 	"type":"value",
@@ -132,7 +132,7 @@ qb.domain.value = {
 //
 // DEFAULT DOMAIN FOR GENERAL SETS OF PRIMITIVES
 //
-qb.domain["default"] = function(column, sourceColumns){
+jx.domain["default"] = function(column, sourceColumns){
 	var d = {};
 
 	column.domain = d;
@@ -143,7 +143,7 @@ qb.domain["default"] = function(column, sourceColumns){
 //		return a == b;
 //	};//method
 
-	d.valCMP=qb.domain.value.compare;
+	d.valCMP=jx.domain.value.compare;
 	d.compare = function(a, b){
 		return d.valCMP(a.value, b.value);
 	};//method
@@ -189,12 +189,12 @@ qb.domain["default"] = function(column, sourceColumns){
 		return part.value;
 	};
 
-	qb.domain.compileEnd(d);
+	jx.domain.compileEnd(d);
 
 };
 
 
-qb.domain.time = function(column, sourceColumns){
+jx.domain.time = function(column, sourceColumns){
 
 	var d = column.domain;
 	if (d.name === undefined) d.name = d.type;
@@ -208,7 +208,7 @@ qb.domain.time = function(column, sourceColumns){
 
 
 	d.compare = function(a, b){
-		return qb.domain.value.compare(a.value, b.value);
+		return jx.domain.value.compare(a.value, b.value);
 	};//method
 
 	//PROVIDE FORMATTING FUNCTION
@@ -310,7 +310,7 @@ qb.domain.time = function(column, sourceColumns){
 		if (d.partitions === undefined){
 			d.map={};
 			d.partitions = [];
-			qb.domain.time.addRange(d.min, d.max, d);
+			jx.domain.time.addRange(d.min, d.max, d);
 		}//endif
 	}//endif
 
@@ -338,7 +338,7 @@ qb.domain.time = function(column, sourceColumns){
 		d.map = {};
 		d.partitions = [];
 		if (!(d.min === undefined) && !(d.max === undefined)){
-			qb.domain.time.addRange(d.min, d.max, d);
+			jx.domain.time.addRange(d.min, d.max, d);
 		}//endif
 	} else{
 		d.map = {};
@@ -364,16 +364,16 @@ qb.domain.time = function(column, sourceColumns){
 
 };//method;
 
-qb.domain.time.DEFAULT_FORMAT="yyyy-MM-dd HH:mm:ss";
+jx.domain.time.DEFAULT_FORMAT="yyyy-MM-dd HH:mm:ss";
 
 
-qb.domain.time.addRange = function(min, max, domain){
+jx.domain.time.addRange = function(min, max, domain){
 	for(var v = min; v.getMilli() < max.getMilli(); v = v.add(domain.interval)){
 		var partition = {
 			"value":v,
 			"min":v,
 			"max":v.add(domain.interval),
-			"name":v.format(coalesce(domain.format, qb.domain.time.DEFAULT_FORMAT))
+			"name":v.format(coalesce(domain.format, jx.domain.time.DEFAULT_FORMAT))
 		};
 		domain.map[v] = partition;
 		domain.partitions.push(partition);
@@ -381,7 +381,7 @@ qb.domain.time.addRange = function(min, max, domain){
 };//method
 
 
-qb.domain.continuousTime = function(column, sourceColumns){
+jx.domain.continuousTime = function(column, sourceColumns){
 
 	var d = column.domain;
 	if (d.name === undefined) d.name = d.type;
@@ -391,7 +391,7 @@ qb.domain.continuousTime = function(column, sourceColumns){
 	d.max = new Date(d.max);
 
 	d.compare = function(a, b){
-		return qb.domain.value.compare(a.value, b.value);
+		return jx.domain.value.compare(a.value, b.value);
 	};//method
 
 	//PROVIDE FORMATTING FUNCTION
@@ -468,7 +468,7 @@ qb.domain.continuousTime = function(column, sourceColumns){
 ////////////////////////////////////////////////////////////////////////////////
 // duration IS A PARTITION OF TIME DURATION
 ////////////////////////////////////////////////////////////////////////////////
-qb.domain.duration = function(column, sourceColumns){
+jx.domain.duration = function(column, sourceColumns){
 
 	var d = column.domain;
 	if (d.name === undefined) d.name = d.type;
@@ -558,7 +558,7 @@ qb.domain.duration = function(column, sourceColumns){
 			d.map = {};
 			d.partitions = [];
 			if (!noMin && !noMax){
-				qb.domain.duration.addRange(d.min, d.max, d);
+				jx.domain.duration.addRange(d.min, d.max, d);
 			}//endif
 		} else{
 			d.map = {};
@@ -587,10 +587,10 @@ qb.domain.duration = function(column, sourceColumns){
 					if (noMax || key.milli < this.max.milli){
 						this.min = floor;
 						this.max = coalesce(this.max, ceil);
-						qb.domain.duration.addRange(this.min, this.max, this);
+						jx.domain.duration.addRange(this.min, this.max, this);
 					}//endif
 				}else if (key.milli < this.min.milli){
-					qb.domain.duration.addRange(floor, this.min, this);
+					jx.domain.duration.addRange(floor, this.min, this);
 					this.min = floor;
 				}//endif
 			} else if (key.milli < this.min.milli){
@@ -603,10 +603,10 @@ qb.domain.duration = function(column, sourceColumns){
 					if (noMin || this.min.milli <= key.milli){
 						this.min = coalesce(this.min, floor);
 						this.max = ceil;
-						qb.domain.duration.addRange(this.min, this.max, this);
+						jx.domain.duration.addRange(this.min, this.max, this);
 					}//endif
 				} else if (key.milli >= this.max.milli){
-					qb.domain.duration.addRange(this.max, ceil, this);
+					jx.domain.duration.addRange(this.max, ceil, this);
 					this.max = ceil;
 				}//endif
 			} else if (key.milli >= this.max.milli){
@@ -621,7 +621,7 @@ qb.domain.duration = function(column, sourceColumns){
 			d.map = {};
 			d.partitions = [];
 			if (!(d.min === undefined) && !(d.max === undefined)){
-				qb.domain.duration.addRange(d.min, d.max, d);
+				jx.domain.duration.addRange(d.min, d.max, d);
 			}//endif
 		} else{
 			d.map = {};
@@ -670,12 +670,12 @@ qb.domain.duration = function(column, sourceColumns){
 
 
 
-	qb.domain.compileEnd(d);
+	jx.domain.compileEnd(d);
 
 };//method;
 
 
-qb.domain.duration.addRange = function(min, max, domain){
+jx.domain.duration.addRange = function(min, max, domain){
 	for(var v = min; v.milli < max.milli; v = v.add(domain.interval)){
 		var partition = {
 			"value":v,
@@ -695,7 +695,7 @@ qb.domain.duration.addRange = function(min, max, domain){
 
 
 
-qb.domain.numeric = function(column, sourceColumns){
+jx.domain.numeric = function(column, sourceColumns){
 	function _floor(value, mod){
 		return aMath.floor(value/mod)*mod;
 	}
@@ -746,10 +746,10 @@ qb.domain.numeric = function(column, sourceColumns){
 				if (this.min===undefined){
 					this.min = floor;
 					this.max = aMath.min(this.max, floor+this.interval);
-					qb.domain.numeric.addRange(this.min, this.max, this);
+					jx.domain.numeric.addRange(this.min, this.max, this);
 				} else if (key < this.min){
 //					var newmin=floor;
-					qb.domain.numeric.addRange(floor, this.min, this);
+					jx.domain.numeric.addRange(floor, this.min, this);
 					this.min = floor;
 				}//endif
 			} else if (this.min == null){
@@ -762,10 +762,10 @@ qb.domain.numeric = function(column, sourceColumns){
 				if (this.max===undefined){
 					this.min = Math.max(this.min, floor);
 					this.max = floor+this.interval;
-					qb.domain.numeric.addRange(this.min, this.max, this);
+					jx.domain.numeric.addRange(this.min, this.max, this);
 				} else if (key >= this.max){
 					var newmax = floor+this.interval;
-					qb.domain.numeric.addRange(this.max, newmax, this);
+					jx.domain.numeric.addRange(this.max, newmax, this);
 					this.max = newmax;
 				}//endif
 			} else if (key >= this.max){
@@ -780,7 +780,7 @@ qb.domain.numeric = function(column, sourceColumns){
 			d.map = {};
 			d.partitions = [];
 			if (!noMin && !noMax){
-				qb.domain.numeric.addRange(d.min, d.max, d);
+				jx.domain.numeric.addRange(d.min, d.max, d);
 			}//endif
 		} else{
 			d.map = {};
@@ -812,7 +812,7 @@ qb.domain.numeric = function(column, sourceColumns){
 
 
 	if (d.value!=undefined){
-		qb.domain.compileEnd(d);
+		jx.domain.compileEnd(d);
 	}else{
 		d.end=function(v){return v.value;};
 	}//endif
@@ -820,7 +820,7 @@ qb.domain.numeric = function(column, sourceColumns){
 };//method;
 
 
-qb.domain.numeric.addRange = function(min, max, domain){
+jx.domain.numeric.addRange = function(min, max, domain){
 	for(var v = min; v < max; v = v + domain.interval){
 		var partition = {
 			"value":v,
@@ -837,7 +837,7 @@ qb.domain.numeric.addRange = function(min, max, domain){
 
 
 
-qb.domain.count = function(column, sourceColumns){
+jx.domain.count = function(column, sourceColumns){
 	function _floor(value, mod){
 		return aMath.floor(value/mod)*mod;
 	}
@@ -887,10 +887,10 @@ qb.domain.count = function(column, sourceColumns){
 			if (noMax){//NO MAXIMUM REQUESTED
 				var newmax = floor+this.interval;
 				if (this.max===undefined){
-					qb.domain.numeric.addRange(0, newmax, this);
+					jx.domain.numeric.addRange(0, newmax, this);
 					this.max = newmax;
 				}else if (key >= this.max){
-					qb.domain.numeric.addRange(this.max, newmax, this);
+					jx.domain.numeric.addRange(this.max, newmax, this);
 					this.max = newmax;
 				}//endif
 			} else if (key >= this.max){
@@ -905,7 +905,7 @@ qb.domain.count = function(column, sourceColumns){
 			d.map = {};
 			d.partitions = [];
 			if (!(d.max === undefined)){
-				qb.domain.numeric.addRange(d.min, d.max, d);
+				jx.domain.numeric.addRange(d.min, d.max, d);
 			}//endif
 		} else{
 			d.map = {};
@@ -936,7 +936,7 @@ qb.domain.count = function(column, sourceColumns){
 	];
 
 	if (d.value!=undefined){
-		qb.domain.compileEnd(d);
+		jx.domain.compileEnd(d);
 	}else{
 		d.end=function(v){return v.value;};
 	}//endif
@@ -952,7 +952,7 @@ qb.domain.count = function(column, sourceColumns){
 
 
 
-qb.domain.set = function(column, sourceColumns){
+jx.domain.set = function(column, sourceColumns){
 
 	var d = column.domain;
 	if (d.name === undefined) d.name = d.type;
@@ -966,7 +966,7 @@ qb.domain.set = function(column, sourceColumns){
 		d.columns=d.partitions.columns,
 		d.partitions=d.partitions.list
 	}else if (d.partitions instanceof Array){
-		d.columns=qb.getColumnsFromList(d.partitions);
+		d.columns=jx.getColumnsFromList(d.partitions);
 	}//endif
 
 	d.NULL = {};
@@ -977,7 +977,7 @@ qb.domain.set = function(column, sourceColumns){
 
 
 	d.compare = function(a, b){
-		return qb.domain.value.compare(d.getKey(a), d.getKey(b));
+		return jx.domain.value.compare(d.getKey(a), d.getKey(b));
 	};//method
 
 	d.label = function(part){
@@ -1015,7 +1015,7 @@ qb.domain.set = function(column, sourceColumns){
 
 	//DEFINE VALUE->PARTITION MAP
 	if (column.test===undefined || d.key!==undefined){
-		qb.domain.set.compileKey(d);
+		jx.domain.set.compileKey(d);
 
 		d.map = {};
 
@@ -1043,7 +1043,7 @@ qb.domain.set = function(column, sourceColumns){
 		////////////////////////////////////////////////////////////////////////
 		if (column.test.indexOf("||") >= 0){
 			Log.warning("Can not optimize test condition with a OR operator: {" + column.test + "}");
-			qb.domain.set.compileSimpleLookup(column, d, sourceColumns);
+			jx.domain.set.compileSimpleLookup(column, d, sourceColumns);
 			return;
 		} else{
 			var ands = column.test.split("&&");
@@ -1072,7 +1072,7 @@ qb.domain.set = function(column, sourceColumns){
 			}//for
 			if (indexVars.length==0){
 				Log.warning("test clause is too complicated to optimize: {" + column.test + "}");
-				qb.domain.set.compileSimpleLookup(column, d, sourceColumns);
+				jx.domain.set.compileSimpleLookup(column, d, sourceColumns);
 				return;
 			}//endif
 
@@ -1099,7 +1099,7 @@ qb.domain.set = function(column, sourceColumns){
 			}//for
 
 			try{
-				qb.domain.set.compileMappedLookup2(column, d, sourceColumns, lookupVars);
+				jx.domain.set.compileMappedLookup2(column, d, sourceColumns, lookupVars);
 			}catch(e){
 				Log.error("test parameter is malformed", e);
 			}//try
@@ -1107,11 +1107,11 @@ qb.domain.set = function(column, sourceColumns){
 	}//endif
 
 
-	qb.domain.compileEnd(d);
+	jx.domain.compileEnd(d);
 };//method
 
 
-qb.domain.set.compileSimpleLookup = function(column, d, sourceColumns){
+jx.domain.set.compileSimpleLookup = function(column, d, sourceColumns){
 //	d.map = undefined;
 	d.getCanonicalPart = undefined;
 	d.getMatchingParts=undefined;
@@ -1138,7 +1138,7 @@ qb.domain.set.compileSimpleLookup = function(column, d, sourceColumns){
 	eval(f);
 };
 
-qb.domain.set.compileMappedLookup = function(column, d, sourceColumns, lookupVar){
+jx.domain.set.compileMappedLookup = function(column, d, sourceColumns, lookupVar){
 	d.getCanonicalPart = undefined;
 	d.getMatchingParts=undefined;
 	var f =
@@ -1166,7 +1166,7 @@ qb.domain.set.compileMappedLookup = function(column, d, sourceColumns, lookupVar
 	eval(f);
 };
 
-qb.domain.set.compileMappedLookup2 = function(column, d, sourceColumns, lookupVars){
+jx.domain.set.compileMappedLookup2 = function(column, d, sourceColumns, lookupVars){
 	d.getCanonicalPart = undefined;
 	d.getMatchingParts=undefined;
 	var f =
@@ -1200,7 +1200,7 @@ qb.domain.set.compileMappedLookup2 = function(column, d, sourceColumns, lookupVa
 };
 
 
-qb.domain.set.compileKey=function(domain){
+jx.domain.set.compileKey=function(domain){
 	if (domain.key === undefined) domain.key = "value";
 	var key=domain.key;
 
@@ -1255,12 +1255,12 @@ qb.domain.set.compileKey=function(domain){
 // IF THE DOMAIN DEFINES A value, THEN MAKE AN end() FUNCTION WHICH WILL RETURN
 // THAT VALUE, INSTEAD OF RETURNING THE DOMAIN OBJECT
 ////////////////////////////////////////////////////////////////////////////////
-qb.domain.compileEnd=function(domain){
+jx.domain.compileEnd=function(domain){
 	if (domain.end===undefined && domain.value!=undefined){
 		domain.end=function(part){
 			//HOPEFULLY THE FIRST RUN WILL HAVE ENOUGH PARTITIONS TO DETERMINE A TYPE
 			if (!domain.columns){
-				domain.columns=qb.getColumnsFromList(domain.partitions);
+				domain.columns=jx.getColumnsFromList(domain.partitions);
 			}//endif
 
 			//RECOMPILE SELF WITH NEW INFO
@@ -1284,7 +1284,7 @@ qb.domain.compileEnd=function(domain){
 };
 
 //CONVERT ANY ALGEBRIC DOMAIN TO A numeric DOMAIN (FOR STATS PROCESSING)
-qb.domain.algebraic2numeric=function(domain){
+jx.domain.algebraic2numeric=function(domain){
 	if (["default", "set"].contains(domain.type)){
 		Log.error("Can not convert <partitioned> domain to numeric");
 	}//endif
@@ -1309,7 +1309,7 @@ qb.domain.algebraic2numeric=function(domain){
 };//method
 
 
-qb.domain.range = function(column, sourceColumns){
+jx.domain.range = function(column, sourceColumns){
 
 	var d = column.domain;
 	if (d.name === undefined) d.name = d.type;
@@ -1332,7 +1332,7 @@ qb.domain.range = function(column, sourceColumns){
 				return 1;
 			}//endif
 		}//endif
-		return qb.domain.value.compare(a.value, b.value);
+		return jx.domain.value.compare(a.value, b.value);
 	};//method
 
 	//PROVIDE FORMATTING FUNCTION

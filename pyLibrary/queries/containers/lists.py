@@ -15,10 +15,10 @@ from collections import Mapping
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList
-from pyLibrary.queries import qb
+from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import is_keyword
-from pyLibrary.queries.expressions import TRUE_FILTER, qb_expression, Expression
+from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
 from pyLibrary.queries.meta import Column
 from pyLibrary.thread.threads import Lock
@@ -69,13 +69,13 @@ class ListContainer(Container):
         """
         EXPECTING command == {"set":term, "clear":term, "where":where}
         THE set CLAUSE IS A DICT MAPPING NAMES TO VALUES
-        THE where CLAUSE IS A QB FILTER
+        THE where CLAUSE IS A JSON EXPRESSION FILTER
         """
         command = wrap(command)
         if command.where == None:
             filter_ = lambda: True
         else:
-            filter_ = _exec("temp = lambda row: " + qb_expression(command.where).to_python())
+            filter_ = _exec("temp = lambda row: " + jx_expression(command.where).to_python())
 
 
         for c in self.data:
@@ -91,7 +91,7 @@ class ListContainer(Container):
     def where(self, where):
         temp = None
         if isinstance(where, Mapping):
-            exec("def temp(row):\n    return "+qb_expression(where).to_python())
+            exec("def temp(row):\n    return "+jx_expression(where).to_python())
         elif isinstance(where, Expression):
             exec("def temp(row):\n    return "+where.to_python())
         else:
@@ -100,7 +100,7 @@ class ListContainer(Container):
         return ListContainer("from "+self.name, filter(temp, self.data), self.schema)
 
     def sort(self, sort):
-        return ListContainer("from "+self.name, qb.sort(self.data, sort), self.schema)
+        return ListContainer("from "+self.name, jx.sort(self.data, sort), self.schema)
 
     def select(self, select):
         selects = listwrap(select)
@@ -119,7 +119,7 @@ class ListContainer(Container):
 
     def window(self, window):
         _ = window
-        qb.window(self.data, window)
+        jx.window(self.data, window)
         return self
 
     def having(self, having):

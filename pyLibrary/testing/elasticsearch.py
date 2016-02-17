@@ -15,7 +15,7 @@ from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Index, Cluster
 from pyLibrary.debugs.logs import Log
 from pyLibrary.env.files import File
-from pyLibrary.queries import qb
+from pyLibrary.queries import jx
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import unwrap, wrap
 
@@ -59,7 +59,7 @@ class Fake_ES():
         f = convert.esfilter2where(query.query.filtered.filter)
         filtered=wrap([{"_id": i, "_source": d} for i, d in self.data.items() if f(d)])
         if query.fields:
-            return wrap({"hits": {"total":len(filtered), "hits": [{"_id":d._id, "fields":unwrap(qb.select([unwrap(d._source)], query.fields)[0])} for d in filtered]}})
+            return wrap({"hits": {"total":len(filtered), "hits": [{"_id":d._id, "fields":unwrap(jx.select([unwrap(d._source)], query.fields)[0])} for d in filtered]}})
         else:
             return wrap({"hits": {"total":len(filtered), "hits": filtered}})
 

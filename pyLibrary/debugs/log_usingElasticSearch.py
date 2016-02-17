@@ -16,7 +16,7 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, unwrap
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import qb
+from pyLibrary.queries import jx
 from pyLibrary.thread.threads import Thread, Queue
 from pyLibrary.debugs.text_logs import TextLog
 from pyLibrary.times.durations import MINUTE, SECOND
@@ -59,7 +59,7 @@ class TextLog_usingElasticSearch(TextLog):
                     for m in messages:
                         m.value.params = leafer(m.value.params)
                         m.value.error = leafer(m.value.error)
-                    for g, mm in qb.groupby(messages, size=self.batch_size):
+                    for g, mm in jx.groupby(messages, size=self.batch_size):
                         self.es.extend(mm)
                     bad_count = 0
             except Exception, e:

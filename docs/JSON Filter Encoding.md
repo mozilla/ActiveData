@@ -34,7 +34,7 @@ leaky abstraction.
 Since there is no standard, we will declare yet-another JSON filter format:  It uses prefix
 ordering; and is consistent with functional notation.
 
-| Operation                     | Qb Query                       | MongoDB                           | ElasticSearch                       |
+| Operation                     | JSON Query Expression                       | MongoDB                           | ElasticSearch                       |
 |:------------------------------|:-------------------------------|:----------------------------------|:------------------------------------|
 |Equality                       |`{"eq": {field: value}}`        |`{field: value}`                   |`{"term": {field: value}}`           |
 |Inequality `gt, gte, ne, lte, lt`|`{"gt": {field: value}}`      |`{field: {"$gt": value} }`         |`{"range": {field: {"gt":value}}}`   |
@@ -48,5 +48,5 @@ ordering; and is consistent with functional notation.
 |Script                         |`{"script": javascript}`        |`{"$where": javascript}`           |`{"script": {"script": mvel_script}}`|
 
 **Special note on nulls**
-  * Qb - null values do not `exists` and are considered `missing`
+  * JSON Expressions - null values do not `exists` and are considered `missing`
   * MongoDB and ES - null values `exist` and are not `missing`

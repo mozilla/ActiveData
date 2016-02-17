@@ -23,7 +23,7 @@ In this case, all rows in the result-set are grouped (aka edged) into buckets an
 
 Which can be used in an expression to calculate a variety of values, including the `result` of the latest build: `rows.last().result.ok`
 
-Window functions can be found in Postgres' PSQL and Oracle's PLSQL, but Qb has changed the names of the clauses to match a SQL query better.  For me, when I saw Oracle add window functions to SQL back in the 90s, it was a big step toward removing any need for the looping constructs we commonly find in procedural code.
+Window functions can be found in Postgres' PSQL and Oracle's PLSQL, but JSON Expressions have changed the names of the clauses to match a SQL query better.  For me, when I saw Oracle add window functions to SQL back in the 90s, it was a big step toward removing any need for the looping constructs we commonly find in procedural code.
 
 
 Having Clause

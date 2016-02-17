@@ -82,7 +82,7 @@ December.
 }</pre>
 </td>
 <td>
-<b>Qb Query</b>
+<b>JSON Query Expression</b>
 <pre>{
   "from":"public_bugs",
   "select":{
@@ -111,7 +111,7 @@ December.
   }]
 }</pre><br>
 <i>The edges clause defines how the data is grouped (aka partitioned)
-before the aggregate is calculated.  The Qb result will contain data for evey
+before the aggregate is calculated.  The JSON Expressions result will contain data for evey
 partition in the domain, even if it is empty.</i>
 </td>
 </tr>

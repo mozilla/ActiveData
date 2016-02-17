@@ -2,13 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-if (qb===undefined) var qb = {};
+if (jx===undefined) var jx = {};
 
 
-qb.column = {};
+jx.column = {};
 
 
-qb.column.normalize=function(column){
+jx.column.normalize=function(column){
 	if (isString(column)) {
 		return {"name": column};
 	}else if (!column.name){
@@ -19,7 +19,7 @@ qb.column.normalize=function(column){
 };//function
 
 
-qb.column.compile = function(resultColumn, sourceColumns, edges, useMVEL){  //useMVEL TO INDICATE THIS IS AN ES COLUMN
+jx.column.compile = function(resultColumn, sourceColumns, edges, useMVEL){  //useMVEL TO INDICATE THIS IS AN ES COLUMN
 
 	if (isString(resultColumn)){
 		Log.error("expecting a column definition, not a string");
@@ -29,9 +29,9 @@ qb.column.compile = function(resultColumn, sourceColumns, edges, useMVEL){  //us
 
 	if (resultColumn.domain){
 		if (resultColumn.domain.compare===undefined)
-			qb.domain.compile(resultColumn, sourceColumns);
+			jx.domain.compile(resultColumn, sourceColumns);
 	}else{
-		resultColumn.domain=qb.domain.value;
+		resultColumn.domain=jx.domain.value;
 	}//endif
 
 	resultColumn.sortOrder = 1;
@@ -123,8 +123,8 @@ qb.column.compile = function(resultColumn, sourceColumns, edges, useMVEL){  //us
 
 
 //MAKE THE WHERE TEST METHOD
-qb.where = {};
-qb.where.compile = function(whereClause, sourceColumns, edges){
+jx.where = {};
+jx.where.compile = function(whereClause, sourceColumns, edges){
 	var whereMethod = null;
 
 

@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 importScript("Dimension.js");
-importScript("qb/ESQuery.js");
-importScript("qb/qb.js");
+importScript("jx/ESQuery.js");
+importScript("jx/jx.js");
 
 if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 
@@ -174,7 +174,7 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 
 		]
 	};
-	releaseTracking.requiredFields = Array.union(releaseTracking.edges.select("esfilter").map(qb.requiredFields));
+	releaseTracking.requiredFields = Array.union(releaseTracking.edges.select("esfilter").map(jx.requiredFields));
 
 	{//FIND CURRENT RELEASE, AND ENSURE WE HAVE ENOUGH RELEASES!
 		var currentRelease = undefined;

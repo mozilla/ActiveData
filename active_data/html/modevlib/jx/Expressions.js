@@ -1,4 +1,4 @@
-function qb2function(expr){
+function jx2function(expr){
 
   if (expr == null) return function(){
     return null;
@@ -35,9 +35,9 @@ function qb2function(expr){
 expressions = {};
 
 expressions.when = function(expr){
-    var test = qb2function(expr.when);
-    var pass = qb2function(expr.then);
-    var fail = qb2function(expr.else);
+    var test = jx2function(expr.when);
+    var pass = jx2function(expr.then);
+    var fail = jx2function(expr.else);
     return function(value){
       if (test(value)) {
         return pass(value);
@@ -50,7 +50,7 @@ expressions.when = function(expr){
 
 expressions.eq = function (expr) {
   if (isArray(expr.eq)) {
-    var exprs = expr.eq.map(qb2function);
+    var exprs = expr.eq.map(jx2function);
     return function (value) {
       return exprs[0](value) == exprs[1](value);
     };

@@ -6,18 +6,18 @@
 // AGGREGATION
 ////////////////////////////////////////////////////////////////////////////////
 
-if (qb===undefined) var qb = {};
+if (jx===undefined) var jx = {};
 
 
-qb.aggregate = {};
-qb.aggregate.compile = function(select){
+jx.aggregate = {};
+jx.aggregate.compile = function(select){
 	if (select.aggregate === undefined) select.aggregate = "none";
 
-	if (qb.aggregate[select.aggregate] === undefined){
+	if (jx.aggregate[select.aggregate] === undefined){
 		Log.error("Do not know aggregate aggregate '" + select.aggregate + "'");
 	}//endif
 
-	qb.aggregate[select.aggregate](select);
+	jx.aggregate[select.aggregate](select);
 
 	//DEFAULT AGGREGATION USES A STRUCTURE (OR VALUE) THAT CHANGES
 	//SOME AGGREGATES DEFER calc() UNTIL LATER
@@ -40,7 +40,7 @@ qb.aggregate.compile = function(select){
 
 
 
-qb.aggregate.join = function(select){
+jx.aggregate.join = function(select){
 	if (select.separator === undefined) select.separator = '';
 
 	select.defaultValue = function(){
@@ -54,7 +54,7 @@ qb.aggregate.join = function(select){
 	};//method
 
 	select.domain = {};
-	Map.copy(qb.domain.value, select.domain);
+	Map.copy(jx.domain.value, select.domain);
 
 	select.domain.end=function(total){
 		return total.join(select.separator);
@@ -63,7 +63,7 @@ qb.aggregate.join = function(select){
 
 };
 
-qb.aggregate.average = function(select){
+jx.aggregate.average = function(select){
 	select.defaultValue = function(){
 		return {total:0.0, count:0.0};
 	};//method
@@ -112,11 +112,11 @@ qb.aggregate.average = function(select){
 		}
 	};
 };
-qb.aggregate.avg=qb.aggregate.average;
-qb.aggregate.mean=qb.aggregate.average;
+jx.aggregate.avg=jx.aggregate.average;
+jx.aggregate.mean=jx.aggregate.average;
 
 
-qb.aggregate.geomean = function(select){
+jx.aggregate.geomean = function(select){
 	select.defaultValue = function(){
 		return {total:0.0, count:0.0};
 	};//method
@@ -169,7 +169,7 @@ qb.aggregate.geomean = function(select){
 
 ////////////////////////////////////////////////////////////////////////////////
 // THIS VALUE WILL BE SET ONCE AND ONLY ONCE
-qb.aggregate.none = function(select){
+jx.aggregate.none = function(select){
 	select.defaultValue = function(){
 		return null;
 	};//method
@@ -182,7 +182,7 @@ qb.aggregate.none = function(select){
 	};//method
 
 	select.domain = {};
-	Map.copy(qb.domain.value, select.domain);
+	Map.copy(jx.domain.value, select.domain);
 
 
 };
@@ -190,7 +190,7 @@ qb.aggregate.none = function(select){
 
 ////////////////////////////////////////////////////////////////////////////////
 // THE AGGREGATE MAY BE ACCUMULATED MANY TIMES BUT ONLY ONE VALUE IS SET
-qb.aggregate.one = function(select){
+jx.aggregate.one = function(select){
 	select.defaultValue = function(){
 		return null;
 	};//method
@@ -204,7 +204,7 @@ qb.aggregate.one = function(select){
 	};//method
 
 	select.domain = {};
-	Map.copy(qb.domain.value, select.domain);
+	Map.copy(jx.domain.value, select.domain);
 
 	select.domain.end=function(value){
 		if (value == null && select["default"]!==undefined) return eval(select["default"]);
@@ -214,7 +214,7 @@ qb.aggregate.one = function(select){
 
 ////////////////////////////////////////////////////////////////////////////////
 // PICK ANY VALUE AS THE AGGREGATE
-qb.aggregate.any = function(select){
+jx.aggregate.any = function(select){
 	select.defaultValue = function(){
 		return null;
 	};//method
@@ -226,7 +226,7 @@ qb.aggregate.any = function(select){
 	};//method
 
 	select.domain = {};
-	Map.copy(qb.domain.value, select.domain);
+	Map.copy(jx.domain.value, select.domain);
 
 	select.domain.end=function(value){
 		if (value == null && select["default"]!==undefined) return eval(select["default"]);
@@ -234,7 +234,7 @@ qb.aggregate.any = function(select){
 	};//method
 };
 
-qb.aggregate.sum = function(select){
+jx.aggregate.sum = function(select){
 	select.defaultValue = function(){
 		return null;
 	};//method
@@ -245,7 +245,7 @@ qb.aggregate.sum = function(select){
 	};//method
 
 	select.domain = {};
-	Map.copy(qb.domain.value, select.domain);
+	Map.copy(jx.domain.value, select.domain);
 
 	select.domain.end=function(value){
 		if (value == null && select["default"]!==undefined) return eval(select["default"]);
@@ -255,12 +255,12 @@ qb.aggregate.sum = function(select){
 
 
 };
-qb.aggregate.add=qb.aggregate.sum;
-qb.aggregate.X1=qb.aggregate.sum;
+jx.aggregate.add=jx.aggregate.sum;
+jx.aggregate.X1=jx.aggregate.sum;
 
 
 //SUM OF SQUARES
-qb.aggregate.X2 = function(select){
+jx.aggregate.X2 = function(select){
 	select.defaultValue = function(){
 		return null;
 	};//method
@@ -271,7 +271,7 @@ qb.aggregate.X2 = function(select){
 	};//method
 
 	select.domain = {};
-	Map.copy(qb.domain.value, select.domain);
+	Map.copy(jx.domain.value, select.domain);
 
 	select.domain.end=function(value){
 		if (value == null && select["default"]!==undefined) return eval(select["default"]);
@@ -281,7 +281,7 @@ qb.aggregate.X2 = function(select){
 
 
 //SUM OF SQUARES
-qb.aggregate.stddev = function(select){
+jx.aggregate.stddev = function(select){
 	select.defaultValue = function(){
 		return {z0:0.0, z1:0.0, z2:0.0};
 	};//method
@@ -337,7 +337,7 @@ qb.aggregate.stddev = function(select){
 
 
 //RETURN ZERO (FOR NO DATA) OR ONE (FOR DATA)
-qb.aggregate.binary = function(select){
+jx.aggregate.binary = function(select){
 	select.defaultValue = function(){
 		return 0;
 	};//method
@@ -348,14 +348,14 @@ qb.aggregate.binary = function(select){
 	};//method
 
 	select.domain = {};
-	Map.copy(qb.domain.value, select.domain);
+	Map.copy(jx.domain.value, select.domain);
 };
-qb.aggregate.exists=qb.aggregate.binary;
+jx.aggregate.exists=jx.aggregate.binary;
 
 
 
 
-qb.aggregate.count = function(select){
+jx.aggregate.count = function(select){
 	select.defaultValue = function(){
 		return 0;
 	};//method
@@ -366,10 +366,10 @@ qb.aggregate.count = function(select){
 	};//method
 
 	select.domain = {};
-	Map.copy(qb.domain.value, select.domain);
+	Map.copy(jx.domain.value, select.domain);
 };
 
-qb.aggregate.maximum = function(select){
+jx.aggregate.maximum = function(select){
 	select.defaultValue = function(){
 		return null;
 	};//method
@@ -381,15 +381,15 @@ qb.aggregate.maximum = function(select){
 	};//method
 
 	select.domain = {};
-	Map.copy(qb.domain.value, select.domain);
+	Map.copy(jx.domain.value, select.domain);
 	select.domain.end=function(value){
 		if (value == null && select["default"]!==undefined) return select["default"];
 		return value;
 	};//method
 };
-qb.aggregate.max = qb.aggregate.maximum;
+jx.aggregate.max = jx.aggregate.maximum;
 
-qb.aggregate.minimum = function(select){
+jx.aggregate.minimum = function(select){
 	select.defaultValue = function(){
 		return null;
 	};//method
@@ -400,7 +400,7 @@ qb.aggregate.minimum = function(select){
 		return total;
 	};//method
 
-	select.domain=Map.copy(qb.domain.value, {});
+	select.domain=Map.copy(jx.domain.value, {});
 
 	select.domain.end=function(value){
 		if (value == null && select["default"]!==undefined) return select["default"];
@@ -408,10 +408,10 @@ qb.aggregate.minimum = function(select){
 	};//method
 
 };
-qb.aggregate.min = qb.aggregate.minimum;
+jx.aggregate.min = jx.aggregate.minimum;
 
 
-qb.aggregate.percentile = function(select){
+jx.aggregate.percentile = function(select){
 	select.defaultValue = function(){
 		return {list:[]};
 	};//method
@@ -475,7 +475,7 @@ qb.aggregate.percentile = function(select){
 	};
 };
 
-qb.aggregate.median = function(select){
+jx.aggregate.median = function(select){
 	select.defaultValue = function(){
 		return {list:[]};
 	};//method
@@ -541,7 +541,7 @@ qb.aggregate.median = function(select){
 
 
 
-qb.aggregate.middle = function(select){
+jx.aggregate.middle = function(select){
 	select.defaultValue = function(){
 		return {list:[]};
 	};//method
@@ -606,7 +606,7 @@ qb.aggregate.middle = function(select){
 };
 
 
-qb.aggregate.array = function(select){
+jx.aggregate.array = function(select){
 	select.defaultValue = function(){
 		return {list:[]};
 	};//method
@@ -643,10 +643,10 @@ qb.aggregate.array = function(select){
 		}
 	};
 };
-qb.aggregate.append = qb.aggregate.array;
-qb.aggregate.list = qb.aggregate.array;
+jx.aggregate.append = jx.aggregate.array;
+jx.aggregate.list = jx.aggregate.array;
 
-qb.aggregate.union = function(select){
+jx.aggregate.union = function(select){
 	select.defaultValue = function(){
 		return {map:{}};
 	};//method

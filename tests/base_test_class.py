@@ -23,8 +23,8 @@ from pyLibrary.debugs.logs import Log, Except, constants
 from pyLibrary.dot import wrap, coalesce, unwrap
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
-from pyLibrary.queries import qb, containers
-from pyLibrary.queries.qb_usingES import FromES
+from pyLibrary.queries import jx, containers
+from pyLibrary.queries.jx_usingES import FromES
 from pyLibrary.queries.query import Query
 from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
@@ -60,7 +60,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
         "name": "EXAMPLE TEMPLATE",
         "metadata": {},             # OPTIONAL DATA SHAPE REQUIRED FOR NESTED DOCUMENT QUERIES
         "data": [],                  # THE DOCUMENTS NEEDED FOR THIS TEST
-        "query": {                   # THE Qb QUERY
+        "query": {                   # THE JSON QUERY EXPRESSION
             "from": base_test_class.settings.backend_es.index,      # base_test_class.settings.backend_es.index WILL BE REPLACED WITH DATASTORE FILLED WITH data
             "edges": []              # THIS FILE IS EXPECTING EDGES (OR GROUP BY)
         },
@@ -273,7 +273,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
             if not query.sort:
                 try:
                     #result.data MAY BE A LIST OF VALUES, NOT OBJECTS
-                    data_columns = qb.sort(set(qb.get_columns(result.data, leaves=True)) | set(qb.get_columns(expect.data, leaves=True)), "name")
+                    data_columns = jx.sort(set(jx.get_columns(result.data, leaves=True)) | set(jx.get_columns(expect.data, leaves=True)), "name")
                 except Exception:
                     data_columns = []
 
@@ -281,20 +281,20 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
                 if isinstance(expect.data, list):
                     try:
-                        expect.data = qb.sort(expect.data, sort_order.name)
+                        expect.data = jx.sort(expect.data, sort_order.name)
                     except Exception:
                         pass
                 if isinstance(result.data, list):
-                    result.data = qb.sort(result.data, sort_order.name)
+                    result.data = jx.sort(result.data, sort_order.name)
         elif result.meta.format == "cube" and len(result.edges) == 1 and result.edges[0].name == "rownum" and not query.sort:
             header = list(result.data.keys())
 
             result.data = cube2list(result.data)
-            result.data = qb.sort(result.data, header)
+            result.data = jx.sort(result.data, header)
             result.data = list2cube(result.data, header)
 
             expect.data = cube2list(expect.data)
-            expect.data = qb.sort(expect.data, header)
+            expect.data = jx.sort(expect.data, header)
             expect.data = list2cube(expect.data, header)
 
         # CONFIRM MATCH
@@ -348,8 +348,8 @@ def sort_table(result):
     SORT ROWS IN TABLE, EVEN IF ELEMENTS ARE JSON
     """
     data = wrap([{unicode(i): v for i, v in enumerate(row)} for row in result.data])
-    sort_columns = qb.sort(set(qb.get_columns(data, leaves=True).name))
-    data = qb.sort(data, sort_columns)
+    sort_columns = jx.sort(set(jx.get_columns(data, leaves=True).name))
+    data = jx.sort(data, sort_columns)
     result.data = [tuple(row[unicode(i)] for i in range(len(result.header))) for row in data]
 
 
@@ -402,7 +402,7 @@ class FakeHttp(object):
         text = convert.utf82unicode(body)
         text = replace_vars(text)
         data = convert.json2value(text)
-        result = qb.run(data)
+        result = jx.run(data)
         output_bytes = convert.unicode2utf8(convert.value2json(result))
         return wrap({
             "status_code": 200,

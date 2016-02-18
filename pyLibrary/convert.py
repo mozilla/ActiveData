@@ -644,7 +644,7 @@ json_decoder = json.JSONDecoder().decode
 
 
 def json_schema_to_markdown(schema):
-    from pyLibrary.queries import qb
+    from pyLibrary.queries import jx
 
     def _md_code(code):
         return "`"+code+"`"
@@ -676,7 +676,7 @@ def json_schema_to_markdown(schema):
     lines.append(schema.description)
     lines.append("")
 
-    for k, v in qb.sort(schema.properties.items(), 0):
+    for k, v in jx.sort(schema.properties.items(), 0):
         full_name = k
         if v.type in ["object", "array", "nested"]:
             lines.append("##"+_md_code(full_name)+" Property")

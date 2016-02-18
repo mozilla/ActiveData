@@ -18,9 +18,9 @@ Documentation
 -------------
 
 - [Using this Query Tool](../docs/ActiveData Query Tool.pdf)
-- [Unittest Tutorial](../docs/Qb_Tutorial.md)
-- [qb Expressions](../docs/Qb_Expressions.md)
-- [Reference Documentation](../docs/Qb_Reference.md)
+- [Unittest Tutorial](../docs/jx_tutorial.md)
+- [JSON Expressions](../docs/jx_expressions.md)
+- [Reference Documentation](../docs/jx_reference.md)
 - [Bugzilla Tutorial](../docs/BZ_Tutorial.md)
 - [ActiveData code on Github](https://github.com/klahnakoski/ActiveData)
 

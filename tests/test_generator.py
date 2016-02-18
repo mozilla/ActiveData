@@ -1,5 +1,5 @@
 
-#TODO: COMBINE THESE QUERY FEATURES TO TEST ALL Qb QUERY TYPES
+#TODO: COMBINE THESE QUERY FEATURES TO TEST ALL JSON QUERY EXPRESSION TYPES
 # 4 - select None/single/list(1)/list(2)
 # 4 - select aggregates/setop/aggop/count(no value)
 # 5 - deep select: gparent/parent/self/child/gchild

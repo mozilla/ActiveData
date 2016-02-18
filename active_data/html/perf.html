@@ -49,12 +49,12 @@
         'modevlib/aLibrary.js',
         'modevlib/Settings.js',
         'modevlib/rest/ElasticSearch.js',
-        'modevlib/qb/ESQuery.js',
+        'modevlib/jx/ESQuery.js',
         'modevlib/charts/aColor.js',
         'modevlib/charts/cccChart.js',
         "modevlib/gui/GUI.js",
         "modevlib/css/menu.css",
-        'modevlib/qb/qb.js',
+        'modevlib/jx/jx.js',
         'modevlib/Dimension-Performance.js'
     ], function () {
         $("#description").html(
@@ -139,7 +139,7 @@
 
             });
 
-            chart.list = Qb.sort(chart.list, ["date.value"]);
+            chart.list = jx.sort(chart.list, ["date.value"]);
 
             aChart.showScatter({
                 "id": "chart",

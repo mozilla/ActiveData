@@ -134,7 +134,7 @@ var chart = function*(testGroup){
 	a = Log.action("Make chart", true);
 	try {
 		//SORT REVISIONS BY build_date
-		var revisions = (yield(qb.calc2List({
+		var revisions = (yield(jx.calc2List({
 			"from": testGroup.details,
 			"select": {"value": "build_date", "aggregate": "min"},
 			"edges": ["revision"],
@@ -222,7 +222,7 @@ var getDetails = function*(group, testGroups){
 
 		addGroupId(success, ["suite", "test", "platform", "build_type"]);
 
-		var groupedSuccesses = (yield (qb.calc2List({
+		var groupedSuccesses = (yield (jx.calc2List({
 			"from": success.data,
 			"select": [
 				{"name": "last_good", "value": "build_date", "aggregate": "max"},

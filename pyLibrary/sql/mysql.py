@@ -28,7 +28,7 @@ from pyLibrary.dot import coalesce, wrap, listwrap, unwrap
 from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import qb
+from pyLibrary.queries import jx
 from pyLibrary.strings import indent
 from pyLibrary.strings import outdent
 from pyLibrary.env.files import File
@@ -446,7 +446,7 @@ class MySQL(object):
             self.cursor.close()
             self.cursor = self.db.cursor()
         else:
-            for i, g in qb.groupby(backlog, size=MAX_BATCH_SIZE):
+            for i, g in jx.groupby(backlog, size=MAX_BATCH_SIZE):
                 sql = self.preamble + ";\n".join(g)
                 try:
                     if self.debug:
@@ -501,7 +501,7 @@ class MySQL(object):
         keys = set()
         for r in records:
             keys |= set(r.keys())
-        keys = qb.sort(keys)
+        keys = jx.sort(keys)
 
         try:
             command = \
@@ -605,7 +605,7 @@ class MySQL(object):
             return SQL(column_name.value + " AS " + self.quote_column(column_name.name))
 
     def sort2sqlorderby(self, sort):
-        sort = qb.normalize_sort_parameters(sort)
+        sort = jx.normalize_sort_parameters(sort)
         return ",\n".join([self.quote_column(s.field) + (" DESC" if s.sort == -1 else " ASC") for s in sort])
 
 
@@ -632,7 +632,7 @@ def int_list_packer(term, values):
     ranges = []
     exclude = set()
 
-    sorted = qb.sort(values)
+    sorted = jx.sort(values)
 
     last = sorted[0]
     curr_start = last
@@ -690,10 +690,10 @@ def int_list_packer(term, values):
     if ranges:
         r = {"or": [{"range": {term: r}} for r in ranges]}
         if exclude:
-            r = {"and": [r, {"not": {"terms": {term: qb.sort(exclude)}}}]}
+            r = {"and": [r, {"not": {"terms": {term: jx.sort(exclude)}}}]}
         if singletons:
             return {"or": [
-                {"terms": {term: qb.sort(singletons)}},
+                {"terms": {term: jx.sort(singletons)}},
                 r
             ]}
         else:

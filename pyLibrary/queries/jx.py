@@ -26,7 +26,7 @@ from pyLibrary.maths import Math
 from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.cubes.aggs import cube_aggs
-from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, compile_expression, qb_expression_to_function
+from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, compile_expression, jx_expression_to_function
 from pyLibrary.queries.flat_list import FlatList
 from pyLibrary.queries.index import Index
 from pyLibrary.queries.query import Query, _normalize_selects, sort_direction, _normalize_select
@@ -34,8 +34,8 @@ from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.unique_index import UniqueIndex
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
-# qb QUERY DOCUMENTATION: https://github.com/klahnakoski/qb/tree/master/docs
-# START HERE: https://github.com/klahnakoski/qb/blob/master/docs/Qb_Reference.md
+# JSON QUERY EXPRESSION DOCUMENTATION: https://github.com/klahnakoski/jx/tree/master/docs
+# START HERE: https://github.com/klahnakoski/jx/blob/master/docs/jx_reference.md
 # TODO: USE http://docs.sqlalchemy.org/en/latest/core/tutorial.html AS DOCUMENTATION FRAMEWORK
 
 _Column = None
@@ -548,7 +548,7 @@ def sort(data, fieldnames=None):
                     return value_compare(l, r, fieldnames.sort)
                 return DictList([unwrap(d) for d in sorted(data, cmp=_compare_v)])
             elif isinstance(fieldnames.value, Mapping):
-                func = qb_expression_to_function(fieldnames.value)
+                func = jx_expression_to_function(fieldnames.value)
                 def _compare_o(left, right):
                     return value_compare(func(coalesce(left)), func(coalesce(right)), fieldnames.sort)
                 return DictList([unwrap(d) for d in sorted(data, cmp=_compare_o)])
@@ -559,7 +559,7 @@ def sort(data, fieldnames=None):
 
         formal = query._normalize_sort(fieldnames)
         for f in formal:
-            f.func = qb_expression_to_function(f.value)
+            f.func = jx_expression_to_function(f.value)
 
         def comparer(left, right):
             left = coalesce(left)
@@ -645,7 +645,7 @@ def filter(data, where):
         return data.filter(where)
 
     if isinstance(data, (list, set)):
-        temp = qb_expression_to_function(where)
+        temp = jx_expression_to_function(where)
         dd = wrap(data)
         return [d for i, d in enumerate(data) if temp(wrap(d), i, dd)]
     else:
@@ -966,7 +966,7 @@ def window(data, param):
     edges = param.edges          # columns to gourp by
     where = param.where          # DO NOT CONSIDER THESE VALUES
     sortColumns = param.sort            # columns to sort by
-    calc_value = wrap_function(qb_expression_to_function(param.value)) # function that takes a record and returns a value (for aggregation)
+    calc_value = wrap_function(jx_expression_to_function(param.value)) # function that takes a record and returns a value (for aggregation)
     aggregate = param.aggregate  # WindowFunction to apply
     _range = param.range          # of form {"min":-10, "max":0} to specify the size and relative position of window
 

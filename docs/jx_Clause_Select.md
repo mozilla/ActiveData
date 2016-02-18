@@ -6,10 +6,10 @@
 Introduction
 ------------
 
-Getting a feel for the Qb `select` clause is easiest done by comparing to SQL.  Just like SQL, the `select` clause is used for renaming:
+Getting a feel for the JSON Expressions `select` clause is easiest done by comparing to SQL.  Just like SQL, the `select` clause is used for renaming:
 
 <table><tr><td>
-<b>Qb</b><br>
+<b>JSON Expressions</b><br>
 <pre>
 {
     "from": test,
@@ -36,7 +36,7 @@ FROM
 </pre>
 </td></tr></table>
 
-Qb is clearly more verbose than SQL, but there are many shortcuts to mitigate this, plus the `select` clause can do more than SQL.
+JSON expressions are clearly more verbose than SQL, but there are many shortcuts to mitigate this, plus the `select` clause can do more than SQL.
 
 
 The Standard `select` Clause 
@@ -434,7 +434,7 @@ The star can be used on the end of a path.  The path is not flattened, but the s
 Aggregation
 -----------
 
-When a Qb query includes a `groupby` or `edges` clause, the members of the `select` clause must include the `aggregate` property; which indicates what to do with the many possible values being assigned to the `name`.
+When a JSON query expressions includes a `groupby` or `edges` clause, the members of the `select` clause must include the `aggregate` property; which indicates what to do with the many possible values being assigned to the `name`.
 
 
 

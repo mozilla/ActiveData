@@ -13,7 +13,7 @@ the same data.  Child partitions divide the dimension into mutually exclusive
 parts.  A well-behaved partition will cover the dimension's domain,
 ill-behaved partitions are "compiled" to be well-behaved so nothing is missed.
 
-Dimensions are similar to domain clauses in Qb queries, with additional
+Dimensions are similar to domain clauses in JSON query expressions, with additional
 attributes to help apply that domain over many different queries.
 
   - **name** - humane words to describe the child dimension

@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 importScript("Dimension.js");
-importScript("qb/ESQuery.js");
+importScript("jx/ESQuery.js");
 
 if (!Mozilla) var Mozilla={"name":"Mozilla", "edges":[]};
 

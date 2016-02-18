@@ -8,14 +8,14 @@ importScript("../modevlib/aLibrary.js");
 importScript("../modevlib/Settings.js");
 
 importScript("../modevlib/MozillaPrograms.js");
-importScript("../modevlib/qb/ESQuery.js");
+importScript("../modevlib/jx/ESQuery.js");
 importScript("../modevlib/charts/cccChart.js");
 importScript("../modevlib/charts/aColor.js");
 importScript([
 	"../css/menu.css"
 ]);
 importScript("../modevlib/math/Stats.js");
-importScript("../modevlib/qb/qb.js");
+importScript("../modevlib/jx/jx.js");
 
 
 var search = function*(query){

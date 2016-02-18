@@ -31,7 +31,7 @@ from pyLibrary.dot import wrap, coalesce, Dict
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.queries import containers
-from pyLibrary.queries import qb, meta
+from pyLibrary.queries import jx, meta
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.meta import FromESMetadata, TOO_OLD
 from pyLibrary.strings import expand_template
@@ -130,13 +130,13 @@ def query(path):
             if Log.profiler or Log.cprofiler:
                 # THREAD CREATION IS DONE TO CAPTURE THE PROFILING DATA
                 def run(please_stop):
-                    return qb.run(data)
+                    return jx.run(data)
                 thread = Thread.run("run query", run)
                 result = thread.join()
             else:
-                result = qb.run(data)
+                result = jx.run(data)
 
-            if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, qb SHOULD ALWAYS RETURN Containers
+            if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                 result = result.format(data.format)
 
             if data.meta.save:
@@ -169,14 +169,14 @@ def get_raw_json(path):
             args = wrap(Dict(**flask.request.args))
             limit = args.limit if args.limit else 10
             args.limit = None
-            result = qb.run({
+            result = jx.run({
                 "from": path,
                 "where": {"eq": args},
                 "limit": limit,
                 "format": "list"
             })
 
-            if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, qb SHOULD ALWAYS RETURN Containers
+            if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                 result = result.format("list")
 
         result.meta.active_data_response_time = active_data_timer.duration

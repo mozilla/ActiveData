@@ -119,7 +119,7 @@ class Rename(Namespace):
 
     def _convert_clause(self, clause):
         """
-        Qb QUERIES HAVE MANY CLAUSES WITH SIMILAR COLUMN DELCARATIONS
+        JSON QUERY EXPRESSIONS HAVE MANY CLAUSES WITH SIMILAR COLUMN DELCARATIONS
         """
         clause = wrap(clause)
 

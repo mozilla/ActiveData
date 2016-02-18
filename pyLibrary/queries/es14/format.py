@@ -233,7 +233,7 @@ set_default(format_dispatch, {
 def _pull(s, agg):
     """
     USE s.pull TO GET VALUE OUT OF agg
-    :param s: THE QB SELECT CLAUSE
+    :param s: THE JSON EXPRESSION SELECT CLAUSE
     :param agg: THE ES AGGREGATE OBJECT
     :return:
     """

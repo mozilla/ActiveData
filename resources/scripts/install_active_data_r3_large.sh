@@ -76,6 +76,12 @@ sudo pip install supervisor-plus-cron
 cd /usr/bin
 sudo ln -s /usr/local/bin/supervisorctl supervisorctl
 
+#INSTALL gunicorn
+sudo pip install gunicorn
+
+
+
+
 
 # CLONE ACTIVEDATA
 cd ~

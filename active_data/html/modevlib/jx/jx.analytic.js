@@ -1,20 +1,20 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-if (qb===undefined) var qb = {};
+if (jx===undefined) var jx = {};
 
-qb.analytic={};
+jx.analytic={};
 
-qb.analytic.ROWNUM="__rownum";
-qb.analytic.ROWS="__rows";
+jx.analytic.ROWNUM="__rownum";
+jx.analytic.ROWS="__rows";
 
 
-qb.analytic.run=function(query){
+jx.analytic.run=function(query){
   if (query.analytic){
     if (!(query.analytic instanceof Array)) query.analytic = [query.analytic];
     //ANALYTIC COLUMNS ARE ADDED IN ORDER SO EACH CAN REFER TO THE PREVIOUS
     for(var a = 0; a < query.analytic.length; a++){
-      qb.analytic.add(query, query.analytic[a]);
+      jx.analytic.add(query, query.analytic[a]);
     }//for
   }//endif
 };//method
@@ -22,7 +22,7 @@ qb.analytic.run=function(query){
 
 //from IS AN ARRAY OF OBJECTS
 //sourceColumns IS AN ARRAY OF COLUMNS DEFINING THE TUPLES IN from
-qb.analytic.add=function(query, analytic){
+jx.analytic.add=function(query, analytic){
 
   var edges = analytic.edges;    //ARRAY OF COLUMN NAMES
   if (edges===undefined) Log.error("Analytic expects 'edges' to be defined, even if empty");
@@ -47,11 +47,11 @@ qb.analytic.add=function(query, analytic){
     Log.error("All columns must have different names");});
   analytic.columnIndex=sourceColumns.length;
   sourceColumns[analytic.columnIndex] = analytic;
-  analytic.calc=qb.analytic.compile(sourceColumns, analytic.value);
-  analytic.domain=qb.domain.value;
+  analytic.calc=jx.analytic.compile(sourceColumns, analytic.value);
+  analytic.domain=jx.domain.value;
 
   if (analytic.where===undefined) analytic.where="true";
-  var where=qb.analytic.compile(sourceColumns, analytic.where);
+  var where=jx.analytic.compile(sourceColumns, analytic.where);
 
 //  sourceColumns=sourceColumns.copy();
 
@@ -67,7 +67,7 @@ qb.analytic.add=function(query, analytic){
     for(i = from.length; i --;){
       var row = from[i];
       if (copyEdge) row[query.edges[0].name]=parts[i];
-//      if (copyEdge) row[query.edges[0].name]=query.edges[0].domain.end(parts[i]);  CONFLICTS WITH qb.sort.compile(), WHICH EXPECTS A PARTITION OBJECT
+//      if (copyEdge) row[query.edges[0].name]=query.edges[0].domain.end(parts[i]);  CONFLICTS WITH jx.sort.compile(), WHICH EXPECTS A PARTITION OBJECT
       if (!where(null, -1, row)){
         nullGroup.push(row);
         continue;
@@ -79,7 +79,7 @@ qb.analytic.add=function(query, analytic){
     for(i = from.length; i --;){
       var row = from[i];
       if (copyEdge) row[query.edges[0].name]=parts[i];
-//      if (copyEdge) row[query.edges[0].name]=query.edges[0].domain.end(parts[i]);  CONFLICTS WITH qb.sort.compile(), WHICH EXPECTS A PARTITION OBJECT
+//      if (copyEdge) row[query.edges[0].name]=query.edges[0].domain.end(parts[i]);  CONFLICTS WITH jx.sort.compile(), WHICH EXPECTS A PARTITION OBJECT
       if (!where(null, -1, row)){
         nullGroup.push(row);
         continue;
@@ -110,7 +110,7 @@ qb.analytic.add=function(query, analytic){
   var sortFunction;
   if (analytic.sort){
     if (!(analytic.sort instanceof Array)) analytic.sort=[analytic.sort];
-    sortFunction=qb.sort.compile(analytic.sort, sourceColumns, true);
+    sortFunction=jx.sort.compile(analytic.sort, sourceColumns, true);
   }//endif
 
   for(var g=allGroups.length;g--;){
@@ -118,31 +118,31 @@ qb.analytic.add=function(query, analytic){
     if (sortFunction) group.sort(sortFunction);
 
     for(rownum=group.length;rownum--;){
-      group[rownum][qb.analytic.ROWNUM]=rownum;    //ASSIGN ROWNUM TO EVERY ROW
-      group[rownum][qb.analytic.ROWS]=group;    //EVERY ROW HAS REFERENCE TO IT'S GROUP
+      group[rownum][jx.analytic.ROWNUM]=rownum;    //ASSIGN ROWNUM TO EVERY ROW
+      group[rownum][jx.analytic.ROWS]=group;    //EVERY ROW HAS REFERENCE TO IT'S GROUP
     }//for
   }//for
   {//NULL GROUP
     if (sortFunction) nullGroup.sort(sortFunction);
 
     for(rownum=nullGroup.length;rownum--;){
-      nullGroup[rownum][qb.analytic.ROWNUM]=null;
-      nullGroup[rownum][qb.analytic.ROWS]=null;
+      nullGroup[rownum][jx.analytic.ROWNUM]=null;
+      nullGroup[rownum][jx.analytic.ROWS]=null;
     }//for
   }
 
 
   //PERFORM CALC
   for(var i=from.length;i--;){
-    from[i][analytic.name]=analytic.calc(from[i][qb.analytic.ROWS], from[i][qb.analytic.ROWNUM], from[i]);
-    from[i][qb.analytic.ROWNUM]=undefined;  //CLEANUP
-    from[i][qb.analytic.ROWS]=undefined;  //CLEANUP
+    from[i][analytic.name]=analytic.calc(from[i][jx.analytic.ROWS], from[i][jx.analytic.ROWNUM], from[i]);
+    from[i][jx.analytic.ROWNUM]=undefined;  //CLEANUP
+    from[i][jx.analytic.ROWS]=undefined;  //CLEANUP
   }//for
 
 };
 
 
-qb.analytic.compile = function(sourceColumns, expression){
+jx.analytic.compile = function(sourceColumns, expression){
   var func;
 
 

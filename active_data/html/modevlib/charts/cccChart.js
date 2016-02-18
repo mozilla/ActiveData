@@ -273,13 +273,13 @@ var aChart = {};
                         other += v;
                     }//endif
                 });
-                values = qb.sort(values, {"value": "value", "sort": -1});
+                values = jx.sort(values, {"value": "value", "sort": -1});
                 if (other > 0) values.append({"name": "Other", "value": other, "style": params.otherStyle});
             } else {
                 values = cube.map(function (v, i) {
                     return {"name": seriesLabels[i], "value": v, "style": chartCube.edges[0].domain.partitions[i].style}
                 });
-                values = qb.sort(values, {"value": "value", "sort": -1});
+                values = jx.sort(values, {"value": "value", "sort": -1});
             }//endif
         } else if (chartCube.edges.length == 2) {
             var aLabels = getAxisLabels(chartCube.edges[0]);
@@ -312,7 +312,7 @@ var aChart = {};
                         allOther += other;
                     }//endif
                 });
-                values = qb.sort(values, {"value": "value", "sort": -1});
+                values = jx.sort(values, {"value": "value", "sort": -1});
                 if (allOther > 0) values.append({"name": "Other", "value": allOther, "style": params.otherStyle});
             } else {
                 Log.error("having hierarchical dimension without a minPercent is not implemented");
@@ -522,7 +522,7 @@ var aChart = {};
                     var self = this;
                     dateMarks.forall(function (m) {
                         try {
-                            self.chart.markEvent(Date.newInstance(m.date).format(qb.domain.time.DEFAULT_FORMAT), m.name, m.style);
+                            self.chart.markEvent(Date.newInstance(m.date).format(jx.domain.time.DEFAULT_FORMAT), m.name, m.style);
                         } catch (e) {
                             Log.warning("markEvent failed", e);
                         }
@@ -675,21 +675,21 @@ var aChart = {};
             //NUMBER OF EDGES
             if (chartCube.edges.length == 1) {
                 //TYPE OF EDGES
-                if (qb.domain.ALGEBRAIC.contains(chartCube.edges[0].domain.type)) {
+                if (jx.domain.ALGEBRAIC.contains(chartCube.edges[0].domain.type)) {
                     type = "line";
                 } else {
                     type = "bar";
                 }//endif
             } else if (chartCube.edges.length == 2) {
-                if (qb.domain.ALGEBRAIC.contains(chartCube.edges[0].domain.type)) {
-                    if (qb.domain.ALGEBRAIC.contains(chartCube.edges[1].domain.type)) {
+                if (jx.domain.ALGEBRAIC.contains(chartCube.edges[0].domain.type)) {
+                    if (jx.domain.ALGEBRAIC.contains(chartCube.edges[1].domain.type)) {
                         type = "heat";
                     } else {
                         type = "bar";
 //          params.orientation="horizontal"
                     }//endif
                 } else {
-                    if (qb.domain.ALGEBRAIC.contains(chartCube.edges[1].domain.type)) {
+                    if (jx.domain.ALGEBRAIC.contains(chartCube.edges[1].domain.type)) {
                         type = "line";
                     } else {
                         type = "bar";
@@ -811,7 +811,7 @@ var aChart = {};
             legendAlign: "center",
             orientation: 'vertical',
             timeSeries: (xaxis.domain.type == "time"),
-            timeSeriesFormat: JavaDateFormat2ProtoVisDateFormat(qb.domain.time.DEFAULT_FORMAT),
+            timeSeriesFormat: JavaDateFormat2ProtoVisDateFormat(jx.domain.time.DEFAULT_FORMAT),
             showDots: true,
             showValues: false,
             "stacked": stacked,
@@ -869,7 +869,7 @@ var aChart = {};
                     var self = this;
                     dateMarks.forall(function (m) {
                         try {
-                            self.chart.markEvent(m.date.format(qb.domain.time.DEFAULT_FORMAT), m.name, m.style);
+                            self.chart.markEvent(m.date.format(jx.domain.time.DEFAULT_FORMAT), m.name, m.style);
                         } catch (e) {
                             Log.warning("markEvent failed", e);
                         }
@@ -895,7 +895,7 @@ var aChart = {};
                 for (var s = 0; s < chartCube.select.length; s++) {
                     data.push(cube[chartCube.select[s].name]);
                 }//for
-            } else if (qb.domain.ALGEBRAIC.contains(chartCube.edges[0].domain.type)) {
+            } else if (jx.domain.ALGEBRAIC.contains(chartCube.edges[0].domain.type)) {
                 //ALGEBRAIC DOMAINS ARE PROBABLY NOT MULTICOLORED
                 data = [cube[chartCube.select.name]]
             } else {
@@ -1087,13 +1087,13 @@ var aChart = {};
                 try {
                     var specific;
                     if (query.edges.length == 2) {
-                        specific = qb.specificBugs(query, [series, x]);
+                        specific = jx.specificBugs(query, [series, x]);
                     } else {
-                        specific = qb.specificBugs(query, [x]);
+                        specific = jx.specificBugs(query, [x]);
                     }//endif
 
 
-                    //      var specific=qb.specificBugs(query, [series, x]);
+                    //      var specific=jx.specificBugs(query, [series, x]);
                     var buglist = (yield (ESQuery.run(specific)));
                     //      buglist=buglist.list.map(function(b){return b.bug_id;});
                     if (buglist.cube === undefined) buglist.cube = buglist.list;
@@ -1136,7 +1136,7 @@ var aChart = {};
         var labels;
         if (axis.domain.type == "time") {
             if (axis.allowNulls) Log.error("Charting lib can not handle NULL domain value.");
-            var format = qb.domain.time.DEFAULT_FORMAT;
+            var format = jx.domain.time.DEFAULT_FORMAT;
             labels = axis.domain.partitions.map(function (v, i) {
                 if (v.value !== undefined) {
                     return Date.newInstance(v.value).format(format);

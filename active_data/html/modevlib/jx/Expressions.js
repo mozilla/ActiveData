@@ -1,4 +1,4 @@
-function qb2function(expr){
+function jx2function(expr){
   if (expr == null) return function(){
     return function(){
       return null;
@@ -44,9 +44,9 @@ function qb2function(expr){
 expressions = {};
 
 expressions.when = function(expr){
-    var test = qb2function(expr.when, true);
-    var pass = qb2function(expr.then);
-    var fail = qb2function(expr.else);
+    var test = jx2function(expr.when, true);
+    var pass = jx2function(expr.then);
+    var fail = jx2function(expr.else);
     return function(value){
       var condition=test(value);
 
@@ -61,7 +61,7 @@ expressions.when = function(expr){
 
 expressions.eq = function (expr) {
   if (isArray(expr.eq)) {
-    var exprs = expr.eq.map(qb2function);
+    var exprs = expr.eq.map(jx2function);
     return function (value) {
       return exprs[0](value) == exprs[1](value);
     };
@@ -88,10 +88,10 @@ expressions.case = function(expr){
 
   expr.case.forall(function(s, i, switchs){
     if (i==switchs.length-1){
-      els_ = qb2function(s);
+      els_ = jx2function(s);
     }else{
-      test[i] = qb2function(s.when);
-      then[i] = qb2function(s.then);
+      test[i] = jx2function(s.when);
+      then[i] = jx2function(s.then);
     }//endif
   });
 
@@ -112,7 +112,7 @@ expressions.case = function(expr){
 
 
 expressions.missing = function(expr){
-  var missing = qb2function(expr.missing);
+  var missing = jx2function(expr.missing);
 
   return function(value){
     return missing(value) == null;

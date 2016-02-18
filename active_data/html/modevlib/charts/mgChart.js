@@ -4,7 +4,7 @@
 
 importScript("../../lib/metrics-graphics/import.js");
 importScript("../../lib/jquery.js");
-importScript("../qb/Expressions.js");
+importScript("../jx/Expressions.js");
 importScript("tools.js");
 
 (function(){
@@ -44,9 +44,9 @@ importScript("tools.js");
       data = coalesce(params.data.data, params.data);
 
       params.series.forall(function(s){
-        var getter = qb2function(s.value);
+        var getter = jx2function(s.value);
         var edge = params.axis[s.axis];
-        qb.domain.compile(edge);
+        jx.domain.compile(edge);
         edge.domain.NULL.style = Map.get(edge, "missing.style");
 
         if (s.axis == "color") {
@@ -63,7 +63,7 @@ importScript("tools.js");
         }//endif
       });
     } else if (params.data.meta) {
-      //ASSUME Qb QUERY RESULT
+      //ASSUME JSON QUERY EXPRESSION RESULT
       var chartCube = params.data;
       if (!(chartCube.select instanceof Array) || chartCube.select.length != 2) {
         Log.error("Expecting `select` clause to have two columns");
@@ -250,7 +250,7 @@ importScript("tools.js");
    RETURN A NICE MAX VALUE, THAT INCLUDES THE IMPORTANT CHART VALUES
    */
   aChart.maxNice = function(values){
-    var sorted = qb.sort(values, ".");
+    var sorted = jx.sort(values, ".");
     var mostlyMax = sorted[aMath.ceiling(values.length * 0.90)];
     var max = sorted.last();
 

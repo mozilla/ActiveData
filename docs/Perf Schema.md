@@ -2,7 +2,7 @@
 Perf Logs
 =============
 
-The Talos performance data is in the `perf` table.
+The (Talos) performance data is in the `perf` table.
 
 
 `result` Columns

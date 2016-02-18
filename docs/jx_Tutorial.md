@@ -1,5 +1,5 @@
-ActiveData: JSON Query Expression Tutorial
-=============================
+JSON Query Expression Tutorial
+==============================
 
 JSON query expressions are JSON structures that mimic SQL query semantics; each property corresponds to a SQL clause.  There are some differences from SQL, especially when it comes to using default clauses, but I hope your knowledge of SQL can jump-start your use of JSON Expressions.
 
@@ -77,7 +77,7 @@ Use the `where` clause to restrict our results to those that match.
 }
 ```
 
-In this case, we limit ourselves to test results on `linux64` platform.  You can see [a full list of `unittest` properties](Unittest Schema.md), and you have a [variety of other expressions available](jx_Expressions.md). 
+In this case, we limit ourselves to test results on `linux64` platform.  You can see [a full list of `unittest` properties](Unittest Schema.md), and you have a [variety of other expressions available](jx_expressions.md). 
 
 
 `select` Clause
@@ -220,7 +220,7 @@ Other domains are
 * `time` - to query over time ranges, defined by the `min`, `max`, and `interval`
 * `range` - for regular numeric intervals using the same `min`, `max`, and `interval`
 
-More details about the properties that these (and other) domain types accept are in the [reference documention](jx_Reference.md#edges.domain)
+More details about the properties that these (and other) domain types accept are in the [reference documention](jx_reference.md#edges.domain)
 
 ### Time, Duration and Relative Values
 

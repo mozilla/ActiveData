@@ -1,29 +1,29 @@
-JSON Expressions Reference
-============
+JSON Query Expressions Reference
+==============================
 
 Intended Audience
 -----------------
 
 This document is only a reference document.  It is expected the reader already
-knows how to write JSON query expressions.  For a tutorial, start [here](jx_Tutorial.md)
+knows how to write JSON query expressions.  For a tutorial, start [here](jx_tutorial.md)
 
 Nomenclature
 ------------
 
-The nomenclature closely follows that used in business intellegnce.
+The nomenclature closely follows that used in business intelligence.
 
   - **cube** – a set of values in an n-space.  A good example for n=2 is a spreadsheet.
   - **edge** – each edge defines a dimension of the cube and the topology of that dimension.  Our spreadsheet example has two dimensions: Rows and Columns.
-  - **domain** – every edge has a domain which defines it’s valid values.  The spreadsheet's rows have natual numbers as thier domain (1, 2, 3, ...) and the columns are in the alphabet domain (A, B, C, ....)
+  - **domain** – every edge has a domain which defines it’s valid values.  The spreadsheet's rows have natural numbers as their domain (1, 2, 3, ...) and the columns are in the alphabet domain (A, B, C, ....)
   - **partition** – every domain can be partitioned in multiple ways.  Each partition is an ordered array of mutually exclusive parts that cover the domain.  In the case of the spreadsheet, you may want to group many rows, or many columns together and treat them all the same.  Maybe columns are retail outlets, grouped by region, and rows are customers, group by demographic
   - **part** – one part of a partition.  Eg "north-east region", or "under 20"
   - **part objects** - Partitions are often an array of objects (with a name, value, and other attributes).  These objects usually represent the values along the axis of a chart.  Eg {"name": "NorthEast", "director":"Ann"} {"name":"Under 20", "display color":"blue"}
   - **coordinates** - a unique tuple representing one part from each edge: Simply an array of part objects.
   - **cell** – the conceptual space located at a set of coordinate
-  - **fact** - the value/number/object in the cell at given coorinates
+  - **fact** - the value/number/object in the cell at given coordinates
   - **attribute** - any one coordinate, which is a *part*
-  - **record/row** – anaglous to a database row.  In the case of a cube, there is one record for every cell: which is an object with having attributes
-  - **column** – anagolous to a database column, a dimension or an edges
+  - **record/row** – analogous to a database row.  In the case of a cube, there is one record for every cell: which is an object with having attributes
+  - **column** – analogous to a database column, a dimension or an edges
 
 Order of Operations
 -------------------
@@ -32,7 +32,7 @@ Each of the clauses are executed in a particular order, irrespective of their
 order in the JSON structure.   This is most limiting in the case of the
 where clause.  Use sub queries to get around this limitation for now.
 
-  - **from** – the array, or list, to operate on.  Can also be the results of a query, or an in-lined subquery.
+  - **from** – the array, or list, to operate on.  Can also be the results of a query, or an in-lined sub-query.
   - **edges** – definition of the edge names and their domains
   - **groupby** - names of the attributes to group by
   - **where** – early in the processing to limit rows and aggregation: has access to domain names
@@ -153,7 +153,7 @@ The ```aggregate``` sub-clause has many options.
     - **select.sort** - optional, to return the array sorted
   - **list** - return an list of values (alternate name for array aggregate)
     - **select.sort** - optional, to return the array sorted
-  - **union** - return an array of unique values.  In the case of javascript, uniquness is defined as the string the object can be coorced to (```""+a == ""+b```).
+  - **union** - return an array of unique values.  In the case of javascript, uniqueness is defined as the string the object can be coorced to (```""+a == ""+b```).
 
 All aggregates ignore the null values; If all values are null, it is the same as having no data.
 
@@ -161,7 +161,7 @@ All aggregates ignore the null values; If all values are null, it is the same as
 `where` Clause
 ------------
 
-The `where` clause is [an expression](jx_Expresions.md) that returns a boolean indicating whether the document will be included in the aggregate.  If the query is returning a pivot-table, or data cube, the where clause does not affect the dimensions' domains.
+The `where` clause is [an expression](jx_Expresions.md) that returns a Boolean indicating whether the document will be included in the aggregate.  If the query is returning a pivot-table, or data cube, the where clause does not affect the dimensions' domains.
 
 `edges` Clause
 --------------
@@ -175,7 +175,7 @@ Each edge is a column which SQL group-by will be applied; with the additional st
       - **min** – The expression that defines the minimum value
       - **max** – The expression defining the supremum (of all values greater than the range, pick the smallest)
       - **mode** – `inclusive` will ensure any domain part that intersects with the range will be used in the aggregate.  `snapshot` (default) will only count ranges that contain the domain part key value.
-  - **test** – Expression to be used instead of value: It must return a boolean indicating if the data will match the domain parts.  Use this to simulate a SQL join.
+  - **test** – Expression to be used instead of value: It must return a Boolean indicating if the data will match the domain parts.  Use this to simulate a SQL join.
   - **domain** – The range of values to be part of the aggregation
   - **allowNulls** – Set to `true` (default) if you want to aggregate all values outside the domain. 
 

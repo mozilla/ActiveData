@@ -35,7 +35,7 @@ from pyLibrary.queries.unique_index import UniqueIndex
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
 # JSON QUERY EXPRESSION DOCUMENTATION: https://github.com/klahnakoski/jx/tree/master/docs
-# START HERE: https://github.com/klahnakoski/jx/blob/master/docs/jx_Reference.md
+# START HERE: https://github.com/klahnakoski/jx/blob/master/docs/jx_reference.md
 # TODO: USE http://docs.sqlalchemy.org/en/latest/core/tutorial.html AS DOCUMENTATION FRAMEWORK
 
 _Column = None

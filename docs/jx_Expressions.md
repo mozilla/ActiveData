@@ -1,15 +1,13 @@
 JSON Expressions
-==============
+================
 
 Summary
 -------
 
-JSON Expressions have a limited expression language to increase the number of useful queries that can be written.  Expressions are JSON objects inspired by [Polish prefix notation](http://en.wikipedia.org/wiki/Polish_notation):  All expression objects are `{name: value}` pairs, where the operator is the name, and value holds the parameters.
+JSON Expressions are JSON objects inspired by [Polish prefix notation](http://en.wikipedia.org/wiki/Polish_notation):  
+All expression objects are `{name: value}` pairs, where the operator is the name, and value holds the parameters.
 
 	{operator_name: parameters}
-
-As a side note, JSON query expressions are also expressions: `from` is the operator, and other properties act as modifiers. 
-
 
 Expressions are composed of 
 
@@ -411,7 +409,7 @@ Convert a literal value to an absolute, or relative, unix datestamp.   Only lite
 
 		{"date": literal}
 
-The literal is parsed according to a [date and time mini language](jx_Time_Math.md).
+The literal is parsed according to a [date and time mini language](jx_time.md).
 
 
 ###`literal` Operator###

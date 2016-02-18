@@ -1,14 +1,14 @@
 JSON Query Expression Documentation
-======================
+===================================
 
-JSON query expressions are JSON structures that mimic SQL query semantics; each property corresponds to a SQL clause.  There are some differences from SQL, especially when it comes to using default clauses, but I hope your knowledge of SQL can jump-start your use of JSON Expressions.
+JSON query expressions are structures that mimic SQL query semantics; each property corresponds to a SQL clause.  There are some differences from SQL, especially when it comes to using default clauses, but I hope your knowledge of SQL can jump-start your use of JSON Expressions.
 
 Motivation
 ----------
 
-JSON Expressions provides ...
+JSON Expressions provide ...
 
-* Simplified query expressions over unclean data.
+* Simplified expressions over unclean data.
 * Ability to translate shape of the data.
 * Extract data as pivot tables and data frames
 * Some language independence
@@ -22,15 +22,15 @@ Are JSON Expressions for you?
 Non-Goals
 ---------
 
-* **Use something better than JSON** - JSON expressions are deliberately a JSON specification; and avoids the complexities of defining a DSL syntax.  Using another language is not an option, because each language makes a design choice that conflicts with JSON Expressions somewhere.  SQL has a lot of overlap:  Mapping a subset of SQL to a subset of JSON Expressions may be useful.      
-* **Extend to a procedural language** - JSON expressions are meant to be purely functional, adding procedural features is much more work, and outside the objective of providing concise data transformation expressions.
-* **Joins** - There is currently no attempt to provide clauses for joins.  Although, there are some JSON Expressions expression forms that can be abused to perform joins.
+* **Use something better than JSON** - JSON expressions are deliberately a JSON specification; and avoids the complexities of defining a DSL syntax.  Using an existing language is not an option, because each language makes a design choice that conflicts with JSON Expressions somewhere.  That said, SQL has a lot of overlap:  Mapping a subset of SQL to a subset of JSON Expressions may be useful.      
+* **Extend to a procedural language** - JSON expressions are meant to be purely functional, adding procedural features is much more work, and outside the objective of providing concise data transformation.
+* **Joins** - There is currently no attempt to provide clauses for joins.  Although, there are some JSON Expressions forms that can be abused to perform joins.
 * **Graph Operations** - Graph traversal, aggregation, or SQL's `CONNECT BY` are not implemented.
 * **Under development** - The JSON Expressions specification is not fully implemented, and the specification itself is incomplete.  What does exist has tests to maintain stability.
 
 ### Expression Simplification
 
-JSON Expressions provides data transformation and expressions over multi-dimensional and unclean data.  It simplifies expressions by defining [`null` as out-of-context](https://github.com/klahnakoski/pyLibrary/tree/dev/pyLibrary/dot#null-is-the-new-none).  The *out-of-context* definition is different than the definition used by many other languages; which means every operator and expression must be translated from JSON Expressions to the destination language.  This translation is not complicated, just annoying.  Here is a definition of the `add` function:
+JSON Expressions provide data transformation and expressions over multi-dimensional and unclean data.  It simplifies expressions by defining [`null` as out-of-context](https://github.com/klahnakoski/pyLibrary/tree/dev/pyLibrary/dot#null-is-the-new-none).  The *out-of-context* definition is different than the definition used by many other languages; which means every operator and expression must be translated from JSON Expressions to the destination language.  This translation is not complicated, just annoying.  Here is a definition of the `add` function:
 
 #### Summation with `nulls`
 
@@ -74,7 +74,7 @@ Using the *out-of-context* definition,  expressions, list comprehensions, and qu
 
 ### Translating Data Shape
 
-JSON Expressions operates on JSON, with a focus on translating arrays of JSON, which is still just JSON.  JSON expressions are not limited to arrays, and works on other (un)ordered sets that come out of databases and document stores.  The [`select` clause](jx_Clause_Select.md) is responsible for record-wise translation.
+JSON Expressions operate on JSON, with a focus on translating arrays of JSON, which is still just JSON.  JSON expressions are not limited to arrays, and work on other (un)ordered sets that come out of databases and document stores.  The [`select` clause](jx_clause_select.md) is responsible for record-wise translation.
 
 
 ### Pivot Tables and Data Frames
@@ -149,16 +149,16 @@ Alaska will show, despite it having no employees.  Furthermore, filtering employ
 History
 -------
 
-JSON Expressions was originally designed to send complex aggregation queries to Elasticsearch version 0.90.x.  In that version, ES only had "facets"; which limited grouping data on a single property.  In order to group by multiple columns you had to provide a server side script to concatenate multiple columns, and the complementary script on the client to break them apart.  JSON Expressions was a Javascript library that did the script generation and provided a simpler interface.  It is still in use now by [MoDevMetrics](https://github.com/klahnakoski/MoDevMetrics) and [charts](https://github.com/mozilla/charts) which read off an old, but perfectly functional, ES cluster.
+JSON Expressions were originally designed to send complex aggregation queries to Elasticsearch version 0.90.x.  In that version, ES only had "facets"; which limited grouping data on a single property.  In order to group by multiple columns you had to provide a server side script to concatenate multiple columns, and the complementary script on the client to break them apart.  JSON Expressions were a Javascript library that did the script generation and provided a simpler interface.  It is still in use now by [MoDevMetrics](https://github.com/klahnakoski/MoDevMetrics) and [charts](https://github.com/mozilla/charts) which read off an old, but perfectly functional, ES cluster.
 
-ElasticSearch now has aggregations, and the JSON Expressions translation layer is simplified, but the pivot table extraction, and expression simplification is still required.
+ElasticSearch now has aggregations, and the JSON expression translation layer is simplified, but the pivot table extraction, and expression simplification is still required.
 
 ##More Reading
 
-* [Tutorial](jx_Tutorial.md) - For some examples
-* [Select Clause](jx_Clause_Select.md) - Data transformation using the `select` clause
-* [Window Clause](jx_Clause_Window.md) - Using window functions
-* [Expressions](jx_Expressions.md) - Covers all the other expressions
-* [Time Math](jx_Time_Math.md) - Writing expressions in the time domain
-* [Commands](jx_Update.md) - Update data with JSON Expressions
+* [Tutorial](jx_tutorial.md) - For some examples
+* [Select Clause](jx_clause_select.md) - Data transformation using the `select` clause
+* [Window Clause](jx_clause_window.md) - Using window functions
+* [Expressions](jx_expressions.md) - Covers all the other expressions
+* [Time Math](jx_time.md) - Writing expressions in the time domain
+* [Commands](jx_update.md) - Update data with JSON Expressions
 * [Reference](Reference.md) - A bare list of allowed clauses and options for JSON query expressions

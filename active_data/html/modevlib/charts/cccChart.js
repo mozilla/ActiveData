@@ -345,7 +345,7 @@ var aChart = {};
             title: coalesce(params.name, chartCube.name),
             legend: true,
             legendPosition: "right",
-//		legendAlign: "center",
+//    legendAlign: "center",
             legendSize: 100,
             orientation: 'vertical',
             timeSeries: false,
@@ -354,11 +354,11 @@ var aChart = {};
             "colors": colors,
             extensionPoints: {
                 noDataMessage_text: "No Data To Chart"
-//			xAxisLabel_textAngle: aMath.PI/4,
-//			xAxisLabel_textAlign: "left",
-//			xAxisLabel_textBaseline: "top"
-//			xAxisScale_dateTickFormat: "%Y/%m/%d",
-//			xAxisScale_dateTickPrecision: xaxis.domain.interval.milli
+//      xAxisLabel_textAngle: aMath.PI/4,
+//      xAxisLabel_textAlign: "left",
+//      xAxisLabel_textBaseline: "top"
+//      xAxisScale_dateTickFormat: "%Y/%m/%d",
+//      xAxisScale_dateTickPrecision: xaxis.domain.interval.milli
                 //set in miliseconds
             },
             "clickable": true,
@@ -476,7 +476,7 @@ var aChart = {};
             height: height,
             animate: false,
             title: coalesce(params.name, chartCube.name),
-            legend: (chartCube.edges.length != 1 || Array.newInstance(chartCube.select).length > 1),		//DO NOT SHOW LEGEND IF NO CATEGORIES
+            legend: (chartCube.edges.length != 1 || Array.newInstance(chartCube.select).length > 1),    //DO NOT SHOW LEGEND IF NO CATEGORIES
             legendPosition: "bottom",
             legendAlign: "center",
 
@@ -492,21 +492,21 @@ var aChart = {};
             xAxisSize: 50,
             "colors": styles.select("color"),
             plotFrameVisible: false,
-            //		"colorNormByCategory": false,        //FOR HEAT CHARTS
+            //    "colorNormByCategory": false,        //FOR HEAT CHARTS
             extensionPoints: {
                 noDataMessage_text: "No Data To Chart",
                 xAxisLabel_textAngle: aMath.PI / 4,
                 xAxisLabel_textAlign: "left",
                 xAxisLabel_textBaseline: "top",
-                //			label_textStyle:"white",
-                //			xAxisScale_dateTickFormat: "%Y/%m/%d",
-                //			xAxisScale_dateTickPrecision: xaxis.domain.interval.milli
+                //      label_textStyle:"white",
+                //      xAxisScale_dateTickFormat: "%Y/%m/%d",
+                //      xAxisScale_dateTickPrecision: xaxis.domain.interval.milli
                 //set in miliseconds
 
                 dot_shapeRadius: 4, //USEd IN LEGEND (VERSION 2)
                 dot_shape: "circle",
                 line_lineWidth: 4
-                //			line_strokeStyle:
+                //      line_strokeStyle:
             }
         };
         copyParam(params, chartParams);
@@ -522,7 +522,7 @@ var aChart = {};
                     var self = this;
                     dateMarks.forall(function (m) {
                         try {
-                            self.chart.markEvent(Date.newInstance(m.date).format(Qb.domain.time.DEFAULT_FORMAT), m.name, m.style);
+                            self.chart.markEvent(Date.newInstance(m.date).format(qb.domain.time.DEFAULT_FORMAT), m.name, m.style);
                         } catch (e) {
                             Log.warning("markEvent failed", e);
                         }
@@ -604,7 +604,7 @@ var aChart = {};
         chart.render(true, true, false);
 
 
-        //	chart.basePanel.chart.legendPanel
+        //  chart.basePanel.chart.legendPanel
 
         //ADD BUTTON TO SHOW SHEET
         if (params.sheetDiv) {
@@ -686,7 +686,7 @@ var aChart = {};
                         type = "heat";
                     } else {
                         type = "bar";
-//					params.orientation="horizontal"
+//          params.orientation="horizontal"
                     }//endif
                 } else {
                     if (qb.domain.ALGEBRAIC.contains(chartCube.edges[1].domain.type)) {
@@ -731,21 +731,21 @@ var aChart = {};
         ////////////////////////////////////////////////////////////////////////////
         // SET MAX WITHOUT "NICE" ROUNDING BUFFER
         ////////////////////////////////////////////////////////////////////////////
-//	if (params.orthoAxisFixedMax==true){
-//		if (stacked && chartCube.edges.length==1){
-//			var max=undefined;
-//			chartCube.edges[0].domain.partitions.forall(function(part,i){
-//				var total=0;
-//				Array.newInstance(chartCube.select).forall(function(s){
-//					total+=coalesce(cube[i][s.name], 0);
-//				});
-//				max=aMath.max(max, total);
-//			});
-//			params.orthoAxisFixedMax=max==0 ? 1 : max;  //DO NOT USE ZERO
-//		}else{
-//			Log.error("Not supported yet");
-//		}
-//	}//endif
+//  if (params.orthoAxisFixedMax==true){
+//    if (stacked && chartCube.edges.length==1){
+//      var max=undefined;
+//      chartCube.edges[0].domain.partitions.forall(function(part,i){
+//        var total=0;
+//        Array.newInstance(chartCube.select).forall(function(s){
+//          total+=coalesce(cube[i][s.name], 0);
+//        });
+//        max=aMath.max(max, total);
+//      });
+//      params.orthoAxisFixedMax=max==0 ? 1 : max;  //DO NOT USE ZERO
+//    }else{
+//      Log.error("Not supported yet");
+//    }
+//  }//endif
 
         ////////////////////////////////////////////////////////////////////////////
         // STYLES
@@ -806,7 +806,7 @@ var aChart = {};
             animate: false,
             ignoreNulls: false,
             title: coalesce(params.name, chartCube.name),
-            legend: (chartCube.edges.length != 1 || Array.newInstance(chartCube.select).length > 1),		//DO NOT SHOW LEGEND IF NO CATEGORIES
+            legend: (chartCube.edges.length != 1 || Array.newInstance(chartCube.select).length > 1),    //DO NOT SHOW LEGEND IF NO CATEGORIES
             legendPosition: "bottom",
             legendAlign: "center",
             orientation: 'vertical',
@@ -821,9 +821,9 @@ var aChart = {};
             xAxisSize: 50,
             "otherStyle": {"color": "lightgray"},
             tooltip: {
-//			"format":function(){
-//				return "hi there";
-//			}
+//      "format":function(){
+//        return "hi there";
+//      }
             },
             "colors": styles.map(function (s, i) {
                 var c = coalesce(s.color, styles[i % (styles.length)].color);
@@ -840,15 +840,15 @@ var aChart = {};
                 xAxisLabel_textAngle: aMath.PI / 4,
                 xAxisLabel_textAlign: "left",
                 xAxisLabel_textBaseline: "top",
-//			label_textStyle:"white",
-//			xAxisScale_dateTickFormat: "%Y/%m/%d",
-//			xAxisScale_dateTickPrecision: xaxis.domain.interval.milli
+//      label_textStyle:"white",
+//      xAxisScale_dateTickFormat: "%Y/%m/%d",
+//      xAxisScale_dateTickPrecision: xaxis.domain.interval.milli
                 //set in miliseconds
 
                 dot_shapeRadius: 4, //USEd IN LEGEND (VERSION 2)
                 dot_shape: "circle",
                 line_lineWidth: 4
-//			line_strokeStyle: "none",
+//      line_strokeStyle: "none",
             },
             "clickable": true,
             "clickAction": function (series, x, d, elem) {
@@ -961,7 +961,7 @@ var aChart = {};
         });
         chart.render(true, true, false);
 
-//	chart.basePanel.chart.legendPanel
+//  chart.basePanel.chart.legendPanel
 
         //ADD BUTTON TO SHOW SHEET
         if (params.sheetDiv) {
@@ -1093,9 +1093,9 @@ var aChart = {};
                     }//endif
 
 
-                    //			var specific=qb.specificBugs(query, [series, x]);
+                    //      var specific=qb.specificBugs(query, [series, x]);
                     var buglist = (yield (ESQuery.run(specific)));
-                    //			buglist=buglist.list.map(function(b){return b.bug_id;});
+                    //      buglist=buglist.list.map(function(b){return b.bug_id;});
                     if (buglist.cube === undefined) buglist.cube = buglist.list;
 
 
@@ -1154,7 +1154,7 @@ var aChart = {};
                     return v.value.toString();
                 } else {
                     return "" + v.divideBy(Duration.DAY);
-//				return v.toString();
+//        return v.toString();
                 }//endif
             });
         } else if (axis.domain.type == "numeric") {
@@ -1197,20 +1197,20 @@ var aChart = {};
 // param.predict.line EXPECTS ONE PARAMETER FROM THE param.predict.domain
 ////////////////////////////////////////////////////////////////////////////////
 //EXAMPLE
-//	aChart.addPredictionLine({
-//		"source":{
-//			"name":"open",
-//			"domain":{"min":sampleMin, "max":MAX_CHART_DATE},
-//			"data":flat.list
-//		},
-//		"predict":{
-//			"name":"estimate",
-//			"domain":{"min":statsMax, "max":MAX_CHART_DATE},
-//			"line":function(date){
-//				return aMath.round(openAtStartOfEstimate + (-netCloseRatePerDay * (Date.diffWeekday(date, statsMax))));
-//			}
-//		}
-//	});
+//  aChart.addPredictionLine({
+//    "source":{
+//      "name":"open",
+//      "domain":{"min":sampleMin, "max":MAX_CHART_DATE},
+//      "data":flat.list
+//    },
+//    "predict":{
+//      "name":"estimate",
+//      "domain":{"min":statsMax, "max":MAX_CHART_DATE},
+//      "line":function(date){
+//        return aMath.round(openAtStartOfEstimate + (-netCloseRatePerDay * (Date.diffWeekday(date, statsMax))));
+//      }
+//    }
+//  });
 //
     aChart.addPredictionLine = function (param) {
         Map.expecting(param, ["source", "predict"]);

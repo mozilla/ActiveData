@@ -85,6 +85,10 @@
 				}
 			}
 		},
+		"click": {
+			"description": "function to run when a data element is clicked",
+			"type": "function"
+		},
 		"series": {
 			"description": "what is ploted ",
 			"type": "object",
@@ -152,6 +156,10 @@
 							"$ref": "#definitions.object_style"
 						}
 					}
+				},
+				"click":{
+					"description": "override he general click, for this series only",
+					"type": "function"
 				}
 			}
 		}

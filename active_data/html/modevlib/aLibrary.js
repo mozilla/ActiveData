@@ -14,6 +14,6 @@ importScript("util/aTemplate.js");
 
 
 importScript([
-	"debug/aLog.js",
-	"threads/thread.js"
+  "debug/aLog.js",
+  "threads/thread.js"
 ]);

@@ -9,14 +9,14 @@ aCompile={};
 // EXECUTE SIMPLE CODE IN THE CONTEXT OF AN OBJECT'S VARIABLES
 ////////////////////////////////////////////////////////////////////////////////
 aCompile.method_usingObjects=function(code, contextObjects){
-	if (!(contextObjects instanceof Array)) contextObjects=[contextObjects];
+  if (!(contextObjects instanceof Array)) contextObjects=[contextObjects];
 
-	var contextTypes=[];
-	contextObjects.forall(function(v, i){
-		contextTypes[i]={"columns":qb.getColumnsFromList([v])};
-	});
+  var contextTypes=[];
+  contextObjects.forall(function(v, i){
+    contextTypes[i]={"columns":qb.getColumnsFromList([v])};
+  });
 
-	return aCompile.method(code, contextTypes);
+  return aCompile.method(code, contextTypes);
 
 };
 
@@ -25,43 +25,43 @@ aCompile.method_usingObjects=function(code, contextObjects){
 // contextTypes ARE TABLES
 ////////////////////////////////////////////////////////////////////////////////
 aCompile.method=function(code, contextTypes){
-	if (!(contextTypes instanceof Array)) contextTypes=[contextTypes];
-	var output;
+  if (!(contextTypes instanceof Array)) contextTypes=[contextTypes];
+  var output;
 
-	var contexTypeNames=[];
-	contextTypes.forall(function(c, i){
-		contexTypeNames.push("__source"+i);
-	});
+  var contexTypeNames=[];
+  contextTypes.forall(function(c, i){
+    contexTypeNames.push("__source"+i);
+  });
 
-	var f =
-		"output=function("+contexTypeNames.join(",")+"){\n";
+  var f =
+    "output=function("+contexTypeNames.join(",")+"){\n";
 
-		for(var s = contextTypes.length; s--;){
-			contextTypes[s].columns.forall(function(p){
-				//ONLY DEFINE VARS THAT ARE USED
-				if (code.indexOf(p.name) != -1){
-					f += "var " + p.name + "="+contexTypeNames[s]+"." + p.name + ";\n";
-				}//endif
-			});
-		}//for
+    for(var s = contextTypes.length; s--;){
+      contextTypes[s].columns.forall(function(p){
+        //ONLY DEFINE VARS THAT ARE USED
+        if (code.indexOf(p.name) != -1){
+          f += "var " + p.name + "="+contexTypeNames[s]+"." + p.name + ";\n";
+        }//endif
+      });
+    }//for
 
-		f+=code.trim().rtrim(";")+";\n";
+    f+=code.trim().rtrim(";")+";\n";
 
-		//FIRST CONTEXT OBJECT IS SPECIAL, AND WILL HAVE IT'S VARS ASSIGNED BACK
-		contextTypes[0].columns.forall(function(p){
-			if (code.indexOf(p.name) != -1){
-				f += contexTypeNames[0] + "." + p.name + "=" + p.name + ";	\n";
-			}//endif
-		});
+    //FIRST CONTEXT OBJECT IS SPECIAL, AND WILL HAVE IT'S VARS ASSIGNED BACK
+    contextTypes[0].columns.forall(function(p){
+      if (code.indexOf(p.name) != -1){
+        f += contexTypeNames[0] + "." + p.name + "=" + p.name + ";  \n";
+      }//endif
+    });
 
-		f += "}";
-		try{
-			eval(f);
-		}catch(e){
-			Log.error("Expression does not eval():\n\t"+f, e)
-		}//try
+    f += "}";
+    try{
+      eval(f);
+    }catch(e){
+      Log.error("Expression does not eval():\n\t"+f, e)
+    }//try
 
-	return output;
+  return output;
 
 };
 
@@ -70,29 +70,29 @@ aCompile.method=function(code, contextTypes){
 // COMPILE AN EXPRESSION, WHICH WILL RETURN A VALUE
 ////////////////////////////////////////////////////////////////////////////////
 aCompile.expression=function(code, contextTypes){
-	if (!(contextTypes instanceof Array)) contextTypes=[contextTypes];
-	var output;
+  if (!(contextTypes instanceof Array)) contextTypes=[contextTypes];
+  var output;
 
-	var contexTypeNames=[];
-	contextTypes.forall(function(c, i){
-		contexTypeNames.push("__source"+i);
-	});
+  var contexTypeNames=[];
+  contextTypes.forall(function(c, i){
+    contexTypeNames.push("__source"+i);
+  });
 
-	var f =
-		"output=function("+contexTypeNames.join(",")+"){\n";
+  var f =
+    "output=function("+contexTypeNames.join(",")+"){\n";
 
-		for(var s = contextTypes.length; s--;){
-			contextTypes[s].columns.forall(function(p){
-				//ONLY DEFINE VARS THAT ARE USED
-				if (code.indexOf(p.name) != -1){
-					f += "var " + p.name + "="+contexTypeNames[s]+"." + p.name + ";\n";
-				}//endif
-			});
-		}//for
+    for(var s = contextTypes.length; s--;){
+      contextTypes[s].columns.forall(function(p){
+        //ONLY DEFINE VARS THAT ARE USED
+        if (code.indexOf(p.name) != -1){
+          f += "var " + p.name + "="+contexTypeNames[s]+"." + p.name + ";\n";
+        }//endif
+      });
+    }//for
 
-		f+="return "+code.trim().rtrim(";")+";\n}";
-		eval(f);
+    f+="return "+code.trim().rtrim(";")+";\n}";
+    eval(f);
 
-	return output;
+  return output;
 
 };

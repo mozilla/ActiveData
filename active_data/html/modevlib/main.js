@@ -10,8 +10,8 @@ importScript("Bugzilla.js");
 importScript("charts/cccChart.js");
 importScript("charts/aColor.js");
 importScript([
-	"gui/GUI.js",
-	"../css/menu.css"
+  "gui/GUI.js",
+  "../css/menu.css"
 ]);
 importScript("Hierarchy.js");
 importScript("math/Stats.js");

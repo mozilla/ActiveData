@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 cd ~/ActiveData
-
+export PYTHONPATH=.
 
 # usage: gunicorn [OPTIONS] [APP_MODULE]
 #

@@ -76,6 +76,7 @@ sudo pip install supervisor-plus-cron
 cd /usr/bin
 sudo ln -s /usr/local/bin/supervisorctl supervisorctl
 
+
 #INSTALL gunicorn
 sudo pip install gunicorn
 
@@ -102,6 +103,18 @@ sudo cp ~/ActiveData/resources/config/elasticsearch.in.sh /usr/local/elasticsear
 
 # SUPERVISOR CONFIG
 sudo cp ~/ActiveData/resources/config/supervisord.conf /etc/supervisord.conf
+
+
+
+
+#INSTALL nginx
+sudo yum install nginx
+sudo cp resources/config/staging/nginx.conf /etc/nginx/sites-enabled/
+
+
+
+
+
 
 
 mkdir ~/logs

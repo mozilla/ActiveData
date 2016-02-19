@@ -299,8 +299,6 @@ def main():
             Log.warning("ActiveData is in debug mode")
             app.add_url_rule('/exit', 'exit', exit)
 
-
-
         # TRIGGER FIRST INSTANCE
         FromESMetadata(config.elasticsearch)
         if config.saved_queries:
@@ -341,7 +339,7 @@ def main():
 
             Thread.run("SSL Server", runner)
 
-        if config.flask.ssl_context:
+        if config.flask.ssl_context and config.flask.port != 80:
             Log.warning("ActiveData has SSL context, but is still listening on non-encrypted http port {{port}}", port=config.flask.port)
         config.flask.ssl_context = None
         app.run(**config.flask)

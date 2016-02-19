@@ -654,10 +654,10 @@ class DivOp(Expression):
     has_simple_form = True
 
 
-    def __init__(self, op, terms, **kwargs):
+    def __init__(self, op, terms, default=NullOp()):
         Expression.__init__(self, op, terms)
         self.lhs, self.rhs = terms
-        self.default = coalesce(kwargs["default"], NullOp())
+        self.default = default
 
     def to_ruby(self, not_null=False, boolean=False):
         lhs = self.lhs.to_ruby(not_null=True)

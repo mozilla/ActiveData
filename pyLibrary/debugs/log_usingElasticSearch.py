@@ -7,19 +7,19 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from pyLibrary import convert, strings
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, unwrap
+from pyLibrary.debugs.text_logs import TextLog
+from pyLibrary.dot import wrap, unwrap, coalesce
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.thread.threads import Thread, Queue
-from pyLibrary.debugs.text_logs import TextLog
-from pyLibrary.times.durations import MINUTE, SECOND
+from pyLibrary.times.durations import MINUTE
 
 
 class TextLog_usingElasticSearch(TextLog):
@@ -35,8 +35,8 @@ class TextLog_usingElasticSearch(TextLog):
             tjson=True,
             settings=settings
         )
-        self.batch_size=batch_size
-        self.es.add_alias("debug")
+        self.batch_size = batch_size
+        self.es.add_alias(coalesce(settings.alias, settings.index))
         self.queue = Queue("debug logs to es", max=max_size, silent=True)
         Thread.run("add debug logs to es", self._insert_loop)
 

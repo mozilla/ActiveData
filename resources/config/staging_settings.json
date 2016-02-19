@@ -1,15 +1,5 @@
 {
 	"flask": {
-		"host": "0.0.0.0",
-		"port": 80,
-		"debug": false,
-		"threaded": true,
-		"processes": 1,
-		"ssl_context":{
-			"privatekey_file": "",
-			"certificate_file": "~/.ssh/activedata_allizom_org.crt",
-			"certificate_chain_file": "~/.ssh/DigiCertCA.crt"
-		}
 	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {

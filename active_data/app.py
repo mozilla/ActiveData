@@ -273,8 +273,7 @@ def record_request(request, query_, data, error):
     request_log_queue.add({"value": log})
 
 
-def main(settings=None):
-    # global default_elasticsearch
+def setup(settings=None):
     global request_log_queue
     global config
 
@@ -299,51 +298,22 @@ def main(settings=None):
             Log.warning("ActiveData is in debug mode")
             app.add_url_rule('/exit', 'exit', exit)
 
-
-
         # TRIGGER FIRST INSTANCE
         FromESMetadata(config.elasticsearch)
         if config.saved_queries:
             setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
 
-        if config.flask.ssl_context:
-            ssl_flask = config.flask.copy()
-            ssl_flask.debug = False
-            ssl_flask.port = 443
+        return app
+    except Exception, e:
+        Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
 
-            if isinstance(config.flask.ssl_context, Mapping):
-                # EXPECTED PEM ENCODED FILE NAMES
-                # `load_cert_chain` REQUIRES CONCATENATED LIST OF CERTS
-                tempfile = NamedTemporaryFile(delete=False, suffix=".pem")
-                try:
-                    tempfile.write(File(ssl_flask.ssl_context.certificate_file).read_bytes())
-                    if ssl_flask.ssl_context.certificate_chain_file:
-                        tempfile.write(File(ssl_flask.ssl_context.certificate_chain_file).read_bytes())
-                    tempfile.flush()
-                    tempfile.close()
 
-                    context = SSLContext(PROTOCOL_SSLv23)
-                    context.load_cert_chain(tempfile.name, keyfile=File(ssl_flask.ssl_context.privatekey_file).abspath)
+def main():
+    global config
 
-                    ssl_flask.ssl_context = context
-                except Exception, e:
-                    Log.error("Could not handle ssl context construction", cause=e)
-                finally:
-                    try:
-                        tempfile.delete()
-                    except Exception:
-                        pass
-
-            def runner(please_stop):
-                Log.warning("ActiveData listening on encrypted port {{port}}", port=ssl_flask.port)
-                app.run(**ssl_flask)
-
-            Thread.run("SSL Server", runner)
-
-        if config.flask.ssl_context:
-            Log.warning("ActiveData has SSL context, but is still listening on non-encrypted http port {{port}}", port=config.flask.port)
-        config.flask.ssl_context = None
+    try:
+        setup()
         app.run(**config.flask)
     except Exception, e:
         Log.error("Serious problem with ActiveData service!  Shutdown completed!", cause=e)
@@ -366,8 +336,6 @@ def exit():
             "content-type": "text/html"
         }
     )
-
-
 
 if __name__ == "__main__":
     main()

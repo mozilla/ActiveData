@@ -273,13 +273,13 @@ def record_request(request, query_, data, error):
     request_log_queue.add({"value": log})
 
 
-def main():
+def main(settings_file=None):
     # global default_elasticsearch
     global request_log_queue
     global config
 
     try:
-        config = startup.read_settings()
+        config = startup.read_settings(filename=settings_file)
         constants.set(config.constants)
         Log.start(config.debug)
 

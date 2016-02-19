@@ -1,4 +1,4 @@
-bind = "127.0.0.1:80"
+bind = "0.0.0.0:80"
 
 backlog = 64
 workers = 1

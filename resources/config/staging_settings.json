@@ -47,7 +47,7 @@
 			{
 				"log_type": "elasticsearch",
 				"host": "http://localhost",
-				"index": "debug",
+				"index": "debug_active_data",
 				"type": "active_data"
 			}
 		]

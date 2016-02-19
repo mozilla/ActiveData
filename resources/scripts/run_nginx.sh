@@ -8,8 +8,9 @@ git pull origin gunicorn2
 sudo cp resources/config/nginx.conf /etc/nginx/nginx.conf
 
 
-sudo /etc/init.d/nginx stop
+more /logs/nginx.pid
+
+
 sudo /etc/init.d/nginx start
 
 
-sudo /etc/init.d/nginx -s reload

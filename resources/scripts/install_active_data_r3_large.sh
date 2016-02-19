@@ -104,9 +104,6 @@ sudo cp ~/ActiveData/resources/config/elasticsearch.in.sh /usr/local/elasticsear
 # SUPERVISOR CONFIG
 sudo cp ~/ActiveData/resources/config/supervisord.conf /etc/supervisord.conf
 
-
-
-
 #INSTALL nginx
 sudo yum install nginx
 sudo cp resources/config/staging/nginx.conf /etc/nginx/sites-enabled/

@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
 
-sudo -i
-export PYTHONPATH=.
-export HOME=/home/ec2-user
 cd ~/ActiveData
 
-/usr/bin/nginx -t -c resources/config/nginx.conf
+git pull origin gunicorn2
+
+sudo cp resources/config/nginx.conf /etc/nginx/nginx.conf
+
+
+sudo /etc/init.d/nginx stop
+sudo /etc/init.d/nginx start

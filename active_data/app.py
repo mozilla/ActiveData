@@ -304,6 +304,8 @@ def setup(settings=None):
             setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
 
+        # SHUTDOWN LOGGING WHEN DONE
+        app.do_teardown_appcontext(Log.stop)
         return app
     except Exception, e:
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
@@ -312,14 +314,8 @@ def setup(settings=None):
 def main():
     global config
 
-    try:
-        setup()
-        app.run(**config.flask)
-    except Exception, e:
-        Log.error("Serious problem with ActiveData service!  Shutdown completed!", cause=e)
-    finally:
-        Log.stop()
-
+    setup()
+    app.run(**config.flask)
     sys.exit(0)
 
 

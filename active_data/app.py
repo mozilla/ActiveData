@@ -305,7 +305,7 @@ def setup(settings=None):
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
 
         # SHUTDOWN LOGGING WHEN DONE
-        app.do_teardown_appcontext(Log.stop)
+        app.do_teardown_appcontext(teardown)
         return app
     except Exception, e:
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
@@ -317,6 +317,12 @@ def main():
     setup()
     app.run(**config.flask)
     sys.exit(0)
+
+
+def teardown():
+    print "stopping"
+    Log.stop()
+
 
 
 def exit():

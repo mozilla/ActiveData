@@ -21,6 +21,7 @@ from active_data import record_request
 from active_data.actions import save_query
 from active_data.actions.query import query
 from active_data.actions.save_query import SaveQueries, find_query
+from active_data.actions.static import download
 from pyLibrary import convert
 from pyLibrary.debugs import constants, startup
 from pyLibrary.debugs.logs import Log
@@ -35,6 +36,7 @@ app = Flask(__name__)
 config = None
 
 
+app.add_url_rule('/tools/<path:filename>', 'download', download)
 app.add_url_rule('/find/<path:hash>', 'find_query', find_query)
 app.add_url_rule('/query/<path:hash>', 'query', query, defaults={'path': ''}, methods=['GET', 'POST'])
 

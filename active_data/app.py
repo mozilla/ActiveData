@@ -11,6 +11,10 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import sys
+from _ssl import PROTOCOL_SSLv23
+from collections import Mapping
+from ssl import SSLContext
+from tempfile import NamedTemporaryFile
 
 import flask
 from flask import Flask
@@ -30,6 +34,7 @@ from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.queries import containers
 from pyLibrary.queries.meta import FromESMetadata
+from pyLibrary.thread.threads import Thread
 
 OVERVIEW = File("active_data/public/index.html").read()
 
@@ -70,6 +75,7 @@ def setup(settings=None):
             request_logger = elasticsearch.Cluster(config.request_logs).get_or_create_index(config.request_logs)
             active_data.request_log_queue = request_logger.threaded_queue(max_size=2000)
 
+        # SETUP DEFAULT CONTAINER, SO THER EIS SIMETHING TO QUERY
         containers.config.default = {
             "type": "elasticsearch",
             "settings": config.elasticsearch.copy()
@@ -87,21 +93,54 @@ def setup(settings=None):
             setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
 
-        config.flask.ssl_context = None
+        setup_ssl()
+
         return app
     except Exception, e:
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
 
 
-def main():
-    try:
-        setup()
-        app.run(**config.flask)
-    finally:
-        Log.stop()
+def setup_ssl():
+    if not config.flask.ssl_context:
+        return
 
-    sys.exit(0)
+    ssl_flask = config.flask.copy()
+    ssl_flask.debug = False
+    ssl_flask.port = 443
 
+    if isinstance(config.flask.ssl_context, Mapping):
+        # EXPECTED PEM ENCODED FILE NAMES
+        # `load_cert_chain` REQUIRES CONCATENATED LIST OF CERTS
+        tempfile = NamedTemporaryFile(delete=False, suffix=".pem")
+        try:
+            tempfile.write(File(ssl_flask.ssl_context.certificate_file).read_bytes())
+            if ssl_flask.ssl_context.certificate_chain_file:
+                tempfile.write(File(ssl_flask.ssl_context.certificate_chain_file).read_bytes())
+            tempfile.flush()
+            tempfile.close()
+
+            context = SSLContext(PROTOCOL_SSLv23)
+            context.load_cert_chain(tempfile.name, keyfile=File(ssl_flask.ssl_context.privatekey_file).abspath)
+
+            ssl_flask.ssl_context = context
+        except Exception, e:
+            Log.error("Could not handle ssl context construction", cause=e)
+        finally:
+            try:
+                tempfile.delete()
+            except Exception:
+                pass
+
+    def runner(please_stop):
+        Log.warning("ActiveData listening on encrypted port {{port}}", port=ssl_flask.port)
+        app.run(**ssl_flask)
+
+    Thread.run("SSL Server", runner)
+
+    if config.flask.ssl_context and config.flask.port != 80:
+        Log.warning("ActiveData has SSL context, but is still listening on non-encrypted http port {{port}}", port=config.flask.port)
+
+    config.flask.ssl_context = None
 
 
 def _exit():
@@ -119,7 +158,12 @@ def _exit():
     )
 
 
-
 if __name__ == "__main__":
-    main()
+    try:
+        setup()
+        app.run(**config.flask)
+    finally:
+        Log.stop()
+
+    sys.exit(0)
 

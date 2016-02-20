@@ -16,7 +16,7 @@ import os
 import signal
 import subprocess
 
-from active_data.app import replace_vars
+from active_data.actions.query import replace_vars
 from pyLibrary import convert, jsons
 from pyLibrary.debugs.exceptions import extract_stack
 from pyLibrary.debugs.logs import Log, Except, constants
@@ -409,3 +409,5 @@ class FakeHttp(object):
             "all_content": output_bytes,
             "content": output_bytes
         })
+
+

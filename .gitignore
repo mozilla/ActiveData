@@ -21,9 +21,9 @@ pyLibrary/.svn
 /docs/*.png
 /docs/ElasticSearch.docx
 /docs/*.xlsx
-/active_data/html/images/Sharethis.svg
+/active_data/public/images/Sharethis.svg
 /docs/*.pptx
-/active_data/html/modevlib/.svn
-/active_data/html/modevlib/ESQueryRunner.js
+/active_data/public/modevlib/.svn
+/active_data/public/modevlib/ESQueryRunner.js
 /pyLibrary1
 /docs/ActiveData Notes.rtf

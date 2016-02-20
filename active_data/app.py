@@ -11,10 +11,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import sys
-from _ssl import PROTOCOL_SSLv23
-from collections import Mapping
-from ssl import SSLContext
-from tempfile import NamedTemporaryFile
 
 import flask
 from flask import Flask
@@ -27,21 +23,13 @@ from active_data.actions import save_query
 from active_data.actions.query import query
 from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.static import download
-from pyLibrary import convert, strings
+from pyLibrary import convert
 from pyLibrary.debugs import constants, startup
-from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import wrap, coalesce, Dict
+from pyLibrary.debugs.logs import Log
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.queries import containers
-from pyLibrary.queries import jx, meta
-from pyLibrary.queries.containers import Container
-from pyLibrary.queries.meta import FromESMetadata, TOO_OLD
-from pyLibrary.strings import expand_template
-from pyLibrary.thread.threads import Thread
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import MINUTE
-from pyLibrary.times.timer import Timer
+from pyLibrary.queries.meta import FromESMetadata
 
 OVERVIEW = File("active_data/public/index.html").read()
 
@@ -67,30 +55,6 @@ def catch_all(path):
             "content-type": "text/html"
         }
     )
-
-
-def replace_vars(text, params=None):
-    """
-    REPLACE {{vars}} WITH ENVIRONMENTAL VALUES
-    """
-    start = 0
-    var = strings.between(text, "{{", "}}", start)
-    while var:
-        replace = "{{" + var + "}}"
-        index = text.find(replace, 0)
-        end = index + len(replace)
-
-        try:
-            replacement = unicode(Date(var).unix)
-            text = text[:index] + replacement + text[end:]
-            start = index + len(replacement)
-        except Exception, _:
-            start += 1
-
-        var = strings.between(text, "{{", "}}", start)
-
-    text = expand_template(text, coalesce(params, {}))
-    return text
 
 
 def setup(settings=None):
@@ -130,16 +94,14 @@ def setup(settings=None):
 
 
 def main():
-    global config
+    try:
+        setup()
+        app.run(**config.flask)
+    finally:
+        Log.stop()
 
-    setup()
-    app.run(**config.flask)
     sys.exit(0)
 
-
-def _teardown():
-    print "stopping"
-    Log.stop()
 
 
 def _exit():

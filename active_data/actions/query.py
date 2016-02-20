@@ -146,7 +146,6 @@ def _send_error(active_data_timer, body, e):
     )
 
 
-
 def replace_vars(text, params=None):
     """
     REPLACE {{vars}} WITH ENVIRONMENTAL VALUES

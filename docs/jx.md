@@ -147,13 +147,81 @@ Alaska will show, despite it having no employees.  Furthermore, filtering employ
 
 
 History
--------
+=======
+
+Original Implementation
+-----------------------
 
 JSON Expressions were originally designed to send complex aggregation queries to Elasticsearch version 0.90.x.  In that version, ES only had "facets"; which limited grouping data on a single property.  In order to group by multiple columns you had to provide a server side script to concatenate multiple columns, and the complementary script on the client to break them apart.  JSON Expressions were a Javascript library that did the script generation and provided a simpler interface.  It is still in use now by [MoDevMetrics](https://github.com/klahnakoski/MoDevMetrics) and [charts](https://github.com/mozilla/charts) which read off an old, but perfectly functional, ES cluster.
 
 ElasticSearch now has aggregations, and the JSON expression translation layer is simplified, but the pivot table extraction, and expression simplification is still required.
 
-##More Reading
+Exploring Possible Expression Formats
+-------------------------------------
+
+When serializing data structures, specifically data structures involving
+function operations, there are three common operator positions:
+
+* Prefix - ```+ a b```
+* Infix  - ```a + b```
+* Suffix - ```a b +```
+
+Encoding these as JSON objects gives us:
+
+* Prefix - ```{"add": {"a": "b"}}```
+* Infix  - ```{"a": {"add": "b"}}```
+* Suffix - ```{"a": {"b": "add"}}```
+
+Personally, I find infix ordering aesthetically pleasing in the limited case
+of binary commutative operators.  Unfortunately, many operators have
+a variable number of operands, which makes infix clumsy.
+
+Previous Work
+-------------
+
+Even if I believe infix should not be used, there is still benefit
+to reusing existing JSON-encoded operations found in other applications
+But, it seems no planning was put into the existing serializations:
+
+* MongoDB uses a combination of [infix notation](http://docs.mongodb.org/manual/reference/operator/query/gt/#op._S_gt),
+[prefix notation](http://docs.mongodb.org/manual/reference/operator/query/and/#op._S_and),
+and [nofix notation](http://caffinc.com/blog/2014/02/mongodb-eq-operator-for-find/),
+which is clearly a mess.
+* ElasticSearch has standardized on a [prefix notation](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-term-filter.html),
+and has some oddities like the [range filter](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-range-filter.html)
+which is a combination of prefix and suffix, and probably a side effect of some
+leaky abstraction.
+
+
+| Operation                     | JSON Expression                | MongoDB                           | ElasticSearch                       |
+|:------------------------------|:-------------------------------|:----------------------------------|:------------------------------------|
+|Equality                       |`{"eq": {field: value}}`        |`{field: value}`                   |`{"term": {field: value}}`           |
+|Inequality `gt, gte, ne, lte, lt`|`{"gt": {field: value}}`      |`{field: {"$gt": value} }`         |`{"range": {field: {"gt": value}}}`  |
+|Logical Operators `and, or`    |`{"and": [a, b, c, ...]}`       |`{"$and": [a, b, c, ...]}`         |`{"and": [a, b, c, ...]}`            |
+|Match All                      |`true`                          |`{}`                               |`{"match_all": {}}`                  |
+|Exists                         |`{"exists": field}`             |`{field: {"$exists": true}}`       |`{"exists": {"field": field}}`       |
+|Missing                        |`{"missing": field}`            |`{field: {"$exists": false}}`      |`{"missing": {"field": field}}`      |
+|Match one of many              |`{"in": {field:[a, b, c, ...]}` |`{field {"$in":[a, b, c, ...]}`    |`{"terms": {field: [a, b, c, ...]}`  |
+|Prefix                         |`{"prefix": {field: prefix}}`   |`{field: {"$regex": /^prefix\.*/}}`|`{"prefix": {field: prefix}}`        |
+|Regular Expression             |`{"regex": {"field":regex}`     |`{field: {"$regex": regex}}`       |`{"regexp":{field: regex}}`          |
+|Script                         |`{"script": javascript}`        |`{"$where": javascript}`           |`{"script": {"script": mvel_script}}`|
+
+**Special note on nulls**
+  * JSON Expressions - null values do not `exists` and are considered `missing`
+  * MongoDB and ES - null values `exist` and are not `missing`
+
+Prefix Operator Benefits
+------------------------
+
+Consistent use of the prefix operator gives us additional benefit:
+
+* **Operator namespace** - If we can assume the JSON property names are operators, in their own namespace exclusive of  variable names, we do not need an operator prefix, like MongoDb's dollar sign (`$`).   
+* **Familiar** - Prefix operators also read like functional notation, which gives it familiarity.
+* **Clauses** - If property names are operators, the additional properties on the same object can act as operator modifiers, or "clauses".  Clauses allow us to define trinary operators, and beyond, naturally.  Allow us to define default behaviour of common operators in the face of missing values.  And, allow us to mimic multi-clause languages, like SQL.
+
+
+More Reading
+------------
 
 * [Tutorial](jx_tutorial.md) - For some examples
 * [Select Clause](jx_clause_select.md) - Data transformation using the `select` clause

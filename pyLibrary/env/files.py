@@ -9,16 +9,15 @@
 #
 
 
-from datetime import datetime
 import io
 import os
 import shutil
+from datetime import datetime
 
-from pyLibrary.strings import utf82unicode
-from pyLibrary.maths import crypto
-from pyLibrary.dot import coalesce, set_default, split_field, join_field
-from pyLibrary.dot import listwrap, wrap
 from pyLibrary import convert
+from pyLibrary.dot import coalesce
+from pyLibrary.maths import crypto
+from pyLibrary.strings import utf82unicode
 
 
 class File(object):

@@ -11,7 +11,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-from active_data.app import replace_vars
+
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import WEEK

@@ -19,7 +19,8 @@ from pyLibrary.env.files import File
 from pyLibrary.meta import cache
 from pyLibrary.times.durations import DAY
 
-STATIC_DIRECTORY = File.new_instance("active_data/html")
+BLANK = File("active_data/public/error.html").read()
+STATIC_DIRECTORY = File.new_instance("active_data/public")
 
 
 def download(filename):

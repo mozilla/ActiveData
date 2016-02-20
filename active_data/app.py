@@ -43,7 +43,7 @@ app.add_url_rule('/query/<path:hash>', 'query', query, defaults={'path': ''}, me
 
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
 @app.route('/<path:path>', methods=['GET', 'POST'])
-def overview(path):
+def catch_all(path):
     try:
         record_request(flask.request, None, flask.request.data, None)
     except Exception, e:
@@ -91,7 +91,7 @@ def setup(settings=None):
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
 
         # SHUTDOWN LOGGING WHEN DONE
-        app.do_teardown_appcontext(_teardown)
+        app.teardown_appcontext(_teardown)
         return app
     except Exception, e:
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)

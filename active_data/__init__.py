@@ -15,26 +15,29 @@ from pyLibrary.dot import wrap
 from pyLibrary.times.dates import Date
 
 
-
 request_log_queue = None
 
 
 def record_request(request, query_, data, error):
-    if request_log_queue == None:
-        return
+    try:
+        if request_log_queue == None:
+            return
 
-    log = wrap({
-        "timestamp": Date.now(),
-        "http_user_agent": request.headers.get("user_agent"),
-        "http_accept_encoding": request.headers.get("accept_encoding"),
-        "path": request.headers.environ["werkzeug.request"].full_path,
-        "content_length": request.headers.get("content_length"),
-        "remote_addr": request.remote_addr,
-        "query": query_,
-        "data": data,
-        "error": error
-    })
-    log["from"] = request.headers.get("from")
-    request_log_queue.add({"value": log})
+        log = wrap({
+            "timestamp": Date.now(),
+            "http_user_agent": request.headers.get("user_agent"),
+            "http_accept_encoding": request.headers.get("accept_encoding"),
+            "path": request.headers.environ["werkzeug.request"].full_path,
+            "content_length": request.headers.get("content_length"),
+            "remote_addr": request.remote_addr,
+            "query": query_,
+            "data": data,
+            "error": error
+        })
+        log["from"] = request.headers.get("from")
+        request_log_queue.add({"value": log})
+    except Exception, e:
+        Log.warning("Can not record", cause=e)
+
 
 

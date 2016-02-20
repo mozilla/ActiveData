@@ -12,8 +12,10 @@ from __future__ import unicode_literals
 
 import mimetypes
 
+import flask
 from werkzeug.wrappers import Response
 
+from active_data import record_request
 from pyLibrary.debugs.logs import Log
 from pyLibrary.env.files import File
 from pyLibrary.meta import cache
@@ -30,6 +32,7 @@ def download(filename):
     :return: Response OBJECT WITH FILE CONTENT
     """
     try:
+        record_request(flask.request, None, flask.request.data, None)
         content, status, mimetype = _read_file(filename)
         return Response(
             content,

@@ -13,9 +13,12 @@ from __future__ import unicode_literals
 import flask
 from flask import Response
 
+from active_data import record_request
+from active_data.actions.static import BLANK
 from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
+from pyLibrary.debugs.profiles import CProfiler
 from pyLibrary.dot import coalesce
 from pyLibrary.queries import jx, meta
 from pyLibrary.queries.containers import Container
@@ -29,71 +32,53 @@ from pyLibrary.times.timer import Timer
 from active_data.actions import save_query
 
 
-
 def query(path):
-    cprofiler = None
+    with CProfiler():
+        active_data_timer = Timer("total duration")
+        body = flask.request.data
+        try:
+            with active_data_timer:
+                if not body.strip():
+                    return Response(
+                        convert.unicode2utf8(BLANK),
+                        status=400,
+                        headers={
+                            "access-control-allow-origin": "*",
+                            "content-type": "text/html"
+                        }
+                    )
 
-    if Log.cprofiler:
-        import cProfile
-        Log.note("starting cprofile for query")
+                text = convert.utf82unicode(body)
+                text = replace_vars(text, flask.request.args)
+                data = convert.json2value(text)
+                record_request(flask.request, data, None, None)
+                if data.meta.testing:
+                    _test_mode_wait(data)
 
-        cprofiler = cProfile.Profile()
-        cprofiler.enable()
-
-    active_data_timer = Timer("total duration")
-    body = flask.request.data
-    try:
-        with active_data_timer:
-            if not body.strip():
-                return Response(
-                    convert.unicode2utf8(BLANK),
-                    status=400,
-                    headers={
-                        "access-control-allow-origin": "*",
-                        "content-type": "text/html"
-                    }
-                )
-
-            text = convert.utf82unicode(body)
-            text = replace_vars(text, flask.request.args)
-            data = convert.json2value(text)
-            record_request(flask.request, data, None, None)
-            if data.meta.testing:
-                _test_mode_wait(data)
-
-            if Log.profiler or Log.cprofiler:
-                # flask.run() DOES NOT HAVE PROFILING ON
-                # THREAD CREATION IS DONE TO CAPTURE THE PROFILING DATA
-                def run(please_stop):
-                    return jx.run(data)
-                thread = Thread.run("run query", run)
-                result = thread.join()
-            else:
                 result = jx.run(data)
 
-            if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
-                result = result.format(data.format)
+                if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
+                    result = result.format(data.format)
 
-            if data.meta.save:
-                result.meta.saved_as = save_query.query_finder.save(data)
+                if data.meta.save:
+                    result.meta.saved_as = save_query.query_finder.save(data)
 
-        result.meta.timing.total = active_data_timer.duration
+            result.meta.timing.total = active_data_timer.duration
 
-        response_data = convert.unicode2utf8(convert.value2json(result))
-        Log.note("Response is {{num}} bytes", num=len(response_data))
-        return Response(
-            response_data,
-            direct_passthrough=True,  # FOR STREAMING
-            status=200,
-            headers={
-                "access-control-allow-origin": "*",
-                "content-type": result.meta.content_type
-            }
-        )
-    except Exception, e:
-        e = Except.wrap(e)
-        return _send_error(active_data_timer, body, e)
-
+            response_data = convert.unicode2utf8(convert.value2json(result))
+            Log.note("Response is {{num}} bytes", num=len(response_data))
+            return Response(
+                response_data,
+                direct_passthrough=True,  # FOR STREAMING
+                status=200,
+                headers={
+                    "access-control-allow-origin": "*",
+                    "content-type": result.meta.content_type
+                }
+            )
+        except Exception, e:
+            e = Except.wrap(e)
+            return _send_error(active_data_timer, body, e)
 
 
 def _test_mode_wait(query):

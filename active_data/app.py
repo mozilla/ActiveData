@@ -24,6 +24,7 @@ from werkzeug.wrappers import Response
 import active_data
 from active_data import record_request
 from active_data.actions import save_query
+from active_data.actions.json import get_raw_json
 from active_data.actions.query import query
 from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.static import download
@@ -41,11 +42,12 @@ OVERVIEW = File("active_data/public/index.html").read()
 app = Flask(__name__)
 config = None
 
-
-app.add_url_rule('/tools/<path:filename>', 'download', download)
-app.add_url_rule('/find/<path:hash>', 'find_query', find_query)
-app.add_url_rule('/query', 'query', query, defaults={'path': ''}, methods=['GET', 'POST'])
-app.add_url_rule('/query/<path:path>', 'query', query, defaults={'path': ''}, methods=['GET', 'POST'])
+app.add_url_rule('/tools/<path:filename>', None, download)
+app.add_url_rule('/find/<path:hash>', None, find_query)
+app.add_url_rule('/query', None, query, defaults={'path': ''}, methods=['GET', 'POST'])
+app.add_url_rule('/query/', None, query, defaults={'path': ''}, methods=['GET', 'POST'])
+app.add_url_rule('/query/<path:path>', None, query, defaults={'path': ''}, methods=['GET', 'POST'])
+app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])

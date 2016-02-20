@@ -44,7 +44,6 @@ from pyLibrary.times.durations import MINUTE
 from pyLibrary.times.timer import Timer
 
 OVERVIEW = File("active_data/public/index.html").read()
-BLANK = File("active_data/public/error.html").read()
 
 app = Flask(__name__)
 config = None
@@ -55,61 +54,9 @@ app.add_url_rule('/find/<path:hash>', 'find_query', find_query)
 app.add_url_rule('/query/<path:hash>', 'query', query, defaults={'path': ''}, methods=['GET', 'POST'])
 
 
-@app.route('/json/<path:path>', methods=['GET'])
-def get_raw_json(path):
-    active_data_timer = Timer("total duration")
-    body = flask.request.data
-    try:
-        with active_data_timer:
-            args = wrap(Dict(**flask.request.args))
-            limit = args.limit if args.limit else 10
-            args.limit = None
-            result = jx.run({
-                "from": path,
-                "where": {"eq": args},
-                "limit": limit,
-                "format": "list"
-            })
-
-            if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
-                result = result.format("list")
-
-        result.meta.active_data_response_time = active_data_timer.duration
-
-        response_data = convert.unicode2utf8(convert.value2json(result.data, pretty=True))
-        Log.note("Response is {{num}} bytes", num=len(response_data))
-        return Response(
-            response_data,
-            direct_passthrough=True,  # FOR STREAMING
-            status=200,
-            headers={
-                "access-control-allow-origin": "*",
-                "content-type": "text/plain"
-            }
-        )
-    except Exception, e:
-        e = Except.wrap(e)
-        return send_error(active_data_timer, body, e)
-
-
-def send_error(active_data_timer, body, e):
-    record_request(flask.request, None, body, e)
-    Log.warning("Could not process\n{{body}}", body=body, cause=e)
-    e = e.as_dict()
-    e.meta.active_data_response_time = active_data_timer.duration
-    return Response(
-        convert.unicode2utf8(convert.value2json(e)),
-        status=400,
-        headers={
-            "access-control-allow-origin": "*",
-            "content-type": "application/json"
-        }
-    )
-
-
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
 @app.route('/<path:path>', methods=['GET', 'POST'])
-def overview(path):
+def catch_all(path):
     record_request(flask.request, None, flask.request.data, None)
 
     return Response(
@@ -177,7 +124,7 @@ def setup(settings=None):
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
 
         config.flask.ssl_context = None
-        app.run(**config.flask)
+        return app
     except Exception, e:
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
 

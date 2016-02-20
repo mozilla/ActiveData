@@ -22,7 +22,7 @@
 # strang@nmr.mgh.harvard.edu).
 #
 """
-profile_stats.py module
+stats.py module
 
 (Requires pstat.py module.)
 

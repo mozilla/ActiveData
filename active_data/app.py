@@ -44,7 +44,8 @@ config = None
 
 app.add_url_rule('/tools/<path:filename>', 'download', download)
 app.add_url_rule('/find/<path:hash>', 'find_query', find_query)
-app.add_url_rule('/query/<path:hash>', 'query', query, defaults={'path': ''}, methods=['GET', 'POST'])
+app.add_url_rule('/query', 'query', query, defaults={'path': ''}, methods=['GET', 'POST'])
+app.add_url_rule('/query/<path:path>', 'query', query, defaults={'path': ''}, methods=['GET', 'POST'])
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
@@ -101,6 +102,8 @@ def setup(settings=None):
 
 
 def setup_ssl():
+    config.flask.ssl_context = None
+
     if not config.flask.ssl_context:
         return
 

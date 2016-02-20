@@ -128,11 +128,11 @@ class CProfiler(object):
     def __init__(self):
         if not _Log:
             _late_import()
-        _Log.note("starting cprofile for query")
         self.cprofiler = None
 
     def __enter__(self):
         if _Log.cprofiler:
+            _Log.note("starting cprofile")
             self.cprofiler = cProfile.Profile()
             self.cprofiler.enable()
 

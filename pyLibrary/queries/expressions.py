@@ -39,7 +39,7 @@ def _late_import():
 
 def jx_expression(expr):
     """
-    WRAP A JSON EXPRESSION EXPRESSION WITH OBJECT REPRESENTATION
+    WRAP A JSON EXPRESSION WITH OBJECT REPRESENTATION
     """
     if expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal)) or isinstance(expr, Date):
         return Literal(None, expr)

@@ -20,6 +20,7 @@ from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.debugs.profiles import CProfiler
 from pyLibrary.dot import coalesce
+from pyLibrary.maths import Math
 from pyLibrary.queries import jx, meta
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.meta import TOO_OLD
@@ -63,10 +64,22 @@ def query(path):
                 if data.meta.save:
                     result.meta.saved_as = save_query.query_finder.save(data)
 
-            result.meta.timing.total = active_data_timer.duration
+                result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
-            response_data = convert.unicode2utf8(convert.value2json(result))
+                jsonification = Timer("jsonification")
+                with jsonification:
+                    response_data = convert.unicode2utf8(convert.value2json(result))
+
+                timing_replacement = b'"total": ' + \
+                                     str(Math.round(active_data_timer.duration.seconds, digits=8)) +\
+                                     ', "jsonification": ' + \
+                                     str(Math.round(active_data_timer.duration.seconds, digits=8))
+
+            # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
+            # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
+            response_data = response_data.replace(b'"total": "{{TOTAL_TIME}}"', timing_replacement)
             Log.note("Response is {{num}} bytes", num=len(response_data))
+
             return Response(
                 response_data,
                 status=200,

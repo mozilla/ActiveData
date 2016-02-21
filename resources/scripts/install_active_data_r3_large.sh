@@ -80,6 +80,8 @@ sudo ln -s /usr/local/bin/supervisorctl supervisorctl
 #INSTALL gunicorn
 sudo pip install gunicorn
 
+#INSTALL nginx
+sudo yum install nginx
 
 
 
@@ -101,27 +103,7 @@ sudo cp ~/ActiveData/resources/config/elasticsearch.yml /usr/local/elasticsearch
 # THIS SCRIPT SETS THE ES_MIN_MEM/ES_MAX_MEM EXPLICITLY
 sudo cp ~/ActiveData/resources/config/elasticsearch.in.sh /usr/local/elasticsearch/bin/elasticsearch.in.sh
 
-# SUPERVISOR CONFIG
-sudo cp ~/ActiveData/resources/config/supervisord.conf /etc/supervisord.conf
-
-#INSTALL nginx
-sudo yum install nginx
-sudo cp resources/config/staging/nginx.conf /etc/nginx/sites-enabled/
-
-
-
-
-
-
-
 mkdir ~/logs
 cd /
 sudo ln -s /home/ec2-user/logs logs
 
-
-# START DAEMON (OR THROW ERROR IF RUNNING ALREADY)
-sudo /usr/local/bin/supervisord -c /etc/supervisord.conf
-
-# READ CONFIG
-sudo supervisorctl reread
-sudo supervisorctl update

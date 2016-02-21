@@ -6,8 +6,9 @@ Running Examples (Query Tool)
 -----------------------------
 
 [ElasticSearch Head](https://github.com/mobz/elasticsearch-head) is a simple
-tool for sending general queries.  [Active Data Query Tool](../html/QueryTool.html) can be used to prototype Qb
-queries, and see their equivalent ES query.  Please ```git clone``` both of these projects and open in your browser.
+tool for sending general queries.  [Active Data Query Tool](../html/QueryTool.html) 
+can be used to prototype JSON query expressions, and see their equivalent ES query.  
+Please ```git clone``` both of these projects and open in your browser.
 
 Schema
 ------
@@ -60,7 +61,7 @@ use a ```cf_``` prefix on tracking flags; Our filter looks like
 }</pre>
 </td>
 <td>
-<b>Qb Query</b>
+<b>JSON Query Expression</b>
 <pre>{
   "from":"public_bugs",
   <strong>"select":"_source",  # magic word '_source'</strong>
@@ -69,9 +70,9 @@ use a ```cf_``` prefix on tracking flags; Our filter looks like
     {"term":{"cf_blocking_b2g":"koi+"}}
   ]}
 }</pre><br>
-<i>Qb queries are intended to be more like SQL, with familiar clauses, and
+<i>JSON query expressions are intended to be more like SQL, with familiar clauses, and
 simpler syntax.  Benefits will be more apparent as we push the limits of ES's
-query language: Qb queries will isolate us from necessary scripting,
+query language: JSON query expressions will isolate us from necessary scripting,
 multifaceting, and nested queries</i>
 </td>
 </tr>
@@ -110,7 +111,7 @@ restrict your query to just the fields you desire.
 }</pre>
 </td>
 <td>
-<b>Qb Query</b>
+<b>JSON Query Expression</b>
 <pre>{
   "from":"public_bugs",
   <strong>"select":[   # field list
@@ -163,7 +164,7 @@ does do are very fast.  Here is a count of all KOI bugs by product:
 </pre>
 </td>
 <td>
-<b>Qb Query</b>
+<b>JSON Query Expression</b>
 <pre>{
   "from":"public_bugs",
   <b>"select":{
@@ -223,7 +224,7 @@ Here is a count of all open bugs by product.
 </pre>
 </td>
 <td>
-<b>Qb Query</b>
+<b>JSON Query Expression</b>
 <pre>{
   "from":"public_bugs",
   "select":{
@@ -285,7 +286,7 @@ look at the number of open bugs back in Jan 1st, 2010:
 }</pre>
 </td>
 <td>
-<b>Qb Query</b>
+<b>JSON Query Expression</b>
 <pre>{
     "from":"public_bugs",
   "select":{
@@ -351,7 +352,7 @@ block of 50K bug_ids:
 }</pre>
 </td>
 <td>
-<b>Qb Query</b>
+<b>JSON Query Expression</b>
 <pre>{
   "from":"public_bugs",
   "select":{
@@ -370,7 +371,7 @@ block of 50K bug_ids:
     }
   }]
 }</pre><br>
-Qb queries allow you to specify how to group data by using the <code>domain</code>
+JSON query expressions allow you to specify how to group data by using the <code>domain</code>
 sub-clause.  The number of unique parts in the domain must be known at request
 time.
 </td>
@@ -423,7 +424,7 @@ run this on the public cluster, you will get zeros.
 }</pre>
 </td>
 <td>
-<b>Qb Query</b>
+<b>JSON Query Expression</b>
 <pre>{
   "from":"private_bugs",
   "select":{

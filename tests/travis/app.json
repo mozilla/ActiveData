@@ -1,11 +1,13 @@
 {
 	"is_travis": true,
-	"flask": {
-		"host": "0.0.0.0",
-		"port": 5000,
-		"debug": false,
-		"threaded": true,
-		"processes": 1
+	"service_url": "http://127.0.0.1:5000/query",
+	"backend_es": {
+		"index": "testdata",
+		"type": "test_result",
+		"host": "http://localhost",
+		"port": 9200,
+		"schema":{"$ref":"//.../resources/schema/basic_schema.json.template?type=test_result"},
+		"debug":true
 	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {
@@ -15,13 +17,20 @@
 		"pyLibrary.queries.meta.ENABLE_META_SCAN": true,
 		"pyLibrary.queries.expressions.ALLOW_SCRIPTING": true
 	},
+	"flask": {
+		"host": "0.0.0.0",
+		"port": 5000,
+		"debug": false,
+		"threaded": true,
+		"processes": 1
+	},
 	"request_logs": {
 		"host": "http://localhost",
 		"port": 9200,
 		"index": "active_data_requests",
 		"type": "request_log",
 		"schema": {
-			"$ref": "//../../resources/schema/request_log.schema.json"
+			"$ref": "//.../resources/schema/request_log.schema.json"
 		}
 	},
 	"saved_queries":{
@@ -41,5 +50,4 @@
 	"debug": {
 		"trace": true
 	}
-
 }

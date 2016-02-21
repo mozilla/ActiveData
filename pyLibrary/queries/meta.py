@@ -14,7 +14,7 @@ from copy import copy
 from itertools import product
 
 from pyLibrary.meta import use_settings, DataClass
-from pyLibrary.queries import qb, Schema
+from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.query import Query
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
@@ -112,7 +112,7 @@ class FromESMetadata(Schema):
         index = split_field(table)[0]
         query_path = split_field(table)[1:]
         metadata = self.default_es.get_metadata(index=index)
-        for index, meta in qb.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
+        for index, meta in jx.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
             for _, properties in meta.mappings.items():
                 columns = _elasticsearch.parse_properties(index, None, properties.properties)
                 columns = columns.filter(lambda r: not r.abs_name.startswith("other.") and not r.abs_name.startswith("previous_values.cf_"))  # TODO: REMOVE WHEN jobs PROPERTY EXPLOSION IS CONTAINED
@@ -146,13 +146,13 @@ class FromESMetadata(Schema):
         RETURN METADATA COLUMNS
         """
         with self.columns.locker:
-            columns = qb.sort(filter(lambda r: r.table == table, self.columns.data), "name")
+            columns = jx.sort(filter(lambda r: r.table == table, self.columns.data), "name")
             if columns:
                 return columns
 
         self._get_columns(table=table)
         with self.columns.locker:
-            columns = qb.sort(filter(lambda r: r.table == table, self.columns.data), "name")
+            columns = jx.sort(filter(lambda r: r.table == table, self.columns.data), "name")
             if columns:
                 return columns
 
@@ -168,7 +168,7 @@ class FromESMetadata(Schema):
         try:
             if c.table == "meta.columns":
                 with self.columns.locker:
-                    partitions = qb.sort([g[c.abs_name] for g, _ in qb.groupby(self.columns, c.abs_name) if g[c.abs_name] != None])
+                    partitions = jx.sort([g[c.abs_name] for g, _ in jx.groupby(self.columns, c.abs_name) if g[c.abs_name] != None])
                     self.columns.update({
                         "set": {
                             "partitions": partitions,
@@ -181,7 +181,7 @@ class FromESMetadata(Schema):
                 return
             if c.table == "meta.tables":
                 with self.columns.locker:
-                    partitions = qb.sort([g[c.abs_name] for g, _ in qb.groupby(self.tables, c.abs_name) if g[c.abs_name] != None])
+                    partitions = jx.sort([g[c.abs_name] for g, _ in jx.groupby(self.tables, c.abs_name) if g[c.abs_name] != None])
                     self.columns.update({
                         "set": {
                             "partitions": partitions,
@@ -256,9 +256,9 @@ class FromESMetadata(Schema):
 
             aggs = result.aggregations.values()[0]
             if aggs._nested:
-                parts = qb.sort(aggs._nested.buckets.key)
+                parts = jx.sort(aggs._nested.buckets.key)
             else:
-                parts = qb.sort(aggs.buckets.key)
+                parts = jx.sort(aggs.buckets.key)
 
             Log.note("{{field}} has {{parts}}", field=c.name, parts=parts)
             with self.columns.locker:

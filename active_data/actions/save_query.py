@@ -21,7 +21,7 @@ from pyLibrary.dot import wrap
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.queries.containers.cube import Cube
-from pyLibrary.queries.qb_usingES import FromES
+from pyLibrary.queries.jx_usingES import FromES
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import SECOND

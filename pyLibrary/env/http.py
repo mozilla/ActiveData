@@ -32,7 +32,7 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, coalesce, wrap, set_default
 from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines, GzipLines
 from pyLibrary.maths import Math
-from pyLibrary.queries import qb
+from pyLibrary.queries import jx
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.durations import SECOND
 
@@ -76,7 +76,7 @@ def request(method, url, zip=None, retry=None, **kwargs):
     if isinstance(url, list):
         # TRY MANY URLS
         failures = []
-        for remaining, u in qb.countdown(url):
+        for remaining, u in jx.countdown(url):
             try:
                 response = request(method, u, zip=zip, retry=retry, **kwargs)
                 if Math.round(response.status_code, decimal=-2) not in [400, 500]:

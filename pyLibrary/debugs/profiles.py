@@ -11,14 +11,28 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
+import cProfile
+import pstats
 from datetime import datetime
 from time import clock
+
 from pyLibrary.collections import MAX
 from pyLibrary.dot import wrap
 from pyLibrary.dot import Dict
 
 ON = False
 profiles = {}
+
+
+_Log = None
+
+def _late_import():
+    global _Log
+
+    from pyLibrary.debugs.logs import Log as _Log
+
+    _ = _Log
+
 
 
 class Profiler(object):
@@ -103,4 +117,28 @@ def write(profile_settings):
     if stats:
         stats_file2.write(convert.list2tab(stats))
 
+
+
+
+class CProfiler(object):
+    """
+    cProfiler WRAPPER TO HANDLE ROGUE THREADS (NOT PROFILED BY DEFAULT)
+    """
+
+    def __init__(self):
+        if not _Log:
+            _late_import()
+        self.cprofiler = None
+
+    def __enter__(self):
+        if _Log.cprofiler:
+            _Log.note("starting cprofile")
+            self.cprofiler = cProfile.Profile()
+            self.cprofiler.enable()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.cprofiler:
+            self.cprofiler.disable()
+            _Log.cprofiler_stats.add(pstats.Stats(self.cprofiler))
+            del self.cprofiler
 

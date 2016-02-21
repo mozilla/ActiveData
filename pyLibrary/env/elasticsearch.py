@@ -26,7 +26,7 @@ from pyLibrary.jsons.typed_encoder import json2typed
 from pyLibrary.maths.randoms import Random
 from pyLibrary.maths import Math
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import qb
+from pyLibrary.queries import jx
 from pyLibrary.strings import utf82unicode
 from pyLibrary.thread.threads import ThreadedQueue, Thread, Lock
 from pyLibrary.times.durations import MINUTE
@@ -461,9 +461,9 @@ class Cluster(object):
         return Index(settings)
 
     def _get_best(self, settings):
-        from pyLibrary.queries import qb
+        from pyLibrary.queries import jx
         aliases = self.get_aliases()
-        indexes = qb.sort([
+        indexes = jx.sort([
             a
             for a in aliases
             if (a.alias == settings.index and settings.alias == None) or
@@ -621,10 +621,10 @@ class Cluster(object):
                 elif index:  # UPDATE THE MAPPING FOR ONE INDEX ONLY
                     response = self.get("/"+index+"/_mapping")
                     if self.version.startswith("0.90."):
-                        best = qb.sort(response.items(), 0).last()
+                        best = jx.sort(response.items(), 0).last()
                         self._metadata.indices[index].mappings = best[1]
                     else:
-                        self._metadata.indices[index].mappings = qb.sort(response.items(), 0).last()[1].mappings
+                        self._metadata.indices[index].mappings = jx.sort(response.items(), 0).last()[1].mappings
                     return Dict(indices={index: self._metadata.indices[index]})
             else:
                 Log.error("Metadata exploration has been disabled")
@@ -818,7 +818,7 @@ class Alias(Features):
             if not self.settings.alias or self.settings.alias==self.settings.index:
                 alias_list = self.cluster.get("/_alias/"+self.settings.index)
                 candidates = [(name, i) for name, i in alias_list.items() if self.settings.index in i.aliases.keys()]
-                full_name = qb.sort(candidates, 0).last()[0]
+                full_name = jx.sort(candidates, 0).last()[0]
                 index = self.cluster.get("/" + full_name + "/_mapping")[full_name]
             else:
                 index = self.cluster.get("/"+self.settings.index+"/_mapping")[self.settings.index]
@@ -853,7 +853,7 @@ class Alias(Features):
 
                 index = "dummy value"
                 schema = wrap({"_routing": {}, "properties": {}})
-                for _, ind in qb.sort(candidates, {"value": 0, "sort": -1}):
+                for _, ind in jx.sort(candidates, {"value": 0, "sort": -1}):
                     mapping = ind.mappings[self.settings.type]
                     set_default(schema._routing, mapping._routing)
                     schema.properties = _merge_mapping(schema.properties, mapping.properties)

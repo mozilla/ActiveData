@@ -1,0 +1,284 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<HTML>
+<HEAD>
+	<link type="text/css" rel="stylesheet" href="css/menu.css">
+	<link type="text/css" rel="stylesheet" href="lib/jquery-linedtextarea/jquery-linedtextarea.css">
+	<script type="text/javascript" src="lib/jquery.js"></script>
+	<script type="text/javascript" src="lib/jquery-linedtextarea/jquery-linedtextarea.js"></script>
+	<script type="text/javascript" src="lib/jsonlint/jsl.parser.js"></script>
+	<script type="text/javascript" src="lib/jsonlint/jsl.format.js"></script>
+
+	<script type="text/javascript" src="modevlib/imports/import.js"></script>
+	<script type="text/javascript" src="js/ESQueryRunner.js"></script>
+</HEAD>
+<BODY>
+<div class="warning">This message will be removed if you have FF27+, or Chrome (with experimental Javascript enabled)</div>
+
+
+<div id="sidebar">
+	<br><br>
+
+	<div style="height: 30px; text-align: center;vertical-align:middle;">
+		<span id="status" style="height:30px">Ready</span><span class="loading"><img src="images/spinner.gif" alt=""></span>
+	</div>
+
+	<hr>
+	<div id="description">
+		Sends given query to <code style="font-size: 0.9em">/query</code> endpoint, and shows response.
+		<ul>
+			<li><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/ActiveData Query Tool.pdf">Using this Query Tool</a></li><br>
+			<li><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_tutorial.md">Unittest Tutorial</a></li>
+			<li><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_expressions.md">JSON Expressions</a></li>
+			<li><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_reference.md">Reference Documentation</a></li>
+			<li><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/BZ_Tutorial.md">Bugzilla Tutorial</a></li>
+			<li><a href="https://github.com/klahnakoski/ActiveData">ActiveData code on Github</a></li>
+		</ul>
+		<hr>
+		<b>Schemas</b>
+		<ul>
+			<li class="code"><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/Unittest%20Schema.md">unittest</a></li>
+			<li class="code"><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/Jobs%20Schema.md">jobs</a></li>
+			<li class="code"><a href="https://github.com/klahnakoski/ActiveData/blob/dev/docs/Perf%20Schema.md">perf</a></li>
+		</ul>
+	</div>
+</div>
+<h3>ActiveData Query Tool</h3>
+
+
+<div style="width:800px;float: left;">
+	<textarea name="cube" id="cube" style="width:800px;height:250px;"></textarea>
+
+	<div id="execute" class="button">EXECUTE</div>
+	<div id="success" style="display: inline-block;padding-left: 30px;">
+		<div id="copy" class="button">Copy</div>
+		<div id="share" class="button">Share</div>
+		<div id="tab" class="button">as Table</div>
+		<div id="json" class="button">as Json</div>
+	</div>
+	<textarea name="notes" id="notes" style="width:800px;height:250px;"></textarea>
+
+	<div id="result" style="overflow: scroll;width:800px;height:250px;"></div>
+</div>
+
+<div id="tableDialog" title="Tab-delimited" style="display:none;">
+	<p>Copy-and-paste to Spreadsheet</p>
+	<textarea name="tableContent" id="tableContent" style="overflow: scroll;width:800px;height:250px;"></textarea>
+</div>
+
+<div id="jsonDialog" title="JSON Object" style="display:none;">
+	<p>Copy</p>
+	<textarea name="jsonContent" id="jsonContent" style="overflow: scroll;width:800px;height:250px;"></textarea>
+</div>
+
+
+
+
+<script>
+function setupBusySpinner(){
+	$(".loading").hide();
+
+	Thread.showWorking = function(numThread){
+		if (numThread) {
+			var l = $(".loading");
+			l.show();
+		}//endif
+	};//function
+
+	Thread.hideWorking = function(){
+		var l = $(".loading");
+		l.hide();
+	};//function
+
+	Thread.run(function*(){
+		$(".warning").html("");
+	});
+
+}
+
+importScript([], function(){
+	setupBusySpinner();
+
+	$().ready(function(){
+		//STYLE AS LINED TEXT AREAQ
+		$("#cube").linedtextarea();
+
+		$("#share").click(function(){
+			if (queryTool.shareLink !== undefined) {
+				window.prompt("Copy to clipboard: Ctrl+C, Enter", queryTool.shareLink);
+			}//endif
+		});
+
+		$("#copy").click(function(){
+			if (queryTool.showMode=="showTable"){
+				var list = convert.List2Tab(response2list(queryTool.response));
+				var c=$("#tableContent");
+				c.val(list.toString());
+				$("#tableDialog").dialog({
+				    width:850,
+					height:350
+				});
+				c.select().focus();
+			}else{
+				$("#jsonDialog").dialog({ width: 850, height: 350});
+				$("#jsonContent").html(convert.value2json(queryTool.response)).select().focus();
+			}//endif
+		});
+
+		$("#tab").click(function(){
+			queryTool.showTable();
+		});
+
+		$("#json").click(function(){
+			queryTool.showJSON();
+		});
+
+		$("#execute").click(function(event){
+			$("#result").html("");
+			queryTool.executeCube();
+		});//method
+
+		queryTool.setup();
+
+	});
+
+});
+
+
+function response2list(response){
+	//TRY OUR BEST TO CONVERT ActiveData RESPONSE INTO A LIST OF OBJECTS
+	var rows;
+	if (response.meta && response.meta.format == "cube") {
+		response.cube = response.data;
+		rows = jx.Cube2List(response);
+		response.cube = undefined;
+	} else if (response.meta && response.meta.format == "table") {
+		response.columns = response.header;
+		rows = convert.Table2List({"columns": response.header, "rows": response.data});
+		response.columns = undefined;
+	} else if (response.meta && response.meta.format == "list") {
+		rows = response.data;
+	} else if (response.cube !== undefined) {
+		rows = jx.Cube2List(response);
+	} else if (response.list !== undefined) {
+		rows = response.list
+	} else {
+		Log.error("unknown response type");
+	}//endif
+	return rows;
+}//function
+
+
+var queryTool = {};
+(function(){
+	queryTool.response = null;
+	queryTool.shareLink = null;
+	queryTool.showMode = "showTable";
+
+	queryTool.setup = function(){
+		this.hideAll();
+
+		var self = this;
+		var loc = window.location.href;
+		var anchor = convert.URLParam2Object(loc.split("#")[1]);
+		if (anchor.query_id===undefined) {
+			$("#cube").prop('disabled', false).val("").focus();
+		}else{
+			$("#cube").prop('disabled', true).val("Loading query...");
+			Thread.run(function*(){
+				try {
+					var response = yield(Rest.get({
+						"url": "/find/" + anchor.query_id,
+						"data": ""
+					}));
+
+					$("#cube").prop('disabled', false).val(convert.value2json(response));
+					self.executeCube();
+					yield (response);
+				} catch (e) {
+					$("#cube").prop('disabled', false).val("Query "+anchor.query_id+" not found");
+				}//try
+			});
+		}//endif
+
+	};//function
+
+	queryTool.hideAll=function hideAll(){
+		//EVAL THE jx
+		this.shareLink=undefined;
+		$("#notes").hide();
+		$("#success").hide();
+		$("#results").hide();
+	};//function
+
+	queryTool.showTable=function showTable(){
+		var self=this;
+		self.showMode="showTable";
+
+		try {
+			var rows = response2list(self.response);
+			$("#result").html("<div>" + rows.length + " rows (up to 3000 shown)</div>" + convert.List2HTMLTable(rows, {"limit": 3000})).show();
+		}catch(e){
+			$("#result").html("<div>"+convert.String2HTML(convert.value2json(self.response))+"</div>");
+		}//try
+	};//function
+
+	queryTool.showJSON=function showJSON(){
+		var self=this;
+		self.showMode="showJSON";
+		$("#result").html("<div>" + convert.String2HTML(convert.value2json(self.response)) + "/<div>")
+	};//function
+
+
+	queryTool.executeCube = function(event){
+		var self = this;
+
+		//EVAL THE jx
+		self.hideAll();
+
+		var code = $("#cube").val();
+		if (code.trim().left(1) != "{") code = "{" + code;
+		if (code.trim().right(1) != "}") code = code + "}";
+
+		Thread.run(function*(){
+			var a = Log.action("Send query", true);
+			try {
+				//USE JSONLINT TO FORMAT AND TEST-COMPILE THE code
+				code = jsl.format.formatJson(code);
+				$("#cube").val(code);
+				var query = jsl.parser.parse(code);
+				//REQUEST A URL FOR SHARING
+				query.meta = {};
+				query.meta.save = true;
+
+				self.response = yield(ActiveDataQuery(query));
+				self[self.showMode]();
+				$("#cube").val(convert.value2json(convert.json2value(code))).focus();
+				$("#success").show();
+
+				var loc = window.location.href.split("#")[0];
+				self.shareLink =  loc + "#query_id=" + self.response.meta.saved_as;
+
+				if (self.shareLink != window.location.href) {
+					window.history.pushState("object or string", "Good Query - ActiveData Query Tool", self.shareLink);
+				}//endif
+			} catch (e) {
+				$("#notes").show().val(e.toString());
+			} finally {
+				Log.actionDone(a);
+			}//try
+		});
+	};
+
+
+})();
+
+</script>
+
+
+</BODY>
+
+
+</HTML>

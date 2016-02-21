@@ -17,11 +17,11 @@ from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, DictList, unwrap
 from pyLibrary.maths import Math
-from pyLibrary.queries import qb, es09
+from pyLibrary.queries import jx, es09
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword, DefaultDomain
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, qb_expression, AndOp, Variable, Literal, OrOp, BinaryOp
+from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, jx_expression, AndOp, Variable, Literal, OrOp, BinaryOp
 from pyLibrary.queries.query import DEFAULT_LIMIT, MAX_LIMIT
 from pyLibrary.times.timer import Timer
 
@@ -42,7 +42,7 @@ def get_decoders_by_depth(query):
     for e in coalesce(query.edges, query.groupby, []):
         if e.value != None:
             e = e.copy()
-            e.value = qb_expression(e.value)
+            e.value = jx_expression(e.value)
             vars_ = e.value.vars()
 
             for v in vars_:
@@ -161,7 +161,7 @@ def es_aggsop(es, frum, query):
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
-        abs_value = qb_expression(s.value).map({c.name: c.abs_name for c in frum._columns})
+        abs_value = jx_expression(s.value).map({c.name: c.abs_name for c in frum._columns})
 
         if s.aggregate == "count":
             es_query.aggs[literal_field(canonical_name)].value_count.script = abs_value.to_ruby()
@@ -249,7 +249,7 @@ def es_aggsop(es, frum, query):
             )}
         })
     else:
-        if any(split_where[1:]):
+        if any(split_where[1::]):
             Log.error("Where clause is too deep")
 
     for d in decoders[0]:
@@ -273,18 +273,21 @@ def es_aggsop(es, frum, query):
         result = es09.util.post(es, es_query, query.limit)
 
     try:
-        decoders = [d for ds in decoders for d in ds]
-        result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE
+        format_time = Timer("formatting")
+        with format_time:
+            decoders = [d for ds in decoders for d in ds]
+            result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE
 
-        formatter, groupby_formatter, aggop_formatter, mime_type = format_dispatch[query.format]
-        if query.edges:
-            output = formatter(decoders, result.aggregations, start, query, select)
-        elif query.groupby:
-            output = groupby_formatter(decoders, result.aggregations, start, query, select)
-        else:
-            output = aggop_formatter(decoders, result.aggregations, start, query, select)
+            formatter, groupby_formatter, aggop_formatter, mime_type = format_dispatch[query.format]
+            if query.edges:
+                output = formatter(decoders, result.aggregations, start, query, select)
+            elif query.groupby:
+                output = groupby_formatter(decoders, result.aggregations, start, query, select)
+            else:
+                output = aggop_formatter(decoders, result.aggregations, start, query, select)
 
-        output.meta.es_response_time = es_duration.duration
+        output.meta.timing.formatting = format_time.duration
+        output.meta.timing.es_search = es_duration.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
         return output
@@ -615,7 +618,7 @@ class DefaultDecoder(SetDecoder):
 
     def done_count(self):
         self.edge.domain = self.domain = SimpleSetDomain(
-            partitions=qb.sort(set(self.parts))
+            partitions=jx.sort(set(self.parts))
         )
         self.parts = None
 
@@ -663,7 +666,7 @@ class DimFieldListDecoder(SetDecoder):
         columns = map(unicode, range(len(self.fields)))
         parts = wrap([{unicode(i): p for i, p in enumerate(part)} for part in set(self.parts)])
         self.parts = None
-        sorted_parts = qb.sort(parts, columns)
+        sorted_parts = jx.sort(parts, columns)
 
         self.edge.domain = self.domain = SimpleSetDomain(
             key="value",

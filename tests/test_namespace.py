@@ -15,7 +15,7 @@ from unittest import skip
 import base_test_class
 from pyLibrary.queries.namespace.rename import Rename
 from pyLibrary.queries.namespace.typed import Typed
-from pyLibrary.queries.qb_usingES import FromES
+from pyLibrary.queries.jx_usingES import FromES
 from tests.base_test_class import ActiveDataBaseTest
 
 

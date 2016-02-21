@@ -37,9 +37,9 @@ def _late_import():
     _ = _Query
 
 
-def qb_expression(expr):
+def jx_expression(expr):
     """
-    WRAP A QB EXPRESSION WITH OBJECT REPRESENTATION
+    WRAP A JSON EXPRESSION WITH OBJECT REPRESENTATION
     """
     if expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal)) or isinstance(expr, Date):
         return Literal(None, expr)
@@ -64,7 +64,7 @@ def qb_expression(expr):
             op, term = item
             class_ = operators.get(op)
             if class_:
-                clauses = {k: qb_expression(v) for k, v in expr.items() if k != op}
+                clauses = {k: jx_expression(v) for k, v in expr.items() if k != op}
                 break
         else:
             raise Log.error("{{operator|quote}} is not a known operator", operator=op)
@@ -80,7 +80,7 @@ def qb_expression(expr):
     elif term == None:
         return class_(op, [], **clauses)
     elif isinstance(term, list):
-        terms = map(qb_expression, term)
+        terms = map(jx_expression, term)
         return class_(op, terms, **clauses)
     elif isinstance(term, Mapping):
         items = term.items()
@@ -91,9 +91,9 @@ def qb_expression(expr):
             else:
                 return class_(op, {k: Literal(None, v) for k, v in items}, **clauses)
         else:
-            return class_(op, qb_expression(term), **clauses)
+            return class_(op, jx_expression(term), **clauses)
     else:
-        return class_(op, qb_expression(term), **clauses)
+        return class_(op, jx_expression(term), **clauses)
 
 
 def compile_expression(source):
@@ -113,13 +113,13 @@ def output(row, rownum=None, rows=None):
     return output
 
 
-def qb_expression_to_function(expr):
+def jx_expression_to_function(expr):
     """
     RETURN FUNCTION THAT REQUIRES PARAMETERS (row, rownum=None, rows=None):
     """
     if expr != None and not isinstance(expr, (Mapping, list)) and hasattr(expr, "__call__"):
         return expr
-    return compile_expression(qb_expression(expr).to_python())
+    return compile_expression(jx_expression(expr).to_python())
 
 
 def query_get_all_vars(query, exclude_where=False):
@@ -136,7 +136,7 @@ def query_get_all_vars(query, exclude_where=False):
     for s in listwrap(query.groupby):
         output |= edges_get_all_vars(s)
     if not exclude_where:
-        output |= qb_expression(query.where).vars()
+        output |= jx_expression(query.where).vars()
     return output
 
 
@@ -150,7 +150,7 @@ def select_get_all_vars(s):
     else:
         if s.value == "*":
             return {"*"}
-        return qb_expression(s.value).vars()
+        return jx_expression(s.value).vars()
 
 
 def edges_get_all_vars(e):
@@ -160,11 +160,11 @@ def edges_get_all_vars(e):
     if e.domain.key:
         output.add(e.domain.key)
     if e.domain.where:
-        output |= qb_expression(e.domain.where).vars()
+        output |= jx_expression(e.domain.where).vars()
     if e.domain.partitions:
         for p in e.domain.partitions:
             if p.where:
-                output |= qb_expression(p.where).vars()
+                output |= jx_expression(p.where).vars()
     return output
 
 
@@ -654,10 +654,10 @@ class DivOp(Expression):
     has_simple_form = True
 
 
-    def __init__(self, op, terms, **kwargs):
+    def __init__(self, op, terms, default=NullOp()):
         Expression.__init__(self, op, terms)
         self.lhs, self.rhs = terms
-        self.default = coalesce(kwargs["default"], NullOp())
+        self.default = default
 
     def to_ruby(self, not_null=False, boolean=False):
         lhs = self.lhs.to_ruby(not_null=True)

@@ -28,7 +28,7 @@ DEFAULT_QUERY_LIMIT = 20
 class Dimension(Container):
     __slots__ = ["name", "full_name", "where", "type", "limit", "index", "parent", "edges", "partitions", "fields"]
 
-    def __init__(self, dim, parent, qb):
+    def __init__(self, dim, parent, jx):
         dim = wrap(dim)
 
         self.name = dim.name
@@ -39,7 +39,7 @@ class Dimension(Container):
         self.where = dim.where
         self.type = coalesce(dim.type, "set")
         self.limit = coalesce(dim.limit, DEFAULT_QUERY_LIMIT)
-        self.index = coalesce(dim.index, coalesce(parent, Null).index, qb.settings.index)
+        self.index = coalesce(dim.index, coalesce(parent, Null).index, jx.settings.index)
 
         if not self.index:
             Log.error("Expecting an index name")
@@ -47,7 +47,7 @@ class Dimension(Container):
         # ALLOW ACCESS TO SUB-PART BY NAME (IF ONLY THERE IS NO NAME COLLISION)
         self.edges = Dict()
         for e in listwrap(dim.edges):
-            new_e = Dimension(e, self, qb)
+            new_e = Dimension(e, self, jx)
             self.edges[new_e.full_name] = new_e
 
         self.partitions = wrap(coalesce(dim.partitions, []))
@@ -68,9 +68,9 @@ class Dimension(Container):
         if self.type not in KNOWN - ALGEBRAIC:
             return  # PARTS OR TOO FUZZY (OR TOO NUMEROUS) TO FETCH
 
-        qb.get_columns()
+        jx.get_columns()
         with Timer("Get parts of {{name}}", {"name": self.name}):
-            parts = qb.query({
+            parts = jx.query({
                 "from": self.index,
                 "select": {"name": "count", "aggregate": "count"},
                 "edges": edges,

@@ -1,0 +1,245 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<HTML>
+<HEAD>
+    <title>Performance Test Results</title>
+    <script type="application/javascript" src="modevlib/imports/import.js"></script>
+</HEAD>
+<BODY>
+
+<div id="sidebar" style="width:300px;">
+    <br>
+    <br>
+
+    <div style="height: 30px; text-align: center;vertical-align:middle;">
+        <span id="status" style="height:30px">Page Loading...</span><span class="loading"><img src="images/spinner.gif"
+                                                                                               alt=""></span>
+    </div>
+
+    <hr>
+    <div id="description"></div>
+    <hr>
+    <div id="testMessage"></div>
+    <hr>
+    <div id="stats"></div>
+    <hr>
+    <div id="parameters" class="parameters">
+    </div>
+    <div id="filters" class="menu"></div>
+</div>
+
+<div style="float:right;display: inline;">
+    <a href="http://people.mozilla.com/~klahnakoski/" class="button">HOME</a>
+</div>
+<div style="text-align:left;position:relative;float:left;width:800px;">
+    <h3 id="title">Performance Test Results</h3>
+
+    <div id="chart" class="chart" style="float:none;width:800px;height:400px;"></div>
+    <div id="info"></div>
+    <div id="details"></div>
+</div>
+
+
+<script type="application/javascript">
+
+
+    importScript([
+        'modevlib/aLibrary.js',
+        'modevlib/Settings.js',
+        'modevlib/rest/ElasticSearch.js',
+        'modevlib/jx/ESQuery.js',
+        'modevlib/charts/aColor.js',
+        'modevlib/charts/cccChart.js',
+        "modevlib/gui/GUI.js",
+        "modevlib/css/menu.css",
+        'modevlib/jx/jx.js',
+        'modevlib/Dimension-Performance.js'
+    ], function () {
+        $("#description").html(
+            "Simple look at time series"
+        );
+
+
+        var thread;
+        var createChart = function () {
+            if (thread !== undefined)
+                thread.kill();
+            thread = Thread.run(__createChart());
+        };
+
+        var __createChart = function * ()
+        {
+            var DATE_FIELD;
+
+            var sampleMin = Date.newInstance(GUI.state.sampleMin);
+            var sampleMax = Date.newInstance(GUI.state.sampleMax).add(Duration.DAY);
+            var revisions = GUI.state.revision.split(",").map(String.trim);
+            if (revisions.length == 1 && revisions[0] == "") revisions = [];
+
+            var esfilter = {
+                "and": [
+                    {"exists": {"field": DATE_FIELD}},
+                    {"range": Map.newInstance(DATE_FIELD, {"gte": sampleMin.getMilli(), "lt": sampleMax.getMilli()})},
+                    GUI.getFilters("perf")
+                ]
+            };
+
+            if (Mozilla.Performance.Branch.partitions instanceof Thread) {
+                Thread.join(Mozilla.Performance.Branch.partitions);
+            }//while
+
+            //HOW MANY SAMPLES DO WE HAVE, TOO MANY AND WE USE A HEAT GRID
+            var sample = yield(ESQuery.run({
+                "from": "perf",
+                "select": {"name": "count", "value": "result.test_name", "aggregate": "count"},
+                "esfilter": esfilter
+            }));
+
+            if (sample.cube > 10000) {
+                Log.alert("too many datapoints (>10000)");
+                return;
+            } else if (sample.cube == 0) {
+                Log.alert("no results");
+                return;
+            }//endif
+
+            var a = Log.action("Pull perf data", true);
+            var chart = yield(ESQuery.run({
+                "from": "perf",
+                "select": [
+                    {"name": "median", "value": "result.stats.median"},
+                    {"name": "revision", "value": "test_build.revision"},
+                    {"name": "samples", "value": "result.samples"}
+                ],
+                "edges": [
+                    {
+                        "name": "date",
+                        "value": DATE_FIELD,
+                        "domain": {"type": "time", "min": sampleMin, "max": sampleMax, "interval": "none"}
+                    }
+                ],
+                "esfilter": esfilter
+            }));
+            Log.actionDone(a);
+
+            chart.list.forall(function (v) {
+                revisions.forall(function (r) {
+                    if (v.revision.startsWith(r)) {
+                        if (!chart.edges[0].domain.dateMarks) {
+                            chart.edges[0].domain.dateMarks = [];
+                        }//endif
+                        chart.edges[0].domain.dateMarks.append({
+                            "name": v.revision,
+                            "date": Date.newInstance(v.date.value)
+                        });
+                    }
+                });
+
+            });
+
+            chart.list = jx.sort(chart.list, ["date.value"]);
+
+            aChart.showScatter({
+                "id": "chart",
+                "sheetDiv": "info",
+                "cube": chart,
+                "height": "400",
+                xAxisSize: 50,
+                extensionPoints: {
+                    line_lineWidth: 0
+                },
+                tooltipFormat: function (category, x, y, elem, index) {
+                    //FIND THE MATCHING ELEMENT
+//				var item = chart.list.filter(function(v){return v.median==y && v.date==x}).first();
+                    var item = chart.list[index];
+                    return "<div style='text-align:left'>" +
+                        "<b>Revision</b>: " + item.revision + "<br/>" +
+                        "<b>Push Date</b>: " + x.format("MMM dd HH:mm:ss") + "<br/>" +
+                        "<b>Median</b>: " + y +
+                        "</div>";
+                }
+            });
+
+            yield (null);
+
+        };
+
+
+        $(document).ready(function () {
+            GUI.setup(
+                createChart,
+                [
+                    {"id": "revision", "name": "Revision", "type": "string"},
+                    {
+                        "id": "sampleMin",
+                        "name": "Start Date",
+                        "type": "date",
+                        "default": Date.eod().subtract(Duration.newInstance("3month"))
+                    },
+                    {"id": "sampleMax", "name": "End Date", "type": "date", "default": Date.today()},
+                    {"id": "sampleInterval", "name": "Interval", "type": "duration", "default": Duration.WEEK},
+                    {
+                        "id": "test", "name": "Test", "type": PartitionFilter.newInstance({
+                        "id": "test",
+                        "name": "Test",
+                        "dimension": Mozilla.Performance.TestOnly,
+                        "onlyOne": true,
+                        "expandAll": true
+                    })
+                    },
+                    {
+                        "id": "suite", "name": "Suite", "type": PartitionFilter.newInstance({
+                        "id": "suite",
+                        "name": "suite",
+                        "dimension": Mozilla.Performance.Test,
+                        "onlyOne": true,
+                        "expandAll": true
+                    })
+                    },
+                    {
+                        "id": "branch", "name": "Branch", "type": PartitionFilter.newInstance({
+                        "id": "branch",
+                        "name": "Branches",
+                        "dimension": Mozilla.Performance.Branch,
+                        "onlyOne": false,
+                        "expandAll": true
+                    })
+                    },
+                    {
+                        "id": "os", "name": "OS", "type": PartitionFilter.newInstance({
+                        "id": "os",
+                        "name": "OS",
+                        "dimension": Mozilla.Performance.OS,
+                        "onlyOne": true,
+                        "expandAll": true
+                    })
+                    },
+                    {
+                        "id": "platform", "name": "Platform", "type": PartitionFilter.newInstance({
+                        "id": "platform",
+                        "name": "Platform",
+                        "dimension": Mozilla.Performance.Platform,
+                        "onlyOne": true,
+                        "expandAll": true
+                    })
+                    }
+
+                ],
+                [
+                    'sampleInterval=Date.getBestInterval(Date.newInstance(sampleMin), Date.newInstance(sampleMax), Duration.newInstance(sampleInterval), {"min":10, "max":100})'
+                ],
+                "perf",
+                false
+            );
+        });
+
+    });
+
+</script>
+
+
+</BODY>
+</HTML>
+

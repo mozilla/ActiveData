@@ -593,5 +593,24 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+    def test_div_wo_default(self):
+        test = {
+            "data": [
+                {"v": 0},
+                {"v": 1},
+                {"v": 2},
+                {}
+            ],
+            "query": {
+                "select": {"name": "v", "value": {"div": {"v": 2}}},
+                "from": base_test_class.settings.backend_es.index
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [0, 0.5, 1, None]
+            }
+        }
+        self._execute_es_tests(test)
+
 
 

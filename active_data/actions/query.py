@@ -69,7 +69,6 @@ def query(path):
             Log.note("Response is {{num}} bytes", num=len(response_data))
             return Response(
                 response_data,
-                direct_passthrough=True,  # FOR STREAMING
                 status=200,
                 headers={
                     "access-control-allow-origin": "*",

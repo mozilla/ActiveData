@@ -83,6 +83,9 @@ sudo pip install gunicorn
 #INSTALL nginx
 sudo yum install nginx
 
+# IMPORTANT: nginx INSTALL SCREWS UP PERMISSIONS
+sudo chown -R ec2-user:ec2-user /var/lib/nginx/
+
 
 
 

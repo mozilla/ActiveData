@@ -855,7 +855,10 @@ class AndOp(Expression):
         return " and ".join("(" + t.to_python() + ")" for t in self.terms)
 
     def to_esfilter(self):
-        return {"and": [t.to_esfilter() for t in self.terms]}
+        if not len(self.terms):
+            return {"match_all": {}}
+        else:
+            return {"bool": {"must": [t.to_esfilter() for t in self.terms]}}
 
     def to_dict(self):
         return {"and": [t.to_dict() for t in self.terms]}

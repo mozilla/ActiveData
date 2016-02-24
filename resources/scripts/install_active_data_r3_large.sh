@@ -77,18 +77,6 @@ cd /usr/bin
 sudo ln -s /usr/local/bin/supervisorctl supervisorctl
 
 
-#INSTALL gunicorn
-sudo pip install gunicorn
-
-#INSTALL nginx
-sudo yum install nginx
-
-# IMPORTANT: nginx INSTALL SCREWS UP PERMISSIONS
-sudo chown -R ec2-user:ec2-user /var/lib/nginx/
-
-
-
-
 # CLONE ACTIVEDATA
 cd ~
 git clone https://github.com/klahnakoski/ActiveData.git

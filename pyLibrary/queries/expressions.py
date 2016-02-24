@@ -1629,6 +1629,8 @@ class CaseOp(Expression):
         return MissingOp("missing", self)
 
 
+USE_BOOL_MUST = True
+
 def simplify_esfilter(esfilter):
     try:
         output = normalize_esfilter(esfilter)
@@ -1679,8 +1681,8 @@ def _normalize(esfilter):
     while isDiff:
         isDiff = False
 
-        if esfilter["and"] != None:
-            terms = esfilter["and"]
+        if coalesce(esfilter["and"], esfilter.bool.must):
+            terms = coalesce(esfilter["and"], esfilter.bool.must)
             # MERGE range FILTER WITH SAME FIELD
             for (i0, t0), (i1, t1) in itertools.product(enumerate(terms), enumerate(terms)):
                 if i0 >= i1:
@@ -1709,10 +1711,10 @@ def _normalize(esfilter):
                     continue
                 if a == FALSE_FILTER:
                     return FALSE_FILTER
-                if a.get("and"):
+                if coalesce(a.get("and"), a.bool.must):
                     isDiff = True
                     a.isNormal = None
-                    output.extend(a.get("and"))
+                    output.extend(coalesce(a.get("and"), a.bool.must))
                 else:
                     a.isNormal = None
                     output.append(a)
@@ -1723,7 +1725,10 @@ def _normalize(esfilter):
                 esfilter = output[0]
                 break
             elif isDiff:
-                esfilter = wrap({"and": output})
+                if USE_BOOL_MUST:
+                    esfilter = wrap({"bool": {"must": output}})
+                else:
+                    esfilter = wrap({"and": output})
             continue
 
         if esfilter["or"] != None:

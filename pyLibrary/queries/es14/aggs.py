@@ -400,7 +400,7 @@ class SetDecoder(AggsDecoder):
                     "size": 0,
                     "include": include
                 }}, es_query),
-                "_missing": set_default(
+                "_missing": set_default(  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
                     {"filter": {"or": [
                         {"missing": {"field": field_name}},
                         {"not": {"terms": {field_name: include}}}
@@ -445,7 +445,7 @@ def _range_composer(edge, domain, es_query, to_float):
     else:
         calc = {"script": edge.value.to_ruby()}
 
-    if edge.allowNulls:
+    if edge.allowNulls:    # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
         if isinstance(edge.value, Variable):
             missing_range = {"or": [
                 {"range": {edge.value.var: {"lt": to_float(_min)}}},
@@ -605,7 +605,7 @@ class DefaultDecoder(SetDecoder):
                 }},
                 es_query
             ),
-            "_missing": set_default({"missing": {"field": self.edge.value}}, es_query)
+            "_missing": set_default({"missing": {"field": self.edge.value}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
         }})
         return output
 
@@ -648,7 +648,7 @@ class DimFieldListDecoder(SetDecoder):
                 }}, es_query)
             }})
             if self.edge.allowNulls:
-                nest.aggs._missing = set_default({"missing": {"field": v}}, es_query)
+                nest.aggs._missing = set_default({"missing": {"field": v}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             es_query = nest
 
         if self.domain.where:

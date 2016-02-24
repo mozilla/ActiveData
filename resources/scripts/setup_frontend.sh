@@ -5,6 +5,19 @@ sudo apt-get update
 sudo apt-get -y install python-pip python-dev nginx git-core
 
 
+#INSTALL gunicorn
+sudo pip install gunicorn
+
+#INSTALL nginx
+sudo yum install nginx
+
+# IMPORTANT: nginx INSTALL SCREWS UP PERMISSIONS
+sudo chown -R ec2-user:ec2-user /var/lib/nginx/
+
+
+
+
+
 mkdir  ~/temp
 cd  ~/temp
 wget https://bootstrap.pypa.io/get-pip.py

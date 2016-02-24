@@ -18,7 +18,7 @@ from decimal import Decimal
 from pyLibrary import convert
 from pyLibrary.collections import OR, MAX
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null
+from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null, split_field
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.times.dates import Date
 
@@ -261,10 +261,21 @@ class Variable(Expression):
                     return "doc[" + q + "].isEmpty() ? null : doc[" + q + "].value"
 
     def to_python(self, not_null=False, boolean=False):
-        if self.var == ".":
-            return "row"
-        else:
-            return "row[" + convert.value2quote(self.var) + "]"
+        path = split_field(self.var)
+        agg = "row"
+        if not path:
+            return agg
+        for p in path[:-1]:
+            agg = agg+".get("+convert.value2quote(p)+", EMPTY_DICT)"
+        return agg+".get("+convert.value2quote(path[-1])+")"
+
+    def __call__(self, row, rownum=None, rows=None):
+        path = split_field(self.var)
+        for p in path:
+            row = row.get(p)
+            if row is None:
+                return None
+        return row
 
     def to_dict(self):
         return self.var

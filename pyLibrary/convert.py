@@ -157,7 +157,12 @@ def str2datetime(value, format=None):
 
 
 def datetime2string(value, format="%Y-%m-%d %H:%M:%S"):
-    return Date(value).format(format=format)
+    try:
+        return value.strftime(format)
+    except Exception, e:
+        from pyLibrary.debugs.logs import Log
+
+        Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
 
 
 def datetime2str(value, format="%Y-%m-%d %H:%M:%S"):

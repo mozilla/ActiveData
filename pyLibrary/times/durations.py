@@ -11,7 +11,6 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 import datetime
-from decimal import Decimal
 
 from pyLibrary import regex
 from pyLibrary.vendor.dateutil.relativedelta import relativedelta
@@ -46,8 +45,8 @@ class Duration(object):
             else:
                 return None
         if Math.is_number(value):
-            output._milli = Decimal(value*1000)
-            output.month = Decimal(0)
+            output._milli = float(value)*1000
+            output.month = 0
             return output
         elif isinstance(value, basestring):
             return parse(value)
@@ -107,7 +106,7 @@ class Duration(object):
 
 
     def __rmul__(self, amount):
-        amount = Decimal(amount)
+        amount = float(amount)
         output = Duration(0)
         output.milli = self.milli * amount
         output.month = self.month * amount
@@ -209,7 +208,7 @@ class Duration(object):
 
     @property
     def seconds(self):
-        return Decimal(self.milli) / 1000
+        return self.milli / 1000
 
     @property
     def milli(self):
@@ -217,13 +216,13 @@ class Duration(object):
 
     @milli.setter
     def milli(self, value):
-        if not isinstance(value, Decimal):
+        if not isinstance(value, float):
             from pyLibrary.debugs.logs import Log
             Log.error("not allowed")
         self._milli = value
 
     def total_seconds(self):
-        return Decimal(self.milli) / 1000
+        return float(self.milli) / 1000
 
     def __str__(self):
         return str(self.__unicode__())
@@ -347,16 +346,16 @@ def parse(value):
 
 
 MILLI_VALUES = wrap({
-    "year": Decimal(52 * 7 * 24 * 60 * 60 * 1000),  # 52weeks
-    "quarter": Decimal(13 * 7 * 24 * 60 * 60 * 1000),  # 13weeks
-    "month": Decimal(28 * 24 * 60 * 60 * 1000),  # 4weeks
-    "week": Decimal(7 * 24 * 60 * 60 * 1000),
-    "day": Decimal(24 * 60 * 60 * 1000),
-    "hour": Decimal(60 * 60 * 1000),
-    "minute": Decimal(60 * 1000),
-    "second": Decimal(1000),
-    "milli": Decimal(1),
-    "zero": Decimal(0)
+    "year": float(52 * 7 * 24 * 60 * 60 * 1000),  # 52weeks
+    "quarter": float(13 * 7 * 24 * 60 * 60 * 1000),  # 13weeks
+    "month": float(28 * 24 * 60 * 60 * 1000),  # 4weeks
+    "week": float(7 * 24 * 60 * 60 * 1000),
+    "day": float(24 * 60 * 60 * 1000),
+    "hour": float(60 * 60 * 1000),
+    "minute": float(60 * 1000),
+    "second": float(1000),
+    "milli": float(1),
+    "zero": float(0)
 })
 
 MONTH_VALUES = wrap({

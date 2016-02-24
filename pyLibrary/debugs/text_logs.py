@@ -22,18 +22,21 @@ DEBUG_LOGGING = False
 
 _Log = None
 _Except = None
+_Queue = None
 
 
 def _delayed_imports():
     global _Log
     global _Except
+    global _Queue
 
     from pyLibrary.debugs.logs import Log as _Log
     from pyLibrary.debugs.exceptions import Except as _Except
+    from pyLibrary.thread.threads import Queue as _Queue
 
     _ = _Log
     _ = _Except
-
+    _ = _Queue
 
 class TextLog(object):
     def write(self, template, params):
@@ -64,10 +67,10 @@ class TextLog_usingFile(TextLog):
 class TextLog_usingThread(TextLog):
 
     def __init__(self, logger):
-        # DELAYED LOAD FOR THREADS MODULE
-        from pyLibrary.thread.threads import Queue
+        if not _Log:
+            _delayed_imports()
 
-        self.queue = Queue("logs", max=10000, silent=True)
+        self.queue = _Queue("logs", max=10000, silent=True)
         self.logger = logger
 
         def worker(please_stop):

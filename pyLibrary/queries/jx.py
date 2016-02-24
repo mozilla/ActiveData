@@ -41,6 +41,14 @@ from pyLibrary.queries.unique_index import UniqueIndex
 _Column = None
 _merge_type = None
 
+
+def get(expr):
+    """
+    RETURN FUNCTION FOR EXPRESSION
+    """
+    return jx_expression_to_function(expr)
+
+
 def run(query, frum=None):
     """
     THIS FUNCTION IS SIMPLY SWITCHING BASED ON THE query["from"] CONTAINER,

@@ -247,11 +247,8 @@ def _pull(s, agg):
 
 
 def _get(v, k, d):
-    if "." in k:
-        path = split_field(k)
-        for p in path:
-            v = v.get(p)
-            if v is None:
-                return None
-        return v
-    return v.get(k, d)
+    for p in split_field(k):
+        v = v.get(p)
+        if v is None:
+            return d
+    return v

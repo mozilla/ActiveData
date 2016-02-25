@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from pyLibrary.queries.domains import is_keyword
-from pyLibrary.queries.expressions import simplify_esfilter, jx_expression
+from pyLibrary.queries.expressions import simplify_esfilter, jx_expression, USE_BOOL_MUST
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 from pyLibrary.times.dates import Date
 
@@ -65,7 +65,10 @@ class TestExpressions(FuzzyTestCase):
             "b": 2
         }}
         result = simplify_esfilter(jx_expression(where).to_esfilter())
-        self.assertEqual(result, {"and": [{"term": {"a": 1}}, {"term": {"b": 2}}]})
+        if USE_BOOL_MUST:
+            self.assertEqual(result, {"bool": {"must": [{"term": {"a": 1}}, {"term": {"b": 2}}]}})
+        else:
+            self.assertEqual(result, {"and": [{"term": {"a": 1}}, {"term": {"b": 2}}]})
 
     def test_eq3(self):
         where = {"eq": {
@@ -73,7 +76,10 @@ class TestExpressions(FuzzyTestCase):
             "b": [2, 3]
         }}
         result = simplify_esfilter(jx_expression(where).to_esfilter())
-        self.assertEqual(result, {"and": [{"term": {"a": 1}}, {"terms": {"b": [2, 3]}}]})
+        if USE_BOOL_MUST:
+            self.assertEqual(result, {"bool": {"must": [{"term": {"a": 1}}, {"terms": {"b": [2, 3]}}]}})
+        else:
+            self.assertEqual(result, {"and": [{"term": {"a": 1}}, {"terms": {"b": [2, 3]}}]})
 
     def test_ne1(self):
         where = {"ne": {"a": 1}}

@@ -734,7 +734,7 @@ def aggs_iterator(aggs, decoders):
                 yield b
 
     for a in _aggs_iterator(unwrap(aggs), depth - 1):
-        yield parts, wrap(a)
+        yield parts, a
 
 
 def count_dim(aggs, decoders):

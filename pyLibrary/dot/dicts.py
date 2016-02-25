@@ -98,7 +98,6 @@ class Dict(MutableMapping):
                 else:
                     d = _getdefault(d, n)  # EVERYTHING ELSE TREATS n AS LITERAL
 
-
             return wrap(d)
         else:
             o = d.get(key)

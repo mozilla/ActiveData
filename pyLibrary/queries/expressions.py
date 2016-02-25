@@ -25,6 +25,7 @@ from pyLibrary.times.dates import Date
 ALLOW_SCRIPTING = False
 TRUE_FILTER = True
 FALSE_FILTER = False
+EMPTY_DICT = {}
 
 _Query = None
 

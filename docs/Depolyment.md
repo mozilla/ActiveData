@@ -1,5 +1,3 @@
-
-
 ETL
 ===
 
@@ -28,16 +26,38 @@ With new ETL comes new tables, new S3 buckets and new Amazon Queues.
 10. Increase SpotManager budget, if desired
  
 
-ActiveData Service
-=================
+ActiveData Architecture
+=======================
 
-The ActiveData service is a relatively simple, stateless, query translation service.  It was designed to be agnostic about schema changes and migrations.  Upgrading is simple.     
+Nginx
+-----
+
+Nginx is not required, but used in production for three reasons.
+
+- Serve static files (located at `~/ActiveData/active_data/public`)
+- Serve SSH (The Flask server can deliver its own SSH, probably slower, if required)
+- Forward requests to Gunicorn (The Flask server does not pre-fork processes)
+
+Configuration is `~/ActiveData/resources/config/nginx.conf`
+
+Gunicorn
+--------
+
+Gunicorn is used to pre-fork the ActiveData service, so it can serve multiple requests at once, and quicker than Flask.  Since ActiveData has no concept of session, so coordinating instances is not required. 
+
+Configuration is `~/ActiveData/resources/config/gunicorn.conf`
+
+
+ActiveData Python Program
+-------------------------
+
+The ActiveData program is a stateless query translation service.  It was designed to be agnostic about schema changes and migrations.  Upgrading is simple.     
 
 Production Deployment Steps
 ---------------------------
 
 1. On the `frontend` machine run `git pull origin master`
-2. Use supervisor to restart service
+2. Use supervisor to restart the Gunicorn service
 
 
 Config and Logs 
@@ -57,9 +77,11 @@ Fixing Cluster
 
 ES still breaks, sometimes.  All problems encountered so far only require a bounce, but that bounce must be controlled. 
  
- 1. Disable shard movement `curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}"  http://localhost:9200/_cluster/settings`
- 2. Bounce the nodes as you see fit
- 3. Enable shard movement `curl -XPUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"all\"}}"  http://localhost:9200/_cluster/settings`
+ 1. Ensure all nodes are reliable - This is a lengthy process, disable the SPOT nodes, or `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : "spot"}}' http://localhost:9200/_cluster/settings`
+ 2. Disable shard movement `curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}"  http://localhost:9200/_cluster/settings`
+ 3. Bounce the nodes as you see fit
+ 4. Enable shard movement `curl -XPUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"all\"}}"  http://localhost:9200/_cluster/settings`
+ 5. Re-enable spot nodes: `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : ""}}' http://localhost:9200/_cluster/settings`
 
 Changing Cluster Config
 -----------------------
@@ -74,14 +96,12 @@ be sure the transient settings for the same do not interfere with your plans:
 
 
  1. Ensure all nodes are reliable - This is a lengthy process, disable the SPOT nodes, or `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : "spot"}}' http://localhost:9200/_cluster/settings`
- 1. Move shards off the node `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude._ip" : "172.31.0.39"}}' http://localhost:9200/_cluster/settings`
- 2. Wait while ES moves the shards of the node.  *Jan2016 - took 1 day to move 2 terabytes off a node.* 
- 3. Disable shard movement `curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}"  http://localhost:9200/_cluster/settings`
- 4. Stop node, perform changes, start node
- 5. Enable shard movement `curl -XPUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"all\"}}"  http://localhost:9200/_cluster/settings`
- 6. Allow allocation back to node: `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude._ip" : ""}}' http://localhost:9200/_cluster/settings`
+ 2. Move shards off the node `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude._ip" : "172.31.0.39"}}' http://localhost:9200/_cluster/settings`
+ 3. Wait while ES moves the shards of the node.  *Jan2016 - took 1 day to move 2 terabytes off a node.* 
+ 4. Disable shard movement `curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}"  http://localhost:9200/_cluster/settings`
+ 5. Stop node, perform changes, start node
+ 6. Enable shard movement `curl -XPUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"all\"}}"  http://localhost:9200/_cluster/settings`
+ 7. Allow allocation back to node: `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude._ip" : ""}}' http://localhost:9200/_cluster/settings`
+ 8. Re-enable spot nodes: `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : ""}}' http://localhost:9200/_cluster/settings`
 
 Upon which another node can be upgraded
-
-
-

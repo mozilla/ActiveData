@@ -16,6 +16,8 @@
 
 # NOTE: NODE DISCOVERY WILL ONLY WORK IF PORT 9300 IS OPEN BETWEEN THEM
 
+sudo yum -y update
+
 # ORACLE'S JAVA VERISON 8 IS APPARENTLY MUCH FASTER
 # YOU MUST AGREE TO ORACLE'S LICENSE TERMS TO USE THIS COMMAND
 cd /home/ec2-user/
@@ -60,6 +62,7 @@ mkdir  /home/ec2-user/temp
 cd /home/ec2-user/temp
 wget https://bootstrap.pypa.io/get-pip.py
 sudo python27 get-pip.py
+sudo rm /usr/bin/pip
 sudo ln -s /usr/local/bin/pip /usr/bin/pip
 
 #INSTALL MODIFIED SUPERVISOR
@@ -82,11 +85,13 @@ sudo pip install gunicorn
 
 #INSTALL nginx
 sudo yum install nginx
-
 # IMPORTANT: nginx INSTALL SCREWS UP PERMISSIONS
 sudo chown -R ec2-user:ec2-user /var/lib/nginx/
 
-
+# SIMPLE PLACE FOR LOGS
+mkdir ~/logs
+cd /
+sudo ln -s /home/ec2-user/logs logs
 
 
 # CLONE ACTIVEDATA
@@ -97,7 +102,10 @@ cd ~/ActiveData/
 git checkout master
 sudo pip install -r requirements.txt
 
+
+###############################################################################
 # PLACE ALL CONFIG FILES
+###############################################################################
 
 # ELASTICSEARCH CONFIG
 sudo cp ~/ActiveData/resources/config/elasticsearch.yml /usr/local/elasticsearch/config/elasticsearch.yml
@@ -106,7 +114,22 @@ sudo cp ~/ActiveData/resources/config/elasticsearch.yml /usr/local/elasticsearch
 # THIS SCRIPT SETS THE ES_MIN_MEM/ES_MAX_MEM EXPLICITLY
 sudo cp ~/ActiveData/resources/config/elasticsearch.in.sh /usr/local/elasticsearch/bin/elasticsearch.in.sh
 
-mkdir ~/logs
-cd /
-sudo ln -s /home/ec2-user/logs logs
+# SUPERVISOR CONFIG
+sudo cp ~/ActiveData/resources/config/supervisord.conf /etc/supervisord.conf
+
+# START DAEMON (OR THROW ERROR IF RUNNING ALREADY)
+sudo /usr/local/bin/supervisord -c /etc/supervisord.conf
+
+# READ CONFIG
+sudo /usr/local/bin/supervisorctl reread
+sudo /usr/local/bin/supervisorctl update
+
+
+#NGINX CONFIG
+sudo cp ~/ActiveData/resources/config/nginx.conf /etc/nginx/nginx.conf
+
+sudo /etc/init.d/nginx start
+
+more /logs/nginx.pid
+
 

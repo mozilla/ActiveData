@@ -35,10 +35,10 @@ from active_data.actions import save_query
 
 def query(path):
     with CProfiler():
-        active_data_timer = Timer("total duration")
+        query_timer = Timer("total duration")
         body = flask.request.data
         try:
-            with active_data_timer:
+            with query_timer:
                 if not body.strip():
                     return Response(
                         convert.unicode2utf8(BLANK),
@@ -66,31 +66,29 @@ def query(path):
 
                 result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
-                jsonification = Timer("jsonification")
-                with jsonification:
+                json_timer = Timer("jsonification")
+                with json_timer:
                     response_data = convert.unicode2utf8(convert.value2json(result))
 
-                timing_replacement = b'"total": ' + \
-                                     str(Math.round(active_data_timer.duration.seconds, digits=8)) +\
-                                     ', "jsonification": ' + \
-                                     str(Math.round(active_data_timer.duration.seconds, digits=8))
+            with Timer("post timer"):
+                # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
+                # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
+                timing_replacement = b'"total": ' + str(Math.round(query_timer.duration.seconds, digits=8)) +\
+                                     ', "jsonification": ' + str(Math.round(json_timer.duration.seconds, digits=8))
+                response_data = response_data.replace(b'"total": "{{TOTAL_TIME}}"', timing_replacement)
+                Log.note("Response is {{num}} bytes in {{duration}}", num=len(response_data), duration=query_timer.duration)
 
-            # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
-            # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
-            response_data = response_data.replace(b'"total": "{{TOTAL_TIME}}"', timing_replacement)
-            Log.note("Response is {{num}} bytes", num=len(response_data))
-
-            return Response(
-                response_data,
-                status=200,
-                headers={
-                    "access-control-allow-origin": "*",
-                    "content-type": result.meta.content_type
-                }
-            )
+                return Response(
+                    response_data,
+                    status=200,
+                    headers={
+                        "access-control-allow-origin": "*",
+                        "content-type": result.meta.content_type
+                    }
+                )
         except Exception, e:
             e = Except.wrap(e)
-            return _send_error(active_data_timer, body, e)
+            return _send_error(query_timer, body, e)
 
 
 def _test_mode_wait(query):
@@ -145,9 +143,9 @@ def _test_mode_wait(query):
 
 def _send_error(active_data_timer, body, e):
     record_request(flask.request, None, body, e)
-    Log.warning("Could not process\n{{body}}", body=body, cause=e)
+    Log.warning("Could not process\n{{body}}", body=body.decode("latin1"), cause=e)
     e = e.as_dict()
-    e.meta.active_data_response_time = active_data_timer.duration
+    e.meta.timing.total = active_data_timer.duration.seconds
     return Response(
         convert.unicode2utf8(convert.value2json(e)),
         status=400,

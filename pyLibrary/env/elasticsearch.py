@@ -650,7 +650,7 @@ class Cluster(object):
 
             response = http.post(url, **kwargs)
             if response.status_code not in [200, 201]:
-                Log.error(response.reason + ": " + response.content)
+                Log.error(response.reason.decode("latin1") + ": " + strings.limit(response.content.decode("latin1"), 100 if self.debug else 10000))
             if self.debug:
                 Log.note("response: {{response}}", response=utf82unicode(response.content)[:130])
             details = convert.json2value(utf82unicode(response.content))
@@ -671,7 +671,7 @@ class Cluster(object):
                 Log.error(
                     "Problem with call to {{url}}" + suggestion + "\n{{body|left(10000)}}",
                     url=url,
-                    body=kwargs["data"][0:10000] if self.debug else kwargs["data"][0:100],
+                    body=strings.limit(kwargs["data"], 100 if self.debug else 10000),
                     cause=e
                 )
             else:

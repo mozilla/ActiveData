@@ -34,6 +34,7 @@ from pyLibrary.times.durations import MINUTE
 
 settings = jsons.ref.get("file://tests/config/test_settings.json")
 constants.set(settings.constants)
+NEXT = 0
 
 
 def read_alternate_settings():
@@ -135,7 +136,10 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
 
     def setUp(self):
-        index_name = "testing_" + Random.hex(10).lower()
+        global NEXT
+
+        index_name = "testing_" + ("000"+unicode(NEXT))[-3:]
+        NEXT += 1
 
         # ADD TEST RECORDS
         self.service_url = settings.service_url

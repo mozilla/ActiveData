@@ -16,7 +16,7 @@ from collections import Mapping
 from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, set_default, coalesce, wrap
+from pyLibrary.dot import Dict, set_default, coalesce, wrap, split_field
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.es14.aggs import count_dim, aggs_iterator, format_dispatch, drill
 
@@ -241,10 +241,14 @@ def _pull(s, agg):
     if not p:
         Log.error("programmer error")
     elif isinstance(p, Mapping):
-        v = {k: agg[v] for k, v in p.items()}
+        return {k: _get(agg, v, None) for k, v in p.items()}
     else:
-        v = agg[p]
+        return _get(agg, p, s.default)
 
-    if v == None:
-        v = s.default
+
+def _get(v, k, d):
+    for p in split_field(k):
+        v = v.get(p)
+        if v is None:
+            return d
     return v

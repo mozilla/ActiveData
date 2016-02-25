@@ -18,13 +18,14 @@ from decimal import Decimal
 from pyLibrary import convert
 from pyLibrary.collections import OR, MAX
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null
+from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null, split_field
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.times.dates import Date
 
 ALLOW_SCRIPTING = False
 TRUE_FILTER = True
 FALSE_FILTER = False
+EMPTY_DICT = {}
 
 _Query = None
 
@@ -261,10 +262,21 @@ class Variable(Expression):
                     return "doc[" + q + "].isEmpty() ? null : doc[" + q + "].value"
 
     def to_python(self, not_null=False, boolean=False):
-        if self.var == ".":
-            return "row"
-        else:
-            return "row[" + convert.value2quote(self.var) + "]"
+        path = split_field(self.var)
+        agg = "row"
+        if not path:
+            return agg
+        for p in path[:-1]:
+            agg = agg+".get("+convert.value2quote(p)+", EMPTY_DICT)"
+        return agg+".get("+convert.value2quote(path[-1])+")"
+
+    def __call__(self, row, rownum=None, rows=None):
+        path = split_field(self.var)
+        for p in path:
+            row = row.get(p)
+            if row is None:
+                return None
+        return row
 
     def to_dict(self):
         return self.var
@@ -855,7 +867,10 @@ class AndOp(Expression):
         return " and ".join("(" + t.to_python() + ")" for t in self.terms)
 
     def to_esfilter(self):
-        return {"and": [t.to_esfilter() for t in self.terms]}
+        if not len(self.terms):
+            return {"match_all": {}}
+        else:
+            return {"bool": {"must": [t.to_esfilter() for t in self.terms]}}
 
     def to_dict(self):
         return {"and": [t.to_dict() for t in self.terms]}
@@ -1626,6 +1641,8 @@ class CaseOp(Expression):
         return MissingOp("missing", self)
 
 
+USE_BOOL_MUST = True
+
 def simplify_esfilter(esfilter):
     try:
         output = normalize_esfilter(esfilter)
@@ -1676,8 +1693,8 @@ def _normalize(esfilter):
     while isDiff:
         isDiff = False
 
-        if esfilter["and"] != None:
-            terms = esfilter["and"]
+        if coalesce(esfilter["and"], esfilter.bool.must):
+            terms = coalesce(esfilter["and"], esfilter.bool.must)
             # MERGE range FILTER WITH SAME FIELD
             for (i0, t0), (i1, t1) in itertools.product(enumerate(terms), enumerate(terms)):
                 if i0 >= i1:
@@ -1706,10 +1723,10 @@ def _normalize(esfilter):
                     continue
                 if a == FALSE_FILTER:
                     return FALSE_FILTER
-                if a.get("and"):
+                if coalesce(a.get("and"), a.bool.must):
                     isDiff = True
                     a.isNormal = None
-                    output.extend(a.get("and"))
+                    output.extend(coalesce(a.get("and"), a.bool.must))
                 else:
                     a.isNormal = None
                     output.append(a)
@@ -1720,7 +1737,10 @@ def _normalize(esfilter):
                 esfilter = output[0]
                 break
             elif isDiff:
-                esfilter = wrap({"and": output})
+                if USE_BOOL_MUST:
+                    esfilter = wrap({"bool": {"must": output}})
+                else:
+                    esfilter = wrap({"and": output})
             continue
 
         if esfilter["or"] != None:

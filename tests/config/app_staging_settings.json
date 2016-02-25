@@ -53,7 +53,7 @@
 			{
 				"log_type": "elasticsearch",
 				"host": "http://activedata.allizom.org",
-				"index": "debug",
+				"index": "debug_active_data",
 				"type": "active_data"
 			}
 		]

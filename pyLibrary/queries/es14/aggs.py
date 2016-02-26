@@ -443,7 +443,7 @@ def _range_composer(edge, domain, es_query, to_float):
     if isinstance(edge.value, Variable):
         calc = {"field": edge.value.var}
     else:
-        calc = {"script": edge.value.to_ruby()}
+        calc = {"script_field": edge.value.to_ruby()}
 
     if edge.allowNulls:    # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
         if isinstance(edge.value, Variable):

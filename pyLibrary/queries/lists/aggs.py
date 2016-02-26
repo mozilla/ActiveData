@@ -14,7 +14,7 @@ import itertools
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, wrap
+from pyLibrary.dot import listwrap, wrap, Null, coalesce
 from pyLibrary.queries import windows
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
@@ -42,7 +42,7 @@ def list_aggs(frum, query):
     result = {
         s.name: Matrix(
             dims=[len(e.domain.partitions) + (1 if e.allowNulls else 0) for e in query.edges],
-            zeros=s.aggregate == "count"
+            zeros=coalesce(s.default, 0 if s.aggregate == "count" else Null)
         )
         for s in select
     }

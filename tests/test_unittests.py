@@ -50,6 +50,22 @@ class TestUnittests(ActiveDataBaseTest):
         pass
 
 
+    def test_simple_query(self):
+        if self.not_real_service():
+            return
+
+        query = convert.unicode2utf8(convert.value2json({"from": "unittest"}))
+        # EXECUTE QUERY
+        with Timer("query"):
+            response = http.get(self.service_url, data=query)
+            if response.status_code != 200:
+                error(response)
+        result = convert.json2value(convert.utf82unicode(response.all_content))
+
+        Log.note("result\n{{result|indent}}", {"result": result})
+
+
+
     def test_chunk_timing(self):
         if self.not_real_service():
             return

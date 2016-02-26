@@ -237,7 +237,7 @@ def es_deepop(es, query):
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]
 
         output = formatter(inners(), new_select, query)
-        output.meta.es_response_time = call_timer.duration
+        output.meta.timing.es = call_timer.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
         return output

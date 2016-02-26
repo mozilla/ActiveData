@@ -14,7 +14,7 @@ import itertools
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, unwrap
+from pyLibrary.dot import listwrap, unwrap, Null, coalesce
 from pyLibrary.queries import windows
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
@@ -43,7 +43,13 @@ def cube_aggs(frum, query):
                     break
 
 
-    result = {s.name: Matrix(dims=[len(e.domain.partitions) + (1 if e.allowNulls else 0) for e in query.edges], zeros=s.aggregate == "count") for s in select}
+    result = {
+        s.name: Matrix(
+            dims=[len(e.domain.partitions) + (1 if e.allowNulls else 0) for e in query.edges],
+            zeros=coalesce(s.default, 0 if s.aggregate == "count" else Null)
+        )
+        for s in select
+    }
     where = jx_expression_to_function(query.where)
     for d in filter(where, frum.values()):
         coord = []  # LIST OF MATCHING COORDINATE FAMILIES, USUALLY ONLY ONE PER FAMILY BUT JOINS WITH EDGES CAN CAUSE MORE

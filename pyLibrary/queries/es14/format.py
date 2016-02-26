@@ -16,7 +16,7 @@ from collections import Mapping
 from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, set_default, coalesce, wrap, split_field
+from pyLibrary.dot import Dict, set_default, coalesce, wrap, split_field, Null
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.es14.aggs import count_dim, aggs_iterator, format_dispatch, drill
 
@@ -24,7 +24,7 @@ from pyLibrary.queries.es14.aggs import count_dim, aggs_iterator, format_dispatc
 def format_cube(decoders, aggs, start, query, select):
     new_edges = count_dim(aggs, decoders)
     dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-    matricies = [(s, Matrix(dims=dims, zeros=(s.aggregate == "count"))) for s in select]
+    matricies = [(s, Matrix(dims=dims, zeros=coalesce(s.default, 0 if s.aggregate == "count" else Null))) for s in select]
     for row, agg in aggs_iterator(aggs, decoders):
         coord = tuple(d.get_index(row) for d in decoders)
         for s, m in matricies:
@@ -43,7 +43,7 @@ def format_cube(decoders, aggs, start, query, select):
 
 def format_cube_from_aggop(decoders, aggs, start, query, select):
     agg = drill(aggs)
-    matricies = [(s, Matrix(dims=[], zeros=(s.aggregate == "count"))) for s in select]
+    matricies = [(s, Matrix(dims=[], zeros=coalesce(s.default, 0 if s.aggregate == "count" else Null))) for s in select]
     for s, m in matricies:
         m[tuple()] = _pull(s, agg)
     cube = Cube(query.select, [], {s.name: m for s, m in matricies})
@@ -57,7 +57,7 @@ def format_table(decoders, aggs, start, query, select):
 
     def data():
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-        is_sent = Matrix(dims=dims, zeros=True)
+        is_sent = Matrix(dims=dims, zeros=0)
         for row, agg in aggs_iterator(aggs, decoders):
             coord = tuple(d.get_index(row) for d in decoders)
             is_sent[coord] = 1
@@ -161,7 +161,7 @@ def format_list(decoders, aggs, start, query, select):
 
     def data():
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-        is_sent = Matrix(dims=dims, zeros=True)
+        is_sent = Matrix(dims=dims, zeros=0)
         for row, agg in aggs_iterator(aggs, decoders):
             coord = tuple(d.get_index(row) for d in decoders)
             is_sent[coord] = 1

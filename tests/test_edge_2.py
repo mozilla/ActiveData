@@ -18,7 +18,6 @@ from tests.base_test_class import ActiveDataBaseTest
 class TestEdge2(ActiveDataBaseTest):
     def test_count_rows(self):
         test = {
-            "disable": True,  # TODO: PLEASE ENABLE, TOO COMPLICATED FOR v1
             "name": "count rows, 2d",
             "metadata": {},
             "data": two_dim_test_data,
@@ -167,6 +166,107 @@ class TestEdge2(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test)
+
+    def test_avg_rows_w_default(self):
+        test = {
+            "metadata": {},
+            "data": [
+                {"a": "x", "b": "m", "v": 2},
+                {"a": "x", "b": "m"},
+                {"a": "x", "b": "n", "v": 3},
+                {"a": "x"},
+                {"a": "y", "b": "m", "v": 7},
+                {"a": "y", "b": "n"},
+                {"a": "y", "b": "n"},
+                {"a": "y", "v": 13},
+                {"b": "m", "v": 17},
+                {"b": "n", "v": 19}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": {"value": "v", "aggregate": "average", "default": 0},
+                "edges": ["a", "b"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "x", "b": "m", "v": 2},
+                    {"a": "x", "b": "n", "v": 3},
+                    {"a": "x", "v": 0},
+                    {"a": "y", "b": "m", "v": 7},
+                    {"a": "y", "b": "n", "v": 0},
+                    {"a": "y", "v": 13},
+                    {"b": "m", "v": 17},
+                    {"b": "n", "v": 19}
+                ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a", "b", "v"],
+                "data": [
+                    ["x", None, 0],
+                    ["x", "m", 2],
+                    ["x", "n", 3],
+                    ["y", None, 13],
+                    ["y", "m", 7],
+                    ["y", "n", 0],
+                    [None, "m", 17],
+                    [None, "n", 19]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "a",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "partitions": [
+                                {
+                                    "dataIndex": 0,
+                                    "name": "x",
+                                    "value": "x"
+                                },
+                                {
+                                    "dataIndex": 1,
+                                    "name": "y",
+                                    "value": "y"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "b",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "partitions": [
+                                {
+                                    "dataIndex": 0,
+                                    "name": "m",
+                                    "value": "m"
+                                },
+                                {
+                                    "dataIndex": 1,
+                                    "name": "n",
+                                    "value": "n"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "data": {
+                    "v": [
+                        [2, 3, 0],
+                        [7, 0, 13],
+                        [17, 19, 0]
+                    ]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
 
     def test_sum_rows_w_domain(self):
         test = {

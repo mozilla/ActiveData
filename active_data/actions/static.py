@@ -54,6 +54,8 @@ def _read_file(filename):
 
         Log.note("Read {{file}}", file=file.abspath)
         mimetype, encoding = mimetypes.guess_type(file.extension)
+        if not mimetype:
+            mimetype = "text/html"
         return file.read_bytes(), 200, mimetype
     except Exception:
         return "", 404, "text/html"

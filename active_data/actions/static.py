@@ -21,7 +21,6 @@ from pyLibrary.env.files import File
 from pyLibrary.meta import cache
 from pyLibrary.times.durations import DAY
 
-BLANK = File("active_data/public/error.html").read()
 STATIC_DIRECTORY = File.new_instance("active_data/public")
 
 
@@ -32,7 +31,7 @@ def download(filename):
     :return: Response OBJECT WITH FILE CONTENT
     """
     try:
-        record_request(flask.request, None, flask.request.data, None)
+        record_request(flask.request, None, flask.request.get_data(), None)
         content, status, mimetype = _read_file(filename)
         return Response(
             content,

@@ -18,7 +18,7 @@ from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.debugs.profiles import CProfiler
-from pyLibrary.dot import coalesce
+from pyLibrary.dot import coalesce, listwrap
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx, meta
@@ -33,13 +33,19 @@ from pyLibrary.times.timer import Timer
 from active_data.actions import save_query
 
 BLANK = convert.unicode2utf8(File("active_data/public/error.html").read())
+QUERY_SIZE_LIMIT = 10*1024*1024
+
 
 def query(path):
     with CProfiler():
+        body = ''
         query_timer = Timer("total duration")
-        body = flask.request.get_data()
         try:
             with query_timer:
+                if int(flask.request.headers["content-length"]) > QUERY_SIZE_LIMIT:
+                    Log.error("Query is too large")
+
+                body = flask.request.get_data()
                 if not body.strip():
                     return Response(
                         BLANK,
@@ -147,6 +153,14 @@ def _send_error(active_data_timer, body, e):
     Log.warning("Could not process\n{{body}}", body=body.decode("latin1"), cause=e)
     e = e.as_dict()
     e.meta.timing.total = active_data_timer.duration.seconds
+
+    # REMOVE TRACES, BECAUSE NICER TO HUMANS
+    def remove_trace(e):
+        e.trace=None
+        for c in listwrap(e.cause):
+            remove_trace(c)
+    remove_trace(e)
+
     return Response(
         convert.unicode2utf8(convert.value2json(e)),
         status=400,

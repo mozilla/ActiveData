@@ -14,12 +14,12 @@ import flask
 from flask import Response
 
 from active_data import record_request
-from active_data.actions.static import BLANK
 from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.debugs.profiles import CProfiler
 from pyLibrary.dot import coalesce
+from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx, meta
 from pyLibrary.queries.containers import Container
@@ -32,16 +32,17 @@ from pyLibrary.times.timer import Timer
 
 from active_data.actions import save_query
 
+BLANK = convert.unicode2utf8(File("active_data/public/error.html").read())
 
 def query(path):
     with CProfiler():
         query_timer = Timer("total duration")
-        body = flask.request.data
+        body = flask.request.get_data()
         try:
             with query_timer:
                 if not body.strip():
                     return Response(
-                        convert.unicode2utf8(BLANK),
+                        BLANK,
                         status=400,
                         headers={
                             "access-control-allow-origin": "*",
@@ -73,8 +74,8 @@ def query(path):
             with Timer("post timer"):
                 # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
                 # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
-                timing_replacement = b'"total": ' + str(Math.round(query_timer.duration.seconds, digits=8)) +\
-                                     ', "jsonification": ' + str(Math.round(json_timer.duration.seconds, digits=8))
+                timing_replacement = b'"total": ' + str(Math.round(query_timer.duration.seconds, digits=4)) +\
+                                     ', "jsonification": ' + str(Math.round(json_timer.duration.seconds, digits=4))
                 response_data = response_data.replace(b'"total": "{{TOTAL_TIME}}"', timing_replacement)
                 Log.note("Response is {{num}} bytes in {{duration}}", num=len(response_data), duration=query_timer.duration)
 

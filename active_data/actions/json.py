@@ -25,7 +25,7 @@ from pyLibrary.times.timer import Timer
 
 def get_raw_json(path):
     active_data_timer = Timer("total duration")
-    body = flask.request.data
+    body = flask.request.get_data()
     try:
         with active_data_timer:
             args = wrap(Dict(**flask.request.args))

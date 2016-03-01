@@ -55,9 +55,9 @@ class TextLog_usingElasticSearch(TextLog):
                 Thread.sleep(seconds=1)
                 messages = wrap(self.queue.pop_all())
                 if messages:
-                    for m in messages:
-                        m.value.params = leafer(m.value.params)
-                        m.value.error = leafer(m.value.error)
+                    # for m in messages:
+                    #     m.value.params = leafer(m.value.params)
+                    #     m.value.error = leafer(m.value.error)
                     for g, mm in jx.groupby(messages, size=self.batch_size):
                         self.es.extend(mm)
                     bad_count = 0
@@ -97,48 +97,50 @@ def leafer(param):
 
 
 SCHEMA = {
-    "settings": {
-        "index.number_of_shards": 2,
-        "index.number_of_replicas": 2
-    },
-    "mappings": {
-        "_default_": {
-            "dynamic_templates": [
-                {
-                    "default_params_object": {
-                        "path_match": "params.*",
-                        "match_mapping_type": "object",
-                        "mapping": {
-                            "type": "object",
-                            "index": "no"
-                        }
-
-                    }
-                },
-                {
-                    "default_param_values": {
-                        "match": "$value",
-                        "mapping": {
-                            "type": "string",
-                            "index": "not_analyzed",
-                            "doc_values": True
-                        }
-                    }
+    "settings": {"index.number_of_shards": 2, "index.number_of_replicas": 2},
+    "mappings": {"_default_": {
+        "dynamic_templates": [
+            {"everything_else": {
+                "match": "*",
+                "mapping": {"index": "no"}
+            }}
+        ],
+        "_all": {"enabled": False},
+        "_source": {"compress": True, "enabled": True},
+        "properties": {
+            "params": {"type": "object", "dynamic": False, "index": "no"},
+            "template": {"type": "object", "dynamic": False, "index": "no"},
+            "context": {"type": "object", "dynamic": False, "index": "no"},
+            "$object": {"type": "string"},
+            "machine": {
+                "dynamic": True,
+                "properties": {
+                    "python": {
+                        "properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
+                    "$object": {"type": "string"},
+                    "os": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
+                    "name": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}}
                 }
-            ],
-            "_all": {
-                "enabled": False
             },
-            "_source": {
-                "compress": True,
-                "enabled": True
-            },
-            "properties": {
-                "params": {
-                    "type": "object",
-                    "index": "no"
+            "location": {
+                "dynamic": True,
+                "properties": {
+                    "$object": {"type": "string"},
+                    "file": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
+                    "method": {
+                        "properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
+                    "line": {"properties": {"$value": {"index": "not_analyzed", "type": "long", "doc_values": True}}}
                 }
-            }
+            },
+            "thread": {
+                "dynamic": True,
+                "properties": {
+                    "$object": {"type": "string"},
+                    "name": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
+                    "id": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}}
+                }
+            },
+            "timestamp": {"properties": {"$value": {"index": "not_analyzed", "type": "string"}}}
         }
-    }
+    }}
 }

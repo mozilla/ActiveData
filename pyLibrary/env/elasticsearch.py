@@ -303,7 +303,7 @@ class Index(Features):
                     "{{num}} {{error}} while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
                     num=item.index.status,
                     error=item.index.error,
-                    line=strings.limit(lines[fails[0] * 2 + 1], 500),
+                    line=strings.limit(lines[fails[0] * 2 + 1], 2000),
                     index=self.settings.index,
                     all_fails=fails,
                     id=item.index._id

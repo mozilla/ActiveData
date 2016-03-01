@@ -192,21 +192,17 @@ def parse(*args):
             elif isinstance(a0, Date):
                 output = unix2Date(a0.unix)
             elif isinstance(a0, (int, long, float, Decimal)):
-                if a0 == 9999999999000:  # PYPY BUG https://bugs.pypy.org/issue1697
-                    output = Date.MAX
-                elif a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
-                    output = unix2Date(float(a0) / 1000)
+                a0 = float(a0)
+                if a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
+                    output = unix2Date(a0 / 1000)
                 else:
-                    output = unix2Date(float(a0))
+                    output = unix2Date(a0)
             elif isinstance(a0, basestring) and len(a0) in [9, 10, 12, 13] and Math.is_integer(a0):
-                a0 = long(a0)
-                if a0 == 9999999999000:  # PYPY BUG https://bugs.pypy.org/issue1697
-                    output = Date.MAX
-                elif a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
-                    output = unix2Date(float(a0) / 1000)
+                a0 = float(a0)
+                if a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
+                    output = unix2Date(a0 / 1000)
                 else:
-                    output = unix2Date(float(a0))
-
+                    output = unix2Date(a0)
             elif isinstance(a0, basestring):
                 output = unicode2Date(a0)
             else:

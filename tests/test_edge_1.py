@@ -1321,7 +1321,81 @@ class TestEdge1(ActiveDataBaseTest):
 
         self.assertRaises("expression is empty", self._execute_es_tests, test)
 
-
+    def test_range(self):
+        test = {
+            "data": [
+                {"k": "a", "s": 0, "e": 0.1},  # THIS RECORD HAS NO LIFESPAN, SO WE DO NOT COUNT IT
+                {"k": "b", "s": 1, "e": 4},
+                {"k": "c", "s": 2, "e": 5},
+                {"k": "d", "s": 3, "e": 6},
+                {"k": "e", "s": 4, "e": 7},
+                {"k": "f", "s": 5, "e": 8},
+                {"k": "g", "s": 6, "e": 9},
+                {"k": "h", "s": 7, "e": 10},
+                {"k": "i", "s": 8, "e": 11},
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "edges": [
+                    {
+                        "name": "a",
+                        "range": {"min": "s", "max": "e"},
+                        "domain": {"type": "range", "min": 0, "max": 10, "interval": 1}
+                    }
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 0, "count": 1},
+                    {"a": 1, "count": 1},
+                    {"a": 2, "count": 2},
+                    {"a": 3, "count": 3},
+                    {"a": 4, "count": 3},
+                    {"a": 5, "count": 3},
+                    {"a": 6, "count": 3},
+                    {"a": 7, "count": 3},
+                    {"a": 8, "count": 3},
+                    {"a": 9, "count": 2}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header":["a", "count"],
+                "data": [
+                    [0, 1],
+                    [1, 1],
+                    [2, 2],
+                    [3, 3],
+                    [4, 3],
+                    [5, 3],
+                    [6, 3],
+                    [7, 3],
+                    [8, 3],
+                    [9, 2]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {"name": "a",
+                     "domain": {"partitions": [
+                         {"min": 0, "max": 1},
+                         {"min": 1, "max": 2},
+                         {"min": 2, "max": 3},
+                         {"min": 3, "max": 4},
+                         {"min": 4, "max": 5},
+                         {"min": 5, "max": 6},
+                         {"min": 6, "max": 7},
+                         {"min": 7, "max": 8},
+                         {"min": 8, "max": 9},
+                         {"min": 9, "max": 10}
+                     ]}}
+                ],
+                "data": {"count": [1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 0]}  # NOT SURE HOW WE ARE COUNTING NULLS
+            }
+        }
+        self._execute_es_tests(test)
 
 
 # TODO: TEST DOMAINS WITH PARTITIONS DEFINED BY FILTERS

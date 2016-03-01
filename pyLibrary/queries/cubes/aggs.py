@@ -46,7 +46,7 @@ def cube_aggs(frum, query):
     result = {
         s.name: Matrix(
             dims=[len(e.domain.partitions) + (1 if e.allowNulls else 0) for e in query.edges],
-            zeros=coalesce(s.default, 0 if s.aggregate == "count" else Null)
+            zeros=s.default
         )
         for s in select
     }

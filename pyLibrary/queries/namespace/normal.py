@@ -56,7 +56,7 @@ class Normal(Namespace):
             output.select = convert_list(self._convert_select, query.select)
         else:
             if query.edges or query.groupby:
-                output.select = {"name": "count", "value": ".", "aggregate": "count"}
+                output.select = {"name": "count", "value": ".", "aggregate": "count", "default": 0}
             else:
                 output.select = {"name": "__all__", "value": "*", "aggregate": "none"}
 

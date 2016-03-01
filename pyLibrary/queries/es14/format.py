@@ -24,12 +24,12 @@ from pyLibrary.queries.es14.aggs import count_dim, aggs_iterator, format_dispatc
 def format_cube(decoders, aggs, start, query, select):
     new_edges = count_dim(aggs, decoders)
     dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-    matricies = [(s, Matrix(dims=dims, zeros=coalesce(s.default, 0 if s.aggregate == "count" else Null))) for s in select]
+    matricies = [(s, Matrix(dims=dims, zeros=s.default)) for s in select]
     for row, agg in aggs_iterator(aggs, decoders):
         coord = tuple(d.get_index(row) for d in decoders)
         for s, m in matricies:
             try:
-                if m[coord]:
+                if m[coord] != s.default:
                     Log.error("Not expected")
                 v = _pull(s, agg)
                 m[coord] = v
@@ -43,7 +43,7 @@ def format_cube(decoders, aggs, start, query, select):
 
 def format_cube_from_aggop(decoders, aggs, start, query, select):
     agg = drill(aggs)
-    matricies = [(s, Matrix(dims=[], zeros=coalesce(s.default, 0 if s.aggregate == "count" else Null))) for s in select]
+    matricies = [(s, Matrix(dims=[], zeros=s.default)) for s in select]
     for s, m in matricies:
         m[tuple()] = _pull(s, agg)
     cube = Cube(query.select, [], {s.name: m for s, m in matricies})

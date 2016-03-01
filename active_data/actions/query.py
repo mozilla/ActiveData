@@ -42,11 +42,8 @@ def query(path):
         query_timer = Timer("total duration")
         try:
             with query_timer:
-                if int(flask.request.headers["content-length"]) > QUERY_SIZE_LIMIT:
-                    Log.error("Query is too large")
-
-                body = flask.request.get_data()
-                if not body.strip():
+                if flask.request.headers.get("content-length", "") in ["", "0"]:
+                    # ASSUME A BROWSER HIT THIS POINT, SEND text/html RESPONSE BACK
                     return Response(
                         BLANK,
                         status=400,
@@ -55,7 +52,10 @@ def query(path):
                             "content-type": "text/html"
                         }
                     )
+                elif int(flask.request.headers["content-length"]) > QUERY_SIZE_LIMIT:
+                    Log.error("Query is too large")
 
+                body = flask.request.get_data().strip()
                 text = convert.utf82unicode(body)
                 text = replace_vars(text, flask.request.args)
                 data = convert.json2value(text)
@@ -155,11 +155,11 @@ def _send_error(active_data_timer, body, e):
     e.meta.timing.total = active_data_timer.duration.seconds
 
     # REMOVE TRACES, BECAUSE NICER TO HUMANS
-    def remove_trace(e):
-        e.trace=None
-        for c in listwrap(e.cause):
-            remove_trace(c)
-    remove_trace(e)
+    # def remove_trace(e):
+    #     e.trace = e.trace[0:1:]
+    #     for c in listwrap(e.cause):
+    #         remove_trace(c)
+    # remove_trace(e)
 
     return Response(
         convert.unicode2utf8(convert.value2json(e)),

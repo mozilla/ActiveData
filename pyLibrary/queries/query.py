@@ -85,7 +85,7 @@ class Query(object):
             self.select = _normalize_select(select, schema=schema)
         else:
             if query.edges or query.groupby:
-                self.select = Dict(name="count", value=".", aggregate="count")
+                self.select = Dict(name="count", value=".", aggregate="count", default=0)
             else:
                 self.select = Dict(name=".", value=".", aggregate="none")
 
@@ -155,13 +155,14 @@ class Query(object):
         return output
 
 
-canonical_aggregates = {
-    "min": "minimum",
-    "max": "maximum",
-    "add": "sum",
-    "avg": "average",
-    "mean": "average"
-}
+canonical_aggregates = wrap({
+    "count": {"name": "count", "default": 0},
+    "min": {"name": "minimum"},
+    "max": {"name": "maximum"},
+    "add": {"name": "sum"},
+    "avg": {"name": "average"},
+    "mean": {"name": "average"},
+})
 
 
 def _normalize_selects(selects, schema=None):
@@ -239,8 +240,10 @@ def _normalize_select(select, schema=None):
         if output.name.endswith(".*"):
             output.name = output.name[:-2]
 
-        output.aggregate = coalesce(canonical_aggregates.get(select.aggregate), select.aggregate, "none")
+        output.aggregate = coalesce(canonical_aggregates[select.aggregate].name, select.aggregate, "none")
+        output.default = coalesce(select.default, canonical_aggregates[output.aggregate].default)
         return output
+
 
 
 def _normalize_edges(edges, schema=None):

@@ -12,9 +12,7 @@
 # WITH ADDED default_headers THAT CAN BE SET USING pyLibrary.debugs.settings
 # EG
 # {"debug.constants":{
-# "pyLibrary.env.http.default_headers={
-# "From":"klahnakoski@mozilla.com"
-#     }
+#     "pyLibrary.env.http.default_headers":{"From":"klahnakoski@mozilla.com"}
 # }}
 
 

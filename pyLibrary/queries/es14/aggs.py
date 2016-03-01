@@ -23,6 +23,7 @@ from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword, De
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
 from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, jx_expression, AndOp, Variable, Literal, OrOp, BinaryOp
 from pyLibrary.queries.query import DEFAULT_LIMIT, MAX_LIMIT
+from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
 
 
@@ -50,6 +51,21 @@ def get_decoders_by_depth(query):
                     Log.error("{{var}} does not exist in schema", var=v)
 
             e.value = e.value.map({schema[v].name: schema[v].abs_name for v in vars_})
+        elif e.range:
+            e = e.copy()
+            min_ = jx_expression(e.range.min)
+            max_ = jx_expression(e.range.max)
+            vars_ = min_.vars() | max_.vars()
+
+            for v in vars_:
+                if not schema[v]:
+                    Log.error("{{var}} does not exist in schema", var=v)
+
+            map_ = {schema[v].name: schema[v].abs_name for v in vars_}
+            e.range = {
+                "min": min_.map(map_),
+                "max": max_.map(map_)
+            }
         else:
             vars_ = e.domain.dimension.fields
             e.domain.dimension = e.domain.dimension.copy()
@@ -335,6 +351,8 @@ class AggsDecoder(object):
             return object.__new__(SetDecoder, e)
         if e.value and e.domain.type == "time":
             return object.__new__(TimeDecoder, e)
+        if e.range:
+            return object.__new__(GeneralRangeDecoder, e)
         if e.value and e.domain.type == "duration":
             return object.__new__(DurationDecoder, e)
         elif e.value and e.domain.type == "range":
@@ -421,12 +439,12 @@ class SetDecoder(AggsDecoder):
         return self.domain.getKeyByIndex(index)
 
     def get_value_from_row(self, row):
-        return row[self.start].key
+        return row[self.start]["key"]
 
     def get_index(self, row):
         try:
             part = row[self.start]
-            return self.domain.getIndexByKey(part.key)
+            return self.domain.getIndexByKey(part["key"])
         except Exception, e:
             Log.error("problem", cause=e)
 
@@ -446,19 +464,12 @@ def _range_composer(edge, domain, es_query, to_float):
         calc = {"script_field": edge.value.to_ruby()}
 
     if edge.allowNulls:    # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
-        if isinstance(edge.value, Variable):
-            missing_range = {"or": [
-                {"range": {edge.value.var: {"lt": to_float(_min)}}},
-                {"range": {edge.value.var: {"gte": to_float(_max)}}}
-            ]}
-        else:
-            missing_range = {"script": {"script": OrOp("or", [
-                BinaryOp("lt", [edge.value, Literal(None, to_float(_min))]),
-                BinaryOp("gt", [edge.value, Literal(None, to_float(_max))]),
-            ]).to_ruby()}}
         missing_filter = set_default(
             {"filter": {"or": [
-                missing_range,
+                OrOp("or", [
+                    BinaryOp("lt", [edge.value, Literal(None, to_float(_min))]),
+                    BinaryOp("gt", [edge.value, Literal(None, to_float(_max))]),
+                ]).to_esfilter(),
                 edge.value.missing().to_esfilter()
             ]}},
             es_query
@@ -490,8 +501,8 @@ class TimeDecoder(AggsDecoder):
         if part == None:
             return len(domain.partitions)
 
-        f = coalesce(part["from"], part.key)
-        t = coalesce(part.to, part.key)
+        f = coalesce(part["from"], part["key"])
+        t = coalesce(part["to"], part["key"])
         if f == None or t == None:
             return len(domain.partitions)
         else:
@@ -501,6 +512,57 @@ class TimeDecoder(AggsDecoder):
         sample = part.copy
         sample.buckets = None
         Log.error("Expecting to find {{part}}",  part=sample)
+
+    @property
+    def num_columns(self):
+        return 1
+
+
+class GeneralRangeDecoder(AggsDecoder):
+    """
+    Accept an algebraic domain, and an edge with a `range` attribute
+    This class assumes the `snapshot` version - where we only include
+    partitions that have their `min` value in the range.
+    """
+
+    def __init__(self, edge, query):
+        AggsDecoder.__init__(self, edge, query)
+        if edge.domain.type=="time":
+            self.to_float = lambda x: x.unix
+        elif edge.domain.type=="range":
+            self.to_float = lambda x: x
+        else:
+            Log.error("Unknown domain of type {{type}} for range edge", type=edge.domain.type)
+
+    def append_query(self, es_query, start):
+        self.start = start
+
+        edge = self.edge
+        range = edge.range
+        domain = edge.domain
+
+        aggs = {}
+        for i, p in enumerate(domain.partitions):
+            filter_ = AndOp("and", [
+                BinaryOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
+                BinaryOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
+            ])
+            aggs["_join_" + unicode(i)] = set_default(
+                {"filter": filter_.to_esfilter()},
+                es_query
+            )
+
+        return wrap({"aggs": aggs})
+
+    def get_value(self, index):
+        return self.edge.domain.getKeyByIndex(index)
+
+    def get_index(self, row):
+        domain = self.edge.domain
+        part = row[self.start]
+        if part == None:
+            return len(domain.partitions)
+        return part["key"]
 
     @property
     def num_columns(self):
@@ -521,8 +583,8 @@ class DurationDecoder(AggsDecoder):
         if part == None:
             return len(domain.partitions)
 
-        f = coalesce(part["from"], part.key)
-        t = coalesce(part.to, part.key)
+        f = coalesce(part["from"], part["key"])
+        t = coalesce(part["to"], part["key"])
         if f == None or t == None:
             return len(domain.partitions)
         else:
@@ -552,8 +614,8 @@ class RangeDecoder(AggsDecoder):
         if part == None:
             return len(domain.partitions)
 
-        f = coalesce(part["from"], part.key)
-        t = coalesce(part.to, part.key)
+        f = coalesce(part["from"], part["key"])
+        t = coalesce(part["to"], part["key"])
         if f == None or t == None:
             return len(domain.partitions)
         else:
@@ -614,7 +676,7 @@ class DefaultDecoder(SetDecoder):
         if part == None:
             self.edge.allowNulls = True  # OK! WE WILL ALLOW NULLS
         else:
-            self.parts.append(part.key)
+            self.parts.append(part["key"])
 
     def done_count(self):
         self.edge.domain = self.domain = SimpleSetDomain(
@@ -659,7 +721,7 @@ class DimFieldListDecoder(SetDecoder):
 
     def count(self, row):
         part = row[self.start:self.start + len(self.fields):]
-        value = tuple(p.key for p in part)
+        value = tuple(p["key"] for p in part)
         self.parts.append(value)
 
     def done_count(self):
@@ -674,7 +736,7 @@ class DimFieldListDecoder(SetDecoder):
         )
 
     def get_index(self, row):
-        find = tuple(p.key for p in row[self.start:self.start + self.num_columns:])
+        find = tuple(p["key"] for p in row[self.start:self.start + self.num_columns:])
         return self.domain.getIndexByKey(find)
 
     @property
@@ -687,10 +749,10 @@ EMPTY_LIST = []
 
 
 def drill(agg):
-    deeper = coalesce(agg.get("_filter"), agg.get("_nested"))
+    deeper = agg.get("_filter", agg.get("_nested"))
     while deeper:
         agg = deeper
-        deeper = coalesce(agg.get("_filter"), agg.get("_nested"))
+        deeper = agg.get("_filter", agg.get("_nested"))
     return agg
 
 
@@ -706,32 +768,50 @@ def aggs_iterator(aggs, decoders):
         agg = drill(agg)
 
         if d > 0:
-            for b in agg.get("_match", EMPTY).get("buckets", EMPTY_LIST):
-                parts[d] = wrap(b)
-                for a in _aggs_iterator(b, d - 1):
-                    yield a
-            parts[d] = Null
-            for b in agg.get("_other", EMPTY).get("buckets", EMPTY_LIST):
-                for a in _aggs_iterator(b, d - 1):
-                    yield a
-            b = drill(agg.get("_missing", EMPTY))
-            if b.get("doc_count"):
-                for a in _aggs_iterator(b, d - 1):
-                    yield a
+            for k, v in agg.items():
+                if k == "_match":
+                    for b in v.get("buckets", EMPTY_LIST):
+                        parts[d] = b
+                        for a in _aggs_iterator(b, d - 1):
+                            yield a
+                elif k == "_other":
+                    parts[d] = Null
+                    for b in v.get("buckets", EMPTY_LIST):
+                        for a in _aggs_iterator(b, d - 1):
+                            yield a
+                elif k == "_missing":
+                    parts[d] = Null
+                    b = drill(v)
+                    if b.get("doc_count"):
+                        for a in _aggs_iterator(b, d - 1):
+                            yield a
+                elif k.startswith("_join_"):
+                    v["key"] = int(k[6:])
+                    parts[d] = v
+                    for a in _aggs_iterator(v, d - 1):
+                        yield a
         else:
-            for b in agg.get("_match", EMPTY).get("buckets", EMPTY_LIST):
-                parts[d] = wrap(b)
-                b = drill(b)
-                if b.get("doc_count"):
-                    yield b
-            parts[d] = Null
-            for b in agg.get("_other", EMPTY).get("buckets", EMPTY_LIST):
-                b = drill(b)
-                if b.get("doc_count"):
-                    yield b
-            b = drill(agg.get("_missing", EMPTY))
-            if b.get("doc_count"):
-                yield b
+            for k, v in agg.items():
+                if k == "_match":
+                    for b in v.get("buckets", EMPTY_LIST):
+                        parts[d] = b
+                        if b.get("doc_count"):
+                            yield b
+                elif k == "_other":
+                    parts[d] = Null
+                    for b in v.get("buckets", EMPTY_LIST):
+                        b = drill(b)
+                        if b.get("doc_count"):
+                            yield b
+                elif k == "_missing":
+                    parts[d] = Null
+                    b = drill(v)
+                    if b.get("doc_count"):
+                        yield b
+                elif k.startswith("_join_"):
+                    v["key"] = int(k[6:])
+                    parts[d] = v
+                    yield v
 
     for a in _aggs_iterator(unwrap(aggs), depth - 1):
         yield parts, a

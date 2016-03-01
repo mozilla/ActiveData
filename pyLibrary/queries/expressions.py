@@ -94,7 +94,10 @@ def jx_expression(expr):
         else:
             return class_(op, jx_expression(term), **clauses)
     else:
-        return class_(op, jx_expression(term), **clauses)
+        if op in ["literal", "date"]:
+            return class_(op, term, **clauses)
+        else:
+            return class_(op, jx_expression(term), **clauses)
 
 
 def compile_expression(source):
@@ -1000,28 +1003,10 @@ class StringOp(Expression):
         return self.term.missing()
 
 
-class DateOp(Expression):
+class DateOp(Literal):
     def __init__(self, op, term):
-        Expression.__init__(self, op, [term])
-        self.term = term
-
-    def to_ruby(self, not_null=False, boolean=False):
-        return unicode(Date(self.term).unix)
-
-    def to_python(self, not_null=False, boolean=False):
-        return unicode(Date(self.term).unix)
-
-    def to_dict(self):
-        return {"date": self.term.to_dict()}
-
-    def vars(self):
-        return set()
-
-    def map(self, map_):
-        return self
-
-    def missing(self):
-        return False
+        Literal.__init__(self, op, [term])
+        self.json = convert.value2json(Date(term).unix)
 
 
 class CountOp(Expression):
@@ -1858,6 +1843,7 @@ operators = {
     "regexp": RegExpOp,
     "regex": RegExpOp,
     "literal": Literal,
+    "date": DateOp,
     "null": NullOp,
     "coalesce": CoalesceOp,
     "left": LeftOp,

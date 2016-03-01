@@ -23,7 +23,6 @@ from pyLibrary.times.durations import MINUTE
 
 
 class TextLog_usingElasticSearch(TextLog):
-
     @use_settings
     def __init__(self, host, index, type="log", max_size=1000, batch_size=100, settings=None):
         """
@@ -46,7 +45,7 @@ class TextLog_usingElasticSearch(TextLog):
             self.queue.add({"value": params})
         else:
             template = strings.limit(template, 2000)
-            self.queue.add({"value": {"template": template, "params": params}}, timeout=3*MINUTE)
+            self.queue.add({"value": {"template": template, "params": params}}, timeout=3 * MINUTE)
         return self
 
     def _insert_loop(self, please_stop=None):
@@ -106,6 +105,17 @@ SCHEMA = {
         "_default_": {
             "dynamic_templates": [
                 {
+                    "default_params_object": {
+                        "path_match": "params.*",
+                        "match_mapping_type": "object",
+                        "mapping": {
+                            "type": "object",
+                            "index": "no"
+                        }
+
+                    }
+                },
+                {
                     "default_param_values": {
                         "match": "$value",
                         "mapping": {
@@ -126,7 +136,7 @@ SCHEMA = {
             "properties": {
                 "params": {
                     "type": "object",
-                    "dynamic": True
+                    "index": "no"
                 }
             }
         }

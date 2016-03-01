@@ -121,9 +121,9 @@ class TestMetadata(ActiveDataBaseTest):
                 "data": [
                     {"table": table_name, "name": "_a", "type": "nested", "nested_path": "_a"},
                     {"table": table_name, "name": "_a.b", "type": "string", "nested_path": "_a"},
-                    {"table": table_name, "name": "_a.v", "type": "long", "nested_path": "_a"},
+                    {"table": table_name, "name": "_a.v", "type": "double", "nested_path": "_a"},
                     {"table": table_name, "name": "c", "type": "string", "nested_path": None},
-                    {"table": table_name, "name": "o", "type": "long", "nested_path": None},
+                    {"table": table_name, "name": "o", "type": "double", "nested_path": None},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -131,9 +131,9 @@ class TestMetadata(ActiveDataBaseTest):
                 "data": [
                     [table_name, "_a", "_a", "nested"],
                     [table_name, "_a.b", "_a", "string"],
-                    [table_name, "_a.v", "_a", "long"],
+                    [table_name, "_a.v", "_a", "double"],
                     [table_name, "c", None, "string"],
-                    [table_name, "o", None, "long"]
+                    [table_name, "o", None, "double"]
                 ]
             }
         }

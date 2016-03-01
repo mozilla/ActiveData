@@ -983,7 +983,7 @@ class StringOp(Expression):
     def to_ruby(self, not_null=False, boolean=False):
         value = self.term.to_ruby(not_null=True)
         missing = self.term.missing().to_ruby()
-        return "(" + missing + ") ? null : String.valueOf(" + value + ")"
+        return "(" + missing + ") ? null : (((" + value + ") instanceof java.lang.Double) ? String.valueOf(" + value + ").replaceAll('\\\\.0$', '') : String.valueOf(" + value + "))"  #"\\.0$"
 
     def to_python(self, not_null=False, boolean=False):
         value = self.term.to_python(not_null=True)

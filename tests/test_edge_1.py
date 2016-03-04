@@ -61,8 +61,6 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-
-
     def test_count_rows(self):
         test = {
             "name": "count rows, 1d",
@@ -1397,8 +1395,61 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
-
-# TODO: TEST DOMAINS WITH PARTITIONS DEFINED BY FILTERS
+    def test_edge_w_partition_filters(self):
+        test = {
+            "data": structured_test_data,
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": [
+                    {"name": "count", "value": "v", "aggregate": "count"},
+                    {"name": "sum", "value": "v", "aggregate": "sum"}
+                ],
+                "edges": [
+                    {
+                        "name": "a",
+                        "domain": {
+                            "type":"set",
+                            "partitions": [
+                                {"name": "b", "where": {"eq": {"b.r": "b"}}},
+                                {"name": "3", "where": {"eq": {"b.d": 3}}}
+                            ]
+                        }
+                    }
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b", "count": 3, "sum": 15},
+                    {"a": "3", "count": 4, "sum": 37},
+                    {"a": None, "count": 6, "sum": 39}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header":["a", "count", "sum"],
+                "data": [
+                    ["b", 3, 15],
+                    ["3", 4, 37],
+                    [None, 6, 39],
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [{
+                    "name": "a",
+                    "domain": {"partitions": [
+                        {"name": "b"},
+                        {"name": "3"}
+                    ]}
+                }],
+                "data": {
+                    "count": [3, 4, 6],
+                    "sum": [15, 37, 39]
+                }
+            }
+        }
+        self._execute_es_tests(test)
 
 
 

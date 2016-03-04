@@ -223,7 +223,7 @@ class SimpleSetDomain(Domain):
             self.label = coalesce(self.label, "name")
             return
         elif desc.key == None:
-            if desc.partitions and len(set(desc.partitions.value)) == len(desc.partitions):
+            if desc.partitions and len(set(desc.partitions.value)-{None}) == len(desc.partitions):
                 # TRY A COMMON KEY CALLED "value".  IT APPEARS UNIQUE
                 self.key = "value"
                 self.map = dict()
@@ -233,6 +233,24 @@ class SimpleSetDomain(Domain):
                     self.map[p[self.key]] = p
                     self.order[p[self.key]] = i
                 self.primitive = False
+            elif all(desc.partitions.where):
+                if not all(desc.partitions.name):
+                    Log.error("Expecting all partitions to have a name")
+                from pyLibrary.queries.expressions import jx_expression
+
+                self.key = "name"
+                self.map = dict()
+                self.map[None] = self.NULL
+                self.order[None] = len(desc.partitions)
+                for i, p in enumerate(desc.partitions):
+                    self.partitions.append({
+                        "where": jx_expression(p.where),
+                        "name": p.name,
+                        "dataIndex": i
+                    })
+                    self.map[p.name] = p
+                    self.order[p.name] = i
+                return
             else:
                 Log.error("Domains must have keys")
         elif self.key:

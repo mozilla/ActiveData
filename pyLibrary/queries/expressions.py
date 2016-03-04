@@ -46,6 +46,8 @@ def jx_expression(expr):
         return Literal(None, expr)
     elif is_keyword(expr):
         return Variable(expr)
+    elif isinstance(expr, Mapping) and expr.date:
+        return DateOp("date", expr)
     elif expr == "":
         Log.error("expression is empty")
 
@@ -167,8 +169,7 @@ def edges_get_all_vars(e):
         output |= jx_expression(e.domain.where).vars()
     if e.domain.partitions:
         for p in e.domain.partitions:
-            if p.where:
-                output |= jx_expression(p.where).vars()
+            output |= p.where.vars()
     return output
 
 
@@ -182,7 +183,7 @@ class Expression(object):
                 Log.error("Expecting an expression")
         elif isinstance(terms, Mapping):
             if not all(isinstance(k, Variable) and isinstance(v, Literal) for k, v in terms.items()):
-                Log.error("Expecting an {<variable>: <literal}")
+                Log.error("Expecting an {<variable>: <literal>}")
         elif terms == None:
             pass
         else:
@@ -300,6 +301,9 @@ class Variable(Expression):
     def exists(self):
         return ExistsOp("exists", self)
 
+    def __call__(self, row=None, rownum=None, rows=None):
+        return row[self.var]
+
     def __hash__(self):
         return self.var.__hash__()
 
@@ -347,6 +351,9 @@ class Literal(Expression):
             return TrueOp()
         if term is False:
             return FalseOp()
+        if isinstance(term, Mapping) and term.date:
+            # SPECIAL CASE
+            return object.__new__(DateOp, None, term)
         return object.__new__(cls, op, term)
 
     def __init__(self, op, term):
@@ -412,6 +419,9 @@ class Literal(Expression):
     def missing(self):
         return FalseOp()
 
+    def __call__(self, row=None, rownum=None, rows=None):
+        return convert.json2value(self.json)
+
     def __unicode__(self):
         return self.json
 
@@ -456,6 +466,9 @@ class NullOp(Literal):
 
     def exists(self):
         return FalseOp()
+
+    def __call__(self, row=None, rownum=None, rows=None):
+        return Null
 
     def __unicode__(self):
         return "null"
@@ -504,6 +517,9 @@ class TrueOp(Literal):
     def is_false(self):
         return FalseOp()
 
+    def __call__(self, row=None, rownum=None, rows=None):
+        return True
+
     def __unicode__(self):
         return "true"
 
@@ -551,12 +567,38 @@ class FalseOp(Literal):
     def is_false(self):
         return TrueOp()
 
+    def __call__(self, row=None, rownum=None, rows=None):
+        return False
 
     def __unicode__(self):
         return "false"
 
     def __str__(self):
         return b"false"
+
+
+class DateOp(Literal):
+    def __init__(self, op, term):
+        self.value = term.date
+        Literal.__init__(self, op, Date(term.date).unix)
+
+    def to_python(self, not_null=False, boolean=False):
+        return "Date("+convert.string2quote(self.value)+")"
+
+    def to_esfilter(self):
+        return convert.json2value(self.json)
+
+    def to_dict(self):
+        return {"date": self.value}
+
+    def __call__(self, row=None, rownum=None, rows=None):
+        return Date(self.value)
+
+    def __unicode__(self):
+        return self.json
+
+    def __str__(self):
+        return str(self.json)
 
 
 class BinaryOp(Expression):
@@ -615,13 +657,14 @@ class BinaryOp(Expression):
         lhs = self.lhs.to_ruby(not_null=True)
         rhs = self.rhs.to_ruby(not_null=True)
         script = "(" + lhs + ") " + BinaryOp.operators[self.op] + " (" + rhs + ")"
+        missing = OrOp("or", [self.lhs.missing(), self.rhs.missing()])
 
         if self.op in BinaryOp.algebra_ops:
             script = "(" + script + ").doubleValue()"  # RETURN A NUMBER, NOT A STRING
 
         output = WhenOp(
             "when",
-            OrOp("or", [self.lhs.missing(), self.rhs.missing()]),
+            missing,
             **{
                 "then": self.default,
                 "else":
@@ -776,7 +819,6 @@ class EqOp(Expression):
         return TrueOp()
 
 
-
 class NeOp(Expression):
     has_simple_form = True
 
@@ -807,7 +849,6 @@ class NeOp(Expression):
                 {"and": [{"exists": {"field": v}} for v in self.vars()]},
                 {"script": {"script": self.to_ruby()}}
             ]}
-
 
     def to_dict(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
@@ -841,7 +882,11 @@ class NotOp(Expression):
         return self.term.vars()
 
     def to_esfilter(self):
-        return {"not": self.term.to_esfilter()}
+        operand = self.term.to_esfilter()
+        if operand.get("script"):
+            return {"script": {"script": "!(" + operand.get("script", {}).get("script") + ")"}}
+        else:
+            return {"not": operand}
 
     def to_dict(self):
         return {"not": self.term.to_dict()}
@@ -919,6 +964,9 @@ class OrOp(Expression):
 
     def missing(self):
         return False
+
+    def __call__(self, row=None, rownum=None, rows=None):
+        return any(t(row, rownum, rows) for t in self.terms)
 
 
 class LengthOp(Expression):
@@ -1001,12 +1049,6 @@ class StringOp(Expression):
 
     def missing(self):
         return self.term.missing()
-
-
-class DateOp(Literal):
-    def __init__(self, op, term):
-        Literal.__init__(self, op, [term])
-        self.json = convert.value2json(Date(term).unix)
 
 
 class CountOp(Expression):
@@ -1513,7 +1555,10 @@ class InOp(Expression):
         return self.field.to_python() + " in " + self.values.to_python()
 
     def to_esfilter(self):
-        return {"terms": {self.field.var: convert.json2value(self.values.json)}}
+        if isinstance(self.field, Variable):
+            return {"terms": {self.field.var: convert.json2value(self.values.json)}}
+        else:
+            return {"script": self.to_ruby()}
 
     def to_dict(self):
         if isinstance(self.field, Variable) and isinstance(self.values, Literal):

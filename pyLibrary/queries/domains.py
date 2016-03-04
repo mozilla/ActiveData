@@ -233,7 +233,7 @@ class SimpleSetDomain(Domain):
                     self.map[p[self.key]] = p
                     self.order[p[self.key]] = i
                 self.primitive = False
-            elif all(desc.partitions.where):
+            elif all(desc.partitions.where) or all(desc.partitions.esfilter):
                 if not all(desc.partitions.name):
                     Log.error("Expecting all partitions to have a name")
                 from pyLibrary.queries.expressions import jx_expression
@@ -244,7 +244,7 @@ class SimpleSetDomain(Domain):
                 self.order[None] = len(desc.partitions)
                 for i, p in enumerate(desc.partitions):
                     self.partitions.append({
-                        "where": jx_expression(p.where),
+                        "where": jx_expression(coalesce(p.where, p.esfilter)),
                         "name": p.name,
                         "dataIndex": i
                     })
@@ -262,11 +262,6 @@ class SimpleSetDomain(Domain):
                 self.map[p[self.key]] = p
                 self.order[p[self.key]] = i
             self.primitive = False
-        elif all(p.esfilter for p in self.partitions):
-            # EVERY PART HAS AN esfilter DEFINED, SO USE THEM
-            for i, p in enumerate(self.partitions):
-                p.dataIndex = i
-
         else:
             Log.error("Can not hanldle")
 

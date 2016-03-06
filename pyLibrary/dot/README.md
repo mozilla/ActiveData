@@ -65,6 +65,7 @@ a.b.c += [42]
 `Dict` is a common pattern in many frameworks even though it goes by
 different names and slightly different variations, some examples are:
 
+ * [PEP 0505] calls this ["save navigation"](https://www.python.org/dev/peps/pep-0505/)
  * `jinja2.environment.Environment.getattr()`  to allow convenient dot notation
  * `argparse.Environment()` - code performs `setattr(e, name, value)` on
   instances of Environment to provide dot(`.`) accessors
@@ -100,7 +101,7 @@ have that property: Asking for the physical height of poem is nonsense, and
 we return None/null to indicate this.  Databases use `null` in this way to
 simultaneously deal with multiple (sub)types and keep records in fewer tables
 to minimize query complexity.  Call this version of None the "*Out of Context*"
-definition.
+definition.  
 
 Python, and the *pythonic way*, and many of its libraries, assume None is a
 *Missing Value*.  This assumption results in an excess of exception handling
@@ -114,9 +115,8 @@ more generic when dealing with sets and lists with members of non-uniform type.
 
 I would like to override `None` in order to change its behaviour.
 Unfortunately, `None` is a primitive that can not be extended, so we create
-a new type, `NullType` and instances, `Null`, which are closed under the dot(.)
-and slice [::] operators.  In many ways, `Null` acts as both an impotent
-list and an impotent dict.
+a new type, `NullType` and instances, `Null` ([a null object](https://en.wikipedia.org/wiki/Null_Object_pattern)), which are closed under the dot(.), access [], and slice [::] 
+operators. `Null` acts as both an impotent list and an impotent dict:
 
  1. `a[Null] == Null`
  2. `Null.a == Null`

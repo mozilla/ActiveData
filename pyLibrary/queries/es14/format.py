@@ -28,8 +28,6 @@ def format_cube(decoders, aggs, start, query, select):
     for row, coord, agg in aggs_iterator(aggs, decoders):
         for s, m in matricies:
             try:
-                if m[coord] != s.default:
-                    Log.error("Not expected")
                 v = _pull(s, agg)
                 m[coord] = v
             except Exception, e:
@@ -244,7 +242,10 @@ def _pull(s, agg):
 
 def _get(v, k, d):
     for p in split_field(k):
-        v = v.get(p)
-        if v is None:
-            return d
+        try:
+            v = v.get(p)
+            if v is None:
+                return d
+        except Exception:
+            v = [vv.get(p) for vv in v]
     return v

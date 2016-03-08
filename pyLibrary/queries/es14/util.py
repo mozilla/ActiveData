@@ -90,6 +90,7 @@ aggregates1_4 = {
     "s2": "sum_of_squares",
     "std": "std_deviation",
     "stddev": "std_deviation",
+    "union": "union",
     "var": "variance",
     "variance": "variance",
     "stats": "stats"

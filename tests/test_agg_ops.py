@@ -371,3 +371,37 @@ class TestAggOps(ActiveDataBaseTest):
             }
         }
         self._execute_es_tests(test, tjson=False)
+
+    def test_union(self):
+        test = {
+            "data": [
+                {"b": "a"},
+                {"b": "b"},
+                {"b": "c"},
+                {"b": "d"},
+                {"b": "e"},
+                {"b": "f"},
+                {"b": "g"},
+                {"b": "h"},
+                {"b": "i"},
+                {"b": "j"},
+                {"b": "x"},
+                {"b": "x"},
+                {"b": "x"},
+                {"b": "y"},
+                {"b": "y"},
+                {"b": "y"},
+                {"b": "z"},
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "select": [
+                    {"value": "b", "aggregate": "union"}
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "value"},
+                "data": {"b": ["x", "y", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "z"]}
+            }
+        }
+        self._execute_es_tests(test, tjson=False)

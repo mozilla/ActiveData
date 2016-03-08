@@ -175,6 +175,12 @@ def es_aggsop(es, frum, query):
                     "var": stats_name + ".variance",
                     "median": median_name + ".values.50\.0"
                 }
+            elif s.aggregate == "union":
+                # USE TERMS AGGREGATE TO SIMULATE union
+                stats_name = literal_field(canonical_name)
+                es_query.aggs[stats_name].terms.field = field_name
+                es_query.aggs[stats_name].terms.size = Math.min(s.limit, MAX_LIMIT)
+                s.pull = stats_name + ".buckets.key"
             else:
                 # PULL VALUE OUT OF THE stats AGGREGATE
                 es_query.aggs[literal_field(canonical_name)].extended_stats.field = field_name
@@ -229,6 +235,11 @@ def es_aggsop(es, frum, query):
                 "var": stats_name + ".variance",
                 "median": median_name + ".values.50\.0"
             }
+        elif s.aggregate=="union":
+            # USE TERMS AGGREGATE TO SIMULATE union
+            stats_name = literal_field(canonical_name)
+            es_query.aggs[stats_name].terms.script_field = abs_value.to_ruby()
+            s.pull = stats_name + ".buckets.key"
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = canonical_name + "." + aggregates1_4[s.aggregate]

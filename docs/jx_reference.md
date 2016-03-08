@@ -154,6 +154,7 @@ The ```aggregate``` sub-clause has many options.
   - **list** - return an list of values (alternate name for array aggregate)
     - **select.sort** - optional, to return the array sorted
   - **union** - return an array of unique values.  In the case of javascript, uniqueness is defined as the string the object can be coerced to (```""+a == ""+b```).
+    - **select.limit** - limit on the size of the set
 
 All aggregates ignore the null values; If all values are null, it is the same as having no data.
 

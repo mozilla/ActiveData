@@ -154,10 +154,11 @@ def es_aggsop(es, frum, query):
                     "var": stats_name + ".variance",
                     "median": median_name + ".values.50\.0"
                 }
-            elif s.aggregate=="union":
+            elif s.aggregate == "union":
                 # USE TERMS AGGREGATE TO SIMULATE union
                 stats_name = literal_field(canonical_name)
                 es_query.aggs[stats_name].terms.field = field_name
+                es_query.aggs[stats_name].terms.size = Math.min(s.limit, MAX_LIMIT)
                 s.pull = stats_name + ".buckets.key"
             else:
                 # PULL VALUE OUT OF THE stats AGGREGATE

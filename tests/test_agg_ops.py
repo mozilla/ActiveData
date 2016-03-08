@@ -375,6 +375,16 @@ class TestAggOps(ActiveDataBaseTest):
     def test_union(self):
         test = {
             "data": [
+                {"b": "a"},
+                {"b": "b"},
+                {"b": "c"},
+                {"b": "d"},
+                {"b": "e"},
+                {"b": "f"},
+                {"b": "g"},
+                {"b": "h"},
+                {"b": "i"},
+                {"b": "j"},
                 {"b": "x"},
                 {"b": "x"},
                 {"b": "x"},
@@ -391,7 +401,7 @@ class TestAggOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "value"},
-                "data": {"b": ["x", "y", "z"]}
+                "data": {"b": ["x", "y", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "z"]}
             }
         }
         self._execute_es_tests(test, tjson=False)

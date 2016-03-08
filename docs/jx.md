@@ -6,12 +6,13 @@ JSON query expressions are structures that mimic SQL query semantics; each prope
 Motivation
 ----------
 
-JSON Expressions provide ...
+JSON Expressions have the following benefits
 
 * Simplified expressions over unclean data.
 * Ability to translate shape of the data.
 * Extract data as pivot tables and data frames
-* Some language independence
+* Easy Meta-Programming
+* Language independence
 
 
 Non Goals and Limitations
@@ -27,6 +28,9 @@ Non-Goals
 * **Joins** - There is currently no attempt to provide clauses for joins.  Although, there are some JSON Expressions forms that can be abused to perform joins.
 * **Graph Operations** - Graph traversal, aggregation, or SQL's `CONNECT BY` are not implemented.
 * **Under development** - The JSON Expressions specification is not fully implemented, and the specification itself is incomplete.  What does exist has tests to maintain stability.
+
+More on Benefits
+----------------
 
 ### Expression Simplification
 
@@ -144,6 +148,11 @@ An inspection of this table may have you conclude AL (Alaska) does not exist.  A
 </td></tr></table>
 
 Alaska will show, despite it having no employees.  Furthermore, filtering employees by some criterion will continue to return the same number of rows, only with the `count` changed.  
+
+Meta-Programming
+----------------
+
+The `from` expression is the most complex; covering set operations, list comprehensions, and relational operators; each shaped by the variety of clauses the `from` expression accepts.  These clauses can be programatically composed because JSON is just data.  In practice this happens most when specifying query domains.
 
 
 History

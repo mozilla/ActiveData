@@ -24,7 +24,10 @@ class TestEdge2(ActiveDataBaseTest):
             "query": {
                 "from": base_test_class.settings.backend_es.index,
                 "select": {"aggregate": "count"},
-                "edges": ["a", "b"]
+                "edges": [
+                    {"value": "a", "domain": {"type": "set", "partitions": ["x", "y", "z"]}},
+                    "b"
+                ]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -35,29 +38,21 @@ class TestEdge2(ActiveDataBaseTest):
                     {"a": "y", "b": "m", "count": 1},
                     {"a": "y", "b": "n", "count": 2},
                     {"a": "y", "b": None, "count": 1},
-                    {"a": "z", "b": "m", "count": 0},
-                    {"a": "z", "b": "n", "count": 0},
-                    {"a": "z", "b": None, "count": 0},
                     {"a": None, "b": "m", "count": 1},
-                    {"a": None, "b": "n", "count": 1},
-                    {"a": None, "b": None, "count": 0}
+                    {"a": None, "b": "n", "count": 1}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "b", "count"],
                 "data": [
-                    ["x", "m", 2],
-                    ["x", "n", 1],
-                    ["x", None, 1],
-                    ["y", "m", 1],
-                    ["y", "n", 2],
-                    ["y", None, 1],
-                    ["z", "m", 0],
-                    ["z", "n", 0],
-                    ["z", None, 0],
                     [None, "m", 1],
                     [None, "n", 1],
-                    [None, None, 0]
+                    ["x", None, 1],
+                    ["x", "m", 2],
+                    ["x", "n", 1],
+                    ["y", None, 1],
+                    ["y", "m", 1],
+                    ["y", "n", 2]
                 ]
             },
             "expecting_cube": {
@@ -65,20 +60,45 @@ class TestEdge2(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "type": "string",
                         "allowNulls": True,
                         "domain": {
                             "type": "set",
-                            "partitions": ["x", "y", "z"]
+                            "partitions": [
+                                {
+                                    "dataIndex": 0,
+                                    "name": "x",
+                                    "value": "x"
+                                },
+                                {
+                                    "dataIndex": 1,
+                                    "name": "y",
+                                    "value": "y"
+                                },
+                                {
+                                    "dataIndex": 2,
+                                    "name": "z",
+                                    "value": "z"
+                                }
+                            ]
                         }
                     },
                     {
                         "name": "b",
-                        "type": "string",
                         "allowNulls": True,
                         "domain": {
                             "type": "set",
-                            "partitions": ["m", "n"]
+                            "partitions": [
+                                {
+                                    "dataIndex": 0,
+                                    "name": "m",
+                                    "value": "m"
+                                },
+                                {
+                                    "dataIndex": 1,
+                                    "name": "n",
+                                    "value": "n"
+                                }
+                            ]
                         }
                     }
                 ],

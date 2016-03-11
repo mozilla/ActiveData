@@ -46,10 +46,12 @@ def jx_expression(expr):
         return Literal(None, expr)
     elif is_keyword(expr):
         return Variable(expr)
-    elif isinstance(expr, Mapping) and expr.date:
-        return DateOp("date", expr)
     elif expr == "":
         Log.error("expression is empty")
+
+    expr = wrap(expr)
+    if expr.date:
+        return DateOp("date", expr)
 
     try:
         items = expr.items()

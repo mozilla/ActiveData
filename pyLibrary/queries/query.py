@@ -120,7 +120,10 @@ class Query(object):
                 _late_import()
             columns = _jx.get_columns(self.frum)
         elif isinstance(self.frum, Container):
-            columns = self.frum.get_columns(table_name=self.frum.name)
+            try:
+                columns = self.frum.get_columns(table_name=self.frum.name)
+            except Exception, e:
+                Log.error("Problem", cause=e)
         else:
             columns = []
 

@@ -32,6 +32,8 @@ class ListContainer(Container):
         Container.__init__(self, data, schema)
         if schema == None:
             self.schema = get_schema_from_list(data)
+        else:
+            self.schema = schema
         self.name = name
         self.data = data
         self.locker = Lock()  # JUST IN CASE YOU WANT TO DO MORE THAN ONE THING
@@ -151,7 +153,7 @@ class ListContainer(Container):
             "data": [{k: unwraplist(v) for k, v in row.items()} for row in self.data]
         })
 
-    def get_columns(self, table=None):
+    def get_columns(self, table_name=None):
         return self.schema.values()
 
     def __getitem__(self, item):

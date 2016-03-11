@@ -16,7 +16,7 @@ from types import FunctionType
 from pyLibrary import dot, convert
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, wrap, _get_attr, Null
+from pyLibrary.dot import set_default, wrap, _get_attr, Null, coalesce
 from pyLibrary.maths.randoms import Random
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Lock
@@ -299,19 +299,21 @@ class _FakeLock():
 
 def DataClass(name, columns):
     """
-    Each column has {"name", "required", "nulls", "default"} properties
+    Each column has {"name", "required", "nulls", "default", "type"} properties
     """
 
-    columns = wrap([{"name": c, "required": True, "nulls": False} if isinstance(c, basestring) else c for c in columns])
+    columns = wrap([{"name": c, "required": True, "nulls": False, "type": object} if isinstance(c, basestring) else c for c in columns])
     slots = columns.name
     required = wrap(filter(lambda c: c.required and not c.nulls and not c.default, columns)).name
     nulls = wrap(filter(lambda c: c.nulls, columns)).name
+    types = {c.name: coalesce(c.type, object) for c in columns}
 
     code = expand_template("""
 from __future__ import unicode_literals
 from collections import Mapping
 
 meta = None
+types_ = {{types}}
 
 class {{name}}(Mapping):
     __slots__ = {{slots}}
@@ -341,6 +343,8 @@ class {{name}}(Mapping):
     def __setattr__(self, item, value):
         if item not in {{slots}}:
             Log.error("{"+"{item|quote}} not valid attribute", item=item)
+        #if not isinstance(value, types_[item]):
+        #    Log.error("{"+"{item|quote}} not of type "+"{"+"{type}}", item=item, type=types_[item])
         object.__setattr__(self, item, value)
 
     def __getattr__(self, item):
@@ -384,7 +388,8 @@ temp = {{name}}
             "nulls": "{" + (", ".join(convert.value2quote(s) for s in nulls)) + "}",
             "len_slots": len(slots),
             "dict": "{" + (", ".join(convert.value2quote(s) + ": self." + s for s in slots)) + "}",
-            "assign": "; ".join("_set(output, "+convert.value2quote(s)+", self."+s+")" for s in slots)
+            "assign": "; ".join("_set(output, "+convert.value2quote(s)+", self."+s+")" for s in slots),
+            "types": convert.value2json(types)
         }
     )
 

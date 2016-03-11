@@ -18,7 +18,7 @@ from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.debugs.profiles import CProfiler
-from pyLibrary.dot import coalesce, listwrap
+from pyLibrary.dot import coalesce, listwrap, join_field, split_field
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx, meta
@@ -118,11 +118,11 @@ def _test_mode_wait(query):
                 "cardinality",
                 "last_updated"
             ],
-            "where": {"eq": {"table": query["from"]}}
+            "where": {"eq": {"table": join_field(split_field(query["from"])[0:1])}}
         })
 
     # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
-    cols = [c for c in m.get_columns(table=query["from"]) if c.type not in ["nested", "object"]]
+    cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in ["nested", "object"]]
     for c in cols:
         Log.note("Mark {{column}} dirty at {{time}}", column=c.name, time=now)
         c.last_updated = now - TOO_OLD
@@ -130,7 +130,7 @@ def _test_mode_wait(query):
 
     while end_time > now:
         # GET FRESH VERSIONS
-        cols = [c for c in m.get_columns(table=query["from"]) if c.type not in ["nested", "object"]]
+        cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in ["nested", "object"]]
         for c in cols:
             if not c.last_updated or c.cardinality == None :
                 Log.note(

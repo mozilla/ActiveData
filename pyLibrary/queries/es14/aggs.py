@@ -51,7 +51,7 @@ def get_decoders_by_depth(query):
                 if not schema[v]:
                     Log.error("{{var}} does not exist in schema", var=v)
 
-            e.value = e.value.map({schema[v].name: schema[v].abs_name for v in vars_})
+            e.value = e.value.map({schema[v].name: schema[v].es_column for v in vars_})
         elif e.range:
             e = e.copy()
             min_ = jx_expression(e.range.min)
@@ -62,19 +62,19 @@ def get_decoders_by_depth(query):
                 if not schema[v]:
                     Log.error("{{var}} does not exist in schema", var=v)
 
-            map_ = {schema[v].name: schema[v].abs_name for v in vars_}
+            map_ = {schema[v].name: schema[v].es_column for v in vars_}
             e.range = {
                 "min": min_.map(map_),
                 "max": max_.map(map_)
             }
+        elif e.domain.dimension:
+            vars_ = e.domain.dimension.fields
+            e.domain.dimension = e.domain.dimension.copy()
+            e.domain.dimension.fields = [schema[v].es_column for v in vars_]
         elif all(e.domain.partitions.where):
             vars_ = set()
             for p in e.domain.partitions:
                 vars_ |= p.where.vars()
-        elif e.domain.dimension:
-            vars_ = e.domain.dimension.fields
-            e.domain.dimension = e.domain.dimension.copy()
-            e.domain.dimension.fields = [schema[v].abs_name for v in vars_]
 
         depths = set(len(listwrap(schema[v].nested_path)) for v in vars_)
         if len(depths) > 1:
@@ -111,10 +111,10 @@ def es_aggsop(es, frum, query):
                 else:
                     Log.error('Not expecting ES to have a value at "." which {{agg}} can be applied', agg=s.aggregate)
         elif is_keyword(s.value) and s.aggregate=="count":
-            s.value = coalesce(frum[s.value].abs_name, s.value)
+            s.value = coalesce(frum[s.value].es_column, s.value)
             new_select["count_"+literal_field(s.value)] += [s]
         elif is_keyword(s.value):
-            s.value = coalesce(frum[s.value].abs_name, s.value)
+            s.value = coalesce(frum[s.value].es_column, s.value)
             new_select[literal_field(s.value)] += [s]
         else:
             formula.append(s)
@@ -188,7 +188,7 @@ def es_aggsop(es, frum, query):
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
-        abs_value = jx_expression(s.value).map({c.name: c.abs_name for c in frum._columns})
+        abs_value = jx_expression(s.value).map({c.name: c.es_column for c in frum._columns})
 
         if s.aggregate == "count":
             es_query.aggs[literal_field(canonical_name)].value_count.script = abs_value.to_ruby()
@@ -250,7 +250,7 @@ def es_aggsop(es, frum, query):
     start = 0
 
     vars_ = query.where.vars()
-    map_ = {v: frum[v].abs_name for v in vars_}
+    map_ = {v: frum[v].es_column for v in vars_}
 
     #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
     split_where = split_expression_by_depth(query.where, schema=frum, map_=map_)
@@ -373,8 +373,6 @@ class AggsDecoder(object):
             return object.__new__(DurationDecoder, e)
         elif e.value and e.domain.type == "range":
             return object.__new__(RangeDecoder, e)
-        elif not e.value and all(e.domain.partitions.where):
-            return object.__new__(GeneralSetDecoder, e)
         elif not e.value and e.domain.dimension.fields:
             # THIS domain IS FROM A dimension THAT IS A SIMPLE LIST OF fields
             # JUST PULL THE FIELDS
@@ -383,6 +381,8 @@ class AggsDecoder(object):
                 Log.error("No longer allowed: All objects are expressions")
             else:
                 return object.__new__(DimFieldListDecoder, e)
+        elif not e.value and all(e.domain.partitions.where):
+            return object.__new__(GeneralSetDecoder, e)
         else:
             Log.error("domain type of {{type}} is not supported yet", type=e.domain.type)
 
@@ -847,10 +847,14 @@ def drill(agg):
     return agg
 
 
-def aggs_iterator(aggs, decoders):
+def aggs_iterator(aggs, decoders, coord=True):
     """
     DIG INTO ES'S RECURSIVE aggs DATA-STRUCTURE:
     RETURN AN ITERATOR OVER THE EFFECTIVE ROWS OF THE RESULTS
+
+    :param aggs: ES AGGREGATE OBJECT
+    :param decoders:
+    :param coord: TURN ON LOCAL COORDINATE LOOKUP
     """
     depth = max(d.start + d.num_columns for d in decoders)
     parts = [None] * depth
@@ -887,7 +891,8 @@ def aggs_iterator(aggs, decoders):
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
                         parts[d] = b
                         if b.get("doc_count"):
-                            b["_index"]=i
+                            b = drill(b)
+                            b["_index"] = i
                             yield b
                 elif k == "_other":
                     parts[d] = Null
@@ -905,15 +910,19 @@ def aggs_iterator(aggs, decoders):
                     parts[d] = v
                     yield v
 
-    for a in _aggs_iterator(unwrap(aggs), depth - 1):
-        coord = tuple(d.get_index(parts) for d in decoders)
-        yield parts, coord, a
+    if coord:
+        for a in _aggs_iterator(unwrap(aggs), depth - 1):
+            coord = tuple(d.get_index(parts) for d in decoders)
+            yield parts, coord, a
+    else:
+        for a in _aggs_iterator(unwrap(aggs), depth - 1):
+            yield parts, None, a
 
 
 def count_dim(aggs, decoders):
     if any(isinstance(d, (DefaultDecoder, DimFieldListDecoder)) for d in decoders):
         # ENUMERATE THE DOMAINS, IF UNKNOWN AT QUERY TIME
-        for row, coord, agg in aggs_iterator(aggs, decoders):
+        for row, coord, agg in aggs_iterator(aggs, decoders, coord=False):
             for d in decoders:
                 d.count(row)
         for d in decoders:

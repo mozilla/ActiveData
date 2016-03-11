@@ -48,9 +48,9 @@ def es_deepop(es, query):
     columns = query.frum.get_columns()
     query_path = query.frum.query_path
     columns = UniqueIndex(keys=["name"], data=sorted(columns, lambda a, b: cmp(len(listwrap(b.nested_path)), len(listwrap(a.nested_path)))), fail_on_dup=False)
-    map_ = {c.name: c.abs_name for c in columns}
+    map_ = {c.name: c.es_column for c in columns}
     map_to_local = {
-        c.name: "_inner" + c.abs_name[len(listwrap(c.nested_path)[0]):] if c.nested_path else "fields." + literal_field(c.abs_name)
+        c.name: "_inner" + c.es_column[len(listwrap(c.nested_path)[0]):] if c.nested_path else "fields." + literal_field(c.es_column)
         for c in columns
     }
     # TODO: FIX THE GREAT SADNESS CAUSED BY EXECUTING post_expressions
@@ -94,9 +94,9 @@ def es_deepop(es, query):
 
     def get_pull(column):
         if column.nested_path:
-            return "_inner" + column.abs_name[len(listwrap(column.nested_path)[0]):]
+            return "_inner" + column.es_column[len(listwrap(column.nested_path)[0]):]
         else:
-            return "fields." + literal_field(column.abs_name)
+            return "fields." + literal_field(column.es_column)
 
     i = 0
     for s in listwrap(query.select):
@@ -105,7 +105,7 @@ def es_deepop(es, query):
             for c in columns:
                 if c.relative and c.type not in ["nested", "object"]:
                     if not c.nested_path:
-                        es_query.fields += [c.abs_name]
+                        es_query.fields += [c.es_column]
                     new_select.append({
                         "name": c.name,
                         "pull": get_pull(c),
@@ -123,12 +123,12 @@ def es_deepop(es, query):
             for c in columns:
                 if c.relative and c.type not in ["nested", "object"]:
                     if not c.nested_path:
-                        es_query.fields += [c.abs_name]
+                        es_query.fields += [c.es_column]
                     new_select.append({
                         "name": c.name,
                         "pull": get_pull(c),
                         "nested_path": listwrap(c.nested_path)[0],
-                        "put": {"name": ".", "index": i, "child": c.abs_name}
+                        "put": {"name": ".", "index": i, "child": c.es_column}
                     })
             i += 1
         elif s.value == "_id":
@@ -140,13 +140,13 @@ def es_deepop(es, query):
             })
             i += 1
         elif isinstance(s.value, basestring) and s.value.endswith(".*") and is_keyword(s.value[:-2]):
-            parent = s.value[:-1]
-            prefix = len(parent)
+            column = s.value[:-1]
+            prefix = len(column)
             for c in columns:
-                if c.name.startswith(parent) and c.type not in ["object", "nested"]:
+                if c.name.startswith(column) and c.type not in ["object", "nested"]:
                     pull = get_pull(c)
                     if len(listwrap(c.nested_path)) == 0:
-                        es_query.fields += [c.abs_name]
+                        es_query.fields += [c.es_column]
 
                     new_select.append({
                         "name": s.name + "." + c.name[prefix:],
@@ -156,30 +156,36 @@ def es_deepop(es, query):
                     })
                     i += 1
         elif isinstance(s.value, basestring) and is_keyword(s.value):
-            parent = s.value + "."
+            column = columns[(s.value,)]
+            parent = column.es_column+"."
             prefix = len(parent)
-            net_columns = [c for c in columns if c.name.startswith(parent) and c.type not in ["object", "nested"]]
+            net_columns = [c for c in columns if c.es_column.startswith(parent) and c.type not in ["object", "nested"]]
             if not net_columns:
-                c = columns[(s.value,)]
-                pull = get_pull(c)
-                if not c.nested_path:
-                    es_query.fields += [s.value]
+                pull = get_pull(column)
+                if not column.nested_path:
+                    es_query.fields += [column.es_column]
                 new_select.append({
                     "name": s.name,
                     "pull": pull,
-                    "nested_path": listwrap(c.nested_path)[0],
+                    "nested_path": listwrap(column.nested_path)[0],
                     "put": {"name": s.name, "index": i, "child": "."}
                 })
             else:
+                done = set()
                 for n in net_columns:
+                    # THE COLUMNS CAN HAVE DUPLICATE REFERNCES TO THE SAME ES_COLUMN
+                    if n.es_column in done:
+                        continue
+                    done.add(n.es_column)
+
                     pull = get_pull(n)
                     if not n.nested_path:
-                        es_query.fields += [n.abs_name]
+                        es_query.fields += [n.es_column]
                     new_select.append({
                         "name": s.name,
                         "pull": pull,
                         "nested_path": listwrap(n.nested_path)[0],
-                        "put": {"name": s.name, "index": i, "child": n.name[prefix:]}
+                        "put": {"name": s.name, "index": i, "child": n.es_column[prefix:]}
                     })
             i += 1
         else:
@@ -188,7 +194,7 @@ def es_deepop(es, query):
                 for n in columns:
                     if n.name==v:
                         if not n.nested_path:
-                            es_query.fields += [n.abs_name]
+                            es_query.fields += [n.es_column]
 
             pull = EXPRESSION_PREFIX + s.name
             post_expressions[pull] = compile_expression(expr.map(map_to_local).to_python())

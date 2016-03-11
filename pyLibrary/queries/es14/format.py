@@ -135,7 +135,7 @@ def format_csv(decoders, aggs, start, query, select):
 
 def format_list_from_groupby(decoders, aggs, start, query, select):
     def data():
-        for coord, agg in aggs_iterator(aggs, decoders):
+        for row, coord, agg in aggs_iterator(aggs, decoders):
             output = Dict()
             for g, d in zip(query.groupby, decoders):
                 output[g.name] = d.get_value_from_row(row)

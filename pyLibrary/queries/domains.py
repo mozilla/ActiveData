@@ -51,6 +51,7 @@ class Domain(object):
         set_default(self, desc)
         self.name = coalesce(desc.name, desc.type)
         self.isFacet = coalesce(desc.isFacet, False)
+        self.dimension = Null
 
     def _set_slots_to_none(self, cls):
         """
@@ -152,6 +153,9 @@ class DefaultDomain(Domain):
         self.partitions.append(canonical)
         self.map[key] = canonical
         return canonical
+
+    # def getIndexByKey(self, key):
+    #     return self.map.get(key).dataIndex;
 
     def getKey(self, part):
         return part.value

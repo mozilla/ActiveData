@@ -1451,6 +1451,31 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+# TODO: ALLOW USE OF EDGE VARIABLES IN QUERY
+# IN THIS CASE "timestamp.min" REFERS TO A PART OF THE EDGE
+# {
+#     "from": "jobs",
+#     "select": {
+#           "name": "waiting",
+#           "value": {"sub": ["timestamp.min", "action.request_time"]},
+#           "aggregate": "average",
+#           "default": 0
+#     },
+#     "edges": [
+#         {
+#             "name": "timestamp",
+#             "range": {"min": "action.request_time", "max": "action.start_time"},
+#             "domain": {
+#                 "type": "time",
+#                 "min": date.min.unix(),
+#                 "max": date.max.unix(),
+#                 "interval": date.interval.seconds()
+#             }
+#         }
+#     ]
+# }
+
+
 
 
 simple_test_data = [

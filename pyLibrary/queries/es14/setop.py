@@ -67,7 +67,7 @@ def extract_rows(es, es_query, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
     new_select = DictList()
     columns = query.frum.get_columns()
-    leaf_columns = set(c.name for c in columns if c.type not in ["object", "nested"] and (not c.nested_path or c.abs_name == c.nested_path))
+    leaf_columns = set(c.name for c in columns if c.type not in ["object", "nested"] and (not c.nested_path or c.es_column == c.nested_path))
     nested_columns = set(c.name for c in columns if c.nested_path)
 
     i = 0

@@ -167,9 +167,13 @@ def edges_get_all_vars(e):
         output.add(e.domain.key)
     if e.domain.where:
         output |= jx_expression(e.domain.where).vars()
+    if e.range:
+        output |= jx_expression(e.range.min).vars()
+        output |= jx_expression(e.range.max).vars()
     if e.domain.partitions:
         for p in e.domain.partitions:
-            output |= p.where.vars()
+            if p.where:
+                output |= p.where.vars()
     return output
 
 

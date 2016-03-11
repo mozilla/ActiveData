@@ -55,7 +55,7 @@ class FromES(Container):
 
     @use_settings
     def __init__(self, host, index, type=None, alias=None, name=None, port=9200, read_only=True, settings=None):
-        Container.__init__(self, None, None)
+        Container.__init__(self, None)
         if not containers.config.default:
             containers.config.default.settings = settings
         self.settings = settings
@@ -70,9 +70,12 @@ class FromES(Container):
         self.edges = Dict()
         self.worker = None
         self._columns = self.get_columns()
-        self.schema = {c.name: c for c in self._columns}
         # SWITCH ON TYPED MODE
         self.typed = any(c.name in ("$value", "$object") for c in self._columns)
+
+    @property
+    def schema(self):
+        return Dict(get=lambda c:self.get_columns(column_name=c))
 
     @staticmethod
     def wrap(es):
@@ -149,80 +152,18 @@ class FromES(Container):
                 Log.error("Problem (Tried to clear Elasticsearch cache)", e)
             Log.error("problem", e)
 
-    def get_columns(self, table=None):
-        if table is None or table==self.settings.index or table==self.settings.alias:
+    def get_columns(self, table_name=None, column_name=None):
+        if table_name is None or table_name==self.settings.index or table_name==self.settings.alias:
             pass
-        elif table.startswith(self.settings.index+".") or table.startswith(self.settings.alias):
+        elif table_name.startswith(self.settings.index+ ".") or table_name.startswith(self.settings.alias):
             pass
         else:
             Log.error("expecting `table` to be same as, or deeper, than index name")
-        query_path = self.query_path if self.query_path != "." else None
-        abs_columns = [copy(c) for c in unwrap(self.meta.get_columns(table=coalesce(table, self.settings.index)))]
 
-        columns = []
-        shadowed_columns = set()
-
-        def add_column(c):
-            columns.append(c)
-            if c.relative:
-                for a in abs_columns:
-                    if a.name.startswith(c.name + ".") or a.name == c.name:
-                        shadowed_columns.add(a)
-
-        if query_path:
-            try:
-                query_depth = (len(listwrap(c.nested_path)) for c in abs_columns if listwrap(c.nested_path)[0] == query_path).next()
-            except Exception:
-                Log.error("{{path}} does not exist", path=query_path)
-
-            # ADD RELATIVE COLUMNS
-            for c in abs_columns:
-                full_path = listwrap(c.nested_path)
-                nested_path = full_path[0]
-                if nested_path == query_path:
-                    add_column(c)
-                    c = copy(c)
-                    c.name = c.abs_name[len(query_path) + 1:] if c.type != "nested" else "."
-                    c.relative = True
-                    add_column(c)
-                elif not full_path:
-                    add_column(c)
-                    c = copy(c)
-                    c.name = "." + ("." * query_depth) + c.abs_name
-                    c.relative = True
-                    add_column(c)
-                elif query_depth > len(full_path) and query_path.startswith(nested_path + "."):
-                    diff = query_depth - len(full_path)
-                    add_column(c)
-                    c = copy(c)
-                    c.name = "." + ("." * diff) + (c.abs_name[len(nested_path) + 1:] if c.type != "nested" else "")
-                    c.relative = True
-                    add_column(c)
-                elif c.abs_name.startswith(query_path + "."):
-                    add_column(c)
-                    c = copy(c)
-                    c.name = c.abs_name[len(query_path)+1:]
-                    c.relative = True
-                    add_column(c)
-                elif c.abs_name == query_path:
-                    add_column(c)
-                    c = copy(c)
-                    c.name = "."
-                    c.relative = True
-                    add_column(c)
-                elif query_path and nested_path != query_path:
-                    # SIBLING NESTED PATHS ARE INVISIBLE
-                    pass
-                else:
-                    Log.error("logic error")
-        else:
-            for c in abs_columns:
-                c = copy(c)
-                c.relative = True
-                add_column(c)
-
-        columns = [c for c in columns if c not in shadowed_columns]
-        return wrap(columns)
+        try:
+            return self.meta.get_columns(table_name=coalesce(table_name, self.name), column_name=column_name)
+        except Exception, e:
+            return DictList.EMPTY
 
     def addDimension(self, dim):
         if isinstance(dim, list):
@@ -236,9 +177,11 @@ class FromES(Container):
             self.edges[d.full_name] = d
 
     def __getitem__(self, item):
-        c = self.schema.get(item)
+        c = self.get_columns(table_name=self.name, column_name=item)
         if c:
-             return c
+            if len(c) > 1:
+                Log.error("Do not know how to handle multipole matches")
+            return c[0]
 
         e = self.edges[item]
         if not c:

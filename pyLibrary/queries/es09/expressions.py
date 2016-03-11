@@ -276,7 +276,7 @@ class _MVEL(object):
         expression = setValues(expression, constants)
 
         fromPath = self.fromData.name           # FIRST NAME IS THE INDEX
-        indexName = split_field(fromPath)[0]
+        indexName = join_field(split_field(fromPath)[:1:])
 
         context = self.getFrameVariables(expression)
         if context == "":

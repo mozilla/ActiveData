@@ -496,7 +496,7 @@ def _deeper_iterator(columns, nested_path, path, data):
             leaf = join_field(split_field(path) + [k])
             c = columns.get(leaf)
             if not c:
-                c = columns[leaf] = _Column(name=leaf, type=type_to_name[v.__class__], table=None, abs_name=leaf)
+                c = columns[leaf] = _Column(name=leaf, type=type_to_name[v.__class__], table=None, es_column=leaf)
             c.type = _merge_type[c.type][type_to_name[v.__class__]]
             if c.type == "nested" and not nested_path[0].startswith(leaf + "."):
                 if leaf.startswith(nested_path[0] + ".") or leaf == nested_path[0] or not nested_path[0]:
@@ -612,7 +612,7 @@ def value_compare(l, r, ordering=1):
     elif isinstance(l, Mapping):
         if isinstance(r, Mapping):
             for k in set(l.keys()) | set(r.keys()):
-                c = value_compare(l[k], r[k]) * ordering
+                c = value_compare(l.get(k), r.get(k)) * ordering
                 if c != 0:
                     return c
             return 0

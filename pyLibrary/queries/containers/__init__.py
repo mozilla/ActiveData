@@ -58,7 +58,7 @@ def _delayed_imports():
 
 
 class Container(object):
-    __slots__ = ["data", "schema", "namespaces"]
+    __slots__ = ["data", "namespaces"]
 
     @classmethod
     def new_instance(type, frum, schema=None):
@@ -83,7 +83,7 @@ class Container(object):
 
             settings = set_default(
                 {
-                    "index": split_field(frum)[0],
+                    "index": join_field(split_field(frum)[:1:]),
                     "name": frum,
                 },
                 config.default.settings
@@ -111,9 +111,7 @@ class Container(object):
 
         self.data = frum
         if isinstance(schema, list):
-            Log.error("expecting map from abs_name to column object")
-        self.schema = schema
-        # self.namespaces = wrap([_Normal()])
+            Log.error("expecting map from es_column to column object")
 
     def query(self, query):
         if query.frum != self:
@@ -147,7 +145,7 @@ class Container(object):
         _ = format
         Log.error("not implemented")
 
-    def get_columns(self, table):
+    def get_columns(self, table_name):
         """
         USE THE frum TO DETERMINE THE COLUMNS
         """

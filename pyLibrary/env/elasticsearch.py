@@ -975,8 +975,9 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
             columns.extend(self_columns)
             columns.append(Column(
                 table=index_name,
+                es_index=index_name,
                 name=query_path,
-                abs_name=query_path,
+                es_column=query_path,
                 type="nested",
                 nested_path=query_path
             ))
@@ -988,8 +989,9 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
             columns.extend(child_columns)
             columns.append(Column(
                 table=index_name,
+                es_index=index_name,
                 name=query_path,
-                abs_name=query_path,
+                es_column=query_path,
                 type="source" if property.enabled == False else "object"
             ))
 
@@ -1004,15 +1006,17 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                     # DEFAULT
                     columns.append(Column(
                         table=index_name,
+                        es_index=index_name,
                         name=query_path,
-                        abs_name=query_path,
+                        es_column=query_path,
                         type=p.type
                     ))
                 else:
                     columns.append(Column(
                         table=index_name,
+                        es_index=index_name,
                         name=query_path + "\\." + n,
-                        abs_name=query_path + "\\." + n,
+                        es_column=query_path + "\\." + n,
                         type=p.type
                     ))
             continue
@@ -1020,22 +1024,25 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
         if property.type in ["string", "boolean", "integer", "date", "long", "double"]:
             columns.append(Column(
                 table=index_name,
+                es_index=index_name,
                 name=query_path,
-                abs_name=query_path,
+                es_column=query_path,
                 type=property.type
             ))
             if property.index_name and name != property.index_name:
                 columns.append(Column(
                     table=index_name,
-                    abs_name=query_path,
+                    es_index=index_name,
+                    es_column=query_path,
                     name=query_path,
                     type=property.type
                 ))
         elif property.enabled == None or property.enabled == False:
             columns.append(Column(
                 table=index_name,
+                es_index=index_name,
                 name=query_path,
-                abs_name=query_path,
+                es_column=query_path,
                 type="source" if property.enabled==False else "object"
             ))
         else:

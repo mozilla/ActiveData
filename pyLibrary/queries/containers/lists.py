@@ -195,7 +195,7 @@ def _get_schema_from_list(frum, columns, prefix, nested_path):
         column = Column(
             table=".",
             name=full_name,
-            abs_name=full_name,
+            es_column=full_name,
             type=t,
             nested_path=nested_path
         )

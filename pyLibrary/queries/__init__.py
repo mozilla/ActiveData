@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, set_default, split_field
+from pyLibrary.dot import wrap, set_default, split_field, join_field
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.queries import containers
 
@@ -70,7 +70,7 @@ def wrap_from(frum, schema=None):
                 Log.error("{{name}} not a recognized table", name=frum)
         else:
             type_ = containers.config.default.type
-            index = split_field(frum)[0]
+            index = join_field(split_field(frum)[:1:])
 
         settings = set_default(
             {

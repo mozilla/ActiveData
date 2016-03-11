@@ -48,6 +48,9 @@ class Date(object):
         if self.unix is None:
             self.unix = parse(*args).unix
 
+    def __nonzero__(self):
+        return True
+
     def floor(self, duration=None):
         if duration is None:  # ASSUME DAY
             return unix2Date(math.floor(self.unix / 86400) * 86400)

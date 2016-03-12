@@ -157,29 +157,24 @@ class Index(Features):
                 self.cluster.delete_index(a.index)
 
     def add_alias(self, alias=None):
-        if alias:
-            self.cluster_state = None
-            self.cluster.post(
-                "/_aliases",
-                data={
-                    "actions": [
-                        {"add": {"index": self.settings.index, "alias": alias}}
-                    ]
-                },
-                timeout=coalesce(self.settings.timeout, 30)
-            )
-        else:
-            # SET ALIAS ACCORDING TO LIFECYCLE RULES
-            self.cluster_state = None
-            self.cluster.post(
-                "/_aliases",
-                data={
-                    "actions": [
-                        {"add": {"index": self.settings.index, "alias": self.settings.alias}}
-                    ]
-                },
-                timeout=coalesce(self.settings.timeout, 30)
-            )
+        alias = coalesce(alias, self.settings.alias)
+        self.cluster_state = None
+        self.cluster.post(
+            "/_aliases",
+            data={
+                "actions": [
+                    {"add": {"index": self.settings.index, "alias": alias}}
+                ]
+            },
+            timeout=coalesce(self.settings.timeout, 30)
+        )
+
+        # WAIT FOR ALIAS TO APPEAR
+        while True:
+            if alias in self.cluster.get("/_cluster/state").metadata.indices[self.settings.index].aliases:
+                return
+            Log.note("Waiting for alias {{alias}} to appear", alias=alias)
+            Thread.sleep(seconds=1)
 
     def get_index(self, alias):
         """
@@ -550,9 +545,9 @@ class Cluster(object):
     ):
         if not settings.alias:
             settings.alias = settings.index
-            settings.index = proto_name(settings.alias)
+            index = settings.index = proto_name(settings.alias)
 
-        if settings.alias == settings.index:
+        if settings.alias == index:
             Log.error("Expecting index name to conform to pattern")
 
         if settings.schema_file:
@@ -576,26 +571,22 @@ class Cluster(object):
                 schema.settings.index.number_of_replicas = health.number_of_nodes - 1
 
         self.post(
-            "/" + settings.index,
+            "/" + index,
             data=schema,
             headers={"Content-Type": "application/json"}
         )
-        while True:
-            time.sleep(1)
-            try:
-                self.head("/" + settings.index)
-                break
-            except Exception:
-                Log.note("{{index}} does not exist yet", index=settings.index)
 
-        Log.alert("Made new index {{index|quote}}", index=settings.index)
-        indices = self.get_metadata().indices
-        Log.warning(
-            "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{mapping|json}}",
-            index=self.settings.index,
-            type=self.settings.type,
-            mapping=indices
-        )
+        # CONFIRM INDEX EXISTS
+        while True:
+            try:
+                state = self.get("/_cluster/state")
+                if index in state.metadata.indices:
+                    break
+                Log.note("Waiting for index {{index}} to appear", index=index)
+            except Exception, e:
+                Log.warning("Problem while waiting for index {{index}} to appear", index=index, cause=e)
+            Thread.sleep(seconds=1)
+        Log.alert("Made new index {{index|quote}}", index=index)
 
         es = Index(settings=settings)
         return es

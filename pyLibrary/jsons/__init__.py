@@ -98,7 +98,8 @@ def _scrub(value, is_done):
     elif isinstance(value, Mapping):
         _id = id(value)
         if _id in is_done:
-            _Log.error("possible loop in structure detected")
+            _Log.warning("possible loop in structure detected")
+            return '"<LOOP IN STRUCTURE>"'
         is_done.add(_id)
 
         output = {}

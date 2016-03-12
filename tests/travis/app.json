@@ -38,7 +38,8 @@
 		"port": 9200,
 		"index": "saved_queries",
 		"type": "query",
-		"debug": false
+		"debug": false,
+		"limit_replicas": true
 	},
 	"elasticsearch": {
 		"host": "http://localhost",

@@ -588,7 +588,14 @@ class Cluster(object):
             except Exception:
                 Log.note("{{index}} does not exist yet", index=settings.index)
 
-        Log.note("Made new index {{index|quote}}", index=settings.index)
+        Log.alert("Made new index {{index|quote}}", index=settings.index)
+        indices = self.cluster.get_metadata().indices
+        Log.warning(
+            "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{mapping|json}}",
+            index=self.settings.index,
+            type=self.settings.type,
+            mapping=indices
+        )
 
         es = Index(settings=settings)
         return es

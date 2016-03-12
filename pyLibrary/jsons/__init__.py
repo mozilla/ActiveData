@@ -1,3 +1,16 @@
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+
 from collections import Mapping
 from datetime import date, timedelta, datetime
 from decimal import Decimal
@@ -8,7 +21,6 @@ from types import NoneType
 from pyLibrary.dot import DictList, NullType, Dict, unwrap
 from pyLibrary.dot.objects import DictObject
 from pyLibrary.times.dates import Date
-
 from pyLibrary.times.durations import Duration
 
 
@@ -22,10 +34,10 @@ def _late_import():
     global datetime2unix
     global utf82unicode
 
-    from pyLibrary.debugs.logs import Log
+    from pyLibrary.debugs.logs import Log as _Log
     from pyLibrary.convert import datetime2unix, utf82unicode
 
-    _ = Log
+    _ = _Log
     _ = datetime2unix
     _ = utf82unicode
 
@@ -96,7 +108,6 @@ def _scrub(value, is_done):
             elif hasattr(k, "__unicode__"):
                 k = unicode(k)
             else:
-
                 _Log.error("keys must be strings")
             v = _scrub(v, is_done)
             if v != None or isinstance(v, Mapping):

@@ -588,6 +588,8 @@ class Cluster(object):
             except Exception:
                 Log.note("{{index}} does not exist yet", index=settings.index)
 
+        Log.note("Made new index {{index|quote}}", index=settings.index)
+
         es = Index(settings=settings)
         return es
 

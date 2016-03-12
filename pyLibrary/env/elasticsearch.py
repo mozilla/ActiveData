@@ -124,12 +124,22 @@ class Index(Features):
                 return self.get_schema(retry=False)
 
             if not index.mappings[self.settings.type]:
-                Log.error("ElasticSearch index ({{index}}) does not have type ({{type}})", self.settings)
+                Log.error(
+                    "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{mapping|json}}",
+                    index=self.settings.index,
+                    type=self.settings.type,
+                    mapping=index.mappings
+                )
             return index.mappings[self.settings.type]
         else:
             mapping = self.cluster.get(self.path + "/_mapping")
             if not mapping[self.settings.type]:
-                Log.error("{{index}} does not have type {{type}}", self.settings)
+                Log.error(
+                    "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{mapping|json}}",
+                    index=self.settings.index,
+                    type=self.settings.type,
+                    mapping=mapping
+                )
             return wrap({"mappings": mapping[self.settings.type]})
 
     def delete_all_but_self(self):

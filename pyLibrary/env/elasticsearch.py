@@ -128,7 +128,7 @@ class Index(Features):
                     "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{mapping|json}}",
                     index=self.settings.index,
                     type=self.settings.type,
-                    mapping=index.mappings
+                    mapping=indices
                 )
             return index.mappings[self.settings.type]
         else:

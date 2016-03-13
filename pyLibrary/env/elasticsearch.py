@@ -594,6 +594,13 @@ class Cluster(object):
         return es
 
     def delete_index(self, index_name):
+        #RMEOVE ALL ALIASES TOO
+        aliases = [a for a in self.get_aliases() if a.index == index_name]
+        self.post(
+            path="/_aliases",
+            data={"actions": [{"remove": a} for a in aliases]}
+        )
+
         url = self.settings.host + ":" + unicode(self.settings.port) + "/" + index_name
         try:
             response = http.delete(url)

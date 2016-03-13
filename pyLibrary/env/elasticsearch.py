@@ -130,6 +130,12 @@ class Index(Features):
                     type=self.settings.type,
                     mapping=metadata
                 )
+            Log.warning(
+                "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{mapping|json}}",
+                index=self.settings.index,
+                type=self.settings.type,
+                mapping=metadata
+            )
             return index.mappings[self.settings.type]
         else:
             mapping = self.cluster.get(self.path + "/_mapping")

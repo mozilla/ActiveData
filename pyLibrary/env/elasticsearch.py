@@ -115,8 +115,8 @@ class Index(Features):
 
     def get_schema(self, retry=True):
         if self.settings.explore_metadata:
-            indices = self.cluster.get_metadata().indices
-            index = indices[self.settings.index]
+            metadata = self.cluster.get_metadata()
+            index = metadata.indices[self.settings.index]
 
             if index == None and retry:
                 #TRY AGAIN, JUST IN CASE
@@ -128,7 +128,7 @@ class Index(Features):
                     "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{mapping|json}}",
                     index=self.settings.index,
                     type=self.settings.type,
-                    mapping=indices
+                    mapping=metadata
                 )
             return index.mappings[self.settings.type]
         else:
@@ -138,7 +138,7 @@ class Index(Features):
                     "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{mapping|json}}",
                     index=self.settings.index,
                     type=self.settings.type,
-                    mapping=mapping
+                    mapping=metadata
                 )
             return wrap({"mappings": mapping[self.settings.type]})
 

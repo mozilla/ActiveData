@@ -118,8 +118,6 @@ class Index(Features):
             metadata = self.cluster.get_metadata()
             index = metadata.indices[self.settings.index]
 
-            Log.warning( "ElasticSearch metadata {{metadata|json}}", metadata=metadata)
-
             if index == None and retry:
                 #TRY AGAIN, JUST IN CASE
                 self.cluster.cluster_state = None
@@ -127,20 +125,19 @@ class Index(Features):
 
             if not index.mappings[self.settings.type]:
                 Log.error(
-                    "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{mapping|json}}",
+                    "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{metadata|json}}",
                     index=self.settings.index,
                     type=self.settings.type,
-                    mapping=metadata
+                    metadata=metadata
                 )
             return index.mappings[self.settings.type]
         else:
             mapping = self.cluster.get(self.path + "/_mapping")
             if not mapping[self.settings.type]:
                 Log.error(
-                    "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{mapping|json}}",
+                    "ElasticSearch index {{index|quote}} does not have type {{type|quote}}",
                     index=self.settings.index,
-                    type=self.settings.type,
-                    mapping=metadata
+                    type=self.settings.type
                 )
             return wrap({"mappings": mapping[self.settings.type]})
 
@@ -434,8 +431,17 @@ class Cluster(object):
         self.debug = settings.debug
         self.version = None
         self.path = settings.host + ":" + unicode(settings.port)
-
         self.get_metadata()
+
+
+        def monitor(please_stop):
+            while not please_stop:
+                metadata = self.get_metadata(force=True)
+                for k, v in metadata.indices.items():
+                    v.mappings = None
+                Log.note("ElasticSearch metadata {{metadata|json}}", metadata=metadata)
+                Thread.sleep(seconds=5)
+        Thread.run("es schema monitor", monitor)
 
     @use_settings
     def get_or_create_index(
@@ -634,24 +640,25 @@ class Cluster(object):
         return wrap(output)
 
     def get_metadata(self, index=None, force=False):
-        with self.metadata_locker:
-            if self.settings.explore_metadata:
-                if not self._metadata or (force and index is None):
-                    response = self.get("/_cluster/state")
+        if self.settings.explore_metadata:
+            if not self._metadata or (force and index is None):
+                response = self.get("/_cluster/state")
+                with self.metadata_locker:
                     self._metadata = wrap(response.metadata)
                     self.cluster_state = wrap(self.get("/"))
                     self.version = self.cluster_state.version.number
-                elif index:  # UPDATE THE MAPPING FOR ONE INDEX ONLY
-                    response = self.get("/"+index+"/_mapping")
+            elif index:  # UPDATE THE MAPPING FOR ONE INDEX ONLY
+                response = self.get("/"+index+"/_mapping")
+                with self.metadata_locker:
                     if self.version.startswith("0.90."):
                         best = jx.sort(response.items(), 0).last()
                         self._metadata.indices[index].mappings = best[1]
                     else:
                         self._metadata.indices[index].mappings = jx.sort(response.items(), 0).last()[1].mappings
                     return Dict(indices={index: self._metadata.indices[index]})
-            else:
-                Log.error("Metadata exploration has been disabled")
-            return self._metadata
+        else:
+            Log.error("Metadata exploration has been disabled")
+        return self._metadata
 
     def post(self, path, **kwargs):
         url = self.settings.host + ":" + unicode(self.settings.port) + path

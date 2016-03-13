@@ -18,27 +18,32 @@ from pyLibrary.queries import containers
 type2container = Dict()
 config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
 _ListContainer = None
+_meta = None
+
 
 def _delayed_imports():
     global type2container
     global _ListContainer
+    global _meta
 
+    from pyLibrary.queries import meta as _meta
     from pyLibrary.queries.containers.lists import ListContainer as _ListContainer
     _ = _ListContainer
+    _ = _meta
 
     try:
-        from pyLibrary.queries.jx_usingMySQL import MySQL as _MySQL
+        from pyLibrary.queries.jx_usingMySQL import MySQL
     except Exception:
-        _MySQL = None
+        MySQL = None
 
-    from pyLibrary.queries.jx_usingES import FromES as _FromES
-    from pyLibrary.queries.meta import FromESMetadata as _FromESMetadata
+    from pyLibrary.queries.jx_usingES import FromES
+    from pyLibrary.queries.meta import FromESMetadata
 
     set_default(type2container, {
-        "elasticsearch": _FromES,
-        "mysql": _MySQL,
+        "elasticsearch": FromES,
+        "mysql": MySQL,
         "memory": None,
-        "meta": _FromESMetadata
+        "meta": FromESMetadata
     })
 
 
@@ -60,12 +65,10 @@ def wrap_from(frum, schema=None):
         type_ = None
         index = frum
         if frum.startswith("meta."):
-            from pyLibrary.queries.meta import FromESMetadata
-
             if frum == "meta.columns":
-                return meta.singlton.columns
+                return _meta.singlton.columns
             elif frum == "meta.table":
-                return meta.singlton.tables
+                return _meta.singlton.tables
             else:
                 Log.error("{{name}} not a recognized table", name=frum)
         else:

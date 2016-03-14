@@ -69,7 +69,7 @@ class FromES(Container):
         self.settings.type = self._es.settings.type
         self.edges = Dict()
         self.worker = None
-        self._columns = self.get_columns()
+        self._columns = self.get_columns(table_name=index)
         # SWITCH ON TYPED MODE
         self.typed = any(c.name in ("$value", "$object") for c in self._columns)
 
@@ -153,15 +153,16 @@ class FromES(Container):
             Log.error("problem", e)
 
     def get_columns(self, table_name=None, column_name=None):
-        if table_name is None or table_name==self.settings.index or table_name==self.settings.alias:
+        # CONFIRM WE CAN USE NAME OF index
+        if table_name is None or table_name == self.settings.index or table_name == self.settings.alias:
             pass
-        elif table_name.startswith(self.settings.index+ ".") or table_name.startswith(self.settings.alias):
+        elif table_name.startswith(self.settings.index + ".") or table_name.startswith(self.settings.alias):
             pass
         else:
             Log.error("expecting `table` to be same as, or deeper, than index name")
 
         try:
-            return self.meta.get_columns(table_name=coalesce(table_name, self.name), column_name=column_name)
+            return self.meta.get_columns(table_name=table_name, column_name=column_name)
         except Exception, e:
             return DictList.EMPTY
 

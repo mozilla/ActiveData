@@ -44,6 +44,8 @@ class NullType(object):
         return False
 
     def __add__(self, other):
+        if isinstance(other, list):
+            return other
         return Null
 
     def __radd__(self, other):

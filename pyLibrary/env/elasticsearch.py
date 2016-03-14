@@ -436,7 +436,7 @@ class Cluster(object):
 
         def monitor(please_stop):
             while not please_stop:
-                metadata = self.get_metadata(force=True)
+                metadata = self.get("/_cluster/state").metadata
                 for k, v in metadata.indices.items():
                     v.mappings = None
                 Log.note("ElasticSearch metadata {{metadata|json}}", metadata=metadata)
@@ -645,9 +645,16 @@ class Cluster(object):
                 response = self.get("/_cluster/state")
                 with self.metadata_locker:
                     self._metadata = wrap(response.metadata)
+                    # REPLICATE MAPPING OVER ALL ALIASES
+                    indices = self._metadata.indices
+                    for i, m in indices.items():
+                        for a in m.aliases:
+                            indices[a] = m
                     self.cluster_state = wrap(self.get("/"))
                     self.version = self.cluster_state.version.number
-            elif index:  # UPDATE THE MAPPING FOR ONE INDEX ONLY
+                return self._metadata.indices
+
+            if index:  # UPDATE THE MAPPING FOR ONE INDEX ONLY
                 response = self.get("/"+index+"/_mapping")
                 with self.metadata_locker:
                     if self.version.startswith("0.90."):

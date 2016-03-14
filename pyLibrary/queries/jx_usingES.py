@@ -155,7 +155,7 @@ class FromES(Container):
     def get_columns(self, table_name=None, column_name=None):
         # CONFIRM WE CAN USE NAME OF index
         if table_name is None or table_name == self.settings.index or table_name == self.settings.alias:
-            pass
+            table_name = self.settings.index
         elif table_name.startswith(self.settings.index + ".") or table_name.startswith(self.settings.alias):
             pass
         else:

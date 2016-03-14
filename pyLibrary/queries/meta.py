@@ -228,6 +228,7 @@ class FromESMetadata(Schema):
             if column_name:
                 Log.error("no columns matching {{table}}.{{column}}", table=table_name, column=column_name)
             else:
+                self._get_columns(table=table_name)
                 Log.error("no columns for {{table}}", table=table_name)
 
         self._get_columns(table=table_name)

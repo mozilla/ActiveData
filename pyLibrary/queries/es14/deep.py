@@ -45,7 +45,7 @@ def is_deepop(es, query):
 
 
 def es_deepop(es, query):
-    columns = query.frum.get_columns()
+    columns = query.frum.get_columns(query.frum.name)
     query_path = query.frum.query_path
     columns = UniqueIndex(keys=["name"], data=sorted(columns, lambda a, b: cmp(len(listwrap(b.nested_path)), len(listwrap(a.nested_path)))), fail_on_dup=False)
     map_ = {c.name: c.es_column for c in columns}

@@ -433,16 +433,6 @@ class Cluster(object):
         self.path = settings.host + ":" + unicode(settings.port)
         self.get_metadata()
 
-
-        def monitor(please_stop):
-            while not please_stop:
-                metadata = self.get("/_cluster/state").metadata
-                for k, v in metadata.indices.items():
-                    v.mappings = None
-                Log.note("ElasticSearch metadata {{metadata|json}}", metadata=metadata)
-                Thread.sleep(seconds=5)
-        Thread.run("es schema monitor", monitor)
-
     @use_settings
     def get_or_create_index(
         self,

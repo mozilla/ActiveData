@@ -14,8 +14,9 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import sys
+from collections import Mapping
 
-from pyLibrary.dot import Dict, listwrap
+from pyLibrary.dot import Dict, listwrap, unwraplist, set_default
 from pyLibrary.jsons.encoder import json_encoder
 from pyLibrary.strings import indent, expand_template
 
@@ -40,11 +41,11 @@ class Except(Exception):
         )
 
 
-    def __init__(self, type=ERROR, template=None, params=None, cause=None, trace=None):
+    def __init__(self, type=ERROR, template=None, params=None, cause=None, trace=None, **kwargs):
         Exception.__init__(self)
         self.type = type
         self.template = template
-        self.params = params
+        self.params = set_default(kwargs, params)
         self.cause = cause
         self.trace = trace
 
@@ -54,6 +55,9 @@ class Except(Exception):
             return None
         elif isinstance(e, (list, Except)):
             return e
+        elif isinstance(e, Mapping):
+            e.cause = unwraplist([Except.wrap(c) for c in listwrap(e.cause)])
+            return Except(**e)
         else:
             if hasattr(e, "message") and e.message:
                 cause = Except(ERROR, unicode(e.message), trace=_extract_traceback(0))

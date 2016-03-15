@@ -10,6 +10,8 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+
+import string
 from collections import Mapping
 from copy import deepcopy
 from datetime import datetime
@@ -90,7 +92,7 @@ class Index(Features):
                 with self.cluster.metadata_locker:
                     index_ = self.cluster._metadata.indices[self.settings.index]
                 if not index_:
-                    indices = self.cluster.get_metadata(index=self.settings.index).indices
+                    indices = self.cluster.get_metadata().indices
                     index_ = indices[self.settings.index]
 
                 candidate_types = list(index_.mappings.keys())
@@ -180,13 +182,13 @@ class Index(Features):
         RETURN THE INDEX USED BY THIS alias
         """
         alias_list = self.cluster.get_aliases()
-        output = sort([
+        output = qb.sort(set([
             a.index
             for a in alias_list
             if a.alias == alias or
                 a.index == alias or
                 (re.match(re.escape(alias) + "\\d{8}_\\d{6}", a.index) and a.index != alias)
-        ])
+        ]))
 
         if len(output) > 1:
             Log.error("only one index with given alias==\"{{alias}}\" expected",  alias= alias)
@@ -304,10 +306,11 @@ class Index(Features):
             if fails:
                 item = items[fails[0]]
                 Log.error(
-                    "{{num}} {{error}} while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
-                    num=item.index.status,
+                    "{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
+                    status=item.index.status,
                     error=item.index.error,
                     line=strings.limit(lines[fails[0] * 2 + 1], 2000),
+                    some=len(fails) - 1,
                     index=self.settings.index,
                     all_fails=fails,
                     id=item.index._id
@@ -456,7 +459,7 @@ class Cluster(object):
             settings.index = best.index
 
         index = settings.index
-        meta = self.get_metadata(index=index)
+        meta = self.get_metadata()
         columns = parse_properties(index, [], meta.indices[index].mappings.values()[0].properties)
         if len(columns)!=0:
             settings.tjson = tjson or any(c.name.endswith("$value") for c in columns)
@@ -629,32 +632,26 @@ class Cluster(object):
                     output.append({"index": index, "alias": a})
         return wrap(output)
 
-    def get_metadata(self, index=None, force=False):
-        if self.settings.explore_metadata:
-            if not self._metadata or (force and index is None):
-                response = self.get("/_cluster/state")
-                with self.metadata_locker:
-                    self._metadata = wrap(response.metadata)
-                    # REPLICATE MAPPING OVER ALL ALIASES
-                    indices = self._metadata.indices
-                    for i, m in indices.items():
-                        for a in m.aliases:
-                            indices[a] = m
-                    self.cluster_state = wrap(self.get("/"))
-                    self.version = self.cluster_state.version.number
-                return self._metadata.indices
-
-            if index:  # UPDATE THE MAPPING FOR ONE INDEX ONLY
-                response = self.get("/"+index+"/_mapping")
-                with self.metadata_locker:
-                    if self.version.startswith("0.90."):
-                        best = jx.sort(response.items(), 0).last()
-                        self._metadata.indices[index].mappings = best[1]
-                    else:
-                        self._metadata.indices[index].mappings = jx.sort(response.items(), 0).last()[1].mappings
-                    return Dict(indices={index: self._metadata.indices[index]})
-        else:
+    def get_metadata(self, force=False):
+        if not self.settings.explore_metadata:
             Log.error("Metadata exploration has been disabled")
+
+
+        if not self._metadata or force:
+            response = self.get("/_cluster/state")
+            with self.metadata_locker:
+                self._metadata = wrap(response.metadata)
+                # REPLICATE MAPPING OVER ALL ALIASES
+                indices = self._metadata.indices
+                for i, m in jx.sort(indices.items(), {"value": 0, "sort": -1}):
+                    m.index = i
+                    for a in m.aliases:
+                        if not indices[a]:
+                            indices[a] = {"index": i}
+                self.cluster_state = wrap(self.get("/"))
+                self.version = self.cluster_state.version.number
+            return self._metadata
+
         return self._metadata
 
     def post(self, path, **kwargs):
@@ -713,7 +710,7 @@ class Cluster(object):
             if response.status_code not in [200]:
                 Log.error(response.reason+": "+response.all_content)
             if self.debug:
-                Log.note("response: {{response}}", response=utf82unicode(response.all_content)[:130])
+                Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 130))
             details = wrap(convert.json2value(utf82unicode(response.all_content)))
             if details.error:
                 Log.error(details.error)
@@ -728,7 +725,7 @@ class Cluster(object):
             if response.status_code not in [200]:
                 Log.error(response.reason+": "+response.all_content)
             if self.debug:
-                Log.note("response: {{response}}",  response= utf82unicode(response.all_content)[:130])
+                Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 130))
             if response.all_content:
                 details = wrap(convert.json2value(utf82unicode(response.all_content)))
                 if details.error:
@@ -833,7 +830,8 @@ class Alias(Features):
         self.debug = debug
         if self.debug:
             Log.alert("Elasticsearch debugging on {{index|quote}} is on",  index= settings.index)
-
+        if alias == None:
+            Log.error("Alias can not be None")
         self.settings = settings
         self.cluster = Cluster(settings)
 

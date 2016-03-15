@@ -90,13 +90,15 @@ class FromESMetadata(Schema):
             return self.tables.query({"where": {"eq": {"name": table_name}}})
 
     def _upsert_column(self, c):
-        existing_columns = filter(lambda r: r.table == c.table and r.name == c.name, self.columns.data)
+        # ASSUMING THE  self.columns.locker IS HAD
+        existing_columns = [r for r in self.columns.data if r.table == c.table and r.name == c.name]
         if not existing_columns:
             self.columns.add(c)
             Log.note("todo: {{table}}.{{column}}", table=c.table, column=c.es_column)
             self.todo.add(c)
 
-            cols = filter(lambda r: r.table == "meta.columns", self.columns.data)
+            # MARK meta.columns AS DIRTY TOO
+            cols = [r for r in self.columns.data if r.table == "meta.columns"]
             for cc in cols:
                 cc.partitions = cc.cardinality = None
                 cc.last_updated = Date.now()
@@ -118,83 +120,88 @@ class FromESMetadata(Schema):
 
     def _get_columns(self, table=None):
         # TODO: HANDLE MORE THEN ONE ES, MAP TABLE SHORT_NAME TO ES INSTANCE
-        index = join_field(split_field(table)[:1:])
-        metadata = self.default_es.get_metadata(index=index, force=True)
+        metadata = self.default_es.get_metadata(force=True)
         for abs_index, meta in jx.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
-            for index in meta.aliases+[abs_index]:
-                for _, properties in meta.mappings.items():
-                    abs_columns = _elasticsearch.parse_properties(index, None, properties.properties)
-                    abs_columns = abs_columns.filter(lambda r: not r.es_column.startswith("other.") and not r.es_column.startswith("previous_values.cf_"))  # TODO: REMOVE WHEN jobs PROPERTY EXPLOSION IS CONTAINED
-                    with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
+            if meta.index != abs_index:
+                continue
+
+            for _, properties in meta.mappings.items():
+                abs_columns = _elasticsearch.parse_properties(abs_index, None, properties.properties)
+                abs_columns = abs_columns.filter(  # TODO: REMOVE WHEN jobs PROPERTY EXPLOSION IS CONTAINED
+                    lambda r: not r.es_column.startswith("other.") and
+                              not r.es_column.startswith("previous_values.cf_") and
+                              not r.es_index.startswith("debug")
+                )
+                with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
+                    def add_column(c, query_path):
+                        if query_path:
+                            c.table = c.es_index + "." + query_path.last()
+                        else:
+                            c.table = c.es_index
+
                         with self.columns.locker:
-                            def add_column(c, query_path):
+                            self._upsert_column(c)
+                            for alias in meta.aliases:
+                                c = copy(c)
                                 if query_path:
-                                    c.table = c.es_index + "." + query_path.last()
+                                    c.table = alias + "." + query_path.last()
                                 else:
-                                    c.table = c.es_index
-
+                                    c.table = alias
                                 self._upsert_column(c)
-                                for alias in meta.aliases:
-                                    c = copy(c)
-                                    if query_path:
-                                        c.table = alias + "." + query_path.last()
-                                    else:
-                                        c.table = alias
-                                    self._upsert_column(c)
 
-                            # EACH query_path IS A LIST OF EVER-INCREASING PATHS THROUGH EACH NESTED LEVEL
-                            query_paths = wrap([[c.es_column] for c in abs_columns if c.type == "nested"])
-                            for a, b in itertools.product(query_paths, query_paths):
-                                aa = a.last()
-                                bb = b.last()
-                                if aa and bb.startswith(aa):
-                                    for i, b_prefix in enumerate(b):
-                                        if len(b_prefix) < len(aa):
-                                            continue
-                                        if aa == b_prefix:
-                                            break  # SPLIT ALREADY FOUND
-                                        b.insert(0, aa)
-                                        break
-                            query_paths.append([])
+                    # EACH query_path IS A LIST OF EVER-INCREASING PATHS THROUGH EACH NESTED LEVEL
+                    query_paths = wrap([[c.es_column] for c in abs_columns if c.type == "nested"])
+                    for a, b in itertools.product(query_paths, query_paths):
+                        aa = a.last()
+                        bb = b.last()
+                        if aa and bb.startswith(aa):
+                            for i, b_prefix in enumerate(b):
+                                if len(b_prefix) < len(aa):
+                                    continue
+                                if aa == b_prefix:
+                                    break  # SPLIT ALREADY FOUND
+                                b.insert(0, aa)
+                                break
+                    query_paths.append([])
 
-                            for c in abs_columns:
-                                # ADD RELATIVE COLUMNS
-                                full_path = listwrap(c.nested_path)
-                                abs_depth = len(full_path)
-                                abs_parent = coalesce(full_path.last(), "")
-                                for query_path in query_paths:
-                                    rel_depth = len(query_path)
+                    for c in abs_columns:
+                        # ADD RELATIVE COLUMNS
+                        full_path = listwrap(c.nested_path)
+                        abs_depth = len(full_path)
+                        abs_parent = coalesce(full_path.last(), "")
+                        for query_path in query_paths:
+                            rel_depth = len(query_path)
 
-                                    # ABSOLUTE
-                                    add_column(copy(c), query_path)
-                                    cc = copy(c)
-                                    cc.relative = True
+                            # ABSOLUTE
+                            add_column(copy(c), query_path)
+                            cc = copy(c)
+                            cc.relative = True
 
-                                    if not query_path:
-                                        add_column(cc, query_path)
-                                        continue
+                            if not query_path:
+                                add_column(cc, query_path)
+                                continue
 
-                                    rel_parent = query_path.last()
+                            rel_parent = query_path.last()
 
-                                    if c.es_column.startswith(rel_parent+"."):
-                                        cc.name = c.es_column[len(rel_parent)+1:]
-                                        add_column(cc, query_path)
-                                    elif c.es_column == rel_parent:
-                                        cc.name = "."
-                                        add_column(cc, query_path)
-                                    elif not abs_parent:
-                                        # THIS RELATIVE NAME (..o) ALSO NEEDS A RELATIVE NAME (o)
-                                        # AND THEN REMOVE THE SHADOWED
-                                        cc.name = "." + ("." * (rel_depth - abs_depth)) + c.es_column
-                                        add_column(cc, query_path)
-                                    elif rel_parent.startswith(abs_parent+"."):
-                                        cc.name = "." + ("." * (rel_depth - abs_depth)) + c.es_column
-                                        add_column(cc, query_path)
-                                    elif rel_parent != abs_parent:
-                                        # SIBLING NESTED PATHS ARE INVISIBLE
-                                        pass
-                                    else:
-                                        Log.error("logic error")
+                            if c.es_column.startswith(rel_parent+"."):
+                                cc.name = c.es_column[len(rel_parent)+1:]
+                                add_column(cc, query_path)
+                            elif c.es_column == rel_parent:
+                                cc.name = "."
+                                add_column(cc, query_path)
+                            elif not abs_parent:
+                                # THIS RELATIVE NAME (..o) ALSO NEEDS A RELATIVE NAME (o)
+                                # AND THEN REMOVE THE SHADOWED
+                                cc.name = "." + ("." * (rel_depth - abs_depth)) + c.es_column
+                                add_column(cc, query_path)
+                            elif rel_parent.startswith(abs_parent+"."):
+                                cc.name = "." + ("." * (rel_depth - abs_depth)) + c.es_column
+                                add_column(cc, query_path)
+                            elif rel_parent != abs_parent:
+                                # SIBLING NESTED PATHS ARE INVISIBLE
+                                pass
+                            else:
+                                Log.error("logic error")
 
     def query(self, _query):
         return self.columns.query(Query(set_default(
@@ -211,8 +218,9 @@ class FromESMetadata(Schema):
         """
         try:
             with self.columns.locker:
-                columns = jx.sort(filter(lambda r: r.table == table_name and (column_name is None or r.name==column_name), self.columns.data), "name")
+                columns = [c for c in self.columns.data if c.table == table_name and (column_name is None or c.name==column_name)]
             if columns:
+                columns = jx.sort(columns, "name")
                 if fail_when_not_found:
                     # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
                     while len(self.todo) and not all(columns.select("last_updated")):
@@ -395,7 +403,7 @@ class FromESMetadata(Schema):
                         if DEBUG and not column.table.startswith(TEST_TABLE_PREFIX):
                             Log.note("updated {{column.name}}", column=column)
                     except Exception, e:
-                        Log.warning("problem getting cardinality for  {{column.name}}", column=column, cause=e)
+                        Log.warning("problem getting cardinality for {{column.name}}", column=column, cause=e)
             except Exception, e:
                 Log.warning("problem in cardinality monitor", cause=e)
 
@@ -406,6 +414,10 @@ class FromESMetadata(Schema):
             c = self.todo.pop()
             if c == Thread.STOP:
                 break
+
+            if not c.last_updated or c.last_updated >= Date.now()-TOO_OLD:
+                continue
+
             with self.columns.locker:
                 self.columns.update({
                     "set": {
@@ -416,9 +428,9 @@ class FromESMetadata(Schema):
                         "cardinality",
                         "partitions",
                     ],
-                    "where": {"eq": {"table": c.table, "es_column": c.es_column}}
+                    "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                 })
-            Log.note("Could not get {{col.table}}.{{col.es_column}} info", col=c)
+            Log.note("Could not get {{col.es_index}}.{{col.es_column}} info", col=c)
 
 
 def _counting_query(c):

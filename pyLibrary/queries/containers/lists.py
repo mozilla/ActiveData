@@ -18,7 +18,7 @@ from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import is_keyword
-from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression
+from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression, compile_expression
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
 from pyLibrary.queries.meta import Column
 from pyLibrary.thread.threads import Lock
@@ -74,17 +74,15 @@ class ListContainer(Container):
         THE where CLAUSE IS A JSON EXPRESSION FILTER
         """
         command = wrap(command)
-        if command.where == None:
-            filter_ = lambda: True
-        else:
-            filter_ = _exec("temp = lambda row: " + jx_expression(command.where).to_python())
-
+        command_clear = listwrap(command["clear"])
+        command_set = command.set.items()
+        command_where = jx.get(command.where)
 
         for c in self.data:
-            if filter_(c):
-                for k in listwrap(command["clear"]):
+            if command_where(c):
+                for k in command_clear:
                     c[k] = None
-                for k, v in command.set.items():
+                for k, v in command_set:
                     c[k] = v
 
     def filter(self, where):
@@ -317,7 +315,7 @@ _merge_type = {
 def _exec(code):
     try:
         temp = None
-        exec code
+        exec "temp = " + code
         return temp
     except Exception, e:
         Log.error("Could not execute {{code|quote}}", code=code, cause=e)

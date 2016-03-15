@@ -71,8 +71,11 @@ def expand(doc, doc_url):
     ASSUMING YOU ALREADY PULED THE doc FROM doc_url, YOU CAN STILL USE THE
     EXPANDING FEATURE
     """
+    if not _Log:
+        _late_import()
+
     if doc_url.find("://") == -1:
-        _Log.error("{{url}} must have a prototcol (eg http://) declared",  url= doc_url)
+        _Log.error("{{url}} must have a prototcol (eg http://) declared", url=doc_url)
 
     phase1 = _replace_ref(doc, URL(doc_url))  # BLANK URL ONLY WORKS IF url IS ABSOLUTE
     phase2 = _replace_locals(phase1, [phase1])

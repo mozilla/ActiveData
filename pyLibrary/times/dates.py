@@ -153,11 +153,16 @@ class Date(object):
     def __eq__(self, other):
         if other == None:
             return Null
+
         try:
-            other = Date(other)
+            return other.unix == self.unix
+        except Exception:
+            pass
+
+        try:
+            return Date(other).unix == self.unix
         except Exception:
             return False
-        return self.unix == other.unix
 
     def __le__(self, other):
         other = Date(other)

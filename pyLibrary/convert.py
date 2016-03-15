@@ -110,11 +110,10 @@ def json2value(json_string, params={}, flexible=False, leaves=False):
             json_string = re.sub(r",\s*\]", r"]", json_string)
 
         if params:
+            # LOOKUP REFERENCES
             json_string = expand_template(json_string, params)
 
-
-        # LOOKUP REFERENCES
-        value = wrap(json_decoder(json_string))
+        value = wrap(json_decoder(unicode(json_string)))
 
         if leaves:
             value = wrap_leaves(value)

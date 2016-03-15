@@ -55,9 +55,20 @@ class FileString(object):
         return file_length
 
     def __getslice__(self, i, j):
-        self.file.seek(i)
-        output = self.file.read(j - i).decode(self.encoding)
-        return output
+        j = Math.min(j, len(self))
+        if j - 1 > 2 ** 28:
+            Log.error("Slice of {{num}} bytes is too big", num=j - i)
+        try:
+            self.file.seek(i)
+            output = self.file.read(j - i).decode(self.encoding)
+            return output
+        except Exception, e:
+            Log.error(
+                "Can not read file slice at {{index}}, with encoding {{encoding}}",
+                index=i,
+                encoding=self.encoding,
+                cause=e
+            )
 
     def __add__(self, other):
         self.file.seek(0, 2)
@@ -83,6 +94,16 @@ class FileString(object):
     def __iter__(self):
         self.file.seek(0)
         return self.file
+
+    def __unicode__(self):
+        if self.encoding == "utf8":
+            temp = self.file.tell()
+            self.file.seek(0, 2)
+            file_length = self.file.tell()
+            self.file.seek(0)
+            output = self.file.read(file_length).decode(self.encoding)
+            self.file.seek(temp)
+            return output
 
 
 def safe_size(source):

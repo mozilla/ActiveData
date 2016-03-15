@@ -19,6 +19,8 @@ import sys
 import thread
 import threading
 import time
+
+import types
 from collections import deque
 from copy import copy
 from datetime import datetime, timedelta
@@ -447,7 +449,8 @@ class Thread(object):
         try:
             self.children.remove(child)
         except Exception, e:
-            _Log.error("not expected", e)
+            # happens when multiple joins on same thread
+            pass
 
     def _run(self):
         with CProfiler():
@@ -760,6 +763,8 @@ class ThreadedQueue(Queue):
                             queue.extend(_buffer)
                             please_stop.go()
                             break
+                        elif isinstance(item, types.FunctionType):
+                            item()
                         elif item is not None:
                             _buffer.append(item)
 
@@ -773,6 +778,8 @@ class ThreadedQueue(Queue):
                         queue.extend(_buffer)
                         please_stop.go()
                         break
+                    elif isinstance(item, types.FunctionType):
+                        item()
                     elif item is not None:
                         _buffer.append(item)
 

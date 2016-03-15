@@ -190,12 +190,24 @@ def post_json(url, **kwargs):
     """
     ASSUME RESPONSE IN IN JSON
     """
-    kwargs["data"] = convert.unicode2utf8(convert.value2json(kwargs["data"]))
+    if b"json" in kwargs:
+        kwargs[b"data"] = convert.unicode2utf8(convert.value2json(kwargs[b"json"]))
+    elif b'data':
+        kwargs[b"data"] = convert.unicode2utf8(convert.value2json(kwargs[b"data"]))
+    else:
+        Log.error("Expecting `json` parameter")
 
     response = post(url, **kwargs)
-    c=response.content
-    return convert.json2value(convert.utf82unicode(c))
+    c = response.content
+    try:
+        details = convert.json2value(convert.utf82unicode(c))
+    except Exception, e:
+        Log.error("Unexpected return value {{content}}", content=c, cause=e)
 
+    if response.status_code != 200:
+        Log.error("Bad response", cause=Except.wrap(details))
+
+    return details
 
 def put(url, **kwargs):
     return HttpResponse(request(b'put', url, **kwargs))

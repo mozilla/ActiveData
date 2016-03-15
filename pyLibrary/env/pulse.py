@@ -106,7 +106,7 @@ class Consumer(Thread):
                 self.pulse.listen()
             except Exception, e:
                 if not please_stop:
-                    Log.warning("pulse had problem", e)
+                    Log.warning("Pulse had problem (Have you set your Pulse permissions correctly?", e)
         Log.note("pulse listener is done")
 
 

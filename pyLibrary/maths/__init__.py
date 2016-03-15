@@ -192,11 +192,13 @@ class Math(object):
     def floor(value, mod=1):
         """
         x == Math.floor(x, a) + Math.mod(x, a)  FOR ALL a, x
+        RETURN None WHEN GIVEN INVALID ARGUMENTS
         """
         if value == None:
             return None
-
-        if mod == 1:
+        elif mod <= 0:
+            return None
+        elif mod == 1:
             return int(math.floor(value))
         elif Math.is_integer(mod):
             return int(math.floor(value/mod))*mod
@@ -208,9 +210,12 @@ class Math(object):
     @staticmethod
     def mod(value, mod=1):
         """
-        RETURN NON-NEGATIVE VALUE
+        RETURN NON-NEGATIVE MODULO
+        RETURN None WHEN GIVEN INVALID ARGUMENTS
         """
         if value == None:
+            return None
+        elif mod <= 0:
             return None
         elif value < 0:
             return (value % mod + mod) % mod

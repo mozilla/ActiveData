@@ -17,6 +17,7 @@ from boto.sqs.message import Message
 import requests
 
 from pyLibrary import convert
+from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, unwrap
 from pyLibrary.maths import Math
@@ -81,18 +82,20 @@ class Queue(object):
             return None
 
         self.pending.append(m)
-        return convert.json2value(m.get_body())
+        output = convert.json2value(m.get_body())
+        return output
 
     def pop_message(self, wait=SECOND, till=None):
         """
-        RETURN THE MESSAGE, CALLER IS RESPONSIBLE FOR CALLING delete_message() WHEN DONE
+        RETURN TUPLE (message, payload) CALLER IS RESPONSIBLE FOR CALLING message.delete() WHEN DONE
         """
-        m = self.queue.read(wait_time_seconds=Math.floor(wait.seconds))
-        if not m:
+        message = self.queue.read(wait_time_seconds=Math.floor(wait.seconds))
+        if not message:
             return None
+        message.delete = lambda: self.queue.delete_message(message)
 
-        output = convert.json2value(m.get_body())
-        return output
+        payload = convert.json2value(message.get_body())
+        return message, payload
 
     def commit(self):
         pending = self.pending
@@ -143,5 +146,23 @@ def capture_termination_signal(please_stop):
 def get_instance_metadata():
     output = wrap({k.replace("-", "_"): v for k, v in boto_utils.get_instance_metadata().items()})
     return output
+
+
+def aws_retry(func):
+    def output(*args, **kwargs):
+        while True:
+            try:
+                return func(*args, **kwargs)
+            except Exception, e:
+                e = Except.wrap(e)
+                if "Request limit exceeded" in e:
+                    Log.warning("AWS Problem", cause=e)
+                    continue
+                else:
+                    Log.error("Problem with call to AWS", cause=e)
+    return output
+
+
+
 
 from . import s3

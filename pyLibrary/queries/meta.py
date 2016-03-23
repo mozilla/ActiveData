@@ -113,10 +113,6 @@ class FromESMetadata(Schema):
             Log.note("todo: {{table}}.{{column}}", table=canonical.table, column=canonical.es_column)
             self.todo.add(canonical)
 
-            # TEST CONSISTENCY
-            for c, d in product(list(self.todo.queue), list(self.todo.queue)):
-                if c.name == d.name and c.table == d.table and c != d:
-                    Log.error("")
 
     def _get_columns(self, table=None):
         # TODO: HANDLE MORE THEN ONE ES, MAP TABLE SHORT_NAME TO ES INSTANCE
@@ -134,6 +130,7 @@ class FromESMetadata(Schema):
                 )
                 with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
                     def add_column(c, query_path):
+                        c.last_updated = Date.now()
                         if query_path:
                             c.table = c.es_index + "." + query_path.last()
                         else:

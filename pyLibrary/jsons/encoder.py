@@ -245,18 +245,22 @@ def _iter2json(value, _buffer):
 
 
 def _dict2json(value, _buffer):
-    prefix = u"{\""
-    for k, v in value.iteritems():
-        append(_buffer, prefix)
-        prefix = u", \""
-        if isinstance(k, str):
-            k = utf82unicode(k)
-        for c in k:
-            append(_buffer, ESCAPE_DCT.get(c, c))
-        append(_buffer, u"\": ")
-        _value2json(v, _buffer)
-    append(_buffer, u"}")
+    try:
+        prefix = u"{\""
+        for k, v in value.iteritems():
+            append(_buffer, prefix)
+            prefix = u", \""
+            if isinstance(k, str):
+                k = utf82unicode(k)
+            for c in k:
+                append(_buffer, ESCAPE_DCT.get(c, c))
+            append(_buffer, u"\": ")
+            _value2json(v, _buffer)
+        append(_buffer, u"}")
+    except Exception, e:
+        from pyLibrary.debugs.logs import Log
 
+        Log.error(_repr(value) + " is not JSON serializable", cause=e)
 
 ARRAY_ROW_LENGTH = 80
 ARRAY_ITEM_MAX_LENGTH = 30

@@ -182,7 +182,7 @@ class Index(Features):
         RETURN THE INDEX USED BY THIS alias
         """
         alias_list = self.cluster.get_aliases()
-        output = qb.sort(set([
+        output = jx.sort(set([
             a.index
             for a in alias_list
             if a.alias == alias or

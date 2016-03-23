@@ -27,7 +27,7 @@
 		"port": 9200,
 		"index": "saved_queries",
 		"type": "query",
-		"debug": true
+		"debug": false
 	},
 	"elasticsearch": {
 		"host": "http://activedata.allizom.org",
@@ -38,7 +38,7 @@
 	},
 	"debug": {
 		"trace": true,
-		"cprofile": false,
+		"cprofile": true,
 		"log": [
 			{
 				"log_type": "console"

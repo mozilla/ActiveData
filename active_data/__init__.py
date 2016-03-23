@@ -11,6 +11,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from active_data.actions import save_query
+from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
 from pyLibrary.times.dates import Date
 

@@ -42,35 +42,44 @@ def query(path):
         query_timer = Timer("total duration")
         try:
             with query_timer:
-                if flask.request.headers.get("content-length", "") in ["", "0"]:
-                    # ASSUME A BROWSER HIT THIS POINT, SEND text/html RESPONSE BACK
-                    return Response(
-                        BLANK,
-                        status=400,
-                        headers={
-                            "access-control-allow-origin": "*",
-                            "content-type": "text/html"
-                        }
-                    )
-                elif int(flask.request.headers["content-length"]) > QUERY_SIZE_LIMIT:
-                    Log.error("Query is too large")
+                preamble_timer = Timer("preamble")
+                with preamble_timer:
+                    if flask.request.headers.get("content-length", "") in ["", "0"]:
+                        # ASSUME A BROWSER HIT THIS POINT, SEND text/html RESPONSE BACK
+                        return Response(
+                            BLANK,
+                            status=400,
+                            headers={
+                                "access-control-allow-origin": "*",
+                                "content-type": "text/html"
+                            }
+                        )
+                    elif int(flask.request.headers["content-length"]) > QUERY_SIZE_LIMIT:
+                        Log.error("Query is too large")
 
-                body = flask.request.get_data().strip()
-                text = convert.utf82unicode(body)
-                text = replace_vars(text, flask.request.args)
-                data = convert.json2value(text)
-                record_request(flask.request, data, None, None)
-                if data.meta.testing:
-                    _test_mode_wait(data)
+                    body = flask.request.get_data().strip()
+                    text = convert.utf82unicode(body)
+                    text = replace_vars(text, flask.request.args)
+                    data = convert.json2value(text)
+                    record_request(flask.request, data, None, None)
+                    if data.meta.testing:
+                        _test_mode_wait(data)
 
-                result = jx.run(data)
+                translate_timer = Timer("translate")
+                with translate_timer:
+                    result = jx.run(data)
 
-                if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
-                    result = result.format(data.format)
+                    if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
+                        result = result.format(data.format)
 
-                if data.meta.save:
-                    result.meta.saved_as = save_query.query_finder.save(data)
+                save_timer = Timer("save")
+                with save_timer:
+                    if data.meta.save:
+                        result.meta.saved_as = save_query.query_finder.save(data)
 
+                result.meta.timing.preamble = Math.round(preamble_timer.duration.seconds, digits=4)
+                result.meta.timing.translate = Math.round(translate_timer.duration.seconds, digits=4)
+                result.meta.timing.save = Math.round(save_timer.duration.seconds, digits=4)
                 result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
                 json_timer = Timer("jsonification")

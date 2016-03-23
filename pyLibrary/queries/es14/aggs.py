@@ -865,8 +865,9 @@ def aggs_iterator(aggs, decoders, coord=True):
         if d > 0:
             for k, v in agg.items():
                 if k == "_match":
-                    for b in v.get("buckets", EMPTY_LIST):
+                    for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
                         parts[d] = b
+                        b["_index"] = i
                         for a in _aggs_iterator(b, d - 1):
                             yield a
                 elif k == "_other":

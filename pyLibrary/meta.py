@@ -389,7 +389,7 @@ temp = {{name}}
             "len_slots": len(slots),
             "dict": "{" + (", ".join(convert.value2quote(s) + ": self." + s for s in slots)) + "}",
             "assign": "; ".join("_set(output, "+convert.value2quote(s)+", self."+s+")" for s in slots),
-            "types": convert.value2json(types)
+            "types": "{" + (",".join(convert.string2quote(k) + ": " + v.__name__ for k, v in types.items())) + "}"
         }
     )
 

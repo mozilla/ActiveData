@@ -17,5 +17,5 @@ access_log_format = '{' \
                     '"referer": "%(f)s",' \
                     '"user_agent": "%(a)s",' \
                     '"upstream_request_time": %(D)s,' \
-                    '"process_id": %(p)s' \
+                    '"process_id": "%(p)s"' \
                     '}'

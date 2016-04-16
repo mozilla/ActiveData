@@ -310,6 +310,8 @@ class Log(object):
             cause = default_params
             default_params = {}
 
+        if "values" in more_params.keys():
+            Log.error("Can not handle a logging parameter by name `values`")
         params = dict(unwrap(default_params), **more_params)
         cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
         trace = exceptions.extract_stack(stack_depth + 1)

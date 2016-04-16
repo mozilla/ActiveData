@@ -22,10 +22,9 @@ from pyLibrary.maths import Math
 # LIBRARY TO DEAL WITH BIG DATA ARRAYS AS ITERATORS OVER (IR)REGULAR SIZED
 # BLOCKS, OR AS ITERATORS OVER LINES
 
-
+DEBUG = False
 MIN_READ_SIZE = 8 * 1024
 MAX_STRING_SIZE = 1 * 1024 * 1024
-
 
 class FileString(object):
     """
@@ -264,41 +263,39 @@ def compressed_bytes2ibytes(compressed, size):
         except Exception, e:
             Log.error("Not expected", e)
 
-def ibytes2ilines(stream):
+
+def ibytes2ilines(generator, encoding="utf8", closer=None):
     """
     CONVERT A GENERATOR OF (ARBITRARY-SIZED) byte BLOCKS
     TO A LINE (CR-DELIMITED) GENERATOR
+
+    :param generator:
+    :param encoding:
+    :param closer: OPTIONAL FUNCTION TO RUN WHEN DONE ITERATING
+    :return:
     """
-    _buffer = stream.next()
+    _buffer = generator.next()
     s = 0
     e = _buffer.find(b"\n")
     while True:
         while e == -1:
             try:
-                next_block = stream.next()
+                next_block = generator.next()
                 _buffer = _buffer[s:] + next_block
                 s = 0
                 e = _buffer.find(b"\n")
             except StopIteration:
                 _buffer = _buffer[s:]
-                del stream
-                yield _buffer
+                del generator
+                yield _buffer.decode(encoding)
+                if closer:
+                    closer()
                 return
 
-        yield _buffer[s:e]
+        yield _buffer[s:e].decode(encoding)
         s = e + 1
         e = _buffer.find(b"\n", s)
 
-def sbytes2ilines(stream):
-    """
-    CONVERT A STREAM OF (ARBITRARY-SIZED) byte BLOCKS
-    TO A LINE (CR-DELIMITED) GENERATOR
-    """
-    def read():
-        output = stream.read(MIN_READ_SIZE)
-        return output
-
-    return ibytes2ilines({"next": read})
 
 
 class GzipLines(CompressedLines):
@@ -330,3 +327,68 @@ class ZipfileLines(CompressedLines):
             Log.error("*.zip file has {{num}} files, expecting only one.",  num= len(names))
         stream = archive.open(names[0], "r")
         return LazyLines(sbytes2ilines(stream), encoding=self.encoding).__iter__()
+
+
+def icompressed2ibytes(source):
+    """
+    :param source: GENERATOR OF COMPRESSED BYTES
+    :return: GENERATOR OF BYTES
+    """
+    decompressor = zlib.decompressobj(16 + zlib.MAX_WBITS)
+    last_bytes_count = 0  # Track the last byte count, so we do not show too many debug lines
+    bytes_count = 0
+    for bytes_ in source:
+        data = decompressor.decompress(bytes_)
+        bytes_count += len(data)
+        if Math.floor(last_bytes_count, 1000000) != Math.floor(bytes_count, 1000000):
+            last_bytes_count = bytes_count
+            if DEBUG:
+                Log.note("bytes={{bytes}}", bytes=bytes_count)
+        yield data
+
+
+def scompressed2ibytes(stream):
+    """
+    :param stream:  SOMETHING WITH read() METHOD TO GET MORE BYTES
+    :return: GENERATOR OF UNCOMPRESSED BYTES
+    """
+    def more():
+        try:
+            while True:
+                bytes_ = stream.read(4096)
+                if not bytes_:
+                    stream.close()
+                    return
+                yield bytes_
+        except Exception, e:
+            try:
+                stream.close()
+            except Exception:
+                pass
+            Log.error("Problem iterating through stream", cause=e)
+
+    return icompressed2ibytes(more)
+
+
+def sbytes2ilines(stream, encoding="utf8"):
+    """
+    CONVERT A STREAM (with read() method) OF (ARBITRARY-SIZED) byte BLOCKS
+    TO A LINE (CR-DELIMITED) GENERATOR
+    """
+    def read():
+        try:
+            while True:
+                bytes_ = stream.read(4096)
+                if not bytes_:
+                    stream.close()
+                    return
+                yield bytes_
+        except Exception, e:
+            try:
+                stream.close()
+            except Exception:
+                pass
+            Log.error("Problem iterating through stream", cause=e)
+
+    return ibytes2ilines({"next": read}, encoding=encoding)
+

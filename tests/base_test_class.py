@@ -24,7 +24,7 @@ from pyLibrary.dot import wrap, coalesce, unwrap
 from pyLibrary.env import http
 from pyLibrary.queries import jx, containers
 from pyLibrary.queries.jx_usingES import FromES
-from pyLibrary.queries.query import Query
+from pyLibrary.queries.query import QueryOp
 from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
@@ -271,7 +271,18 @@ class ActiveDataBaseTest(FuzzyTestCase):
             if query["from"].startswith("meta."):
                 pass
             else:
-                query = Query(query, schema=FromES(name=query["from"], settings=self.index.settings))
+                query = QueryOp(
+                    "from",
+                    frum=FromES(name=query["from"], settings=self.index.settings),
+                    select=query.select,
+                    edges=query.edges,
+                    groupby=query.groupby,
+                    window=query.window,
+                    where=query.where,
+                    sort=query.sort,
+                    limit=query.limit,
+                    format=query.format
+                )
 
             if not query.sort:
                 try:

@@ -7,18 +7,21 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 import itertools
 
+from pyLibrary.collections import UNION
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, wrap, Null, coalesce
+from pyLibrary.dot import listwrap, wrap
 from pyLibrary.queries import windows
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
-from pyLibrary.queries.expressions import jx_expression_to_function
+from pyLibrary.queries.expression_compiler import compile_expression
+from pyLibrary.queries.expressions import jx_expression_to_function, jx_expression
 
 
 def is_aggs(query):
@@ -31,60 +34,60 @@ def list_aggs(frum, query):
     frum = wrap(frum)
     select = listwrap(query.select)
 
-    is_join = False  # True IF MANY TO MANY JOIN WITH AN EDGE
     for e in query.edges:
         if isinstance(e.domain, DefaultDomain):
-            e.domain = SimpleSetDomain(partitions=list(sorted(set(frum.select(e)))))
+            accessor = jx_expression_to_function(e.value)
+            unique_values = set(map(accessor, frum))
+            if None in unique_values:
+                e.allowNulls = True
+                unique_values -= {None}
+            e.domain = SimpleSetDomain(partitions=list(sorted(unique_values)))
 
-    for s in listwrap(query.select):
-        s["exec"] = jx_expression_to_function(s.value)
+    s_expressions = [jx_expression(s.value) for s in select]
+    s_accessors = [compile_expression(e.to_python()) for e in s_expressions]
 
     result = {
         s.name: Matrix(
             dims=[len(e.domain.partitions) + (1 if e.allowNulls else 0) for e in query.edges],
-            zeros=s.default
+            zeros=lambda: windows.name2accumulator.get(s.aggregate)(**s)
         )
         for s in select
     }
     where = jx_expression_to_function(query.where)
-    for d in filter(where, frum):
-        d = d.copy()
-        coord = []  # LIST OF MATCHING COORDINATE FAMILIES, USUALLY ONLY ONE PER FAMILY BUT JOINS WITH EDGES CAN CAUSE MORE
-        for e in query.edges:
-            coord.append(get_matches(e, d))
+    coord = [None]*len(query.edges)
 
-        for s in select:
-            mat = result[s.name]
-            agg = s.aggregate
-            var = s.value
-            if agg == "count":
-                for c in itertools.product(*coord):
-                    if var == "." or var == None:
-                        mat[c] += 1
-                        continue
+    net_new_edge_names = set(wrap(query.edges).name) - UNION(jx_expression(e.value).vars() for e in query.edges)
+    if net_new_edge_names & UNION(e.vars() for e in s_expressions):
+        # s_accessor NEEDS THESE EDGES, SO WE PASS THEM ANYWAY
+        for d in filter(where, frum):
+            d = d.copy()
+            for c, e in enumerate(query.edges):
+                coord[c] = get_matches(e, d)
 
-                    for e, cc in zip(query.edges, c):
-                        d[e.name] = cc
-                    val = s["exec"](d, c, frum)
-                    if val != None:
-                        mat[c] += 1
-            else:
+            for s_accessor, s in zip(s_accessors, select):
+                mat = result[s.name]
                 for c in itertools.product(*coord):
                     acc = mat[c]
-                    if acc == None:
-                        acc = windows.name2accumulator.get(agg)
-                        if acc == None:
-                            Log.error("select aggregate {{agg}} is not recognized",  agg= agg)
-                        acc = acc(**s)
-                        mat[c] = acc
-                    for e, cc in zip(query.edges, c):  # BECAUSE WE DO NOT KNOW IF s.exec NEEDS THESE EDGES, SO WE PASS THEM ANYWAY
+                    for e, cc in zip(query.edges, c):
                         d[e.name] = e.domain.partitions[cc]
-                    val = s["exec"](d, c, frum)
+                    val = s_accessor(d, c, frum)
+                    acc.add(val)
+    else:
+        # FASTER
+        for d in filter(where, frum):
+            for c, e in enumerate(query.edges):
+                coord[c] = get_matches(e, d)
+
+            for s_accessor, s in zip(s_accessors, select):
+                mat = result[s.name]
+                for c in itertools.product(*coord):
+                    acc = mat[c]
+                    val = s_accessor(d, c, frum)
                     acc.add(val)
 
     for s in select:
-        if s.aggregate == "count":
-            continue
+        # if s.aggregate == "count":
+        #     continue
         m = result[s.name]
         for c, var in m.items():
             if var != None:

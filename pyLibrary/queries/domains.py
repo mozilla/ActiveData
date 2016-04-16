@@ -47,21 +47,21 @@ class Domain(object):
 
     def __init__(self, **desc):
         desc = wrap(desc)
-        self._set_slots_to_none(self.__class__)
+        self._set_slots_to_null(self.__class__)
         set_default(self, desc)
         self.name = coalesce(desc.name, desc.type)
         self.isFacet = coalesce(desc.isFacet, False)
         self.dimension = Null
 
-    def _set_slots_to_none(self, cls):
+    def _set_slots_to_null(self, cls):
         """
         WHY ARE SLOTS NOT ACCESIBLE UNTIL WE ASSIGN TO THEM?
         """
         if hasattr(cls, "__slots__"):
             for s in cls.__slots__:
-                self.__setattr__(s, None)
+                self.__setattr__(s, Null)
         for b in cls.__bases__:
-            self._set_slots_to_none(b)
+            self._set_slots_to_null(b)
 
 
     def __copy__(self):
@@ -193,7 +193,7 @@ class SimpleSetDomain(Domain):
         if isinstance(self.key, set):
             Log.error("problem")
 
-        if not desc.key and isinstance(desc.partitions[0], (basestring, Number)):
+        if not desc.key and (len(desc.partitions)==0 or isinstance(desc.partitions[0], (basestring, Number))):
             # ASSUME PARTS ARE STRINGS, CONVERT TO REAL PART OBJECTS
             self.key = "value"
             self.map = {}

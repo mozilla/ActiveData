@@ -44,3 +44,48 @@ class TestSorting(ActiveDataBaseTest):
 
 
 
+    def test_groupby_and_sort(self):
+        test = {
+            "data": [
+                {"a":"c", "value": 1},
+                {"a":"c", "value": 3},
+                {"a":"c", "value": 4},
+                {"a":"c", "value": 6},
+                {"a":"a", "value": 7},
+                {"a":"a", "value": 8},
+                {"a":"a", "value": 9},
+                {"a":"a", "value": 10},
+                {"a":"a", "value": 11}
+            ],
+            "query": {
+                "from": base_test_class.settings.backend_es.index,
+                "groupby": "a",
+                "sort": "a"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a":"c", "count":4},
+                    {"a":"a", "count":5}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a", "count"],
+                "data": [
+                    ["c", 4],
+                    ["a", 5]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": ["a", "count"],
+                "data": {
+                    "count": [4, 5]
+                }
+            }
+        }
+        self._execute_es_tests(test)
+
+
+

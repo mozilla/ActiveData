@@ -48,7 +48,7 @@ Query Clauses
 Queries are complex operators over sets, tables, and lists.  Technically, queries are `from` operators with a variety of optional clauses that direct data transformation.
 
 `from` Clause
-----
+-------------
 
 The `from` clause states the table, index, or relation that is being processed
 by the query.  In Javascript this can be an array of objects, a cube, or

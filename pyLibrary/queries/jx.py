@@ -26,10 +26,11 @@ from pyLibrary.maths import Math
 from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.cubes.aggs import cube_aggs
-from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, compile_expression, jx_expression_to_function
+from pyLibrary.queries.expression_compiler import compile_expression
+from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, jx_expression_to_function
 from pyLibrary.queries.flat_list import FlatList
 from pyLibrary.queries.index import Index
-from pyLibrary.queries.query import Query, _normalize_selects, sort_direction, _normalize_select
+from pyLibrary.queries.query import QueryOp, _normalize_selects, sort_direction, _normalize_select
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.unique_index import UniqueIndex
 
@@ -54,7 +55,7 @@ def run(query, frum=None):
     THIS FUNCTION IS SIMPLY SWITCHING BASED ON THE query["from"] CONTAINER,
     BUT IT IS ALSO PROCESSING A list CONTAINER; SEPARATE TO A ListContainer
     """
-    query = Query(query)
+    query = QueryOp.wrap(query)
     frum = coalesce(frum, query["from"])
     if isinstance(frum, Container):
         return frum.query(query)
@@ -64,7 +65,7 @@ def run(query, frum=None):
         if is_aggs(query):
             return cube_aggs(frum, query)
 
-    elif isinstance(frum, Query):
+    elif isinstance(frum, QueryOp):
         frum = run(frum)
     else:
         Log.error("Do not know how to handle {{type}}",  type=frum.__class__.__name__)
@@ -263,29 +264,6 @@ def _tuple_deep(v, field, depth, record):
     return 0, None, record + (v.get(f), )
 
 
-def select_one(record, selection):
-    """
-    APPLY THE selection TO A SINGLE record
-    """
-    record = wrap(record)
-    selection = wrap(selection)
-
-    if isinstance(selection, Mapping):
-        selection = wrap(selection)
-        return record[selection.value]
-    elif isinstance(selection, basestring):
-        return record[selection]
-    elif isinstance(selection, list):
-        output = Dict()
-        for f in selection:
-            f = _normalize_select(f)
-            output[f.name] = record[f.value]
-        return output
-    else:
-        Log.error("Do not know how to handle")
-
-
-
 def select(data, field_name):
     """
     return list with values from field_name
@@ -455,10 +433,12 @@ def _select_deep_meta(field, depth):
 
 
 def get_columns(data, leaves=False):
+    # TODO Split this into two functions
     if not leaves:
         return wrap([{"name": n} for n in UNION(set(d.keys()) for d in data)])
     else:
         return wrap([{"name": leaf} for leaf in set(leaf for row in data for leaf, _ in row.leaves())])
+
 
 _ = """
 DEEP ITERATOR FOR NESTED DOCUMENTS
@@ -544,7 +524,7 @@ def sort(data, fieldnames=None):
             if isinstance(fieldnames, (basestring, int)):
                 fieldnames = wrap({"value": fieldnames, "sort": 1})
 
-            # EXPECTING {"field":f, "sort":i} FORMAT
+            # EXPECTING {"value":f, "sort":i} FORMAT
             fieldnames.sort = sort_direction.get(fieldnames.sort, 1)
             fieldnames.value = coalesce(fieldnames.value, fieldnames.field)
             if fieldnames.value == None:
@@ -973,10 +953,10 @@ def window(data, param):
     name = param.name            # column to assign window function result
     edges = param.edges          # columns to gourp by
     where = param.where          # DO NOT CONSIDER THESE VALUES
-    sortColumns = param.sort            # columns to sort by
-    calc_value = wrap_function(jx_expression_to_function(param.value)) # function that takes a record and returns a value (for aggregation)
+    sortColumns = param.sort     # columns to sort by
+    calc_value = wrap_function(jx_expression_to_function(param.value))  # function that takes a record and returns a value (for aggregation)
     aggregate = param.aggregate  # WindowFunction to apply
-    _range = param.range          # of form {"min":-10, "max":0} to specify the size and relative position of window
+    _range = param.range         # of form {"min":-10, "max":0} to specify the size and relative position of window
 
     data = filter(data, where)
 

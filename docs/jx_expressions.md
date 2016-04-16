@@ -4,8 +4,7 @@ JSON Expressions
 Summary
 -------
 
-JSON Expressions are JSON objects inspired by [Polish prefix notation](http://en.wikipedia.org/wiki/Polish_notation):  
-All expression objects are `{name: value}` pairs, where the operator is the name, and value holds the parameters.
+JSON Expressions are JSON objects inspired by [Polish prefix notation](http://en.wikipedia.org/wiki/Polish_notation): All expression objects are `{name: value}` pairs, where the operator is the name, and value holds the parameters.
 
 	{operator_name: parameters}
 
@@ -21,7 +20,7 @@ Example: `eq` Operator
 
 ###`eq` Operator###
 
-The equality operator is most used, and has the most complex range of parameters.  We will use the `eq` operator to demonstrate the format for the rest of this document.  
+The equality operator is most used, and has a range of parameters.  We will use the `eq` operator to demonstrate the format for the rest of this document.  
 
 `eq` returns a Boolean, and has two major forms:
 
@@ -30,7 +29,7 @@ The equality operator is most used, and has the most complex range of parameters
 
 ***Be careful of the distinction between a parameter as an object `{}` or an array `[]`***
 
-Since "eq" is commutative, the *formal* form is not limited to just two expressions 
+Since "eq" is commutative, the array form is not limited to just two expressions 
 
 		{"eq": [expr1, expr2, ... exprN]}
 
@@ -145,7 +144,7 @@ If either operand is `null` then the result is `null`; which is effectively `fal
 Math Operators
 --------------
 
-All the math operators, except `count`, return `null` if *any* the operands are `null`. You can change the return value by including a `default`. 
+All the math operators, except `count`, return `null` if *any* the operands are `null`. You can change the return value by including a `default`.   This is different from the aggregates that go by the same name; which simply ignore the `null` values.
 
 		# if **any** expressions evaluate to `null` then return zero
 		{"sum": [expr1, expr2, ... exprN], "default": 0}
@@ -231,7 +230,7 @@ of course, the `default` clause allows you to provide the definition that suites
 
 ###`mod` Operator###
 
-Calculate the modulo, always results in a non-negative integer
+Calculate the modulo, always results in a non-negative number
 	
 		{"mod": [dividend, divisor]}  ⇒ dividend % divisor
 
@@ -327,7 +326,7 @@ Removes the `length` right-most characters from the given string, returning the 
 
 ###`contains` Operator###
 
-Test if property contains given substring.  
+Test if property contains given substring.
 
 		{"contains": {variable, substring}}
 
@@ -349,7 +348,7 @@ Return `true` if a property matches a given regular expression.  The whole term 
 Conditional Operators
 ---------------------
 
-Conditional operators expect a Boolean value to decide on.  If the value provided is not Boolean, it is considered `true`; if the value is missing or `null`, it is considered `false`.  This is different than many other languages: ***Numeric zero (0) is truthy***  
+Conditional operators expect a Boolean value to decide on.  If the value provided is not Boolean, it is considered `true`; if the value is missing or `null`, it is considered `false`.  This is different than many other languages: ***Numeric zero (`0`) is truthy***  
 
 ###`coalesce` Operator###
 
@@ -414,18 +413,89 @@ The literal is parsed according to a [date and time mini language](jx_time.md).
 
 ###`literal` Operator###
 
-Except for the right-hand-side of simple form operations, JSON Expressions will interpret JSON as an expression.  Sometimes you just want the literal JSON value.  `literal` simply returns the property value, unchanged.
+Except for the right-hand-side of simple form operations, JSON expressions will interpret JSON as an expression.  Sometimes you just want the literal JSON value.  `literal` simply returns the property value, unchanged.
 
-		{"eq": {"test", 42}}
+		{"eq": {"name", "kyle"}}
 
-Can be stated in a more complicated form 
+Can be stated using the formal (array) form: 
 
-		{"eq": ["test", {"literal": 42}]}
+		{"eq": ["test", {"literal": "kyle"}]}
 
 The literal can be primitive, or whole objects
 
-		{"literal": 42}
+		{"literal": "kyle"}
 		{"literal": {"name": "Kyle Lahnakoski", "age": 41}}
+
+###`tuple` Operator###
+
+You can build a tuple from a JSON array of expressions.  This is useful when building compound terms, or building lists with dynamic content. 
+
+		{"tuple": [{"date":"now"}, {"date":"today"}]}
+
+gives
+
+		[1459619303.633, 1459555200.0]
+
+
+###`leaves`###
+
+Flattens a (deep) JSON structure to leaf form - where each property name is a dot-delimited path to the values found.  Shallow JSON objects are not changed.  The `leaves` operator can be used in queries to act like the star (`*`) special form. 
+
+		{
+			"from": "unittest",
+			"select": {"leaves":"."}
+		}
+
+
+The `leaves` operator action on a literal
+
+		{"leaves": {"literal": {"a": {"index.html": "Hello"}, "b": "World"}}}
+
+results in  
+
+		{
+			"a.index\\.html": "Hello", 
+			"b": "World"
+		}
+
+Please notice the dots (`.`) from the original properties are escaped with backslash.
+
+Set Operators (and Variables)
+-----------------------------
+
+Window functions are given additional context variables to facilitate calculation over a set of (sorted) values covered by the window.  These are 
+
+* `row` - for the current row; which is implied, but can sometimes be useful
+* `rownum` - the index into the window
+* `rows` - an array representing the window
+
+### `rows` Operator ###
+
+JSON Expressions reference inner property names using dot-separated paths.  In the case of referencing specific rows in a window function, this is possible, but painful:
+
+		{"get": ["rows", offset, variable]}
+  
+The `rows` operator exists to get the properties of an offset a little easier:
+
+		{"rows": {variable: offset}}  
+
+
+Reflective Operators
+--------------------
+
+### `get` Operator ###
+
+JSON Expressions reference inner property names using dot-separated paths.  Sometimes you will want to compose that path:
+
+		"run.test.duration"
+
+can be made explicit:
+
+		{"get": ["get": {"run": "test"}}, "duration"]}
+		{"get": {"run": ["test", "duration"]}}
+		{"get": ["run", ["test", "duration"]]}
+		{"get": ["run", "test", "duration"]}
+
 
 
 ### `script` Operator ###

@@ -11,20 +11,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from collections import Mapping
-
-from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, DictList, unwrap
 from pyLibrary.maths import Math
-from pyLibrary.queries import jx, es09
-from pyLibrary.queries.dimensions import Dimension
-from pyLibrary.queries.domains import PARTITION, SimpleSetDomain, is_keyword, DefaultDomain
+from pyLibrary.queries import es09
+from pyLibrary.queries.domains import is_keyword
+from pyLibrary.queries.es14.decoders import DefaultDecoder, AggsDecoder
+from pyLibrary.queries.es14.decoders import DimFieldListDecoder
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, jx_expression, AndOp, Variable, Literal, OrOp, BinaryOp, \
-    InOp, NotOp
-from pyLibrary.queries.query import DEFAULT_LIMIT, MAX_LIMIT
-from pyLibrary.times.dates import Date
+from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, jx_expression, AndOp, Variable
+from pyLibrary.queries.query import MAX_LIMIT
 from pyLibrary.times.timer import Timer
 
 
@@ -44,7 +40,6 @@ def get_decoders_by_depth(query):
     for e in coalesce(query.edges, query.groupby, []):
         if e.value != None:
             e = e.copy()
-            e.value = jx_expression(e.value)
             vars_ = e.value.vars()
 
             for v in vars_:
@@ -54,8 +49,8 @@ def get_decoders_by_depth(query):
             e.value = e.value.map({schema[v].name: schema[v].es_column for v in vars_})
         elif e.range:
             e = e.copy()
-            min_ = jx_expression(e.range.min)
-            max_ = jx_expression(e.range.max)
+            min_ = e.range.min
+            max_ = e.range.max
             vars_ = min_.vars() | max_.vars()
 
             for v in vars_:
@@ -88,6 +83,7 @@ def get_decoders_by_depth(query):
 
 def es_aggsop(es, frum, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
+    es_column_map = {c.name: c.es_column for c in frum._columns}
 
     es_query = Dict()
     new_select = Dict()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
@@ -110,21 +106,21 @@ def es_aggsop(es, frum, query):
                     Log.error("do not know how to handle")
                 else:
                     Log.error('Not expecting ES to have a value at "." which {{agg}} can be applied', agg=s.aggregate)
-        elif is_keyword(s.value) and s.aggregate=="count":
-            s.value = coalesce(frum[s.value].es_column, s.value)
-            new_select["count_"+literal_field(s.value)] += [s]
-        elif is_keyword(s.value):
-            s.value = coalesce(frum[s.value].es_column, s.value)
-            new_select[literal_field(s.value)] += [s]
+        elif isinstance(s.value, Variable) and s.aggregate=="count":
+            s.value = s.value.map(es_column_map)
+            new_select["count_"+literal_field(s.value.var)] += [s]
+        elif isinstance(s.value, Variable):
+            s.value = s.value.map(es_column_map)
+            new_select[literal_field(s.value.var)] += [s]
         else:
             formula.append(s)
 
     for canonical_name, many in new_select.items():
         representative = many[0]
-        if representative.value == ".":
+        if representative.value.var == ".":
             Log.error("do not know how to handle")
         else:
-            field_name = representative.value
+            field_name = representative.value.var
 
         # canonical_name=literal_field(many[0].name)
         for s in many:
@@ -188,7 +184,7 @@ def es_aggsop(es, frum, query):
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
-        abs_value = jx_expression(s.value).map({c.name: c.es_column for c in frum._columns})
+        abs_value = jx_expression(s.value).map(es_column_map)
 
         if s.aggregate == "count":
             es_query.aggs[literal_field(canonical_name)].value_count.script = abs_value.to_ruby()
@@ -250,10 +246,9 @@ def es_aggsop(es, frum, query):
     start = 0
 
     vars_ = query.where.vars()
-    map_ = {v: frum[v].es_column for v in vars_}
 
     #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
-    split_where = split_expression_by_depth(query.where, schema=frum, map_=map_)
+    split_where = split_expression_by_depth(query.where, schema=frum, map_=es_column_map)
 
     if len(split_field(frum.name)) > 1:
         if any(split_where[2::]):
@@ -328,511 +323,6 @@ def es_aggsop(es, frum, query):
             Log.error("Format {{format|quote}} not supported yet", format=query.format, cause=e)
         Log.error("Some problem", e)
 
-
-class AggsDecoder(object):
-    def __new__(cls, e=None, query=None, *args, **kwargs):
-        if query.groupby:
-            # GROUPBY ASSUMES WE IGNORE THE DOMAIN RANGE
-            e.allowNulls = False
-        else:
-            e.allowNulls = coalesce(e.allowNulls, True)
-
-        if e.value and e.domain.type == "default":
-            if query.groupby:
-                return object.__new__(DefaultDecoder, e)
-
-            if isinstance(e.value, basestring):
-                Log.error("Expecting Variable or Expression, not plain string")
-
-            if isinstance(e.value, Variable):
-                cols = query.frum.get_columns()
-                col = cols.filter(lambda c: c.name == e.value.var)[0]
-                if not col:
-                    return object.__new__(DefaultDecoder, e)
-                limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
-
-                if col.partitions != None:
-                    e.domain = SimpleSetDomain(partitions=col.partitions[:limit:])
-                else:
-                    e.domain = set_default(DefaultDomain(limit=limit), e.domain.as_dict())
-                    return object.__new__(DefaultDecoder, e)
-
-            else:
-                return object.__new__(DefaultDecoder, e)
-
-        if e.value and e.domain.type in PARTITION:
-            return object.__new__(SetDecoder, e)
-        if isinstance(e.domain.dimension, Dimension):
-            e.domain = e.domain.dimension.getDomain()
-            return object.__new__(SetDecoder, e)
-        if e.value and e.domain.type == "time":
-            return object.__new__(TimeDecoder, e)
-        if e.range:
-            return object.__new__(GeneralRangeDecoder, e)
-        if e.value and e.domain.type == "duration":
-            return object.__new__(DurationDecoder, e)
-        elif e.value and e.domain.type == "range":
-            return object.__new__(RangeDecoder, e)
-        elif not e.value and e.domain.dimension.fields:
-            # THIS domain IS FROM A dimension THAT IS A SIMPLE LIST OF fields
-            # JUST PULL THE FIELDS
-            fields = e.domain.dimension.fields
-            if isinstance(fields, Mapping):
-                Log.error("No longer allowed: All objects are expressions")
-            else:
-                return object.__new__(DimFieldListDecoder, e)
-        elif not e.value and all(e.domain.partitions.where):
-            return object.__new__(GeneralSetDecoder, e)
-        else:
-            Log.error("domain type of {{type}} is not supported yet", type=e.domain.type)
-
-
-    def __init__(self, edge, query):
-        self.start = None
-        self.edge = edge
-        self.name = literal_field(self.edge.name)
-
-    def append_query(self, es_query, start):
-        Log.error("Not supported")
-
-    def count(self, row):
-        pass
-
-    def done_count(self):
-        pass
-
-    def get_value_from_row(self, row):
-        Log.error("Not implemented")
-
-    def get_value(self, index):
-        Log.error("Not implemented")
-
-    def get_index(self, row):
-        Log.error("Not implemented")
-
-    @property
-    def num_columns(self):
-        return 0
-
-
-class SetDecoder(AggsDecoder):
-
-    def __init__(self, edge, query):
-        AggsDecoder.__init__(self, edge, query)
-        self.domain = edge.domain
-
-
-    def append_query(self, es_query, start):
-        self.start = start
-        domain = self.domain
-        field = self.edge.value
-
-        if isinstance(field, Variable):
-            include = [p[domain.key] for p in domain.partitions]
-            if self.edge.allowNulls:
-
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
-                        "field": field.var,
-                        "size": 0,
-                        "include": include
-                    }}, es_query),
-                    "_missing": set_default(
-                        {"filter": {"or": [
-                            field.missing().to_esfilter(),
-                            {"not": {"terms": {field.var: include}}}
-                        ]}},
-                        es_query
-                    ),
-                }})
-            else:
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
-                        "field": field.var,
-                        "size": 0,
-                        "include": include
-                    }}, es_query)
-                }})
-        else:
-            include = [p[domain.key] for p in domain.partitions]
-            if self.edge.allowNulls:
-
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
-                        "script_field": field.to_ruby(),
-                        "size": 0,
-                        "include": include
-                    }}, es_query),
-                    "_missing": set_default(
-                        {"filter": {"or": [
-                            field.missing().to_esfilter(),
-                            NotOp("not", InOp("in", [field, Literal("literal", include)])).to_esfilter()
-                        ]}},
-                        es_query
-                    ),
-                }})
-            else:
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
-                        "script_field": field.to_ruby(),
-                        "size": 0,
-                        "include": include
-                    }}, es_query)
-                }})
-
-    def get_value(self, index):
-        return self.domain.getKeyByIndex(index)
-
-    def get_value_from_row(self, row):
-        return row[self.start]["key"]
-
-    def get_index(self, row):
-        try:
-            part = row[self.start]
-            return self.domain.getIndexByKey(part["key"])
-        except Exception, e:
-            Log.error("problem", cause=e)
-
-    @property
-    def num_columns(self):
-        return 1
-
-
-def _range_composer(edge, domain, es_query, to_float):
-    # USE RANGES
-    _min = coalesce(domain.min, MAX(domain.partitions.min))
-    _max = coalesce(domain.max, MAX(domain.partitions.max))
-
-    if isinstance(edge.value, Variable):
-        calc = {"field": edge.value.var}
-    else:
-        calc = {"script_field": edge.value.to_ruby()}
-
-    if edge.allowNulls:    # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
-        missing_filter = set_default(
-            {"filter": {"or": [
-                OrOp("or", [
-                    BinaryOp("lt", [edge.value, Literal(None, to_float(_min))]),
-                    BinaryOp("gte", [edge.value, Literal(None, to_float(_max))]),
-                ]).to_esfilter(),
-                edge.value.missing().to_esfilter()
-            ]}},
-            es_query
-        )
-    else:
-        missing_filter = None
-
-    return wrap({"aggs": {
-        "_match": set_default(
-            {"range": calc},
-            {"range": {"ranges": [{"from": to_float(p.min), "to": to_float(p.max)} for p in domain.partitions]}},
-            es_query
-        ),
-        "_missing": missing_filter
-    }})
-
-
-class TimeDecoder(AggsDecoder):
-    def append_query(self, es_query, start):
-        self.start = start
-        return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x.unix)
-
-    def get_value(self, index):
-        return self.edge.domain.getKeyByIndex(index)
-
-    def get_index(self, row):
-        domain = self.edge.domain
-        part = row[self.start]
-        if part == None:
-            return len(domain.partitions)
-
-        f = coalesce(part["from"], part["key"])
-        t = coalesce(part["to"], part["key"])
-        if f == None or t == None:
-            return len(domain.partitions)
-        else:
-            for p in domain.partitions:
-                if p.min.unix <= f <p.max.unix:
-                    return p.dataIndex
-        sample = part.copy
-        sample.buckets = None
-        Log.error("Expecting to find {{part}}",  part=sample)
-
-    @property
-    def num_columns(self):
-        return 1
-
-
-class GeneralRangeDecoder(AggsDecoder):
-    """
-    Accept an algebraic domain, and an edge with a `range` attribute
-    This class assumes the `snapshot` version - where we only include
-    partitions that have their `min` value in the range.
-    """
-
-    def __init__(self, edge, query):
-        AggsDecoder.__init__(self, edge, query)
-        if edge.domain.type=="time":
-            self.to_float = lambda x: x.unix
-        elif edge.domain.type=="range":
-            self.to_float = lambda x: x
-        else:
-            Log.error("Unknown domain of type {{type}} for range edge", type=edge.domain.type)
-
-    def append_query(self, es_query, start):
-        self.start = start
-
-        edge = self.edge
-        range = edge.range
-        domain = edge.domain
-
-        aggs = {}
-        for i, p in enumerate(domain.partitions):
-            filter_ = AndOp("and", [
-                BinaryOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
-                BinaryOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
-            ])
-            aggs["_join_" + unicode(i)] = set_default(
-                {"filter": filter_.to_esfilter()},
-                es_query
-            )
-
-        return wrap({"aggs": aggs})
-
-    def get_value(self, index):
-        return self.edge.domain.getKeyByIndex(index)
-
-    def get_index(self, row):
-        domain = self.edge.domain
-        part = row[self.start]
-        if part == None:
-            return len(domain.partitions)
-        return part["_index"]
-
-    @property
-    def num_columns(self):
-        return 1
-
-
-class GeneralSetDecoder(AggsDecoder):
-    """
-    EXPECTING ALL PARTS IN partitions TO HAVE A where CLAUSE
-    """
-
-    def append_query(self, es_query, start):
-        self.start = start
-
-        parts = self.edge.domain.partitions
-        filters = []
-        notty = []
-
-        for p in parts:
-            filters.append(AndOp("and", [p.where]+notty).to_esfilter())
-            notty.append(NotOp("not", p.where))
-
-        missing_filter = None
-        if self.edge.allowNulls:    # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
-            missing_filter = set_default(
-                {"filter": AndOp("and", notty).to_esfilter()},
-                es_query
-            )
-
-        return wrap({"aggs": {
-            "_match": set_default(
-                {"filters": {"filters": filters}},
-                es_query
-            ),
-            "_missing": missing_filter
-        }})
-
-    def get_value(self, index):
-        return self.edge.domain.getKeyByIndex(index)
-
-    def get_index(self, row):
-        domain = self.edge.domain
-        part = row[self.start]
-        if part == None:
-            return len(domain.partitions)
-        return part["_index"]
-
-    @property
-    def num_columns(self):
-        return 1
-
-
-class DurationDecoder(AggsDecoder):
-    def append_query(self, es_query, start):
-        self.start = start
-        return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x.seconds)
-
-    def get_value(self, index):
-        return self.edge.domain.getKeyByIndex(index)
-
-    def get_index(self, row):
-        domain = self.edge.domain
-        part = row[self.start]
-        if part == None:
-            return len(domain.partitions)
-
-        f = coalesce(part["from"], part["key"])
-        t = coalesce(part["to"], part["key"])
-        if f == None or t == None:
-            return len(domain.partitions)
-        else:
-            for p in domain.partitions:
-                if p.min.seconds <= f < p.max.seconds:
-                    return p.dataIndex
-        sample = part.copy
-        sample.buckets = None
-        Log.error("Expecting to find {{part}}",  part=sample)
-
-    @property
-    def num_columns(self):
-        return 1
-
-
-class RangeDecoder(AggsDecoder):
-    def append_query(self, es_query, start):
-        self.start = start
-        return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x)
-
-    def get_value(self, index):
-        return self.edge.domain.getKeyByIndex(index)
-
-    def get_index(self, row):
-        domain = self.edge.domain
-        part = row[self.start]
-        if part == None:
-            return len(domain.partitions)
-
-        f = coalesce(part["from"], part["key"])
-        t = coalesce(part["to"], part["key"])
-        if f == None or t == None:
-            return len(domain.partitions)
-        else:
-            for p in domain.partitions:
-                if p.min <= f <p.max:
-                    return p.dataIndex
-        sample = part.copy
-        sample.buckets = None
-        Log.error("Expecting to find {{part}}",  part=sample)
-
-    @property
-    def num_columns(self):
-        return 1
-
-
-class DefaultDecoder(SetDecoder):
-    # FOR DECODING THE default DOMAIN TYPE (UNKNOWN-AT-QUERY-TIME SET OF VALUES)
-
-    def __init__(self, edge, query):
-        AggsDecoder.__init__(self, edge, query)
-        self.domain = edge.domain
-        self.domain.limit =Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
-        self.parts = list()
-
-    def append_query(self, es_query, start):
-        self.start = start
-
-        if not isinstance(self.edge.value, Variable):
-            script_field = self.edge.value.to_ruby()
-            missing = self.edge.value.missing().to_esfilter()
-
-            output = wrap({"aggs": {
-                "_match": set_default(
-                    {"terms": {
-                        "script_field": script_field,
-                        "size": self.domain.limit
-                    }},
-                    es_query
-                ),
-                "_missing": set_default({"filter": missing}, es_query)
-            }})
-            return output
-
-        output = wrap({"aggs": {
-            "_match": set_default(
-                {"terms": {
-                    "field": self.edge.value.var,
-                    "size": self.domain.limit
-                }},
-                es_query
-            ),
-            "_missing": set_default({"missing": {"field": self.edge.value}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
-        }})
-        return output
-
-    def count(self, row):
-        part = row[self.start]
-        if part == None:
-            self.edge.allowNulls = True  # OK! WE WILL ALLOW NULLS
-        else:
-            self.parts.append(part["key"])
-
-    def done_count(self):
-        self.edge.domain = self.domain = SimpleSetDomain(
-            partitions=jx.sort(set(self.parts))
-        )
-        self.parts = None
-
-    @property
-    def num_columns(self):
-        return 1
-
-
-class DimFieldListDecoder(SetDecoder):
-    def __init__(self, edge, query):
-        AggsDecoder.__init__(self, edge, query)
-        self.fields = edge.domain.dimension.fields
-        self.domain = self.edge.domain
-        self.domain.limit =Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
-        self.parts = list()
-
-
-    def append_query(self, es_query, start):
-        #TODO: USE "reverse_nested" QUERY TO PULL THESE
-
-        self.start = start
-        for i, v in enumerate(self.fields):
-            nest = wrap({"aggs": {
-                "_match": set_default({"terms": {
-                    "field": v,
-                    "size": self.domain.limit
-                }}, es_query)
-            }})
-            if self.edge.allowNulls:
-                nest.aggs._missing = set_default({"missing": {"field": v}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
-            es_query = nest
-
-        if self.domain.where:
-            filter = simplify_esfilter(self.domain.where)
-            es_query = {"aggs": {"_filter": set_default({"filter": filter}, es_query)}}
-
-        return es_query
-
-    def count(self, row):
-        part = row[self.start:self.start + len(self.fields):]
-        value = tuple(p["key"] for p in part)
-        self.parts.append(value)
-
-    def done_count(self):
-        columns = map(unicode, range(len(self.fields)))
-        parts = wrap([{unicode(i): p for i, p in enumerate(part)} for part in set(self.parts)])
-        self.parts = None
-        sorted_parts = jx.sort(parts, columns)
-
-        self.edge.domain = self.domain = SimpleSetDomain(
-            key="value",
-            partitions=[{"value": tuple(v[k] for k in columns), "dataIndex": i} for i, v in enumerate(sorted_parts)]
-        )
-
-    def get_index(self, row):
-        find = tuple(p["key"] for p in row[self.start:self.start + self.num_columns:])
-        return self.domain.getIndexByKey(find)
-
-    @property
-    def num_columns(self):
-        return len(self.fields)
 
 
 EMPTY = {}

@@ -47,7 +47,11 @@ class Except(Exception):
         self.template = template
         self.params = set_default(kwargs, params)
         self.cause = cause
-        self.trace = trace
+
+        if not trace:
+            self.trace=extract_stack(2)
+        else:
+            self.trace = trace
 
     @classmethod
     def wrap(cls, e, stack_depth=0):

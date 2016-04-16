@@ -53,7 +53,7 @@ def zip(keys, values):
 
 def literal_field(field):
     """
-    RETURN SAME WITH . ESCAPED
+    RETURN SAME WITH DOTS (`.`) ESCAPED
     """
     try:
         return field.replace(".", "\.")
@@ -449,6 +449,8 @@ def listwrap(value):
         return DictList()
     elif isinstance(value, list):
         return wrap(value)
+    elif isinstance(value, set):
+        return wrap(list(value))
     else:
         return wrap([unwrap(value)])
 

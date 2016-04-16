@@ -15,9 +15,9 @@ Motivation
 Exception handling and logging are undeniably linked.  There are many instances
 where exceptions are raised and must be logged, except when a subsuming system 
 can compensate.  Exception handling semantics are great because they 
-decouple the cause from the solution, but this can be at odds with clean logging
-- which couples raising and catching to make appropriate decisions about what to
-emit to the log.  
+decouple the cause from the solution, but this can be at odds with clean 
+logging - which couples raising and catching to make appropriate decisions 
+about what to emit to the log.  
 
 This logging module is additionally responsible for raising exceptions, 
 collecting the trace and context, and then deducing if it must be logged, or 
@@ -142,7 +142,7 @@ the `in` keyword:
         except Exception, e:
             if "Failure to work with {{key2}}" in e:
 				# Deal with exception thrown in above code, no matter
-				# how many other exception handlers where in the chain
+				# how many other exception handlers were in the chain
 ```
 
 **If you can deal with an exception, then it will never be logged**
@@ -217,38 +217,6 @@ dangerous because it also picks up sensitive local variables.  Even if
 be sent to the structured loggers for recording. 
 
 
-Configuration
--------------
-
-The `logs` module will log to the console by default.  ```Log.start(settings)```
-will redirect the logging to other streams, as defined by the settings:
-
- *  **log** - List of all log-streams and their parameters
- *  **trace** - Show more details in every log line (default False)
- *  **cprofile** - Used to enable the builtin python c-profiler (default False)
- *  **profile** - Used to enable pyLibrary's simple profiling (default False)
-    (eg with Profiler("some description"):)
- *  **constants** - Map absolute path of module constants to the values that will
-    be assigned.  Used mostly to set debugging constants in modules.
-
-Of course, logging should be the first thing to be setup (aside from digesting
-settings of course).  For this reason, applications should have the following
-structure:
-
-```python
-    def main():
-        try:
-            settings = startup.read_settings()
-            Log.start(settings.debug)
-
-            # DO WORK HERE
-
-        except Exception, e:
-            Log.error("Complain, or not", e)
-        finally:
-            Log.stop()
-```
-
 Log 'Levels'
 ------------
 
@@ -294,13 +262,71 @@ These debug variables can be set by configuration file:
 	}
 ```
 
+Configuration
+-------------
+
+The `logs` module will log to the console by default.  ```Log.start(settings)```
+will redirect the logging to other streams, as defined by the settings:
+
+ *  **log** - List of all log-streams and their parameters
+ *  **trace** - Show more details in every log line (default False)
+ *  **cprofile** - Used to enable the builtin python c-profiler (default False)
+ *  **profile** - Used to enable pyLibrary's simple profiling (default False)
+    (eg with Profiler("some description"):)
+ *  **constants** - Map absolute path of module constants to the values that will
+    be assigned.  Used mostly to set debugging constants in modules.
+
+Of course, logging should be the first thing to be setup (aside from digesting
+settings of course).  For this reason, applications should have the following
+structure:
+
+```python
+    def main():
+        try:
+            settings = startup.read_settings()
+            Log.start(settings.debug)
+
+            # DO WORK HERE
+
+        except Exception, e:
+            Log.error("Complain, or not", e)
+        finally:
+            Log.stop()
+```
+
+
+
+		"log": [
+			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "examples/logs/examples_etl.log",
+				"maxBytes": 10000000,
+				"backupCount": 100,
+				"encoding": "utf8"
+			},
+			{
+				"log_type": "email",
+				"from_address": "klahnakoski@mozilla.com",
+				"to_address": "klahnakoski@mozilla.com",
+				"subject": "[ALERT][DEV] Problem in ETL Spot",
+				"$ref": "file://~/private.json#email"
+			},
+			{
+				"log_type": "console"
+			}
+		]
+
+
+
 Problems with Python Logging
 ----------------------------
 
 [Python's default `logging` module](https://docs.python.org/2/library/logging.html#logging.debug) 
-is deceptively close to doing the right thing:  
+comes close to doing the right thing, but fails:  
   * It has  keyword parameters, but they are expanded at call time so the values are lost in a string.  
   * It has `extra` parameters, but they are lost if not used by the matching `Formatter`.  
   * It even has stack trace with `exc_info` parameter, but only if an exception is being handled.
+
+Python 2.x has no builtin exception chaining, like [Python 3 does](https://www.python.org/dev/peps/pep-3134/)
 
 

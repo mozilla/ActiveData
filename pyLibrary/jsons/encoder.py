@@ -124,7 +124,7 @@ json_encoder_module.FLOAT_REPR = float_repr
 
 
 class cPythonJSONEncoder(object):
-    def __init__(self):
+    def __init__(self, sort_keys=False):
         object.__init__(self)
 
         self.encoder = json.JSONEncoder(
@@ -136,7 +136,7 @@ class cPythonJSONEncoder(object):
             separators=None,
             encoding='utf-8',
             default=None,
-            sort_keys=False
+            sort_keys=sort_keys
         )
 
     def encode(self, value, pretty=False):

@@ -9,7 +9,7 @@ Introduction
 Getting a feel for the JSON Expressions `select` clause is easiest done by comparing to SQL.  Just like SQL, the `select` clause is used for renaming:
 
 <table><tr><td>
-<b>JSON Expressions</b><br>
+<b>JSON Query Expression</b><br>
 <pre>
 {
     "from": test,
@@ -33,6 +33,14 @@ SELECT
 	years AS age
 FROM
 	test 
+
+
+
+
+
+
+
+ 
 </pre>
 </td></tr></table>
 

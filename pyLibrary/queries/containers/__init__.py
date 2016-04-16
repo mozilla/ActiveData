@@ -7,17 +7,19 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from collections import Mapping
 from copy import copy
 from types import GeneratorType
 
+from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, split_field, wrap, DictList
+from pyLibrary.dot import set_default, split_field, wrap, join_field
 from pyLibrary.dot.dicts import Dict
+from pyLibrary.queries.expressions import jx_expression_to_function
 
 type2container = Dict()
 config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
@@ -44,7 +46,7 @@ def _delayed_imports():
     from pyLibrary.queries.containers.lists import ListContainer as _ListContainer
     from pyLibrary.queries.containers.cube import Cube as _Cube
     from pyLibrary.queries.jx import run as _run
-    from pyLibrary.queries.query import Query as _Query
+    from pyLibrary.queries.query import QueryOp as _Query
 
     set_default(type2container, {
         "elasticsearch": _FromES,
@@ -97,7 +99,7 @@ class Container(object):
             elif frum["from"]:
                 frum = copy(frum)
                 frum["from"] = Container(frum["from"])
-                return _Query(frum)
+                return _Query.wrap(frum)
             else:
                 Log.error("Do not know how to handle {{frum|json}}", frum=frum)
         else:
@@ -134,7 +136,6 @@ class Container(object):
         Log.error("not implemented")
 
     def window(self, window):
-        _ = window
         Log.error("not implemented")
 
     def having(self, having):

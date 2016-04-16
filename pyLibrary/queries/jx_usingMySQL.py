@@ -59,9 +59,9 @@ class MySQL(object):
         """
         TRANSLATE JSON QUERY EXPRESSION ON SINGLE TABLE TO SQL QUERY
         """
-        from pyLibrary.queries.query import Query
+        from pyLibrary.queries.query import QueryOp
 
-        query = Query(query)
+        query = QueryOp.wrap(query)
 
         sql, post = self._subquery(query, isolate=False, stacked=stacked)
         query.data = post(sql)

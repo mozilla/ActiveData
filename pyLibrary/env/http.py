@@ -19,8 +19,12 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+
+import types
 from copy import copy
+from mmap import mmap
 from numbers import Number
+from tempfile import TemporaryFile
 
 from requests import sessions, Response
 
@@ -28,10 +32,10 @@ from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, coalesce, wrap, set_default
-from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines, GzipLines
+from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines, GzipLines, scompressed2ibytes, ibytes2ilines, sbytes2ilines, icompressed2ibytes
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx
-from pyLibrary.thread.threads import Thread
+from pyLibrary.thread.threads import Thread, Lock
 from pyLibrary.times.durations import SECOND
 
 
@@ -86,7 +90,11 @@ def request(method, url, zip=None, retry=None, **kwargs):
                 failures.append(e)
         Log.error("Tried {{num}} urls", num=len(url), cause=failures)
 
-    session = sessions.Session()
+    if b"session" in kwargs:
+        session = kwargs[b"session"]
+        del kwargs[b"session"]
+    else:
+        session = sessions.Session()
     session.headers.update(default_headers)
 
     if zip is None:
@@ -209,6 +217,7 @@ def post_json(url, **kwargs):
 
     return details
 
+
 def put(url, **kwargs):
     return HttpResponse(request(b'put', url, **kwargs))
 
@@ -258,17 +267,99 @@ class HttpResponse(Response):
         return self._all_lines()
 
     def _all_lines(self, encoding="utf8"):
+        length = int(self.headers.get('content-length'))
+        raw = Generator_usingStream(self.raw, length)
+
         try:
-            content = self.raw.read(decode_content=False)
             if self.headers.get('content-encoding') == 'gzip':
-                return CompressedLines(content, encoding=encoding)
+                return ibytes2ilines(icompressed2ibytes(raw), encoding=encoding)
             elif self.headers.get('content-type') == 'application/zip':
-                return ZipfileLines(content, encoding=encoding)
+                return ibytes2ilines(icompressed2ibytes(raw), encoding=encoding)
             elif self.url.endswith(".gz"):
-                return GzipLines(content, encoding)
+                return ibytes2ilines(icompressed2ibytes(raw), encoding=encoding)
             else:
-                return content.decode(encoding).split("\n")
+                return ibytes2ilines(raw, encoding=encoding, closer=self.close)
         except Exception, e:
             Log.error("Can not read content", cause=e)
+
+
+class Generator_usingStream(object):
+    """
+    A BYTE GENERATOR USING A STREAM, AND BUFFERING IT FOR RE-PLAY
+    """
+
+    def __init__(self, stream, length, _shared=None):
+        """
+        :param stream:  THE STREAM WE WILL GET THE BYTES FROM
+        :param length:  THE MAX NUMBER OF BYTES WE ARE EXPECTING
+        :param _shared: FOR INTERNAL USE TO SHARE THE BUFFER
+        :return:
+        """
+        self.position = 0
+        file_ = TemporaryFile()
+        if not _shared:
+            self.shared = Dict(
+                length=length,
+                locker=Lock(),
+                stream=stream,
+                done_read=0,
+                file=file_,
+                buffer=mmap(file_.fileno(), length)
+            )
+        else:
+            self.shared = _shared
+
+        self.shared.ref_count += 1
+
+    def __iter__(self):
+        return Generator_usingStream(None, self.shared.length, self.shared)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
+    def next(self):
+        if self.position >= self.shared.length:
+            raise StopIteration
+
+        end = min(self.position + MIN_READ_SIZE, self.shared.length)
+        s = self.shared
+        with s.locker:
+            while end > s.done_read:
+                data = s.stream.read(MIN_READ_SIZE)
+                s.buffer.write(data)
+                s.done_read += MIN_READ_SIZE
+                if s.done_read >= s.length:
+                    s.done_read = s.length
+                    s.stream.close()
+        try:
+            return s.buffer[self.position:end]
         finally:
-            self.close()
+            self.position = end
+
+    def close(self):
+        with self.shared.locker:
+            if self.shared:
+                s, self.shared = self.shared, None
+                s.ref_count -= 1
+
+                if s.ref_count==0:
+                    try:
+                        s.stream.close()
+                    except Exception:
+                        pass
+
+                    try:
+                        s.buffer.close()
+                    except Exception:
+                        pass
+
+                    try:
+                        s.file.close()
+                    except Exception:
+                        pass
+
+    def __del__(self):
+        self.close()

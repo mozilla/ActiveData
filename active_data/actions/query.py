@@ -119,16 +119,15 @@ def _test_mode_wait(query):
     end_time = now + MINUTE
 
     # MARK COLUMNS DIRTY
-    with m.columns.locker:
-        m.columns.update({
-            "clear": [
-                "partitions",
-                "count",
-                "cardinality",
-                "last_updated"
-            ],
-            "where": {"eq": {"table": join_field(split_field(query["from"])[0:1])}}
-        })
+    m.meta.columns.update({
+        "clear": [
+            "partitions",
+            "count",
+            "cardinality",
+            "last_updated"
+        ],
+        "where": {"eq": {"table": join_field(split_field(query["from"])[0:1])}}
+    })
 
     # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
     cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in ["nested", "object"]]

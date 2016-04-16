@@ -302,8 +302,7 @@ def leaves(value, prefix=None):
             from pyLibrary.debugs.logs import Log
 
             Log.error("Do not know how to handle", cause=e)
-    return wrap(output)
-
+    return output
 
 
 def _split_field(field):

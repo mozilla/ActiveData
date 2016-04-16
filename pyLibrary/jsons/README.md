@@ -17,6 +17,11 @@ Module `jsons.encode`
 Function: `jsons.encode.json_encoder()`
 -------------------------------------
 
+**Update Mar2016 - PyPy version 5.x appears to have improved C integration to 
+the point that the C library callbacks are no longer a significant overhead: 
+This pure Python JSON encoder is no longer faster than a compound C/Python 
+solution.**   
+
 Fast JSON encoder used in `convert.value2json()` when running in Pypy.  Run the
 [speedtest](https://github.com/klahnakoski/pyLibrary/blob/dev/tests/speedtest_json.py)
 to compare with default implementation and ujson

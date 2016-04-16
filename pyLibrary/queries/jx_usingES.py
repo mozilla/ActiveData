@@ -31,7 +31,7 @@ from pyLibrary.queries.es14.util import aggregates1_4
 from pyLibrary.queries.expressions import jx_expression
 from pyLibrary.queries.meta import FromESMetadata
 from pyLibrary.queries.namespace.typed import Typed
-from pyLibrary.queries.query import Query, _normalize_where
+from pyLibrary.queries.query import QueryOp, _normalize_where
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
@@ -42,7 +42,7 @@ from pyLibrary.dot import wrap, listwrap
 
 class FromES(Container):
     """
-    SEND GENERAL jx QUERIES TO ElasticSearch
+    SEND jx QUERIES TO ElasticSearch
     """
 
     def __new__(cls, *args, **kwargs):
@@ -91,7 +91,6 @@ class FromES(Container):
     def __json__(self):
         return convert.value2json(self.as_dict())
 
-
     def __enter__(self):
         Log.error("No longer used")
         return self
@@ -116,7 +115,7 @@ class FromES(Container):
 
     def query(self, _query):
         try:
-            query = Query(_query, schema=self)
+            query = QueryOp.wrap(_query, schema=self)
 
             for n in self.namespaces:
                 query = n.convert(query)
@@ -125,10 +124,14 @@ class FromES(Container):
 
             for s in listwrap(query.select):
                 if not aggregates1_4.get(s.aggregate):
-                    Log.error("ES can not aggregate " + s.name + " because '" + s.aggregate + "' is not a recognized aggregate")
+                    Log.error(
+                        "ES can not aggregate {{name}} because {{aggregate|quote}} is not a recognized aggregate",
+                        name=s.name,
+                        aggregate=s.aggregate
+                    )
 
             frum = query["from"]
-            if isinstance(frum, Query):
+            if isinstance(frum, QueryOp):
                 result = self.query(frum)
                 q2 = query.copy()
                 q2.frum = result
@@ -191,46 +194,6 @@ class FromES(Container):
 
     def __getattr__(self, item):
         return self.edges[item]
-
-    def normalize_edges(self, edges):
-        output = DictList()
-        for e in listwrap(edges):
-            output.extend(self._normalize_edge(e))
-        return output
-
-    def _normalize_edge(self, edge):
-        """
-        RETURN A EDGE DEFINITION INTO A SIMPLE ARRAY OF PATH-LEAF
-        DEFINITIONS [ {"name":<pathA>, "value":<pathB>}, ... ]
-
-        USEFUL FOR DECLARING HIGH-LEVEL DIMENSIONS, AND RELIEVING LOW LEVEL PATH PAIRS
-        """
-        if isinstance(edge, basestring):
-            e = self[edge]
-            if e:
-                domain = e.getDomain()
-                fields = domain.dimension.fields
-
-                if isinstance(fields, list):
-                    if len(fields) == 1:
-                        return [{"value": fields[0]}]
-                    else:
-                        return [{"name": (edge + "[" + str(i) + "]"), "value": v} for i, v in enumerate(fields)]
-                elif isinstance(fields, Mapping):
-                    return [{"name": (edge + "." + k), "value": v} for k, v in fields.items()]
-                else:
-                    Log.error("do not know how to handle")
-
-            return [{
-                        "name": edge,
-                        "value": edge
-                    }]
-        else:
-            return [{
-                        "name": coalesce(edge.name, edge.value),
-                        "value": edge.value
-                    }]
-
 
     def update(self, command):
         """

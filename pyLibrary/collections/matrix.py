@@ -43,7 +43,10 @@ class Matrix(object):
         self.dims = tuple(dims)
         if zeros != None:
             if self.num == 0 or OR(d == 0 for d in dims):  #NO DIMS, OR HAS A ZERO DIM, THEN IT IS A NULL CUBE
-                self.cube = zeros
+                if hasattr(zeros, "__call__"):
+                    self.cube = zeros()
+                else:
+                    self.cube = zeros
             else:
                 self.cube = _zeros(dims, zero=zeros)
         else:
@@ -290,7 +293,10 @@ def _zeros(dims, zero):
     if d0 == 0:
         Log.error("Zero dimensions not allowed")
     if len(dims) == 1:
-        return [zero] * d0
+        if hasattr(zero, "__call__"):
+            return [zero() for _ in range(d0)]
+        else:
+            return [zero] * d0
     else:
         return [_zeros(dims[1::], zero) for _ in range(d0)]
 

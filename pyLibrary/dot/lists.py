@@ -10,6 +10,8 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+
+from collections import Mapping
 from copy import deepcopy
 
 from pyLibrary.dot.nones import Null
@@ -88,9 +90,9 @@ class DictList(list):
         except Exception, e:
             if key[0:2] == "__":  # SYSTEM LEVEL ATTRIBUTES CAN NOT BE USED FOR SELECT
                 raise e
-        return DictList.select(self, key)
+        return DictList.get(self, key)
 
-    def select(self, key):
+    def get(self, key):
         """
         simple `select`
         """
@@ -98,6 +100,12 @@ class DictList(list):
             _late_import()
 
         return DictList(vals=[unwrap(coalesce(_dictwrap(v), Null)[key]) for v in _get(self, "list")])
+
+    def select(self, key):
+        if not _Log:
+            _late_import()
+
+        _Log.error("Not supported.  Use `get()`")
 
     def filter(self, _filter):
         return DictList(vals=[unwrap(u) for u in (wrap(v) for v in _get(self, "list")) if _filter(u)])

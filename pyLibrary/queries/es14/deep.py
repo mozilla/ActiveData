@@ -7,21 +7,21 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 from pyLibrary import queries, convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import split_field, DictList, listwrap, literal_field, coalesce, Dict, unwrap, set_default
+from pyLibrary.dot import split_field, DictList, listwrap, literal_field, coalesce, Dict, unwrap
 from pyLibrary.queries import es09, es14
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es14.setop import format_dispatch
 from pyLibrary.queries.es14.util import jx_sort_to_es_sort
-from pyLibrary.queries.expressions import query_get_all_vars, split_expression_by_depth, simplify_esfilter, jx_expression, AndOp, jx_expression_to_function, compile_expression
+from pyLibrary.queries.expressions import split_expression_by_depth, simplify_esfilter, jx_expression, AndOp, compile_expression
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.timer import Timer
-
 
 EXPRESSION_PREFIX = "_expr."
 

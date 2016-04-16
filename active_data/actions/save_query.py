@@ -100,8 +100,6 @@ class SaveQueries(object):
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size, period=SECOND)
         self.es = FromES(es.settings)
 
-
-
     def find(self, hash):
         result = self.es.query({
             "select": "*",

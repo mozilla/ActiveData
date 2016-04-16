@@ -9,6 +9,18 @@ benefits of JSON query expressions.
 
 This document serves to provide motivation for a query language beyond SQL. JSON query expressions are a query language optimized specifically for hierarchical databases, nested JSON, and data warehouses.  
 
+Some common requests that are hard to don in SQL
+http://www2.sqlite.org/cvstrac/wiki?p=UnsupportedSqlAnalyticalFunctions
+
+
+    Calculate a running total - Show the cumulative salary within a department row by row, with each row including a summation of the prior rows' salary.
+    Find percentages within a group - Show the percentage of the total salary paid to an individual in a certain department. Take their salary and divide it by the sum of the salary in the department.
+    Top-N queries - Find the top N highest-paid people or the top N sales by region.
+    Compute a moving average - Average the current row's value and the previous N rows values together.
+    Perform ranking queries - Show the relative rank of an individual's salary within their department. 
+
+
+
 JSON vs SQL
 ------------
 

@@ -43,8 +43,7 @@ def list_aggs(frum, query):
                 unique_values -= {None}
             e.domain = SimpleSetDomain(partitions=list(sorted(unique_values)))
 
-    s_expressions = [jx_expression(s.value) for s in select]
-    s_accessors = [compile_expression(e.to_python()) for e in s_expressions]
+    s_accessors = [compile_expression(ss.value.to_python()) for ss in select]
 
     result = {
         s.name: Matrix(
@@ -55,14 +54,15 @@ def list_aggs(frum, query):
     }
     where = jx_expression_to_function(query.where)
     coord = [None]*len(query.edges)
+    edge_accessor = [(i, make_accessor(e)) for i, e in enumerate(query.edges)]
 
-    net_new_edge_names = set(wrap(query.edges).name) - UNION(jx_expression(e.value).vars() for e in query.edges)
-    if net_new_edge_names & UNION(e.vars() for e in s_expressions):
+    net_new_edge_names = set(wrap(query.edges).name) - UNION(e.value.vars() for e in query.edges)
+    if net_new_edge_names & UNION(ss.value.vars() for ss in select):
         # s_accessor NEEDS THESE EDGES, SO WE PASS THEM ANYWAY
         for d in filter(where, frum):
             d = d.copy()
-            for c, e in enumerate(query.edges):
-                coord[c] = get_matches(e, d)
+            for c, get_matches in edge_accessor:
+                coord[c] = get_matches(d)
 
             for s_accessor, s in zip(s_accessors, select):
                 mat = result[s.name]
@@ -75,8 +75,8 @@ def list_aggs(frum, query):
     else:
         # FASTER
         for d in filter(where, frum):
-            for c, e in enumerate(query.edges):
-                coord[c] = get_matches(e, d)
+            for c, get_matches in edge_accessor:
+                coord[c] = get_matches(d)
 
             for s_accessor, s in zip(s_accessors, select):
                 mat = result[s.name]
@@ -97,38 +97,45 @@ def list_aggs(frum, query):
     return output
 
 
+def make_accessor(e):
+    d = e.domain
 
-def get_matches(e, d):
     if e.value:
+        accessor = jx_expression_to_function(e.value)
         if e.allowNulls:
-            return [e.domain.getIndexByKey(d[e.value])]
+            def output1(row):
+                return [d.getIndexByKey(accessor(row))]
+            return output1
         else:
-            c = e.domain.getIndexByKey(d[e.value])
-            if c == len(e.domain.partitions):
-                return []
-            else:
-                return [c]
-    elif e.range and e.range.mode == "inclusive":
-        for p in e.domain.partitions:
+            def output2(row):
+                c = d.getIndexByKey(accessor(row))
+                if c == len(d.partitions):
+                    return []
+                else:
+                    return [c]
+            return output2
+    elif e.range:
+        for p in d.partitions:
             if p["max"] == None or p["min"] == None:
                 Log.error("Inclusive expects domain parts to have `min` and `max` properties")
 
-        output = []
-        mi, ma = d[e.range.min], d[e.range.max]
-        for p in e.domain.partitions:
-            if mi <= p["max"] and p["min"] < ma:
-                output.append(p.dataIndex)
-        if e.allowNulls and not output:
-            output.append(len(e.domain.partitions))  # ENSURE THIS IS NULL
-        return output
+        mi_accessor = jx_expression_to_function(e.range.min)
+        ma_accessor = jx_expression_to_function(e.range.max)
 
-    elif e.range:
-        output = []
-        mi, ma = d[e.range.min], d[e.range.max]
-        var = e.domain.key
-        for p in e.domain.partitions:
-            if mi <= p[var] < ma:
-                output.append(p.dataIndex)
-        if e.allowNulls and not output:
-            output.append(len(e.domain.partitions))  # ENSURE THIS IS NULL
-        return output
+        if e.range.mode == "inclusive":
+            def output3(row):
+                mi, ma = mi_accessor(row), ma_accessor(row)
+                output = [p.dataIndex for p in d.partitions if mi <= p["max"] and p["min"] < ma]
+                if e.allowNulls and not output:
+                    return [len(d.partitions)]  # ENSURE THIS IS NULL
+                return output
+            return output3
+        else:
+            def output4(row):
+                mi, ma = mi_accessor(row), ma_accessor(row)
+                var = d.key
+                output = [p.dataIndex for p in d.partitions if mi <= p[var] < ma]
+                if e.allowNulls and not output:
+                    return [len(d.partitions)]  # ENSURE THIS IS NULL
+                return output
+            return output4

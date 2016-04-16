@@ -43,6 +43,9 @@ def jx_expression(expr):
     """
     WRAP A JSON EXPRESSION WITH OBJECT REPRESENTATION
     """
+    if isinstance(expr, Expression):
+        Log.error("Expecting JSON, not expression")
+
     if expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal)) or isinstance(expr, Date):
         return Literal(None, expr)
     elif is_keyword(expr):
@@ -111,6 +114,8 @@ def jx_expression_to_function(expr):
     """
     RETURN FUNCTION THAT REQUIRES PARAMETERS (row, rownum=None, rows=None):
     """
+    if isinstance(expr, Expression):
+        return compile_expression(expr.to_python())
     if expr != None and not isinstance(expr, (Mapping, list)) and hasattr(expr, "__call__"):
         return expr
     return compile_expression(jx_expression(expr).to_python())

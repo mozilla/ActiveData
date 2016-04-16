@@ -276,7 +276,7 @@ canonical_aggregates = wrap({
 
 
 def _normalize_selects(selects, frum, schema=None, ):
-    if frum == None:
+    if frum == None or isinstance(frum, (list, set)):
         if isinstance(selects, list):
             output = [_normalize_select_no_context(s, schema=schema) for s in selects]
         else:
@@ -318,7 +318,6 @@ def _normalize_select(select, frum, schema=None):
 
     output = []
     if not select.value or select.value == ".":
-
         output.extend([
             set_default(
                 {
@@ -385,21 +384,21 @@ def _normalize_select_no_context(select, schema=None):
 
     output = select.copy()
     if not select.value:
-        output.value = jx_expression(".")
         output.name = coalesce(select.name, select.aggregate)
+        output.value = jx_expression(".")
     elif isinstance(select.value, basestring):
         if select.value.endswith(".*"):
-            output.value = jx_expression({"leaves": select.value[:-2]})
             if select.value == ".":
                 output.name = coalesce(select.name[:-2], select.aggregate)
             else:
                 output.name = coalesce(select.name[:-2], select.value, select.aggregate)
+            output.value = jx_expression({"leaves": select.value[:-2]})
         else:
-            output.value = jx_expression(select.value)
             if select.value == ".":
-                output.name = coalesce(select.name, select.aggregate)
+                output.name = coalesce(select.name, select.aggregate, ".")
             else:
                 output.name = coalesce(select.name, select.value, select.aggregate)
+            output.value = jx_expression(select.value)
     elif not output.name:
         Log.error("Must give name to each column in select clause")
 

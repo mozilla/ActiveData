@@ -46,12 +46,13 @@ def jx_expression(expr):
     if isinstance(expr, Expression):
         Log.error("Expecting JSON, not expression")
 
-    if expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal)) or isinstance(expr, Date):
+    if expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal, Date)):
         return Literal(None, expr)
-    elif is_keyword(expr):
-        return Variable(expr)
-    elif expr == "":
-        Log.error("expression is empty")
+    elif isinstance(expr, unicode):
+        if is_keyword(expr):
+            return Variable(expr)
+        else:
+            Log.error("expression is not recognized: {{expr}}", expr=expr)
     elif isinstance(expr, (list, tuple)):
         return jx_expression({"tuple": expr})  # FORMALIZE
 
@@ -643,13 +644,13 @@ class LeavesOp(Expression):
         Log.error("not supported")
 
     def to_dict(self):
-        return {"leaves": self.terms.to_dict()}
+        return {"leaves": self.term.to_dict()}
 
     def vars(self):
         return self.term.vars()
 
     def map(self, map_):
-        return LeavesOp("leaves", [t.map(map_) for t in self.terms])
+        return LeavesOp("leaves", self.term.map(map_))
 
     def missing(self):
         return False

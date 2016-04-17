@@ -388,24 +388,26 @@ def _normalize_select_no_context(select, schema=None):
         output.value = jx_expression(".")
     elif isinstance(select.value, basestring):
         if select.value.endswith(".*"):
-            if select.value == ".":
-                output.name = coalesce(select.name[:-2], select.aggregate)
-            else:
-                output.name = coalesce(select.name[:-2], select.value, select.aggregate)
+            output.name = coalesce(select.name, select.value[:-2], select.aggregate)
             output.value = jx_expression({"leaves": select.value[:-2]})
         else:
             if select.value == ".":
                 output.name = coalesce(select.name, select.aggregate, ".")
+                output.value = jx_expression(select.value)
+            elif select.value == "*":
+                output.name = coalesce(select.name, select.aggregate, ".")
+                output.value = LeavesOp("leaves", Variable("."))
             else:
                 output.name = coalesce(select.name, select.value, select.aggregate)
-            output.value = jx_expression(select.value)
+                output.value = jx_expression(select.value)
     elif not output.name:
         Log.error("Must give name to each column in select clause")
 
     if not output.name:
         Log.error("expecting select to have a name: {{select}}",  select= select)
     if output.name.endswith(".*"):
-        output.name = output.name[:-2]
+        Log.error("{{name|quote}} is invalid select", name=output.name)
+
 
     output.aggregate = coalesce(canonical_aggregates[select.aggregate].name, select.aggregate, "none")
     output.default = coalesce(select.default, canonical_aggregates[output.aggregate].default)

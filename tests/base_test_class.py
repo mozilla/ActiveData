@@ -271,18 +271,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
             if query["from"].startswith("meta."):
                 pass
             else:
-                query = QueryOp(
-                    "from",
-                    frum=FromES(name=query["from"], settings=self.index.settings),
-                    select=query.select,
-                    edges=query.edges,
-                    groupby=query.groupby,
-                    window=query.window,
-                    where=query.where,
-                    sort=query.sort,
-                    limit=query.limit,
-                    format=query.format
-                )
+                query["from"]=FromES(name=query["from"], settings=self.index.settings)
+                query = QueryOp.wrap(query)
 
             if not query.sort:
                 try:
@@ -299,7 +289,7 @@ class ActiveDataBaseTest(FuzzyTestCase):
                     except Exception:
                         pass
                 if isinstance(result.data, list):
-                    result.data = jx.sort(result.data, sort_order.name)
+                    result.data = jx.sort(result.data, wrap(sort_order).name)
         elif result.meta.format == "cube" and len(result.edges) == 1 and result.edges[0].name == "rownum" and not query.sort:
             header = list(result.data.keys())
 

@@ -48,7 +48,7 @@ def es_deepop(es, query):
     columns = query.frum.get_columns(query.frum.name)
     query_path = query.frum.query_path
     columns = UniqueIndex(keys=["name"], data=sorted(columns, lambda a, b: cmp(len(listwrap(b.nested_path)), len(listwrap(a.nested_path)))), fail_on_dup=False)
-    map_ = {c.name: c.es_column for c in columns}
+    map_to_es_columns = {c.name: c.es_column for c in columns}
     map_to_local = {
         c.name: "_inner" + c.es_column[len(listwrap(c.nested_path)[0]):] if c.nested_path else "fields." + literal_field(c.es_column)
         for c in columns
@@ -61,7 +61,7 @@ def es_deepop(es, query):
     es_query, es_filters = es14.util.es_query_template(query.frum.name)
 
     # SPLIT WHERE CLAUSE BY DEPTH
-    wheres = split_expression_by_depth(query.where, query.frum, map_)
+    wheres = split_expression_by_depth(query.where, query.frum, map_to_es_columns)
     for i, f in enumerate(es_filters):
         # PROBLEM IS {"match_all": {}} DOES NOT SURVIVE set_default()
         for k, v in unwrap(simplify_esfilter(AndOp("and", wheres[i]).to_esfilter())).items():
@@ -189,7 +189,7 @@ def es_deepop(es, query):
                     })
             i += 1
         else:
-            expr = jx_expression(s.value)
+            expr = s.value
             for v in expr.vars():
                 for n in columns:
                     if n.name==v:

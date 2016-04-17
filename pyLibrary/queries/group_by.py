@@ -18,7 +18,7 @@ import sys
 
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap
+from pyLibrary.dot import wrap, listwrap
 from pyLibrary.dot.lists import DictList
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.expressions import jx_expression_to_function
@@ -41,11 +41,12 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
         return data.groupby(keys)
 
     try:
+        keys = listwrap(keys)
         get_key = jx_expression_to_function(keys)
         if not contiguous:
             data = sorted(data, key=get_key)
 
-        return ((wrap(g), wrap(v)) for g, v in itertools.groupby(data, get_key))
+        return ((wrap({k: v for k, v in zip(keys, g)}), wrap(v)) for g, v in itertools.groupby(data, get_key))
     except Exception, e:
         Log.error("Problem grouping", e)
 

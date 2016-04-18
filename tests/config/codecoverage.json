@@ -2,7 +2,7 @@
 	"url":"http://activedata.allizom.org/query",
 	"batch_size": 1000,
 	"elasticsearch": {
-		"host": "http://activedata.allizom.org:9200",
+		"host": "http://localhost",
 		"port": 9200,
 		"index": "coverage",
 		"type": "code_coverage",

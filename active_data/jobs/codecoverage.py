@@ -45,6 +45,8 @@ def process_batch(coverage_index, settings, please_stop):
         if please_stop:
             return True
 
+        Log.note("Summarize file {{filename}}", filename=not_summarized.source.file.name)
+
         # LIST ALL TESTS THAT COVER THIS FILE, AND THE LINES COVERED
         test_count = http.post_json(settings.url, json={
             "from": "coverage.source.file.covered",
@@ -64,10 +66,13 @@ def process_batch(coverage_index, settings, please_stop):
         })
 
         all_tests_covering_file = UNION(test_count.data.get("test.url"))
+        Log.note("{{filename}} is covered by {{num}} tests", filename=not_summarized.source.file.name, num=len(all_tests_covering_file))
         line_summary = list(
             (k, wrap(list(v)))
             for k, v in jx.groupby(test_count.data, keys="line")
         )
+
+
 
         # PULL THE RAW RECORD FOR MODIFICATION
         file_level_coverage_records = http.post_json(settings.url, json={

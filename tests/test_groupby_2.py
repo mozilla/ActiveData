@@ -132,6 +132,26 @@ class TestGroupBy2(ActiveDataBaseTest):
         self._execute_es_tests(test)
 
 
+# TODO:  APPEARS THERE IS A COLUMN SWAP PROBLEM, NOTICE THE QUERY IS DEEP
+# {
+#     "from": "coverage.source.file.covered",
+#     "where": {"and": [
+#         {"missing": "source.method.name"},
+#         {"eq": {
+#             "source.file.name": not_summarized.source.file.name,
+#             "build.revision12": not_summarized.build.revision12
+#         }},
+#     ]},
+#     "groupby": [
+#         "line",
+#         "test.url"
+#     ],
+#     "limit": 100000,
+#     "format": "list"
+# })
+
+
+
 two_dim_test_data = [
     {"a": "x", "b": "m", "v": 2},
     {"a": "x", "b": "n", "v": 3},

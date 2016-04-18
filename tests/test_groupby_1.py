@@ -359,6 +359,24 @@ class TestgroupBy1(ActiveDataBaseTest):
         }
         self._execute_es_tests(test)
 
+# TODO: AGG SHALLOW FIELD WITH DEEP GROUPBY
+# {
+#     "from": "coverage.source.file.covered",
+#     "select": {"value":"test.url", "aggregate":"union"},   # NOT SUPPORTED ON DEEP QUERY, YET
+#     "where": {"and": [
+#         {"missing": "source.method.name"},
+#         {"eq": {
+#             "source.file.name": not_summarized.source.file.name,
+#             "build.revision12": not_summarized.build.revision12
+#         }},
+#     ]},
+#     "groupby": [
+#         "line"
+#     ],
+#     "limit": 100000,
+#     "format": "list"
+# }
+
 
 simple_test_data = [
     {"a": "c", "v": 13},

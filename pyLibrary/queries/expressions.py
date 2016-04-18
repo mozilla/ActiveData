@@ -125,7 +125,6 @@ def jx_expression_to_function(expr):
 class Expression(object):
     has_simple_form = False
 
-
     def __init__(self, op, terms):
         if isinstance(terms, (list, tuple)):
             if not all(isinstance(t, Expression) for t in terms):

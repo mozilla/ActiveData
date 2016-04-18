@@ -32,7 +32,7 @@ def process_batch(coverage_index, settings, please_stop):
         "groupby": ["source.file.name", "build.revision12"],
         "where": {"and": [
             {"missing": "source.method.name"},
-            {"missing": "source.file.min_test_count"}
+            {"missing": "source.file.min_line_siblings"}
         ]},
         "format": "list",
         "limit": coalesce(settings.batch_size, 1000)
@@ -66,13 +66,13 @@ def process_batch(coverage_index, settings, please_stop):
         })
 
         all_tests_covering_file = UNION(test_count.data.get("test.url"))
-        Log.note("{{filename}} is covered by {{num}} tests", filename=not_summarized.source.file.name, num=len(all_tests_covering_file))
+        num_tests = len(all_tests_covering_file)
+        max_siblings = num_tests - 1
+        Log.note("{{filename}} is covered by {{num}} tests", filename=not_summarized.source.file.name, num=num_tests)
         line_summary = list(
             (k, wrap(list(v)))
             for k, v in jx.groupby(test_count.data, keys="line")
         )
-
-
 
         # PULL THE RAW RECORD FOR MODIFICATION
         file_level_coverage_records = http.post_json(settings.url, json={
@@ -90,8 +90,9 @@ def process_batch(coverage_index, settings, please_stop):
             siblings = [len(t)-1 for g, t in line_summary if test_name in t.get("test.url")]
             min_siblings = MIN(siblings)
             coverage_record = jx.filter(file_level_coverage_records.data, lambda row, rownum, rows: row.test.url == test_name)[0]
-            coverage_record.source.file.min_siblings = min_siblings
-            coverage_record.source.file.score = 1 / (min_siblings + 1)
+            coverage_record.source.file.max_test_siblings = max_siblings
+            coverage_record.source.file.min_line_siblings = min_siblings
+            coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings)
 
         coverage_index.extend([{"id": d._id, "value": d} for d in file_level_coverage_records.data])
 
@@ -104,7 +105,7 @@ def loop(coverage_index, settings, please_stop):
                 return
         except Exception, e:
             Log.warning("Problem processing", cause=e)
-
+    please_stop.go()
 
 def main():
     try:

@@ -210,10 +210,10 @@ class Index(Features):
 
     def flush(self):
         try:
-            self.cluster.post("/" + self.settings.index + "/_flush", data={"wait_if_ongoing": True, "forced": True})
+            self.cluster.post("/" + self.settings.index + "/_flush", data={"wait_if_ongoing": True, "forced": False})
         except Exception, e:
             if "FlushNotAllowedEngineException" in e:
-                Log.warning("Flush is ignored", cause=e)
+                Log.note("Flush is ignored")
             else:
                 Log.error("Problem flushing", cause=e)
 

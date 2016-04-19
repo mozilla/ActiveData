@@ -141,8 +141,8 @@ def json2value(json_string, params={}, flexible=False, leaves=False):
         base_str = unicode2utf8(strings.limit(json_string, 1000))
         hexx_str = bytes2hex(base_str, " ")
         try:
-            char_str = " " + ("  ".join(c.decode("latin1") if ord(c) >= 32 else ".") for c in base_str)
-        except Exception:
+            char_str = " " + "  ".join((c.decode("latin1") if ord(c) >= 32 else ".") for c in base_str)
+        except Exception, e:
             char_str = " "
         Log.error("Can not decode JSON:\n" + char_str + "\n" + hexx_str + "\n", e)
 

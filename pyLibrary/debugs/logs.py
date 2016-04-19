@@ -145,6 +145,11 @@ class Log(object):
         if settings.log_type == "email":
             from .log_usingEmail import TextLog_usingEmail
             return TextLog_usingEmail(settings)
+        if settings.log_type == "ses":
+            from .log_usingSES import TextLog_usingSES
+            return TextLog_usingSES(settings)
+
+        Log.error("Log type of {{log_type|quote}} is not recognized", log_type=settings.log_type)
 
     @classmethod
     def add_log(cls, log):

@@ -54,7 +54,7 @@ def parse(json, path, expected_vars=NO_VARS):
         # ASSUME IT IS A STREAM
         temp = json
         def get_more():
-            temp.read(MIN_READ_SIZE)
+            return temp.read(MIN_READ_SIZE)
         json = List_usingStream(get_more)
     elif hasattr(json, "__call__"):
         json = List_usingStream(json)

@@ -18,7 +18,6 @@ from pyLibrary.times.dates import Date
 
 EMPTY_DICT = {}
 
-
 def compile_expression(source):
     """
     THIS FUNCTION IS ON ITS OWN FOR MINIMAL GLOBAL NAMESPACE
@@ -33,6 +32,7 @@ def compile_expression(source):
     _ = convert
     _ = Log
     _ = Dict
+    _ = EMPTY_DICT
 
     output = None
     exec """

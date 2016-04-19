@@ -23,7 +23,7 @@ from pyLibrary.queries.es09.util import aggregates
 from pyLibrary.queries import domains, es09
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.containers.cube import Cube
-from pyLibrary.queries.expressions import simplify_esfilter, TRUE_FILTER, jx_expression
+from pyLibrary.queries.expressions import simplify_esfilter, TRUE_FILTER, jx_expression, Variable
 
 
 def is_fieldop(query):
@@ -130,11 +130,11 @@ def es_setop(es, mvel, query):
                 "sort": query.sort,
                 "size": 1
             })
-        elif all(map(is_keyword, select.value)):
+        elif all(isinstance(v, Variable) for v in select.value):
             FromES = wrap({
                 "query": {"filtered": {
                     "query": {"match_all": {}},
-                    "filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
+                    "filter": simplify_esfilter(query.where.to_esfilter())
                 }},
                 "fields": select.value,
                 "sort": query.sort,
@@ -164,7 +164,7 @@ def es_setop(es, mvel, query):
     if len(select) == 1 and  not select[0].value or select[0].value == "*":
         # SPECIAL CASE FOR SINGLE COUNT
         cube = wrap(data).hits.hits._source
-    elif all(map(is_keyword, select[0].value)):
+    elif isinstance(select[0].value, Variable):
         # SPECIAL CASE FOR SINGLE TERM
         cube = wrap(data).hits.hits.fields
     else:

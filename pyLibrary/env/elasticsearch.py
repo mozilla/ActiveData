@@ -400,8 +400,12 @@ class Index(Features):
     def threaded_queue(self, batch_size=None, max_size=None, period=None, silent=False):
         def errors(e, _buffer):  # HANDLE ERRORS FROM extend()
 
-            not_possible = [f for f in listwrap(e.cause.cause) if "JsonParseException" in f]
-            still_have_hope = [f for f in listwrap(e.cause.cause) if "JsonParseException" not in f]
+            if e.cause.cause:
+                not_possible = [f for f in listwrap(e.cause.cause) if "JsonParseException" in f]
+                still_have_hope = [f for f in listwrap(e.cause.cause) if "JsonParseException" not in f]
+            else:
+                not_possible = [e]
+                still_have_hope = []
 
             if still_have_hope:
                 Log.warning("Problem with sending to ES", cause=still_have_hope)

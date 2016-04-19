@@ -16,7 +16,7 @@ from __future__ import unicode_literals
 import sys
 from collections import Mapping
 
-from pyLibrary.dot import Dict, listwrap, unwraplist, set_default
+from pyLibrary.dot import Dict, listwrap, unwraplist, set_default, Null
 from pyLibrary.jsons.encoder import json_encoder
 from pyLibrary.strings import indent, expand_template
 
@@ -40,8 +40,7 @@ class Except(Exception):
             desc.trace
         )
 
-
-    def __init__(self, type=ERROR, template=None, params=None, cause=None, trace=None, **kwargs):
+    def __init__(self, type=ERROR, template=Null, params=Null, cause=Null, trace=Null, **kwargs):
         Exception.__init__(self)
         self.type = type
         self.template = template
@@ -56,7 +55,7 @@ class Except(Exception):
     @classmethod
     def wrap(cls, e, stack_depth=0):
         if e == None:
-            return None
+            return Null
         elif isinstance(e, (list, Except)):
             return e
         elif isinstance(e, Mapping):

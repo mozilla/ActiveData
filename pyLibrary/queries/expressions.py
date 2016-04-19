@@ -1829,7 +1829,7 @@ def simplify_esfilter(esfilter):
     except Exception, e:
         from pyLibrary.debugs.logs import Log
 
-        Log.unexpected("programmer error", e)
+        Log.unexpected("programmer error", cause=e)
 
 
 def removeOr(esfilter):

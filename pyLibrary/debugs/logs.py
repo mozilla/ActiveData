@@ -357,7 +357,7 @@ class Log(object):
         params = dict(unwrap(default_params), **more_params)
 
         add_to_trace = False
-        cause = unwraplist([Except.wrap(c, stack_depth=1) for c in listwrap(cause)])
+        cause = wrap(unwraplist([Except.wrap(c, stack_depth=1) for c in listwrap(cause)]))
         trace = exceptions.extract_stack(stack_depth + 1)
 
         if add_to_trace:

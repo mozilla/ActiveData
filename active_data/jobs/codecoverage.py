@@ -45,8 +45,6 @@ def process_batch(coverage_index, settings, please_stop):
         if please_stop:
             return True
 
-        Log.note("Summarize file {{filename}}", filename=not_summarized.source.file.name)
-
         # LIST ALL TESTS THAT COVER THIS FILE, AND THE LINES COVERED
         test_count = http.post_json(settings.url, json={
             "from": "coverage.source.file.covered",
@@ -92,7 +90,7 @@ def process_batch(coverage_index, settings, please_stop):
             coverage_record = jx.filter(file_level_coverage_records.data, lambda row, rownum, rows: row.test.url == test_name)[0]
             coverage_record.source.file.max_test_siblings = max_siblings
             coverage_record.source.file.min_line_siblings = min_siblings
-            coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings)
+            coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings + 1)
 
         coverage_index.extend([{"id": d._id, "value": d} for d in file_level_coverage_records.data])
 

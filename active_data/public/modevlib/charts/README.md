@@ -9,8 +9,8 @@ of-names to inject parameter values. We will perfer the use of objects for compo
 3. `data` is assumed to be an Array of Objects, or a JSON query expressions result.
 4. `value` is can be a property name, or a JSON Expression
 
-If two, or more, charts share the same `axis` (as in `===`), they are 
-considered *linked*, and act as a single chart. Use the [`$ref` property](https://github.com/klahnakoski/pyLibrary/tree/dev/pyLibrary/jsons#) to 
+If two, or more, charts share the same `axis` (as in `===`), they are
+considered *linked*, and act as a single chart. Use the [`$ref` property](https://github.com/klahnakoski/pyLibrary/tree/dev/pyLibrary/jsons#) to
 define a shared axis.
 
 

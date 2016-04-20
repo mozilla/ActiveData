@@ -17,9 +17,9 @@ Module `jsons.encode`
 Function: `jsons.encode.json_encoder()`
 -------------------------------------
 
-**Update Mar2016 - PyPy version 5.x appears to have improved C integration to 
-the point that the C library callbacks are no longer a significant overhead: 
-This pure Python JSON encoder is no longer faster than a compound C/Python 
+**Update Mar2016 - PyPy version 5.x appears to have improved C integration to
+the point that the C library callbacks are no longer a significant overhead:
+This pure Python JSON encoder is no longer faster than a compound C/Python
 solution.**   
 
 Fast JSON encoder used in `convert.value2json()` when running in Pypy. Run the
@@ -30,14 +30,14 @@ to compare with default implementation and ujson
 Module `jsons.stream`
 =====================
 
-A module supporting the implementation of queries over very large JSON 
-strings. The overall objective is to make a large JSON document appear like 
-a hierarchical database, where arrays of any depth, can be queried like 
+A module supporting the implementation of queries over very large JSON
+strings. The overall objective is to make a large JSON document appear like
+a hierarchical database, where arrays of any depth, can be queried like
 tables. 
 
 ### Limitations
 
-This is not a generic streaming JSON parser. This module has two main 
+This is not a generic streaming JSON parser. This module has two main
 restrictions:
 
 1. **Objects are not streamed** - All objects will reside in memory. Large 
@@ -46,7 +46,7 @@ restrictions:
    instead of `{<name>: <value>}` format, try a list of name/value pairs 
    instead: `[{"name": <name>, "value": <value>}]` This format is easier to 
    query, and gentler on the various document stores that you may put this 
-   data into. 
+   data into.
 2. **Array values must be the last object property** - If you query into a 
    nested array, all sibling properties found after that array must be ignored 
    (must not be in the `expected_vars`). If not, then those arrays will not 
@@ -63,7 +63,7 @@ Will return an iterator over all objects found in the JSON stream.
 * **json** - a parameter-less function, when called returns some number of 
   bytes from the JSON stream. It can also be a string.
 * **path** - a list of strings specifying the nested JSON paths. Use 
-  `"."` if your JSON starts with `[`, and is a list. 
+  `"."` if your JSON starts with `[`, and is a list.
 * **expected_vars** - a list of strings specifying the full property names 
   required (all other properties are ignored)
 
@@ -119,7 +119,7 @@ The dot (`.`) can be used to refer to the top-most array. Notice the structure i
 
 **Nested Arrays**
 
-Nested array iteration is meant to mimic a left-join from parent to child table; 
+Nested array iteration is meant to mimic a left-join from parent to child table;
 as such, it includes every record in the parent. 
 
 	json = [
@@ -129,9 +129,9 @@ as such, it includes every record in the parent.
 	]
 	parse(json, path=[".", "a"], required_vars=["o", "a.b"])
 
-The `path` parameter can be a list, which is used to indicate which properties 
-are expected to have an array, and to iterate over them. Please notice if no 
-array is found, it is treated like a singleton array, and missing arrays still 
+The `path` parameter can be a list, which is used to indicate which properties
+are expected to have an array, and to iterate over them. Please notice if no
+array is found, it is treated like a singleton array, and missing arrays still
 produce a result.
 
 	{"o": 1, "a": {"b": 1}}
@@ -154,9 +154,9 @@ Motivation
 
 This module has superficial similarity to the [JSON Reference Draft](https://tools.ietf.org/html/draft-pbryan-zyp-json-ref-03), which seems inspired by the committee-driven XPath specification. Of course, there are a few improvements:
 
-1. This `jsons.ref` module uses the dot (`.`) as a path separator in the URL fragment. For example, an absolute reference looks like `{"$ref": "#message.type.name"}`, and a relative reference looks like `{"$ref": "#..type.name"}`.   This syntax better matches that used by Javascript.  
+1. This `jsons.ref` module uses the dot (`.`) as a path separator in the URL fragment. For example, an absolute reference looks like `{"$ref": "#message.type.name"}`, and a relative reference looks like `{"$ref": "#..type.name"}`.   This syntax better matches that used by Javascript.
 2. The additional properties founf in a `$ref` object are used to override the referenced object. This allows you to reference a default document, and override the particular properties needed. *more below*
-3. Furthermore, references can accept URL parameters: JSON is treated like a string template for more sophisticated value replacement. *see below*  
+3. Furthermore, references can accept URL parameters: JSON is treated like a string template for more sophisticated value replacement. *see below*
 4. You can reference files and environment variables in addition to general URLs.
 
 Usage

@@ -1,5 +1,5 @@
 
-`select` Clause 
+`select` Clause
 ===============
 
 
@@ -40,14 +40,14 @@ FROM
 
 
 
- 
+
 </pre>
 </td></tr></table>
 
 JSON expressions are clearly more verbose than SQL, but there are many shortcuts to mitigate this, plus the `select` clause can do more than SQL.
 
 
-The Standard `select` Clause 
+The Standard `select` Clause
 ----------------------------
 
 The select clause is used for both selecting particular values, and for creating new structures from those values. A select clause is a list that maps the leaves of one data structure to the leaves of another.
@@ -214,7 +214,7 @@ The standard `select` clause is used for returning objects and structures. You c
 ### Selecting Self (`.`)
 
 Sometimes the whole object is desired; in this case, use a single dot (`"."`). Since `"."` is the default select clause, you do not even need to specify it.
- 
+
 <table><tr><td>
 <b>Select Self</b><br>
 <pre>

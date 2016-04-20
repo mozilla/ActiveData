@@ -75,7 +75,7 @@ Convenience method for `self.add(DAY)`
 ================
 
 Represents the difference between two `Dates`. There are two scales:
-  
+
 *  **`DAY` scale** - includes seconds, minutes, hours, days and weeks.
 *  **`YEAR` scale** - includes months, quarters, years, and centuries. 
 

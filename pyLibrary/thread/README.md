@@ -1,4 +1,4 @@
- 
+
 Multithreading
 ==============
 
@@ -19,20 +19,20 @@ The main distinction between this library and Python's is:
 
 ###What's it used for###
 
-A good amount of time is spent waiting for underlying C libraries and OS 
-services to respond to network and file access requests. Multiple 
-threads can make your code faster despite the GIL when dealing with those 
-requests. For example, by moving logging off the main thread, we can get 
-up to 15% increase in overall speed because we no longer have the main thread 
-waiting for disk writes or remote logging posts. Please note, this level of 
-speed improvement can only be realized if there is no serialization happening 
+A good amount of time is spent waiting for underlying C libraries and OS
+services to respond to network and file access requests. Multiple
+threads can make your code faster despite the GIL when dealing with those
+requests. For example, by moving logging off the main thread, we can get
+up to 15% increase in overall speed because we no longer have the main thread
+waiting for disk writes or remote logging posts. Please note, this level of
+speed improvement can only be realized if there is no serialization happening
 at the multi-threaded queue.  
 
 ###Asynch vs. Actors###
 
-My personal belief is that [actors](http://en.wikipedia.org/wiki/Actor_model) 
+My personal belief is that [actors](http://en.wikipedia.org/wiki/Actor_model)
 are easier to reason about than [asynch tasks](https://docs.python.org/3/library/asyncio-task.html).
-Mixing regular methods and co-routines (with their `yield from` pollution) is 
+Mixing regular methods and co-routines (with their `yield from` pollution) is
 dangerous because:
 
 1. calling styles between methods and co-routines can be easily confused
@@ -49,8 +49,8 @@ There are three major aspects of a synchronization primitive:
 * **Binary** - The primitive has only two states
 * **Irreversible** - The state of the primitive can only be set, or advanced, never reversed
 
-The last, *irreversibility* is very useful, but ignored in many threading 
-libraries. The irreversibility allows us to model progression; and 
+The last, *irreversibility* is very useful, but ignored in many threading
+libraries. The irreversibility allows us to model progression; and
 we can allow threads to poll for progress, or be notified of progress. 
 
 These three aspects can be combined to give us 8 synchronization primitives:

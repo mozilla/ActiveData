@@ -20,8 +20,8 @@ With new ETL comes new tables, new S3 buckets and new Amazon Queues.
 4. Use development run ETL and confirm use of buckets and queues, and confirm creation of new tables in production
 5. Push code to `etl` branch
 6. Pull SpotManager changes (on `beta` branch) to its instance
-7. Start Spot manager; 
-8. Confirm nothing blows up; which will take several minutes as SpotManager negotiates pricing and waits to setup instances 
+7. Start Spot manager;
+8. Confirm nothing blows up; which will take several minutes as SpotManager negotiates pricing and waits to setup instances
 9. Run the backfill, if desired
 10. Increase SpotManager budget, if desired
  
@@ -60,7 +60,7 @@ Production Deployment Steps
 2. Use supervisor to restart the Gunicorn service
 
 
-Config and Logs 
+Config and Logs
 ---------------
 
 Configuration is `~/ActiveData/resources/config/supervisord.conf`
@@ -89,7 +89,7 @@ Changing Cluster Config
 ES will take any opportunity to loose your data if you make any configuration changes. To prevent this you must ensure no important shards are on the node you are changing: Either it has no primaries, or all primaries are replicated to another node. You can ensure this happens by telling ES to exclude the machine you want cleared of shards. Due to enormous size of the ActiveData indexes, you will probably need to deploy more machines to handle the volume while you make a transition.  
 
     curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude._ip" : "172.31.0.39"}}' http://localhost:9200/_cluster/settings
- 
+
 be sure the transient settings for the same do not interfere with your plans: 
 
     curl -XPUT -d '{"transient": {"cluster.routing.allocation.exclude._ip" : ""}}' http://localhost:9200/_cluster/settings

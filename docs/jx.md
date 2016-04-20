@@ -1,9 +1,9 @@
 JSON Query Expression Documentation
 ===================================
 
-JSON query expressions are structures that mimic SQL query semantics; each 
-property corresponds to a SQL clause. There are some differences from SQL, 
-especially when it comes to using default clauses, but I hope your knowledge 
+JSON query expressions are structures that mimic SQL query semantics; each
+property corresponds to a SQL clause. There are some differences from SQL,
+especially when it comes to using default clauses, but I hope your knowledge
 of SQL can jump-start your use of JSON Expressions.
 
 Specific Reading
@@ -39,22 +39,22 @@ Are JSON Expressions for you?
 Non-Goals
 ---------
 
-* **Use something better than JSON** - JSON expressions are deliberately a 
-JSON specification; and avoids the complexities of defining a DSL syntax.  
-Using an existing language is not an option, because each language makes a 
-design choice that conflicts with JSON Expressions somewhere. That said, SQL 
-has a lot of overlap: Mapping a subset of SQL to a subset of JSON 
-Expressions may be useful.      
-* **Extend to a procedural language** - JSON expressions are meant to be 
-purely functional, adding procedural features is much more work, and outside 
+* **Use something better than JSON** - JSON expressions are deliberately a
+JSON specification; and avoids the complexities of defining a DSL syntax.
+Using an existing language is not an option, because each language makes a
+design choice that conflicts with JSON Expressions somewhere. That said, SQL
+has a lot of overlap: Mapping a subset of SQL to a subset of JSON
+Expressions may be useful.
+* **Extend to a procedural language** - JSON expressions are meant to be
+purely functional, adding procedural features is much more work, and outside
 the objective of providing concise data transformation.
-* **Joins** - There is currently no attempt to provide clauses for joins.  
-Although, there are some JSON Expressions forms that can be abused to perform 
+* **Joins** - There is currently no attempt to provide clauses for joins.
+Although, there are some JSON Expressions forms that can be abused to perform
 joins.
-* **Graph Operations** - Graph traversal, aggregation, or SQL's `CONNECT BY` 
+* **Graph Operations** - Graph traversal, aggregation, or SQL's `CONNECT BY`
 are not implemented.
-* **Under development** - The JSON Expressions specification is not fully 
-implemented, and the specification itself is incomplete. What does exist has 
+* **Under development** - The JSON Expressions specification is not fully
+implemented, and the specification itself is incomplete. What does exist has
 tests to maintain stability.
 
 More on Benefits
@@ -63,18 +63,18 @@ More on Benefits
 ### Expression Simplification
 
 JSON Expressions provide data transformation and expressions over multi-
-dimensional and unclean data. It simplifies expressions by defining 
-[`null` as out-of-context](https://github.com/klahnakoski/pyLibrary/tree/dev/pyLibrary/dot#null-is-the-new-none).  
-The *out-of-context* definition is different than the definition used by 
-many other languages; which means every operator and expression must be 
-translated from JSON Expressions to the destination language. This translation 
-is not complicated, just annoying. Here is a definition of the `add` 
+dimensional and unclean data. It simplifies expressions by defining
+[`null` as out-of-context](https://github.com/klahnakoski/pyLibrary/tree/dev/pyLibrary/dot#null-is-the-new-none).
+The *out-of-context* definition is different than the definition used by
+many other languages; which means every operator and expression must be
+translated from JSON Expressions to the destination language. This translation
+is not complicated, just annoying. Here is a definition of the `add`
 function:
 
 #### Summation with `nulls`
 
-The summation aggregate is probably the simplest example of how the definition 
-of `null` impacts the definition of all other functions. Databases use this 
+The summation aggregate is probably the simplest example of how the definition
+of `null` impacts the definition of all other functions. Databases use this
 definition.
 
 JSON Expression
@@ -92,7 +92,7 @@ Javascript equivalent
 
 #### Dereferencing with `nulls`
 
-The dot operator is a function. It too is impacted by the definition of `null`.  
+The dot operator is a function. It too is impacted by the definition of `null`.
 Databases have only primitive concepts of objects and dereferencing.
 
 JSON Expression
@@ -109,29 +109,28 @@ Javascript equivalent
  	}
 
 
-Using the *out-of-context* definition, expressions, list comprehensions, and 
+Using the *out-of-context* definition, expressions, list comprehensions, and
 query expressions are all simplified:  
 
-1. **`null` checks are avoided** - all `null` checks are built into every function 
-2. **boundary checks are avoided** - window functions are not required to 
+1. **`null` checks are avoided** - all `null` checks are built into every function
+2. **boundary checks are avoided** - window functions are not required to
 verify boundaries because all points outside a domain map to `null`.  
 
 ### Translating Data Shape
 
-JSON Expressions operate on JSON, with a focus on translating arrays of JSON 
-(which is still just JSON. JSON expressions are not limited to arrays, and 
-work on other (un)ordered sets that come out of databases and document stores.  
-The [`select` clause](jx_clause_select.md) is responsible for record-wise 
-translation.
+JSON Expressions operate on JSON, with a focus on translating arrays of JSON.
+JSON expressions are not limited to arrays, and work on other (un)ordered sets
+that come out of databases and document stores. The [`select` clause](jx_clause_select.md)
+is responsible for record-wise translation.
 
 
 ### Pivot Tables and Data Frames
 
-A specific type of data transformation involves converting general sets into 
-data frames, which pivot tables are specific instances. The full domain of 
-each dimension is representing in a data frame, an that domain is not affected 
-by the filter; and can result in a sparse matrix. The columns of a SQL 
-`group by` clause have their domain affected by the resultant rows, a denser 
+A specific type of data transformation involves converting general sets into
+data frames, which pivot tables are specific instances. The full domain of
+each dimension is representing in a data frame, an that domain is not affected
+by the filter; and can result in a sparse matrix. The columns of a SQL
+`group by` clause have their domain affected by the resultant rows, a denser
 data set, but missing domain values. 
 
 Here is an example that shows the problem.  
@@ -196,17 +195,17 @@ An inspection of this table may have you conclude AL (Alaska) does not exist. A 
 </pre>
 </td></tr></table>
 
-Alaska will show, despite it having no employees. Furthermore, filtering 
-employees by some criterion will continue to return the same number of 
+Alaska will show, despite it having no employees. Furthermore, filtering
+employees by some criterion will continue to return the same number of
 rows, only with the `count` changed.  
 
 Meta-Programming
 ----------------
 
-The `from` expression is the most complex; covering set operations, list 
-comprehensions, and relational operators; each shaped by the variety of 
-clauses the `from` expression accepts. These clauses can be programatically 
-composed because JSON is just data. In practice this happens most when 
+The `from` expression is the most complex; covering set operations, list
+comprehensions, and relational operators; each shaped by the variety of
+clauses the `from` expression accepts. These clauses can be programatically
+composed because JSON is just data. In practice this happens most when
 specifying query domains.
 
 
@@ -216,19 +215,19 @@ History
 Original Implementation
 -----------------------
 
-JSON Expressions were originally designed to send complex aggregation queries 
-to Elasticsearch version 0.90.x. In that version, ES only had "facets"; which 
-limited grouping data on a single property. In order to group by multiple 
-columns you had to provide a server side script to concatenate columns, 
-and the complementary script on the client to break them apart. JSON 
-Expressions was a Javascript library that did the script generation and 
-provided a simpler interface. It is still in use now by 
-[MoDevMetrics](https://github.com/klahnakoski/MoDevMetrics) and 
-[charts](https://github.com/mozilla/charts) which read off an old, but 
+JSON Expressions were originally designed to send complex aggregation queries
+to Elasticsearch version 0.90.x. In that version, ES only had "facets"; which
+limited grouping data on a single property. In order to group by multiple
+columns you had to provide a server side script to concatenate columns,
+and the complementary script on the client to break them apart. JSON
+Expressions was a Javascript library that did the script generation and
+provided a simpler interface. It is still in use now by
+[MoDevMetrics](https://github.com/klahnakoski/MoDevMetrics) and
+[charts](https://github.com/mozilla/charts) which read off an old, but
 perfectly functional, ES cluster.
 
-ElasticSearch now has aggregations, and the JSON expression translation layer 
-is simplified, but the pivot table extraction, and expression simplification 
+ElasticSearch now has aggregations, and the JSON expression translation layer
+is simplified, but the pivot table extraction, and expression simplification
 is still required.
 
 Exploring Possible Expression Formats
@@ -290,15 +289,15 @@ Prefix Operator Benefits
 
 Consistent use of the prefix operator gives us additional benefit:
 
-* **Operator namespace** - If we can assume the JSON property names are 
-operators, in their own namespace exclusive of variable names, we do not need 
-an operator prefix, like MongoDb's dollar sign (`$`).   
-* **Familiar** - Prefix operators also read like functional notation, which 
+* **Operator namespace** - If we can assume the JSON property names are
+operators, in their own namespace exclusive of variable names, we do not need
+an operator prefix, like MongoDb's dollar sign (`$`).
+* **Familiar** - Prefix operators also read like functional notation, which
 gives it familiarity.
-* **Clauses** - If property names are operators, the additional properties on 
-the same object can act as operator modifiers, or "clauses". Clauses allow us 
-to define trinary operators, and beyond, naturally. They allow us to override 
-default behaviour of common operators in the face of missing values. And, 
+* **Clauses** - If property names are operators, the additional properties on
+the same object can act as operator modifiers, or "clauses". Clauses allow us
+to define trinary operators, and beyond, naturally. They allow us to override
+default behaviour of common operators in the face of missing values. And,
 allow us to mimic multi-clause languages, like SQL.
 
 

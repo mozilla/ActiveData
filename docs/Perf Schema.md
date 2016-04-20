@@ -11,7 +11,7 @@ The (Talos) performance data is in the `perf` table.
 Describes properties exclusive to an individual test result
 
 * `result.test` - *string* name of the specific test in a suite
-* `result.ordering` - *integer* the index of the test in the original result object 
+* `result.ordering` - *integer* the index of the test in the original result object
 * `result.samples` - *array` ordered list of individual replicates
 * `result.stats` - *object* multiple statistics of the sample, for convenience
   * `result.stats.count` - *integer* 

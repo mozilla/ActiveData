@@ -1,4 +1,4 @@
-JSON Expressions for Changing Documents  
+JSON Expressions for Changing Documents
 =======================================
 
 JSON Expressions have limited update features, assuming they are even enabled for your chosen document container.

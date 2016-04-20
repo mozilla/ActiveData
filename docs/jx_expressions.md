@@ -99,7 +99,7 @@ Note: negation of `null` is `null`
 		{"not": null} ⇒ null
 
 
-Comparison Operators 
+Comparison Operators
 --------------------
 
 ###`eq` Operator###
@@ -383,7 +383,7 @@ Evaluates a list of `when` sub-clauses in order, if one evaluates to `true` the 
 			default_expression
 		]}
 
-The last item in the list can be a plain expression, called the `default_expression`. It is evaluated-and-returned only if all previous conditions evaluate to `false`. If the `default_expression` is missing, and all conditions evaluate to `false`, `null` is returned.  
+The last item in the list can be a plain expression, called the `default_expression`. It is evaluated-and-returned only if all previous conditions evaluate to `false`. If the `default_expression` is missing, and all conditions evaluate to `false`, `null` is returned.
 ***If any `when` sub-clauses contain an `else` clause, the `else` clause is ignored.***
 
 
@@ -474,7 +474,7 @@ Window functions are given additional context variables to facilitate calculatio
 JSON Expressions reference inner property names using dot-separated paths. In the case of referencing specific rows in a window function, this is possible, but painful:
 
 		{"get": ["rows", offset, variable]}
-  
+
 The `rows` operator exists to get the properties of an offset a little easier:
 
 		{"rows": {variable: offset}}  
@@ -506,7 +506,7 @@ can be made explicit:
 
 This is useful during development and debugging of ActiveData, and exploring ElasticSearch's responses in more detail.
 
- 
+
 ### `ref` Operator ###
 
 **Not implemented. Security risk if not done properly (eg file://)**

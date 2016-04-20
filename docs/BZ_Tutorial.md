@@ -6,8 +6,8 @@ Running Examples (Query Tool)
 -----------------------------
 
 [ElasticSearch Head](https://github.com/mobz/elasticsearch-head) is a simple
-tool for sending general queries. [Active Data Query Tool](../html/QueryTool.html) 
-can be used to prototype JSON query expressions, and see their equivalent ES query.  
+tool for sending general queries. [Active Data Query Tool](../html/QueryTool.html)
+can be used to prototype JSON query expressions, and see their equivalent ES query.
 Please ```git clone``` both of these projects and open in your browser.
 
 Schema

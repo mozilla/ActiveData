@@ -1,7 +1,7 @@
 `columns` Property
 ------------------
 
-The `columns` property is an array of objects, each declaring the domain 
+The `columns` property is an array of objects, each declaring the domain
 values that are possible for each of the columns.
 
   - **name** – The name used to match column found in the data 
@@ -21,7 +21,7 @@ The `domain` is defined for every column.
 `columns.domain.type` Inner Property
 ------------------------------------
 
-Every domain is one of a few basic domain types. Which further defines the 
+Every domain is one of a few basic domain types. Which further defines the
 other domain attributes which can be assigned.
 
   - **count** – just like numeric, but limited to integers >= 0

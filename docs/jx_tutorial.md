@@ -1,17 +1,17 @@
 JSON Query Expression Tutorial
 ==============================
 
-JSON query expressions are JSON structures that mimic SQL query semantics; 
-each property corresponds to a SQL clause. There are some differences from 
-SQL, especially when it comes to using default clauses, but I hope your 
+JSON query expressions are JSON structures that mimic SQL query semantics;
+each property corresponds to a SQL clause. There are some differences from
+SQL, especially when it comes to using default clauses, but I hope your
 knowledge of SQL can jump-start your use of JSON Expressions.
 
 
-Simple `from` Clause 
+Simple `from` Clause
 --------------------
 
-All queries must have a `from` clause, which indicates what data is being 
-queried. ActiveData has a default container, which it uses to translate names 
+All queries must have a `from` clause, which indicates what data is being
+queried. ActiveData has a default container, which it uses to translate names
 to explicit data sources that can be queried.
 
 ```javascript
@@ -27,7 +27,7 @@ In this case, we will get some records from the `unittest` cube. Please note: Ac
 
 The ActiveData Query Tool hides the formatting feature of the ActiveData service. Most responses you get back from the service are data cubes (aka pivot tables), and this may not be the best format for your application. You have three main formats to choose from:
 
-* `list` - service will return a list of JSON objects, which is great if you want to see the original source documents, or iterate through the response. 
+* `list` - service will return a list of JSON objects, which is great if you want to see the original source documents, or iterate through the response.
 * `table` - service returns a table - There is a `header` containing the names of the columns, and the `data` which is a list of tuples containing row values. This form is generally more compact than the other two forms.
 * `cube` - (default) returns the cube form - This format is good for analysis, charting, and is compact for large, dense, datasets.
 
@@ -165,10 +165,10 @@ At time of this writing we see structured logs of over 1.1 Gigabytes! No wonder 
 `edges` Clause
 --------------
 
-The `edges` clause works just like `groupby` except its domain is unaffected 
-by the filter. This means that all parts of the domain will be represented in 
+The `edges` clause works just like `groupby` except its domain is unaffected
+by the filter. This means that all parts of the domain will be represented in
 the result-set, even in the case when no records are in that part.
-Furthermore, every domain has a `null` part representing the records that are 
+Furthermore, every domain has a `null` part representing the records that are
 outside the domain. 
 
 ```javascript
@@ -185,7 +185,7 @@ outside the domain.
 
 ###Complex `edges`
 
-Edges can be more than strings, they can be clauses that include an additional 
+Edges can be more than strings, they can be clauses that include an additional
 description of the domain.
 
 
@@ -204,7 +204,7 @@ description of the domain.
 }
 ```
 
-In this case, we only care about "win32". The result will include counts for 
+In this case, we only care about "win32". The result will include counts for
 both "win32" and the "`null`" part which counts everything else.  
 
 

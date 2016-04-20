@@ -12,10 +12,10 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, DictList, unwrap
+from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, DictList, unwrap, \
+    join_field
 from pyLibrary.maths import Math
 from pyLibrary.queries import es09
-from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es14.decoders import DefaultDecoder, AggsDecoder
 from pyLibrary.queries.es14.decoders import DimFieldListDecoder
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
@@ -89,29 +89,30 @@ def es_aggsop(es, frum, query):
     new_select = Dict()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
     formula = []
     for s in select:
-        if s.aggregate == "count" and (s.value == None or s.value == "."):
+        if s.aggregate == "count" and isinstance(s.value, Variable) and s.value.var == ".":
             s.pull = "doc_count"
-        elif s.value == ".":
-            if frum.typed:
-                # STATISITCAL AGGS IMPLY $value, WHILE OTHERS CAN BE ANYTHING
-                if s.aggregate in NON_STATISTICAL_AGGS:
-                    #TODO: HANDLE BOTH $value AND $objects TO COUNT
-                    Log.error("do not know how to handle")
-                else:
-                    s.value = "$value"
-                    new_select["$value"] += [s]
-            else:
-                if s.aggregate in NON_STATISTICAL_AGGS:
-                    #TODO:  WE SHOULD BE ABLE TO COUNT, BUT WE MUST *OR* ALL LEAF VALUES TO DO IT
-                    Log.error("do not know how to handle")
-                else:
-                    Log.error('Not expecting ES to have a value at "." which {{agg}} can be applied', agg=s.aggregate)
-        elif isinstance(s.value, Variable) and s.aggregate=="count":
-            s.value = s.value.map(es_column_map)
-            new_select["count_"+literal_field(s.value.var)] += [s]
         elif isinstance(s.value, Variable):
-            s.value = s.value.map(es_column_map)
-            new_select[literal_field(s.value.var)] += [s]
+            if s.value.var==".":
+                if frum.typed:
+                    # STATISITCAL AGGS IMPLY $value, WHILE OTHERS CAN BE ANYTHING
+                    if s.aggregate in NON_STATISTICAL_AGGS:
+                        #TODO: HANDLE BOTH $value AND $objects TO COUNT
+                        Log.error("do not know how to handle")
+                    else:
+                        s.value.var = "$value"
+                        new_select["$value"] += [s]
+                else:
+                    if s.aggregate in NON_STATISTICAL_AGGS:
+                        #TODO:  WE SHOULD BE ABLE TO COUNT, BUT WE MUST *OR* ALL LEAF VALUES TO DO IT
+                        Log.error("do not know how to handle")
+                    else:
+                        Log.error('Not expecting ES to have a value at "." which {{agg}} can be applied', agg=s.aggregate)
+            elif s.aggregate == "count":
+                s.value = s.value.map(es_column_map)
+                new_select["count_"+literal_field(s.value.var)] += [s]
+            else:
+                s.value = s.value.map(es_column_map)
+                new_select[literal_field(s.value.var)] += [s]
         else:
             formula.append(s)
 

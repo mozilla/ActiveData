@@ -15,10 +15,10 @@ from pyLibrary import queries, convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import split_field, DictList, listwrap, literal_field, coalesce, Dict, unwrap
 from pyLibrary.queries import es09, es14
-from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es14.setop import format_dispatch
 from pyLibrary.queries.es14.util import jx_sort_to_es_sort
-from pyLibrary.queries.expressions import split_expression_by_depth, simplify_esfilter, jx_expression, AndOp, compile_expression
+from pyLibrary.queries.expressions import split_expression_by_depth, simplify_esfilter, AndOp, compile_expression, \
+    Variable, LeavesOp
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.timer import Timer
@@ -100,105 +100,107 @@ def es_deepop(es, query):
 
     i = 0
     for s in listwrap(query.select):
-        if s.value == "*":
-            # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
-            for c in columns:
-                if c.relative and c.type not in ["nested", "object"]:
-                    if not c.nested_path:
-                        es_query.fields += [c.es_column]
-                    new_select.append({
-                        "name": c.name,
-                        "pull": get_pull(c),
-                        "nested_path": listwrap(c.nested_path)[0],
-                        "put": {"name": literal_field(c.name), "index": i, "child": "."}
-                    })
-                    i += 1
+        if isinstance(s.value, LeavesOp):
+            if isinstance(s.value.term, Variable):
+                if s.value.term.var==".":
+                    # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
+                    for c in columns:
+                        if c.relative and c.type not in ["nested", "object"]:
+                            if not c.nested_path:
+                                es_query.fields += [c.es_column]
+                            new_select.append({
+                                "name": c.name,
+                                "pull": get_pull(c),
+                                "nested_path": listwrap(c.nested_path)[0],
+                                "put": {"name": literal_field(c.name), "index": i, "child": "."}
+                            })
+                            i += 1
 
-            # REMOVE DOTS IN PREFIX IF NAME NOT AMBIGUOUS
-            col_names = [c.name for c in columns if c.relative]
-            for n in new_select:
-                if n.name.startswith("..") and n.name.lstrip(".") not in col_names:
-                    n.name = n.put.name = n.name.lstrip(".")
-        elif s.value == ".":
-            for c in columns:
-                if c.relative and c.type not in ["nested", "object"]:
-                    if not c.nested_path:
-                        es_query.fields += [c.es_column]
-                    new_select.append({
-                        "name": c.name,
-                        "pull": get_pull(c),
-                        "nested_path": listwrap(c.nested_path)[0],
-                        "put": {"name": ".", "index": i, "child": c.es_column}
-                    })
-            i += 1
-        elif s.value == "_id":
-            new_select.append({
-                "name": s.name,
-                "value": s.value,
-                "pull": "_id",
-                "put": {"name": s.name, "index": i, "child": "."}
-            })
-            i += 1
-        elif isinstance(s.value, basestring) and s.value.endswith(".*") and is_keyword(s.value[:-2]):
-            column = s.value[:-1]
-            prefix = len(column)
-            for c in columns:
-                if c.name.startswith(column) and c.type not in ["object", "nested"]:
-                    pull = get_pull(c)
-                    if len(listwrap(c.nested_path)) == 0:
-                        es_query.fields += [c.es_column]
+                    # REMOVE DOTS IN PREFIX IF NAME NOT AMBIGUOUS
+                    col_names = [c.name for c in columns if c.relative]
+                    for n in new_select:
+                        if n.name.startswith("..") and n.name.lstrip(".") not in col_names:
+                            n.name = n.put.name = n.name.lstrip(".")
+                else:
+                    column = s.term.value.var+"."
+                    prefix = len(column)
+                    for c in columns:
+                        if c.name.startswith(column) and c.type not in ["object", "nested"]:
+                            pull = get_pull(c)
+                            if len(listwrap(c.nested_path)) == 0:
+                                es_query.fields += [c.es_column]
 
-                    new_select.append({
-                        "name": s.name + "." + c.name[prefix:],
-                        "pull": pull,
-                        "nested_path": listwrap(c.nested_path)[0],
-                        "put": {"name": s.name + "." + literal_field(c.name[prefix:]), "index": i, "child": "."}
-                    })
-                    i += 1
-        elif isinstance(s.value, basestring) and is_keyword(s.value):
-            column = columns[(s.value,)]
-            parent = column.es_column+"."
-            prefix = len(parent)
-            net_columns = [c for c in columns if c.es_column.startswith(parent) and c.type not in ["object", "nested"]]
-            if not net_columns:
-                pull = get_pull(column)
-                if not column.nested_path:
-                    es_query.fields += [column.es_column]
+                            new_select.append({
+                                "name": s.name + "." + c.name[prefix:],
+                                "pull": pull,
+                                "nested_path": listwrap(c.nested_path)[0],
+                                "put": {"name": s.name + "." + literal_field(c.name[prefix:]), "index": i, "child": "."}
+                            })
+                            i += 1
+        elif isinstance(s.value, Variable):
+            if s.value.var == ".":
+                for c in columns:
+                    if c.relative and c.type not in ["nested", "object"]:
+                        if not c.nested_path:
+                            es_query.fields += [c.es_column]
+                        new_select.append({
+                            "name": c.name,
+                            "pull": get_pull(c),
+                            "nested_path": listwrap(c.nested_path)[0],
+                            "put": {"name": ".", "index": i, "child": c.es_column}
+                        })
+                i += 1
+            elif s.value.var == "_id":
                 new_select.append({
                     "name": s.name,
-                    "pull": pull,
-                    "nested_path": listwrap(column.nested_path)[0],
+                    "value": s.value.var,
+                    "pull": "_id",
                     "put": {"name": s.name, "index": i, "child": "."}
                 })
+                i += 1
             else:
-                done = set()
-                for n in net_columns:
-                    # THE COLUMNS CAN HAVE DUPLICATE REFERNCES TO THE SAME ES_COLUMN
-                    if n.es_column in done:
-                        continue
-                    done.add(n.es_column)
-
-                    pull = get_pull(n)
-                    if not n.nested_path:
-                        es_query.fields += [n.es_column]
+                column = columns[(s.value.var,)]
+                parent = column.es_column+"."
+                prefix = len(parent)
+                net_columns = [c for c in columns if c.es_column.startswith(parent) and c.type not in ["object", "nested"]]
+                if not net_columns:
+                    pull = get_pull(column)
+                    if not column.nested_path:
+                        es_query.fields += [column.es_column]
                     new_select.append({
                         "name": s.name,
                         "pull": pull,
-                        "nested_path": listwrap(n.nested_path)[0],
-                        "put": {"name": s.name, "index": i, "child": n.es_column[prefix:]}
+                        "nested_path": listwrap(column.nested_path)[0],
+                        "put": {"name": s.name, "index": i, "child": "."}
                     })
-            i += 1
+                else:
+                    done = set()
+                    for n in net_columns:
+                        # THE COLUMNS CAN HAVE DUPLICATE REFERNCES TO THE SAME ES_COLUMN
+                        if n.es_column in done:
+                            continue
+                        done.add(n.es_column)
+
+                        pull = get_pull(n)
+                        if not n.nested_path:
+                            es_query.fields += [n.es_column]
+                        new_select.append({
+                            "name": s.name,
+                            "pull": pull,
+                            "nested_path": listwrap(n.nested_path)[0],
+                            "put": {"name": s.name, "index": i, "child": n.es_column[prefix:]}
+                        })
+                i += 1
         else:
             expr = s.value
             for v in expr.vars():
                 for n in columns:
-                    if n.name==v:
+                    if n.name == v:
                         if not n.nested_path:
                             es_query.fields += [n.es_column]
 
             pull = EXPRESSION_PREFIX + s.name
             post_expressions[pull] = compile_expression(expr.map(map_to_local).to_python())
-
 
             new_select.append({
                 "name": s.name if is_list else ".",

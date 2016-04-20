@@ -202,7 +202,7 @@ def format_list(T, select, query=None):
         for row in T:
             r = Dict()
             for s in select:
-                r[s.put.child] = unwraplist(row[s.pull])
+                r[s.put.name][s.put.child] = unwraplist(row[s.pull])
             data.append(r if r else None)
 
     return Dict(

@@ -582,12 +582,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 "from": base_test_class.settings.backend_es.index + ".a._a",
                 "select": "*",
                 "where": {
-                    "eq": [
-                        {
-                            "length": "v"
-                        },
-                        10
-                    ]
+                    "eq": [{"length": "v"}, 10]
                 }
             },
             "es_query": {  # FOR REFERENCE

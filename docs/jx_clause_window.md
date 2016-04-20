@@ -15,7 +15,7 @@ Window Functions
 		    "sort":"build.date"
 		}]
 
-In this case, all rows in the result-set are grouped (aka edged) into buckets and sorted.  This gives you access to three extra properties:
+In this case, all rows in the result-set are grouped (aka edged) into buckets and sorted. This gives you access to three extra properties:
 
 * **row** - the current row in the sorted list
 * **rownum** - the index of the row in the sorted list

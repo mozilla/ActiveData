@@ -20,7 +20,7 @@ Example: `eq` Operator
 
 ###`eq` Operator###
 
-The equality operator is most used, and has a range of parameters.  We will use the `eq` operator to demonstrate the format for the rest of this document.  
+The equality operator is most used, and has a range of parameters. We will use the `eq` operator to demonstrate the format for the rest of this document.  
 
 `eq` returns a Boolean, and has two major forms:
 
@@ -51,7 +51,7 @@ which is logically equivalent to:
 			{"eq": {variable_N: constant_N}}	
 		]}
 
-`null` constants are ignored by the `eq` operator.  If you want to compare a `variable` to `null`, you must use the `missing` operator.
+`null` constants are ignored by the `eq` operator. If you want to compare a `variable` to `null`, you must use the `missing` operator.
 
 
 --------------------------------------------------------------------------------
@@ -104,7 +104,7 @@ Comparison Operators
 
 ###`eq` Operator###
 
-As detailed above, `eq` has two main forms.  The *simple* form:  
+As detailed above, `eq` has two main forms. The *simple* form:  
 
 		{"eq": {
 			variable_1: constant_1,
@@ -163,11 +163,11 @@ For counting the number of not-null values.
 
 ###`sum` Operator (commutative)###
 
-For adding the result of many expressions.  Also known as `add`.
+For adding the result of many expressions. Also known as `add`.
 
 		{"sum": [expr1, expr2, ... exprN]}
 		
-By default, if **any** expressions evaluate to `null`, then `null` is returned.  You can change this with `"nulls":true`; so `nulls` are ignored during summation, returning `null` only if **all** expressions evaluate to `null`:  
+By default, if **any** expressions evaluate to `null`, then `null` is returned. You can change this with `"nulls":true`; so `nulls` are ignored during summation, returning `null` only if **all** expressions evaluate to `null`:  
 
 		# `null` expressions are ignored
 		{"sum": [expr1, expr2, ... exprN], "nulls": true}
@@ -179,7 +179,7 @@ The empty list always evaluates to the default value, or `null`.
 
 ###`sub` Operator###
 
-Subtract two expressions.  Also known as `subtract` and `minus`
+Subtract two expressions. Also known as `subtract` and `minus`
 
 		{"sub": {variable: value}}
 		{"sub": [expr_a, expr_b]}
@@ -187,11 +187,11 @@ Subtract two expressions.  Also known as `subtract` and `minus`
 
 ###`mult` Operator (commutative)###
 
-Multiply multiple values.  Also known as `multiply` and `mul`
+Multiply multiple values. Also known as `multiply` and `mul`
 
 		{"mult": [expr1, expr2, ... exprN]}
 
-By default, if **any** expressions evaluate to `null`, then `null` is returned.  You can change this with `"nulls":true`; so `nulls` are ignored during summation, returning `null` only if **all** expressions evaluate to `null`:  
+By default, if **any** expressions evaluate to `null`, then `null` is returned. You can change this with `"nulls":true`; so `nulls` are ignored during summation, returning `null` only if **all** expressions evaluate to `null`:  
 
 		# `null` expressions are ignored
 		{"mult": [expr1, expr2, ... exprN], "nulls": true}
@@ -207,14 +207,14 @@ For division.
 		{"div": {variable: denominator}} 
 		{"div": [numerator, denominator]} 
 
-If either operand is `null`, or if the denominator is zero, the operator will return `null`.  The `default` clause can be used to replace that.
+If either operand is `null`, or if the denominator is zero, the operator will return `null`. The `default` clause can be used to replace that.
 
 		{"div": [numerator, denominator], "default": 0}  // {"div": ["x", 0]} == 0 for all x
 
 
 ###`exp` Operator###
 
-Raise the base to given exponent.  Also known as `pow` and `power`
+Raise the base to given exponent. Also known as `pow` and `power`
 
 		{"exp": [base, exponent]} ⇒ base ** exponent
 
@@ -225,7 +225,7 @@ to resolve ambiguity, we define 0<sup>0</sup> as `null`:
 of course, the `default` clause allows you to provide the definition that suites you best:
 
 		{"exp": [base, exponent], "default": 0}     // {"exp": [0, x]} == 0 for all x
-		{"exp": [base, exponent], "default": base}  // {"exp": [x, 1]} == x for all x
+		{"exp": [base, exponent], "default": base} // {"exp": [x, 1]} == x for all x
 
 
 ###`mod` Operator###
@@ -282,7 +282,7 @@ Test is a property is not `null`
 
 ###`match_all` Operator###
 
-Dummy operator that always returns `true`.  It is an artifact of ElasticSearch filter expressions.  Use `true` instead.
+Dummy operator that always returns `true`. It is an artifact of ElasticSearch filter expressions. Use `true` instead.
 
 		{"match_all": {}}
 
@@ -298,28 +298,28 @@ Return the length of a string.
 
 ###`left` Operator###
 
-Return the left-part of given string.  `null` parameters result in `null`; negative length results in the empty string.  
+Return the left-part of given string. `null` parameters result in `null`; negative length results in the empty string.  
 
 		{"left": {variable: length}}
 		{"left": [expression, length]}
 
 ###`not_left` Operator###
 
-Removes the `length` left-most characters from the given string, returning the rest.  `null` parameters result in `null`; negative `length` returns the whole string.  Notice that concatenating `left` and `not_left` will return the original expression for all integer `length`.    
+Removes the `length` left-most characters from the given string, returning the rest. `null` parameters result in `null`; negative `length` returns the whole string. Notice that concatenating `left` and `not_left` will return the original expression for all integer `length`.    
 
 		{"not_left": {variable: length}}
 		{"not_left": [expression, length]}
 
 ###`right` Operator###
 
-Return the right-part of given string.  `null` parameters result in `null`; negative length results in the empty string.  
+Return the right-part of given string. `null` parameters result in `null`; negative length results in the empty string.  
 
 		{"right": {variable: length}}
 		{"right": [expression, length]}
 
 ###`not_right` Operator###
 
-Removes the `length` right-most characters from the given string, returning the rest.  `null` parameters result in `null`; negative `length` returns the whole string.  Notice that concatenating `right` and `not_right` will return the original expression for all integer `length`.    
+Removes the `length` right-most characters from the given string, returning the rest. `null` parameters result in `null`; negative `length` returns the whole string. Notice that concatenating `right` and `not_right` will return the original expression for all integer `length`.    
 
 		{"not_right": {variable: length}}
 		{"not_right": [expression, length]}
@@ -333,13 +333,13 @@ Test if property contains given substring.
 
 ###`prefix` Operator###
 
-Test if a property has the given prefix.  Only the *simple* form exists.
+Test if a property has the given prefix. Only the *simple* form exists.
 
 		{"prefix": {variable: prefix}}
 
 ###`regexp` Operator###
 
-Return `true` if a property matches a given regular expression.  The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term.  Also be sure you escape special characters:  This is a JSON string of a regular expression, not a regular expression itself.  Only the *simple* form exists.
+Return `true` if a property matches a given regular expression. The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term. Also be sure you escape special characters: This is a JSON string of a regular expression, not a regular expression itself. Only the *simple* form exists.
 
 		{"regexp": {variable: regular_expression}}
 
@@ -348,7 +348,7 @@ Return `true` if a property matches a given regular expression.  The whole term 
 Conditional Operators
 ---------------------
 
-Conditional operators expect a Boolean value to decide on.  If the value provided is not Boolean, it is considered `true`; if the value is missing or `null`, it is considered `false`.  This is different than many other languages: ***Numeric zero (`0`) is truthy***  
+Conditional operators expect a Boolean value to decide on. If the value provided is not Boolean, it is considered `true`; if the value is missing or `null`, it is considered `false`. This is different than many other languages: ***Numeric zero (`0`) is truthy***  
 
 ###`coalesce` Operator###
 
@@ -357,7 +357,7 @@ Return the first not `null` value in the list of evaluated expressions.
 		{"coalesce": {variable, constant}}
 		{"coalesce": [expr1, expr2, ... exprN]}
 
-For the *simple* form; `null` is a legitimate `constant`.  Generally, if all expressions evaluate to `null`, or the expression list is empty, then the result is `null` 
+For the *simple* form; `null` is a legitimate `constant`. Generally, if all expressions evaluate to `null`, or the expression list is empty, then the result is `null` 
 
 ###`when` Operator###
 
@@ -383,7 +383,7 @@ Evaluates a list of `when` sub-clauses in order, if one evaluates to `true` the 
 			default_expression
 		]}
 
-The last item in the list can be a plain expression, called the `default_expression`.  It is  evaluated-and-returned only if all previous conditions evaluate to `false`.  If the `default_expression` is missing, and all conditions evaluate to `false`, `null` is returned.  
+The last item in the list can be a plain expression, called the `default_expression`. It is evaluated-and-returned only if all previous conditions evaluate to `false`. If the `default_expression` is missing, and all conditions evaluate to `false`, `null` is returned.  
 ***If any `when` sub-clauses contain an `else` clause, the `else` clause is ignored.***
 
 
@@ -413,7 +413,7 @@ The literal is parsed according to a [date and time mini language](jx_time.md).
 
 ###`literal` Operator###
 
-Except for the right-hand-side of simple form operations, JSON expressions will interpret JSON as an expression.  Sometimes you just want the literal JSON value.  `literal` simply returns the property value, unchanged.
+Except for the right-hand-side of simple form operations, JSON expressions will interpret JSON as an expression. Sometimes you just want the literal JSON value. `literal` simply returns the property value, unchanged.
 
 		{"eq": {"name", "kyle"}}
 
@@ -428,7 +428,7 @@ The literal can be primitive, or whole objects
 
 ###`tuple` Operator###
 
-You can build a tuple from a JSON array of expressions.  This is useful when building compound terms, or building lists with dynamic content. 
+You can build a tuple from a JSON array of expressions. This is useful when building compound terms, or building lists with dynamic content. 
 
 		{"tuple": [{"date":"now"}, {"date":"today"}]}
 
@@ -439,7 +439,7 @@ gives
 
 ###`leaves`###
 
-Flattens a (deep) JSON structure to leaf form - where each property name is a dot-delimited path to the values found.  Shallow JSON objects are not changed.  The `leaves` operator can be used in queries to act like the star (`*`) special form. 
+Flattens a (deep) JSON structure to leaf form - where each property name is a dot-delimited path to the values found. Shallow JSON objects are not changed. The `leaves` operator can be used in queries to act like the star (`*`) special form. 
 
 		{
 			"from": "unittest",
@@ -463,7 +463,7 @@ Please notice the dots (`.`) from the original properties are escaped with backs
 Set Operators (and Variables)
 -----------------------------
 
-Window functions are given additional context variables to facilitate calculation over a set of (sorted) values covered by the window.  These are 
+Window functions are given additional context variables to facilitate calculation over a set of (sorted) values covered by the window. These are 
 
 * `row` - for the current row; which is implied, but can sometimes be useful
 * `rownum` - the index into the window
@@ -471,7 +471,7 @@ Window functions are given additional context variables to facilitate calculatio
 
 ### `rows` Operator ###
 
-JSON Expressions reference inner property names using dot-separated paths.  In the case of referencing specific rows in a window function, this is possible, but painful:
+JSON Expressions reference inner property names using dot-separated paths. In the case of referencing specific rows in a window function, this is possible, but painful:
 
 		{"get": ["rows", offset, variable]}
   
@@ -485,7 +485,7 @@ Reflective Operators
 
 ### `get` Operator ###
 
-JSON Expressions reference inner property names using dot-separated paths.  Sometimes you will want to compose that path:
+JSON Expressions reference inner property names using dot-separated paths. Sometimes you will want to compose that path:
 
 		"run.test.duration"
 
@@ -500,7 +500,7 @@ can be made explicit:
 
 ### `script` Operator ###
 
-**For testing only** - Used to deliver a string, representing code, to the backend container.  ActiveData uses ElasticSearch, where scripting is a security vulnerability, so it is turned off. 
+**For testing only** - Used to deliver a string, representing code, to the backend container. ActiveData uses ElasticSearch, where scripting is a security vulnerability, so it is turned off. 
 
 		{"script": "doc['build.date'].value"}
 
@@ -509,7 +509,7 @@ This is useful during development and debugging of ActiveData, and exploring Ela
  
 ### `ref` Operator ###
 
-**Not implemented.  Security risk if not done properly (eg file://)**
+**Not implemented. Security risk if not done properly (eg file://)**
 
 Uses the URL provided to retrieve a JSON value.  
 
@@ -517,7 +517,7 @@ Uses the URL provided to retrieve a JSON value.
 
 ### `eval` Operator ###
 
-**Not implemented.  Requires a security review.**
+**Not implemented. Requires a security review.**
 
 Evaluate the given JSON as an expression:
 

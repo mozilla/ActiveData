@@ -22,7 +22,7 @@ the point that the C library callbacks are no longer a significant overhead:
 This pure Python JSON encoder is no longer faster than a compound C/Python 
 solution.**   
 
-Fast JSON encoder used in `convert.value2json()` when running in Pypy.  Run the
+Fast JSON encoder used in `convert.value2json()` when running in Pypy. Run the
 [speedtest](https://github.com/klahnakoski/pyLibrary/blob/dev/tests/speedtest_json.py)
 to compare with default implementation and ujson
 
@@ -31,25 +31,25 @@ Module `jsons.stream`
 =====================
 
 A module supporting the implementation of queries over very large JSON 
-strings.  The overall objective is to make a large JSON document appear like 
+strings. The overall objective is to make a large JSON document appear like 
 a hierarchical database, where arrays of any depth, can be queried like 
 tables. 
 
 ### Limitations
 
-This is not a generic streaming JSON parser.  This module has two main 
+This is not a generic streaming JSON parser. This module has two main 
 restrictions:
 
-1. **Objects are not streamed** - All objects will reside in memory.  Large 
-   objects, with a multitude of properties, may cause problems.  Property 
-   names should be known at query time.  If you must serialize large objects; 
+1. **Objects are not streamed** - All objects will reside in memory. Large 
+   objects, with a multitude of properties, may cause problems. Property 
+   names should be known at query time. If you must serialize large objects; 
    instead of `{<name>: <value>}` format, try a list of name/value pairs 
-   instead: `[{"name": <name>, "value": <value>}]`  This format is easier to 
+   instead: `[{"name": <name>, "value": <value>}]` This format is easier to 
    query, and gentler on the various document stores that you may put this 
    data into. 
 2. **Array values must be the last object property** - If you query into a 
    nested array, all sibling properties found after that array must be ignored 
-   (must not be in the `expected_vars`).  If not, then those arrays will not 
+   (must not be in the `expected_vars`). If not, then those arrays will not 
    benefit from streaming, and will reside in memory.   
 
 
@@ -61,8 +61,8 @@ Will return an iterator over all objects found in the JSON stream.
 **Parameters:**
 
 * **json** - a parameter-less function, when called returns some number of 
-  bytes from the JSON stream.  It can also be a string.
-* **path** - a list of strings specifying the nested JSON paths.  Use 
+  bytes from the JSON stream. It can also be a string.
+* **path** - a list of strings specifying the nested JSON paths. Use 
   `"."` if your JSON starts with `[`, and is a list. 
 * **expected_vars** - a list of strings specifying the full property names 
   required (all other properties are ignored)
@@ -75,7 +75,7 @@ Will return an iterator over all objects found in the JSON stream.
 	json = {"b": "done", "a": [1, 2, 3]}
 	parse(json, path="a", required_vars=["a", "b"]}
 
-We will iterate through the array found on property `a`, and return both `a` and `b` variables.  It will return the following values:
+We will iterate through the array found on property `a`, and return both `a` and `b` variables. It will return the following values:
 
 	{"b": "done", "a": 1}
 	{"b": "done", "a": 2}
@@ -106,12 +106,12 @@ If we do not require `b`, then streaming will proceed just fine:
 
 **Complex Objects**
 
-This streamer was meant for very long lists of complex objects.  Use dot-delimited naming to refer to full name of the property
+This streamer was meant for very long lists of complex objects. Use dot-delimited naming to refer to full name of the property
 
 	json = [{"a": {"b": 1, "c": 2}}, {"a": {"b": 3, "c": 4}}, ...
 	parse(json, path=".", required_vars=["a.c"])
 
-The dot (`.`) can be used to refer to the top-most array.  Notice the structure is maintained, but only includes the required variables.
+The dot (`.`) can be used to refer to the top-most array. Notice the structure is maintained, but only includes the required variables.
 
 	{"a": {"c": 2}}
 	{"a": {"c": 4}}
@@ -130,7 +130,7 @@ as such, it includes every record in the parent.
 	parse(json, path=[".", "a"], required_vars=["o", "a.b"])
 
 The `path` parameter can be a list, which is used to indicate which properties 
-are expected to have an array, and to iterate over them.  Please notice if no 
+are expected to have an array, and to iterate over them. Please notice if no 
 array is found, it is treated like a singleton array, and missing arrays still 
 produce a result.
 
@@ -152,10 +152,10 @@ A JSON-like storage format intended for configuration files.
 Motivation
 ----------
 
-This module has superficial similarity to the [JSON Reference Draft](https://tools.ietf.org/html/draft-pbryan-zyp-json-ref-03), which seems inspired by the committee-driven XPath specification.  Of course, there are a few improvements:
+This module has superficial similarity to the [JSON Reference Draft](https://tools.ietf.org/html/draft-pbryan-zyp-json-ref-03), which seems inspired by the committee-driven XPath specification. Of course, there are a few improvements:
 
-1. This `jsons.ref` module uses the dot (`.`) as a path separator in the URL fragment.  For example, an absolute reference looks like `{"$ref": "#message.type.name"}`, and a relative reference looks like `{"$ref": "#..type.name"}`.   This syntax better matches that used by Javascript.  
-2. The additional properties founf in a `$ref` object are used to override the referenced object. This allows you to reference a default document, and override the particular  properties needed. *more below*
+1. This `jsons.ref` module uses the dot (`.`) as a path separator in the URL fragment. For example, an absolute reference looks like `{"$ref": "#message.type.name"}`, and a relative reference looks like `{"$ref": "#..type.name"}`.   This syntax better matches that used by Javascript.  
+2. The additional properties founf in a `$ref` object are used to override the referenced object. This allows you to reference a default document, and override the particular properties needed. *more below*
 3. Furthermore, references can accept URL parameters: JSON is treated like a string template for more sophisticated value replacement. *see below*  
 4. You can reference files and environment variables in addition to general URLs.
 
@@ -199,7 +199,7 @@ Multiline comments are also allowed, using either Python's triple-quotes
 Example References
 ------------------
 
-The `$ref` property is special.  Its value is interpreted as a URL pointing to more JSON
+The `$ref` property is special. Its value is interpreted as a URL pointing to more JSON
 
 ###Absolute Internal Reference
 
@@ -239,7 +239,7 @@ ref-object's parent, and expands just like the previous example:
 
 ###File References
 
-Configuration is often stored on the local file system.  You can in-line the
+Configuration is often stored on the local file system. You can in-line the
 JSON found in a file by using the `file://` scheme:
 
 It is good practice to store sensitive data in a secure place...
@@ -356,7 +356,7 @@ Some remote configuration files are quite large...
     }
 ```
 
-... and you only need one fragment.  For this use the hash (`#`) followed by
+... and you only need one fragment. For this use the hash (`#`) followed by
 the dot-delimited path into the document:
 
 ```python
@@ -389,7 +389,7 @@ JSON documents are allowed named parameters, which are surrounded by moustaches 
 	}
 ```
 
-Parameter replacement is performed on the unicode text before being interpreted by the JSON parser.  It is your responsibility to ensure the parameter replacement will result in valid JSON.
+Parameter replacement is performed on the unicode text before being interpreted by the JSON parser. It is your responsibility to ensure the parameter replacement will result in valid JSON.
 
 You pass the parameters by including them as URL parameters:
 
@@ -431,9 +431,9 @@ Module `typed_encoder`
 =====================
 
 
-One reason NoSQL documents stores are wonderful is the fact their schema can automatically expand to accept new properties.   Unfortunately, this flexibility is not limitless:  A string assigned to property prevents an object being assigned to the same, or visa-versa.
+One reason NoSQL documents stores are wonderful is the fact their schema can automatically expand to accept new properties.   Unfortunately, this flexibility is not limitless: A string assigned to property prevents an object being assigned to the same, or visa-versa.
 
-This module translates JSON documents into "typed" form; which allows document containers to store both objects and primitives in the same property value.  This allows storage of values with no containing object! 
+This module translates JSON documents into "typed" form; which allows document containers to store both objects and primitives in the same property value. This allows storage of values with no containing object! 
 
 ###How it works
 
@@ -442,7 +442,7 @@ Typed JSON uses `$value` and `$object` properties to markup the original JSON:
 * All JSON objects are annotated with `"$object":"."`, which makes querying object existence (especially the empty object) easier.
 * All primitive values are replaced with an object with a single `$value` property: So `"value"` gets mapped to `{"$value": "value"}`.  
 
-Of course, the typed JSON has a different form than the original, and queries into the documents store must take this into account.  Fortunately, the use of typed JSON is intended to be hidden behind a query abstraction layer.
+Of course, the typed JSON has a different form than the original, and queries into the documents store must take this into account. Fortunately, the use of typed JSON is intended to be hidden behind a query abstraction layer.
 
 
 Function `typed_encode()`

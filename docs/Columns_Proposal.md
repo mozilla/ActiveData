@@ -12,7 +12,7 @@ values that are possible for each of the columns.
 
 The `domain` is defined for every column.  
 
-  - **type** – One of a few predefined types  (Default `{"type":"default"}`)
+  - **type** – One of a few predefined types (Default `{"type":"default"}`)
   - **units** - The measurement units, (see below)
   - **name** – (Optional) Name given to this domain definition
   - **higher_is_better** - Boolean to help with orientation  
@@ -21,7 +21,7 @@ The `domain` is defined for every column.
 `columns.domain.type` Inner Property
 ------------------------------------
 
-Every domain is one of a few basic domain types.  Which further defines the 
+Every domain is one of a few basic domain types. Which further defines the 
 other domain attributes which can be assigned.
 
   - **count** – just like numeric, but limited to integers >= 0

@@ -107,6 +107,6 @@ Markup from the ETL process
 * `etl.timestamp` - *timestamp* when the ETL was run
 * `etl.revision` - *string* git revision number of the ETL
 * `etl.duration` - *seconds* - how long the ETL took
-* `etl.source` - *object* another structure, just like this, which describes the parent ETL that fed this:  An effective audit chain.
+* `etl.source` - *object* another structure, just like this, which describes the parent ETL that fed this: An effective audit chain.
 * `etl.name` - *string* humane description of this ETL step
 * `etl.type` - *string* either `join` or `aggregation` indicating if this ETL step was adding or reducing information

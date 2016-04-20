@@ -12,9 +12,9 @@ the (exceptional) code paths taken.
 Motivation
 ----------
 
-Exception handling and logging are undeniably linked.  There are many instances
+Exception handling and logging are undeniably linked. There are many instances
 where exceptions are raised and must be logged, except when a subsuming system 
-can compensate.  Exception handling semantics are great because they 
+can compensate. Exception handling semantics are great because they 
 decouple the cause from the solution, but this can be at odds with clean 
 logging - which couples raising and catching to make appropriate decisions 
 about what to emit to the log.  
@@ -37,7 +37,7 @@ Basic Usage
     Log.note("Hello, World!")
 ```
 
-There is no need to create logger objects.  The `Log` module will keep track of 
+There is no need to create logger objects. The `Log` module will keep track of 
 what, where and who of every call.
 
 
@@ -52,7 +52,7 @@ for log analysis tools.
 ```
 
 All logs are structured logs; the parameters will be included, unchanged, in 
-the log structure.  This library also expects all parameter values to be JSON-
+the log structure. This library also expects all parameter values to be JSON-
 serializable so they can be stored/processed by downstream JSON tools.
   
 ```javascript
@@ -78,7 +78,7 @@ serializable so they can be stored/processed by downstream JSON tools.
 ```
 
 The actual call will always raise an exception, and it manipulates the stack 
-trace to ensure the caller is appropriately blamed.  Feel free to use the 
+trace to ensure the caller is appropriately blamed. Feel free to use the 
 `raise` keyword (as in `raise Log.error("")`), if that looks nicer to you. 
 
 **Always chain your exceptions**
@@ -97,15 +97,15 @@ a failure.
 **Always catch all `Exceptions`**
 
 Catching all exceptions is preferred over the *only-catch-what-you-can-handle* 
-strategy.  First, exceptions are not lost because we are chaining.  Second, 
+strategy. First, exceptions are not lost because we are chaining. Second, 
 we catch unexpected `Exceptions` early and we annotate them with a 
-description of what the local code was intending to do.  This annotation 
+description of what the local code was intending to do. This annotation 
 effectively groups the possible errors (known, or not) into a class, which 
 can be used by callers to decide on appropriate mitigation.  
 
-To repeat:  When using dependency injection, callers can not reasonably be 
+To repeat: When using dependency injection, callers can not reasonably be 
 expected to know about the types of failures that can happen deep down the 
-call chain.  This makes it vitally important that methods summarize all 
+call chain. This makes it vitally important that methods summarize all 
 exceptions, both known and unknown, so their callers have the information to 
 make better decisions on appropriate action.  
 
@@ -125,7 +125,7 @@ Error logging accepts keyword parameters just like `Log.note()` does
 **No need to formally type your exceptions**
 
 An exception can be uniquely identified by the first-parameter string template 
-it is given; exceptions raised with the same template are the same type.  You 
+it is given; exceptions raised with the same template are the same type. You 
 should have no need to create new exception sub-types.
 
 **Testing for exception "types"**
@@ -148,7 +148,7 @@ the `in` keyword:
 **If you can deal with an exception, then it will never be logged**
 
 When a caller catches an exception from a callee, it is the caller's 
-responsibility to handle that exception, or re-raise it.  There are many 
+responsibility to handle that exception, or re-raise it. There are many 
 situations a caller can be expected to handle exceptions; and in those cases 
 logging an error would be deceptive. 
 
@@ -172,11 +172,11 @@ logging an error would be deceptive.
 ```
 **Don't loose your stack trace!**
 
-Be aware your `except` clause can also throw exceptions:  In the event you 
+Be aware your `except` clause can also throw exceptions: In the event you 
 catch a vanilla Python Exception, you run the risk of loosing its stack trace.  
 To prevent this, wrap your exception in an `Except` object, which will capture 
-your trace for later use.  Exceptions thrown from this `Log` library need not 
-be wrapped because they already captured their trace.  If you wrap an `Except` 
+your trace for later use. Exceptions thrown from this `Log` library need not 
+be wrapped because they already captured their trace. If you wrap an `Except` 
 object, you simply get back the object you passed.
 
 ```python
@@ -198,8 +198,8 @@ All the `Log` functions accept a `default_params` as a second parameter, like so
 ```
 
 this is meant for the situation your code already has a bundled structure you 
-wish to use as a source of parameters.  If keyword parameters are used, they 
-will override the default values.  Be careful when sending whole data 
+wish to use as a source of parameters. If keyword parameters are used, they 
+will override the default values. Be careful when sending whole data 
 structures, they will be logged!
 
 **Please, never use locals()**
@@ -212,7 +212,7 @@ structures, they will be logged!
 ```
 
 Despite the fact using `locals()` is a wonderful shortcut for logging it is 
-dangerous because it also picks up sensitive local variables.  Even if 
+dangerous because it also picks up sensitive local variables. Even if 
 `{{name}}` is the only value in the template, the whole `locals()` dict will 
 be sent to the structured loggers for recording. 
 
@@ -265,7 +265,7 @@ These debug variables can be set by configuration file:
 Configuration
 -------------
 
-The `logs` module will log to the console by default.  ```Log.start(settings)```
+The `logs` module will log to the console by default. ```Log.start(settings)```
 will redirect the logging to other streams, as defined by the settings:
 
  *  **log** - List of all log-streams and their parameters
@@ -274,10 +274,10 @@ will redirect the logging to other streams, as defined by the settings:
  *  **profile** - Used to enable pyLibrary's simple profiling (default False)
     (eg with Profiler("some description"):)
  *  **constants** - Map absolute path of module constants to the values that will
-    be assigned.  Used mostly to set debugging constants in modules.
+    be assigned. Used mostly to set debugging constants in modules.
 
 Of course, logging should be the first thing to be setup (aside from digesting
-settings of course).  For this reason, applications should have the following
+settings of course). For this reason, applications should have the following
 structure:
 
 ```python
@@ -323,7 +323,7 @@ Problems with Python Logging
 
 [Python's default `logging` module](https://docs.python.org/2/library/logging.html#logging.debug) 
 comes close to doing the right thing, but fails:  
-  * It has  keyword parameters, but they are expanded at call time so the values are lost in a string.  
+  * It has keyword parameters, but they are expanded at call time so the values are lost in a string.  
   * It has `extra` parameters, but they are lost if not used by the matching `Formatter`.  
   * It even has stack trace with `exc_info` parameter, but only if an exception is being handled.
 

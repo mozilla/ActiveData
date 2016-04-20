@@ -139,11 +139,11 @@ what is ploted
       * `series.marker.style.border` - *string* css border
     * `series.marker.size` - *number* size of the datapoint
   * `series.type` - *string* the chart type to show as (bar/line/dot)
-  * `series.axis` - *string* name of the axis to apply against: can be any #chart.axis property name.  Use tuple if plotting more than one dimension.
+  * `series.axis` - *string* name of the axis to apply against: can be any #chart.axis property name. Use tuple if plotting more than one dimension.
 ##`target` (string)
 name of dom elements to insert chart
 ##`title` Property
-details regarding the title.  Can also be a simple string.
+details regarding the title. Can also be a simple string.
 
   * `title.position` - *string* location of title relative to area (default=top)
   * `title.description` - *string* detail text shown while hovering over title (default=null)

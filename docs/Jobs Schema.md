@@ -8,10 +8,10 @@ individual actions.
 `jobs` Columns
 --------------
 
-These can be found at the top of each logfile.  Use the `run` properties 
+These can be found at the top of each logfile. Use the `run` properties 
 for finer grained querying
 
-* `action.builder` - *string* full build name given to this job.  Same as 
+* `action.builder` - *string* full build name given to this job. Same as 
   `run.key`
 * `action.start_time` - *timestamp* when buildbot started this action
 * `action.end_time` - *timestamp* when buildbot completed this action
@@ -25,7 +25,7 @@ for finer grained querying
 
 All timing details can be had by querying `{"from":"jobs.action.timings"}`.  
 Like everything else in Active Data, the various depth of timing has been 
-denormalized for ease of querying.  Each property here is the short form; 
+denormalized for ease of querying. Each property here is the short form; 
 prefix with `action.timings.` for the absolute name.
 
 * `order` - *integer* the number of this step for showing the order they 
@@ -37,11 +37,11 @@ prefix with `action.timings.` for the absolute name.
   number of parameters, which can be found here
   * `builder.start_time` - *timestamp* when the step started
   * `builder.end_time` - *timestamp* when the step ended
-  * `builder.duration` - *seconds* total length of time for this step.  It 
+  * `builder.duration` - *seconds* total length of time for this step. It 
   may be longer than what start/end would indicate because it includes the 
   inter-builder step time
   * `builder.elapsedTime` - Before the end of each BuildBot step the is an 
-  `elapsedTime=` line; which is the script reporting it is done.  This can 
+  `elapsedTime=` line; which is the script reporting it is done. This can 
   be much shorter than the `duration`, if BuildBot is acting slow.
 * `harness` - *object* properties for the mozharness steps
   * `harness.step` - *string* name of the step 
@@ -132,6 +132,6 @@ Markup from the ETL process
 * `etl.revision` - *string* git revision number of the ETL
 * `etl.duration` - *seconds* - how long the ETL took
 * `etl.source` - *object* another structure, just like this, which describes 
-the parent ETL that fed this:  An effective audit chain.
+the parent ETL that fed this: An effective audit chain.
 * `etl.name` - *string* humane description of this ETL step
 * `etl.type` - *string* either `join` or `aggregation` indicating if this ETL step was adding or reducing information

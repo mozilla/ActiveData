@@ -1,9 +1,9 @@
 Time
 ====
 
-All points in time are referenced as seconds since epoch GMT.  UTC is not used 
-due to the irregular leap seconds.  No one needs UTC unless you need accuracy 
-over 7 digits (measuring duration of months with accuracy of seconds).  The 
+All points in time are referenced as seconds since epoch GMT. UTC is not used 
+due to the irregular leap seconds. No one needs UTC unless you need accuracy 
+over 7 digits (measuring duration of months with accuracy of seconds). The 
 regularity of GMT allows us to define a vector space.
 
 Absolute Time
@@ -34,7 +34,7 @@ There are string constants to refer to the
  
 notice they are singular, not plural. 
 
-Durations can be added (`+`) and subtracted (`-`) from each other.  They can also be multiplied by a scalar which is simply prefix numeric value (no operator).
+Durations can be added (`+`) and subtracted (`-`) from each other. They can also be multiplied by a scalar which is simply prefix numeric value (no operator).
 
 	2month + week - 13hour
 
@@ -47,14 +47,14 @@ Time Expressions
 
 Time expressions are simplified with the floor function, denoted by pipe (`|`).   Floor only works on time points, and rounds down to closest time that is a multiple of the given duration since epoch GMT:
 
-* `June 30, 2015  19:50:10 | hour  ⇒ June 30, 2015 19:00:00` 
-* `June 30, 2015  19:50:10 | day   ⇒ June 30, 2015 00:00:00`
-* `June 30, 2015  19:50:10 | week  ⇒ June 28, 2015 00:00:00`
-* `June 30, 2015  19:50:10 | month ⇒ June 1, 2015 00:00:00` 
+* `June 30, 2015 19:50:10 | hour  ⇒ June 30, 2015 19:00:00` 
+* `June 30, 2015 19:50:10 | day   ⇒ June 30, 2015 00:00:00`
+* `June 30, 2015 19:50:10 | week  ⇒ June 28, 2015 00:00:00`
+* `June 30, 2015 19:50:10 | month ⇒ June 1, 2015 00:00:00` 
 
 It is convenient to use the floor function on the relative time 
 
-* `now | day`  same as `today`
+* `now | day` same as `today`
 * `today | month` for start of the current month
 
 You can also perform modulo arithmetic with the following identity:

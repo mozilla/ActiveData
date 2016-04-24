@@ -30,8 +30,7 @@ def process_batch(coverage_index, settings, please_stop):
         "groupby": ["source.file.name", "build.revision12"],
         "where": {"and": [
             {"missing": "source.method.name"},
-            {"missing": "source.file.min_line_siblings"},
-            {"eq":{"test.url":"resource://gre/modules/Preferences.jsm"}}
+            {"missing": "source.file.min_line_siblings"}
         ]},
         "format": "list",
         "limit": coalesce(settings.batch_size, 100)

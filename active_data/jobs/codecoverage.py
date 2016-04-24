@@ -10,20 +10,17 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary import convert
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, wrap
+from pyLibrary.dot import coalesce, wrap, unwrap
 from pyLibrary.env import http
 from pyLibrary.queries import jx
 from pyLibrary.testing import elasticsearch
 from pyLibrary.thread.threads import Signal
 from pyLibrary.thread.threads import Thread
 
-
-_ = convert
 
 def process_batch(coverage_index, settings, please_stop):
     # IDENTIFY NEW WORK
@@ -35,7 +32,7 @@ def process_batch(coverage_index, settings, please_stop):
             {"missing": "source.file.min_line_siblings"}
         ]},
         "format": "list",
-        "limit": coalesce(settings.batch_size, 1000)
+        "limit": coalesce(settings.batch_size, 100)
     })
 
     if not todo.data:
@@ -44,6 +41,39 @@ def process_batch(coverage_index, settings, please_stop):
     for not_summarized in todo.data:
         if please_stop:
             return True
+
+        # IS THERE MORE THAN ONE COVERAGE FILE FOR THIS REVISION?
+        Log.note("Find dups for file {{file}}", file=not_summarized.source.file.name)
+        dups = http.post_json(settings.url, json={
+            "from": "coverage",
+            "select": [
+                {"name": "max_id", "value": "etl.source.id", "aggregate": "max"},
+                {"name": "min_id", "value": "etl.source.id", "aggregate": "min"}
+            ],
+            "where": {"and": [
+                {"missing": "source.method.name"},
+                {"eq": {
+                    "source.file.name": not_summarized.source.file.name,
+                    "build.revision12": not_summarized.build.revision12
+                }},
+            ]},
+            "groupby": [
+                "test.url"
+            ],
+            "limit": 100000,
+            "format": "list"
+        })
+
+        dups_found = False
+        for d in dups.data:
+            if d.max_id != d.min_id:
+                dups_found = True
+                coverage_index.delete_record({"and": [
+                    {"not": {"term": {"etl.source.id": d.max_id}}},
+                    {"term": {"test.url": d.test.url}}
+                ]})
+        if dups_found:
+            continue
 
         # LIST ALL TESTS THAT COVER THIS FILE, AND THE LINES COVERED
         test_count = http.post_json(settings.url, json={
@@ -68,7 +98,7 @@ def process_batch(coverage_index, settings, please_stop):
         max_siblings = num_tests - 1
         Log.note("{{filename}} is covered by {{num}} tests", filename=not_summarized.source.file.name, num=num_tests)
         line_summary = list(
-            (k, wrap(list(v)))
+            (k, unwrap(wrap(list(v)).get("test.url")))
             for k, v in jx.groupby(test_count.data, keys="line")
         )
 
@@ -78,19 +108,26 @@ def process_batch(coverage_index, settings, please_stop):
             "where": {"and": [
                 {"missing": "source.method.name"},
                 {"in": {"test.url": all_tests_covering_file}},
-                {"eq": {"source.file.name": not_summarized.source.file.name}},
+                {"eq": {
+                    "source.file.name": not_summarized.source.file.name,
+                    "build.revision12": not_summarized.build.revision12
+                }}
             ]},
             "limit": 100000,
             "format": "list"
         })
 
         for test_name in all_tests_covering_file:
-            siblings = [len(t)-1 for g, t in line_summary if test_name in t.get("test.url")]
+            siblings = [len(test_names)-1 for g, test_names in line_summary if test_name in test_names]
             min_siblings = MIN(siblings)
-            coverage_record = jx.filter(file_level_coverage_records.data, lambda row, rownum, rows: row.test.url == test_name)[0]
+            coverage_candidates = jx.filter(file_level_coverage_records.data, lambda row, rownum, rows: row.test.url == test_name)
+            coverage_record = coverage_candidates[0]
             coverage_record.source.file.max_test_siblings = max_siblings
             coverage_record.source.file.min_line_siblings = min_siblings
             coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings + 1)
+
+        if [d for d in file_level_coverage_records.data if d["source.file.min_line_siblings"] == None]:
+            Log.warning("expecting all records to have summary")
 
         coverage_index.extend([{"id": d._id, "value": d} for d in file_level_coverage_records.data])
 
@@ -98,12 +135,14 @@ def process_batch(coverage_index, settings, please_stop):
 def loop(coverage_index, settings, please_stop):
     while not please_stop:
         try:
+            coverage_index.refresh()
             done = process_batch(coverage_index, settings, please_stop)
             if done:
                 return
         except Exception, e:
             Log.warning("Problem processing", cause=e)
     please_stop.go()
+
 
 def main():
     try:

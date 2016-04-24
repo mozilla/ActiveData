@@ -1,6 +1,11 @@
 {
 	"url":"http://activedata.allizom.org/query",
 	"batch_size": 1000,
+	"constants":{
+		"pyLibrary.env.http.default_headers":{
+			"referer":"https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
+		}
+	},
 	"elasticsearch": {
 		"host": "http://activedata.allizom.org",
 		"port": 9200,

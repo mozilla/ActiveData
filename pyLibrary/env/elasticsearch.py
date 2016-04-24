@@ -341,6 +341,9 @@ class Index(Features):
             Log.error("add() has changed to only accept one record, no lists")
         self.extend([record])
 
+    def refresh(self):
+        self.cluster.post("/" + self.settings.index + "/_refresh")
+
     # -1 FOR NO REFRESH
     def set_refresh_interval(self, seconds):
         if seconds <= 0:
@@ -953,7 +956,7 @@ class Alias(Features):
             raise NotImplementedError
 
         if self.debug:
-            Log.note("Delete bugs:\n{{query}}",  query= query)
+            Log.note("Delete documents:\n{{query}}", query=query)
 
         keep_trying = True
         while keep_trying:

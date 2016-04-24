@@ -12,34 +12,22 @@ Getting a feel for the JSON Expressions `select` clause is easiest done by compa
 <b>JSON Query Expression</b><br>
 <pre>
 {
-    "from": test,
     "select": [
-        {
-            "name":"name", 
-            "value":"person"
-        },
-        {
-            "name":"age", 
-            "value":"years"
-        }
-    ]
+        {"name":"name", "value":"person"},
+        {"name":"age", "value":"years"}
+    ],
+    "from": test
 }
 </pre>
 </td><td>
 <b>SQL</b><br>
 <pre>
+
 SELECT
 	person AS name,
 	years AS age
 FROM
 	test 
-
-
-
-
-
-
-
 
 </pre>
 </td></tr></table>
@@ -318,6 +306,13 @@ The star (`*`) can be used to refer to all leaves of a path. This behaviour is d
         "run.chunk": 2
     }]
 }
+
+
+
+
+
+
+
 </pre>
 
 </td><td>
@@ -352,7 +347,7 @@ The star (`*`) can be used to refer to all leaves of a path. This behaviour is d
 </pre>
 
 </td><td>
-<b>Select all as Table</b><br>
+<b>Select Self as Table</b><br>
 <pre>
 {
     "from": test,

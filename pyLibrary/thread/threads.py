@@ -399,7 +399,7 @@ class Thread(object):
         self.please_stop = self.kwargs["please_stop"]
 
         self.thread = None
-        self.stopped = Signal()
+        self.stopped = Signal(name+" has stopped")
         self.cprofiler = None
         self.children = []
 
@@ -653,7 +653,8 @@ class Signal(object):
     on_go() - METHOD FOR OTHER THREAD TO RUN WHEN ACTIVATING SIGNAL
     """
 
-    def __init__(self):
+    def __init__(self, name=None):
+        self._name = name
         self.lock = Lock()
         self._go = False
         self.job_queue = []
@@ -668,7 +669,6 @@ class Signal(object):
     def __nonzero__(self):
         with self.lock:
             return self._go
-
 
     def wait_for_go(self, timeout=None, till=None):
         """
@@ -688,6 +688,10 @@ class Signal(object):
             if self._go:
                 return
 
+            if DEBUG:
+                if not _Log:
+                    _late_import()
+                _Log.note("Thread {{thread|quote}} signaled {{name|quote}}", thread=Thread.current().name, name=self.name)
             self._go = True
             jobs = self.job_queue
             self.job_queue = []
@@ -715,10 +719,27 @@ class Signal(object):
 
         with self.lock:
             if self._go:
+                if DEBUG:
+                    if not _Log:
+                        _late_import()
+                    _Log.note("{{thread|quote}} sees signal {{name|quote}} already triggered, running job immediately", thread=Thread.current().name, name=self.name)
                 target()
             else:
+                if DEBUG:
+                    if not _Log:
+                        _late_import()
+                    _Log.note("{{thread|quote}} adding job to {{name|quote}}", thread=Thread.current().name, name=self.name)
                 self.job_queue.append(target)
 
+    @property
+    def name(self):
+        if not self._name:
+            return "anonymous signal"
+        else:
+            return self._name
+
+    def __str__(self):
+        return self.name.decode(unicode)
 
 class ThreadedQueue(Queue):
     """

@@ -144,7 +144,7 @@ def capture_termination_signal(please_stop):
 
 @cache
 def get_instance_metadata():
-    output = wrap({k.replace("-", "_"): v for k, v in boto_utils.get_instance_metadata().items()})
+    output = wrap({k.replace("-", "_"): v for k, v in boto_utils.get_instance_metadata(timeout=5, num_retries=2).items()})
     return output
 
 

@@ -79,7 +79,7 @@ def pypy_json_encode(value, pretty=False):
         return pretty_json(value)
 
     try:
-        _buffer = UnicodeBuilder(1024)
+        _buffer = UnicodeBuilder(2048)
         _value2json(value, _buffer)
         output = _buffer.build()
         return output
@@ -229,7 +229,7 @@ def _list2json(value, _buffer):
         sep = u"["
         for v in value:
             append(_buffer, sep)
-            sep = u", "
+            sep = u","
             _value2json(v, _buffer)
         append(_buffer, u"]")
 

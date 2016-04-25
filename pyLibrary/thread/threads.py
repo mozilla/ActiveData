@@ -722,13 +722,13 @@ class Signal(object):
                 if DEBUG:
                     if not _Log:
                         _late_import()
-                    _Log.note("{{thread|quote}} sees signal {{name|quote}} already triggered, running job immediately", thread=Thread.current().name, name=self.name)
+                    _Log.note("Signal {{name|quote}} already triggered, running job immediately", name=self.name)
                 target()
             else:
                 if DEBUG:
                     if not _Log:
                         _late_import()
-                    _Log.note("{{thread|quote}} adding job to {{name|quote}}", thread=Thread.current().name, name=self.name)
+                    _Log.note("Adding job to signal {{name|quote}}", name=self.name)
                 self.job_queue.append(target)
 
     @property
@@ -740,6 +740,7 @@ class Signal(object):
 
     def __str__(self):
         return self.name.decode(unicode)
+
 
 class ThreadedQueue(Queue):
     """

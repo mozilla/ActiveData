@@ -18,28 +18,14 @@ from pyLibrary.dot import coalesce, wrap, unwrap
 from pyLibrary.env import http
 from pyLibrary.queries import jx
 from pyLibrary.testing import elasticsearch
-from pyLibrary.thread.threads import Signal
+from pyLibrary.thread.threads import Signal, Queue
 from pyLibrary.thread.threads import Thread
 
+NUM_THREAD=4
 
-def process_batch(coverage_index, settings, please_stop):
-    # IDENTIFY NEW WORK
-    Log.note("Identify new coverage to work on")
-    todo = http.post_json(settings.url, json={
-        "from": "coverage",
-        "groupby": ["source.file.name", "build.revision12"],
-        "where": {"and": [
-            {"missing": "source.method.name"},
-            {"missing": "source.file.min_line_siblings"}
-        ]},
-        "format": "list",
-        "limit": coalesce(settings.batch_size, 100)
-    })
 
-    if not todo.data:
-        return True
-
-    for not_summarized in todo.data:
+def process_batch(todo, coverage_index, settings, please_stop):
+    for not_summarized in todo:
         if please_stop:
             return True
 
@@ -134,15 +120,54 @@ def process_batch(coverage_index, settings, please_stop):
 
 
 def loop(coverage_index, settings, please_stop):
-    while not please_stop:
-        try:
+    try:
+        while not please_stop:
             coverage_index.refresh()
-            done = process_batch(coverage_index, settings, please_stop)
-            if done:
+
+            # IDENTIFY NEW WORK
+            Log.note("Identify new coverage to work on")
+            todo = http.post_json(settings.url, json={
+                "from": "coverage",
+                "groupby": ["source.file.name", "build.revision12"],
+                "where": {"and": [
+                    {"missing": "source.method.name"},
+                    {"missing": "source.file.min_line_siblings"}
+                ]},
+                "format": "list",
+                "limit": coalesce(settings.batch_size, 100)
+            })
+
+            if not todo.data:
                 please_stop.go()
                 return
-        except Exception, e:
-            Log.warning("Problem processing", cause=e)
+
+            queue = Queue("work queue")
+            queue.extend(todo.data)
+
+            threads = [
+                Thread.run(
+                    "processor" + unicode(i),
+                    process_batch,
+                    queue,
+                    coverage_index,
+                    settings,
+                    please_stop=please_stop
+                )
+                for i in range(NUM_THREAD)
+            ]
+
+            # ADD A STOP MESSAGE FOR EACH THREAD
+            for i in range(NUM_THREAD):
+                queue.add(Thread.STOP)
+
+            # WAIT FOR THEM TO COMPLETE
+            for t in threads:
+                t.join()
+
+    except Exception, e:
+        Log.warning("Problem processing", cause=e)
+    finally:
+        please_stop.go()
 
 
 def main():

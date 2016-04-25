@@ -227,7 +227,7 @@ class Index(Features):
                 "query": {"match_all": {}},
                 "filter": filter
             }}
-        elif self.cluster.cluster_state.version.number.startswith("1.0"):
+        elif self.cluster.cluster_state.version.number.startswith("1."):
             query = {"query": {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
@@ -241,7 +241,7 @@ class Index(Features):
         result = self.cluster.delete(
             self.path + "/_query",
             data=convert.value2json(query),
-            timeout=60
+            timeout=600
         )
 
         for name, status in result._indices.items():
@@ -730,7 +730,20 @@ class Cluster(object):
             else:
                 Log.error("Problem with call to {{url}}" + suggestion, url=url, cause=e)
 
-
+    def delete(self, path, **kwargs):
+        url = self.settings.host + ":" + unicode(self.settings.port) + path
+        try:
+            response = http.delete(url, **kwargs)
+            if response.status_code not in [200]:
+                Log.error(response.reason+": "+response.all_content)
+            if self.debug:
+                Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 130))
+            details = wrap(convert.json2value(utf82unicode(response.all_content)))
+            if details.error:
+                Log.error(details.error)
+            return details
+        except Exception, e:
+            Log.error("Problem with call to {{url}}", url=url, cause=e)
 
     def get(self, path, **kwargs):
         url = self.settings.host + ":" + unicode(self.settings.port) + path

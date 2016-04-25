@@ -55,9 +55,20 @@ def process_batch(todo, coverage_index, settings, please_stop):
         for d in dups.data:
             if d.max_id != d.min_id:
                 dups_found = True
+                Log.note(
+                    "removing dups {{details|json}}",
+                    details={
+                        "id": int(d.max_id),
+                        "test": d.test.url,
+                        "source": not_summarized.source.file.name,
+                        "revision": not_summarized.build.revision12
+                    }
+                )
                 coverage_index.delete_record({"and": [
-                    {"not": {"term": {"etl.source.id": d.max_id}}},
-                    {"term": {"test.url": d.test.url}}
+                    {"not": {"term": {"etl.source.id": int(d.max_id)}}},
+                    {"term": {"test.url": d.test.url}},
+                    {"term": {"source.file.name": not_summarized.source.file.name}},
+                    {"term": {"build.revision12": not_summarized.build.revision12}}
                 ]})
         if dups_found:
             continue

@@ -194,6 +194,10 @@ def post(url, **kwargs):
     return HttpResponse(request(b'post', url, **kwargs))
 
 
+def delete(url, **kwargs):
+    return HttpResponse(request(b'delete', url, **kwargs))
+
+
 def post_json(url, **kwargs):
     """
     ASSUME RESPONSE IN IN JSON

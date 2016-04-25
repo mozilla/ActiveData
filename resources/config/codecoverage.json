@@ -18,6 +18,20 @@
 		"cprofile": false,
 		"log": [
 			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "/logs/codecoverage.log",
+				"maxBytes": 10000000,
+				"backupCount": 10,
+				"encoding": "utf8"
+			},
+			{
+				"log_type": "ses",
+				"from_address": "klahnakoski@mozilla.com",
+				"to_address": "klahnakoski@mozilla.com",
+				"subject": "[ALERT][Manager] Problem in CodeCoverage Post Processing",
+				"$ref": "file://~/private.json#aws_credentials"
+			},
+			{
 				"log_type": "console"
 			}
 		]

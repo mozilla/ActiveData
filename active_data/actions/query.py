@@ -162,9 +162,9 @@ def replace_vars(text, params=None):
     REPLACE {{vars}} WITH ENVIRONMENTAL VALUES
     """
     start = 0
-    var = strings.between(text, "{{", "}}", start)
+    var = strings.between(text, "\"{{", "}}\"", start)
     while var:
-        replace = "{{" + var + "}}"
+        replace = "\"{{" + var + "}}\""
         index = text.find(replace, 0)
         end = index + len(replace)
 

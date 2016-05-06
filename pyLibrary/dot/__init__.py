@@ -85,6 +85,16 @@ def join_field(field):
     return ".".join([f.replace(".", "\.") for f in potent])
 
 
+def startswith_field(field, prefix):
+    """
+    RETURN True IF field PATH STRING STARTS WITH prefix PATH STRING
+    """
+    if field.startswith(prefix):
+        if len(field) == len(prefix) or field[len(prefix)] == ".":
+            return True
+    return False
+
+
 def hash_value(v):
     if isinstance(v, (set, tuple, list)):
         return hash(tuple(hash_value(vv) for vv in v))

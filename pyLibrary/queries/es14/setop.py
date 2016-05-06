@@ -20,6 +20,7 @@ from pyLibrary.dot import listwrap
 from pyLibrary.maths import Math
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import es14, es09
+from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.domains import is_keyword, ALGEBRAIC
 from pyLibrary.queries.es14.util import jx_sort_to_es_sort
@@ -67,7 +68,7 @@ def extract_rows(es, es_query, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
     new_select = DictList()
     columns = query.frum.get_columns()
-    leaf_columns = set(c.name for c in columns if c.type not in ["object", "nested"] and (not c.nested_path or c.es_column == c.nested_path))
+    leaf_columns = set(c.name for c in columns if c.type not in STRUCT and (not c.nested_path or c.es_column == c.nested_path))
     nested_columns = set(c.name for c in columns if c.nested_path)
 
     i = 0

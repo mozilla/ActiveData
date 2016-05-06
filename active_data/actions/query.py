@@ -22,7 +22,7 @@ from pyLibrary.dot import coalesce, listwrap, join_field, split_field
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx, meta
-from pyLibrary.queries.containers import Container
+from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.meta import TOO_OLD
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Thread
@@ -130,7 +130,7 @@ def _test_mode_wait(query):
     })
 
     # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
-    cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in ["nested", "object"]]
+    cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in STRUCT]
     for c in cols:
         Log.note("Mark {{column}} dirty at {{time}}", column=c.name, time=now)
         c.last_updated = now - TOO_OLD
@@ -138,7 +138,7 @@ def _test_mode_wait(query):
 
     while end_time > now:
         # GET FRESH VERSIONS
-        cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in ["nested", "object"]]
+        cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in STRUCT]
         for c in cols:
             if not c.last_updated or c.cardinality == None :
                 Log.note(

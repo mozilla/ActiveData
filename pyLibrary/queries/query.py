@@ -23,7 +23,7 @@ from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.maths import Math
 from pyLibrary.queries import Schema, wrap_from
-from pyLibrary.queries.containers import Container
+from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain, is_keyword
 from pyLibrary.queries.expressions import jx_expression, TrueOp, Expression, FalseOp, Variable, LeavesOp
@@ -345,7 +345,7 @@ def _normalize_select(select, frum, schema=None):
                         canonical
                     )
                     for c in frum.get_columns()
-                    if c.type not in ["object", "nested"]
+                    if c.type not in STRUCT
                 ])
             else:
                 output.extend([

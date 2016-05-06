@@ -19,10 +19,10 @@ from copy import copy
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, coalesce, Dict, wrap, Null, unwraplist, split_field, join_field, literal_field, \
-    set_default
+    set_default, startswith_field, unwrap
 from pyLibrary.maths.randoms import Random
 from pyLibrary.queries import jx
-from pyLibrary.queries.containers import Container
+from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain
 from pyLibrary.queries.expressions import jx_expression, CoalesceOp, Variable
 from pyLibrary.queries.meta import Column
@@ -30,11 +30,14 @@ from pyLibrary.queries.query import QueryOp
 from pyLibrary.sql.sqlite import Sqlite
 from pyLibrary.times.dates import Date
 
-UID_PREFIX = "___"
+
+UID = "__id__"
+ORDER = "__order__"
+PARENT = "__parent__"
 
 
 class Table_usingSQLite(Container):
-    def __init__(self, name, db=None, uid=UID_PREFIX+"id", exists=False):
+    def __init__(self, name, db=None, uid=UID, exists=False):
         """
         :param name: NAME FOR THIS TABLE
         :param db: THE DB TO USE
@@ -46,20 +49,20 @@ class Table_usingSQLite(Container):
             self.db = db
         else:
             self.db = db = Sqlite()
+
         self.name = name
         self.uid = listwrap(uid)
+        self._next_uid = 1
 
         self.columns = {}
-        for u in uid:
+        for u in self.uid:
             if not self.columns.get(u, None):
                 cs = self.columns[u] = set()
-            if u.startswith(UID_PREFIX):
-                cs.add(Column(name=u, table=name, type="integer", es_column=typed_column(u, "integer"), es_index=name))
-            else:
-                cs.add(Column(name=u, table=name, type="text", es_column=typed_column(u, "text"), es_index=name))
+            if u != UID:
+                cs.add(Column(name=u, table=name, type="string", es_column=typed_column(u, "string"), es_index=name))
 
         self.uid_accessor = jx.get(self.uid)
-        self.nested_tables = {}  # MAP FROM TABLE NAME TO Table OBJECT
+        self.nested_tables = {}  # MAP FROM NESTED PATH TO Table OBJECT
         if exists:
             # LOAD THE COLUMNS
             command = "PRAGMA table_info(" + quote_table(name) + ")"
@@ -80,14 +83,27 @@ class Table_usingSQLite(Container):
                 if not cs:
                     cs = self.columns[name] = set()
                 cs.add(column)
+            # TODO: FOR ALL TABLES, FIND THE MAX ID
         else:
             command = "CREATE TABLE " + quote_table(name) + "(" + \
-                      (",".join(_quote_column(c) + " " + c.type for u, cs in self.columns.items() for c in cs)) + \
+                      (",".join(
+                          [quote_table(UID) + " INTEGER"] +
+                          [_quote_column(c) + " " + sql_types[c.type] for u, cs in self.columns.items() for c in cs]
+                      )) + \
                       ", PRIMARY KEY (" + \
-                      (", ".join(_quote_column(c) for u in self.uid for c in self.columns[u])) + \
+                      (", ".join(
+                          [quote_table(UID)] +
+                          [_quote_column(c) for u in self.uid for c in self.columns[u]]
+                      )) + \
                       "))"
 
             self.db.execute(command)
+
+    def next_uid(self):
+        try:
+            return self._next_uid
+        finally:
+            self._next_uid += 1
 
     def __del__(self):
         self.db.execute("DROP TABLE " + quote_table(self.name))
@@ -99,7 +115,7 @@ class Table_usingSQLite(Container):
         output = []
         for columns_by_type in self.columns.values():
             for c in columns_by_type:
-                if c.type in ["nested", "object"]:
+                if c.type in STRUCT:
                     continue
                 c = c.__copy__()
                 c.type = "value"  # MULTI-VALUED, SO HIDE THE TYPE IN THIS GENERIC NAME
@@ -141,13 +157,12 @@ class Table_usingSQLite(Container):
         if column.type == "nested":
             nested_table_name = join_field(split_field(self.name) + split_field(column.name))
             # MAKE THE TABLE
-            table = Table_usingSQLite(nested_table_name, self.db, self.uid + [UID_PREFIX+"id"+unicode(len(self.uid))], exists=False)
-            self.nested_tables[nested_table_name] = table
+            table = Table_usingSQLite(nested_table_name, self.db, exists=False)
+            self.nested_tables[column.name] = table
         else:
             self.db.execute(
                 "ALTER TABLE " + quote_table(self.name) + " ADD COLUMN " + _quote_column(column) + " " + column.type
             )
-
 
     def __len__(self):
         counter = self.db.query("SELECT COUNT(*) FROM " + quote_table(self.name))[0][0]
@@ -174,7 +189,7 @@ class Table_usingSQLite(Container):
         return [o[0] for o in output]
 
     def __iter__(self):
-        columns = [c for c, cs in self.columns.items() for c in cs if c.type not in ["object", "nested"]]
+        columns = [c for c, cs in self.columns.items() for c in cs if c.type not in STRUCT]
         command = "SELECT " + \
                   ",\n".join(_quote_column(c) for c in columns) + \
                   " FROM " + quote_table(self.name)
@@ -214,7 +229,7 @@ class Table_usingSQLite(Container):
             v: c.es_column
             for v in _vars
             for c in self.columns.get(v, Null)
-            if c.type not in ["nested", "object"]
+            if c.type not in STRUCT
             }
         where_sql = where.map(_map).to_sql()
         new_columns = set(command.set.keys()) - set(self.columns.keys())
@@ -234,7 +249,7 @@ class Table_usingSQLite(Container):
         for nested_column_name, nested_value in command.set.items():
             if get_type(nested_value) == "nested":
                 nested_table_name = join_field(split_field(self.name)+split_field(nested_column_name))
-                nested_table = self.nested_tables[nested_table_name]
+                nested_table = self.nested_tables[nested_column_name]
                 self_primary_key = ",".join(quote_table(c.es_column) for u in self.uid for c in self.columns[u])
                 extra_key_name = UID_PREFIX+"id"+unicode(len(self.uid))
                 extra_key = [e for e in nested_table.columns[extra_key_name]][0]
@@ -317,7 +332,7 @@ class Table_usingSQLite(Container):
                             table=self.name,
                             es_index=c.es_index,
                             es_column=c.es_column,
-                            nested_path=[nested_column_name]+listwrap(c.nested_path)
+                            nested_path=unwraplist([nested_column_name]+listwrap(c.nested_path))
                         )
                         if c.name not in self.columns:
                             self.columns[column.name] = {column}
@@ -362,7 +377,7 @@ class Table_usingSQLite(Container):
         select = []
         column_names = []
         for cname, cs in self.columns.items():
-            cs = [c for c in cs if c.type not in ["nested", "object"] and not c.nested_path]
+            cs = [c for c in cs if c.type not in STRUCT and not c.nested_path]
             if len(cs) == 0:
                 continue
             column_names.append(cname)
@@ -583,7 +598,7 @@ class Table_usingSQLite(Container):
             for cname, cs in self.columns.items():
                 num_types = 0
                 for c in cs:
-                    if c.type in ["nested", "object"]:
+                    if c.type in STRUCT:
                         continue
                     if not num_types:
                         new_select = select.copy()
@@ -601,38 +616,160 @@ class Table_usingSQLite(Container):
             Log.error("not done")
         return output
 
+    def change_schema(self, required_changes):
+        required_changes=wrap(required_changes)
+        for required_change in required_changes:
+            if required_change.add:
+                column = required_change.add
+                if column.type == "nested":
+                    # WE ARE ALSO NESTING
+                    self.nest_column(column, column.name)
+
+                table = join_field([self.name] + split_field(listwrap(column.nested_path)[0]))
+
+                self.db.execute(
+                    "ALTER TABLE " + quote_table(table) + " ADD COLUMN " + _quote_column(column) + " " + sql_types[column.type]
+                )
+
+                cols = self.columns.get(column.name)
+                if cols is None:
+                    cols = self.columns[column.name] = set()
+                cols.add(column)
+
+            elif required_change.nest:
+                column = required_change.nest
+                new_path = required_change.new_path
+                self.nest_column(column, new_path)
+
+                # REMOVE KNOWLEDGE OF PARENT COLUMNS (DONE AUTOMATICALLY)
+
+                # DELETE PARENT COLUMNS?
+
+    def nest_column(self, column, new_path):
+        destination_table = join_field([self.name] + split_field(new_path))
+        existing_table = join_field([self.name] + split_field(listwrap(column.nested_path)[0]))
+
+        # FIND THE INNER COLUMNS WE WILL BE MOVING
+        new_columns = {}
+        for cname, cols in self.columns.items():
+            if startswith_field(cname, column.name):
+                new_columns[cname] = set()
+                for col in cols:
+                    new_columns[cname].add(col)
+                    col.nested_path = unwraplist([new_path] + listwrap(col.nested_path))
+
+        # DEFINE A NEW TABLE?
+        # LOAD THE COLUMNS
+        command = "PRAGMA table_info(" + quote_table(destination_table) + ")"
+        details = self.db.query(command)
+        if details.data:
+            raise Log.error("not expected, new nesting!")
+        self.nested_tables[new_path] = sub_table = Table_usingSQLite(destination_table, self.db, exists=False)
+
+        self.db.execute(
+            "ALTER TABLE " + quote_table(sub_table.name) + " ADD COLUMN " + quote_table(PARENT) + " INTEGER"
+        )
+        self.db.execute(
+            "ALTER TABLE " + quote_table(sub_table.name) + " ADD COLUMN " + quote_table(ORDER) + " INTEGER"
+        )
+        for cname, cols in new_columns.items():
+            for c in cols:
+                sub_table.add_column(c)
+
+        # FILL TABLE WITH EXISTING COLUMN DATA
+        command = "INSERT INTO " + quote_table(destination_table) + "(" + \
+                  ",".join(
+                      [quote_table(UID), quote_table(PARENT), quote_table(ORDER)] +
+                      [_quote_column(c) for _, cols in sub_table.columns.items() for c in cols]
+                  ) + \
+                  ")" + \
+                  " SELECT " + ",".join(
+                      [quote_table(UID), quote_table(UID), "0"] +
+                      [_quote_column(c) for _, cols in sub_table.columns.items() for c in cols]
+                  ) + \
+                  " FROM " + quote_table(existing_table)
+        self.db.execute(command)
+
     def flatten(self, doc, uid, doc_collection, path=None):
         """
-        :param doc:  THE JSON DOCUMENT
-        :param doc_collection: MAP NESTED PATH TO INSERTION PARAMETERS
+        :param doc: THE JSON DOCUMENT
+        :param uid: ID ASSIGNED TO THIS (NESTED) DOCUMENT
+        :param doc_collection: MAP FROM NESTED PATH TO INSERTION PARAMETERS
+               {"active_columns": list, "rows": list of objects}
+        :param path: FULL PATH TO THIS (INNER/NESTED) DOCUMENT
+        :return: TUPLE (success, command) WHERE
+                 success: BOOLEAN INDICATING PROPER PARSING
+                 command: SCHEMA CHANGES REQUIRED TO BE SUCCESSFUL NEXT TIME
         """
 
-        def _flatten(d, uid, path, nested_path):
-            insertion = doc_collection["." if not nested_path else nested_path[0]]
-            row = uid.copy()
-            insertion.rows.append(row)
+        # TODO: COMMAND TO ADD COLUMNS
+        # TODO: COMMAND TO NEST EXISTING COLUMNS
+        # COLLECT AS MANY doc THAT DO NOT REQUIRE SCHEMA CHANGE
+
+        required_changes = []
+
+        def _flatten(d, uid, parent_id, order, full_path, nested_path, row=None):
+            insertion = doc_collection[nested_path[0]]
+            if not row:
+                row = {UID: uid, PARENT: parent_id, ORDER: order}
+                insertion.rows.append(row)
+
             if isinstance(d, Mapping):
                 for k, v in d.items():
-                    cname = join_field(split_field(path)+[k])
-                    ctype = get_type(v)
-                    if ctype is None:
+                    cname = join_field(split_field(full_path) + [k])
+                    value_type = get_type(v)
+                    if value_type is None:
                         continue
 
-                    c = unwraplist([c for c in self.columns.get(cname, Null) if c.type == ctype])
+                    if value_type in STRUCT:
+                        c = unwraplist(
+                            [c for c in self.columns.get(cname, Null) if c.type in STRUCT]
+                        )
+                    else:
+                        c = unwraplist(
+                            [c for c in self.columns.get(cname, Null) if c.type == value_type]
+                        )
+
                     if not c:
+                        # WHAT IS THE NESTING LEVEL FOR THIS PATH?
+                        deeper_nested_path = "."
+                        for path, sub_table in self.nested_tables.items():
+                            if startswith_field(cname, path) and len(deeper_nested_path) < path:
+                                deeper_nested_path = path
+                        if deeper_nested_path != nested_path[0]:
+                            # I HIGHLY SUSPECT, THROUGH CALLING _flatten() AGAIN THE REST OF THIS BLOCK IS NOT NEEDED
+                            nested_column = unwraplist(
+                                [c for c in self.columns.get(deeper_nested_path, Null) if c.type in STRUCT]
+                            )
+                            insertion.active_columns.add(nested_column)
+                            row[nested_column.es_column] = "."
+
+                            nested_path = [deeper_nested_path] + nested_path
+                            insertion = doc_collection.get(nested_path[0], None)
+                            if not insertion:
+                                insertion = doc_collection[nested_path[0]] = Dict(
+                                    active_columns=set(),
+                                    rows=[]
+                                )
+                            uid, parent_id, order = self.next_uid(), uid, 0
+                            row = {UID: uid, PARENT: parent_id, ORDER: order}
+                            insertion.rows.append(row)
+
                         c = Column(
                             name=cname,
                             table=self.name,
-                            type=ctype,
-                            es_column=typed_column(cname, ctype),
-                            es_index=self.name,
-                            nested_path=nested_path
+                            type=value_type,
+                            es_column=typed_column(cname, value_type),
+                            es_index=self.name,  # THIS MAY BE THE WRONG TABLE, IF THIS PATH IS A NESTED DOC
+                            nested_path=unwraplist(nested_path[:-1])
                         )
-                        self.add_column(c)
+                        required_changes.append({"add": c})
+
                     insertion.active_columns.add(c)
 
-                    if ctype == "nested":
-                        row[cname] = "."
+                    # BE SURE TO NEST VALUES, IF NEEDED
+                    if value_type == "nested":
+                        row[c.es_column] = "."
                         deeper = [cname] + listwrap(nested_path)
                         insertion = doc_collection.get(cname, None)
                         if not insertion:
@@ -641,36 +778,46 @@ class Table_usingSQLite(Container):
                                 rows=[]
                             )
                         for i, r in enumerate(v):
-                            child_uid = set_default({UID_PREFIX+"id"+unicode(len(uid)): i}, uid)
-                            _flatten(r, child_uid, cname, deeper)
-                    elif ctype == "object":
-                        row[cname] = "."
-                        _flatten(v, cname, nested_path)
+                            child_uid = self.next_uid()
+                            _flatten(r, child_uid, uid, i, cname, deeper)
+                    elif value_type == "object":
+                        row[c.es_column] = "."
+                        _flatten(v, uid, parent_id, order, cname, nested_path, row=row)
                     elif c.type:
-                        row[cname] = v
+                        row[c.es_column] = v
             else:
-                k="."
-                v=d
-                cname = join_field(split_field(path)+[k])
-                ctype = get_type(v)
-                if ctype is None:
+                k = "."
+                v = d
+                cname = join_field(split_field(full_path) + [k])
+                value_type = get_type(v)
+                if value_type is None:
                     return
 
-                c = unwraplist([c for c in self.columns.get(cname, Null) if c.type == ctype])
+                if value_type in STRUCT:
+                    c = unwraplist([c for c in self.columns.get(cname, Null) if c.type in STRUCT])
+                else:
+                    c = unwraplist([c for c in self.columns.get(cname, Null) if c.type == value_type])
+
                 if not c:
                     c = Column(
                         name=cname,
                         table=self.name,
-                        type=ctype,
-                        es_column=typed_column(cname, ctype),
+                        type=value_type,
+                        es_column=typed_column(cname, value_type),
                         es_index=self.name,
                         nested_path=nested_path
                     )
-                    self.add_column(c)
+                    required_changes.append(c)
+                    Log.error("continue looking for more changes")
+
                 insertion.active_columns.add(c)
 
-                if ctype == "nested":
-                    row[cname] = "."
+                if value_type == "nested":
+                    if c.type == "object":
+                        # WE CAN FIX THIS,
+                        Log.error("fix this")
+
+                    row[c.es_column] = "."
                     deeper = [cname] + listwrap(nested_path)
                     insertion = doc_collection.get(cname, None)
                     if not insertion:
@@ -679,22 +826,58 @@ class Table_usingSQLite(Container):
                             rows=[]
                         )
                     for i, r in enumerate(v):
-                        child_uid = set_default({UID_PREFIX+"id"+unicode(len(uid)): i}, uid)
-                        _flatten(r, child_uid, cname, deeper)
-                elif ctype == "object":
-                    row[cname] = "."
-                    _flatten(v, cname, nested_path)
+                        child_uid = self.next_uid()
+                        _flatten(r, child_uid, uid, i, cname, deeper)
+                elif value_type == "object":
+                    if c.type == "nested":
+                        # MOVE TO SINGLE-VALUED LIST
+                        child_uid = self.next_uid()
+                        row[c.es_column] = "."
+                        deeper = [cname] + listwrap(nested_path)
+                        _flatten(v, child_uid, uid, 0, cname, deeper)
+                    else:
+                        row[c.es_column] = "."
+                        _flatten(v, uid, parent_id, order, nested_path, row=row)
                 elif c.type:
-                    row[cname] = v
+                    row[c.es_column] = v
 
         insertion = doc_collection.get(".", None)
         if not insertion:
             doc_collection["."] = Dict(
                 active_columns=set(),
-                rows = []
+                rows=[]
             )
 
-        _flatten(doc, uid, coalesce(path, "."), None)
+        _flatten(doc, uid, 0, 0, full_path=coalesce(path, "."), nested_path=["."])
+        if required_changes:
+            return False, required_changes
+        else:
+            return True, []
+
+    def _insert(self, collection):
+        for nested_path, details in collection.items():
+            active_columns = wrap(list(details.active_columns))
+            rows = details.rows
+            table_name = join_field(split_field(self.name)+split_field(nested_path))
+
+            if table_name == self.name:
+                # DO NOT REQUIRE PARENT OR ORDER COLUMNS
+                meta_columns = [UID]
+            else:
+                meta_columns = [UID, PARENT, ORDER]
+
+            all_columns = meta_columns + active_columns.es_column
+
+            prefix = "INSERT INTO " + quote_table(table_name) + \
+                     "(" + ",".join(map(quote_table, all_columns)) + ")"
+
+            # BUILD THE RECORDS
+            records = " UNION ALL ".join(
+                "\nSELECT " + ",".join(quote_value(row.get(c)) for c in all_columns)
+                for row in unwrap(rows)
+            )
+
+            self.db.execute(prefix + records)
 
 
 def quote_table(column):
@@ -729,26 +912,26 @@ def column_key(k, v):
     if v == None:
         return None
     elif isinstance(v, basestring):
-        return k, "text"
+        return k, "string"
     elif isinstance(v, list):
         return k, None
     elif isinstance(v, Mapping):
         return k, "object"
     elif isinstance(v, Date):
-        return k, "real"
+        return k, "number"
     else:
-        return k, "real"
+        return k, "number"
 
 
 def get_type(v):
     if v == None:
         return None
     elif isinstance(v, basestring):
-        return "text"
+        return "string"
     elif isinstance(v, Mapping):
         return "object"
     elif isinstance(v, (int, float, Date)):
-        return "real"
+        return "number"
     elif isinstance(v, list):
         return "nested"
     return None
@@ -779,19 +962,21 @@ def get_if_type(value, type):
 def is_type(value, type):
     if value == None:
         return False
-    elif isinstance(value, basestring) and type == "text":
+    elif isinstance(value, basestring) and type == "string":
         return value
     elif isinstance(value, list):
         return False
     elif isinstance(value, Mapping) and type == "object":
         return True
-    elif isinstance(value, (int, float, Date)) and type == "real":
+    elif isinstance(value, (int, float, Date)) and type == "number":
         return True
     return False
 
 
-def typed_column(name, type):
-    return join_field(split_field(name)+["$" + type])
+def typed_column(name, type_):
+    if type_ == "nested":
+        type_ = "object"
+    return join_field(split_field(name) + ["$" + type_])
 
 
 def untyped_column(column_name):
@@ -813,8 +998,11 @@ sql_aggs = {
 }
 
 sql_types = {
-    "string": "text",
-    "long": "integer",
-    "double": "real",
-    "boolean": "integer"
+    "string": "TEXT",
+    "integer": "INTEGER",
+    "number": "REAL",
+    "boolean": "INTEGER",
+    "object": "TEXT",
+    "nested": "TEXT"
 }
+

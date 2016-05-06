@@ -15,6 +15,7 @@ from pyLibrary import queries, convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import split_field, DictList, listwrap, literal_field, coalesce, Dict, unwrap
 from pyLibrary.queries import es09, es14
+from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.es14.setop import format_dispatch
 from pyLibrary.queries.es14.util import jx_sort_to_es_sort
 from pyLibrary.queries.expressions import split_expression_by_depth, simplify_esfilter, AndOp, compile_expression, \
@@ -105,7 +106,7 @@ def es_deepop(es, query):
                 if s.value.term.var==".":
                     # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
                     for c in columns:
-                        if c.relative and c.type not in ["nested", "object"]:
+                        if c.relative and c.type not in STRUCT:
                             if not c.nested_path:
                                 es_query.fields += [c.es_column]
                             new_select.append({
@@ -125,7 +126,7 @@ def es_deepop(es, query):
                     column = s.term.value.var+"."
                     prefix = len(column)
                     for c in columns:
-                        if c.name.startswith(column) and c.type not in ["object", "nested"]:
+                        if c.name.startswith(column) and c.type not in STRUCT:
                             pull = get_pull(c)
                             if len(listwrap(c.nested_path)) == 0:
                                 es_query.fields += [c.es_column]
@@ -140,7 +141,7 @@ def es_deepop(es, query):
         elif isinstance(s.value, Variable):
             if s.value.var == ".":
                 for c in columns:
-                    if c.relative and c.type not in ["nested", "object"]:
+                    if c.relative and c.type not in STRUCT:
                         if not c.nested_path:
                             es_query.fields += [c.es_column]
                         new_select.append({
@@ -162,7 +163,7 @@ def es_deepop(es, query):
                 column = columns[(s.value.var,)]
                 parent = column.es_column+"."
                 prefix = len(parent)
-                net_columns = [c for c in columns if c.es_column.startswith(parent) and c.type not in ["object", "nested"]]
+                net_columns = [c for c in columns if c.es_column.startswith(parent) and c.type not in STRUCT]
                 if not net_columns:
                     pull = get_pull(column)
                     if not column.nested_path:

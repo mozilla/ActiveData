@@ -102,3 +102,4 @@ class TestContainer(FuzzyTestCase):
         table.change_schema(required_changes)
         table._insert(collection)
 
+        table.query({"from": table.name})

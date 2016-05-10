@@ -568,18 +568,19 @@ class Table_usingSQLite(Container):
     def _set_op(self, query, frum):
         # GET LIST OF COLUMNS
         primary_nested_path = join_field(split_field(frum)[1:])
-        vars_ = UNION([s.vars() for s in listwrap(query.select)])
+        vars_ = UNION([s.value.vars() for s in listwrap(query.select)])
 
         active_columns = {}
-        for c in self.columns:
-            nest = (listwrap(c.nested_path)+["."])[0]
-            for v in vars_:
-                if c.name.startswith(v):
-                    cols = active_columns[nest]
-                    if not cols:
-                        cols = active_columns[nest] = []
-                    cols.append(c)
-                    break
+        for cname, cols in self.columns.items():
+            for c in cols:
+                nest = (listwrap(c.nested_path)+["."])[0]
+                for v in vars_:
+                    if c.name.startswith(v):
+                        cols = active_columns[nest]
+                        if not cols:
+                            cols = active_columns[nest] = []
+                        cols.append(c)
+                        break
 
         # EVERY COLUMN, AND THE INDEX IT TAKES UP
         index_to_column = {}  # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
@@ -716,9 +717,6 @@ class Table_usingSQLite(Container):
             [", ".join(select_clause) + from_clause + where_clause] +
             children_sql
         )
-
-
-
 
     def _window_op(self, query, window):
         # http://www2.sqlite.org/cvstrac/wiki?p=UnsupportedSqlAnalyticalFunctions

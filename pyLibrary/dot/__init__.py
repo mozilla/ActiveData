@@ -89,6 +89,9 @@ def startswith_field(field, prefix):
     """
     RETURN True IF field PATH STRING STARTS WITH prefix PATH STRING
     """
+    if prefix == ".":
+        return True
+
     if field.startswith(prefix):
         if len(field) == len(prefix) or field[len(prefix)] == ".":
             return True

@@ -25,7 +25,7 @@ from pyLibrary.maths.randoms import Random
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain
-from pyLibrary.queries.expressions import jx_expression, CoalesceOp, Variable
+from pyLibrary.queries.expressions import jx_expression, CoalesceOp, Variable, wrap_nested_path
 from pyLibrary.queries.meta import Column
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.sql.sqlite import Sqlite
@@ -434,7 +434,7 @@ class Table_usingSQLite(Container):
         elif sql_query.groupby:
             command = create_table + self._groupby_op(sql_query)
         else:
-            command = create_table + self._set_op(sql_query, frum)
+            command = create_table + self._make_sql_for_set_op(sql_query, frum)
 
         if sql_query.sort:
             command += "\nORDER BY " + ",\n".join(
@@ -565,83 +565,97 @@ class Table_usingSQLite(Container):
 
         return "SELECT " + (",\n".join(selects)) + agg + where+groupby
 
-    def _set_op(self, query, frum):
+    def _make_sql_for_set_op(self, query, frum):
         # GET LIST OF COLUMNS
         primary_nested_path = join_field(split_field(frum)[1:])
         vars_ = UNION([s.value.vars() for s in listwrap(query.select)])
 
         active_columns = {}
         for cname, cols in self.columns.items():
-            for c in cols:
-                nest = (listwrap(c.nested_path)+["."])[0]
-                for v in vars_:
-                    if c.name.startswith(v):
-                        cols = active_columns[nest]
-                        if not cols:
-                            cols = active_columns[nest] = []
-                        cols.append(c)
-                        break
+            if cname in vars_:
+                for c in cols:
+                    if c.type in STRUCT:
+                        continue
+                    nest = (listwrap(c.nested_path)+["."])[0]
+                    active = active_columns.get(nest)
+                    if not active:
+                        active = active_columns[nest] = []
+                    active.append(c)
 
         # EVERY COLUMN, AND THE INDEX IT TAKES UP
         index_to_column = {}  # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
         index_to_uid = {}  # FROM NESTED PATH TO THE INDEX OF UID
         selects = []  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE)
+        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
+
+        # EVERY SELECT STATEMENT THAT WILL BE REQUIRED, NO MATTER THE DEPTH
+        # WE WILL CREATE THEM ACORDING TO THE DEPTH REQUIRED
         for i, (nested_path, sub_table) in enumerate(self.nested_tables.items()):
-            alias = unichr(ord('a') + i)
+            alias = nest_to_alias[nested_path]
             # WE DO NOT NEED DATA FROM TABLES WE REQUEST NOTHING FROM
             if nested_path not in active_columns:
                 continue
 
             # WE ALWAYS ADD THE UID AND ORDER
-            index_to_uid[nested_path]=len(selects)
-            selects.append(quote_table(alias + "." + UID))
+            index_to_uid[nested_path] = len(selects)
+            selects.append(alias + "." + quote_table(UID))
             if nested_path != ".":
-                selects.append(quote_table(alias + "." + ORDER))
+                selects.append(alias + "." + quote_table(ORDER))
+
+            # WE MUST HAVE THE ALIAS NAMES FOR THE TABLES
+            def copy_cols(cols):
+                output = set()
+                for c in cols:
+                    c = copy(c)
+                    c.es_index = nest_to_alias[wrap_nested_path(c.nested_path)[0]]
+                    output.add(c)
+                return output
+            columns = {k: copy_cols(v) for k, v in self.columns.items()}
 
             if startswith_field(primary_nested_path, nested_path):
                 if primary_nested_path == nested_path:
-                    # ADD SELECT CLAUSE HERE
+                    # ADD SQL SELECT COLUMNS FOR EACH jx SELECT CLAUSE
                     for s in listwrap(query.select):
                         i = len(selects)
                         s.pull = i
-                        selects.append(s.value.to_sql() + " AS " + quote_table(s.name))
-                        index_to_column[i] = s
-                    for w in query.window:
-                        i = len(selects)
-                        w.pull = i
-                        selects.append(self._window_op(query, w))
-                        index_to_column[i] = w
+                        db_columns = listwrap(s.value.to_sql(columns))
+                        for column in db_columns:
+                            for t, sql in column.sql.items():
+                                i = len(selects)
+                                # SQL HAS ABS TABLE REFERENCE
+                                selects.append(sql)
+                                index_to_column[i] = Dict(name=s.name, pull=i, sql=sql, type=t, nested_path=column.nested_path)
                 else:
                     # NO NEED TO INCLUDE COLUMNS, WILL INCLUDE ALL COLUMNS WHEN WE REACH primary_nested_path
                     pass
             else:
-                # ADD REQUIRED COLUMNS
+                # ADD REQUIRED COLUMNS, FOR DEEP STUFF
                 for c in active_columns[nested_path]:
                     i = len(selects)
-                    selects.append(quote_table(alias+"."+c.es_column))
-                    index_to_column[i] = c
+                    nested_path = wrap_nested_path(c.nested_path)
+                    sql = nest_to_alias[nested_path[0]] + "." + quote_table(c.es_column)
+                    selects.append(sql)
+                    index_to_column[i] = Dict(name=c.name, pull=i, sql=sql, type=c.type, nested_path=nested_path)
 
-        where_clause = query.where.to_sql()
+        where_clause = query.where.to_sql(self.columns).b
 
-        sql = self._rest_of_nested_values(
+        sql = self._make_sql_for_one_nest_in_set_op(
             ".",
             selects,
             where_clause,
             active_columns,
-            index_to_column,
-            index_to_uid
+            index_to_column
         )
 
         return sql
 
-    def _rest_of_nested_values(
+    def _make_sql_for_one_nest_in_set_op(
         self,
         primary_nested_path,
-        selects, # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE
+        selects,  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE
         where_clause,
         active_columns,
-        index_to_column,   # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
-        index_to_uid # FROM NESTED PATH TO THE INDEX OF UID
+        index_to_sql_select   # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
     ):
         """
         WE ALREADY HAVE A SELECT CLAUSE THAT ALLOWS PULLS THE FIRST RECORD FROM primary_nested_path
@@ -650,13 +664,13 @@ class Table_usingSQLite(Container):
         :param selects:
         :param where_clause:
         :param active_columns:
-        :param index_to_column:
+        :param index_to_sql_select:
         :param index_to_uid:
         :return:
         """
 
         parent_alias = "a"
-        from_clause = " FROM "+quote_table(self.name) + "a\n"
+        from_clause = ""
         select_clause = []
         children_sql = []
         done = []
@@ -666,46 +680,57 @@ class Table_usingSQLite(Container):
             if any(startswith_field(nested_path, d) for d in done):
                 continue
 
-            alias = unichr(ord('a') + i)
+            alias = "__" + unichr(ord('a') + i) + "__"
 
             if primary_nested_path==nested_path:
                 select_clause = []
                 # ADD SELECT CLAUSE HERE
                 for select_index, s in enumerate(selects):
-                    column = index_to_column[select_index]
-                    if select_index in index_to_uid:
+                    sql_select = index_to_sql_select.get(select_index)
+                    if not sql_select:
                         select_clause.append(s)
-                    elif isinstance(column, Column) and (listwrap(column.nested_path)+["."])[0]==nested_path:
-                        select_clause.append(s)
-                    else:
-                        select_clause.append(" NULL ")
+                        continue
 
-                from_clause += " LEFT JOIN " + quote_table(sub_table.name) + " " + alias + \
-                       " ON " + quote_table(alias + "." + PARENT) + " = " + quote_table(parent_alias + "." + UID)
+                    if startswith_field(sql_select.nested_path[0], nested_path):
+                        select_clause.append(sql_select.sql)
+                    else:
+                        # DO NOT INCLUDE DEEP STUFF AT THIS LEVEL
+                        select_clause.append("NULL")
+
+                if nested_path == ".":
+                    from_clause += "\nFROM "+quote_table(self.name) + " " + alias + "\n"
+                else:
+                    from_clause += "\nLEFT JOIN " + quote_table(sub_table.name) + " " + alias + "\n" \
+                       " ON " + alias + "." + quote_table(PARENT) + " = " + parent_alias + "." + quote_table(UID)+"\n" + \
+                        " AND " + alias + "." +quote_table(ORDER) + " > 0\n"
 
             elif startswith_field(primary_nested_path, nested_path):
+                # PARENT TABLE
                 # NO NEED TO INCLUDE COLUMNS, BUT WILL INCLUDE ID AND ORDER
-                parent_alias = alias = unichr(ord('a') + i - 1)
-
-                from_clause += " LEFT JOIN " + quote_table(sub_table.name) + " " + alias + \
-                       " ON " + quote_table(alias + "." + PARENT) + " = " + quote_table(parent_alias + "." + UID) + \
-                       " AND " + quote_table(parent_alias + "." +ORDER) + " > 0\n"
+                if nested_path == ".":
+                    from_clause += "\nFROM "+quote_table(self.name) + " " + alias + "\n"
+                else:
+                    parent_alias = alias = unichr(ord('a') + i - 1)
+                    from_clause += "\nLEFT JOIN " + quote_table(sub_table.name) + " " + alias + \
+                           " ON " + alias + "." + quote_table(PARENT) + " = " + parent_alias + "." + quote_table(UID) + \
+                           " AND " + parent_alias + "." +quote_table(ORDER) + " > 0\n"
 
             elif startswith_field(nested_path, primary_nested_path):
+                # CHILD TABLE
                 # GET FIRST ROW FOR EACH NESTED TABLE
-                from_clause += " LEFT JOIN " + quote_table(sub_table.name) + " " + alias + \
-                       " ON " + quote_table(alias + "." + PARENT) + " = " + quote_table(parent_alias + "." + UID) + \
-                       " AND " + quote_table(alias + "." +ORDER) + " = 0\n"
+                from_clause += "\nLEFT JOIN " + quote_table(sub_table.name) + " " + alias + \
+                       " ON " + alias + "." + quote_table(PARENT) + " = " + parent_alias + "." + quote_table(UID) + \
+                       " AND " + alias + "." +quote_table(ORDER) + " = 0\n"
 
                 # IMMEDIATE CHILDREN ONLY
                 done.append(nested_path)
                 # NESTED TABLES WILL USE RECURSION
-                children_sql.append(self._rest_of_nested_values(
+                children_sql.append(self._make_sql_for_one_nest_in_set_op(
                     nested_path,
-                    selects, # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE
+                    selects,  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE
+                    where_clause,
                     active_columns,
-                    index_to_column,   # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
-                    index_to_uid # FROM NESTED PATH TO THE INDEX OF UID
+                    index_to_sql_select   # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
                 ))
             else:
                 # SIBLING PATHS ARE IGNORED
@@ -713,8 +738,8 @@ class Table_usingSQLite(Container):
 
             parent_alias = alias
 
-        return " UNION ALL ".join(
-            [", ".join(select_clause) + from_clause + where_clause] +
+        return "\nUNION ALL\n".join(
+            ["SELECT " + ",\n".join(select_clause) + from_clause + "\nWHERE\n" + where_clause] +
             children_sql
         )
 
@@ -739,20 +764,15 @@ class Table_usingSQLite(Container):
         output = []
         if select.value == ".":
             for cname, cs in self.columns.items():
-                num_types = 0
                 for c in cs:
                     if c.type in STRUCT:
                         continue
-                    if not num_types:
-                        new_select = select.copy()
-                        new_select.name = cname
-                        new_select.value = Variable(c.es_column)
-                        output.append(new_select)
-                    elif num_types == 1:
-                        new_select.value = CoalesceOp("coalesce", [Variable(c.es_column), new_select.value])
-                    else:
-                        new_select.value.terms.append(Variable(c.es_column))
-                    num_types += 1
+
+                    new_select = select.copy()
+                    new_select.name = cname
+                    new_select.value = Variable(cname)
+                    output.append(new_select)
+                    break
         elif select.value.endswith(".*"):
             Log.error("not done")
         else:
@@ -821,7 +841,7 @@ class Table_usingSQLite(Container):
 
         # FILL TABLE WITH EXISTING COLUMN DATA
         command = "INSERT INTO " + quote_table(destination_table) + "(" + \
-                  ",".join(
+                  ",\n".join(
                       [quote_table(UID), quote_table(PARENT), quote_table(ORDER)] +
                       [_quote_column(c) for _, cols in sub_table.columns.items() for c in cols]
                   ) + \
@@ -830,7 +850,7 @@ class Table_usingSQLite(Container):
                       [quote_table(UID), quote_table(UID), "0"] +
                       [_quote_column(c) for _, cols in sub_table.columns.items() for c in cols]
                   ) + \
-                  " FROM " + quote_table(existing_table)
+                  "\nFROM " + quote_table(existing_table)
         self.db.execute(command)
 
     def flatten(self, doc, uid, doc_collection, path=None):

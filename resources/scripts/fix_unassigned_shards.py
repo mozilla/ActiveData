@@ -49,19 +49,21 @@ def assign_shards(settings):
     shards = wrap(list(convert_table_to_list(http.get(path + "/_cat/shards").content, ["index", "i", "type", "status", "num", "size", "ip", "node"])))
     # Log.note("Shards:\n{{shards}}", shards=shards)
     for shard in jx.sort(shards, "index"):
-        if shard.status=="UNASSIGNED" and shard.index=="saved_queries20150510_160318" and shard.i=='0':
+        if shard.status=="UNASSIGNED":
             i = Random.weight(nodes.disk)
+            destination_node = nodes[i].name
+            # destination_node = "secondary"
             command = wrap({"allocate":{
                 "index": shard.index,
                 "shard": shard.i,
-                "node": "tertiary", # nodes[i].name,
+                "node": destination_node, # nodes[i].name,
                 "allow_primary": True
             }})
             result = convert.json2value(convert.utf82unicode(http.post(path + "/_cluster/reroute", json={"commands": [command]}).content))
             if not result.acknowledged:
                 Log.warning("Can not allocate: {{error}}", error=result.error)
             else:
-                Log.note("index={{shard.index}}, shard={{shard.i}}, assign_to={{node}}, ok={{result.acknowledged}}", shard=shard, result=result, node=nodes[i].name)
+                Log.note("index={{shard.index}}, shard={{shard.i}}, assign_to={{node}}, ok={{result.acknowledged}}", shard=shard, result=result, node=destination_node)
 
 
 def convert_table_to_list(table, column_names):

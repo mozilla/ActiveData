@@ -16,7 +16,8 @@ from copy import copy
 from itertools import product
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, set_default, Null, literal_field, listwrap, split_field, join_field
+from pyLibrary.dot import coalesce, set_default, Null, literal_field, listwrap, split_field, join_field, unwraplist, \
+    unwrap
 from pyLibrary.dot import wrap
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.meta import use_settings, DataClass
@@ -581,6 +582,4 @@ Column = DataClass(
         {"name": "last_updated", "nulls": True}
     ]
 )
-
-
 

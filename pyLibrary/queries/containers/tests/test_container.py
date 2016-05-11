@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
 from pyLibrary.queries.containers.Table_usingSQLite import Table_usingSQLite
 from pyLibrary.queries.expressions import NullOp
@@ -18,6 +19,24 @@ from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 
 
 class TestContainer(FuzzyTestCase):
+
+    def test_assumption(self):
+        table = Table_usingSQLite("test_table")
+
+        collection = {}
+        uid = table.next_uid()
+        ok, required_changes = table.flatten({"a": 1, "b": "v"}, uid, collection)
+        table.change_schema(required_changes)
+
+        uid = table.next_uid()
+        ok, required_changes = table.flatten({"a": None, "b": "v"}, uid, collection)
+        uid = table.next_uid()
+        ok, required_changes = table.flatten({"a": 1, "b": None}, uid, collection)
+
+        table._insert(collection)
+
+        result = table.db.query('SELECT coalesce("a.$number", "b.$string"), length(coalesce("a.$number", "b.$string")) FROM '+table.name)
+        self.assertEqual(result, {"data": [(1.0, 3), ('v', 1), (1.0, 3)]})
 
     def test_flatten_inner(self):
         table = Table_usingSQLite("test_table")
@@ -102,4 +121,47 @@ class TestContainer(FuzzyTestCase):
         table.change_schema(required_changes)
         table._insert(collection)
 
-        table.query({"from": table.name})
+        # VERIFY CONTENT OF TABLE
+        result = table.db.query('SELECT * FROM "test_table.a.b" ORDER BY __id__')
+        self.assertEqual(result, {"data":[
+            (1, 1, 0, None, None),
+            (2, 2, 0, 0, None),
+            (4, 3, 0, 0, None),
+            (5, 3, 1, 1, None),
+            (7, 6, 0, None, 'value')
+        ]})
+
+        # VERIFY METADATA
+        command = 'PRAGMA table_info("test_table")'
+        Log.note("Metadata\n{{meta|json|indent}}", meta=table.db.query(command))
+
+        # VERIFY METADATA
+        command = 'PRAGMA table_info("test_table.a.b")'
+        Log.note("Metadata\n{{meta|json|indent}}", meta=table.db.query(command))
+
+        # VERIFY SQL
+        command = """
+            SELECT
+                __a__."__id__",
+                __a__."a.$object",
+                __a__."a.$number",
+                __b__."a.b.$string",
+                __a__."a.b.$object",
+                __b__."a.b.$number",
+                __b__."__id__",
+                __b__."__order__",
+                __b__."a.b.$string",
+                __b__."a.b.$number"
+            FROM
+                "test_table" __a__
+            LEFT JOIN
+                "test_table.a.b" __b__ ON __b__."__parent__" = __a__."__id__" AND __b__."__order__" = 0
+            WHERE
+                1
+        """
+        details = table.db.query(command)
+        pass
+
+        # VERIFY PULLING DATA
+        result = table.query({"from": table.name})
+        pass

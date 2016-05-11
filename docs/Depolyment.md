@@ -75,7 +75,7 @@ Elasticsearch is powerful magic. Only the ES developers really know the plethora
 Fixing Cluster
 --------------
 
-ES still breaks, sometimes. All problems encountered so far only require a bounce, but that bounce must be controlled. 
+ES still breaks, sometimes. All problems encountered so far only require a bounce, but that bounce must be controlled.  Be sure these commands are run on the **coordinator** node (which is the ES master located on the `frontend` machine).
  
  1. Ensure all nodes are reliable - This is a lengthy process, disable the SPOT nodes, or `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : "spot"}}' http://localhost:9200/_cluster/settings`
  2. Disable shard movement `curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}" http://localhost:9200/_cluster/settings`

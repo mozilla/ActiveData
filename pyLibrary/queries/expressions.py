@@ -2234,6 +2234,13 @@ json_type_to_sql_type = {
     "nested": "j"
 }
 
+sql_type_to_json_type = {
+    "s": "string",
+    "n": "number",
+    "j": "object",
+    "b": "boolean"
+}
+
 
 def wrap_nested_path(nested_path):
     return listwrap(nested_path) + ["."]

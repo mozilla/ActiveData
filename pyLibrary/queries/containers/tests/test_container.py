@@ -123,8 +123,7 @@ class TestContainer(FuzzyTestCase):
 
         # VERIFY CONTENT OF TABLE
         result = table.db.query('SELECT * FROM "test_table.a.b" ORDER BY __id__')
-        self.assertEqual(result, {"data":[
-            (1, 1, 0, None, None),
+        self.assertEqual(result, {"data": [
             (2, 2, 0, 0, None),
             (4, 3, 0, 0, None),
             (5, 3, 1, 1, None),
@@ -139,7 +138,7 @@ class TestContainer(FuzzyTestCase):
         command = 'PRAGMA table_info("test_table.a.b")'
         Log.note("Metadata\n{{meta|json|indent}}", meta=table.db.query(command))
 
-        # VERIFY SQL
+        # VERIFY SQL WORKS
         command = """
             SELECT
                 __a__."__id__",
@@ -160,8 +159,13 @@ class TestContainer(FuzzyTestCase):
                 1
         """
         details = table.db.query(command)
-        pass
 
         # VERIFY PULLING DATA
         result = table.query({"from": table.name})
-        pass
+        self.assertEqual(result, {"data": [
+            {"a": 0},
+            {"a": {"b": 0}},
+            {"a": {"b": [0, 1]}},
+            {"a": {"b": "value"}}
+        ]})
+        Log.note("{{result}}", result=result)

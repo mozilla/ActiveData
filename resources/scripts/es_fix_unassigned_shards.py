@@ -14,12 +14,13 @@ from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, listwrap
 from pyLibrary.env import http
+from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
 from pyLibrary.queries import jx
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread
 
-CONCURRENT = 2
+CONCURRENT = 4
 
 
 def assign_shards(settings):
@@ -93,29 +94,33 @@ def assign_shards(settings):
     # else:
     #     Log.note("No high risk shards found")
 
+    # ARE WE BUSY MOVING TOO MUCH?
+    relocating = [s for s in shards if s.status in ("RELOCATING", "INITIALIZING")]
+    if len(relocating) >= CONCURRENT:
+        Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
+        return
+
     # LOOK FOR UNALLOCATED SHARDS WE CAN PUT ON THE SPOT ZONE
     low_risk_shards = []
     for g, replicas in jx.groupby(shards, ["index", "i"]):
-        replicas = list(replicas)
+        replicas = wrap(list(replicas))
+        size = Math.MAX(replicas.size)
         safe_zones = list(set([s.zone for s in replicas if s.status == "STARTED" and s.zone != "spot"]))
         if safe_zones:
             # WE CAN ASSIGN THIS REPLICA TO spot
             for s in replicas:
                 if s.status == "UNASSIGNED":
+                    s.size = size
                     low_risk_shards.append(s)
                     break  # ONLY NEED ONE
 
     if low_risk_shards:
         Log.note("{{num}} low risk shards found", num=len(low_risk_shards))
-        allocate(jx.sort(low_risk_shards, "size"), path, nodes, {"spot"})
+        num = CONCURRENT - len(relocating)
+        allocate(jx.sort(low_risk_shards, "size")[:num:], path, nodes, {"spot"})
+        return
     else:
         Log.note("No low risk shards found")
-
-    # ARE WE BUSY MOVING TOO MUCH?
-    relocating = [s for s in shards if s.status == "RELOCATING"]
-    if len(relocating)>1:
-        Log.note("Delay work, cluster busy RELOCATING {{num}} shards", num=len(relocating))
-        return
 
     # LOOK FOR SHARDS WE CAN MOVE TO SPOT
     too_safe_shards = []
@@ -193,6 +198,9 @@ def split_at(row, columns):
 
 
 def text_to_bytes(size):
+    if size=="":
+        return 0
+
     multiplier = {
         "kb":1000,
         "mb":1000000,

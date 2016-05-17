@@ -22,8 +22,7 @@ from pyLibrary.thread.multiprocess import Process
 from pyLibrary.times.dates import Date, Duration
 from pyLibrary.times.durations import DAY
 from pyLibrary.times.timer import Timer
-from tests.base_test_class import ActiveDataBaseTest, error, settings
-
+from tests.base_test_class import ActiveDataBaseTest, error, global_settings
 
 APP_CONFIG_FILE = "tests/config/app_staging_settings.json"
 ES_CLUSTER_LOCATION = None
@@ -40,7 +39,7 @@ class TestUnittests(ActiveDataBaseTest):
         global ES_CLUSTER_LOCATION
 
         app_config = jsons.ref.get("file://"+APP_CONFIG_FILE)
-        settings.service_url = "http://localhost:"+unicode(app_config.flask.port)+"/query"
+        global_settings.service_url = "http://localhost:"+unicode(app_config.flask.port)+"/query"
         ES_CLUSTER_LOCATION = app_config.elasticsearch.host
 
     @classmethod
@@ -63,8 +62,6 @@ class TestUnittests(ActiveDataBaseTest):
         result = convert.json2value(convert.utf82unicode(response.all_content))
 
         Log.note("result\n{{result|indent}}", {"result": result})
-
-
 
     def test_chunk_timing(self):
         if self.not_real_service():
@@ -96,7 +93,7 @@ class TestUnittests(ActiveDataBaseTest):
         query = convert.unicode2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
-            response = self._try_till_response(self.service_url, data=query)
+            response = self.utils.try_till_response(self.service_url, data=query)
             if response.status_code != 200:
                 error(response)
         result = convert.json2value(convert.utf82unicode(response.all_content))
@@ -182,7 +179,7 @@ class TestUnittests(ActiveDataBaseTest):
         Log.note("result\n{{result|indent}}", {"result": result})
 
     def test_big_result_works(self):
-        result = http.post_json(settings.service_url, data={
+        result = http.post_json(global_settings.service_url, data={
             "from": "unittest",
             "where": {"and": [
                 {"gte": {"run.timestamp": Date.today() - DAY}},

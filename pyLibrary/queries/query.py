@@ -170,11 +170,15 @@ class QueryOp(Expression):
                 edge.range.max = e.range.max.map(map_)
             return edge
 
+        if isinstance(self.select, list):
+            select = wrap([map_select(s, map_) for s in self.select])
+        else:
+            select = map_select(self.select, map_)
 
         return QueryOp(
             "from",
             frum=self.frum.map(map_),
-            select=wrap([map_select(s, map_) for s in listwrap(self.select)]),
+            select=select,
             edges=wrap([map_edge(e, map_) for e in self.edges]),
             groupby=wrap([g.map(map_) for g in self.groupby]),
             window=wrap([w.map(map_) for w in self.window]),
@@ -276,7 +280,7 @@ canonical_aggregates = wrap({
 
 
 def _normalize_selects(selects, frum, schema=None, ):
-    if frum == None or isinstance(frum, (list, set)):
+    if frum == None or isinstance(frum, (list, set, unicode)):
         if isinstance(selects, list):
             output = [_normalize_select_no_context(s, schema=schema) for s in selects]
         else:
@@ -389,7 +393,7 @@ def _normalize_select_no_context(select, schema=None):
     elif isinstance(select.value, basestring):
         if select.value.endswith(".*"):
             output.name = coalesce(select.name, select.value[:-2], select.aggregate)
-            output.value = jx_expression({"leaves": select.value[:-2]})
+            output.value = LeavesOp("leaves", Variable(select.value[:-2]))
         else:
             if select.value == ".":
                 output.name = coalesce(select.name, select.aggregate, ".")
@@ -400,8 +404,8 @@ def _normalize_select_no_context(select, schema=None):
             else:
                 output.name = coalesce(select.name, select.value, select.aggregate)
                 output.value = jx_expression(select.value)
-    elif not output.name:
-        Log.error("Must give name to each column in select clause")
+    else:
+        output.value = jx_expression(select.value)
 
     if not output.name:
         Log.error("expecting select to have a name: {{select}}",  select= select)

@@ -68,7 +68,7 @@ class FromES(Container):
         self.edges = Dict()
         self.worker = None
         if typed == None:
-            self._columns = self.get_columns(table_name=index)
+            self._columns = self.get_columns(table_name=name)
             # SWITCH ON TYPED MODE
             self.typed = any(c.name in ("$value", "$object") for c in self._columns)
         else:

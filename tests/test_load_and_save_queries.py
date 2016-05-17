@@ -32,7 +32,7 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
             ],
             "query": {
                 "meta": {"save": True},
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "a"
             },
             "expecting_list": {
@@ -43,7 +43,7 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
             }
         }
 
-        settings = self._fill_es(test)
+        settings = self.utils.fill_container(test)
 
         bytes = convert.unicode2utf8(convert.value2json({
             "from": settings.index,
@@ -53,7 +53,7 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
         expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
         wrap(test).expecting_list.meta.saved_as = expected_hash
 
-        self._send_queries(settings, test, delete_index=False)
+        self.utils.send_queries(test)
 
         #ENSURE THE QUERY HAS BEEN INDEXED
         container = elasticsearch.Index(index="saved_queries", settings=settings)
@@ -62,7 +62,7 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
 
         url = URL(self.service_url)
 
-        response = self._try_till_response(url.scheme+"://"+url.host+":"+unicode(url.port)+"/find/"+expected_hash, data=b'')
+        response = self.utils.try_till_response(url.scheme+"://"+url.host+":"+unicode(url.port)+"/find/"+expected_hash, data=b'')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, bytes)

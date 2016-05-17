@@ -20,7 +20,7 @@ class TestGroupBy2(ActiveDataBaseTest):
         test = {
             "data": two_dim_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"aggregate": "count"},
                 "groupby": ["a", "b"]
             },
@@ -51,7 +51,7 @@ class TestGroupBy2(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_sum_rows(self):
         test = {
@@ -59,7 +59,7 @@ class TestGroupBy2(ActiveDataBaseTest):
             "metadata": {},
             "data": two_dim_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "sum"},
                 "groupby": ["a", "b"]
             },
@@ -90,7 +90,7 @@ class TestGroupBy2(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_sum_rows_w_domain(self):
         test = {
@@ -98,7 +98,7 @@ class TestGroupBy2(ActiveDataBaseTest):
             "metadata": {},
             "data": two_dim_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "sum"},
                 "groupby": ["a", "b"]
             },
@@ -129,7 +129,7 @@ class TestGroupBy2(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
 # TODO:  APPEARS THERE IS A COLUMN SWAP PROBLEM, NOTICE THE QUERY IS DEEP

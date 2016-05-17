@@ -130,35 +130,13 @@ class TestContainer(FuzzyTestCase):
             (7, 6, 0, None, 'value')
         ]})
 
-        # VERIFY METADATA
+        # VIEW METADATA
         command = 'PRAGMA table_info("test_table")'
         Log.note("Metadata\n{{meta|json|indent}}", meta=table.db.query(command))
 
-        # VERIFY METADATA
+        # VIEW METADATA
         command = 'PRAGMA table_info("test_table.a.b")'
         Log.note("Metadata\n{{meta|json|indent}}", meta=table.db.query(command))
-
-        # VERIFY SQL WORKS
-        command = """
-            SELECT
-                __a__."__id__",
-                __a__."a.$object",
-                __a__."a.$number",
-                __b__."a.b.$string",
-                __a__."a.b.$object",
-                __b__."a.b.$number",
-                __b__."__id__",
-                __b__."__order__",
-                __b__."a.b.$string",
-                __b__."a.b.$number"
-            FROM
-                "test_table" __a__
-            LEFT JOIN
-                "test_table.a.b" __b__ ON __b__."__parent__" = __a__."__id__" AND __b__."__order__" = 0
-            WHERE
-                1
-        """
-        details = table.db.query(command)
 
         # VERIFY PULLING DATA
         result = table.query({"from": table.name})
@@ -169,3 +147,5 @@ class TestContainer(FuzzyTestCase):
             {"a": {"b": "value"}}
         ]})
         Log.note("{{result}}", result=result)
+
+

@@ -17,7 +17,7 @@ from unittest import skipIf
 import base_test_class
 from pyLibrary.dot import wrap
 from pyLibrary.queries.expressions import NullOp
-from tests.base_test_class import ActiveDataBaseTest
+from tests.base_test_class import ActiveDataBaseTest, global_settings, TEST_TABLE
 from pyLibrary.maths import Math
 
 
@@ -40,7 +40,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index + "._a",
+                "from": TEST_TABLE + "._a",
                 "select": {"value": "_a.v", "aggregate": "sum"},
                 "edges": ["_a.b"]
             },
@@ -76,7 +76,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_deep_select_column_w_groupby(self):
         test = {
@@ -92,7 +92,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index + "._a",
+                "from": TEST_TABLE + "._a",
                 "select": {"value": "_a.v", "aggregate": "sum"},
                 "groupby": ["_a.b"]
             },
@@ -111,7 +111,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_bad_deep_select_column_w_groupby(self):
         test = {
@@ -119,7 +119,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"_a": {"b": "x"}}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "a.v", "aggregate": "sum"},
                 "groupby": ["a.b"]
             },
@@ -128,7 +128,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 "data": []
             }
         }
-        self.assertRaises(Exception, self._execute_es_tests, test)
+        self.assertRaises(Exception, self.utils.execute_es_tests, test)
 
     def test_abs_shallow_select(self):
         # TEST THAT ABSOLUTE COLUMN NAMES WORK (WHEN THEY DO NOT CONFLICT WITH RELATIVE PROPERTY NAME)
@@ -145,7 +145,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 4, "c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index + "._a",
+                "from": TEST_TABLE + "._a",
                 "select": ["b", "o"],
                 "where": {"eq": {"b": "x"}},
                 "sort": ["o"]
@@ -205,7 +205,7 @@ class TestDeepOps(ActiveDataBaseTest):
             # }
         }
 
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_select_whole_document(self):
@@ -222,7 +222,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 4, "c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "*",
                 "sort": ["o"]
             },
@@ -291,7 +291,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 4, "c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index + "._a",
+                "from": TEST_TABLE + "._a",
                 "select": "*"
             },
             "expecting_list": {
@@ -331,7 +331,7 @@ class TestDeepOps(ActiveDataBaseTest):
             }
         }
 
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_deep_names_w_star(self):
         test = {
@@ -348,7 +348,7 @@ class TestDeepOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": "a._t.*",
-                "from": base_test_class.settings.backend_es.index + ".a._t",
+                "from": TEST_TABLE + ".a._t",
                 "where": {
                     "prefix": {
                         "h.s": "a-"
@@ -386,7 +386,7 @@ class TestDeepOps(ActiveDataBaseTest):
             }
         }
 
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_deep_names_select_value(self):
@@ -404,7 +404,7 @@ class TestDeepOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": "a._t",
-                "from": base_test_class.settings.backend_es.index + ".a._t",
+                "from": TEST_TABLE + ".a._t",
                 "where": {
                     "prefix": {
                         "h.s": "a-"
@@ -445,7 +445,7 @@ class TestDeepOps(ActiveDataBaseTest):
             }
         }
 
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_deep_names(self):
         test = {
@@ -462,7 +462,7 @@ class TestDeepOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": ["a._t"],
-                "from": base_test_class.settings.backend_es.index + ".a._t",
+                "from": TEST_TABLE + ".a._t",
                 "where": {
                     "prefix": {
                         "h.s": "a-"
@@ -478,7 +478,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 ]}
         }
 
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_deep_agg_on_expression(self):
         # TEST WE CAN PERFORM AGGREGATES ON EXPRESSIONS OF DEEP VARIABLES
@@ -495,7 +495,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 4, "a": {}}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index + ".a._a",
+                "from": TEST_TABLE + ".a._a",
                 "select": {"name": "l", "value": {"length": "v"}, "aggregate": "max"}
             },
             "es_query": {
@@ -526,7 +526,7 @@ class TestDeepOps(ActiveDataBaseTest):
             }
         }
 
-        self._execute_es_tests(test, delete_index=False)
+        self.utils.execute_es_tests(test)
 
     def test_deep_agg_on_expression_w_shallow_where(self):
         # TEST WE CAN PERFORM AGGREGATES ON EXPRESSIONS OF DEEP VARIABLES
@@ -543,7 +543,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 4, "a": {}}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index + ".a._a",
+                "from": TEST_TABLE + ".a._a",
                 "select": {"name": "l", "value": {"length": "v"}, "aggregate": "max"},
                 "where": {"lt": {"o": 3}}
             },
@@ -562,7 +562,7 @@ class TestDeepOps(ActiveDataBaseTest):
             }
         }
 
-        self._execute_es_tests(test, delete_index=False)
+        self.utils.execute_es_tests(test)
 
     def test_agg_w_complicated_where(self):
         # TEST WE CAN PERFORM AGGREGATES ON EXPRESSIONS OF DEEP VARIABLES
@@ -579,7 +579,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 4, "a": {}}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index + ".a._a",
+                "from": TEST_TABLE + ".a._a",
                 "select": "*",
                 "where": {
                     "eq": [{"length": "v"}, 10]
@@ -600,7 +600,7 @@ class TestDeepOps(ActiveDataBaseTest):
             }
         }
 
-        self._execute_es_tests(test, delete_index=False)
+        self.utils.execute_es_tests(test)
 
     def test_setop_w_complicated_where(self):
         # TEST WE CAN PERFORM AGGREGATES ON EXPRESSIONS OF DEEP VARIABLES
@@ -620,7 +620,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 4, "a": {"_a": {"s": False}}}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index + ".a._a",
+                "from": TEST_TABLE + ".a._a",
                 "select": ["o", "v"],
                 "where": {"and": [
                     {"gte": {"o": 2}},
@@ -636,7 +636,7 @@ class TestDeepOps(ActiveDataBaseTest):
             }
         }
 
-        self._execute_es_tests(test, delete_index=False)
+        self.utils.execute_es_tests(test)
 
     def test_id_select(self):
         """
@@ -659,7 +659,7 @@ class TestDeepOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": ["_id"],
-                "from": base_test_class.settings.backend_es.index + ".a._a",
+                "from": TEST_TABLE + ".a._a",
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -695,7 +695,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_id_value_select(self):
         """
@@ -719,7 +719,7 @@ class TestDeepOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": "_id",
-                "from": base_test_class.settings.backend_es.index + ".a._a",
+                "from": TEST_TABLE + ".a._a",
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -732,7 +732,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_aggs_on_parent(self):
@@ -752,7 +752,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 4, "a": {"_a": {"s": False}}}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index + ".a._a",
+                "from": TEST_TABLE + ".a._a",
                 "edges": ["o"]
             },
             "expecting_list": {
@@ -790,7 +790,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_aggs_on_parent_and_child(self):
@@ -810,7 +810,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"o": 2, "a": {"_a": {"s": False}}}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index + ".a._a",
+                "from": TEST_TABLE + ".a._a",
                 "edges": ["o", "v"],
                 "select": {"aggregate": "count", "value": "s"}
             },
@@ -854,7 +854,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_deep_edge_using_list(self):
         data = [{"a": {"_b": [
@@ -873,7 +873,7 @@ class TestDeepOps(ActiveDataBaseTest):
         test = {
             "data": data,
             "query": {
-                "from": base_test_class.settings.backend_es.index + ".a._b",
+                "from": TEST_TABLE + ".a._b",
                 "edges": [{
                               "name": "v",
                               "value": ["r", "s"]
@@ -932,9 +932,9 @@ class TestDeepOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
-    @skipIf(base_test_class.settings.is_travis, "travis is too fast, must reconfigure the metadata management routines")
+    @skipIf(global_settings.is_travis, "travis is too fast, must reconfigure the metadata management routines")
     def test_deep_agg_w_deeper_select_relative_name(self):
         data = [{"a": {"_b": [
             {"r": {"s": "a"}, "v": {"u": 1}},
@@ -949,7 +949,7 @@ class TestDeepOps(ActiveDataBaseTest):
             "data": data,
             "query": {
                 "select": {"value": "v.u", "aggregate": "sum"},  # TEST RELATIVE NAME IN select
-                "from": base_test_class.settings.backend_es.index + ".a._b",
+                "from": TEST_TABLE + ".a._b",
                 "edges": ["r.s"],  # TEST RELATIVE NAME IN edges
                 "where": {"not": {"eq": {"r.s": "b"}}}  # TEST RELATIVE NAME IN where
             },
@@ -984,8 +984,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
-
+        self.utils.execute_es_tests(test)
 
     def test_setop_w_deep_select_value(self):
         data = [{"a": {"_b": [
@@ -1001,7 +1000,7 @@ class TestDeepOps(ActiveDataBaseTest):
             "data": data,
             "query": {
                 "select": ["r.s", "v.u"],
-                "from": base_test_class.settings.backend_es.index + ".a._b",
+                "from": TEST_TABLE + ".a._b",
                 "where": {"not": {"eq": {"r.s": "b"}}}
             },
             "expecting_list": {
@@ -1039,7 +1038,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_select_average_on_none(self):
@@ -1049,7 +1048,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {}
             ]}}],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a._b",
+                "from": TEST_TABLE+".a._b",
                 "select": [
                     {"name": "t", "value": {"add": ["a", "a"]}, "aggregate": "average"}
                 ],
@@ -1063,7 +1062,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_missing(self):
         test = {
@@ -1079,7 +1078,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {}
             ]}}],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a._b",
+                "from": TEST_TABLE+".a._b",
                 "select": [
                     "a",
                     "b"
@@ -1095,7 +1094,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_exists(self):
         test = {
@@ -1111,7 +1110,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {}
             ]}}],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a._b",
+                "from": TEST_TABLE+".a._b",
                 "select": [
                     "a",
                     "b"
@@ -1130,7 +1129,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_deep_or(self):
@@ -1147,7 +1146,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"q": {}}
             ]}}],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a._b",
+                "from": TEST_TABLE+".a._b",
                 "select": [
                     "q.a",
                     "q.b"
@@ -1171,7 +1170,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_sibling_nested_column(self):
         test = {
@@ -1181,7 +1180,7 @@ class TestDeepOps(ActiveDataBaseTest):
             }
             }],
             "query": {
-                "from": base_test_class.settings.backend_es.index + ".a._b",
+                "from": TEST_TABLE + ".a._b",
                 "select": ["f"]
             },
             "expecting_list": {
@@ -1192,7 +1191,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_deep_star(self):
         test = {
@@ -1202,7 +1201,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 {"q": {}}
             ]}}],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a._b",
+                "from": TEST_TABLE+".a._b",
                 "select": ["*"],
                 "format": "list"
             },
@@ -1215,7 +1214,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 # TODO: WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?
 # THIS SHOULD RETURN SOMETHING, NOT FAIL

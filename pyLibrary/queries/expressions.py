@@ -54,6 +54,8 @@ def jx_expression(expr):
     elif isinstance(expr, unicode):
         if is_keyword(expr):
             return Variable(expr)
+        elif not expr.strip():
+            Log.error("expression is empty")
         else:
             Log.error("expression is not recognized: {{expr}}", expr=expr)
     elif isinstance(expr, (list, tuple)):
@@ -1674,8 +1676,8 @@ class NotLeftOp(Expression):
     def to_ruby(self, not_null=False, boolean=False):
         test_v = self.value.missing().to_ruby(boolean=True)
         test_l = self.length.missing().to_ruby(boolean=True)
-        v = self.value.to_ruby(not_null=True).s
-        l = self.length.to_ruby(not_null=True).n
+        v = self.value.to_ruby(not_null=True)
+        l = self.length.to_ruby(not_null=True)
 
         expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(max(0, min(" + v + ".length(), " + l + ")).intValue()))"
         return expr
@@ -1717,8 +1719,8 @@ class RightOp(Expression):
     def to_ruby(self, not_null=False, boolean=False):
         test_v = self.value.missing().to_ruby(boolean=True)
         test_l = self.length.missing().to_ruby(boolean=True)
-        v = self.value.to_ruby(not_null=True).s
-        l = self.length.to_ruby(not_null=True).n
+        v = self.value.to_ruby(not_null=True)
+        l = self.length.to_ruby(not_null=True)
 
         expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(min("+v+".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
         return expr
@@ -1759,8 +1761,8 @@ class NotRightOp(Expression):
     def to_ruby(self, not_null=False, boolean=False):
         test_v = self.value.missing().to_ruby(boolean=True)
         test_l = self.length.missing().to_ruby(boolean=True)
-        v = self.value.to_ruby(not_null=True).s
-        l = self.length.to_ruby(not_null=True).n
+        v = self.value.to_ruby(not_null=True)
+        l = self.length.to_ruby(not_null=True)
 
         expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, min("+v+".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
         return expr

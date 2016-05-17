@@ -171,8 +171,10 @@ def extract_rows(es, es_query, query):
             continue
         if source == "_source":
             n.pull = join_field(["_source"] + split_field(n.value))
+        elif isinstance(n.value, Variable):
+            n.pull = "fields." + literal_field(n.value.var)
         else:
-            n.pull = "fields." + literal_field(n.value)
+            Log.error("Do not know what to do")
 
     with Timer("call to ES") as call_timer:
         data = es09.util.post(es, es_query, query.limit)
@@ -193,7 +195,13 @@ def extract_rows(es, es_query, query):
 
 def format_list(T, select, query=None):
     data = []
-    if isinstance(query.select, list) or (isinstance(query.select.value, basestring) and query.select.value.endswith("*")):
+    if isinstance(query.select, list):
+        for row in T:
+            r = Dict()
+            for s in select:
+                r[s.put.name][s.put.child] = unwraplist(row[s.pull])
+            data.append(r if r else None)
+    elif isinstance(query.select.value, LeavesOp):
         for row in T:
             r = Dict()
             for s in select:
@@ -203,7 +211,7 @@ def format_list(T, select, query=None):
         for row in T:
             r = Dict()
             for s in select:
-                r[s.put.name][s.put.child] = unwraplist(row[s.pull])
+                r[s.put.child] = unwraplist(row[s.pull])
             data.append(r if r else None)
 
     return Dict(

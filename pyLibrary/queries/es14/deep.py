@@ -123,7 +123,7 @@ def es_deepop(es, query):
                         if n.name.startswith("..") and n.name.lstrip(".") not in col_names:
                             n.name = n.put.name = n.name.lstrip(".")
                 else:
-                    column = s.term.value.var+"."
+                    column = s.value.term.var+"."
                     prefix = len(column)
                     for c in columns:
                         if c.name.startswith(column) and c.type not in STRUCT:

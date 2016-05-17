@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 import flask
 from flask import Response
 
+from active_data.actions.query import _send_error
 from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
@@ -55,5 +56,5 @@ def get_raw_json(path):
         )
     except Exception, e:
         e = Except.wrap(e)
-        return send_error(active_data_timer, body, e)
+        return _send_error(active_data_timer, body, e)
 

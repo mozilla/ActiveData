@@ -16,6 +16,8 @@ from __future__ import unicode_literals
 from collections import Mapping, OrderedDict
 from copy import copy
 
+import re
+
 from pyLibrary import convert
 from pyLibrary.collections import UNION
 from pyLibrary.debugs.logs import Log
@@ -32,10 +34,11 @@ from pyLibrary.sql.sqlite import Sqlite
 from pyLibrary.times.dates import Date
 
 
-UID = "__id__"
+UID = "__id__"  # will not be quoted
 ORDER = "__order__"
 PARENT = "__parent__"
 COLUMN = "__column"
+
 
 class Table_usingSQLite(Container):
     def __init__(self, name, db=None, uid=UID, exists=False):
@@ -89,12 +92,12 @@ class Table_usingSQLite(Container):
         else:
             command = "CREATE TABLE " + quote_table(name) + "(" + \
                       (",".join(
-                          [quote_table(UID) + " INTEGER"] +
+                          [quoted_UID + " INTEGER"] +
                           [_quote_column(c) + " " + sql_types[c.type] for u, cs in self.columns.items() for c in cs]
                       )) + \
                       ", PRIMARY KEY (" + \
                       (", ".join(
-                          [quote_table(UID)] +
+                          [quoted_UID] +
                           [_quote_column(c) for u in self.uid for c in self.columns[u]]
                       )) + \
                       "))"
@@ -418,7 +421,7 @@ class Table_usingSQLite(Container):
             if v in self.columns and len([c for c in self.columns[v] if c.type != "nested"]) == 1
             for c in self.columns[v]
             if c.type != "nested"
-            }
+        }
 
         sql_query = query.map(type_map)
 
@@ -465,9 +468,9 @@ class Table_usingSQLite(Container):
                     Log.error("Can only handle default domains")
                 ci.append(i - len(query.edges))
                 parts = columns[ci[i]]
-                allowNulls=False
-                if parts[0]==None:
-                    allowNulls=True
+                allowNulls = False
+                if parts[0] == None:
+                    allowNulls = True
                     # ONLY ONE EDGE, SO WE CAN DO THIS TO PUT NULL LAST
                     for ii, c in enumerate(copy(columns)):
                         columns[ii] = list(c[1:]) + [c[0]]
@@ -602,12 +605,13 @@ class Table_usingSQLite(Container):
 
         # EVERY SELECT STATEMENT THAT WILL BE REQUIRED, NO MATTER THE DEPTH
         # WE WILL CREATE THEM ACCORDING TO THE DEPTH REQUIRED
-        for column_number, (nested_path, sub_table) in enumerate(self.nested_tables.items()):
-            nested_doc_details = {}
-            nested_doc_details['sub_table'] = sub_table
-            nested_doc_details['children'] = []
-            nested_doc_details['index_to_column'] = {}
-            nested_doc_details['nested_path'] = [nested_path]  # fake the real nested path, we only look at [0] anyway
+        for nested_path, sub_table in self.nested_tables.items():
+            nested_doc_details = {
+                "sub_table":sub_table,
+                "children": [],
+                "index_to_column": {},
+                "nested_path": [nested_path]  # fake the real nested path, we only look at [0] anyway
+            }
 
             # INSERT INTO TREE
             if not primary_doc_details:
@@ -628,9 +632,9 @@ class Table_usingSQLite(Container):
 
             # WE ALWAYS ADD THE UID AND ORDER
             column_number = index_to_uid[nested_path] = nested_doc_details['id_coord'] = len(selects)
-            selects.append(alias + "." + quote_table(UID) + " AS " + COLUMN + unicode(column_number))
+            selects.append(alias + "." + quoted_UID + " AS " + _make_column_name(column_number))
             if nested_path != ".":
-                selects.append(alias + "." + quote_table(ORDER) + " AS " + COLUMN + unicode(column_number + 1))
+                selects.append(alias + "." + quote_table(ORDER) + " AS " + _make_column_name(column_number + 1))
 
             if primary_nested_path == nested_path:
                 # ADD SQL SELECT COLUMNS FOR EACH jx SELECT CLAUSE
@@ -645,7 +649,7 @@ class Table_usingSQLite(Container):
                                 continue
                             column_number = len(selects)
                             # SQL HAS ABS TABLE REFERENCE
-                            selects.append(sql + " AS " + COLUMN + unicode(column_number))
+                            selects.append(sql + " AS " + _make_column_name(column_number))
                             index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
                                 name=s.name,
                                 pull=column_number,
@@ -653,8 +657,6 @@ class Table_usingSQLite(Container):
                                 type=json_type,
                                 nested_path=column.nested_path
                             )
-            elif startswith_field(primary_nested_path, nested_path):
-                pass
             elif startswith_field(nested_path, primary_nested_path):
                 # ADD REQUIRED COLUMNS, FOR DEEP STUFF
                 for c in active_columns[nested_path]:
@@ -664,7 +666,7 @@ class Table_usingSQLite(Container):
                     column_number = len(selects)
                     nested_path = wrap_nested_path(c.nested_path)
                     sql = nest_to_alias[nested_path[0]] + "." + quote_table(c.es_column)
-                    selects.append(sql + " AS " + COLUMN + unicode(column_number))
+                    selects.append(sql + " AS " + _make_column_name(column_number))
                     index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
                         name=c.name,
                         pull=column_number,
@@ -772,8 +774,8 @@ class Table_usingSQLite(Container):
         index_to_sql_select   # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
     ):
         """
-        WE ALREADY HAVE A SELECT CLAUSE THAT ALLOWS PULLS THE FIRST RECORD FROM primary_nested_path
-        NOW WE NEED TO PULL THE REST AS SEPARATE RECORDS
+        FOR EACH NESTED LEVEL, WE MAKE A QUERY THAT PULLS THE VALUES/COLUMNS REQUIRED
+        WE `UNION ALL` THEM WHEN DONE
         :param primary_nested_path:
         :param selects:
         :param where_clause:
@@ -814,7 +816,7 @@ class Table_usingSQLite(Container):
                     from_clause += "\nFROM "+quote_table(self.name) + " " + alias + "\n"
                 else:
                     from_clause += "\nLEFT JOIN " + quote_table(sub_table.name) + " " + alias + "\n" \
-                       " ON " + alias + "." + quote_table(PARENT) + " = " + parent_alias + "." + quote_table(UID)+"\n"
+                       " ON " + alias + "." + quoted_PARENT + " = " + parent_alias + "." + quoted_UID+"\n"
                     where_clause = "("+where_clause+") AND " + alias + "." + quote_table(ORDER) + " > 0\n"
 
             elif startswith_field(primary_nested_path, nested_path):
@@ -825,14 +827,14 @@ class Table_usingSQLite(Container):
                 else:
                     parent_alias = alias = unichr(ord('a') + i - 1)
                     from_clause += "\nLEFT JOIN " + quote_table(sub_table.name) + " " + alias + \
-                           " ON " + alias + "." + quote_table(PARENT) + " = " + parent_alias + "." + quote_table(UID)
+                           " ON " + alias + "." + quoted_PARENT + " = " + parent_alias + "." + quoted_UID
                     where_clause = "("+where_clause+") AND " + parent_alias + "." + quote_table(ORDER) + " > 0\n"
 
             elif startswith_field(nested_path, primary_nested_path):
                 # CHILD TABLE
                 # GET FIRST ROW FOR EACH NESTED TABLE
                 from_clause += "\nLEFT JOIN " + quote_table(sub_table.name) + " " + alias + \
-                       " ON " + alias + "." + quote_table(PARENT) + " = " + parent_alias + "." + quote_table(UID) + \
+                       " ON " + alias + "." + quoted_PARENT + " = " + parent_alias + "." + quoted_UID + \
                        " AND " + alias + "." + quote_table(ORDER) + " = 0\n"
 
                 # IMMEDIATE CHILDREN ONLY
@@ -901,7 +903,7 @@ class Table_usingSQLite(Container):
                 column = required_change.add
                 if column.type == "nested":
                     # WE ARE ALSO NESTING
-                    self.nest_column(column, column.name)
+                    self._nest_column(column, column.name)
 
                 table = join_field([self.name] + split_field(listwrap(column.nested_path)[0]))
 
@@ -917,13 +919,11 @@ class Table_usingSQLite(Container):
             elif required_change.nest:
                 column = required_change.nest
                 new_path = required_change.new_path
-                self.nest_column(column, new_path)
-
+                self._nest_column(column, new_path)
                 # REMOVE KNOWLEDGE OF PARENT COLUMNS (DONE AUTOMATICALLY)
+                # TODO: DELETE PARENT COLUMNS?
 
-                # DELETE PARENT COLUMNS?
-
-    def nest_column(self, column, new_path):
+    def _nest_column(self, column, new_path):
         destination_table = join_field([self.name] + split_field(new_path))
         existing_table = join_field([self.name] + split_field(listwrap(column.nested_path)[0]))
 
@@ -936,6 +936,8 @@ class Table_usingSQLite(Container):
                     new_columns[cname].add(col)
                     col.nested_path = unwraplist([new_path] + listwrap(col.nested_path))
 
+        # TODO: IF THERE ARE CHILD TABLES, WE MUST UPDATE THEIR RELATIONS TOO?
+
         # DEFINE A NEW TABLE?
         # LOAD THE COLUMNS
         command = "PRAGMA table_info(" + quote_table(destination_table) + ")"
@@ -945,7 +947,7 @@ class Table_usingSQLite(Container):
         self.nested_tables[new_path] = sub_table = Table_usingSQLite(destination_table, self.db, exists=False)
 
         self.db.execute(
-            "ALTER TABLE " + quote_table(sub_table.name) + " ADD COLUMN " + quote_table(PARENT) + " INTEGER"
+            "ALTER TABLE " + quote_table(sub_table.name) + " ADD COLUMN " + quoted_PARENT + " INTEGER"
         )
         self.db.execute(
             "ALTER TABLE " + quote_table(sub_table.name) + " ADD COLUMN " + quote_table(ORDER) + " INTEGER"
@@ -964,18 +966,18 @@ class Table_usingSQLite(Container):
                        ") IS NOT NULL"
 
         # FILL TABLE WITH EXISTING COLUMN DATA
-        command = "INSERT INTO " + quote_table(destination_table) + "(" + \
+        command = "INSERT INTO " + quote_table(destination_table) + "(\n" + \
                   ",\n".join(
-                      [quote_table(UID), quote_table(PARENT), quote_table(ORDER)] +
+                      [quoted_UID, quoted_PARENT, quote_table(ORDER)] +
                       [_quote_column(c) for _, cols in sub_table.columns.items() for c in cols]
                   ) + \
-                  ")" + \
-                  "\nSELECT " + ",".join(
-                      [quote_table(UID), quote_table(UID), "0"] +
+                  "\n)\n" + \
+                  "\nSELECT\n" + ",".join(
+                      [quoted_UID, quoted_UID, "0"] +
                       [_quote_column(c) for _, cols in sub_table.columns.items() for c in cols]
                   ) + \
-                  "\nFROM " + quote_table(existing_table) + \
-                  "\nWHERE " + has_nested_data
+                  "\nFROM\n" + quote_table(existing_table) + \
+                  "\nWHERE\n" + has_nested_data
         self.db.execute(command)
 
     def flatten(self, doc, uid, doc_collection, path=None):
@@ -1168,7 +1170,12 @@ class Table_usingSQLite(Container):
             self.db.execute(prefix + records)
 
 
+_do_not_quote = re.compile(r"^\w+$", re.UNICODE)
+
+
 def quote_table(column):
+    if _do_not_quote.match(column):
+        return column
     return convert.string2quote(column)
 
 
@@ -1275,6 +1282,11 @@ def untyped_column(column_name):
     # return column_name.split(".$")[0]
 
 
+def _make_column_name(number):
+    return COLUMN+unicode(number)
+
+
+
 sql_aggs = {
     "min": "MIN",
     "max": "MAX",
@@ -1293,4 +1305,9 @@ sql_types = {
     "object": "TEXT",
     "nested": "TEXT"
 }
+
+
+quoted_UID = quote_table(UID)
+quoted_ORDER = quote_table(ORDER)
+quoted_PARENT = quote_table(PARENT)
 

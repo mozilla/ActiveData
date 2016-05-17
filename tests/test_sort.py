@@ -31,7 +31,7 @@ class TestSorting(ActiveDataBaseTest):
                 {"a": 2}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "a",
                 "sort": {"a": "desc"}
             },
@@ -40,7 +40,7 @@ class TestSorting(ActiveDataBaseTest):
                 "data": [6, 4, 3, 2, 1]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
 
@@ -58,7 +58,7 @@ class TestSorting(ActiveDataBaseTest):
                 {"a":"a", "value": 11}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "groupby": "a",
                 "sort": "a"
             },
@@ -85,7 +85,7 @@ class TestSorting(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
 

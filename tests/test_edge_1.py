@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 import base_test_class
 
-from tests.base_test_class import ActiveDataBaseTest
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 null = None
 
@@ -22,7 +22,7 @@ class TestEdge1(ActiveDataBaseTest):
         test = {
             "data": simple_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": ["a"]
             },
             "expecting_list": {
@@ -59,7 +59,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_count_rows(self):
         test = {
@@ -67,7 +67,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"aggregate": "count"},
                 "edges": ["a"]
             },
@@ -105,7 +105,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_count_self(self):
         test = {
@@ -113,7 +113,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"name": "count_a", "value": "a", "aggregate": "count"},
                 "edges": ["a"]
             },
@@ -151,7 +151,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_count_other(self):
         test = {
@@ -159,7 +159,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"name": "count_v", "value": "v", "aggregate": "count"},
                 "edges": ["a"]
             },
@@ -197,7 +197,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_sum_default(self):
@@ -213,7 +213,7 @@ class TestEdge1(ActiveDataBaseTest):
                 {"a": "c", "v": 11}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"name": "sum_v", "value": "v", "aggregate": "sum", "default": -1},
                 "edges": ["a"]
             },
@@ -251,7 +251,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select_2(self):
         test = {
@@ -259,7 +259,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": [
                     {"name": "count", "value": "v", "aggregate": "count"},
                     {"name": "avg", "value": "v", "aggregate": "average"}
@@ -301,7 +301,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select_3(self):
         test = {
@@ -309,7 +309,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": structured_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": [
                     {"name": "v", "value": "v", "aggregate": "sum"},
                     {"name": "d", "value": "b.d", "aggregate": "sum"}
@@ -355,7 +355,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_select_4(self):
@@ -364,7 +364,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": structured_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": [
                     {"name": "v", "value": "v", "aggregate": "min"},
                     {"name": "d", "value": "b.d", "aggregate": "max"}
@@ -410,7 +410,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_sum_column(self):
@@ -419,7 +419,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "sum"},
                 "edges": ["a"]
             },
@@ -457,7 +457,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_where(self):
         # THE CONTAINER SHOULD RETURN THE FULL CUBE, DESPITE IT NOT BEING EXPLICIT
@@ -466,7 +466,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "max"},
                 "edges": ["a"],
                 "where": {"term": {"a": "c"}}
@@ -501,7 +501,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_where_w_dimension(self):
         test = {
@@ -509,7 +509,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "max"},
                 "edges": [
                     {"value": "a", "allowNulls": False, "domain": {"type": "set", "partitions": ["b", "c"]}}
@@ -546,7 +546,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_empty_default_domain(self):
         test = {
@@ -554,7 +554,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "max"},
                 "edges": ["a"],
                 "where": {"term": {"a": "d"}}
@@ -597,7 +597,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_empty_default_domain_w_groupby(self):
         test = {
@@ -605,7 +605,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": simple_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "max"},
                 "groupby": ["a"],
                 "where": {"term": {"a": "d"}}
@@ -637,7 +637,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_wo_limit(self):
@@ -649,7 +649,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": long_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "max"},
                 "edges": ["k"]
             },
@@ -715,7 +715,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_edge_limit_big(self):
         test = {
@@ -723,7 +723,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": long_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "max"},
                 "edges": [{"value": "k", "domain": {"type": "default", "limit": 100}}]
             },
@@ -796,7 +796,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_edge_limit_small(self):
         test = {
@@ -804,7 +804,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": long_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "max"},
                 "edges": [{"value": "k", "domain": {"type": "default", "limit": 1}}]
             },
@@ -843,7 +843,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_general_limit(self):
         test = {
@@ -851,7 +851,7 @@ class TestEdge1(ActiveDataBaseTest):
             "metadata": {},
             "data": long_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "max"},
                 "edges": [{"value": "k", "domain": {"type": "default"}}],
                 "limit": 5
@@ -903,7 +903,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_expression_on_edge(self):
         data = [
@@ -919,7 +919,7 @@ class TestEdge1(ActiveDataBaseTest):
         test = {
             "data": data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"aggregate": "count"},
                 "edges": [{
                     "name": "start",
@@ -971,7 +971,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_float_range(self):
         data = [
@@ -987,7 +987,7 @@ class TestEdge1(ActiveDataBaseTest):
         test = {
             "data": data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"aggregate": "count"},
                 "edges": [{
                     "name": "start",
@@ -1039,7 +1039,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_edge_using_expression(self):
         data = [
@@ -1058,7 +1058,7 @@ class TestEdge1(ActiveDataBaseTest):
         test = {
             "data": data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": [{
                     "name": "v",
                     "value": {"coalesce": ["r", "s"]}
@@ -1113,7 +1113,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_edge_using_list(self):
         data = [
@@ -1132,7 +1132,7 @@ class TestEdge1(ActiveDataBaseTest):
         test = {
             "data": data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": [{
                     "name": "v",
                     "value": ["r", "s"]
@@ -1191,7 +1191,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_percentile(self):
@@ -1213,7 +1213,7 @@ class TestEdge1(ActiveDataBaseTest):
             ],
             "query": {
                 "select": {"name": "v", "value": {"add": ["v", "u"]}, "aggregate": "percentile", "percentile": 0.70},
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": ["k"]
             },
             "expecting_list": {
@@ -1242,7 +1242,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_count_constant(self):
         test = {
@@ -1256,7 +1256,7 @@ class TestEdge1(ActiveDataBaseTest):
                 {"v": 4}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": [
                     {"name":"count", "value": 1, "aggregate": "count"},
                     {"value": "v", "aggregate": "count"}
@@ -1295,7 +1295,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_bad_edge_name(self):
         test = {
@@ -1303,7 +1303,7 @@ class TestEdge1(ActiveDataBaseTest):
                 {"k": "a", "v": 1},
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "v",
                 "edges": [""]
             },
@@ -1317,7 +1317,7 @@ class TestEdge1(ActiveDataBaseTest):
             },
         }
 
-        self.assertRaises("expression is empty", self._execute_es_tests, test)
+        self.assertRaises("expression is empty", self.utils.execute_es_tests, test)
 
     def test_range(self):
         test = {
@@ -1333,7 +1333,7 @@ class TestEdge1(ActiveDataBaseTest):
                 {"k": "i", "s": 8, "e": 11},
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": [
                     {
                         "name": "a",
@@ -1393,13 +1393,13 @@ class TestEdge1(ActiveDataBaseTest):
                 "data": {"count": [1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 0]}  # NOT SURE HOW WE ARE COUNTING NULLS
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_edge_w_partition_filters(self):
         test = {
             "data": structured_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": [
                     {"name": "count", "value": "v", "aggregate": "count"},
                     {"name": "sum", "value": "v", "aggregate": "sum"}
@@ -1449,7 +1449,7 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 # TODO: ALLOW USE OF EDGE VARIABLES IN QUERY
 # IN THIS CASE "timestamp.min" REFERS TO A PART OF THE EDGE

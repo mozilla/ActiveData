@@ -8,11 +8,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
-import base_test_class
+from __future__ import unicode_literals
 
-from tests.base_test_class import ActiveDataBaseTest
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 
 class TestGroupBy2(ActiveDataBaseTest):

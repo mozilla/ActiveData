@@ -20,7 +20,7 @@ from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expression_compiler import compile_expression
-from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression, TrueOp
+from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression, TrueOp, Variable
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
 from pyLibrary.queries.meta import Column
 from pyLibrary.thread.threads import Lock
@@ -119,14 +119,13 @@ class ListContainer(Container):
         if selects[0].value == "." and selects[0].name == ".":
             return self
 
-        for s in selects:
-            if not isinstance(s.value, basestring) or not is_keyword(s.value):
-                Log.error("selecting on structure, or expressions, not supported yet")
+        if not all(isinstance(s.value, Variable) for s in selects):
+            Log.error("selecting on structure, or expressions, not supported yet")
 
         # TODO: DO THIS WITH JUST A SCHEMA TRANSFORM, DO NOT TOUCH DATA
         # TODO: HANDLE STRUCTURE AND EXPRESSIONS
-        new_schema = {s.name: self.schema[s.value] for s in selects}
-        new_data = [{s.name: d[s.value] for s in selects} for d in self.data]
+        new_schema = {s.name: self.schema[s.value.var] for s in selects}
+        new_data = [{s.name: d[s.value.var] for s in selects} for d in self.data]
         return ListContainer("from "+self.name, data=new_data, schema=new_schema)
 
     def window(self, window):

@@ -39,7 +39,7 @@ sudo cp -R elasticsearch-1.7.1/* /usr/local/elasticsearch/
 
 cd /usr/local/elasticsearch/
 
-# BE SURE TO MATCH THE PULGIN WITH ES VERSION
+# BE SURE TO MATCH THE PLUGIN WITH ES VERSION
 # https://github.com/elasticsearch/elasticsearch-cloud-aws
 sudo bin/plugin install elasticsearch/elasticsearch-cloud-aws/2.7.1
 

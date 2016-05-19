@@ -520,7 +520,7 @@ def sort(data, fieldnames=None):
             fieldnames = fieldnames[0]
             # SPECIAL CASE, ONLY ONE FIELD TO SORT BY
             if fieldnames == ".":
-                return wrap(sorted(data))
+                return wrap(sorted(data, cmp=value_compare))
             if isinstance(fieldnames, (basestring, int)):
                 fieldnames = wrap({"value": fieldnames, "sort": 1})
 

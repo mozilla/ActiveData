@@ -13,8 +13,7 @@ from __future__ import unicode_literals
 
 import hashlib
 
-import base_test_class
-from base_test_class import ActiveDataBaseTest
+from base_test_class import ActiveDataBaseTest, TEST_TABLE
 from pyLibrary import convert
 from pyLibrary.dot import wrap
 from pyLibrary.env import elasticsearch
@@ -60,7 +59,7 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
         container.flush()
         Thread.sleep(seconds=5)
 
-        url = URL(self.service_url)
+        url = URL(self.utils.service_url)
 
         response = self.utils.try_till_response(url.scheme+"://"+url.host+":"+unicode(url.port)+"/find/"+expected_hash, data=b'')
 

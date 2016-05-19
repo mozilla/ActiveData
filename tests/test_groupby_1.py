@@ -13,7 +13,7 @@ from __future__ import division
 import base_test_class
 from pyLibrary.dot import wrap
 
-from tests.base_test_class import ActiveDataBaseTest
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 
 class TestgroupBy1(ActiveDataBaseTest):

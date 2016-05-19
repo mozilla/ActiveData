@@ -20,7 +20,7 @@ from active_data.actions.query import replace_vars
 from pyLibrary import convert, jsons
 from pyLibrary.debugs.exceptions import extract_stack
 from pyLibrary.debugs.logs import Log, Except, constants
-from pyLibrary.dot import wrap, coalesce, unwrap
+from pyLibrary.dot import wrap, coalesce, unwrap, listwrap
 from pyLibrary.env import http
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, containers
@@ -327,7 +327,7 @@ def compare_to_expected(query, result, expect, test_settings):
             except Exception:
                 data_columns = [{"name":"."}]
 
-            sort_order = wrap(coalesce(query.edges, query.groupby) + data_columns)
+            sort_order = listwrap(coalesce(query.edges, query.groupby)) + data_columns
 
             if isinstance(expect.data, list):
                 try:

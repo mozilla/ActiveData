@@ -11,6 +11,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from pyLibrary import convert
+from pyLibrary.debugs import constants
+from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, listwrap
 from pyLibrary.env import http
@@ -20,16 +22,16 @@ from pyLibrary.queries import jx
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread
 
-CONCURRENT = 4
+CONCURRENT = 3
 
 
 def assign_shards(settings):
     """
     ASSIGN THE UNASSIGNED SHARDS
     """
-    path = settings.elasticsearch.host+":"+unicode(settings.elasticsearch.port)
+    path = settings.elasticsearch.host + ":" + unicode(settings.elasticsearch.port)
 
-    #GET LIST OF NODES
+    # GET LIST OF NODES
     # coordinator    26.2gb
     # secondary     383.7gb
     # spot_47727B30   934gb
@@ -37,21 +39,26 @@ def assign_shards(settings):
     # primary       638.8gb
     # spot_A9DB0988     5tb
     Log.note("get nodes")
-    nodes = UniqueIndex("name", list(convert_table_to_list(http.get(path + "/_cat/nodes?bytes=b&h=n,r,d,i").content, ["name", "role", "disk", "ip"])))
+    nodes = UniqueIndex("name", list(convert_table_to_list(
+        http.get(path + "/_cat/nodes?bytes=b&h=n,r,d,i,hm").content,
+        ["name", "role", "disk", "ip", "memory"]
+    )))
     for n in nodes:
-        n.disk = float(n.disk)
+        n.memory = text_to_bytes(n.memory)
+        n.disk = 0 if n.disk == "" else float(n.disk)
         if n.name.startswith("spot_"):
             n.zone = "spot"
         else:
             n.zone = n.name
     # Log.note("Nodes:\n{{nodes}}", nodes=list(nodes))
 
-    #GET LIST OF SHARDS, WITH STATUS
+    # GET LIST OF SHARDS, WITH STATUS
     # debug20150915_172538                0  p STARTED        37319   9.6mb 172.31.0.196 primary
     # debug20150915_172538                0  r UNASSIGNED
     # debug20150915_172538                1  p STARTED        37624   9.6mb 172.31.0.39  secondary
     # debug20150915_172538                1  r UNASSIGNED
-    shards = wrap(list(convert_table_to_list(http.get(path + "/_cat/shards").content, ["index", "i", "type", "status", "num", "size", "ip", "node"])))
+    shards = wrap(list(convert_table_to_list(http.get(path + "/_cat/shards").content,
+                                             ["index", "i", "type", "status", "num", "size", "ip", "node"])))
     for s in shards:
         s.i = int(s.i)
         s.size = text_to_bytes(s.size)
@@ -70,7 +77,7 @@ def assign_shards(settings):
                     break  # ONLY NEED ONE
     if high_risk_shards:
         Log.note("{{num}} high risk shards found", num=len(high_risk_shards))
-        allocate(jx.sort(high_risk_shards, "size"), path, nodes, set(n.zone for n in nodes)-{"spot"})
+        allocate(jx.sort(high_risk_shards, "size"), path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
     else:
         Log.note("No high risk shards found")
 
@@ -100,7 +107,33 @@ def assign_shards(settings):
         Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
         return
 
-    # LOOK FOR UNALLOCATED SHARDS WE CAN PUT ON THE SPOT ZONE
+    # ODD SHARD GO TO primary
+    # for g, replicas in jx.groupby(shards, ["index", "i"]):
+    #     if g.index == "unittest20160516_141717":
+    #         replicas=wrap(list(replicas))
+    #         for shard in replicas:
+    #             if shard.i % 2 == 1 and shard.zone=="secondary" and shard.status=="STARTED":
+    #                 command = wrap({"move":
+    #                     {
+    #                         "index": shard.index,
+    #                         "shard": shard.i,
+    #                         "from_node": shard.node,
+    #                         "to_node": "primary"
+    #                     }
+    #                 })
+    #
+    #                 result = convert.json2value(
+    #                     convert.utf82unicode(http.post(path + "/_cluster/reroute", json={"commands": [command]}).content))
+    #                 if not result.acknowledged:
+    #                     Log.warning("Can not move/allocate: {{error}}", error=result.error)
+    #                 else:
+    #                     Log.note("index={{shard.index}}, shard={{shard.i}}, assign_to={{node}}, ok={{result.acknowledged}}",
+    #                              shard=shard, result=result, node="primary")
+    #                 return
+    #
+
+
+    # LOOK FOR UNALLOCATED SHARDS WE CAN PUT IN THE SPOT ZONE
     low_risk_shards = []
     for g, replicas in jx.groupby(shards, ["index", "i"]):
         replicas = wrap(list(replicas))
@@ -117,7 +150,7 @@ def assign_shards(settings):
     if low_risk_shards:
         Log.note("{{num}} low risk shards found", num=len(low_risk_shards))
         num = CONCURRENT - len(relocating)
-        allocate(jx.sort(low_risk_shards, "size")[:num:], path, nodes, {"spot"})
+        allocate(jx.sort(low_risk_shards, "size")[:num:], path, nodes, {"spot"}, shards)
         return
     else:
         Log.note("No low risk shards found")
@@ -130,22 +163,36 @@ def assign_shards(settings):
         if len(safe_zones) >= len(replicas):
             # WE CAN ASSIGN ONE REPLICA TO spot
             i = Random.int(len(replicas))
-            r = replicas[i]
-            too_safe_shards.append(r)
+            shard = replicas[i]
+            too_safe_shards.append(shard)
 
     if too_safe_shards:
         num = CONCURRENT - len(relocating)
         Log.note("{{num}} shards can be moved to spot", num=len(too_safe_shards))
-        allocate(jx.sort(too_safe_shards, {"value": "size", "sort": -1})[0:num:], path, nodes, {"spot"})
+        allocate(jx.sort(too_safe_shards, {"value": "size", "sort": -1})[0:num:], path, nodes, {"spot"}, shards)
     else:
         Log.note("No shards moved")
 
 
-
-def allocate(shards, path, nodes, zones):
+def allocate(shards, path, nodes, zones, all_shards):
     for shard in shards:
-        i = Random.weight([n.disk if n.zone in zones else 0 for n in nodes])
-        destination_node = list(nodes)[i].name
+        # DIVIDE EACH NODE MEMORY BY NUMBER OF SHARDS FROM THIS INDEX
+        node_weight = {n.name: n.memory for n in nodes}
+        for g, ss in jx.groupby(
+            jx.filter(all_shards, {
+                "eq": {
+                    "index": shard.index,
+                    "status": "STARTED"
+                }
+            }),
+            "node"
+        ):
+            ss = wrap(list(ss))
+            node_weight[g.node] = nodes[g.node].memory / (1 + Math.sum(ss.size))
+
+        list_nodes = list(nodes)
+        i = Random.weight([node_weight[n.name] if n.zone in zones else 0 for n in list_nodes])
+        destination_node = list_nodes[i].name
 
         if shard.status == "UNASSIGNED":
             # destination_node = "secondary"
@@ -198,37 +245,38 @@ def split_at(row, columns):
 
 
 def text_to_bytes(size):
-    if size=="":
+    if size == "":
         return 0
 
     multiplier = {
-        "kb":1000,
-        "mb":1000000,
-        "gb":1000000000
+        "kb": 1000,
+        "mb": 1000000,
+        "gb": 1000000000
     }.get(size[-2:])
     if not multiplier:
         multiplier = 1
-        size = size[:-1]
+        if size[-1]=="b":
+            size = size[:-1]
     else:
         size = size[:-2]
     try:
-        return float(size)*float(multiplier)
+        return float(size) * float(multiplier)
     except Exception, e:
         Log.error("not expected", cause=e)
 
 
-
 def main():
-    try:
-        settings = wrap({"elasticsearch":{
-            "host": "http://activedata.allizom.org",
-            "port": 9200,
-            "debug": True
-        }})
+    settings = startup.read_settings()
+    Log.start(settings.debug)
 
-        Log.start(settings)
-        path = settings.elasticsearch.host+":"+unicode(settings.elasticsearch.port)
-        response = http.put(path+"/_cluster/settings", data='{"persistent": {"cluster.routing.allocation.enable": "none"}}')
+    constants.set(settings.constants)
+    path = settings.elasticsearch.host + ":" + unicode(settings.elasticsearch.port)
+
+    try:
+        response = http.put(
+            path + "/_cluster/settings",
+            data='{"persistent": {"cluster.routing.allocation.enable": "none"}}'
+        )
         Log.note("DISABLE SHARD MOVEMENT: {{result}}", result=response.all_content)
 
         while True:
@@ -237,7 +285,13 @@ def main():
     except Exception, e:
         Log.error("Problem with assign of shards", e)
     finally:
+        response = http.put(
+            path + "/_cluster/settings",
+            data='{"persistent": {"cluster.routing.allocation.enable": "all"}}'
+        )
+        Log.note("ENABLE SHARD MOVEMENT: {{result}}", result=response.all_content)
         Log.stop()
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()

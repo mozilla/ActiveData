@@ -317,7 +317,7 @@ def _normalize_select(select, frum, schema=None):
     canonical.aggregate = coalesce(canonical_aggregates[select.aggregate].name, select.aggregate, "none")
     canonical.default = coalesce(select.default, canonical_aggregates[canonical.aggregate].default)
 
-    if hasattr(frum, "_normalize_select"):
+    if hasattr(unwrap(frum), "_normalize_select"):
         return frum._normalize_select(canonical)
 
     output = []
@@ -489,7 +489,10 @@ def _normalize_edge(edge, schema=None):
 def _normalize_groupby(groupby, schema=None):
     if groupby == None:
         return None
-    return wrap([_normalize_group(e, schema=schema) for e in listwrap(groupby)])
+    output = wrap([_normalize_group(e, schema=schema) for e in listwrap(groupby)])
+    if any(o==None for o in output):
+        Log.error("not expected")
+    return output
 
 
 def _normalize_group(edge, schema=None):

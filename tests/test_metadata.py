@@ -138,4 +138,4 @@ class TestMetadata(ActiveDataBaseTest):
             }
         }
 
-        self.utils.send_queries(settings, test)
+        self.utils.send_queries(test)

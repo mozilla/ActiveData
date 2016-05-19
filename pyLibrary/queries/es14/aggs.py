@@ -185,7 +185,7 @@ def es_aggsop(es, frum, query):
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
-        abs_value = jx_expression(s.value).map(es_column_map)
+        abs_value = s.value.map(es_column_map)
 
         if s.aggregate == "count":
             es_query.aggs[literal_field(canonical_name)].value_count.script = abs_value.to_ruby()

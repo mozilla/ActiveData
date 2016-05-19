@@ -71,9 +71,9 @@ def wrap_from(frum, schema=None):
         index = frum
         if frum.startswith("meta."):
             if frum == "meta.columns":
-                return _meta.singlton.columns
+                return _meta.singlton.meta.columns
             elif frum == "meta.table":
-                return _meta.singlton.tables
+                return _meta.singlton.meta.tables
             else:
                 Log.error("{{name}} not a recognized table", name=frum)
         else:

@@ -8,16 +8,14 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
+from __future__ import unicode_literals
 
 from pyLibrary.dot import wrap
 from pyLibrary.queries.expressions import NullOp
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import WEEK, DAY
-
-import base_test_class
-from tests.base_test_class import ActiveDataBaseTest
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 null = None
 TODAY = Date.today()

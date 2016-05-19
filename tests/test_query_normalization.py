@@ -17,7 +17,7 @@ class TestQueryNormalization(FuzzyTestCase):
 
     def test_naming_select(self):
         select = {"value": "result.duration", "aggregate": "avg"}
-        result = _normalize_select(select)
+        result = _normalize_select(select, None)
         #DEEP NAMES ARE ALLOWED, AND NEEDED TO BUILD STRUCTURE FROM A QUERY
         expected = [{"name": "result.duration", "value": "result.duration", "aggregate": "average"}]
         self.assertEqual(result, expected)

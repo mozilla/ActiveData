@@ -151,9 +151,9 @@ class ESUtils(object):
         ESUtils.indexes.append(self.index)
 
     def tearDown(self):
-        if self.es_test_settings.index in ESUtils.indexes:
-            self.es_cluster.delete_index(self.es_test_settings.index)
-            ESUtils.indexes.remove(self.es_test_settings.index)
+        if self.index in ESUtils.indexes:
+            self.es_cluster.delete_index(self.index.settings.index)
+            ESUtils.indexes.remove(self.index)
 
     def setUpClass(self):
         # REMOVE OLD INDEXES
@@ -172,7 +172,7 @@ class ESUtils(object):
         cluster = elasticsearch.Cluster(global_settings.backend_es)
         for i in ESUtils.indexes:
             try:
-                cluster.delete_index(i)
+                cluster.delete_index(i.settings.index)
                 Log.note("remove index {{index}}", index=i)
             except Exception, e:
                 pass

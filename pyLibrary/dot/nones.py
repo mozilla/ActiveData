@@ -107,7 +107,7 @@ class NullType(object):
         return False
 
     def __eq__(self, other):
-        return other is None or isinstance(other, NullType)
+        return other == None or isinstance(other, NullType)
 
     def __ne__(self, other):
         return other is not None and not isinstance(other, NullType)

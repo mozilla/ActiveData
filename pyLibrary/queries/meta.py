@@ -225,7 +225,6 @@ class FromESMetadata(Schema):
                     else:
                         Log.error("logic error")
 
-
     def query(self, _query):
         return self.meta.columns.query(QueryOp(set_default(
             {

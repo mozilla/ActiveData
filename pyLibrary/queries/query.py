@@ -25,7 +25,7 @@ from pyLibrary.maths import Math
 from pyLibrary.queries import Schema, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.dimensions import Dimension
-from pyLibrary.queries.domains import Domain, is_keyword
+from pyLibrary.queries.domains import Domain, is_keyword, SetDomain
 from pyLibrary.queries.expressions import jx_expression, TrueOp, Expression, FalseOp, Variable, LeavesOp
 
 DEFAULT_LIMIT = 10
@@ -431,14 +431,14 @@ def _normalize_edge(edge, schema=None):
 
     if isinstance(edge, basestring):
         if schema:
-            e = schema[edge]
+            e = unwraplist(schema[edge])
             if e:
                 if isinstance(e, _Column):
                     return Dict(
                         name=edge,
                         value=jx_expression(edge),
                         allowNulls=True,
-                        domain=_normalize_domain(schema=schema)
+                        domain=_normalize_domain(domain=e, schema=schema)
                     )
                 elif isinstance(e.fields, list) and len(e.fields) == 1:
                     return Dict(
@@ -522,6 +522,9 @@ def _normalize_group(edge, schema=None):
 def _normalize_domain(domain=None, schema=None):
     if not domain:
         return Domain(type="default")
+    elif isinstance(domain, _Column):
+        if domain.partitions:
+            return SetDomain(**domain)
     elif isinstance(domain, Dimension):
         return domain.getDomain()
     elif schema and isinstance(domain, basestring) and schema[domain]:

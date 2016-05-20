@@ -21,7 +21,7 @@ from pyLibrary.debugs.profiles import CProfiler
 from pyLibrary.dot import coalesce, listwrap, join_field, split_field
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
-from pyLibrary.queries import jx, meta
+from pyLibrary.queries import jx, meta, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.meta import TOO_OLD
 from pyLibrary.strings import expand_template
@@ -67,7 +67,8 @@ def query(path):
 
                 translate_timer = Timer("translate")
                 with translate_timer:
-                    result = jx.run(data)
+                    frum = wrap_from(data['from'])
+                    result = jx.run(data, frum=frum)
 
                     if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                         result = result.format(data.format)

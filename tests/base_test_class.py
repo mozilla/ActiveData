@@ -15,6 +15,7 @@ import itertools
 import os
 import signal
 import subprocess
+from string import ascii_uppercase, ascii_lowercase
 
 from active_data.actions.query import replace_vars
 from pyLibrary import convert, jsons
@@ -22,6 +23,7 @@ from pyLibrary.debugs.exceptions import extract_stack
 from pyLibrary.debugs.logs import Log, Except, constants
 from pyLibrary.dot import wrap, coalesce, unwrap, listwrap
 from pyLibrary.env import http
+from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, containers
 from pyLibrary.queries.jx_usingES import FromES
@@ -106,6 +108,8 @@ class ESUtils(object):
         if backend_es.schema==None:
             Log.error("Expecting backed_es to have a schema defined")
 
+        letters = unicode(ascii_lowercase)
+        self.random_letter = letters[int(Date.now().unix / 30) % 26]
         self.service_url = service_url
         self.backend_es = backend_es
         self.settings = settings
@@ -135,7 +139,7 @@ class ESUtils(object):
     def setUp(self):
         global NEXT
 
-        index_name = "testing_" + ("000"+unicode(NEXT))[-3:]
+        index_name = "testing_" + ("000"+unicode(NEXT))[-3:] + "_" + self.random_letter
         NEXT += 1
 
         self.es_test_settings = self.backend_es.copy()
@@ -159,7 +163,7 @@ class ESUtils(object):
             try:
                 if a.index.startswith("testing_"):
                     create_time = Date(a.index[-15:], "%Y%m%d_%H%M%S")  # EXAMPLE testing_0ef53e45b320160118_180420
-                    if create_time < Date.now():
+                    if create_time < Date.now() - 10 * MINUTE:
                         cluster.delete_index(a.index)
             except Exception, e:
                 Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
@@ -317,7 +321,7 @@ def compare_to_expected(query, result, expect, test_settings):
         if query["from"].startswith("meta."):
             pass
         else:
-            query["from"]=FromES(name=query["from"], settings=test_settings)
+            frum = query["from"]=FromES(name=query["from"], settings=test_settings)
             query = QueryOp.wrap(query)
 
         if not query.sort:

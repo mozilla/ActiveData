@@ -428,6 +428,10 @@ class Literal(Expression):
 
 
 class NullOp(Literal):
+    """
+    FOR USE WHEN EVERYTHING IS EXPECTED TO BE AN Expression
+    USE IT TO EXPECT A NULL VALUE IN assertAlmostEqual
+    """
 
     def __new__(cls, *args, **kwargs):
         return object.__new__(cls, *args, **kwargs)
@@ -477,6 +481,8 @@ class NullOp(Literal):
     def __str__(self):
         return b"null"
 
+    def __json__(self):
+        return "null"
 
 class TrueOp(Literal):
     def __new__(cls, *args, **kwargs):

@@ -8,18 +8,14 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from unittest import skipIf
-
-import base_test_class
 from pyLibrary.dot import wrap
-from pyLibrary.queries.expressions import NullOp
-from tests.base_test_class import ActiveDataBaseTest, global_settings, TEST_TABLE
 from pyLibrary.maths import Math
-
+from pyLibrary.queries.expressions import NullOp
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 null = None
 lots_of_data = wrap([{"a": i} for i in range(30)])
@@ -934,7 +930,6 @@ class TestDeepOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-    @skipIf(global_settings.is_travis, "travis is too fast, must reconfigure the metadata management routines")
     def test_deep_agg_w_deeper_select_relative_name(self):
         data = [{"a": {"_b": [
             {"r": {"s": "a"}, "v": {"u": 1}},

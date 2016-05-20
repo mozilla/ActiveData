@@ -22,7 +22,7 @@ from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import jx, containers
+from pyLibrary.queries import jx, containers, Schema
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import is_keyword
@@ -67,16 +67,19 @@ class FromES(Container):
         self.settings.type = self._es.settings.type
         self.edges = Dict()
         self.worker = None
+
+        columns = self.get_columns(table_name=name)
+        self._schema = Schema(columns)
+
         if typed == None:
-            self._columns = self.get_columns(table_name=name)
             # SWITCH ON TYPED MODE
-            self.typed = any(c.name in ("$value", "$object") for c in self._columns)
+            self.typed = any(c.name in ("$value", "$object") for c in columns)
         else:
             self.typed = typed
 
     @property
     def schema(self):
-        return Dict(get=lambda c:self.get_columns(column_name=c))
+        return self._schema
 
     @staticmethod
     def wrap(es):

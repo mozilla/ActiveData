@@ -152,3 +152,6 @@ class Container(object):
         """
         Log.error("Not implemented")
 
+    @property
+    def schema(self):
+        Log.error("Not implemented")

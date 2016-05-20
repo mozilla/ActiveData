@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import absolute_import
 
 from pyLibrary.dot import wrap, split_field, join_field
+from pyLibrary.queries.expressions import Variable
 
 
 def es_query_template(path):
@@ -58,12 +59,15 @@ def jx_sort_to_es_sort(sort):
 
     output = []
     for s in sort:
-        if s.sort == 1:
-            output.append(s.value)
-        elif s.sort == -1:
-            output.append({s.value: "desc"})
+        if isinstance(s.value, Variable):
+            if s.sort == -1:
+                output.append({s.value: "desc"})
+            else:
+                output.append(s.value.var)
         else:
-            pass
+            from pyLibrary.debugs.logs import Log
+
+            Log.error("do not know how to handle")
     return output
 
 

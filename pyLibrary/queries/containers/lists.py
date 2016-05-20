@@ -16,7 +16,7 @@ from collections import Mapping
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList, unwrap
-from pyLibrary.queries import jx
+from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expression_compiler import compile_expression
@@ -33,9 +33,9 @@ class ListContainer(Container):
         data = list(unwrap(data))
         Container.__init__(self, data, schema)
         if schema == None:
-            self.schema = get_schema_from_list(data)
+            self._schema = get_schema_from_list(data)
         else:
-            self.schema = schema
+            self._schema = schema
         self.name = name
         self.data = data
         self.locker = Lock()  # JUST IN CASE YOU WANT TO DO MORE THAN ONE THING
@@ -43,6 +43,10 @@ class ListContainer(Container):
     @property
     def query_path(self):
         return None
+
+    @property
+    def schema(self):
+        return self._schema
 
     def query(self, q):
         frum = self
@@ -178,9 +182,9 @@ def get_schema_from_list(frum):
     """
     SCAN THE LIST FOR COLUMN TYPES
     """
-    columns = {}
+    columns = []
     _get_schema_from_list(frum, columns, prefix=[], nested_path=[])
-    return columns
+    return Schema(columns)
 
 def _get_schema_from_list(frum, columns, prefix, nested_path):
     """
@@ -211,7 +215,7 @@ def _get_schema_from_list(frum, columns, prefix, nested_path):
             type=t,
             nested_path=nested_path
         )
-        columns[column.name] = column
+        columns.append(column)
 
 
 _type_to_name = {

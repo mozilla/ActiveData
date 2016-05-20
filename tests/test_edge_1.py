@@ -11,6 +11,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 import base_test_class
+from pyLibrary.queries.expressions import NullOp
 
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
@@ -639,7 +640,6 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-
     def test_wo_limit(self):
         """
         TESTING THAT THE DEFAULT LIMIT IS APPLIED
@@ -665,8 +665,7 @@ class TestEdge1(ActiveDataBaseTest):
                     {"k": "g", "v": 7},
                     {"k": "h", "v": 8},
                     {"k": "i", "v": 9},
-                    {"k": "j", "v": 10},
-                    {"v": 13}
+                    {"k": "j", "v": 10}
                 ]
             },
             "expecting_table": {
@@ -682,8 +681,7 @@ class TestEdge1(ActiveDataBaseTest):
                     ["g", 7],
                     ["h", 8],
                     ["i", 9],
-                    ["j", 10],
-                    [null, 13]
+                    ["j", 10]
                 ]
             },
             "expecting_cube": {
@@ -705,13 +703,16 @@ class TestEdge1(ActiveDataBaseTest):
                                 {"value": "g"},
                                 {"value": "h"},
                                 {"value": "i"},
-                                {"value": "j"}
+                                {"value": "j"},
+                                {"value": "k"},
+                                {"value": "l"},
+                                {"value": "m"}
                             ]
                         }
                     }
                 ],
                 "data": {
-                    "v": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13]
+                    "v": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, NullOp(), NullOp(), NullOp(), NullOp()]
                 }
             }
         }
@@ -725,7 +726,8 @@ class TestEdge1(ActiveDataBaseTest):
             "query": {
                 "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "max"},
-                "edges": [{"value": "k", "domain": {"type": "default", "limit": 100}}]
+                "edges": [{"value": "k", "domain": {"type": "default", "limit": 100}}],
+                "limit": 100
             },
             "expecting_list": {
                 "meta": {"format": "list"},

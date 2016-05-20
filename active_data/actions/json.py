@@ -19,7 +19,7 @@ from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict
 from pyLibrary.dot import wrap
-from pyLibrary.queries import jx
+from pyLibrary.queries import jx, wrap_from
 from pyLibrary.queries.containers import Container
 from pyLibrary.times.timer import Timer
 
@@ -32,12 +32,13 @@ def get_raw_json(path):
             args = wrap(Dict(**flask.request.args))
             limit = args.limit if args.limit else 10
             args.limit = None
+            frum = wrap_from(path)
             result = jx.run({
                 "from": path,
                 "where": {"eq": args},
                 "limit": limit,
                 "format": "list"
-            })
+            }, frum)
 
             if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                 result = result.format("list")

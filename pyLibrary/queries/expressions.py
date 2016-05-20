@@ -920,7 +920,14 @@ class EqOp(Expression):
 
     def to_esfilter(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-            return {"term": {self.lhs.var: convert.json2value(self.rhs.json)}}
+            rhs = convert.json2value(self.rhs.json)
+            if isinstance(rhs, list):
+                if len(rhs) == 1:
+                    return {"term": {self.lhs.var: rhs[0]}}
+                else:
+                    return {"terms": {self.lhs.var: rhs}}
+            else:
+                return {"term": {self.lhs.var: rhs}}
         else:
             return {"script": {"script": self.to_ruby()}}
 

@@ -8,11 +8,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
+from __future__ import unicode_literals
 
-import base_test_class
-from tests.base_test_class import ActiveDataBaseTest, global_settings, TEST_TABLE
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 
 class TestAggOps(ActiveDataBaseTest):

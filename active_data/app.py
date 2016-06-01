@@ -78,7 +78,7 @@ def setup(settings=None):
             request_logger = elasticsearch.Cluster(config.request_logs).get_or_create_index(config.request_logs)
             active_data.request_log_queue = request_logger.threaded_queue(max_size=2000)
 
-        # SETUP DEFAULT CONTAINER, SO THER EIS SIMETHING TO QUERY
+        # SETUP DEFAULT CONTAINER, SO THERE IS SOMETHING TO QUERY
         containers.config.default = {
             "type": "elasticsearch",
             "settings": config.elasticsearch.copy()

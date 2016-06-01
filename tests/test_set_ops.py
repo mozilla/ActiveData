@@ -562,7 +562,7 @@ class TestSetOps(ActiveDataBaseTest):
             }
         })
 
-        settings = self.utils.fill_container(test)
+        self.utils.fill_container(test)
         result = self.utils.execute_query(test.query)
         self.assertEqual(result.meta.es_query.size, query.MAX_LIMIT)
 
@@ -575,7 +575,7 @@ class TestSetOps(ActiveDataBaseTest):
             },
         })
 
-        settings = self.utils.fill_container(test)
+        self.utils.fill_container(test)
         test.query.format = "list"
         result = self.utils.execute_query(test.query)
         self.assertEqual(len(result.data), query.DEFAULT_LIMIT)
@@ -598,7 +598,7 @@ class TestSetOps(ActiveDataBaseTest):
             },
         })
 
-        settings = self.utils.fill_container(test)
+        self.utils.fill_container(test)
         test.query.format = "list"
         result = self.utils.execute_query(test.query)
         self.assertEqual(len(result.data), 5)
@@ -621,7 +621,7 @@ class TestSetOps(ActiveDataBaseTest):
             },
         })
 
-        settings = self.utils.fill_container(test)
+        self.utils.fill_container(test)
         test.query.format = "list"
         self.assertRaises(Exception, self.utils.execute_query, test.query)
 

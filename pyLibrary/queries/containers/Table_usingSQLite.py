@@ -24,6 +24,7 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, coalesce, Dict, wrap, Null, unwraplist, split_field, join_field, literal_field, \
     set_default, startswith_field, unwrap, relative_field
 from pyLibrary.maths.randoms import Random
+from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain
@@ -33,21 +34,36 @@ from pyLibrary.queries.query import QueryOp
 from pyLibrary.sql.sqlite import Sqlite
 from pyLibrary.times.dates import Date
 
+_containers = None
+
 
 UID = "__id__"  # will not be quoted
+GUID = "__guid__"
 ORDER = "__order__"
 PARENT = "__parent__"
 COLUMN = "__column"
 
 
+def late_import():
+    global _containers
+
+    from pyLibrary.queries import containers as _containers
+
+    _ = _containers
+
+
 class Table_usingSQLite(Container):
-    def __init__(self, name, db=None, uid=UID, exists=False):
+
+    @use_settings
+    def __init__(self, name, db=None, uid=GUID, exists=False, settings=None):
         """
         :param name: NAME FOR THIS TABLE
         :param db: THE DB TO USE
         :param uid: THE UNIQUE INDEX FOR THIS TABLE
         :return: HANDLE FOR TABLE IN db
         """
+        global _containers
+
         Container.__init__(self, frum=None)
         if db:
             self.db = db
@@ -57,6 +73,14 @@ class Table_usingSQLite(Container):
         self.name = name
         self.uid = listwrap(uid)
         self._next_uid = 1
+
+        late_import()
+        if not _containers.config.default:
+            _containers.config.default = {
+                "type": "sqlite",
+                "settings": {"db": db}
+            }
+
 
         self.columns = {}
         for u in self.uid:
@@ -129,26 +153,8 @@ class Table_usingSQLite(Container):
         return output
 
     def insert(self, docs):
-        doc_collection = {}
-        for d in docs:
-            # ASSIGN A NON-NULL PRIMARY KEY
-            if any(v == None for v in self.uid_accessor(d)):
-                for u in self.uid:
-                    d[u] = coalesce(d[u], unique_name())
-
-            uid = wrap({u: d[u] for u in self.uid})
-            self.flatten(d, uid, doc_collection)
-
-        for nested_path, insertion in doc_collection.items():
-            active_columns = list(insertion.active_columns)
-            vals = [[quote_value(get_document_value(d, c)) for c in active_columns] for d in insertion.rows]
-
-            command = "INSERT INTO " + quote_table(join_field(split_field(self.name)+split_field(nested_path[0]))) + "(" + \
-                      ",".join(_quote_column(c) for c in active_columns) + \
-                      ")\n" + \
-                      " UNION ALL\n".join("SELECT " + ",".join(vv) for vv in vals)
-
-            self.db.execute(command)
+        doc_collection = self.flatten_many(docs)
+        self._insert(doc_collection)
 
     def add_column(self, column):
         """
@@ -414,16 +420,17 @@ class Table_usingSQLite(Container):
 
         # TYPE CONFLICTS MUST NOW BE RESOLVED DURING
         # TYPE-SPECIFIC QUERY NORMALIZATION
-        vars_ = query.vars(exclude_select=True)
-        type_map = {
-            v: c.es_column
-            for v in vars_
-            if v in self.columns and len([c for c in self.columns[v] if c.type != "nested"]) == 1
-            for c in self.columns[v]
-            if c.type != "nested"
-        }
-
-        sql_query = query.map(type_map)
+        # vars_ = query.vars(exclude_select=True)
+        # type_map = {
+        #     v: c.es_column
+        #     for v in vars_
+        #     if v in self.columns and len([c for c in self.columns[v] if c.type != "nested"]) == 1
+        #     for c in self.columns[v]
+        #     if c.type != "nested"
+        # }
+        #
+        # sql_query = query.map(type_map)
+        query = query
 
         new_table = "temp_"+unique_name()
 
@@ -432,17 +439,17 @@ class Table_usingSQLite(Container):
         else:
             create_table = ""
 
-        if sql_query.edges:
-            command = create_table + self._edges_op(sql_query)
-        elif sql_query.groupby:
-            command = create_table + self._groupby_op(sql_query)
+        if query.groupby:
+            command = create_table + self._groupby_op(query)
+        elif query.edges or any(listwrap(query.select).aggregate):
+            command = create_table + self._edges_op(query)
         else:
-            return self._set_op(sql_query, frum)
+            return self._set_op(query, frum)
 
-        if sql_query.sort:
+        if query.sort:
             command += "\nORDER BY " + ",\n".join(
                 s.value.to_sql() + (" DESC" if s.sort == -1 else "")
-                for s in sql_query.sort
+                for s in query.sort
             )
 
         result = self.db.query(command)
@@ -451,7 +458,14 @@ class Table_usingSQLite(Container):
         if query.format == "container":
             output = Table_usingSQLite(new_table, db=self.db, uid=self.uid, exists=True)
         elif query.format == "cube" or query.edges:
-            if len(query.edges) > 1:
+            if len(query.edges) == 0:
+                data = {s.name: result.data[0][i] for i, s in enumerate(listwrap(query.select))}
+                return Dict(
+                    data=data,
+                    meta={"format": "cube"}
+                )
+
+            elif len(query.edges) > 1:
                 Log.error("Only support one dimension right now")
 
             if not result.data:
@@ -482,35 +496,79 @@ class Table_usingSQLite(Container):
                     domain=SimpleSetDomain(partitions=parts)
                 ))
 
-            data = {s.name: columns[i] for i, s in enumerate(sql_query.select)}
+            data = {s.name: columns[i] for i, s in enumerate(query.select)}
 
             return Dict(
+                meta={"format": "cube"},
                 edges=edges,
                 data=data
             )
-        elif query.format == "list" or (not query.edges and not query.groupby):
+        elif query.format == "table":
             output = Dict(
-                meta={"format": "list"},
+                meta={"format": "table"},
                 header=column_names,
-                data=[{c: v for c, v in zip(column_names, r)} for r in result.data]
+                data=result.data
             )
+        elif query.format == "list" or (not query.edges and not query.groupby):
+
+            if not isinstance(query, list) and query.select.aggregate:
+                output = Dict(
+                    meta={"format": "value"},
+                    header=column_names,
+                    data=result.data[0][0]
+                )
+            else:
+                output = Dict(
+                    meta={"format": "list"},
+                    header=column_names,
+                    data=[{c: v for c, v in zip(column_names, r)} for r in result.data]
+                )
         else:
             Log.error("unknown format {{format}}", format=query.format)
 
         return output
 
     def _edges_op(self, query):
-        selects = []
+        index_to_column = {}  # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
+        selects = []  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE)
+
+        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
+
+        # WE MUST HAVE THE ALIAS NAMES FOR THE TABLES
+        def copy_cols(cols):
+            output = set()
+            for c in cols:
+                c = copy(c)
+                c.es_index = nest_to_alias[wrap_nested_path(c.nested_path)[0]]
+                output.add(c)
+            return output
+        columns = {k: copy_cols(v) for k, v in self.columns.items()}
+
         for s in listwrap(query.select):
-            if s.value=="." and s.aggregate=="count":
+            if isinstance(s.value, Variable) and s.value.var == "." and s.aggregate == "count":
+                # COUNT RECORDS, NOT ANY ONE VALUE
                 selects.append("COUNT(1) AS " + quote_table(s.name))
+            elif s.aggregate == "percentile":
+                if not isinstance(s.percentile, (int, float)):
+                    Log.error("Expecting percentile to be a float between 0 and 1")
+
+                Log.error("not implemented")
             else:
-                selects.append(sql_aggs[s.aggregate]+"("+jx_expression(s.value).to_sql() + ") AS " + quote_table(s.name))
+                for details in s.value.to_sql(columns):
+                    for json_type, sql in details.sql.items():
+                        column_number = len(selects)
+                        selects.append(sql_aggs[s.aggregate] + "(" + sql + ") AS " + _make_column_name(column_number))
+                        index_to_column[column_number] = Dict(
+                            name=details.name,
+                            pull=column_number,
+                            sql=sql,
+                            type=sql_type_to_json_type[json_type]
+                        )
 
         for w in query.window:
             selects.append(self._window_op(self, query, w))
 
-        agg_prefix = " FROM "
+        agg_prefix = "\nFROM "
         agg_suffix = "\n"
 
         agg = ""
@@ -523,7 +581,7 @@ class Table_usingSQLite(Container):
             edge_value = e.value.to_sql()
             value = edge_value
             for v in e.value.vars():
-                value = value.replace(quote_table(v), "a."+quote_table(v))
+                value = value.replace(quote_table(v), nest_to_alias['.'] + "."+quote_table(v))
 
             edge_name = quote_table(e.name)
             selects.append(edge_alias + "." + edge_name + " AS " + edge_name)
@@ -532,22 +590,25 @@ class Table_usingSQLite(Container):
                 "SELECT DISTINCT " + edge_value + " AS " + edge_name + " FROM " + quote_table(self.name) + \
                 ") " + edge_alias + \
                 agg_suffix
-            agg_prefix = " LEFT JOIN "
+            agg_prefix = "\nLEFT JOIN "
             agg_suffix = " ON 1=1\n"
             ons.append(edge_alias + "." + edge_name + " = "+ value)
             groupby += groupby_prefix + edge_alias + "." + edge_name
             groupby_prefix = ",\n"
 
-        agg += agg_prefix + quote_table(self.name) + " a ON "+" AND ".join(ons)
+        if not ons:
+            agg += agg_prefix + quote_table(self.name) + " " + nest_to_alias['.']
+        else:
+            agg += agg_prefix + quote_table(self.name) + " " + nest_to_alias['.'] + " ON " + " AND ".join(ons)
 
-        where = "\nWHERE " + query.where.to_sql()
+        where = "\nWHERE " + query.where.to_sql(self.columns)[0]['b']
 
         return "SELECT " + (",\n".join(selects)) + agg + where+groupby
 
     def _groupby_op(self, query):
         selects = []
         for s in listwrap(query.select):
-            if s.value=="." and s.aggregate=="count":
+            if s.value == "." and s.aggregate == "count":
                 selects.append("COUNT(1) AS " + quote_table(s.name))
             else:
                 selects.append(sql_aggs[s.aggregate]+"("+jx_expression(s.value).to_sql() + ") AS " + quote_table(s.name))
@@ -980,16 +1041,15 @@ class Table_usingSQLite(Container):
                   "\nWHERE\n" + has_nested_data
         self.db.execute(command)
 
-    def flatten(self, doc, uid, doc_collection, path=None):
+    def flatten_many(self, docs, path="."):
         """
         :param doc: THE JSON DOCUMENT
-        :param uid: ID ASSIGNED TO THIS (NESTED) DOCUMENT
-        :param doc_collection: MAP FROM NESTED PATH TO INSERTION PARAMETERS
-               {"active_columns": list, "rows": list of objects}
         :param path: FULL PATH TO THIS (INNER/NESTED) DOCUMENT
-        :return: TUPLE (success, command) WHERE
+        :return: TUPLE (success, command, doc_collection) WHERE
                  success: BOOLEAN INDICATING PROPER PARSING
                  command: SCHEMA CHANGES REQUIRED TO BE SUCCESSFUL NEXT TIME
+                 doc_collection: MAP FROM NESTED PATH TO INSERTION PARAMETERS:
+                 {"active_columns": list, "rows": list of objects}
         """
 
         # TODO: COMMAND TO ADD COLUMNS
@@ -997,6 +1057,11 @@ class Table_usingSQLite(Container):
         # COLLECT AS MANY doc THAT DO NOT REQUIRE SCHEMA CHANGE
 
         required_changes = []
+        insertion = Dict(
+            active_columns=set(),
+            rows=[]
+        )
+        doc_collection = {".": insertion}
 
         def _flatten(d, uid, parent_id, order, full_path, nested_path, row=None):
             insertion = doc_collection[nested_path[0]]
@@ -1131,18 +1196,15 @@ class Table_usingSQLite(Container):
                 elif c.type:
                     row[c.es_column] = v
 
-        insertion = doc_collection.get(".", None)
-        if not insertion:
-            doc_collection["."] = Dict(
-                active_columns=set(),
-                rows=[]
-            )
+        for doc in docs:
+            _flatten(doc, self.next_uid(), 0, 0, full_path=path, nested_path=["."])
+            if required_changes:
+                self.change_schema(required_changes)
+            required_changes = []
 
-        _flatten(doc, uid, 0, 0, full_path=coalesce(path, "."), nested_path=["."])
-        if required_changes:
-            return False, required_changes
-        else:
-            return True, []
+        return doc_collection
+
+
 
     def _insert(self, collection):
         for nested_path, details in collection.items():
@@ -1289,7 +1351,9 @@ def _make_column_name(number):
 
 sql_aggs = {
     "min": "MIN",
+    "minimum": "MIN",
     "max": "MAX",
+    "maximum": "MAX",
     "sum": "SUM",
     "avg": "AVG",
     "average": "AVG",

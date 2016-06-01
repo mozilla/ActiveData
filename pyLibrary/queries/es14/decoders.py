@@ -430,6 +430,8 @@ class DefaultDecoder(SetDecoder):
         self.domain = edge.domain
         self.domain.limit =Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
         self.parts = list()
+        self.key2index = {}
+        self.computed_domain = False
 
     def append_query(self, es_query, start):
         self.start = start
@@ -474,6 +476,28 @@ class DefaultDecoder(SetDecoder):
             partitions=jx.sort(set(self.parts))
         )
         self.parts = None
+        self.computed_domain = True
+
+    def get_index(self, row):
+        if self.computed_domain:
+            try:
+                part = row[self.start]
+                return self.domain.getIndexByKey(part["key"])
+            except Exception, e:
+                Log.error("problem", cause=e)
+        else:
+            try:
+                part = row[self.start]
+                key = part['key']
+                i = self.key2index.get(key)
+                if i is None:
+                    i = len(self.parts)
+                    part = {"key": key, "dataIndex": i}
+                    self.parts.append({"key": key, "dataIndex": i})
+                    self.key2index[i] = part
+                return i
+            except Exception, e:
+                Log.error("problem", cause=e)
 
     @property
     def num_columns(self):

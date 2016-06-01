@@ -250,7 +250,7 @@ class Variable(Expression):
             nested_path = wrap_nested_path(c.nested_path)
             acc[json_type_to_sql_type[c.type]] = c.es_index + "." + convert.string2quote(c.es_column)
 
-        return [{"name": self.var, "sql": acc, "nested_path": nested_path}]
+        return wrap([{"name": self.var, "sql": acc, "nested_path": nested_path}])
 
     def __call__(self, row, rownum=None, rows=None):
         path = split_field(self.var)
@@ -504,7 +504,7 @@ class TrueOp(Literal):
         return "True"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        return wrap({"b": "1"})
+        return wrap([{"b": "1=1"}])
 
     def to_esfilter(self):
         return {"match_all": {}}
@@ -824,7 +824,7 @@ class DivOp(Expression):
     def to_ruby(self, not_null=False, boolean=False):
         lhs = self.lhs.to_ruby(not_null=True)
         rhs = self.rhs.to_ruby(not_null=True)
-        script = "((" + lhs + ") / (" + rhs + ")).doubleValue()"
+        script = "((double)(" + lhs + ") / (double)(" + rhs + ")).doubleValue()"
 
         output = WhenOp(
             "when",
@@ -838,7 +838,7 @@ class DivOp(Expression):
         return output
 
     def to_python(self, not_null=False, boolean=False):
-        return "(" + self.lhs.to_python() + ") / (" + self.rhs.to_python()+")"
+        return "float(" + self.lhs.to_python() + ") / float(" + self.rhs.to_python()+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
         lhs = self.lhs.to_sql(schema).n
@@ -864,7 +864,56 @@ class DivOp(Expression):
         return self.lhs.vars() | self.rhs.vars() | self.default.vars()
 
     def map(self, map_):
-        return BinaryOp("div", [self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_))
+        return DivOp("div", [self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_))
+
+    def missing(self):
+        if self.default.exists():
+            return FalseOp()
+        else:
+            return OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, Literal("literal", 0)])])
+
+
+class FloorOp(Expression):
+    has_simple_form = True
+
+    def __init__(self, op, terms, default=NullOp()):
+        Expression.__init__(self, op, terms)
+        self.lhs, self.rhs = terms
+        self.default = default
+
+    def to_ruby(self, not_null=False, boolean=False):
+        lhs = self.lhs.to_ruby(not_null=True)
+        rhs = self.rhs.to_ruby(not_null=True)
+        script = "Math.floor(((double)(" + lhs + ") / (double)(" + rhs + ")).doubleValue())*(" + rhs + ")"
+
+        output = WhenOp(
+            "when",
+            OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, Literal("literal", 0)])]),
+            **{
+                "then": self.default,
+                "else":
+                    ScriptOp("script", script)
+            }
+        ).to_ruby()
+        return output
+
+    def to_python(self, not_null=False, boolean=False):
+        return "Math.floor(" + self.lhs.to_python() + ", " + self.rhs.to_python()+")"
+
+    def to_esfilter(self):
+        Log.error("Logic error")
+
+    def to_dict(self):
+        if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
+            return {"floor": {self.lhs.var, convert.json2value(self.rhs.json)}, "default": self.default}
+        else:
+            return {"floor": [self.lhs.to_dict(), self.rhs.to_dict()], "default": self.default}
+
+    def vars(self):
+        return self.lhs.vars() | self.rhs.vars() | self.default.vars()
+
+    def map(self, map_):
+        return FloorOp("floor", [self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_))
 
     def missing(self):
         if self.default.exists():
@@ -2187,6 +2236,7 @@ operators = {
     "eq": EqOp,
     "exists": ExistsOp,
     "exp": BinaryOp,
+    "floor": FloorOp,
     "gt": BinaryOp,
     "gte": BinaryOp,
     "in": InOp,

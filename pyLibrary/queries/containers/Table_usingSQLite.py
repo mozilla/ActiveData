@@ -537,6 +537,7 @@ class Table_usingSQLite(Container):
             output = Dict(
                 meta={"format": "table"},
                 header=column_names,
+
                 data=result.data
             )
         elif query.format == "list" or (not query.edges and not query.groupby):
@@ -1407,6 +1408,7 @@ sql_aggs = {
     "last": "LAST_VALUE",
     "max": "MAX",
     "maximum": "MAX",
+    "median": "MEDIAN",
     "min": "MIN",
     "minimum": "MIN",
     "sum": "SUM"
@@ -1421,32 +1423,17 @@ sql_types = {
     "nested": "TEXT"
 }
 
-REFINE_SQRT = "(({{guess}}) + ({{value}})/({{guess}})) / 2"
-SQRT = REFINE_SQRT
-# EACH REFINEMENT GETS A BETTER ESTIMATE, THIS IS GOOD TO 6 PLACES
-SQRT = expand_template(SQRT, {"guess": REFINE_SQRT, "value": "{{value}}"})
-SQRT = expand_template(SQRT, {"guess": REFINE_SQRT, "value": "{{value}}"})
-SQRT = expand_template(SQRT, {"guess": REFINE_SQRT, "value": "{{value}}"})
-# SQRT = expand_template(SQRT, {"guess": REFINE_SQRT, "value": "{{value}}"})
-# SQRT = expand_template(SQRT, {"guess": REFINE_SQRT, "value": "{{value}}"})
-# THE BEST FIRST GUESS HAS 1/2 THE LENGTH
-SQRT = expand_template(SQRT, {"guess": "CAST(SUBSTR('' || ROUND({{value}}), LENGTH('' || ROUND({{value}}))/2) as INTEGER)", "value": "{{value}}"})
-SQRT = SQRT.replace("/(1)", "")
-
-VAR = "SUM({{value}}*{{value}})/COUNT({{value}}) - SUM({{value}})*SUM({{value}})/COUNT({{value}})/COUNT({{value}})"
-
 STATS = {
     "count": "COUNT({{value}})",
-    "std": expand_template(SQRT, {"value": VAR}),
+    "std": "SQRT((1-1.0/COUNT({{value}}))*VARIANCE({{value}}))",
     "min": "MIN({{value}})",
     "max": "MAX({{value}})",
     "sum": "SUM({{value}})",
-    "median": "NULL",
+    "median": "MEDIAN({{value}})",
     "sos": "SUM({{value}}*{{value}})",
-    "var": VAR,
+    "var": "(1-1.0/COUNT({{value}}))*VARIANCE({{value}})",
     "avg": "AVG({{value}})"
 }
-# stdev, variance, mode, median
 
 
 quoted_UID = quote_table(UID)

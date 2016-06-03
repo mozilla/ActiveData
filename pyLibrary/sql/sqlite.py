@@ -8,22 +8,27 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 import sqlite3
 
-from pyLibrary.debugs import exceptions
 from pyLibrary.debugs.exceptions import Except, extract_stack, ERROR
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict
+from pyLibrary.env.files import File
 from pyLibrary.thread.threads import Queue, Signal, Thread
 from pyLibrary.times.timer import Timer
 
 DEBUG = True
 
+
 class Sqlite(object):
+    """
+    Allows multi-threaded access
+    Loads extension functions (like SQRT)
+    """
 
     canonical = None
 
@@ -69,6 +74,13 @@ class Sqlite(object):
             self.db = Sqlite.canonical
         else:
             self.db = sqlite3.connect(':memory:')
+            try:
+                full_path = File("pyLibrary/vendor/sqlite/libsqlitefunctions.so").abspath
+                # self.db.execute("SELECT sqlite3_enable_load_extension(1)")
+                self.db.enable_load_extension(True)
+                self.db.execute("SELECT load_extension('"+full_path+"')")
+            except Exception, e:
+                Log.warning("loading sqlite extension functions failed, doing without. (no SQRT for you!)", cause=e)
 
         try:
             while not please_stop:
@@ -107,3 +119,12 @@ class Sqlite(object):
             Log.error("Problem with sql thread", e)
         finally:
             self.db.close()
+
+
+def install_sqlite():
+    import sys
+
+    sqlite_dll = File.new_instance(sys.exec_prefix, "dlls/sqlite3.dll")
+    backup = sqlite_dll.backup()
+    File.copy("pyLibrary/vendor/sqlite/sqlite3.dll", sqlite_dll)
+

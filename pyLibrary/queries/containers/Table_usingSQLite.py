@@ -32,6 +32,7 @@ from pyLibrary.queries.expressions import jx_expression, CoalesceOp, Variable, w
 from pyLibrary.queries.meta import Column
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.sql.sqlite import Sqlite
+from pyLibrary.strings import expand_template
 from pyLibrary.times.dates import Date
 
 _containers = None
@@ -86,7 +87,7 @@ class Table_usingSQLite(Container):
         for u in self.uid:
             if not self.columns.get(u, None):
                 cs = self.columns[u] = set()
-            if u != UID:
+            if u != GUID:
                 cs.add(Column(name=u, table=name, type="string", es_column=typed_column(u, "string"), es_index=name))
 
         self.uid_accessor = jx.get(self.uid)
@@ -151,6 +152,30 @@ class Table_usingSQLite(Container):
                 output.append(c)
                 break
         return output
+
+    def _get_sql_schema(self):
+        """
+        :return: schema for this table, `change es_index` to sql alias
+        """
+        # WE MUST HAVE THE ALIAS NAMES FOR THE TABLES
+        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
+
+        def paths(field):
+            path = split_field(field)
+            for i in range(len(path)+1):
+                yield join_field(path[0:i])
+
+        columns = Dict()
+        for k in set(kk for k in self.columns.keys() for kk in paths(k)):
+            for j, c in ((j, cc) for j, c in self.columns.items() for cc in c):
+                if startswith_field(j, k):
+                    if c.type in STRUCT:
+                        continue
+                    c = copy(c)
+                    c.es_index = nest_to_alias[wrap_nested_path(c.nested_path)[0]]
+                    columns[literal_field(k)] += [c]
+
+        return unwrap(columns)
 
     def insert(self, docs):
         doc_collection = self.flatten_many(docs)
@@ -440,11 +465,14 @@ class Table_usingSQLite(Container):
             create_table = ""
 
         if query.groupby:
-            command = create_table + self._groupby_op(query)
+            op, index_to_columns = self._groupby_op(query)
+            command = create_table + op
         elif query.edges or any(listwrap(query.select).aggregate):
-            command = create_table + self._edges_op(query)
+            op, index_to_columns = self._edges_op(query)
+            command = create_table + op
         else:
-            return self._set_op(query, frum)
+            op, index_to_columns = self._edges_op(query)
+            return op
 
         if query.sort:
             command += "\nORDER BY " + ",\n".join(
@@ -459,9 +487,11 @@ class Table_usingSQLite(Container):
             output = Table_usingSQLite(new_table, db=self.db, uid=self.uid, exists=True)
         elif query.format == "cube" or query.edges:
             if len(query.edges) == 0:
-                data = {s.name: result.data[0][i] for i, s in enumerate(listwrap(query.select))}
+                data = Dict()
+                for s in index_to_columns.values():
+                    data[s.name] = result.data[0][s.pull]
                 return Dict(
-                    data=data,
+                    data=unwrap(data),
                     meta={"format": "cube"}
                 )
 
@@ -511,16 +541,20 @@ class Table_usingSQLite(Container):
             )
         elif query.format == "list" or (not query.edges and not query.groupby):
 
-            if not isinstance(query, list) and query.select.aggregate:
-                output = Dict(
-                    meta={"format": "value"},
-                    header=column_names,
-                    data=result.data[0][0]
-                )
+            if any(listwrap(query.select).aggregate):
+                if isinstance(query.select, list):
+                    output = Dict(
+                        meta={"format": "value"},
+                        data={c: v for c, v in zip(column_names, result.data[0])}
+                    )
+                else:
+                    output = Dict(
+                        meta={"format": "value"},
+                        data=result.data[0][0]
+                    )
             else:
                 output = Dict(
                     meta={"format": "list"},
-                    header=column_names,
                     data=[{c: v for c, v in zip(column_names, r)} for r in result.data]
                 )
         else:
@@ -534,15 +568,7 @@ class Table_usingSQLite(Container):
 
         nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
 
-        # WE MUST HAVE THE ALIAS NAMES FOR THE TABLES
-        def copy_cols(cols):
-            output = set()
-            for c in cols:
-                c = copy(c)
-                c.es_index = nest_to_alias[wrap_nested_path(c.nested_path)[0]]
-                output.add(c)
-            return output
-        columns = {k: copy_cols(v) for k, v in self.columns.items()}
+        columns = self._get_sql_schema()
 
         for s in listwrap(query.select):
             if isinstance(s.value, Variable) and s.value.var == "." and s.aggregate == "count":
@@ -553,7 +579,31 @@ class Table_usingSQLite(Container):
                     Log.error("Expecting percentile to be a float between 0 and 1")
 
                 Log.error("not implemented")
-            else:
+            elif s.agregate == "cardinality":
+                for details in s.value.to_sql(columns):
+                    for json_type, sql in details.sql.items():
+                        column_number = len(selects)
+                        selects.append("COUNT(DISTINCT(" + sql + ")) AS " + _make_column_name(column_number))
+                        index_to_column[column_number] = Dict(
+                            name=details.name,
+                            pull=column_number,
+                            sql=sql,
+                            type=sql_type_to_json_type[json_type]
+                        )
+            elif s.aggregate == "stats":  # THE STATS OBJECT
+                for details in s.value.to_sql(columns):
+                    sql = details.sql["n"]
+                    for name, code in STATS.items():
+                        full_sql = expand_template(code, {"value": sql})
+                        column_number = len(selects)
+                        selects.append(full_sql + " AS " + _make_column_name(column_number))
+                        index_to_column[column_number] = Dict(
+                            name=details.name+"."+name,
+                            pull=column_number,
+                            sql=full_sql,
+                            type="number"
+                        )
+            else:  # STANDARD AGGREGATES
                 for details in s.value.to_sql(columns):
                     for json_type, sql in details.sql.items():
                         column_number = len(selects)
@@ -603,7 +653,7 @@ class Table_usingSQLite(Container):
 
         where = "\nWHERE " + query.where.to_sql(self.columns)[0]['b']
 
-        return "SELECT " + (",\n".join(selects)) + agg + where+groupby
+        return "SELECT " + (",\n".join(selects)) + agg + where + groupby, index_to_column
 
     def _groupby_op(self, query):
         selects = []
@@ -1162,8 +1212,8 @@ class Table_usingSQLite(Container):
                         es_index=self.name,
                         nested_path=nested_path
                     )
-                    required_changes.append(c)
-                    Log.error("continue looking for more changes")
+                    required_changes.append({"add": c})
+                    # Log.error("continue looking for more changes")
 
                 insertion.active_columns.add(c)
 
@@ -1350,15 +1400,16 @@ def _make_column_name(number):
 
 
 sql_aggs = {
-    "min": "MIN",
-    "minimum": "MIN",
-    "max": "MAX",
-    "maximum": "MAX",
-    "sum": "SUM",
     "avg": "AVG",
     "average": "AVG",
+    "count": "COUNT",
+    "first": "FIRST_VALUE",
     "last": "LAST_VALUE",
-    "first": "FIRST_VALUE"
+    "max": "MAX",
+    "maximum": "MAX",
+    "min": "MIN",
+    "minimum": "MIN",
+    "sum": "SUM"
 }
 
 sql_types = {
@@ -1369,6 +1420,33 @@ sql_types = {
     "object": "TEXT",
     "nested": "TEXT"
 }
+
+REFINE_SQRT = "(({{guess}}) + ({{value}})/({{guess}})) / 2"
+SQRT = REFINE_SQRT
+# EACH REFINEMENT GETS A BETTER ESTIMATE, THIS IS GOOD TO 6 PLACES
+SQRT = expand_template(SQRT, {"guess": REFINE_SQRT, "value": "{{value}}"})
+SQRT = expand_template(SQRT, {"guess": REFINE_SQRT, "value": "{{value}}"})
+SQRT = expand_template(SQRT, {"guess": REFINE_SQRT, "value": "{{value}}"})
+# SQRT = expand_template(SQRT, {"guess": REFINE_SQRT, "value": "{{value}}"})
+# SQRT = expand_template(SQRT, {"guess": REFINE_SQRT, "value": "{{value}}"})
+# THE BEST FIRST GUESS HAS 1/2 THE LENGTH
+SQRT = expand_template(SQRT, {"guess": "CAST(SUBSTR('' || ROUND({{value}}), LENGTH('' || ROUND({{value}}))/2) as INTEGER)", "value": "{{value}}"})
+SQRT = SQRT.replace("/(1)", "")
+
+VAR = "SUM({{value}}*{{value}})/COUNT({{value}}) - SUM({{value}})*SUM({{value}})/COUNT({{value}})/COUNT({{value}})"
+
+STATS = {
+    "count": "COUNT({{value}})",
+    "std": expand_template(SQRT, {"value": VAR}),
+    "min": "MIN({{value}})",
+    "max": "MAX({{value}})",
+    "sum": "SUM({{value}})",
+    "median": "NULL",
+    "sos": "SUM({{value}}*{{value}})",
+    "var": VAR,
+    "avg": "AVG({{value}})"
+}
+# stdev, variance, mode, median
 
 
 quoted_UID = quote_table(UID)

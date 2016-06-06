@@ -21,7 +21,7 @@ from pyLibrary.testing import elasticsearch
 from pyLibrary.thread.threads import Signal, Queue
 from pyLibrary.thread.threads import Thread
 
-NUM_THREAD=4
+NUM_THREAD = 4
 
 
 def process_batch(todo, coverage_index, settings, please_stop):

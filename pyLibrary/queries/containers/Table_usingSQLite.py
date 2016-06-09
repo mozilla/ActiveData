@@ -13,22 +13,21 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import re
 from collections import Mapping, OrderedDict
 from copy import copy
-
-import re
 
 from pyLibrary import convert
 from pyLibrary.collections import UNION
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, coalesce, Dict, wrap, Null, unwraplist, split_field, join_field, literal_field, \
-    set_default, startswith_field, unwrap, relative_field
+    startswith_field, unwrap, relative_field
 from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain
-from pyLibrary.queries.expressions import jx_expression, CoalesceOp, Variable, wrap_nested_path, sql_type_to_json_type
+from pyLibrary.queries.expressions import jx_expression, Variable, wrap_nested_path, sql_type_to_json_type
 from pyLibrary.queries.meta import Column
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.sql.sqlite import Sqlite
@@ -487,9 +486,9 @@ class Table_usingSQLite(Container):
             output = Table_usingSQLite(new_table, db=self.db, uid=self.uid, exists=True)
         elif query.format == "cube" or query.edges:
             if len(query.edges) == 0:
-                data = Dict()
+                data = {n: Dict() for n in column_names}
                 for s in index_to_columns.values():
-                    data[s.name] = result.data[0][s.pull]
+                    data[s.push_name][s.push_child] = unwrap(s.pull(result.data[0]))
                 return Dict(
                     data=unwrap(data),
                     meta={"format": "cube"}
@@ -534,24 +533,38 @@ class Table_usingSQLite(Container):
                 data=data
             )
         elif query.format == "table":
+            data = []
+            for d in result.data:
+                row = [Dict() for _ in column_names]
+                for s in index_to_columns.values():
+                    row[s.push_column][s.push_child] = s.pull(d)
+                data.append(tuple(unwrap(r) for r in row))
+
             output = Dict(
                 meta={"format": "table"},
                 header=column_names,
-
-                data=result.data
+                data=data
             )
         elif query.format == "list" or (not query.edges and not query.groupby):
 
             if any(listwrap(query.select).aggregate):
                 if isinstance(query.select, list):
+                    data = Dict()
+                    for c in index_to_columns.values():
+                        data[c.push_name][c.push_child] = c.pull(result.data[0])
+
                     output = Dict(
                         meta={"format": "value"},
-                        data={c: v for c, v in zip(column_names, result.data[0])}
+                        data=data
                     )
                 else:
+                    data = Dict()
+                    for s in index_to_columns.values():
+                        data[s.push_child] = s.pull(result.data[0])
+
                     output = Dict(
                         meta={"format": "value"},
-                        data=result.data[0][0]
+                        data=unwrap(data)
                     )
             else:
                 output = Dict(
@@ -571,26 +584,62 @@ class Table_usingSQLite(Container):
 
         columns = self._get_sql_schema()
 
-        for s in listwrap(query.select):
+        for si, s in enumerate(listwrap(query.select)):
             if isinstance(s.value, Variable) and s.value.var == "." and s.aggregate == "count":
                 # COUNT RECORDS, NOT ANY ONE VALUE
-                selects.append("COUNT(1) AS " + quote_table(s.name))
+                sql = "COUNT(1) AS " + quote_table(s.name)
+                column_number = len(selects)
+                selects.append(sql)
+                index_to_column[column_number] = Dict(
+                    push_name=s.name,
+                    push_column=si,
+                    push_child=".",
+                    pull=get_column(column_number),
+                    sql=sql,
+                    type=sql_type_to_json_type["n"]
+                )
             elif s.aggregate == "percentile":
                 if not isinstance(s.percentile, (int, float)):
                     Log.error("Expecting percentile to be a float between 0 and 1")
 
                 Log.error("not implemented")
-            elif s.agregate == "cardinality":
+            elif s.aggregate == "cardinality":
                 for details in s.value.to_sql(columns):
                     for json_type, sql in details.sql.items():
                         column_number = len(selects)
-                        selects.append("COUNT(DISTINCT(" + sql + ")) AS " + _make_column_name(column_number))
+                        count_sql = "COUNT(DISTINCT(" + sql + ")) AS " + _make_column_name(column_number)
+                        selects.append(count_sql)
                         index_to_column[column_number] = Dict(
-                            name=details.name,
-                            pull=column_number,
-                            sql=sql,
+                            push_name=s.name,
+                            push_column=si,
+                            push_child=".",
+                            pull=get_column(column_number),
+                            sql=count_sql,
                             type=sql_type_to_json_type[json_type]
                         )
+            elif s.aggregate == "union":
+                for details in s.value.to_sql(columns):
+                    concat_sql = []
+                    column_number = len(selects)
+
+                    for json_type, sql in details.sql.items():
+                        concat_sql.append("GROUP_CONCAT(QUOTE(DISTINCT("+sql+")))")
+
+                    if len(concat_sql)>1:
+                        concat_sql = "CONCAT(" + ",".join(concat_sql) + ") AS " + _make_column_name(column_number)
+                    else:
+                        concat_sql = concat_sql[0] + " AS " + _make_column_name(column_number)
+
+                    selects.append(concat_sql)
+                    index_to_column[column_number] = Dict(
+                        push_name=s.name,
+                        push_column=si,
+                        push_child=".",
+                        pull=sql_text_array_to_set(column_number),
+                        sql=concat_sql,
+                        type=sql_type_to_json_type[json_type]
+                    )
+
             elif s.aggregate == "stats":  # THE STATS OBJECT
                 for details in s.value.to_sql(columns):
                     sql = details.sql["n"]
@@ -599,8 +648,10 @@ class Table_usingSQLite(Container):
                         column_number = len(selects)
                         selects.append(full_sql + " AS " + _make_column_name(column_number))
                         index_to_column[column_number] = Dict(
-                            name=details.name+"."+name,
-                            pull=column_number,
+                            push_name=s.name,
+                            push_column=si,
+                            push_child=name,
+                            pull=get_column(column_number),
                             sql=full_sql,
                             type="number"
                         )
@@ -610,8 +661,10 @@ class Table_usingSQLite(Container):
                         column_number = len(selects)
                         selects.append(sql_aggs[s.aggregate] + "(" + sql + ") AS " + _make_column_name(column_number))
                         index_to_column[column_number] = Dict(
-                            name=details.name,
-                            pull=column_number,
+                            push_name=s.name,
+                            push_column=si,
+                            push_child=details.name,
+                            pull=get_column(column_number),
                             sql=sql,
                             type=sql_type_to_json_type[json_type]
                         )
@@ -750,9 +803,9 @@ class Table_usingSQLite(Container):
 
             if primary_nested_path == nested_path:
                 # ADD SQL SELECT COLUMNS FOR EACH jx SELECT CLAUSE
-                for s in listwrap(query.select):
+                for si, s in enumerate(listwrap(query.select)):
                     column_number = len(selects)
-                    s.pull = column_number
+                    s.pull = get_column(column_number)
                     db_columns = listwrap(s.value.to_sql(columns))
                     for column in db_columns:
                         for t, sql in column.sql.items():
@@ -763,15 +816,16 @@ class Table_usingSQLite(Container):
                             # SQL HAS ABS TABLE REFERENCE
                             selects.append(sql + " AS " + _make_column_name(column_number))
                             index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
-                                name=s.name,
-                                pull=column_number,
+                                push_name=s.name,
+                                push_column=si,
+                                pull=get_column(column_number),
                                 sql=sql,
                                 type=json_type,
                                 nested_path=column.nested_path
                             )
             elif startswith_field(nested_path, primary_nested_path):
                 # ADD REQUIRED COLUMNS, FOR DEEP STUFF
-                for c in active_columns[nested_path]:
+                for ci, c in enumerate(active_columns[nested_path]):
                     if c.type in STRUCT:
                         continue
 
@@ -780,8 +834,9 @@ class Table_usingSQLite(Container):
                     sql = nest_to_alias[nested_path[0]] + "." + quote_table(c.es_column)
                     selects.append(sql + " AS " + _make_column_name(column_number))
                     index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
-                        name=c.name,
-                        pull=column_number,
+                        push_name=c.name,
+                        push_column=ci,
+                        pull=get_column(column_number),
                         sql=sql,
                         type=c.type,
                         nested_path=nested_path
@@ -1440,3 +1495,16 @@ quoted_UID = quote_table(UID)
 quoted_ORDER = quote_table(ORDER)
 quoted_PARENT = quote_table(PARENT)
 
+
+def sql_text_array_to_set(column):
+    def _convert(row):
+        text = row[column]
+        return set(eval('['+text.replace("''", "\'")+']'))
+
+    return _convert
+
+
+def get_column(column):
+    def _get(row):
+        return row[column]
+    return _get

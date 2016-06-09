@@ -399,7 +399,7 @@ class TestAggOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "value"},
-                "data": {"b": ["x", "y", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "z"]}
+                "data": {"b": {"x", "y", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "z"}}
             }
         }
         self.utils.execute_es_tests(test, tjson=False)

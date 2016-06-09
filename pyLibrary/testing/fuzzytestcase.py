@@ -99,7 +99,8 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                     show_deta =False
                     v1 = test[k]
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
-        elif isinstance(test, set) and isinstance(expected, set):
+        elif isinstance(test, (set, list)) and isinstance(expected, set):
+            test = set(test)
             if len(test) != len(expected):
                 Log.error(
                     "Sets do not match, element count different:\n{{test|json|indent}}\nexpecting{{expectedtest|json|indent}}",

@@ -418,9 +418,6 @@ def _normalize_select_no_context(select, schema=None):
     return output
 
 
-
-
-
 def _normalize_edges(edges, schema=None):
     return wrap([_normalize_edge(e, schema=schema) for e in listwrap(edges)])
 
@@ -432,7 +429,7 @@ def _normalize_edge(edge, schema=None):
     if isinstance(edge, basestring):
         if schema:
             e = unwraplist(schema[edge])
-            if e:
+            if e and not isinstance(e, _Column):
                 if isinstance(e, _Column):
                     return Dict(
                         name=edge,

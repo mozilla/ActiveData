@@ -243,14 +243,18 @@ class Variable(Expression):
         return agg+".get("+convert.value2quote(path[-1])+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        cols = schema[self.var]
+        cols = schema.get(self.var, None)
+        if cols is None:
+            # DOES NOT EXIST
+            return wrap([{"name": ".", "sql": {"n": "NULL"}, "nested_path": ["."]}])
+
         acc = Dict()
         nested_path = ["."]
         for c in cols:
             nested_path = wrap_nested_path(c.nested_path)
             acc[json_type_to_sql_type[c.type]] = c.es_index + "." + convert.string2quote(c.es_column)
 
-        return wrap([{"name": self.var, "sql": acc, "nested_path": nested_path}])
+        return wrap([{"name": ".", "sql": acc, "nested_path": nested_path}])
 
     def __call__(self, row, rownum=None, rows=None):
         path = split_field(self.var)

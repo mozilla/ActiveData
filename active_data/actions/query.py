@@ -37,9 +37,9 @@ BLANK = convert.unicode2utf8(File("active_data/public/error.html").read())
 def query(path):
     with CProfiler():
         query_timer = Timer("total duration")
-        body = flask.request.get_data()
         try:
             with query_timer:
+                body = flask.request.get_data()
                 if not body.strip():
                     return Response(
                         BLANK,

@@ -34,6 +34,9 @@
 		"trace": true,
 		"cprofile": false,
 		"log": [
+			{
+				"log_type": "nothing"
+			}
 //			{
 //				"log_type": "console"
 //			},

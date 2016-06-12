@@ -145,6 +145,9 @@ class Log(object):
         if settings.log_type == "email":
             from .log_usingEmail import TextLog_usingEmail
             return TextLog_usingEmail(settings)
+        if settings.log.type.lower() in ["nothing", "none", "null"]:
+            from .log_usingNothing import TextLog_usingNothing
+            return TextLog_usingNothing(settings)
 
     @classmethod
     def add_log(cls, log):

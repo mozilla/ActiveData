@@ -28,15 +28,22 @@
 		"port": 9200,
 		"index": "testdata",
 		"type": "test_result",
-		"debug": true
+		"debug": false
 	},
 	"debug": {
 		"trace": true,
 		"cprofile": false,
 		"log": [
-			{
-				"log_type": "console"
-			}
+//			{
+//				"log_type": "console"
+//			},
+//			{
+//				"class": "logging.handlers.RotatingFileHandler",
+//				"filename": "/logs/active_data.log",
+//				"maxBytes": 10000000,
+//				"backupCount": 30,
+//				"encoding": "utf8"
+//			}
 		]
 	}
 

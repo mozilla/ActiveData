@@ -19,6 +19,7 @@ from copy import copy
 
 from pyLibrary import convert
 from pyLibrary.collections import UNION
+from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, coalesce, Dict, wrap, Null, unwraplist, split_field, join_field, literal_field, \
     startswith_field, unwrap, relative_field
@@ -506,6 +507,7 @@ class Table_usingSQLite(Container):
 
             edges = []
             ci = []
+            dims=[]
             for i, e in enumerate(query.edges):
                 if e.domain.type != "default":
                     Log.error("Can only handle default domains")
@@ -519,13 +521,17 @@ class Table_usingSQLite(Container):
                         columns[ii] = list(c[1:]) + [c[0]]
                     parts = parts[1:]
 
+                dims.append(len(parts)+(1 if allowNulls else 0))
                 edges.append(Dict(
                     name=e.name,
                     allowNulls=allowNulls,
                     domain=SimpleSetDomain(partitions=parts)
                 ))
 
-            data = {s.name: columns[i] for i, s in enumerate(query.select)}
+            data = {s.name: Matrix(dims=dims, zeros=Dict) for s in listwrap(query.select)}
+            for r, d in enumerate(result.data):
+                for i, s in enumerate(index_to_columns.values()):
+                    data[s.push_name][r][s.push_child] = s.pull(d)
 
             return Dict(
                 meta={"format": "cube"},
@@ -673,32 +679,38 @@ class Table_usingSQLite(Container):
             selects.append(self._window_op(self, query, w))
 
         agg_prefix = "\nFROM "
-        agg_suffix = "\n"
+        agg_suffix = ""
 
         agg = ""
         ons = []
         groupby = ""
         groupby_prefix = "\nGROUP BY "
 
+        edges = []
         for i, e in enumerate(query.edges):
             edge_alias = "e" + unicode(i)
-            edge_value = e.value.to_sql()
-            value = edge_value
-            for v in e.value.vars():
-                value = value.replace(quote_table(v), nest_to_alias['.'] + "."+quote_table(v))
+            edge_tuple = e.value.to_sql(columns)
+            edge_cols = {}
+            for edge_value in edge_tuple:
+                for t, sql in edge_value.sql.items():
+                    sql_name = "ec"+unicode(len(edges))
+                    selects.append(edge_alias + "." + sql_name + " AS " + sql_name)
+                    edge_cols[sql_name] = sql
 
-            edge_name = quote_table(e.name)
-            selects.append(edge_alias + "." + edge_name + " AS " + edge_name)
             agg += \
                 agg_prefix + "(" + \
-                "SELECT DISTINCT " + edge_value + " AS " + edge_name + " FROM " + quote_table(self.name) + \
-                ") " + edge_alias + \
+                "\nSELECT " + ",\n".join(g+" AS "+n for n, g in edge_cols.items()) + \
+                "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
+                "\nGROUP BY\n"+",\n".join(g for g in edge_cols.values()) + \
+                "\n) " + edge_alias + \
                 agg_suffix
             agg_prefix = "\nLEFT JOIN "
             agg_suffix = " ON 1=1\n"
-            ons.append(edge_alias + "." + edge_name + " = "+ value)
-            groupby += groupby_prefix + edge_alias + "." + edge_name
-            groupby_prefix = ",\n"
+
+            ons.append(" AND ".join(edge_alias + "." + k + " = " + v for k, v in edge_cols.items()))
+            for k, v in edge_cols.items():
+                groupby += groupby_prefix + edge_alias + "." + k + "\n"
+                groupby_prefix = ",\n"
 
         if not ons:
             agg += agg_prefix + quote_table(self.name) + " " + nest_to_alias['.']

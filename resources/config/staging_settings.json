@@ -1,5 +1,11 @@
 {
 	"flask": {
+		"host": "0.0.0.0",
+		"port": 8080,
+		"debug": false,
+		"threaded": true,
+		"processes": 1,
+		"allow_exit": false
 	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {
@@ -35,11 +41,8 @@
 		"cprofile": false,
 		"log": [
 			{
-				"log_type": "nothing"
+				"log_type": "console"
 			}
-//			{
-//				"log_type": "console"
-//			},
 //			{
 //				"class": "logging.handlers.RotatingFileHandler",
 //				"filename": "/logs/active_data.log",

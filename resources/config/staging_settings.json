@@ -4,8 +4,7 @@
 		"port": 8080,
 		"debug": false,
 		"threaded": true,
-		"processes": 1,
-		"allow_exit": false
+		"processes": 1
 	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {

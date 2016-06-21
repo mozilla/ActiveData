@@ -38,10 +38,8 @@ QUERY_SIZE_LIMIT = 10*1024*1024
 
 def query(path):
     with CProfiler():
-        body = ''
-        query_timer = Timer("total duration")
         try:
-            with query_timer:
+            with Timer("total duration") as query_timer:
                 preamble_timer = Timer("preamble")
                 with preamble_timer:
                     if flask.request.headers.get("content-length", "") in ["", "0"]:
@@ -57,8 +55,8 @@ def query(path):
                     elif int(flask.request.headers["content-length"]) > QUERY_SIZE_LIMIT:
                         Log.error("Query is too large")
 
-                    body = flask.request.get_data().strip()
-                    text = convert.utf82unicode(body)
+                    request_body = flask.request.get_data().strip()
+                    text = convert.utf82unicode(request_body)
                     text = replace_vars(text, flask.request.args)
                     data = convert.json2value(text)
                     record_request(flask.request, data, None, None)
@@ -83,8 +81,7 @@ def query(path):
                 result.meta.timing.save = Math.round(save_timer.duration.seconds, digits=4)
                 result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
-                json_timer = Timer("jsonification")
-                with json_timer:
+                with Timer("jsonification") as json_timer:
                     response_data = convert.unicode2utf8(convert.value2json(result))
 
             with Timer("post timer"):
@@ -105,7 +102,7 @@ def query(path):
                 )
         except Exception, e:
             e = Except.wrap(e)
-            return _send_error(query_timer, body, e)
+            return _send_error(query_timer, request_body, e)
 
 
 def _test_mode_wait(query):
@@ -185,9 +182,9 @@ def replace_vars(text, params=None):
     REPLACE {{vars}} WITH ENVIRONMENTAL VALUES
     """
     start = 0
-    var = strings.between(text, "{{", "}}", start)
+    var = strings.between(text, "\"{{", "}}\"", start)
     while var:
-        replace = "{{" + var + "}}"
+        replace = "\"{{" + var + "}}\""
         index = text.find(replace, 0)
         end = index + len(replace)
 

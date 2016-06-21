@@ -69,9 +69,22 @@ def setup(settings=None):
     global config
 
     try:
-        config = startup.read_settings(filename=settings)
+        config = startup.read_settings(
+            defs={
+                "name": ["--process_num", "--process"],
+                "help": "Additional port offset (for multiple Flask processes",
+                "type": int,
+                "dest": "process_num",
+                "default": 0,
+                "required": False
+            },
+            filename=settings
+        )
         constants.set(config.constants)
         Log.start(config.debug)
+
+        if config.args.process_num and config.flask.port:
+            config.flask.port += config.args.process_num
 
         # PIPE REQUEST LOGS TO ES DEBUG
         if config.request_logs:
@@ -96,7 +109,10 @@ def setup(settings=None):
             setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
 
-        setup_ssl()
+        if config.flask.ssl_context:
+            if config.args.process_num:
+                Log.error("can not serve ssl and multiple Flask instances at once")
+            setup_ssl()
 
         return app
     except Exception, e:

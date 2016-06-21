@@ -1,6 +1,6 @@
 cluster.name: active-data
 node.zone: spot
-node.name: coordinator
+node.name: coordinator2
 node.master: true
 node.data: false
 

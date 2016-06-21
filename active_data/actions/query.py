@@ -36,11 +36,10 @@ BLANK = convert.unicode2utf8(File("active_data/public/error.html").read())
 
 def query(path):
     with CProfiler():
-        query_timer = Timer("total duration")
         try:
-            with query_timer:
-                body = flask.request.get_data()
-                if not body.strip():
+            with Timer("total duration") as query_timer:
+                request_body = flask.request.get_data()
+                if not request_body.strip():
                     return Response(
                         BLANK,
                         status=400,
@@ -50,7 +49,7 @@ def query(path):
                         }
                     )
 
-                text = convert.utf82unicode(body)
+                text = convert.utf82unicode(request_body)
                 text = replace_vars(text, flask.request.args)
                 data = convert.json2value(text)
                 record_request(flask.request, data, None, None)
@@ -67,8 +66,7 @@ def query(path):
 
                 result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
-                json_timer = Timer("jsonification")
-                with json_timer:
+                with Timer("jsonification") as json_timer:
                     response_data = convert.unicode2utf8(convert.value2json(result))
 
             with Timer("post timer"):
@@ -89,7 +87,7 @@ def query(path):
                 )
         except Exception, e:
             e = Except.wrap(e)
-            return _send_error(query_timer, body, e)
+            return _send_error(query_timer, request_body, e)
 
 
 def _test_mode_wait(query):

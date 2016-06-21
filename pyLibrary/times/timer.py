@@ -7,16 +7,16 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from datetime import timedelta
 from time import time
 
-from pyLibrary.dot import coalesce, Dict
-from pyLibrary.dot import wrap
 from pyLibrary.debugs.logs import Log
+from pyLibrary.dot import coalesce
+from pyLibrary.dot import wrap
 from pyLibrary.times.durations import Duration
 
 

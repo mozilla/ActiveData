@@ -148,6 +148,9 @@ class Log(object):
         if settings.log_type == "ses":
             from .log_usingSES import TextLog_usingSES
             return TextLog_usingSES(settings)
+        if settings.log.type.lower() in ["nothing", "none", "null"]:
+            from .log_usingNothing import TextLog_usingNothing
+            return TextLog_usingNothing(settings)
 
         Log.error("Log type of {{log_type|quote}} is not recognized", log_type=settings.log_type)
 

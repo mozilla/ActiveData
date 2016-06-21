@@ -484,6 +484,64 @@ class Table_usingSQLite(Container):
         column_names = query.column_names
         if query.format == "container":
             output = Table_usingSQLite(new_table, db=self.db, uid=self.uid, exists=True)
+        elif query.format == "table":
+            data = []
+            for d in result.data:
+                row = [None for _ in column_names]
+                for s in index_to_columns.values():
+                    if s.push_child == ".":
+                        row[s.push_column] = s.pull(d)
+                    elif row[s.push_column] == None:
+                        row[s.push_column] = Dict()
+                        row[s.push_column][s.push_child] = s.pull(d)
+                    else:
+                        row[s.push_column][s.push_child] = s.pull(d)
+                data.append(tuple(unwrap(r) for r in row))
+
+            output = Dict(
+                meta={"format": "table"},
+                header=column_names,
+                data=data
+            )
+        elif query.format == "list" or (not query.edges and not query.groupby):
+
+            if not query.edges and not query.groupby and any(listwrap(query.select).aggregate):
+                if isinstance(query.select, list):
+                    data = Dict()
+                    for c in index_to_columns.values():
+                        if c.push_child==".":
+                            data[c.push_name] = c.pull(result.data[0])
+                        else:
+                            data[c.push_name][c.push_child] = c.pull(result.data[0])
+
+                    output = Dict(
+                        meta={"format": "value"},
+                        data=data
+                    )
+                else:
+                    data = Dict()
+                    for s in index_to_columns.values():
+                        data[s.push_child] = s.pull(result.data[0])
+
+                    output = Dict(
+                        meta={"format": "value"},
+                        data=unwrap(data)
+                    )
+            else:
+                data = []
+                for r in result.data:
+                    row = Dict()
+                    for c in index_to_columns.values():
+                        if c.push_child == ".":
+                            row[c.push_name] = c.pull(r)
+                        else:
+                            row[c.push_name][c.push_child] = c.pull(r)
+                    data.append(row)
+
+                output = Dict(
+                    meta={"format": "list"},
+                    data=data
+                )
         elif query.format == "cube" or query.edges:
             if len(query.edges) == 0:
                 data = {n: Dict() for n in column_names}
@@ -513,12 +571,10 @@ class Table_usingSQLite(Container):
                 ci.append(i - len(query.edges))
                 parts = columns[ci[i]]
                 allowNulls = False
-                if parts[0] == None:
+                if parts[-1] == None:
                     allowNulls = True
-                    # ONLY ONE EDGE, SO WE CAN DO THIS TO PUT NULL LAST
-                    for ii, c in enumerate(copy(columns)):
-                        columns[ii] = list(c[1:]) + [c[0]]
-                    parts = parts[1:]
+                    # ONLY ONE EDGE, SO WE CAN DO THIS
+                    parts = parts[:-1]
 
                 dims.append(len(parts)+(1 if allowNulls else 0))
                 edges.append(Dict(
@@ -530,52 +586,24 @@ class Table_usingSQLite(Container):
             data = {s.name: Matrix(dims=dims, zeros=Dict) for s in listwrap(query.select)}
             for r, d in enumerate(result.data):
                 for i, s in enumerate(index_to_columns.values()):
-                    data[s.push_name][r][s.push_child] = s.pull(d)
+                    if s.is_edge:
+                        continue
+                    if s.push_child == ".":
+                        data[s.push_name][r] = s.pull(d)
+                    else:
+                        data[s.push_name][r][s.push_child] = s.pull(d)
+
+            if isinstance(query.select, list):
+                select = [{"name": s.name} for s in query.select]
+            else:
+                select = {"name": query.select.name}
 
             return Dict(
                 meta={"format": "cube"},
                 edges=edges,
-                data=data
+                select=select,
+                data={k: v.cube for k, v in data.items()}
             )
-        elif query.format == "table":
-            data = []
-            for d in result.data:
-                row = [Dict() for _ in column_names]
-                for s in index_to_columns.values():
-                    row[s.push_column][s.push_child] = s.pull(d)
-                data.append(tuple(unwrap(r) for r in row))
-
-            output = Dict(
-                meta={"format": "table"},
-                header=column_names,
-                data=data
-            )
-        elif query.format == "list" or (not query.edges and not query.groupby):
-
-            if any(listwrap(query.select).aggregate):
-                if isinstance(query.select, list):
-                    data = Dict()
-                    for c in index_to_columns.values():
-                        data[c.push_name][c.push_child] = c.pull(result.data[0])
-
-                    output = Dict(
-                        meta={"format": "value"},
-                        data=data
-                    )
-                else:
-                    data = Dict()
-                    for s in index_to_columns.values():
-                        data[s.push_child] = s.pull(result.data[0])
-
-                    output = Dict(
-                        meta={"format": "value"},
-                        data=unwrap(data)
-                    )
-            else:
-                output = Dict(
-                    meta={"format": "list"},
-                    data=[{c: v for c, v in zip(column_names, r)} for r in result.data]
-                )
         else:
             Log.error("unknown format {{format}}", format=query.format)
 
@@ -686,27 +714,44 @@ class Table_usingSQLite(Container):
         groupby_prefix = "\nGROUP BY "
 
         edges = []
+        orderby = []
         for i, e in enumerate(query.edges):
             edge_alias = "e" + unicode(i)
             edge_tuple = e.value.to_sql(columns)
-            edge_cols = {}
-            for edge_value in edge_tuple:
-                for t, sql in edge_value.sql.items():
+            edge_cols = OrderedDict()
+            for ei, edge_value in enumerate(edge_tuple):
+                for json_type, sql in edge_value.sql.items():
+                    si = len(selects)
                     sql_name = "ec"+unicode(len(edges))
                     selects.append(edge_alias + "." + sql_name + " AS " + sql_name)
                     edge_cols[sql_name] = sql
 
-            agg += \
-                agg_prefix + "(" + \
-                "\nSELECT " + ",\n".join(g+" AS "+n for n, g in edge_cols.items()) + \
-                "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
-                "\nGROUP BY\n"+",\n".join(g for g in edge_cols.values()) + \
-                "\n) " + edge_alias + \
-                agg_suffix
+                    index_to_column[si] = Dict(
+                        is_edge=True,
+                        push_name=e.name,
+                        push_column=si,
+                        push_child=".",  # CAN NOT HANDLE TUPLES IN COLUMN
+                        pull=get_column(si),
+                        sql=sql,
+                        type=sql_type_to_json_type[json_type]
+                    )
+
+            for k, _ in edge_cols.items():
+                orderby.append(edge_alias + "." + k + " IS NULL")
+                orderby.append(edge_alias + "." + k)
+
+            domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in edge_cols.items()) + \
+                     "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
+                     "\nGROUP BY\n" + ",\n".join(g for g in edge_cols.values())
+
+            agg += agg_prefix + "(" + domain + "\n) " + edge_alias + agg_suffix
             agg_prefix = "\nLEFT JOIN "
             agg_suffix = " ON 1=1\n"
 
-            ons.append(" AND ".join(edge_alias + "." + k + " = " + v for k, v in edge_cols.items()))
+            ons.append(" AND ".join(
+                "((" + edge_alias + "." + k + " IS NULL AND (" + v + ") IS NULL) OR (" + edge_alias + "." + k + " = " + v + "))"
+                for k, v in edge_cols.items()
+            ))
             for k, v in edge_cols.items():
                 groupby += groupby_prefix + edge_alias + "." + k + "\n"
                 groupby_prefix = ",\n"
@@ -718,7 +763,9 @@ class Table_usingSQLite(Container):
 
         where = "\nWHERE " + query.where.to_sql(self.columns)[0]['b']
 
-        return "SELECT " + (",\n".join(selects)) + agg + where + groupby, index_to_column
+        return \
+            "SELECT " + (",\n".join(selects)) + agg + where + groupby + "\nORDER BY\n" + ",\n".join(orderby), \
+            index_to_column
 
     def _groupby_op(self, query):
         selects = []

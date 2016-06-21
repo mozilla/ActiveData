@@ -396,15 +396,15 @@ class Literal(Expression):
         value = convert.json2value(self.json)
         v = sql_quote(value)
         if v == None:
-            return {}
+            return wrap([{"name": "."}])
         elif isinstance(value, unicode):
-            return {"s": sql_quote(value)}
+            return wrap([{"name": ".", "sql": {"s": sql_quote(value)}}])
         elif Math.is_number(v):
-            return {"n": sql_quote(value)}
+            return wrap([{"name": ".", "sql": {"n": sql_quote(value)}}])
         elif v in [True, False]:
-            return {"b": sql_quote(value)}
+            return wrap([{"name": ".", "sql": {"b": sql_quote(value)}}])
         else:
-            return {"j": sql_quote(self.json)}
+            return wrap([{"name": ".", "sql": {"j": sql_quote(self.json)}}])
 
     def to_esfilter(self):
         return convert.json2value(self.json)

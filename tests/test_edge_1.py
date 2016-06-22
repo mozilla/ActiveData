@@ -1477,6 +1477,18 @@ class TestEdge1(ActiveDataBaseTest):
 #     ]
 # }
 
+# TODO: PARENT EDGE WITH DEEP FILTER
+# {
+#     "from": "task.task.artifacts",
+#     "where": {
+#         "regex": {
+#             "name": ".*jscov.*"
+#         }
+#     },
+#     "edges": [
+#         "build.revision12"
+#     ]
+# }
 
 
 

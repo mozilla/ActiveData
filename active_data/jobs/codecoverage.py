@@ -119,10 +119,13 @@ def process_batch(todo, coverage_index, settings, please_stop):
             siblings = [len(test_names)-1 for g, test_names in line_summary if test_name in test_names]
             min_siblings = MIN(siblings)
             coverage_candidates = jx.filter(file_level_coverage_records.data, lambda row, rownum, rows: row.test.url == test_name)
-            coverage_record = coverage_candidates[0]
-            coverage_record.source.file.max_test_siblings = max_siblings
-            coverage_record.source.file.min_line_siblings = min_siblings
-            coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings + 1)
+            if coverage_candidates:
+                coverage_record = coverage_candidates[0]
+                coverage_record.source.file.max_test_siblings = max_siblings
+                coverage_record.source.file.min_line_siblings = min_siblings
+                coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings + 1)
+            else:
+                Log.warning("{{test|quote}} appears to have no coverage!", test=test_name)
 
         if [d for d in file_level_coverage_records.data if d["source.file.min_line_siblings"] == None]:
             Log.warning("expecting all records to have summary")

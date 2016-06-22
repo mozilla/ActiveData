@@ -184,13 +184,14 @@ def loop(coverage_index, settings, please_stop):
 def main():
     try:
         config = startup.read_settings()
-        constants.set(config.constants)
-        Log.start(config.debug)
+        with startup.SingleInstance(flavor_id=config.args.filename):
+            constants.set(config.constants)
+            Log.start(config.debug)
 
-        please_stop = Signal("main stop signal")
-        coverage_index = elasticsearch.Cluster(config.elasticsearch).get_index(read_only=False, settings=config.elasticsearch)
-        Thread.run("processing loop", loop, coverage_index, config, please_stop=please_stop)
-        Thread.wait_for_shutdown_signal(please_stop)
+            please_stop = Signal("main stop signal")
+            coverage_index = elasticsearch.Cluster(config.elasticsearch).get_index(read_only=False, settings=config.elasticsearch)
+            Thread.run("processing loop", loop, coverage_index, config, please_stop=please_stop)
+            Thread.wait_for_shutdown_signal(please_stop)
     except Exception, e:
         Log.error("Problem with code coverage score calculation", cause=e)
     finally:

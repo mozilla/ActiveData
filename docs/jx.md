@@ -31,11 +31,6 @@ JSON Expressions have the following benefits
 * Language independence
 
 
-Non Goals and Limitations
--------------------------
-
-Are JSON Expressions for you?
-
 Non-Goals
 ---------
 
@@ -57,8 +52,8 @@ are not implemented.
 implemented, and the specification itself is incomplete. What does exist has
 tests to maintain stability.
 
-More on Benefits
-----------------
+More about the Benefits
+-----------------------
 
 ### Expression Simplification
 

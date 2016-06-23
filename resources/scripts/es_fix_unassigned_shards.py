@@ -138,8 +138,8 @@ def assign_shards(settings):
     for g, replicas in jx.groupby(shards, ["index", "i"]):
         replicas = wrap(list(replicas))
         size = Math.MAX(replicas.size)
-        safe_zones = list(set([s.zone for s in replicas if s.status == "STARTED" and s.zone != "spot"]))
-        if safe_zones:
+        current_zones = list(set([s.zone for s in replicas if s.status == "STARTED"]))
+        if "spot" not in current_zones:
             # WE CAN ASSIGN THIS REPLICA TO spot
             for s in replicas:
                 if s.status == "UNASSIGNED":
@@ -191,8 +191,15 @@ def allocate(shards, path, nodes, zones, all_shards):
             node_weight[g.node] = nodes[g.node].memory / (1 + Math.sum(ss.size))
 
         list_nodes = list(nodes)
-        i = Random.weight([node_weight[n.name] if n.zone in zones else 0 for n in list_nodes])
-        destination_node = list_nodes[i].name
+        while True:
+            i = Random.weight([node_weight[n.name] if n.zone in zones else 0 for n in list_nodes])
+            destination_node = list_nodes[i].name
+            for s in all_shards:
+                if s.index == shard.index and s.i == shard.i and s.node == destination_node:
+                    Log.note("Shard {{shard.index}}:{{shard.i}} already on node {{node}}", shard=shard, node=destination_node)
+                    break
+            else:
+                break
 
         if shard.status == "UNASSIGNED":
             # destination_node = "secondary"

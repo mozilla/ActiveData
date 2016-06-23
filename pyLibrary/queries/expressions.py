@@ -18,7 +18,10 @@ from decimal import Decimal
 from pyLibrary import convert
 from pyLibrary.collections import OR, MAX
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null, split_field
+from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null, split_field, startswith_field, \
+    Dict, join_field, unwraplist, unwrap
+from pyLibrary.maths import Math
+from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.times.dates import Date
@@ -51,6 +54,8 @@ def jx_expression(expr):
     elif isinstance(expr, unicode):
         if is_keyword(expr):
             return Variable(expr)
+        elif not expr.strip():
+            Log.error("expression is empty")
         else:
             Log.error("expression is not recognized: {{expr}}", expr=expr)
     elif isinstance(expr, (list, tuple)):
@@ -158,7 +163,15 @@ class Expression(object):
         """
         raise Log.error("{{type}} has no `to_python` method", type=self.__class__.__name__)
 
-    def to_sql(self, not_null=False, boolean=False):
+    def to_sql(self, schema, not_null=False, boolean=False):
+        """
+        :param not_null:  IF YOU KNOW THIS WILL NOT RETURN NULL (DO NOT INCLUDE NULL CHECKS)
+        :param boolean: IF YOU KNOW THIS WILL RETURN A BOOLEAN VALUE
+        :return: A LIST OF {"name": col, "sql": value, "nested_path":nested_path} dicts WHERE
+            col (string) IS THE PATH VALUE TO SET
+            value IS A dict MAPPING TYPE TO SQL : (s=string, n=number, b=boolean, 0=null, j=json)
+            nested_path IS THE IDEAL DEPTH THIS VALUE IS CALCULATED AT
+        """
         raise Log.error("{{type}} has no `to_sql` method", type=self.__class__.__name__)
 
     def to_esfilter(self):
@@ -229,10 +242,15 @@ class Variable(Expression):
             agg = agg+".get("+convert.value2quote(p)+", EMPTY_DICT)"
         return agg+".get("+convert.value2quote(path[-1])+")"
 
-    def to_sql(self, not_null=False, boolean=False):
-        if self.var == ".":
-            return "*"
-        return convert.string2quote(self.var)
+    def to_sql(self, schema, not_null=False, boolean=False):
+        cols = schema[self.var]
+        acc = Dict()
+        nested_path = ["."]
+        for c in cols:
+            nested_path = wrap_nested_path(c.nested_path)
+            acc[json_type_to_sql_type[c.type]] = c.es_index + "." + convert.string2quote(c.es_column)
+
+        return [{"name": self.var, "sql": acc, "nested_path": nested_path}]
 
     def __call__(self, row, rownum=None, rows=None):
         path = split_field(self.var)
@@ -370,9 +388,19 @@ class Literal(Expression):
     def to_python(self, not_null=False, boolean=False):
         return self.json
 
-    def to_sql(self, not_null=False, boolean=False):
+    def to_sql(self, schema, not_null=False, boolean=False):
         value = convert.json2value(self.json)
-        return sql_quote(value)
+        v = sql_quote(value)
+        if v == None:
+            return {}
+        elif isinstance(value, unicode):
+            return {"s": sql_quote(value)}
+        elif Math.is_number(v):
+            return {"n": sql_quote(value)}
+        elif v in [True, False]:
+            return {"b": sql_quote(value)}
+        else:
+            return {"j": sql_quote(self.json)}
 
     def to_esfilter(self):
         return convert.json2value(self.json)
@@ -400,6 +428,10 @@ class Literal(Expression):
 
 
 class NullOp(Literal):
+    """
+    FOR USE WHEN EVERYTHING IS EXPECTED TO BE AN Expression
+    USE IT TO EXPECT A NULL VALUE IN assertAlmostEqual
+    """
 
     def __new__(cls, *args, **kwargs):
         return object.__new__(cls, *args, **kwargs)
@@ -419,8 +451,8 @@ class NullOp(Literal):
     def to_python(self, not_null=False, boolean=False):
         return "None"
 
-    def to_sql(self, not_null=False, boolean=False):
-        return "NULL"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        return {}
 
     def to_esfilter(self):
         return {"not": {"match_all": {}}}
@@ -449,6 +481,8 @@ class NullOp(Literal):
     def __str__(self):
         return b"null"
 
+    def __json__(self):
+        return "null"
 
 class TrueOp(Literal):
     def __new__(cls, *args, **kwargs):
@@ -469,8 +503,8 @@ class TrueOp(Literal):
     def to_python(self, not_null=False, boolean=False):
         return "True"
 
-    def to_sql(self, not_null=False, boolean=False):
-        return "1=1"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        return wrap({"b": "1"})
 
     def to_esfilter(self):
         return {"match_all": {}}
@@ -522,8 +556,8 @@ class FalseOp(Literal):
     def to_python(self, not_null=False, boolean=False):
         return "False"
 
-    def to_python(self, not_null=False, boolean=False):
-        return "0"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        return {"b": "0"}
 
     def to_esfilter(self):
         return {"not": {"match_all": {}}}
@@ -564,8 +598,8 @@ class DateOp(Literal):
     def to_python(self, not_null=False, boolean=False):
         return "Date("+convert.string2quote(self.value)+")"
 
-    def to_sql(self, not_null=False, boolean=False):
-        return sql_quote(unicode(self.value.unix))
+    def to_sql(self, schema, not_null=False, boolean=False):
+        return {"n": sql_quote(self.value.unix)}
 
     def to_esfilter(self):
         return convert.json2value(self.json)
@@ -636,8 +670,18 @@ class LeavesOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return "Dict(" + self.term.to_python() + ").leaves()"
 
-    def to_sql(self, not_null=False, boolean=False):
-        return "*"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        if not isinstance(self.term, Variable):
+            Log.error("Can only handle Variable")
+        term = self.term.var
+        path = split_field(term)
+        return [
+            (literal_field(join_field(split_field(c.name)[:len(path)])), term.to_sql())
+            for n, cols in schema.items()
+            if startswith_field(n, term)
+            for c in cols
+            if c.type not in STRUCT
+            ]
 
     def to_esfilter(self):
         Log.error("not supported")
@@ -698,7 +742,6 @@ class BinaryOp(Expression):
         "lt"
     }
 
-
     def __init__(self, op, terms, default=NullOp()):
         Expression.__init__(self, op, terms)
         if op not in BinaryOp.operators:
@@ -734,8 +777,8 @@ class BinaryOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return "(" + self.lhs.to_python() + ") " + BinaryOp.operators[self.op] + " (" + self.rhs.to_python()+")"
 
-    def to_sql(self, not_null=False, boolean=False):
-        return "(" + self.lhs.to_sql() + ") " + BinaryOp.operators[self.op] + " (" + self.rhs.to_sql()+")"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        return "(" + self.lhs.to_sql(schema) + ") " + BinaryOp.operators[self.op] + " (" + self.rhs.to_sql(schema)+")"
 
     def to_esfilter(self):
         if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal) or self.op in BinaryOp.algebra_ops:
@@ -797,8 +840,13 @@ class DivOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return "(" + self.lhs.to_python() + ") / (" + self.rhs.to_python()+")"
 
-    def to_sql(self, not_null=False, boolean=False):
-        return "(" + self.lhs.to_sql() + ") / (" + self.rhs.to_sql()+")"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        lhs = self.lhs.to_sql(schema).n
+        rhs = self.rhs.to_sql(schema).n
+        if lhs and rhs:
+            return "(" + self.lhs.to_sql(schema).n + ") / (" + self.rhs.to_sql(schema).n+")"
+        else:
+            return "NULL"
 
     def to_esfilter(self):
         if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal):
@@ -858,12 +906,28 @@ class EqOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return "(" + self.lhs.to_python() + ") == (" + self.rhs.to_python()+")"
 
-    def to_sql(self, not_null=False, boolean=False):
-        return "(" + self.lhs.to_sql() + ") = (" + self.rhs.to_sql()+")"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        lhs = self.lhs.to_sql(schema)
+        rhs = self.rhs.to_sql(schema)
+        acc = []
+        for t in "bsnj":
+            if lhs[t] and rhs[t]:
+                acc.append("(" + self.lhs[t] + ") = (" + self.rhs[t] + ")")
+        if not acc:
+            return FalseOp().to_sql(schema)
+        else:
+            return {"b": " OR ".join(acc)}
 
     def to_esfilter(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-            return {"term": {self.lhs.var: convert.json2value(self.rhs.json)}}
+            rhs = convert.json2value(self.rhs.json)
+            if isinstance(rhs, list):
+                if len(rhs) == 1:
+                    return {"term": {self.lhs.var: rhs[0]}}
+                else:
+                    return {"terms": {self.lhs.var: rhs}}
+            else:
+                return {"term": {self.lhs.var: rhs}}
         else:
             return {"script": {"script": self.to_ruby()}}
 
@@ -908,10 +972,17 @@ class NeOp(Expression):
         rhs = self.rhs.to_python()
         return "((" + lhs + ") != None and (" + rhs + ") != None and (" + lhs + ") != (" + rhs + "))"
 
-    def to_sql(self, not_null=False, boolean=False):
-        lhs = self.lhs.to_sql()
-        rhs = self.rhs.to_sql()
-        return "((" + lhs + ") IS NOT NULL AND (" + rhs + ") IS NOT NULL AND (" + lhs + ") != (" + rhs + "))"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        lhs = self.lhs.to_sql(schema)
+        rhs = self.rhs.to_sql(schema)
+        acc = []
+        for t in "bsnj":
+            if lhs[t] and rhs[t]:
+                acc.append("(" + self.lhs[t] + ") = (" + self.rhs[t] + ")")
+        if not acc:
+            return FalseOp().to_sql(schema)
+        else:
+            return {"b": "NOT (" + " OR ".join(acc) + ")"}
 
     def to_esfilter(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
@@ -950,8 +1021,8 @@ class NotOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return "not (" + self.term.to_python() + ")"
 
-    def to_sql(self, not_null=False, boolean=False):
-        return "NOT (" + self.term.to_sql() + ")"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        return {"b": "NOT (" + self.term.to_sql(schema).b + ")"}
 
     def vars(self):
         return self.term.vars()
@@ -995,11 +1066,11 @@ class AndOp(Expression):
         else:
             return " and ".join("(" + t.to_python() + ")" for t in self.terms)
 
-    def to_sql(self, not_null=False, boolean=False):
+    def to_sql(self, schema, not_null=False, boolean=False):
         if not self.terms:
-            return "1=1"
+            return {"b": "1"}
         else:
-            return " AND ".join("(" + t.to_sql() + ")" for t in self.terms)
+            return {"b": " AND ".join("(" + t.to_sql(schema).b + ")" for t in self.terms)}
 
     def to_esfilter(self):
         if not len(self.terms):
@@ -1034,8 +1105,8 @@ class OrOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return " or ".join("(" + t.to_python() + ")" for t in self.terms)
 
-    def to_sql(self, not_null=False, boolean=False):
-        return " OR ".join("(" + t.to_sql() + ")" for t in self.terms)
+    def to_sql(self, schema, not_null=False, boolean=False):
+        return {"b": " OR ".join("(" + t.to_sql(schema).b + ")" for t in self.terms)}
 
     def to_esfilter(self):
         return {"or": [t.to_esfilter() for t in self.terms]}
@@ -1072,9 +1143,9 @@ class LengthOp(Expression):
         value = self.term.to_python()
         return "len(" + value + ") if (" + value + ") != None else None"
 
-    def to_sql(self, not_null=False, boolean=False):
-        value = self.term.to_sql()
-        return "CASE WHEN (" + value + ") IS NULL THEN NULL ELSE LENGTH(" + value + ") END"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        value = self.term.to_sql(schema).s
+        return {"n": "CASE WHEN (" + value + ") IS NULL THEN NULL ELSE LENGTH(" + value + ") END"}
 
     def to_dict(self):
         return {"length": self.term.to_dict()}
@@ -1104,10 +1175,22 @@ class NumberOp(Expression):
         value = self.term.to_python(not_null=True)
         return "float(" + value + ") if (" + test + ") else None"
 
-    def to_sql(self, not_null=False, boolean=False):
-        test = self.term.missing().to_sql(boolean=True)
+    def to_sql(self, schema, not_null=False, boolean=False):
+        test = self.term.missing().to_sql(boolean=True).b
         value = self.term.to_sql(not_null=True)
-        return "CASE WHEN ("+test+") THEN NULL ELSE CAST("+value+" as FLOAT) END"
+        acc = []
+        for t, v in value:
+            if t == "b":
+                acc.append("CASE WHEN (" + test + ") THEN NULL WHEN (" + value.b + ") THEN 1 ELSE 0 END")
+            elif t == "s":
+                acc.append("CASE WHEN (" + test + ") THEN NULL ELSE CAST(" + value.s + " as FLOAT) END")
+            elif t == "n":
+                acc.append(value.n)
+
+        if not acc:
+            return {}
+        else:
+            return {"n": "COALESCE(" + ",".join(acc) + ")"}
 
     def to_dict(self):
         return {"number": self.term.to_dict()}
@@ -1137,11 +1220,23 @@ class StringOp(Expression):
         value = self.term.to_python(not_null=True)
         return "null if (" + missing + ") else unicode(" + value + ")"
 
-    def to_sql(self, not_null=False, boolean=False):
-        test = self.term.missing().to_sql(boolean=True)
+    def to_sql(self, schema, not_null=False, boolean=False):
+        test = self.term.missing().to_sql(boolean=True).b
         value = self.term.to_sql(not_null=True)
-        return "CASE WHEN ("+test+") THEN NULL ELSE CAST("+value+" as TEXT) END"
-
+        acc = []
+        for t, v in value:
+            if t == "b":
+                acc.append("CASE WHEN (" + test + ") THEN NULL WHEN (" + v + ") THEN 'true' ELSE 'false' END")
+            elif t == "s":
+                acc.append(v)
+            else:
+                acc.append("CASE WHEN (" + test + ") THEN NULL ELSE CAST(" + v + " as TEXT) END")
+        if not acc:
+            return {}
+        elif len(acc) == 1:
+            return {"s": acc[0]}
+        else:
+            return {"s": "COALESCE(" + ",".join(acc) + ")"}
 
     def to_dict(self):
         return {"string": self.term.to_dict()}
@@ -1169,8 +1264,19 @@ class CountOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return "+".join("(0 if (" + t.missing().to_python(boolean=True) + ") else 1)" for t in self.terms)
 
-    def to_sql(self, not_null=False, boolean=False):
-        return "+".join("CASE WHEN (" + t.missing().to_sql(boolean=True) + ") IS NULL THEN 0 ELSE 1 END" for t in self.terms)
+    def to_sql(self, schema, not_null=False, boolean=False):
+        acc = []
+        for term in self.terms:
+            for t, v in term.to_sql(schema).items():
+                if t in ["b", "s", "n"]:
+                    acc.append("CASE WHEN (" + v + ") IS NULL THEN 0 ELSE 1 END")
+                else:
+                    acc.append("1")
+
+        if not acc:
+            return {}
+        else:
+            return {"n": "+".join(acc)}
 
     def to_dict(self):
         return {"count": [t.to_dict() for t in self.terms]}
@@ -1341,8 +1447,25 @@ class CoalesceOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return "coalesce(" + (",".join(t.to_python() for t in self.terms)) + ")"
 
-    def to_sql(self, not_null=False, boolean=False):
-        return "COALESCE(" + (",".join(t.to_sql() for t in self.terms)) + ")"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        acc = {
+            "b": [],
+            "s": [],
+            "n": []
+        }
+
+        for term in self.terms:
+            for t, v in term.to_sql(schema).items():
+                acc[t].append(v)
+
+        output = {}
+        for t, terms in acc:
+            if not terms:
+                continue
+            elif len(terms) == 1:
+                output[t] = terms[0]
+            else:
+                output[t] = "COALESCE(" + ",".join(terms) + ")"
 
     def to_esfilter(self):
         return {"or": [{"exists": {"field": v}} for v in self.terms]}
@@ -1383,8 +1506,17 @@ class MissingOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return self.field.to_python() + " == None"
 
-    def to_sql(self, not_null=False, boolean=False):
-        return self.field.to_sql() + " IS NULL"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        field = self.field.to_sql(schema)
+        acc = []
+        for t, v in field.items():
+            if t in ["b", "s", "n"]:
+                acc.append("(" + v + " IS NULL)")
+
+        if not acc:
+            return "1"
+        else:
+            return " OR ".join(acc)
 
     def to_esfilter(self):
         if isinstance(self.field, Variable):
@@ -1424,8 +1556,17 @@ class ExistsOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return self.field.to_python() + " != None"
 
-    def to_sql(self, not_null=False, boolean=False):
-        return self.field.to_sql() + " IS NOT NULL"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        field = self.field.to_sql(schema)
+        acc = []
+        for t, v in field.items():
+            if t in ["b", "s", "n"]:
+                acc.append("(" + v + " IS NOT NULL)")
+
+        if not acc:
+            return "0"
+        else:
+            return " OR ".join(acc)
 
     def to_esfilter(self):
         if isinstance(self.field, Variable):
@@ -1465,8 +1606,8 @@ class PrefixOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return "(" + self.field.to_python() + ").startswith(" + self.prefix.to_python() + ")"
 
-    def to_sql(self, not_null=False, boolean=False):
-        return "INSTR(" + self.field.to_sql() + ", " + self.prefix.to_python() + ")==1"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        return {"b": "INSTR(" + self.field.to_sql(schema).s + ", " + self.prefix.to_sql().s + ")==1"}
 
     def to_esfilter(self):
         if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
@@ -1511,9 +1652,9 @@ class LeftOp(Expression):
         l = self.length.to_python()
         return "None if " + v + " == None or " + l + " == None else " + v + "[0:max(0, " + l + ")]"
 
-    def to_sql(self, not_null=False, boolean=False):
-        v = self.value.to_sql()
-        l = self.length.to_sql()
+    def to_sql(self, schema, not_null=False, boolean=False):
+        v = self.value.to_sql(schema).s
+        l = self.length.to_sql(schema).n
         return "CASE WHEN " + v + " IS NULL THEN NULL WHEN " + l + " IS NULL THEN NULL ELSE SUBSTR(" + v + ", 1, " + l + ") END"
 
     def to_dict(self):
@@ -1663,9 +1804,6 @@ class NotRightOp(Expression):
             return OrOp(None, [self.value.missing(), self.length.missing()])
 
 
-
-
-
 class InOp(Expression):
     has_simple_form = True
 
@@ -1679,10 +1817,10 @@ class InOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return self.field.to_python() + " in " + self.values.to_python()
 
-    def to_sql(self, not_null=False, boolean=False):
+    def to_sql(self, schema, not_null=False, boolean=False):
         if not isinstance(self.values, Literal):
             Log.error("Not supported")
-        var = self.field.to_sql()
+        var = self.field.to_sql(schema)
         return " OR ".join("(" + var + "==" + sql_quote(v) + ")" for v in convert.json2value(self.values))
 
     def to_esfilter(self):
@@ -1729,11 +1867,23 @@ class WhenOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return "(" + self.when.to_python(boolean=True) + ") ? (" + self.then.to_python(not_null=not_null) + ") : (" + self.els_.to_python(not_null=not_null) + ")"
 
-    def to_sql(self, not_null=False, boolean=False):
-        return "CASE WHEN " + self.when.to_sql(boolean=True) + \
-               " THEN " + self.then.to_sql(not_null=not_null) + \
-               " ELSE " + self.els_.to_sql(not_null=not_null) + \
-               " END"
+    def to_sql(self, schema, not_null=False, boolean=False):
+        when = self.when.to_sql(boolean=True)
+        then = self.then.to_sql(not_null=not_null)
+        els_ = self.els_.to_sql(not_null=not_null)
+        output = {}
+        for t in "bsn":
+            if then[t] == None:
+                if els_[t] == None:
+                    pass
+                else:
+                    output[t] = "CASE WHEN " + when.b + " THEN NULL ELSE " + els_[t] + " END"
+            else:
+                if els_[t] == None:
+                    output[t] = "CASE WHEN " + when.b + " THEN " + then[t] + " END"
+                else:
+                    output[t] = "CASE WHEN " + when.b + " THEN " + then[t] + " ELSE " + els_[t] + " END"
+        return output
 
     def to_esfilter(self):
         return {"or": [
@@ -1789,11 +1939,14 @@ class CaseOp(Expression):
             acc = "(" + w.when.to_python(boolean=True) + ") ? (" + w.then.to_python() + ") : (" + acc + ")"
         return acc
 
-    def to_sql(self, not_null=False, boolean=False):
-        acc = " ELSE " + self.whens[-1].to_sql() + " END"
-        for w in reversed(self.whens[0:-1]):
-            acc = " WHEN " + w.when.to_sql(boolean=True) + " THEN " + w.then.to_sql() + acc
-        return "CASE" + acc
+    def to_sql(self, schema, not_null=False, boolean=False):
+        output = {}
+        for t in "bsn":  # EXPENSIVE LOOP to_sql() RUN 3 TIMES
+            acc = " ELSE " + self.whens[-1].to_sql(schema)[t] + " END"
+            for w in reversed(self.whens[0:-1]):
+                acc = " WHEN " + w.when.to_sql(boolean=True).b + " THEN " + w.then.to_sql(schema)[t] + acc
+            output[t]="CASE" + acc
+        return output
 
     def to_esfilter(self):
         return {"script": {"script": self.to_ruby()}}
@@ -2086,3 +2239,30 @@ def sql_quote(value):
         return "'" + value.replace("'", "''") + "'"
     else:
         return unicode(value)
+
+
+json_type_to_sql_type = {
+    "string": "s",
+    "number": "n",
+    "object": "j",
+    "boolean": "b",
+    "nested": "j"
+}
+
+sql_type_to_json_type = {
+    "s": "string",
+    "n": "number",
+    "j": "object",
+    "b": "boolean"
+}
+
+
+def wrap_nested_path(nested_path):
+    return listwrap(nested_path) + ["."]
+
+
+def unwrap_nested_path(nested_path):
+    if unwrap(nested_path)[-1] == ".":
+        nested_path = nested_path[:-1]
+
+    return unwraplist(nested_path)

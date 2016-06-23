@@ -46,7 +46,7 @@
 //				"class": "logging.handlers.RotatingFileHandler",
 //				"filename": "/logs/active_data.log",
 //				"maxBytes": 10000000,
-//				"backupCount": 30,
+//				"backupCount": 10,
 //				"encoding": "utf8"
 //			}
 		]

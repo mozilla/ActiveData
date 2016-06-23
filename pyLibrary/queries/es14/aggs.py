@@ -13,13 +13,13 @@ from __future__ import unicode_literals
 
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, DictList, unwrap, \
-    join_field
+    unwraplist
 from pyLibrary.maths import Math
 from pyLibrary.queries import es09
 from pyLibrary.queries.es14.decoders import DefaultDecoder, AggsDecoder
 from pyLibrary.queries.es14.decoders import DimFieldListDecoder
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, jx_expression, AndOp, Variable
+from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable
 from pyLibrary.queries.query import MAX_LIMIT
 from pyLibrary.times.timer import Timer
 
@@ -83,7 +83,7 @@ def get_decoders_by_depth(query):
 
 def es_aggsop(es, frum, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
-    es_column_map = {c.name: c.es_column for c in frum._columns}
+    es_column_map = {c.name: unwraplist(c.es_column) for c in frum.schema.all_columns}
 
     es_query = Dict()
     new_select = Dict()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
@@ -92,7 +92,7 @@ def es_aggsop(es, frum, query):
         if s.aggregate == "count" and isinstance(s.value, Variable) and s.value.var == ".":
             s.pull = "doc_count"
         elif isinstance(s.value, Variable):
-            if s.value.var==".":
+            if s.value.var == ".":
                 if frum.typed:
                     # STATISITCAL AGGS IMPLY $value, WHILE OTHERS CAN BE ANYTHING
                     if s.aggregate in NON_STATISTICAL_AGGS:
@@ -129,14 +129,14 @@ def es_aggsop(es, frum, query):
                 es_query.aggs[literal_field(canonical_name)].value_count.field = field_name
                 s.pull = literal_field(canonical_name) + ".value"
             elif s.aggregate == "median":
-                #ES USES DIFFERENT METHOD FOR PERCENTILES
+                # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
 
                 es_query.aggs[key].percentiles.field = field_name
                 es_query.aggs[key].percentiles.percents += [50]
                 s.pull = key + ".values.50\.0"
             elif s.aggregate == "percentile":
-                #ES USES DIFFERENT METHOD FOR PERCENTILES
+                # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
                 if isinstance(s.percentile, basestring) or s.percetile < 0 or 1 < s.percentile:
                     Log.error("Expecting percentile to be a float from 0.0 to 1.0")
@@ -146,7 +146,7 @@ def es_aggsop(es, frum, query):
                 es_query.aggs[key].percentiles.percents += [percent]
                 s.pull = key + ".values." + literal_field(unicode(percent))
             elif s.aggregate == "cardinality":
-                #ES USES DIFFERENT METHOD FOR CARDINALITY
+                # ES USES DIFFERENT METHOD FOR CARDINALITY
                 key = literal_field(canonical_name + " cardinality")
 
                 es_query.aggs[key].cardinality.field = field_name
@@ -185,7 +185,7 @@ def es_aggsop(es, frum, query):
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
-        abs_value = jx_expression(s.value).map(es_column_map)
+        abs_value = s.value.map(es_column_map)
 
         if s.aggregate == "count":
             es_query.aggs[literal_field(canonical_name)].value_count.script = abs_value.to_ruby()

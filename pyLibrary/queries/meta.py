@@ -16,11 +16,13 @@ from copy import copy
 from itertools import product
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, set_default, Null, literal_field, listwrap, split_field, join_field
+from pyLibrary.dot import coalesce, set_default, Null, literal_field, listwrap, split_field, join_field, unwraplist, \
+    unwrap
 from pyLibrary.dot import wrap
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.meta import use_settings, DataClass
 from pyLibrary.queries import jx, Schema
+from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.thread.threads import Queue, Thread
 from pyLibrary.times.dates import Date
@@ -223,7 +225,6 @@ class FromESMetadata(Schema):
                     else:
                         Log.error("logic error")
 
-
     def query(self, _query):
         return self.meta.columns.query(QueryOp(set_default(
             {
@@ -267,7 +268,7 @@ class FromESMetadata(Schema):
         """
         QUERY ES TO FIND CARDINALITY AND PARTITIONS FOR A SIMPLE COLUMN
         """
-        if c.type in ["object", "nested"]:
+        if c.type in STRUCT:
             Log.error("not supported")
         try:
             if c.table == "meta.columns":
@@ -397,7 +398,7 @@ class FromESMetadata(Schema):
                 if not self.todo:
                     with self.meta.columns.locker:
                         old_columns = filter(
-                            lambda c: (c.last_updated == None or c.last_updated < Date.now()-TOO_OLD) and c.type not in ["object", "nested"],
+                            lambda c: (c.last_updated == None or c.last_updated < Date.now()-TOO_OLD) and c.type not in STRUCT,
                             self.meta.columns
                         )
                         if old_columns:
@@ -413,7 +414,7 @@ class FromESMetadata(Schema):
                 column = self.todo.pop(timeout=10*MINUTE)
                 if column:
                     Log.note("update {{table}}.{{column}}", table=column.table, column=column.es_column)
-                    if column.type in ["object", "nested"]:
+                    if column.type in STRUCT:
                         with self.meta.columns.locker:
                             column.last_updated = Date.now()
                         continue
@@ -580,6 +581,4 @@ Column = DataClass(
         {"name": "last_updated", "nulls": True}
     ]
 )
-
-
 

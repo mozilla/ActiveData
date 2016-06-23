@@ -13,8 +13,7 @@ from __future__ import division
 import base_test_class
 
 from pyLibrary.dot import wrap
-from tests.base_test_class import ActiveDataBaseTest
-
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
@@ -29,7 +28,7 @@ class TestFilters(ActiveDataBaseTest):
                        {"a": {"b": 1, "c": 1}},
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "*",
                 "where": {"eq": ["a.b", "a.c"]},
                 "sort": "a.b"
@@ -58,7 +57,7 @@ class TestFilters(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_add_expression(self):
@@ -70,7 +69,7 @@ class TestFilters(ActiveDataBaseTest):
                        {"a": {"b": 1, "c": 1}},
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "*",
                 "where": {"eq": [{"add": ["a.b", 1]}, "a.c"]},
                 "sort": "a.b"
@@ -98,7 +97,7 @@ class TestFilters(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_regexp_expression(self):
         test = {
@@ -115,7 +114,7 @@ class TestFilters(ActiveDataBaseTest):
                 {"a": "b"}
             ]}],
             "query": {
-                "from": base_test_class.settings.backend_es.index+"._a",
+                "from": TEST_TABLE+"._a",
                 "select": "*",
                 "where": {"regex": {"a": ".*b.*"}},
             },
@@ -129,14 +128,14 @@ class TestFilters(ActiveDataBaseTest):
                 {"a": "b"}
             ]}
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_empty_or(self):
         test = {
             "data": [{"a": 1}],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "*",
                 "where": {"or": []}
             },
@@ -144,14 +143,14 @@ class TestFilters(ActiveDataBaseTest):
                 "meta": {"format": "list"}, "data": []
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_empty_and(self):
         test = {
             "data": [{"a": 1}],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "*",
                 "where": {"and": []}
             },
@@ -159,7 +158,7 @@ class TestFilters(ActiveDataBaseTest):
                 "meta": {"format": "list"}, "data": [{"a": 1}]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_empty_in(self):
@@ -167,21 +166,21 @@ class TestFilters(ActiveDataBaseTest):
             "data": [{"a": 1}],
             "query": {
                 "select": "a",
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "where": {"in": {"a": []}}
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": []
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_empty_match_all(self):
         test = {
             "data": [{"a": 1}],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "*",
                 "where": {"match_all": {}}
             },
@@ -189,7 +188,7 @@ class TestFilters(ActiveDataBaseTest):
                 "meta": {"format": "list"}, "data": [{"a": 1}]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
 

@@ -126,7 +126,7 @@ replaced with simply the value:
 `select.aggregate` Subclause
 ----------------------------
 
-The ```aggregate``` sub-clause has many options. 
+The `aggregate` sub-clause has many options. 
 
   - **none** – when expecting only one value
   - **one** – when expecting all values to be identical
@@ -138,7 +138,7 @@ The ```aggregate``` sub-clause has many options.
   - **geomean** - geometric mean of values
   - **minimum** – return minimum value observed
   - **maximum** – return maximum value observed
-  - **first** - return first value observed (assuming ordered ```from``` clause)
+  - **first** - return first value observed (assuming ordered `from` clause)
   - **any** - return any value observed (that is not null, of course)
   - **percentile** – return given percentile
     - **select.percentile** defined from 0.0 to 1.0 (required)
@@ -153,7 +153,7 @@ The ```aggregate``` sub-clause has many options.
     - **select.sort** - optional, to return the array sorted
   - **list** - return an list of values (alternate name for array aggregate)
     - **select.sort** - optional, to return the array sorted
-  - **union** - return an array of unique values. In the case of javascript, uniqueness is defined as the string the object can be coerced to (```""+a == ""+b```).
+  - **union** - return an array of unique values. In the case of javascript, uniqueness is defined as the string the object can be coerced to (`""+a == ""+b`).
     - **select.limit** - limit on the size of the set
 
 All aggregates ignore the null values; If all values are null, it is the same as having no data.
@@ -162,34 +162,53 @@ All aggregates ignore the null values; If all values are null, it is the same as
 `where` Clause
 ------------
 
-The `where` clause is [an expression](jx_Expresions.md) that returns a Boolean indicating whether the document will be included in the aggregate. If the query is returning a pivot-table, or data cube, the where clause does not affect the dimensions' domains.
+The `where` clause is [an expression](jx_Expresions.md) that returns a Boolean 
+indicating whether the document will be included in the aggregate. If the 
+query is returning a pivot-table, or data cube, the where clause does not 
+affect the dimensions' domains.
 
 `edges` Clause
 --------------
 
-The edges clause is used to produce pivot tables and data cubes; each edge defines a side.
-Each edge is a column which SQL group-by will be applied; with the additional stipulation that all parts of all domains are represented, even if null (count==0).
+The edges clause is used to produce pivot tables and data cubes; each edge 
+defines a side. Each edge is a column which SQL group-by will be applied; with 
+the additional stipulation that all parts of all domains are represented, even 
+if null (count==0).
 
-  - **name** – The name given to the resulting edge (optional, if the value is a simple attribute name)
+  - **name** – The name given to the resulting edge (optional, if the value is 
+  a simple attribute name)
   - **value** – The expression to generate the edge value before grouping
-  - **range** – Can be used instead of value, but only for algebraic fields: In which case, if the minimum of a domain part is in the range, it will be used in the aggregate.
+  - **range** – Can be used instead of value, but only for algebraic fields: 
+  In which case, if the minimum of a domain part is in the range, it will be 
+  used in the aggregate.
       - **min** – The expression that defines the minimum value
-      - **max** – The expression defining the supremum (of all values greater than the range, pick the smallest)
-      - **mode** – `inclusive` will ensure any domain part that intersects with the range will be used in the aggregate. `snapshot` (default) will only count ranges that contain the domain part key value.
-  - **test** – Expression to be used instead of value: It must return a Boolean indicating if the data will match the domain parts. Use this to simulate a SQL join.
+      - **max** – The expression defining the supremum (of all values greater 
+      than the range, pick the smallest)
+      - **mode** – `inclusive` will ensure any domain part that intersects 
+      with the range will be used in the aggregate. `snapshot` (default) will 
+      only count ranges that contain the domain part key value.
+  - **test** – Expression to be used instead of value: It must return a 
+  Boolean indicating if the data will match the domain parts. Use this to 
+  simulate a SQL join.
   - **domain** – The range of values to be part of the aggregation
-  - **allowNulls** – Set to `true` (default) if you want to aggregate all values outside the domain. 
+  - **allowNulls** – Set to `true` (default) if you want to aggregate all 
+  values outside the domain. 
 
 `edges.domain` Subclause
 ------------------------
 
 The domain is defined as an attribute of every edge. Each domain defines a covering partition.
 
-  - **name** – Name given to this domain definition, for use in other code in the query (default to ```type``` value).
-  - **type** – One of a few predefined types (Default ```{"type":"default"}```)
+  - **name** – Name given to this domain definition, for use in other code in 
+  the query (default to `type` value).
+  - **type** – One of a few predefined types (Default `{"type":"default"}`)
   - **limit** - for `"type": "default"` domains; limit the number of parts that will be returned 
-  - **value** – Domain partitions are technically JSON objects with descriptive attributes (name, value, max, min, etc). The value attribute is code that will extract the value of the domain after aggregation is complete.
-  - **key** – Code to extract the unique key value from any part object in a partition. This is important so a 1-1 relationship can be established – mapping fast string hashes to slow object comparisons.
+  - **value** – Domain partitions are technically JSON objects with 
+  descriptive attributes (name, value, max, min, etc). The value attribute is 
+  code that will extract the value of the domain after aggregation is complete.
+  - **key** – Code to extract the unique key value from any part object in a 
+  partition. This is important so a 1-1 relationship can be established – 
+  mapping fast string hashes to slow object comparisons.
 
 
 `edges.domain.type` Subclause
@@ -212,7 +231,7 @@ Every edge must be limited to one of a few basic domain types. Which further def
       - **edge.domain.interval** – The size of each time part. (max-min)/interval must be an integer
   - **count** – just like numeric, but limited to integers >= 0
   - **set** – An explicit set of unique values
-      - **edge.domain.partitions** – the set of values allowed. These can be compound objects, but ```edge.test``` and ```edge.domain.value``` need to be defined.
+      - **edge.domain.partitions** – the set of values allowed. These can be compound objects, but `edge.test` and `edge.domain.value` need to be defined.
   - **range** - A list of ranges, probably not of the same interval, over some algebraic field. The ranges can have holes, but can not overlap.
       - **edge.domain.partitions.N.min** - minimum value for this partition
       - **edge.domain.partitions.N.max** - supremum value for this partition
@@ -220,19 +239,19 @@ Every edge must be limited to one of a few basic domain types. Which further def
 `window` Clause
 ---------------
 
-The `window` clause defines a sequence of window functions to be applied to the result set. Each window function defines an additional attribute, and does not affect the number of rows returned. For each window, the data is grouped, sorted and assigned a ```rownum``` attribute that can be used to calculate the attribute value.
+The `window` clause defines a sequence of window functions to be applied to the result set. Each window function defines an additional attribute, and does not affect the number of rows returned. For each window, the data is grouped, sorted and assigned a `rownum` attribute that can be used to calculate the attribute value.
 
   - **name** – name given to resulting attribute
   - **value** – can be a function (or a string containing javascript code) to determine the attribute value. The functions is passed three special variables:
-      - ```row``` – the row being processed
-      - ```rownum``` – which is integer, starting at zero for the first row
-      - ```rows``` – an array of all data in the group.
+      - `row` – the row being processed
+      - `rownum` – which is integer, starting at zero for the first row
+      - `rows` – an array of all data in the group.
   - **edges** – an array of column names used to determine the groups
   - **where** – code that returns true/false to indicate if a record is a member of any group. This will not affect the number of rows returned, only how the window is calculated. If where returns false then rownum and rows will both be null: Be sure to properly handle those values in your code.
   - **sort** – a single attribute name, or array of attribute names, used to sort the members of each group
-  - **range** - the interval which the window function will apply, outside the range the ```row``` is null. Only makes sense when **sort** is defined
-      - **min** - offset from ```rownum``` where window starts
-      - **max** - offset from ```rownum``` where window ends (```rows[rownum + max] == null```)
+  - **range** - the interval which the window function will apply, outside the range the `row` is null. Only makes sense when **sort** is defined
+      - **min** - offset from `rownum` where window starts
+      - **max** - offset from `rownum` where window ends (`rows[rownum + max] == null`)
   - **aggregate** - an aggregate function to apply on **value** over the **range**, (or whole group if range is not defined)
 
 **Please note: The javascript JSON Expressions library uses "analytic" instead of "window".**
@@ -249,7 +268,7 @@ The `having` clause is a filter that uses aggregates and partitions to determine
 Pre-Defined Dimensions
 ----------------------
 
-Pre-defined dimensions simplify queries, and double as type information for the dataset. In this project [```Mozilla.*```
+Pre-defined dimensions simplify queries, and double as type information for the dataset. In this project [`Mozilla.*`
 have been pre-defined](https://github.com/klahnakoski/Qb/blob/master/html/es/js/Dimension-Bugzilla.js).
 [More documentation on dimension definitions here](Dimension Definitions.md).
 

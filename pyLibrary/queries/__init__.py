@@ -13,6 +13,7 @@ from collections import Mapping
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, set_default, split_field, join_field
 from pyLibrary.dot.dicts import Dict
+from pyLibrary.queries.index import Index
 
 type2container = Dict()
 config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
@@ -71,9 +72,9 @@ def wrap_from(frum, schema=None):
         index = frum
         if frum.startswith("meta."):
             if frum == "meta.columns":
-                return _meta.singlton.columns
+                return _meta.singlton.meta.columns
             elif frum == "meta.table":
-                return _meta.singlton.tables
+                return _meta.singlton.meta.tables
             else:
                 Log.error("{{name}} not a recognized table", name=frum)
         else:
@@ -103,8 +104,17 @@ def wrap_from(frum, schema=None):
         return frum
 
 
-
 class Schema(object):
 
-    def get_column(self, name, table):
-        raise NotImplementedError()
+    def __init__(self, columns):
+        self.lookup = Index(keys=["name"], data=columns)
+
+    def __getitem__(self, column_name):
+        return self.lookup[column_name]
+
+    def get_column(self, name, table=None):
+        return self.lookup[name]
+
+    @property
+    def all_columns(self):
+        return list(self.lookup)

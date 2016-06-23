@@ -15,11 +15,11 @@ from collections import Mapping
 from copy import copy
 from types import GeneratorType
 
-from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import set_default, split_field, wrap, join_field
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.queries.expressions import jx_expression_to_function
+
+STRUCT = ["object", "nested"]
 
 type2container = Dict()
 config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
@@ -152,3 +152,6 @@ class Container(object):
         """
         Log.error("Not implemented")
 
+    @property
+    def schema(self):
+        Log.error("Not implemented")

@@ -23,9 +23,9 @@ from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.maths import Math
 from pyLibrary.queries import Schema, wrap_from
-from pyLibrary.queries.containers import Container
+from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.dimensions import Dimension
-from pyLibrary.queries.domains import Domain, is_keyword
+from pyLibrary.queries.domains import Domain, is_keyword, SetDomain
 from pyLibrary.queries.expressions import jx_expression, TrueOp, Expression, FalseOp, Variable, LeavesOp
 
 DEFAULT_LIMIT = 10
@@ -170,11 +170,15 @@ class QueryOp(Expression):
                 edge.range.max = e.range.max.map(map_)
             return edge
 
+        if isinstance(self.select, list):
+            select = wrap([map_select(s, map_) for s in self.select])
+        else:
+            select = map_select(self.select, map_)
 
         return QueryOp(
             "from",
             frum=self.frum.map(map_),
-            select=wrap([map_select(s, map_) for s in listwrap(self.select)]),
+            select=select,
             edges=wrap([map_edge(e, map_) for e in self.edges]),
             groupby=wrap([g.map(map_) for g in self.groupby]),
             window=wrap([w.map(map_) for w in self.window]),
@@ -276,7 +280,7 @@ canonical_aggregates = wrap({
 
 
 def _normalize_selects(selects, frum, schema=None, ):
-    if frum == None or isinstance(frum, (list, set)):
+    if frum == None or isinstance(frum, (list, set, unicode)):
         if isinstance(selects, list):
             output = [_normalize_select_no_context(s, schema=schema) for s in selects]
         else:
@@ -313,7 +317,7 @@ def _normalize_select(select, frum, schema=None):
     canonical.aggregate = coalesce(canonical_aggregates[select.aggregate].name, select.aggregate, "none")
     canonical.default = coalesce(select.default, canonical_aggregates[canonical.aggregate].default)
 
-    if hasattr(frum, "_normalize_select"):
+    if hasattr(unwrap(frum), "_normalize_select"):
         return frum._normalize_select(canonical)
 
     output = []
@@ -345,7 +349,7 @@ def _normalize_select(select, frum, schema=None):
                         canonical
                     )
                     for c in frum.get_columns()
-                    if c.type not in ["object", "nested"]
+                    if c.type not in STRUCT
                 ])
             else:
                 output.extend([
@@ -389,7 +393,7 @@ def _normalize_select_no_context(select, schema=None):
     elif isinstance(select.value, basestring):
         if select.value.endswith(".*"):
             output.name = coalesce(select.name, select.value[:-2], select.aggregate)
-            output.value = jx_expression({"leaves": select.value[:-2]})
+            output.value = LeavesOp("leaves", Variable(select.value[:-2]))
         else:
             if select.value == ".":
                 output.name = coalesce(select.name, select.aggregate, ".")
@@ -400,8 +404,8 @@ def _normalize_select_no_context(select, schema=None):
             else:
                 output.name = coalesce(select.name, select.value, select.aggregate)
                 output.value = jx_expression(select.value)
-    elif not output.name:
-        Log.error("Must give name to each column in select clause")
+    else:
+        output.value = jx_expression(select.value)
 
     if not output.name:
         Log.error("expecting select to have a name: {{select}}",  select= select)
@@ -427,14 +431,14 @@ def _normalize_edge(edge, schema=None):
 
     if isinstance(edge, basestring):
         if schema:
-            e = schema[edge]
+            e = unwraplist(schema[edge])
             if e:
                 if isinstance(e, _Column):
                     return Dict(
                         name=edge,
                         value=jx_expression(edge),
                         allowNulls=True,
-                        domain=_normalize_domain(schema=schema)
+                        domain=_normalize_domain(domain=e, schema=schema)
                     )
                 elif isinstance(e.fields, list) and len(e.fields) == 1:
                     return Dict(
@@ -485,7 +489,10 @@ def _normalize_edge(edge, schema=None):
 def _normalize_groupby(groupby, schema=None):
     if groupby == None:
         return None
-    return wrap([_normalize_group(e, schema=schema) for e in listwrap(groupby)])
+    output = wrap([_normalize_group(e, schema=schema) for e in listwrap(groupby)])
+    if any(o==None for o in output):
+        Log.error("not expected")
+    return output
 
 
 def _normalize_group(edge, schema=None):
@@ -515,6 +522,9 @@ def _normalize_group(edge, schema=None):
 def _normalize_domain(domain=None, schema=None):
     if not domain:
         return Domain(type="default")
+    elif isinstance(domain, _Column):
+        if domain.partitions:
+            return SetDomain(**domain)
     elif isinstance(domain, Dimension):
         return domain.getDomain()
     elif schema and isinstance(domain, basestring) and schema[domain]:

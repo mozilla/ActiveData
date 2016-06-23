@@ -20,6 +20,7 @@ from pyLibrary.dot import listwrap
 from pyLibrary.maths import Math
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import es14, es09
+from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.domains import is_keyword, ALGEBRAIC
 from pyLibrary.queries.es14.util import jx_sort_to_es_sort
@@ -67,7 +68,7 @@ def extract_rows(es, es_query, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
     new_select = DictList()
     columns = query.frum.get_columns()
-    leaf_columns = set(c.name for c in columns if c.type not in ["object", "nested"] and (not c.nested_path or c.es_column == c.nested_path))
+    leaf_columns = set(c.name for c in columns if c.type not in STRUCT and (not c.nested_path or c.es_column == c.nested_path))
     nested_columns = set(c.name for c in columns if c.nested_path)
 
     i = 0
@@ -75,8 +76,10 @@ def extract_rows(es, es_query, query):
     for s in select:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if isinstance(s.value, LeavesOp):
-            if isinstance(s.value.term, Variable):
-                if s.value.term.var == ".":
+            term = s.value.term
+            if isinstance(term, Variable):
+
+                if term.var == ".":
                     es_query.fields = None
                     source = "_source"
 
@@ -84,12 +87,12 @@ def extract_rows(es, es_query, query):
                     for n in net_columns:
                         new_select.append({
                             "name": n,
-                            "value": n,
+                            "value": Variable(n),
                             "put": {"name": n, "index": i, "child": "."}
                         })
                         i += 1
                 else:
-                    parent = s.value.var + "."
+                    parent = term.var + "."
                     prefix = len(parent)
                     for c in leaf_columns:
                         if c.startswith(parent):
@@ -98,7 +101,7 @@ def extract_rows(es, es_query, query):
 
                             new_select.append({
                                 "name": s.name + "." + c[prefix:],
-                                "value": c,
+                                "value": Variable(c),
                                 "put": {"name": s.name + "." + c[prefix:], "index": i, "child": "."}
                             })
                             i += 1
@@ -110,14 +113,14 @@ def extract_rows(es, es_query, query):
 
                 new_select.append({
                     "name": s.name,
-                    "value": s.value.var,
+                    "value": s.value,
                     "put": {"name": s.name, "index": i, "child": "."}
                 })
                 i += 1
             elif s.value.var == "_id":
                 new_select.append({
                     "name": s.name,
-                    "value": s.value.var,
+                    "value": s.value,
                     "pull": "_id",
                     "put": {"name": s.name, "index": i, "child": "."}
                 })
@@ -152,7 +155,7 @@ def extract_rows(es, es_query, query):
                             es_query.fields.append(n)
                         new_select.append({
                             "name": s.name,
-                            "value": n,
+                            "value": Variable(n),
                             "put": {"name": s.name, "index": i, "child": n[prefix:]}
                         })
                 i += 1
@@ -169,9 +172,11 @@ def extract_rows(es, es_query, query):
         if n.pull:
             continue
         if source == "_source":
-            n.pull = join_field(["_source"] + split_field(n.value))
+            n.pull = join_field(["_source"] + split_field(n.value.var))
+        elif isinstance(n.value, Variable):
+            n.pull = "fields." + literal_field(n.value.var)
         else:
-            n.pull = "fields." + literal_field(n.value)
+            Log.error("Do not know what to do")
 
     with Timer("call to ES") as call_timer:
         data = es09.util.post(es, es_query, query.limit)
@@ -192,7 +197,13 @@ def extract_rows(es, es_query, query):
 
 def format_list(T, select, query=None):
     data = []
-    if isinstance(query.select, list) or (isinstance(query.select.value, basestring) and query.select.value.endswith("*")):
+    if isinstance(query.select, list):
+        for row in T:
+            r = Dict()
+            for s in select:
+                r[s.put.name][s.put.child] = unwraplist(row[s.pull])
+            data.append(r if r else None)
+    elif isinstance(query.select.value, LeavesOp):
         for row in T:
             r = Dict()
             for s in select:
@@ -202,7 +213,7 @@ def format_list(T, select, query=None):
         for row in T:
             r = Dict()
             for s in select:
-                r[s.put.name][s.put.child] = unwraplist(row[s.pull])
+                r[s.put.child] = unwraplist(row[s.pull])
             data.append(r if r else None)
 
     return Dict(

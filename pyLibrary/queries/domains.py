@@ -342,12 +342,12 @@ class SetDomain(Domain):
         if isinstance(self.key, set):
             Log.error("problem")
 
-        if isinstance(desc.partitions[0], basestring):
+        if isinstance(desc.partitions[0], (int, float, basestring)):
             # ASSMUE PARTS ARE STRINGS, CONVERT TO REAL PART OBJECTS
-            self.key = ("value", )
+            self.key = "value"
             self.order[None] = len(desc.partitions)
             for i, p in enumerate(desc.partitions):
-                part = {"name": p, "value": p}
+                part = {"name": p, "value": p, "dataIndex": i}
                 self.partitions.append(part)
                 self.map[p] = part
                 self.order[p] = i
@@ -382,11 +382,6 @@ class SetDomain(Domain):
             Log.error("Can not hanldle")
 
         self.label = coalesce(self.label, "name")
-
-        if isinstance(desc.partitions, list):
-            self.partitions = desc.partitions.copy()
-        else:
-            Log.error("expecting a list of partitions")
 
     def compare(self, a, b):
         return value_compare(self.getKey(a), self.getKey(b))

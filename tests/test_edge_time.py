@@ -14,7 +14,7 @@ import base_test_class
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import DAY
 
-from tests.base_test_class import ActiveDataBaseTest
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 FROM_DATE = Date.today()-7*DAY
 TO_DATE = Date.today()
@@ -54,7 +54,7 @@ class TestEdge1(ActiveDataBaseTest):
         test = {
             "data": simple_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": [
                     {
                         "value": "run.timestamp",
@@ -110,6 +110,6 @@ class TestEdge1(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 

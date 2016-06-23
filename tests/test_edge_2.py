@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 import base_test_class
 
-from tests.base_test_class import ActiveDataBaseTest
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 
 class TestEdge2(ActiveDataBaseTest):
@@ -22,7 +22,7 @@ class TestEdge2(ActiveDataBaseTest):
             "metadata": {},
             "data": two_dim_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"aggregate": "count"},
                 "edges": [
                     {"value": "a", "domain": {"type": "set", "partitions": ["x", "y", "z"]}},
@@ -112,7 +112,7 @@ class TestEdge2(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_sum_rows(self):
         test = {
@@ -120,7 +120,7 @@ class TestEdge2(ActiveDataBaseTest):
             "metadata": {},
             "data": two_dim_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "sum"},
                 "edges": ["a", "b"]
             },
@@ -185,7 +185,7 @@ class TestEdge2(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_avg_rows_w_default(self):
         test = {
@@ -203,7 +203,7 @@ class TestEdge2(ActiveDataBaseTest):
                 {"b": "n", "v": 19}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "average", "default": 0},
                 "edges": ["a", "b"]
             },
@@ -284,7 +284,7 @@ class TestEdge2(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
 
@@ -294,7 +294,7 @@ class TestEdge2(ActiveDataBaseTest):
             "metadata": {},
             "data": two_dim_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "sum"},
                 "edges": [
                     {
@@ -378,7 +378,7 @@ class TestEdge2(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
 two_dim_test_data = [

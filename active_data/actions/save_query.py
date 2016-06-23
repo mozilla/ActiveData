@@ -139,7 +139,8 @@ class SaveQueries(object):
 
         existing = self.es.query({
             "from": {"type": "elasticsearch", "settings": self.es.settings},
-            "where": {"terms": {"hash": short_hashes}}
+            "where": {"terms": {"hash": short_hashes}},
+            "meta": {"timeout": "2second"}
         })
 
         for e in Cube(select=existing.select, edges=existing.edges, data=existing.data).values():

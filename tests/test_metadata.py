@@ -26,7 +26,7 @@ class TestMetadata(ActiveDataBaseTest):
             ]
         })
 
-        settings = self._fill_es(test, tjson=False)
+        settings = self.utils.fill_container(test, tjson=False)
 
         table_name = settings.index
 
@@ -39,7 +39,7 @@ class TestMetadata(ActiveDataBaseTest):
                 "meta": {"format": "list"}, "data": [{"a": "b"}]
             }
         }
-        self._send_queries(settings, pre_test, delete_index=False)
+        self.utils.send_queries(pre_test)
 
         test = set_default(test, {
             "query": {
@@ -72,10 +72,10 @@ class TestMetadata(ActiveDataBaseTest):
                 }
             }
         })
-        self._send_queries(settings, test)
+        self.utils.send_queries(test)
 
     def test_get_nested_columns(self):
-        settings = self._fill_es({
+        settings = self.utils.fill_container({
             "query": {"from": "meta.columns"},  # DUMMY QUERY
             "data": [
                 {"o": 1, "_a": [
@@ -108,7 +108,7 @@ class TestMetadata(ActiveDataBaseTest):
                     {"o": 4, "c": "x"}
                 ]}
         }
-        self._send_queries(settings, pre_test, delete_index=False)
+        self.utils.send_queries(pre_test)
 
         test = {
             "query": {
@@ -138,4 +138,4 @@ class TestMetadata(ActiveDataBaseTest):
             }
         }
 
-        self._send_queries(settings, test)
+        self.utils.send_queries(test)

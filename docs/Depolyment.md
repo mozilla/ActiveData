@@ -4,7 +4,7 @@ ETL
 The ETL is covered by two projects
 
 * [TestLog-ETL](https://github.com/klahnakoski/TestLog-ETL) (using the `etl` branch) - is the workhorse
-* [SpotManager](https://github.com/klahnakoski/SpotManager) (using the `beta` branch) - responsible for deploying the above
+* [SpotManager](https://github.com/klahnakoski/SpotManager) (using the `manager` branch) - responsible for deploying the above
 
 
 Production Deployment Steps
@@ -26,8 +26,10 @@ With new ETL comes new tables, new S3 buckets and new Amazon Queues.
 10. Increase SpotManager budget, if desired
  
 
-ActiveData Architecture
-=======================
+ActiveData Frontend
+===================
+
+ActiveData has a web server on the *Frontend* machine.  It has a local instance of ES (with no data) to minimize search delays, and to improve search load balancing in the ES cluster.
 
 Nginx
 -----
@@ -40,13 +42,17 @@ Nginx is not required, but used in production for three reasons.
 
 Configuration is `~/ActiveData/resources/config/nginx.conf`
 
-Gunicorn
---------
+Flask
+-----
+
+There are 5 Flask instances that serve ActiveData.  Nginx does the load balancing.
+
+Gunicorn (not used)
+-------------------
 
 Gunicorn is used to pre-fork the ActiveData service, so it can serve multiple requests at once, and quicker than Flask. Since ActiveData has no concept of session, so coordinating instances is not required. 
 
 Configuration is `~/ActiveData/resources/config/gunicorn.conf`
-
 
 ActiveData Python Program
 -------------------------
@@ -56,15 +62,33 @@ The ActiveData program is a stateless query translation service. It was designed
 Production Deployment Steps
 ---------------------------
 
-1. On the `frontend` machine run `git pull origin master`
-2. Use supervisor to restart the Gunicorn service
+Updating the web server is relatively easy
 
+1. On the `frontend` machine run `git pull origin master`
+2. Use supervisor to `restart flask:*` services
+
+
+Configuration and Logs 
+----------------------
 
 Config and Logs
 ---------------
 
-Configuration is `~/ActiveData/resources/config/supervisord.conf`
-Logs are `/logs/active_data.log`
+* Configuration is `~/ActiveData/resources/config/supervisord.conf`
+* Logs are `/logs/active_data.log`
+
+
+ActiveData Manager
+==================
+
+Overall, the *Manager* machine is responsible for running CRON jobs against ActiveData.  The code for these jobs are found on multiple repositories, under the `manager` branch.  
+
+* The [Manager setup](https://github.com/klahnakoski/TestLog-ETL/blob/manager/resources/scripts/setup_manager.sh) reveals the repositories being used 
+* [CRON jobs](https://github.com/klahnakoski/TestLog-ETL/blob/manager/resources/cron/manager.cron) is the list of actions being performed
+* Logs are found at `/logs`
+
+
+<span style="color:red">As a temporary measure, MoDataSubmission is running a web server here too.</span>
 
 
 ActiveData's ElasticSearch Cluster Cheat Sheet
@@ -75,7 +99,7 @@ Elasticsearch is powerful magic. Only the ES developers really know the plethora
 Fixing Cluster
 --------------
 
-ES still breaks, sometimes. All problems encountered so far only require a bounce, but that bounce must be controlled. 
+ES still breaks, sometimes. All problems encountered so far only require a bounce, but that bounce must be controlled.  Be sure these commands are run on the **coordinator** node (which is the ES master located on the `frontend` machine).
  
  1. Ensure all nodes are reliable - This is a lengthy process, disable the SPOT nodes, or `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : "spot"}}' http://localhost:9200/_cluster/settings`
  2. Disable shard movement `curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}" http://localhost:9200/_cluster/settings`
@@ -95,10 +119,10 @@ be sure the transient settings for the same do not interfere with your plans:
     curl -XPUT -d '{"transient": {"cluster.routing.allocation.exclude._ip" : ""}}' http://localhost:9200/_cluster/settings
 
 
- 1. Ensure all nodes are reliable - This is a lengthy process, disable the SPOT nodes, or `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : "spot"}}' http://localhost:9200/_cluster/settings`
- 2. Move shards off the node `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude._ip" : "172.31.0.39"}}' http://localhost:9200/_cluster/settings`
- 3. Wait while ES moves the shards of the node. *Jan2016 - took 1 day to move 2 terabytes off a node.* 
- 4. Disable shard movement `curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}" http://localhost:9200/_cluster/settings`
+ 1. Ensure all nodes are reliable - This is a lengthy process, disable the SPOT nodes and SpotManager, or `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : "spot"}}' http://localhost:9200/_cluster/settings`
+ 2. Move shards off the node: `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude._ip" : "172.31.0.39"}}' http://localhost:9200/_cluster/settings`
+ 3. Wait while ES moves the shards of the node.  *Jan2016 - took 1 day to move 2 terabytes off a node.* 
+ 4. Disable shard movement `curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}"  http://localhost:9200/_cluster/settings`
  5. Stop node, perform changes, start node
  6. Enable shard movement `curl -XPUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"all\"}}" http://localhost:9200/_cluster/settings`
  7. Allow allocation back to node: `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude._ip" : ""}}' http://localhost:9200/_cluster/settings`

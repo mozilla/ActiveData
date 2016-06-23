@@ -87,6 +87,7 @@ class AggsDecoder(object):
         self.start = None
         self.edge = edge
         self.name = literal_field(self.edge.name)
+        self.query = query
 
     def append_query(self, es_query, start):
         Log.error("Not supported")
@@ -117,14 +118,16 @@ class SetDecoder(AggsDecoder):
         AggsDecoder.__init__(self, edge, query)
         self.domain = edge.domain
 
-
     def append_query(self, es_query, start):
         self.start = start
         domain = self.domain
         field = self.edge.value
 
         if isinstance(field, Variable):
-            include = [p[domain.key] for p in domain.partitions]
+            key = domain.key
+            if isinstance(key, (tuple, list)) and len(key)==1:
+                key = key[0]
+            include = [p[key] for p in domain.partitions]
             if self.edge.allowNulls:
 
                 return wrap({"aggs": {

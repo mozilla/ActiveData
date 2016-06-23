@@ -28,6 +28,7 @@ INDEX = "_index"
 class DocStore(Container):
     """
     SIMPLE COLUMNAR DATASTORE, EVERYTHING IS INDEXED, WITH QUERY INTERFACE
+    HOPE IS IT WILL USE NUMPY
     """
     def __init__(self, uid="_id"):
         self._uid = uid  # COLUMN NAME HOLDING UID

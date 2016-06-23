@@ -8,16 +8,14 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
+from __future__ import unicode_literals
 
 from pyLibrary.dot import wrap
 from pyLibrary.queries.expressions import NullOp
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import WEEK, DAY
-
-import base_test_class
-from tests.base_test_class import ActiveDataBaseTest
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 null = None
 TODAY = Date.today()
@@ -99,7 +97,7 @@ class TestTime(ActiveDataBaseTest):
             "metadata": {},
             "data": test_data_1,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": [
                     {
                         "value": "t",
@@ -142,14 +140,14 @@ class TestTime(ActiveDataBaseTest):
                 "data": {"v": [r.v for r in expected_list_1]}
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_time2_variables(self):
         test = {
             "metadata": {},
             "data": test_data_1,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": [
                     "a",
                     {
@@ -207,13 +205,13 @@ class TestTime(ActiveDataBaseTest):
                 ]}
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_time_expression(self):
         test = {
             "data": test_data_3,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": [
                     {
                         "name": "since",
@@ -257,4 +255,4 @@ class TestTime(ActiveDataBaseTest):
                 "data": {"v": [e.v for e in expected3]}
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)

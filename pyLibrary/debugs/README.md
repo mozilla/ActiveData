@@ -67,6 +67,11 @@ serializable so they can be stored/processed by downstream JSON tools.
 			"line": 3,
 			"file": "hello.py",
 			"method": "hello"
+		},
+		"machine": {
+            "python": "CPython",
+            "os": "Windows10",
+            "name": "ekyle-win"
 		}
 	}
 ```
@@ -108,6 +113,14 @@ expected to know about the types of failures that can happen deep down the
 call chain. This makes it vitally important that methods summarize all
 exceptions, both known and unknown, so their callers have the information to
 make better decisions on appropriate action.  
+
+For example: An abstract document container, implemented on top of a SQL 
+database, should not emit SQLExceptions of any kind: A caller that uses a 
+document container should not need to know how to handle SQLExceptions (or any 
+other implementation-specific exceptions).  Rather, in this example, the 
+caller should be told it "can not add a document", or "can not remove a 
+document". This allows the caller to make reasonable desisions when they do 
+occur.  The original cause (the SQLException) is in the causal chain. 
 
 **Use named parameters in your error descriptions too**
 
@@ -160,7 +173,8 @@ logging an error would be deceptive.
             # Try something else
 ```
 
-**Use `Log.warning()` if your code can deal with an exception, but you still want to log it as an issue**
+**Use `Log.warning()` if your code can deal with an exception, but you still 
+want to log it as an issue**
 
 ```python
     def worker(value):

@@ -55,7 +55,7 @@ def run(query, frum=None):
     THIS FUNCTION IS SIMPLY SWITCHING BASED ON THE query["from"] CONTAINER,
     BUT IT IS ALSO PROCESSING A list CONTAINER; SEPARATE TO A ListContainer
     """
-    query = QueryOp.wrap(query)
+    query = QueryOp.wrap(query, frum.schema)
     frum = coalesce(frum, query["from"])
     if isinstance(frum, Container):
         return frum.query(query)
@@ -520,7 +520,7 @@ def sort(data, fieldnames=None):
             fieldnames = fieldnames[0]
             # SPECIAL CASE, ONLY ONE FIELD TO SORT BY
             if fieldnames == ".":
-                return wrap(sorted(data))
+                return wrap(sorted(data, cmp=value_compare))
             if isinstance(fieldnames, (basestring, int)):
                 fieldnames = wrap({"value": fieldnames, "sort": 1})
 

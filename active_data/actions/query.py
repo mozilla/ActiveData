@@ -21,8 +21,8 @@ from pyLibrary.debugs.profiles import CProfiler
 from pyLibrary.dot import coalesce, listwrap, join_field, split_field
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
-from pyLibrary.queries import jx, meta
-from pyLibrary.queries.containers import Container
+from pyLibrary.queries import jx, meta, wrap_from
+from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.meta import TOO_OLD
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Thread
@@ -38,10 +38,8 @@ QUERY_SIZE_LIMIT = 10*1024*1024
 
 def query(path):
     with CProfiler():
-        body = ''
-        query_timer = Timer("total duration")
         try:
-            with query_timer:
+            with Timer("total duration") as query_timer:
                 preamble_timer = Timer("preamble")
                 with preamble_timer:
                     if flask.request.headers.get("content-length", "") in ["", "0"]:
@@ -57,8 +55,8 @@ def query(path):
                     elif int(flask.request.headers["content-length"]) > QUERY_SIZE_LIMIT:
                         Log.error("Query is too large")
 
-                    body = flask.request.get_data().strip()
-                    text = convert.utf82unicode(body)
+                    request_body = flask.request.get_data().strip()
+                    text = convert.utf82unicode(request_body)
                     text = replace_vars(text, flask.request.args)
                     data = convert.json2value(text)
                     record_request(flask.request, data, None, None)
@@ -67,7 +65,8 @@ def query(path):
 
                 translate_timer = Timer("translate")
                 with translate_timer:
-                    result = jx.run(data)
+                    frum = wrap_from(data['from'])
+                    result = jx.run(data, frum=frum)
 
                     if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                         result = result.format(data.format)
@@ -75,15 +74,18 @@ def query(path):
                 save_timer = Timer("save")
                 with save_timer:
                     if data.meta.save:
-                        result.meta.saved_as = save_query.query_finder.save(data)
+                        try:
+                            result.meta.saved_as = save_query.query_finder.save(data)
+                        except Exception:
+                            pass
+
 
                 result.meta.timing.preamble = Math.round(preamble_timer.duration.seconds, digits=4)
                 result.meta.timing.translate = Math.round(translate_timer.duration.seconds, digits=4)
                 result.meta.timing.save = Math.round(save_timer.duration.seconds, digits=4)
                 result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
-                json_timer = Timer("jsonification")
-                with json_timer:
+                with Timer("jsonification") as json_timer:
                     response_data = convert.unicode2utf8(convert.value2json(result))
 
             with Timer("post timer"):
@@ -104,7 +106,7 @@ def query(path):
                 )
         except Exception, e:
             e = Except.wrap(e)
-            return _send_error(query_timer, body, e)
+            return _send_error(query_timer, request_body, e)
 
 
 def _test_mode_wait(query):
@@ -130,7 +132,7 @@ def _test_mode_wait(query):
     })
 
     # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
-    cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in ["nested", "object"]]
+    cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in STRUCT]
     for c in cols:
         Log.note("Mark {{column}} dirty at {{time}}", column=c.name, time=now)
         c.last_updated = now - TOO_OLD
@@ -138,7 +140,7 @@ def _test_mode_wait(query):
 
     while end_time > now:
         # GET FRESH VERSIONS
-        cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in ["nested", "object"]]
+        cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in STRUCT]
         for c in cols:
             if not c.last_updated or c.cardinality == None :
                 Log.note(

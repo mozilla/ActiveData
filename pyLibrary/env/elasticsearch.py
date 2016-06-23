@@ -7,34 +7,31 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-import string
+import re
 from collections import Mapping
 from copy import deepcopy
 from datetime import datetime
-import re
-import time
 
 from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, Null, Dict, set_default, join_field, split_field, unwraplist, listwrap, literal_field
-from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap
+from pyLibrary.dot.lists import DictList
 from pyLibrary.env import http
 from pyLibrary.jsons.typed_encoder import json2typed
-from pyLibrary.maths.randoms import Random
 from pyLibrary.maths import Math
+from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.strings import utf82unicode
 from pyLibrary.thread.threads import ThreadedQueue, Thread, Lock
-from pyLibrary.times.durations import MINUTE
 
-
+ES_STRUCT = ["object", "nested"]
 ES_NUMERIC_TYPES = ["long", "integer", "double", "float"]
 ES_PRIMITIVE_TYPES = ["string", "boolean", "integer", "date", "long", "double"]
 
@@ -1135,7 +1132,7 @@ def _merge_mapping(a, b):
         if a_details:
             a_details.type = _merge_type[a_details.type][b_details.type]
 
-            if b_details.type in ["object", "nested"]:
+            if b_details.type in ES_STRUCT:
                 _merge_mapping(a_details.properties, b_details.properties)
         else:
             a[literal_field(name)] = deepcopy(b_details)

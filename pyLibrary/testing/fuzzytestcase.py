@@ -100,8 +100,23 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                     v1 = test[k]
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
         elif isinstance(test, set) and isinstance(expected, set):
-            if test ^ expected:
-                Log.error("Sets do not match")
+            if len(test) != len(expected):
+                Log.error(
+                    "Sets do not match, element count different:\n{{test|json|indent}}\nexpecting{{expectedtest|json|indent}}",
+                    test=test,
+                    expected=expected
+                )
+
+            for e in expected:
+                for t in test:
+                    try:
+                        assertAlmostEqual(t, e, msg=msg, digits=digits, places=places, delta=delta)
+                        break
+                    except Exception, _:
+                        pass
+                else:
+                    Log.error("Sets do not match. {{value|json}} not found in {{test|json}}", value=e, test=test)
+
         elif isinstance(expected, types.FunctionType):
             return expected(test)
         elif hasattr(test, "__iter__") and hasattr(expected, "__iter__"):
@@ -122,7 +137,7 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
     """
     Snagged from unittest/case.py, then modified (Aug2014)
     """
-    if test == expected:
+    if expected == test:
         # shortcut
         return
 

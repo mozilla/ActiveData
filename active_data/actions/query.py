@@ -62,7 +62,10 @@ def query(path):
                     result = result.format(data.format)
 
                 if data.meta.save:
-                    result.meta.saved_as = save_query.query_finder.save(data)
+                    try:
+                        result.meta.saved_as = save_query.query_finder.save(data)
+                    except Exception:
+                        pass
 
                 result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 

@@ -74,7 +74,11 @@ def query(path):
                 save_timer = Timer("save")
                 with save_timer:
                     if data.meta.save:
-                        result.meta.saved_as = save_query.query_finder.save(data)
+                        try:
+                            result.meta.saved_as = save_query.query_finder.save(data)
+                        except Exception:
+                            pass
+
 
                 result.meta.timing.preamble = Math.round(preamble_timer.duration.seconds, digits=4)
                 result.meta.timing.translate = Math.round(translate_timer.duration.seconds, digits=4)

@@ -21,10 +21,11 @@
                 "log_type": "console"
             },
             {
-                "log_type": "ses", "$ref": "file://~/private.json#aws_credentials",
+                "log_type": "ses",
                 "from_address": "klahnakoski@mozilla.com",
                 "to_address": "klahnakoski@mozilla.com",
-                "subject": "[ALERT][DEV] Problem with shard assignment"
+                "subject": "[ALERT][Manager] Problem with shard assignment",
+                "$ref": "file://~/private.json#aws_credentials"
             }
         ]
     }

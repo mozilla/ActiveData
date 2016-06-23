@@ -11,6 +11,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from active_data.actions import save_query
+from pyLibrary import strings
+from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
 from pyLibrary.times.dates import Date
 
@@ -22,6 +24,9 @@ def record_request(request, query_, data, error):
     try:
         if request_log_queue == None:
             return
+
+        if data and len(data)>10000:
+            data = data[:10000]
 
         log = wrap({
             "timestamp": Date.now(),

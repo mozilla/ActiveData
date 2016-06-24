@@ -23,7 +23,7 @@ from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread
 
 CONCURRENT = 3
-
+BIG_SHARD_SIZE = 20 * 1024 * 1024 * 1024  # SIZE WHEN WE SHOULD BE MOVING ONLY ONE SHARD AT A TIME
 
 def assign_shards(settings):
     """
@@ -77,7 +77,7 @@ def assign_shards(settings):
                     break  # ONLY NEED ONE
     if high_risk_shards:
         Log.note("{{num}} high risk shards found", num=len(high_risk_shards))
-        allocate(jx.sort(high_risk_shards, "size"), path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
+        allocate(high_risk_shards, [], path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
     else:
         Log.note("No high risk shards found")
 
@@ -103,9 +103,9 @@ def assign_shards(settings):
 
     # ARE WE BUSY MOVING TOO MUCH?
     relocating = [s for s in shards if s.status in ("RELOCATING", "INITIALIZING")]
-    if len(relocating) >= CONCURRENT:
-        Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
-        return
+    # if len(relocating) >= CONCURRENT:
+    #     Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
+    #     return
 
     # ODD SHARD GO TO primary
     # for g, replicas in jx.groupby(shards, ["index", "i"]):
@@ -149,8 +149,8 @@ def assign_shards(settings):
 
     if low_risk_shards:
         Log.note("{{num}} low risk shards found", num=len(low_risk_shards))
-        num = CONCURRENT - len(relocating)
-        allocate(jx.sort(low_risk_shards, "size")[:num:], path, nodes, {"spot"}, shards)
+
+        allocate(low_risk_shards, relocating, path, nodes, {"spot"}, shards)
         return
     else:
         Log.note("No low risk shards found")
@@ -167,15 +167,27 @@ def assign_shards(settings):
             too_safe_shards.append(shard)
 
     if too_safe_shards:
-        num = CONCURRENT - len(relocating)
         Log.note("{{num}} shards can be moved to spot", num=len(too_safe_shards))
-        allocate(jx.sort(too_safe_shards, {"value": "size", "sort": -1})[0:num:], path, nodes, {"spot"}, shards)
+        allocate(too_safe_shards, relocating, path, nodes, {"spot"}, shards)
     else:
         Log.note("No shards moved")
 
 
-def allocate(shards, path, nodes, zones, all_shards):
-    for shard in shards:
+def net_shards_to_move(shards, relocating):
+    sorted_shards = jx.sort(shards, "size")
+    size = sorted_shards[0].size / BIG_SHARD_SIZE
+    concurrent = min(CONCURRENT, Math.ceiling(1 / size))
+    net = concurrent - len(relocating)
+    return net, sorted_shards
+
+
+def allocate(proposed_shards, relocating, path, nodes, zones, all_shards):
+    net, shards = net_shards_to_move(proposed_shards, relocating)
+    if net <= 0:
+        Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
+        return
+
+    for shard in shards[:net:]:
         # DIVIDE EACH NODE MEMORY BY NUMBER OF SHARDS FROM THIS INDEX
         node_weight = {n.name: n.memory for n in nodes}
         for g, ss in jx.groupby(

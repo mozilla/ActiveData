@@ -10,12 +10,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from copy import deepcopy
+
+from pyLibrary import convert
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, wrap, unwrap
 from pyLibrary.env import http
+from pyLibrary.env.elasticsearch import Index
 from pyLibrary.queries import jx
 from pyLibrary.testing import elasticsearch
 from pyLibrary.thread.threads import Signal, Queue
@@ -64,12 +68,20 @@ def process_batch(todo, coverage_index, settings, please_stop):
                         "revision": not_summarized.build.revision12
                     }
                 )
-                coverage_index.delete_record({"and": [
-                    {"not": {"term": {"etl.source.id": int(d.max_id)}}},
-                    {"term": {"test.url": d.test.url}},
-                    {"term": {"source.file.name": not_summarized.source.file.name}},
-                    {"term": {"build.revision12": not_summarized.build.revision12}}
-                ]})
+
+                # FIND ALL INDEXES
+                all_indexes = [
+                    p.index
+                    for p in coverage_index.cluster.get_aliases()
+                    if p.alias == coverage_index.settings.alias
+                ]
+                for index_name in all_indexes:
+                    Index(index=index_name, read_only=False, cluster=coverage_index.cluster).delete_record({"and": [
+                        {"not": {"term": {"etl.source.id": int(d.max_id)}}},
+                        {"term": {"test.url": d.test.url}},
+                        {"term": {"source.file.name": not_summarized.source.file.name}},
+                        {"term": {"build.revision12": not_summarized.build.revision12}}
+                    ]})
         if dups_found:
             continue
 
@@ -125,7 +137,18 @@ def process_batch(todo, coverage_index, settings, please_stop):
                 coverage_record.source.file.min_line_siblings = min_siblings
                 coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings + 1)
             else:
-                Log.warning("{{test|quote}} appears to have no coverage!", test=test_name)
+                example = http.post_json(settings.url, json={
+                    "from": "coverage",
+                    "where": {"eq": {
+                        "test.url": test_name,
+                        "source.file.name": not_summarized.source.file.name,
+                        "build.revision12": not_summarized.build.revision12
+                    }},
+                    "limit": 1,
+                    "format": "list"
+                })
+
+                Log.warning("{{test|quote}} appears to have no coverage!\n{{example|json|indent}}", test=test_name, example=example.data[0])
 
         if [d for d in file_level_coverage_records.data if d["source.file.min_line_siblings"] == None]:
             Log.warning("expecting all records to have summary")

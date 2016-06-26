@@ -46,7 +46,7 @@ def assign_shards(settings):
     for n in nodes:
         n.memory = text_to_bytes(n.memory)
         n.disk = 0 if n.disk == "" else float(n.disk)
-        if n.name.startswith("spot_"):
+        if n.name.startswith("spot_") or n.name.startswith("coord"):
             n.zone = "spot"
         else:
             n.zone = n.name
@@ -64,6 +64,15 @@ def assign_shards(settings):
         s.size = text_to_bytes(s.size)
         s.zone = nodes[s.node].zone
 
+    # ASSIGN SIZE TO ALL SHARDS
+    for g, replicas in jx.groupby(shards, ["index", "i"]):
+        replicas=wrap(list(replicas))
+        size = max(*replicas.size)
+        for r in replicas:
+            r.size=size
+
+    relocating = [s for s in shards if s.status in ("RELOCATING", "INITIALIZING")]
+
     # LOOKING FOR SHARDS WITH ONLY ONE INSTANCE, IN THE spot ZONE
     high_risk_shards = []
     for g, replicas in jx.groupby(shards, ["index", "i"]):
@@ -77,7 +86,8 @@ def assign_shards(settings):
                     break  # ONLY NEED ONE
     if high_risk_shards:
         Log.note("{{num}} high risk shards found", num=len(high_risk_shards))
-        allocate(high_risk_shards, [], path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
+        allocate(10, high_risk_shards, relocating, path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
+        return
     else:
         Log.note("No high risk shards found")
 
@@ -102,7 +112,6 @@ def assign_shards(settings):
     #     Log.note("No high risk shards found")
 
     # ARE WE BUSY MOVING TOO MUCH?
-    relocating = [s for s in shards if s.status in ("RELOCATING", "INITIALIZING")]
     # if len(relocating) >= CONCURRENT:
     #     Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
     #     return
@@ -150,7 +159,7 @@ def assign_shards(settings):
     if low_risk_shards:
         Log.note("{{num}} low risk shards found", num=len(low_risk_shards))
 
-        allocate(low_risk_shards, relocating, path, nodes, {"spot"}, shards)
+        allocate(CONCURRENT, low_risk_shards, relocating, path, nodes, {"spot"}, shards)
         return
     else:
         Log.note("No low risk shards found")
@@ -168,26 +177,28 @@ def assign_shards(settings):
 
     if too_safe_shards:
         Log.note("{{num}} shards can be moved to spot", num=len(too_safe_shards))
-        allocate(too_safe_shards, relocating, path, nodes, {"spot"}, shards)
+        allocate(CONCURRENT, too_safe_shards, relocating, path, nodes, {"spot"}, shards)
     else:
         Log.note("No shards moved")
 
 
-def net_shards_to_move(shards, relocating):
+def net_shards_to_move(concurrent, shards, relocating):
     sorted_shards = jx.sort(shards, "size")
-    size = sorted_shards[0].size / BIG_SHARD_SIZE
-    concurrent = min(CONCURRENT, Math.ceiling(1 / size))
+    size = (sorted_shards[0].size+1) / BIG_SHARD_SIZE   # +1 to avoid divide-by-zero
+    concurrent = min(concurrent, Math.ceiling(1 / size))
     net = concurrent - len(relocating)
     return net, sorted_shards
 
 
-def allocate(proposed_shards, relocating, path, nodes, zones, all_shards):
-    net, shards = net_shards_to_move(proposed_shards, relocating)
+def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_shards):
+    net, shards = net_shards_to_move(concurrent, proposed_shards, relocating)
     if net <= 0:
         Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
         return
 
-    for shard in shards[:net:]:
+    for shard in shards:
+        if net <= 0:
+            break
         # DIVIDE EACH NODE MEMORY BY NUMBER OF SHARDS FROM THIS INDEX
         node_weight = {n.name: n.memory for n in nodes}
         for g, ss in jx.groupby(
@@ -234,10 +245,15 @@ def allocate(proposed_shards, relocating, path, nodes, zones, all_shards):
         result = convert.json2value(
             convert.utf82unicode(http.post(path + "/_cluster/reroute", json={"commands": [command]}).content))
         if not result.acknowledged:
-            Log.warning("Can not move/allocate: {{error}}", error=result.error)
+            Log.warning("Can not move/allocate to {{node}}: {{error}}", node=destination_node, error=result.error)
         else:
-            Log.note("index={{shard.index}}, shard={{shard.i}}, assign_to={{node}}, ok={{result.acknowledged}}",
-                     shard=shard, result=result, node=destination_node)
+            net -= 1
+            Log.note(
+                "index={{shard.index}}, shard={{shard.i}}, assign_to={{node}}, ok={{result.acknowledged}}",
+                shard=shard,
+                result=result,
+                node=destination_node
+            )
 
 
 def convert_table_to_list(table, column_names):

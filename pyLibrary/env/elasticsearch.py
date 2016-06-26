@@ -66,6 +66,7 @@ class Index(Features):
         tjson=False,  # STORED AS TYPED JSON
         timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
         debug=False,  # DO NOT SHOW THE DEBUG STATEMENTS
+        cluster=None,
         settings=None
     ):
         if index==None:
@@ -76,7 +77,10 @@ class Index(Features):
         self.cluster_state = None
         self.debug = debug
         self.settings = settings
-        self.cluster = Cluster(settings)
+        if cluster:
+            self.cluster = cluster
+        else:
+            self.cluster = Cluster(settings)
 
         try:
             full_index = self.get_index(index)

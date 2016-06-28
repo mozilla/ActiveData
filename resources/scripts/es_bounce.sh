@@ -1,4 +1,4 @@
-curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}"  http://localhost:9200/_cluster/settings
+curl -XPUT http://localhost:9200/_cluster/settings -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}"
 
 
 

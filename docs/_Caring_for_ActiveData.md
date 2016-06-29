@@ -1,5 +1,5 @@
-ActiveData
-==========
+Caring for your ActiveData Instance
+==================================
 
 ##ETL
 
@@ -7,7 +7,7 @@ ActiveData
 The ETL is covered by two projects
 
 * [TestLog-ETL](https://github.com/klahnakoski/TestLog-ETL) (using the `etl` branch) - is the workhorse
-* [SpotManager](https://github.com/klahnakoski/SpotManager) (using the `manager` branch) - responsible for deploying the above
+* [SpotManager](https://github.com/klahnakoski/SpotManager) (using the `manager` branch) - responsible for deploying instances of the above
 
 
 ###Production Deployment Steps
@@ -19,9 +19,9 @@ With new ETL comes new tables, new S3 buckets and new Amazon Queues.
 1. Stop SpotManager
 2. Terminate all ETL instances
 3. Create S3 buckets and queues
-4. Use development run ETL and confirm use of buckets and queues, and confirm creation of new tables in production
+4. Use development to run ETL and confirm use of buckets and queues, and confirm creation of new tables in production
 5. Push code to `etl` branch
-6. Pull SpotManager changes (on `beta` branch) to its instance
+6. Pull SpotManager changes (on `managera` branch) to its instance
 7. Start Spot manager;
 8. Confirm nothing blows up; which will take several minutes as SpotManager negotiates pricing and waits to setup instances
 9. Run the backfill, if desired
@@ -38,7 +38,7 @@ Nginx is not required, but used in production for three reasons.
 
 - Serve static files (located at `~/ActiveData/active_data/public`)
 - Serve SSH (The Flask server can deliver its own SSH, probably slower, if required)
-- Forward requests to Gunicorn (The Flask server does not pre-fork processes)
+- Forward requests to multiple Flask processes (or Gunicorn if you wish)
 
 Configuration is `~/ActiveData/resources/config/nginx.conf`
 

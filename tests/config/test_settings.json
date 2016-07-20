@@ -1,0 +1,32 @@
+{
+	"fastTesting": false,  //IMPORTANT VARIABLE!  true WILL RUN TESTS FASTER, false INCLUDES NETWORK RESPONSE TESTS
+	"service_url": "http://127.0.0.1:5000/query",
+	"backend_es": {
+		"index": "testdata",
+		"type": "test_result",
+		"host": "http://localhost",
+		"port": 9200,
+		"schema":{"$ref":"//.../resources/schema/basic_schema.json.template?type=test_result"},
+		"debug":true
+	},
+	"constants": {
+		"pyLibrary.env.http.default_headers": {
+			"Referer": "ActiveDataTests"
+		},
+		"pyLibrary.queries.expressions.ALLOW_SCRIPTING": true
+	},
+	"flask": {
+		"host": "0.0.0.0",
+		"port": 5000,
+		"debug": false,
+		"threaded": true,
+		"processes": 1
+	},
+	"elasticsearch": {
+		"host": "http://localhost",
+		"port": 9200,
+		"index": "testdata",
+		"type": "test_result",
+		"debug": true
+	}
+}

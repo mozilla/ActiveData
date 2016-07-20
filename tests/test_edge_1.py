@@ -719,8 +719,6 @@ class TestEdge1(ActiveDataBaseTest):
 
     def test_edge_limit_big(self):
         test = {
-            "name": "sum column",
-            "metadata": {},
             "data": long_test_data,
             "query": {
                 "from": TEST_TABLE,

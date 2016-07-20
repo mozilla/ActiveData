@@ -744,6 +744,8 @@ class Table_usingSQLite(Container):
                      "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
                      "\nGROUP BY\n" + ",\n".join(g for g in edge_cols.values())
 
+            # TODO: ADD ORDER BY AND LIMIT CLAUSES, IF WE NEED TO LIMIT DOMAIN
+
             agg += agg_prefix + "(" + domain + "\n) " + edge_alias + agg_suffix
             agg_prefix = "\nLEFT JOIN "
             agg_suffix = " ON 1=1\n"
@@ -1335,7 +1337,10 @@ class Table_usingSQLite(Container):
                 if value_type in STRUCT:
                     c = unwraplist([c for c in columns.get(cname, Null) if c.type in STRUCT])
                 else:
-                    c = unwraplist([c for c in columns.get(cname, Null) if c.type == value_type])
+                    try:
+                        c = unwraplist([c for c in columns.get(cname, Null) if c.type == value_type])
+                    except Exception, e:
+                        Log.error("not expected", cause=e)
 
                 if not c:
                     c = Column(
@@ -1346,7 +1351,7 @@ class Table_usingSQLite(Container):
                         es_index=self.name,
                         nested_path=nested_path
                     )
-                    columns[cname] = c
+                    add_column_to_schema(columns, c)
                     if value_type == "nested":
                         nested_tables[cname] = "fake table"
                     required_changes.append({"add": c})

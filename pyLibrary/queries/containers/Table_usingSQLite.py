@@ -27,7 +27,7 @@ from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container, STRUCT
-from pyLibrary.queries.domains import SimpleSetDomain
+from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
 from pyLibrary.queries.expressions import jx_expression, Variable, wrap_nested_path, sql_type_to_json_type
 from pyLibrary.queries.meta import Column
 from pyLibrary.queries.query import QueryOp
@@ -484,7 +484,7 @@ class Table_usingSQLite(Container):
         column_names = query.column_names
         if query.format == "container":
             output = Table_usingSQLite(new_table, db=self.db, uid=self.uid, exists=True)
-        elif query.format == "cube" or query.edges:
+        elif query.format == "cube" or (not query.format and query.edges):
             if len(query.edges) == 0:
                 data = {n: Dict() for n in column_names}
                 for s in index_to_columns.values():
@@ -512,12 +512,12 @@ class Table_usingSQLite(Container):
                     Log.error("Can only handle default domains")
                 ci.append(i - len(query.edges))
                 parts = columns[ci[i]]
-                allowNulls = False
+                hasNulls = False
                 if parts[-1] == None:
-                    allowNulls = True
+                    hasNulls = True
                     # ONLY ONE EDGE, SO WE CAN DO THIS
                     parts = parts[:-1]
-
+                allowNulls = coalesce(e.allowNulls, True)
                 dims.append(len(parts)+(1 if allowNulls else 0))
                 edges.append(Dict(
                     name=e.name,
@@ -744,7 +744,9 @@ class Table_usingSQLite(Container):
                      "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
                      "\nGROUP BY\n" + ",\n".join(g for g in edge_cols.values())
 
-            # TODO: ADD ORDER BY AND LIMIT CLAUSES, IF WE NEED TO LIMIT DOMAIN
+            if isinstance(e.domain, DefaultDomain) and e.domain.limit:
+                domain += "\nORDER BY\n" + ",\n".join(g for g in edge_cols.values()) + \
+                    "\nLIMIT\n"+unicode(e.domain.limit)
 
             agg += agg_prefix + "(" + domain + "\n) " + edge_alias + agg_suffix
             agg_prefix = "\nLEFT JOIN "

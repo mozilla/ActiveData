@@ -428,7 +428,11 @@ def _normalize_edge(edge, schema=None):
 
     if isinstance(edge, basestring):
         if schema:
-            e = unwraplist(schema[edge])
+            try:
+                e = schema[edge]
+            except Exception, e:
+                e = None
+            e = unwraplist(e)
             if e and not isinstance(e, (_Column, set, list)):
                 if isinstance(e, _Column):
                     return Dict(

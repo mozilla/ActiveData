@@ -561,12 +561,18 @@ class TestEdge1(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": []
+                "data": [
+                    {"a": "b"},
+                    {"a": "c"}
+                ]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "v"],
-                "data": []
+                "data": [
+                    ["b", null],
+                    ["c", null]
+                ]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},

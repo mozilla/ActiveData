@@ -17,6 +17,8 @@ import re
 from collections import Mapping, OrderedDict
 from copy import copy
 
+import itertools
+
 from pyLibrary import convert
 from pyLibrary.collections import UNION
 from pyLibrary.collections.matrix import Matrix
@@ -705,16 +707,12 @@ class Table_usingSQLite(Container):
         for w in query.window:
             selects.append(self._window_op(self, query, w))
 
-        agg_prefix = "\nFROM "
-        agg_suffix = ""
-
-        agg = ""
         ons = []
-        groupby = ""
-        groupby_prefix = "\nGROUP BY "
-
+        groupby = []
         edges = []
+        edges_cols = []
         orderby = []
+        domains = []
         for i, e in enumerate(query.edges):
             edge_alias = "e" + unicode(i)
             edge_tuple = e.value.to_sql(columns)
@@ -737,37 +735,65 @@ class Table_usingSQLite(Container):
                     )
 
             for k, _ in edge_cols.items():
-                orderby.append(edge_alias + "." + k + " IS NULL")
-                orderby.append(edge_alias + "." + k)
+                orderby.append(k + " IS NULL")
+                orderby.append(k)
 
             domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in edge_cols.items()) + \
                      "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
+                     "\nWHERE\n" + " AND ".join(g + " IS NOT NULL" for g in edge_cols.values()) + \
                      "\nGROUP BY\n" + ",\n".join(g for g in edge_cols.values())
 
             if isinstance(e.domain, DefaultDomain) and e.domain.limit:
                 domain += "\nORDER BY\n" + ",\n".join(g for g in edge_cols.values()) + \
                     "\nLIMIT\n"+unicode(e.domain.limit)
 
-            agg += agg_prefix + "(" + domain + "\n) " + edge_alias + agg_suffix
-            agg_prefix = "\nLEFT JOIN "
-            agg_suffix = " ON 1=1\n"
-
-            ons.append(" AND ".join(
-                "((" + edge_alias + "." + k + " IS NULL AND (" + v + ") IS NULL) OR (" + edge_alias + "." + k + " = " + v + "))"
+            on_clause = " AND ".join(
+                edge_alias + "." + k + " = " + v
                 for k, v in edge_cols.items()
-            ))
+            )
+
+            edges_cols.append(edge_cols)
+            domains.append(domain)
+            ons.append(on_clause)
+
             for k, v in edge_cols.items():
-                groupby += groupby_prefix + edge_alias + "." + k + "\n"
-                groupby_prefix = ",\n"
+                groupby.append(edge_alias + "." + k)
 
-        if not ons:
-            agg += agg_prefix + quote_table(self.name) + " " + nest_to_alias['.']
-        else:
-            agg += agg_prefix + quote_table(self.name) + " " + nest_to_alias['.'] + " ON " + " AND ".join(ons)
+        main_filter = query.where.to_sql(columns)[0]['b']
 
-        where = "\nWHERE " + query.where.to_sql(self.columns)[0]['b']
+        all_parts = []
+        for p in itertools.product(*[[[False, i, e], [True, i, e]] if e.allowNulls else [[False, i, e]] for i, e in enumerate(query.edges)]):
+            sources = ["(" +
+                       "\nSELECT * " +
+                       "\nFROM " + quote_table(self.name) + " " + nest_to_alias["."] +
+                       "\nWHERE " + main_filter +
+                       ") " + nest_to_alias["."]
+                       ]
+            joins = []
+            where_clause = ["1"]
+            for is_null, i, e in p:
+                edge_alias = "e" + unicode(i)
+                domain = domains[i]
+                if is_null:
+                    sources.append("(" + domain + ") "+edge_alias)
+                    joins.append(ons[i])
+                    where_clause.append(" AND ".join(
+                        edge_alias + "." + k + " IS NULL "
+                        for k, v in edges_cols[i].items()
+                    ))
+                else:
+                    sources.insert(0, "(" + domain + ") "+edge_alias)
+                    joins.insert(0, ons[i])
 
-        command = "SELECT " + (",\n".join(selects)) + agg + where + groupby
+            part = "SELECT " + (",\n".join(selects)) + "\nFROM\n" + sources[0]
+            for s, j in zip(sources[1:], joins):
+                part += "\nLEFT JOIN\n" + s + "\nON\n" + j
+            part += "\nWHERE\n" + "\nAND\n".join(where_clause) + \
+                    "\nGROUP BY\n" + ",\n".join(groupby)
+
+            all_parts.append(part)
+
+        command = "SELECT * FROM (\n"+"\nUNION ALL\n".join(all_parts)+"\n)"
         if orderby:
             command += "\nORDER BY\n" + ",\n".join(orderby)
 

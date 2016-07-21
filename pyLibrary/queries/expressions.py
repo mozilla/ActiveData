@@ -1038,13 +1038,16 @@ class EqOp(Expression):
         lhs = self.lhs.to_sql(schema)
         rhs = self.rhs.to_sql(schema)
         acc = []
-        for t in "bsnj":
-            if lhs[t] and rhs[t]:
-                acc.append("(" + self.lhs[t] + ") = (" + self.rhs[t] + ")")
+        if len(lhs) != len(rhs):
+            Log.error("lhs and rhs have different dimensionality!?")
+        for l, r in zip(lhs, rhs):
+            for t in "bsnj":
+                if l.sql[t] and r.sql[t]:
+                    acc.append("(" + l.sql[t] + ") = (" + r.sql[t] + ")")
         if not acc:
             return FalseOp().to_sql(schema)
         else:
-            return {"b": " OR ".join(acc)}
+            return [{"b": " OR ".join(acc)}]
 
     def to_esfilter(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
@@ -1583,17 +1586,18 @@ class CoalesceOp(Expression):
         }
 
         for term in self.terms:
-            for t, v in term.to_sql(schema).items():
+            for t, v in term.to_sql(schema)[0].sql.items():
                 acc[t].append(v)
 
         output = {}
-        for t, terms in acc:
+        for t, terms in acc.items():
             if not terms:
                 continue
             elif len(terms) == 1:
                 output[t] = terms[0]
             else:
                 output[t] = "COALESCE(" + ",".join(terms) + ")"
+        return wrap([{"name": ".", "sql": output}])
 
     def to_esfilter(self):
         return {"or": [{"exists": {"field": v}} for v in self.terms]}

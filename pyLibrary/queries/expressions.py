@@ -643,6 +643,9 @@ class TupleOp(Expression):
         else:
             return "(" + (",".join(t.to_python() for t in self.terms)) + ")"
 
+    def to_sql(self, schema):
+        return wrap([{"name": ".", "sql": t.to_sql(schema)[0].sql} for t in self.terms])
+
     def to_esfilter(self):
         Log.error("not supported")
 
@@ -1047,7 +1050,7 @@ class EqOp(Expression):
         if not acc:
             return FalseOp().to_sql(schema)
         else:
-            return [{"b": " OR ".join(acc)}]
+            return wrap([{"b": " OR ".join(acc)}])
 
     def to_esfilter(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):

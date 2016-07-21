@@ -508,17 +508,19 @@ class Table_usingSQLite(Container):
 
             edges = []
             ci = []
-            dims=[]
+            dims = []
             for i, e in enumerate(query.edges):
-                if e.domain.type != "default":
-                    Log.error("Can only handle default domains")
+                # if e.domain.type != "default":
+                #     Log.error("Can only handle default domains")
                 ci.append(i - len(query.edges))
-                parts = columns[ci[i]]
-                hasNulls = False
-                if parts[-1] == None:
-                    hasNulls = True
-                    # ONLY ONE EDGE, SO WE CAN DO THIS
-                    parts = parts[:-1]
+                if e.domain.type == "set" and e.domain.partitions:
+                    parts = e.domain.partitions.name
+                else:
+                    parts = columns[ci[i]]
+                    if parts[-1] == None:
+                        # ONLY ONE EDGE, SO WE CAN DO THIS
+                        parts = parts[:-1]
+
                 allowNulls = coalesce(e.allowNulls, True)
                 dims.append(len(parts)+(1 if allowNulls else 0))
                 edges.append(Dict(
@@ -715,7 +717,17 @@ class Table_usingSQLite(Container):
         domains = []
         for i, e in enumerate(query.edges):
             edge_alias = "e" + unicode(i)
-            edge_tuple = e.value.to_sql(columns)
+
+            if e.value:
+                edge_tuple = e.value.to_sql(columns)
+            elif not e.value and any(e.domain.partitions.where):
+                case = "CASE "
+                for pp, p in enumerate(e.domain.partitions):
+                    w = p.where.to_sql(columns)[0].b
+                    t = quote_value(pp)
+                    case += " WHEN " + w + " THEN " + t
+                case += " ELSE NULL END "
+                edge_tuple = wrap([{"name": ".", "sql": {"s": case}}])
             edge_cols = OrderedDict()
             for ei, edge_value in enumerate(edge_tuple):
                 for json_type, sql in edge_value.sql.items():
@@ -724,12 +736,21 @@ class Table_usingSQLite(Container):
                     selects.append(edge_alias + "." + sql_name + " AS " + sql_name)
                     edge_cols[sql_name] = sql
 
+                    if not e.value and any(e.domain.partitions.where):
+                        def __(parts, si):
+                            def _get(row):
+                                return parts[row[si]].name
+                            return _get
+                        pull = __(e.domain.partitions, si)
+                    else:
+                        pull = get_column(si)
+
                     index_to_column[si] = Dict(
                         is_edge=True,
                         push_name=e.name,
                         push_column=si,
                         push_child=".",  # CAN NOT HANDLE TUPLES IN COLUMN
-                        pull=get_column(si),
+                        pull=pull,
                         sql=sql,
                         type=sql_type_to_json_type[json_type]
                     )
@@ -738,10 +759,16 @@ class Table_usingSQLite(Container):
                 orderby.append(k + " IS NULL")
                 orderby.append(k)
 
-            domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in edge_cols.items()) + \
-                     "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
-                     "\nWHERE\n" + " AND ".join(g + " IS NOT NULL" for g in edge_cols.values()) + \
-                     "\nGROUP BY\n" + ",\n".join(g for g in edge_cols.values())
+            if e.domain.type=="set":
+                if len(edge_cols.keys()) > 1:
+                    Log.error("Do not know how to handle")
+                edge_name = edge_cols.keys()[0]
+                domain = "\nUNION ALL\n".join("SELECT "+quote_value(pp) + " AS " + edge_name for pp, p in enumerate(e.domain.partitions))
+            else:
+                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in edge_cols.items()) + \
+                         "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
+                         "\nWHERE\n" + " AND ".join(g + " IS NOT NULL" for g in edge_cols.values()) + \
+                         "\nGROUP BY\n" + ",\n".join(g for g in edge_cols.values())
 
             if isinstance(e.domain, DefaultDomain) and e.domain.limit:
                 domain += "\nORDER BY\n" + ",\n".join(g for g in edge_cols.values()) + \
@@ -763,12 +790,15 @@ class Table_usingSQLite(Container):
 
         all_parts = []
         for p in itertools.product(*[[[False, i, e], [True, i, e]] if e.allowNulls else [[False, i, e]] for i, e in enumerate(query.edges)]):
-            sources = ["(" +
-                       "\nSELECT * " +
-                       "\nFROM " + quote_table(self.name) + " " + nest_to_alias["."] +
-                       "\nWHERE " + main_filter +
-                       ") " + nest_to_alias["."]
-                       ]
+            if main_filter == "1":
+                sources = [quote_table(self.name) + " " + nest_to_alias["."]]
+            else:
+                sources = ["(" +
+                           "\nSELECT * " +
+                           "\nFROM " + quote_table(self.name) + " " + nest_to_alias["."] +
+                           "\nWHERE " + main_filter +
+                           ") " + nest_to_alias["."]
+                           ]
             joins = []
             where_clause = ["1"]
             for is_null, i, e in p:

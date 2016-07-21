@@ -1413,7 +1413,7 @@ class TestEdge1(ActiveDataBaseTest):
                     {
                         "name": "a",
                         "domain": {
-                            "type":"set",
+                            "type": "set",
                             "partitions": [
                                 {"name": "b", "where": {"eq": {"b.r": "b"}}},
                                 {"name": "3", "where": {"eq": {"b.d": 3}}}

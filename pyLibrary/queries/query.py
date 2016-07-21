@@ -472,6 +472,7 @@ def _normalize_edge(edge, schema=None):
 
             return Dict(
                 name=edge.name,
+                value=jx_expression(edge.value),
                 allowNulls=bool(coalesce(edge.allowNulls, True)),
                 domain=domain
             )

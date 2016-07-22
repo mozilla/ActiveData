@@ -6,7 +6,7 @@ Caring for your ActiveData Instance
 
 The ETL is covered by two projects
 
-* [TestLog-ETL](https://github.com/klahnakoski/TestLog-ETL) (using the `etl` branch) - is the workhorse
+* [ActiveData-ETL](https://github.com/klahnakoski/ActiveData-ETL) (using the `etl` branch) - is the workhorse
 * [SpotManager](https://github.com/klahnakoski/SpotManager) (using the `manager` branch) - responsible for deploying instances of the above
 
 
@@ -79,8 +79,8 @@ ActiveData Manager
 
 Overall, the *Manager* machine is responsible for running CRON jobs against ActiveData.  The code for these jobs are found on multiple repositories, under the `manager` branch.  
 
-* The [Manager setup](https://github.com/klahnakoski/TestLog-ETL/blob/manager/resources/scripts/setup_manager.sh) reveals the repositories being used 
-* [CRON jobs](https://github.com/klahnakoski/TestLog-ETL/blob/manager/resources/cron/manager.cron) is the list of actions being performed
+* The [Manager setup](https://github.com/klahnakoski/ActiveData-ETL/blob/manager/resources/scripts/setup_manager.sh) reveals the repositories being used 
+* [CRON jobs](https://github.com/klahnakoski/ActiveData-ETL/blob/manager/resources/cron/manager.cron) is the list of actions being performed
 * Logs are found at `/logs`
 
 

@@ -44,7 +44,10 @@ def assign_shards(settings):
         ["name", "role", "disk", "ip", "memory"]
     )))
     for n in nodes:
-        n.memory = text_to_bytes(n.memory)
+        if n.role == 'd':
+            n.memory = text_to_bytes(n.memory)
+        else:
+            n.memory = 0
         n.disk = 0 if n.disk == "" else float(n.disk)
         if n.name.startswith("spot_") or n.name.startswith("coord"):
             n.zone = "spot"
@@ -78,7 +81,7 @@ def assign_shards(settings):
     for g, replicas in jx.groupby(shards, ["index", "i"]):
         replicas = list(replicas)
         safe_zones = list(set([s.zone for s in replicas if s.status == "STARTED"]))
-        if len(safe_zones) == 1 and safe_zones[0] == "spot":
+        if len(safe_zones) == 0 or (len(safe_zones) == 1 and safe_zones[0] == "spot"):
             # MARK NODE AS RISKY
             for s in replicas:
                 if s.status == "UNASSIGNED":
@@ -86,7 +89,7 @@ def assign_shards(settings):
                     break  # ONLY NEED ONE
     if high_risk_shards:
         Log.note("{{num}} high risk shards found", num=len(high_risk_shards))
-        allocate(10, high_risk_shards, relocating, path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
+        allocate(50, high_risk_shards, relocating, path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
         return
     else:
         Log.note("No high risk shards found")

@@ -30,7 +30,7 @@ from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
-from pyLibrary.queries.expressions import jx_expression, Variable, wrap_nested_path, sql_type_to_json_type
+from pyLibrary.queries.expressions import jx_expression, Variable, wrap_nested_path, sql_type_to_json_type, TupleOp
 from pyLibrary.queries.meta import Column
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.sql.sqlite import Sqlite
@@ -515,6 +515,9 @@ class Table_usingSQLite(Container):
                 ci.append(i - len(query.edges))
                 if e.domain.type == "set" and e.domain.partitions:
                     parts = e.domain.partitions.name
+                elif isinstance(e.value, TupleOp):
+                    pulls = jx.sort([c for c in index_to_columns.values() if c.push_name==e.name], "push_child").pull
+                    parts = [tuple(p(d) for p in pulls) for d in result.data]
                 else:
                     parts = columns[ci[i]]
                     if parts[-1] == None:
@@ -526,7 +529,7 @@ class Table_usingSQLite(Container):
                 edges.append(Dict(
                     name=e.name,
                     allowNulls=allowNulls,
-                    domain=SimpleSetDomain(partitions=parts)
+                    domain=SimpleSetDomain(partitions=jx.sort(set(parts)))
                 ))
 
             data = {s.name: Matrix(dims=dims, zeros=Dict) for s in listwrap(query.select)}
@@ -557,6 +560,13 @@ class Table_usingSQLite(Container):
                 for s in index_to_columns.values():
                     if s.push_child == ".":
                         row[s.push_column] = s.pull(d)
+                    elif isinstance(s.push_child, int):
+                        lst = row[s.push_column]
+                        if lst == None:
+                            lst = row[s.push_column] = [None] * (s.push_child + 1)
+                        elif len(lst) <= s.push_child:
+                            lst.extend([None]*(s.push_child+1-len(lst)))
+                        lst[s.push_child] = s.pull(d)
                     elif row[s.push_column] == None:
                         row[s.push_column] = Dict()
                         row[s.push_column][s.push_child] = s.pull(d)
@@ -711,7 +721,6 @@ class Table_usingSQLite(Container):
 
         ons = []
         groupby = []
-        edges = []
         edges_cols = []
         orderby = []
         domains = []
@@ -727,12 +736,12 @@ class Table_usingSQLite(Container):
                     t = quote_value(pp)
                     case += " WHEN " + w + " THEN " + t
                 case += " ELSE NULL END "
-                edge_tuple = wrap([{"name": ".", "sql": {"s": case}}])
+                edge_tuple = wrap([{"name": ".", "sql": {"n": case}}])
             edge_cols = OrderedDict()
             for ei, edge_value in enumerate(edge_tuple):
                 for json_type, sql in edge_value.sql.items():
                     si = len(selects)
-                    sql_name = "ec"+unicode(len(edges))
+                    sql_name = "ec"+unicode(si)
                     selects.append(edge_alias + "." + sql_name + " AS " + sql_name)
                     edge_cols[sql_name] = sql
 
@@ -745,11 +754,16 @@ class Table_usingSQLite(Container):
                     else:
                         pull = get_column(si)
 
+                    if len(edge_tuple) > 1:
+                        push_child = ei
+                    else:
+                        push_child = "."
+
                     index_to_column[si] = Dict(
                         is_edge=True,
                         push_name=e.name,
                         push_column=si,
-                        push_child=".",  # CAN NOT HANDLE TUPLES IN COLUMN
+                        push_child=push_child,  # CAN NOT HANDLE TUPLES IN COLUMN
                         pull=pull,
                         sql=sql,
                         type=sql_type_to_json_type[json_type]
@@ -759,25 +773,39 @@ class Table_usingSQLite(Container):
                 orderby.append(k + " IS NULL")
                 orderby.append(k)
 
-            if e.domain.type=="set":
+            if e.domain.type == "set":
                 if len(edge_cols.keys()) > 1:
                     Log.error("Do not know how to handle")
                 edge_name = edge_cols.keys()[0]
-                domain = "\nUNION ALL\n".join("SELECT "+quote_value(pp) + " AS " + edge_name for pp, p in enumerate(e.domain.partitions))
+                domain = "\nUNION ALL\n".join(
+                    "SELECT " + quote_value(pp) + " AS " + edge_name for pp, p in enumerate(e.domain.partitions)
+                )
+                on_clause = " AND ".join(
+                    edge_alias + "." + k + " = " + v
+                    for k, v in edge_cols.items()
+                )
+            elif len(edge_tuple) > 1:
+                e.allowNulls = False
+                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in edge_cols.items()) + \
+                         "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
+                          "\nGROUP BY\n" + ",\n".join(g for g in edge_cols.values())
+                on_clause = " AND ".join(
+                    "((" + edge_alias + "." + k + " IS NULL AND " + v + " IS NULL) OR " + edge_alias + "." + k + " = " + v + ")"
+                    for k, v in edge_cols.items()
+                )
             else:
                 domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in edge_cols.items()) + \
                          "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
                          "\nWHERE\n" + " AND ".join(g + " IS NOT NULL" for g in edge_cols.values()) + \
                          "\nGROUP BY\n" + ",\n".join(g for g in edge_cols.values())
+                on_clause = " AND ".join(
+                    edge_alias + "." + k + " = " + v
+                    for k, v in edge_cols.items()
+                )
 
             if isinstance(e.domain, DefaultDomain) and e.domain.limit:
                 domain += "\nORDER BY\n" + ",\n".join(g for g in edge_cols.values()) + \
                     "\nLIMIT\n"+unicode(e.domain.limit)
-
-            on_clause = " AND ".join(
-                edge_alias + "." + k + " = " + v
-                for k, v in edge_cols.items()
-            )
 
             edges_cols.append(edge_cols)
             domains.append(domain)

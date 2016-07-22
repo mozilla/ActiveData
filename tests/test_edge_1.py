@@ -1175,24 +1175,24 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "v",
-                        "allowNulls": True,
+                        "allowNulls": False,
                         "domain": {
                             "type": "set",
                             "partitions": [
-                                {"dataIndex": 0, "value": [null, null]},
-                                {"dataIndex": 1, "value": [null, "bb"]},
-                                {"dataIndex": 2, "value": [null, "dd"]},
-                                {"dataIndex": 3, "value": ["a", "aa"]},
-                                {"dataIndex": 4, "value": ["bb", "bb"]},
-                                {"dataIndex": 5, "value": ["c", "cc"]},
-                                {"dataIndex": 6, "value": ["e", "ee"]},
-                                {"dataIndex": 7, "value": ["f", null]}
+                                {"dataIndex": 0, "value": ["a", "aa"]},
+                                {"dataIndex": 1, "value": ["bb", "bb"]},
+                                {"dataIndex": 2, "value": ["c", "cc"]},
+                                {"dataIndex": 3, "value": ["e", "ee"]},
+                                {"dataIndex": 4, "value": ["f", null]},
+                                {"dataIndex": 5, "value": [null, "bb"]},
+                                {"dataIndex": 6, "value": [null, "dd"]},
+                                {"dataIndex": 7, "value": [null, null]}
                             ]
                         }
                     }
                 ],
                 "data": {
-                    "count": [1, 1, 1, 1, 1, 1, 2, 2, 0]
+                    "count": [1, 1, 1, 2, 2, 1, 1, 1]
                 }
             }
         }

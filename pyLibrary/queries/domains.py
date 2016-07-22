@@ -193,7 +193,7 @@ class SimpleSetDomain(Domain):
         if isinstance(self.key, set):
             Log.error("problem")
 
-        if not desc.key and (len(desc.partitions)==0 or isinstance(desc.partitions[0], (basestring, Number))):
+        if not desc.key and (len(desc.partitions)==0 or isinstance(desc.partitions[0], (basestring, Number, tuple))):
             # ASSUME PARTS ARE STRINGS, CONVERT TO REAL PART OBJECTS
             self.key = "value"
             self.map = {}

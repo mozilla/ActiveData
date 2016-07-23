@@ -1156,7 +1156,7 @@ class NotOp(Expression):
         return "not (" + self.term.to_python() + ")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        return {"b": "NOT (" + self.term.to_sql(schema).b + ")"}
+        return wrap([{"b": "NOT (" + self.term.to_sql(schema).b + ")"}])
 
     def vars(self):
         return self.term.vars()

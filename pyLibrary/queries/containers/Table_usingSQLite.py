@@ -560,13 +560,11 @@ class Table_usingSQLite(Container):
                 for s in index_to_columns.values():
                     if s.push_child == ".":
                         row[s.push_column] = s.pull(d)
-                    elif isinstance(s.push_child, int):
-                        lst = row[s.push_column]
-                        if lst == None:
-                            lst = row[s.push_column] = [None] * (s.push_child + 1)
-                        elif len(lst) <= s.push_child:
-                            lst.extend([None]*(s.push_child+1-len(lst)))
-                        lst[s.push_child] = s.pull(d)
+                    elif s.num_push_columns:
+                        tuple_value = row[s.push_column]
+                        if tuple_value == None:
+                            tuple_value = row[s.push_column] = [None] * s.num_push_columns
+                        tuple_value[s.push_child] = s.pull(d)
                     elif row[s.push_column] == None:
                         row[s.push_column] = Dict()
                         row[s.push_column][s.push_child] = s.pull(d)
@@ -610,8 +608,14 @@ class Table_usingSQLite(Container):
                     for c in index_to_columns.values():
                         if c.push_child == ".":
                             row[c.push_name] = c.pull(r)
+                        elif c.num_push_columns:
+                            tuple_value = row[c.push_name]
+                            if not tuple_value:
+                                tuple_value = row[c.push_name] = [None] * c.num_push_columns
+                            tuple_value[c.push_child] = c.pull(r)
                         else:
                             row[c.push_name][c.push_child] = c.pull(r)
+
                     data.append(row)
 
                 output = Dict(
@@ -724,6 +728,8 @@ class Table_usingSQLite(Container):
         edges_cols = []
         orderby = []
         domains = []
+        num_selects = len(selects)
+
         for i, e in enumerate(query.edges):
             edge_alias = "e" + unicode(i)
 
@@ -738,6 +744,7 @@ class Table_usingSQLite(Container):
                 case += " ELSE NULL END "
                 edge_tuple = wrap([{"name": ".", "sql": {"n": case}}])
             edge_cols = OrderedDict()
+            push_column = i + num_selects
             for ei, edge_value in enumerate(edge_tuple):
                 for json_type, sql in edge_value.sql.items():
                     si = len(selects)
@@ -762,7 +769,8 @@ class Table_usingSQLite(Container):
                     index_to_column[si] = Dict(
                         is_edge=True,
                         push_name=e.name,
-                        push_column=si,
+                        push_column=push_column,
+                        num_push_columns=len(edge_tuple),
                         push_child=push_child,  # CAN NOT HANDLE TUPLES IN COLUMN
                         pull=pull,
                         sql=sql,
@@ -846,8 +854,10 @@ class Table_usingSQLite(Container):
             part = "SELECT " + (",\n".join(selects)) + "\nFROM\n" + sources[0]
             for s, j in zip(sources[1:], joins):
                 part += "\nLEFT JOIN\n" + s + "\nON\n" + j
-            part += "\nWHERE\n" + "\nAND\n".join(where_clause) + \
-                    "\nGROUP BY\n" + ",\n".join(groupby)
+            if where_clause:
+                part += "\nWHERE\n" + "\nAND\n".join(where_clause)
+            if groupby:
+                part += "\nGROUP BY\n" + ",\n".join(groupby)
 
             all_parts.append(part)
 

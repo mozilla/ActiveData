@@ -474,12 +474,14 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
+                    {"a": "b"},
                     {"a": "c", "v": 13},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "v"],
                 "data": [
+                    ["b", null],
                     ["c", 13]
                 ]
             },
@@ -519,12 +521,14 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
+                    {"a": "b"},
                     {"a": "c", "v": 13}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "v"],
                 "data": [
+                    ["b", null],
                     ["c", 13]
                 ]
             },
@@ -645,12 +649,11 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-    def test_wo_limit(self):
+    def test_default_limit(self):
         """
-        TESTING THAT THE DEFAULT LIMIT IS APPLIED
+        TEST THAT THE DEFAULT LIMIT IS APPLIED
         """
         test = {
-            "name": "sum column",
             "metadata": {},
             "data": long_test_data,
             "query": {
@@ -935,9 +938,11 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
+                    {"start": 0, "count": 0},
                     {"start": 1, "count": 1},
                     {"start": 2, "count": 2},
                     {"start": 3, "count": 3},
+                    {"start": 4, "count": 0},
                     {"start": 5, "count": 1}
                 ]
             },
@@ -945,9 +950,11 @@ class TestEdge1(ActiveDataBaseTest):
                 "meta": {"format": "table"},
                 "header": ["start", "count"],
                 "data": [
+                    [0, 0],
                     [1, 1],
                     [2, 2],
                     [3, 3],
+                    [4, 0],
                     [5, 1]
                 ]
             },

@@ -99,7 +99,7 @@ class Sqlite(object):
                             result.meta.format = "table"
                             result.data = curr.fetchall()
                         except Exception, e:
-                            e=Except.wrap(e)
+                            e = Except.wrap(e)
                             result.exception = Except(ERROR, "Problem with\n{{command|indent}}", command=command, cause=e)
                         finally:
                             signal.go()

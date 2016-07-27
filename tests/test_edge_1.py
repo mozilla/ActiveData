@@ -63,7 +63,6 @@ class TestEdge1(ActiveDataBaseTest):
 
     def test_count_rows(self):
         test = {
-            "name": "count rows, 1d",
             "metadata": {},
             "data": simple_test_data,
             "query": {
@@ -673,7 +672,8 @@ class TestEdge1(ActiveDataBaseTest):
                     {"k": "g", "v": 7},
                     {"k": "h", "v": 8},
                     {"k": "i", "v": 9},
-                    {"k": "j", "v": 10}
+                    {"k": "j", "v": 10},
+                    {"v":13}
                 ]
             },
             "expecting_table": {
@@ -689,7 +689,8 @@ class TestEdge1(ActiveDataBaseTest):
                     ["g", 7],
                     ["h", 8],
                     ["i", 9],
-                    ["j", 10]
+                    ["j", 10],
+                    [null, 13]
                 ]
             },
             "expecting_cube": {
@@ -711,16 +712,13 @@ class TestEdge1(ActiveDataBaseTest):
                                 {"value": "g"},
                                 {"value": "h"},
                                 {"value": "i"},
-                                {"value": "j"},
-                                {"value": "k"},
-                                {"value": "l"},
-                                {"value": "m"}
+                                {"value": "j"}
                             ]
                         }
                     }
                 ],
                 "data": {
-                    "v": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, NullOp(), NullOp(), NullOp(), NullOp()]
+                    "v": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13]
                 }
             }
         }
@@ -1010,7 +1008,10 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
+                    {"start": 0.0, "count": 0},
+                    {"start": 0.1, "count": 0},
                     {"start": 0.2, "count": 1},
+                    {"start": 0.3, "count": 0},
                     {"start": 0.4, "count": 1},
                     {"start": 0.5, "count": 3},
                     {"start": null, "count": 2}
@@ -1020,7 +1021,10 @@ class TestEdge1(ActiveDataBaseTest):
                 "meta": {"format": "table"},
                 "header": ["start", "count"],
                 "data": [
+                    [0.0, 0],
+                    [0.1, 0],
                     [0.2, 1],
+                    [0.3, 0],
                     [0.4, 1],
                     [0.5, 3],
                     [null, 2]

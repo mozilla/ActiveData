@@ -658,7 +658,7 @@ class Table_usingSQLite(Container):
             edge_alias = "e" + unicode(i)
 
             if e.value:
-                edge_tuple = e.value.to_sql(columns)
+                edge_values = e.value.to_sql(columns)
             elif not e.value and any(e.domain.partitions.where):
                 case = "CASE "
                 for pp, p in enumerate(e.domain.partitions):
@@ -666,14 +666,17 @@ class Table_usingSQLite(Container):
                     t = quote_value(pp)
                     case += " WHEN " + w + " THEN " + t
                 case += " ELSE NULL END "
-                edge_tuple = wrap([{"name": ".", "sql": {"n": case}}])
-            edge_cols = OrderedDict()
-            for ei, edge_value in enumerate(edge_tuple):
+                edge_values = wrap([{"name": ".", "sql": {"n": case}}])
+            else:
+                edge_values = TupleOp("", [e.range.min, e.range.max]).to_sql(columns)
+
+            edge_names = []
+            for ei, edge_value in enumerate(edge_values):
                 for json_type, sql in edge_value.sql.items():
                     si = len(selects)
                     sql_name = "ec"+unicode(si)
+                    edge_names.append(sql_name)
                     selects.append(edge_alias + "." + sql_name + " AS " + sql_name)
-                    edge_cols[sql_name] = sql
 
                     if not e.value and any(e.domain.partitions.where):
                         def __(parts, si):
@@ -684,7 +687,7 @@ class Table_usingSQLite(Container):
                     else:
                         pull = get_column(si)
 
-                    if len(edge_tuple) > 1:
+                    if len(edge_names) > 1:
                         push_child = ei
                     else:
                         push_child = "."
@@ -693,28 +696,28 @@ class Table_usingSQLite(Container):
                         is_edge=True,
                         push_name=e.name,
                         push_column=i,
-                        num_push_columns=len(edge_tuple) if len(edge_tuple)>1 else None,
+                        num_push_columns=len(edge_names) if len(edge_names) > 1 else None,
                         push_child=push_child,  # CAN NOT HANDLE TUPLES IN COLUMN
                         pull=pull,
                         sql=sql,
                         type=sql_type_to_json_type[json_type]
                     )
 
-            for k, _ in edge_cols.items():
+            for k in edge_names:
                 orderby.append(k + " IS NULL")
                 orderby.append(k)
 
             if e.domain.type == "set":
-                if len(edge_cols.keys()) > 1:
+                if len(edge_names) > 1:
                     Log.error("Do not know how to handle")
-                edge_name = edge_cols.keys()[0]
+                edge_name = edge_names[0]
                 if e.value:
                     domain = "\nUNION ALL\n".join(
                         "SELECT " + quote_value(p) + " AS " + edge_name for p in e.domain.partitions.value
                     )
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " = " + v
-                        for k, v in edge_cols.items()
+                        for k, v in zip(edge_names, edge_values)
                     )
                 else:
                     domain = "\nUNION ALL\n".join(
@@ -722,65 +725,54 @@ class Table_usingSQLite(Container):
                     )
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " = " + v
-                        for k, v in edge_cols.items()
+                        for k, v in zip(edge_names, edge_values)
                     )
             elif e.domain.type == "range":
                 d = e.domain
                 if d.max == None or d.min == None or d.min == d.max:
                     Log.error("Invalid range: {{range|json}}", range=d)
-                if len(edge_cols.keys())>1:
+                if len(edge_names)==1:
+                    domain = self._make_range_domain(domain=d, column_name=edge_names[0] )
+                    on_clause = " AND ".join(
+                        edge_alias + "." + k + " <= " + v + " AND " + v + "< (" + edge_alias + "." + k + " + " + unicode(
+                            d.interval) + ")"
+                        for k, v in zip(edge_names, edge_values)
+                    )
+                elif e.range:
+                    domain = self._make_range_domain(domain=d, column_name=edge_names[0])
+                    on_clause = edge_alias + "." + edge_names[0] + " <= " + edge_values[1].sql.n + " AND " + \
+                                edge_values[0].sql.n + " < (" + edge_alias + "." + edge_names[1] + " + " + unicode(d.interval) + ")"
+                else:
                     Log.error("do not know how to handle")
-
-                width = d.max - d.min
-                digits = Math.floor(Math.log10(width))
-                if digits == 0:
-                    value = "a.value"
-                else:
-                    value = "+".join("1" + ("0" * j) + "*" + unicode(chr(ord(b'a') + j))+".value" for j in range(digits + 1))
-
-                if d.min == 0:
-                    domain = "SELECT " + value + " " + edge_cols.keys()[0] + \
-                             "\nFROM __digits__ a"
-                else:
-                    domain = "SELECT (" + value + ") - " + quote_value(d.min) + " " + edge_cols.keys()[0] + \
-                             "\nFROM __digits__ a"
-
-                for j in range(digits):
-                    domain += "\nJOIN __digits__ " + unicode(chr(ord(b'a') + j + 1)) + " ON 1=1"
-                domain += "\nWHERE " + value + " < " + quote_value(width)
-
-                on_clause = " AND ".join(
-                    edge_alias + "." + k + " = " + v
-                    for k, v in edge_cols.items()
-                )
-            elif len(edge_tuple) > 1:
+            elif len(edge_names) > 1:
                 e.allowNulls = False
-                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in edge_cols.items()) + \
+                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(edge_names, edge_values)) + \
                          "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
-                          "\nGROUP BY\n" + ",\n".join(g for g in edge_cols.values())
+                          "\nGROUP BY\n" + ",\n".join(g for g in edge_values)
                 on_clause = " AND ".join(
                     "((" + edge_alias + "." + k + " IS NULL AND " + v + " IS NULL) OR " + edge_alias + "." + k + " = " + v + ")"
-                    for k, v in edge_cols.items()
+                    for k, v in zip(edge_names, edge_values)
                 )
-            else:
-                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in edge_cols.items()) + \
+            elif isinstance(e.domain, DefaultDomain):
+                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(edge_names, edge_values)) + \
                          "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
-                         "\nWHERE\n" + " AND ".join(g + " IS NOT NULL" for g in edge_cols.values()) + \
-                         "\nGROUP BY\n" + ",\n".join(g for g in edge_cols.values())
+                         "\nWHERE\n" + " AND ".join(g + " IS NOT NULL" for g in edge_values) + \
+                         "\nGROUP BY\n" + ",\n".join(g for g in edge_values)
                 on_clause = " AND ".join(
                     edge_alias + "." + k + " = " + v
-                    for k, v in edge_cols.items()
+                    for k, v in zip(edge_names, edge_values)
                 )
 
-            if isinstance(e.domain, DefaultDomain) and e.domain.limit:
-                domain += "\nORDER BY\n" + ",\n".join(g for g in edge_cols.values()) + \
-                    "\nLIMIT\n"+unicode(e.domain.limit)
+                limit = Math.min(query.limit, e.domain.limit)
+                domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in edge_values) + \
+                          "\nLIMIT\n"+unicode(limit)
+            else:
+                Log.note("not handled")
 
-            edges_cols.append(edge_cols)
             domains.append(domain)
             ons.append(on_clause)
 
-            for k, v in edge_cols.items():
+            for k, v in zip(edge_names, edge_values):
                 groupby.append(edge_alias + "." + k)
 
         offset = len(selects)
@@ -788,12 +780,7 @@ class Table_usingSQLite(Container):
             si = ssi+offset
             if isinstance(s.value, Variable) and s.value.var == "." and s.aggregate == "count":
                 # COUNT RECORDS, NOT ANY ONE VALUE
-                if len(edge_cols) == 0:
-                    sql = "COUNT(*) AS " + quote_table(s.name)
-                elif len(edge_cols) == 1:
-                    sql = "COUNT(" + edge_cols.values()[0] + ") AS " + quote_table(s.name)
-                else:
-                    sql = "COUNT(COALESCE("+",".join(edge_cols.values())+")) AS " + quote_table(s.name)
+                sql = "COUNT(__exists__) AS " + quote_table(s.name)
 
                 column_number = len(selects)
                 selects.append(sql)
@@ -886,34 +873,35 @@ class Table_usingSQLite(Container):
 
         all_parts = []
         for p in itertools.product(*[[[False, i, e], [True, i, e]] if e.allowNulls else [[False, i, e]] for i, e in enumerate(query.edges)]):
-            if main_filter == "1":
-                sources = [quote_table(self.name) + " " + nest_to_alias["."]]
-            else:
-                sources = ["(" +
-                           "\nSELECT * " +
-                           "\nFROM " + quote_table(self.name) + " " + nest_to_alias["."] +
-                           "\nWHERE " + main_filter +
-                           ") " + nest_to_alias["."]
-                           ]
+
+            sources = ["(" +
+                       "\nSELECT 1 __exists__, * " +
+                       "\nFROM " + quote_table(self.name) + " " + nest_to_alias["."] +
+                       "\nWHERE " + main_filter +
+                       ") " + nest_to_alias["."]
+                       ]
             joins = []
+            join_types = []
             where_clause = []
             for is_null, i, e in p:
                 edge_alias = "e" + unicode(i)
                 domain = domains[i]
                 if is_null:
                     sources.append("(" + domain + ") "+edge_alias)
+                    join_types.append("LEFT JOIN")
                     joins.append(ons[i])
                     where_clause.append(" AND ".join(
                         edge_alias + "." + k + " IS NULL "
-                        for k, v in edges_cols[i].items()
+                        for k in edge_names
                     ))
                 else:
                     sources.insert(0, "(" + domain + ") "+edge_alias)
+                    join_types.append("LEFT JOIN")
                     joins.insert(0, ons[i])
 
             part = "SELECT " + (",\n".join(selects)) + "\nFROM\n" + sources[0]
-            for s, j in zip(sources[1:], joins):
-                part += "\nLEFT JOIN\n" + s + "\nON\n" + j
+            for join_type, s, j in zip(join_types, sources[1:], joins):
+                part += "\n"+join_type+"\n" + s + "\nON\n" + j
             if where_clause:
                 part += "\nWHERE\n" + "\nAND\n".join(where_clause)
             if groupby:
@@ -922,10 +910,40 @@ class Table_usingSQLite(Container):
             all_parts.append(part)
 
         command = "SELECT * FROM (\n"+"\nUNION ALL\n".join(all_parts)+"\n)"
+
         if orderby:
             command += "\nORDER BY\n" + ",\n".join(orderby)
 
         return command, index_to_column
+
+    def _make_range_domain(self, domain, column_name):
+        width = (domain.max - domain.min) / domain.interval
+        digits = Math.floor(Math.log10(width-1))
+        if digits == 0:
+            value = "a.value"
+        else:
+            value = "+".join("1" + ("0" * j) + "*" + unicode(chr(ord(b'a') + j)) + ".value" for j in range(digits + 1))
+
+        if domain.interval == 1:
+            if domain.min == 0:
+                domain = "SELECT " + value + " " + column_name + \
+                         "\nFROM __digits__ a"
+            else:
+                domain = "SELECT (" + value + ") - " + quote_value(domain.min) + " " + column_name + \
+                         "\nFROM __digits__ a"
+        else:
+            if domain.min == 0:
+                domain = "SELECT " + value + " * " + unicode(domain.interval) + " " + column_name + \
+                         "\nFROM __digits__ a"
+            else:
+                domain = "SELECT (" + value + " * " + unicode(domain.interval) + ") - " + quote_value(
+                    domain.min) + " " + column_name + \
+                         "\nFROM __digits__ a"
+
+        for j in range(digits):
+            domain += "\nJOIN __digits__ " + unicode(chr(ord(b'a') + j + 1)) + " ON 1=1"
+        domain += "\nWHERE " + value + " < " + quote_value(width)
+        return domain
 
     def _groupby_op(self, query):
         selects = []

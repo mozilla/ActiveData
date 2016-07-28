@@ -495,6 +495,10 @@ class Table_usingSQLite(Container):
         if query.format == "container":
             output = Table_usingSQLite(new_table, db=self.db, uid=self.uid, exists=True)
         elif query.format == "cube" or (not query.format and query.edges):
+
+            # temp=self.db.query("""
+	        # """)
+
             if len(query.edges) == 0:
                 data = {n: Dict() for n in column_names}
                 for s in index_to_columns.values():
@@ -642,7 +646,7 @@ class Table_usingSQLite(Container):
 
     def _edges_op(self, query):
         index_to_column = {}  # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
-        selects = []  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE)
+        outer_selects = []  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE)
 
         nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
 
@@ -650,11 +654,13 @@ class Table_usingSQLite(Container):
 
         ons = []
         groupby = []
-        edges_cols = []
+        domain_names = []
         orderby = []
         domains = []
+        select_clause = ["1 __exists__"]
 
         for i, e in enumerate(query.edges):
+            domain_names.append("dc"+unicode(i))
             edge_alias = "e" + unicode(i)
 
             if e.value:
@@ -667,16 +673,17 @@ class Table_usingSQLite(Container):
                     case += " WHEN " + w + " THEN " + t
                 case += " ELSE NULL END "
                 edge_values = wrap([{"name": ".", "sql": {"n": case}}])
-            else:
+            elif e.range:
                 edge_values = TupleOp("", [e.range.min, e.range.max]).to_sql(columns)
+            else:
+                Log.error("Do not know how to handle")
 
             edge_names = []
             for ei, edge_value in enumerate(edge_values):
                 for json_type, sql in edge_value.sql.items():
-                    si = len(selects)
+                    si = len(outer_selects)
                     sql_name = "ec"+unicode(si)
                     edge_names.append(sql_name)
-                    selects.append(edge_alias + "." + sql_name + " AS " + sql_name)
 
                     if not e.value and any(e.domain.partitions.where):
                         def __(parts, si):
@@ -687,7 +694,7 @@ class Table_usingSQLite(Container):
                     else:
                         pull = get_column(si)
 
-                    if len(edge_names) > 1:
+                    if len(domain_names) > 1:
                         push_child = ei
                     else:
                         push_child = "."
@@ -696,24 +703,26 @@ class Table_usingSQLite(Container):
                         is_edge=True,
                         push_name=e.name,
                         push_column=i,
-                        num_push_columns=len(edge_names) if len(edge_names) > 1 else None,
+                        num_push_columns=len(domain_names) if len(domain_names) > 1 else None,
                         push_child=push_child,  # CAN NOT HANDLE TUPLES IN COLUMN
                         pull=pull,
                         sql=sql,
                         type=sql_type_to_json_type[json_type]
                     )
 
-            for k in edge_names:
+            for k in domain_names:
+                outer_selects.append(edge_alias + "." + k + " AS " + k)
+
                 orderby.append(k + " IS NULL")
                 orderby.append(k)
+            domain_name = domain_names[0]  #DO NOT USE THIS, MAKE UP OUR OWN UNIQUE NAME
 
             if e.domain.type == "set":
                 if len(edge_names) > 1:
                     Log.error("Do not know how to handle")
-                edge_name = edge_names[0]
                 if e.value:
                     domain = "\nUNION ALL\n".join(
-                        "SELECT " + quote_value(p) + " AS " + edge_name for p in e.domain.partitions.value
+                        "SELECT " + quote_value(p) + " AS " + domain_name for p in e.domain.partitions.value
                     )
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " = " + v
@@ -721,7 +730,7 @@ class Table_usingSQLite(Container):
                     )
                 else:
                     domain = "\nUNION ALL\n".join(
-                        "SELECT " + quote_value(pp) + " AS " + edge_name for pp, p in enumerate(e.domain.partitions)
+                        "SELECT " + quote_value(pp) + " AS " + domain_name for pp, p in enumerate(e.domain.partitions)
                     )
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " = " + v
@@ -731,19 +740,20 @@ class Table_usingSQLite(Container):
                 d = e.domain
                 if d.max == None or d.min == None or d.min == d.max:
                     Log.error("Invalid range: {{range|json}}", range=d)
-                if len(edge_names)==1:
-                    domain = self._make_range_domain(domain=d, column_name=edge_names[0] )
+                if len(edge_names) == 1:
+                    domain = self._make_range_domain(domain=d, column_name=domain_name)
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " <= " + v + " AND " + v + "< (" + edge_alias + "." + k + " + " + unicode(
                             d.interval) + ")"
                         for k, v in zip(edge_names, edge_values)
                     )
                 elif e.range:
-                    domain = self._make_range_domain(domain=d, column_name=edge_names[0])
-                    on_clause = edge_alias + "." + edge_names[0] + " <= " + edge_values[1].sql.n + " AND " + \
-                                edge_values[0].sql.n + " < (" + edge_alias + "." + edge_names[1] + " + " + unicode(d.interval) + ")"
+                    domain = self._make_range_domain(domain=d, column_name=domain_name)
+                    on_clause = edge_alias + "." + domain_name + " < " + edge_values[1].sql.n + " AND " + \
+                                edge_values[0].sql.n + " < (" + edge_alias + "." + domain_name + " + " + unicode(d.interval) + ")"
                 else:
                     Log.error("do not know how to handle")
+                select_clause.extend(v.sql.n + " " + k for k, v in zip(edge_names, edge_values))
             elif len(edge_names) > 1:
                 e.allowNulls = False
                 domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(edge_names, edge_values)) + \
@@ -772,18 +782,18 @@ class Table_usingSQLite(Container):
             domains.append(domain)
             ons.append(on_clause)
 
-            for k, v in zip(edge_names, edge_values):
-                groupby.append(edge_alias + "." + k)
+            for d in domain_names:
+                groupby.append(edge_alias + "." + d)
 
-        offset = len(selects)
+        offset = len(outer_selects)
         for ssi, s in enumerate(listwrap(query.select)):
             si = ssi+offset
             if isinstance(s.value, Variable) and s.value.var == "." and s.aggregate == "count":
                 # COUNT RECORDS, NOT ANY ONE VALUE
                 sql = "COUNT(__exists__) AS " + quote_table(s.name)
 
-                column_number = len(selects)
-                selects.append(sql)
+                column_number = len(outer_selects)
+                outer_selects.append(sql)
                 index_to_column[column_number] = Dict(
                     push_name=s.name,
                     push_column=si,
@@ -800,9 +810,9 @@ class Table_usingSQLite(Container):
             elif s.aggregate == "cardinality":
                 for details in s.value.to_sql(columns):
                     for json_type, sql in details.sql.items():
-                        column_number = len(selects)
+                        column_number = len(outer_selects)
                         count_sql = "COUNT(DISTINCT(" + sql + ")) AS " + _make_column_name(column_number)
-                        selects.append(count_sql)
+                        outer_selects.append(count_sql)
                         index_to_column[column_number] = Dict(
                             push_name=s.name,
                             push_column=si,
@@ -814,7 +824,7 @@ class Table_usingSQLite(Container):
             elif s.aggregate == "union":
                 for details in s.value.to_sql(columns):
                     concat_sql = []
-                    column_number = len(selects)
+                    column_number = len(outer_selects)
 
                     for json_type, sql in details.sql.items():
                         concat_sql.append("GROUP_CONCAT(QUOTE(DISTINCT("+sql+")))")
@@ -824,7 +834,7 @@ class Table_usingSQLite(Container):
                     else:
                         concat_sql = concat_sql[0] + " AS " + _make_column_name(column_number)
 
-                    selects.append(concat_sql)
+                    outer_selects.append(concat_sql)
                     index_to_column[column_number] = Dict(
                         push_name=s.name,
                         push_column=si,
@@ -839,8 +849,8 @@ class Table_usingSQLite(Container):
                     sql = details.sql["n"]
                     for name, code in STATS.items():
                         full_sql = expand_template(code, {"value": sql})
-                        column_number = len(selects)
-                        selects.append(full_sql + " AS " + _make_column_name(column_number))
+                        column_number = len(outer_selects)
+                        outer_selects.append(full_sql + " AS " + _make_column_name(column_number))
                         index_to_column[column_number] = Dict(
                             push_name=s.name,
                             push_column=si,
@@ -852,11 +862,11 @@ class Table_usingSQLite(Container):
             else:  # STANDARD AGGREGATES
                 for details in s.value.to_sql(columns):
                     for json_type, sql in details.sql.items():
-                        column_number = len(selects)
+                        column_number = len(outer_selects)
                         sql = sql_aggs[s.aggregate] + "(" + sql + ")"
                         if s.default != None:
                             sql = "COALESCE(" + sql + ", " + quote_value(s.default) + ")"
-                        selects.append(sql+" AS " + _make_column_name(column_number))
+                        outer_selects.append(sql+" AS " + _make_column_name(column_number))
                         index_to_column[column_number] = Dict(
                             push_name=s.name,
                             push_column=si,
@@ -867,7 +877,7 @@ class Table_usingSQLite(Container):
                         )
 
         for w in query.window:
-            selects.append(self._window_op(self, query, w))
+            outer_selects.append(self._window_op(self, query, w))
 
         main_filter = query.where.to_sql(columns)[0]['b']
 
@@ -875,7 +885,7 @@ class Table_usingSQLite(Container):
         for p in itertools.product(*[[[False, i, e], [True, i, e]] if e.allowNulls else [[False, i, e]] for i, e in enumerate(query.edges)]):
 
             sources = ["(" +
-                       "\nSELECT 1 __exists__, * " +
+                       "\nSELECT\n" + ",\n".join(select_clause) + ",\n*" +
                        "\nFROM " + quote_table(self.name) + " " + nest_to_alias["."] +
                        "\nWHERE " + main_filter +
                        ") " + nest_to_alias["."]
@@ -892,14 +902,14 @@ class Table_usingSQLite(Container):
                     joins.append(ons[i])
                     where_clause.append(" AND ".join(
                         edge_alias + "." + k + " IS NULL "
-                        for k in edge_names
+                        for k in domain_names
                     ))
                 else:
                     sources.insert(0, "(" + domain + ") "+edge_alias)
                     join_types.append("LEFT JOIN")
                     joins.insert(0, ons[i])
 
-            part = "SELECT " + (",\n".join(selects)) + "\nFROM\n" + sources[0]
+            part = "SELECT " + (",\n".join(outer_selects)) + "\nFROM\n" + sources[0]
             for join_type, s, j in zip(join_types, sources[1:], joins):
                 part += "\n"+join_type+"\n" + s + "\nON\n" + j
             if where_clause:

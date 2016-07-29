@@ -1050,7 +1050,7 @@ class EqOp(Expression):
         if not acc:
             return FalseOp().to_sql(schema)
         else:
-            return wrap([{"b": " OR ".join(acc)}])
+            return wrap([{"name": ".", "sql": {"b": " OR ".join(acc)}}])
 
     def to_esfilter(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):

@@ -745,7 +745,7 @@ class Table_usingSQLite(Container):
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " <= " + v + " AND " + v + "< (" + edge_alias + "." + k + " + " + unicode(
                             d.interval) + ")"
-                        for k, v in zip(edge_names, edge_values)
+                        for k, v in zip(domain_names, edge_values[0].sql.values())
                     )
                 elif e.range:
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
@@ -764,17 +764,18 @@ class Table_usingSQLite(Container):
                     for k, v in zip(edge_names, edge_values)
                 )
             elif isinstance(e.domain, DefaultDomain):
-                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(edge_names, edge_values)) + \
+                vals = edge_values[0].sql.values()
+                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(domain_names, vals)) + \
                          "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
-                         "\nWHERE\n" + " AND ".join(g + " IS NOT NULL" for g in edge_values) + \
-                         "\nGROUP BY\n" + ",\n".join(g for g in edge_values)
+                         "\nWHERE\n" + " AND ".join(g + " IS NOT NULL" for g in vals) + \
+                         "\nGROUP BY\n" + ",\n".join(g for g in vals)
                 on_clause = " AND ".join(
                     edge_alias + "." + k + " = " + v
-                    for k, v in zip(edge_names, edge_values)
+                    for k, v in zip(domain_names, vals)
                 )
 
                 limit = Math.min(query.limit, e.domain.limit)
-                domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in edge_values) + \
+                domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
                           "\nLIMIT\n"+unicode(limit)
             else:
                 Log.note("not handled")
@@ -956,28 +957,56 @@ class Table_usingSQLite(Container):
         return domain
 
     def _groupby_op(self, query):
+        columns = self._get_sql_schema()
+        index_to_column={}
+        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
+
         selects = []
-        for s in listwrap(query.select):
+        for si, s in enumerate(listwrap(query.select)):
+            column_number=len(selects)
+            sql_type, sql =s.value.to_sql(columns)[0].sql.items()[0]
+
             if s.value == "." and s.aggregate == "count":
                 selects.append("COUNT(1) AS " + quote_table(s.name))
             else:
-                selects.append(sql_aggs[s.aggregate]+"("+jx_expression(s.value).to_sql() + ") AS " + quote_table(s.name))
+                selects.append(sql_aggs[s.aggregate]+"("+sql + ") AS " + quote_table(s.name))
+
+            index_to_column[column_number] = Dict(
+                push_name=s.name,
+                push_column=si,
+                push_child=".",
+                pull=get_column(column_number),
+                sql=sql,
+                type=sql_type_to_json_type[sql_type]
+            )
 
         for w in query.window:
             selects.append(self._window_op(self, query, w))
 
-        agg = " FROM " + quote_table(self.name) + " a\n"
-        groupby = ""
-        groupby_prefix = " GROUP BY "
+        groupby = []
+        for i, e in enumerate(query.groupby):
+            column_number = len(selects)
+            sql_type, sql = e.value.to_sql(columns)[0].sql.items()[0]
+            groupby.append(sql)
+            selects.append(sql+" AS "+e.name)
 
-        for i, e in enumerate(query.edges):
-            value = e.to_sql()
-            groupby += groupby_prefix + value
-            groupby_prefix = ",\n"
+            index_to_column[column_number] = Dict(
+                push_name=e.name,
+                push_column=column_number,
+                push_child=".",
+                pull=get_column(column_number),
+                sql=sql,
+                type=sql_type_to_json_type[sql_type]
+            )
 
-        where = "\nWHERE " + query.where.to_sql()
+        where = query.where.to_sql(columns)[0].sql.b
 
-        return "SELECT " + (",\n".join(selects)) + agg + where+groupby
+        command = "SELECT\n" + (",\n".join(selects)) + \
+                  "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
+                  "\nWHERE\n" + where + \
+                  "\nGROUP BY\n" + ",\n".join(groupby)
+
+        return command, index_to_column
 
     def _set_op(self, query, frum):
         # GET LIST OF COLUMNS

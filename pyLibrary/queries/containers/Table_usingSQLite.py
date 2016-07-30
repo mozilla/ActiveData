@@ -47,6 +47,7 @@ ORDER = "__order__"
 PARENT = "__parent__"
 COLUMN = "__column"
 
+ALL_TYPES="bns"
 
 def late_import():
     global _containers
@@ -657,14 +658,14 @@ class Table_usingSQLite(Container):
         domain_names = []
         orderby = []
         domains = []
-        select_clause = ["1 __exists__"]
+        select_clause = ["1 __exists__"]  # USED TO DISTINGUISH BETWEEN NULL-BECAUSE-LEFT-JOIN OR NULL-BECAUSE-NULL-VALUE
 
         for i, e in enumerate(query.edges):
             domain_names.append("dc"+unicode(i))
             edge_alias = "e" + unicode(i)
 
             if e.value:
-                edge_values = e.value.to_sql(columns)
+                edge_values = [p for c in e.value.to_sql(columns).sql for p in c.items()]
             elif not e.value and any(e.domain.partitions.where):
                 case = "CASE "
                 for pp, p in enumerate(e.domain.partitions):
@@ -672,51 +673,52 @@ class Table_usingSQLite(Container):
                     t = quote_value(pp)
                     case += " WHEN " + w + " THEN " + t
                 case += " ELSE NULL END "
-                edge_values = wrap([{"name": ".", "sql": {"n": case}}])
+                edge_values = [("n", case)]
             elif e.range:
-                edge_values = TupleOp("", [e.range.min, e.range.max]).to_sql(columns)
+                edge_values = e.range.min.to_sql(columns)[0].sql.items() + e.range.max.to_sql(columns)[0].sql.items()
             else:
                 Log.error("Do not know how to handle")
 
             edge_names = []
-            for ei, edge_value in enumerate(edge_values):
-                for json_type, sql in edge_value.sql.items():
-                    si = len(outer_selects)
-                    sql_name = "ec"+unicode(si)
-                    edge_names.append(sql_name)
+            for column_index, (json_type, sql) in enumerate(edge_values):
+                sql_name = "ec"+unicode(column_index)
+                edge_names.append(sql_name)
 
-                    if not e.value and any(e.domain.partitions.where):
-                        def __(parts, si):
-                            def _get(row):
-                                return parts[row[si]].name
-                            return _get
-                        pull = __(e.domain.partitions, si)
-                    else:
-                        pull = get_column(si)
+                if not e.value and any(e.domain.partitions.where):
+                    def __(parts, column_index):
+                        def _get(row):
+                            return parts[row[column_index]].name
+                        return _get
+                    pull = __(e.domain.partitions, column_index)
+                else:
+                    pull = get_column(column_index)
 
-                    if len(domain_names) > 1:
-                        push_child = ei
-                    else:
-                        push_child = "."
+                if isinstance(e.value, TupleOp):
+                    push_child = column_index
+                    num_push_columns=len(e.value.terms)
+                else:
+                    push_child = "."
+                    num_push_columns=None
 
-                    index_to_column[si] = Dict(
-                        is_edge=True,
-                        push_name=e.name,
-                        push_column=i,
-                        num_push_columns=len(domain_names) if len(domain_names) > 1 else None,
-                        push_child=push_child,  # CAN NOT HANDLE TUPLES IN COLUMN
-                        pull=pull,
-                        sql=sql,
-                        type=sql_type_to_json_type[json_type]
-                    )
+                index_to_column[column_index] = Dict(
+                    is_edge=True,
+                    push_name=e.name,
+                    push_column=i,
+                    num_push_columns=num_push_columns,
+                    push_child=push_child,  # CAN NOT HANDLE TUPLES IN COLUMN
+                    pull=pull,
+                    sql=sql,
+                    type=sql_type_to_json_type[json_type]
+                )
 
             for k in domain_names:
                 outer_selects.append(edge_alias + "." + k + " AS " + k)
 
                 orderby.append(k + " IS NULL")
                 orderby.append(k)
-            domain_name = domain_names[0]  #DO NOT USE THIS, MAKE UP OUR OWN UNIQUE NAME
+            domain_name = domain_names[0]  # DO NOT USE THIS, MAKE UP OUR OWN UNIQUE NAME
 
+            vals = [g[1] for g in edge_values]
             if e.domain.type == "set":
                 if len(edge_names) > 1:
                     Log.error("Do not know how to handle")
@@ -749,22 +751,21 @@ class Table_usingSQLite(Container):
                     )
                 elif e.range:
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
-                    on_clause = edge_alias + "." + domain_name + " < " + edge_values[1].sql.n + " AND " + \
-                                edge_values[0].sql.n + " < (" + edge_alias + "." + domain_name + " + " + unicode(d.interval) + ")"
+                    on_clause = edge_alias + "." + domain_name + " < " + edge_values[1][1] + " AND " + \
+                                edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + unicode(d.interval) + ")"
                 else:
                     Log.error("do not know how to handle")
-                select_clause.extend(v.sql.n + " " + k for k, v in zip(edge_names, edge_values))
+                # select_clause.extend(v[0] + " " + k for k, v in zip(domain_names, edge_values))
             elif len(edge_names) > 1:
                 e.allowNulls = False
-                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(edge_names, edge_values)) + \
+                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(edge_names, vals)) + \
                          "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
-                          "\nGROUP BY\n" + ",\n".join(g for g in edge_values)
+                          "\nGROUP BY\n" + ",\n".join(vals)
                 on_clause = " AND ".join(
                     "((" + edge_alias + "." + k + " IS NULL AND " + v + " IS NULL) OR " + edge_alias + "." + k + " = " + v + ")"
-                    for k, v in zip(edge_names, edge_values)
+                    for k, v in zip(edge_names, vals)
                 )
             elif isinstance(e.domain, DefaultDomain):
-                vals = edge_values[0].sql.values()
                 domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(domain_names, vals)) + \
                          "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
                          "\nWHERE\n" + " AND ".join(g + " IS NOT NULL" for g in vals) + \
@@ -786,7 +787,7 @@ class Table_usingSQLite(Container):
             for d in domain_names:
                 groupby.append(edge_alias + "." + d)
 
-        offset = len(outer_selects)
+        offset = len(query.edges)
         for ssi, s in enumerate(listwrap(query.select)):
             si = ssi+offset
             if isinstance(s.value, Variable) and s.value.var == "." and s.aggregate == "count":
@@ -1131,7 +1132,7 @@ class Table_usingSQLite(Container):
         if query.sort:
             for s in query.sort:
                 sql = s.value.to_sql()
-                for t in "bns":
+                for t in ALL_TYPES:
                     if sql[t]:
                         if s.sort == -1:
                             sorts.append(sql[t]+" DESC")
@@ -1810,6 +1811,10 @@ def sql_text_array_to_set(column):
 
 
 def get_column(column):
+    """
+    :param column: The column you want extracted
+    :return: a function that can pull the given column out of sql resultset
+    """
     def _get(row):
         return row[column]
     return _get

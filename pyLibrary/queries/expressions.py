@@ -508,7 +508,7 @@ class TrueOp(Literal):
         return "True"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        return wrap([{"b": "1"}])
+        return wrap([{"name": ".", "sql": {"b": "1"}}])
 
     def to_esfilter(self):
         return {"match_all": {}}

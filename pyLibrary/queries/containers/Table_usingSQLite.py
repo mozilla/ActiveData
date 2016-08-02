@@ -500,7 +500,7 @@ class Table_usingSQLite(Container):
             # temp=self.db.query("""
 	        # """)
 
-            if len(query.edges) == 0:
+            if len(query.edges) == 0 and len(query.groupby) == 0:
                 data = {n: Dict() for n in column_names}
                 for s in index_to_columns.values():
                     data[s.push_name][s.push_child] = unwrap(s.pull(result.data[0]))
@@ -513,15 +513,52 @@ class Table_usingSQLite(Container):
                 Log.error("Only support one dimension right now")
 
             if not result.data:
+                edges = []
+                dims = []
+                for i, e in enumerate(query.edges+query.groupby):
+                    allowNulls = coalesce(e.allowNulls, True)
+
+                    if e.domain.type == "set" and e.domain.partitions:
+                        domain=SimpleSetDomain(partitions=e.domain.partitions.name)
+                    elif e.domain.type == "range":
+                        domain = e.domain
+                    elif isinstance(e.value, TupleOp):
+                        pulls = jx.sort([c for c in index_to_columns.values() if c.push_name==e.name], "push_child").pull
+                        parts = [tuple(p(d) for p in pulls) for d in result.data]
+                        domain=SimpleSetDomain(partitions=jx.sort(set(parts)))
+                    else:
+                        domain=SimpleSetDomain(partitions=[])
+
+                    dims.append(1 if allowNulls else 0)
+                    edges.append(Dict(
+                        name=e.name,
+                        allowNulls=allowNulls,
+                        domain=domain
+                    ))
+
+                zeros = [
+                    0 if s.aggregate == "count" and index_to_columns[si].push_child == "." else Dict
+                    for si, s in enumerate(listwrap(query.select))
+                ]
+                data = {s.name: Matrix(dims=dims, zeros=zeros[si]) for si, s in enumerate(listwrap(query.select))}
+
+                if isinstance(query.select, list):
+                    select = [{"name": s.name} for s in query.select]
+                else:
+                    select = {"name": query.select.name}
+
                 return Dict(
-                    data={}
+                    meta={"format": "cube"},
+                    edges=edges,
+                    select=select,
+                    data={k: v.cube for k, v in data.items()}
                 )
 
             columns = zip(*result.data)
 
             edges = []
             dims = []
-            for i, e in enumerate(query.edges):
+            for i, e in enumerate(query.edges+query.groupby):
                 allowNulls = coalesce(e.allowNulls, True)
 
                 if e.domain.type == "set" and e.domain.partitions:
@@ -975,7 +1012,7 @@ class Table_usingSQLite(Container):
             if s.value == "." and s.aggregate == "count":
                 selects.append("COUNT(1) AS " + quote_table(s.name))
             else:
-                selects.append(sql_aggs[s.aggregate]+"("+sql + ") AS " + quote_table(s.name))
+                selects.append(sql_aggs[s.aggregate] + "(" + sql + ") AS " + quote_table(s.name))
 
             index_to_column[column_number] = Dict(
                 push_name=s.name,

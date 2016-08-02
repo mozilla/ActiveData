@@ -610,7 +610,6 @@ class TestEdge1(ActiveDataBaseTest):
 
     def test_empty_default_domain_w_groupby(self):
         test = {
-            "name": "sum column",
             "metadata": {},
             "data": simple_test_data,
             "query": {

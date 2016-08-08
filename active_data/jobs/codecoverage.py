@@ -156,8 +156,9 @@ def process_batch(todo, coverage_index, settings, please_stop):
                     example=example.data[0]
                 )
 
-        if [d for d in file_level_coverage_records.data if d["source.file.min_line_siblings"] == None]:
-            Log.warning("expecting all records to have summary")
+        bad_example = [d for d in file_level_coverage_records.data if d["source.file.min_line_siblings"] == None]
+        if bad_example:
+            Log.warning("expecting all records to have summary. Example:\n{{example}}", example=bad_example[0])
 
         coverage_index.extend([{"id": d._id, "value": d} for d in file_level_coverage_records.data])
 

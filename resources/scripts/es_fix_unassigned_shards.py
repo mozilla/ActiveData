@@ -1,3 +1,4 @@
+
 # encoding: utf-8
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
@@ -43,12 +44,17 @@ def assign_shards(settings):
         http.get(path + "/_cat/nodes?bytes=b&h=n,r,d,i,hm").content,
         ["name", "role", "disk", "ip", "memory"]
     )))
+    if "primary" not in nodes or "secondary" not in nodes:
+        Log.error("missing an important index\n{{nodes|json}}", nodes=nodes)
+
     for n in nodes:
         if n.role == 'd':
+            n.disk = 0 if n.disk == "" else float(n.disk)
             n.memory = text_to_bytes(n.memory)
         else:
+            n.disk = 0
             n.memory = 0
-        n.disk = 0 if n.disk == "" else float(n.disk)
+
         if n.name.startswith("spot_") or n.name.startswith("coord"):
             n.zone = "spot"
         else:
@@ -69,12 +75,39 @@ def assign_shards(settings):
 
     # ASSIGN SIZE TO ALL SHARDS
     for g, replicas in jx.groupby(shards, ["index", "i"]):
-        replicas=wrap(list(replicas))
+        replicas = wrap(list(replicas))
         size = max(*replicas.size)
         for r in replicas:
-            r.size=size
+            r.size = size
+    for g, replicas in jx.groupby(shards, "index"):
+        replicas = wrap(list(replicas))
+        index_size = Math.sum(replicas.size)
+        for r in replicas:
+            r.index_size=index_size
 
     relocating = [s for s in shards if s.status in ("RELOCATING", "INITIALIZING")]
+
+    # LOOKING FOR SHARDS WITH ZERO INSTANCES, IN THE spot ZONE
+    not_started = []
+    for g, replicas in jx.groupby(shards, ["index", "i"]):
+        replicas = list(replicas)
+        started_replicas = list(set([s.zone for s in replicas if s.status == "STARTED"]))
+        if len(started_replicas) == 0:
+            # MARK NODE AS RISKY
+            for s in replicas:
+                if s.status == "UNASSIGNED":
+                    not_started.append(s)
+                    break  # ONLY NEED ONE
+    if not_started:
+        Log.note("{{num}} shards have not started", num=len(not_started))
+        if len(relocating)>1:
+            Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
+        else:
+            allocate(30, not_started, relocating, path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
+        return
+    else:
+        Log.note("No not-started shards found")
+
 
     # LOOKING FOR SHARDS WITH ONLY ONE INSTANCE, IN THE spot ZONE
     high_risk_shards = []
@@ -94,56 +127,36 @@ def assign_shards(settings):
     else:
         Log.note("No high risk shards found")
 
-    # LOOK SHARDS WITH A QUORUM (USUALLY 2) IN A SINGLE ZONE (ES BUG https://github.com/elastic/elasticsearch/issues/13667)
-    # buggy_shards = []
-    # for g, replicas in jx.groupby(shards, ["index", "i"]):
-    #     replicas = list(replicas)
-    #
-    #     num = len(replicas)
-    #     for zone, parts in jx.group(replicas, "zone"):
-    #         parts = len(parts)
-    #         if len(parts) > float(num) / 2.0:
-    #             # WE CAN ASSIGN ONE REPLICA TO ANTHER ZONE
-    #             i = Random.int(len(parts))
-    #             r = parts[i]
-    #             buggy_shards.append(r)
-    #
-    # if buggy_shards:
-    #     Log.note("{{num}} high risk shards found", num=len(buggy_shards))
-    #     allocate(jx.sort(buggy_shards, "size")[:2:], path, nodes, set(n.zone for n in nodes)-{"spot"})
-    # else:
-    #     Log.note("No high risk shards found")
+    # LOOK FOR SHARDS WE CAN MOVE TO SPOT
+    too_safe_shards = []
+    for g, replicas in jx.groupby(shards, ["index", "i"]):
+        replicas = wrap(list(replicas))
+        safe_replicas = jx.filter(
+            replicas,
+            {"and": [
+                {"eq": {"status": "STARTED"}},
+                {"neq": {"zone": "spot"}}
+            ]}
+        )
+        if len(safe_replicas) >= len(replicas):  # RATHER THAN ONE SAFE SHARD, WE ARE ASKING FOR ONE UNSAFE SHARD
+            # TAKE THE SHARD ON THE FULLEST NODE
+            # node_load = jx.run({
+            #     "select": {"name": "size", "value": "size", "aggregate": "sum"},
+            #     "from": shards,
+            #     "groupby": ["node"],
+            #     "where": {"eq": {"index": replicas[0].index}}
+            # })
 
-    # ARE WE BUSY MOVING TOO MUCH?
-    # if len(relocating) >= CONCURRENT:
-    #     Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
-    #     return
+            i = Random.int(len(replicas))
+            shard = replicas[i]
+            too_safe_shards.append(shard)
 
-    # ODD SHARD GO TO primary
-    # for g, replicas in jx.groupby(shards, ["index", "i"]):
-    #     if g.index == "unittest20160516_141717":
-    #         replicas=wrap(list(replicas))
-    #         for shard in replicas:
-    #             if shard.i % 2 == 1 and shard.zone=="secondary" and shard.status=="STARTED":
-    #                 command = wrap({"move":
-    #                     {
-    #                         "index": shard.index,
-    #                         "shard": shard.i,
-    #                         "from_node": shard.node,
-    #                         "to_node": "primary"
-    #                     }
-    #                 })
-    #
-    #                 result = convert.json2value(
-    #                     convert.utf82unicode(http.post(path + "/_cluster/reroute", json={"commands": [command]}).content))
-    #                 if not result.acknowledged:
-    #                     Log.warning("Can not move/allocate: {{error}}", error=result.error)
-    #                 else:
-    #                     Log.note("index={{shard.index}}, shard={{shard.i}}, assign_to={{node}}, ok={{result.acknowledged}}",
-    #                              shard=shard, result=result, node="primary")
-    #                 return
-    #
-
+    if too_safe_shards:
+        Log.note("{{num}} shards can be moved to spot", num=len(too_safe_shards))
+        allocate(CONCURRENT, too_safe_shards, relocating, path, nodes, {"spot"}, shards)
+        return
+    else:
+        Log.note("No shards moved")
 
     # LOOK FOR UNALLOCATED SHARDS WE CAN PUT IN THE SPOT ZONE
     low_risk_shards = []
@@ -167,26 +180,9 @@ def assign_shards(settings):
     else:
         Log.note("No low risk shards found")
 
-    # LOOK FOR SHARDS WE CAN MOVE TO SPOT
-    too_safe_shards = []
-    for g, replicas in jx.groupby(shards, ["index", "i"]):
-        replicas = listwrap(list(replicas))
-        safe_zones = list(set([nodes[s.node].zone for s in replicas if s.status == "STARTED"]) - {"spot"})
-        if len(safe_zones) >= len(replicas):
-            # WE CAN ASSIGN ONE REPLICA TO spot
-            i = Random.int(len(replicas))
-            shard = replicas[i]
-            too_safe_shards.append(shard)
-
-    if too_safe_shards:
-        Log.note("{{num}} shards can be moved to spot", num=len(too_safe_shards))
-        allocate(CONCURRENT, too_safe_shards, relocating, path, nodes, {"spot"}, shards)
-    else:
-        Log.note("No shards moved")
-
 
 def net_shards_to_move(concurrent, shards, relocating):
-    sorted_shards = jx.sort(shards, "size")
+    sorted_shards = jx.sort(shards, ["index_size", "size"])
     size = (sorted_shards[0].size+1) / BIG_SHARD_SIZE   # +1 to avoid divide-by-zero
     concurrent = min(concurrent, Math.ceiling(1 / size))
     net = concurrent - len(relocating)
@@ -204,17 +200,16 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
             break
         # DIVIDE EACH NODE MEMORY BY NUMBER OF SHARDS FROM THIS INDEX
         node_weight = {n.name: n.memory for n in nodes}
-        for g, ss in jx.groupby(
-            jx.filter(all_shards, {
-                "eq": {
-                    "index": shard.index,
-                    "status": "STARTED"
-                }
-            }),
-            "node"
-        ):
+        shards_for_this_index = wrap(jx.filter(all_shards, {
+            "eq": {
+                "index": shard.index,
+                "status": "STARTED"
+            }
+        }))
+        index_size = Math.sum(shards_for_this_index.size)
+        for g, ss in jx.groupby(shards_for_this_index, "node"):
             ss = wrap(list(ss))
-            node_weight[g.node] = nodes[g.node].memory / (1 + Math.sum(ss.size))
+            node_weight[g.node] = nodes[g.node].memory * (1 - Math.sum(ss.size)/index_size)
 
         list_nodes = list(nodes)
         while True:

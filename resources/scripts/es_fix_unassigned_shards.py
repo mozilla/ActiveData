@@ -1,3 +1,4 @@
+
 # encoding: utf-8
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
@@ -43,6 +44,9 @@ def assign_shards(settings):
         http.get(path + "/_cat/nodes?bytes=b&h=n,r,d,i,hm").content,
         ["name", "role", "disk", "ip", "memory"]
     )))
+    if "primary" not in nodes or "secondary" not in nodes:
+        Log.error("missing an important index\n{{nodes|json}}", nodes=nodes)
+
     for n in nodes:
         n.memory = text_to_bytes(n.memory)
         if n.role != 'd':
@@ -70,12 +74,39 @@ def assign_shards(settings):
 
     # ASSIGN SIZE TO ALL SHARDS
     for g, replicas in jx.groupby(shards, ["index", "i"]):
-        replicas=wrap(list(replicas))
+        replicas = wrap(list(replicas))
         size = max(*replicas.size)
         for r in replicas:
-            r.size=size
+            r.size = size
+    for g, replicas in jx.groupby(shards, "index"):
+        replicas = wrap(list(replicas))
+        index_size = Math.sum(replicas.size)
+        for r in replicas:
+            r.index_size=index_size
 
     relocating = [s for s in shards if s.status in ("RELOCATING", "INITIALIZING")]
+
+    # LOOKING FOR SHARDS WITH ZERO INSTANCES, IN THE spot ZONE
+    not_started = []
+    for g, replicas in jx.groupby(shards, ["index", "i"]):
+        replicas = list(replicas)
+        started_replicas = list(set([s.zone for s in replicas if s.status == "STARTED"]))
+        if len(started_replicas) == 0:
+            # MARK NODE AS RISKY
+            for s in replicas:
+                if s.status == "UNASSIGNED":
+                    not_started.append(s)
+                    break  # ONLY NEED ONE
+    if not_started:
+        Log.note("{{num}} shards have not started", num=len(not_started))
+        if len(relocating)>1:
+            Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
+        else:
+            allocate(30, not_started, relocating, path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
+        return
+    else:
+        Log.note("No not-started shards found")
+
 
     # LOOKING FOR SHARDS WITH ONLY ONE INSTANCE, IN THE spot ZONE
     high_risk_shards = []
@@ -150,7 +181,7 @@ def assign_shards(settings):
 
 
 def net_shards_to_move(concurrent, shards, relocating):
-    sorted_shards = jx.sort(shards, "size")
+    sorted_shards = jx.sort(shards, ["index_size", "size"])
     size = (sorted_shards[0].size+1) / BIG_SHARD_SIZE   # +1 to avoid divide-by-zero
     concurrent = min(concurrent, Math.ceiling(1 / size))
     net = concurrent - len(relocating)

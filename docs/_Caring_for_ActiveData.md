@@ -95,11 +95,11 @@ Elasticsearch is powerful magic. Only the ES developers really know the plethora
 
 ES still breaks, sometimes. All problems encountered so far only require a bounce, but that bounce must be controlled.  Be sure these commands are run on the **coordinator** node (which is the ES master located on the *Frontend* machine).
  
- 1. Ensure all nodes are reliable - This is a lengthy process, disable the SPOT nodes, or `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : "spot"}}' http://localhost:9200/_cluster/settings`
- 2. Disable shard movement `curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}" http://localhost:9200/_cluster/settings`
+ 1. **Ensure all nodes are reliable** - This is a lengthy process, disable the SPOT nodes, or `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : "spot"}}' http://localhost:9200/_cluster/settings` If you do not do this step, a shutdown of a node may leave a single shard in the `spot` zone, which will be at risk of loss until it is replicated back to a safe node. 
+ 2. **Disable shard movement** - This will prevent the cluster from making copies of any shards that are on the bouncing node.  `curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}" http://localhost:9200/_cluster/settings`
  3. Bounce the nodes as you see fit
- 4. Enable shard movement `curl -XPUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"all\"}}" http://localhost:9200/_cluster/settings`
- 5. Re-enable spot nodes: `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : ""}}' http://localhost:9200/_cluster/settings`
+ 4. **Enable shard movement** - `curl -XPUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"all\"}}" http://localhost:9200/_cluster/settings`
+ 5. **Re-enable spot nodes** - `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : ""}}' http://localhost:9200/_cluster/settings`
 
 ###Changing Cluster Config
 
@@ -112,7 +112,7 @@ be sure the transient settings for the same do not interfere with your plans:
     curl -XPUT -d '{"transient": {"cluster.routing.allocation.exclude._ip" : ""}}' http://localhost:9200/_cluster/settings
 
 
- 1. Ensure all nodes are reliable - This is a lengthy process, disable the SPOT nodes, or `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : "spot"}}' http://localhost:9200/_cluster/settings`
+ 1. **Ensure all nodes are reliable** - This is a lengthy process, disable the SPOT nodes, or `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : "spot"}}' http://localhost:9200/_cluster/settings` If you do not do this step, a shutdown of a node may leave a single shard in the `spot` zone, which will be at risk of loss until it is replicated back to a safe node. 
  2. Move shards off the node you plan to change `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude._ip" : "172.31.0.39"}}' http://localhost:9200/_cluster/settings`
  3. Wait while ES moves the shards of the node. *Jan2016 - took 1 day to move 2 terabytes off a node.* 
  4. Disable shard movement `curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}" http://localhost:9200/_cluster/settings`

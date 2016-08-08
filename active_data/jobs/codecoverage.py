@@ -25,7 +25,7 @@ from pyLibrary.testing import elasticsearch
 from pyLibrary.thread.threads import Signal, Queue
 from pyLibrary.thread.threads import Thread
 
-NUM_THREAD=4
+NUM_THREAD = 4
 
 
 def process_batch(todo, coverage_index, settings, please_stop):
@@ -148,7 +148,13 @@ def process_batch(todo, coverage_index, settings, please_stop):
                     "format": "list"
                 })
 
-                Log.warning("{{test|quote}} appears to have no coverage!\n{{example|json|indent}}", test=test_name, example=example.data[0])
+                Log.warning(
+                    "{{test|quote}} rev {{revision}} appears to have no coverage for {{file|quote}}!\n{{example|json|indent}}",
+                    test=test_name,
+                    file=not_summarized.source.file.name,
+                    revision=not_summarized.build.revision12,
+                    example=example.data[0]
+                )
 
         if [d for d in file_level_coverage_records.data if d["source.file.min_line_siblings"] == None]:
             Log.warning("expecting all records to have summary")

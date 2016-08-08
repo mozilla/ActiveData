@@ -21,6 +21,7 @@ cloud:
         ec2:
             protocol: https
 discovery.type: ec2
+discovery.zen.publish_timeout: 60
 discovery.zen.ping.multicast.enabled: false
 discovery.zen.minimum_master_nodes: 1
 

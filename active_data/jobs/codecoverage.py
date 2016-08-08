@@ -132,10 +132,11 @@ def process_batch(todo, coverage_index, settings, please_stop):
             min_siblings = MIN(siblings)
             coverage_candidates = jx.filter(file_level_coverage_records.data, lambda row, rownum, rows: row.test.url == test_name)
             if coverage_candidates:
-                coverage_record = coverage_candidates[0]
-                coverage_record.source.file.max_test_siblings = max_siblings
-                coverage_record.source.file.min_line_siblings = min_siblings
-                coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings + 1)
+                # MORE THAN ONE COVERAGE CANDIDATE CAN HAPPEN WHEN THE SAME TEST IS IN TWO DIFFERENT CHUNKS OF THE SAME SUITE
+                for coverage_record in coverage_candidates:
+                    coverage_record.source.file.max_test_siblings = max_siblings
+                    coverage_record.source.file.min_line_siblings = min_siblings
+                    coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings + 1)
             else:
                 example = http.post_json(settings.url, json={
                     "from": "coverage",

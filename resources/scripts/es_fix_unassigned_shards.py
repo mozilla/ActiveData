@@ -243,7 +243,7 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
         result = convert.json2value(
             convert.utf82unicode(http.post(path + "/_cluster/reroute", json={"commands": [command]}).content))
         if not result.acknowledged:
-            Log.warning("Can not move/allocate to {{node}}: {{error}}", node=destination_node, error=result.error)
+            Log.warning("Can not move/allocate to {{node}}: Error={{error|quote}}", node=destination_node, error=result.error)
         else:
             net -= 1
             Log.note(
@@ -312,6 +312,12 @@ def main():
         )
         Log.note("DISABLE SHARD MOVEMENT: {{result}}", result=response.all_content)
 
+        response = http.put(
+            path + "/_cluster/settings",
+            data='{"transient": {"cluster.routing.allocation.disk.watermark.low": "95%"}}'
+        )
+        Log.note("ALLOW ALLOCATION: {{result}}", result=response.all_content)
+
         while True:
             assign_shards(settings)
             Thread.sleep(seconds=30)
@@ -323,6 +329,12 @@ def main():
             data='{"persistent": {"cluster.routing.allocation.enable": "all"}}'
         )
         Log.note("ENABLE SHARD MOVEMENT: {{result}}", result=response.all_content)
+
+        response = http.put(
+            path + "/_cluster/settings",
+            data='{"transient": {"cluster.routing.allocation.disk.watermark.low": "80%"}}'
+        )
+        Log.note("RESTRICT ALLOCATION: {{result}}", result=response.all_content)
         Log.stop()
 
 

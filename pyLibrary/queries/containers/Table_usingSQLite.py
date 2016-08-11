@@ -758,7 +758,7 @@ class Table_usingSQLite(Container):
                     )
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " = " + v
-                        for k, (t, v) in zip(edge_names, edge_values)
+                        for k, (t, v) in zip(domain_names, edge_values)
                     )
                 else:
                     domain = "\nUNION ALL\n".join(
@@ -1006,7 +1006,7 @@ class Table_usingSQLite(Container):
 
         selects = []
         for si, s in enumerate(listwrap(query.select)):
-            column_number=len(selects)
+            column_number = len(selects)
             sql_type, sql =s.value.to_sql(columns)[0].sql.items()[0]
 
             if s.value == "." and s.aggregate == "count":

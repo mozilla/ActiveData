@@ -632,7 +632,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "allowNulls": False,
+                        "allowNulls": True,  # MUST BE True SO THAT NULL VALUES ARE INCLUDED
                         "domain": {
                             "type": "set",
                             "key": "value",

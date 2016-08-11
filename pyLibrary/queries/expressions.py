@@ -456,7 +456,7 @@ class NullOp(Literal):
         return "None"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        return {}
+        return Null
 
     def to_esfilter(self):
         return {"not": {"match_all": {}}}
@@ -923,12 +923,23 @@ class DivOp(Expression):
         return "float(" + self.lhs.to_python() + ") / float(" + self.rhs.to_python()+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        lhs = self.lhs.to_sql(schema).n
-        rhs = self.rhs.to_sql(schema).n
+        lhs = self.lhs.to_sql(schema)[0].sql.n
+        rhs = self.rhs.to_sql(schema)[0].sql.n
+        d = self.default.to_sql(schema)[0].sql.n
+
         if lhs and rhs:
-            return "(" + self.lhs.to_sql(schema).n + ") / (" + self.rhs.to_sql(schema).n+")"
+            if d == None:
+                return [{
+                    "name": ".",
+                    "sql": {"n": "(" + lhs + ") / (" + rhs + ")"}
+                }]
+            else:
+                return [{
+                    "name": ".",
+                    "sql": {"n": "COALESCE((" + lhs + ") / (" + rhs + "), " + d + ")"}
+                }]
         else:
-            return "NULL"
+            return Null
 
     def to_esfilter(self):
         if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal):
@@ -1544,6 +1555,12 @@ class ContainsOp(Expression):
         c = self.substring.to_ruby()
         return "((" + v + ") == null ? false : q.indexOf(" + c + ")>=0)"
 
+    def to_sql(self, schema):
+        v = self.var.to_sql(schema)
+        c = self.substring.to_sql(schema)
+        sql = "COALESCE(" + v[0].sql.s + ", '') LIKE '%' || " + c[0].sql.s + " || '%'"
+        return wrap([{"name": ".", "sql": {"b": sql}}])
+
     def to_esfilter(self):
         if isinstance(self.var, Variable) and isinstance(self.substring, Literal):
             return {"regexp": {self.var.var: ".*" + convert.string2regexp(convert.json2value(self.substring.json)) + ".*"}}
@@ -1788,9 +1805,12 @@ class LeftOp(Expression):
         return "None if " + v + " == None or " + l + " == None else " + v + "[0:max(0, " + l + ")]"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        v = self.value.to_sql(schema).s
-        l = self.length.to_sql(schema).n
-        return "CASE WHEN " + v + " IS NULL THEN NULL WHEN " + l + " IS NULL THEN NULL ELSE SUBSTR(" + v + ", 1, " + l + ") END"
+        v = self.value.to_sql(schema)[0].sql.s
+        l = self.length.to_sql(schema)[0].sql.n
+        return wrap([{
+            "name": ".",
+            "sql": {"s": "CASE WHEN " + v + " IS NULL THEN NULL WHEN " + l + " IS NULL THEN NULL ELSE SUBSTR(" + v + ", 1, " + l + ") END"}
+        }])
 
     def to_dict(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):

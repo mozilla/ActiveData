@@ -481,7 +481,7 @@ class Table_usingSQLite(Container):
             op, index_to_columns = self._edges_op(query)
             command = create_table + op
         else:
-            op, index_to_columns = self._set_op(query, frum)
+            op = self._set_op(query, frum)
             return op
 
         if query.sort:
@@ -821,13 +821,12 @@ class Table_usingSQLite(Container):
             for d in domain_names:
                 groupby.append(edge_alias + "." + d)
 
-        for k in domain_names:
-            outer_selects.append(edge_alias + "." + k + " AS " + k)
+        if query.edges:
+            for k in domain_names:
+                outer_selects.append(edge_alias + "." + k + " AS " + k)
 
-            orderby.append(k + " IS NULL")
-            orderby.append(k)
-
-
+                orderby.append(k + " IS NULL")
+                orderby.append(k)
 
         offset = len(query.edges)
         for ssi, s in enumerate(listwrap(query.select)):
@@ -1056,6 +1055,9 @@ class Table_usingSQLite(Container):
         primary_nested_path = join_field(split_field(frum)[1:])
         vars_ = UNION([s.value.vars() for s in listwrap(query.select)])
 
+        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
+        columns = self._get_sql_schema()
+
         active_columns = {}
         for cname, cols in self.columns.items():
             if cname in vars_:
@@ -1109,15 +1111,16 @@ class Table_usingSQLite(Container):
                 place(primary_doc_details)
 
             alias = nested_doc_details['alias'] = nest_to_alias[nested_path]
-            # WE DO NOT NEED DATA FROM TABLES WE REQUEST NOTHING FROM
-            if nested_path not in active_columns:
-                continue
 
             # WE ALWAYS ADD THE UID AND ORDER
             column_number = index_to_uid[nested_path] = nested_doc_details['id_coord'] = len(selects)
             selects.append(alias + "." + quoted_UID + " AS " + _make_column_name(column_number))
             if nested_path != ".":
                 selects.append(alias + "." + quote_table(ORDER) + " AS " + _make_column_name(column_number + 1))
+
+            # WE DO NOT NEED DATA FROM TABLES WE REQUEST NOTHING FROM
+            if nested_path not in active_columns:
+                continue
 
             if primary_nested_path == nested_path:
                 # ADD SQL SELECT COLUMNS FOR EACH jx SELECT CLAUSE
@@ -1160,7 +1163,7 @@ class Table_usingSQLite(Container):
                         nested_path=nested_path
                     )
 
-        where_clause = query.where.to_sql(self.columns).b
+        where_clause = query.where.to_sql(columns)[0].sql.b
 
         sql = self._make_sql_for_one_nest_in_set_op(
             ".",
@@ -1197,7 +1200,7 @@ class Table_usingSQLite(Container):
                  }
             :param parent_doc_id: the id of the parent doc (for detecting when to step out of loop)
             :param parent_id_coord: the column number for the parent id (so we ca extract from each row)
-            :return:  the nested property (usually an array)
+            :return: the nested property (usually an array)
             """
             previous_doc_id = None
             doc = Dict()
@@ -1215,16 +1218,22 @@ class Table_usingSQLite(Container):
 
                 if doc_id != previous_doc_id:
                     previous_doc_id = doc_id
-                    doc = Dict()
-                    # ASSIGN INNER PROPERTIES
-                    for i, c in nested_doc_details['index_to_column'].items():
-                        value = row[i]
-                        if value is not None:
-                            relative_path = relative_field(c.name, nested_doc_details['nested_path'][0])
-                            if relative_path == ".":
-                                doc = value
-                            else:
-                                doc[relative_path] = value
+                    if query.format == "list" and not isinstance(query.select, list):
+                        doc = None
+                        # ASSIGN INNER PROPERTIES
+                        for i, _ in nested_doc_details['index_to_column'].items():
+                            doc = row[i]
+                    else:
+                        doc = Dict()
+                        # ASSIGN INNER PROPERTIES
+                        for i, c in nested_doc_details['index_to_column'].items():
+                            value = row[i]
+                            if value is not None:
+                                relative_path = relative_field(c.push_name, nested_doc_details['nested_path'][0])
+                                if relative_path == ".":
+                                    doc = value
+                                else:
+                                    doc[relative_path] = value
                     output.append(doc)
 
                 # ASSIGN NESTED ARRAYS
@@ -1244,11 +1253,11 @@ class Table_usingSQLite(Container):
 
         rows = list(reversed(unwrap(result.data)))
         row = rows.pop()
-        output = _accumulate_nested(rows, row, primary_doc_details, None, None)
-        return {
-            "meta": {"format": "list"},
-            "data": output
-        }
+        output = Dict(
+            meta={"format": "list"},
+            data=_accumulate_nested(rows, row, primary_doc_details, None, None)
+        )
+        return output
 
     def _make_sql_for_one_nest_in_set_op(
         self,

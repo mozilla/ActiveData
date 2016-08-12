@@ -321,11 +321,11 @@ def pretty_json(value):
                         try:
                             try:
                                 c2 = ESCAPE_DCT[c]
-                            except Exception, h:
+                            except Exception:
                                 c2 = c
                             c3 = unicode(c2)
                             acc.append(c3)
-                        except BaseException, g:
+                        except BaseException:
                             pass
                             # Log.warning("odd character {{ord}} found in string.  Ignored.",  ord= ord(c)}, cause=g)
                     acc.append(u"\"")

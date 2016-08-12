@@ -1,3 +1,4 @@
+from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.strings import expand_template
 
@@ -8,7 +9,7 @@ def use():
         return
 
     globals()["_using_mozlog"] = True
-    try:
+    with suppress_exception:
         from mozlog.structured import structuredlog
 
         global logger
@@ -16,8 +17,6 @@ def use():
         ToMozLog.logger = logger
         ToMozLog.old_class = Log
         globals()["Log"] = ToMozLog
-    except:
-        pass
 
 
 class ToMozLog(object):

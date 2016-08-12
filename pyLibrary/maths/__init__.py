@@ -107,14 +107,18 @@ class Math(object):
 
     @staticmethod
     def is_number(s):
-        if s is True or s is False:
+        if s is True or s is False or s == None:
             return False
 
         try:
-            float(s)
-            return True
+            s = float(s)
+            return not math.isnan(s)
         except Exception:
             return False
+
+    @staticmethod
+    def is_nan(s):
+        return s==None or math.isnan(s)
 
     @staticmethod
     def is_finite(s):
@@ -133,12 +137,6 @@ class Math(object):
             return True
         except Exception:
             return False
-
-
-
-    @staticmethod
-    def is_nan(s):
-        return s==None or math.isnan(s)
 
     @staticmethod
     def is_integer(s):

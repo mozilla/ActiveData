@@ -7,16 +7,16 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 import itertools
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, unwrap, Null, coalesce
+from pyLibrary.dot import listwrap
 from pyLibrary.queries import windows
-from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
 from pyLibrary.queries.expressions import jx_expression_to_function
 
@@ -92,6 +92,8 @@ def cube_aggs(frum, query):
         for c, var in m.items():
             if var != None:
                 m[c] = var.end()
+
+    from pyLibrary.queries.containers.cube import Cube
 
     return Cube(select, query.edges, result)
 

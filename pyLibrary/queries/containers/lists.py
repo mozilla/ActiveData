@@ -15,16 +15,17 @@ from collections import Mapping
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList, unwrap
+from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList, unwrap, set_default, join_field, split_field
 from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expression_compiler import compile_expression
-from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression, TrueOp, Variable
+from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression, TrueOp, jx_expression_to_function, Variable
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
 from pyLibrary.queries.meta import Column
 from pyLibrary.thread.threads import Lock
 from pyLibrary.times.dates import Date
+
+_get = object.__getattribute__
 
 
 class ListContainer(Container):
@@ -106,7 +107,7 @@ class ListContainer(Container):
         return ListContainer("from "+self.name, filter(temp, self.data), self.schema)
 
     def sort(self, sort):
-        return ListContainer("from "+self.name, jx.sort(self.data, sort), self.schema)
+        return ListContainer("from "+self.name, jx.sort(self.data, sort, already_normalized=True), self.schema)
 
     def get(self, select):
         """
@@ -120,16 +121,29 @@ class ListContainer(Container):
 
     def select(self, select):
         selects = listwrap(select)
-        if selects[0].value == "." and selects[0].name == ".":
-            return self
 
         if not all(isinstance(s.value, Variable) for s in selects):
             Log.error("selecting on structure, or expressions, not supported yet")
+        if len(selects) == 1 and isinstance(selects[0].value, Variable) and selects[0].value.var == ".":
+            new_schema = self.schema
+            if selects[0].name == ".":
+                return self
+        else:
+            new_schema = None
 
-        # TODO: DO THIS WITH JUST A SCHEMA TRANSFORM, DO NOT TOUCH DATA
-        # TODO: HANDLE STRUCTURE AND EXPRESSIONS
-        new_schema = {s.name: self.schema[s.value.var] for s in selects}
-        new_data = [{s.name: d[s.value.var] for s in selects} for d in self.data]
+        if isinstance(select, list):
+            push_and_pull = [(s.name, jx_expression_to_function(s.value)) for s in selects]
+            def selector(d):
+                output = Dict()
+                for n, p in push_and_pull:
+                    output[n] = p(wrap(d))
+                return unwrap(output)
+
+            new_data = map(selector, self.data)
+        else:
+            select_value = jx_expression_to_function(select.value)
+            new_data = map(select_value, self.data)
+
         return ListContainer("from "+self.name, data=new_data, schema=new_schema)
 
     def window(self, window):
@@ -183,7 +197,7 @@ def get_schema_from_list(frum):
     SCAN THE LIST FOR COLUMN TYPES
     """
     columns = []
-    _get_schema_from_list(frum, columns, prefix=[], nested_path=[])
+    _get_schema_from_list(frum, columns, prefix=[], nested_path=["."])
     return Schema(columns)
 
 def _get_schema_from_list(frum, columns, prefix, nested_path):
@@ -192,18 +206,31 @@ def _get_schema_from_list(frum, columns, prefix, nested_path):
     """
     names = {}
     for d in frum:
-        for name, value in d.items():
-            agg_type = names.get(name, "undefined")
-            this_type = _type_to_name[value.__class__]
-            new_type = _merge_type[agg_type][this_type]
-            names[name] = new_type
+        row_type = _type_to_name[d.__class__]
+        if row_type!="object":
+            agg_type = names.get(".", "undefined")
+            names["."] = _merge_type[agg_type][row_type]
+        else:
+            for name, value in d.items():
+                agg_type = names.get(name, "undefined")
+                if isinstance(value, list):
+                    if len(value)==0:
+                        this_type = "undefined"
+                    else:
+                        this_type=_type_to_name[value[0].__class__]
+                        if this_type=="object":
+                            this_type="nested"
+                else:
+                    this_type = _type_to_name[value.__class__]
+                new_type = _merge_type[agg_type][this_type]
+                names[name] = new_type
 
-            if this_type == "object":
-                _get_schema_from_list([value], columns, prefix + [name], nested_path)
-            elif this_type == "nested":
-                np = listwrap(nested_path)
-                newpath = unwraplist([".".join((np[0], name))]+np)
-                _get_schema_from_list(value, columns, prefix + [name], newpath)
+                if this_type == "object":
+                    _get_schema_from_list([value], columns, prefix + [name], nested_path)
+                elif this_type == "nested":
+                    np = listwrap(nested_path)
+                    newpath = unwraplist([join_field(split_field(np[0])+[name])]+np)
+                    _get_schema_from_list(value, columns, prefix + [name], newpath)
 
     for n, t in names.items():
         full_name = ".".join(prefix + [n])

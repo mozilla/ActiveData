@@ -17,6 +17,7 @@ from decimal import Decimal
 
 from pyLibrary import convert
 from pyLibrary.collections import OR, MAX
+from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null, split_field, startswith_field, \
     Dict, join_field, unwraplist, unwrap
@@ -59,7 +60,7 @@ def jx_expression(expr):
         else:
             Log.error("expression is not recognized: {{expr}}", expr=expr)
     elif isinstance(expr, (list, tuple)):
-        return jx_expression({"tuple": expr})  # FORMALIZE
+        return TupleOp("tuple", map(jx_expression, expr))  # FORMALIZE
 
     expr = wrap(expr)
     if expr.date:
@@ -121,7 +122,10 @@ def jx_expression_to_function(expr):
     RETURN FUNCTION THAT REQUIRES PARAMETERS (row, rownum=None, rows=None):
     """
     if isinstance(expr, Expression):
-        return compile_expression(expr.to_python())
+        if isinstance(expr, ScriptOp) and not isinstance(expr.script, unicode):
+            return expr.script
+        else:
+            return compile_expression(expr.to_python())
     if expr != None and not isinstance(expr, (Mapping, list)) and hasattr(expr, "__call__"):
         return expr
     return compile_expression(jx_expression(expr).to_python())
@@ -238,6 +242,19 @@ class Variable(Expression):
         agg = "row"
         if not path:
             return agg
+        elif path[0] in ["row", "rownum"]:
+            # MAGIC VARIABLES
+            agg = path[0]
+            path = path[1:]
+        elif path[0] == "rows":
+            if len(path) == 1:
+                return "rows"
+            elif path[1] in ["first", "last"]:
+                agg = "rows." + path[1] + "()"
+                path = path[2:]
+            else:
+                Log.error("do not know what {{var}} of `rows` is", var=path[1])
+
         for p in path[:-1]:
             agg = agg+".get("+convert.value2quote(p)+", EMPTY_DICT)"
         return agg+".get("+convert.value2quote(path[-1])+")"
@@ -298,6 +315,40 @@ class Variable(Expression):
     def __str__(self):
         return str(self.var)
 
+class RowsOp(Expression):
+    has_simple_form = True
+
+    def __init__(self, op, term):
+        Expression.__init__(self, op, term)
+        self.var, self.offset = term
+        if isinstance(self.var, Variable) and not any(self.var.var.startswith(p) for p in ["row.", "rows.", "rownum"]):  # VARIABLES ARE INTERPRETED LITERALLY
+            self.var = Literal("literal", self.var.var)
+
+    def to_python(self, not_null=False, boolean=False):
+        path = split_field(self.var.to_python(not_null=True))
+        agg = "rows[rownum+" + unicode(self.offset) + "]"
+        if not path:
+            return agg
+
+        for p in path[:-1]:
+            agg = agg+".get("+convert.value2quote(p)+", EMPTY_DICT)"
+        return agg+".get("+convert.value2quote(path[-1])+")"
+
+    def to_dict(self):
+        if isinstance(self.var, Literal) and isinstance(self.offset, Literal):
+            return {"rows": {self.var.json, convert.json2value(self.offset.json)}}
+        else:
+            return {"rows": [self.var.to_dict(), self.offset.to_dict()]}
+
+    def vars(self):
+        return self.var.vars() | self.offset.vars() | {"rows", "rownum"}
+
+    def map(self, map_):
+        return BinaryOp("rows", [self.var.map(map_), self.offset.map(map_)])
+
+    def missing(self):
+        return MissingOp("missing", self)
+
 
 class ScriptOp(Expression):
     """
@@ -305,7 +356,7 @@ class ScriptOp(Expression):
     """
 
     def __init__(self, op, script):
-        Expression.__init__(self, "", None)
+        Expression.__init__(self, op, None)
         self.script = script
 
     def to_ruby(self, not_null=False, boolean=False):
@@ -920,7 +971,7 @@ class DivOp(Expression):
         return output
 
     def to_python(self, not_null=False, boolean=False):
-        return "float(" + self.lhs.to_python() + ") / float(" + self.rhs.to_python()+")"
+        return "None if ("+self.missing().to_python()+") else (" + self.lhs.to_python(not_null=True) + ") / (" + self.rhs.to_python(not_null=True)+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
         lhs = self.lhs.to_sql(schema)[0].sql.n
@@ -2180,14 +2231,12 @@ def _normalize(esfilter):
             for (i0, t0), (i1, t1) in itertools.product(enumerate(terms), enumerate(terms)):
                 if i0 >= i1:
                     continue  # SAME, IGNORE
-                try:
+                with suppress_exception:
                     f0, tt0 = t0.range.items()[0]
                     f1, tt1 = t1.range.items()[0]
                     if f0 == f1:
                         set_default(terms[i0].range[literal_field(f1)], tt1)
                         terms[i1] = True
-                except Exception, e:
-                    pass
 
             output = []
             for a in terms:
@@ -2372,6 +2421,7 @@ operators = {
     "regex": RegExpOp,
     "regexp": RegExpOp,
     "right": RightOp,
+    "rows": RowsOp,
     "script": ScriptOp,
     "string": StringOp,
     "sub": BinaryOp,

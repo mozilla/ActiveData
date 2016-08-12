@@ -13,14 +13,14 @@ Module `meta`
 
 ###Decorator `use_settings`###
 
-**Description** 
+**Description**
 
 `@use_settings` will decorate a function to accept a `settings` parameter which is just like `**kwargs`, but the named parameters can override the properties in `settings`, rather than raise duplicate keyname exceptions.
 
 
 **Example**
 
-We decorate the `login()` function with `@use_settings`. In this case, `username` is a required parameter, and `password` will default to `None`. The settings parameter should always default to `None` so that it's not required.   
+We decorate the `login()` function with `@use_settings`. In this case, `username` is a required parameter, and `password` will default to `None`. The settings parameter should always default to `None` so that it's not required.
 
 ```python
 		@use_settings
@@ -34,7 +34,7 @@ Define some `dicts` for use with our `settings` parameter:
 		alt_creds = {"username": "klahnakoski"}
 
 
-The simplest case is when we use settings with no overrides 
+The simplest case is when we use settings with no overrides
 
 		login(settings=creds)
 		# SAME AS
@@ -48,13 +48,13 @@ You may override any property in settings, in this case it is `password`
 		# SAME AS
 		login(username="ekyle", password="123")
 
-There is no problem with overriding everything in `settings`:  
+There is no problem with overriding everything in `settings`:
 
 		login(username="klahnakoski", password="asd213", settings=creds)
 		# SAME AS
 		login(username="klahnakoski", password="asd213")
 
-You may continue to use `**kwargs`; which provides a way to overlay one parameter template (`creds`) with another (`alt_creds`) 
+You may continue to use `**kwargs`; which provides a way to overlay one parameter template (`creds`) with another (`alt_creds`)
 
 		login(settings=creds, **alt_creds)
 		# SAME AS

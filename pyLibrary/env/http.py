@@ -31,14 +31,14 @@ from requests import sessions, Response
 from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, coalesce, wrap, set_default
+from pyLibrary.dot import Dict, coalesce, wrap, set_default, unwrap
 from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines, GzipLines, scompressed2ibytes, ibytes2ilines, sbytes2ilines, icompressed2ibytes
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx
 from pyLibrary.thread.threads import Thread, Lock
-from pyLibrary.times.durations import SECOND
+from pyLibrary.times.durations import SECOND, Duration
 
-
+DEBUG = False
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
 MIN_READ_SIZE = 8 * 1024
 ZIP_REQUEST = False
@@ -107,12 +107,14 @@ def request(method, url, zip=None, retry=None, **kwargs):
     _to_ascii_dict(kwargs)
     timeout = kwargs[b'timeout'] = coalesce(kwargs.get(b'timeout'), default_timeout)
 
-    if retry is None:
+    if retry == None:
         retry = Dict(times=1, sleep=0)
     elif isinstance(retry, Number):
-        retry = Dict(times=retry, sleep=SECOND)
+        retry = Dict(times=retry, sleep=1)
     else:
         retry = wrap(retry)
+        if isinstance(retry.sleep, Duration):
+            retry.sleep = retry.sleep.seconds
         set_default(retry.sleep, {"times": 1, "sleep": 0})
 
     if b'json' in kwargs:
@@ -120,16 +122,17 @@ def request(method, url, zip=None, retry=None, **kwargs):
         del kwargs[b'json']
 
     try:
+        headers = kwargs[b"headers"] = unwrap(coalesce(wrap(kwargs)[b"headers"], {}))
+        set_default(headers, {b"accept-encoding": b"compress, gzip"})
+
         if zip and len(coalesce(kwargs.get(b"data"))) > 1000:
             compressed = convert.bytes2zip(kwargs[b"data"])
-            if b"headers" not in kwargs:
-                kwargs[b"headers"] = {}
-            kwargs[b"headers"][b'content-encoding'] = b'gzip'
+            headers[b'content-encoding'] = b'gzip'
             kwargs[b"data"] = compressed
 
-            _to_ascii_dict(kwargs[b"headers"])
+            _to_ascii_dict(headers)
         else:
-            _to_ascii_dict(kwargs.get(b"headers"))
+            _to_ascii_dict(headers)
     except Exception, e:
         Log.error("Request setup failure on {{url}}", url=url, cause=e)
 
@@ -139,6 +142,8 @@ def request(method, url, zip=None, retry=None, **kwargs):
             Thread.sleep(retry.sleep)
 
         try:
+            if DEBUG:
+                Log.note("http request to {{url}}", url=url)
             return session.request(method=method, url=url, **kwargs)
         except Exception, e:
             errors.append(Except.wrap(e))
@@ -271,18 +276,17 @@ class HttpResponse(Response):
         return self._all_lines()
 
     def _all_lines(self, encoding="utf8"):
-        length = int(self.headers.get('content-length'))
-        raw = Generator_usingStream(self.raw, length)
-
         try:
+            iterator = self.raw.stream(4096, decode_content=False)
+
             if self.headers.get('content-encoding') == 'gzip':
-                return ibytes2ilines(icompressed2ibytes(raw), encoding=encoding)
+                return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding)
             elif self.headers.get('content-type') == 'application/zip':
-                return ibytes2ilines(icompressed2ibytes(raw), encoding=encoding)
+                return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding)
             elif self.url.endswith(".gz"):
-                return ibytes2ilines(icompressed2ibytes(raw), encoding=encoding)
+                return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding)
             else:
-                return ibytes2ilines(raw, encoding=encoding, closer=self.close)
+                return ibytes2ilines(iterator, encoding=encoding, closer=self.close)
         except Exception, e:
             Log.error("Can not read content", cause=e)
 

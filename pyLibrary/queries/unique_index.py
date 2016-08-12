@@ -14,6 +14,8 @@ from __future__ import absolute_import
 
 from collections import Mapping, Iterable
 from sets import BaseSet
+
+from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import unwrap, tuplewrap, wrap
 from pyLibrary.dot.objects import dictwrap
@@ -137,18 +139,15 @@ class UniqueIndex(BaseSet, Mapping):
         for v in self:
             output.add(v)
         for v in other:
-            try:
+            with suppress_exception:
                 output.add(v)
-            except Exception, e:
-                pass
         return output
 
     def __ior__(self, other):
         for v in other:
-            try:
+            with suppress_exception:
                 self.add(v)
-            except Exception, e:
-                pass
+
         return self
 
     def __xor__(self, other):

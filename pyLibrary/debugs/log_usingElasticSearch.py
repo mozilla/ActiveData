@@ -12,14 +12,15 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from pyLibrary import convert, strings
+from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.debugs.text_logs import TextLog
-from pyLibrary.dot import wrap, unwrap, coalesce
+from pyLibrary.dot import wrap, unwrap, coalesce, set_default
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.thread.threads import Thread, Queue
-from pyLibrary.times.durations import MINUTE
+from pyLibrary.times.durations import MINUTE, Duration
 
 
 class TextLog_usingElasticSearch(TextLog):
@@ -37,6 +38,8 @@ class TextLog_usingElasticSearch(TextLog):
         self.batch_size = batch_size
         self.es.add_alias(coalesce(settings.alias, settings.index))
         self.queue = Queue("debug logs to es", max=max_size, silent=True)
+        self.es.settings.retry.times = coalesce(self.es.settings.retry.times, 3)
+        self.es.settings.retry.sleep = Duration(coalesce(self.es.settings.retry.sleep, MINUTE))
         Thread.run("add debug logs to es", self._insert_loop)
 
     def write(self, template, params):
@@ -77,15 +80,12 @@ class TextLog_usingElasticSearch(TextLog):
                 Log.warning("Should not happen", cause=e)
 
     def stop(self):
-        try:
+        with suppress_exception:
             self.queue.add(Thread.STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
-        except Exception, e:
-            pass
 
-        try:
+        with suppress_exception:
             self.queue.close()
-        except Exception, f:
-            pass
+
 
 
 def leafer(param):
@@ -110,7 +110,13 @@ SCHEMA = {
         "properties": {
             "params": {"type": "object", "dynamic": False, "index": "no"},
             "template": {"type": "object", "dynamic": False, "index": "no"},
-            "context": {"type": "object", "dynamic": False, "index": "no"},
+            "context": {
+                "type": "object",
+                "dynamic": False,
+                "properties": {
+                    "$value": {"type": "string"}
+                }
+            },
             "$object": {"type": "string"},
             "machine": {
                 "dynamic": True,

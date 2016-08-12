@@ -205,7 +205,7 @@ object, you simply get back the object you passed.
 Other forms
 -----------
 
-All the `Log` functions accept a `default_params` as a second parameter, like so: 
+All the `Log` functions accept a `default_params` as a second parameter, like so:
 
 ```python
     Log.note("Hello, {{name}}!", {"name": "World!"})
@@ -237,12 +237,12 @@ Log 'Levels'
 The `logs` module has no concept of logging levels it is expected that debug
 variables (variables prefixed with `DEBUG_` are used to control the logging
 output.
-    
+
 
 ```python
 	# simple.py
 	DEBUG_SHOW_DETAIL = True
-    
+
     def worker():
 		if DEBUG_SHOW_DETAIL:
 			Log.note("Starting")

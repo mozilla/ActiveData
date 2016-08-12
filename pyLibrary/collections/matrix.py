@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 from pyLibrary.collections import PRODUCT, reverse, MAX, MIN, OR
 from pyLibrary import convert
+from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Null, Dict, coalesce
 from pyLibrary.meta import use_settings
@@ -344,9 +345,7 @@ def _getitem(c, i):
             dims, cube = zip(*[_getitem(cc, i[1::]) for cc in sub])
             return (len(cube),)+dims[0], cube
         else:
-            try:
+            with suppress_exception:
                 return _getitem(c[select], i[1::])
-            except Exception, _:
-                pass
 
 

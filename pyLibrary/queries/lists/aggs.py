@@ -18,11 +18,12 @@ from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, wrap
 from pyLibrary.queries import windows
-from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.queries.expressions import jx_expression_to_function, jx_expression
+from pyLibrary.times.dates import Date
 
+_ = Date
 
 def is_aggs(query):
     if query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate):
@@ -43,7 +44,7 @@ def list_aggs(frum, query):
                 unique_values -= {None}
             e.domain = SimpleSetDomain(partitions=list(sorted(unique_values)))
 
-    s_accessors = [compile_expression(ss.value.to_python()) for ss in select]
+    s_accessors = [(ss.name, compile_expression(ss.value.to_python())) for ss in select]
 
     result = {
         s.name: Matrix(
@@ -64,8 +65,8 @@ def list_aggs(frum, query):
             for c, get_matches in edge_accessor:
                 coord[c] = get_matches(d)
 
-            for s_accessor, s in zip(s_accessors, select):
-                mat = result[s.name]
+            for s_name, s_accessor in s_accessors:
+                mat = result[s_name]
                 for c in itertools.product(*coord):
                     acc = mat[c]
                     for e, cc in zip(query.edges, c):
@@ -78,8 +79,8 @@ def list_aggs(frum, query):
             for c, get_matches in edge_accessor:
                 coord[c] = get_matches(d)
 
-            for s_accessor, s in zip(s_accessors, select):
-                mat = result[s.name]
+            for s_name, s_accessor in s_accessors:
+                mat = result[s_name]
                 for c in itertools.product(*coord):
                     acc = mat[c]
                     val = s_accessor(d, c, frum)
@@ -92,6 +93,8 @@ def list_aggs(frum, query):
         for c, var in m.items():
             if var != None:
                 m[c] = var.end()
+
+    from pyLibrary.queries.containers.cube import Cube
 
     output = Cube(select, query.edges, result)
     return output

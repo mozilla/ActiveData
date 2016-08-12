@@ -12,6 +12,7 @@ import types
 import unittest
 
 from pyLibrary import dot
+from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, literal_field
 from pyLibrary.maths import Math
@@ -138,7 +139,9 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
     """
     Snagged from unittest/case.py, then modified (Aug2014)
     """
-    if expected == test:
+    if expected == None:  # None has no expectations
+        return
+    if test == expected:
         # shortcut
         return
 
@@ -163,12 +166,10 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
         raise TypeError("specify only one of digits, places or delta")
 
     if digits is not None:
-        try:
+        with suppress_exception:
             diff = Math.log10(abs(test-expected))
             if diff < digits:
                 return
-        except Exception, e:
-            pass
 
         standardMsg = expand_template("{{test}} != {{expected}} within {{digits}} decimal places", locals())
     elif delta is not None:
@@ -180,12 +181,11 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
         if places is None:
             places = 15
 
-        try:
+        with suppress_exception:
             diff = Math.log10(abs(test-expected))
             if diff < Math.ceiling(Math.log10(abs(test)))-places:
                 return
-        except Exception, e:
-            pass
+
 
         standardMsg = expand_template("{{test|json}} != {{expected|json}} within {{places}} places", locals())
 

@@ -20,7 +20,7 @@ from mozillapulse.utils import time_to_string
 
 from pyLibrary.debugs import constants
 from pyLibrary import jsons
-from pyLibrary.debugs.exceptions import Except
+from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, coalesce, Dict, set_default
 from pyLibrary.meta import use_settings
@@ -90,11 +90,9 @@ class Consumer(Thread):
 
     def _worker(self, please_stop):
         def disconnect():
-            try:
+            with suppress_exception:
                 self.target_queue.close()
                 Log.note("stop put into queue")
-            except:
-                pass
 
             self.pulse.disconnect()
             Log.note("pulse listener was given a disconnect()")
@@ -113,11 +111,9 @@ class Consumer(Thread):
     def __exit__(self, exc_type, exc_val, exc_tb):
         Log.note("clean pulse exit")
         self.please_stop.go()
-        try:
+        with suppress_exception:
             self.target_queue.close()
             Log.note("stop put into queue")
-        except:
-            pass
 
         try:
             self.pulse.disconnect()

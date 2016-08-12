@@ -90,7 +90,12 @@ class Matrix(object):
 
     def __setitem__(self, key, value):
         try:
-            if len(key) != self.num:
+            if self.num == 1:
+                if isinstance(key, int):
+                    key = key,
+                elif len(key) != 1:
+                    Log.error("Expecting coordinates to match the number of dimensions")
+            elif len(key) != self.num:
                 Log.error("Expecting coordinates to match the number of dimensions")
 
             if self.num == 0:
@@ -226,7 +231,6 @@ class Matrix(object):
             _, value = _getitem(self.cube, c)
             yield c, value
 
-
     def _all_combos(self):
         """
         RETURN AN ITERATOR OF ALL COORDINATES
@@ -239,7 +243,6 @@ class Matrix(object):
 
         for c in xrange(combos):
             yield tuple(int(c / dd) % mm for dd, mm in calc)
-
 
     def __str__(self):
         return "Matrix " + convert.value2json(self.dims) + ": " + str(self.cube)

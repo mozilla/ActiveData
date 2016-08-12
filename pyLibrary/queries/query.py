@@ -418,9 +418,6 @@ def _normalize_select_no_context(select, schema=None):
     return output
 
 
-
-
-
 def _normalize_edges(edges, schema=None):
     return wrap([_normalize_edge(e, schema=schema) for e in listwrap(edges)])
 
@@ -431,8 +428,12 @@ def _normalize_edge(edge, schema=None):
 
     if isinstance(edge, basestring):
         if schema:
-            e = unwraplist(schema[edge])
-            if e:
+            try:
+                e = schema[edge]
+            except Exception, e:
+                e = None
+            e = unwraplist(e)
+            if e and not isinstance(e, (_Column, set, list)):
                 if isinstance(e, _Column):
                     return Dict(
                         name=edge,
@@ -471,6 +472,7 @@ def _normalize_edge(edge, schema=None):
 
             return Dict(
                 name=edge.name,
+                value=jx_expression(edge.value),
                 allowNulls=bool(coalesce(edge.allowNulls, True)),
                 domain=domain
             )

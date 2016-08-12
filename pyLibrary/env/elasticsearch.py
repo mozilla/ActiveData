@@ -623,6 +623,9 @@ class Cluster(object):
         return es
 
     def delete_index(self, index_name):
+        if not isinstance(index_name, unicode):
+            Log.error("expecting an index name")
+
         if self.debug:
             Log.note("Deleting index {{index}}", index=index_name)
 

@@ -485,7 +485,7 @@ Reflective Operators
 
 ### `get` Operator ###
 
-JSON Expressions reference inner property names using dot-separated paths. Sometimes you will want to compose that path:
+JSON Expressions reference inner property names using dot-separated paths. Sometimes you will want to compose that path from dynamic values:
 
 		"run.test.duration"
 
@@ -496,6 +496,9 @@ can be made explicit:
 		{"get": ["run", ["test", "duration"]]}
 		{"get": ["run", "test", "duration"]}
 
+This can also be used to refer to numeric offsets found in tuples, or lists.  Let `temp == {"tuple": [3, 5]}`:
+
+		{"get": {"temp": 0}} ⇒ 3
 
 
 ### `script` Operator ###

@@ -15,18 +15,18 @@ import itertools
 import os
 import signal
 import subprocess
-from string import ascii_uppercase, ascii_lowercase
+from copy import deepcopy
+from string import ascii_lowercase
 
 from active_data.actions.query import replace_vars
 from pyLibrary import convert, jsons
 from pyLibrary.debugs.exceptions import extract_stack
 from pyLibrary.debugs.logs import Log, Except, constants
-from pyLibrary.dot import wrap, coalesce, unwrap, listwrap
+from pyLibrary.dot import wrap, coalesce, unwrap, listwrap, Dict
 from pyLibrary.env import http
-from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import jx, containers
-from pyLibrary.queries.jx_usingES import FromES
+from pyLibrary.queries import jx
+from pyLibrary.queries.containers.Table_usingSQLite import Table_usingSQLite
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
@@ -34,25 +34,9 @@ from pyLibrary.testing.fuzzytestcase import FuzzyTestCase, assertAlmostEqual
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import MINUTE
 
-
 TEST_TABLE = "testdata"
 
-global_settings = jsons.ref.get("file://tests/config/test_settings.json")
-constants.set(global_settings.constants)
-NEXT = 0
 
-
-def read_alternate_settings():
-    global settings
-
-    try:
-        filename = os.environ.get("TEST_CONFIG")
-        if filename:
-            settings = jsons.ref.get("file://"+filename)
-    except Exception, e:
-        Log.warning("problem", e)
-
-read_alternate_settings()
 
 
 class ActiveDataBaseTest(FuzzyTestCase):
@@ -113,9 +97,9 @@ class ESUtils(object):
         self.service_url = service_url
         self.backend_es = backend_es
         self.settings = settings
-        self.es_test_settings = None
-        self.es_cluster = None
-        self.index = None
+        self._es_test_settings = None
+        self._es_cluster = None
+        self._index = None
 
         if not containers.config.default:
             containers.config.default = {
@@ -126,7 +110,7 @@ class ESUtils(object):
         if not fastTesting:
             self.server = http
         else:
-            Log.alert("TESTS WILL RUN FAST, BUT NOT ALL TESTS ARE RUN!\nEnsure the `file://tests/config/test_settings.json#fastTesting=true` to turn on the network response tests.")
+            Log.alert("TESTS WILL RUN FAST, BUT NOT ALL TESTS ARE RUN!\nEnsure the `file://tests/config/elasticsearch.json#fastTesting=true` to turn on the network response tests.")
             # WE WILL USE THE ActiveServer CODE, AND CONNECT TO ES DIRECTLY.
             # THIS MAKES FOR SLIGHTLY FASTER TEST TIMES BECAUSE THE PROXY IS
             # MISSING
@@ -142,18 +126,18 @@ class ESUtils(object):
         index_name = "testing_" + ("000"+unicode(NEXT))[-3:] + "_" + self.random_letter
         NEXT += 1
 
-        self.es_test_settings = self.backend_es.copy()
-        self.es_test_settings.index = index_name
-        self.es_test_settings.alias = None
-        self.es_cluster = elasticsearch.Cluster(self.es_test_settings)
-        self.index = self.es_cluster.get_or_create_index(self.es_test_settings)
+        self._es_test_settings = self.backend_es.copy()
+        self._es_test_settings.index = index_name
+        self._es_test_settings.alias = None
+        self._es_cluster = elasticsearch.Cluster(self._es_test_settings)
+        self._index = self._es_cluster.get_or_create_index(self._es_test_settings)
 
-        ESUtils.indexes.append(self.index)
+        ESUtils.indexes.append(self._index)
 
     def tearDown(self):
-        if self.es_test_settings.index in ESUtils.indexes:
-            self.es_cluster.delete_index(self.es_test_settings.index)
-            ESUtils.indexes.remove(self.es_test_settings.index)
+        if self._index in ESUtils.indexes:
+            self._es_cluster.delete_index(self._index.settings.index)
+            ESUtils.indexes.remove(self._index)
 
     def setUpClass(self):
         # REMOVE OLD INDEXES
@@ -172,7 +156,7 @@ class ESUtils(object):
         cluster = elasticsearch.Cluster(global_settings.backend_es)
         for i in ESUtils.indexes:
             try:
-                cluster.delete_index(i)
+                cluster.delete_index(i.settings.index)
                 Log.note("remove index {{index}}", index=i)
             except Exception, e:
                 pass
@@ -199,7 +183,7 @@ class ESUtils(object):
         RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
         """
         subtest = wrap(subtest)
-        _settings = self.es_test_settings  # ALREADY COPIED AT setUp()
+        _settings = self._es_test_settings  # ALREADY COPIED AT setUp()
         # _settings.index = "testing_" + Random.hex(10).lower()
         # settings.type = "test_result"
 
@@ -212,7 +196,7 @@ class ESUtils(object):
             _settings.schema = jsons.ref.get(url)
 
             # MAKE CONTAINER
-            container = self.es_cluster.get_or_create_index(tjson=tjson, settings=_settings)
+            container = self._es_cluster.get_or_create_index(tjson=tjson, settings=_settings)
             container.add_alias(_settings.index)
 
             # INSERT DATA
@@ -259,7 +243,7 @@ class ESUtils(object):
                 result = convert.json2value(convert.utf82unicode(response.all_content))
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
-                compare_to_expected(subtest.query, result, expected, self.es_test_settings)
+                compare_to_expected(subtest.query, result, expected)
             if num_expectations == 0:
                 Log.error("Expecting test {{name|quote}} to have property named 'expecting_*' for testing the various format clauses", {
                     "name": subtest.name
@@ -296,7 +280,104 @@ class ESUtils(object):
                     Log.error("Server raised exception", e)
 
 
-def compare_to_expected(query, result, expect, test_settings):
+
+class SQLiteUtils(object):
+    @use_settings
+    def __init__(
+        self,
+        settings=None
+    ):
+        self._index = None
+
+    def setUp(self):
+        self._index = Table_usingSQLite("testing")
+
+    def tearDown(self):
+        pass
+
+    def setUpClass(self):
+        pass
+
+    def tearDownClass(self):
+        pass
+
+    def not_real_service(self):
+        return True
+
+    def execute_es_tests(self, subtest, tjson=False):
+        subtest = wrap(subtest)
+        subtest.name = extract_stack()[1]['method']
+
+        if subtest.disable:
+            return
+
+        if "sqlite" in subtest["not"]:
+            return
+
+        self.fill_container(subtest, tjson=tjson)
+        self.send_queries(subtest)
+
+    def fill_container(self, subtest, tjson=False):
+        """
+        RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
+        """
+        subtest = wrap(subtest)
+
+        try:
+            # INSERT DATA
+            self._index.insert(subtest.data)
+        except Exception, e:
+            Log.error("can not load {{data}} into container", {"data":subtest.data}, e)
+
+        frum = subtest.query['from']
+        if isinstance(frum, basestring):
+            subtest.query["from"] = frum.replace(TEST_TABLE, self._index.name)
+        else:
+            Log.error("Do not know how to handle")
+
+
+        return Dict()
+
+    def send_queries(self, subtest):
+        subtest = wrap(subtest)
+
+        try:
+            # EXECUTE QUERY
+            num_expectations = 0
+            for k, v in subtest.items():
+                if k.startswith("expecting_"):  # WHAT FORMAT ARE WE REQUESTING
+                    format = k[len("expecting_"):]
+                elif k == "expecting":  # NO FORMAT REQUESTED (TO TEST DEFAULT FORMATS)
+                    format = None
+                else:
+                    continue
+
+                num_expectations += 1
+                expected = v
+
+                subtest.query.format = format
+                subtest.query.meta.testing = True  # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
+                result = self.execute_query(subtest.query)
+
+                compare_to_expected(subtest.query, result, expected)
+            if num_expectations == 0:
+                Log.error("Expecting test {{name|quote}} to have property named 'expecting_*' for testing the various format clauses", {
+                    "name": subtest.name
+                })
+        except Exception, e:
+            Log.error("Failed test {{name|quote}}", {"name": subtest.name}, e)
+
+    def execute_query(self, query):
+        try:
+            return self._index.query(deepcopy(query))
+        except Exception, e:
+            Log.error("Failed query", e)
+
+    def try_till_response(self, *args, **kwargs):
+        self.execute_query(convert.json2value(convert.utf82unicode(kwargs["data"])))
+
+
+def compare_to_expected(query, result, expect):
     query = wrap(query)
     expect = wrap(expect)
 
@@ -321,7 +402,6 @@ def compare_to_expected(query, result, expect, test_settings):
         if query["from"].startswith("meta."):
             pass
         else:
-            frum = query["from"]=FromES(name=query["from"], settings=test_settings)
             query = QueryOp.wrap(query)
 
         if not query.sort:
@@ -399,7 +479,7 @@ def error(response):
 
 def run_app(please_stop, server_is_ready):
     proc = subprocess.Popen(
-        ["python", "active_data\\app.py", "--settings", "tests/config/test_settings.json"],
+        ["python", "active_data\\app.py", "--settings", "tests/config/elasticsearch.json"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -416,7 +496,6 @@ def run_app(please_stop, server_is_ready):
         Log.note("SERVER: {{line}}", {"line": line.strip()})
 
     proc.send_signal(signal.CTRL_C_EVENT)
-
 
 
 class FakeHttp(object):
@@ -441,4 +520,26 @@ class FakeHttp(object):
         })
 
 
-utils = ESUtils(global_settings)
+global_settings = jsons.ref.get("file://tests/config/elasticsearch.json")
+constants.set(global_settings.constants)
+NEXT = 0
+
+containers = Dict(
+    elasticsearch=ESUtils,
+    sqlite=SQLiteUtils
+)
+
+
+# read_alternate_settings
+utils = None
+try:
+    filename = os.environ.get("TEST_CONFIG")
+    if filename:
+        global_settings = jsons.ref.get("file://"+filename)
+    else:
+        raise Log.error("Expecting TEST_CONFIG environment variable to point to config file for container")
+
+    utils = containers[global_settings.use](global_settings)
+except Exception, e:
+    Log.warning("problem", e)
+

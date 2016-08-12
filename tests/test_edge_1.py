@@ -8,11 +8,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
-import base_test_class
-from pyLibrary.queries.expressions import NullOp
+from __future__ import unicode_literals
 
+from pyLibrary.queries.expressions import NullOp
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 null = None
@@ -64,7 +63,6 @@ class TestEdge1(ActiveDataBaseTest):
 
     def test_count_rows(self):
         test = {
-            "name": "count rows, 1d",
             "metadata": {},
             "data": simple_test_data,
             "query": {
@@ -475,12 +473,14 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
+                    {"a": "b"},
                     {"a": "c", "v": 13},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "v"],
                 "data": [
+                    ["b", null],
                     ["c", 13]
                 ]
             },
@@ -520,12 +520,14 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
+                    {"a": "b"},
                     {"a": "c", "v": 13}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "v"],
                 "data": [
+                    ["b", null],
                     ["c", 13]
                 ]
             },
@@ -562,12 +564,18 @@ class TestEdge1(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": []
+                "data": [
+                    {"a": "b"},
+                    {"a": "c"}
+                ]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "v"],
-                "data": []
+                "data": [
+                    ["b", null],
+                    ["c", null]
+                ]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -602,7 +610,6 @@ class TestEdge1(ActiveDataBaseTest):
 
     def test_empty_default_domain_w_groupby(self):
         test = {
-            "name": "sum column",
             "metadata": {},
             "data": simple_test_data,
             "query": {
@@ -625,7 +632,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "allowNulls": False,
+                        "allowNulls": True,  # MUST BE True SO THAT NULL VALUES ARE INCLUDED
                         "domain": {
                             "type": "set",
                             "key": "value",
@@ -640,12 +647,11 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-    def test_wo_limit(self):
+    def test_default_limit(self):
         """
-        TESTING THAT THE DEFAULT LIMIT IS APPLIED
+        TEST THAT THE DEFAULT LIMIT IS APPLIED
         """
         test = {
-            "name": "sum column",
             "metadata": {},
             "data": long_test_data,
             "query": {
@@ -665,7 +671,8 @@ class TestEdge1(ActiveDataBaseTest):
                     {"k": "g", "v": 7},
                     {"k": "h", "v": 8},
                     {"k": "i", "v": 9},
-                    {"k": "j", "v": 10}
+                    {"k": "j", "v": 10},
+                    {"v":13}
                 ]
             },
             "expecting_table": {
@@ -681,7 +688,8 @@ class TestEdge1(ActiveDataBaseTest):
                     ["g", 7],
                     ["h", 8],
                     ["i", 9],
-                    ["j", 10]
+                    ["j", 10],
+                    [null, 13]
                 ]
             },
             "expecting_cube": {
@@ -703,16 +711,13 @@ class TestEdge1(ActiveDataBaseTest):
                                 {"value": "g"},
                                 {"value": "h"},
                                 {"value": "i"},
-                                {"value": "j"},
-                                {"value": "k"},
-                                {"value": "l"},
-                                {"value": "m"}
+                                {"value": "j"}
                             ]
                         }
                     }
                 ],
                 "data": {
-                    "v": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, NullOp(), NullOp(), NullOp(), NullOp()]
+                    "v": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13]
                 }
             }
         }
@@ -720,8 +725,6 @@ class TestEdge1(ActiveDataBaseTest):
 
     def test_edge_limit_big(self):
         test = {
-            "name": "sum column",
-            "metadata": {},
             "data": long_test_data,
             "query": {
                 "from": TEST_TABLE,
@@ -932,9 +935,11 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
+                    {"start": 0, "count": 0},
                     {"start": 1, "count": 1},
                     {"start": 2, "count": 2},
                     {"start": 3, "count": 3},
+                    {"start": 4, "count": 0},
                     {"start": 5, "count": 1}
                 ]
             },
@@ -942,9 +947,11 @@ class TestEdge1(ActiveDataBaseTest):
                 "meta": {"format": "table"},
                 "header": ["start", "count"],
                 "data": [
+                    [0, 0],
                     [1, 1],
                     [2, 2],
                     [3, 3],
+                    [4, 0],
                     [5, 1]
                 ]
             },
@@ -1000,7 +1007,10 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
+                    {"start": 0.0, "count": 0},
+                    {"start": 0.1, "count": 0},
                     {"start": 0.2, "count": 1},
+                    {"start": 0.3, "count": 0},
                     {"start": 0.4, "count": 1},
                     {"start": 0.5, "count": 3},
                     {"start": null, "count": 2}
@@ -1010,7 +1020,10 @@ class TestEdge1(ActiveDataBaseTest):
                 "meta": {"format": "table"},
                 "header": ["start", "count"],
                 "data": [
+                    [0.0, 0],
+                    [0.1, 0],
                     [0.2, 1],
+                    [0.3, 0],
                     [0.4, 1],
                     [0.5, 3],
                     [null, 2]
@@ -1172,24 +1185,24 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "v",
-                        "allowNulls": True,
+                        "allowNulls": False,
                         "domain": {
                             "type": "set",
                             "partitions": [
-                                {"dataIndex": 0, "value": [null, null]},
-                                {"dataIndex": 1, "value": [null, "bb"]},
-                                {"dataIndex": 2, "value": [null, "dd"]},
-                                {"dataIndex": 3, "value": ["a", "aa"]},
-                                {"dataIndex": 4, "value": ["bb", "bb"]},
-                                {"dataIndex": 5, "value": ["c", "cc"]},
-                                {"dataIndex": 6, "value": ["e", "ee"]},
-                                {"dataIndex": 7, "value": ["f", null]}
+                                {"dataIndex": 0, "value": ["a", "aa"]},
+                                {"dataIndex": 1, "value": ["bb", "bb"]},
+                                {"dataIndex": 2, "value": ["c", "cc"]},
+                                {"dataIndex": 3, "value": ["e", "ee"]},
+                                {"dataIndex": 4, "value": ["f", null]},
+                                {"dataIndex": 5, "value": [null, "bb"]},
+                                {"dataIndex": 6, "value": [null, "dd"]},
+                                {"dataIndex": 7, "value": [null, null]}
                             ]
                         }
                     }
                 ],
                 "data": {
-                    "count": [1, 1, 1, 1, 1, 1, 2, 2, 0]
+                    "count": [1, 1, 1, 2, 2, 1, 1, 1]
                 }
             }
         }
@@ -1410,7 +1423,7 @@ class TestEdge1(ActiveDataBaseTest):
                     {
                         "name": "a",
                         "domain": {
-                            "type":"set",
+                            "type": "set",
                             "partitions": [
                                 {"name": "b", "where": {"eq": {"b.r": "b"}}},
                                 {"name": "3", "where": {"eq": {"b.d": 3}}}

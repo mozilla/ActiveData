@@ -8,9 +8,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 import __builtin__
 from collections import Mapping
 from types import GeneratorType
@@ -18,20 +19,20 @@ from types import GeneratorType
 from pyLibrary import dot, convert
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.debugs.logs import Log
+from pyLibrary.dot import listwrap, wrap, unwrap
 from pyLibrary.dot import set_default, Null, Dict, split_field, coalesce, join_field
 from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import listwrap, wrap, unwrap
 from pyLibrary.dot.objects import DictObject
 from pyLibrary.maths import Math
 from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.containers import Container
+from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.cubes.aggs import cube_aggs
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, jx_expression_to_function
 from pyLibrary.queries.flat_list import FlatList
 from pyLibrary.queries.index import Index
-from pyLibrary.queries.query import QueryOp, _normalize_selects, sort_direction, _normalize_select
-from pyLibrary.queries.containers.cube import Cube
+from pyLibrary.queries.query import QueryOp, _normalize_selects, sort_direction
 from pyLibrary.queries.unique_index import UniqueIndex
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
@@ -39,6 +40,7 @@ from pyLibrary.queries.unique_index import UniqueIndex
 # START HERE: https://github.com/klahnakoski/jx/blob/master/docs/jx_reference.md
 # TODO: USE http://docs.sqlalchemy.org/en/latest/core/tutorial.html AS DOCUMENTATION FRAMEWORK
 
+builtin_tuple = tuple
 _Column = None
 _merge_type = None
 
@@ -579,12 +581,18 @@ def value_compare(l, r, ordering=1):
         if r == None:
             return 0
         else:
-            return - ordering
+            return ordering
     elif r == None:
-        return ordering
+        return - ordering
 
     if isinstance(l, list) or isinstance(r, list):
         for a, b in zip(listwrap(l), listwrap(r)):
+            c = value_compare(a, b) * ordering
+            if c != 0:
+                return c
+        return 0
+    elif isinstance(l, builtin_tuple) and isinstance(r, builtin_tuple):
+        for a, b in zip(l, r):
             c = value_compare(a, b) * ordering
             if c != 0:
                 return c

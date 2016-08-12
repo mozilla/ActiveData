@@ -8,11 +8,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
+from __future__ import unicode_literals
 
-import base_test_class
-from tests.base_test_class import ActiveDataBaseTest, global_settings, TEST_TABLE
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 
 class TestAggOps(ActiveDataBaseTest):
@@ -400,7 +399,7 @@ class TestAggOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "value"},
-                "data": {"b": ["x", "y", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "z"]}
+                "data": {"b": {"x", "y", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "z"}}
             }
         }
         self.utils.execute_es_tests(test, tjson=False)

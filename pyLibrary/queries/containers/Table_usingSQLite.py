@@ -1176,13 +1176,13 @@ class Table_usingSQLite(Container):
         sorts = []
         if query.sort:
             for s in query.sort:
-                sql = s.value.to_sql()
-                for t in ALL_TYPES:
-                    if sql[t]:
-                        if s.sort == -1:
-                            sorts.append(sql[t]+" DESC")
-                        else:
-                            sorts.append(sql[t])
+                for sql_column in s.value.to_sql(columns):
+                    for t in ALL_TYPES:
+                        if sql_column.sql[t]:
+                            if s.sort == -1:
+                                sorts.append(sql_column.sql[t]+" DESC")
+                            else:
+                                sorts.append(sql_column.sql[t])
         for n, _ in self.nested_tables.items():
             sorts.append(COLUMN+unicode(index_to_uid[n]))
 
@@ -1492,11 +1492,11 @@ class Table_usingSQLite(Container):
         # COLLECT AS MANY doc THAT DO NOT REQUIRE SCHEMA CHANGE
 
         required_changes = []
-        insertion = Dict(
+        _insertion = Dict(
             active_columns=set(),
             rows=[]
         )
-        doc_collection = {".": insertion}
+        doc_collection = {".": _insertion}
         nested_tables = copy(self.nested_tables)  # KEEP TRACK OF WHAT TABLE WILL BE MADE (SHORTLY)
         columns = copy(self.columns)
 
@@ -1579,7 +1579,7 @@ class Table_usingSQLite(Container):
                         deeper_nested_path = [cname] + nested_path
                         insertion = doc_collection.get(cname, None)
                         if not insertion:
-                            doc_collection[cname] = Dict(
+                            insertion = doc_collection[cname] = Dict(
                                 active_columns=set(),
                                 rows=[]
                             )

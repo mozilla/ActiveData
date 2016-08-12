@@ -561,7 +561,7 @@ class FalseOp(Literal):
         return "False"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        return {"b": "0"}
+        return wrap([{"name": ".", "sql": {"b": "0"}}])
 
     def to_esfilter(self):
         return {"not": {"match_all": {}}}

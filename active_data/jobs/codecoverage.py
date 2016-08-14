@@ -28,7 +28,7 @@ from pyLibrary.thread.threads import Thread
 NUM_THREAD = 4
 
 
-def process_batch(todo, coverage_index, settings, please_stop):
+def process_batch(todo, coverage_index, coverage_summary_index, settings, please_stop):
     for not_summarized in todo:
         if please_stop:
             return True
@@ -59,8 +59,9 @@ def process_batch(todo, coverage_index, settings, please_stop):
         for d in dups.data:
             if d.max_id != d.min_id:
                 dups_found = True
+
                 Log.note(
-                    "removing dups {{details|json}}",
+                    "removing dups {{details|json}}\n{{dups|json|indent}}",
                     details={
                         "id": int(d.max_id),
                         "test": d.test.url,
@@ -132,10 +133,18 @@ def process_batch(todo, coverage_index, settings, please_stop):
             min_siblings = MIN(siblings)
             coverage_candidates = jx.filter(file_level_coverage_records.data, lambda row, rownum, rows: row.test.url == test_name)
             if coverage_candidates:
-                coverage_record = coverage_candidates[0]
-                coverage_record.source.file.max_test_siblings = max_siblings
-                coverage_record.source.file.min_line_siblings = min_siblings
-                coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings + 1)
+
+                if len(coverage_candidates) > 1:
+                    Log.warning(
+                        "Duplicate coverage\n{{cov|json|indent}}",
+                        cov=[{"run": c.run, "test": c.test} for c in coverage_candidates]
+                    )
+
+                # MORE THAN ONE COVERAGE CANDIDATE CAN HAPPEN WHEN THE SAME TEST IS IN TWO DIFFERENT CHUNKS OF THE SAME SUITE
+                for coverage_record in coverage_candidates:
+                    coverage_record.source.file.max_test_siblings = max_siblings
+                    coverage_record.source.file.min_line_siblings = min_siblings
+                    coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings + 1)
             else:
                 example = http.post_json(settings.url, json={
                     "from": "coverage",
@@ -156,13 +165,15 @@ def process_batch(todo, coverage_index, settings, please_stop):
                     example=example.data[0]
                 )
 
-        if [d for d in file_level_coverage_records.data if d["source.file.min_line_siblings"] == None]:
-            Log.warning("expecting all records to have summary")
+        bad_example = [d for d in file_level_coverage_records.data if d["source.file.min_line_siblings"] == None]
+        if bad_example:
+            Log.warning("expecting all records to have summary. Example:\n{{example}}", example=bad_example[0])
 
-        coverage_index.extend([{"id": d._id, "value": d} for d in file_level_coverage_records.data])
+        rows = [{"id": d._id, "value": d} for d in file_level_coverage_records.data]
+        coverage_index.extend(rows)
+        coverage_summary_index.extend(rows)
 
-
-def loop(coverage_index, settings, please_stop):
+def loop(coverage_index, coverage_summary_index, settings, please_stop):
     try:
         while not please_stop:
             coverage_index.refresh()
@@ -193,6 +204,7 @@ def loop(coverage_index, settings, please_stop):
                     process_batch,
                     queue,
                     coverage_index,
+                    coverage_summary_index,
                     settings,
                     please_stop=please_stop
                 )
@@ -221,8 +233,18 @@ def main():
             Log.start(config.debug)
 
             please_stop = Signal("main stop signal")
-            coverage_index = elasticsearch.Cluster(config.elasticsearch).get_index(read_only=False, settings=config.elasticsearch)
-            Thread.run("processing loop", loop, coverage_index, config, please_stop=please_stop)
+            coverage_index = elasticsearch.Cluster(config.source).get_index(read_only=False, settings=config.source)
+            config.destination.schema = coverage_index.get_schema()
+            coverage_summary_index = elasticsearch.Cluster(config.destination).get_or_create_index(read_only=False, settings=config.destination)
+            coverage_summary_index.add_alias(config.destination.index)
+            Thread.run(
+                "processing loop",
+                loop,
+                coverage_index,
+                coverage_summary_index,
+                config,
+                please_stop=please_stop
+            )
             Thread.wait_for_shutdown_signal(please_stop)
     except Exception, e:
         Log.error("Problem with code coverage score calculation", cause=e)

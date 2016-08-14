@@ -48,12 +48,13 @@ def assign_shards(settings):
         Log.error("missing an important index\n{{nodes|json}}", nodes=nodes)
 
     for n in nodes:
-        n.memory = text_to_bytes(n.memory)
-        if n.role != 'd':
+        if n.role == 'd':
+            n.disk = 0 if n.disk == "" else float(n.disk)
+            n.memory = text_to_bytes(n.memory)
+        else:
             n.disk = 0
             n.memory = 0
-        else:
-            n.disk = 0 if n.disk == "" else float(n.disk)
+
         if n.name.startswith("spot_") or n.name.startswith("coord"):
             n.zone = "spot"
         else:
@@ -112,8 +113,8 @@ def assign_shards(settings):
     high_risk_shards = []
     for g, replicas in jx.groupby(shards, ["index", "i"]):
         replicas = list(replicas)
-        safe_replicas = list(set([s.zone for s in replicas if s.status == "STARTED"]))
-        if len(safe_replicas) == 1 and safe_replicas[0] == "spot":
+        safe_zones = list(set([s.zone for s in replicas if s.status == "STARTED"]))
+        if len(safe_zones) == 0 or (len(safe_zones) == 1 and safe_zones[0] == "spot"):
             # MARK NODE AS RISKY
             for s in replicas:
                 if s.status == "UNASSIGNED":
@@ -121,7 +122,7 @@ def assign_shards(settings):
                     break  # ONLY NEED ONE
     if high_risk_shards:
         Log.note("{{num}} high risk shards found", num=len(high_risk_shards))
-        allocate(10, high_risk_shards, relocating, path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
+        allocate(50, high_risk_shards, relocating, path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
         return
     else:
         Log.note("No high risk shards found")
@@ -242,7 +243,7 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
         result = convert.json2value(
             convert.utf82unicode(http.post(path + "/_cluster/reroute", json={"commands": [command]}).content))
         if not result.acknowledged:
-            Log.warning("Can not move/allocate to {{node}}: {{error}}", node=destination_node, error=result.error)
+            Log.warning("Can not move/allocate to {{node}}: Error={{error|quote}}", node=destination_node, error=result.error)
         else:
             net -= 1
             Log.note(
@@ -311,6 +312,12 @@ def main():
         )
         Log.note("DISABLE SHARD MOVEMENT: {{result}}", result=response.all_content)
 
+        response = http.put(
+            path + "/_cluster/settings",
+            data='{"transient": {"cluster.routing.allocation.disk.watermark.low": "95%"}}'
+        )
+        Log.note("ALLOW ALLOCATION: {{result}}", result=response.all_content)
+
         while True:
             assign_shards(settings)
             Thread.sleep(seconds=30)
@@ -322,6 +329,12 @@ def main():
             data='{"persistent": {"cluster.routing.allocation.enable": "all"}}'
         )
         Log.note("ENABLE SHARD MOVEMENT: {{result}}", result=response.all_content)
+
+        response = http.put(
+            path + "/_cluster/settings",
+            data='{"transient": {"cluster.routing.allocation.disk.watermark.low": "80%"}}'
+        )
+        Log.note("RESTRICT ALLOCATION: {{result}}", result=response.all_content)
         Log.stop()
 
 

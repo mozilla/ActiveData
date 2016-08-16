@@ -1,5 +1,16 @@
 {
-
+    "zones":[
+        {
+            "name":"spot",
+            "risky":true,
+            "shards":2
+        },
+        {
+            "name":"primary",
+            "risky":false,
+            "shards":1
+        }
+    ],
     "elasticsearch": {
         "host": "http://activedata.allizom.org",
         "port": 9200,
@@ -29,5 +40,4 @@
             }
         ]
     }
-
 }

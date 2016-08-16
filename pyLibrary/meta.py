@@ -14,7 +14,7 @@ from collections import Mapping
 from types import FunctionType
 
 from pyLibrary import dot, convert
-from pyLibrary.debugs.exceptions import Except
+from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import set_default, wrap, _get_attr, Null, coalesce
 from pyLibrary.maths.randoms import Random
@@ -58,10 +58,8 @@ def new_instance(settings):
         Log.error("Can not find class {{class}}", {"class": path}, cause=e)
 
     settings['class'] = None
-    try:
+    with suppress_exception:
         return constructor(settings=settings)  # MAYBE IT TAKES A SETTINGS OBJECT
-    except Exception, _:
-        pass
 
     try:
         return constructor(**settings)
@@ -253,25 +251,28 @@ def wrap_function(cache_store, func_):
 
             timeout, key, value, exception = _cache.get(args, (Null, Null, Null, Null))
 
-            if now > timeout:
-                value = func(self, *args)
+        if now > timeout:
+            value = func(self, *args)
+            with cache_store.locker:
                 _cache[args] = (now + cache_store.timeout, args, value, None)
-                return value
+            return value
 
-            if value == None:
-                if exception == None:
-                    try:
-                        value = func(self, *args)
+        if value == None:
+            if exception == None:
+                try:
+                    value = func(self, *args)
+                    with cache_store.locker:
                         _cache[args] = (now + cache_store.timeout, args, value, None)
-                        return value
-                    except Exception, e:
-                        e = Except.wrap(e)
+                    return value
+                except Exception, e:
+                    e = Except.wrap(e)
+                    with cache_store.locker:
                         _cache[args] = (now + cache_store.timeout, args, None, e)
-                        raise e
-                else:
-                    raise exception
+                    raise e
             else:
-                return value
+                raise exception
+        else:
+            return value
 
     return output
 

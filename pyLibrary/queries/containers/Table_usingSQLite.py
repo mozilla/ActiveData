@@ -13,41 +13,62 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import re
 from collections import Mapping, OrderedDict
 from copy import copy
 
-import re
+import itertools
 
 from pyLibrary import convert
 from pyLibrary.collections import UNION
+from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, coalesce, Dict, wrap, Null, unwraplist, split_field, join_field, literal_field, \
-    set_default, startswith_field, unwrap, relative_field
+    startswith_field, unwrap, relative_field
+from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
+from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container, STRUCT
-from pyLibrary.queries.domains import SimpleSetDomain
-from pyLibrary.queries.expressions import jx_expression, CoalesceOp, Variable, wrap_nested_path, sql_type_to_json_type
+from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, RangeDomain
+from pyLibrary.queries.expressions import jx_expression, Variable, wrap_nested_path, sql_type_to_json_type, TupleOp
 from pyLibrary.queries.meta import Column
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.sql.sqlite import Sqlite
+from pyLibrary.strings import expand_template
 from pyLibrary.times.dates import Date
+
+_containers = None
 
 
 UID = "__id__"  # will not be quoted
+GUID = "__guid__"
 ORDER = "__order__"
 PARENT = "__parent__"
 COLUMN = "__column"
 
+ALL_TYPES="bns"
+
+def late_import():
+    global _containers
+
+    from pyLibrary.queries import containers as _containers
+
+    _ = _containers
+
 
 class Table_usingSQLite(Container):
-    def __init__(self, name, db=None, uid=UID, exists=False):
+
+    @use_settings
+    def __init__(self, name, db=None, uid=GUID, exists=False, settings=None):
         """
         :param name: NAME FOR THIS TABLE
         :param db: THE DB TO USE
         :param uid: THE UNIQUE INDEX FOR THIS TABLE
         :return: HANDLE FOR TABLE IN db
         """
+        global _containers
+
         Container.__init__(self, frum=None)
         if db:
             self.db = db
@@ -57,13 +78,24 @@ class Table_usingSQLite(Container):
         self.name = name
         self.uid = listwrap(uid)
         self._next_uid = 1
+        self._make_digits_table()
+
+        late_import()
+        if not _containers.config.default:
+            _containers.config.default = {
+                "type": "sqlite",
+                "settings": {"db": db}
+            }
+
 
         self.columns = {}
         for u in self.uid:
-            if not self.columns.get(u, None):
-                cs = self.columns[u] = set()
-            if u != UID:
-                cs.add(Column(name=u, table=name, type="string", es_column=typed_column(u, "string"), es_index=name))
+            if u == GUID:
+                if self.columns.get(u) is None:
+                    self.columns[u] = set()
+            else:
+                c = Column(name=u, table=name, type="string", es_column=typed_column(u, "string"), es_index=name)
+                add_column_to_schema(self.columns, c)
 
         self.uid_accessor = jx.get(self.uid)
         self.nested_tables = OrderedDict() # MAP FROM NESTED PATH TO Table OBJECT, PARENTS PROCEED CHILDREN
@@ -84,10 +116,7 @@ class Table_usingSQLite(Container):
                     es_index=name
                 )
 
-                cs = self.columns.get(name, Null)
-                if not cs:
-                    cs = self.columns[name] = set()
-                cs.add(column)
+                add_column_to_schema(self.columns, column)
             # TODO: FOR ALL TABLES, FIND THE MAX ID
         else:
             command = "CREATE TABLE " + quote_table(name) + "(" + \
@@ -103,6 +132,12 @@ class Table_usingSQLite(Container):
                       "))"
 
             self.db.execute(command)
+
+    def _make_digits_table(self):
+        existence = self.db.query("PRAGMA table_info(__digits__)")
+        if not existence.data:
+            self.db.execute("CREATE TABLE __digits__(value INTEGER)")
+            self.db.execute("INSERT INTO __digits__ " + "\nUNION ALL ".join("SELECT " + unicode(i) for i in range(10)))
 
     def next_uid(self):
         try:
@@ -128,27 +163,33 @@ class Table_usingSQLite(Container):
                 break
         return output
 
+    def _get_sql_schema(self):
+        """
+        :return: schema for this table, `change es_index` to sql alias
+        """
+        # WE MUST HAVE THE ALIAS NAMES FOR THE TABLES
+        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
+
+        def paths(field):
+            path = split_field(field)
+            for i in range(len(path)+1):
+                yield join_field(path[0:i])
+
+        columns = Dict()
+        for k in set(kk for k in self.columns.keys() for kk in paths(k)):
+            for j, c in ((j, cc) for j, c in self.columns.items() for cc in c):
+                if startswith_field(j, k):
+                    if c.type in STRUCT:
+                        continue
+                    c = copy(c)
+                    c.es_index = nest_to_alias[wrap_nested_path(c.nested_path)[0]]
+                    columns[literal_field(k)] += [c]
+
+        return unwrap(columns)
+
     def insert(self, docs):
-        doc_collection = {}
-        for d in docs:
-            # ASSIGN A NON-NULL PRIMARY KEY
-            if any(v == None for v in self.uid_accessor(d)):
-                for u in self.uid:
-                    d[u] = coalesce(d[u], unique_name())
-
-            uid = wrap({u: d[u] for u in self.uid})
-            self.flatten(d, uid, doc_collection)
-
-        for nested_path, insertion in doc_collection.items():
-            active_columns = list(insertion.active_columns)
-            vals = [[quote_value(get_document_value(d, c)) for c in active_columns] for d in insertion.rows]
-
-            command = "INSERT INTO " + quote_table(join_field(split_field(self.name)+split_field(nested_path[0]))) + "(" + \
-                      ",".join(_quote_column(c) for c in active_columns) + \
-                      ")\n" + \
-                      " UNION ALL\n".join("SELECT " + ",".join(vv) for vv in vals)
-
-            self.db.execute(command)
+        doc_collection = self.flatten_many(docs)
+        self._insert(doc_collection)
 
     def add_column(self, column):
         """
@@ -254,7 +295,7 @@ class Table_usingSQLite(Container):
         for nested_column_name, nested_value in command.set.items():
             if get_type(nested_value) == "nested":
                 nested_table_name = join_field(split_field(self.name)+split_field(nested_column_name))
-                nested_table = self.nested_tables[nested_column_name]
+                nested_table = nested_tables[nested_column_name]
                 self_primary_key = ",".join(quote_table(c.es_column) for u in self.uid for c in self.columns[u])
                 extra_key_name = UID_PREFIX+"id"+unicode(len(self.uid))
                 extra_key = [e for e in nested_table.columns[extra_key_name]][0]
@@ -414,16 +455,17 @@ class Table_usingSQLite(Container):
 
         # TYPE CONFLICTS MUST NOW BE RESOLVED DURING
         # TYPE-SPECIFIC QUERY NORMALIZATION
-        vars_ = query.vars(exclude_select=True)
-        type_map = {
-            v: c.es_column
-            for v in vars_
-            if v in self.columns and len([c for c in self.columns[v] if c.type != "nested"]) == 1
-            for c in self.columns[v]
-            if c.type != "nested"
-        }
-
-        sql_query = query.map(type_map)
+        # vars_ = query.vars(exclude_select=True)
+        # type_map = {
+        #     v: c.es_column
+        #     for v in vars_
+        #     if v in self.columns and len([c for c in self.columns[v] if c.type != "nested"]) == 1
+        #     for c in self.columns[v]
+        #     if c.type != "nested"
+        # }
+        #
+        # sql_query = query.map(type_map)
+        query = query
 
         new_table = "temp_"+unique_name()
 
@@ -432,146 +474,589 @@ class Table_usingSQLite(Container):
         else:
             create_table = ""
 
-        if sql_query.edges:
-            command = create_table + self._edges_op(sql_query)
-        elif sql_query.groupby:
-            command = create_table + self._groupby_op(sql_query)
+        if query.groupby:
+            op, index_to_columns = self._groupby_op(query)
+            command = create_table + op
+        elif query.edges or any(a!="none" for a in listwrap(query.select).aggregate):
+            op, index_to_columns = self._edges_op(query)
+            command = create_table + op
         else:
-            return self._set_op(sql_query, frum)
+            op = self._set_op(query, frum)
+            return op
 
-        if sql_query.sort:
+        if query.sort:
             command += "\nORDER BY " + ",\n".join(
                 s.value.to_sql() + (" DESC" if s.sort == -1 else "")
-                for s in sql_query.sort
+                for s in query.sort
             )
 
         result = self.db.query(command)
 
-        column_names = query.column_names
+        column_names = query.edges.name + query.groupby.name + listwrap(query.select).name
         if query.format == "container":
             output = Table_usingSQLite(new_table, db=self.db, uid=self.uid, exists=True)
-        elif query.format == "cube" or query.edges:
-            if len(query.edges) > 1:
+        elif query.format == "cube" or (not query.format and query.edges):
+
+            # temp=self.db.query("""
+	        # """)
+
+            if len(query.edges) == 0 and len(query.groupby) == 0:
+                data = {n: Dict() for n in column_names}
+                for s in index_to_columns.values():
+                    data[s.push_name][s.push_child] = unwrap(s.pull(result.data[0]))
+                return Dict(
+                    data=unwrap(data),
+                    meta={"format": "cube"}
+                )
+
+            elif len(query.edges) > 1:
                 Log.error("Only support one dimension right now")
 
             if not result.data:
+                edges = []
+                dims = []
+                for i, e in enumerate(query.edges+query.groupby):
+                    allowNulls = coalesce(e.allowNulls, True)
+
+                    if e.domain.type == "set" and e.domain.partitions:
+                        domain=SimpleSetDomain(partitions=e.domain.partitions.name)
+                    elif e.domain.type == "range":
+                        domain = e.domain
+                    elif isinstance(e.value, TupleOp):
+                        pulls = jx.sort([c for c in index_to_columns.values() if c.push_name==e.name], "push_child").pull
+                        parts = [tuple(p(d) for p in pulls) for d in result.data]
+                        domain=SimpleSetDomain(partitions=jx.sort(set(parts)))
+                    else:
+                        domain=SimpleSetDomain(partitions=[])
+
+                    dims.append(1 if allowNulls else 0)
+                    edges.append(Dict(
+                        name=e.name,
+                        allowNulls=allowNulls,
+                        domain=domain
+                    ))
+
+                zeros = [
+                    0 if s.aggregate == "count" and index_to_columns[si].push_child == "." else Dict
+                    for si, s in enumerate(listwrap(query.select))
+                ]
+                data = {s.name: Matrix(dims=dims, zeros=zeros[si]) for si, s in enumerate(listwrap(query.select))}
+
+                if isinstance(query.select, list):
+                    select = [{"name": s.name} for s in query.select]
+                else:
+                    select = {"name": query.select.name}
+
                 return Dict(
-                    data={}
+                    meta={"format": "cube"},
+                    edges=edges,
+                    select=select,
+                    data={k: v.cube for k, v in data.items()}
                 )
 
             columns = zip(*result.data)
 
             edges = []
-            ci = []
-            for i, e in enumerate(query.edges):
-                if e.domain.type != "default":
-                    Log.error("Can only handle default domains")
-                ci.append(i - len(query.edges))
-                parts = columns[ci[i]]
-                allowNulls = False
-                if parts[0] == None:
-                    allowNulls = True
-                    # ONLY ONE EDGE, SO WE CAN DO THIS TO PUT NULL LAST
-                    for ii, c in enumerate(copy(columns)):
-                        columns[ii] = list(c[1:]) + [c[0]]
-                    parts = parts[1:]
+            dims = []
+            for i, e in enumerate(query.edges+query.groupby):
+                allowNulls = coalesce(e.allowNulls, True)
 
+                if e.domain.type == "set" and e.domain.partitions:
+                    domain=SimpleSetDomain(partitions=e.domain.partitions.name)
+                elif e.domain.type == "range":
+                    domain = e.domain
+                elif isinstance(e.value, TupleOp):
+                    pulls = jx.sort([c for c in index_to_columns.values() if c.push_name==e.name], "push_child").pull
+                    parts = [tuple(p(d) for p in pulls) for d in result.data]
+                    domain=SimpleSetDomain(partitions=jx.sort(set(parts)))
+                else:
+                    parts = columns[i]
+                    if parts[-1] == None:
+                        # ONLY ONE EDGE, SO WE CAN DO THIS
+                        parts = parts[:-1]
+                    domain=SimpleSetDomain(partitions=jx.sort(set(parts)))
+
+                dims.append(len(domain.partitions)+(1 if allowNulls else 0))
                 edges.append(Dict(
                     name=e.name,
                     allowNulls=allowNulls,
-                    domain=SimpleSetDomain(partitions=parts)
+                    domain=domain
                 ))
 
-            data = {s.name: columns[i] for i, s in enumerate(sql_query.select)}
+            zeros = [
+                0 if s.aggregate == "count" and index_to_columns[si].push_child == "." else Dict
+                for si, s in enumerate(listwrap(query.select))
+            ]
+            data = {s.name: Matrix(dims=dims, zeros=zeros[si]) for si, s in enumerate(listwrap(query.select))}
+            for r, d in enumerate(result.data):
+                for i, s in enumerate(index_to_columns.values()):
+                    if s.is_edge:
+                        continue
+                    if s.push_child == ".":
+                        data[s.push_name][r] = s.pull(d)
+                    else:
+                        data[s.push_name][r][s.push_child] = s.pull(d)
+
+            if isinstance(query.select, list):
+                select = [{"name": s.name} for s in query.select]
+            else:
+                select = {"name": query.select.name}
 
             return Dict(
+                meta={"format": "cube"},
                 edges=edges,
+                select=select,
+                data={k: v.cube for k, v in data.items()}
+            )
+        elif query.format == "table":
+            data = []
+            for d in result.data:
+                row = [None for _ in column_names]
+                for s in index_to_columns.values():
+                    if s.push_child == ".":
+                        row[s.push_column] = s.pull(d)
+                    elif s.num_push_columns:
+                        tuple_value = row[s.push_column]
+                        if tuple_value == None:
+                            tuple_value = row[s.push_column] = [None] * s.num_push_columns
+                        tuple_value[s.push_child] = s.pull(d)
+                    elif row[s.push_column] == None:
+                        row[s.push_column] = Dict()
+                        row[s.push_column][s.push_child] = s.pull(d)
+                    else:
+                        row[s.push_column][s.push_child] = s.pull(d)
+                data.append(tuple(unwrap(r) for r in row))
+
+            output = Dict(
+                meta={"format": "table"},
+                header=column_names,
                 data=data
             )
         elif query.format == "list" or (not query.edges and not query.groupby):
-            output = Dict(
-                meta={"format": "list"},
-                header=column_names,
-                data=[{c: v for c, v in zip(column_names, r)} for r in result.data]
-            )
+
+            if not query.edges and not query.groupby and any(listwrap(query.select).aggregate):
+                if isinstance(query.select, list):
+                    data = Dict()
+                    for c in index_to_columns.values():
+                        if c.push_child==".":
+                            data[c.push_name] = c.pull(result.data[0])
+                        else:
+                            data[c.push_name][c.push_child] = c.pull(result.data[0])
+
+                    output = Dict(
+                        meta={"format": "value"},
+                        data=data
+                    )
+                else:
+                    data = Dict()
+                    for s in index_to_columns.values():
+                        data[s.push_child] = s.pull(result.data[0])
+
+                    output = Dict(
+                        meta={"format": "value"},
+                        data=unwrap(data)
+                    )
+            else:
+                data = []
+                for r in result.data:
+                    row = Dict()
+                    for c in index_to_columns.values():
+                        if c.push_child == ".":
+                            row[c.push_name] = c.pull(r)
+                        elif c.num_push_columns:
+                            tuple_value = row[c.push_name]
+                            if not tuple_value:
+                                tuple_value = row[c.push_name] = [None] * c.num_push_columns
+                            tuple_value[c.push_child] = c.pull(r)
+                        else:
+                            row[c.push_name][c.push_child] = c.pull(r)
+
+                    data.append(row)
+
+                output = Dict(
+                    meta={"format": "list"},
+                    data=data
+                )
         else:
             Log.error("unknown format {{format}}", format=query.format)
 
         return output
 
     def _edges_op(self, query):
-        selects = []
-        for s in listwrap(query.select):
-            if s.value=="." and s.aggregate=="count":
-                selects.append("COUNT(1) AS " + quote_table(s.name))
+        index_to_column = {}  # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
+        outer_selects = []  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE)
+
+        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
+
+        columns = self._get_sql_schema()
+
+        ons = []
+        groupby = []
+        orderby = []
+        domains = []
+        select_clause = ["1 __exists__"]  # USED TO DISTINGUISH BETWEEN NULL-BECAUSE-LEFT-JOIN OR NULL-BECAUSE-NULL-VALUE
+
+        for edge_index, query_edge in enumerate(query.edges):
+            edge_alias = "e" + unicode(edge_index)
+
+            if query_edge.value:
+                edge_values = [p for c in query_edge.value.to_sql(columns).sql for p in c.items()]
+            elif not query_edge.value and any(query_edge.domain.partitions.where):
+                case = "CASE "
+                for pp, p in enumerate(query_edge.domain.partitions):
+                    w = p.where.to_sql(columns)[0].sql.b
+                    t = quote_value(pp)
+                    case += " WHEN " + w + " THEN " + t
+                case += " ELSE NULL END "
+                edge_values = [("n", case)]
+            elif query_edge.range:
+                edge_values = query_edge.range.min.to_sql(columns)[0].sql.items() + query_edge.range.max.to_sql(columns)[0].sql.items()
             else:
-                selects.append(sql_aggs[s.aggregate]+"("+jx_expression(s.value).to_sql() + ") AS " + quote_table(s.name))
+                Log.error("Do not know how to handle")
+
+            edge_names = []
+            for column_index, (json_type, sql) in enumerate(edge_values):
+                sql_name = "ec"+unicode(column_index)
+                edge_names.append(sql_name)
+
+                if not query_edge.value and any(query_edge.domain.partitions.where):
+                    def __(parts, column_index):
+                        def _get(row):
+                            return parts[row[column_index]].name
+                        return _get
+                    pull = __(query_edge.domain.partitions, column_index)
+                else:
+                    pull = get_column(column_index)
+
+                if isinstance(query_edge.value, TupleOp):
+                    push_child = column_index
+                    num_push_columns=len(query_edge.value.terms)
+                else:
+                    push_child = "."
+                    num_push_columns=None
+
+                index_to_column[column_index] = Dict(
+                    is_edge=True,
+                    push_name=query_edge.name,
+                    push_column=edge_index,
+                    num_push_columns=num_push_columns,
+                    push_child=push_child,  # CAN NOT HANDLE TUPLES IN COLUMN
+                    pull=pull,
+                    sql=sql,
+                    type=sql_type_to_json_type[json_type]
+                )
+
+            vals = [g[1] for g in edge_values]
+            if query_edge.domain.type == "set":
+                domain_name = "dc0"
+                domain_names =[domain_name]
+                if len(edge_names) > 1:
+                    Log.error("Do not know how to handle")
+                if query_edge.value:
+                    domain = "\nUNION ALL\n".join(
+                        "SELECT " + quote_value(p) + " AS " + domain_name for p in query_edge.domain.partitions.value
+                    )
+                    on_clause = " AND ".join(
+                        edge_alias + "." + k + " = " + v
+                        for k, (t, v) in zip(domain_names, edge_values)
+                    )
+                else:
+                    domain = "\nUNION ALL\n".join(
+                        "SELECT " + quote_value(pp) + " AS " + domain_name for pp, p in enumerate(query_edge.domain.partitions)
+                    )
+                    on_clause = " AND ".join(
+                        edge_alias + "." + k + " = " + sql
+                        for k, (t, sql) in zip(domain_names, edge_values)
+                    )
+            elif query_edge.domain.type == "range":
+                domain_name = "dc0"
+                domain_names = [domain_name]  # ONLY EVER SEEN ONE DOMAIN VALUE, DOMAIN TUPLES CERTAINLY EXIST
+                d = query_edge.domain
+                if d.max == None or d.min == None or d.min == d.max:
+                    Log.error("Invalid range: {{range|json}}", range=d)
+                if len(edge_names) == 1:
+                    domain = self._make_range_domain(domain=d, column_name=domain_name)
+                    on_clause = " AND ".join(
+                        edge_alias + "." + k + " <= " + v + " AND " + v + "< (" + edge_alias + "." + k + " + " + unicode(
+                            d.interval) + ")"
+                        for k, (t, v) in zip(domain_names, edge_values)
+                    )
+                elif query_edge.range:
+                    domain = self._make_range_domain(domain=d, column_name=domain_name)
+                    on_clause = edge_alias + "." + domain_name + " < " + edge_values[1][1] + " AND " + \
+                                edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + unicode(d.interval) + ")"
+                else:
+                    Log.error("do not know how to handle")
+                # select_clause.extend(v[0] + " " + k for k, v in zip(domain_names, edge_values))
+            elif len(edge_names) > 1:
+                domain_names = ["dc" + unicode(i) for i, _ in enumerate(edge_names)]
+                query_edge.allowNulls = False
+                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(domain_names, vals)) + \
+                         "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
+                          "\nGROUP BY\n" + ",\n".join(vals)
+                on_clause = " AND ".join(
+                    "((" + edge_alias + "." + k + " IS NULL AND " + v + " IS NULL) OR " + edge_alias + "." + k + " = " + v + ")"
+                    for k, v in zip(domain_names, vals)
+                )
+            elif isinstance(query_edge.domain, DefaultDomain):
+                domain_names = ["dc"+unicode(i) for i, _ in enumerate(edge_names)]
+                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(domain_names, vals)) + \
+                         "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
+                         "\nWHERE\n" + " AND ".join(g + " IS NOT NULL" for g in vals) + \
+                         "\nGROUP BY\n" + ",\n".join(g for g in vals)
+                on_clause = " AND ".join(
+                    edge_alias + "." + k + " = " + v
+                    for k, v in zip(domain_names, vals)
+                )
+
+                limit = Math.min(query.limit, query_edge.domain.limit)
+                domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
+                          "\nLIMIT\n"+unicode(limit)
+            else:
+                Log.note("not handled")
+
+            domains.append(domain)
+            ons.append(on_clause)
+
+            for d in domain_names:
+                groupby.append(edge_alias + "." + d)
+
+        if query.edges:
+            for k in domain_names:
+                outer_selects.append(edge_alias + "." + k + " AS " + k)
+
+                orderby.append(k + " IS NULL")
+                orderby.append(k)
+
+        offset = len(query.edges)
+        for ssi, s in enumerate(listwrap(query.select)):
+            si = ssi+offset
+            if isinstance(s.value, Variable) and s.value.var == "." and s.aggregate == "count":
+                # COUNT RECORDS, NOT ANY ONE VALUE
+                sql = "COUNT(__exists__) AS " + quote_table(s.name)
+
+                column_number = len(outer_selects)
+                outer_selects.append(sql)
+                index_to_column[column_number] = Dict(
+                    push_name=s.name,
+                    push_column=si,
+                    push_child=".",
+                    pull=get_column(column_number),
+                    sql=sql,
+                    type=sql_type_to_json_type["n"]
+                )
+            elif s.aggregate == "percentile":
+                if not isinstance(s.percentile, (int, float)):
+                    Log.error("Expecting percentile to be a float between 0 and 1")
+
+                Log.error("not implemented")
+            elif s.aggregate == "cardinality":
+                for details in s.value.to_sql(columns):
+                    for json_type, sql in details.sql.items():
+                        column_number = len(outer_selects)
+                        count_sql = "COUNT(DISTINCT(" + sql + ")) AS " + _make_column_name(column_number)
+                        outer_selects.append(count_sql)
+                        index_to_column[column_number] = Dict(
+                            push_name=s.name,
+                            push_column=si,
+                            push_child=".",
+                            pull=get_column(column_number),
+                            sql=count_sql,
+                            type=sql_type_to_json_type[json_type]
+                        )
+            elif s.aggregate == "union":
+                for details in s.value.to_sql(columns):
+                    concat_sql = []
+                    column_number = len(outer_selects)
+
+                    for json_type, sql in details.sql.items():
+                        concat_sql.append("GROUP_CONCAT(QUOTE(DISTINCT("+sql+")))")
+
+                    if len(concat_sql)>1:
+                        concat_sql = "CONCAT(" + ",".join(concat_sql) + ") AS " + _make_column_name(column_number)
+                    else:
+                        concat_sql = concat_sql[0] + " AS " + _make_column_name(column_number)
+
+                    outer_selects.append(concat_sql)
+                    index_to_column[column_number] = Dict(
+                        push_name=s.name,
+                        push_column=si,
+                        push_child=".",
+                        pull=sql_text_array_to_set(column_number),
+                        sql=concat_sql,
+                        type=sql_type_to_json_type[json_type]
+                    )
+
+            elif s.aggregate == "stats":  # THE STATS OBJECT
+                for details in s.value.to_sql(columns):
+                    sql = details.sql["n"]
+                    for name, code in STATS.items():
+                        full_sql = expand_template(code, {"value": sql})
+                        column_number = len(outer_selects)
+                        outer_selects.append(full_sql + " AS " + _make_column_name(column_number))
+                        index_to_column[column_number] = Dict(
+                            push_name=s.name,
+                            push_column=si,
+                            push_child=name,
+                            pull=get_column(column_number),
+                            sql=full_sql,
+                            type="number"
+                        )
+            else:  # STANDARD AGGREGATES
+                for details in s.value.to_sql(columns):
+                    for json_type, sql in details.sql.items():
+                        column_number = len(outer_selects)
+                        sql = sql_aggs[s.aggregate] + "(" + sql + ")"
+                        if s.default != None:
+                            sql = "COALESCE(" + sql + ", " + quote_value(s.default) + ")"
+                        outer_selects.append(sql+" AS " + _make_column_name(column_number))
+                        index_to_column[column_number] = Dict(
+                            push_name=s.name,
+                            push_column=si,
+                            push_child=details.name,
+                            pull=get_column(column_number),
+                            sql=sql,
+                            type=sql_type_to_json_type[json_type]
+                        )
 
         for w in query.window:
-            selects.append(self._window_op(self, query, w))
+            outer_selects.append(self._window_op(self, query, w))
 
-        agg_prefix = " FROM "
-        agg_suffix = "\n"
+        main_filter = query.where.to_sql(columns)[0].sql.b
 
-        agg = ""
-        ons = []
-        groupby = ""
-        groupby_prefix = "\nGROUP BY "
+        all_parts = []
+        for p in itertools.product(*[[[False, edge_index, query_edge], [True, edge_index, query_edge]] if query_edge.allowNulls else [[False, edge_index, query_edge]] for edge_index, query_edge in enumerate(query.edges)]):
 
-        for i, e in enumerate(query.edges):
-            edge_alias = "e" + unicode(i)
-            edge_value = e.value.to_sql()
-            value = edge_value
-            for v in e.value.vars():
-                value = value.replace(quote_table(v), "a."+quote_table(v))
+            sources = ["(" +
+                       "\nSELECT\n" + ",\n".join(select_clause) + ",\n*" +
+                       "\nFROM " + quote_table(self.name) + " " + nest_to_alias["."] +
+                       "\nWHERE " + main_filter +
+                       ") " + nest_to_alias["."]
+                       ]
+            joins = []
+            join_types = []
+            where_clause = []
+            for is_null, edge_index, query_edge in p:
+                edge_alias = "e" + unicode(edge_index)
+                domain = domains[edge_index]
+                if is_null:
+                    sources.append("(" + domain + ") "+edge_alias)
+                    join_types.append("LEFT JOIN")
+                    joins.append(ons[edge_index])
+                    where_clause.append(" AND ".join(
+                        edge_alias + "." + k + " IS NULL "
+                        for k in domain_names
+                    ))
+                else:
+                    sources.insert(0, "(" + domain + ") "+edge_alias)
+                    join_types.append("LEFT JOIN")
+                    joins.insert(0, ons[edge_index])
 
-            edge_name = quote_table(e.name)
-            selects.append(edge_alias + "." + edge_name + " AS " + edge_name)
-            agg += \
-                agg_prefix + "(" + \
-                "SELECT DISTINCT " + edge_value + " AS " + edge_name + " FROM " + quote_table(self.name) + \
-                ") " + edge_alias + \
-                agg_suffix
-            agg_prefix = " LEFT JOIN "
-            agg_suffix = " ON 1=1\n"
-            ons.append(edge_alias + "." + edge_name + " = "+ value)
-            groupby += groupby_prefix + edge_alias + "." + edge_name
-            groupby_prefix = ",\n"
+            part = "SELECT " + (",\n".join(outer_selects)) + "\nFROM\n" + sources[0]
+            for join_type, s, j in zip(join_types, sources[1:], joins):
+                part += "\n"+join_type+"\n" + s + "\nON\n" + j
+            if where_clause:
+                part += "\nWHERE\n" + "\nAND\n".join(where_clause)
+            if groupby:
+                part += "\nGROUP BY\n" + ",\n".join(groupby)
 
-        agg += agg_prefix + quote_table(self.name) + " a ON "+" AND ".join(ons)
+            all_parts.append(part)
 
-        where = "\nWHERE " + query.where.to_sql()
+        command = "SELECT * FROM (\n"+"\nUNION ALL\n".join(all_parts)+"\n)"
 
-        return "SELECT " + (",\n".join(selects)) + agg + where+groupby
+        if orderby:
+            command += "\nORDER BY\n" + ",\n".join(orderby)
+
+        return command, index_to_column
+
+    def _make_range_domain(self, domain, column_name):
+        width = (domain.max - domain.min) / domain.interval
+        digits = Math.floor(Math.log10(width-1))
+        if digits == 0:
+            value = "a.value"
+        else:
+            value = "+".join("1" + ("0" * j) + "*" + unicode(chr(ord(b'a') + j)) + ".value" for j in range(digits + 1))
+
+        if domain.interval == 1:
+            if domain.min == 0:
+                domain = "SELECT " + value + " " + column_name + \
+                         "\nFROM __digits__ a"
+            else:
+                domain = "SELECT (" + value + ") - " + quote_value(domain.min) + " " + column_name + \
+                         "\nFROM __digits__ a"
+        else:
+            if domain.min == 0:
+                domain = "SELECT " + value + " * " + unicode(domain.interval) + " " + column_name + \
+                         "\nFROM __digits__ a"
+            else:
+                domain = "SELECT (" + value + " * " + unicode(domain.interval) + ") - " + quote_value(
+                    domain.min) + " " + column_name + \
+                         "\nFROM __digits__ a"
+
+        for j in range(digits):
+            domain += "\nJOIN __digits__ " + unicode(chr(ord(b'a') + j + 1)) + " ON 1=1"
+        domain += "\nWHERE " + value + " < " + quote_value(width)
+        return domain
 
     def _groupby_op(self, query):
+        columns = self._get_sql_schema()
+        index_to_column={}
+        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
+
         selects = []
-        for s in listwrap(query.select):
-            if s.value=="." and s.aggregate=="count":
+        for si, s in enumerate(listwrap(query.select)):
+            column_number = len(selects)
+            sql_type, sql =s.value.to_sql(columns)[0].sql.items()[0]
+
+            if s.value == "." and s.aggregate == "count":
                 selects.append("COUNT(1) AS " + quote_table(s.name))
             else:
-                selects.append(sql_aggs[s.aggregate]+"("+jx_expression(s.value).to_sql() + ") AS " + quote_table(s.name))
+                selects.append(sql_aggs[s.aggregate] + "(" + sql + ") AS " + quote_table(s.name))
+
+            index_to_column[column_number] = Dict(
+                push_name=s.name,
+                push_column=si,
+                push_child=".",
+                pull=get_column(column_number),
+                sql=sql,
+                type=sql_type_to_json_type[sql_type]
+            )
 
         for w in query.window:
             selects.append(self._window_op(self, query, w))
 
-        agg = " FROM " + quote_table(self.name) + " a\n"
-        groupby = ""
-        groupby_prefix = " GROUP BY "
+        groupby = []
+        for i, e in enumerate(query.groupby):
+            column_number = len(selects)
+            sql_type, sql = e.value.to_sql(columns)[0].sql.items()[0]
+            groupby.append(sql)
+            selects.append(sql+" AS "+e.name)
 
-        for i, e in enumerate(query.edges):
-            value = e.to_sql()
-            groupby += groupby_prefix + value
-            groupby_prefix = ",\n"
+            index_to_column[column_number] = Dict(
+                push_name=e.name,
+                push_column=column_number,
+                push_child=".",
+                pull=get_column(column_number),
+                sql=sql,
+                type=sql_type_to_json_type[sql_type]
+            )
 
-        where = "\nWHERE " + query.where.to_sql()
+        where = query.where.to_sql(columns)[0].sql.b
 
-        return "SELECT " + (",\n".join(selects)) + agg + where+groupby
+        command = "SELECT\n" + (",\n".join(selects)) + \
+                  "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
+                  "\nWHERE\n" + where + \
+                  "\nGROUP BY\n" + ",\n".join(groupby)
+
+        return command, index_to_column
 
     def _set_op(self, query, frum):
         # GET LIST OF COLUMNS
         primary_nested_path = join_field(split_field(frum)[1:])
         vars_ = UNION([s.value.vars() for s in listwrap(query.select)])
+
+        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
+        columns = self._get_sql_schema()
 
         active_columns = {}
         for cname, cols in self.columns.items():
@@ -626,9 +1111,6 @@ class Table_usingSQLite(Container):
                 place(primary_doc_details)
 
             alias = nested_doc_details['alias'] = nest_to_alias[nested_path]
-            # WE DO NOT NEED DATA FROM TABLES WE REQUEST NOTHING FROM
-            if nested_path not in active_columns:
-                continue
 
             # WE ALWAYS ADD THE UID AND ORDER
             column_number = index_to_uid[nested_path] = nested_doc_details['id_coord'] = len(selects)
@@ -636,11 +1118,15 @@ class Table_usingSQLite(Container):
             if nested_path != ".":
                 selects.append(alias + "." + quote_table(ORDER) + " AS " + _make_column_name(column_number + 1))
 
+            # WE DO NOT NEED DATA FROM TABLES WE REQUEST NOTHING FROM
+            if nested_path not in active_columns:
+                continue
+
             if primary_nested_path == nested_path:
                 # ADD SQL SELECT COLUMNS FOR EACH jx SELECT CLAUSE
-                for s in listwrap(query.select):
+                for si, s in enumerate(listwrap(query.select)):
                     column_number = len(selects)
-                    s.pull = column_number
+                    s.pull = get_column(column_number)
                     db_columns = listwrap(s.value.to_sql(columns))
                     for column in db_columns:
                         for t, sql in column.sql.items():
@@ -651,15 +1137,16 @@ class Table_usingSQLite(Container):
                             # SQL HAS ABS TABLE REFERENCE
                             selects.append(sql + " AS " + _make_column_name(column_number))
                             index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
-                                name=s.name,
-                                pull=column_number,
+                                push_name=s.name,
+                                push_column=si,
+                                pull=get_column(column_number),
                                 sql=sql,
                                 type=json_type,
                                 nested_path=column.nested_path
                             )
             elif startswith_field(nested_path, primary_nested_path):
                 # ADD REQUIRED COLUMNS, FOR DEEP STUFF
-                for c in active_columns[nested_path]:
+                for ci, c in enumerate(active_columns[nested_path]):
                     if c.type in STRUCT:
                         continue
 
@@ -668,14 +1155,15 @@ class Table_usingSQLite(Container):
                     sql = nest_to_alias[nested_path[0]] + "." + quote_table(c.es_column)
                     selects.append(sql + " AS " + _make_column_name(column_number))
                     index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
-                        name=c.name,
-                        pull=column_number,
+                        push_name=c.name,
+                        push_column=ci,
+                        pull=get_column(column_number),
                         sql=sql,
                         type=c.type,
                         nested_path=nested_path
                     )
 
-        where_clause = query.where.to_sql(self.columns).b
+        where_clause = query.where.to_sql(columns)[0].sql.b
 
         sql = self._make_sql_for_one_nest_in_set_op(
             ".",
@@ -688,13 +1176,13 @@ class Table_usingSQLite(Container):
         sorts = []
         if query.sort:
             for s in query.sort:
-                sql = s.value.to_sql()
-                for t in "bns":
-                    if sql[t]:
-                        if s.sort == -1:
-                            sorts.append(sql[t]+" DESC")
-                        else:
-                            sorts.append(sql[t])
+                for sql_column in s.value.to_sql(columns):
+                    for t in ALL_TYPES:
+                        if sql_column.sql[t]:
+                            if s.sort == -1:
+                                sorts.append(sql_column.sql[t]+" DESC")
+                            else:
+                                sorts.append(sql_column.sql[t])
         for n, _ in self.nested_tables.items():
             sorts.append(COLUMN+unicode(index_to_uid[n]))
 
@@ -712,7 +1200,7 @@ class Table_usingSQLite(Container):
                  }
             :param parent_doc_id: the id of the parent doc (for detecting when to step out of loop)
             :param parent_id_coord: the column number for the parent id (so we ca extract from each row)
-            :return:  the nested property (usually an array)
+            :return: the nested property (usually an array)
             """
             previous_doc_id = None
             doc = Dict()
@@ -730,16 +1218,22 @@ class Table_usingSQLite(Container):
 
                 if doc_id != previous_doc_id:
                     previous_doc_id = doc_id
-                    doc = Dict()
-                    # ASSIGN INNER PROPERTIES
-                    for i, c in nested_doc_details['index_to_column'].items():
-                        value = row[i]
-                        if value is not None:
-                            relative_path = relative_field(c.name, nested_doc_details['nested_path'][0])
-                            if relative_path == ".":
-                                doc = value
-                            else:
-                                doc[relative_path] = value
+                    if query.format == "list" and not isinstance(query.select, list):
+                        doc = None
+                        # ASSIGN INNER PROPERTIES
+                        for i, _ in nested_doc_details['index_to_column'].items():
+                            doc = row[i]
+                    else:
+                        doc = Dict()
+                        # ASSIGN INNER PROPERTIES
+                        for i, c in nested_doc_details['index_to_column'].items():
+                            value = row[i]
+                            if value is not None:
+                                relative_path = relative_field(c.push_name, nested_doc_details['nested_path'][0])
+                                if relative_path == ".":
+                                    doc = value
+                                else:
+                                    doc[relative_path] = value
                     output.append(doc)
 
                 # ASSIGN NESTED ARRAYS
@@ -759,11 +1253,11 @@ class Table_usingSQLite(Container):
 
         rows = list(reversed(unwrap(result.data)))
         row = rows.pop()
-        output = _accumulate_nested(rows, row, primary_doc_details, None, None)
-        return {
-            "meta": {"format": "list"},
-            "data": output
-        }
+        output = Dict(
+            meta={"format": "list"},
+            data=_accumulate_nested(rows, row, primary_doc_details, None, None)
+        )
+        return output
 
     def _make_sql_for_one_nest_in_set_op(
         self,
@@ -958,7 +1452,9 @@ class Table_usingSQLite(Container):
 
         # TEST IF THERE IS ANY DATA IN THE NEW NESTED ARRAY
         all_cols = [c for _, cols in sub_table.columns.items() for c in cols]
-        if len(all_cols) == 1:
+        if not all_cols:
+            has_nested_data = "0"
+        elif len(all_cols) == 1:
             has_nested_data = _quote_column(all_cols[0]) + " is NOT NULL"
         else:
             has_nested_data = "COALESCE(" + \
@@ -980,16 +1476,15 @@ class Table_usingSQLite(Container):
                   "\nWHERE\n" + has_nested_data
         self.db.execute(command)
 
-    def flatten(self, doc, uid, doc_collection, path=None):
+    def flatten_many(self, docs, path="."):
         """
         :param doc: THE JSON DOCUMENT
-        :param uid: ID ASSIGNED TO THIS (NESTED) DOCUMENT
-        :param doc_collection: MAP FROM NESTED PATH TO INSERTION PARAMETERS
-               {"active_columns": list, "rows": list of objects}
         :param path: FULL PATH TO THIS (INNER/NESTED) DOCUMENT
-        :return: TUPLE (success, command) WHERE
+        :return: TUPLE (success, command, doc_collection) WHERE
                  success: BOOLEAN INDICATING PROPER PARSING
                  command: SCHEMA CHANGES REQUIRED TO BE SUCCESSFUL NEXT TIME
+                 doc_collection: MAP FROM NESTED PATH TO INSERTION PARAMETERS:
+                 {"active_columns": list, "rows": list of objects}
         """
 
         # TODO: COMMAND TO ADD COLUMNS
@@ -997,8 +1492,25 @@ class Table_usingSQLite(Container):
         # COLLECT AS MANY doc THAT DO NOT REQUIRE SCHEMA CHANGE
 
         required_changes = []
+        _insertion = Dict(
+            active_columns=set(),
+            rows=[]
+        )
+        doc_collection = {".": _insertion}
+        nested_tables = copy(self.nested_tables)  # KEEP TRACK OF WHAT TABLE WILL BE MADE (SHORTLY)
+        columns = copy(self.columns)
 
         def _flatten(d, uid, parent_id, order, full_path, nested_path, row=None):
+            """
+            :param d: the data we are pulling appart
+            :param uid: the uid we are giving this doc
+            :param parent_id: the parent id of this (sub)doc
+            :param order: the number of siblings before this one
+            :param full_path: path to this (sub)doc
+            :param nested_path: list of paths, deepest first
+            :param row: we will be filling this
+            :return:
+            """
             insertion = doc_collection[nested_path[0]]
             if not row:
                 row = {UID: uid, PARENT: parent_id, ORDER: order}
@@ -1013,23 +1525,23 @@ class Table_usingSQLite(Container):
 
                     if value_type in STRUCT:
                         c = unwraplist(
-                            [c for c in self.columns.get(cname, Null) if c.type in STRUCT]
+                            [c for c in columns.get(cname, Null) if c.type in STRUCT]
                         )
                     else:
                         c = unwraplist(
-                            [c for c in self.columns.get(cname, Null) if c.type == value_type]
+                            [c for c in columns.get(cname, Null) if c.type == value_type]
                         )
 
                     if not c:
                         # WHAT IS THE NESTING LEVEL FOR THIS PATH?
                         deeper_nested_path = "."
-                        for path, sub_table in self.nested_tables.items():
-                            if startswith_field(cname, path) and len(deeper_nested_path) < path:
+                        for path, _ in nested_tables.items():
+                            if startswith_field(cname, path) and len(deeper_nested_path) < len(path):
                                 deeper_nested_path = path
                         if deeper_nested_path != nested_path[0]:
                             # I HIGHLY SUSPECT, THROUGH CALLING _flatten() AGAIN THE REST OF THIS BLOCK IS NOT NEEDED
                             nested_column = unwraplist(
-                                [c for c in self.columns.get(deeper_nested_path, Null) if c.type in STRUCT]
+                                [c for c in columns.get(deeper_nested_path, Null) if c.type in STRUCT]
                             )
                             insertion.active_columns.add(nested_column)
                             row[nested_column.es_column] = "."
@@ -1053,6 +1565,10 @@ class Table_usingSQLite(Container):
                             es_index=self.name,  # THIS MAY BE THE WRONG TABLE, IF THIS PATH IS A NESTED DOC
                             nested_path=unwraplist(nested_path[:-1])
                         )
+                        add_column_to_schema(columns, c)
+                        if value_type == "nested":
+                            nested_tables[cname] = "fake table"
+
                         required_changes.append({"add": c})
 
                     insertion.active_columns.add(c)
@@ -1060,16 +1576,16 @@ class Table_usingSQLite(Container):
                     # BE SURE TO NEST VALUES, IF NEEDED
                     if value_type == "nested":
                         row[c.es_column] = "."
-                        deeper = [cname] + listwrap(nested_path)
+                        deeper_nested_path = [cname] + nested_path
                         insertion = doc_collection.get(cname, None)
                         if not insertion:
-                            doc_collection[cname] = Dict(
+                            insertion = doc_collection[cname] = Dict(
                                 active_columns=set(),
                                 rows=[]
                             )
                         for i, r in enumerate(v):
                             child_uid = self.next_uid()
-                            _flatten(r, child_uid, uid, i, cname, deeper)
+                            _flatten(r, child_uid, uid, i, cname, deeper_nested_path)
                     elif value_type == "object":
                         row[c.es_column] = "."
                         _flatten(v, uid, parent_id, order, cname, nested_path, row=row)
@@ -1084,9 +1600,12 @@ class Table_usingSQLite(Container):
                     return
 
                 if value_type in STRUCT:
-                    c = unwraplist([c for c in self.columns.get(cname, Null) if c.type in STRUCT])
+                    c = unwraplist([c for c in columns.get(cname, Null) if c.type in STRUCT])
                 else:
-                    c = unwraplist([c for c in self.columns.get(cname, Null) if c.type == value_type])
+                    try:
+                        c = unwraplist([c for c in columns.get(cname, Null) if c.type == value_type])
+                    except Exception, e:
+                        Log.error("not expected", cause=e)
 
                 if not c:
                     c = Column(
@@ -1097,8 +1616,10 @@ class Table_usingSQLite(Container):
                         es_index=self.name,
                         nested_path=nested_path
                     )
-                    required_changes.append(c)
-                    Log.error("continue looking for more changes")
+                    add_column_to_schema(columns, c)
+                    if value_type == "nested":
+                        nested_tables[cname] = "fake table"
+                    required_changes.append({"add": c})
 
                 insertion.active_columns.add(c)
 
@@ -1108,7 +1629,7 @@ class Table_usingSQLite(Container):
                         Log.error("fix this")
 
                     row[c.es_column] = "."
-                    deeper = [cname] + listwrap(nested_path)
+                    deeper_nested_path = [cname] + nested_path
                     insertion = doc_collection.get(cname, None)
                     if not insertion:
                         doc_collection[cname] = Dict(
@@ -1117,32 +1638,29 @@ class Table_usingSQLite(Container):
                         )
                     for i, r in enumerate(v):
                         child_uid = self.next_uid()
-                        _flatten(r, child_uid, uid, i, cname, deeper)
+                        _flatten(r, child_uid, uid, i, cname, deeper_nested_path)
                 elif value_type == "object":
                     if c.type == "nested":
                         # MOVE TO SINGLE-VALUED LIST
                         child_uid = self.next_uid()
                         row[c.es_column] = "."
-                        deeper = [cname] + listwrap(nested_path)
-                        _flatten(v, child_uid, uid, 0, cname, deeper)
+                        deeper_nested_path = [cname] + nested_path
+                        _flatten(v, child_uid, uid, 0, cname, deeper_nested_path)
                     else:
                         row[c.es_column] = "."
                         _flatten(v, uid, parent_id, order, nested_path, row=row)
                 elif c.type:
                     row[c.es_column] = v
 
-        insertion = doc_collection.get(".", None)
-        if not insertion:
-            doc_collection["."] = Dict(
-                active_columns=set(),
-                rows=[]
-            )
+        for doc in docs:
+            _flatten(doc, self.next_uid(), 0, 0, full_path=path, nested_path=["."])
+            if required_changes:
+                self.change_schema(required_changes)
+            required_changes = []
 
-        _flatten(doc, uid, 0, 0, full_path=coalesce(path, "."), nested_path=["."])
-        if required_changes:
-            return False, required_changes
-        else:
-            return True, []
+        return doc_collection
+
+
 
     def _insert(self, collection):
         for nested_path, details in collection.items():
@@ -1168,6 +1686,13 @@ class Table_usingSQLite(Container):
             )
 
             self.db.execute(prefix + records)
+
+
+def add_column_to_schema(schema, column):
+    variants = schema.get(column.name)
+    if not variants:
+        variants = schema[column.name] = set()
+    variants.add(column)
 
 
 _do_not_quote = re.compile(r"^\w+$", re.UNICODE)
@@ -1288,13 +1813,17 @@ def _make_column_name(number):
 
 
 sql_aggs = {
-    "min": "MIN",
-    "max": "MAX",
-    "sum": "SUM",
     "avg": "AVG",
     "average": "AVG",
+    "count": "COUNT",
+    "first": "FIRST_VALUE",
     "last": "LAST_VALUE",
-    "first": "FIRST_VALUE"
+    "max": "MAX",
+    "maximum": "MAX",
+    "median": "MEDIAN",
+    "min": "MIN",
+    "minimum": "MIN",
+    "sum": "SUM"
 }
 
 sql_types = {
@@ -1306,8 +1835,37 @@ sql_types = {
     "nested": "TEXT"
 }
 
+STATS = {
+    "count": "COUNT({{value}})",
+    "std": "SQRT((1-1.0/COUNT({{value}}))*VARIANCE({{value}}))",
+    "min": "MIN({{value}})",
+    "max": "MAX({{value}})",
+    "sum": "SUM({{value}})",
+    "median": "MEDIAN({{value}})",
+    "sos": "SUM({{value}}*{{value}})",
+    "var": "(1-1.0/COUNT({{value}}))*VARIANCE({{value}})",
+    "avg": "AVG({{value}})"
+}
+
 
 quoted_UID = quote_table(UID)
 quoted_ORDER = quote_table(ORDER)
 quoted_PARENT = quote_table(PARENT)
 
+
+def sql_text_array_to_set(column):
+    def _convert(row):
+        text = row[column]
+        return set(eval('['+text.replace("''", "\'")+']'))
+
+    return _convert
+
+
+def get_column(column):
+    """
+    :param column: The column you want extracted
+    :return: a function that can pull the given column out of sql resultset
+    """
+    def _get(row):
+        return row[column]
+    return _get

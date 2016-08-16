@@ -15,6 +15,7 @@ from __future__ import absolute_import
 
 import sys
 
+from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.thread.threads import Thread, Lock
 from pyLibrary.strings import expand_template
 
@@ -134,11 +135,9 @@ class TextLog_usingMulti(TextLog):
                     _delayed_imports()
 
                 _Log.warning("Logger failed!  It will be removed: {{type}}", type=m.__class__.__name__, cause=e)
-        try:
+        with suppress_exception:
             for b in bad:
                 self.many.remove(b)
-        except Exception:
-            pass
 
         return self
 
@@ -155,10 +154,9 @@ class TextLog_usingMulti(TextLog):
 
     def stop(self):
         for m in self.many:
-            try:
+            with suppress_exception:
                 m.stop()
-            except Exception, e:
-                pass
+
 
 
 class TextLog_usingStream(TextLog):

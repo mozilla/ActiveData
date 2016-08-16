@@ -18,6 +18,7 @@ import psycopg2
 from psycopg2.extensions import adapt
 
 from pyLibrary import convert
+from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
@@ -71,12 +72,10 @@ class Redshift(object):
                 self.connection.commit()
                 done = True
             except Exception, e:
-                try:
+                with suppress_exception:
                     self.connection.rollback()
                     # TODO: FIGURE OUT WHY rollback() DOES NOT HELP
                     self.connection.close()
-                except Exception, f:
-                    pass
                 self.connection = None
                 self._connect()
                 if not retry:
@@ -173,10 +172,8 @@ class Closer(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        try:
+        with suppress_exception:
             self.resource.close()
-        except Exception, e:
-            pass
 
     def __getattr__(self, item):
         return getattr(self.resource, item)

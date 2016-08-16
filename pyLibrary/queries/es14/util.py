@@ -61,7 +61,7 @@ def jx_sort_to_es_sort(sort):
     for s in sort:
         if isinstance(s.value, Variable):
             if s.sort == -1:
-                output.append({s.value: "desc"})
+                output.append({s.value.var: "desc"})
             else:
                 output.append(s.value.var)
         else:

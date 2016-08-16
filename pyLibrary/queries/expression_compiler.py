@@ -16,6 +16,9 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, Dict
 from pyLibrary.times.dates import Date
 
+true = True
+false = False
+null = None
 EMPTY_DICT = {}
 
 def compile_expression(source):

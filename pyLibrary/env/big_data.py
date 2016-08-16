@@ -16,6 +16,7 @@ from tempfile import TemporaryFile
 import zipfile
 import zlib
 
+from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 
@@ -166,16 +167,12 @@ class LazyLines(object):
         Log.error("Do not know how to slice this generator")
 
     def __iter__(self):
-        def output(encoding):
+        def output():
             for v in self.source:
-                if not encoding:
-                    self._last = v
-                else:
-                    self._last = v.decode(encoding)
-                self._next += 1
+                self._last = v
                 yield self._last
 
-        return output(self.encoding)
+        return output()
 
     def __getitem__(self, item):
         try:
@@ -205,7 +202,7 @@ class CompressedLines(LazyLines):
         self._iter = self.__iter__()
 
     def __iter__(self):
-        return LazyLines(ibytes2ilines(compressed_bytes2ibytes(self.compressed, MIN_READ_SIZE)), self.encoding).__iter__()
+        return LazyLines(ibytes2ilines(compressed_bytes2ibytes(self.compressed, MIN_READ_SIZE), encoding=self.encoding)).__iter__()
 
     def __getslice__(self, i, j):
         if i == self._next:
@@ -270,10 +267,11 @@ def ibytes2ilines(generator, encoding="utf8", closer=None):
     TO A LINE (CR-DELIMITED) GENERATOR
 
     :param generator:
-    :param encoding:
+    :param encoding: None TO DO NO DECODING
     :param closer: OPTIONAL FUNCTION TO RUN WHEN DONE ITERATING
     :return:
     """
+    decode = get_decoder(encoding)
     _buffer = generator.next()
     s = 0
     e = _buffer.find(b"\n")
@@ -287,12 +285,13 @@ def ibytes2ilines(generator, encoding="utf8", closer=None):
             except StopIteration:
                 _buffer = _buffer[s:]
                 del generator
-                yield _buffer.decode(encoding)
                 if closer:
                     closer()
+                if _buffer:
+                    yield decode(_buffer)
                 return
 
-        yield _buffer[s:e].decode(encoding)
+        yield decode(_buffer[s:e])
         s = e + 1
         e = _buffer.find(b"\n", s)
 
@@ -357,20 +356,18 @@ def scompressed2ibytes(stream):
             while True:
                 bytes_ = stream.read(4096)
                 if not bytes_:
-                    stream.close()
                     return
                 yield bytes_
         except Exception, e:
-            try:
-                stream.close()
-            except Exception:
-                pass
             Log.error("Problem iterating through stream", cause=e)
+        finally:
+            with suppress_exception:
+                stream.close()
 
-    return icompressed2ibytes(more)
+    return icompressed2ibytes(more())
 
 
-def sbytes2ilines(stream, encoding="utf8"):
+def sbytes2ilines(stream, encoding="utf8", closer=None):
     """
     CONVERT A STREAM (with read() method) OF (ARBITRARY-SIZED) byte BLOCKS
     TO A LINE (CR-DELIMITED) GENERATOR
@@ -380,15 +377,36 @@ def sbytes2ilines(stream, encoding="utf8"):
             while True:
                 bytes_ = stream.read(4096)
                 if not bytes_:
-                    stream.close()
                     return
                 yield bytes_
         except Exception, e:
+            Log.error("Problem iterating through stream", cause=e)
+        finally:
             try:
                 stream.close()
             except Exception:
                 pass
-            Log.error("Problem iterating through stream", cause=e)
 
-    return ibytes2ilines({"next": read}, encoding=encoding)
+            if closer:
+                try:
+                    closer()
+                except Exception:
+                    pass
 
+    return ibytes2ilines(read(), encoding=encoding)
+
+
+def get_decoder(encoding):
+    """
+    RETURN FUNCTION TO PERFORM DECODE
+    :param encoding:
+    :return:
+    """
+    if encoding == None:
+        def no_decode(v):
+            return v
+        return no_decode
+    else:
+        def do_decode(v):
+            return v.decode(encoding)
+        return do_decode

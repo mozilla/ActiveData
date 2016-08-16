@@ -12,9 +12,7 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
 from types import GeneratorType, NoneType, ModuleType
-
 from __builtin__ import zip as _builtin_zip
-
 
 _get = object.__getattribute__
 
@@ -218,14 +216,16 @@ def _getdefault(obj, key):
 
     try:
         return getattr(obj, key)
-    except Exception, e:
+    except Exception, f:
         pass
+
 
     try:
         if float(key) == round(float(key), 0):
             return obj[int(key)]
     except Exception, f:
         pass
+
 
     # TODO: FIGURE OUT WHY THIS WAS EVER HERE (AND MAKE A TEST)
     # try:
@@ -312,13 +312,13 @@ def _get_attr(obj, path):
     try:
         obj = obj[int(attr_name)]
         return _get_attr(obj, path[1:])
-    except Exception, e:
+    except Exception:
         pass
 
     try:
         obj = getattr(obj, attr_name)
         return _get_attr(obj, path[1:])
-    except Exception, e:
+    except Exception:
         pass
 
     try:

@@ -37,6 +37,7 @@ def get_decoders_by_depth(query):
     """
     schema = query.frum
     output = DictList()
+    limit = query.limit
     for e in coalesce(query.edges, query.groupby, []):
         if e.value != None:
             e = e.copy()
@@ -77,7 +78,8 @@ def get_decoders_by_depth(query):
         depth = list(depths)[0]
         while len(output) <= depth:
             output.append([])
-        output[depth].append(AggsDecoder(e, query))
+        output[depth].append(AggsDecoder(e, query, limit))
+        limit = 0
     return output
 
 
@@ -241,7 +243,6 @@ def es_aggsop(es, frum, query):
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
             es_query.aggs[canonical_name].extended_stats.script = abs_value.to_ruby()
-
 
     decoders = get_decoders_by_depth(query)
     start = 0

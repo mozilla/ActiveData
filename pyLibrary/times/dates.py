@@ -21,9 +21,8 @@ from pyLibrary.maths import Math
 
 try:
     import pytz
-except Exception, _:
+except Exception:
     pass
-
 
 from pyLibrary.dot import Null
 from pyLibrary.times.durations import Duration, MILLI_VALUES
@@ -315,6 +314,16 @@ def unicode2Date(value, format=None):
     if value == None:
         return None
 
+    if format != None:
+        try:
+            if format.endswith("%S.%f") and "." not in value:
+                value += ".000"
+            return unix2Date(datetime2unix(datetime.strptime(value, format)))
+        except Exception, e:
+            from pyLibrary.debugs.logs import Log
+
+            Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
+
     value = value.strip()
     if value.lower() == "now":
         return unix2Date(datetime2unix(datetime.utcnow()))
@@ -326,30 +335,23 @@ def unicode2Date(value, format=None):
     if any(value.lower().find(n) >= 0 for n in ["now", "today", "eod", "tomorrow"] + list(MILLI_VALUES.keys())):
         return parse_time_expression(value)
 
-    if format != None:
-        try:
-            if format.endswith("%S.%f") and "." not in value:
-                value += ".000"
-            return unix2Date(datetime2unix(datetime.strptime(value, format)))
-        except Exception, e:
-            from pyLibrary.debugs.logs import Log
-
-            Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
-
-    try:
+    try:  # 2.7 DOES NOT SUPPORT %z
         local_value = parse_date(value)  #eg 2014-07-16 10:57 +0200
         return unix2Date(datetime2unix((local_value - local_value.utcoffset()).replace(tzinfo=None)))
     except Exception:
         pass
 
     formats = [
-        #"%Y-%m-%d %H:%M %z",  # "%z" NOT SUPPORTED IN 2.7
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S.%f"
     ]
     for f in formats:
         try:
-            return unicode2Date(value, format=f)
+            return unix2Date(datetime2unix(datetime.strptime(value, f)))
         except Exception:
             pass
+
+
 
     deformats = [
         "%Y-%m",# eg 2014-07-16 10:57 +0200
@@ -375,6 +377,7 @@ def unicode2Date(value, format=None):
             return unicode2Date(value, format=f)
         except Exception:
             pass
+
     else:
         from pyLibrary.debugs.logs import Log
         Log.error("Can not interpret {{value}} as a datetime",  value= value)

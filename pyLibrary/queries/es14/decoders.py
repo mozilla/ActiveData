@@ -83,11 +83,12 @@ class AggsDecoder(object):
             Log.error("domain type of {{type}} is not supported yet", type=e.domain.type)
 
 
-    def __init__(self, edge, query):
+    def __init__(self, edge, query, limit):
         self.start = None
         self.edge = edge
         self.name = literal_field(self.edge.name)
         self.query = query
+        self.limit= limit
 
     def append_query(self, es_query, start):
         Log.error("Not supported")
@@ -114,8 +115,8 @@ class AggsDecoder(object):
 
 class SetDecoder(AggsDecoder):
 
-    def __init__(self, edge, query):
-        AggsDecoder.__init__(self, edge, query)
+    def __init__(self, edge, query, limit):
+        AggsDecoder.__init__(self, edge, query, limit)
         self.domain = edge.domain
 
     def append_query(self, es_query, start):
@@ -133,7 +134,7 @@ class SetDecoder(AggsDecoder):
                 return wrap({"aggs": {
                     "_match": set_default({"terms": {
                         "field": field.var,
-                        "size": 0,
+                        "size": self.limit,
                         "include": include
                     }}, es_query),
                     "_missing": set_default(
@@ -148,7 +149,7 @@ class SetDecoder(AggsDecoder):
                 return wrap({"aggs": {
                     "_match": set_default({"terms": {
                         "field": field.var,
-                        "size": 0,
+                        "size": self.limit,
                         "include": include
                     }}, es_query)
                 }})
@@ -159,7 +160,7 @@ class SetDecoder(AggsDecoder):
                 return wrap({"aggs": {
                     "_match": set_default({"terms": {
                         "script_field": field.to_ruby(),
-                        "size": 0,
+                        "size": self.limit,
                         "include": include
                     }}, es_query),
                     "_missing": set_default(
@@ -174,7 +175,7 @@ class SetDecoder(AggsDecoder):
                 return wrap({"aggs": {
                     "_match": set_default({"terms": {
                         "script_field": field.to_ruby(),
-                        "size": 0,
+                        "size": self.limit,
                         "include": include
                     }}, es_query)
                 }})
@@ -269,8 +270,8 @@ class GeneralRangeDecoder(AggsDecoder):
     partitions that have their `min` value in the range.
     """
 
-    def __init__(self, edge, query):
-        AggsDecoder.__init__(self, edge, query)
+    def __init__(self, edge, query, limit):
+        AggsDecoder.__init__(self, edge, query, limit)
         if edge.domain.type=="time":
             self.to_float = lambda x: x.unix
         elif edge.domain.type=="range":
@@ -424,11 +425,13 @@ class RangeDecoder(AggsDecoder):
 class DefaultDecoder(SetDecoder):
     # FOR DECODING THE default DOMAIN TYPE (UNKNOWN-AT-QUERY-TIME SET OF VALUES)
 
-    def __init__(self, edge, query):
-        AggsDecoder.__init__(self, edge, query)
+    def __init__(self, edge, query, limit):
+        AggsDecoder.__init__(self, edge, query, limit)
         self.domain = edge.domain
         self.domain.limit =Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
         self.parts = list()
+        self.key2index = {}
+        self.computed_domain = False
 
     def append_query(self, es_query, start):
         self.start = start
@@ -473,6 +476,28 @@ class DefaultDecoder(SetDecoder):
             partitions=jx.sort(set(self.parts))
         )
         self.parts = None
+        self.computed_domain = True
+
+    def get_index(self, row):
+        if self.computed_domain:
+            try:
+                part = row[self.start]
+                return self.domain.getIndexByKey(part["key"])
+            except Exception, e:
+                Log.error("problem", cause=e)
+        else:
+            try:
+                part = row[self.start]
+                key = part['key']
+                i = self.key2index.get(key)
+                if i is None:
+                    i = len(self.parts)
+                    part = {"key": key, "dataIndex": i}
+                    self.parts.append({"key": key, "dataIndex": i})
+                    self.key2index[i] = part
+                return i
+            except Exception, e:
+                Log.error("problem", cause=e)
 
     @property
     def num_columns(self):
@@ -480,8 +505,8 @@ class DefaultDecoder(SetDecoder):
 
 
 class DimFieldListDecoder(SetDecoder):
-    def __init__(self, edge, query):
-        AggsDecoder.__init__(self, edge, query)
+    def __init__(self, edge, query, limit):
+        AggsDecoder.__init__(self, edge, query, limit)
         self.fields = edge.domain.dimension.fields
         self.domain = self.edge.domain
         self.domain.limit =Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)

@@ -265,7 +265,6 @@ def parse(json, path, expected_vars=NO_VARS):
                 index += 1
             return float(json.release(index)), index
 
-
     def skip_whitespace(index):
         """
         RETURN NEXT NON-WHITESPACE CHAR, AND ITS INDEX

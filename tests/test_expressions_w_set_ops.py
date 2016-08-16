@@ -8,10 +8,8 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
-
-import base_test_class
+from __future__ import unicode_literals
 
 from pyLibrary.dot import wrap
 from pyLibrary.queries.expressions import NullOp
@@ -571,7 +569,6 @@ class TestSetOps(ActiveDataBaseTest):
             }
         }
         self.utils.execute_es_tests(test)
-
 
     def test_div_with_default(self):
         test = {

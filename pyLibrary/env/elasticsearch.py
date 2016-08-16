@@ -30,6 +30,7 @@ from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.strings import utf82unicode
 from pyLibrary.thread.threads import ThreadedQueue, Thread, Lock
+from pyLibrary.times.timer import Timer
 
 ES_STRUCT = ["object", "nested"]
 ES_NUMERIC_TYPES = ["long", "integer", "double", "float"]
@@ -268,66 +269,64 @@ class Index(Features):
                     id = random_id()
 
                 if "json" in r:
-                    json = r["json"]
+                    json_bytes = r["json"].encode("utf8")
                 elif "value" in r:
-                    json = convert.value2json(r["value"])
+                    json_bytes = convert.value2json(r["value"]).encode("utf8")
                 else:
-                    json = None
+                    json_bytes = None
                     Log.error("Expecting every record given to have \"value\" or \"json\" property")
 
-                lines.append('{"index":{"_id": ' + convert.value2json(id) + '}}')
+                lines.append(b'{"index":{"_id": ' + convert.value2json(id).encode("utf8") + b'}}')
                 if self.settings.tjson:
-                    lines.append(json2typed(json))
+                    lines.append(json2typed(json_bytes.decode('utf8')).encode('utf8'))
                 else:
-                    lines.append(json)
+                    lines.append(json_bytes)
             del records
 
             if not lines:
                 return
 
-            try:
-                data_bytes = "\n".join(lines) + "\n"
-                data_bytes = data_bytes.encode("utf8")
-            except Exception, e:
-                Log.error("can not make request body from\n{{lines|indent}}", lines=lines, cause=e)
+            with Timer("Add {{num}} documents to {{index}}", {"num": len(lines) / 2, "index":self.settings.index}, debug=self.debug):
+                try:
+                    data_bytes = b"\n".join(l for l in lines) + b"\n"
+                except Exception, e:
+                    Log.error("can not make request body from\n{{lines|indent}}", lines=lines, cause=e)
 
+                response = self.cluster.post(
+                    self.path + "/_bulk",
+                    data=data_bytes,
+                    headers={"Content-Type": "text"},
+                    timeout=self.settings.timeout,
+                    retry=self.settings.retry
+                )
+                items = response["items"]
 
-            response = self.cluster.post(
-                self.path + "/_bulk",
-                data=data_bytes,
-                headers={"Content-Type": "text"},
-                timeout=self.settings.timeout
-            )
-            items = response["items"]
+                fails = []
+                if self.cluster.version.startswith("0.90."):
+                    for i, item in enumerate(items):
+                        if not item.index.ok:
+                            fails.append(i)
+                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
+                    for i, item in enumerate(items):
+                        if item.index.status not in [200, 201]:
+                            fails.append(i)
+                else:
+                    Log.error("version not supported {{version}}", version=self.cluster.version)
 
-            fails = []
-            if self.cluster.version.startswith("0.90."):
-                for i, item in enumerate(items):
-                    if not item.index.ok:
-                        fails.append(i)
-            elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
-                for i, item in enumerate(items):
-                    if item.index.status not in [200, 201]:
-                        fails.append(i)
-            else:
-                Log.error("version not supported {{version}}", version=self.cluster.version)
+                if fails:
+                    Log.error("Problems with insert", cause=[
+                        Except(
+                            template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
+                            status=items[i].index.status,
+                            error=items[i].index.error,
+                            some=len(fails) - 1,
+                            line=strings.limit(lines[fails[0] * 2 + 1], 500 if not self.debug else 100000),
+                            index=self.settings.index,
+                            id=items[i].index._id
+                        )
+                        for i in fails
+                    ])
 
-            if fails:
-                Log.error("Problems with insert", cause=[
-                    Except(
-                        template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
-                        status=items[i].index.status,
-                        error=items[i].index.error,
-                        some=len(fails) - 1,
-                        line=strings.limit(lines[fails[0] * 2 + 1], 500 if not self.debug else 100000),
-                        index=self.settings.index,
-                        id=items[i].index._id
-                    )
-                    for i in fails
-                ])
-
-            if self.debug:
-                Log.note("{{num}} documents added", num=len(items))
         except Exception, e:
             if e.message.startswith("sequence item "):
                 Log.error("problem with {{data}}", data=repr(lines[int(e.message[14:16].strip())]), cause=e)
@@ -405,8 +404,8 @@ class Index(Features):
         def errors(e, _buffer):  # HANDLE ERRORS FROM extend()
 
             if e.cause.cause:
-                not_possible = [f for f in listwrap(e.cause.cause) if "JsonParseException" in f]
-                still_have_hope = [f for f in listwrap(e.cause.cause) if "JsonParseException" not in f]
+                not_possible = [f for f in listwrap(e.cause.cause) if "JsonParseException" in f or "400 MapperParsingException" in f]
+                still_have_hope = [f for f in listwrap(e.cause.cause) if "JsonParseException" not in f and "400 MapperParsingException" not in f]
             else:
                 not_possible = [e]
                 still_have_hope = []
@@ -415,7 +414,7 @@ class Index(Features):
                 Log.warning("Problem with sending to ES", cause=still_have_hope)
             elif not_possible:
                 # THERE IS NOTHING WE CAN DO
-                Log.warning("Not inserted, will not try again", cause=not_possible)
+                Log.warning("Not inserted, will not try again", cause=not_possible[0:10:])
                 del _buffer[:]
 
         return ThreadedQueue(
@@ -429,7 +428,7 @@ class Index(Features):
         )
 
     def delete(self):
-        self.cluster.delete_index(index=self.settings.index)
+        self.cluster.delete_index(index_name=self.settings.index)
 
 
 known_clusters = {}
@@ -623,6 +622,9 @@ class Cluster(object):
         return es
 
     def delete_index(self, index_name):
+        if not isinstance(index_name, unicode):
+            Log.error("expecting an index name")
+
         if self.debug:
             Log.note("Deleting index {{index}}", index=index_name)
 

@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 from pyLibrary.collections import PRODUCT, reverse, MAX, MIN, OR
 from pyLibrary import convert
+from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Null, Dict, coalesce
 from pyLibrary.meta import use_settings
@@ -90,7 +91,12 @@ class Matrix(object):
 
     def __setitem__(self, key, value):
         try:
-            if len(key) != self.num:
+            if self.num == 1:
+                if isinstance(key, int):
+                    key = key,
+                elif len(key) != 1:
+                    Log.error("Expecting coordinates to match the number of dimensions")
+            elif len(key) != self.num:
                 Log.error("Expecting coordinates to match the number of dimensions")
 
             if self.num == 0:
@@ -226,7 +232,6 @@ class Matrix(object):
             _, value = _getitem(self.cube, c)
             yield c, value
 
-
     def _all_combos(self):
         """
         RETURN AN ITERATOR OF ALL COORDINATES
@@ -239,7 +244,6 @@ class Matrix(object):
 
         for c in xrange(combos):
             yield tuple(int(c / dd) % mm for dd, mm in calc)
-
 
     def __str__(self):
         return "Matrix " + convert.value2json(self.dims) + ": " + str(self.cube)
@@ -341,9 +345,7 @@ def _getitem(c, i):
             dims, cube = zip(*[_getitem(cc, i[1::]) for cc in sub])
             return (len(cube),)+dims[0], cube
         else:
-            try:
+            with suppress_exception:
                 return _getitem(c[select], i[1::])
-            except Exception, _:
-                pass
 
 

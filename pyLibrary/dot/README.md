@@ -101,7 +101,7 @@ have that property: Asking for the physical height of poem is nonsense, and
 we return None/null to indicate this. Databases use `null` in this way to
 simultaneously deal with multiple (sub)types and keep records in fewer tables
 to minimize query complexity. Call this version of None the "*Out of Context*"
-definition.  
+definition.
 
 Python, and the *pythonic way*, and many of its libraries, assume None is a
 *Missing Value*. This assumption results in an excess of exception handling

@@ -15,16 +15,17 @@ from pyLibrary import convert
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, listwrap
+from pyLibrary.dot import wrap, listwrap, Dict
 from pyLibrary.env import http
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
 from pyLibrary.queries import jx
 from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.thread.threads import Thread
+from pyLibrary.thread.threads import Thread, Signal
 
 CONCURRENT = 3
-BIG_SHARD_SIZE = 20 * 1024 * 1024 * 1024  # SIZE WHEN WE SHOULD BE MOVING ONLY ONE SHARD AT A TIME
+BIG_SHARD_SIZE = 10 * 1024 * 1024 * 1024  # SIZE WHEN WE SHOULD BE MOVING ONLY ONE SHARD AT A TIME
+
 
 def assign_shards(settings):
     """
@@ -40,6 +41,11 @@ def assign_shards(settings):
     # primary       638.8gb
     # spot_A9DB0988     5tb
     Log.note("get nodes")
+
+    # stats = http.get_json(path+"/_stats")
+
+
+
     nodes = UniqueIndex("name", list(convert_table_to_list(
         http.get(path + "/_cat/nodes?bytes=b&h=n,r,d,i,hm").content,
         ["name", "role", "disk", "ip", "memory"]
@@ -58,7 +64,13 @@ def assign_shards(settings):
         if n.name.startswith("spot_") or n.name.startswith("coord"):
             n.zone = "spot"
         else:
-            n.zone = n.name
+            n.zone = "primary"
+
+    for g, siblings in jx.groupby(nodes, "zone"):
+        siblings=list(siblings)
+        siblings = filter(lambda n: n.role=="d", siblings)
+        for s in siblings:
+            s.siblings = len(siblings)
     # Log.note("Nodes:\n{{nodes}}", nodes=list(nodes))
 
     # GET LIST OF SHARDS, WITH STATUS
@@ -83,7 +95,15 @@ def assign_shards(settings):
         replicas = wrap(list(replicas))
         index_size = Math.sum(replicas.size)
         for r in replicas:
-            r.index_size=index_size
+            r.index_size = index_size
+            r.siblings = len(replicas)/2  # ASSUME ONE REPLICA AND ONE PRIMARY (2replicas) PER SHARD
+
+    # # MARKUP WITH MAX ALLOWED SHARDS PER NODE
+    # for g, replicas in jx.groupby(shards, ["node", "index"]):
+    #     replicas=list(replicas)
+    #     for r in replicas:
+    #         _node = filter(lambda n: n.name==r.node, nodes)[0]
+    #         r.max_shards = Math.floor(len(replicas)/_node.siblings+0.9)
 
     relocating = [s for s in shards if s.status in ("RELOCATING", "INITIALIZING")]
 
@@ -91,7 +111,7 @@ def assign_shards(settings):
     not_started = []
     for g, replicas in jx.groupby(shards, ["index", "i"]):
         replicas = list(replicas)
-        started_replicas = list(set([s.zone for s in replicas if s.status == "STARTED"]))
+        started_replicas = list(set([s.zone for s in replicas if s.status in {"STARTED", "RELOCATING"}]))
         if len(started_replicas) == 0:
             # MARK NODE AS RISKY
             for s in replicas:
@@ -100,20 +120,19 @@ def assign_shards(settings):
                     break  # ONLY NEED ONE
     if not_started:
         Log.note("{{num}} shards have not started", num=len(not_started))
-        if len(relocating)>1:
+        if len(relocating) > 1:  # SINCE WE CAN NOT RECOGNIZE THE ASSIGNMENT THAT WE MAY HAVE REQUESTED LAST ITERATION
             Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
         else:
             allocate(30, not_started, relocating, path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
         return
     else:
-        Log.note("No not-started shards found")
-
+        Log.note("All shards have started")
 
     # LOOKING FOR SHARDS WITH ONLY ONE INSTANCE, IN THE spot ZONE
     high_risk_shards = []
     for g, replicas in jx.groupby(shards, ["index", "i"]):
         replicas = list(replicas)
-        safe_zones = list(set([s.zone for s in replicas if s.status == "STARTED"]))
+        safe_zones = list(set([s.zone for s in replicas if s.status in {"STARTED", "RELOCATING"}]))
         if len(safe_zones) == 0 or (len(safe_zones) == 1 and safe_zones[0] == "spot"):
             # MARK NODE AS RISKY
             for s in replicas:
@@ -126,6 +145,31 @@ def assign_shards(settings):
         return
     else:
         Log.note("No high risk shards found")
+
+    # LOOK FOR SHARD IMBALANCE
+    not_balanced = Dict()
+    for g, replicas in jx.groupby(filter(lambda r: r.status == "STARTED" and not r.index.startswith("unit"), shards), ["node", "index"]):
+        replicas=list(replicas)
+        if not g.node:
+            continue
+        _node = filter(lambda n: n.name==g.node, nodes)[0]
+        existing_shards = filter(lambda r: r.node == g.node and r.index == g.index, shards)
+        if not existing_shards:
+            continue
+        num_shards = existing_shards[0].siblings
+        max_allowed = Math.floor(num_shards/_node.siblings+0.9)
+        for i in range(max_allowed, len(replicas), 1):
+            i = Random.int(len(replicas))
+            shard = replicas[i]
+            not_balanced[_node.zone] += [shard]
+
+    if not_balanced:
+        for z, b in not_balanced.items():
+            Log.note("{{num}} shards can be moved to better location within {{zone|quote}} zone", zone=z, num=len(b))
+            allocate(CONCURRENT, b, relocating, path, nodes, {z}, shards)
+            return
+    else:
+        Log.note("No shards need to move")
 
     # LOOK FOR SHARDS WE CAN MOVE TO SPOT
     too_safe_shards = []
@@ -183,8 +227,14 @@ def assign_shards(settings):
 
 def net_shards_to_move(concurrent, shards, relocating):
     sorted_shards = jx.sort(shards, ["index_size", "size"])
-    size = (sorted_shards[0].size+1) / BIG_SHARD_SIZE   # +1 to avoid divide-by-zero
-    concurrent = min(concurrent, Math.ceiling(1 / size))
+    concurrent = 0
+    total_size = 0
+    for s in sorted_shards:
+        if total_size > BIG_SHARD_SIZE:
+            break
+        concurrent += 1
+        total_size += s.size
+    concurrent = max(concurrent, CONCURRENT)
     net = concurrent - len(relocating)
     return net, sorted_shards
 
@@ -253,6 +303,9 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
                 node=destination_node
             )
 
+def _check_imbalance():
+    pass
+
 
 def convert_table_to_list(table, column_names):
     lines = [l for l in table.split("\n") if l.strip()]
@@ -318,9 +371,14 @@ def main():
         )
         Log.note("ALLOW ALLOCATION: {{result}}", result=response.all_content)
 
-        while True:
-            assign_shards(settings)
-            Thread.sleep(seconds=30)
+        please_stop = Signal()
+        def loop(please_stop):
+            while not please_stop:
+                assign_shards(settings)
+                Thread.sleep(seconds=30, please_stop=please_stop)
+
+        Thread.run("loop", loop, please_stop=please_stop)
+        Thread.wait_for_shutdown_signal(please_stop=please_stop, allow_exit=True)
     except Exception, e:
         Log.error("Problem with assign of shards", e)
     finally:

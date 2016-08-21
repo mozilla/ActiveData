@@ -11,6 +11,12 @@
             "shards":1
         }
     ],
+    "indices":[
+        {
+            "name": "treeherder*",
+            "balance": "cpu"
+        }
+    ],
     "elasticsearch": {
         "host": "http://activedata.allizom.org",
         "port": 9200,

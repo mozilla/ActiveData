@@ -24,7 +24,7 @@ from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread, Signal
 
 CONCURRENT = 3
-BIG_SHARD_SIZE = 10 * 1024 * 1024 * 1024  # SIZE WHEN WE SHOULD BE MOVING ONLY ONE SHARD AT A TIME
+BIG_SHARD_SIZE = 5 * 1024 * 1024 * 1024  # SIZE WHEN WE SHOULD BE MOVING ONLY ONE SHARD AT A TIME
 
 
 def assign_shards(settings):
@@ -120,7 +120,9 @@ def assign_shards(settings):
                     break  # ONLY NEED ONE
     if not_started:
         Log.note("{{num}} shards have not started", num=len(not_started))
-        if len(relocating) > 1:  # SINCE WE CAN NOT RECOGNIZE THE ASSIGNMENT THAT WE MAY HAVE REQUESTED LAST ITERATION
+        if len(relocating) > 1:
+            # WE GET HERE WHEN AN IMPORTANT NODE IS WARMING UP ITS SHARDS
+            # SINCE WE CAN NOT RECOGNIZE THE ASSIGNMENT THAT WE MAY HAVE REQUESTED LAST ITERATION
             Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
         else:
             allocate(30, not_started, relocating, path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
@@ -152,12 +154,12 @@ def assign_shards(settings):
         replicas=list(replicas)
         if not g.node:
             continue
-        _node = filter(lambda n: n.name==g.node, nodes)[0]
+        _node = nodes[g.node]
         existing_shards = filter(lambda r: r.node == g.node and r.index == g.index, shards)
         if not existing_shards:
             continue
         num_shards = existing_shards[0].siblings
-        max_allowed = Math.floor(num_shards/_node.siblings+0.9)
+        max_allowed = Math.ceiling(num_shards/_node.siblings)
         for i in range(max_allowed, len(replicas), 1):
             i = Random.int(len(replicas))
             shard = replicas[i]
@@ -248,18 +250,20 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
     for shard in shards:
         if net <= 0:
             break
-        # DIVIDE EACH NODE MEMORY BY NUMBER OF SHARDS FROM THIS INDEX
-        node_weight = {n.name: n.memory for n in nodes}
+        # DIVIDE EACH NODE MEMORY BY NUMBER OF SHARDS FROM THIS INDEX (ASSUME ZERO SHARDS ASSGINED TO EACH NODE)
+        node_weight = {n.name: n.memory * 4 ** (Math.floor(shard.siblings / n.siblings + 0.9)-1) if n.memory else 0 for n in nodes}
         shards_for_this_index = wrap(jx.filter(all_shards, {
             "eq": {
-                "index": shard.index,
-                "status": "STARTED"
+                "index": shard.index
             }
         }))
         index_size = Math.sum(shards_for_this_index.size)
-        for g, ss in jx.groupby(shards_for_this_index, "node"):
+        for g, ss in jx.groupby(filter(lambda s: s.status == "STARTED" and s.node, shards_for_this_index), "node"):
             ss = wrap(list(ss))
+            index_count = len(ss)
             node_weight[g.node] = nodes[g.node].memory * (1 - Math.sum(ss.size)/index_size)
+            max_allowed = Math.ceiling(shard.siblings/nodes[g.node].siblings)
+            node_weight[g.node] *= 4 ** (max_allowed - index_count - 1)
 
         list_nodes = list(nodes)
         while True:
@@ -303,8 +307,8 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
                 node=destination_node
             )
 
-def _check_imbalance():
-    pass
+def balance_multiplier(shard_count, node_count):
+    return 10 ** (Math.floor(shard_count / node_count + 0.9)-1)
 
 
 def convert_table_to_list(table, column_names):

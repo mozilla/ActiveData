@@ -54,7 +54,11 @@ def assign_shards(settings):
     if "primary" not in nodes or "secondary" not in nodes:
         Log.error("missing an important index\n{{nodes|json}}", nodes=nodes)
 
-    risky_zones = set(z.name for z in settings.zones if z.risky)
+    zones = UniqueIndex("name")
+    for z in settings.zones:
+        zones.add(z)
+
+    risky_zone_names = set(z.name for z in settings.zones if z.risky)
 
     for n in nodes:
         if n.role == 'd':
@@ -65,13 +69,15 @@ def assign_shards(settings):
             n.memory = 0
 
         if n.name.startswith("spot_") or n.name.startswith("coord"):
-            n.zone = "spot"
+            n.zone = zones["spot"]
         else:
-            n.zone = "primary"
+            n.zone = zones["primary"]
 
-    for g, siblings in jx.groupby(nodes, "zone"):
-        siblings=list(siblings)
-        siblings = filter(lambda n: n.role=="d", siblings)
+    total_node_memory = Math.sum(nodes.memory)
+
+    for g, siblings in jx.groupby(nodes, "zone.name"):
+        siblings = list(siblings)
+        siblings = filter(lambda n: n.role == "d", siblings)
         for s in siblings:
             s.siblings = len(siblings)
     # Log.note("Nodes:\n{{nodes}}", nodes=list(nodes))
@@ -86,7 +92,7 @@ def assign_shards(settings):
     for s in shards:
         s.i = int(s.i)
         s.size = text_to_bytes(s.size)
-        s.zone = nodes[s.node].zone
+        s.node = nodes[s.node]
 
     # TODO: MAKE ZONE OBJECTS TO STORE THE NUMBER OF REPLICAS
 
@@ -96,19 +102,27 @@ def assign_shards(settings):
         size = max(*replicas.size)
         for r in replicas:
             r.size = size
+
+    # AN "ALLOCATION" IS THE SET OF SHARDS FOR ONE INDEX ON ONE NODE
+    # CALCULATE HOW MANY SHARDS SHOULD BE IN EACH ALLOCATION
+    allocation = UniqueIndex(["index", "node"])
+
     for g, replicas in jx.groupby(shards, "index"):
         replicas = wrap(list(replicas))
         index_size = Math.sum(replicas.size)
+        total_expected_replicas = Math.sum(zones.shards)
+
+        for n in nodes:
+            allocation.add({
+                "index": g.index,
+                "node": n.name,
+                "max_allowed": Math.ceiling(len(replicas)*(n.memory/total_node_memory)*(n.zone.shards/total_expected_replicas))
+            })
+
         for r in replicas:
             r.index_size = index_size
-            r.siblings = len(replicas)/2  # ASSUME ONE REPLICA AND ONE PRIMARY (2replicas) PER SHARD
+            r.siblings = len(replicas)
 
-    # # MARKUP WITH MAX ALLOWED SHARDS PER NODE
-    # for g, replicas in jx.groupby(shards, ["node", "index"]):
-    #     replicas=list(replicas)
-    #     for r in replicas:
-    #         _node = filter(lambda n: n.name==r.node, nodes)[0]
-    #         r.max_shards = Math.floor(len(replicas)/_node.siblings+0.9)
 
     relocating = [s for s in shards if s.status in ("RELOCATING", "INITIALIZING")]
 
@@ -131,7 +145,7 @@ def assign_shards(settings):
             # SINCE WE CAN NOT RECOGNIZE THE ASSIGNMENT THAT WE MAY HAVE REQUESTED LAST ITERATION
             Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
         else:
-            allocate(30, not_started, relocating, path, nodes, set(n.zone for n in nodes) - risky_zones, shards)
+            allocate(30, not_started, relocating, path, nodes, set(n.zone for n in nodes) - risky_zone_names, shards)
         return
     else:
         Log.note("All shards have started")
@@ -141,7 +155,7 @@ def assign_shards(settings):
     for g, replicas in jx.groupby(shards, ["index", "i"]):
         replicas = list(replicas)
         realized_zones = set([s.zone for s in replicas if s.status in {"STARTED", "RELOCATING"}])
-        if len(realized_zones-risky_zones) == 0:
+        if len(realized_zones-risky_zone_names) == 0:
             # MARK NODE AS RISKY
             for s in replicas:
                 if s.status == "UNASSIGNED":
@@ -149,7 +163,7 @@ def assign_shards(settings):
                     break  # ONLY NEED ONE
     if high_risk_shards:
         Log.note("{{num}} high risk shards found", num=len(high_risk_shards))
-        allocate(10, high_risk_shards, relocating, path, nodes, set(n.zone for n in nodes) - risky_zones, shards)
+        allocate(10, high_risk_shards, relocating, path, nodes, set(n.zone for n in nodes) - risky_zone_names, shards)
         return
     else:
         Log.note("No high risk shards found")
@@ -187,7 +201,7 @@ def assign_shards(settings):
             replicas,
             {"and": [
                 {"eq": {"status": "STARTED"}},
-                {"neq": {"zone": "spot"}}
+                {"neq": {"zone.name": "spot"}}
             ]}
         )
         if len(safe_replicas) >= len(replicas):  # RATHER THAN ONE SAFE SHARD, WE ARE ASKING FOR ONE UNSAFE SHARD
@@ -205,7 +219,7 @@ def assign_shards(settings):
 
     if too_safe_shards:
         Log.note("{{num}} shards can be moved to spot", num=len(too_safe_shards))
-        allocate(CONCURRENT, too_safe_shards, relocating, path, nodes, risky_zones, shards)
+        allocate(CONCURRENT, too_safe_shards, relocating, path, nodes, risky_zone_names, shards)
         return
     else:
         Log.note("No shards moved")

@@ -44,7 +44,8 @@ def assign_shards(settings):
 
     # stats = http.get_json(path+"/_stats")
 
-
+    # TODO: PULL DATA ABOUT NODES TO INCLUDE THE USER DEFINED ZONES
+    #
 
     nodes = UniqueIndex("name", list(convert_table_to_list(
         http.get(path + "/_cat/nodes?bytes=b&h=n,r,d,i,hm").content,
@@ -52,6 +53,8 @@ def assign_shards(settings):
     )))
     if "primary" not in nodes or "secondary" not in nodes:
         Log.error("missing an important index\n{{nodes|json}}", nodes=nodes)
+
+    risky_zones = set(z.name for z in settings.zones if z.risky)
 
     for n in nodes:
         if n.role == 'd':
@@ -84,6 +87,8 @@ def assign_shards(settings):
         s.i = int(s.i)
         s.size = text_to_bytes(s.size)
         s.zone = nodes[s.node].zone
+
+    # TODO: MAKE ZONE OBJECTS TO STORE THE NUMBER OF REPLICAS
 
     # ASSIGN SIZE TO ALL SHARDS
     for g, replicas in jx.groupby(shards, ["index", "i"]):
@@ -120,22 +125,23 @@ def assign_shards(settings):
                     break  # ONLY NEED ONE
     if not_started:
         Log.note("{{num}} shards have not started", num=len(not_started))
+        Log.warning("Shards not started!!\n{{shards|json|indent}}", shards=not_started)
         if len(relocating) > 1:
             # WE GET HERE WHEN AN IMPORTANT NODE IS WARMING UP ITS SHARDS
             # SINCE WE CAN NOT RECOGNIZE THE ASSIGNMENT THAT WE MAY HAVE REQUESTED LAST ITERATION
             Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
         else:
-            allocate(30, not_started, relocating, path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
+            allocate(30, not_started, relocating, path, nodes, set(n.zone for n in nodes) - risky_zones, shards)
         return
     else:
         Log.note("All shards have started")
 
-    # LOOKING FOR SHARDS WITH ONLY ONE INSTANCE, IN THE spot ZONE
+    # LOOKING FOR SHARDS WITH ONLY ONE INSTANCE, IN THE RISKY ZONES ZONE
     high_risk_shards = []
     for g, replicas in jx.groupby(shards, ["index", "i"]):
         replicas = list(replicas)
-        safe_zones = list(set([s.zone for s in replicas if s.status in {"STARTED", "RELOCATING"}]))
-        if len(safe_zones) == 0 or (len(safe_zones) == 1 and safe_zones[0] == "spot"):
+        realized_zones = set([s.zone for s in replicas if s.status in {"STARTED", "RELOCATING"}])
+        if len(realized_zones-risky_zones) == 0:
             # MARK NODE AS RISKY
             for s in replicas:
                 if s.status == "UNASSIGNED":
@@ -143,7 +149,7 @@ def assign_shards(settings):
                     break  # ONLY NEED ONE
     if high_risk_shards:
         Log.note("{{num}} high risk shards found", num=len(high_risk_shards))
-        allocate(50, high_risk_shards, relocating, path, nodes, set(n.zone for n in nodes) - {"spot"}, shards)
+        allocate(10, high_risk_shards, relocating, path, nodes, set(n.zone for n in nodes) - risky_zones, shards)
         return
     else:
         Log.note("No high risk shards found")
@@ -199,7 +205,7 @@ def assign_shards(settings):
 
     if too_safe_shards:
         Log.note("{{num}} shards can be moved to spot", num=len(too_safe_shards))
-        allocate(CONCURRENT, too_safe_shards, relocating, path, nodes, {"spot"}, shards)
+        allocate(CONCURRENT, too_safe_shards, relocating, path, nodes, risky_zones, shards)
         return
     else:
         Log.note("No shards moved")
@@ -229,7 +235,6 @@ def assign_shards(settings):
 
 def net_shards_to_move(concurrent, shards, relocating):
     sorted_shards = jx.sort(shards, ["index_size", "size"])
-    concurrent = 0
     total_size = 0
     for s in sorted_shards:
         if total_size > BIG_SHARD_SIZE:
@@ -250,7 +255,7 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
     for shard in shards:
         if net <= 0:
             break
-        # DIVIDE EACH NODE MEMORY BY NUMBER OF SHARDS FROM THIS INDEX (ASSUME ZERO SHARDS ASSGINED TO EACH NODE)
+        # DIVIDE EACH NODE MEMORY BY NUMBER OF SHARDS FROM THIS INDEX (ASSUME ZERO SHARDS ASSIGNED TO EACH NODE)
         node_weight = {n.name: n.memory * 4 ** (Math.floor(shard.siblings / n.siblings + 0.9)-1) if n.memory else 0 for n in nodes}
         shards_for_this_index = wrap(jx.filter(all_shards, {
             "eq": {

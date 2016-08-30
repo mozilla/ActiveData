@@ -18,7 +18,7 @@ import sys
 
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, listwrap
+from pyLibrary.dot import wrap, listwrap, Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.expressions import jx_expression_to_function
@@ -46,7 +46,14 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
         if not contiguous:
             data = sorted(data, key=get_key)
 
-        return ((wrap({k: v for k, v in zip(keys, g)}), wrap(v)) for g, v in itertools.groupby(data, get_key))
+        def _output():
+            for g, v in itertools.groupby(data, get_key):
+                group = Dict()
+                for k, gg in zip(keys, g):
+                    group[k] = gg
+                yield (group, wrap(v))
+
+        return _output()
     except Exception, e:
         Log.error("Problem grouping", e)
 

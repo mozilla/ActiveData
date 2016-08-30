@@ -247,9 +247,10 @@ def assign_shards(settings):
             if s.status != "UNASSIGNED":
                 continue
             for z in settings.zones:
-                active_count = len([r for r in replicas if r.status in {"STARTED", "RELOCATING"} and r.node.zone.name==z.name])
+                active_count = len([r for r in replicas if r.status in {"INITIALIZING", "STARTED", "RELOCATING"} and r.node.zone.name==z.name])
                 if active_count < z.shards:
                     low_risk_shards[z.name] += [s]
+            break  # ONLY ONE SHARD PER CYCLE
 
     if low_risk_shards:
         for zone_name, assign in low_risk_shards.items():
@@ -293,6 +294,7 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
             }
         }))
         index_size = Math.sum(shards_for_this_index.size)
+        existing_on_nodes = set(s.node.name for s in shards_for_this_index if s.status in {"INITIALIZING", "STARTED", "RELOCATING"} and s.i==shard.i)
         for g, ss in jx.groupby(filter(lambda s: s.status == "STARTED" and s.node, shards_for_this_index), "node.name"):
             ss = wrap(list(ss))
             index_count = len(ss)
@@ -301,8 +303,9 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
             node_weight[g.node.name] *= 4 ** (max_allowed - index_count - 1)
 
         list_nodes = list(nodes)
+        list_node_weight = [node_weight[n.name] if n.zone.name in zones and n.name not in existing_on_nodes else 0 for n in list_nodes]
         while True:
-            i = Random.weight([node_weight[n.name] if n.zone.name in zones else 0 for n in list_nodes])
+            i = Random.weight(list_node_weight)
             destination_node = list_nodes[i].name
             for s in all_shards:
                 if s.index == shard.index and s.i == shard.i and s.node.name == destination_node:
@@ -324,13 +327,14 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
                 {
                     "index": shard.index,
                     "shard": shard.i,
-                    "from_node": shard.node,
+                    "from_node": shard.node.name,
                     "to_node": destination_node
                 }
             })
 
         result = convert.json2value(
-            convert.utf82unicode(http.post(path + "/_cluster/reroute", json={"commands": [command]}).content))
+            convert.utf82unicode(http.post(path + "/_cluster/reroute", json={"commands": [command]}).content)
+        )
         if not result.acknowledged:
             Log.warning("Can not move/allocate to {{node}}: Error={{error|quote}}", node=destination_node, error=result.error)
         else:
@@ -400,6 +404,12 @@ def main():
     try:
         response = http.put(
             path + "/_cluster/settings",
+            data='{"persistent": {"index.recovery.initial_shards": 1}, "persistent":{"action.write_consistency": 1}}'
+        )
+        Log.note("ONE SHARD IS ENOUGHT: {{result}}", result=response.all_content)
+
+        response = http.put(
+            path + "/_cluster/settings",
             data='{"persistent": {"cluster.routing.allocation.enable": "none"}}'
         )
         Log.note("DISABLE SHARD MOVEMENT: {{result}}", result=response.all_content)
@@ -426,15 +436,16 @@ def main():
     finally:
         response = http.put(
             path + "/_cluster/settings",
+            data='{"transient": {"cluster.routing.allocation.disk.watermark.low": "60%"}}'
+        )
+        Log.note("RESTRICT ALLOCATION: {{result}}", result=response.all_content)
+
+        response = http.put(
+            path + "/_cluster/settings",
             data='{"persistent": {"cluster.routing.allocation.enable": "all"}}'
         )
         Log.note("ENABLE SHARD MOVEMENT: {{result}}", result=response.all_content)
 
-        response = http.put(
-            path + "/_cluster/settings",
-            data='{"transient": {"cluster.routing.allocation.disk.watermark.low": "80%"}}'
-        )
-        Log.note("RESTRICT ALLOCATION: {{result}}", result=response.all_content)
         Log.stop()
 
 

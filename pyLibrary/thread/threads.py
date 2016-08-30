@@ -488,12 +488,16 @@ class Thread(object):
                 try:
                     children = copy(self.children)
                     for c in children:
-                        with suppress_exception:
+                        try:
                             c.stop()
+                        except Exception, e:
+                            _Log.warning("Problem stopping thread {{thread}}", thread=c.name, cause=e)
 
                     for c in children:
-                        with suppress_exception:
+                        try:
                             c.join()
+                        except Exception, e:
+                            _Log.warning("Problem joining thread {{thread}}", thread=c.name, cause=e)
 
                     self.stopped.go()
                     del self.target, self.args, self.kwargs

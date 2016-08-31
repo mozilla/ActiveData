@@ -99,7 +99,7 @@ def assign_shards(settings):
     # ASSIGN SIZE TO ALL SHARDS
     for g, replicas in jx.groupby(shards, ["index", "i"]):
         replicas = wrap(list(replicas))
-        size = max(*replicas.size)
+        size = Math.MAX(replicas.size)
         for r in replicas:
             r.size = size
 

@@ -39,7 +39,7 @@
             },
 			{
 				"class": "logging.handlers.RotatingFileHandler",
-				"filename": "~/logs/fix_unassigned_shards.log",
+				"filename": "/logs/fix_unassigned_shards.log",
 				"maxBytes": 10000000,
 				"backupCount": 10,
 				"encoding": "utf8"

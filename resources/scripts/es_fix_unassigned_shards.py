@@ -193,7 +193,7 @@ def assign_shards(settings):
         if not g.node.zone.name or g.node.zone.name in risky_zone_names:
             continue
         replicas = wrap(list(replicas))
-        safe_replicas = filter(lambda r: r.status == "STARTED", replicas)
+        safe_replicas = list(filter(lambda r: r.status == "STARTED", replicas))
         if len(safe_replicas) > zones[g.node.zone.name].shards:  # RATHER THAN ONE SAFE SHARD, WE ARE ASKING FOR ONE UNSAFE SHARD
             # TODO: NEED BETTER CHOOSER; NODE WITH MOST SHARDS
             i = Random.weight(r.siblings for r in safe_replicas)

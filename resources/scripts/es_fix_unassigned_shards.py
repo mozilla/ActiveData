@@ -196,7 +196,7 @@ def assign_shards(settings):
         safe_replicas = list(filter(lambda r: r.status == "STARTED", replicas))
         if len(safe_replicas) > zones[g.node.zone.name].shards:  # RATHER THAN ONE SAFE SHARD, WE ARE ASKING FOR ONE UNSAFE SHARD
             # TODO: NEED BETTER CHOOSER; NODE WITH MOST SHARDS
-            i = Random.weight(r.siblings for r in safe_replicas)
+            i = Random.weight([r.siblings for r in safe_replicas])
             shard = safe_replicas[i]
             over_allocated_shards.append(shard)
 

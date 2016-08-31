@@ -192,11 +192,14 @@ def assign_shards(settings):
             if z.name in risky_zone_names:
                 continue
 
-            safe_replicas = filter(lambda r: r.status == "STARTED" and r.node.zone.name==z.name, replicas)
+            safe_replicas = filter(lambda r: r.status == "STARTED" and r.node.zone.name == z.name, replicas)
             if len(safe_replicas) > z.shards:
                 # IS THERE A PLACE TO PUT IT?
                 for risky_zone in risky_zone_names:
-                    num_in_risky_zone = len(filter(lambda r: r.status in {"INITIALIZING", "STARTED", "RELOCATING"}  and r.node.zone.name==risky_zone, replicas))
+                    num_in_risky_zone = len(filter(
+                        lambda r: r.status in {"INITIALIZING", "STARTED", "RELOCATING"} and r.node.zone.name==risky_zone,
+                        replicas
+                    ))
                     if zones[risky_zone].shards > num_in_risky_zone:
                         # TODO: NEED BETTER CHOOSER; NODE WITH MOST SHARDS
                         i = Random.weight([r.siblings for r in safe_replicas])
@@ -454,6 +457,8 @@ def main():
                     Thread.sleep(seconds=30, please_stop=please_stop)
             except Exception, e:
                 Log.error("Not expected", cause=e)
+            finally:
+                please_stop.go()
 
         Thread.run("loop", loop, please_stop=please_stop)
         Thread.wait_for_shutdown_signal(please_stop=please_stop, allow_exit=True)

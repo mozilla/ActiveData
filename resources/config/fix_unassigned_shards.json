@@ -37,7 +37,14 @@
             {
                 "log_type": "console"
             },
-            {
+			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "~/logs/fix_unassigned_shards.log",
+				"maxBytes": 10000000,
+				"backupCount": 10,
+				"encoding": "utf8"
+			},
+			{
                 "log_type": "ses",
                 "from_address": "klahnakoski@mozilla.com",
                 "to_address": "klahnakoski@mozilla.com",

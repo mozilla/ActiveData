@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary import convert
+from pyLibrary import convert, strings
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
@@ -122,9 +122,6 @@ def assign_shards(settings):
             response = http.put(path + "/" + g.index + "/_settings", json={"index": {"number_of_replicas": num_replicas-1}})
             Log.note("Update replicas for {{index}}\n{{result}}", index=g.index, result=convert.json2value(convert.utf82unicode(response.content)))
 
-
-
-
         for n in nodes:
             if n.role == 'd':
                 max_allowed = Math.ceiling((n.memory / n.zone.memory) * (n.zone.shards * num_primaries))
@@ -188,24 +185,24 @@ def assign_shards(settings):
 
     # LOOK FOR SHARDS WE CAN MOVE TO SPOT
     # THIS HAPPENS WHEN THE ES SHARD LOGIC ASSIGNED TOO MANY REPLICAS TO A SINGLE ZONE
-    over_allocated_shards = []
-    for g, replicas in jx.groupby(shards, ["index", "i", "node.zone.name"]):
-        if not g.node.zone.name or g.node.zone.name in risky_zone_names:
-            continue
-        replicas = wrap(list(replicas))
-        safe_replicas = list(filter(lambda r: r.status == "STARTED", replicas))
-        if len(safe_replicas) > zones[g.node.zone.name].shards:  # RATHER THAN ONE SAFE SHARD, WE ARE ASKING FOR ONE UNSAFE SHARD
-            # TODO: NEED BETTER CHOOSER; NODE WITH MOST SHARDS
-            i = Random.weight([r.siblings for r in safe_replicas])
-            shard = safe_replicas[i]
-            over_allocated_shards.append(shard)
-
-    if over_allocated_shards:
-        Log.note("{{num}} shards can be moved to spot", num=len(over_allocated_shards))
-        allocate(CONCURRENT, over_allocated_shards, relocating, path, nodes, risky_zone_names, shards, allocation)
-        return
-    else:
-        Log.note("No over-allocated shard found")
+    # over_allocated_shards = []
+    # for g, replicas in jx.groupby(shards, ["index", "i", "node.zone.name"]):
+    #     if not g.node.zone.name or g.node.zone.name in risky_zone_names:
+    #         continue
+    #     replicas = wrap(list(replicas))
+    #     safe_replicas = list(filter(lambda r: r.status == "STARTED", replicas))
+    #     if len(safe_replicas) > zones[g.node.zone.name].shards:  # RATHER THAN ONE SAFE SHARD, WE ARE ASKING FOR ONE UNSAFE SHARD
+    #         # TODO: NEED BETTER CHOOSER; NODE WITH MOST SHARDS
+    #         i = Random.weight([r.siblings for r in safe_replicas])
+    #         shard = safe_replicas[i]
+    #         over_allocated_shards.append(shard)
+    #
+    # if over_allocated_shards:
+    #     Log.note("{{num}} shards can be moved to spot", num=len(over_allocated_shards))
+    #     allocate(CONCURRENT, over_allocated_shards, relocating, path, nodes, risky_zone_names, shards, allocation)
+    #     return
+    # else:
+    #     Log.note("No over-allocated shard found")
 
     # LOOK FOR DUPLICATION OPPORTUNITIES
     # IN THEORY THIS IS FASTER BECAUSE THEY ARE IN THE SAME ZONE (AND BETTER MACHINES)
@@ -357,7 +354,8 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
             convert.utf82unicode(http.post(path + "/_cluster/reroute", json={"commands": [command]}).content)
         )
         if not result.acknowledged:
-            Log.warning("Can not move/allocate to {{node}}: Error={{error|quote}}", node=destination_node, error=result.error)
+            main_reason = strings.between(result.error, "[NO", "]")
+            Log.warning("Can not move/allocate to {{node}}:\n\treason={{reason}}\n\tdetails={{error|quote}}", reason=main_reason, node=destination_node, error=result.error)
         else:
             net -= 1
             Log.note(

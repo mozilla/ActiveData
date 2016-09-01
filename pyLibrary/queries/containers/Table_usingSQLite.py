@@ -525,9 +525,9 @@ class Table_usingSQLite(Container):
                     elif isinstance(e.value, TupleOp):
                         pulls = jx.sort([c for c in index_to_columns.values() if c.push_name==e.name], "push_child").pull
                         parts = [tuple(p(d) for p in pulls) for d in result.data]
-                        domain=SimpleSetDomain(partitions=jx.sort(set(parts)))
+                        domain = SimpleSetDomain(partitions=jx.sort(set(parts)))
                     else:
-                        domain=SimpleSetDomain(partitions=[])
+                        domain = SimpleSetDomain(partitions=[])
 
                     dims.append(1 if allowNulls else 0)
                     edges.append(Dict(
@@ -568,13 +568,13 @@ class Table_usingSQLite(Container):
                 elif isinstance(e.value, TupleOp):
                     pulls = jx.sort([c for c in index_to_columns.values() if c.push_name==e.name], "push_child").pull
                     parts = [tuple(p(d) for p in pulls) for d in result.data]
-                    domain=SimpleSetDomain(partitions=jx.sort(set(parts)))
+                    domain = SimpleSetDomain(partitions=jx.sort(set(parts)))
                 else:
                     parts = columns[i]
                     if parts[-1] == None:
                         # ONLY ONE EDGE, SO WE CAN DO THIS
                         parts = parts[:-1]
-                    domain=SimpleSetDomain(partitions=jx.sort(set(parts)))
+                    domain = SimpleSetDomain(partitions=jx.sort(set(parts)))
 
                 dims.append(len(domain.partitions)+(1 if allowNulls else 0))
                 edges.append(Dict(

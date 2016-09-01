@@ -492,7 +492,7 @@ class Table_usingSQLite(Container):
 
         result = self.db.query(command)
 
-        column_names = query.edges.name + query.groupby.name + listwrap(query.select).name
+        column_names = listwrap(query.select).name + query.edges.name + query.groupby.name
         if query.format == "container":
             output = Table_usingSQLite(new_table, db=self.db, uid=self.uid, exists=True)
         elif query.format == "cube" or (not query.format and query.edges):
@@ -608,7 +608,7 @@ class Table_usingSQLite(Container):
                 select=select,
                 data={k: v.cube for k, v in data.items()}
             )
-        elif query.format == "table":
+        elif query.format == "table" or (not query.format and query.groupby):
             data = []
             for d in result.data:
                 row = [None for _ in column_names]

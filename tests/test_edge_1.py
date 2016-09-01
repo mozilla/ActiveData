@@ -1281,9 +1281,9 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"k": "a", "count": 3, "v":2},
-                    {"k": "b", "count": 3, "v":1},
-                    {"count": 1, "v":1}
+                    {"k": "a", "count": 3, "v": 2},
+                    {"k": "b", "count": 3, "v": 1},
+                    {"count": 1, "v": 1}
                 ]
             },
             "expecting_table": {

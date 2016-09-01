@@ -492,7 +492,7 @@ class Table_usingSQLite(Container):
 
         result = self.db.query(command)
 
-        column_names = listwrap(query.select).name + query.edges.name + query.groupby.name
+        column_names = query.edges.name + query.groupby.name + listwrap(query.select).name
         if query.format == "container":
             output = Table_usingSQLite(new_table, db=self.db, uid=self.uid, exists=True)
         elif query.format == "cube" or (not query.format and query.edges):
@@ -1004,27 +1004,6 @@ class Table_usingSQLite(Container):
         nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
 
         selects = []
-        for si, s in enumerate(listwrap(query.select)):
-            column_number = len(selects)
-            sql_type, sql =s.value.to_sql(columns)[0].sql.items()[0]
-
-            if s.value == "." and s.aggregate == "count":
-                selects.append("COUNT(1) AS " + quote_table(s.name))
-            else:
-                selects.append(sql_aggs[s.aggregate] + "(" + sql + ") AS " + quote_table(s.name))
-
-            index_to_column[column_number] = Dict(
-                push_name=s.name,
-                push_column=si,
-                push_child=".",
-                pull=get_column(column_number),
-                sql=sql,
-                type=sql_type_to_json_type[sql_type]
-            )
-
-        for w in query.window:
-            selects.append(self._window_op(self, query, w))
-
         groupby = []
         for i, e in enumerate(query.groupby):
             column_number = len(selects)
@@ -1040,6 +1019,27 @@ class Table_usingSQLite(Container):
                 sql=sql,
                 type=sql_type_to_json_type[sql_type]
             )
+
+        for s in listwrap(query.select):
+            column_number = len(selects)
+            sql_type, sql =s.value.to_sql(columns)[0].sql.items()[0]
+
+            if s.value == "." and s.aggregate == "count":
+                selects.append("COUNT(1) AS " + quote_table(s.name))
+            else:
+                selects.append(sql_aggs[s.aggregate] + "(" + sql + ") AS " + quote_table(s.name))
+
+            index_to_column[column_number] = Dict(
+                push_name=s.name,
+                push_column=column_number,
+                push_child=".",
+                pull=get_column(column_number),
+                sql=sql,
+                type=sql_type_to_json_type[sql_type]
+            )
+
+        for w in query.window:
+            selects.append(self._window_op(self, query, w))
 
         where = query.where.to_sql(columns)[0].sql.b
 

@@ -15,7 +15,7 @@ from pyLibrary import convert, strings
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, listwrap, Dict
+from pyLibrary.dot import wrap, listwrap, Dict, coalesce
 from pyLibrary.env import http
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
@@ -311,7 +311,6 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
     for shard in shards:
         if net <= 0:
             break
-        # DIVIDE EACH NODE MEMORY BY NUMBER OF SHARDS FROM THIS INDEX (ASSUME ZERO SHARDS ASSIGNED TO EACH NODE)
         shards_for_this_index = wrap(jx.filter(all_shards, {
             "eq": {
                 "index": shard.index
@@ -319,7 +318,11 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
         }))
         index_size = Math.sum(shards_for_this_index.size)
         existing_on_nodes = set(s.node.name for s in shards_for_this_index if s.status in {"INITIALIZING", "STARTED", "RELOCATING"} and s.i==shard.i)
-        node_weight = {}
+        # FOR THE NODES WITH NO SHARDS, GIVE A DEFAULT VALUES
+        node_weight = {
+            n.name: coalesce(n.memory, 0)
+            for n in nodes
+        }
         for g, ss in jx.groupby(filter(lambda s: s.status == "STARTED" and s.node, shards_for_this_index), "node.name"):
             ss = wrap(list(ss))
             index_count = len(ss)

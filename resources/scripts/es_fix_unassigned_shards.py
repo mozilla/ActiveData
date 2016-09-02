@@ -312,10 +312,6 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
         if net <= 0:
             break
         # DIVIDE EACH NODE MEMORY BY NUMBER OF SHARDS FROM THIS INDEX (ASSUME ZERO SHARDS ASSIGNED TO EACH NODE)
-        node_weight = {
-            n.name: n.memory * 4 ** (Math.floor(shard.siblings / allocation[shard.index, n.name].max_allowed + 0.9)-1) if n.memory else 0
-            for n in nodes
-        }
         shards_for_this_index = wrap(jx.filter(all_shards, {
             "eq": {
                 "index": shard.index
@@ -323,12 +319,13 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
         }))
         index_size = Math.sum(shards_for_this_index.size)
         existing_on_nodes = set(s.node.name for s in shards_for_this_index if s.status in {"INITIALIZING", "STARTED", "RELOCATING"} and s.i==shard.i)
+        node_weight = {}
         for g, ss in jx.groupby(filter(lambda s: s.status == "STARTED" and s.node, shards_for_this_index), "node.name"):
             ss = wrap(list(ss))
             index_count = len(ss)
             node_weight[g.node.name] = nodes[g.node.name].memory * (1 - Math.sum(ss.size)/index_size)
             max_allowed = allocation[shard.index, g.node.name].max_allowed
-            node_weight[g.node.name] *= 4 ** (max_allowed - index_count - 1)
+            node_weight[g.node.name] *= 4 ** Math.MIN([0, max_allowed - index_count - 1])
 
         list_nodes = list(nodes)
         list_node_weight = [node_weight[n.name] if n.zone.name in zones and n.name not in existing_on_nodes else 0 for n in list_nodes]

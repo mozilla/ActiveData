@@ -1,5 +1,10 @@
 
 
+
+
+
+curl -XPOST http://localhost:9200/pulse20160225_224749/_settings -d"{\"index.recovery.initial_shards\": 1}"
+
 curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"cancel\": {\"index\": \"unittest20160729_131157\",\"shard\": 79, \"node\":\"primary\", \"allow_primary\":true}}]}"
 
 

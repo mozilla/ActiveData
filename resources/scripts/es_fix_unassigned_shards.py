@@ -139,7 +139,7 @@ def assign_shards(settings):
             r.index_size = index_size
             r.siblings = num_primaries
 
-    relocating = [s for s in shards if s.status in ("RELOCATING", "INITIALIZING")]
+    relocating = wrap([s for s in shards if s.status in ("RELOCATING", "INITIALIZING")])
 
     # LOOKING FOR SHARDS WITH ZERO INSTANCES, IN THE spot ZONE
     not_started = []
@@ -155,12 +155,14 @@ def assign_shards(settings):
     if not_started:
         Log.note("{{num}} shards have not started", num=len(not_started))
         Log.warning("Shards not started!!\n{{shards|json|indent}}", shards=not_started)
-        if len(relocating) > 1:
+        initailizing_indexes = set(relocating.index)
+        busy = [n for n in not_started if n.index in initailizing_indexes]
+        please_initialize = [n for n in not_started if n.index not in initailizing_indexes]
+        if len(busy) > 1:
             # WE GET HERE WHEN AN IMPORTANT NODE IS WARMING UP ITS SHARDS
             # SINCE WE CAN NOT RECOGNIZE THE ASSIGNMENT THAT WE MAY HAVE REQUESTED LAST ITERATION
             Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
-        else:
-            allocate(30, not_started, relocating, path, nodes, set(n.zone for n in nodes) - risky_zone_names, shards, allocation)
+        allocate(30, please_initialize, relocating, path, nodes, set(n.zone.name for n in nodes) - risky_zone_names, shards, allocation)
         return
     else:
         Log.note("All shards have started")

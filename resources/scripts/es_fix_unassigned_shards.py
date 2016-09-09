@@ -231,13 +231,15 @@ def assign_shards(settings):
                 # IS THERE A PLACE TO PUT IT?
                 best_zone = None
                 for possible_zone in zones:
-                    current_shard_count = len(filter(
-                        lambda r: r.status in {"INITIALIZING", "STARTED", "RELOCATING"} and r.node.zone.name==possible_zone,
+                    if possible_zone == z:
+                        continue
+                    number_of_shards = len(filter(
+                        lambda r: r.status in {"INITIALIZING", "STARTED", "RELOCATING"} and r.node.zone.name==possible_zone.name,
                         replicas
                     ))
-                    if not best_zone or best_zone[1] > current_shard_count:
-                        best_zone = possible_zone, current_shard_count
-                    if zones[possible_zone].shards > current_shard_count:
+                    if not best_zone or best_zone[1] > number_of_shards:
+                        best_zone = possible_zone, number_of_shards
+                    if zones[possible_zone].shards > number_of_shards:
                         # TODO: NEED BETTER CHOOSER; NODE WITH MOST SHARDS
                         i = Random.weight([r.siblings for r in safe_replicas])
                         shard = safe_replicas[i]
@@ -273,6 +275,7 @@ def assign_shards(settings):
                 started_count = len([r for r in replicas if r.status in {"STARTED", "RELOCATING"} and r.node.zone.name==z.name])
                 active_count = len([r for r in replicas if r.status in {"INITIALIZING", "STARTED", "RELOCATING"} and r.node.zone.name==z.name])
                 if started_count >= 1 and active_count < z.shards:
+                    s.status = "INITIALIZING"
                     dup_shards[z.name] += [s]
             break  # ONLY ONE SHARD PER CYCLE
 
@@ -316,6 +319,7 @@ def assign_shards(settings):
         for i in range(alloc.max_allowed, len(replicas), 1):
             i = Random.int(len(replicas))
             shard = replicas[i]
+            replicas.remove(shard)
             not_balanced[_node.zone.name] += [shard]
 
     if not_balanced:

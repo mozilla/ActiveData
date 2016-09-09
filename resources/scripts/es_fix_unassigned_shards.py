@@ -141,6 +141,9 @@ def assign_shards(settings):
 
     relocating = wrap([s for s in shards if s.status in ("RELOCATING", "INITIALIZING")])
 
+    # for r in relocating:
+    #     cancel(path, r)
+
     # LOOKING FOR SHARDS WITH ZERO INSTANCES, IN THE spot ZONE
     not_started = []
     for g, replicas in jx.groupby(shards, ["index", "i"]):
@@ -216,6 +219,9 @@ def assign_shards(settings):
     else:
         Log.note("No over-allocated shard found")
 
+    # MOVE SHARDS OUT OF FULL NODES (BIGGEST TO SMALLEST)
+
+
     # LOOK FOR DUPLICATION OPPORTUNITIES
     # IN THEORY THIS IS FASTER BECAUSE THEY ARE IN THE SAME ZONE (AND BETTER MACHINES)
     dup_shards = Dict()
@@ -289,6 +295,13 @@ def assign_shards(settings):
         Log.note("No shards need to move")
 
 
+def reset_node(node):
+    # FIND THE IP
+    # VERIFY IT IS UNRESPONSIVE
+    # LOG IN, AND RESET
+
+    pass
+
 
 
 def net_shards_to_move(concurrent, shards, relocating):
@@ -335,6 +348,9 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
         list_nodes = list(nodes)
         list_node_weight = [node_weight[n.name] if n.zone.name in zones and n.name not in existing_on_nodes else 0 for n in list_nodes]
         while True:
+            if Math.sum(list_node_weight) == 0:
+                Log.warning("No nodes available to assign")
+                return
             i = Random.weight(list_node_weight)
             destination_node = list_nodes[i].name
             for s in all_shards:
@@ -362,12 +378,17 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
                 }
             })
 
-        result = convert.json2value(
-            convert.utf82unicode(http.post(path + "/_cluster/reroute", json={"commands": [command]}).content)
-        )
-        if not result.acknowledged:
+        response = http.post(path + "/_cluster/reroute", json={"commands": [command]})
+        result = convert.json2value(convert.utf82unicode(response.content))
+        if response.status_code not in [200, 201] or not result.acknowledged:
             main_reason = strings.between(result.error, "[NO", "]")
-            Log.warning("Can not move/allocate to {{node}}:\n\treason={{reason}}\n\tdetails={{error|quote}}", reason=main_reason, node=destination_node, error=result.error)
+            Log.warning(
+                "{{code}} Can not move/allocate to {{node}}:\n\treason={{reason}}\n\tdetails={{error|quote}}",
+                code=response.status_code,
+                reason=main_reason,
+                node=destination_node,
+                error=result.error
+            )
         else:
             net -= 1
             Log.note(
@@ -376,6 +397,34 @@ def allocate(concurrent, proposed_shards, relocating, path, nodes, zones, all_sh
                 result=result,
                 node=destination_node
             )
+
+
+def cancel(path, shard):
+    json = {"commands": [{"cancel": {
+        "index": shard.index,
+        "shard": shard.i,
+        "node": shard.node.name
+    }}]}
+    result = convert.json2value(
+        convert.utf82unicode(http.post(path + "/_cluster/reroute", json=json).content)
+    )
+    if not result.acknowledged:
+        main_reason = strings.between(result.error, "[NO", "]")
+        Log.warning(
+            "Can not cancel from {{node}}:\n\treason={{reason}}\n\tdetails={{error|quote}}",
+            reason=main_reason,
+            node=shard.node.name,
+            error=result.error
+        )
+    else:
+        Log.note(
+            "index={{shard.index}}, shard={{shard.i}}, assign_to={{node}}, ok={{result.acknowledged}}",
+            shard=shard,
+            result=result,
+            node=shard.node.name
+        )
+
+
 
 def balance_multiplier(shard_count, node_count):
     return 10 ** (Math.floor(shard_count / node_count + 0.9)-1)
@@ -435,9 +484,9 @@ def main():
     try:
         response = http.put(
             path + "/_cluster/settings",
-            data='{"persistent": {"index.recovery.initial_shards": 1}, "persistent":{"action.write_consistency": 1}}'
+            data='{"persistent": {"index.recovery.initial_shards": 1, "action.write_consistency": 1}}'
         )
-        Log.note("ONE SHARD IS ENOUGHT: {{result}}", result=response.all_content)
+        Log.note("ONE SHARD IS ENOUGH: {{result}}", result=response.all_content)
 
         response = http.put(
             path + "/_cluster/settings",
@@ -447,7 +496,7 @@ def main():
 
         response = http.put(
             path + "/_cluster/settings",
-            data='{"transient": {"cluster.routing.allocation.disk.watermark.low": "95%"}}'
+            data='{"transient": {"cluster.routing.allocation.disk.watermark.low": "80%"}}'
         )
         Log.note("ALLOW ALLOCATION: {{result}}", result=response.all_content)
 

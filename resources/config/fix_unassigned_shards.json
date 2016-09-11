@@ -11,11 +11,11 @@
             "shards":1
         }
     ],
-    "indices":[
-        {
-            "name": "treeherder*",
-            "balance": "cpu"
-        }
+    "replication_priority":[
+        "saved*",
+        "repo*",
+        "treeherder*",
+        "unit*"
     ],
     "elasticsearch": {
         "host": "http://activedata.allizom.org",
@@ -39,7 +39,7 @@
             },
 			{
 				"class": "logging.handlers.RotatingFileHandler",
-				"filename": "/logs/fix_unassigned_shards.log",
+				"filename": "./results/fix_unassigned_shards.log",
 				"maxBytes": 10000000,
 				"backupCount": 10,
 				"encoding": "utf8"

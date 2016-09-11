@@ -35,7 +35,6 @@ def assign_shards(settings):
     ASSIGN THE UNASSIGNED SHARDS
     """
     path = settings.elasticsearch.host + ":" + unicode(settings.elasticsearch.port)
-
     # GET LIST OF NODES
     # coordinator    26.2gb
     # secondary     383.7gb
@@ -100,13 +99,25 @@ def assign_shards(settings):
         if s.node.find(" -> ") != -1:
             m = s.node.split(" -> ")
             s.node = m[0]  # <from> " -> " <to> format
+            destination = m[1].split(" ")[-1]
+            if nodes[destination]:
+                destination = nodes[destination]
+            else:
+                for n in nodes:
+                    if n.ip == destination:
+                        destination = n
+                        break
+
             CURRENT_MOVING_SHARDS.append({
                 "index": s.index,
                 "shard": s.i,
                 "from_node": m[0],
-                "to_node": m[1].split(" ")[-1]
+                "to_node": destination.name
             })
         s.node = nodes[s.node]
+
+    # Log.note("{{shards}}", shards=shards)
+    Log.note("{{num}} shards moving", num=len(CURRENT_MOVING_SHARDS))
 
     # TODO: MAKE ZONE OBJECTS TO STORE THE NUMBER OF REPLICAS
 
@@ -145,8 +156,8 @@ def assign_shards(settings):
             allocation.add({
                 "index": g.index,
                 "node": n,
-                "max_allowed": max_allowed,
-                "shards": filter(lambda r: r.node.name == n.name and r.index == g.index, shards)
+                "max_allowed": max_allowed
+                # "shards": filter(lambda r: r.node.name == n.name and r.index == g.index, shards)
             })
 
         index_size = Math.sum(replicas.size)
@@ -170,12 +181,15 @@ def assign_shards(settings):
                 s = copy(s)
                 s.node = nodes[m.to_node]
                 s.status = "INITIALIZING"
-                relocating.append(s)
-                shards.append(s)  # SORRY, BUT MOVING SHARDS TAKE TWO SPOTS
+                if s.node:  # HAPPENS WHEN SENDING SHARD TO UNKNOWN
+                    relocating.append(s)
+                    shards.append(s)  # SORRY, BUT MOVING SHARDS TAKE TWO SPOTS
                 break
         else:
             # COULD NOT BE FOUND
             CURRENT_MOVING_SHARDS.remove(m)
+
+    del ALLOCATION_REQUESTS[:]
 
     # LOOKING FOR SHARDS WITH ZERO INSTANCES, IN THE spot ZONE
     not_started = []
@@ -199,7 +213,7 @@ def assign_shards(settings):
             # WE GET HERE WHEN AN IMPORTANT NODE IS WARMING UP ITS SHARDS
             # SINCE WE CAN NOT RECOGNIZE THE ASSIGNMENT THAT WE MAY HAVE REQUESTED LAST ITERATION
             Log.note("Delay work, cluster busy RELOCATING/INITIALIZING {{num}} shards", num=len(relocating))
-        allocate(30, please_initialize, set(n.zone.name for n in nodes) - risky_zone_names, "not started")
+        allocate(30, please_initialize, set(n.zone.name for n in nodes) - risky_zone_names, "not started", 1, settings)
     else:
         Log.note("All shards have started")
 
@@ -217,17 +231,19 @@ def assign_shards(settings):
                     break  # ONLY NEED ONE
     if high_risk_shards:
         Log.note("{{num}} high risk shards found", num=len(high_risk_shards))
-        allocate(10, high_risk_shards, set(n.zone for n in nodes.zone) - risky_zone_names, "high risk shards")
+        allocate(10, high_risk_shards, set(n.zone for n in nodes) - risky_zone_names, "high risk shards", 2, settings)
     else:
         Log.note("No high risk shards found")
 
     # THIS HAPPENS WHEN THE ES SHARD LOGIC ASSIGNED TOO MANY REPLICAS TO A SINGLE ZONE
+    overloaded_zone_index_pairs = set()
     over_allocated_shards = Dict()
     for g, replicas in jx.groupby(shards, ["index", "i"]):
         replicas = wrap(list(replicas))
         for z in zones:
             safe_replicas = filter(lambda r: r.status == "STARTED" and r.node.zone.name == z.name, replicas)
             if len(safe_replicas) > z.shards:
+                overloaded_zone_index_pairs.add((z.name, g.index))
                 # IS THERE A PLACE TO PUT IT?
                 best_zone = None
                 for possible_zone in zones:
@@ -235,7 +251,7 @@ def assign_shards(settings):
                         lambda r: r.status in {"INITIALIZING", "STARTED", "RELOCATING"} and r.node.zone.name == possible_zone.name,
                         replicas
                     ))
-                    if not best_zone or best_zone[1] > number_of_shards or (best_zone[1] == number_of_shards and best_zone[0] != z):
+                    if not best_zone or (not best_zone[0].risky and z.risky) or (best_zone[1] > number_of_shards and best_zone[0].risky == r.risky):
                         best_zone = possible_zone, number_of_shards
                     if zones[possible_zone].shards > number_of_shards:
                         # TODO: NEED BETTER CHOOSER; NODE WITH MOST SHARDS
@@ -244,15 +260,23 @@ def assign_shards(settings):
                         over_allocated_shards[possible_zone.name] += [shard]
                         break
                 else:
-                    if z != best_zone[0]:
-                        i = Random.weight([r.siblings for r in safe_replicas])
-                        shard = safe_replicas[i]
-                        over_allocated_shards[best_zone[0].name] += [shard]
+                    if z == best_zone[0]:
+                        continue
+                    i = Random.weight([r.siblings for r in safe_replicas])
+                    shard = safe_replicas[i]
+                    # alloc = allocation[g.index, shard.node.name]
+                    potential_peers =filter(
+                        lambda r: r.status in {"INITIALIZING", "STARTED", "RELOCATING"} and r.index ==shard.index and r.i==shard.i and r.node.zone==shard.node.zone,
+                        shards
+                    )
+                    if len(potential_peers) >= best_zone[0].shards:
+                        continue
+                    over_allocated_shards[best_zone[0].name] += [shard]
 
     if over_allocated_shards:
         for z, v in over_allocated_shards.items():
             Log.note("{{num}} shards can be moved to {{zone}}", num=len(over_allocated_shards), zone=z)
-            allocate(CONCURRENT, v, {z}, "over allocated")
+            allocate(CONCURRENT, v, {z}, "over allocated", 3, settings)
     else:
         Log.note("No over-allocated shard found")
 
@@ -264,12 +288,12 @@ def assign_shards(settings):
     dup_shards = Dict()
     for g, replicas in jx.groupby(shards, ["index", "i"]):
         replicas = wrap(list(replicas))
-        # WE CAN ASSIGN THIS REPLICA WITHIN THE SAME ZONEt
+        # WE CAN ASSIGN THIS REPLICA WITHIN THE SAME ZONE
         for s in replicas:
             if s.status != "UNASSIGNED":
                 continue
             for z in settings.zones:
-                started_count = len([r for r in replicas if r.status in {"STARTED", "RELOCATING"} and r.node.zone.name==z.name])
+                started_count = len([r for r in replicas if r.status in {"STARTED"} and r.node.zone.name==z.name])
                 active_count = len([r for r in replicas if r.status in {"INITIALIZING", "STARTED", "RELOCATING"} and r.node.zone.name==z.name])
                 if started_count >= 1 and active_count < z.shards:
                     dup_shards[z.name] += [s]
@@ -277,8 +301,9 @@ def assign_shards(settings):
 
     if dup_shards:
         for zone_name, assign in dup_shards.items():
+            # Log.note("{{dups}}", dups=assign)
             Log.note("{{num}} shards can be duplicated in the {{zone}} zone", num=len(assign), zone=zone_name)
-            allocate(CONCURRENT, assign, {zone_name}, "duplicate shards")
+            allocate(CONCURRENT, assign, {zone_name}, "duplicate shards", 4, settings)
     else:
         Log.note("No duplicate shards left to assign")
 
@@ -300,7 +325,7 @@ def assign_shards(settings):
     if low_risk_shards:
         for zone_name, assign in low_risk_shards.items():
             Log.note("{{num}} low risk shards can be assigned to {{zone}} zone", num=len(assign), zone=zone_name)
-            allocate(CONCURRENT, assign, {zone_name}, "low risk shards")
+            allocate(CONCURRENT, assign, {zone_name}, "low risk shards", 5, settings)
     else:
         Log.note("No low risk shards found")
 
@@ -308,6 +333,8 @@ def assign_shards(settings):
     not_balanced = Dict()
     for g, replicas in jx.groupby(filter(lambda r: r.status == "STARTED", shards), ["node.name", "index"]):
         replicas = list(replicas)
+        if (nodes[g.node.name].zone.name, g.index) in overloaded_zone_index_pairs:
+            continue
         if not g.node:
             continue
         _node = nodes[g.node.name]
@@ -321,9 +348,9 @@ def assign_shards(settings):
     if not_balanced:
         for z, b in not_balanced.items():
             Log.note("{{num}} shards can be moved to better location within {{zone|quote}} zone", zone=z, num=len(b))
-            allocate(CONCURRENT, b, {z}, "not balanced")
+            allocate(CONCURRENT, b, {z}, "not balanced", 6, settings)
     else:
-        Log.note("No shards need to move")
+        Log.note("No shards need to be balanced")
 
     _allocate(relocating, path, nodes, shards, allocation)
 
@@ -339,16 +366,26 @@ def reset_node(node):
 ALLOCATION_REQUESTS = []
 
 
-def allocate(concurrent, proposed_shards, zones, reason):
-    ALLOCATION_REQUESTS.extend([
-        {
+def allocate(concurrent, proposed_shards, zones, reason, mode_priority, settings):
+    for s in proposed_shards:
+        move = {
             "shard": s,
             "to_zone": zones,
             "concurrent": concurrent,
-            "reason": reason
+            "reason": reason,
+            "mode_priority": mode_priority,
+            "replication_priority": replication_priority(s, settings)
         }
-        for s in proposed_shards
-    ])
+        ALLOCATION_REQUESTS.append(move)
+
+
+def replication_priority(shard, settings):
+    for i, prefix in enumerate(settings.replication_priority):
+        if prefix.endswith("*") and shard.index.startswith(prefix[:-1]):
+            return i
+        elif shard.index == prefix:
+            return i
+    return len(settings.replication_priority)
 
 
 def net_shards_to_move(concurrent, shards, relocating):
@@ -365,18 +402,18 @@ def net_shards_to_move(concurrent, shards, relocating):
 
 
 def _allocate(relocating, path, nodes, all_shards, allocation):
-    moves = jx.sort(ALLOCATION_REQUESTS, ["shard.index_size", "shard.i"])
+    moves = jx.sort(ALLOCATION_REQUESTS, ["replication_priority", "mode_priority", "shard.index_size", "shard.size"])
 
     busy_nodes = Dict()
     for s in relocating:
         if s.status == "INITIALIZING":
-            busy_nodes[s.node.name] += 1
+            busy_nodes[s.node.name] += s.size
 
-    done = set()
+    done = set()  # (index, i) pair
 
     for move in moves:
         shard = move.shard
-        if shard in done:
+        if (shard.index, shard.i) in done:
             continue
         zones = move.to_zone
 
@@ -406,7 +443,7 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
                 list_node_weight[i] = 0
             elif n.name in existing_on_nodes:
                 list_node_weight[i] = 0
-            elif busy_nodes[n.name] >= move.concurrent:
+            elif busy_nodes[n.name] >= move.concurrent*BIG_SHARD_SIZE:
                 list_node_weight[i] = 0
 
         if Math.sum(list_node_weight) == 0:
@@ -426,6 +463,16 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
             else:
                 break
 
+        if move.reason == "duplicate shards":
+            existing = filter(
+                lambda r: r.index == shard.index and r.i == shard.i and r.node.name == destination_node and r.status in {"INITIALIZING", "STARTED", "RELOCATING"},
+                all_shards
+            )
+            if len(existing) >= nodes[destination_node].zone.shards:
+                Log.error("should nt happen")
+
+
+
         if shard.status == "UNASSIGNED":
             # destination_node = "secondary"
             command = wrap({"allocate": {
@@ -434,7 +481,7 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
                 "node": destination_node,  # nodes[i].name,
                 "allow_primary": True
             }})
-        elif shard.status=="STARTED":
+        elif shard.status == "STARTED":
             _move = {
                 "index": shard.index,
                 "shard": shard.i,
@@ -462,6 +509,10 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
 
             if move.reason == "over allocated" and main_reason and main_reason.find("too many shards on nodes for attribute") != -1:
                 pass  # THIS WILL HAPPEN WHEN THE ES SHARD BALANCER IS ACTIVATED, NOTHING WE CAN DO
+                Log.note("failed")
+            elif main_reason and main_reason.find("after allocation more than allowed"):
+                pass
+                Log.note("failed")
             else:
                 Log.warning(
                     "{{code}} Can not move/allocate:\n\treason={{reason}}\n\tdetails={{error|quote}}",
@@ -470,8 +521,8 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
                     error=result.error
                 )
         else:
-            busy_nodes[destination_node] += 1
-            done.add(shard)
+            done.add((shard.index, shard.i))
+            busy_nodes[destination_node] += shard.size
             Log.note(
                 "ok={{result.acknowledged}}",
                 result=result

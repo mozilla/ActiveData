@@ -110,6 +110,12 @@ class DictList(list):
     def filter(self, _filter):
         return DictList(vals=[unwrap(u) for u in (wrap(v) for v in _get(self, "list")) if _filter(u)])
 
+    def __delslice__(self, i, j):
+        _Log.error("Can not perform del on slice: modulo arithmetic was performed on the parameters.  You can try using clear()")
+
+    def clear(self):
+        self.list = []
+
     def __iter__(self):
         return (wrap(v) for v in _get(self, "list"))
 

@@ -26,7 +26,8 @@ from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread, Signal
 
 CONCURRENT = 1
-BIG_SHARD_SIZE = 5 * 1024 * 1024 * 1024  # SIZE WHEN WE SHOULD BE MOVING ONLY ONE SHARD AT A TIME
+BILLION = 1024 * 1024 * 1024  # SIZE WHEN WE SHOULD BE MOVING ONLY ONE SHARD AT A TIME
+BIG_SHARD_SIZE = 2 * BILLION  # SIZE WHEN WE SHOULD BE MOVING ONLY ONE SHARD AT A TIME
 
 CURRENT_MOVING_SHARDS = DictList()  # BECAUSE ES WILL NOT TELL US WHERE THE SHARDS ARE MOVING TO
 
@@ -49,31 +50,36 @@ def assign_shards(settings):
     # TODO: PULL DATA ABOUT NODES TO INCLUDE THE USER DEFINED ZONES
     #
 
-    nodes = UniqueIndex("name", list(convert_table_to_list(
-        http.get(path + "/_cat/nodes?bytes=b&h=n,r,d,i,hm").content,
-        ["name", "role", "disk", "ip", "memory"]
-    )))
-    if "primary" not in nodes or "secondary" not in nodes:
-        Log.error("missing an important index\n{{nodes|json}}", nodes=nodes)
-
     zones = UniqueIndex("name")
     for z in settings.zones:
         zones.add(z)
 
+    stats = http.get_json(path+"/_nodes/stats?all=true")
+    nodes = UniqueIndex("name", [
+        {
+            "name": n.name,
+            "ip": n.host[3:].replace("-", "."),
+            "role": "-" if n.attributes.data == 'false' else "d",
+            "zone": zones[n.attributes.zone],
+            "memory": n.jvm.mem.heap_max_in_bytes,
+            "disk": n.fs.total.total_in_bytes,
+            "disk_free": n.fs.total.available_in_bytes
+        }
+        for k, n in stats.nodes.items()
+    ])
+    if "primary" not in nodes or "secondary" not in nodes:
+        Log.error("missing an important index\n{{nodes|json}}", nodes=nodes)
+
     risky_zone_names = set(z.name for z in settings.zones if z.risky)
 
     for n in nodes:
+        if not n.zone:
+            Log.error("Expecting all nodes to have a zone")
         if n.role == 'd':
             n.disk = 0 if n.disk == "" else float(n.disk)
-            n.memory = text_to_bytes(n.memory)
         else:
             n.disk = 0
             n.memory = 0
-
-        if n.name.startswith("spot_") or n.name.startswith("coord"):
-            n.zone = zones["spot"]
-        else:
-            n.zone = zones["primary"]
 
     for g, siblings in jx.groupby(nodes, "zone.name"):
         siblings = list(siblings)
@@ -91,8 +97,11 @@ def assign_shards(settings):
     # debug20150915_172538                0  r UNASSIGNED
     # debug20150915_172538                1  p STARTED        37624   9.6mb 172.31.0.39  secondary
     # debug20150915_172538                1  r UNASSIGNED
-    shards = wrap(list(convert_table_to_list(http.get(path + "/_cat/shards").content,
-                                             ["index", "i", "type", "status", "num", "size", "ip", "node"])))
+    shards = wrap(list(convert_table_to_list(
+        http.get(path + "/_cat/shards").content,
+        ["index", "i", "type", "status", "num", "size", "ip", "node"]
+    )))
+    CURRENT_MOVING_SHARDS.clear()
     for s in shards:
         s.i = int(s.i)
         s.size = text_to_bytes(s.size)
@@ -156,8 +165,8 @@ def assign_shards(settings):
             allocation.add({
                 "index": g.index,
                 "node": n,
-                "max_allowed": max_allowed
-                # "shards": filter(lambda r: r.node.name == n.name and r.index == g.index, shards)
+                "max_allowed": max_allowed,
+                "shards": filter(lambda r: r.node.name == n.name and r.index == g.index, shards)
             })
 
         index_size = Math.sum(replicas.size)
@@ -402,7 +411,7 @@ def net_shards_to_move(concurrent, shards, relocating):
 
 
 def _allocate(relocating, path, nodes, all_shards, allocation):
-    moves = jx.sort(ALLOCATION_REQUESTS, ["replication_priority", "mode_priority", "shard.index_size", "shard.size"])
+    moves = jx.sort(ALLOCATION_REQUESTS, ["replication_priority", "mode_priority", "shard.index_size", "shard.i"])
 
     busy_nodes = Dict()
     for s in relocating:
@@ -439,11 +448,17 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
         list_nodes = list(nodes)
         list_node_weight = [node_weight[n.name] for n in list_nodes]
         for i, n in enumerate(list_nodes):
+            alloc = allocation[shard.index, n.name]
+
             if n.zone.name not in zones:
                 list_node_weight[i] = 0
             elif n.name in existing_on_nodes:
                 list_node_weight[i] = 0
             elif busy_nodes[n.name] >= move.concurrent*BIG_SHARD_SIZE:
+                list_node_weight[i] = 0
+            elif n.disk and (n.disk_free - shard.size)/n.disk < 0.10:
+                list_node_weight[i] = 0
+            elif len(alloc.shards) >= alloc.max_allowed:
                 list_node_weight[i] = 0
 
         if Math.sum(list_node_weight) == 0:
@@ -463,13 +478,12 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
             else:
                 break
 
-        if move.reason == "duplicate shards":
-            existing = filter(
-                lambda r: r.index == shard.index and r.i == shard.i and r.node.name == destination_node and r.status in {"INITIALIZING", "STARTED", "RELOCATING"},
-                all_shards
-            )
-            if len(existing) >= nodes[destination_node].zone.shards:
-                Log.error("should nt happen")
+        existing = filter(
+            lambda r: r.index == shard.index and r.i == shard.i and r.node.name == destination_node and r.status in {"INITIALIZING", "STARTED", "RELOCATING"},
+            all_shards
+        )
+        if len(existing) >= nodes[destination_node].zone.shards:
+            Log.error("should nt happen")
 
 
 
@@ -628,20 +642,19 @@ def main():
 
         response = http.put(
             path + "/_cluster/settings",
-            data='{"transient": {"cluster.routing.allocation.disk.watermark.low": "95%"}}'
+            data='{"transient": {"cluster.routing.allocation.disk.threshold_enabled" : false}}'
         )
         Log.note("ALLOW ALLOCATION: {{result}}", result=response.all_content)
 
         please_stop = Signal()
+
         def loop(please_stop):
-            try:
-                while not please_stop:
+            while not please_stop:
+                try:
                     assign_shards(settings)
-                    Thread.sleep(seconds=30, please_stop=please_stop)
-            except Exception, e:
-                Log.error("Not expected", cause=e)
-            finally:
-                please_stop.go()
+                except Exception, e:
+                    Log.warning("Not expected", cause=e)
+                Thread.sleep(seconds=30, please_stop=please_stop)
 
         Thread.run("loop", loop, please_stop=please_stop)
         Thread.wait_for_shutdown_signal(please_stop=please_stop, allow_exit=True)
@@ -650,7 +663,7 @@ def main():
     finally:
         response = http.put(
             path + "/_cluster/settings",
-            data='{"transient": {"cluster.routing.allocation.disk.watermark.low": "40%"}}'
+            data='{"transient": {"cluster.routing.allocation.disk.threshold_enabled" : true, "cluster.routing.allocation.disk.watermark.low": "40%"}}'
         )
         Log.note("RESTRICT ALLOCATION: {{result}}", result=response.all_content)
 

@@ -13,6 +13,8 @@
     ],
     "replication_priority":[
         "saved*",
+        "branches*",
+        "job*",
         "repo*",
         "treeherder*",
         "unit*"

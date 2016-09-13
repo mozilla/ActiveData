@@ -11,11 +11,20 @@
             "shards":1
         }
     ],
+    "finally":{
+        "/_cluster/settings": [
+            {"transient": {
+                "cluster.routing.allocation.disk.threshold_enabled" : true,
+                "cluster.routing.allocation.disk.watermark.low": "40%"
+            }},
+            {"persistent": {"cluster.routing.allocation.enable": "all"}}
+        ]
+    },
     "replication_priority":[
         "saved*",
+        "repo*",
         "branches*",
         "job*",
-        "repo*",
         "treeherder*",
         "unit*"
     ],

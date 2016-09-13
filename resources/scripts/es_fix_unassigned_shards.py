@@ -17,7 +17,7 @@ from pyLibrary import convert, strings
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, Dict, coalesce, DictList
+from pyLibrary.dot import wrap, Dict, coalesce, DictList, listwrap
 from pyLibrary.env import http
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
@@ -29,7 +29,12 @@ CONCURRENT = 1
 BILLION = 1024 * 1024 * 1024  # SIZE WHEN WE SHOULD BE MOVING ONLY ONE SHARD AT A TIME
 BIG_SHARD_SIZE = 2 * BILLION  # SIZE WHEN WE SHOULD BE MOVING ONLY ONE SHARD AT A TIME
 
-CURRENT_MOVING_SHARDS = DictList()  # BECAUSE ES WILL NOT TELL US WHERE THE SHARDS ARE MOVING TO
+current_moving_shards = DictList()  # BECAUSE ES WILL NOT TELL US WHERE THE SHARDS ARE MOVING TO
+
+DEAD = "DEAD"
+ALIVE = "ALIVE"
+last_known_node_status = Dict()
+
 
 def assign_shards(settings):
     """
@@ -72,7 +77,14 @@ def assign_shards(settings):
 
     risky_zone_names = set(z.name for z in settings.zones if z.risky)
 
+    first_run = not last_known_node_status
     for n in nodes:
+        status, last_known_node_status[n.name] = last_known_node_status[n.name], "ALIVE"
+        if status == DEAD:
+            Log.warning("Node {{node}} came back to life!", node=n.name)
+        elif status == None and not first_run:
+            Log.alert("New node {{node}}!", node=n.name)
+
         if not n.zone:
             Log.error("Expecting all nodes to have a zone")
         if n.role == 'd':
@@ -80,6 +92,10 @@ def assign_shards(settings):
         else:
             n.disk = 0
             n.memory = 0
+    for n, status in last_known_node_status.copy().items():
+        if not nodes[n]:
+            Log.alert("Lost node {{node}}", node=n)
+            last_known_node_status[n] = DEAD
 
     for g, siblings in jx.groupby(nodes, "zone.name"):
         siblings = list(siblings)
@@ -101,7 +117,7 @@ def assign_shards(settings):
         http.get(path + "/_cat/shards").content,
         ["index", "i", "type", "status", "num", "size", "ip", "node"]
     )))
-    CURRENT_MOVING_SHARDS.clear()
+    current_moving_shards.__clear__()
     for s in shards:
         s.i = int(s.i)
         s.size = text_to_bytes(s.size)
@@ -117,7 +133,7 @@ def assign_shards(settings):
                         destination = n
                         break
 
-            CURRENT_MOVING_SHARDS.append({
+            current_moving_shards.append({
                 "index": s.index,
                 "shard": s.i,
                 "from_node": m[0],
@@ -126,7 +142,7 @@ def assign_shards(settings):
         s.node = nodes[s.node]
 
     # Log.note("{{shards}}", shards=shards)
-    Log.note("{{num}} shards moving", num=len(CURRENT_MOVING_SHARDS))
+    Log.note("{{num}} shards moving", num=len(current_moving_shards))
 
     # TODO: MAKE ZONE OBJECTS TO STORE THE NUMBER OF REPLICAS
 
@@ -179,11 +195,11 @@ def assign_shards(settings):
     # for r in relocating:
     #     cancel(path, r)
 
-    for m in copy(CURRENT_MOVING_SHARDS):
+    for m in copy(current_moving_shards):
         for s in shards:
             if s.index == m.index and s.i == m.shard and s.node.name == m.to_node and s.status == "STARTED":
                 # FINISHED MOVE
-                CURRENT_MOVING_SHARDS.remove(m)
+                current_moving_shards.remove(m)
                 break
             elif s.index == m.index and s.i == m.shard and s.node.name == m.from_node and s.status == "RELOCATING":
                 # STILL MOVING, ADD A VIRTUAL SHARD TO REPRESENT THE DESTINATION OF RELOCATION
@@ -196,7 +212,7 @@ def assign_shards(settings):
                 break
         else:
             # COULD NOT BE FOUND
-            CURRENT_MOVING_SHARDS.remove(m)
+            current_moving_shards.remove(m)
 
     del ALLOCATION_REQUESTS[:]
 
@@ -502,7 +518,7 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
                 "from_node": shard.node.name,
                 "to_node": destination_node
             }
-            CURRENT_MOVING_SHARDS.append(_move)
+            current_moving_shards.append(_move)
             command = wrap({"move": _move})
         else:
             Log.error("do not know how to handle")
@@ -661,17 +677,14 @@ def main():
     except Exception, e:
         Log.error("Problem with assign of shards", e)
     finally:
-        response = http.put(
-            path + "/_cluster/settings",
-            data='{"transient": {"cluster.routing.allocation.disk.threshold_enabled" : true, "cluster.routing.allocation.disk.watermark.low": "40%"}}'
-        )
-        Log.note("RESTRICT ALLOCATION: {{result}}", result=response.all_content)
-
-        response = http.put(
-            path + "/_cluster/settings",
-            data='{"persistent": {"cluster.routing.allocation.enable": "all"}}'
-        )
-        Log.note("ENABLE SHARD MOVEMENT: {{result}}", result=response.all_content)
+        for p, command in settings["finally"]:
+            for c in listwrap(command):
+                Log.note()
+                response = http.put(
+                    path + p,
+                    data=convert.value2json(c)
+                )
+                Log.note("Finally {{command}}\n{{result}}", command=c, result=response.all_content)
 
         Log.stop()
 

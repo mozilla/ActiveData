@@ -113,7 +113,7 @@ class DictList(list):
     def __delslice__(self, i, j):
         _Log.error("Can not perform del on slice: modulo arithmetic was performed on the parameters.  You can try using clear()")
 
-    def clear(self):
+    def __clear__(self):
         self.list = []
 
     def __iter__(self):

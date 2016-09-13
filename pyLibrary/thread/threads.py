@@ -19,7 +19,6 @@ import sys
 import thread
 import threading
 import time
-
 import types
 from collections import deque
 from copy import copy
@@ -28,8 +27,7 @@ from datetime import datetime, timedelta
 from pyLibrary import strings
 from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.profiles import CProfiler
-from pyLibrary.dot import coalesce, Dict, unwraplist
-from pyLibrary.maths import Math
+from pyLibrary.dot import coalesce, Dict, unwraplist, Null
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import SECOND, Duration
 
@@ -37,7 +35,7 @@ _Log = None
 _Except = None
 DEBUG = True
 MAX_DATETIME = datetime(2286, 11, 20, 17, 46, 39)
-DEFAULT_WAIT_TIME = timedelta(minutes=5)
+DEFAULT_WAIT_TIME = timedelta(minutes=10)
 
 def _late_import():
     global _Log
@@ -96,7 +94,7 @@ class Queue(object):
      IS DIFFICULT TO USE JUST BETWEEN THREADS (SERIALIZATION REQUIRED)
     """
 
-    def __init__(self, name, max=None, silent=False, unique=False):
+    def __init__(self, name, max=None, silent=False, unique=False, allow_add_after_close=False):
         """
         max - LIMIT THE NUMBER IN THE QUEUE, IF TOO MANY add() AND extend() WILL BLOCK
         silent - COMPLAIN IF THE READERS ARE TOO SLOW
@@ -105,6 +103,7 @@ class Queue(object):
         self.name = name
         self.max = coalesce(max, 2 ** 10)
         self.silent = silent
+        self.allow_add_after_close=allow_add_after_close
         self.unique = unique
         self.keep_running = True
         self.lock = Lock("lock for queue " + name)
@@ -124,6 +123,9 @@ class Queue(object):
 
 
     def add(self, value, timeout=None):
+        if not self.keep_running and not self.allow_add_after_close:
+            _Log.error("Do not add to closed queue")
+
         with self.lock:
             self._wait_for_queue_space(timeout=None)
             if self.keep_running:
@@ -138,13 +140,25 @@ class Queue(object):
         """
         SNEAK value TO FRONT OF THE QUEUE
         """
+        if not self.keep_running and not self.allow_add_after_close:
+            _Log.error("Do not push to closed queue")
+
         with self.lock:
             self._wait_for_queue_space()
             if self.keep_running:
                 self.queue.appendleft(value)
         return self
 
+    def pop_message(self, wait=SECOND, till=None):
+        """
+        RETURN TUPLE (message, payload) CALLER IS RESPONSIBLE FOR CALLING message.delete() WHEN DONE
+        """
+        return Null, self.pop(timeout=wait, till=till)
+
     def extend(self, values):
+        if not self.keep_running and not self.allow_add_after_close:
+            _Log.error("Do not push to closed queue")
+
         with self.lock:
             # ONCE THE queue IS BELOW LIMIT, ALLOW ADDING MORE
             self._wait_for_queue_space()
@@ -179,7 +193,7 @@ class Queue(object):
                 _Log.error(Thread.TIMEOUT)
 
             if self.silent:
-                self.lock.wait()
+                self.lock.wait(till=time_to_stop_waiting)
             else:
                 self.lock.wait(wait_time)
                 if len(self.queue) > self.max:
@@ -499,6 +513,7 @@ class Thread(object):
                         except Exception, e:
                             _Log.warning("Problem joining thread {{thread}}", thread=c.name, cause=e)
 
+                    _Log.note("thread {{name|quote}} is done", name=self.name)
                     self.stopped.go()
                     del self.target, self.args, self.kwargs
                     with ALL_LOCK:
@@ -507,9 +522,6 @@ class Thread(object):
                 except Exception, e:
                     if DEBUG:
                         _Log.warning("problem with thread {{name|quote}}", cause=e, name=self.name)
-                finally:
-                    if DEBUG:
-                        _Log.note("thread {{name|quote}} is done", name=self.name)
 
     def is_alive(self):
         return not self.stopped
@@ -923,12 +935,13 @@ class ThreadedQueue(Queue):
         self.thread.join()
 
 
-
 def _wait_for_exit(please_stop):
     """
     /dev/null SPEWS INFINITE LINES, DO NOT POLL AS OFTEN
     """
     cr_count = 0  # COUNT NUMBER OF BLANK LINES
+
+    please_stop.on_go(_interrupt_main_safely)
 
     while not please_stop:
         # if DEBUG:
@@ -938,6 +951,7 @@ def _wait_for_exit(please_stop):
         try:
             line = sys.stdin.readline()
         except Exception, e:
+            Except.wrap(e)
             if "Bad file descriptor" in e:
                 _wait_for_interrupt(please_stop)
                 break
@@ -960,6 +974,14 @@ def _wait_for_interrupt(please_stop):
             _Log.note("inside wait-for-shutdown loop")
         with suppress_exception:
             Thread.sleep(please_stop=please_stop)
+
+
+def _interrupt_main_safely():
+    try:
+        thread.interrupt_main()
+    except KeyboardInterrupt:
+        # WE COULD BE INTERRUPTING SELF
+        pass
 
 
 class Till(Signal):

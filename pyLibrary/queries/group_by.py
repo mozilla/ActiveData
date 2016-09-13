@@ -17,6 +17,7 @@ import math
 import sys
 
 from pyLibrary.collections.multiset import Multiset
+from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap, listwrap, Dict
 from pyLibrary.dot.lists import DictList
@@ -143,6 +144,7 @@ def groupby_min_max_size(data, min_size=0, max_size=None, ):
                 if out:
                     yield g, out
             except Exception, e:
+                e = Except.wrap(e)
                 if out:
                     # AT LEAST TRY TO RETURN WHAT HAS BEEN PROCESSED SO FAR
                     yield g, out

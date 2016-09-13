@@ -16,11 +16,10 @@
 # }}
 
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-import types
 from copy import copy
 from mmap import mmap
 from numbers import Number
@@ -32,11 +31,11 @@ from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, coalesce, wrap, set_default, unwrap
-from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines, GzipLines, scompressed2ibytes, ibytes2ilines, sbytes2ilines, icompressed2ibytes
+from pyLibrary.env.big_data import safe_size, ibytes2ilines, icompressed2ibytes
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx
 from pyLibrary.thread.threads import Thread, Lock
-from pyLibrary.times.durations import SECOND, Duration
+from pyLibrary.times.durations import Duration
 
 DEBUG = False
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
@@ -115,7 +114,7 @@ def request(method, url, zip=None, retry=None, **kwargs):
         retry = wrap(retry)
         if isinstance(retry.sleep, Duration):
             retry.sleep = retry.sleep.seconds
-        set_default(retry.sleep, {"times": 1, "sleep": 0})
+        set_default(retry, {"times": 1, "sleep": 0})
 
     if b'json' in kwargs:
         kwargs[b'data'] = convert.value2json(kwargs[b'json']).encode("utf8")
@@ -143,7 +142,7 @@ def request(method, url, zip=None, retry=None, **kwargs):
 
         try:
             if DEBUG:
-                Log.note("http request to {{url}}", url=url)
+                Log.note("http {{method}} to {{url}}", method=method, url=url)
             return session.request(method=method, url=url, **kwargs)
         except Exception, e:
             errors.append(Except.wrap(e))
@@ -221,7 +220,7 @@ def post_json(url, **kwargs):
     except Exception, e:
         Log.error("Unexpected return value {{content}}", content=c, cause=e)
 
-    if response.status_code != 200:
+    if response.status_code not in [200, 201]:
         Log.error("Bad response", cause=Except.wrap(details))
 
     return details
@@ -273,9 +272,9 @@ class HttpResponse(Response):
 
     @property
     def all_lines(self):
-        return self._all_lines()
+        return self.get_all_lines()
 
-    def _all_lines(self, encoding="utf8"):
+    def get_all_lines(self, encoding="utf8"):
         try:
             iterator = self.raw.stream(4096, decode_content=False)
 

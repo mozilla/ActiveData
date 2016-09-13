@@ -337,7 +337,7 @@ def _select(template, data, fields, depth):
                 path = f.value[0:index:]
                 if not deep_fields[f]:
                     deep_fields.add(f)  # KEEP TRACK OF WHICH FIELDS NEED DEEPER SELECT
-                short = MIN(len(deep_path), len(path))
+                short = MIN([len(deep_path), len(path)])
                 if path[:short:] != deep_path[:short:]:
                     Log.error("Dangerous to select into more than one branch at time")
                 if len(deep_path) < len(path):

@@ -162,6 +162,14 @@ class LazyLines(object):
         self._next = 0
 
     def __getslice__(self, i, j):
+        if i == self._next - 1:
+            def output():
+                yield self._last
+                for v in self._iter:
+                    self._next += 1
+                    yield v
+
+            return output()
         if i == self._next:
             return self._iter
         Log.error("Do not know how to slice this generator")
@@ -177,6 +185,7 @@ class LazyLines(object):
     def __getitem__(self, item):
         try:
             if item == self._next:
+                self._next += 1
                 return self._iter.next()
             elif item == self._next - 1:
                 return self._last

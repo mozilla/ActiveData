@@ -165,8 +165,8 @@ class DictList(list):
             _get(self, "list").append(unwrap(v))
         return self
 
-    def pop(self):
-        return wrap(_get(self, "list").pop())
+    def pop(self, index=None):
+        return wrap(_get(self, "list").pop(index))
 
     def __add__(self, value):
         output = list(_get(self, "list"))

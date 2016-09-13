@@ -23,6 +23,7 @@ from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, 
     Dict, join_field, unwraplist, unwrap
 from pyLibrary.maths import Math
 from pyLibrary.queries.containers import STRUCT
+from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.times.dates import Date
@@ -111,7 +112,7 @@ def jx_expression(expr):
         else:
             return class_(op, jx_expression(term), **clauses)
     else:
-        if op in ["literal", "date"]:
+        if op in ["literal", "date", "offset"]:
             return class_(op, term, **clauses)
         else:
             return class_(op, jx_expression(term), **clauses)
@@ -300,9 +301,6 @@ class Variable(Expression):
     def exists(self):
         return ExistsOp("exists", self)
 
-    def __call__(self, row=None, rownum=None, rows=None):
-        return row[self.var]
-
     def __hash__(self):
         return self.var.__hash__()
 
@@ -314,6 +312,53 @@ class Variable(Expression):
 
     def __str__(self):
         return str(self.var)
+
+
+class OffsetOp(Expression):
+    """
+    OFFSET INDEX INTO A TUPLE
+    """
+
+    def __init__(self, op, var):
+        Expression.__init__(self, "offset", None)
+        if not Math.is_integer(var):
+            Log.error("Expecting an integer")
+        self.var = var
+
+    def to_python(self, not_null=False, boolean=False):
+        return "row[" + unicode(self.var) + "] if 0<=" + unicode(self.var) + "<len(row) else None"
+
+    def __call__(self, row, rownum=None, rows=None):
+        try:
+            return row[self.var]
+        except Exception:
+            return None
+
+    def to_dict(self):
+        return {"offset": self.var}
+
+    def vars(self):
+        return {}
+
+    def missing(self):
+        # RETURN FILTER THAT INDICATE THIS EXPRESSION RETURNS null
+        return MissingOp("missing", self)
+
+    def exists(self):
+        return ExistsOp("exists", self)
+
+    def __hash__(self):
+        return self.var.__hash__()
+
+    def __eq__(self, other):
+        return self.var == other
+
+    def __unicode__(self):
+        return unicode(self.var)
+
+    def __str__(self):
+        return str(self.var)
+
 
 class RowsOp(Expression):
     has_simple_form = True
@@ -2415,6 +2460,7 @@ operators = {
     "not_right": NotRightOp,
     "null": NullOp,
     "number": NumberOp,
+    "offset": OffsetOp,
     "or": OrOp,
     "prefix": PrefixOp,
     "range": RangeOp,

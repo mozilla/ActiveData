@@ -16,11 +16,11 @@ from types import GeneratorType
 
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import split_field
+from pyLibrary.env.files import File
 from pyLibrary.env.http import MIN_READ_SIZE
 
 
 DEBUG = False
-
 WHITESPACE = b" \n\r\t"
 CLOSE = {
     b"{": b"}",
@@ -321,20 +321,30 @@ class List_usingStream(object):
 
     def __getitem__(self, index):
         offset = index - self.start
+        try:
+            return self.buffer[offset]
+        except IndexError:
+            pass
+
         if offset < 0:
             Log.error("Can not go in reverse on stream index=={{index}}", index=index)
 
         if self._mark == -1:
-            while self.buffer_length <= offset:
-                self.start += len(self.buffer)
-                offset = index - self.start
-                self.buffer = self.get_more()
-                self.buffer_length = len(self.buffer)
-        else:
-            while self.buffer_length <= offset:
-                self.buffer += self.get_more()
-                self.buffer_length = len(self.buffer)
+            self.start += self.buffer_length
+            offset = index - self.start
+            self.buffer = self.get_more()
+            self.buffer_length = len(self.buffer)
+            return self.buffer[offset]
 
+        needless_bytes = self._mark - self.start
+        if needless_bytes:
+            self.start = self._mark
+            offset = index - self.start
+            self.buffer = self.buffer[needless_bytes:]
+
+        more = self.get_more()
+        self.buffer += more
+        self.buffer_length = len(self.buffer)
 
         return self.buffer[offset]
 
@@ -342,26 +352,25 @@ class List_usingStream(object):
         self.mark(start)
         return self.release(stop)
 
-
     def mark(self, index):
         """
         KEEP THIS index IN MEMORY UNTIL release()
         """
-        if index<self.start:
+        if index < self.start:
             Log.error("Can not go in reverse on stream")
+        if self._mark != -1:
+            Log.error("Not expected")
         self._mark = index
 
     def release(self, end):
         if self._mark == -1:
             Log.error("Must mark() this stream before release")
 
-        self._get_more(end - 1)
-        output = self.buffer[self._mark - self.start:end - self.start]
-        self._mark = -1
-        return output
-
-    def _get_more(self, index):
-        while self.buffer_length <= index - self.start:
+        end_offset = end - self.start
+        while self.buffer_length < end_offset:
             self.buffer += self.get_more()
             self.buffer_length = len(self.buffer)
 
+        output = self.buffer[self._mark - self.start:end_offset]
+        self._mark = -1
+        return output

@@ -299,7 +299,7 @@ class FromESMetadata(Schema):
                 return
 
             es_index = c.table.split(".")[0]
-            result = self.default_es.post("/"+es_index+"/_search", data={
+            result = self.default_es.post("/" + es_index + "/_search", data={
                 "aggs": {c.name: _counting_query(c)},
                 "size": 0
             })
@@ -344,7 +344,7 @@ class FromESMetadata(Schema):
             else:
                 query.aggs[literal_field(c.name)] = {"terms": {"field": c.es_column, "size": 0}}
 
-            result = self.default_es.post("/"+es_index+"/_search", data=query)
+            result = self.default_es.post("/" + es_index + "/_search", data=query)
 
             aggs = result.aggregations.values()[0]
             if aggs._nested:

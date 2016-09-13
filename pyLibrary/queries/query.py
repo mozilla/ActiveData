@@ -26,7 +26,7 @@ from pyLibrary.queries import Schema, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain, is_keyword, SetDomain
-from pyLibrary.queries.expressions import jx_expression, TrueOp, Expression, FalseOp, Variable, LeavesOp, ScriptOp
+from pyLibrary.queries.expressions import jx_expression, TrueOp, Expression, FalseOp, Variable, LeavesOp, ScriptOp, OffsetOp
 
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 50000
@@ -698,13 +698,15 @@ def _normalize_sort(sort=None):
     CONVERT SORT PARAMETERS TO A NORMAL FORM SO EASIER TO USE
     """
 
-    if not sort:
+    if sort==None:
         return DictList.EMPTY
 
     output = DictList()
     for s in listwrap(sort):
-        if isinstance(s, basestring) or Math.is_integer(s):
+        if isinstance(s, basestring):
             output.append({"value": jx_expression(s), "sort": 1})
+        elif Math.is_integer(s):
+            output.append({"value": OffsetOp("offset", s), "sort": 1})
         elif all(d in sort_direction for d in s.values()) and not s.sort and not s.value:
             for v, d in s.items():
                 output.append({"value": jx_expression(v), "sort": -1})

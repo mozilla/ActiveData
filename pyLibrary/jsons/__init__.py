@@ -79,7 +79,13 @@ def _scrub(value, is_done):
 
     if type_ in (NoneType, NullType):
         return None
-    elif type_ in (unicode, int, float, long, bool):
+    elif type_ is unicode:
+        value_ = value.strip()
+        if value_:
+            return value_
+        else:
+            return None
+    elif type_ in (int, float, long, bool):
         return value
     elif type_ in (date, datetime):
         return float(datetime2unix(value))

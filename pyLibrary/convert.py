@@ -127,9 +127,13 @@ def json2value(json_string, params={}, flexible=False, leaves=False):
         if not json_string.strip():
             Log.error("JSON string is only whitespace")
 
-        if "Expecting '" in e and "' delimiter: line" in e:
-            line_index = int(strings.between(e.message, " line ", " column ")) - 1
-            column = int(strings.between(e.message, " column ", " ")) - 1
+        c = e
+        while "Expecting '" in c.cause and "' delimiter: line" in c.cause:
+            c = c.cause
+
+        if "Expecting '" in c and "' delimiter: line" in c:
+            line_index = int(strings.between(c.message, " line ", " column ")) - 1
+            column = int(strings.between(c.message, " column ", " ")) - 1
             line = json_string.split("\n")[line_index].replace("\t", " ")
             if column > 20:
                 sample = "..." + line[column - 20:]

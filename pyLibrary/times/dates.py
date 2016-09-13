@@ -228,7 +228,7 @@ def parse(*args):
 
 
 def add_month(offset, months):
-    month = offset.month+months-1
+    month = int(offset.month+months-1)
     year = offset.year
     if not 0 <= month < 12:
         r = Math.mod(month, 12)

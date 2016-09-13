@@ -309,13 +309,14 @@ def assign_shards(settings):
 
 
     # LOOK FOR DUPLICATION OPPORTUNITIES
+    # ONLY DUPLICATE PRIMARY SHARDS AT THIS TIME
     # IN THEORY THIS IS FASTER BECAUSE THEY ARE IN THE SAME ZONE (AND BETTER MACHINES)
     dup_shards = Dict()
     for g, replicas in jx.groupby(shards, ["index", "i"]):
         replicas = wrap(list(replicas))
         # WE CAN ASSIGN THIS REPLICA WITHIN THE SAME ZONE
         for s in replicas:
-            if s.status != "UNASSIGNED":
+            if s.status != "UNASSIGNED" or s.type != "p":
                 continue
             for z in settings.zones:
                 started_count = len([r for r in replicas if r.status in {"STARTED"} and r.node.zone.name==z.name])
@@ -376,6 +377,29 @@ def assign_shards(settings):
             allocate(CONCURRENT, b, {z}, "not balanced", 6, settings)
     else:
         Log.note("No shards need to be balanced")
+
+    # LOOK FOR OTHER, SLOWER, DUPLICATION OPPORTUNITIES
+    dup_shards = Dict()
+    for g, replicas in jx.groupby(shards, ["index", "i"]):
+        replicas = wrap(list(replicas))
+        # WE CAN ASSIGN THIS REPLICA WITHIN THE SAME ZONE
+        for s in replicas:
+            if s.status != "UNASSIGNED":
+                continue
+            for z in settings.zones:
+                started_count = len([r for r in replicas if r.status in {"STARTED"} and r.node.zone.name==z.name])
+                active_count = len([r for r in replicas if r.status in {"INITIALIZING", "STARTED", "RELOCATING"} and r.node.zone.name==z.name])
+                if started_count >= 1 and active_count < z.shards:
+                    dup_shards[z.name] += [s]
+            break  # ONLY ONE SHARD PER CYCLE
+
+    if dup_shards:
+        for zone_name, assign in dup_shards.items():
+            # Log.note("{{dups}}", dups=assign)
+            Log.note("{{num}} shards can be duplicated between zones", num=len(assign))
+            allocate(CONCURRENT, assign, {zone_name}, "inter-zone duplicate shards ", 7, settings)
+    else:
+        Log.note("No duplicate shards left to assign")
 
     _allocate(relocating, path, nodes, shards, allocation)
 

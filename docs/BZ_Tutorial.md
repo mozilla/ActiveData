@@ -6,37 +6,37 @@ Running Examples (Query Tool)
 -----------------------------
 
 [ElasticSearch Head](https://github.com/mobz/elasticsearch-head) is a simple
-tool for sending general queries.  [Active Data Query Tool](../html/QueryTool.html) 
-can be used to prototype JSON query expressions, and see their equivalent ES query.  
+tool for sending general queries. [Active Data Query Tool](../html/QueryTool.html)
+can be used to prototype JSON query expressions, and see their equivalent ES query.
 Please ```git clone``` both of these projects and open in your browser.
 
 Schema
 ------
 
-The history of each bug is stored as a set of documents.  Each document is a
-snapshot of the bug between ```modified_ts``` and ```expires_on```.  All times
+The history of each bug is stored as a set of documents. Each document is a
+snapshot of the bug between ```modified_ts``` and ```expires_on```. All times
 are in milliseconds since epoch (GMT).
 
-The current schema can be pulled using ElasticSearch Head.  You can view the simpler [schema used by the ETL](https://github.com/klahnakoski/Bugzilla-ETL/blob/df89c80428ae78fd53b4a05bd94c5949130e6898/resources/json/bug_version.json#L105)
+The current schema can be pulled using ElasticSearch Head. You can view the simpler [schema used by the ETL](https://github.com/klahnakoski/Bugzilla-ETL/blob/df89c80428ae78fd53b4a05bd94c5949130e6898/resources/json/bug_version.json#L105)
 
 Query Current State of All Bugs
 -------------------------------
 
-It is common to query the current bug state.  To do this you take advantage of
+It is common to query the current bug state. To do this you take advantage of
 the fact that current documents have ```expires_on``` set to the deep future.
 It is a simple matter to ensure all you queries include
 
     {"range":{"expires_on":{"gte":NOW}}}
 
-where ```NOW``` is in milliseconds since epoch (GMT).  For example,
+where ```NOW``` is in milliseconds since epoch (GMT). For example,
 1389453465000 == 11-Jan-2014 15:17:45 (GMT) (notice the extra three zeros
 indicating milliseconds)
 
 Search for Current Bugs
 ------------------------
 
-Lets look at all the bugs in a project called **KOI**.  This project is tracked
-using the Blocking B2G flag in Bugzilla.  Both Bugzilla and the ElasticSearch
+Lets look at all the bugs in a project called **KOI**. This project is tracked
+using the Blocking B2G flag in Bugzilla. Both Bugzilla and the ElasticSearch
 use a ```cf_``` prefix on tracking flags; Our filter looks like
 ```{"term":{"cf_blocking_b2g":"koi+"}}```.
 
@@ -71,7 +71,7 @@ use a ```cf_``` prefix on tracking flags; Our filter looks like
   ]}
 }</pre><br>
 <i>JSON query expressions are intended to be more like SQL, with familiar clauses, and
-simpler syntax.  Benefits will be more apparent as we push the limits of ES's
+simpler syntax. Benefits will be more apparent as we push the limits of ES's
 query language: JSON query expressions will isolate us from necessary scripting,
 multifaceting, and nested queries</i>
 </td>
@@ -81,7 +81,7 @@ multifaceting, and nested queries</i>
 Just Some Fields
 ----------------
 
-The bug version documents returned by ElasticSearch can be big.  If you are
+The bug version documents returned by ElasticSearch can be big. If you are
 interested in larger sets of bugs, and not interested in every detail, you can
 restrict your query to just the fields you desire.
 
@@ -124,7 +124,7 @@ restrict your query to just the fields you desire.
     {"term":{"cf_blocking_b2g":"koi+"}}
   ]}
 }</pre><br>
-<i>An array in the <code>select</code> clause will have the query return JSON objects.  No array means the query
+<i>An array in the <code>select</code> clause will have the query return JSON objects. No array means the query
 returns values only.
 
 </i>
@@ -136,7 +136,7 @@ Aggregation
 -----------
 
 ElasticSearch has limited options when it comes to aggregates, but the ones it
-does do are very fast.  Here is a count of all KOI bugs by product:
+does do are very fast. Here is a count of all KOI bugs by product:
 
 <table>
 <tr>
@@ -188,9 +188,9 @@ does do are very fast.  Here is a count of all KOI bugs by product:
 Open Bugs
 ---------
 
-The Bugzilla database is dominated by closed bugs.  It is often useful to limit
-our requests to open bugs only.  Personally, my strategy is to find bugs *not*
-marked closed.  This way new bug states (open or closed) will reveal themselves.
+The Bugzilla database is dominated by closed bugs. It is often useful to limit
+our requests to open bugs only. Personally, my strategy is to find bugs *not*
+marked closed. This way new bug states (open or closed) will reveal themselves.
 Here is a count of all open bugs by product.
 
 
@@ -249,7 +249,7 @@ Historical Query
 ----------------
 
 To query a point in time, we look for records that straddle the point in time
-we are interested in (```modified_ts <= sometime < expires_on```).  Here is
+we are interested in (```modified_ts <= sometime < expires_on```). Here is
 look at the number of open bugs back in Jan 1st, 2010:
 
 <table>
@@ -314,9 +314,9 @@ look at the number of open bugs back in Jan 1st, 2010:
 Group By
 --------
 
-ElasticSearch's has a limited form of GroupBy called "facets".  Facets are
+ElasticSearch's has a limited form of GroupBy called "facets". Facets are
 strictly one dimensional, so grouping by more than one column will require
-MVEL scripting or many facets.  Furthermore, facets are limited to using the
+MVEL scripting or many facets. Furthermore, facets are limited to using the
 unique values of the data.
 
 In this example, we are simply count the number of bug version records for each
@@ -372,7 +372,7 @@ block of 50K bug_ids:
   }]
 }</pre><br>
 JSON query expressions allow you to specify how to group data by using the <code>domain</code>
-sub-clause.  The number of unique parts in the domain must be known at request
+sub-clause. The number of unique parts in the domain must be known at request
 time.
 </td>
 </tr>
@@ -382,18 +382,18 @@ time.
 Private Bugs
 ------------
 
-The public cluster does not contain Mozilla's confidential bugs.  Most of
+The public cluster does not contain Mozilla's confidential bugs. Most of
 these are internal network and infrastructure bugs, product security bugs, and
-administrative "bugs".  Mozilla has an VPN-accessible private cluster with
+administrative "bugs". Mozilla has an VPN-accessible private cluster with
 those additional private bugs, but is handicapped by having no comments or
-descriptions.  When querying aggregates you must be cognisant of this
+descriptions. When querying aggregates you must be cognisant of this
 difference.
 
 If you have access to the private cluster you can call up the private bugs with
 ```{"not":{"missing":{"field":"bug_group"}}}``` - which means any bug that
 belongs to a bug_group is a private bug.
 
-This example pulls the current number of open private bugs by product.  If you
+This example pulls the current number of open private bugs by product. If you
 run this on the public cluster, you will get zeros.
 
 <table>

@@ -21,9 +21,8 @@ from pyLibrary.maths import Math
 
 try:
     import pytz
-except Exception, _:
+except Exception:
     pass
-
 
 from pyLibrary.dot import Null
 from pyLibrary.times.durations import Duration, MILLI_VALUES
@@ -47,6 +46,9 @@ class Date(object):
     def __init__(self, *args):
         if self.unix is None:
             self.unix = parse(*args).unix
+
+    def __nonzero__(self):
+        return True
 
     def floor(self, duration=None):
         if duration is None:  # ASSUME DAY
@@ -150,11 +152,16 @@ class Date(object):
     def __eq__(self, other):
         if other == None:
             return Null
+
         try:
-            other = Date(other)
+            return other.unix == self.unix
+        except Exception:
+            pass
+
+        try:
+            return Date(other).unix == self.unix
         except Exception:
             return False
-        return self.unix == other.unix
 
     def __le__(self, other):
         other = Date(other)
@@ -192,21 +199,17 @@ def parse(*args):
             elif isinstance(a0, Date):
                 output = unix2Date(a0.unix)
             elif isinstance(a0, (int, long, float, Decimal)):
-                if a0 == 9999999999000:  # PYPY BUG https://bugs.pypy.org/issue1697
-                    output = Date.MAX
-                elif a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
-                    output = unix2Date(float(a0) / 1000)
+                a0 = float(a0)
+                if a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
+                    output = unix2Date(a0 / 1000)
                 else:
-                    output = unix2Date(float(a0))
+                    output = unix2Date(a0)
             elif isinstance(a0, basestring) and len(a0) in [9, 10, 12, 13] and Math.is_integer(a0):
-                a0 = long(a0)
-                if a0 == 9999999999000:  # PYPY BUG https://bugs.pypy.org/issue1697
-                    output = Date.MAX
-                elif a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
-                    output = unix2Date(float(a0) / 1000)
+                a0 = float(a0)
+                if a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
+                    output = unix2Date(a0 / 1000)
                 else:
-                    output = unix2Date(float(a0))
-
+                    output = unix2Date(a0)
             elif isinstance(a0, basestring):
                 output = unicode2Date(a0)
             else:
@@ -225,7 +228,7 @@ def parse(*args):
 
 
 def add_month(offset, months):
-    month = offset.month+months-1
+    month = int(offset.month+months-1)
     year = offset.year
     if not 0 <= month < 12:
         r = Math.mod(month, 12)
@@ -311,6 +314,16 @@ def unicode2Date(value, format=None):
     if value == None:
         return None
 
+    if format != None:
+        try:
+            if format.endswith("%S.%f") and "." not in value:
+                value += ".000"
+            return unix2Date(datetime2unix(datetime.strptime(value, format)))
+        except Exception, e:
+            from pyLibrary.debugs.logs import Log
+
+            Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
+
     value = value.strip()
     if value.lower() == "now":
         return unix2Date(datetime2unix(datetime.utcnow()))
@@ -322,30 +335,23 @@ def unicode2Date(value, format=None):
     if any(value.lower().find(n) >= 0 for n in ["now", "today", "eod", "tomorrow"] + list(MILLI_VALUES.keys())):
         return parse_time_expression(value)
 
-    if format != None:
-        try:
-            if format.endswith("%S.%f") and "." not in value:
-                value += ".000"
-            return unix2Date(datetime2unix(datetime.strptime(value, format)))
-        except Exception, e:
-            from pyLibrary.debugs.logs import Log
-
-            Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
-
-    try:
+    try:  # 2.7 DOES NOT SUPPORT %z
         local_value = parse_date(value)  #eg 2014-07-16 10:57 +0200
         return unix2Date(datetime2unix((local_value - local_value.utcoffset()).replace(tzinfo=None)))
     except Exception:
         pass
 
     formats = [
-        #"%Y-%m-%d %H:%M %z",  # "%z" NOT SUPPORTED IN 2.7
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S.%f"
     ]
     for f in formats:
         try:
-            return unicode2Date(value, format=f)
+            return unix2Date(datetime2unix(datetime.strptime(value, f)))
         except Exception:
             pass
+
+
 
     deformats = [
         "%Y-%m",# eg 2014-07-16 10:57 +0200
@@ -371,6 +377,7 @@ def unicode2Date(value, format=None):
             return unicode2Date(value, format=f)
         except Exception:
             pass
+
     else:
         from pyLibrary.debugs.logs import Log
         Log.error("Can not interpret {{value}} as a datetime",  value= value)

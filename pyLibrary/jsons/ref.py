@@ -25,6 +25,7 @@ _convert = None
 _Log = None
 _Except = None
 
+
 def _late_import():
     global _convert
     global _Log
@@ -62,7 +63,7 @@ def get(url):
         phase2 = _replace_locals(phase1, [phase1])
         return wrap(phase2)
     except Exception, e:
-        _Log.error("problem replacing locals in\n{{phase1}}", phase1=phase1)
+        _Log.error("problem replacing locals in\n{{phase1}}", phase1=phase1, cause=e)
 
 
 def expand(doc, doc_url):
@@ -70,8 +71,11 @@ def expand(doc, doc_url):
     ASSUMING YOU ALREADY PULED THE doc FROM doc_url, YOU CAN STILL USE THE
     EXPANDING FEATURE
     """
+    if not _Log:
+        _late_import()
+
     if doc_url.find("://") == -1:
-        _Log.error("{{url}} must have a prototcol (eg http://) declared",  url= doc_url)
+        _Log.error("{{url}} must have a prototcol (eg http://) declared", url=doc_url)
 
     phase1 = _replace_ref(doc, URL(doc_url))  # BLANK URL ONLY WORKS IF url IS ABSOLUTE
     phase2 = _replace_locals(phase1, [phase1])
@@ -144,6 +148,8 @@ def _replace_locals(node, doc_path):
         for k, v in node.items():
             if k == "$ref":
                 ref = v
+            elif v == None:
+                continue
             else:
                 output[k] = _replace_locals(v, [v] + doc_path)
 

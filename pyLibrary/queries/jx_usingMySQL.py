@@ -14,6 +14,7 @@ from collections import Mapping
 
 from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
+from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.meta import use_settings
 from pyLibrary.sql import SQL
 from pyLibrary.sql.mysql import int_list_packer
@@ -59,9 +60,9 @@ class MySQL(object):
         """
         TRANSLATE JSON QUERY EXPRESSION ON SINGLE TABLE TO SQL QUERY
         """
-        from pyLibrary.queries.query import Query
+        from pyLibrary.queries.query import QueryOp
 
-        query = Query(query)
+        query = QueryOp.wrap(query)
 
         sql, post = self._subquery(query, isolate=False, stacked=stacked)
         query.data = post(sql)
@@ -369,7 +370,7 @@ def _esfilter2sqlwhere(db, esfilter):
             if len(v) == 0:
                 return "FALSE"
 
-            try:
+            with suppress_exception:
                 int_list = convert.value2intlist(v)
                 has_null = False
                 for vv in v:
@@ -387,8 +388,6 @@ def _esfilter2sqlwhere(db, esfilter):
                         return esfilter2sqlwhere(db, {"missing": col})
                     else:
                         return "false"
-            except Exception, e:
-                pass
             return db.quote_column(col) + " in (" + ",\n".join([db.quote_value(val) for val in v]) + ")"
     elif esfilter.script:
         return "(" + esfilter.script + ")"
@@ -437,11 +436,10 @@ def expand_json(rows):
     for r in rows:
         for k, json in list(r.items()):
             if isinstance(json, basestring) and json[0:1] in ("[", "{"):
-                try:
+                with suppress_exception:
                     value = convert.json2value(json)
                     r[k] = value
-                except Exception, e:
-                    pass
+
 
 
 # MAP NAME TO SQL FUNCTION

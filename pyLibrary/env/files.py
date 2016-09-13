@@ -287,10 +287,17 @@ class File(object):
             Log.error("Could not remove file", e)
 
     def backup(self):
-        names = self._filename.split("/")[-1].split(".")
-        if len(names) == 1:
-            backup = File(self._filename + ".backup " + datetime.utcnow().strftime("%Y%m%d %H%i%s"))
-
+        path = self._filename.split("/")
+        names = path[-1].split(".")
+        if len(names) == 1 or names[0] == '':
+            backup = File(self._filename + ".backup " + datetime.utcnow().strftime("%Y%m%d %H%M%S"))
+        else:
+            backup = File.new_instance(
+                "/".join(path[:-1]),
+                ".".join(names[:-1]) + ".backup " + datetime.now().strftime("%Y%m%d %H%M%S") + "." + names[-1]
+            )
+        File.copy(self, backup)
+        return backup
 
     def create(self):
         try:

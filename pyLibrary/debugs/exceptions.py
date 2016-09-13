@@ -14,8 +14,9 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import sys
+from collections import Mapping
 
-from pyLibrary.dot import Dict, listwrap
+from pyLibrary.dot import Dict, listwrap, unwraplist, set_default, Null
 from pyLibrary.jsons.encoder import json_encoder
 from pyLibrary.strings import indent, expand_template
 
@@ -39,21 +40,27 @@ class Except(Exception):
             desc.trace
         )
 
-
-    def __init__(self, type=ERROR, template=None, params=None, cause=None, trace=None):
+    def __init__(self, type=ERROR, template=Null, params=Null, cause=Null, trace=Null, **kwargs):
         Exception.__init__(self)
         self.type = type
         self.template = template
-        self.params = params
+        self.params = set_default(kwargs, params)
         self.cause = cause
-        self.trace = trace
+
+        if not trace:
+            self.trace=extract_stack(2)
+        else:
+            self.trace = trace
 
     @classmethod
     def wrap(cls, e, stack_depth=0):
         if e == None:
-            return None
+            return Null
         elif isinstance(e, (list, Except)):
             return e
+        elif isinstance(e, Mapping):
+            e.cause = unwraplist([Except.wrap(c) for c in listwrap(e.cause)])
+            return Except(**e)
         else:
             if hasattr(e, "message") and e.message:
                 cause = Except(ERROR, unicode(e.message), trace=_extract_traceback(0))
@@ -91,10 +98,9 @@ class Except(Exception):
         if self.cause:
             cause_strings = []
             for c in listwrap(self.cause):
-                try:
+                with suppress_exception:
                     cause_strings.append(unicode(c))
-                except Exception:
-                    pass
+
 
             output += "caused by\n\t" + "and caused by\n\t".join(cause_strings)
 
@@ -182,3 +188,109 @@ def format_trace(tbs, start=0):
         trace.append(item)
     return "".join(trace)
 
+
+class Suppress(object):
+    """
+    IGNORE EXCEPTIONS
+    """
+
+    def __init__(self, exception_type):
+        self.type = exception_type
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if not exc_val or isinstance(exc_val, self.type):
+            return True
+
+suppress_exception = Suppress(Exception)
+
+
+class Explanation(object):
+    """
+    EXPLAIN THE ACTION BEING TAKEN
+    IF THERE IS AN EXCEPTION WRAP IT WITH THE EXPLANATION
+    CHAIN EXCEPTION AND RE-RAISE
+    """
+
+    def __init__(
+        self,
+        template,  # human readable template
+        **more_params
+    ):
+        self.template = template
+        self.more_params = more_params
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if isinstance(exc_val, Exception):
+            from pyLibrary.debugs.logs import Log
+
+            Log.error(
+                template="Failure in " + self.template,
+                default_params=self.more_params,
+                cause=exc_val,
+                stack_depth=1
+            )
+
+            return True
+
+
+class WarnOnException(object):
+    """
+    EXPLAIN THE ACTION BEING TAKEN
+    IF THERE IS AN EXCEPTION WRAP ISSUE A WARNING
+    """
+
+    def __init__(
+        self,
+        template,  # human readable template
+        **more_params
+    ):
+        self.template = template
+        self.more_params = more_params
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if isinstance(exc_val, Exception):
+            from pyLibrary.debugs.logs import Log
+
+            Log.warning(
+                template="Ignored failure while " + self.template,
+                default_params=self.more_params,
+                cause=exc_val,
+                stack_depth=1
+            )
+
+            return True
+
+
+class AssertNoException(object):
+    """
+    EXPECT NO EXCEPTION IN THIS BLOCK
+    """
+
+    def __init__(self):
+        pass
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if isinstance(exc_val, Exception):
+            from pyLibrary.debugs.logs import Log
+
+            Log.error(
+                template="Not expected to fail",
+                cause=exc_val,
+                stack_depth=1
+            )
+
+            return True
+
+assert_no_exception = AssertNoException()

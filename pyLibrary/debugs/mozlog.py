@@ -15,7 +15,7 @@ def use_mozlog():
         return
 
     _using_mozlog = True
-    try:
+    with suppress:
         from pyLibrary.debugs.mozlog.structured import structuredlog
 
 
@@ -24,8 +24,6 @@ def use_mozlog():
 
         logger = structuredlog.get_default_logger()
         setattr(Log, "moz_logger", logger)
-    except:
-        pass
 
 
 def copy_attr(name):

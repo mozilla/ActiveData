@@ -25,5 +25,6 @@ class Table(object):
         self.meta = Dict()
 
     def groupby(self, keys):
+        pass
 
 

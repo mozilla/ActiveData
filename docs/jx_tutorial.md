@@ -1,29 +1,34 @@
 JSON Query Expression Tutorial
 ==============================
 
-JSON query expressions are JSON structures that mimic SQL query semantics; each property corresponds to a SQL clause.  There are some differences from SQL, especially when it comes to using default clauses, but I hope your knowledge of SQL can jump-start your use of JSON Expressions.
+JSON query expressions are JSON structures that mimic SQL query semantics;
+each property corresponds to a SQL clause. There are some differences from
+SQL, especially when it comes to using default clauses, but I hope your
+knowledge of SQL can jump-start your use of JSON Expressions.
 
 
-Simple `from` Clause 
+Simple `from` Clause
 --------------------
 
-All queries must have a `from` clause, which indicates what data is being queried.  ActiveData has a default container, which it uses to translate names to explicit data sources that can be queried.
+All queries must have a `from` clause, which indicates what data is being
+queried. ActiveData has a default container, which it uses to translate names
+to explicit data sources that can be queried.
 
 ```javascript
 	{"from": "unittest"}
 
 ```
 
-In this case, we will get some records from the `unittest` cube.  Please note: ActiveData assigns a default `"limit": 10` on all requests to prevent returning overwhelmingly large results by accident.
+In this case, we will get some records from the `unittest` cube. Please note: ActiveData assigns a default `"limit": 10` on all requests to prevent returning overwhelmingly large results by accident.
 
 
 `format` Clause
 ---------------
 
-The ActiveData Query Tool hides the formatting feature of the ActiveData service.  Most responses you get back from the service are data cubes (aka pivot tables), and this may not be the best format for your application.  You have three main formats to choose from:
+The ActiveData Query Tool hides the formatting feature of the ActiveData service. Most responses you get back from the service are data cubes (aka pivot tables), and this may not be the best format for your application. You have three main formats to choose from:
 
-* `list` - service will return a list of JSON objects, which is great if you want to see the original source documents, or iterate through the response. 
-* `table` - service returns a table - There is a `header` containing the names of the columns, and the `data` which is a list of tuples containing row values.  This form is generally more compact than the other two forms.
+* `list` - service will return a list of JSON objects, which is great if you want to see the original source documents, or iterate through the response.
+* `table` - service returns a table - There is a `header` containing the names of the columns, and the `data` which is a list of tuples containing row values. This form is generally more compact than the other two forms.
 * `cube` - (default) returns the cube form - This format is good for analysis, charting, and is compact for large, dense, datasets.
 
 ```javascript
@@ -35,7 +40,7 @@ The ActiveData Query Tool hides the formatting feature of the ActiveData service
 
 ###Inspecting Individual Records
 
-The `"format":"list"` clause is great for extracting specific records from ActiveData.  Individual records will give you an idea of what is available, and allow you to drill down while exploring possible anomalies.
+The `"format":"list"` clause is great for extracting specific records from ActiveData. Individual records will give you an idea of what is available, and allow you to drill down while exploring possible anomalies.
 
 ```javascript
 {
@@ -48,13 +53,13 @@ The `"format":"list"` clause is great for extracting specific records from Activ
 }
 ```
 
-In the above case, I was curious about the test named "Main app process exited normally": It is actually an emission from [the harness attempting to report the last run test](https://hg.mozilla.org/mozilla-central/file/291614a686f1/testing/mochitest/runtests.py#l1824).  In this case, the harness could not make that determination because the browser closed without error.  
+In the above case, I was curious about the test named "Main app process exited normally": It is actually an emission from [the harness attempting to report the last run test](https://hg.mozilla.org/mozilla-central/file/291614a686f1/testing/mochitest/runtests.py#l1824). In this case, the harness could not make that determination because the browser closed without error.  
 
 
 `limit` Clause
 --------------
 
-**The ActiveData service limits responses to 10 rows by default**.  To increase this limit (or decrease it) Use the `limit` clause to set an upper bound on the response:
+**The ActiveData service limits responses to 10 rows by default**. To increase this limit (or decrease it) Use the `limit` clause to set an upper bound on the response:
 
 ```javascript
 	{
@@ -77,13 +82,13 @@ Use the `where` clause to restrict our results to those that match.
 }
 ```
 
-In this case, we limit ourselves to test results on `linux64` platform.  You can see [a full list of `unittest` properties](Unittest Schema.md), and you have a [variety of other expressions available](jx_expressions.md). 
+In this case, we limit ourselves to test results on `linux64` platform. You can see [a full list of `unittest` properties](Unittest Schema.md), and you have a [variety of other expressions available](jx_expressions.md). 
 
 
 `select` Clause
 ---------------
 
-The `unittest` records are quite large, and in most cases you will not be interested in all the properties.  Let's look at how big some test result files can be; list some files over 600 megabytes!  It is best to view the raw JSON response with this query; some files are over a gigabyte, so big the Query Tool interprets the number as a unix timestamp!!
+The `unittest` records are quite large, and in most cases you will not be interested in all the properties. Let's look at how big some test result files can be; list some files over 600 megabytes! It is best to view the raw JSON response with this query; some files are over a gigabyte, so big the Query Tool interprets the number as a unix timestamp!!
 
 ```javascript
 {
@@ -106,11 +111,12 @@ Knowing the size is not enough: What files are they?
 		{"eq":{"build.platform":"linux64"}},
 		{"gt":{"run.stats.bytes":600000000}}
 	]}
-}```
+}
+```
 
 It appears there are multiple files generated by each test run, at least one of them is the culprit.  
 
-A couple of things you should notice: First, the `run.files` property in the `unittest` table is an array objects, therefore it can be queried directly by using its full name: `unittest.run.files`.  Also notice the `select` clause can be an array of properties.
+A couple of things you should notice: First, the `run.files` property in the `unittest` table is an array objects, therefore it can be queried directly by using its full name: `unittest.run.files`. Also notice the `select` clause can be an array of properties.
 
 Grouping
 ----------
@@ -133,7 +139,7 @@ How many of these monster files are there?
 }
 ```
 
-A few notes on this query: First, if there is no `select` clause when using `groupby`, it is assumed a `count` is requested.  Second, the properties in the `groupby` clause will be included in the result set.  This differs from SQL, which only shows columns found in the select clause.
+A few notes on this query: First, if there is no `select` clause when using `groupby`, it is assumed a `count` is requested. Second, the properties in the `groupby` clause will be included in the result set. This differs from SQL, which only shows columns found in the select clause.
 
 Finally, and most important:
 
@@ -153,13 +159,17 @@ How big do these files get?
 }
 ```
 
-At time of this writing we see structured logs of over 1.1 Gigabytes!  No wonder my Python processes were running out of memory! 
+At time of this writing we see structured logs of over 1.1 Gigabytes! No wonder my Python processes were running out of memory! 
 
 
 `edges` Clause
 --------------
 
-The `edges` clause works just like `groupby` except its domain is unaffected by the filter.  This means that all parts of the domain will be represented in the result-set, even in the case when no records are in that part.  Furthermore, every domain has a `null` part representing the records that are outside the domain. 
+The `edges` clause works just like `groupby` except its domain is unaffected
+by the filter. This means that all parts of the domain will be represented in
+the result-set, even in the case when no records are in that part.
+Furthermore, every domain has a `null` part representing the records that are
+outside the domain. 
 
 ```javascript
 {
@@ -175,7 +185,8 @@ The `edges` clause works just like `groupby` except its domain is unaffected by 
 
 ###Complex `edges`
 
-Edges can be more than strings, they can be clauses that include an additional description of the domain.
+Edges can be more than strings, they can be clauses that include an additional
+description of the domain.
 
 
 ```javascript
@@ -193,117 +204,13 @@ Edges can be more than strings, they can be clauses that include an additional d
 }
 ```
 
-In this case, we only care about "win32".  The result will include counts for both "win32" and the "`null`" part which counts everything else.  
-
-###Declaring the `domain`
-
-Domains have several forms.  Unsurprisingly, the default domain type is `"type": "default"`.  This means a clause, like 
-
-```javascript
-"edges":["build.platform"]
-```
-
-is really a short form of 
-
-```javascript
-"edges":[{
-	"value": "build.platform"
-	"domain": {"type":"default"}
-}]
-```
-
-The `default` domain will accumulate the distinct values, and use them as the parts in the domain of the final result.
-
-Other domains are 
-
-* `set` - which accepts an explicit `partition` of values, 
-* `time` - to query over time ranges, defined by the `min`, `max`, and `interval`
-* `range` - for regular numeric intervals using the same `min`, `max`, and `interval`
-
-More details about the properties that these (and other) domain types accept are in the [reference documention](jx_reference.md#edges.domain)
-
-### Time, Duration and Relative Values
-
-ActiveData does not store time data, instead it standardizes all time queries to unix timestamps (seconds since epoch, GMT).  All datetime values going in, or out, of ActiveData should be converted to GMT (not UTC with its leap seconds).    
-
-The `"type":"time"` domain will accept relative time values, and allow you to perform simple time math.  
-
-
-```javascript
-{
-    "from": "unittest",
-    "select": {
-        "name": "total_bytes",
-        "value": "run.stats.bytes",
-        "aggregate": "sum"
-    },
-    "edges": [
-        {
-            "value": "run.timestamp",
-            "domain": {
-                "type": "time",
-                "min": "today|month",
-                "max": "today|day",
-                "interval": "day"
-            }
-        }
-    ],
-    "where": {
-        "and": [
-            {
-                "term": {
-                    "etl.id": 0
-                }
-            },
-            {
-                "gte": {
-                    "build.date": "{{today|month}}"
-                }
-            },
-            {
-                "lt": {
-                    "build.date": "{{now|day}}"
-                }
-            }
-        ]
-    }
-}
-```
+In this case, we only care about "win32". The result will include counts for
+both "win32" and the "`null`" part which counts everything else.  
 
 
 
-###Explicit Partitions
+More Reading
+------------
 
-A domain has a partition.  Usually this partition is defined with a regular interval, but this may not be what you want in all cases.   You are free to define the parts of the partitions explicitly.  For example, we may want a semi-logarithmic scale to display the spectrum of file sizes. 
-
-```javascript
-{
-	"from":"unittest",
-	"edges":[{
-		"name":"size",
-		"value":"run.stats.bytes",
-		"domain":{
-			"type":"range",
-			"key":"min",
-			"partitions":[
-				{"min":0,"max":1000},
-				{"min":1000,"max":10000},
-				{"min":10000,"max":100000},
-				{"min":100000,"max":1000000},
-				{"min":1000000,"max":10000000},
-				{"min":10000000,"max":100000000},
-				{"min":100000000,"max":1000000000},
-				{"min":1000000000,"max":10000000000}
-			]
-		}
-	}],
-	"where":{"and":[{"eq":{"etl.id":0}}]}
-}
-```
-
-
-
-**THIS TUTORIAL IS INCOMPLETE**
-
- 
+* [General Documentation](jx.md) - Detailed documentation
 

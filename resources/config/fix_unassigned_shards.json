@@ -1,0 +1,67 @@
+{
+    "zones":[
+        {
+            "name":"spot",
+            "risky":true,
+            "shards":2
+        },
+        {
+            "name":"primary",
+            "risky":false,
+            "shards":1
+        }
+    ],
+    "finally":{
+        "/_cluster/settings": [
+            {"transient": {
+                "cluster.routing.allocation.disk.threshold_enabled" : true,
+                "cluster.routing.allocation.disk.watermark.low": "40%"
+            }},
+            {"persistent": {"cluster.routing.allocation.enable": "all"}}
+        ]
+    },
+    "replication_priority":[
+        "saved*",
+        "repo*",
+        "branches*",
+        "job*",
+        "treeherder*",
+        "unit*"
+    ],
+    "elasticsearch": {
+        "host": "http://activedata.allizom.org",
+        "port": 9200,
+        "debug": true
+    },
+    "constants":{
+        "pyLibrary.env.http.default_headers":{
+            "referer":"https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
+        }
+    },
+    "debug": {
+        "trace": true,
+        "cprofile": {
+            "enabled": false,
+            "filename": "./results/profile.tab"
+        },
+        "log": [
+            {
+                "log_type": "console"
+            },
+			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "./results/fix_unassigned_shards.log",
+				"maxBytes": 10000000,
+				"backupCount": 10,
+				"encoding": "utf8"
+			},
+			{
+                "log_type": "ses",
+                "from_address": "klahnakoski@mozilla.com",
+                "to_address": "klahnakoski@mozilla.com",
+                "subject": "[ALERT][Manager] Problem with shard assignment",
+                "$ref": "file://~/private.json#aws_credentials"
+            }
+        ]
+    }
+}

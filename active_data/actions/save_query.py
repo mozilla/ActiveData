@@ -96,10 +96,9 @@ class SaveQueries(object):
         except Exception, e:
             Log.warning("Problem saving query", cause=e)
         es.add_alias(es.settings.alias)
+        es.flush()
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size, period=SECOND)
         self.es = FromES(es.settings)
-
-
 
     def find(self, hash):
         result = self.es.query({

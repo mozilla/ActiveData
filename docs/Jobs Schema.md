@@ -2,16 +2,16 @@
 Jobs
 ====
 
-The Jobs table records all BuildBot jobs, including the timings of the 
+The Jobs table records all BuildBot jobs, including the timings of the
 individual actions.  
 
 `jobs` Columns
 --------------
 
-These can be found at the top of each logfile.  Use the `run` properties 
+These can be found at the top of each logfile. Use the `run` properties
 for finer grained querying
 
-* `action.builder` - *string* full build name given to this job.  Same as 
+* `action.builder` - *string* full build name given to this job. Same as 
   `run.key`
 * `action.start_time` - *timestamp* when buildbot started this action
 * `action.end_time` - *timestamp* when buildbot completed this action
@@ -23,9 +23,9 @@ for finer grained querying
 `jobs.action.timings` Columns
 ----------------------------
 
-All timing details can be had by querying `{"from":"jobs.action.timings"}`.  
-Like everything else in Active Data, the various depth of timing has been 
-denormalized for ease of querying.  Each property here is the short form; 
+All timing details can be had by querying `{"from":"jobs.action.timings"}`.
+Like everything else in Active Data, the various depth of timing has been
+denormalized for ease of querying. Each property here is the short form;
 prefix with `action.timings.` for the absolute name.
 
 * `order` - *integer* the number of this step for showing the order they 
@@ -37,11 +37,11 @@ prefix with `action.timings.` for the absolute name.
   number of parameters, which can be found here
   * `builder.start_time` - *timestamp* when the step started
   * `builder.end_time` - *timestamp* when the step ended
-  * `builder.duration` - *seconds* total length of time for this step.  It 
+  * `builder.duration` - *seconds* total length of time for this step. It 
   may be longer than what start/end would indicate because it includes the 
   inter-builder step time
   * `builder.elapsedTime` - Before the end of each BuildBot step the is an 
-  `elapsedTime=` line; which is the script reporting it is done.  This can 
+  `elapsedTime=` line; which is the script reporting it is done. This can 
   be much shorter than the `duration`, if BuildBot is acting slow.
 * `harness` - *object* properties for the mozharness steps
   * `harness.step` - *string* name of the step 
@@ -56,11 +56,11 @@ prefix with `action.timings.` for the absolute name.
 Properties that describe the run of this job.
 
 * `run.suite` - *string* name of the suite (if a test)
-* `run.chunk` - *integer* each suite is broken into chucks to parallelize the 
+* `run.chunk` - *integer* each suite is broken into chucks to parallelize the
 run, each chunk is given a number
 * `run.type` - *string* one of many build options
 * `run.buildbot_status` - *string* BuildBot's end status
-* `run.files` - *array* of files recorded for this suite, one or more of which  
+* `run.files` - *array* of files recorded for this suite, one or more of which
 are the structured log digested to make this record
 	* `run.files.name` - *string* name of the file
 	* `run.files.url` - *string* url where he contents can/could be found
@@ -70,8 +70,8 @@ are the structured log digested to make this record
 	* `run.machine.pool` - *string* the buildbot/task cluster pool that this machine belongs
 	* `run.machine.type` - *string* indicator if a "vm", or emulator", or other that may affect performance of this test
 	* `run.machine.aws_type` - *string* AWS instance type
-	* `run.machine.aws_id` - *string* machine ID, for correlating possible problems  
-* `run.talos` - *boolean* indicates if Talos performance results can be found 
+	* `run.machine.aws_id` - *string* machine ID, for correlating possible problems
+* `run.talos` - *boolean* indicates if Talos performance results can be found
 in the text log
 * `run.logurl` - *string* url to find the text log
 * `run.key` - *string* created by PulseTranslator to represent these other properties
@@ -131,7 +131,7 @@ Markup from the ETL process
 * `etl.timestamp` - *timestamp* when the ETL was run
 * `etl.revision` - *string* git revision number of the ETL
 * `etl.duration` - *seconds* - how long the ETL took
-* `etl.source` - *object* another structure, just like this, which describes 
-the parent ETL that fed this:  An effective audit chain.
+* `etl.source` - *object* another structure, just like this, which describes
+the parent ETL that fed this: An effective audit chain.
 * `etl.name` - *string* humane description of this ETL step
 * `etl.type` - *string* either `join` or `aggregation` indicating if this ETL step was adding or reducing information

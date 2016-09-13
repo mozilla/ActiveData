@@ -2,7 +2,7 @@
 Unittest Logs
 =============
 
-The Unittest logs are deep JSON structures describing each of the individual test results.  There are seven major properties.
+The Unittest logs are deep JSON structures describing each of the individual test results. There are seven major properties.
 
 `result` Columns
 ----------------
@@ -12,9 +12,9 @@ Describes properties exclusive to an individual test result
 * `result.test` - *string* path and filename of the specific test
 * `result.status` - *string* recording the test result
 * ~~`result.result` - *string* recording the test result~~
-* `result.expected` - *string* representing what was expected of the test.  Not all tests are expected to pass.
+* `result.expected` - *string* representing what was expected of the test. Not all tests are expected to pass.
 * `result.ok` - *boolean* where `result==expected`, and all subtests too
-* `result.start_time` -  *timestamp* when the test started running
+* `result.start_time` - *timestamp* when the test started running
 * `result.end_time` - *timestamp* when the test ended
 * `result.duration` - *seconds* usually the calculated difference between start and end times, but could be the test's own reported duration
 * `result.last_log_time` - *timestamp* of the last log line seen for this run, may be after the `result.end_time`
@@ -30,7 +30,7 @@ Describes properties exclusive to an individual test result
 `result.subtests` Columns
 -------------------------
 
-Some test types have multiple individual results per top-level test, these are represented as *subtests*.  To query the subtests use `{"from":"unittest.result.subtests"}`
+Some test types have multiple individual results per top-level test, these are represented as *subtests*. To query the subtests use `{"from":"unittest.result.subtests"}`
 
 * `result.subtests.ordering` - *integer* for maintaining the original log ordering
 * `result.subtests.name` - *string* name of the subtest
@@ -45,7 +45,7 @@ Some test types have multiple individual results per top-level test, these are r
 `run` Columns
 -------------
 
-Properties that describe the run of this test suite, and the many tests that are contained within.  Most are verbatim from the Pulse messages received by the ETL, and replicated for every test result in the data store.  **If you are interested in suite-level aggregates, be sure to filter by the suite's canonical test result: `"where": {"eq":{"etl.id":0}}`**
+Properties that describe the run of this test suite, and the many tests that are contained within. Most are verbatim from the Pulse messages received by the ETL, and replicated for every test result in the data store. **If you are interested in suite-level aggregates, be sure to filter by the suite's canonical test result: `"where": {"eq":{"etl.id":0}}`**
 
 * `run.suite` - *string* name of the suite
 * `run.chunk` - *integer* each suite is broken into chucks to parallelize the run, each chunk is given a number
@@ -133,6 +133,6 @@ Markup from the ETL process
 * `etl.timestamp` - *timestamp* when the ETL was run
 * `etl.revision` - *string* git revision number of the ETL
 * `etl.duration` - *seconds* - how long the ETL took
-* `etl.source` - *object* another structure, just like this, which describes the parent ETL that fed this:  An effective audit chain.
+* `etl.source` - *object* another structure, just like this, which describes the parent ETL that fed this: An effective audit chain.
 * `etl.name` - *string* humane description of this ETL step
 * `etl.type` - *string* either `join` or `aggregation` indicating if this ETL step was adding or reducing information

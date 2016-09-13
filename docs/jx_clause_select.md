@@ -1,48 +1,44 @@
 
-`select` Clause 
+`select` Clause
 ===============
 
 
 Introduction
 ------------
 
-Getting a feel for the JSON Expressions `select` clause is easiest done by comparing to SQL.  Just like SQL, the `select` clause is used for renaming:
+Getting a feel for the JSON Expressions `select` clause is easiest done by comparing to SQL. Just like SQL, the `select` clause is used for renaming:
 
 <table><tr><td>
-<b>JSON Expressions</b><br>
+<b>JSON Query Expression</b><br>
 <pre>
 {
-    "from": test,
     "select": [
-        {
-            "name":"name", 
-            "value":"person"
-        },
-        {
-            "name":"age", 
-            "value":"years"
-        }
-    ]
+        {"name":"name", "value":"person"},
+        {"name":"age", "value":"years"}
+    ],
+    "from": test
 }
 </pre>
 </td><td>
 <b>SQL</b><br>
 <pre>
+
 SELECT
 	person AS name,
 	years AS age
 FROM
 	test 
+
 </pre>
 </td></tr></table>
 
 JSON expressions are clearly more verbose than SQL, but there are many shortcuts to mitigate this, plus the `select` clause can do more than SQL.
 
 
-The Standard `select` Clause 
+The Standard `select` Clause
 ----------------------------
 
-The select clause is used for both selecting particular values, and for creating new structures from those values.  A select clause is a list that maps the leaves of one data structure to the leaves of another.
+The select clause is used for both selecting particular values, and for creating new structures from those values. A select clause is a list that maps the leaves of one data structure to the leaves of another.
 
 	"select": [
 		{"value": source_path_1, "name": destination_path_1}
@@ -50,7 +46,7 @@ The select clause is used for both selecting particular values, and for creating
 		...
 	]
 
-The path separator is the dot (`.`), with literal dots escaped using backslash.  Paths need not point to primitive values, and can refer to objects.
+The path separator is the dot (`.`), with literal dots escaped using backslash. Paths need not point to primitive values, and can refer to objects.
 
 
 ###Example Transformation
@@ -163,7 +159,7 @@ If the name of the name, or path, of the value is not changed, a string will do 
 
 ### Selecting A Single Value
 
-The standard `select` clause is used for returning objects and structures.  You can return a single (unnamed) value by eliminating the array (`[]`):
+The standard `select` clause is used for returning objects and structures. You can return a single (unnamed) value by eliminating the array (`[]`):
 
 
 <table><tr><td>
@@ -205,8 +201,8 @@ The standard `select` clause is used for returning objects and structures.  You 
 
 ### Selecting Self (`.`)
 
-Sometimes the whole object is desired; in this case, use a single dot (`"."`).  Since `"."` is the default select clause, you do not even need to specify it.
- 
+Sometimes the whole object is desired; in this case, use a single dot (`"."`). Since `"."` is the default select clause, you do not even need to specify it.
+
 <table><tr><td>
 <b>Select Self</b><br>
 <pre>
@@ -287,7 +283,7 @@ Sometimes the whole object is desired; in this case, use a single dot (`"."`).  
 
 ###Selecting Leaves (`*`)
 
-The star (`*`) can be used to refer to all leaves of a path.  This behaviour is different from dot (`.`):  Dot does not change structure, the star will flatten it.  Star is useful when converting data to table form.
+The star (`*`) can be used to refer to all leaves of a path. This behaviour is different from dot (`.`): Dot does not change structure, the star will flatten it. Star is useful when converting data to table form.
 
 <table><tr><td>
 <b>Select All Leaves as List</b><br>
@@ -310,6 +306,13 @@ The star (`*`) can be used to refer to all leaves of a path.  This behaviour is 
         "run.chunk": 2
     }]
 }
+
+
+
+
+
+
+
 </pre>
 
 </td><td>
@@ -344,7 +347,7 @@ The star (`*`) can be used to refer to all leaves of a path.  This behaviour is 
 </pre>
 
 </td><td>
-<b>Select all as Table</b><br>
+<b>Select Self as Table</b><br>
 <pre>
 {
     "from": test,
@@ -376,7 +379,7 @@ The star (`*`) can be used to refer to all leaves of a path.  This behaviour is 
 
 </td></tr></table>
 
-The star can be used on the end of a path.  The path is not flattened, but the structure it points to is.
+The star can be used on the end of a path. The path is not flattened, but the structure it points to is.
 
 <table><tr><td>
 <b>Query as List</b><br>

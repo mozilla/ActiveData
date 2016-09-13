@@ -6,6 +6,7 @@ timeout = 24*60*60
 
 accesslog = "/logs/gunicorn_access.log"
 errorlog = "/logs/gunicorn_error.log"
+logfile = "/logs/gunicorn_debug.log"
 
 access_log_format = '{' \
                     '"remote_addr": "%(h)s",' \

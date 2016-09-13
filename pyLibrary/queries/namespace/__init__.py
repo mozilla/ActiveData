@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from collections import Mapping
 
 from pyLibrary.dot import set_default, Dict
-from pyLibrary.queries.query import Query
+from pyLibrary.queries.query import QueryOp
 
 
 class Namespace(object):
@@ -23,7 +23,7 @@ class Namespace(object):
         raise NotImplementedError()
 
     def _convert_query(self, query):
-        output = Query()
+        output = QueryOp("from", None)
         output.select = self._convert_clause(query.select)
         output.where = self.convert(query.where)
         output["from"] = self._convert_from(query["from"])

@@ -7,19 +7,23 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 import itertools
 
+from pyLibrary.collections import UNION
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, wrap, Null, coalesce
+from pyLibrary.dot import listwrap, wrap
 from pyLibrary.queries import windows
-from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
-from pyLibrary.queries.expressions import jx_expression_to_function
+from pyLibrary.queries.expression_compiler import compile_expression
+from pyLibrary.queries.expressions import jx_expression_to_function, jx_expression
+from pyLibrary.times.dates import Date
 
+_ = Date
 
 def is_aggs(query):
     if query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate):
@@ -31,101 +35,110 @@ def list_aggs(frum, query):
     frum = wrap(frum)
     select = listwrap(query.select)
 
-    is_join = False  # True IF MANY TO MANY JOIN WITH AN EDGE
     for e in query.edges:
         if isinstance(e.domain, DefaultDomain):
-            e.domain = SimpleSetDomain(partitions=list(sorted(set(frum.select(e)))))
+            accessor = jx_expression_to_function(e.value)
+            unique_values = set(map(accessor, frum))
+            if None in unique_values:
+                e.allowNulls = True
+                unique_values -= {None}
+            e.domain = SimpleSetDomain(partitions=list(sorted(unique_values)))
 
-    for s in listwrap(query.select):
-        s["exec"] = jx_expression_to_function(s.value)
+    s_accessors = [(ss.name, compile_expression(ss.value.to_python())) for ss in select]
 
     result = {
         s.name: Matrix(
             dims=[len(e.domain.partitions) + (1 if e.allowNulls else 0) for e in query.edges],
-            zeros=coalesce(s.default, 0 if s.aggregate == "count" else Null)
+            zeros=lambda: windows.name2accumulator.get(s.aggregate)(**s)
         )
         for s in select
     }
     where = jx_expression_to_function(query.where)
-    for d in filter(where, frum):
-        d = d.copy()
-        coord = []  # LIST OF MATCHING COORDINATE FAMILIES, USUALLY ONLY ONE PER FAMILY BUT JOINS WITH EDGES CAN CAUSE MORE
-        for e in query.edges:
-            coord.append(get_matches(e, d))
+    coord = [None]*len(query.edges)
+    edge_accessor = [(i, make_accessor(e)) for i, e in enumerate(query.edges)]
 
-        for s in select:
-            mat = result[s.name]
-            agg = s.aggregate
-            var = s.value
-            if agg == "count":
-                for c in itertools.product(*coord):
-                    if var == "." or var == None:
-                        mat[c] += 1
-                        continue
+    net_new_edge_names = set(wrap(query.edges).name) - UNION(e.value.vars() for e in query.edges)
+    if net_new_edge_names & UNION(ss.value.vars() for ss in select):
+        # s_accessor NEEDS THESE EDGES, SO WE PASS THEM ANYWAY
+        for d in filter(where, frum):
+            d = d.copy()
+            for c, get_matches in edge_accessor:
+                coord[c] = get_matches(d)
 
-                    for e, cc in zip(query.edges, c):
-                        d[e.name] = cc
-                    val = s["exec"](d, c, frum)
-                    if val != None:
-                        mat[c] += 1
-            else:
+            for s_name, s_accessor in s_accessors:
+                mat = result[s_name]
                 for c in itertools.product(*coord):
                     acc = mat[c]
-                    if acc == None:
-                        acc = windows.name2accumulator.get(agg)
-                        if acc == None:
-                            Log.error("select aggregate {{agg}} is not recognized",  agg= agg)
-                        acc = acc(**s)
-                        mat[c] = acc
-                    for e, cc in zip(query.edges, c):  # BECAUSE WE DO NOT KNOW IF s.exec NEEDS THESE EDGES, SO WE PASS THEM ANYWAY
+                    for e, cc in zip(query.edges, c):
                         d[e.name] = e.domain.partitions[cc]
-                    val = s["exec"](d, c, frum)
+                    val = s_accessor(d, c, frum)
+                    acc.add(val)
+    else:
+        # FASTER
+        for d in filter(where, frum):
+            for c, get_matches in edge_accessor:
+                coord[c] = get_matches(d)
+
+            for s_name, s_accessor in s_accessors:
+                mat = result[s_name]
+                for c in itertools.product(*coord):
+                    acc = mat[c]
+                    val = s_accessor(d, c, frum)
                     acc.add(val)
 
     for s in select:
-        if s.aggregate == "count":
-            continue
+        # if s.aggregate == "count":
+        #     continue
         m = result[s.name]
         for c, var in m.items():
             if var != None:
                 m[c] = var.end()
 
+    from pyLibrary.queries.containers.cube import Cube
+
     output = Cube(select, query.edges, result)
     return output
 
 
+def make_accessor(e):
+    d = e.domain
 
-def get_matches(e, d):
     if e.value:
+        accessor = jx_expression_to_function(e.value)
         if e.allowNulls:
-            return [e.domain.getIndexByKey(d[e.value])]
+            def output1(row):
+                return [d.getIndexByKey(accessor(row))]
+            return output1
         else:
-            c = e.domain.getIndexByKey(d[e.value])
-            if c == len(e.domain.partitions):
-                return []
-            else:
-                return [c]
-    elif e.range and e.range.mode == "inclusive":
-        for p in e.domain.partitions:
+            def output2(row):
+                c = d.getIndexByKey(accessor(row))
+                if c == len(d.partitions):
+                    return []
+                else:
+                    return [c]
+            return output2
+    elif e.range:
+        for p in d.partitions:
             if p["max"] == None or p["min"] == None:
                 Log.error("Inclusive expects domain parts to have `min` and `max` properties")
 
-        output = []
-        mi, ma = d[e.range.min], d[e.range.max]
-        for p in e.domain.partitions:
-            if mi <= p["max"] and p["min"] < ma:
-                output.append(p.dataIndex)
-        if e.allowNulls and not output:
-            output.append(len(e.domain.partitions))  # ENSURE THIS IS NULL
-        return output
+        mi_accessor = jx_expression_to_function(e.range.min)
+        ma_accessor = jx_expression_to_function(e.range.max)
 
-    elif e.range:
-        output = []
-        mi, ma = d[e.range.min], d[e.range.max]
-        var = e.domain.key
-        for p in e.domain.partitions:
-            if mi <= p[var] < ma:
-                output.append(p.dataIndex)
-        if e.allowNulls and not output:
-            output.append(len(e.domain.partitions))  # ENSURE THIS IS NULL
-        return output
+        if e.range.mode == "inclusive":
+            def output3(row):
+                mi, ma = mi_accessor(row), ma_accessor(row)
+                output = [p.dataIndex for p in d.partitions if mi <= p["max"] and p["min"] < ma]
+                if e.allowNulls and not output:
+                    return [len(d.partitions)]  # ENSURE THIS IS NULL
+                return output
+            return output3
+        else:
+            def output4(row):
+                mi, ma = mi_accessor(row), ma_accessor(row)
+                var = d.key
+                output = [p.dataIndex for p in d.partitions if mi <= p[var] < ma]
+                if e.allowNulls and not output:
+                    return [len(d.partitions)]  # ENSURE THIS IS NULL
+                return output
+            return output4

@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
 from types import GeneratorType, NoneType, ModuleType
-
+from __builtin__ import zip as _builtin_zip
 
 _get = object.__getattribute__
 
@@ -53,7 +53,7 @@ def zip(keys, values):
 
 def literal_field(field):
     """
-    RETURN SAME WITH . ESCAPED
+    RETURN SAME WITH DOTS (`.`) ESCAPED
     """
     try:
         return field.replace(".", "\.")
@@ -83,6 +83,41 @@ def join_field(field):
     if not potent:
         return "."
     return ".".join([f.replace(".", "\.") for f in potent])
+
+
+def startswith_field(field, prefix):
+    """
+    RETURN True IF field PATH STRING STARTS WITH prefix PATH STRING
+    """
+    if prefix == ".":
+        return True
+
+    if field.startswith(prefix):
+        if len(field) == len(prefix) or field[len(prefix)] == ".":
+            return True
+    return False
+
+
+def relative_field(field, parent):
+    """
+    RETURN field PATH WITH RESPECT TO parent
+    """
+    if parent==".":
+        return field
+
+    field_path = split_field(field)
+    parent_path = split_field(parent)
+    common = 0
+    for f, p in _builtin_zip(field_path, parent_path):
+        if f != p:
+            break
+        common += 1
+
+    if len(parent_path) == common:
+        return join_field(field_path[common:])
+    else:
+        dots = "." * (len(parent_path) - common)
+        return dots + "." + join_field(field_path[common:])
 
 
 def hash_value(v):
@@ -131,8 +166,8 @@ def _all_default(d, default, seen=None):
         return
     if isinstance(default, Dict):
         default = object.__getattribute__(default, "_dict")  # REACH IN AND GET THE dict
-        from pyLibrary.debugs.logs import Log
-        Log.error("strictly dict (or object) allowed: got {{type}}", type=default.__class__.__name__)
+        # from pyLibrary.debugs.logs import Log
+        # Log.error("strictly dict (or object) allowed: got {{type}}", type=default.__class__.__name__)
 
     for k, default_value in default.items():
         default_value = unwrap(default_value)  # TWO DIFFERENT Dicts CAN SHARE id() BECAUSE THEY ARE SHORT LIVED
@@ -181,14 +216,16 @@ def _getdefault(obj, key):
 
     try:
         return getattr(obj, key)
-    except Exception, e:
+    except Exception, f:
         pass
+
 
     try:
         if float(key) == round(float(key), 0):
             return obj[int(key)]
     except Exception, f:
         pass
+
 
     # TODO: FIGURE OUT WHY THIS WAS EVER HERE (AND MAKE A TEST)
     # try:
@@ -275,13 +312,13 @@ def _get_attr(obj, path):
     try:
         obj = obj[int(attr_name)]
         return _get_attr(obj, path[1:])
-    except Exception, e:
+    except Exception:
         pass
 
     try:
         obj = getattr(obj, attr_name)
         return _get_attr(obj, path[1:])
-    except Exception, e:
+    except Exception:
         pass
 
     try:
@@ -449,6 +486,8 @@ def listwrap(value):
         return DictList()
     elif isinstance(value, list):
         return wrap(value)
+    elif isinstance(value, set):
+        return wrap(list(value))
     else:
         return wrap([unwrap(value)])
 

@@ -218,7 +218,7 @@ class Max(WindowFunction):
         self.total.remove(value)
 
     def end(self):
-        return MAX(*self.total)
+        return MAX(self.total)
 
 
 class Count(WindowFunction):

@@ -37,6 +37,8 @@ class Timer(object):
         self.param = wrap(coalesce(param, {}))
         self.debug = debug
         self.silent = silent
+        self.start = 0
+        self.end = 0
         self.interval = None
 
     def __enter__(self):
@@ -58,4 +60,7 @@ class Timer(object):
 
     @property
     def duration(self):
+        if not self.end:
+            return Duration(clock() - self.start)
+
         return Duration(self.interval)

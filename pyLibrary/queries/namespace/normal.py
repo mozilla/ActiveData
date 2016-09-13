@@ -25,7 +25,7 @@ from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain
 from pyLibrary.queries.expressions import TRUE_FILTER
 from pyLibrary.queries.namespace import Namespace, convert_list
-from pyLibrary.queries.query import Query, get_all_vars
+from pyLibrary.queries.query import QueryOp, get_all_vars
 
 
 DEFAULT_LIMIT = 10
@@ -47,7 +47,7 @@ class Normal(Namespace):
         #     Log.error('Expecting from clause to be a Container')
         query = wrap(query)
 
-        output = Query()
+        output = QueryOp("from", None)
         output["from"] = self._convert_from(query["from"])
 
         output.format = query.format
@@ -56,7 +56,7 @@ class Normal(Namespace):
             output.select = convert_list(self._convert_select, query.select)
         else:
             if query.edges or query.groupby:
-                output.select = {"name": "count", "value": ".", "aggregate": "count"}
+                output.select = {"name": "count", "value": ".", "aggregate": "count", "default": 0}
             else:
                 output.select = {"name": "__all__", "value": "*", "aggregate": "none"}
 
@@ -96,7 +96,7 @@ class Normal(Namespace):
     def _convert_from(self, frum):
         if isinstance(frum, basestring):
             return Dict(name=frum)
-        elif isinstance(frum, (Container, Query)):
+        elif isinstance(frum, (Container, QueryOp)):
             return frum
         else:
             Log.error("Expecting from clause to be a name, or a container")

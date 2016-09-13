@@ -272,7 +272,7 @@ class SimpleSetDomain(Domain):
         self.label = coalesce(self.label, "name")
 
         if hasattr(desc.partitions, "__iter__"):
-            self.partitions = list(desc.partitions)
+            self.partitions = wrap(list(desc.partitions))
         else:
             Log.error("expecting a list of partitions")
 

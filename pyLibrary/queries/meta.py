@@ -34,6 +34,7 @@ _elasticsearch = None
 ENABLE_META_SCAN = False
 DEBUG = True
 TOO_OLD = 2*HOUR
+OLD_METADATA = MINUTE
 singlton = None
 TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
 
@@ -66,6 +67,9 @@ class FromESMetadata(Schema):
         self.default_es = _elasticsearch.Cluster(settings=settings)
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
+        self.es_metadata = Null
+        self.last_es_metadata = Date.now()-OLD_METADATA
+
         self.meta=Dict()
         table_columns = metadata_tables()
         column_columns = metadata_columns()
@@ -90,7 +94,7 @@ class FromESMetadata(Schema):
 
     def get_table(self, table_name):
         with self.meta.tables.locker:
-            return self.meta.tables.query({"where": {"eq": {"name": table_name}}})
+            return wrap([t for t in self.meta.tables.data if t.name == table_name])
 
     def _upsert_column(self, c):
         # ASSUMING THE  self.meta.columns.locker IS HAD
@@ -116,42 +120,23 @@ class FromESMetadata(Schema):
             Log.note("todo: {{table}}.{{column}}", table=canonical.table, column=canonical.es_column)
             self.todo.add(canonical)
 
-    def _get_columns(self, table=None, metadata=None):
+    def _get_columns(self, table=None):
         # TODO: HANDLE MORE THEN ONE ES, MAP TABLE SHORT_NAME TO ES INSTANCE
-        if not metadata:
-            metadata = self.default_es.get_metadata(force=True)
+        meta = self.es_metadata.indices[table]
+        if not meta or self.last_es_metadata < Date.now() - OLD_METADATA:
+            self.es_metadata = self.default_es.get_metadata(force=True)
+            meta = self.es_metadata.indices[table]
 
-        def parse_all(please_stop):
-            for abs_index, meta in jx.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
-                if meta.index != abs_index:
-                    continue
-
-                for _, properties in meta.mappings.items():
-                    if please_stop:
-                        return
-                    self._parse_properties(abs_index, properties, meta)
-
-        if table:
-            for abs_index, meta in jx.sort(metadata.indices.items(), {"value": 0, "sort": -1}):
-                if table == meta.index:
-                    for _, properties in meta.mappings.items():
-                        self._parse_properties(abs_index, properties, meta)
-                    return
-                if table == abs_index:
-                    self._get_columns(table=meta.index, metadata=metadata)
-                    return
-        else:
-            self.parser = Thread.run("parse properties", parse_all)
-
-
-
+        for _, properties in meta.mappings.items():
+            self._parse_properties(meta.index, properties, meta)
 
     def _parse_properties(self, abs_index, properties, meta):
         abs_columns = _elasticsearch.parse_properties(abs_index, None, properties.properties)
         abs_columns = abs_columns.filter(  # TODO: REMOVE WHEN jobs PROPERTY EXPLOSION IS CONTAINED
             lambda r: not r.es_column.startswith("other.") and
                       not r.es_column.startswith("previous_values.cf_") and
-                      not r.es_index.startswith("debug")
+                      not r.es_index.startswith("debug") and
+                      not r.es_coloun.find
         )
         with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
             def add_column(c, query_path):
@@ -234,35 +219,46 @@ class FromESMetadata(Schema):
             _query.as_dict()
         )))
 
-    def get_columns(self, table_name, column_name=None, fail_when_not_found=False):
+    def get_columns(self, table_name, column_name=None):
         """
         RETURN METADATA COLUMNS
         """
         try:
+            # LAST TIME WE GOT INFO FOR THIS TABLE
+            short_name = join_field(split_field(table_name)[0:1])
+            table = self.get_table(short_name)[0]
+
+            if not table:
+                table = Table(
+                    name=short_name,
+                    url=None,
+                    query_path=None,
+                    timestamp=Date.now()
+                )
+                with self.meta.tables.locker:
+                    self.meta.tables.add(table)
+                self._get_columns(table=short_name)
+            elif table.timestamp == None or table.timestamp < Date.now() - 5 * MINUTE:
+                table.timestamp = Date.now()
+                self._get_columns(table=short_name)
+
             with self.meta.columns.locker:
                 columns = [c for c in self.meta.columns.data if c.table == table_name and (column_name is None or c.name==column_name)]
             if columns:
                 columns = jx.sort(columns, "name")
-                if fail_when_not_found:
-                    # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
-                    while len(self.todo) and not all(columns.get("last_updated")):
-                        Log.note("waiting for columns to update {{columns|json}}", columns=[c.table+"."+c.es_column for c in columns if not c.last_updated])
-                        Thread.sleep(seconds=1)
-                    return columns
-                elif all(columns.get("last_updated")):
-                    return columns
+                # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
+                while len(self.todo) and not all(columns.get("last_updated")):
+                    Log.note("waiting for columns to update {{columns|json}}", columns=[c.table+"."+c.es_column for c in columns if not c.last_updated])
+                    Thread.sleep(seconds=1)
+                return columns
         except Exception, e:
             Log.error("Not expected", cause=e)
 
-        if fail_when_not_found:
-            if column_name:
-                Log.error("no columns matching {{table}}.{{column}}", table=table_name, column=column_name)
-            else:
-                self._get_columns(table=table_name)
-                Log.error("no columns for {{table}}", table=table_name)
-
-        self._get_columns(table=join_field(split_field(table_name)[0:1]))
-        return self.get_columns(table_name=table_name, column_name=column_name, fail_when_not_found=True)
+        if column_name:
+            Log.error("no columns matching {{table}}.{{column}}", table=table_name, column=column_name)
+        else:
+            self._get_columns(table=table_name)
+            Log.error("no columns for {{table}}", table=table_name)
 
     def _update_cardinality(self, c):
         """
@@ -547,6 +543,15 @@ def metadata_tables():
                 "url",
                 "query_path"
             ]
+        ]+[
+            Column(
+                table="meta.tables",
+                name="timestamp",
+                es_index=None,
+                es_column="timestamp",
+                type="integer",
+                nested_path=Null
+            )
         ]
     )
 
@@ -557,7 +562,8 @@ def metadata_tables():
 class Table(DataClass("Table", [
     "name",
     "url",
-    "query_path"
+    "query_path",
+    "timestamp"
 ])):
     @property
     def columns(self):

@@ -19,7 +19,7 @@ from pyLibrary.queries import es09
 from pyLibrary.queries.es14.decoders import DefaultDecoder, AggsDecoder
 from pyLibrary.queries.es14.decoders import DimFieldListDecoder
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable
+from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp
 from pyLibrary.queries.query import MAX_LIMIT
 from pyLibrary.times.timer import Timer
 
@@ -38,7 +38,7 @@ def get_decoders_by_depth(query):
     schema = query.frum
     output = DictList()
     for e in wrap(coalesce(query.edges, query.groupby, [])):
-        if e.value != None:
+        if e.value != None and not isinstance(e.vlaue, NullOp):
             e = e.copy()
             vars_ = e.value.vars()
 
@@ -71,14 +71,20 @@ def get_decoders_by_depth(query):
             for p in e.domain.partitions:
                 vars_ |= p.where.vars()
 
-        depths = set(len(listwrap(schema[v].nested_path)) for v in vars_)
-        if len(depths) > 1:
-            Log.error("expression {{expr}} spans tables, can not handle", expr=e.value)
-        depth = list(depths)[0]
-        while len(output) <= depth:
+        try:
+            depths = set(len(listwrap(schema[v].nested_path)) for v in vars_)
+            if len(depths) > 1:
+                Log.error("expression {{expr}} spans tables, can not handle", expr=e.value)
+            max_depth = Math.MAX(depths)
+            while len(output) <= max_depth:
+                output.append([])
+        except Exception, e:
+            # USUALLY THE SCHEMA IS EMPTY, SO WE ASSUME THIS IS A SIMPLE QUERY
+            max_depth = 0
             output.append([])
-        output[depth].append(AggsDecoder(e, query, limit))
+
         limit = 0
+        output[max_depth].append(AggsDecoder(e, query, limit))
     return output
 
 
@@ -192,14 +198,14 @@ def es_aggsop(es, frum, query):
             es_query.aggs[literal_field(canonical_name)].value_count.script = abs_value.to_ruby()
             s.pull = literal_field(canonical_name) + ".value"
         elif s.aggregate == "median":
-            #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
+            # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")
 
             es_query.aggs[key].percentiles.script = abs_value.to_ruby()
             es_query.aggs[key].percentiles.percents += [50]
             s.pull = key + ".values.50\.0"
         elif s.aggregate == "percentile":
-            #ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
+            # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")
             percent = Math.round(s.percentile * 100, decimal=6)
 
@@ -207,7 +213,7 @@ def es_aggsop(es, frum, query):
             es_query.aggs[key].percentiles.percents += [percent]
             s.pull = key + ".values." + literal_field(unicode(percent))
         elif s.aggregate == "cardinality":
-            #ES USES DIFFERENT METHOD FOR CARDINALITY
+            # ES USES DIFFERENT METHOD FOR CARDINALITY
             key = canonical_name + " cardinality"
 
             es_query.aggs[key].cardinality.script = abs_value.to_ruby()

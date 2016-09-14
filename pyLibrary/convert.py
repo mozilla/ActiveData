@@ -476,7 +476,10 @@ def bytes2hex(value, separator=" "):
 
 
 def base642bytearray(value):
-    return bytearray(base64.b64decode(value))
+    if value == None:
+        return bytearray(b"")
+    else:
+        return bytearray(base64.b64decode(value))
 
 
 def base642bytes(value):
@@ -484,6 +487,8 @@ def base642bytes(value):
 
 
 def bytes2base64(value):
+    if isinstance(value, bytearray):
+        value=str(value)
     return base64.b64encode(value).decode("utf8")
 
 

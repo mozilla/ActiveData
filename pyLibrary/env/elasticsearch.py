@@ -695,7 +695,7 @@ class Cluster(object):
                     m.index = i
                     for a in m.aliases:
                         if not indices[a]:
-                            indices[a] = {"index": i}
+                            indices[a] = m
                 self.cluster_state = wrap(self.get("/"))
                 self.version = self.cluster_state.version.number
             return self._metadata

@@ -235,7 +235,7 @@ def _list2json(value, _buffer):
         sep = u"["
         for v in value:
             append(_buffer, sep)
-            sep = u","
+            sep = u", "
             _value2json(v, _buffer)
         append(_buffer, u"]")
 

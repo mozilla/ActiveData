@@ -15,7 +15,7 @@ from collections import Mapping
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList, unwrap, set_default, join_field, split_field
+from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList, unwrap, set_default, join_field, split_field, Null
 from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.expression_compiler import compile_expression
@@ -50,6 +50,7 @@ class ListContainer(Container):
         return self._schema
 
     def query(self, q):
+        q = wrap(q)
         frum = self
         if is_aggs(q):
             frum = list_aggs(frum.data, q)
@@ -183,7 +184,12 @@ class ListContainer(Container):
     def get_columns(self, table_name=None):
         return self.schema.values()
 
+    def add(self, value):
+        self.data.append(value)
+
     def __getitem__(self, item):
+        if item < 0 or len(self.data) <= item:
+            return Null
         return self.data[item]
 
     def __iter__(self):

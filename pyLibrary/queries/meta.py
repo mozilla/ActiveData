@@ -136,7 +136,8 @@ class FromESMetadata(Schema):
             lambda r: not r.es_column.startswith("other.") and
                       not r.es_column.startswith("previous_values.cf_") and
                       not r.es_index.startswith("debug") and
-                      not r.es_coloun.find
+                      r.es_column.find("=")==-1 and
+                      r.es_column.find(" ")==-1
         )
         with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
             def add_column(c, query_path):

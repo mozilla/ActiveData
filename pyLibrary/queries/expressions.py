@@ -249,12 +249,14 @@ class Variable(Expression):
             return wrap([{"name": ".", "sql": {"n": "NULL"}, "nested_path": ["."]}])
 
         acc = Dict()
-        nested_path = ["."]
         for c in cols:
-            nested_path = wrap_nested_path(c.nested_path)
-            acc[json_type_to_sql_type[c.type]] = c.es_index + "." + convert.string2quote(c.es_column)
+            nested_path = wrap_nested_path(c.nested_path)[0]
+            acc[literal_field(nested_path)][literal_field(c.name)][json_type_to_sql_type[c.type]] = c.es_index + "." + convert.string2quote(c.es_column)
 
-        return wrap([{"name": ".", "sql": acc, "nested_path": nested_path}])
+        return wrap([
+            {"name": cname, "sql": types, "nested_path": nested_path}
+            for nested_path, pairs in acc.items() for cname, types in pairs.items()
+        ])
 
     def __call__(self, row, rownum=None, rows=None):
         path = split_field(self.var)
@@ -1321,16 +1323,14 @@ class NumberOp(Expression):
         return "float(" + value + ") if (" + test + ") else None"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        test = self.term.missing().to_sql(boolean=True).b
-        value = self.term.to_sql(not_null=True)
+        value = self.term.to_sql(schema, not_null=True)
         acc = []
-        for t, v in value:
-            if t == "b":
-                acc.append("CASE WHEN (" + test + ") THEN NULL WHEN (" + value.b + ") THEN 1 ELSE 0 END")
-            elif t == "s":
-                acc.append("CASE WHEN (" + test + ") THEN NULL ELSE CAST(" + value.s + " as FLOAT) END")
-            elif t == "n":
-                acc.append(value.n)
+        for c in value:
+            for t, v in c.sql.items():
+                if t == "s":
+                    acc.append("CAST(" + v + " as FLOAT)")
+                else:
+                    acc.append(v)
 
         if not acc:
             return {}
@@ -1660,15 +1660,20 @@ class MissingOp(Expression):
 
     def to_sql(self, schema, not_null=False, boolean=False):
         field = self.field.to_sql(schema)
+
+        if len(field)>1:
+            return wrap([{"name": ".", "sql": {"b": "0"}}])
+
         acc = []
-        for t, v in field.items():
-            if t in ["b", "s", "n"]:
-                acc.append("(" + v + " IS NULL)")
+        for c in field:
+            for t, v in c.sql.items():
+                if t in ["b", "s", "n"]:
+                    acc.append("(" + v + " IS NULL)")
 
         if not acc:
-            return "1"
+            return wrap([{"name": ".", "sql": {"b": "1"}}])
         else:
-            return " OR ".join(acc)
+            return wrap([{"name": ".", "sql": {"b": " AND ".join(acc)}}])
 
     def to_esfilter(self):
         if isinstance(self.field, Variable):

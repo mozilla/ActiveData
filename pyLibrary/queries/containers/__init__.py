@@ -19,7 +19,9 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import set_default, split_field, wrap, join_field
 from pyLibrary.dot.dicts import Dict
 
-STRUCT = ["object", "nested"]
+OBJECT = "object"
+NESTED = "nested"
+STRUCT = [OBJECT, NESTED]
 
 type2container = Dict()
 config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE

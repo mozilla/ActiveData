@@ -29,7 +29,7 @@ from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
-from pyLibrary.queries.containers import Container, STRUCT
+from pyLibrary.queries.containers import Container, STRUCT, OBJECT
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, RangeDomain
 from pyLibrary.queries.expressions import jx_expression, Variable, wrap_nested_path, sql_type_to_json_type, TupleOp
 from pyLibrary.queries.meta import Column
@@ -48,6 +48,7 @@ PARENT = "__parent__"
 COLUMN = "__column"
 
 ALL_TYPES="bns"
+
 
 def late_import():
     global _containers
@@ -88,37 +89,21 @@ class Table_usingSQLite(Container):
             }
 
 
-        self.columns = {}
-        for u in self.uid:
-            if u == GUID:
-                if self.columns.get(u) is None:
-                    self.columns[u] = set()
-            else:
-                c = Column(name=u, table=name, type="string", es_column=typed_column(u, "string"), es_index=name)
-                add_column_to_schema(self.columns, c)
 
         self.uid_accessor = jx.get(self.uid)
         self.nested_tables = OrderedDict() # MAP FROM NESTED PATH TO Table OBJECT, PARENTS PROCEED CHILDREN
         self.nested_tables["."] = self
-        if exists:
-            # LOAD THE COLUMNS
-            command = "PRAGMA table_info(" + quote_table(name) + ")"
-            details = self.db.query(command)
-            self.columns = {}
-            for r in details:
-                cname = untyped_column(r[1])
-                ctype = r[2].lower()
-                column = Column(
-                    name=cname,
-                    table=name,
-                    type=ctype,
-                    es_column=typed_column(cname, ctype),
-                    es_index=name
-                )
+        self.columns = {".": set()}
 
-                add_column_to_schema(self.columns, column)
-            # TODO: FOR ALL TABLES, FIND THE MAX ID
-        else:
+        if not exists:
+            for u in self.uid:
+                if u == GUID:
+                    if self.columns.get(u) is None:
+                        self.columns[u] = set()
+                else:
+                    c = Column(name=u, table=name, type="string", es_column=typed_column(u, "string"), es_index=name)
+                    add_column_to_schema(self.columns, c)
+
             command = "CREATE TABLE " + quote_table(name) + "(" + \
                       (",".join(
                           [quoted_UID + " INTEGER"] +
@@ -132,6 +117,24 @@ class Table_usingSQLite(Container):
                       "))"
 
             self.db.execute(command)
+        else:
+            # LOAD THE COLUMNS
+            command = "PRAGMA table_info(" + quote_table(name) + ")"
+            details = self.db.query(command)
+
+            for r in details:
+                cname = untyped_column(r[1])
+                ctype = r[2].lower()
+                column = Column(
+                    name=cname,
+                    table=name,
+                    type=ctype,
+                    es_column=typed_column(cname, ctype),
+                    es_index=name
+                )
+
+                add_column_to_schema(self.columns, column)
+            # TODO: FOR ALL TABLES, FIND THE MAX ID
 
     def _make_digits_table(self):
         existence = self.db.query("PRAGMA table_info(__digits__)")
@@ -1060,7 +1063,7 @@ class Table_usingSQLite(Container):
 
         active_columns = {}
         for cname, cols in self.columns.items():
-            if cname in vars_:
+            if any(startswith_field(cname, v) for v in vars_):
                 for c in cols:
                     if c.type in STRUCT:
                         continue
@@ -1137,7 +1140,7 @@ class Table_usingSQLite(Container):
                             # SQL HAS ABS TABLE REFERENCE
                             selects.append(sql + " AS " + _make_column_name(column_number))
                             index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
-                                push_name=s.name,
+                                push_name=join_field([s.name]+split_field(column.name)),
                                 push_column=si,
                                 pull=get_column(column_number),
                                 sql=sql,
@@ -1218,22 +1221,16 @@ class Table_usingSQLite(Container):
 
                 if doc_id != previous_doc_id:
                     previous_doc_id = doc_id
-                    if query.format == "list" and not isinstance(query.select, list):
-                        doc = None
-                        # ASSIGN INNER PROPERTIES
-                        for i, _ in nested_doc_details['index_to_column'].items():
-                            doc = row[i]
-                    else:
-                        doc = Dict()
-                        # ASSIGN INNER PROPERTIES
-                        for i, c in nested_doc_details['index_to_column'].items():
-                            value = row[i]
-                            if value is not None:
-                                relative_path = relative_field(c.push_name, nested_doc_details['nested_path'][0])
-                                if relative_path == ".":
-                                    doc = value
-                                else:
-                                    doc[relative_path] = value
+                    doc = Dict()
+                    # ASSIGN INNER PROPERTIES
+                    for i, c in nested_doc_details['index_to_column'].items():
+                        value = row[i]
+                        if value is not None:
+                            relative_path = relative_field(c.push_name, nested_doc_details['nested_path'][0])
+                            if relative_path == ".":
+                                doc = value
+                            else:
+                                doc[relative_path] = value
                     output.append(doc)
 
                 # ASSIGN NESTED ARRAYS
@@ -1689,11 +1686,14 @@ class Table_usingSQLite(Container):
 
 
 def add_column_to_schema(schema, column):
-    variants = schema.get(column.name)
-    if not variants:
-        variants = schema[column.name] = set()
-    variants.add(column)
-
+    columns = schema.get(column.name)
+    if not columns:
+        columns = schema[column.name] = set()
+    for var_name, db_columns in schema.items():
+        if startswith_field(column.name, var_name):
+            db_columns.add(column)
+        if startswith_field(var_name, column.name):
+            columns.add(column)
 
 _do_not_quote = re.compile(r"^\w+$", re.UNICODE)
 

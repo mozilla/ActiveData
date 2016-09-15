@@ -451,7 +451,7 @@ def net_shards_to_move(concurrent, shards, relocating):
 
 
 def _allocate(relocating, path, nodes, all_shards, allocation):
-    moves = jx.sort(ALLOCATION_REQUESTS, ["replication_priority", "mode_priority", "shard.index_size", "shard.i"])
+    moves = jx.sort(ALLOCATION_REQUESTS, ["mode_priority", "replication_priority", "shard.index_size", "shard.i"])
 
     busy_nodes = Dict()
     for s in relocating:

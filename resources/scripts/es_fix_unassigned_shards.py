@@ -702,9 +702,8 @@ def main():
     except Exception, e:
         Log.error("Problem with assign of shards", e)
     finally:
-        for p, command in settings["finally"]:
+        for p, command in settings["finally"].items():
             for c in listwrap(command):
-                Log.note()
                 response = http.put(
                     path + p,
                     data=convert.value2json(c)

@@ -77,9 +77,10 @@ def assign_shards(settings):
 
     risky_zone_names = set(z.name for z in settings.zones if z.risky)
 
+    # REVIEW NODE STATUS, AND ANY CHANGES
     first_run = not last_known_node_status
     for n in nodes:
-        status, last_known_node_status[n.name] = last_known_node_status[n.name], "ALIVE"
+        status, last_known_node_status[n.name] = last_known_node_status[n.name], ALIVE
         if status == DEAD:
             Log.warning("Node {{node}} came back to life!", node=n.name)
         elif status == None and not first_run:
@@ -93,7 +94,7 @@ def assign_shards(settings):
             n.disk = 0
             n.memory = 0
     for n, status in last_known_node_status.copy().items():
-        if not nodes[n]:
+        if not nodes[n] and status == ALIVE:
             Log.alert("Lost node {{node}}", node=n)
             last_known_node_status[n] = DEAD
 
@@ -566,7 +567,7 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
                 Log.note("failed")
             elif main_reason and main_reason.find("after allocation more than allowed"):
                 pass
-                Log.note("failed")
+                Log.note("failed: out of space")
             else:
                 Log.warning(
                     "{{code}} Can not move/allocate:\n\treason={{reason}}\n\tdetails={{error|quote}}",

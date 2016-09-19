@@ -836,7 +836,7 @@ class BinaryOp(Expression):
         script = "(" + lhs + ") " + BinaryOp.operators[self.op] + " (" + rhs + ")"
         missing = OrOp("or", [self.lhs.missing(), self.rhs.missing()])
 
-        if self.op in BinaryOp.algebra_ops:
+        if self.op in BinaryOp.operators:
             script = "(" + script + ").doubleValue()"  # RETURN A NUMBER, NOT A STRING
 
         output = WhenOp(

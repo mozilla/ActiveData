@@ -1,32 +1,22 @@
 Getting Started with ActiveData
 ===============================
 
-ActiveData has over 10billion records available to you live!!
+**me:** ActiveData has over 10billion records available to you live!!<br>
+**you:** Yea, so, now what?
 
-But now what?
-
-ActiveData allows you to form queries over a dynamically-typed database. This means the schema can be changing and evolving over time. In practice, for any one domain, the schema hardly changes over time.  
-
-
-The biggest hurdle is learning the various schema intricacies relevant to the data that will answer your question. This will take time   
-
+ActiveData allows you to form queries over a dynamically-typed database. This means the schema can be changing and evolving over time. In practice, for any one domain, the schema hardly changes over time.
 
 There are only two paths forward:
 
 ##Best Option: Please Ask a Question
 
-Please ask someone, [like myself](klahnakoski@mozilla.com), how to pull he information you need. This is the most efficient use of your time.  You probably came to ActiveData because you have a question that data may answer for you. If you only have a question every couple of months, you should not be wasting your time (re)learning the schema, and the query language. By asking a question, you will get the data you need faster, and I get to learn what people are interested in. 
+If you an occasional user, please [ask me, Kyle Lahnakoski](klahnakoski@mozilla.com), how to pull he information you need; this is the most efficient use of your time. You probably came to ActiveData because you have a question that data may answer for you. If you only have a question every couple of months, you should not be wasting your time (re)learning the schema, and the query language. By asking a question, you will get the data you need faster, and I get to learn what people are interested in. 
 
-Asking just one question is not enough; the schemas are enormous and and growing; trying to find what you need will take time;  only after several questions you will have a constellation of queries that are relevant to your role. These queries will serve as meaningful examples upon which you can learn the query language, and will give you hints about the topology of data you are most interested in.   
-
+Asking just one question is not enough. The schemas are enormous and and growing; trying to find the needle in the haystack is not a good use of your time.  After asking several questions, you will have a constellation of queries that are relevant to your role. These queries will serve as meaningful examples upon which you can learn the query language, and will give you hints about the topology of data you are most interested in.
    
 ##Second Option: Explore the schemas yourself
 
 If you plan to interact with ActiveData over an extended period of time, then it will be worth your time to learn the query language and the relevant schema. If you have used raw SQL in the past to explore the contents of a database, then you will be familiar with the process of exploring ActiveData. In general, a database schema is only a superficial description of the data; you will need to know many more details before you can use it effectively. For example, you must be familiar with the domain-of-values for given columns, their cardinality, and which values are most common. There will be business-specific meaning given to he values, and there will be important correlations between columns that you can use to reduce apparent complexity.
-
-Have you used SQL to explore a database before?  If not, I humbly suggest you [ask a question](GettingStarted.md#best-option-please-ask-a-question).   
-
-Get ready to explore!!
 
 ### 0) Prerequisites
 
@@ -34,7 +24,9 @@ You will need
 
 1. A large-screen JSON formatting tool.  I made [my own formatting tool](http://people.mozilla.org/~klahnakoski/JSON-Formatter/) because I wanted my JSON packed tight.
 2. Access to [http://activedata.allizom.org/tools/query.html](http://activedata.allizom.org/tools/query.html)   
-3. Motivation, or patience.
+3. Analysis tools, dashboarding tools, or something to handle the data and make a finished product.  ActiveData gives you access to data; you will be responsible for making that data meaningful.
+4. Motivation, or patience.  The biggest hurdle is learning the various schema intricacies relevant to the data that will answer your question. This will take time.
+
 
 ### 1. Choose a table
 
@@ -231,7 +223,7 @@ No matter the format, the [ActiveData Query Tool](http://activedata.allizom.org/
 |test         | 8103826|
 |             |  186840|
 
-There appears to be a significant number of no-type jobs.  We could look at examples of those, `{"missing":"action.type"}`, and I admit I am curious too, but we will focus on tests.
+Looking at the table, there appears to be a significant number of no-type jobs. We could look at examples of those, `{"missing":"action.type"}`, and I admit I am curious too, but we will focus on tests.
 
 Both `test` and `talos` jobs have a `run.suite` property that is not used by builds, which can be seen in this query, which lists all `action.type`, `run.suite` pairs:
 
@@ -244,7 +236,7 @@ Both `test` and `talos` jobs have a `run.suite` property that is not used by bui
 
 ###5. Rinse, and Repeat...
 
-We continue to add to the `where` clause: Restricting ourselves to `mochitest`.  We also notice jobs run off of multiple branches:
+We continue to add to the `where` clause: Restricting ourselves to `mochitest`. We also notice jobs run off of multiple branches:
 
 	{
 		"from":"jobs",
@@ -282,11 +274,11 @@ Let us restrict ourselves to `mozilla-inbound`, the principal branch for Firefox
 
 ###6. Request Aggregates
 
-Individual records are useful for understanding the data and building a query. They are also useful to the people that are familiar with the events those records represent.  But, you will need aggregate statistics to get a better holistic understanding of trends.
+Individual records are useful for understanding the data and building a query. They are also useful to the people that are familiar with the events that produced those record. But, you will need aggregate statistics to get a better holistic understanding of trends.
 
 Once you are confident your `where` clause is focused on the records you're interested in, you can start requesting aggregates. Up to this point in this guide, ActiveData has either returned individual records, or provided a `count` (which is the default aggregate). [We can request many other aggregates](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_reference.md#selectaggregate-subclause)
 
-In the following query we are going to use `edges`, which ares much like `groupby`, [see more](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_clause_edges.md), but accept an explicit `domain` to join-and-group the data. In this case, we are bucketing the past month of `action.start_time` to days.  We also define a `select` clause to give us the `average` duration, and the record `count` for each of those buckets. 
+In the following query we are going to use `edges`, which acts much like `groupby`, [see more](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_clause_edges.md), but accepts an explicit `domain` to join-and-group the data. In this case, we are bucketing the past month of `action.start_time` to days.  We also define a `select` clause to give us the `average` duration, and the `count` for each of those buckets. 
 
 	{
 		"from":"jobs",
@@ -316,9 +308,9 @@ In the following query we are going to use `edges`, which ares much like `groupb
 
 ###7. Further processing
 
-You are done with ActiveData, but your task is not complete. The most enlightening answers come from data that has undergone a complex series of transformations; required to properly correlate it to other data, and organize it for presentation. ActiveData is not an analysis tool, its responsibilities are to make a large amount of data searchable,  provide basic aggregates, and allow data reshaping. Analysis and charting is better done by other tools.
+Whether you are pulling long streams of raw records, or pulling compact aggregates, you are done with ActiveData, but your task is not complete. The most enlightening answers come from data that has undergone a complex series of transformations; required to properly correlate it to other data, and organize it for presentation. ActiveData does not do that, it is not an analysis tool, its responsibilities are to make a large amount of data searchable, provide basic aggregates, and allow data reshaping. Analysis and charting is better done by other tools.
 
-ActiveData is a service, once you have a prototype query that gets the data you want, you must go to your analysis tool.
+ActiveData is a service. Once you have a prototype query that gets the data you want, you must go to your analysis tool and import that data. ActiveData is fast enough that you can make your request at presentation time, so your presentation is near-real time.
 
 You can pull information into the browser:
 
@@ -341,3 +333,8 @@ You can pull information into your (Python) server:
 	)
 	print response.content
 ```
+
+Similarly for other languages and tools.
+
+##Summary
+

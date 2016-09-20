@@ -15,7 +15,7 @@ There are only two paths forward:
 
 ##Best Option: Please Ask a Question
 
-Please ask someone, [like myself](klahnakoski@mozilla.com), how to pull he information you need. This is the most efficient use of both our time.  You are probably came to ActiveData because you have a question that data may answer for you. If you only have a question every couple of months, you should not be wasting your time re-learning the schema, and the query language. By asking a question, you will get the data you need faster, and I get to learn what people are interested in. 
+Please ask someone, [like myself](klahnakoski@mozilla.com), how to pull he information you need. This is the most efficient use of your time.  You probably came to ActiveData because you have a question that data may answer for you. If you only have a question every couple of months, you should not be wasting your time (re)learning the schema, and the query language. By asking a question, you will get the data you need faster, and I get to learn what people are interested in. 
 
 Asking just one question is not enough; the schemas are enormous and and growing; trying to find what you need will take time;  only after several questions you will have a constellation of queries that are relevant to your role. These queries will serve as meaningful examples upon which you can learn the query language, and will give you hints about the topology of data you are most interested in.   
 
@@ -66,7 +66,7 @@ ActiveData accepts [JSON Query Expressions](https://github.com/klahnakoski/Activ
 
 The records returned from ActiveData are usually quite large, so you will need a large-screen JSON formatting tool to view the query result.  There is a page that has [details about what is in a `jobs` record](https://github.com/klahnakoski/ActiveData/blob/dev/docs/Jobs%20Schema.md), but we will focus on just a few columns for now.
 
-Here is an example result, with all the `data` property collapsed:
+Here is an example result, with the `data` property collapsed:
   
 	{
 		"meta":{
@@ -95,6 +95,8 @@ Here is an example result, with all the `data` property collapsed:
 		"data":{...}
 	}
 
+There are four major properties:
+
 * **meta** - details about what was sent to the backend ES, how long it took, **and the format of the data**
 * **edges** - a fully specified edge, with all defaults made explicit. This summarizes the dimensions of `data` returned. In this case there is only one dimension. We will talk more about this later.
 * **select** - a fully specified `select` clause, with all defaults made explicit. Notice the `"value": "."`, which means the-value-is-the-whole-record.
@@ -119,7 +121,7 @@ Expanding the `data` property a couple of levels, we can see:
 		{"run":{},"repo":{},"other":{},"build":{},"action":{},"properties":{},"etl":{}
 	]}
 
-The `data` is in `cube` format, which is a columnar format: Each key-value pair is the name of the column, and a (multidimensional) array of values respectively. This particular cube has only one output column with name "." (dot), and one dimension: Which turns out to be a complicated way to return a simple list of results.
+The `data` is in `cube` format, which is a columnar format: Each key-value pair is the name of the column, and a (multidimensional) array of values, respectively. This particular cube has only one output column with name "." (dot), and one dimension: Which turns out to be a complicated way to return a simple list of results.
 
 You can request the query result be returned in `list` form by adding `"format":"list"` to your query.
 
@@ -128,7 +130,7 @@ You can request the query result be returned in `list` form by adding `"format":
 		"format":"list"
 	}
 
-http://activedata.allizom.org/tools/query.html#query_id=NHNx3_IS
+<div style="text-align:right;"><a href="http://activedata.allizom.org/tools/query.html#query_id=NHNx3_IS">http://activedata.allizom.org/tools/query.html#query_id=NHNx3_IS</a></div>
 
 which will give you `data` without the obtuse "." property:
 
@@ -203,25 +205,31 @@ For instance, Windows `jobs` can be split by 3 major categories:
 
 Here is the body of the response 
 
-	{
-		"header":[{"name":"action.type"},{"name":"count"}],
-		"data":[
-			["test",8103826],
-			["talos",1234390],
-			["build",260094],
-			[null,186840]
-		]
-	}
+	"header":[{"name":"action.type"},{"name":"count"}],
+	"data":[
+		["test",8103826],
+		["talos",1234390],
+		["build",260094],
+		[null,186840]
+	]
 
+Using the "groupby" clause forces ActiveData to assume you want a `table` format. Tables have `data`, plus an additional `header` to help decode the row tuples.  You can use `"format": "list"` to get the same data in list format:
 
-which can be interpreted as
+	"data":[
+        {"action":{"type":"test"},"count":8103826},
+        {"action":{"type":"talos"},"count":1234390},
+        {"action":{"type":"build"},"count":260094},
+        {"count":186840}
+    ]
+
+No matter the format, the [ActiveData Query Tool](http://activedata.allizom.org/tools/query.html) will interpret all three forms the same, as a table:
 
 |action.type  |count   |
 |-------------|-------:|
-|build        |  259344|
-|talos        | 1229883|
-|test         | 8075543|
-|             |  186222|
+|build        |  260094|
+|talos        | 1234390|
+|test         | 8103826|
+|             |  186840|
 
 There appears to be a significant number of no-type jobs.  We could look at examples of those, `{"missing":"action.type"}`, and I admit I am curious too, but we will focus on tests.
 

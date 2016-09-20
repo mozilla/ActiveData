@@ -1,18 +1,18 @@
 Getting Started with ActiveData
 ===============================
 
-**me:** ActiveData has over 10billion records available to you live!!<br>
-**you:** Yea, so, now what?
+> **me:** ActiveData has over 10billion records available to you live!!<br>
+> **you:** Yea, so, now what?
 
-ActiveData allows you to form queries over a dynamically-typed database. This means the schema can be changing and evolving over time. In practice, for any one domain, the schema hardly changes over time.
+You probably got her from the [ActiveData Query Tool](http://activedata.allizom.org/tools/query.html), which is a bare-bones tool for send queries to the ActiveData service endpoint. At best it is hard to use, and at worst it is barrier to understanding. 
 
-There are only two paths forward:
+To understand ActiveData you have two paths forward:
 
 ##Best Option: Please Ask a Question
 
-If you an occasional user, please [ask me, Kyle Lahnakoski](klahnakoski@mozilla.com), how to pull he information you need; this is the most efficient use of your time. You probably came to ActiveData because you have a question that data may answer for you. If you only have a question every couple of months, you should not be wasting your time (re)learning the schema, and the query language. By asking a question, you will get the data you need faster, and I get to learn what people are interested in. 
+If you an occasional user, please [ask me, `:ekyle`](klahnakoski@mozilla.com), for a query that will pull the information you need; this is the most efficient use of your time. You probably came to ActiveData because you have a question that data may answer for you. If you only have a question every couple of months, you should not be wasting your time (re)learning the schema, and the query language. By asking a question, you will get the data you need faster, and I get to learn what people are interested in and make dashboards that present that information in a meaningful way.
 
-Asking just one question is not enough. The schemas are enormous and and growing; trying to find the needle in the haystack is not a good use of your time.  After asking several questions, you will have a constellation of queries that are relevant to your role. These queries will serve as meaningful examples upon which you can learn the query language, and will give you hints about the topology of data you are most interested in.
+Asking just one question is not enough. The schemas are enormous and and growing; trying to find the needle in the haystack is not a good use of your time. After asking several questions, you will have a constellation of queries that are relevant to your role. These queries will serve as meaningful examples upon which you can learn the query language, and will give you hints about the topology of data you are most interested in.
    
 ##Second Option: Explore the schemas yourself
 
@@ -22,10 +22,11 @@ If you plan to interact with ActiveData over an extended period of time, then it
 
 You will need
 
-1. A large-screen JSON formatting tool.  I made [my own formatting tool](http://people.mozilla.org/~klahnakoski/JSON-Formatter/) because I wanted my JSON packed tight.
-2. Access to [http://activedata.allizom.org/tools/query.html](http://activedata.allizom.org/tools/query.html)   
-3. Analysis tools, dashboarding tools, or something to handle the data and make a finished product.  ActiveData gives you access to data; you will be responsible for making that data meaningful.
-4. Motivation, or patience.  The biggest hurdle is learning the various schema intricacies relevant to the data that will answer your question. This will take time.
+1. Read the [unittest tutorial](jx_tutorial.md), it touches on the query language, while this document covers exploration.
+2. A large-screen JSON formatting tool.  I made [my own formatting tool](http://people.mozilla.org/~klahnakoski/JSON-Formatter/) because I wanted my JSON packed tight.
+3. Access to [the ActiveData Query Tool](http://activedata.allizom.org/tools/query.html)   
+4. Analysis tools, dashboarding tools, or something to handle the data and make a finished product.  ActiveData gives you access to data; you will be responsible for making that data meaningful.
+5. Motivation, or patience. The biggest hurdle is learning the various schema intricacies relevant to the data that will answer your question. This will take time.
 
 
 ### 1. Choose a table

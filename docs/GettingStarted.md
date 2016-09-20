@@ -4,7 +4,7 @@ Getting Started with ActiveData
 > **me:** ActiveData has over 10billion records available to you live!!<br>
 > **you:** Yea, so, now what?
 
-You probably got her from the [ActiveData Query Tool](http://activedata.allizom.org/tools/query.html), which is a bare-bones tool for send queries to the ActiveData service endpoint. At best it is hard to use, and at worst it is barrier to understanding. 
+You probably got here from the [ActiveData Query Tool](http://activedata.allizom.org/tools/query.html), which is a bare-bones tool for send queries to the ActiveData service endpoint. At best it is hard to use, and at worst it is barrier to understanding. 
 
 To understand ActiveData you have two paths forward:
 
@@ -339,3 +339,4 @@ Similarly for other languages and tools.
 
 ##Summary
 
+I hope I have given you a good sense for how to explore the ActiveData schema, and how to build a query that will give you the data you are interested in.  More specific documentation regarding the intricacies of JSON Query Expressions, and ActiveData, is all centrally linked on the [main documentation page](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx.md)

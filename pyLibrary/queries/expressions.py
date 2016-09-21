@@ -1680,6 +1680,8 @@ class ContainsOp(Expression):
 
 
 class CoalesceOp(Expression):
+    has_simple_form = True
+
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
         self.terms = terms

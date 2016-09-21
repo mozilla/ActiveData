@@ -57,7 +57,6 @@ def late_import():
 
     _ = _containers
 
-
 class Table_usingSQLite(Container):
 
     @use_settings
@@ -166,10 +165,14 @@ class Table_usingSQLite(Container):
                 break
         return output
 
-    def _get_sql_schema(self):
+    def _get_sql_schema(self, frum):
         """
-        :return: schema for this table, `change es_index` to sql alias
+        :param nest: the path to the nested sub-table
+        :return: relative schema for the sub-table; change `es_index` to sql alias
         """
+        nest_path = split_field(frum)[len(split_field(self.name)):]
+        nest = join_field(nest_path)
+
         # WE MUST HAVE THE ALIAS NAMES FOR THE TABLES
         nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
 
@@ -179,14 +182,17 @@ class Table_usingSQLite(Container):
                 yield join_field(path[0:i])
 
         columns = Dict()
-        for k in set(kk for k in self.columns.keys() for kk in paths(k)):
-            for j, c in ((j, cc) for j, c in self.columns.items() for cc in c):
-                if startswith_field(j, k):
-                    if c.type in STRUCT:
-                        continue
-                    c = copy(c)
-                    c.es_index = nest_to_alias[wrap_nested_path(c.nested_path)[0]]
-                    columns[literal_field(k)] += [c]
+        for var_name, column in ((j, cc) for j, c in self.columns.items() for cc in c):
+            col_nest = wrap_nested_path(column.nested_path)[0]
+            if startswith_field(var_name, nest):
+                column = copy(column)
+                rel_path = join_field(split_field(var_name)[len(nest_path):])
+                column.es_index = nest_to_alias[col_nest]
+                columns[literal_field(rel_path)] += [column]
+            elif startswith_field(nest, col_nest):
+                dots = len(nest_path) - len(split_field(col_nest))
+                rel_name = join_field([""]*(dots+2)+split_field(var_name)[len(col_nest):])
+                columns[literal_field(rel_name)] += [column]
 
         return unwrap(columns)
 
@@ -478,10 +484,10 @@ class Table_usingSQLite(Container):
             create_table = ""
 
         if query.groupby:
-            op, index_to_columns = self._groupby_op(query)
+            op, index_to_columns = self._groupby_op(query, frum)
             command = create_table + op
         elif query.edges or any(a!="none" for a in listwrap(query.select).aggregate):
-            op, index_to_columns = self._edges_op(query)
+            op, index_to_columns = self._edges_op(query, frum)
             command = create_table + op
         else:
             op = self._set_op(query, frum)
@@ -685,13 +691,16 @@ class Table_usingSQLite(Container):
 
         return output
 
-    def _edges_op(self, query):
+    def _edges_op(self, query, frum):
         index_to_column = {}  # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
         outer_selects = []  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE)
 
         nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
 
-        columns = self._get_sql_schema()
+        columns = self._get_sql_schema(frum)
+
+        # SHIFT THE COLUMN DEFINITIONS BASED ON THE NESTED QUERY DEPTH
+
 
         ons = []
         groupby = []
@@ -1001,7 +1010,7 @@ class Table_usingSQLite(Container):
         domain += "\nWHERE " + value + " < " + quote_value(width)
         return domain
 
-    def _groupby_op(self, query):
+    def _groupby_op(self, query, frum):
         columns = self._get_sql_schema()
         index_to_column={}
         nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
@@ -1140,7 +1149,7 @@ class Table_usingSQLite(Container):
                             # SQL HAS ABS TABLE REFERENCE
                             selects.append(sql + " AS " + _make_column_name(column_number))
                             index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
-                                push_name=join_field([s.name]+split_field(column.name)),
+                                push_name=join_field(([s.name] if isinstance(query.select, list) else [])+split_field(column.name)),
                                 push_column=si,
                                 pull=get_column(column_number),
                                 sql=sql,

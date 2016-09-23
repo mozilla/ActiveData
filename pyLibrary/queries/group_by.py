@@ -26,10 +26,16 @@ from pyLibrary.queries.expressions import jx_expression_to_function
 
 def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous=False):
     """
-        return list of (keys, values) pairs where
-            group by the set of keys
-            values IS LIST OF ALL data that has those keys
-        contiguous - MAINTAIN THE ORDER OF THE DATA, STARTING THE NEW GROUP WHEN THE SELECTOR CHANGES
+    :param data:
+    :param keys:
+    :param size:
+    :param min_size:
+    :param max_size:
+    :param contiguous: MAINTAIN THE ORDER OF THE DATA, STARTING THE NEW GROUP WHEN THE SELECTOR CHANGES
+    :return: return list of (keys, values) PAIRS, WHERE
+                 keys IS IN LEAF FORM (FOR USE WITH {"eq": terms} OPERATOR
+                 values IS GENERATOR OF ALL VALUE THAT MATCH keys
+        contiguous -
     """
 
     if size != None or min_size != None or max_size != None:

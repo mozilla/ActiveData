@@ -187,7 +187,7 @@ def assign_shards(settings):
                 "node": n,
                 "min_allowed": min_allowed,
                 "max_allowed": max_allowed,
-                "shards": filter(lambda r: r.node.name == n.name and r.index == g.index, shards)
+                "shards": list(filter(lambda r: r.node.name == n.name and r.index == g.index, shards))
             })
 
         index_size = Math.sum(replicas.size)
@@ -362,12 +362,12 @@ def assign_shards(settings):
     rebalance_candidates = Dict()
     for g, replicas in jx.groupby(filter(lambda r: r.status == "STARTED", shards), ["node.name", "index"]):
         replicas = list(replicas)
-        if (nodes[g.node.name].zone.name, g.index) in overloaded_zone_index_pairs:
-            continue
         if not g.node:
             continue
         _node = nodes[g.node.name]
         alloc = allocation[g]
+        if (_node.zone.name, g.index) in overloaded_zone_index_pairs:
+            continue
         for i in range(alloc.max_allowed, len(replicas), 1):
             i = Random.int(len(replicas))
             shard = replicas[i]
@@ -405,31 +405,39 @@ def assign_shards(settings):
         Log.note("No duplicate shards left to assign")
 
     # ENSURE ALL NODES HAVE THE MINIMUM NUMBER OF SHARDS
-    rebalance_candidates = Dict()
-    found_destination = []
-    for g, replicas in jx.groupby(filter(lambda r: r.status == "STARTED", shards), ["node.name", "index"]):
-        replicas = list(replicas)
-        if (nodes[g.node.name].zone.name, g.index) in overloaded_zone_index_pairs:
-            continue
-        if not g.node:
-            continue
-        _node = nodes[g.node.name]
-        alloc = allocation[g]
-        for i in range(alloc.min_allowed, len(replicas), 1):
-            i = Random.int(len(replicas))
-            shard = replicas[i]
-            replicas.remove(shard)
-            rebalance_candidates[_node.zone.name] += [shard]
-        if len(replicas) < alloc.min_allowed:
-            found_destination.append(g)
+    total_moves = 0
+    for g, replicas in jx.groupby(filter(lambda r: r.status == "STARTED", shards), ["index", "node.zone.name"]):
+        rebalance_candidate = Dict()  # MOVE ONLY ONE SHARD, PER INDEX, PER ZONE, AT A TIME
+        most_shards = Dict()  # WE WANT TO OFFLOAD THE NODE WITH THE MOST SHARDS
+        found_destination = []
+        for n in nodes:
+            if n.zone.name != g.node.zone.name:
+                continue
+            alloc = allocation[g.index, n.name]
+            if (n.zone.name, g.index) in overloaded_zone_index_pairs:
+                continue
+            shards_on_node = alloc.shards # filter(lambda r: r.status == "STARTED", alloc.shards)
+            if len(shards_on_node) < alloc.min_allowed:
+                found_destination.append(g)
+                continue
+            if most_shards[g.node.zone.name] >= len(shards_on_node):
+                continue
+            for i in range(Math.max(1, alloc.min_allowed), len(shards_on_node), 1):
+                shard = shards_on_node[0]
+                rebalance_candidate[g.node.zone.name] = shard
+                most_shards[g.node.zone.name] = len(shards_on_node)
+                break
 
-    if found_destination:
-        if rebalance_candidates:
-            for z, b in rebalance_candidates.items():
-                Log.note("{{num}} shards can be moved to better location within {{zone|quote}} zone", zone=z, num=len(b))
-                allocate(CONCURRENT, b, {z}, "not balanced", 6, settings)
-    else:
-        Log.note("No shards need to be balanced")
+        if found_destination and rebalance_candidate:
+            for z, b in rebalance_candidate.items():
+                total_moves += 1
+                allocate(CONCURRENT, [b], {z}, "not balanced", 7, settings)
+    if total_moves:
+        Log.note(
+            "{{num}} shards can be moved to better location within their own zone",
+            num=total_moves,
+        )
+
 
     _allocate(relocating, path, nodes, shards, allocation)
 
@@ -554,8 +562,6 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
         )
         if len(existing) >= nodes[destination_node].zone.shards:
             Log.error("should nt happen")
-
-
 
         if shard.status == "UNASSIGNED":
             # destination_node = "secondary"

@@ -416,7 +416,7 @@ def assign_shards(settings):
             alloc = allocation[g.index, n.name]
             if (n.zone.name, g.index) in overloaded_zone_index_pairs:
                 continue
-            shards_on_node = alloc.shards # filter(lambda r: r.status == "STARTED", alloc.shards)
+            shards_on_node = filter(lambda r: r.status == "STARTED", alloc.shards)
             if len(shards_on_node) < alloc.min_allowed:
                 found_destination.append(g)
                 continue

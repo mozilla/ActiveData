@@ -711,9 +711,9 @@ class Table_usingSQLite(Container):
                 tables.append({"nest": n, "alias": a})
         tables = jx.sort(tables, {"value": {"length": "nest"}})
 
-        from_sql = join_field([base_table]+split_field(tables[0].nest))
+        from_sql = join_field([base_table] + split_field(tables[0].nest)) + " " + tables[0].alias
         previous = tables[0]
-        for t in tables[1:]:
+        for t in tables[1::]:
             from_sql += "\nLEFT JOIN\n" + join_field([base_table] + split_field(t.nest)) + " " + t.alias + " ON " + t.alias + "." + PARENT + " = " + previous.alias + "." + GUID
 
         # SHIFT THE COLUMN DEFINITIONS BASED ON THE NESTED QUERY DEPTH
@@ -951,7 +951,6 @@ class Table_usingSQLite(Container):
 
         main_filter = query.where.to_sql(columns)[0].sql.b
 
-
         all_parts = []
         for p in itertools.product(*[
             # FOR EACH EDGE, WE MUST INCLUDE THE NULL PART, CARTESIAN PRODUCT WITH ALL THE OTHER EDGES WITH NULL PART
@@ -962,7 +961,7 @@ class Table_usingSQLite(Container):
 
             sources = [
                 "(" +
-                "\nSELECT\n" + ",\n".join(select_clause) + ",\n*" +
+                "\nSELECT\n" + ",\n".join(select_clause) + ",\n" + "*" +
                 "\nFROM " + from_sql +
                 "\nWHERE " + main_filter +
                 ") " + nest_to_alias["."]

@@ -32,6 +32,7 @@ from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container, STRUCT, OBJECT
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, RangeDomain
 from pyLibrary.queries.expressions import jx_expression, Variable, wrap_nested_path, sql_type_to_json_type, TupleOp
+from pyLibrary.queries.jx import accumulate
 from pyLibrary.queries.meta import Column
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.sql.sqlite import Sqlite
@@ -174,7 +175,10 @@ class Table_usingSQLite(Container):
         nest = join_field(nest_path)
 
         # WE MUST HAVE THE ALIAS NAMES FOR THE TABLES
-        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
+        nest_to_alias = {
+            nested_path: "__" + unichr(ord('a') + i) + "__"
+            for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())
+        }
 
         def paths(field):
             path = split_field(field)
@@ -694,14 +698,25 @@ class Table_usingSQLite(Container):
     def _edges_op(self, query, frum):
         index_to_column = {}  # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
         outer_selects = []  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE)
-
+        tables = []
+        base_table = split_field(frum)[0]
+        path = join_field(split_field(frum)[1:])
         nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
 
         columns = self._get_sql_schema(frum)
 
+        tables = []
+        for n, a in nest_to_alias.items():
+            if startswith_field(path, n):
+                tables.append({"nest": n, "alias": a})
+        tables = jx.sort(tables, {"value": {"length": "nest"}})
+
+        from_sql = join_field([base_table]+split_field(tables[0].nest))
+        previous = tables[0]
+        for t in tables[1:]:
+            from_sql += "\nLEFT JOIN\n" + join_field([base_table] + split_field(t.nest)) + " " + t.alias + " ON " + t.alias + "." + PARENT + " = " + previous.alias + "." + GUID
+
         # SHIFT THE COLUMN DEFINITIONS BASED ON THE NESTED QUERY DEPTH
-
-
         ons = []
         groupby = []
         orderby = []
@@ -745,7 +760,7 @@ class Table_usingSQLite(Container):
                     num_push_columns=len(query_edge.value.terms)
                 else:
                     push_child = "."
-                    num_push_columns=None
+                    num_push_columns = None
 
                 index_to_column[column_index] = Dict(
                     is_edge=True,
@@ -936,15 +951,23 @@ class Table_usingSQLite(Container):
 
         main_filter = query.where.to_sql(columns)[0].sql.b
 
-        all_parts = []
-        for p in itertools.product(*[[[False, edge_index, query_edge], [True, edge_index, query_edge]] if query_edge.allowNulls else [[False, edge_index, query_edge]] for edge_index, query_edge in enumerate(query.edges)]):
 
-            sources = ["(" +
-                       "\nSELECT\n" + ",\n".join(select_clause) + ",\n*" +
-                       "\nFROM " + quote_table(self.name) + " " + nest_to_alias["."] +
-                       "\nWHERE " + main_filter +
-                       ") " + nest_to_alias["."]
-                       ]
+        all_parts = []
+        for p in itertools.product(*[
+            # FOR EACH EDGE, WE MUST INCLUDE THE NULL PART, CARTESIAN PRODUCT WITH ALL THE OTHER EDGES WITH NULL PART
+            [[False, edge_index, query_edge], [True, edge_index, query_edge]]
+            if query_edge.allowNulls else [[False, edge_index, query_edge]]
+            for edge_index, query_edge in enumerate(query.edges)
+        ]):
+
+            sources = [
+                "(" +
+                "\nSELECT\n" + ",\n".join(select_clause) + ",\n*" +
+                "\nFROM " + from_sql +
+                "\nWHERE " + main_filter +
+                ") " + nest_to_alias["."]
+            ]
+
             joins = []
             join_types = []
             where_clause = []
@@ -1011,7 +1034,7 @@ class Table_usingSQLite(Container):
         return domain
 
     def _groupby_op(self, query, frum):
-        columns = self._get_sql_schema()
+        columns = self._get_sql_schema(frum)
         index_to_column={}
         nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
 
@@ -1068,7 +1091,7 @@ class Table_usingSQLite(Container):
         vars_ = UNION([s.value.vars() for s in listwrap(query.select)])
 
         nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
-        columns = self._get_sql_schema()
+        columns = self._get_sql_schema(frum)
 
         active_columns = {}
         for cname, cols in self.columns.items():

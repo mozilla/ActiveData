@@ -17,7 +17,7 @@ from pyLibrary import convert, strings
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, Dict, coalesce, DictList, listwrap
+from pyLibrary.dot import wrap, Dict, coalesce, DictList, listwrap, unwrap
 from pyLibrary.env import http
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
@@ -407,7 +407,7 @@ def assign_shards(settings):
     # ENSURE ALL NODES HAVE THE MINIMUM NUMBER OF SHARDS
     total_moves = 0
     for g, replicas in jx.groupby(filter(lambda r: r.status == "STARTED", shards), ["index", "node.zone.name"]):
-        rebalance_candidate = Dict()  # MOVE ONLY ONE SHARD, PER INDEX, PER ZONE, AT A TIME
+        rebalance_candidate = {}  # MOVE ONLY ONE SHARD, PER INDEX, PER ZONE, AT A TIME
         most_shards = Dict()  # WE WANT TO OFFLOAD THE NODE WITH THE MOST SHARDS
         found_destination = []
         for n in nodes:
@@ -416,17 +416,17 @@ def assign_shards(settings):
             alloc = allocation[g.index, n.name]
             if (n.zone.name, g.index) in overloaded_zone_index_pairs:
                 continue
-            shards_on_node = filter(lambda r: r.status == "STARTED", alloc.shards)
-            if len(shards_on_node) < alloc.min_allowed:
+            shards_on_node = [r for r in alloc.shards if r.status == "STARTED"]
+            if not shards_on_node or len(shards_on_node) < alloc.min_allowed:
                 found_destination.append(g)
                 continue
             if most_shards[g.node.zone.name] >= len(shards_on_node):
                 continue
-            for i in range(Math.max(1, alloc.min_allowed), len(shards_on_node), 1):
+            if Math.max(1, alloc.min_allowed) < len(shards_on_node):
                 shard = shards_on_node[0]
-                rebalance_candidate[g.node.zone.name] = shard
-                most_shards[g.node.zone.name] = len(shards_on_node)
-                break
+                # rebalance_candidate[n.zone.name] = shard  # UN_COMMENT TO CRASH
+                most_shards[n.zone.name] = len(shards_on_node)
+            #     continue
 
         if found_destination and rebalance_candidate:
             for z, b in rebalance_candidate.items():
@@ -437,7 +437,6 @@ def assign_shards(settings):
             "{{num}} shards can be moved to better location within their own zone",
             num=total_moves,
         )
-
 
     _allocate(relocating, path, nodes, shards, allocation)
 

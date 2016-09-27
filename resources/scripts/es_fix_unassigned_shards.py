@@ -424,9 +424,8 @@ def assign_shards(settings):
                 continue
             if Math.max(1, alloc.min_allowed) < len(shards_on_node):
                 shard = shards_on_node[0]
-                # rebalance_candidate[n.zone.name] = shard  # UN_COMMENT TO CRASH
+                rebalance_candidate[n.zone.name] = shard
                 most_shards[n.zone.name] = len(shards_on_node)
-            #     continue
 
         if found_destination and rebalance_candidate:
             for z, b in rebalance_candidate.items():
@@ -610,6 +609,8 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
                     error=result.error
                 )
         else:
+            if shard.status == "STARTED":
+                shard.status = "RELOCATING"
             done.add((shard.index, shard.i))
             busy_nodes[destination_node] += shard.size
             Log.note(

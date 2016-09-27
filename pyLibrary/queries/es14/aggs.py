@@ -38,7 +38,7 @@ def get_decoders_by_depth(query):
     schema = query.frum
     output = DictList()
     limit = query.limit
-    for e in coalesce(query.edges, query.groupby, []):
+    for e in wrap(coalesce(query.edges, query.groupby, [])):
         if e.value != None:
             e = e.copy()
             vars_ = e.value.vars()

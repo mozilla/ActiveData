@@ -13,11 +13,13 @@ from __future__ import unicode_literals
 
 from copy import copy
 
+import sys
+
 from pyLibrary import convert, strings
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, Dict, coalesce, DictList, listwrap, unwrap
+from pyLibrary.dot import wrap, Dict, coalesce, DictList, listwrap, unwrap, set_default
 from pyLibrary.env import http
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
@@ -72,8 +74,8 @@ def assign_shards(settings):
         }
         for k, n in stats.nodes.items()
     ])
-    if "primary" not in nodes or "secondary" not in nodes:
-        Log.error("missing an important index\n{{nodes|json}}", nodes=nodes)
+    # if "primary" not in nodes or "secondary" not in nodes:
+    #     Log.error("missing an important index\n{{nodes|json}}", nodes=nodes)
 
     risky_zone_names = set(z.name for z in settings.zones if z.risky)
 
@@ -140,6 +142,7 @@ def assign_shards(settings):
                 "from_node": m[0],
                 "to_node": destination.name
             })
+            # shards.append(set_default({"node": destination}, s))
         s.node = nodes[s.node]
 
     # Log.note("{{shards}}", shards=shards)
@@ -153,6 +156,28 @@ def assign_shards(settings):
         size = Math.MAX(replicas.size)
         for r in replicas:
             r.size = size
+
+    relocating = wrap([s for s in shards if s.status in ("RELOCATING", "INITIALIZING")])
+    Log.note("{{num}} shards in motion", num=len(relocating))
+
+    for m in copy(current_moving_shards):
+        for s in shards:
+            if s.index == m.index and s.i == m.shard and s.node.name == m.to_node and s.status == "STARTED":
+                # FINISHED MOVE
+                current_moving_shards.remove(m)
+                break
+            elif s.index == m.index and s.i == m.shard and s.node.name == m.from_node and s.status == "RELOCATING":
+                # STILL MOVING, ADD A VIRTUAL SHARD TO REPRESENT THE DESTINATION OF RELOCATION
+                s = copy(s)
+                s.node = nodes[m.to_node]
+                s.status = "INITIALIZING"
+                if s.node:  # HAPPENS WHEN SENDING SHARD TO UNKNOWN
+                    relocating.append(s)
+                    shards.append(s)  # SORRY, BUT MOVING SHARDS TAKE TWO SPOTS
+                break
+        else:
+            # COULD NOT BE FOUND
+            current_moving_shards.remove(m)
 
     # AN "ALLOCATION" IS THE SET OF SHARDS FOR ONE INDEX ON ONE NODE
     # CALCULATE HOW MANY SHARDS SHOULD BE IN EACH ALLOCATION
@@ -194,28 +219,6 @@ def assign_shards(settings):
         for r in replicas:
             r.index_size = index_size
             r.siblings = num_primaries
-
-    relocating = wrap([s for s in shards if s.status in ("RELOCATING", "INITIALIZING")])
-    Log.note("{{num}} shards in motion", num=len(relocating))
-
-    for m in copy(current_moving_shards):
-        for s in shards:
-            if s.index == m.index and s.i == m.shard and s.node.name == m.to_node and s.status == "STARTED":
-                # FINISHED MOVE
-                current_moving_shards.remove(m)
-                break
-            elif s.index == m.index and s.i == m.shard and s.node.name == m.from_node and s.status == "RELOCATING":
-                # STILL MOVING, ADD A VIRTUAL SHARD TO REPRESENT THE DESTINATION OF RELOCATION
-                s = copy(s)
-                s.node = nodes[m.to_node]
-                s.status = "INITIALIZING"
-                if s.node:  # HAPPENS WHEN SENDING SHARD TO UNKNOWN
-                    relocating.append(s)
-                    shards.append(s)  # SORRY, BUT MOVING SHARDS TAKE TWO SPOTS
-                break
-        else:
-            # COULD NOT BE FOUND
-            current_moving_shards.remove(m)
 
     del ALLOCATION_REQUESTS[:]
 
@@ -406,31 +409,34 @@ def assign_shards(settings):
 
     # ENSURE ALL NODES HAVE THE MINIMUM NUMBER OF SHARDS
     total_moves = 0
-    for g, replicas in jx.groupby(filter(lambda r: r.status == "STARTED", shards), ["index", "node.zone.name"]):
-        rebalance_candidate = {}  # MOVE ONLY ONE SHARD, PER INDEX, PER ZONE, AT A TIME
-        most_shards = Dict()  # WE WANT TO OFFLOAD THE NODE WITH THE MOST SHARDS
-        found_destination = []
-        for n in nodes:
-            if n.zone.name != g.node.zone.name:
-                continue
-            alloc = allocation[g.index, n.name]
-            if (n.zone.name, g.index) in overloaded_zone_index_pairs:
-                continue
-            shards_on_node = [r for r in alloc.shards if r.status == "STARTED"]
-            if not shards_on_node or len(shards_on_node) < alloc.min_allowed:
-                found_destination.append(g)
-                continue
-            if most_shards[g.node.zone.name] >= len(shards_on_node):
-                continue
-            if Math.max(1, alloc.min_allowed) < len(shards_on_node):
-                shard = shards_on_node[0]
-                rebalance_candidate[n.zone.name] = shard
-                most_shards[n.zone.name] = len(shards_on_node)
+    for index_name in set(shards.index):
+        for z in set([n.zone.name for n in nodes]):
+            rebalance_candidate = None  # MOVE ONLY ONE SHARD, PER INDEX, PER ZONE, AT A TIME
+            most_shards = 0  # WE WANT TO OFFLOAD THE NODE WITH THE MOST SHARDS
+            destination_zone = None
 
-        if found_destination and rebalance_candidate:
-            for z, b in rebalance_candidate.items():
+            for n in nodes:
+                if n.zone.name != z:
+                    continue
+
+                alloc = allocation[index_name, n.name]
+                if (n.name, index_name) in overloaded_zone_index_pairs:
+                    continue
+                if not alloc.shards or len(alloc.shards) < alloc.min_allowed:
+                    destination_zone = z
+                    continue
+                started_shards = [r for r in alloc.shards if r.status in {"STARTED"}]
+                if most_shards >= len(started_shards):
+                    continue
+
+                if Math.max(1, alloc.min_allowed) < len(started_shards):
+                    shard = started_shards[0]
+                    rebalance_candidate = shard
+                    most_shards = len(started_shards)
+
+            if destination_zone and rebalance_candidate:
                 total_moves += 1
-                allocate(CONCURRENT, [b], {z}, "not balanced", 7, settings)
+                allocate(CONCURRENT, [rebalance_candidate], {destination_zone}, "not balanced", 8, settings)
     if total_moves:
         Log.note(
             "{{num}} shards can be moved to better location within their own zone",
@@ -661,6 +667,7 @@ def convert_table_to_list(table, column_names):
         if all(r == " " for r in c):
             columns.append(i)
 
+    columns = columns[0:len(column_names)-1]
     for i, row in enumerate(lines):
         yield wrap({c: r for c, r in zip(column_names, split_at(row, columns))})
 

@@ -133,7 +133,7 @@ GraphQL can accept multiple relational queries to build a single object.
         }
     }
 
-JSON Query - The `select` expression can build an object using an array of name/value pairs:
+For JSON Expressions, the `select` expression can build an object using an array of name/value pairs:
 
 
     {
@@ -178,7 +178,7 @@ GraphQL allows the definition of query fragments; meant for reuse in a query:
 		}
 	}
 
-There is no equivalent in JSON Expressions; it is expected that JSON Expressions are used in the context of a parent language, like Javascript or Python, which is capable of managing fragments:
+There is no equivalent in JSON Expressions; it is expected that JSON Expressions are used in the context of a host language, like Javascript or Python, which is capable of managing fragments:
 
 	comparisonFields = [
 		"name",
@@ -223,7 +223,7 @@ GraphQL - use `$` as a prefix to declare variables, and their type:
         }
     }
 
-JSON Queries do not have variables, again resting on the hosting language. In this case, setting the `where` clause to the condition required using a `setdefault` function [(python example)](https://github.com/klahnakoski/pyLibrary/blob/5ba9998dee239ec74a0905123a823069581cd8f2/pyLibrary/dot/__init__.py#L144). The technique shown here is to use JSON as a template, and then add the required annotations to build the final result.
+JSON Queries do not have variables, again resting on the host language. In this case, setting the `where` clause to the condition required using a `setdefault` function [(python example)](https://github.com/klahnakoski/pyLibrary/blob/5ba9998dee239ec74a0905123a823069581cd8f2/pyLibrary/dot/__init__.py#L144). The technique shown here is to use JSON as a template, and then add the required annotations to build the final result.
 
 	HeroNameAndFriends = {
 		"from": "hero"

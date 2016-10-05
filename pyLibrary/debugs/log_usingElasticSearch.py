@@ -58,9 +58,11 @@ class TextLog_usingElasticSearch(TextLog):
                 Thread.sleep(seconds=1)
                 messages = wrap(self.queue.pop_all())
                 if messages:
-                    # for m in messages:
-                    #     m.value.params = leafer(m.value.params)
-                    #     m.value.error = leafer(m.value.error)
+                    for m, i in enumerate(messages):
+                        if m == Thread.STOP:
+                            messages = messages[0:i]
+                            please_stop.go()
+                            break
                     for g, mm in jx.groupby(messages, size=self.batch_size):
                         self.es.extend(mm)
                     bad_count = 0

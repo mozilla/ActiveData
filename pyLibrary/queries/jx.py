@@ -59,7 +59,10 @@ def run(query, frum=None):
     THIS FUNCTION IS SIMPLY SWITCHING BASED ON THE query["from"] CONTAINER,
     BUT IT IS ALSO PROCESSING A list CONTAINER; SEPARATE TO A ListContainer
     """
-    query = QueryOp.wrap(query, frum.schema)
+    try:
+        query = QueryOp.wrap(query, frum.schema)
+    except Exception, e:
+        Log.error("impossible", cause=e)
     frum = coalesce(frum, query["from"])
     if isinstance(frum, Container):
         return frum.query(query)

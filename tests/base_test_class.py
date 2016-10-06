@@ -25,7 +25,7 @@ from pyLibrary.debugs.logs import Log, Except, constants
 from pyLibrary.dot import wrap, coalesce, unwrap, listwrap, Dict
 from pyLibrary.env import http
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import jx
+from pyLibrary.queries import jx, containers
 from pyLibrary.queries.containers.Table_usingSQLite import Table_usingSQLite
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.strings import expand_template
@@ -524,7 +524,7 @@ global_settings = jsons.ref.get("file://tests/config/elasticsearch.json")
 constants.set(global_settings.constants)
 NEXT = 0
 
-containers = Dict(
+container_types = Dict(
     elasticsearch=ESUtils,
     sqlite=SQLiteUtils
 )
@@ -537,9 +537,9 @@ try:
     if filename:
         global_settings = jsons.ref.get("file://"+filename)
     else:
-        raise Log.error("Expecting TEST_CONFIG environment variable to point to config file for container")
+        Log.alert("No TEST_CONFIG environment variable to point to config file.  Using /tests/config/elasticsearch.json")
 
-    utils = containers[global_settings.use](global_settings)
+    utils = container_types[global_settings.use](global_settings)
 except Exception, e:
     Log.warning("problem", e)
 

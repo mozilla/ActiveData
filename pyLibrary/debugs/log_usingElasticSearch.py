@@ -11,6 +11,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from collections import Mapping
+
 from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
@@ -21,6 +23,9 @@ from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.thread.threads import Thread, Queue
 from pyLibrary.times.durations import MINUTE, Duration
+
+MAX_BAD_COUNT = 5
+LOG_STRING_LENGTH = 2000
 
 
 class TextLog_usingElasticSearch(TextLog):

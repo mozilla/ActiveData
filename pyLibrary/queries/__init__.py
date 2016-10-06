@@ -15,7 +15,6 @@ from pyLibrary.dot import wrap, set_default, split_field, join_field
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.queries.index import Index
 
-type2container = Dict()
 config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
 _ListContainer = None
 _meta = None
@@ -23,7 +22,6 @@ _containers = None
 
 
 def _delayed_imports():
-    global type2container
     global _ListContainer
     global _meta
     global _containers
@@ -45,7 +43,7 @@ def _delayed_imports():
     from pyLibrary.queries.jx_usingES import FromES
     from pyLibrary.queries.meta import FromESMetadata
 
-    set_default(type2container, {
+    set_default(_containers.type2container, {
         "elasticsearch": FromES,
         "mysql": MySQL,
         "memory": None,
@@ -59,7 +57,7 @@ def wrap_from(frum, schema=None):
     :param schema:
     :return:
     """
-    if not type2container:
+    if not _containers:
         _delayed_imports()
 
     frum = wrap(frum)
@@ -89,12 +87,12 @@ def wrap_from(frum, schema=None):
             _containers.config.default.settings
         )
         settings.type = None
-        return type2container[type_](settings)
-    elif isinstance(frum, Mapping) and frum.type and type2container[frum.type]:
+        return _containers.type2container[type_](settings)
+    elif isinstance(frum, Mapping) and frum.type and _containers.type2container[frum.type]:
         # TODO: Ensure the frum.name is set, so we capture the deep queries
         if not frum.type:
             Log.error("Expecting from clause to have a 'type' property")
-        return type2container[frum.type](frum.settings)
+        return _containers.type2container[frum.type](frum.settings)
     elif isinstance(frum, Mapping) and (frum["from"] or isinstance(frum["from"], (list, set))):
         from pyLibrary.queries.query import QueryOp
         return QueryOp.wrap(frum, schema=schema)

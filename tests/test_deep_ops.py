@@ -871,9 +871,9 @@ class TestDeepOps(ActiveDataBaseTest):
             "query": {
                 "from": TEST_TABLE + ".a._b",
                 "edges": [{
-                              "name": "v",
-                              "value": ["r", "s"]
-                          }]
+                    "name": "v",
+                    "value": ["r", "s"]
+                }]
             },
             "expecting_list": {
                 "meta": {"format": "list"},

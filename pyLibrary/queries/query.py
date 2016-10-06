@@ -426,7 +426,9 @@ def _normalize_edge(edge, schema=None):
     if not _Column:
         _late_import()
 
-    if isinstance(edge, basestring):
+    if edge == None:
+        Log.error("Edge has no value, or expression is empty")
+    elif isinstance(edge, basestring):
         if schema:
             try:
                 e = schema[edge]
@@ -502,7 +504,7 @@ def _normalize_group(edge, schema=None):
         return wrap({
             "name": edge,
             "value": jx_expression(edge),
-            "allowNulls": True,
+            "allowNulls": False,
             "domain": {"type": "default"}
         })
     else:

@@ -632,7 +632,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "allowNulls": True,  # MUST BE True SO THAT NULL VALUES ARE INCLUDED
+                        "allowNulls": False,  # MUST BE FALSE, cube FORMAT CAN NOT CHANGE WHAT'S AVAILABLE
                         "domain": {
                             "type": "set",
                             "key": "value",

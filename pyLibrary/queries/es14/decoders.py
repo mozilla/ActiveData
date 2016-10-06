@@ -213,8 +213,8 @@ def _range_composer(edge, domain, es_query, to_float):
         missing_filter = set_default(
             {"filter": {"or": [
                 OrOp("or", [
-                    BinaryOp("lt", [edge.value, Literal(None, to_float(_min))]),
-                    BinaryOp("gte", [edge.value, Literal(None, to_float(_max))]),
+                    InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
+                    InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
                 ]).to_esfilter(),
                 edge.value.missing().to_esfilter()
             ]}},

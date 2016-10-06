@@ -63,15 +63,16 @@ def format_table(decoders, aggs, start, query, select):
             yield output
 
         # EMIT THE MISSING CELLS IN THE CUBE
-        # for c, v in is_sent:
-        #     if not v:
-        #         record = [d.get_value(c[i]) for i, d in enumerate(decoders)]
-        #         for s in select:
-        #             if s.aggregate == "count":
-        #                 record.append(0)
-        #             else:
-        #                 record.append(None)
-        #         yield record
+        if not query.groupby:
+            for c, v in is_sent:
+                if not v:
+                    record = [d.get_value(c[i]) for i, d in enumerate(decoders)]
+                    for s in select:
+                        if s.aggregate == "count":
+                            record.append(0)
+                        else:
+                            record.append(None)
+                    yield record
 
     return Dict(
         meta={"format": "table"},
@@ -167,6 +168,19 @@ def format_list(decoders, aggs, start, query, select):
             for s in select:
                 output[s.name] = _pull(s, agg)
             yield output
+
+        # EMIT THE MISSING CELLS IN THE CUBE
+        if not query.groupby:
+            for c, v in is_sent:
+                if not v:
+                    output = Dict()
+                    for i, d in enumerate(decoders):
+                        output[query.edges[i].name] = d.get_value(c[i])
+
+                    for s in select:
+                        if s.aggregate == "count":
+                            output[s.name] = 0
+                    yield output
 
     output = Dict(
         meta={"format": "list"},

@@ -21,7 +21,8 @@ from pyLibrary.maths import Math
 from pyLibrary.queries import jx
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from pyLibrary.queries.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, BinaryOp, AndOp
+from pyLibrary.queries.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, BinaryOp, AndOp, \
+    InequalityOp
 from pyLibrary.queries.query import MAX_LIMIT, DEFAULT_LIMIT
 
 
@@ -289,8 +290,8 @@ class GeneralRangeDecoder(AggsDecoder):
         aggs = {}
         for i, p in enumerate(domain.partitions):
             filter_ = AndOp("and", [
-                BinaryOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
-                BinaryOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
+                InequalityOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
+                InequalityOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
             ])
             aggs["_join_" + unicode(i)] = set_default(
                 {"filter": filter_.to_esfilter()},

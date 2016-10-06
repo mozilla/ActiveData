@@ -213,7 +213,7 @@ class QueryOp(Expression):
             if query.edges or query.groupby:
                 output.select = Dict(name="count", value=jx_expression("."), aggregate="count", default=0)
             else:
-                output.select = _normalize_selects(".", query["from"])
+                output.select = _normalize_selects(".", query.frum)
 
         if query.groupby and query.edges:
             Log.error("You can not use both the `groupby` and `edges` clauses in the same query!")

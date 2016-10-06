@@ -30,8 +30,8 @@ class TestQueryVariables(FuzzyTestCase):
     def test_two_simple(self):
         today = Date.today()
 
-        result = replace_vars('"{{today|week}}" "{{today}}d')
-        expect = '"'+unicode(today.floor(WEEK).unix)+'" "'+unicode(today.unix)+"d"
+        result = replace_vars('"{{today|week}}" "{{today}}d"')
+        expect = '"'+unicode(today.floor(WEEK).unix)+'" "'+unicode(today.unix)+'d"'
         self.assertEqual(result, expect)
 
     def test_overload(self):

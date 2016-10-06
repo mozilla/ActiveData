@@ -510,21 +510,21 @@ class TestSetOps(ActiveDataBaseTest):
             "expecting_list": {
                 "data": [
                     {"i": 0},
-                    {"i": 1, "a": "", "b": "", "c": "", "d": ""},
-                    {"i": 2, "a": "", "b": "a", "c": "", "d": "a"},
-                    {"i": 3, "a": "", "b": "abcdefg", "c": "", "d": "abcdefg"},
+                    {"i": 1, "a": None, "b": None, "c": None, "d": None},
+                    {"i": 2, "a": None, "b": "a", "c": None, "d": "a"},
+                    {"i": 3, "a": None, "b": "abcdefg", "c": None, "d": "abcdefg"},
                     {"i": 4},
-                    {"i": 5, "a": "", "b": "", "c": "", "d": ""},
-                    {"i": 6, "a": "", "b": "a", "c": "", "d": "a"},
-                    {"i": 7, "a": "", "b": "abcdefg", "c": "", "d": "abcdefg"},
+                    {"i": 5, "a": None, "b": None, "c": None, "d": None},
+                    {"i": 6, "a": None, "b": "a", "c": None, "d": "a"},
+                    {"i": 7, "a": None, "b": "abcdefg", "c": None, "d": "abcdefg"},
                     {"i": 8},
-                    {"i": 9, "a": "", "b": "", "c": "", "d": ""},
-                    {"i": 10, "a": "a", "b": "", "c": "a", "d": ""},
+                    {"i": 9, "a": None, "b": None, "c": None, "d": None},
+                    {"i": 10, "a": "a", "b": None, "c": "a", "d": None},
                     {"i": 11, "a": "abc", "b": "defg", "c": "efg", "d": "abcd"},
                     {"i": 12},
-                    {"i": 13, "a": "", "b": "", "c": "", "d": ""},
-                    {"i": 14, "a": "a", "b": "", "c": "a", "d": ""},
-                    {"i": 15, "a": "abcdefg", "b": "", "c": "abcdefg", "d": ""}
+                    {"i": 13, "a": None, "b": None, "c": None, "d": None},
+                    {"i": 14, "a": "a", "b": None, "c": "a", "d": None},
+                    {"i": 15, "a": "abcdefg", "b": None, "c": "abcdefg", "d": None}
                 ]
             }
         }

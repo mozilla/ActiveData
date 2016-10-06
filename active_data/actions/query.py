@@ -76,8 +76,8 @@ def query(path):
                     if data.meta.save:
                         try:
                             result.meta.saved_as = save_query.query_finder.save(data)
-                        except Exception:
-                            pass
+                        except Exception, e:
+                            Log.warning("Unexpected save problem", cause=e)
 
 
                 result.meta.timing.preamble = Math.round(preamble_timer.duration.seconds, digits=4)
@@ -186,10 +186,12 @@ def replace_vars(text, params=None):
     REPLACE {{vars}} WITH ENVIRONMENTAL VALUES
     """
     start = 0
-    var = strings.between(text, "\"{{", "}}\"", start)
+    var = strings.between(text, "{{", "}}", start)
     while var:
-        replace = "\"{{" + var + "}}\""
+        replace = "{{" + var + "}}"
         index = text.find(replace, 0)
+        if index==-1:
+            Log.error("could not find {{var}} (including quotes)", var=replace)
         end = index + len(replace)
 
         try:

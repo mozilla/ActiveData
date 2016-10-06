@@ -120,7 +120,7 @@ class Cube(Container):
         columns = wrap({s.name: s for s in self.select + self.edges})
 
         # DEFER TO ListContainer
-        from pyLibrary.queries.containers.lists import ListContainer
+        from pyLibrary.queries.containers.list_usingPythonList import ListContainer
 
         frum = ListContainer(name="", data=frum.values(), schema=columns)
         return frum.query(q)

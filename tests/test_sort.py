@@ -73,7 +73,7 @@ class TestSorting(ActiveDataBaseTest):
                 "data": [
                     ["a", 5],
                     ["c", 4],
-                    [None, 1]
+                    [NULL, 1]
                 ]
             },
             "expecting_cube": {

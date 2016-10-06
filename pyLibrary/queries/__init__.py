@@ -28,7 +28,7 @@ def _delayed_imports():
 
 
     from pyLibrary.queries import meta as _meta
-    from pyLibrary.queries.containers.lists import ListContainer as _ListContainer
+    from pyLibrary.queries.containers.list_usingPythonList import ListContainer as _ListContainer
     from pyLibrary.queries import containers as _containers
 
     _ = _ListContainer
@@ -116,3 +116,6 @@ class Schema(object):
     @property
     def all_columns(self):
         return list(self.lookup)
+
+    def keys(self):
+        return set(k[0] for k in self.lookup._data.keys())

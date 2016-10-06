@@ -59,7 +59,7 @@ class FromESMetadata(Schema):
         if hasattr(self, "settings"):
             return
 
-        from pyLibrary.queries.containers.lists import ListContainer
+        from pyLibrary.queries.containers.list_usingPythonList import ListContainer
         from pyLibrary.env import elasticsearch as _elasticsearch
 
         self.settings = settings

@@ -40,7 +40,7 @@ class Namespace(ActiveDataBaseTest):
                     [3, 2],
                     [1, 5],
                     [2, 7],
-                    [4, None]
+                    [4, NULL]
                 ]
             }
         )
@@ -61,7 +61,7 @@ class Namespace(ActiveDataBaseTest):
                     [3, 2, "x"],
                     [1, 5, "x"],
                     [2, 7, "x"],
-                    [4, None, None]
+                    [4, NULL, NULL]
                 ]
             }
         )
@@ -82,7 +82,7 @@ class Namespace(ActiveDataBaseTest):
                     [3, [2, "x"]],
                     [1, [5, "x"]],
                     [2, [7, "x"]],
-                    [4, [None, None]]
+                    [4, [NULL, NULL]]
                 ]
             }
         )
@@ -101,7 +101,7 @@ class Namespace(ActiveDataBaseTest):
                 "header": ["w", "count"],
                 "data": [
                     ["x", 3],
-                    [None, 1]
+                    [NULL, 1]
                 ]
             }
         )
@@ -124,7 +124,7 @@ class Namespace(ActiveDataBaseTest):
                 [2, "x", 1],
                 [5, "x", 1],
                 [7, "x", 1],
-                [None, None, 1]
+                [NULL, NULL, 1]
             ]
         })
 
@@ -148,7 +148,7 @@ class Namespace(ActiveDataBaseTest):
                         {"value": [2, "x"]},
                         {"value": [5, "x"]},
                         {"value": [7, "x"]},
-                        {"value": None}
+                        {"value": NULL}
                     ]}
                 }],
                 "data": {"count": [1, 1, 1, 1]}

@@ -276,7 +276,7 @@ def list2table(rows, column_names=None):
             columns |= set(r.keys())
         keys = list(columns)
 
-    output = [[unwraplist(r[k]) for k in keys] for r in rows]
+    output = [[unwraplist(r.get(k)) for k in keys] for r in rows]
 
     return wrap({
         "meta": {"format": "table"},

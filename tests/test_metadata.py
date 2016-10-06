@@ -11,6 +11,8 @@
 from __future__ import unicode_literals
 from __future__ import division
 from pyLibrary.dot import set_default, wrap
+from pyLibrary.queries.expressions import NullOp
+from tests import NULL
 
 from tests.base_test_class import ActiveDataBaseTest
 
@@ -49,12 +51,12 @@ class TestMetadata(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
-                {"table": table_name, "name": "a", "type": "string", "nested_path": None}
+                {"table": table_name, "name": "a", "type": "string", "nested_path": NULL}
             ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["table", "name", "type", "nested_path"],
-                "data": [[table_name, "a", "string", None]]
+                "data": [[table_name, "a", "string", NULL]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -68,7 +70,7 @@ class TestMetadata(ActiveDataBaseTest):
                     "table": [table_name],
                     "name": ["a"],
                     "type": ["string"],
-                    "nested_type": [None]
+                    "nested_type": [NULL]
                 }
             }
         })
@@ -122,8 +124,8 @@ class TestMetadata(ActiveDataBaseTest):
                     {"table": table_name, "name": "_a", "type": "nested", "nested_path": "_a"},
                     {"table": table_name, "name": "_a.b", "type": "string", "nested_path": "_a"},
                     {"table": table_name, "name": "_a.v", "type": "double", "nested_path": "_a"},
-                    {"table": table_name, "name": "c", "type": "string", "nested_path": None},
-                    {"table": table_name, "name": "o", "type": "double", "nested_path": None},
+                    {"table": table_name, "name": "c", "type": "string", "nested_path": NULL},
+                    {"table": table_name, "name": "o", "type": "double", "nested_path": NULL},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -132,8 +134,8 @@ class TestMetadata(ActiveDataBaseTest):
                     [table_name, "_a", "_a", "nested"],
                     [table_name, "_a.b", "_a", "string"],
                     [table_name, "_a.v", "_a", "double"],
-                    [table_name, "c", None, "string"],
-                    [table_name, "o", None, "double"]
+                    [table_name, "c", NULL, "string"],
+                    [table_name, "o", NULL, "double"]
                 ]
             }
         }

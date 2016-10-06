@@ -8,10 +8,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
-import base_test_class
+from __future__ import unicode_literals
 
+from tests import NULL
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 
@@ -34,14 +34,14 @@ class TestEdge2(ActiveDataBaseTest):
                 "data": [
                     {"a": "x", "b": "m", "count": 2},
                     {"a": "x", "b": "n", "count": 1},
-                    {"a": "x", "b": None, "count": 1},
+                    {"a": "x", "b": NULL, "count": 1},
                     {"a": "y", "b": "m", "count": 1},
                     {"a": "y", "b": "n", "count": 2},
-                    {"a": "y", "b": None, "count": 1},
-                    {"a": None, "b": "m", "count": 1},
-                    {"a": None, "b": "n", "count": 1},
-                    {"a": "z", "count": 0},
-                    {"count": 0},
+                    {"a": "y", "b": NULL, "count": 1},
+                    {"a": NULL, "b": "m", "count": 1},
+                    {"a": NULL, "b": "n", "count": 1},
+                    {"a": "z", "b": NULL, "count": 0},
+                    {"a": NULL, "b": NULL, "count": 0},
                     {"a": "z", "b": "m", "count": 0},
                     {"a": "z", "b": "n", "count": 0}
                 ]},
@@ -49,16 +49,16 @@ class TestEdge2(ActiveDataBaseTest):
                 "meta": {"format": "table"},
                 "header": ["a", "b", "count"],
                 "data": [
-                    [None, "m", 1],
-                    [None, "n", 1],
-                    ["x", None, 1],
+                    [NULL, "m", 1],
+                    [NULL, "n", 1],
+                    ["x", NULL, 1],
                     ["x", "m", 2],
                     ["x", "n", 1],
-                    ["y", None, 1],
+                    ["y", NULL, 1],
                     ["y", "m", 1],
                     ["y", "n", 2],
-                    ["z", None, 0],
-                    [None, None, 0],
+                    ["z", NULL, 0],
+                    [NULL, NULL, 0],
                     ["z", "m", 0],
                     ["z", "n", 0]
                 ]
@@ -137,12 +137,12 @@ class TestEdge2(ActiveDataBaseTest):
                 "data": [
                     {"a": "x", "b": "m", "v": 29},
                     {"a": "x", "b": "n", "v": 3},
-                    {"a": "x", "b": None, "v": 5},
+                    {"a": "x", "b": NULL, "v": 5},
                     {"a": "y", "b": "m", "v": 7},
                     {"a": "y", "b": "n", "v": 50},
-                    {"a": "y", "b": None, "v": 13},
-                    {"a": None, "b": "m", "v": 17},
-                    {"a": None, "b": "n", "v": 19}
+                    {"a": "y", "b": NULL, "v": 13},
+                    {"a": NULL, "b": "m", "v": 17},
+                    {"a": NULL, "b": "n", "v": 19}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -150,12 +150,12 @@ class TestEdge2(ActiveDataBaseTest):
                 "data": [
                     ["x", "m", 29],
                     ["x", "n", 3],
-                    ["x", None, 5],
+                    ["x", NULL, 5],
                     ["y", "m", 7],
                     ["y", "n", 50],
-                    ["y", None, 13],
-                    [None, "m", 17],
-                    [None, "n", 19]
+                    ["y", NULL, 13],
+                    [NULL, "m", 17],
+                    [NULL, "n", 19]
                 ]
             },
             "expecting_cube": {
@@ -188,7 +188,7 @@ class TestEdge2(ActiveDataBaseTest):
                     "v": [
                         [29, 3, 5],
                         [7, 50, 13],
-                        [17, 19, None]
+                        [17, 19, NULL]
                     ]
                 }
             }
@@ -231,14 +231,14 @@ class TestEdge2(ActiveDataBaseTest):
                 "meta": {"format": "table"},
                 "header": ["a", "b", "v"],
                 "data": [
-                    ["x", None, 0],
+                    ["x", NULL, 0],
                     ["x", "m", 2],
                     ["x", "n", 3],
-                    ["y", None, 13],
+                    ["y", NULL, 13],
                     ["y", "m", 7],
                     ["y", "n", 0],
-                    [None, "m", 17],
-                    [None, "n", 19]
+                    [NULL, "m", 17],
+                    [NULL, "n", 19]
                 ]
             },
             "expecting_cube": {
@@ -326,15 +326,15 @@ class TestEdge2(ActiveDataBaseTest):
                 "data": [
                     {"a": "x", "b": "m", "v": 29},
                     {"a": "x", "b": "n", "v": 3},
-                    {"a": "x", "b": None, "v": 5},
+                    {"a": "x", "b": NULL, "v": 5},
                     {"a": "y", "b": "m", "v": 7},
                     {"a": "y", "b": "n", "v": 50},
-                    {"a": "y", "b": None, "v": 13},
+                    {"a": "y", "b": NULL, "v": 13},
                     {"a": "z", "b": "m"},
                     {"a": "z", "b": "n"},
                     {"a": "z"},
-                    {"a": None, "b": "m", "v": 17},
-                    {"a": None, "b": "n", "v": 19},
+                    {"a": NULL, "b": "m", "v": 17},
+                    {"a": NULL, "b": "n", "v": 19},
                     {}
                 ]},
             "expecting_table": {
@@ -343,16 +343,16 @@ class TestEdge2(ActiveDataBaseTest):
                 "data": [
                     ["x", "m", 29],
                     ["x", "n", 3],
-                    ["x", None, 5],
+                    ["x", NULL, 5],
                     ["y", "m", 7],
                     ["y", "n", 50],
-                    ["y", None, 13],
-                    ["z", "m", None],
-                    ["z", "n", None],
-                    ["z", None, None],
-                    [None, "m", 17],
-                    [None, "n", 19],
-                    [None, None, None]
+                    ["y", NULL, 13],
+                    ["z", "m", NULL],
+                    ["z", "n", NULL],
+                    ["z", NULL, NULL],
+                    [NULL, "m", 17],
+                    [NULL, "n", 19],
+                    [NULL, NULL, NULL]
                 ]
             },
             "expecting_cube": {
@@ -388,8 +388,8 @@ class TestEdge2(ActiveDataBaseTest):
                     "v": [
                         [29, 3, 5],
                         [7, 50, 13],
-                        [None, None, None],
-                        [17, 19, None]
+                        [NULL, NULL, NULL],
+                        [17, 19, NULL]
                     ]
                 }
             }
@@ -400,12 +400,12 @@ class TestEdge2(ActiveDataBaseTest):
 two_dim_test_data = [
     {"a": "x", "b": "m", "v": 2},
     {"a": "x", "b": "n", "v": 3},
-    {"a": "x", "b": None, "v": 5},
+    {"a": "x", "b": NULL, "v": 5},
     {"a": "y", "b": "m", "v": 7},
     {"a": "y", "b": "n", "v": 11},
-    {"a": "y", "b": None, "v": 13},
-    {"a": None, "b": "m", "v": 17},
-    {"a": None, "b": "n", "v": 19},
+    {"a": "y", "b": NULL, "v": 13},
+    {"a": NULL, "b": "m", "v": 17},
+    {"a": NULL, "b": "n", "v": 19},
     {"a": "x", "b": "m", "v": 27},
     {"a": "y", "b": "n", "v": 39}
 ]

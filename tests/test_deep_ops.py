@@ -14,10 +14,9 @@ from __future__ import unicode_literals
 
 from pyLibrary.dot import wrap
 from pyLibrary.maths import Math
-from pyLibrary.queries.expressions import NullOp
+from tests import NULL
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
-null = None
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
@@ -165,16 +164,16 @@ class TestDeepOps(ActiveDataBaseTest):
             # "meta": {"format": "table"},
             #     "header": ["o", "a", "c"],
             #     "data": [
-            #         [1, {"b": "x", "v": 5}, None],
-            #         [2, {"b": "x", "v": 7}, None],
+            #         [1, {"b": "x", "v": 5}, NULL],
+            #         [2, {"b": "x", "v": 7}, NULL],
             #         [3,
             #             [
             #                 {"b": "x", "v": 2},
             #                 {"b": "y", "v": 3}
             #             ],
-            #             None
+            #             NULL
             #         ],
-            #         [4, None, "x"]
+            #         [4, NULL, "x"]
             #     ]
             # },
             # "expecting_cube": {
@@ -193,9 +192,9 @@ class TestDeepOps(ActiveDataBaseTest):
             #                 {"b": "x", "v": 2},
             #                 {"b": "y", "v": 3}
             #             ],
-            #             None
+            #             NULL
             #         ],
-            #         "c": [None, None, None, "x"],
+            #         "c": [NULL, NULL, NULL, "x"],
             #         "o": [1, 2, 3, 4]
             #     }
             # }
@@ -237,16 +236,16 @@ class TestDeepOps(ActiveDataBaseTest):
                 "meta": {"format": "table"},
                 "header": ["o", "a", "c"],
                 "data": [
-                    [1, {"b": "x", "v": 5}, None],
-                    [2, {"b": "x", "v": 7}, None],
+                    [1, {"b": "x", "v": 5}, NULL],
+                    [2, {"b": "x", "v": 7}, NULL],
                     [3,
                      [
                          {"b": "x", "v": 2},
                          {"b": "y", "v": 3}
                      ],
-                     None
+                     NULL
                     ],
-                    [4, None, "x"]
+                    [4, NULL, "x"]
                 ]
             },
             "expecting_cube": {
@@ -265,9 +264,9 @@ class TestDeepOps(ActiveDataBaseTest):
                             {"b": "x", "v": 2},
                             {"b": "y", "v": 3}
                         ],
-                        None
+                        NULL
                     ],
-                    "c": [None, None, None, "x"],
+                    "c": [NULL, NULL, NULL, "x"],
                     "o": [1, 2, 3, 4]
                 }
             }
@@ -303,11 +302,11 @@ class TestDeepOps(ActiveDataBaseTest):
                 "meta": {"format": "table"},
                 "header": ["o", "b", "v", "c"],
                 "data": [
-                    [1, "x", 5, None],
-                    [2, "x", 7, None],
-                    [3, "x", 2, None],
-                    [3, "y", 3, None],
-                    [4, None, None, "x"]
+                    [1, "x", 5, NULL],
+                    [2, "x", 7, NULL],
+                    [3, "x", 2, NULL],
+                    [3, "y", 3, NULL],
+                    [4, NULL, NULL, "x"]
                 ]
             },
             "expecting_cube": {
@@ -319,9 +318,9 @@ class TestDeepOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "b": ["x", "x", "y", "x", None],
-                    "v": [5, 7, 3, 2, None],
-                    "c": [None, None, None, None, "x"],
+                    "b": ["x", "x", "y", "x", NULL],
+                    "v": [5, 7, 3, 2, NULL],
+                    "c": [NULL, NULL, NULL, NULL, "x"],
                     "o": [1, 2, 3, 3, 4]
                 }
             }
@@ -826,7 +825,7 @@ class TestDeepOps(ActiveDataBaseTest):
                     [1, "b", 2],
                     [1, "c", 0],
                     [2, "b", 1],
-                    [2, None, 1]
+                    [2, NULL, 1]
                 ]
             },
             "expecting_cube": {
@@ -879,13 +878,13 @@ class TestDeepOps(ActiveDataBaseTest):
                 "meta": {"format": "list"},
                 "data": [
                     {"v": ["a", "aa"], "count": 1},
-                    {"v": [null, "bb"], "count": 1},
+                    {"v": [NULL, "bb"], "count": 1},
                     {"v": ["bb", "bb"], "count": 1},
                     {"v": ["c", "cc"], "count": 1},
-                    {"v": [null, "dd"], "count": 1},
+                    {"v": [NULL, "dd"], "count": 1},
                     {"v": ["e", "ee"], "count": 2},
-                    {"v": ["f", null], "count": 2},
-                    {"v": [null, null], "count": 1}
+                    {"v": ["f", NULL], "count": 2},
+                    {"v": [NULL, NULL], "count": 1}
                 ]
             },
             "expecting_table": {
@@ -893,13 +892,13 @@ class TestDeepOps(ActiveDataBaseTest):
                 "header": ["v", "count"],
                 "data": [
                     [["a", "aa"], 1],
-                    [[null, "bb"], 1],
+                    [[NULL, "bb"], 1],
                     [["bb", "bb"], 1],
                     [["c", "cc"], 1],
-                    [[null, "dd"], 1],
+                    [[NULL, "dd"], 1],
                     [["e", "ee"], 2],
-                    [["f", null], 2],
-                    [[null, null], 1]
+                    [["f", NULL], 2],
+                    [[NULL, NULL], 1]
                 ]
             },
             "expecting_cube": {
@@ -911,14 +910,14 @@ class TestDeepOps(ActiveDataBaseTest):
                         "domain": {
                             "type": "set",
                             "partitions": [
-                                {"dataIndex": 0, "value": [null, null]},
-                                {"dataIndex": 1, "value": [null, "bb"]},
-                                {"dataIndex": 2, "value": [null, "dd"]},
+                                {"dataIndex": 0, "value": [NULL, NULL]},
+                                {"dataIndex": 1, "value": [NULL, "bb"]},
+                                {"dataIndex": 2, "value": [NULL, "dd"]},
                                 {"dataIndex": 3, "value": ["a", "aa"]},
                                 {"dataIndex": 4, "value": ["bb", "bb"]},
                                 {"dataIndex": 5, "value": ["c", "cc"]},
                                 {"dataIndex": 6, "value": ["e", "ee"]},
-                                {"dataIndex": 7, "value": ["f", null]}
+                                {"dataIndex": 7, "value": ["f", NULL]}
                             ]
                         }
                     }
@@ -962,7 +961,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 "data": [
                     ["a", 3],
                     ["c", 5],
-                    [null, 6]
+                    [NULL, 6]
                 ]
             },
             "expecting_cube": {
@@ -975,7 +974,7 @@ class TestDeepOps(ActiveDataBaseTest):
                     ]}}
                 ],
                 "data": {
-                    "v.u": [3, null, 5, 6]
+                    "v.u": [3, NULL, 5, 6]
                 }
             }
         }
@@ -1014,7 +1013,7 @@ class TestDeepOps(ActiveDataBaseTest):
                     ["a", 1],
                     ["a", 2],
                     ["c", 5],
-                    [null, 6]
+                    [NULL, 6]
                 ]
             },
             "expecting_cube": {
@@ -1029,12 +1028,11 @@ class TestDeepOps(ActiveDataBaseTest):
                 ],
                 "data": {
                     "v.u": [1, 2, 5, 6],
-                    "r.s": ["a", "a", "c", null]
+                    "r.s": ["a", "a", "c", NULL]
                 }
             }
         }
         self.utils.execute_es_tests(test)
-
 
     def test_select_average_on_none(self):
         test = {
@@ -1053,7 +1051,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 "meta": {"format": "list"},
                 "data": [
                     {"a": 0, "t": 0},
-                    {"t": NullOp()}
+                    {"t": NULL}
                 ]
             }
         }

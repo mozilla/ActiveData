@@ -274,18 +274,18 @@ class HttpResponse(Response):
     def all_lines(self):
         return self.get_all_lines()
 
-    def get_all_lines(self, encoding="utf8"):
+    def get_all_lines(self, encoding="utf8", flexible=False):
         try:
             iterator = self.raw.stream(4096, decode_content=False)
 
             if self.headers.get('content-encoding') == 'gzip':
-                return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding)
+                return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding, flexible=flexible)
             elif self.headers.get('content-type') == 'application/zip':
-                return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding)
+                return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding, flexible=flexible)
             elif self.url.endswith(".gz"):
-                return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding)
+                return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding, flexible=flexible)
             else:
-                return ibytes2ilines(iterator, encoding=encoding, closer=self.close)
+                return ibytes2ilines(iterator, encoding=encoding, flexible=flexible, closer=self.close)
         except Exception, e:
             Log.error("Can not read content", cause=e)
 

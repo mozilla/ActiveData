@@ -52,7 +52,7 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
                 group = Dict()
                 for k, gg in zip(keys, g):
                     group[k] = gg
-                yield (group, wrap(v))
+                yield (group, wrap(list(v)))
 
         return _output()
     except Exception, e:

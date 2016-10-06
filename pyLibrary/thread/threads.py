@@ -37,6 +37,9 @@ DEBUG = True
 MAX_DATETIME = datetime(2286, 11, 20, 17, 46, 39)
 DEFAULT_WAIT_TIME = timedelta(minutes=10)
 
+datetime.strptime('2012-01-01', '%Y-%m-%d')  # http://bugs.python.org/issue7980
+
+
 def _late_import():
     global _Log
     global _Except
@@ -522,6 +525,9 @@ class Thread(object):
                 except Exception, e:
                     if DEBUG:
                         _Log.warning("problem with thread {{name|quote}}", cause=e, name=self.name)
+                finally:
+                    if DEBUG:
+                        _Log.note("thread {{name|quote}} is done", name=self.name)
 
     def is_alive(self):
         return not self.stopped
@@ -672,7 +678,7 @@ class Thread(object):
         with ALL_LOCK:
             try:
                 return ALL[id]
-            except KeyError, e:
+            except KeyError:
                 return MAIN_THREAD
 
 

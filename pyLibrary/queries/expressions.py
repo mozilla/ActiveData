@@ -1611,7 +1611,7 @@ class RegExpOp(Expression):
         self.var, self.pattern = term
 
     def to_python(self, not_null=False, boolean=False):
-        return "re.match(" + self.pattern + ", " + self.var.to_python() + ")"
+        return "re.match(" + convert.string2quote(convert.json2value(self.pattern.json)) + ", " + self.var.to_python() + ")"
 
     def to_esfilter(self):
         return {"regexp": {self.var.var: convert.json2value(self.pattern.json)}}

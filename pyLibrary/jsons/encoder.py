@@ -7,27 +7,25 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 import json
-import time
+import math
 import sys
-
+import time
+from collections import Mapping
 from datetime import datetime, date, timedelta
 from decimal import Decimal
-from collections import Mapping
-from json import encoder as json_encoder_module
 from math import floor
 from repr import Repr
 
-from pyLibrary.dot import Dict, DictList, NullType, Null, unwrap
-from pyLibrary.jsons import quote, ESCAPE_DCT, scrub
+from pyLibrary.dot import Dict, DictList, NullType, Null
+from pyLibrary.jsons import quote, ESCAPE_DCT, scrub, float2json
 from pyLibrary.strings import utf82unicode
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
-
 
 json_decoder = json.JSONDecoder().decode
 _get = object.__getattribute__
@@ -104,26 +102,6 @@ def pypy_json_encode(value, pretty=False):
 almost_pattern = r"(?:\.(\d*)999)|(?:\.(\d*)000)"
 
 
-def float_repr(value):
-    output = repr(value)
-    d = output.find(".")
-    if d != -1:
-        i = output.find("999", d)
-        if i == -1:
-            i = output.find("000", d)
-            if i == -1:
-                return output
-            fixed = output
-        else:
-            fixed = repr(output + pow(10, d - i - 3))
-        fixed = output[:i]
-    else:
-        return output
-
-
-json_encoder_module.FLOAT_REPR = float_repr
-
-
 class cPythonJSONEncoder(object):
     def __init__(self, sort_keys=False):
         object.__init__(self)
@@ -196,23 +174,32 @@ def _value2json(value, _buffer):
             _value2json(d, _buffer)
             return
         elif type in (int, long, Decimal):
-            append(_buffer, unicode(value))
+            append(_buffer, float2json(value))
         elif type is float:
-            append(_buffer, unicode(repr(value)))
+            if math.isnan(value) or math.isinf(value):
+                append(_buffer, u'null')
+            else:
+                append(_buffer, float2json(value))
         elif type in (set, list, tuple, DictList):
             _list2json(value, _buffer)
         elif type is date:
-            append(_buffer, unicode(Decimal(time.mktime(value.timetuple()))))
+            append(_buffer, float2json(time.mktime(value.timetuple())))
         elif type is datetime:
-            append(_buffer, unicode(Decimal(time.mktime(value.timetuple()))))
+            append(_buffer, float2json(time.mktime(value.timetuple())))
         elif type is Date:
-            append(_buffer, unicode(value.unix))
+            append(_buffer, float2json(value.unix))
         elif type is timedelta:
-            append(_buffer, unicode(value.total_seconds()))
+            append(_buffer, float2json(value.total_seconds()))
         elif type is Duration:
-            append(_buffer, unicode(value.seconds))
+            append(_buffer, float2json(value.seconds))
         elif type is NullType:
             append(_buffer, u"null")
+        elif isinstance(value, Mapping):
+            if not value:
+                append(_buffer, u"{}")
+            else:
+                _dict2json(value, _buffer)
+            return
         elif hasattr(value, '__json__'):
             j = value.__json__()
             append(_buffer, j)

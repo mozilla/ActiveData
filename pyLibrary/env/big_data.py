@@ -270,7 +270,7 @@ def compressed_bytes2ibytes(compressed, size):
             Log.error("Not expected", e)
 
 
-def ibytes2ilines(generator, encoding="utf8", closer=None):
+def ibytes2ilines(generator, encoding="utf8", flexible=False, closer=None):
     """
     CONVERT A GENERATOR OF (ARBITRARY-SIZED) byte BLOCKS
     TO A LINE (CR-DELIMITED) GENERATOR
@@ -280,7 +280,7 @@ def ibytes2ilines(generator, encoding="utf8", closer=None):
     :param closer: OPTIONAL FUNCTION TO RUN WHEN DONE ITERATING
     :return:
     """
-    decode = get_decoder(encoding)
+    decode = get_decoder(encoding=encoding, flexible=flexible)
     _buffer = generator.next()
     s = 0
     e = _buffer.find(b"\n")
@@ -405,17 +405,22 @@ def sbytes2ilines(stream, encoding="utf8", closer=None):
     return ibytes2ilines(read(), encoding=encoding)
 
 
-def get_decoder(encoding):
+def get_decoder(encoding, flexible=False):
     """
     RETURN FUNCTION TO PERFORM DECODE
-    :param encoding:
-    :return:
+    :param encoding: STRING OF THE ENCODING
+    :param flexible: True IF YOU WISH TO TRY OUR BEST, AND KEEP GOING
+    :return: FUNCTION
     """
     if encoding == None:
         def no_decode(v):
             return v
         return no_decode
+    elif flexible:
+        def do_decode1(v):
+            return v.decode(encoding, 'ignore')
+        return do_decode1
     else:
-        def do_decode(v):
+        def do_decode2(v):
             return v.decode(encoding)
-        return do_decode
+        return do_decode2

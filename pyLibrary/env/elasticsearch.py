@@ -30,11 +30,13 @@ from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.strings import utf82unicode
 from pyLibrary.thread.threads import ThreadedQueue, Thread, Lock
+from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
 
 ES_STRUCT = ["object", "nested"]
 ES_NUMERIC_TYPES = ["long", "integer", "double", "float"]
 ES_PRIMITIVE_TYPES = ["string", "boolean", "integer", "date", "long", "double"]
+INDEX_DATE_FORMAT = "%Y%m%d_%H%M%S"
 
 
 class Features(object):
@@ -414,13 +416,6 @@ class Index(Features):
 
     def threaded_queue(self, batch_size=None, max_size=None, period=None, silent=False):
         def errors(e, _buffer):  # HANDLE ERRORS FROM extend()
-            HOPELESS = [
-                "Document contains at least one immense term",
-                "400 MapperParsingException",
-                "400 RoutingMissingException",
-                "JsonParseException"
-            ]
-
             if e.cause.cause:
                 not_possible = [f for f in listwrap(e.cause.cause) if any(h in f for h in HOPELESS)]
                 still_have_hope = [f for f in listwrap(e.cause.cause) if all(h not in f for h in HOPELESS)]
@@ -429,7 +424,12 @@ class Index(Features):
                 still_have_hope = []
 
             if still_have_hope:
-                Log.warning("Problem with sending to ES", cause=still_have_hope)
+                if "429 EsRejectedExecutionException[rejected execution (queue capacity" in e:
+                    Log.note("waiting for ES to be free ({{num}} pending)", num=len(_buffer))
+                elif "503 UnavailableShardsException" in e:
+                    Log.note("waiting for ES to initialize shards ({{num}} pending)", num=len(_buffer))
+                else:
+                    Log.warning("Problem with sending to ES ({{num}} pending)", num=len(_buffer), cause=still_have_hope)
             elif not_possible:
                 # THERE IS NOTHING WE CAN DO
                 Log.warning("Not inserted, will not try again", cause=not_possible[0:10:])
@@ -447,6 +447,15 @@ class Index(Features):
 
     def delete(self):
         self.cluster.delete_index(index_name=self.settings.index)
+
+
+HOPELESS = [
+    "Document contains at least one immense term",
+    "400 MapperParsingException",
+    "400 RoutingMissingException",
+    "JsonParseException"
+]
+
 
 
 known_clusters = {}
@@ -585,15 +594,16 @@ class Cluster(object):
         self,
         index,
         alias=None,
+        create_timestamp=None,
         schema=None,
         limit_replicas=None,
         read_only=False,
         tjson=False,
         settings=None
     ):
-        if not settings.alias:
-            settings.alias = settings.index
-            index = settings.index = proto_name(settings.alias)
+        if not alias:
+            alias = settings.alias = settings.index
+            index = settings.index = proto_name(alias, create_timestamp)
 
         if settings.alias == index:
             Log.error("Expecting index name to conform to pattern")
@@ -820,8 +830,10 @@ class Cluster(object):
 
 def proto_name(prefix, timestamp=None):
     if not timestamp:
-        timestamp = datetime.utcnow()
-    return prefix + convert.datetime2string(timestamp, "%Y%m%d_%H%M%S")
+        timestamp = Date.now()
+    else:
+        timestamp = Date(timestamp)
+    return prefix + timestamp.format(INDEX_DATE_FORMAT)
 
 
 def sort(values):
@@ -877,7 +889,7 @@ def _scrub(r):
         else:
             return r
     except Exception, e:
-        Log.warning("Can not scrub: {{json}}",  json= r)
+        Log.warning("Can not scrub: {{json}}", json=r, cause=e)
 
 
 

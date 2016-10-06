@@ -32,9 +32,17 @@ def format_cube(decoders, aggs, start, query, select):
                 m[coord] = v
             except Exception, e:
                 Log.error("", e)
+
     cube = Cube(query.select, new_edges, {s.name: m for s, m in matricies})
     cube.frum = query
     return cube
+
+
+
+
+
+
+
 
 
 def format_cube_from_aggop(decoders, aggs, start, query, select):

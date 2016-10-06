@@ -115,12 +115,12 @@ class TestTime(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [r for r in expected_list_1 if r.v != None]
+                "data": [r for r in expected_list_1]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["t", "v"],
-                "data": [[r.t, r.v] for r in expected_list_1 if r.v != None]
+                "data": [[r.t, r.v] for r in expected_list_1]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -166,12 +166,12 @@ class TestTime(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [r for r in expected2 if r.v != None]
+                "data": [r for r in expected2]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "t", "v"],
-                "data": [[r.a, r.t, r.v] for r in expected2 if r.v != None]
+                "data": [[r.a, r.t, r.v] for r in expected2]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -230,12 +230,12 @@ class TestTime(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [r for r in expected3 if r.v != None]
+                "data": [r for r in expected3]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["since", "v"],
-                "data": [[r.since, r.v] for r in expected3 if r.v != None]
+                "data": [[r.since, r.v] for r in expected3]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},

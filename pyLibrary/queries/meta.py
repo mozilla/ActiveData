@@ -101,7 +101,7 @@ class FromESMetadata(Schema):
         existing_columns = [r for r in self.meta.columns.data if r.table == c.table and r.name == c.name]
         if not existing_columns:
             self.meta.columns.add(c)
-            Log.note("todo: {{table}}.{{column}}", table=c.table, column=c.es_column)
+            Log.note("todo: {{table}}::{{column}}", table=c.table, column=c.es_column)
             self.todo.add(c)
 
             # MARK meta.columns AS DIRTY TOO
@@ -117,7 +117,7 @@ class FromESMetadata(Schema):
 
             for key in Column.__slots__:
                 canonical[key] = c[key]
-            Log.note("todo: {{table}}.{{column}}", table=canonical.table, column=canonical.es_column)
+            Log.note("todo: {{table}}::{{column}}", table=canonical.table, column=canonical.es_column)
             self.todo.add(canonical)
 
     def _get_columns(self, table=None):

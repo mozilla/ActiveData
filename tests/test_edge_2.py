@@ -39,7 +39,11 @@ class TestEdge2(ActiveDataBaseTest):
                     {"a": "y", "b": "n", "count": 2},
                     {"a": "y", "b": None, "count": 1},
                     {"a": None, "b": "m", "count": 1},
-                    {"a": None, "b": "n", "count": 1}
+                    {"a": None, "b": "n", "count": 1},
+                    {"a": "z", "count": 0},
+                    {"count": 0},
+                    {"a": "z", "b": "m", "count": 0},
+                    {"a": "z", "b": "n", "count": 0}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -52,7 +56,11 @@ class TestEdge2(ActiveDataBaseTest):
                     ["x", "n", 1],
                     ["y", None, 1],
                     ["y", "m", 1],
-                    ["y", "n", 2]
+                    ["y", "n", 2],
+                    ["z", None, 0],
+                    [None, None, 0],
+                    ["z", "m", 0],
+                    ["z", "n", 0]
                 ]
             },
             "expecting_cube": {
@@ -322,8 +330,12 @@ class TestEdge2(ActiveDataBaseTest):
                     {"a": "y", "b": "m", "v": 7},
                     {"a": "y", "b": "n", "v": 50},
                     {"a": "y", "b": None, "v": 13},
+                    {"a": "z", "b": "m"},
+                    {"a": "z", "b": "n"},
+                    {"a": "z"},
                     {"a": None, "b": "m", "v": 17},
-                    {"a": None, "b": "n", "v": 19}
+                    {"a": None, "b": "n", "v": 19},
+                    {}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -335,8 +347,12 @@ class TestEdge2(ActiveDataBaseTest):
                     ["y", "m", 7],
                     ["y", "n", 50],
                     ["y", None, 13],
+                    ["z", "m", None],
+                    ["z", "n", None],
+                    ["z", None, None],
                     [None, "m", 17],
-                    [None, "n", 19]
+                    [None, "n", 19],
+                    [None, None, None]
                 ]
             },
             "expecting_cube": {

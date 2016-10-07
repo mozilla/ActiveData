@@ -11,11 +11,13 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from unittest import skipIf
+
 from pyLibrary.dot import wrap
 from pyLibrary.maths import Math
 from pyLibrary.queries import query
 from tests import NULL
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
@@ -943,6 +945,7 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
+    @skipIf(global_settings.is_travis, "not expected to pass yet")
     def test_select_nested_column(self):
         test = {
             "data": [

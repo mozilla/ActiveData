@@ -12,10 +12,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from unittest import skipIf
+
 from pyLibrary.dot import wrap
 from pyLibrary.maths import Math
 from tests import NULL
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
@@ -1218,6 +1220,54 @@ class TestDeepOps(ActiveDataBaseTest):
             }
         }
         self.utils.execute_es_tests(test)
+
+    @skipIf(global_settings.is_travis, "not expected to pass yet")
+    def test_from_shallow_select_deep_column(self):
+        test = {
+            "data": [
+                {"_a": [{"b": 1, "c": 2}, {"b": 3, "c": 4}]},
+                {"_a": [{"b": 5, "c": 6}, {"b": 7, "c": 8}]}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": "_a.b"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    [1, 3],
+                    [5, 7]
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["_a.b"],
+                "data": [
+                    [[1, 3]],
+                    [[5, 7]]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 2, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "_a.b": [
+                        [1, 3],
+                        [5, 7]
+                    ]
+                }
+            }
+        }
+        self.utils.execute_es_tests(test)
+
+
+
+
 
 # TODO: WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?
 # THIS SHOULD RETURN SOMETHING, NOT FAIL

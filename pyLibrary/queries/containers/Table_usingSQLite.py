@@ -30,7 +30,7 @@ from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
 from pyLibrary.queries.expressions import jx_expression, Variable, sql_type_to_json_type, TupleOp
-from pyLibrary.queries.meta import Column, ROOT_PATH
+from pyLibrary.queries.meta import Column
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.sql.sqlite import Sqlite
 from pyLibrary.strings import expand_template
@@ -390,14 +390,14 @@ class Table_usingSQLite(Container):
                           for k, v in command.set.items()
                           if get_type(v) != "nested"
                           for c in self.columns[k]
-                          if c.type != "nested" and c.nested_path is ROOT_PATH
+                          if c.type != "nested" and len(c.nested_path) == 1
                           ] +
                       [
                           _quote_column(c) + "=NULL"
                           for k in listwrap(command['clear'])
                           if k in self.columns
                           for c in self.columns[k]
-                          if c.type != "nested" and c.nested_path is ROOT_PATH
+                          if c.type != "nested" and len(c.nested_path) == 1
                           ]
                   ) + \
                   " WHERE " + where_sql
@@ -421,7 +421,7 @@ class Table_usingSQLite(Container):
         select = []
         column_names = []
         for cname, cs in self.columns.items():
-            cs = [c for c in cs if c.type not in STRUCT and c.nested_path is ROOT_PATH]
+            cs = [c for c in cs if c.type not in STRUCT and len(c.nested_path) == 1]
             if len(cs) == 0:
                 continue
             column_names.append(cname)

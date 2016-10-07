@@ -16,8 +16,7 @@ from copy import copy
 from itertools import product
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, set_default, Null, literal_field, listwrap, split_field, join_field, unwraplist, \
-    unwrap, ROOT_PATH
+from pyLibrary.dot import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
 from pyLibrary.dot import wrap
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.meta import use_settings, DataClass
@@ -328,7 +327,7 @@ class FromESMetadata(Schema):
                         "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                     })
                 return
-            elif c.nested_path is not ROOT_PATH:
+            elif len(c.nested_path) != 1:
                 query.aggs[literal_field(c.name)] = {
                     "nested": {"path": c.nested_path[0]},
                     "aggs": {"_nested": {"terms": {"field": c.es_column, "size": 0}}}
@@ -448,7 +447,7 @@ class FromESMetadata(Schema):
 
 
 def _counting_query(c):
-    if c.nested_path is not ROOT_PATH:
+    if len(c.nested_path) != 1:
         return {
             "nested": {
                 "path": c.nested_path[0]  # FIRST ONE IS LONGEST

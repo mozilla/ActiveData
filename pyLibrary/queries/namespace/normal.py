@@ -15,7 +15,7 @@ from collections import Mapping
 from copy import copy
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, Null, ROOT_PATH
+from pyLibrary.dot import coalesce, Null
 from pyLibrary.dot import wrap, listwrap
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot.lists import DictList
@@ -85,7 +85,7 @@ class Normal(Namespace):
         # THE from SOURCE IS.
         vars = get_all_vars(output, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
         for c in query.columns:
-            if c.name in vars and c.nested_path is not ROOT_PATH:
+            if c.name in vars and len(c.nested_path) != 1:
                 Log.error("This query, with variable {{var_name}} is too deep", var_name=c.name)
 
         output.having = convert_list(self._convert_having, query.having)

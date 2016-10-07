@@ -15,14 +15,14 @@ from collections import Mapping
 
 from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, coalesce, literal_field
+from pyLibrary.dot import set_default, coalesce, literal_field, Dict
 from pyLibrary.dot import wrap
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, PARTITION
 from pyLibrary.queries.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, BinaryOp, AndOp, \
-    InequalityOp
+    InequalityOp, TupleOp, LeavesOp
 from pyLibrary.queries.query import MAX_LIMIT, DEFAULT_LIMIT
 
 
@@ -41,7 +41,17 @@ class AggsDecoder(object):
             if isinstance(e.value, basestring):
                 Log.error("Expecting Variable or Expression, not plain string")
 
-            if isinstance(e.value, Variable):
+            if isinstance(e.value, TupleOp):
+                # THIS domain IS FROM A dimension THAT IS A SIMPLE LIST OF fields
+                # JUST PULL THE FIELDS
+                if not all(isinstance(t, Variable) for t in e.value.terms):
+                    Log.error("Can only handle variables in tuples")
+
+                e.domain = Dict(
+                    dimension={"fields":e.value.terms}
+                )
+                return object.__new__(DimFieldListDecoder, e)
+            elif isinstance(e.value, Variable):
                 cols = query.frum.get_columns()
                 col = cols.filter(lambda c: c.name == e.value.var)[0]
                 if not col:

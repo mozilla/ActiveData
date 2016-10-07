@@ -814,8 +814,12 @@ class TestDeepOps(ActiveDataBaseTest):
                 "data": [
                     {"o": 1, "v": "b", "s": 2},
                     {"o": 1, "v": "c", "s": 0},
+                    {"o": 1, "v": NULL, "s": 0},
                     {"o": 2, "v": "b", "s": 1},
-                    {"o": 2, "s": 1},
+                    {"o": 2, "v": "c", "s": 0},
+                    {"o": 2, "v": NULL, "s": 1},
+                    {"o": NULL, "v": "b", "s": 0},
+                    {"o": NULL, "v": "c", "s": 0}
                 ]
             },
             "expecting_table": {
@@ -824,8 +828,12 @@ class TestDeepOps(ActiveDataBaseTest):
                 "data": [
                     [1, "b", 2],
                     [1, "c", 0],
+                    [1, NULL, 0],
                     [2, "b", 1],
-                    [2, NULL, 1]
+                    [2, "c", 0],
+                    [2, NULL, 1],
+                    [NULL, "b", 0],
+                    [NULL, "c", 0]
                 ]
             },
             "expecting_cube": {
@@ -910,20 +918,20 @@ class TestDeepOps(ActiveDataBaseTest):
                         "domain": {
                             "type": "set",
                             "partitions": [
-                                {"dataIndex": 0, "value": [NULL, NULL]},
-                                {"dataIndex": 1, "value": [NULL, "bb"]},
-                                {"dataIndex": 2, "value": [NULL, "dd"]},
-                                {"dataIndex": 3, "value": ["a", "aa"]},
-                                {"dataIndex": 4, "value": ["bb", "bb"]},
-                                {"dataIndex": 5, "value": ["c", "cc"]},
-                                {"dataIndex": 6, "value": ["e", "ee"]},
-                                {"dataIndex": 7, "value": ["f", NULL]}
+                                {"dataIndex": 0, "value": ["a", "aa"]},
+                                {"dataIndex": 1, "value": ["bb", "bb"]},
+                                {"dataIndex": 2, "value": ["c", "cc"]},
+                                {"dataIndex": 3, "value": ["e", "ee"]},
+                                {"dataIndex": 4, "value": ["f", NULL]},
+                                {"dataIndex": 5, "value": [NULL, "bb"]},
+                                {"dataIndex": 6, "value": [NULL, "dd"]},
+                                {"dataIndex": 7, "value": [NULL, NULL]}
                             ]
                         }
                     }
                 ],
                 "data": {
-                    "count": [1, 1, 1, 1, 1, 1, 2, 2, 0]
+                    "count": [1, 1, 1, 2, 2, 1, 1, 1, 0]
                 }
             }
         }
@@ -951,8 +959,9 @@ class TestDeepOps(ActiveDataBaseTest):
                 "meta": {"format": "list"},
                 "data": [
                     {"r": {"s": "a"}, "v": {"u": 3}},
+                    {"r": {"s": "b"}, "v": NULL},
                     {"r": {"s": "c"}, "v": {"u": 5}},
-                    {"v": {"u": 6}}
+                    {"r": NULL, "v": {"u": 6}}
                 ]
             },
             "expecting_table": {
@@ -960,6 +969,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 "header": ["r.s", "v.u"],
                 "data": [
                     ["a", 3],
+                    ["b", NULL],
                     ["c", 5],
                     [NULL, 6]
                 ]

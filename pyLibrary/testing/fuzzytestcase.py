@@ -56,17 +56,21 @@ class FuzzyTestCase(unittest.TestCase):
     def assertRaises(self, problem, function, *args, **kwargs):
         try:
             function(*args, **kwargs)
-            Log.error("Expecting an exception to be raised")
         except Exception, e:
             if isinstance(problem, basestring):
-                if problem not in e:
-                    Log.error(
-                        "expecting an exception returning {{problem|quote}} got something else instead",
-                        problem=problem,
-                        cause=e
-                    )
+                if problem in e:
+                    return
+                Log.error(
+                    "expecting an exception returning {{problem|quote}} got something else instead",
+                    problem=problem,
+                    cause=e
+                )
             elif not isinstance(e, problem):
                 Log.error("expecting an exception of type {{type}} to be raised", type=problem)
+            else:
+                return
+
+        Log.error("Expecting an exception to be raised")
 
 def zipall(*args):
     """

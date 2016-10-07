@@ -244,6 +244,7 @@ class ESUtils(object):
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
                 compare_to_expected(subtest.query, result, expected)
+                Log.note("Test result compares well")
             if num_expectations == 0:
                 Log.error("Expecting test {{name|quote}} to have property named 'expecting_*' for testing the various format clauses", {
                     "name": subtest.name

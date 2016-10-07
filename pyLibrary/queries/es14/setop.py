@@ -68,8 +68,8 @@ def extract_rows(es, es_query, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
     new_select = DictList()
     columns = query.frum.get_columns()
-    leaf_columns = set(c.name for c in columns if c.type not in STRUCT and (not c.nested_path or c.es_column == c.nested_path))
-    nested_columns = set(c.name for c in columns if c.nested_path)
+    leaf_columns = set(c.name for c in columns if c.type not in STRUCT and (c.nested_path[0] == "." or c.es_column == c.nested_path))
+    nested_columns = set(c.name for c in columns if c.nested_path[0]!=".")
 
     i = 0
     source = "fields"

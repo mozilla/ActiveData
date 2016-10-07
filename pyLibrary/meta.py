@@ -342,6 +342,8 @@ class {{name}}(Mapping):
         return self
 
     def __setattr__(self, item, value):
+        if item == "nested_path" and len(value) < 1:
+            Log.error("not acceptable")
         if item not in {{slots}}:
             Log.error("{"+"{item|quote}} not valid attribute", item=item)
         #if not isinstance(value, types_[item]):

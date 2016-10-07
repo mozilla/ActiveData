@@ -23,12 +23,13 @@ from pyLibrary.collections import UNION
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, coalesce, Dict, wrap, Null, unwraplist, split_field, join_field, startswith_field, literal_field, unwrap
+from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
-from pyLibrary.queries.expressions import jx_expression, Variable, wrap_nested_path, sql_type_to_json_type, TupleOp
+from pyLibrary.queries.expressions import jx_expression, Variable, sql_type_to_json_type, TupleOp
 from pyLibrary.queries.meta import Column
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.sql.sqlite import Sqlite
@@ -179,7 +180,7 @@ class Table_usingSQLite(Container):
                     if c.type in STRUCT:
                         continue
                     c = copy(c)
-                    c.es_index = nest_to_alias[wrap_nested_path(c.nested_path)[0]]
+                    c.es_index = nest_to_alias[c.nested_path[0]]
                     columns[literal_field(k)] += [c]
 
         return unwrap(columns)
@@ -375,7 +376,7 @@ class Table_usingSQLite(Container):
                             table=self.name,
                             es_index=c.es_index,
                             es_column=c.es_column,
-                            nested_path=unwraplist([nested_column_name]+listwrap(c.nested_path))
+                            nested_path=[nested_column_name]+c.nested_path
                         )
                         if c.name not in self.columns:
                             self.columns[column.name] = {column}
@@ -389,14 +390,14 @@ class Table_usingSQLite(Container):
                           for k, v in command.set.items()
                           if get_type(v) != "nested"
                           for c in self.columns[k]
-                          if c.type != "nested" and not c.nested_path
+                          if c.type != "nested" and c.nested_path[0] == "."
                           ] +
                       [
                           _quote_column(c) + "=NULL"
                           for k in listwrap(command['clear'])
                           if k in self.columns
                           for c in self.columns[k]
-                          if c.type != "nested" and not c.nested_path
+                          if c.type != "nested" and c.nested_path[0] == "."
                           ]
                   ) + \
                   " WHERE " + where_sql
@@ -420,7 +421,7 @@ class Table_usingSQLite(Container):
         select = []
         column_names = []
         for cname, cs in self.columns.items():
-            cs = [c for c in cs if c.type not in STRUCT and not c.nested_path]
+            cs = [c for c in cs if c.type not in STRUCT and c.nested_path[0] == "."]
             if len(cs) == 0:
                 continue
             column_names.append(cname)
@@ -1061,7 +1062,7 @@ class Table_usingSQLite(Container):
                 for c in cols:
                     if c.type in STRUCT:
                         continue
-                    nest = (listwrap(c.nested_path)+["."])[0]
+                    nest = c.nested_path[0]
                     active = active_columns.get(nest)
                     if not active:
                         active = active_columns[nest] = []
@@ -1078,7 +1079,7 @@ class Table_usingSQLite(Container):
             output = set()
             for c in cols:
                 c = copy(c)
-                c.es_index = nest_to_alias[wrap_nested_path(c.nested_path)[0]]
+                c.es_index = nest_to_alias[c.nested_path[0]]
                 output.add(c)
             return output
         columns = {k: copy_cols(v) for k, v in self.columns.items()}
@@ -1148,7 +1149,7 @@ class Table_usingSQLite(Container):
                         continue
 
                     column_number = len(selects)
-                    nested_path = wrap_nested_path(c.nested_path)
+                    nested_path = c.nested_path
                     sql = nest_to_alias[nested_path[0]] + "." + quote_table(c.es_column)
                     selects.append(sql + " AS " + _make_column_name(column_number))
                     index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
@@ -1396,7 +1397,7 @@ class Table_usingSQLite(Container):
                     # WE ARE ALSO NESTING
                     self._nest_column(column, column.name)
 
-                table = join_field([self.name] + split_field(listwrap(column.nested_path)[0]))
+                table = join_field([self.name] + split_field(column.nested_path[0]))
 
                 self.db.execute(
                     "ALTER TABLE " + quote_table(table) + " ADD COLUMN " + _quote_column(column) + " " + sql_types[column.type]
@@ -1416,7 +1417,7 @@ class Table_usingSQLite(Container):
 
     def _nest_column(self, column, new_path):
         destination_table = join_field([self.name] + split_field(new_path))
-        existing_table = join_field([self.name] + split_field(listwrap(column.nested_path)[0]))
+        existing_table = join_field([self.name] + split_field(column.nested_path[0]))
 
         # FIND THE INNER COLUMNS WE WILL BE MOVING
         new_columns = {}
@@ -1425,7 +1426,7 @@ class Table_usingSQLite(Container):
                 new_columns[cname] = set()
                 for col in cols:
                     new_columns[cname].add(col)
-                    col.nested_path = unwraplist([new_path] + listwrap(col.nested_path))
+                    col.nested_path = [new_path] + col.nested_path
 
         # TODO: IF THERE ARE CHILD TABLES, WE MUST UPDATE THEIR RELATIONS TOO?
 

@@ -86,7 +86,7 @@ class Normal(Namespace):
         # THE from SOURCE IS.
         vars = get_all_vars(output, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
         for c in query.columns:
-            if c.name in vars and c.nested_path:
+            if c.name in vars and c.nested_path[0]!=".":
                 Log.error("This query, with variable {{var_name}} is too deep", var_name=c.name)
 
         output.having = convert_list(self._convert_having, query.having)

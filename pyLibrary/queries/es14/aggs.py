@@ -72,7 +72,7 @@ def get_decoders_by_depth(query):
                 vars_ |= p.where.vars()
 
         try:
-            depths = set(len(listwrap(schema[v].nested_path)) for v in vars_)
+            depths = set(len(schema[v].nested_path)-1 for v in vars_)
             if len(depths) > 1:
                 Log.error("expression {{expr}} spans tables, can not handle", expr=e.value)
             max_depth = Math.MAX(depths)

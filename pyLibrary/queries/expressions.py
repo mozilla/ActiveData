@@ -269,7 +269,7 @@ class Variable(Expression):
         acc = Dict()
         nested_path = ["."]
         for c in cols:
-            nested_path = wrap_nested_path(c.nested_path)
+            nested_path = c.nested_path
             acc[json_type_to_sql_type[c.type]] = c.es_index + "." + convert.string2quote(c.es_column)
 
         return wrap([{"name": ".", "sql": acc, "nested_path": nested_path}])
@@ -2408,7 +2408,7 @@ def split_expression_by_depth(where, schema, map_, output=None, var_to_depth=Non
         if not vars_:
             return Null
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
-        var_to_depth = {v: len(listwrap(schema[v].nested_path)) for v in vars_}
+        var_to_depth = {v: len(schema[v].nested_path)-1 for v in vars_}
         all_depths = set(var_to_depth.values())
         output = wrap([[] for _ in range(MAX(all_depths) + 1)])
     else:
@@ -2509,14 +2509,3 @@ sql_type_to_json_type = {
     "j": "object",
     "b": "boolean"
 }
-
-
-def wrap_nested_path(nested_path):
-    return listwrap(nested_path) + ["."]
-
-
-def unwrap_nested_path(nested_path):
-    if unwrap(nested_path)[-1] == ".":
-        nested_path = nested_path[:-1]
-
-    return unwraplist(nested_path)

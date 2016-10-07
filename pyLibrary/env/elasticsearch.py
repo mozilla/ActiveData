@@ -1073,7 +1073,7 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
             # MARKUP CHILD COLUMNS WITH THE EXTRA DEPTH
             self_columns = parse_properties(index_name, query_path, property.properties)
             for c in self_columns:
-                c.nested_path = unwraplist([query_path] + listwrap(c.nested_path))
+                c.nested_path = [query_path] + c.nested_path
             columns.extend(self_columns)
             columns.append(Column(
                 table=index_name,
@@ -1094,6 +1094,7 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                 es_index=index_name,
                 name=query_path,
                 es_column=query_path,
+                nested_path=["."],
                 type="source" if property.enabled == False else "object"
             ))
 
@@ -1111,6 +1112,7 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                         es_index=index_name,
                         name=query_path,
                         es_column=query_path,
+                        nested_path=["."],
                         type=p.type
                     ))
                 else:
@@ -1119,6 +1121,7 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                         es_index=index_name,
                         name=query_path + "\\." + n,
                         es_column=query_path + "\\." + n,
+                        nested_path=["."],
                         type=p.type
                     ))
             continue
@@ -1129,6 +1132,7 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                 es_index=index_name,
                 name=query_path,
                 es_column=query_path,
+                nested_path=["."],
                 type=property.type
             ))
             if property.index_name and name != property.index_name:
@@ -1137,6 +1141,7 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                     es_index=index_name,
                     es_column=query_path,
                     name=query_path,
+                    nested_path=["."],
                     type=property.type
                 ))
         elif property.enabled == None or property.enabled == False:
@@ -1145,6 +1150,7 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                 es_index=index_name,
                 name=query_path,
                 es_column=query_path,
+                nested_path=["."],
                 type="source" if property.enabled==False else "object"
             ))
         else:

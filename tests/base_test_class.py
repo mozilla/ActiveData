@@ -46,6 +46,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
     @classmethod
     def setUpClass(cls):
+        if not utils:
+            Log.error("Something wrong with test setup")
         utils.setUpClass()
 
     @classmethod
@@ -540,6 +542,8 @@ try:
     else:
         Log.alert("No TEST_CONFIG environment variable to point to config file.  Using /tests/config/elasticsearch.json")
 
+    if not global_settings.use:
+        Log.error('Must have a {"use": type} set in the config file')
     utils = container_types[global_settings.use](global_settings)
 except Exception, e:
     Log.warning("problem", e)

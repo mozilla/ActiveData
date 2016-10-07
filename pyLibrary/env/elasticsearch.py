@@ -516,7 +516,7 @@ class Cluster(object):
 
         index = settings.index
         meta = self.get_metadata()
-        columns = parse_properties(index, [], meta.indices[index].mappings.values()[0].properties)
+        columns = parse_properties(index, ".", meta.indices[index].mappings.values()[0].properties)
         if len(columns)!=0:
             settings.tjson = tjson or any(c.name.endswith("$value") for c in columns)
 
@@ -1055,7 +1055,7 @@ class Alias(Features):
             )
 
 
-def parse_properties(parent_index_name, parent_query_path, esProperties):
+def parse_properties(parent_index_name, parent_name, esProperties):
     """
     RETURN THE COLUMN DEFINITIONS IN THE GIVEN esProperties OBJECT
     """
@@ -1063,37 +1063,35 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
 
     columns = DictList()
     for name, property in esProperties.items():
-        if parent_query_path:
-            index_name, query_path = parent_index_name, join_field(split_field(parent_query_path) + [name])
-        else:
-            index_name, query_path = parent_index_name, name
+        index_name = parent_index_name
+        column_name = join_field(split_field(parent_name) + [name])
 
         if property.type == "nested" and property.properties:
             # NESTED TYPE IS A NEW TYPE DEFINITION
             # MARKUP CHILD COLUMNS WITH THE EXTRA DEPTH
-            self_columns = parse_properties(index_name, query_path, property.properties)
+            self_columns = parse_properties(index_name, column_name, property.properties)
             for c in self_columns:
-                c.nested_path = [query_path] + c.nested_path
+                c.nested_path = [column_name] + c.nested_path
             columns.extend(self_columns)
             columns.append(Column(
                 table=index_name,
                 es_index=index_name,
-                name=query_path,
-                es_column=query_path,
+                name=column_name,
+                es_column=column_name,
                 type="nested",
-                nested_path=query_path
+                nested_path=["."]
             ))
 
             continue
 
         if property.properties:
-            child_columns = parse_properties(index_name, query_path, property.properties)
+            child_columns = parse_properties(index_name, column_name, property.properties)
             columns.extend(child_columns)
             columns.append(Column(
                 table=index_name,
                 es_index=index_name,
-                name=query_path,
-                es_column=query_path,
+                name=column_name,
+                es_column=column_name,
                 nested_path=["."],
                 type="source" if property.enabled == False else "object"
             ))
@@ -1110,8 +1108,8 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                     columns.append(Column(
                         table=index_name,
                         es_index=index_name,
-                        name=query_path,
-                        es_column=query_path,
+                        name=column_name,
+                        es_column=column_name,
                         nested_path=["."],
                         type=p.type
                     ))
@@ -1119,8 +1117,8 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                     columns.append(Column(
                         table=index_name,
                         es_index=index_name,
-                        name=query_path + "\\." + n,
-                        es_column=query_path + "\\." + n,
+                        name=column_name + "\\." + n,
+                        es_column=column_name + "\\." + n,
                         nested_path=["."],
                         type=p.type
                     ))
@@ -1130,8 +1128,8 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
             columns.append(Column(
                 table=index_name,
                 es_index=index_name,
-                name=query_path,
-                es_column=query_path,
+                name=column_name,
+                es_column=column_name,
                 nested_path=["."],
                 type=property.type
             ))
@@ -1139,8 +1137,8 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                 columns.append(Column(
                     table=index_name,
                     es_index=index_name,
-                    es_column=query_path,
-                    name=query_path,
+                    es_column=column_name,
+                    name=column_name,
                     nested_path=["."],
                     type=property.type
                 ))
@@ -1148,8 +1146,8 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
             columns.append(Column(
                 table=index_name,
                 es_index=index_name,
-                name=query_path,
-                es_column=query_path,
+                name=column_name,
+                es_column=column_name,
                 nested_path=["."],
                 type="source" if property.enabled==False else "object"
             ))

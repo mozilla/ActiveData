@@ -192,7 +192,7 @@ class NullType(object):
         assert not isinstance(key, str)
 
         d = _get(self, "__dict__")
-        o = wrap(d["_obj"])
+        o = d["_obj"]
         k = d["__key__"]
 
         seq = [k] + split_field(key)

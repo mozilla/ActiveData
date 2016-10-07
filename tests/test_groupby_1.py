@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 import base_test_class
 from pyLibrary.dot import wrap
+from tests import NULL
 
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 

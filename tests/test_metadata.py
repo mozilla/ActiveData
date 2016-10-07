@@ -121,21 +121,21 @@ class TestMetadata(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"table": table_name, "name": "_a", "type": "nested", "nested_path": "_a"},
-                    {"table": table_name, "name": "_a.b", "type": "string", "nested_path": "_a"},
-                    {"table": table_name, "name": "_a.v", "type": "double", "nested_path": "_a"},
-                    {"table": table_name, "name": "c", "type": "string", "nested_path": NULL},
-                    {"table": table_name, "name": "o", "type": "double", "nested_path": NULL},
+                    {"table": table_name, "name": "_a", "type": "nested", "nested_path": "."},
+                    {"table": table_name, "name": "_a.b", "type": "string", "nested_path": ["_a", "."]},
+                    {"table": table_name, "name": "_a.v", "type": "double", "nested_path": ["_a", "."]},
+                    {"table": table_name, "name": "c", "type": "string", "nested_path": "."},
+                    {"table": table_name, "name": "o", "type": "double", "nested_path": "."},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["table", "name", "nested_path", "type"],
                 "data": [
-                    [table_name, "_a", "_a", "nested"],
-                    [table_name, "_a.b", "_a", "string"],
-                    [table_name, "_a.v", "_a", "double"],
-                    [table_name, "c", NULL, "string"],
-                    [table_name, "o", NULL, "double"]
+                    [table_name, "_a", ".", "nested"],
+                    [table_name, "_a.b", ["_a", "."], "string"],
+                    [table_name, "_a.v", ["_a", "."], "double"],
+                    [table_name, "c", ".", "string"],
+                    [table_name, "o", ".", "double"]
                 ]
             }
         }

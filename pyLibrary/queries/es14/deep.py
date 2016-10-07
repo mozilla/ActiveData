@@ -51,7 +51,7 @@ def es_deepop(es, query):
     columns = UniqueIndex(keys=["name"], data=sorted(columns, lambda a, b: cmp(len(b.nested_path), len(a.nested_path))), fail_on_dup=False)
     map_to_es_columns = {c.name: c.es_column for c in columns}
     map_to_local = {
-        c.name: "_inner" + c.es_column[len(c.nested_path[0])-1:] if c.nested_path[0] != "." else "fields." + literal_field(c.es_column)
+        c.name: "_inner" + c.es_column[len(c.nested_path[0]):] if c.nested_path[0] != "." else "fields." + literal_field(c.es_column)
         for c in columns
     }
     # TODO: FIX THE GREAT SADNESS CAUSED BY EXECUTING post_expressions

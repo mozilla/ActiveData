@@ -1184,7 +1184,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "v",
-                        "allowNulls": False,
+                        "allowNulls": True,
                         "domain": {
                             "type": "set",
                             "partitions": [
@@ -1201,7 +1201,7 @@ class TestEdge1(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "count": [1, 1, 1, 2, 2, 1, 1, 1]
+                    "count": [1, 1, 1, 2, 2, 1, 1, 1, 0]
                 }
             }
         }

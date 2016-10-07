@@ -60,7 +60,11 @@ class FuzzyTestCase(unittest.TestCase):
         except Exception, e:
             if isinstance(problem, basestring):
                 if problem not in e:
-                    Log.error("expecting an exception returning {{problem|quote}}", problem=problem)
+                    Log.error(
+                        "expecting an exception returning {{problem|quote}} got something else instead",
+                        problem=problem,
+                        cause=e
+                    )
             elif not isinstance(e, problem):
                 Log.error("expecting an exception of type {{type}} to be raised", type=problem)
 

@@ -217,7 +217,7 @@ class FromESMetadata(Schema):
             _query.as_dict()
         )))
 
-    def get_columns(self, table_name, column_name=None):
+    def get_columns(self, table_name, column_name=None, force=False):
         """
         RETURN METADATA COLUMNS
         """
@@ -236,7 +236,7 @@ class FromESMetadata(Schema):
                 with self.meta.tables.locker:
                     self.meta.tables.add(table)
                 self._get_columns(table=short_name)
-            elif table.timestamp == None or table.timestamp < Date.now() - 5 * MINUTE:
+            elif force or table.timestamp == None or table.timestamp < Date.now() - 5 * MINUTE:
                 table.timestamp = Date.now()
                 self._get_columns(table=short_name)
 

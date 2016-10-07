@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 from pyLibrary.queries.query import _normalize_edge, _normalize_select
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
+from tests import NULL
 
 
 class TestQueryNormalization(FuzzyTestCase):

@@ -124,6 +124,8 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
         elif hasattr(test, "__iter__") and hasattr(expected, "__iter__"):
             if test == None and not expected:
                 return
+            if expected == None:
+                expected = []  # REPRESENT NOTHING
             for a, b in zipall(test, expected):
                 assertAlmostEqual(a, b, msg=msg, digits=digits, places=places, delta=delta)
         else:

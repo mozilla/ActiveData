@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from pyLibrary.dot import wrap
+from tests import NULL
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 lots_of_data = wrap([{"a": i} for i in range(30)])

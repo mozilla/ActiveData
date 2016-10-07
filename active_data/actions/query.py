@@ -115,47 +115,49 @@ def _test_mode_wait(query):
     :param query: dict() OF REQUEST BODY
     :return: nothing
     """
+    try:
+        m = meta.singlton
+        now = Date.now()
+        end_time = now + MINUTE
 
-    m = meta.singlton
-    now = Date.now()
-    end_time = now + MINUTE
+        # MARK COLUMNS DIRTY
+        m.meta.columns.update({
+            "clear": [
+                "partitions",
+                "count",
+                "cardinality",
+                "last_updated"
+            ],
+            "where": {"eq": {"table": join_field(split_field(query["from"])[0:1])}}
+        })
 
-    # MARK COLUMNS DIRTY
-    m.meta.columns.update({
-        "clear": [
-            "partitions",
-            "count",
-            "cardinality",
-            "last_updated"
-        ],
-        "where": {"eq": {"table": join_field(split_field(query["from"])[0:1])}}
-    })
-
-    # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
-    cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in STRUCT]
-    for c in cols:
-        Log.note("Mark {{column}} dirty at {{time}}", column=c.name, time=now)
-        c.last_updated = now - TOO_OLD
-        m.todo.push(c)
-
-    while end_time > now:
-        # GET FRESH VERSIONS
-        cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in STRUCT]
+        # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
+        cols = [c for c in m.get_columns(table_name=query["from"], force=True) if c.type not in STRUCT]
         for c in cols:
-            if not c.last_updated or c.cardinality == None :
-                Log.note(
-                    "wait for column (table={{col.table}}, name={{col.name}}) metadata to arrive",
-                    col=c
-                )
+            Log.note("Mark {{column}} dirty at {{time}}", column=c.name, time=now)
+            c.last_updated = now - TOO_OLD
+            m.todo.push(c)
+
+        while end_time > now:
+            # GET FRESH VERSIONS
+            cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in STRUCT]
+            for c in cols:
+                if not c.last_updated or c.cardinality == None :
+                    Log.note(
+                        "wait for column (table={{col.table}}, name={{col.name}}) metadata to arrive",
+                        col=c
+                    )
+                    break
+            else:
                 break
-        else:
-            break
-        Thread.sleep(seconds=1)
-    for c in cols:
-        Log.note(
-            "fresh column name={{column.name}} updated={{column.last_updated|date}} parts={{column.partitions}}",
-            column=c
-        )
+            Thread.sleep(seconds=1)
+        for c in cols:
+            Log.note(
+                "fresh column name={{column.name}} updated={{column.last_updated|date}} parts={{column.partitions}}",
+                column=c
+            )
+    except Exception, e:
+        Log.warning("could not pickup columns", cause=e)
 
 
 def _send_error(active_data_timer, body, e):

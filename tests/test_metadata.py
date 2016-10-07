@@ -8,12 +8,11 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
-from pyLibrary.dot import set_default, wrap
-from pyLibrary.queries.expressions import NullOp
-from tests import NULL
+from __future__ import unicode_literals
 
+from pyLibrary.dot import set_default, wrap
+from tests import NULL
 from tests.base_test_class import ActiveDataBaseTest
 
 
@@ -51,12 +50,13 @@ class TestMetadata(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
-                {"table": table_name, "name": "a", "type": "string", "nested_path": NULL}
-            ]},
+                    {"table": table_name, "name": "a", "type": "string", "nested_path": "."}
+                ]
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["table", "name", "type", "nested_path"],
-                "data": [[table_name, "a", "string", NULL]]
+                "data": [[table_name, "a", "string", "."]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -70,7 +70,7 @@ class TestMetadata(ActiveDataBaseTest):
                     "table": [table_name],
                     "name": ["a"],
                     "type": ["string"],
-                    "nested_type": [NULL]
+                    "nested_path": [["."]]
                 }
             }
         })

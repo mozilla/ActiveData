@@ -46,7 +46,7 @@
 		"port": 9200,
 		"index": "testdata",
 		"type": "test_result",
-		"debug": false
+		"debug": true
 	},
 	"debug": {
 		"trace": true

@@ -264,10 +264,10 @@ class Variable(Expression):
         cols = schema.get(self.var, None)
         if cols is None:
             # DOES NOT EXIST
-            return wrap([{"name": ".", "sql": {"n": "NULL"}, "nested_path": ["."]}])
+            return wrap([{"name": ".", "sql": {"n": "NULL"}, "nested_path": ROOT_PATH}])
 
         acc = Dict()
-        nested_path = ["."]
+        nested_path = ROOT_PATH
         for c in cols:
             nested_path = c.nested_path
             acc[json_type_to_sql_type[c.type]] = c.es_index + "." + convert.string2quote(c.es_column)

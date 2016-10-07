@@ -7,18 +7,18 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from collections import Mapping
 from copy import copy
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import coalesce, Null
-from pyLibrary.dot.lists import DictList
+from pyLibrary.dot import coalesce, Null, ROOT_PATH
 from pyLibrary.dot import wrap, listwrap
+from pyLibrary.dot.dicts import Dict
+from pyLibrary.dot.lists import DictList
 from pyLibrary.maths import Math
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.dimensions import Dimension
@@ -26,7 +26,6 @@ from pyLibrary.queries.domains import Domain
 from pyLibrary.queries.expressions import TRUE_FILTER
 from pyLibrary.queries.namespace import Namespace, convert_list
 from pyLibrary.queries.query import QueryOp, get_all_vars
-
 
 DEFAULT_LIMIT = 10
 
@@ -86,7 +85,7 @@ class Normal(Namespace):
         # THE from SOURCE IS.
         vars = get_all_vars(output, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
         for c in query.columns:
-            if c.name in vars and c.nested_path[0]!=".":
+            if c.name in vars and c.nested_path is not ROOT_PATH:
                 Log.error("This query, with variable {{var_name}} is too deep", var_name=c.name)
 
         output.having = convert_list(self._convert_having, query.having)

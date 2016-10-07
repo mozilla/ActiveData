@@ -17,7 +17,7 @@ from itertools import product
 
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, set_default, Null, literal_field, listwrap, split_field, join_field, unwraplist, \
-    unwrap
+    unwrap, ROOT_PATH
 from pyLibrary.dot import wrap
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.meta import use_settings, DataClass
@@ -37,8 +37,6 @@ TOO_OLD = 2*HOUR
 OLD_METADATA = MINUTE
 singlton = None
 TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
-
-
 
 class FromESMetadata(Schema):
     """
@@ -166,7 +164,7 @@ class FromESMetadata(Schema):
                         break
             for q in query_paths:
                 q.append(".")
-            query_paths.append(["."])
+            query_paths.append(ROOT_PATH)
 
             for c in abs_columns:
                 # ADD RELATIVE COLUMNS
@@ -256,7 +254,7 @@ class FromESMetadata(Schema):
             Log.error("no columns matching {{table}}.{{column}}", table=table_name, column=column_name)
         else:
             self._get_columns(table=table_name)
-            Log.error("no columns for {{table}}", table=table_name)
+            Log.error("no columns for {{table}}?!", table=table_name)
 
     def _update_cardinality(self, c):
         """
@@ -330,7 +328,7 @@ class FromESMetadata(Schema):
                         "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                     })
                 return
-            elif c.nested_path[0] != ".":
+            elif c.nested_path is not ROOT_PATH:
                 query.aggs[literal_field(c.name)] = {
                     "nested": {"path": c.nested_path[0]},
                     "aggs": {"_nested": {"terms": {"field": c.es_column, "size": 0}}}
@@ -450,7 +448,7 @@ class FromESMetadata(Schema):
 
 
 def _counting_query(c):
-    if c.nested_path[0] != ".":
+    if c.nested_path is not ROOT_PATH:
         return {
             "nested": {
                 "path": c.nested_path[0]  # FIRST ONE IS LONGEST
@@ -477,7 +475,7 @@ def metadata_columns():
                 name=c,
                 es_column=c,
                 type="string",
-                nested_path=["."]
+                nested_path=ROOT_PATH
             )
             for c in [
                 "name",
@@ -494,7 +492,7 @@ def metadata_columns():
                 name=c,
                 es_column=c,
                 type="object",
-                nested_path=["."]
+                nested_path=ROOT_PATH
             )
             for c in [
                 "domain",
@@ -507,7 +505,7 @@ def metadata_columns():
                 name=c,
                 es_column=c,
                 type="long",
-                nested_path=["."]
+                nested_path=ROOT_PATH
             )
             for c in [
                 "count",
@@ -520,7 +518,7 @@ def metadata_columns():
                 name="last_updated",
                 es_column="last_updated",
                 type="time",
-                nested_path=["."]
+                nested_path=ROOT_PATH
             )
         ]
     )
@@ -534,7 +532,7 @@ def metadata_tables():
                 es_index=None,
                 es_column=c,
                 type="string",
-                nested_path=["."]
+                nested_path=ROOT_PATH
             )
             for c in [
                 "name",
@@ -548,7 +546,7 @@ def metadata_tables():
                 es_index=None,
                 es_column="timestamp",
                 type="integer",
-                nested_path=["."]
+                nested_path=ROOT_PATH
             )
         ]
     )

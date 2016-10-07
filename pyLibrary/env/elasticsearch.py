@@ -19,7 +19,8 @@ from datetime import datetime
 from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, Null, Dict, set_default, join_field, split_field, unwraplist, listwrap, literal_field
+from pyLibrary.dot import coalesce, Null, Dict, set_default, join_field, split_field, unwraplist, listwrap, literal_field, \
+    ROOT_PATH
 from pyLibrary.dot import wrap
 from pyLibrary.dot.lists import DictList
 from pyLibrary.env import http
@@ -1079,7 +1080,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                 name=column_name,
                 es_column=column_name,
                 type="nested",
-                nested_path=["."]
+                nested_path=ROOT_PATH
             ))
 
             continue
@@ -1092,7 +1093,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                 es_index=index_name,
                 name=column_name,
                 es_column=column_name,
-                nested_path=["."],
+                nested_path=ROOT_PATH,
                 type="source" if property.enabled == False else "object"
             ))
 
@@ -1110,7 +1111,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                         es_index=index_name,
                         name=column_name,
                         es_column=column_name,
-                        nested_path=["."],
+                        nested_path=ROOT_PATH,
                         type=p.type
                     ))
                 else:
@@ -1119,7 +1120,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                         es_index=index_name,
                         name=column_name + "\\." + n,
                         es_column=column_name + "\\." + n,
-                        nested_path=["."],
+                        nested_path=ROOT_PATH,
                         type=p.type
                     ))
             continue
@@ -1130,7 +1131,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                 es_index=index_name,
                 name=column_name,
                 es_column=column_name,
-                nested_path=["."],
+                nested_path=ROOT_PATH,
                 type=property.type
             ))
             if property.index_name and name != property.index_name:
@@ -1139,7 +1140,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                     es_index=index_name,
                     es_column=column_name,
                     name=column_name,
-                    nested_path=["."],
+                    nested_path=ROOT_PATH,
                     type=property.type
                 ))
         elif property.enabled == None or property.enabled == False:
@@ -1148,7 +1149,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                 es_index=index_name,
                 name=column_name,
                 es_column=column_name,
-                nested_path=["."],
+                nested_path=ROOT_PATH,
                 type="source" if property.enabled==False else "object"
             ))
         else:

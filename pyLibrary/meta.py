@@ -16,7 +16,7 @@ from types import FunctionType
 from pyLibrary import dot, convert
 from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, wrap, _get_attr, Null, coalesce
+from pyLibrary.dot import set_default, wrap, _get_attr, Null, coalesce, ROOT_PATH
 from pyLibrary.maths.randoms import Random
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Lock
@@ -342,7 +342,7 @@ class {{name}}(Mapping):
         return self
 
     def __setattr__(self, item, value):
-        if item == "nested_path" and (not isinstance(value, list) or len(value) < 1):
+        if item == "nested_path" and (not isinstance(value, list) or len(value) < 1 or (len(value)==1 and value is not ROOT_PATH)):
             Log.error("not acceptable")
         if item not in {{slots}}:
             Log.error("{"+"{item|quote}} not valid attribute", item=item)
@@ -398,11 +398,11 @@ temp = {{name}}
 
     return _exec(code, name)
 
+_ = ROOT_PATH
+
+
 def _exec(code, name):
     temp = None
-    exec(code)
-    globals()[name]=temp
+    exec (code)
+    globals()[name] = temp
     return temp
-
-
-

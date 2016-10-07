@@ -14,6 +14,11 @@ from collections import Mapping
 from types import GeneratorType, NoneType, ModuleType
 from __builtin__ import zip as _builtin_zip
 
+
+SELF_PATH = "."
+ROOT_PATH = [SELF_PATH]
+
+
 _get = object.__getattribute__
 
 

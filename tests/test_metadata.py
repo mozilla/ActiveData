@@ -12,7 +12,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from pyLibrary.dot import set_default, wrap
-from tests import NULL
 from tests.base_test_class import ActiveDataBaseTest
 
 

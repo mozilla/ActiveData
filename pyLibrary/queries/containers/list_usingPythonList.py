@@ -24,7 +24,7 @@ from pyLibrary.queries.containers import Container
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression, TrueOp, jx_expression_to_function, Variable
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
-from pyLibrary.queries.meta import Column
+from pyLibrary.queries.meta import Column, ROOT_PATH
 from pyLibrary.thread.threads import Lock
 from pyLibrary.times.dates import Date
 
@@ -224,7 +224,7 @@ def get_schema_from_list(frum):
     SCAN THE LIST FOR COLUMN TYPES
     """
     columns = []
-    _get_schema_from_list(frum, columns, prefix=[], nested_path=["."])
+    _get_schema_from_list(frum, columns, prefix=[], nested_path=ROOT_PATH)
     return Schema(columns)
 
 def _get_schema_from_list(frum, columns, prefix, nested_path):

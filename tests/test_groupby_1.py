@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 import base_test_class
 from pyLibrary.dot import wrap
+from tests import NULL
 
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
@@ -30,7 +31,7 @@ class TestgroupBy1(ActiveDataBaseTest):
                 "data": [
                     {"a": "b", "count": 2},
                     {"a": "c", "count": 3},
-                    {"a": None, "count": 1}
+                    {"a": NULL, "count": 1}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -38,7 +39,7 @@ class TestgroupBy1(ActiveDataBaseTest):
                 "data": [
                     ["b", 2],
                     ["c", 3],
-                    [None, 1]
+                    [NULL, 1]
                 ]
             }
         }
@@ -59,7 +60,7 @@ class TestgroupBy1(ActiveDataBaseTest):
                 "data": [
                     {"a": "b", "count": 2},
                     {"a": "c", "count": 3},
-                    {"a": None, "count": 1}
+                    {"a": NULL, "count": 1}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -67,7 +68,7 @@ class TestgroupBy1(ActiveDataBaseTest):
                 "data": [
                     ["b", 2],
                     ["c", 3],
-                    [None, 1]
+                    [NULL, 1]
                 ]
             }
         }
@@ -96,7 +97,7 @@ class TestgroupBy1(ActiveDataBaseTest):
                 "data": [
                     ["b", 2],
                     ["c", 3],
-                    [None, 0]
+                    [NULL, 0]
                 ]
             }
         }
@@ -124,7 +125,7 @@ class TestgroupBy1(ActiveDataBaseTest):
                 "data": [
                     ["b", 1],
                     ["c", 3],
-                    [None, 1]
+                    [NULL, 1]
                 ]
             }
         }
@@ -156,7 +157,7 @@ class TestgroupBy1(ActiveDataBaseTest):
                 "data": [
                     ["b", 1, 2],
                     ["c", 3, 31 / 3],
-                    [None, 1, 3]
+                    [NULL, 1, 3]
                 ]
             }
         }
@@ -177,7 +178,7 @@ class TestgroupBy1(ActiveDataBaseTest):
                 "data": [
                     {"a": "b", "v": 2},
                     {"a": "c", "v": 31},
-                    {"a": None, "v": 3}
+                    {"a": NULL, "v": 3}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -185,7 +186,7 @@ class TestgroupBy1(ActiveDataBaseTest):
                 "data": [
                     ["b", 2],
                     ["c", 31],
-                    [None, 3]
+                    [NULL, 3]
                 ]
             }
         }
@@ -303,7 +304,7 @@ class TestgroupBy1(ActiveDataBaseTest):
                 "data": [
                     {"b": "b", "mini": 2, "maxi": 2},
                     {"b": "c", "mini": 7, "maxi": 13},
-                    {"b": None, "mini": 3, "maxi": 3}
+                    {"b": NULL, "mini": 3, "maxi": 3}
                 ]
             },
             "expecting_table": {
@@ -312,7 +313,7 @@ class TestgroupBy1(ActiveDataBaseTest):
                 "data": [
                     ["b", 2, 2],
                     ["c", 7, 13],
-                    [None, 3, 3]
+                    [NULL, 3, 3]
                 ]
             }
         }
@@ -353,7 +354,7 @@ class TestgroupBy1(ActiveDataBaseTest):
                 "data": [
                     ["b", 2],
                     ["c", 31],
-                    [None, 3]
+                    [NULL, 3]
                 ]
             }
         }

@@ -12,8 +12,11 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
 from types import GeneratorType, NoneType, ModuleType
-
 from __builtin__ import zip as _builtin_zip
+
+
+SELF_PATH = "."
+ROOT_PATH = [SELF_PATH]
 
 
 _get = object.__getattribute__
@@ -218,14 +221,16 @@ def _getdefault(obj, key):
 
     try:
         return getattr(obj, key)
-    except Exception, e:
+    except Exception, f:
         pass
+
 
     try:
         if float(key) == round(float(key), 0):
             return obj[int(key)]
     except Exception, f:
         pass
+
 
     # TODO: FIGURE OUT WHY THIS WAS EVER HERE (AND MAKE A TEST)
     # try:
@@ -282,6 +287,7 @@ def _get_attr(obj, path):
 
         # TRY FILESYSTEM
         from pyLibrary.env.files import File
+        possible_error = None
         if File.new_instance(File(obj.__file__).parent, attr_name).set_extension("py").exists:
             try:
                 # THIS CASE IS WHEN THE __init__.py DOES NOT IMPORT THE SUBDIR FILE
@@ -295,30 +301,30 @@ def _get_attr(obj, path):
                     output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[1]], 0)
                     return _get_attr(output, path[1:])
             except Exception, e:
-                pass
+                from pyLibrary.debugs.exceptions import Except
+                possible_error = Except.wrap(e)
 
         # TRY A CASE-INSENSITIVE MATCH
         attr_name = lower_match(attr_name, dir(obj))
         if not attr_name:
             from pyLibrary.debugs.logs import Log
-            Log.error(PATH_NOT_FOUND)
-        elif len(attr_name)>1:
+            Log.warning(PATH_NOT_FOUND + ". Returning None.", cause=possible_error)
+        elif len(attr_name) > 1:
             from pyLibrary.debugs.logs import Log
-            Log.error(AMBIGUOUS_PATH_FOUND+" {{paths}}",  paths=attr_name)
+            Log.error(AMBIGUOUS_PATH_FOUND + " {{paths}}", paths=attr_name)
         else:
             return _get_attr(obj[attr_name[0]], path[1:])
-
 
     try:
         obj = obj[int(attr_name)]
         return _get_attr(obj, path[1:])
-    except Exception, e:
+    except Exception:
         pass
 
     try:
         obj = getattr(obj, attr_name)
         return _get_attr(obj, path[1:])
-    except Exception, e:
+    except Exception:
         pass
 
     try:

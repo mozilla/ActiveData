@@ -7,27 +7,26 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from pyLibrary import queries
-from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND
-from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field, join_field, unwrap, wrap
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import listwrap
-from pyLibrary.maths import Math
+from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
+from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field, join_field, unwrap, wrap
+from pyLibrary.dot import listwrap
+from pyLibrary.dot.lists import DictList
+from pyLibrary.maths import Math
 from pyLibrary.queries import es14, es09
 from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.containers.cube import Cube
-from pyLibrary.queries.domains import is_keyword, ALGEBRAIC
+from pyLibrary.queries.domains import ALGEBRAIC
 from pyLibrary.queries.es14.util import jx_sort_to_es_sort
-from pyLibrary.queries.expressions import simplify_esfilter, jx_expression, Variable, LeavesOp
+from pyLibrary.queries.expressions import simplify_esfilter, Variable, LeavesOp
 from pyLibrary.queries.query import DEFAULT_LIMIT
 from pyLibrary.times.timer import Timer
-
 
 format_dispatch = {}
 
@@ -68,8 +67,8 @@ def extract_rows(es, es_query, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
     new_select = DictList()
     columns = query.frum.get_columns()
-    leaf_columns = set(c.name for c in columns if c.type not in STRUCT and (not c.nested_path or c.es_column == c.nested_path))
-    nested_columns = set(c.name for c in columns if c.nested_path)
+    leaf_columns = set(c.name for c in columns if c.type not in STRUCT and (len(c.nested_path) == 1 or c.es_column == c.nested_path))
+    nested_columns = set(c.name for c in columns if len(c.nested_path) != 1)
 
     i = 0
     source = "fields"

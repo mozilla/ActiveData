@@ -17,9 +17,10 @@ from decimal import Decimal
 
 from pyLibrary import convert
 from pyLibrary.collections import OR, MAX
+from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null, split_field, startswith_field, \
-    Dict, join_field, unwraplist, unwrap, DictList
+from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null, split_field, startswith_field, Dict, join_field, unwraplist, unwrap, \
+    ROOT_PATH
 from pyLibrary.maths import Math
 from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.domains import is_keyword
@@ -59,7 +60,7 @@ def jx_expression(expr):
         else:
             Log.error("expression is not recognized: {{expr}}", expr=expr)
     elif isinstance(expr, (list, tuple)):
-        return jx_expression({"tuple": expr})  # FORMALIZE
+        return TupleOp("tuple", map(jx_expression, expr))  # FORMALIZE
 
     expr = wrap(expr)
     if expr.date:
@@ -110,7 +111,7 @@ def jx_expression(expr):
         else:
             return class_(op, jx_expression(term), **clauses)
     else:
-        if op in ["literal", "date"]:
+        if op in ["literal", "date", "offset"]:
             return class_(op, term, **clauses)
         else:
             return class_(op, jx_expression(term), **clauses)
@@ -121,7 +122,10 @@ def jx_expression_to_function(expr):
     RETURN FUNCTION THAT REQUIRES PARAMETERS (row, rownum=None, rows=None):
     """
     if isinstance(expr, Expression):
-        return compile_expression(expr.to_python())
+        if isinstance(expr, ScriptOp) and not isinstance(expr.script, unicode):
+            return expr.script
+        else:
+            return compile_expression(expr.to_python())
     if expr != None and not isinstance(expr, (Mapping, list)) and hasattr(expr, "__call__"):
         return expr
     return compile_expression(jx_expression(expr).to_python())
@@ -238,6 +242,19 @@ class Variable(Expression):
         agg = "row"
         if not path:
             return agg
+        elif path[0] in ["row", "rownum"]:
+            # MAGIC VARIABLES
+            agg = path[0]
+            path = path[1:]
+        elif path[0] == "rows":
+            if len(path) == 1:
+                return "rows"
+            elif path[1] in ["first", "last"]:
+                agg = "rows." + path[1] + "()"
+                path = path[2:]
+            else:
+                Log.error("do not know what {{var}} of `rows` is", var=path[1])
+
         for p in path[:-1]:
             agg = agg+".get("+convert.value2quote(p)+", EMPTY_DICT)"
         return agg+".get("+convert.value2quote(path[-1])+")"
@@ -246,12 +263,11 @@ class Variable(Expression):
         cols = schema.get(self.var, None)
         if cols is None:
             # DOES NOT EXIST
-            return wrap([{"name": ".", "sql": {"n": "NULL"}, "nested_path": ["."]}])
+            return wrap([{"name": ".", "sql": {"n": "NULL"}, "nested_path": ROOT_PATH}])
 
         acc = Dict()
         for c in cols:
-            nested_path = wrap_nested_path(c.nested_path)[0]
-            acc[literal_field(nested_path)][literal_field(c.name)][json_type_to_sql_type[c.type]] = c.es_index + "." + convert.string2quote(c.es_column)
+            acc[json_type_to_sql_type[c.type]] = c.es_index + "." + convert.string2quote(c.es_column)
 
         return wrap([
             {"name": cname, "sql": types, "nested_path": nested_path}
@@ -285,9 +301,6 @@ class Variable(Expression):
     def exists(self):
         return ExistsOp("exists", self)
 
-    def __call__(self, row=None, rownum=None, rows=None):
-        return row[self.var]
-
     def __hash__(self):
         return self.var.__hash__()
 
@@ -301,13 +314,94 @@ class Variable(Expression):
         return str(self.var)
 
 
+class OffsetOp(Expression):
+    """
+    OFFSET INDEX INTO A TUPLE
+    """
+
+    def __init__(self, op, var):
+        Expression.__init__(self, "offset", None)
+        if not Math.is_integer(var):
+            Log.error("Expecting an integer")
+        self.var = var
+
+    def to_python(self, not_null=False, boolean=False):
+        return "row[" + unicode(self.var) + "] if 0<=" + unicode(self.var) + "<len(row) else None"
+
+    def __call__(self, row, rownum=None, rows=None):
+        try:
+            return row[self.var]
+        except Exception:
+            return None
+
+    def to_dict(self):
+        return {"offset": self.var}
+
+    def vars(self):
+        return {}
+
+    def missing(self):
+        # RETURN FILTER THAT INDICATE THIS EXPRESSION RETURNS null
+        return MissingOp("missing", self)
+
+    def exists(self):
+        return ExistsOp("exists", self)
+
+    def __hash__(self):
+        return self.var.__hash__()
+
+    def __eq__(self, other):
+        return self.var == other
+
+    def __unicode__(self):
+        return unicode(self.var)
+
+    def __str__(self):
+        return str(self.var)
+
+
+class RowsOp(Expression):
+    has_simple_form = True
+
+    def __init__(self, op, term):
+        Expression.__init__(self, op, term)
+        self.var, self.offset = term
+        if isinstance(self.var, Variable) and not any(self.var.var.startswith(p) for p in ["row.", "rows.", "rownum"]):  # VARIABLES ARE INTERPRETED LITERALLY
+            self.var = Literal("literal", self.var.var)
+
+    def to_python(self, not_null=False, boolean=False):
+        path = split_field(self.var.to_python(not_null=True))
+        agg = "rows[rownum+" + unicode(self.offset) + "]"
+        if not path:
+            return agg
+
+        for p in path[:-1]:
+            agg = agg+".get("+convert.value2quote(p)+", EMPTY_DICT)"
+        return agg+".get("+convert.value2quote(path[-1])+")"
+
+    def to_dict(self):
+        if isinstance(self.var, Literal) and isinstance(self.offset, Literal):
+            return {"rows": {self.var.json, convert.json2value(self.offset.json)}}
+        else:
+            return {"rows": [self.var.to_dict(), self.offset.to_dict()]}
+
+    def vars(self):
+        return self.var.vars() | self.offset.vars() | {"rows", "rownum"}
+
+    def map(self, map_):
+        return BinaryOp("rows", [self.var.map(map_), self.offset.map(map_)])
+
+    def missing(self):
+        return MissingOp("missing", self)
+
+
 class ScriptOp(Expression):
     """
     ONLY FOR TESTING AND WHEN YOU TRUST THE SCRIPT SOURCE
     """
 
     def __init__(self, op, script):
-        Expression.__init__(self, "", None)
+        Expression.__init__(self, op, None)
         self.script = script
 
     def to_ruby(self, not_null=False, boolean=False):
@@ -742,7 +836,7 @@ class BinaryOp(Expression):
         script = "(" + lhs + ") " + BinaryOp.operators[self.op] + " (" + rhs + ")"
         missing = OrOp("or", [self.lhs.missing(), self.rhs.missing()])
 
-        if self.op in BinaryOp.algebra_ops:
+        if self.op in BinaryOp.operators:
             script = "(" + script + ").doubleValue()"  # RETURN A NUMBER, NOT A STRING
 
         output = WhenOp(
@@ -922,7 +1016,7 @@ class DivOp(Expression):
         return output
 
     def to_python(self, not_null=False, boolean=False):
-        return "float(" + self.lhs.to_python() + ") / float(" + self.rhs.to_python()+")"
+        return "None if ("+self.missing().to_python()+") else (" + self.lhs.to_python(not_null=True) + ") / (" + self.rhs.to_python(not_null=True)+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
         lhs = self.lhs.to_sql(schema)[0].sql.n
@@ -1532,7 +1626,7 @@ class RegExpOp(Expression):
         self.var, self.pattern = term
 
     def to_python(self, not_null=False, boolean=False):
-        return "re.match(" + self.pattern + ", " + self.var.to_python() + ")"
+        return "re.match(" + convert.string2quote(convert.json2value(self.pattern.json)) + ", " + self.var.to_python() + ")"
 
     def to_esfilter(self):
         return {"regexp": {self.var.var: convert.json2value(self.pattern.json)}}
@@ -1601,6 +1695,8 @@ class ContainsOp(Expression):
 
 
 class CoalesceOp(Expression):
+    has_simple_form = True
+
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
         self.terms = terms
@@ -2202,14 +2298,12 @@ def _normalize(esfilter):
             for (i0, t0), (i1, t1) in itertools.product(enumerate(terms), enumerate(terms)):
                 if i0 >= i1:
                     continue  # SAME, IGNORE
-                try:
+                with suppress_exception:
                     f0, tt0 = t0.range.items()[0]
                     f1, tt1 = t1.range.items()[0]
                     if f0 == f1:
                         set_default(terms[i0].range[literal_field(f1)], tt1)
                         terms[i1] = True
-                except Exception, e:
-                    pass
 
             output = []
             for a in terms:
@@ -2334,7 +2428,7 @@ def split_expression_by_depth(where, schema, map_, output=None, var_to_depth=Non
         if not vars_:
             return Null
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
-        var_to_depth = {v: len(listwrap(schema[v].nested_path)) for v in vars_}
+        var_to_depth = {v: len(schema[v].nested_path)-1 for v in vars_}
         all_depths = set(var_to_depth.values())
         output = wrap([[] for _ in range(MAX(all_depths) + 1)])
     else:
@@ -2388,12 +2482,14 @@ operators = {
     "not_right": NotRightOp,
     "null": NullOp,
     "number": NumberOp,
+    "offset": OffsetOp,
     "or": OrOp,
     "prefix": PrefixOp,
     "range": RangeOp,
     "regex": RegExpOp,
     "regexp": RegExpOp,
     "right": RightOp,
+    "rows": RowsOp,
     "script": ScriptOp,
     "string": StringOp,
     "sub": BinaryOp,
@@ -2433,15 +2529,3 @@ sql_type_to_json_type = {
     "j": "object",
     "b": "boolean"
 }
-
-
-def wrap_nested_path(nested_path):
-    return listwrap(nested_path) + ["."]
-
-
-def unwrap_nested_path(nested_path):
-    if unwrap(nested_path)[-1] == ".":
-        nested_path = nested_path[:-1]
-
-    return unwraplist(nested_path)
-

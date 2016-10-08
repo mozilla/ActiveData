@@ -63,7 +63,7 @@ def get(url):
         phase2 = _replace_locals(phase1, [phase1])
         return wrap(phase2)
     except Exception, e:
-        _Log.error("problem replacing locals in\n{{phase1}}", phase1=phase1)
+        _Log.error("problem replacing locals in\n{{phase1}}", phase1=phase1, cause=e)
 
 
 def expand(doc, doc_url):
@@ -148,6 +148,8 @@ def _replace_locals(node, doc_path):
         for k, v in node.items():
             if k == "$ref":
                 ref = v
+            elif v == None:
+                continue
             else:
                 output[k] = _replace_locals(v, [v] + doc_path)
 

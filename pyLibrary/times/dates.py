@@ -21,9 +21,8 @@ from pyLibrary.maths import Math
 
 try:
     import pytz
-except Exception, _:
+except Exception:
     pass
-
 
 from pyLibrary.dot import Null
 from pyLibrary.times.durations import Duration, MILLI_VALUES
@@ -54,14 +53,17 @@ class Date(object):
     def floor(self, duration=None):
         if duration is None:  # ASSUME DAY
             return unix2Date(math.floor(self.unix / 86400) * 86400)
+        elif duration.month:
+            dt = unix2datetime(self.unix)
+            month = int(math.floor((dt.year*12+dt.month-1) / duration.month) * duration.month)
+            year = int(math.floor(month/12))
+            month -= 12*year
+            return Date(datetime(year, month+1, 1))
         elif duration.milli % (7 * 86400000) == 0:
             offset = 4*86400
             return unix2Date(math.floor((self.unix + offset) / duration.seconds) * duration.seconds - offset)
-        elif not duration.month:
-            return unix2Date(math.floor(self.unix / duration.seconds) * duration.seconds)
         else:
-            month = int(math.floor(self.value.month / duration.month) * duration.month)
-            return Date(datetime(self.value.year, month, 1))
+            return unix2Date(math.floor(self.unix / duration.seconds) * duration.seconds)
 
     def format(self, format="%Y-%m-%d %H:%M:%S"):
         try:
@@ -76,7 +78,7 @@ class Date(object):
         return self.unix*1000
 
     def addDay(self):
-        return Date(self.value + timedelta(days=1))
+        return Date(unix2datetime(self.unix) + timedelta(days=1))
 
     def add(self, other):
         if other==None:
@@ -229,7 +231,7 @@ def parse(*args):
 
 
 def add_month(offset, months):
-    month = offset.month+months-1
+    month = int(offset.month+months-1)
     year = offset.year
     if not 0 <= month < 12:
         r = Math.mod(month, 12)
@@ -315,6 +317,16 @@ def unicode2Date(value, format=None):
     if value == None:
         return None
 
+    if format != None:
+        try:
+            if format.endswith("%S.%f") and "." not in value:
+                value += ".000"
+            return unix2Date(datetime2unix(datetime.strptime(value, format)))
+        except Exception, e:
+            from pyLibrary.debugs.logs import Log
+
+            Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
+
     value = value.strip()
     if value.lower() == "now":
         return unix2Date(datetime2unix(datetime.utcnow()))
@@ -326,30 +338,23 @@ def unicode2Date(value, format=None):
     if any(value.lower().find(n) >= 0 for n in ["now", "today", "eod", "tomorrow"] + list(MILLI_VALUES.keys())):
         return parse_time_expression(value)
 
-    if format != None:
-        try:
-            if format.endswith("%S.%f") and "." not in value:
-                value += ".000"
-            return unix2Date(datetime2unix(datetime.strptime(value, format)))
-        except Exception, e:
-            from pyLibrary.debugs.logs import Log
-
-            Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
-
-    try:
+    try:  # 2.7 DOES NOT SUPPORT %z
         local_value = parse_date(value)  #eg 2014-07-16 10:57 +0200
         return unix2Date(datetime2unix((local_value - local_value.utcoffset()).replace(tzinfo=None)))
     except Exception:
         pass
 
     formats = [
-        #"%Y-%m-%d %H:%M %z",  # "%z" NOT SUPPORTED IN 2.7
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S.%f"
     ]
     for f in formats:
         try:
-            return unicode2Date(value, format=f)
+            return unix2Date(datetime2unix(datetime.strptime(value, f)))
         except Exception:
             pass
+
+
 
     deformats = [
         "%Y-%m",# eg 2014-07-16 10:57 +0200
@@ -375,6 +380,7 @@ def unicode2Date(value, format=None):
             return unicode2Date(value, format=f)
         except Exception:
             pass
+
     else:
         from pyLibrary.debugs.logs import Log
         Log.error("Can not interpret {{value}} as a datetime",  value= value)

@@ -13,11 +13,11 @@ Some common requests that are hard to don in SQL
 http://www2.sqlite.org/cvstrac/wiki?p=UnsupportedSqlAnalyticalFunctions
 
 
-    Calculate a running total - Show the cumulative salary within a department row by row, with each row including a summation of the prior rows' salary.
-    Find percentages within a group - Show the percentage of the total salary paid to an individual in a certain department. Take their salary and divide it by the sum of the salary in the department.
-    Top-N queries - Find the top N highest-paid people or the top N sales by region.
-    Compute a moving average - Average the current row's value and the previous N rows values together.
-    Perform ranking queries - Show the relative rank of an individual's salary within their department. 
+* **Calculate a running total** - Show the cumulative salary within a department row by row, with each row including a summation of the prior rows' salary.
+* **Find percentages within a group** - Show the percentage of the total salary paid to an individual in a certain department. Take their salary and divide it by the sum of the salary in the department.
+* **Top-N queries** - Find the top N highest-paid people or the top N sales by region.
+* **Compute a moving average** - Average the current row's value and the previous N rows values together.
+* **Perform ranking queries** - Show the relative rank of an individual's salary within their department. 
 
 
 
@@ -46,8 +46,7 @@ columns, like in accounting:
     FROM
         transactions
 
-
-JSON Expressions can (re)use domain definitions to abstract-away the query complexities:
+JSON Expressions can (re)use domain definitions to abstract-away the query complexities.  For example, consider the `money` domain:
 
     money = {
         "name":"money",
@@ -58,16 +57,15 @@ JSON Expressions can (re)use domain definitions to abstract-away the query compl
         ]
     }
 
+Domains are useful abstraction that give names to complex business rules.  Our `money` example is not a complicated domain, so the JSON Query Expression  
+
     {
     "from": "transactions",
-    "select": "account_number",
-    "edges":[
-        {"value":"amount", "domain":money}
-    ]
+    "select": [
+		"account_number",
+		"money*"
     }
 
-
-**Money**
 
 Partitioning records along more dimensions gets more painful with SQL:
 
@@ -80,16 +78,26 @@ Partitioning records along more dimensions gets more painful with SQL:
     FROM
         transfers
 
+We put the business logic into a domain definition
 
+    charge_breakdown = {
+        "name":"Charge Breakdown",
+        "type":"set",
+        "partitions":[
+            {"name":"SendAmount",   "value":"principal_amount", "where":{"eq":{"txn_type": "SEND"}},
+            {"name":"SendFees",     "value":"charges",          "where":{"eq":{"txn_type": "SEND"}},
+            {"name":"RefundAmount", "value":"principal_amount", "where":{"eq":{"txn_type": "RECEIVE"}},
+            {"name":"RefyundFees",  "value":"charges",          "where":{"eq":{"txn_type": "RECEIVE"}},
+        ]
+    }
+
+And 
 
     {
     "from": "transactions",
     "select": [
-        "principal_amount",
-        "charges"
-    ],
-    "edges":[
-        {"value":"txn_type", "domain":"txn_type"}
+        "account_number",
+		"charge_breakdown*"
     ]
     }
 

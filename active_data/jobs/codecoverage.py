@@ -10,12 +10,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from copy import deepcopy
+
+from pyLibrary import convert
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, wrap, unwrap
 from pyLibrary.env import http
+from pyLibrary.env.elasticsearch import Index
 from pyLibrary.queries import jx
 from pyLibrary.testing import elasticsearch
 from pyLibrary.thread.threads import Signal, Queue
@@ -24,7 +28,7 @@ from pyLibrary.thread.threads import Thread
 NUM_THREAD = 4
 
 
-def process_batch(todo, coverage_index, settings, please_stop):
+def process_batch(todo, coverage_index, coverage_summary_index, settings, please_stop):
     for not_summarized in todo:
         if please_stop:
             return True
@@ -55,8 +59,9 @@ def process_batch(todo, coverage_index, settings, please_stop):
         for d in dups.data:
             if d.max_id != d.min_id:
                 dups_found = True
+
                 Log.note(
-                    "removing dups {{details|json}}",
+                    "removing dups {{details|json}}\n{{dups|json|indent}}",
                     details={
                         "id": int(d.max_id),
                         "test": d.test.url,
@@ -64,12 +69,20 @@ def process_batch(todo, coverage_index, settings, please_stop):
                         "revision": not_summarized.build.revision12
                     }
                 )
-                coverage_index.delete_record({"and": [
-                    {"not": {"term": {"etl.source.id": int(d.max_id)}}},
-                    {"term": {"test.url": d.test.url}},
-                    {"term": {"source.file.name": not_summarized.source.file.name}},
-                    {"term": {"build.revision12": not_summarized.build.revision12}}
-                ]})
+
+                # FIND ALL INDEXES
+                all_indexes = [
+                    p.index
+                    for p in coverage_index.cluster.get_aliases()
+                    if p.alias == coverage_index.settings.alias
+                ]
+                for index_name in all_indexes:
+                    Index(index=index_name, read_only=False, cluster=coverage_index.cluster).delete_record({"and": [
+                        {"not": {"term": {"etl.source.id": int(d.max_id)}}},
+                        {"term": {"test.url": d.test.url}},
+                        {"term": {"source.file.name": not_summarized.source.file.name}},
+                        {"term": {"build.revision12": not_summarized.build.revision12}}
+                    ]})
         if dups_found:
             continue
 
@@ -119,18 +132,48 @@ def process_batch(todo, coverage_index, settings, please_stop):
             siblings = [len(test_names)-1 for g, test_names in line_summary if test_name in test_names]
             min_siblings = MIN(siblings)
             coverage_candidates = jx.filter(file_level_coverage_records.data, lambda row, rownum, rows: row.test.url == test_name)
-            coverage_record = coverage_candidates[0]
-            coverage_record.source.file.max_test_siblings = max_siblings
-            coverage_record.source.file.min_line_siblings = min_siblings
-            coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings + 1)
+            if coverage_candidates:
 
-        if [d for d in file_level_coverage_records.data if d["source.file.min_line_siblings"] == None]:
-            Log.warning("expecting all records to have summary")
+                if len(coverage_candidates) > 1:
+                    Log.warning(
+                        "Duplicate coverage\n{{cov|json|indent}}",
+                        cov=[{"run": c.run, "test": c.test} for c in coverage_candidates]
+                    )
 
-        coverage_index.extend([{"id": d._id, "value": d} for d in file_level_coverage_records.data])
+                # MORE THAN ONE COVERAGE CANDIDATE CAN HAPPEN WHEN THE SAME TEST IS IN TWO DIFFERENT CHUNKS OF THE SAME SUITE
+                for coverage_record in coverage_candidates:
+                    coverage_record.source.file.max_test_siblings = max_siblings
+                    coverage_record.source.file.min_line_siblings = min_siblings
+                    coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings + 1)
+            else:
+                example = http.post_json(settings.url, json={
+                    "from": "coverage",
+                    "where": {"eq": {
+                        "test.url": test_name,
+                        "source.file.name": not_summarized.source.file.name,
+                        "build.revision12": not_summarized.build.revision12
+                    }},
+                    "limit": 1,
+                    "format": "list"
+                })
 
+                Log.warning(
+                    "{{test|quote}} rev {{revision}} appears to have no coverage for {{file|quote}}!\n{{example|json|indent}}",
+                    test=test_name,
+                    file=not_summarized.source.file.name,
+                    revision=not_summarized.build.revision12,
+                    example=example.data[0]
+                )
 
-def loop(coverage_index, settings, please_stop):
+        bad_example = [d for d in file_level_coverage_records.data if d["source.file.min_line_siblings"] == None]
+        if bad_example:
+            Log.warning("expecting all records to have summary. Example:\n{{example}}", example=bad_example[0])
+
+        rows = [{"id": d._id, "value": d} for d in file_level_coverage_records.data]
+        coverage_index.extend(rows)
+        coverage_summary_index.extend(rows)
+
+def loop(coverage_index, coverage_summary_index, settings, please_stop):
     try:
         while not please_stop:
             coverage_index.refresh()
@@ -161,6 +204,7 @@ def loop(coverage_index, settings, please_stop):
                     process_batch,
                     queue,
                     coverage_index,
+                    coverage_summary_index,
                     settings,
                     please_stop=please_stop
                 )
@@ -184,13 +228,24 @@ def loop(coverage_index, settings, please_stop):
 def main():
     try:
         config = startup.read_settings()
-        constants.set(config.constants)
-        Log.start(config.debug)
+        with startup.SingleInstance(flavor_id=config.args.filename):
+            constants.set(config.constants)
+            Log.start(config.debug)
 
-        please_stop = Signal("main stop signal")
-        coverage_index = elasticsearch.Cluster(config.elasticsearch).get_index(read_only=False, settings=config.elasticsearch)
-        Thread.run("processing loop", loop, coverage_index, config, please_stop=please_stop)
-        Thread.wait_for_shutdown_signal(please_stop)
+            please_stop = Signal("main stop signal")
+            coverage_index = elasticsearch.Cluster(config.source).get_index(read_only=False, settings=config.source)
+            config.destination.schema = coverage_index.get_schema()
+            coverage_summary_index = elasticsearch.Cluster(config.destination).get_or_create_index(read_only=False, settings=config.destination)
+            coverage_summary_index.add_alias(config.destination.index)
+            Thread.run(
+                "processing loop",
+                loop,
+                coverage_index,
+                coverage_summary_index,
+                config,
+                please_stop=please_stop
+            )
+            Thread.wait_for_shutdown_signal(please_stop)
     except Exception, e:
         Log.error("Problem with code coverage score calculation", cause=e)
     finally:

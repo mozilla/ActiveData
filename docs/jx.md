@@ -16,8 +16,13 @@ Specific Reading
 * [Expressions](jx_expressions.md) - Covers all the other expressions
 * [Time Math](jx_time.md) - Writing expressions in the time domain
 * [Commands](jx_update.md) - Update data with JSON Expressions
-* [Reference](Reference.md) - A bare list of allowed clauses and options for JSON query expressions
+* [Reference](jx_reference.md) - A bare list of allowed clauses and options for JSON query expressions
 
+
+Comparisons
+-----------
+
+* [GraphQL vs JSON Query Expressions](GraphQL.md)
 
 Motivation
 ----------
@@ -30,11 +35,6 @@ JSON Expressions have the following benefits
 * Easy Meta-Programming
 * Language independence
 
-
-Non Goals and Limitations
--------------------------
-
-Are JSON Expressions for you?
 
 Non-Goals
 ---------
@@ -57,8 +57,8 @@ are not implemented.
 implemented, and the specification itself is incomplete. What does exist has
 tests to maintain stability.
 
-More on Benefits
-----------------
+More about the Benefits
+-----------------------
 
 ### Expression Simplification
 

@@ -134,6 +134,8 @@ class Dict(MutableMapping):
                 d = _getdefault(d, k)
             if value == None:
                 d.pop(seq[-1], None)
+            elif d==None:
+                d[literal_field(seq[-1])] = value
             else:
                 d[seq[-1]] = value
             return self

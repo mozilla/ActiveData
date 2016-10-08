@@ -15,7 +15,6 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
 from pyLibrary.times.dates import Date
 
-
 request_log_queue = None
 
 
@@ -23,6 +22,9 @@ def record_request(request, query_, data, error):
     try:
         if request_log_queue == None:
             return
+
+        if data and len(data)>10000:
+            data = data[:10000]
 
         log = wrap({
             "timestamp": Date.now(),

@@ -32,7 +32,8 @@ def encrypt(text, _key, salt=None):
         Log.error("only unicode is encrypted")
     if _key is None:
         Log.error("Expecting a key")
-
+    if isinstance(_key, str):
+        _key = bytearray(_key)
     if salt is None:
         salt = Random.bytes(16)
 

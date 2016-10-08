@@ -13,11 +13,11 @@ Motivation
 ----------
 
 Exception handling and logging are undeniably linked. There are many instances
-where exceptions are raised and must be logged, except when a subsuming system
-can compensate. Exception handling semantics are great because they
-decouple the cause from the solution, but this can be at odds with clean
-logging - which couples raising and catching to make appropriate decisions
-about what to emit to the log.  
+where exceptions are raised and must be logged, and others where the subsuming 
+system can fully handle the exception, and no log should be emitted. Exception 
+handling semantics are great because they decouple the cause from the solution, 
+but this can be at odds with clean logging - which couples raising and catching 
+to make appropriate decisions about what to emit to the log.  
 
 This logging module is additionally responsible for raising exceptions,
 collecting the trace and context, and then deducing if it must be logged, or
@@ -205,7 +205,7 @@ object, you simply get back the object you passed.
 Other forms
 -----------
 
-All the `Log` functions accept a `default_params` as a second parameter, like so: 
+All the `Log` functions accept a `default_params` as a second parameter, like so:
 
 ```python
     Log.note("Hello, {{name}}!", {"name": "World!"})
@@ -237,12 +237,12 @@ Log 'Levels'
 The `logs` module has no concept of logging levels it is expected that debug
 variables (variables prefixed with `DEBUG_` are used to control the logging
 output.
-    
+
 
 ```python
 	# simple.py
 	DEBUG_SHOW_DETAIL = True
-    
+
     def worker():
 		if DEBUG_SHOW_DETAIL:
 			Log.note("Starting")

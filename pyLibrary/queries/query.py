@@ -26,7 +26,7 @@ from pyLibrary.queries import Schema, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain, is_keyword, SetDomain
-from pyLibrary.queries.expressions import jx_expression, TrueOp, Expression, FalseOp, Variable, LeavesOp
+from pyLibrary.queries.expressions import jx_expression, TrueOp, Expression, FalseOp, Variable, LeavesOp, ScriptOp, OffsetOp
 
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 50000
@@ -213,7 +213,7 @@ class QueryOp(Expression):
             if query.edges or query.groupby:
                 output.select = Dict(name="count", value=jx_expression("."), aggregate="count", default=0)
             else:
-                output.select = _normalize_selects(".", query["from"])
+                output.select = _normalize_selects(".", query.frum)
 
         if query.groupby and query.edges:
             Log.error("You can not use both the `groupby` and `edges` clauses in the same query!")
@@ -426,7 +426,9 @@ def _normalize_edge(edge, schema=None):
     if not _Column:
         _late_import()
 
-    if isinstance(edge, basestring):
+    if edge == None:
+        Log.error("Edge has no value, or expression is empty")
+    elif isinstance(edge, basestring):
         if schema:
             try:
                 e = schema[edge]
@@ -502,7 +504,7 @@ def _normalize_group(edge, schema=None):
         return wrap({
             "name": edge,
             "value": jx_expression(edge),
-            "allowNulls": True,
+            "allowNulls": False,
             "domain": {"type": "default"}
         })
     else:
@@ -542,9 +544,16 @@ def _normalize_domain(domain=None, schema=None):
 
 
 def _normalize_window(window, schema=None):
+    v = window.value
+    try:
+        expr = jx_expression(v)
+    except Exception:
+        expr = ScriptOp("script", v)
+
+
     return Dict(
         name=coalesce(window.name, window.value),
-        value=jx_expression(window.value),
+        value=expr,
         edges=[_normalize_edge(e, schema) for e in listwrap(window.edges)],
         sort=_normalize_sort(window.sort),
         aggregate=window.aggregate,
@@ -691,13 +700,15 @@ def _normalize_sort(sort=None):
     CONVERT SORT PARAMETERS TO A NORMAL FORM SO EASIER TO USE
     """
 
-    if not sort:
+    if sort==None:
         return DictList.EMPTY
 
     output = DictList()
     for s in listwrap(sort):
-        if isinstance(s, basestring) or Math.is_integer(s):
+        if isinstance(s, basestring):
             output.append({"value": jx_expression(s), "sort": 1})
+        elif Math.is_integer(s):
+            output.append({"value": OffsetOp("offset", s), "sort": 1})
         elif all(d in sort_direction for d in s.values()) and not s.sort and not s.value:
             for v, d in s.items():
                 output.append({"value": jx_expression(v), "sort": -1})

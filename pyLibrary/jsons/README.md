@@ -60,7 +60,7 @@ Will return an iterator over all objects found in the JSON stream.
 
 **Parameters:**
 
-* **json** - a parameter-less function, when called returns some number of 
+* **json** - a parameter-less function, when called returns some number of
   bytes from the JSON stream. It can also be a string.
 * **path** - a list of strings specifying the nested JSON paths. Use 
   `"."` if your JSON starts with `[`, and is a list.
@@ -89,7 +89,7 @@ The same query, but different JSON with `b` following `a`:
 	json = {"a": [1, 2, 3], "b": "done"}
 	parse(json, path="a", required_vars=["a", "b"]}
 
-Since property `b` follows the array we're iterating over, this will raise an error. 
+Since property `b` follows the array we're iterating over, this will raise an error.
 
 **Good - No need for following properties**
 
@@ -147,7 +147,7 @@ produce a result.
 Module `jsons.ref`
 ==================
 
-A JSON-like storage format intended for configuration files.  
+A JSON-like storage format intended for configuration files.
 
 Motivation
 ----------
@@ -433,14 +433,14 @@ Module `typed_encoder`
 
 One reason NoSQL documents stores are wonderful is the fact their schema can automatically expand to accept new properties.   Unfortunately, this flexibility is not limitless: A string assigned to property prevents an object being assigned to the same, or visa-versa.
 
-This module translates JSON documents into "typed" form; which allows document containers to store both objects and primitives in the same property value. This allows storage of values with no containing object! 
+This module translates JSON documents into "typed" form; which allows document containers to store both objects and primitives in the same property value. This allows storage of values with no containing object!
 
 ###How it works
 
 Typed JSON uses `$value` and `$object` properties to markup the original JSON:
 
 * All JSON objects are annotated with `"$object":"."`, which makes querying object existence (especially the empty object) easier.
-* All primitive values are replaced with an object with a single `$value` property: So `"value"` gets mapped to `{"$value": "value"}`.  
+* All primitive values are replaced with an object with a single `$value` property: So `"value"` gets mapped to `{"$value": "value"}`.
 
 Of course, the typed JSON has a different form than the original, and queries into the documents store must take this into account. Fortunately, the use of typed JSON is intended to be hidden behind a query abstraction layer.
 
@@ -448,13 +448,13 @@ Of course, the typed JSON has a different form than the original, and queries in
 Function `typed_encode()`
 ------------------------
 
-Accepts a `dict`, `list`, or primitive value, and generates the typed JSON that can be inserted into a document store. 
+Accepts a `dict`, `list`, or primitive value, and generates the typed JSON that can be inserted into a document store.
 
 
 Function `json2typed()`
 -----------------------
 
-Converts an existing JSON unicode string and returns the typed JSON unicode string for the same. 
+Converts an existing JSON unicode string and returns the typed JSON unicode string for the same.
 
 
 

@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 from pyLibrary.queries.query import _normalize_edge, _normalize_select
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
+from tests import NULL
 
 
 class TestQueryNormalization(FuzzyTestCase):
@@ -26,7 +27,7 @@ class TestQueryNormalization(FuzzyTestCase):
         result = _normalize_edge(edge)
         expected = {"name": "n", "domain": {"dimension": {"fields": ["a", "c"]}}}
         self.assertEqual(result, expected)
-        self.assertEqual(result.value, None)
+        self.assertEqual(result.value, NULL)
 
     def test_naming_select(self):
         select = {"value": "result.duration", "aggregate": "avg"}

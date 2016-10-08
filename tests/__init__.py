@@ -1,6 +1,8 @@
 from functools import partial
 from pyLibrary.dot import listwrap, Dict, unwrap
+from pyLibrary.queries.expressions import NullOp
 
+NULL = NullOp()
 
 def parametrize(names, values):
     def output(func):

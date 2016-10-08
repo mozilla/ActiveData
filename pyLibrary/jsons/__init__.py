@@ -18,6 +18,8 @@ import json
 import re
 from types import NoneType
 
+import math
+
 from pyLibrary.dot import DictList, NullType, Dict, unwrap
 from pyLibrary.dot.objects import DictObject
 from pyLibrary.times.dates import Date
@@ -65,6 +67,33 @@ def quote(value):
     return "\"" + ESCAPE.sub(replace, value) + "\""
 
 
+def float2json(value):
+    """
+    CONVERT NUMBER TO JSON STRING, WITH BETTER CONTROL OVER ACCURACY
+    :param value: float, int, long, Decimal
+    :return: unicode
+    """
+    if value == 0:
+        return u'0'
+    try:
+        sign = "-" if value < 0 else ""
+        value = abs(value)
+        sci = value.__format__(".15e")
+        mantissa, exp = sci.split("e")
+        exp = int(exp)
+        if 0 <= exp:
+            digits = u"".join(mantissa.split("."))
+            return sign+(digits[:1+exp]+u"."+digits[1+exp:].rstrip('0')).rstrip(".")
+        elif -4 < exp:
+            digits = ("0"*(-exp))+u"".join(mantissa.split("."))
+            return sign+(digits[:1]+u"."+digits[1:].rstrip('0')).rstrip(".")
+        else:
+            return sign+mantissa.rstrip("0")+u"e"+unicode(exp)
+    except Exception, e:
+        from pyLibrary.debugs.logs import Log
+        Log.error("not expected", e)
+
+
 def scrub(value):
     """
     REMOVE/REPLACE VALUES THAT CAN NOT BE JSON-IZED
@@ -79,7 +108,17 @@ def _scrub(value, is_done):
 
     if type_ in (NoneType, NullType):
         return None
-    elif type_ in (unicode, int, float, long, bool):
+    elif type_ is unicode:
+        value_ = value.strip()
+        if value_:
+            return value_
+        else:
+            return None
+    elif type_ is float:
+        if math.isnan(value) or math.isinf(value):
+            return None
+        return value
+    elif type_ in (int, long, bool):
         return value
     elif type_ in (date, datetime):
         return float(datetime2unix(value))

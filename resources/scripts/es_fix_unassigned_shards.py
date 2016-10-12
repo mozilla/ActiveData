@@ -715,7 +715,7 @@ def main():
             path + "/_cluster/settings",
             data='{"persistent": {"index.recovery.initial_shards": 1, "action.write_consistency": 1}}'
         )
-        Log.note("ONE SHARD IS ENOUGH: {{result}}", result=response.all_content)
+        Log.note("ONE SHARD IS ENOUGH TO ALLOW WRITES: {{result}}", result=response.all_content)
 
         response = http.put(
             path + "/_cluster/settings",

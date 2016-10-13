@@ -52,6 +52,15 @@ class ListContainer(Container):
     def schema(self):
         return self._schema
 
+    def last(self):
+        """
+        :return:  Last element in the list, or Null
+        """
+        if self.data:
+            return self.data[-1]
+        else:
+            return Null
+
     def query(self, q):
         q = wrap(q)
         frum = self
@@ -192,9 +201,6 @@ class ListContainer(Container):
 
     def extend(self, documents):
         self.data.extend(documents)
-
-    def add(self, doc):
-        self.data.append(doc)
 
     def to_dict(self):
         return wrap({

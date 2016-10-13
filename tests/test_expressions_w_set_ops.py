@@ -611,3 +611,7 @@ class TestSetOps(ActiveDataBaseTest):
 
 
 
+# TODO: {"left": {variable: sentinel}}
+# TODO: {"find": {variable: subtring}, "default": -1}
+
+

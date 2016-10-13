@@ -55,7 +55,7 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
 
         def _output():
             for g, v in itertools.groupby(data, get_key):
-                group = Dict()
+                group = {}
                 for k, gg in zip(keys, g):
                     group[k] = gg
                 yield (group, wrap(list(v)))

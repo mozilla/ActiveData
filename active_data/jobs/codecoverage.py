@@ -10,9 +10,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from copy import deepcopy
-
-from pyLibrary import convert
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
@@ -24,6 +21,7 @@ from pyLibrary.queries import jx
 from pyLibrary.testing import elasticsearch
 from pyLibrary.thread.threads import Signal, Queue
 from pyLibrary.thread.threads import Thread
+from pyLibrary.times.dates import Date
 
 NUM_THREAD = 4
 
@@ -134,10 +132,10 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             coverage_candidates = jx.filter(file_level_coverage_records.data, lambda row, rownum, rows: row.test.url == test_name)
             if coverage_candidates:
 
-                if len(coverage_candidates) > 1:
+                if len(coverage_candidates) > 1 and any(coverage_candidates[0]._id != c._id for c in coverage_candidates):
                     Log.warning(
                         "Duplicate coverage\n{{cov|json|indent}}",
-                        cov=[{"run": c.run, "test": c.test} for c in coverage_candidates]
+                        cov=[{"_id": c._id, "run": c.run, "test": c.test} for c in coverage_candidates]
                     )
 
                 # MORE THAN ONE COVERAGE CANDIDATE CAN HAPPEN WHEN THE SAME TEST IS IN TWO DIFFERENT CHUNKS OF THE SAME SUITE
@@ -173,6 +171,35 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
         coverage_index.extend(rows)
         coverage_summary_index.extend(rows)
 
+        all_test_summary = []
+        for g, records in jx.groupby(file_level_coverage_records.data, "source.file.name"):
+            cov = UNION(records.source.file.covered)
+            uncov = UNION(records.source.file.uncovered)
+            coverage = {
+                "_id": "|".join([records[0].build.revision12, g["source.file.name"]]),  # SOMETHING UNIQUE, IN CASE WE RECALCULATE
+                "source": {
+                    "file": {
+                        "name": g["source.file.name"],
+                        "is_file": True,
+                        "covered": jx.sort(cov, "line"),
+                        "uncovered": jx.sort(uncov),
+                        "total_covered": len(cov),
+                        "total_uncovered": len(uncov)
+
+                    }
+                },
+                "build": records[0].build,
+                "repo": records[0].repo,
+                "run": records[0].run,
+                "etl": {"timestamp": Date.now()}
+            }
+            all_test_summary.append(coverage)
+
+        rows = [{"id": d["_id"], "value": d} for d in all_test_summary]
+        coverage_index.extend(rows)
+        coverage_summary_index.extend(rows)
+
+
 def loop(coverage_index, coverage_summary_index, settings, please_stop):
     try:
         while not please_stop:
@@ -195,8 +222,8 @@ def loop(coverage_index, coverage_summary_index, settings, please_stop):
                 please_stop.go()
                 return
 
-            queue = Queue("work queue")
-            queue.extend(todo.data)
+            queue = Queue("pending source files to review")
+            queue.extend(todo.data[0:coalesce(settings.batch_size, 100):])
 
             threads = [
                 Thread.run(

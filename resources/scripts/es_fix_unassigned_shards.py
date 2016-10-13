@@ -13,11 +13,13 @@ from __future__ import unicode_literals
 
 from copy import copy
 
+import sys
+
 from pyLibrary import convert, strings
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, Dict, coalesce, DictList, listwrap
+from pyLibrary.dot import wrap, Dict, coalesce, DictList, listwrap, unwrap, set_default
 from pyLibrary.env import http
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
@@ -72,14 +74,15 @@ def assign_shards(settings):
         }
         for k, n in stats.nodes.items()
     ])
-    if "primary" not in nodes or "secondary" not in nodes:
-        Log.error("missing an important index\n{{nodes|json}}", nodes=nodes)
+    # if "primary" not in nodes or "secondary" not in nodes:
+    #     Log.error("missing an important index\n{{nodes|json}}", nodes=nodes)
 
     risky_zone_names = set(z.name for z in settings.zones if z.risky)
 
+    # REVIEW NODE STATUS, AND ANY CHANGES
     first_run = not last_known_node_status
     for n in nodes:
-        status, last_known_node_status[n.name] = last_known_node_status[n.name], "ALIVE"
+        status, last_known_node_status[n.name] = last_known_node_status[n.name], ALIVE
         if status == DEAD:
             Log.warning("Node {{node}} came back to life!", node=n.name)
         elif status == None and not first_run:
@@ -93,7 +96,7 @@ def assign_shards(settings):
             n.disk = 0
             n.memory = 0
     for n, status in last_known_node_status.copy().items():
-        if not nodes[n]:
+        if not nodes[n] and status == ALIVE:
             Log.alert("Lost node {{node}}", node=n)
             last_known_node_status[n] = DEAD
 
@@ -139,6 +142,7 @@ def assign_shards(settings):
                 "from_node": m[0],
                 "to_node": destination.name
             })
+            # shards.append(set_default({"node": destination}, s))
         s.node = nodes[s.node]
 
     # Log.note("{{shards}}", shards=shards)
@@ -153,47 +157,8 @@ def assign_shards(settings):
         for r in replicas:
             r.size = size
 
-    # AN "ALLOCATION" IS THE SET OF SHARDS FOR ONE INDEX ON ONE NODE
-    # CALCULATE HOW MANY SHARDS SHOULD BE IN EACH ALLOCATION
-    allocation = UniqueIndex(["index", "node.name"])
-
-    for g, replicas in jx.groupby(shards, "index"):
-        replicas = wrap(list(replicas))
-        num_primaries = len(filter(lambda r: r.type == 'p', replicas))
-
-        multiplier = Math.MAX(settings.zones.shards)
-        num_replicas = len(settings.zones) * multiplier
-        if len(replicas)/num_primaries < num_replicas:
-            # DECREASE NUMBER OF REQUIRED REPLICAS
-            response = http.put(path + "/" + g.index + "/_settings", json={"index.recovery.initial_shards": 1})
-            Log.note("Number of shards required {{index}}\n{{result}}", index=g.index, result=convert.json2value(convert.utf82unicode(response.content)))
-
-            # INCREASE NUMBER OF REPLICAS
-            response = http.put(path + "/" + g.index + "/_settings", json={"index": {"number_of_replicas": num_replicas-1}})
-            Log.note("Update replicas for {{index}}\n{{result}}", index=g.index, result=convert.json2value(convert.utf82unicode(response.content)))
-
-        for n in nodes:
-            if n.role == 'd':
-                max_allowed = Math.ceiling((n.memory / n.zone.memory) * (n.zone.shards * num_primaries))
-            else:
-                max_allowed = 0
-
-            allocation.add({
-                "index": g.index,
-                "node": n,
-                "max_allowed": max_allowed,
-                "shards": filter(lambda r: r.node.name == n.name and r.index == g.index, shards)
-            })
-
-        index_size = Math.sum(replicas.size)
-        for r in replicas:
-            r.index_size = index_size
-            r.siblings = num_primaries
-
     relocating = wrap([s for s in shards if s.status in ("RELOCATING", "INITIALIZING")])
     Log.note("{{num}} shards in motion", num=len(relocating))
-    # for r in relocating:
-    #     cancel(path, r)
 
     for m in copy(current_moving_shards):
         for s in shards:
@@ -213,6 +178,47 @@ def assign_shards(settings):
         else:
             # COULD NOT BE FOUND
             current_moving_shards.remove(m)
+
+    # AN "ALLOCATION" IS THE SET OF SHARDS FOR ONE INDEX ON ONE NODE
+    # CALCULATE HOW MANY SHARDS SHOULD BE IN EACH ALLOCATION
+    allocation = UniqueIndex(["index", "node.name"])
+
+    for g, replicas in jx.groupby(shards, "index"):
+        replicas = wrap(list(replicas))
+        num_primaries = len(filter(lambda r: r.type == 'p', replicas))
+
+        multiplier = Math.MAX(settings.zones.shards)
+        num_replicas = len(settings.zones) * multiplier
+        if float(len(replicas)) / float(num_primaries) < num_replicas:
+            # DECREASE NUMBER OF REQUIRED REPLICAS
+            response = http.put(path + "/" + g.index + "/_settings", json={"index.recovery.initial_shards": 1})
+            Log.note("Number of shards required {{index}}\n{{result}}", index=g.index, result=convert.json2value(convert.utf82unicode(response.content)))
+
+            # INCREASE NUMBER OF REPLICAS
+            response = http.put(path + "/" + g.index + "/_settings", json={"index": {"number_of_replicas": num_replicas-1}})
+            Log.note("Update replicas for {{index}}\n{{result}}", index=g.index, result=convert.json2value(convert.utf82unicode(response.content)))
+
+        for n in nodes:
+            if n.role == 'd':
+                pro = (float(n.memory) / float(n.zone.memory)) * (n.zone.shards * num_primaries)
+                min_allowed = Math.floor(pro)
+                max_allowed = Math.ceiling(pro)
+            else:
+                min_allowed = 0
+                max_allowed = 0
+
+            allocation.add({
+                "index": g.index,
+                "node": n,
+                "min_allowed": min_allowed,
+                "max_allowed": max_allowed,
+                "shards": list(filter(lambda r: r.node.name == n.name and r.index == g.index, shards))
+            })
+
+        index_size = Math.sum(replicas.size)
+        for r in replicas:
+            r.index_size = index_size
+            r.siblings = num_primaries
 
     del ALLOCATION_REQUESTS[:]
 
@@ -356,23 +362,23 @@ def assign_shards(settings):
         Log.note("No low risk shards found")
 
     # LOOK FOR SHARD IMBALANCE
-    not_balanced = Dict()
+    rebalance_candidates = Dict()
     for g, replicas in jx.groupby(filter(lambda r: r.status == "STARTED", shards), ["node.name", "index"]):
         replicas = list(replicas)
-        if (nodes[g.node.name].zone.name, g.index) in overloaded_zone_index_pairs:
-            continue
         if not g.node:
             continue
         _node = nodes[g.node.name]
         alloc = allocation[g]
+        if (_node.zone.name, g.index) in overloaded_zone_index_pairs:
+            continue
         for i in range(alloc.max_allowed, len(replicas), 1):
             i = Random.int(len(replicas))
             shard = replicas[i]
             replicas.remove(shard)
-            not_balanced[_node.zone.name] += [shard]
+            rebalance_candidates[_node.zone.name] += [shard]
 
-    if not_balanced:
-        for z, b in not_balanced.items():
+    if rebalance_candidates:
+        for z, b in rebalance_candidates.items():
             Log.note("{{num}} shards can be moved to better location within {{zone|quote}} zone", zone=z, num=len(b))
             allocate(CONCURRENT, b, {z}, "not balanced", 6, settings)
     else:
@@ -400,6 +406,42 @@ def assign_shards(settings):
             allocate(CONCURRENT, assign, {zone_name}, "inter-zone duplicate shards ", 7, settings)
     else:
         Log.note("No duplicate shards left to assign")
+
+    # ENSURE ALL NODES HAVE THE MINIMUM NUMBER OF SHARDS
+    total_moves = 0
+    for index_name in set(shards.index):
+        for z in set([n.zone.name for n in nodes]):
+            rebalance_candidate = None  # MOVE ONLY ONE SHARD, PER INDEX, PER ZONE, AT A TIME
+            most_shards = 0  # WE WANT TO OFFLOAD THE NODE WITH THE MOST SHARDS
+            destination_zone = None
+
+            for n in nodes:
+                if n.zone.name != z:
+                    continue
+
+                alloc = allocation[index_name, n.name]
+                if (n.name, index_name) in overloaded_zone_index_pairs:
+                    continue
+                if not alloc.shards or len(alloc.shards) < alloc.min_allowed:
+                    destination_zone = z
+                    continue
+                started_shards = [r for r in alloc.shards if r.status in {"STARTED"}]
+                if most_shards >= len(started_shards):
+                    continue
+
+                if Math.max(1, alloc.min_allowed) < len(started_shards):
+                    shard = started_shards[0]
+                    rebalance_candidate = shard
+                    most_shards = len(started_shards)
+
+            if destination_zone and rebalance_candidate:
+                total_moves += 1
+                allocate(CONCURRENT, [rebalance_candidate], {destination_zone}, "not balanced", 8, settings)
+    if total_moves:
+        Log.note(
+            "{{num}} shards can be moved to better location within their own zone",
+            num=total_moves,
+        )
 
     _allocate(relocating, path, nodes, shards, allocation)
 
@@ -451,7 +493,7 @@ def net_shards_to_move(concurrent, shards, relocating):
 
 
 def _allocate(relocating, path, nodes, all_shards, allocation):
-    moves = jx.sort(ALLOCATION_REQUESTS, ["replication_priority", "mode_priority", "shard.index_size", "shard.i"])
+    moves = jx.sort(ALLOCATION_REQUESTS, ["mode_priority", "replication_priority", "shard.index_size", "shard.i"])
 
     busy_nodes = Dict()
     for s in relocating:
@@ -481,9 +523,9 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
         for g, ss in jx.groupby(filter(lambda s: s.status == "STARTED" and s.node, shards_for_this_index), "node.name"):
             ss = wrap(list(ss))
             index_count = len(ss)
-            node_weight[g.node.name] = nodes[g.node.name].memory * (1 - Math.sum(ss.size)/index_size)
-            max_allowed = allocation[shard.index, g.node.name].max_allowed
-            node_weight[g.node.name] *= 4 ** Math.MIN([0, max_allowed - index_count - 1])
+            node_weight[g.node.name] = nodes[g.node.name].memory * (1 - float(Math.sum(ss.size))/float(index_size))
+            min_allowed = allocation[shard.index, g.node.name].min_allowed
+            node_weight[g.node.name] *= 4 ** Math.MIN([-1, min_allowed - index_count - 1])
 
         list_nodes = list(nodes)
         list_node_weight = [node_weight[n.name] for n in list_nodes]
@@ -496,7 +538,7 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
                 list_node_weight[i] = 0
             elif busy_nodes[n.name] >= move.concurrent*BIG_SHARD_SIZE:
                 list_node_weight[i] = 0
-            elif n.disk and (n.disk_free - shard.size)/n.disk < 0.10:
+            elif n.disk and float(n.disk_free - shard.size)/float(n.disk) < 0.10:
                 list_node_weight[i] = 0
             elif len(alloc.shards) >= alloc.max_allowed:
                 list_node_weight[i] = 0
@@ -524,8 +566,6 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
         )
         if len(existing) >= nodes[destination_node].zone.shards:
             Log.error("should nt happen")
-
-
 
         if shard.status == "UNASSIGNED":
             # destination_node = "secondary"
@@ -566,7 +606,7 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
                 Log.note("failed")
             elif main_reason and main_reason.find("after allocation more than allowed"):
                 pass
-                Log.note("failed")
+                Log.note("failed: out of space")
             else:
                 Log.warning(
                     "{{code}} Can not move/allocate:\n\treason={{reason}}\n\tdetails={{error|quote}}",
@@ -575,6 +615,8 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
                     error=result.error
                 )
         else:
+            if shard.status == "STARTED":
+                shard.status = "RELOCATING"
             done.add((shard.index, shard.i))
             busy_nodes[destination_node] += shard.size
             Log.note(
@@ -613,7 +655,7 @@ def cancel(path, shard):
 
 
 def balance_multiplier(shard_count, node_count):
-    return 10 ** (Math.floor(shard_count / node_count + 0.9)-1)
+    return 10 ** (Math.floor(float(shard_count) / float(node_count) + 0.9)-1)
 
 
 def convert_table_to_list(table, column_names):
@@ -625,6 +667,7 @@ def convert_table_to_list(table, column_names):
         if all(r == " " for r in c):
             columns.append(i)
 
+    columns = columns[0:len(column_names)-1]
     for i, row in enumerate(lines):
         yield wrap({c: r for c, r in zip(column_names, split_at(row, columns))})
 
@@ -672,7 +715,7 @@ def main():
             path + "/_cluster/settings",
             data='{"persistent": {"index.recovery.initial_shards": 1, "action.write_consistency": 1}}'
         )
-        Log.note("ONE SHARD IS ENOUGH: {{result}}", result=response.all_content)
+        Log.note("ONE SHARD IS ENOUGH TO ALLOW WRITES: {{result}}", result=response.all_content)
 
         response = http.put(
             path + "/_cluster/settings",
@@ -701,9 +744,8 @@ def main():
     except Exception, e:
         Log.error("Problem with assign of shards", e)
     finally:
-        for p, command in settings["finally"]:
+        for p, command in settings["finally"].items():
             for c in listwrap(command):
-                Log.note()
                 response = http.put(
                     path + p,
                     data=convert.value2json(c)

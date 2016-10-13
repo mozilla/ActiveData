@@ -298,17 +298,11 @@ Return the length of a string.
 
 ###`left` Operator###
 
-Return the left-part of given string. `null` parameters result in `null`; negative length results in the empty string.  
+Return the left-part of given string. `null` parameters result in `null`. `left` accepts a numeric `length`: negative length results in the empty string.  `left` also accepts a string `sentinel`: If found, will return everything to the left of the `sentinel`, otherwise will return the whole string.
 
 		{"left": {variable: length}}
+		{"left": {variable: sentinel}}
 		{"left": [expression, length]}
-
-###`not_left` Operator###
-
-Removes the `length` left-most characters from the given string, returning the rest. `null` parameters result in `null`; negative `length` returns the whole string. Notice that concatenating `left` and `not_left` will return the original expression for all integer `length`.    
-
-		{"not_left": {variable: length}}
-		{"not_left": [expression, length]}
 
 ###`right` Operator###
 
@@ -317,18 +311,15 @@ Return the right-part of given string. `null` parameters result in `null`; negat
 		{"right": {variable: length}}
 		{"right": [expression, length]}
 
-###`not_right` Operator###
+###`find` Operator###
 
-Removes the `length` right-most characters from the given string, returning the rest. `null` parameters result in `null`; negative `length` returns the whole string. Notice that concatenating `right` and `not_right` will return the original expression for all integer `length`.    
+Test if property contains given substring, return the index of the first character if found.
 
-		{"not_right": {variable: length}}
-		{"not_right": [expression, length]}
+		{"find": {variable, substring}}
 
-###`contains` Operator###
+`find` will return a default value if the substring is not found. The default value is usually `null`, but can be set with the `default` clause.   
 
-Test if property contains given substring.
-
-		{"contains": {variable, substring}}
+		{"find": {variable, substring}, "default": -1}
 
 
 ###`prefix` Operator###
@@ -342,6 +333,21 @@ Test if a property has the given prefix. Only the *simple* form exists.
 Return `true` if a property matches a given regular expression. The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term. Also be sure you escape special characters: This is a JSON string of a regular expression, not a regular expression itself. Only the *simple* form exists.
 
 		{"regexp": {variable: regular_expression}}
+
+###`not_left` Operator###
+
+Removes the `length` left-most characters from the given string, returning the rest. `null` parameters result in `null`; negative `length` returns the whole string. Notice that concatenating `left` and `not_left` will return the original expression for all integer `length`.    
+
+		{"not_left": {variable: length}}
+		{"not_left": [expression, length]}
+
+###`not_right` Operator###
+
+Removes the `length` right-most characters from the given string, returning the rest. `null` parameters result in `null`; negative `length` returns the whole string. Notice that concatenating `right` and `not_right` will return the original expression for all integer `length`.    
+
+		{"not_right": {variable: length}}
+		{"not_right": [expression, length]}
+
 
 
 

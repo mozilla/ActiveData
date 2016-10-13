@@ -601,10 +601,10 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
         if response.status_code not in [200, 201] or not result.acknowledged:
             main_reason = strings.between(result.error, "[NO", "]")
 
-            if move.reason == "over allocated" and main_reason and main_reason.find("too many shards on nodes for attribute") != -1:
+            if main_reason and main_reason.find("too many shards on nodes for attribute") != -1:
                 pass  # THIS WILL HAPPEN WHEN THE ES SHARD BALANCER IS ACTIVATED, NOTHING WE CAN DO
-                Log.note("failed")
-            elif main_reason and main_reason.find("after allocation more than allowed"):
+                Log.note("failed: zone full")
+            elif main_reason and main_reason.find("after allocation more than allowed") != -1:
                 pass
                 Log.note("failed: out of space")
             else:

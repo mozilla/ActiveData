@@ -531,7 +531,7 @@ class Cluster(object):
             for a in aliases
             if (a.alias == settings.index and settings.alias == None) or
             (re.match(re.escape(settings.index) + r'\d{8}_\d{6}', a.index) and settings.alias == None) or
-            (a.index == settings.index and (a.alias == None or a.alias == settings.alias))
+            (a.index == settings.index and (settings.alias == None or a.alias == None or a.alias == settings.alias))
         ], "index")
         return indexes.last()
 

@@ -71,6 +71,7 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
+                    {"run": {"timestamp": (FROM_DATE + 0 * DAY).unix}, "count": 0},
                     {"run": {"timestamp": (FROM_DATE + 1 * DAY).unix}, "count": 6},
                     {"run": {"timestamp": (FROM_DATE + 2 * DAY).unix}, "count": 5},
                     {"run": {"timestamp": (FROM_DATE + 3 * DAY).unix}, "count": 4},
@@ -82,6 +83,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "meta": {"format": "table"},
                 "header": ["run.timestamp", "count"],
                 "data": [
+                    [(FROM_DATE + 0 * DAY).unix, 0],
                     [(FROM_DATE + 1 * DAY).unix, 6],
                     [(FROM_DATE + 2 * DAY).unix, 5],
                     [(FROM_DATE + 3 * DAY).unix, 4],

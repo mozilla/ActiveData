@@ -56,13 +56,21 @@ class FuzzyTestCase(unittest.TestCase):
     def assertRaises(self, problem, function, *args, **kwargs):
         try:
             function(*args, **kwargs)
-            Log.error("Expecting an exception to be raised")
         except Exception, e:
             if isinstance(problem, basestring):
-                if problem not in e:
-                    Log.error("expecting an exception returning {{problem|quote}}", problem=problem)
+                if problem in e:
+                    return
+                Log.error(
+                    "expecting an exception returning {{problem|quote}} got something else instead",
+                    problem=problem,
+                    cause=e
+                )
             elif not isinstance(e, problem):
                 Log.error("expecting an exception of type {{type}} to be raised", type=problem)
+            else:
+                return
+
+        Log.error("Expecting an exception to be raised")
 
 def zipall(*args):
     """
@@ -122,6 +130,10 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
         elif isinstance(expected, types.FunctionType):
             return expected(test)
         elif hasattr(test, "__iter__") and hasattr(expected, "__iter__"):
+            if test == None and not expected:
+                return
+            if expected == None:
+                expected = []  # REPRESENT NOTHING
             for a, b in zipall(test, expected):
                 assertAlmostEqual(a, b, msg=msg, digits=digits, places=places, delta=delta)
         else:

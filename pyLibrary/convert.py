@@ -127,9 +127,13 @@ def json2value(json_string, params={}, flexible=False, leaves=False):
         if not json_string.strip():
             Log.error("JSON string is only whitespace")
 
-        if "Expecting '" in e and "' delimiter: line" in e:
-            line_index = int(strings.between(e.message, " line ", " column ")) - 1
-            column = int(strings.between(e.message, " column ", " ")) - 1
+        c = e
+        while "Expecting '" in c.cause and "' delimiter: line" in c.cause:
+            c = c.cause
+
+        if "Expecting '" in c and "' delimiter: line" in c:
+            line_index = int(strings.between(c.message, " line ", " column ")) - 1
+            column = int(strings.between(c.message, " column ", " ")) - 1
             line = json_string.split("\n")[line_index].replace("\t", " ")
             if column > 20:
                 sample = "..." + line[column - 20:]
@@ -272,7 +276,7 @@ def list2table(rows, column_names=None):
             columns |= set(r.keys())
         keys = list(columns)
 
-    output = [[unwraplist(r[k]) for k in keys] for r in rows]
+    output = [[unwraplist(r.get(k)) for k in keys] for r in rows]
 
     return wrap({
         "meta": {"format": "table"},
@@ -472,7 +476,10 @@ def bytes2hex(value, separator=" "):
 
 
 def base642bytearray(value):
-    return bytearray(base64.b64decode(value))
+    if value == None:
+        return bytearray(b"")
+    else:
+        return bytearray(base64.b64decode(value))
 
 
 def base642bytes(value):
@@ -480,6 +487,8 @@ def base642bytes(value):
 
 
 def bytes2base64(value):
+    if isinstance(value, bytearray):
+        value=str(value)
     return base64.b64encode(value).decode("utf8")
 
 

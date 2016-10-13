@@ -12,16 +12,19 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from collections import Mapping
+from types import NoneType
+
+import itertools
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList, unwrap, set_default, join_field, split_field
+from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList, unwrap, join_field, split_field, NullType, Null
 from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression, TrueOp, jx_expression_to_function, Variable
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
-from pyLibrary.queries.meta import Column
+from pyLibrary.queries.meta import Column, ROOT_PATH
 from pyLibrary.thread.threads import Lock
 from pyLibrary.times.dates import Date
 
@@ -50,6 +53,7 @@ class ListContainer(Container):
         return self._schema
 
     def query(self, q):
+        q = wrap(q)
         frum = self
         if is_aggs(q):
             frum = list_aggs(frum.data, q)
@@ -165,6 +169,24 @@ class ListContainer(Container):
 
         return frum
 
+    def groupby(self, keys, contiguous=False):
+        try:
+            keys = listwrap(keys)
+            get_key = jx_expression_to_function(keys)
+            if not contiguous:
+                data = sorted(self.data, key=get_key)
+
+            def _output():
+                for g, v in itertools.groupby(data, get_key):
+                    group = Dict()
+                    for k, gg in zip(keys, g):
+                        group[k] = gg
+                    yield (group, wrap(list(v)))
+
+            return _output()
+        except Exception, e:
+            Log.error("Problem grouping", e)
+
     def insert(self, documents):
         self.data.extend(documents)
 
@@ -183,7 +205,12 @@ class ListContainer(Container):
     def get_columns(self, table_name=None):
         return self.schema.values()
 
+    def add(self, value):
+        self.data.append(value)
+
     def __getitem__(self, item):
+        if item < 0 or len(self.data) <= item:
+            return Null
         return self.data[item]
 
     def __iter__(self):
@@ -197,7 +224,7 @@ def get_schema_from_list(frum):
     SCAN THE LIST FOR COLUMN TYPES
     """
     columns = []
-    _get_schema_from_list(frum, columns, prefix=[], nested_path=["."])
+    _get_schema_from_list(frum, columns, prefix=[], nested_path=ROOT_PATH)
     return Schema(columns)
 
 def _get_schema_from_list(frum, columns, prefix, nested_path):
@@ -246,7 +273,8 @@ def _get_schema_from_list(frum, columns, prefix, nested_path):
 
 
 _type_to_name = {
-    None: "undefined",
+    NoneType: "undefined",
+    NullType: "undefined",
     str: "string",
     unicode: "string",
     int: "integer",
@@ -262,6 +290,7 @@ _type_to_name = {
 
 _merge_type = {
     "undefined": {
+        "undefined": "undefined",
         "boolean": "boolean",
         "integer": "integer",
         "long": "long",
@@ -272,6 +301,7 @@ _merge_type = {
         "nested": "nested"
     },
     "boolean": {
+        "undefined": "boolean",
         "boolean": "boolean",
         "integer": "integer",
         "long": "long",
@@ -282,6 +312,7 @@ _merge_type = {
         "nested": None
     },
     "integer": {
+        "undefined": "integer",
         "boolean": "integer",
         "integer": "integer",
         "long": "long",
@@ -292,6 +323,7 @@ _merge_type = {
         "nested": None
     },
     "long": {
+        "undefined": "long",
         "boolean": "long",
         "integer": "long",
         "long": "long",
@@ -302,6 +334,7 @@ _merge_type = {
         "nested": None
     },
     "float": {
+        "undefined": "float",
         "boolean": "float",
         "integer": "float",
         "long": "double",
@@ -312,6 +345,7 @@ _merge_type = {
         "nested": None
     },
     "double": {
+        "undefined": "double",
         "boolean": "double",
         "integer": "double",
         "long": "double",
@@ -322,6 +356,7 @@ _merge_type = {
         "nested": None
     },
     "string": {
+        "undefined": "string",
         "boolean": "string",
         "integer": "string",
         "long": "string",
@@ -332,6 +367,7 @@ _merge_type = {
         "nested": None
     },
     "object": {
+        "undefined": "object",
         "boolean": None,
         "integer": None,
         "long": None,
@@ -342,6 +378,7 @@ _merge_type = {
         "nested": "nested"
     },
     "nested": {
+        "undefined": "nested",
         "boolean": None,
         "integer": None,
         "long": None,

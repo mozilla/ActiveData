@@ -165,9 +165,12 @@ def setup_ssl():
 
 
 def _exit():
+    Log.note("Got request to shutdown")
     shutdown = flask.request.environ.get('werkzeug.server.shutdown')
     if shutdown:
         shutdown()
+    else:
+        Log.warning("werkzeug.server.shutdown does not exist")
 
     return Response(
         convert.unicode2utf8(OVERVIEW),

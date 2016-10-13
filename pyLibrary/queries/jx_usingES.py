@@ -170,7 +170,7 @@ class FromES(Container):
 
         try:
             return self.meta.get_columns(table_name=table_name, column_name=column_name)
-        except Exception, e:
+        except Exception:
             return DictList.EMPTY
 
     def addDimension(self, dim):

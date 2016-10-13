@@ -396,11 +396,9 @@ temp = {{name}}
 
     return _exec(code, name)
 
+
 def _exec(code, name):
     temp = None
-    exec(code)
-    globals()[name]=temp
+    exec (code)
+    globals()[name] = temp
     return temp
-
-
-

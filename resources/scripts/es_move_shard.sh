@@ -1,5 +1,14 @@
 
 
+
+
+
+curl -XPUT http://localhost:9200/pulse20160225_224749/_settings -d"{\"index.recovery.initial_shards\": 1}"
+
+curl -XPUT http://localhost:9200/_cluster/settings -d"{\"persistent\": {\"index.recovery.initial_shards\": 1}}"
+
+
+
 curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"cancel\": {\"index\": \"unittest20160729_131157\",\"shard\": 79, \"node\":\"primary\", \"allow_primary\":true}}]}"
 
 
@@ -17,7 +26,7 @@ curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"cancel\"
 
 
 
-curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": {\"index\": \"repo20160225_224705\",\"shard\": 1,\"from_node\": \"spot_00C8C755\",\"to_node\": \"spot_BAC8AE00\"}}]}"
+curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": {\"index\": \".kibana\",\"shard\": 0,\"from_node\": \"secondary\",\"to_node\": \"spot_C4D2B23E\"}}]}"
 curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": {\"index\": \"repo20160225_224705\",\"shard\": 2,\"from_node\": \"spot_00C8C755\",\"to_node\": \"spot_01B4ADC5\"}}]}"
 
 

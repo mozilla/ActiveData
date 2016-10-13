@@ -59,7 +59,10 @@ def run(query, frum=None):
     THIS FUNCTION IS SIMPLY SWITCHING BASED ON THE query["from"] CONTAINER,
     BUT IT IS ALSO PROCESSING A list CONTAINER; SEPARATE TO A ListContainer
     """
-    query = QueryOp.wrap(query, frum.schema)
+    try:
+        query = QueryOp.wrap(query, frum.schema)
+    except Exception, e:
+        Log.error("impossible", cause=e)
     frum = coalesce(frum, query["from"])
     if isinstance(frum, Container):
         return frum.query(query)
@@ -337,7 +340,7 @@ def _select(template, data, fields, depth):
                 path = f.value[0:index:]
                 if not deep_fields[f]:
                     deep_fields.add(f)  # KEEP TRACK OF WHICH FIELDS NEED DEEPER SELECT
-                short = MIN(len(deep_path), len(path))
+                short = MIN([len(deep_path), len(path)])
                 if path[:short:] != deep_path[:short:]:
                     Log.error("Dangerous to select into more than one branch at time")
                 if len(deep_path) < len(path):

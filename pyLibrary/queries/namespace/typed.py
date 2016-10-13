@@ -7,14 +7,14 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from collections import Mapping
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, wrap, Dict, Null, split_field, join_field
+from pyLibrary.dot import set_default, wrap, split_field, join_field
 from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expressions import Expression
@@ -24,6 +24,11 @@ from pyLibrary.times.dates import Date
 
 
 class Typed(Namespace):
+    """
+     NOTE: USING THE ".$value" SUFFIX IS DEPRECIATED: CURRENT VERSIONS OF ES ARE STRONGLY TYPED, LEAVING NO
+     CASE WHERE A GENERAL "value" IS USEFUL.  WE WOULD LIKE TO MOVE TO ".$number", ".$string", ETC. FOR
+     EACH TYPE, LIKE WE DO WITH DATABASES
+    """
 
     def __init__(self):
         self.converter_map = {

@@ -17,8 +17,9 @@ import math
 import sys
 
 from pyLibrary.collections.multiset import Multiset
+from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, listwrap
+from pyLibrary.dot import wrap, listwrap, Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.expressions import jx_expression_to_function
@@ -26,10 +27,16 @@ from pyLibrary.queries.expressions import jx_expression_to_function
 
 def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous=False):
     """
-        return list of (keys, values) pairs where
-            group by the set of keys
-            values IS LIST OF ALL data that has those keys
-        contiguous - MAINTAIN THE ORDER OF THE DATA, STARTING THE NEW GROUP WHEN THE SELECTOR CHANGES
+    :param data:
+    :param keys:
+    :param size:
+    :param min_size:
+    :param max_size:
+    :param contiguous: MAINTAIN THE ORDER OF THE DATA, STARTING THE NEW GROUP WHEN THE SELECTOR CHANGES
+    :return: return list of (keys, values) PAIRS, WHERE
+                 keys IS IN LEAF FORM (FOR USE WITH {"eq": terms} OPERATOR
+                 values IS GENERATOR OF ALL VALUE THAT MATCH keys
+        contiguous -
     """
 
     if size != None or min_size != None or max_size != None:
@@ -46,7 +53,14 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
         if not contiguous:
             data = sorted(data, key=get_key)
 
-        return ((wrap({k: v for k, v in zip(keys, g)}), wrap(v)) for g, v in itertools.groupby(data, get_key))
+        def _output():
+            for g, v in itertools.groupby(data, get_key):
+                group = Dict()
+                for k, gg in zip(keys, g):
+                    group[k] = gg
+                yield (group, wrap(list(v)))
+
+        return _output()
     except Exception, e:
         Log.error("Problem grouping", e)
 
@@ -136,6 +150,7 @@ def groupby_min_max_size(data, min_size=0, max_size=None, ):
                 if out:
                     yield g, out
             except Exception, e:
+                e = Except.wrap(e)
                 if out:
                     # AT LEAST TRY TO RETURN WHAT HAS BEEN PROCESSED SO FAR
                     yield g, out

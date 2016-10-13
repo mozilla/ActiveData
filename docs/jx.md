@@ -19,6 +19,11 @@ Specific Reading
 * [Reference](jx_reference.md) - A bare list of allowed clauses and options for JSON query expressions
 
 
+Comparisons
+-----------
+
+* [GraphQL vs JSON Query Expressions](GraphQL.md)
+
 Motivation
 ----------
 

@@ -12,9 +12,11 @@ from __future__ import unicode_literals
 
 from copy import copy
 
+from datetime import datetime
+
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap
+from pyLibrary.dot import wrap, Dict, DictList, literal_field
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import is_keyword
@@ -22,8 +24,8 @@ from pyLibrary.queries.expressions import Variable, Literal
 from pyLibrary.queries.jx import value_compare
 from pyLibrary.queries.query import QueryOp
 
-INDEX = "_index"
-
+INDEX = "__index__"
+PARENT = "__parent__"
 
 class DocStore(Container):
     """
@@ -69,16 +71,32 @@ class DocStore(Container):
                 existing[k] = v
             self._index_values(existing, _source_index)
 
-    def _index_values(self, doc, _source_index):
+    def _index_values(self, doc, start_index, parent_index=-1, prefix=""):
+        curr_index = doc[INDEX] = start_index
+        doc[PARENT] = parent_index
         _index = self._index
-        for k, v in doc.leaves():
-            i = _index.get(k)
+
+        for k, v in doc.items():
+            k = literal_field(k)
+            _type = _type_map[v.__class__]
+            if _type == "object":
+                self._index_values(v, start_index, prefix=k + ".")
+                v = "."
+            elif _type == "nested":
+                for vv in v:
+                    curr_index = self._index_values(vv, curr_index + 1, start_index, prefix=k + ".")
+                _type = "object"
+                v = "."
+
+            typed_key = k + ".$" + _type
+            i = _index.get(typed_key)
             if i is None:
-                i = _index[k] = {}
+                i = _index[typed_key] = {}
             j = i.get(v)
             if j is None:
                 j = i[v] = set()
-            j |= {_source_index}
+            j |= {start_index}
+        return curr_index
 
     def _unindex_values(self, existing, _source_index):
         self._unique_index[existing[self._uid]] = None
@@ -99,9 +117,9 @@ class DocStore(Container):
                 window_list = self._filter(w.where)
 
     def _edges(self, short_list, edges):
-        edge_values = self._index_values(edges)
+        edge_values = self._index_columns(edges)
 
-    def _index_values(self, columns):
+    def _index_columns(self, columns):
         # INDEX ALL COLUMNS, ESPECIALLY THOSE FUNCTION RESULTS
         indexed_values = [None]*len(columns)
         for i, s in enumerate(columns):
@@ -134,7 +152,7 @@ class DocStore(Container):
         :return:
         """
 
-        sort_values = self._index_values(sorts)
+        sort_values = self._index_columns(sorts)
 
         # RECURSIVE SORTING
         output = []
@@ -197,8 +215,6 @@ class DocStore(Container):
     def get_leaves(self, table_name):
         return {"name":c for c in self._index.keys()}
 
-
-
     def _filter(self, where):
         return filters[where.name](self, where)
 
@@ -225,4 +241,13 @@ filters={
     "true": DocStore._true
 }
 
-
+_type_map = {
+    unicode: "text",
+    int: "long",
+    float: "real",
+    datetime: "real",
+    list: "nested",
+    DictList: "nested",
+    dict: "object",
+    Dict: "object"
+}

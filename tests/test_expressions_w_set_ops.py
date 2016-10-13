@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 from pyLibrary.dot import wrap
 from pyLibrary.queries.expressions import NullOp
+from tests import NULL
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
@@ -108,7 +109,7 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [None, "1", "22", "33", "44"]
+                "data": [NULL, "1", "22", "33", "44"]
             }
         }
         self.utils.execute_es_tests(test)
@@ -273,7 +274,7 @@ class TestSetOps(ActiveDataBaseTest):
                     {"a": 1, "t": 1},
                     {"b": 0, "t": 0},
                     {"b": 1, "t": 1},
-                    {"t": NullOp()}
+                    {"t": NULL}
                 ]
             }
         }
@@ -365,7 +366,7 @@ class TestSetOps(ActiveDataBaseTest):
                     {"a": 1, "count": 1, "t": 1},
                     {"b": 0, "count": 1, "t": 0},
                     {"b": 1, "count": 1, "t": 1},
-                    {"t": NullOp(), "count": 1}
+                    {"t": NULL, "count": 1}
                 ]
             }
         }
@@ -388,7 +389,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "meta": {"format": "list"},
                 "data": [
                     {"a": 5, "t": 10},
-                    {"t": NullOp()}
+                    {"t": NULL}
                 ]
             }
         }
@@ -431,7 +432,7 @@ class TestSetOps(ActiveDataBaseTest):
             "data": [
                 {"v": "test"},
                 {"v": "not test"},
-                {"v": None},
+                {"v": NULL},
                 {},
                 {"v": "a"}
             ],
@@ -454,7 +455,7 @@ class TestSetOps(ActiveDataBaseTest):
             "data": [
                 {"v": "test"},
                 {"v": "not test"},
-                {"v": None},
+                {"v": NULL},
                 {},
                 {"v": "a"}
             ],
@@ -479,19 +480,19 @@ class TestSetOps(ActiveDataBaseTest):
     def test_left_and_right(self):
         test = {
             "data": [
-                {"i": 0, "t": -1, "v": None},
+                {"i": 0, "t": -1, "v": NULL},
                 {"i": 1, "t": -1, "v": ""},
                 {"i": 2, "t": -1, "v": "a"},
                 {"i": 3, "t": -1, "v": "abcdefg"},
-                {"i": 4, "t": 0, "v": None},
+                {"i": 4, "t": 0, "v": NULL},
                 {"i": 5, "t": 0, "v": ""},
                 {"i": 6, "t": 0, "v": "a"},
                 {"i": 7, "t": 0, "v": "abcdefg"},
-                {"i": 8, "t": 3, "v": None},
+                {"i": 8, "t": 3, "v": NULL},
                 {"i": 9, "t": 3, "v": ""},
                 {"i": 10, "t": 3, "v": "a"},
                 {"i": 11, "t": 3, "v": "abcdefg"},
-                {"i": 12, "t": 7, "v": None},
+                {"i": 12, "t": 7, "v": NULL},
                 {"i": 13, "t": 7, "v": ""},
                 {"i": 14, "t": 7, "v": "a"},
                 {"i": 15, "t": 7, "v": "abcdefg"}
@@ -510,21 +511,21 @@ class TestSetOps(ActiveDataBaseTest):
             "expecting_list": {
                 "data": [
                     {"i": 0},
-                    {"i": 1, "a": "", "b": "", "c": "", "d": ""},
-                    {"i": 2, "a": "", "b": "a", "c": "", "d": "a"},
-                    {"i": 3, "a": "", "b": "abcdefg", "c": "", "d": "abcdefg"},
+                    {"i": 1, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
+                    {"i": 2, "a": NULL, "b": "a", "c": NULL, "d": "a"},
+                    {"i": 3, "a": NULL, "b": "abcdefg", "c": NULL, "d": "abcdefg"},
                     {"i": 4},
-                    {"i": 5, "a": "", "b": "", "c": "", "d": ""},
-                    {"i": 6, "a": "", "b": "a", "c": "", "d": "a"},
-                    {"i": 7, "a": "", "b": "abcdefg", "c": "", "d": "abcdefg"},
+                    {"i": 5, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
+                    {"i": 6, "a": NULL, "b": "a", "c": NULL, "d": "a"},
+                    {"i": 7, "a": NULL, "b": "abcdefg", "c": NULL, "d": "abcdefg"},
                     {"i": 8},
-                    {"i": 9, "a": "", "b": "", "c": "", "d": ""},
-                    {"i": 10, "a": "a", "b": "", "c": "a", "d": ""},
+                    {"i": 9, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
+                    {"i": 10, "a": "a", "b": NULL, "c": "a", "d": NULL},
                     {"i": 11, "a": "abc", "b": "defg", "c": "efg", "d": "abcd"},
                     {"i": 12},
-                    {"i": 13, "a": "", "b": "", "c": "", "d": ""},
-                    {"i": 14, "a": "a", "b": "", "c": "a", "d": ""},
-                    {"i": 15, "a": "abcdefg", "b": "", "c": "abcdefg", "d": ""}
+                    {"i": 13, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
+                    {"i": 14, "a": "a", "b": NULL, "c": "a", "d": NULL},
+                    {"i": 15, "a": "abcdefg", "b": NULL, "c": "abcdefg", "d": NULL}
                 ]
             }
         }
@@ -545,7 +546,7 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": ["1", "2", "3", "4", None]
+                "data": ["1", "2", "3", "4", NULL]
             }
         }
         self.utils.execute_es_tests(test)
@@ -565,7 +566,7 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [1, 2, 3, 4, None]
+                "data": [1, 2, 3, 4, NULL]
             }
         }
         self.utils.execute_es_tests(test)
@@ -603,7 +604,7 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [0, 0.5, 1, None]
+                "data": [0, 0.5, 1, NULL]
             }
         }
         self.utils.execute_es_tests(test)

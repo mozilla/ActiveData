@@ -168,7 +168,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             Log.warning("expecting all records to have summary. Example:\n{{example}}", example=bad_example[0])
 
         rows = [{"id": d._id, "value": d} for d in file_level_coverage_records.data]
-        coverage_index.extend(rows)
+        coverage_index.extend(rows)  # TODO: WITH MULTIPLE INDEXS, THIS MAY NOT PUSH BACK TO THE SAME, MAKING DUPS
         coverage_summary_index.extend(rows)
 
         all_test_summary = []

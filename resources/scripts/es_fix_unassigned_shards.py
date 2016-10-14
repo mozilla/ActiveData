@@ -169,6 +169,7 @@ def assign_shards(settings):
             elif s.index == m.index and s.i == m.shard and s.node.name == m.from_node and s.status == "RELOCATING":
                 # STILL MOVING, ADD A VIRTUAL SHARD TO REPRESENT THE DESTINATION OF RELOCATION
                 s = copy(s)
+                s.type = 'r'
                 s.node = nodes[m.to_node]
                 s.status = "INITIALIZING"
                 if s.node:  # HAPPENS WHEN SENDING SHARD TO UNKNOWN

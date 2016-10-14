@@ -27,8 +27,10 @@ from pyLibrary.queries import jx
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.thread.threads import Thread, Signal
 
-CONCURRENT = 1
-BILLION = 1024 * 1024 * 1024  # SIZE WHEN WE SHOULD BE MOVING ONLY ONE SHARD AT A TIME
+DEBUG = True
+
+CONCURRENT = 1  # NUMBER OF SHARDS TO MOVE CONCURRENTLY, PER NODE
+BILLION = 1024 * 1024 * 1024
 BIG_SHARD_SIZE = 2 * BILLION  # SIZE WHEN WE SHOULD BE MOVING ONLY ONE SHARD AT A TIME
 
 current_moving_shards = DictList()  # BECAUSE ES WILL NOT TELL US WHERE THE SHARDS ARE MOVING TO
@@ -459,6 +461,8 @@ ALLOCATION_REQUESTS = []
 
 
 def allocate(concurrent, proposed_shards, zones, reason, mode_priority, settings):
+    if DEBUG:
+        assert all(isinstance(z, unicode) for z in zones)
     for s in proposed_shards:
         move = {
             "shard": s,

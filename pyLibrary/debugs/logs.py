@@ -145,9 +145,9 @@ class Log(object):
         if settings.log_type == "email":
             from .log_usingEmail import TextLog_usingEmail
             return TextLog_usingEmail(settings)
-        if settings.log.type.lower() in ["nothing", "none", "null"]:
+        if settings.log_type.lower() in ["nothing", "none", "null"]:
             from .log_usingNothing import TextLog_usingNothing
-            return TextLog_usingNothing(settings)
+            return TextLog_usingNothing()
 
     @classmethod
     def add_log(cls, log):
@@ -382,19 +382,19 @@ def write_profile(profile_settings, stats):
 
 
 # GET THE MACHINE METADATA
-ec2 = Null
-try:
-    from pyLibrary import aws
-
-    ec2 = aws.get_instance_metadata()
-except Exception:
-    pass
+# ec2 = Null
+# try:
+#     from pyLibrary import aws
+#
+#     ec2 = aws.get_instance_metadata()
+# except Exception:
+#     pass
 
 machine_metadata = wrap({
     "python": platform.python_implementation(),
     "os": (platform.system() + platform.release()).strip(),
-    "aws_instance_type": ec2.instance_type,
-    "name": coalesce(ec2.instance_id, platform.node())
+    # "aws_instance_type": ec2.instance_type,
+    # "name": coalesce(ec2.instance_id, platform.node())
 })
 
 

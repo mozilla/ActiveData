@@ -14,6 +14,7 @@ import hashlib
 
 from flask import Response
 
+from active_data import cors_wrapper
 from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
@@ -32,7 +33,7 @@ HASH_BLOCK_SIZE = 100
 
 query_finder = None
 
-
+@cors_wrapper
 def find_query(hash):
     """
     FIND QUERY BY HASH, RETURN Response OBJECT
@@ -46,31 +47,19 @@ def find_query(hash):
         if not query:
             return Response(
                 b'{"type": "ERROR", "template": "not found"}',
-                status=404,
-                headers={
-                    "access-control-allow-origin": "*",
-                    "content-type": "application/json"
-                }
+                status=404
             )
         else:
             return Response(
                 convert.unicode2utf8(query),
-                status=200,
-                headers={
-                    "access-control-allow-origin": "*",
-                    "content-type": "application/json"
-                }
+                status=200
             )
     except Exception, e:
         e = Except.wrap(e)
         Log.warning("problem finding query with hash={{hash}}", hash=hash, cause=e)
         return Response(
             convert.unicode2utf8(convert.value2json(e)),
-            status=400,
-            headers={
-                "access-control-allow-origin": "*",
-                "content-type": "application/json"
-            }
+            status=400
         )
 
 

@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 import flask
 from flask import Response
 
-from active_data import record_request
+from active_data import record_request, cors_wrapper
 from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
@@ -34,6 +34,7 @@ from active_data.actions import save_query
 
 BLANK = convert.unicode2utf8(File("active_data/public/error.html").read())
 
+@cors_wrapper
 def query(path):
     with CProfiler():
         try:
@@ -42,11 +43,7 @@ def query(path):
                 if not request_body.strip():
                     return Response(
                         BLANK,
-                        status=400,
-                        headers={
-                            "access-control-allow-origin": "*",
-                            "content-type": "text/html"
-                        }
+                        status=400
                     )
 
                 text = convert.utf82unicode(request_body)
@@ -84,8 +81,7 @@ def query(path):
                     response_data,
                     status=200,
                     headers={
-                        "access-control-allow-origin": "*",
-                        "content-type": result.meta.content_type
+                        "Content-Type": result.meta.content_type
                     }
                 )
         except Exception, e:
@@ -150,11 +146,7 @@ def _send_error(active_data_timer, body, e):
     e.meta.timing.total = active_data_timer.duration.seconds
     return Response(
         convert.unicode2utf8(convert.value2json(e)),
-        status=400,
-        headers={
-            "access-control-allow-origin": "*",
-            "content-type": "application/json"
-        }
+        status=400
     )
 
 

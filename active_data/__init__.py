@@ -10,7 +10,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from active_data.actions import save_query
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
 from pyLibrary.times.dates import Date
@@ -43,4 +42,20 @@ def record_request(request, query_, data, error):
         Log.warning("Can not record", cause=e)
 
 
+def cors_wrapper(func):
+    def _default(obj, key, value):
+        v = obj.get(key)
+        if v == None:
+            obj[key] = value
+
+    def output(*args, **kwargs):
+        response = func(*args, **kwargs)
+        headers = response.headers
+        _default(headers, "Access-Control-Allow-Origin", "*")
+        _default(headers, "Content-Type", "application/json")
+        return response
+
+    output.provide_automatic_options = False
+    output.__name__ = func.__name__
+    return output
 

@@ -57,6 +57,7 @@ app.add_url_rule('/query/', None, query, defaults={'path': ''}, methods=['GET', 
 app.add_url_rule('/query/<path:path>', None, query, defaults={'path': ''}, methods=['GET', 'POST'])
 app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
 
+
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
 @app.route('/<path:path>', methods=['GET', 'POST'])
 @cors_wrapper
@@ -65,7 +66,10 @@ def _default(path):
 
     return Response(
         convert.unicode2utf8(OVERVIEW),
-        status=400
+        status=400,
+        headers={
+            "Content-Type": "text/html"
+        }
     )
 
 

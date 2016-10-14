@@ -263,7 +263,7 @@ def assign_shards(settings):
                     break  # ONLY NEED ONE
     if high_risk_shards:
         Log.note("{{num}} high risk shards found", num=len(high_risk_shards))
-        allocate(10, high_risk_shards, set(n.zone for n in nodes) - risky_zone_names, "high risk shards", 2, settings)
+        allocate(10, high_risk_shards, set(n.zone.name for n in nodes) - risky_zone_names, "high risk shards", 2, settings)
     else:
         Log.note("No high risk shards found")
 
@@ -414,7 +414,7 @@ def assign_shards(settings):
         for z in set([n.zone.name for n in nodes]):
             rebalance_candidate = None  # MOVE ONLY ONE SHARD, PER INDEX, PER ZONE, AT A TIME
             most_shards = 0  # WE WANT TO OFFLOAD THE NODE WITH THE MOST SHARDS
-            destination_zone = None
+            destination_zone_name = None
 
             for n in nodes:
                 if n.zone.name != z:
@@ -424,7 +424,7 @@ def assign_shards(settings):
                 if (n.name, index_name) in overloaded_zone_index_pairs:
                     continue
                 if not alloc.shards or len(alloc.shards) < alloc.min_allowed:
-                    destination_zone = z
+                    destination_zone_name = z
                     continue
                 started_shards = [r for r in alloc.shards if r.status in {"STARTED"}]
                 if most_shards >= len(started_shards):
@@ -435,9 +435,9 @@ def assign_shards(settings):
                     rebalance_candidate = shard
                     most_shards = len(started_shards)
 
-            if destination_zone and rebalance_candidate:
+            if destination_zone_name and rebalance_candidate:
                 total_moves += 1
-                allocate(CONCURRENT, [rebalance_candidate], {destination_zone}, "not balanced", 8, settings)
+                allocate(CONCURRENT, [rebalance_candidate], {destination_zone_name}, "not balanced", 8, settings)
     if total_moves:
         Log.note(
             "{{num}} shards can be moved to better location within their own zone",

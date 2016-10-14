@@ -338,7 +338,7 @@ def assign_shards(settings):
         for zone_name, assign in dup_shards.items():
             # Log.note("{{dups}}", dups=assign)
             Log.note("{{num}} shards can be duplicated in the {{zone}} zone", num=len(assign), zone=zone_name)
-            allocate(CONCURRENT, assign, {zone_name}, "duplicate shards", 4, settings)
+            allocate(CONCURRENT, assign, {zone_name}, "duplicate shards", 5, settings)
     else:
         Log.note("No duplicate shards left to assign")
 
@@ -360,7 +360,7 @@ def assign_shards(settings):
     if low_risk_shards:
         for zone_name, assign in low_risk_shards.items():
             Log.note("{{num}} low risk shards can be assigned to {{zone}} zone", num=len(assign), zone=zone_name)
-            allocate(CONCURRENT, assign, {zone_name}, "low risk shards", 5, settings)
+            allocate(CONCURRENT, assign, {zone_name}, "low risk shards", 4, settings)
     else:
         Log.note("No low risk shards found")
 

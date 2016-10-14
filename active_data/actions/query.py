@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 import flask
 from flask import Response
 
-from active_data import record_request
+from active_data import record_request, cors_wrapper
 from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
@@ -36,6 +36,7 @@ BLANK = convert.unicode2utf8(File("active_data/public/error.html").read())
 QUERY_SIZE_LIMIT = 10*1024*1024
 
 
+@cors_wrapper
 def query(path):
     with CProfiler():
         try:
@@ -48,8 +49,7 @@ def query(path):
                             BLANK,
                             status=400,
                             headers={
-                                "access-control-allow-origin": "*",
-                                "content-type": "text/html"
+                                "Content-Type": "text/html"
                             }
                         )
                     elif int(flask.request.headers["content-length"]) > QUERY_SIZE_LIMIT:
@@ -100,8 +100,7 @@ def query(path):
                     response_data,
                     status=200,
                     headers={
-                        "access-control-allow-origin": "*",
-                        "content-type": result.meta.content_type
+                        "Content-Type": result.meta.content_type
                     }
                 )
         except Exception, e:
@@ -175,11 +174,7 @@ def _send_error(active_data_timer, body, e):
 
     return Response(
         convert.unicode2utf8(convert.value2json(e)),
-        status=400,
-        headers={
-            "access-control-allow-origin": "*",
-            "content-type": "application/json"
-        }
+        status=400
     )
 
 

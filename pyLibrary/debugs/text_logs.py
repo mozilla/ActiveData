@@ -143,6 +143,12 @@ class TextLog_usingMulti(TextLog):
         return self
 
     def add_log(self, logger):
+        if logger==None:
+            if not _Log:
+                _delayed_imports()
+
+            _Log.warning("Expecting a non-None logger")
+
         self.many.append(logger)
         return self
 

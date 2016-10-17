@@ -47,7 +47,6 @@ config = None
 @app.route('/<path:path>', methods=['OPTIONS', 'HEAD'])
 @cors_wrapper
 def _head(path):
-    record_request(flask.request, None, flask.request.get_data(), None)
     return Response(b'', status=200)
 
 app.add_url_rule('/tools/<path:filename>', None, download)

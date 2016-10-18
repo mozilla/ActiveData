@@ -11,7 +11,7 @@ The (Talos) performance data is in the `perf` table.
 Describes properties exclusive to an individual test result
 
 * `result.test` - *string* name of the specific test in a suite
-* `result.ordering` - *integer* the index of the test in the original result object 
+* `result.ordering` - *integer* the index of the test in the original result object
 * `result.samples` - *array` ordered list of individual replicates
 * `result.stats` - *object* multiple statistics of the sample, for convenience
   * `result.stats.count` - *integer* 
@@ -107,6 +107,6 @@ Markup from the ETL process
 * `etl.timestamp` - *timestamp* when the ETL was run
 * `etl.revision` - *string* git revision number of the ETL
 * `etl.duration` - *seconds* - how long the ETL took
-* `etl.source` - *object* another structure, just like this, which describes the parent ETL that fed this:  An effective audit chain.
+* `etl.source` - *object* another structure, just like this, which describes the parent ETL that fed this: An effective audit chain.
 * `etl.name` - *string* humane description of this ETL step
 * `etl.type` - *string* either `join` or `aggregation` indicating if this ETL step was adding or reducing information

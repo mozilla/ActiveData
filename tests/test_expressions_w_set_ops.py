@@ -8,15 +8,13 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
-
-import base_test_class
+from __future__ import unicode_literals
 
 from pyLibrary.dot import wrap
 from pyLibrary.queries.expressions import NullOp
-from tests.base_test_class import ActiveDataBaseTest
-
+from tests import NULL
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
@@ -33,7 +31,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"v": "55555"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"name": "l", "value": {"length": "v"}},
                 "sort": "v"
             },
@@ -65,7 +63,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_length_w_inequality(self):
         test = {
@@ -77,7 +75,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"v": "55555"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "v",
                 "where": {
                     "gt": [
@@ -94,7 +92,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "data": ["333", "4444", "55555"]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_left(self):
         test = {
@@ -106,15 +104,15 @@ class TestSetOps(ActiveDataBaseTest):
                 {"v": "4444"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"name": "v", "value": {"left": {"v": 2}}}
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [None, "1", "22", "33", "44"]
+                "data": [NULL, "1", "22", "33", "44"]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_eq(self):
         test = {
@@ -130,7 +128,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": ".",
                 "where": {"eq": ["a", "b"]}
             },
@@ -143,7 +141,7 @@ class TestSetOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_ne(self):
         test = {
@@ -159,7 +157,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": ".",
                 "where": {"ne": ["a", "b"]}
             },
@@ -171,7 +169,7 @@ class TestSetOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select_when(self):
         test = {
@@ -187,7 +185,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": ["a", "b", {"name": "io", "value": {"when": {"eq": ["a", "b"]}, "then": 1, "else": 2}}]
             },
             "expecting_list": {
@@ -205,7 +203,7 @@ class TestSetOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select_mult_w_when(self):
         test = {
@@ -223,7 +221,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"b": False},  # NOT COUNTED
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {
                     "name": "ab",
                     "value": {
@@ -244,7 +242,7 @@ class TestSetOps(ActiveDataBaseTest):
                 "data": 17
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
 
@@ -262,7 +260,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": ["a", "b", {"name": "t", "value": {"add": ["a", "b"], "nulls":True}}]
             },
             "expecting_list": {
@@ -276,11 +274,11 @@ class TestSetOps(ActiveDataBaseTest):
                     {"a": 1, "t": 1},
                     {"b": 0, "t": 0},
                     {"b": 1, "t": 1},
-                    {"t": NullOp()}
+                    {"t": NULL}
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select_add_w_default(self):
         test = {
@@ -289,7 +287,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": ["a", "b", {"name": "t", "value": {"add": ["a", "b"], "default": 0}}]
             },
             "expecting_list": {
@@ -300,7 +298,7 @@ class TestSetOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select_count(self):
         test = {
@@ -316,7 +314,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": ["a", "b", {"name": "t", "value": {"count": ["a", "b"]}}]
             },
             "expecting_list": {
@@ -334,7 +332,7 @@ class TestSetOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select_average(self):
         test = {
@@ -350,7 +348,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {}
             ]}}],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a._b",
+                "from": TEST_TABLE+".a._b",
                 "select": [
                     {"aggregate": "count"},
                     {"name": "t", "value": {"add": ["a", "b"], "nulls":True}, "aggregate": "average"}
@@ -368,11 +366,11 @@ class TestSetOps(ActiveDataBaseTest):
                     {"a": 1, "count": 1, "t": 1},
                     {"b": 0, "count": 1, "t": 0},
                     {"b": 1, "count": 1, "t": 1},
-                    {"t": NullOp(), "count": 1}
+                    {"t": NULL, "count": 1}
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select_average_on_none(self):
         test = {
@@ -381,7 +379,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {}
             ]}}],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a._b",
+                "from": TEST_TABLE+".a._b",
                 "select": [
                     {"name": "t", "value": {"add": ["a", "a"]}, "aggregate": "average"}
                 ],
@@ -391,11 +389,11 @@ class TestSetOps(ActiveDataBaseTest):
                 "meta": {"format": "list"},
                 "data": [
                     {"a": 5, "t": 10},
-                    {"t": NullOp()}
+                    {"t": NULL}
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_select_gt_on_sub(self):
@@ -412,7 +410,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {}
             ]}}],
             "query": {
-                "from": base_test_class.settings.backend_es.index+".a._b",
+                "from": TEST_TABLE+".a._b",
                 "select": [
                     "a",
                     "b",
@@ -427,19 +425,19 @@ class TestSetOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_contains(self):
         test = {
             "data": [
                 {"v": "test"},
                 {"v": "not test"},
-                {"v": None},
+                {"v": NULL},
                 {},
                 {"v": "a"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "where": {"contains": {"v": "test"}}
             },
             "expecting_list": {
@@ -450,20 +448,20 @@ class TestSetOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_left_in_edge(self):
         test = {
             "data": [
                 {"v": "test"},
                 {"v": "not test"},
-                {"v": None},
+                {"v": NULL},
                 {},
                 {"v": "a"}
             ],
             "query": {
                 "edges": [{"name": "a", "value": {"left": {"v": 1}}}],
-                "from": base_test_class.settings.backend_es.index
+                "from": TEST_TABLE
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -477,24 +475,24 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_left_and_right(self):
         test = {
             "data": [
-                {"i": 0, "t": -1, "v": None},
+                {"i": 0, "t": -1, "v": NULL},
                 {"i": 1, "t": -1, "v": ""},
                 {"i": 2, "t": -1, "v": "a"},
                 {"i": 3, "t": -1, "v": "abcdefg"},
-                {"i": 4, "t": 0, "v": None},
+                {"i": 4, "t": 0, "v": NULL},
                 {"i": 5, "t": 0, "v": ""},
                 {"i": 6, "t": 0, "v": "a"},
                 {"i": 7, "t": 0, "v": "abcdefg"},
-                {"i": 8, "t": 3, "v": None},
+                {"i": 8, "t": 3, "v": NULL},
                 {"i": 9, "t": 3, "v": ""},
                 {"i": 10, "t": 3, "v": "a"},
                 {"i": 11, "t": 3, "v": "abcdefg"},
-                {"i": 12, "t": 7, "v": None},
+                {"i": 12, "t": 7, "v": NULL},
                 {"i": 13, "t": 7, "v": ""},
                 {"i": 14, "t": 7, "v": "a"},
                 {"i": 15, "t": 7, "v": "abcdefg"}
@@ -507,31 +505,31 @@ class TestSetOps(ActiveDataBaseTest):
                     {"name": "c", "value": {"right": ["v", "t"]}},
                     {"name": "d", "value": {"not_right": ["v", "t"]}}
                 ],
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "limit": 100
             },
             "expecting_list": {
                 "data": [
                     {"i": 0},
-                    {"i": 1, "a": "", "b": "", "c": "", "d": ""},
-                    {"i": 2, "a": "", "b": "a", "c": "", "d": "a"},
-                    {"i": 3, "a": "", "b": "abcdefg", "c": "", "d": "abcdefg"},
+                    {"i": 1, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
+                    {"i": 2, "a": NULL, "b": "a", "c": NULL, "d": "a"},
+                    {"i": 3, "a": NULL, "b": "abcdefg", "c": NULL, "d": "abcdefg"},
                     {"i": 4},
-                    {"i": 5, "a": "", "b": "", "c": "", "d": ""},
-                    {"i": 6, "a": "", "b": "a", "c": "", "d": "a"},
-                    {"i": 7, "a": "", "b": "abcdefg", "c": "", "d": "abcdefg"},
+                    {"i": 5, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
+                    {"i": 6, "a": NULL, "b": "a", "c": NULL, "d": "a"},
+                    {"i": 7, "a": NULL, "b": "abcdefg", "c": NULL, "d": "abcdefg"},
                     {"i": 8},
-                    {"i": 9, "a": "", "b": "", "c": "", "d": ""},
-                    {"i": 10, "a": "a", "b": "", "c": "a", "d": ""},
+                    {"i": 9, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
+                    {"i": 10, "a": "a", "b": NULL, "c": "a", "d": NULL},
                     {"i": 11, "a": "abc", "b": "defg", "c": "efg", "d": "abcd"},
                     {"i": 12},
-                    {"i": 13, "a": "", "b": "", "c": "", "d": ""},
-                    {"i": 14, "a": "a", "b": "", "c": "a", "d": ""},
-                    {"i": 15, "a": "abcdefg", "b": "", "c": "abcdefg", "d": ""}
+                    {"i": 13, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
+                    {"i": 14, "a": "a", "b": NULL, "c": "a", "d": NULL},
+                    {"i": 15, "a": "abcdefg", "b": NULL, "c": "abcdefg", "d": NULL}
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_string(self):
         test = {
@@ -544,14 +542,14 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": {"name": "v", "value": {"string": "v"}},
-                "from": base_test_class.settings.backend_es.index
+                "from": TEST_TABLE
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": ["1", "2", "3", "4", None]
+                "data": ["1", "2", "3", "4", NULL]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_number(self):
         test = {
@@ -564,15 +562,14 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": {"name": "v", "value": {"number": "v"}},
-                "from": base_test_class.settings.backend_es.index
+                "from": TEST_TABLE
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [1, 2, 3, 4, None]
+                "data": [1, 2, 3, 4, NULL]
             }
         }
-        self._execute_es_tests(test)
-
+        self.utils.execute_es_tests(test)
 
     def test_div_with_default(self):
         test = {
@@ -584,14 +581,14 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": {"name": "v", "value": {"div": {"v": 2}, "default": 0}},
-                "from": base_test_class.settings.backend_es.index
+                "from": TEST_TABLE
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [0, 0.5, 1, 0]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_div_wo_default(self):
         test = {
@@ -603,14 +600,18 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": {"name": "v", "value": {"div": {"v": 2}}},
-                "from": base_test_class.settings.backend_es.index
+                "from": TEST_TABLE
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [0, 0.5, 1, None]
+                "data": [0, 0.5, 1, NULL]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
+
+
+# TODO: {"left": {variable: sentinel}}
+# TODO: {"find": {variable: subtring}, "default": -1}
 
 

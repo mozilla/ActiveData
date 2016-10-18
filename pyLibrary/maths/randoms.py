@@ -30,6 +30,10 @@ class Random(object):
         return Random.string(length, string.digits + 'ABCDEF')
 
     @staticmethod
+    def base64(length):
+        return Random.string(length, string.digits + string.letters + '+/')
+
+    @staticmethod
     def int(*args):
         return SEED.randrange(*args)
 

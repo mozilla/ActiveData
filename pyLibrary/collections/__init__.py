@@ -7,12 +7,12 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-import types
 import math
+
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.dot import Null
 
@@ -26,9 +26,11 @@ def reverse(values):
     return output
 
 
-def MIN(*values):
-    if isinstance(values, tuple) and len(values) == 1 and isinstance(values[0], (list, set, tuple, Multiset, types.GeneratorType)):
-        values = values[0]
+def MIN(values, *others):
+    if len(others) > 0:
+        from pyLibrary.debugs.logs import Log
+        Log.error("no longer accepting args, use a single list")
+
     output = Null
     for v in values:
         if v == None:
@@ -42,9 +44,11 @@ def MIN(*values):
     return output
 
 
-def MAX(*values):
-    if isinstance(values, tuple) and len(values) == 1 and isinstance(values[0], (list, set, tuple, Multiset, types.GeneratorType)):
-        values = values[0]
+def MAX(values, *others):
+    if len(others) > 0:
+        from pyLibrary.debugs.logs import Log
+        Log.error("Expecting an list, or iterable, only")
+
     output = Null
     for v in values:
         if v == None:
@@ -58,9 +62,11 @@ def MAX(*values):
     return output
 
 
-def PRODUCT(*values):
-    if isinstance(values, tuple) and len(values) == 1 and hasattr(values[0], "__iter__"):
-        values = list(values[0])
+def PRODUCT(values, *others):
+    if len(others) > 0:
+        from pyLibrary.debugs.logs import Log
+        Log.error("no longer accepting args, use a single list")
+
     output = Null
     for v in values:
         if v == None:
@@ -73,9 +79,12 @@ def PRODUCT(*values):
         output *= v
     return output
 
-def COUNT(*values):
-    if isinstance(values, tuple) and len(values) == 1 and isinstance(values[0], (list, set, tuple, Multiset, types.GeneratorType)):
-        values = values[0]
+
+def COUNT(values, *others):
+    if len(others) > 0:
+        from pyLibrary.debugs.logs import Log
+        Log.error("no longer accepting args, use a single list")
+
     output = 0
     for v in values:
         if v != None:
@@ -83,9 +92,11 @@ def COUNT(*values):
     return output
 
 
-def SUM(*values):
-    if isinstance(values, tuple) and len(values) == 1 and isinstance(values[0], (list, set, tuple, Multiset, types.GeneratorType)):
-        values = values[0]
+def SUM(values, *others):
+    if len(others) > 0:
+        from pyLibrary.debugs.logs import Log
+        Log.error("no longer accepting args, use a single list")
+
     output = Null
     for v in values:
         if v == None:
@@ -99,9 +110,11 @@ def SUM(*values):
     return output
 
 
-def AND(*values):
-    if isinstance(values, tuple) and len(values) == 1 and isinstance(values[0], (list, set, tuple, Multiset, types.GeneratorType)):
-        values = values[0]
+def AND(values, *others):
+    if len(others) > 0:
+        from pyLibrary.debugs.logs import Log
+        Log.error("no longer accepting args, use a single list")
+
     for v in values:
         if v == None:
             continue
@@ -110,9 +123,11 @@ def AND(*values):
     return True
 
 
-def OR(*values):
-    if isinstance(values, tuple) and len(values) == 1 and isinstance(values[0], (list, set, tuple, Multiset, types.GeneratorType)):
-        values = values[0]
+def OR(values, *others):
+    if len(others) > 0:
+        from pyLibrary.debugs.logs import Log
+        Log.error("no longer accepting args, use a single list")
+
     for v in values:
         if v == None:
             continue
@@ -121,9 +136,10 @@ def OR(*values):
     return False
 
 
-def UNION(*values):
-    if isinstance(values, tuple) and len(values) == 1 and isinstance(values[0], (list, set, tuple, Multiset, types.GeneratorType)):
-        values = values[0]
+def UNION(values, *others):
+    if len(others) > 0:
+        from pyLibrary.debugs.logs import Log
+        Log.error("no longer accepting args, use a single list")
 
     output = set()
     for v in values:
@@ -137,13 +153,14 @@ def UNION(*values):
     return output
 
 
-def INTERSECT(*values):
-    if isinstance(values, tuple) and len(values) == 1 and isinstance(values[0], (list, set, tuple, Multiset, types.GeneratorType)):
-        values = values[0]
+def INTERSECT(values, *others):
+    if len(others) > 0:
+        from pyLibrary.debugs.logs import Log
+        Log.error("no longer accepting args, use a single list")
 
     output = set(values[0])
     for v in values[1:]:
         output -= set(v)
         if not output:
-            return output   # EXIT EARLY
+            return output  # EXIT EARLY
     return output

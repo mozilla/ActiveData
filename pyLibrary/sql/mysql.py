@@ -26,7 +26,7 @@ from pyLibrary.sql import SQL
 from pyLibrary.strings import expand_template
 from pyLibrary.dot import coalesce, wrap, listwrap, unwrap
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except
+from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import jx
 from pyLibrary.strings import indent
@@ -172,20 +172,17 @@ class MySQL(object):
         try:
             self._execute_backlog()
         except Exception, e:
-            try:
+            with suppress_exception:
                 self.rollback()
-            except Exception:
-                pass
             Log.error("Error while processing backlog", e)
 
         if self.transaction_level == 0:
             Log.error("No transaction has begun")
         elif self.transaction_level == 1:
             if self.partial_rollback:
-                try:
+                with suppress_exception:
                     self.rollback()
-                except Exception:
-                    pass
+
                 Log.error("Commit after nested rollback is not allowed")
             else:
                 if self.cursor: self.cursor.close()
@@ -420,10 +417,8 @@ class MySQL(object):
         # have to shell out to the commandline client.
         sql = File(filename).read()
         if ignore_errors:
-            try:
+            with suppress_exception:
                 MySQL.execute_sql(sql=sql, param=param, settings=settings)
-            except Exception, e:
-                pass
         else:
             MySQL.execute_sql(settings, sql, param)
 

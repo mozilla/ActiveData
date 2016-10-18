@@ -20,38 +20,38 @@ from tests.base_test_class import ActiveDataBaseTest
 class TestBasicRequests(ActiveDataBaseTest):
 
     def test_empty_request(self):
-        response = self._try_till_response(self.service_url, data=b"")
+        response = self.utils.try_till_response(self.utils.service_url, data=b"")
         self.assertEqual(response.status_code, 400)
 
     def test_root_request(self):
-        if self.not_real_service():
+        if self.utils.not_real_service():
             return
 
-        url = URL(self.service_url)
+        url = URL(self.utils.service_url)
         url.path = ""
         url = str(url)
-        response = self._try_till_response(url, data=b"")
+        response = self.utils.try_till_response(url, data=b"")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.all_content, OVERVIEW)
 
     def test_bad_file_request(self):
-        url = URL(self.service_url)
+        url = URL(self.utils.service_url)
         url.path = "/tools/../../README.md"
 
-        response = self._try_till_response(str(url), data=b"")
+        response = self.utils.try_till_response(str(url), data=b"")
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.all_content, "")
 
     def test_query_on_static_file(self):
-        url = URL(self.service_url)
+        url = URL(self.utils.service_url)
         url.path = "/tools/index.html?123"
 
-        response = self._try_till_response(str(url), data=b"")
+        response = self.utils.try_till_response(str(url), data=b"")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, OVERVIEW)
 
     def test_rest_get(self):
-        settings = self._fill_es({
+        settings = self.utils.fill_container({
             "data":[
                 {"a": 0, "b": 0},
                 {"a": 0, "b": 1},
@@ -61,11 +61,11 @@ class TestBasicRequests(ActiveDataBaseTest):
             "query": {"from": ""}  # DUMMY LINE
         })
 
-        url = URL(self.service_url)
+        url = URL(self.utils.service_url)
         url.path = "json/" + settings.index
         url.query = {"a": 1}
 
-        response = self._try_till_response(str(url), data=b"")
+        response = self.utils.try_till_response(str(url), data=b"")
         self.assertEqual(response.status_code, 200)
 
         # ORDER DOES NOT MATTER, TEST EITHER

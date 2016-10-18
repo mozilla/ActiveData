@@ -134,6 +134,8 @@ class Dict(MutableMapping):
                 d = _getdefault(d, k)
             if value == None:
                 d.pop(seq[-1], None)
+            elif d==None:
+                d[literal_field(seq[-1])] = value
             else:
                 d[seq[-1]] = value
             return self
@@ -302,8 +304,7 @@ def leaves(value, prefix=None):
             from pyLibrary.debugs.logs import Log
 
             Log.error("Do not know how to handle", cause=e)
-    return wrap(output)
-
+    return output
 
 
 def _split_field(field):

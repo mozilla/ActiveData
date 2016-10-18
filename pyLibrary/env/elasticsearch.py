@@ -7,33 +7,37 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
+import re
 from collections import Mapping
 from copy import deepcopy
 from datetime import datetime
-import re
-import time
 
 from pyLibrary import convert, strings
+from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, Null, Dict, set_default, join_field, split_field, unwraplist, listwrap, literal_field
-from pyLibrary.dot.lists import DictList
+from pyLibrary.dot import coalesce, Null, Dict, set_default, join_field, split_field, unwraplist, listwrap, literal_field, \
+    ROOT_PATH
 from pyLibrary.dot import wrap
+from pyLibrary.dot.lists import DictList
 from pyLibrary.env import http
 from pyLibrary.jsons.typed_encoder import json2typed
-from pyLibrary.maths.randoms import Random
 from pyLibrary.maths import Math
+from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.strings import utf82unicode
 from pyLibrary.thread.threads import ThreadedQueue, Thread, Lock
-from pyLibrary.times.durations import MINUTE
+from pyLibrary.times.dates import Date
+from pyLibrary.times.timer import Timer
 
-
+ES_STRUCT = ["object", "nested"]
 ES_NUMERIC_TYPES = ["long", "integer", "double", "float"]
 ES_PRIMITIVE_TYPES = ["string", "boolean", "integer", "date", "long", "double"]
+INDEX_DATE_FORMAT = "%Y%m%d_%H%M%S"
 
 
 class Features(object):
@@ -65,7 +69,9 @@ class Index(Features):
         read_only=True,
         tjson=False,  # STORED AS TYPED JSON
         timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
+        consistency="one",  # ES WRITE CONSISTENCY (https://www.elastic.co/guide/en/elasticsearch/reference/1.7/docs-index_.html#index-consistency)
         debug=False,  # DO NOT SHOW THE DEBUG STATEMENTS
+        cluster=None,
         settings=None
     ):
         if index==None:
@@ -76,7 +82,10 @@ class Index(Features):
         self.cluster_state = None
         self.debug = debug
         self.settings = settings
-        self.cluster = Cluster(settings)
+        if cluster:
+            self.cluster = cluster
+        else:
+            self.cluster = Cluster(settings)
 
         try:
             full_index = self.get_index(index)
@@ -90,7 +99,7 @@ class Index(Features):
                 with self.cluster.metadata_locker:
                     index_ = self.cluster._metadata.indices[self.settings.index]
                 if not index_:
-                    indices = self.cluster.get_metadata(index=self.settings.index).indices
+                    indices = self.cluster.get_metadata().indices
                     index_ = indices[self.settings.index]
 
                 candidate_types = list(index_.mappings.keys())
@@ -115,8 +124,8 @@ class Index(Features):
 
     def get_schema(self, retry=True):
         if self.settings.explore_metadata:
-            indices = self.cluster.get_metadata().indices
-            index = indices[self.settings.index]
+            metadata = self.cluster.get_metadata()
+            index = metadata.indices[self.settings.index]
 
             if index == None and retry:
                 #TRY AGAIN, JUST IN CASE
@@ -124,12 +133,21 @@ class Index(Features):
                 return self.get_schema(retry=False)
 
             if not index.mappings[self.settings.type]:
-                Log.error("ElasticSearch index ({{index}}) does not have type ({{type}})", self.settings)
+                Log.error(
+                    "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{metadata|json}}",
+                    index=self.settings.index,
+                    type=self.settings.type,
+                    metadata=metadata
+                )
             return index.mappings[self.settings.type]
         else:
             mapping = self.cluster.get(self.path + "/_mapping")
             if not mapping[self.settings.type]:
-                Log.error("{{index}} does not have type {{type}}", self.settings)
+                Log.error(
+                    "ElasticSearch index {{index|quote}} does not have type {{type|quote}}",
+                    index=self.settings.index,
+                    type=self.settings.type
+                )
             return wrap({"mappings": mapping[self.settings.type]})
 
     def delete_all_but_self(self):
@@ -147,42 +165,38 @@ class Index(Features):
                 self.cluster.delete_index(a.index)
 
     def add_alias(self, alias=None):
-        if alias:
-            self.cluster_state = None
-            self.cluster.post(
-                "/_aliases",
-                data={
-                    "actions": [
-                        {"add": {"index": self.settings.index, "alias": alias}}
-                    ]
-                },
-                timeout=coalesce(self.settings.timeout, 30)
-            )
-        else:
-            # SET ALIAS ACCORDING TO LIFECYCLE RULES
-            self.cluster_state = None
-            self.cluster.post(
-                "/_aliases",
-                data={
-                    "actions": [
-                        {"add": {"index": self.settings.index, "alias": self.settings.alias}}
-                    ]
-                },
-                timeout=coalesce(self.settings.timeout, 30)
-            )
+        alias = coalesce(alias, self.settings.alias)
+        self.cluster_state = None
+        self.cluster.post(
+            "/_aliases",
+            data={
+                "actions": [
+                    {"add": {"index": self.settings.index, "alias": alias}}
+                ]
+            },
+            timeout=coalesce(self.settings.timeout, 30)
+        )
+
+        # WAIT FOR ALIAS TO APPEAR
+        while True:
+            response = self.cluster.get("/_cluster/state", retry={"times": 5}, timeout=3)
+            if alias in response.metadata.indices[self.settings.index].aliases:
+                return
+            Log.note("Waiting for alias {{alias}} to appear", alias=alias)
+            Thread.sleep(seconds=1)
 
     def get_index(self, alias):
         """
         RETURN THE INDEX USED BY THIS alias
         """
         alias_list = self.cluster.get_aliases()
-        output = sort([
+        output = jx.sort(set([
             a.index
             for a in alias_list
             if a.alias == alias or
                 a.index == alias or
                 (re.match(re.escape(alias) + "\\d{8}_\\d{6}", a.index) and a.index != alias)
-        ])
+        ]))
 
         if len(output) > 1:
             Log.error("only one index with given alias==\"{{alias}}\" expected",  alias= alias)
@@ -202,7 +216,16 @@ class Index(Features):
         return True
 
     def flush(self):
-        self.cluster.post("/" + self.settings.index + "/_flush", data={"wait_if_ongoing": True, "forced": True})
+        try:
+            self.cluster.post("/" + self.settings.index + "/_flush", data={"wait_if_ongoing": True, "forced": False})
+        except Exception, e:
+            if "FlushNotAllowedEngineException" in e:
+                Log.note("Flush is ignored")
+            else:
+                Log.error("Problem flushing", cause=e)
+
+    def refresh(self):
+        self.cluster.post("/" + self.settings.index + "/_refresh")
 
     def delete_record(self, filter):
         if self.settings.read_only:
@@ -214,7 +237,7 @@ class Index(Features):
                 "query": {"match_all": {}},
                 "filter": filter
             }}
-        elif self.cluster.cluster_state.version.number.startswith("1.0"):
+        elif self.cluster.cluster_state.version.number.startswith("1."):
             query = {"query": {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
@@ -228,7 +251,7 @@ class Index(Features):
         result = self.cluster.delete(
             self.path + "/_query",
             data=convert.value2json(query),
-            timeout=60
+            timeout=600
         )
 
         for name, status in result._indices.items():
@@ -254,63 +277,65 @@ class Index(Features):
                     id = random_id()
 
                 if "json" in r:
-                    json = r["json"]
+                    json_bytes = r["json"].encode("utf8")
                 elif "value" in r:
-                    json = convert.value2json(r["value"])
+                    json_bytes = convert.value2json(r["value"]).encode("utf8")
                 else:
-                    json = None
+                    json_bytes = None
                     Log.error("Expecting every record given to have \"value\" or \"json\" property")
 
-                lines.append('{"index":{"_id": ' + convert.value2json(id) + '}}')
+                lines.append(b'{"index":{"_id": ' + convert.value2json(id).encode("utf8") + b'}}')
                 if self.settings.tjson:
-                    lines.append(json2typed(json))
+                    lines.append(json2typed(json_bytes.decode('utf8')).encode('utf8'))
                 else:
-                    lines.append(json)
+                    lines.append(json_bytes)
             del records
 
             if not lines:
                 return
 
-            try:
-                data_bytes = "\n".join(lines) + "\n"
-                data_bytes = data_bytes.encode("utf8")
-            except Exception, e:
-                Log.error("can not make request body from\n{{lines|indent}}", lines=lines, cause=e)
+            with Timer("Add {{num}} documents to {{index}}", {"num": len(lines) / 2, "index":self.settings.index}, debug=self.debug):
+                try:
+                    data_bytes = b"\n".join(l for l in lines) + b"\n"
+                except Exception, e:
+                    Log.error("can not make request body from\n{{lines|indent}}", lines=lines, cause=e)
 
-
-            response = self.cluster.post(
-                self.path + "/_bulk",
-                data=data_bytes,
-                headers={"Content-Type": "text"},
-                timeout=self.settings.timeout
-            )
-            items = response["items"]
-
-            fails = []
-            if self.cluster.version.startswith("0.90."):
-                for i, item in enumerate(items):
-                    if not item.index.ok:
-                        fails.append(i)
-            elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
-                for i, item in enumerate(items):
-                    if item.index.status not in [200, 201]:
-                        fails.append(i)
-            else:
-                Log.error("version not supported {{version}}", version=self.cluster.version)
-            if fails:
-                item = items[fails[0]]
-                Log.error(
-                    "{{num}} {{error}} while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
-                    num=item.index.status,
-                    error=item.index.error,
-                    line=strings.limit(lines[fails[0] * 2 + 1], 500),
-                    index=self.settings.index,
-                    all_fails=fails,
-                    id=item.index._id
+                response = self.cluster.post(
+                    self.path + "/_bulk",
+                    data=data_bytes,
+                    headers={"Content-Type": "text"},
+                    timeout=self.settings.timeout,
+                    retry=self.settings.retry,
+                    params={"consistency": self.settings.consistency}
                 )
+                items = response["items"]
 
-            if self.debug:
-                Log.note("{{num}} documents added", num=len(items))
+                fails = []
+                if self.cluster.version.startswith("0.90."):
+                    for i, item in enumerate(items):
+                        if not item.index.ok:
+                            fails.append(i)
+                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
+                    for i, item in enumerate(items):
+                        if item.index.status not in [200, 201]:
+                            fails.append(i)
+                else:
+                    Log.error("version not supported {{version}}", version=self.cluster.version)
+
+                if fails:
+                    Log.error("Problems with insert", cause=[
+                        Except(
+                            template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
+                            status=items[i].index.status,
+                            error=items[i].index.error,
+                            some=len(fails) - 1,
+                            line=strings.limit(lines[fails[0] * 2 + 1], 500 if not self.debug else 100000),
+                            index=self.settings.index,
+                            id=items[i].index._id
+                        )
+                        for i in fails
+                    ])
+
         except Exception, e:
             if e.message.startswith("sequence item "):
                 Log.error("problem with {{data}}", data=repr(lines[int(e.message[14:16].strip())]), cause=e)
@@ -325,8 +350,15 @@ class Index(Features):
             Log.error("add() has changed to only accept one record, no lists")
         self.extend([record])
 
-    # -1 FOR NO REFRESH
-    def set_refresh_interval(self, seconds):
+    def refresh(self):
+        self.cluster.post("/" + self.settings.index + "/_refresh")
+
+    def set_refresh_interval(self, seconds, **kwargs):
+        """
+        :param seconds:  -1 FOR NO REFRESH
+        :param kwargs: ANY OTHER REQUEST PARAMETERS
+        :return: None
+        """
         if seconds <= 0:
             interval = -1
         else:
@@ -335,7 +367,8 @@ class Index(Features):
         if self.cluster.version.startswith("0.90."):
             response = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
-                data='{"index":{"refresh_interval":' + convert.value2json(interval) + '}}'
+                data='{"index":{"refresh_interval":' + convert.value2json(interval) + '}}',
+                **kwargs
             )
 
             result = convert.json2value(utf82unicode(response.all_content))
@@ -346,7 +379,8 @@ class Index(Features):
         elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
             response = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
-                data=convert.unicode2utf8('{"index":{"refresh_interval":' + convert.value2json(interval) + '}}')
+                data=convert.unicode2utf8('{"index":{"refresh_interval":' + convert.value2json(interval) + '}}'),
+                **kwargs
             )
 
             result = convert.json2value(utf82unicode(response.all_content))
@@ -355,7 +389,7 @@ class Index(Features):
                     "error": utf82unicode(response.all_content)
                 })
         else:
-            Log.error("Do not know how to handle ES version {{version}}",  version=self.cluster.version)
+            Log.error("Do not know how to handle ES version {{version}}", version=self.cluster.version)
 
     def search(self, query, timeout=None, retry=None):
         query = wrap(query)
@@ -382,17 +416,47 @@ class Index(Features):
             )
 
     def threaded_queue(self, batch_size=None, max_size=None, period=None, silent=False):
+        def errors(e, _buffer):  # HANDLE ERRORS FROM extend()
+            if e.cause.cause:
+                not_possible = [f for f in listwrap(e.cause.cause) if any(h in f for h in HOPELESS)]
+                still_have_hope = [f for f in listwrap(e.cause.cause) if all(h not in f for h in HOPELESS)]
+            else:
+                not_possible = [e]
+                still_have_hope = []
+
+            if still_have_hope:
+                if "429 EsRejectedExecutionException[rejected execution (queue capacity" in e:
+                    Log.note("waiting for ES to be free ({{num}} pending)", num=len(_buffer))
+                elif "503 UnavailableShardsException" in e:
+                    Log.note("waiting for ES to initialize shards ({{num}} pending)", num=len(_buffer))
+                else:
+                    Log.warning("Problem with sending to ES ({{num}} pending)", num=len(_buffer), cause=still_have_hope)
+            elif not_possible:
+                # THERE IS NOTHING WE CAN DO
+                Log.warning("Not inserted, will not try again", cause=not_possible[0:10:])
+                del _buffer[:]
+
         return ThreadedQueue(
             "push to elasticsearch: " + self.settings.index,
             self,
             batch_size=batch_size,
             max_size=max_size,
             period=period,
-            silent=silent
+            silent=silent,
+            error_target=errors
         )
 
     def delete(self):
-        self.cluster.delete_index(index=self.settings.index)
+        self.cluster.delete_index(index_name=self.settings.index)
+
+
+HOPELESS = [
+    "Document contains at least one immense term",
+    "400 MapperParsingException",
+    "400 RoutingMissingException",
+    "JsonParseException"
+]
+
 
 
 known_clusters = {}
@@ -427,7 +491,6 @@ class Cluster(object):
         self.debug = settings.debug
         self.version = None
         self.path = settings.host + ":" + unicode(settings.port)
-
         self.get_metadata()
 
     @use_settings
@@ -453,10 +516,10 @@ class Cluster(object):
             settings.index = best.index
 
         index = settings.index
-        meta = self.get_metadata(index=index)
-        columns = parse_properties(index, [], meta.indices[index].mappings.values()[0].properties)
+        meta = self.get_metadata()
+        columns = parse_properties(index, ".", meta.indices[index].mappings.values()[0].properties)
         if len(columns)!=0:
-            settings.tjson = any(c.name.endswith("$value") for c in columns)
+            settings.tjson = tjson or any(c.name.endswith("$value") for c in columns)
 
         return Index(settings)
 
@@ -468,7 +531,7 @@ class Cluster(object):
             for a in aliases
             if (a.alias == settings.index and settings.alias == None) or
             (re.match(re.escape(settings.index) + r'\d{8}_\d{6}', a.index) and settings.alias == None) or
-            (a.index == settings.index and (a.alias == None or a.alias == settings.alias))
+            (a.index == settings.index and (settings.alias == None or a.alias == None or a.alias == settings.alias))
         ], "index")
         return indexes.last()
 
@@ -532,17 +595,18 @@ class Cluster(object):
         self,
         index,
         alias=None,
+        create_timestamp=None,
         schema=None,
         limit_replicas=None,
         read_only=False,
         tjson=False,
         settings=None
     ):
-        if not settings.alias:
-            settings.alias = settings.index
-            settings.index = proto_name(settings.alias)
+        if not alias:
+            alias = settings.alias = settings.index
+            index = settings.index = proto_name(alias, create_timestamp)
 
-        if settings.alias == settings.index:
+        if settings.alias == index:
             Log.error("Expecting index name to conform to pattern")
 
         if settings.schema_file:
@@ -566,22 +630,41 @@ class Cluster(object):
                 schema.settings.index.number_of_replicas = health.number_of_nodes - 1
 
         self.post(
-            "/" + settings.index,
+            "/" + index,
             data=schema,
             headers={"Content-Type": "application/json"}
         )
+
+        # CONFIRM INDEX EXISTS
         while True:
-            time.sleep(1)
             try:
-                self.head("/" + settings.index)
-                break
-            except Exception:
-                Log.note("{{index}} does not exist yet", index=settings.index)
+                state = self.get("/_cluster/state", retry={"times": 5}, timeout=3)
+                if index in state.metadata.indices:
+                    break
+                Log.note("Waiting for index {{index}} to appear", index=index)
+            except Exception, e:
+                Log.warning("Problem while waiting for index {{index}} to appear", index=index, cause=e)
+            Thread.sleep(seconds=1)
+        Log.alert("Made new index {{index|quote}}", index=index)
 
         es = Index(settings=settings)
         return es
 
     def delete_index(self, index_name):
+        if not isinstance(index_name, unicode):
+            Log.error("expecting an index name")
+
+        if self.debug:
+            Log.note("Deleting index {{index}}", index=index_name)
+
+        # REMOVE ALL ALIASES TOO
+        aliases = [a for a in self.get_aliases() if a.index == index_name and a.alias != None]
+        if aliases:
+            self.post(
+                path="/_aliases",
+                data={"actions": [{"remove": a} for a in aliases]}
+            )
+
         url = self.settings.host + ":" + unicode(self.settings.port) + "/" + index_name
         try:
             response = http.delete(url)
@@ -594,13 +677,12 @@ class Cluster(object):
         except Exception, e:
             Log.error("Problem with call to {{url}}", url=url, cause=e)
 
-
     def get_aliases(self):
         """
         RETURN LIST OF {"alias":a, "index":i} PAIRS
         ALL INDEXES INCLUDED, EVEN IF NO ALIAS {"alias":Null}
         """
-        data = self.get("/_cluster/state")
+        data = self.get("/_cluster/state", retry={"times": 5}, timeout=3)
         output = []
         for index, desc in data.metadata.indices.items():
             if not desc["aliases"]:
@@ -610,25 +692,26 @@ class Cluster(object):
                     output.append({"index": index, "alias": a})
         return wrap(output)
 
-    def get_metadata(self, index=None, force=False):
-        with self.metadata_locker:
-            if self.settings.explore_metadata:
-                if not self._metadata or (force and index is None):
-                    response = self.get("/_cluster/state")
-                    self._metadata = wrap(response.metadata)
-                    self.cluster_state = wrap(self.get("/"))
-                    self.version = self.cluster_state.version.number
-                elif index:  # UPDATE THE MAPPING FOR ONE INDEX ONLY
-                    response = self.get("/"+index+"/_mapping")
-                    if self.version.startswith("0.90."):
-                        best = jx.sort(response.items(), 0).last()
-                        self._metadata.indices[index].mappings = best[1]
-                    else:
-                        self._metadata.indices[index].mappings = jx.sort(response.items(), 0).last()[1].mappings
-                    return Dict(indices={index: self._metadata.indices[index]})
-            else:
-                Log.error("Metadata exploration has been disabled")
+    def get_metadata(self, force=False):
+        if not self.settings.explore_metadata:
+            Log.error("Metadata exploration has been disabled")
+
+        if not self._metadata or force:
+            response = self.get("/_cluster/state", retry={"times": 5}, timeout=3)
+            with self.metadata_locker:
+                self._metadata = wrap(response.metadata)
+                # REPLICATE MAPPING OVER ALL ALIASES
+                indices = self._metadata.indices
+                for i, m in jx.sort(indices.items(), {"value": {"offset": 0}, "sort": -1}):
+                    m.index = i
+                    for a in m.aliases:
+                        if not indices[a]:
+                            indices[a] = m
+                self.cluster_state = wrap(self.get("/"))
+                self.version = self.cluster_state.version.number
             return self._metadata
+
+        return self._metadata
 
     def post(self, path, **kwargs):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
@@ -648,6 +731,8 @@ class Cluster(object):
                 sample = kwargs.get(b'data', "")[:300]
                 Log.note("{{url}}:\n{{data|indent}}", url=url, data=sample)
 
+            if self.debug:
+                Log.note("POST {{url}}", url=url)
             response = http.post(url, **kwargs)
             if response.status_code not in [200, 201]:
                 Log.error(response.reason.decode("latin1") + ": " + strings.limit(response.content.decode("latin1"), 100 if self.debug else 10000))
@@ -677,16 +762,31 @@ class Cluster(object):
             else:
                 Log.error("Problem with call to {{url}}" + suggestion, url=url, cause=e)
 
-
+    def delete(self, path, **kwargs):
+        url = self.settings.host + ":" + unicode(self.settings.port) + path
+        try:
+            response = http.delete(url, **kwargs)
+            if response.status_code not in [200]:
+                Log.error(response.reason+": "+response.all_content)
+            if self.debug:
+                Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 130))
+            details = wrap(convert.json2value(utf82unicode(response.all_content)))
+            if details.error:
+                Log.error(details.error)
+            return details
+        except Exception, e:
+            Log.error("Problem with call to {{url}}", url=url, cause=e)
 
     def get(self, path, **kwargs):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
         try:
+            if self.debug:
+                Log.note("GET {{url}}", url=url)
             response = http.get(url, **kwargs)
             if response.status_code not in [200]:
-                Log.error(response.reason+": "+response.all_content)
+                Log.error(response.reason + ": " + response.all_content)
             if self.debug:
-                Log.note("response: {{response}}", response=utf82unicode(response.all_content)[:130])
+                Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 130))
             details = wrap(convert.json2value(utf82unicode(response.all_content)))
             if details.error:
                 Log.error(details.error)
@@ -701,7 +801,7 @@ class Cluster(object):
             if response.status_code not in [200]:
                 Log.error(response.reason+": "+response.all_content)
             if self.debug:
-                Log.note("response: {{response}}",  response= utf82unicode(response.all_content)[:130])
+                Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 130))
             if response.all_content:
                 details = wrap(convert.json2value(utf82unicode(response.all_content)))
                 if details.error:
@@ -717,7 +817,7 @@ class Cluster(object):
 
         if self.debug:
             sample = kwargs["data"][:300]
-            Log.note("PUT {{url}}:\n{{data|indent}}",  url= url,  data= sample)
+            Log.note("PUT {{url}}:\n{{data|indent}}", url=url, data=sample)
         try:
             response = http.put(url, **kwargs)
             if response.status_code not in [200]:
@@ -731,8 +831,10 @@ class Cluster(object):
 
 def proto_name(prefix, timestamp=None):
     if not timestamp:
-        timestamp = datetime.utcnow()
-    return prefix + convert.datetime2string(timestamp, "%Y%m%d_%H%M%S")
+        timestamp = Date.now()
+    else:
+        timestamp = Date(timestamp)
+    return prefix + timestamp.format(INDEX_DATE_FORMAT)
 
 
 def sort(values):
@@ -788,7 +890,7 @@ def _scrub(r):
         else:
             return r
     except Exception, e:
-        Log.warning("Can not scrub: {{json}}",  json= r)
+        Log.warning("Can not scrub: {{json}}", json=r, cause=e)
 
 
 
@@ -806,7 +908,8 @@ class Alias(Features):
         self.debug = debug
         if self.debug:
             Log.alert("Elasticsearch debugging on {{index|quote}} is on",  index= settings.index)
-
+        if alias == None:
+            Log.error("Alias can not be None")
         self.settings = settings
         self.cluster = Cluster(settings)
 
@@ -902,7 +1005,7 @@ class Alias(Features):
             raise NotImplementedError
 
         if self.debug:
-            Log.note("Delete bugs:\n{{query}}",  query= query)
+            Log.note("Delete documents:\n{{query}}", query=query)
 
         keep_trying = True
         while keep_trying:
@@ -953,7 +1056,7 @@ class Alias(Features):
             )
 
 
-def parse_properties(parent_index_name, parent_query_path, esProperties):
+def parse_properties(parent_index_name, parent_name, esProperties):
     """
     RETURN THE COLUMN DEFINITIONS IN THE GIVEN esProperties OBJECT
     """
@@ -961,35 +1064,36 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
 
     columns = DictList()
     for name, property in esProperties.items():
-        if parent_query_path:
-            index_name, query_path = parent_index_name, join_field(split_field(parent_query_path) + [name])
-        else:
-            index_name, query_path = parent_index_name, name
+        index_name = parent_index_name
+        column_name = join_field(split_field(parent_name) + [name])
 
         if property.type == "nested" and property.properties:
             # NESTED TYPE IS A NEW TYPE DEFINITION
             # MARKUP CHILD COLUMNS WITH THE EXTRA DEPTH
-            self_columns = parse_properties(index_name, query_path, property.properties)
+            self_columns = parse_properties(index_name, column_name, property.properties)
             for c in self_columns:
-                c.nested_path = unwraplist([query_path] + listwrap(c.nested_path))
+                c.nested_path = [column_name] + c.nested_path
             columns.extend(self_columns)
             columns.append(Column(
                 table=index_name,
-                name=query_path,
-                abs_name=query_path,
+                es_index=index_name,
+                name=column_name,
+                es_column=column_name,
                 type="nested",
-                nested_path=query_path
+                nested_path=ROOT_PATH
             ))
 
             continue
 
         if property.properties:
-            child_columns = parse_properties(index_name, query_path, property.properties)
+            child_columns = parse_properties(index_name, column_name, property.properties)
             columns.extend(child_columns)
             columns.append(Column(
                 table=index_name,
-                name=query_path,
-                abs_name=query_path,
+                es_index=index_name,
+                name=column_name,
+                es_column=column_name,
+                nested_path=ROOT_PATH,
                 type="source" if property.enabled == False else "object"
             ))
 
@@ -1004,15 +1108,19 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
                     # DEFAULT
                     columns.append(Column(
                         table=index_name,
-                        name=query_path,
-                        abs_name=query_path,
+                        es_index=index_name,
+                        name=column_name,
+                        es_column=column_name,
+                        nested_path=ROOT_PATH,
                         type=p.type
                     ))
                 else:
                     columns.append(Column(
                         table=index_name,
-                        name=query_path + "\\." + n,
-                        abs_name=query_path + "\\." + n,
+                        es_index=index_name,
+                        name=column_name + "\\." + n,
+                        es_column=column_name + "\\." + n,
+                        nested_path=ROOT_PATH,
                         type=p.type
                     ))
             continue
@@ -1020,22 +1128,28 @@ def parse_properties(parent_index_name, parent_query_path, esProperties):
         if property.type in ["string", "boolean", "integer", "date", "long", "double"]:
             columns.append(Column(
                 table=index_name,
-                name=query_path,
-                abs_name=query_path,
+                es_index=index_name,
+                name=column_name,
+                es_column=column_name,
+                nested_path=ROOT_PATH,
                 type=property.type
             ))
             if property.index_name and name != property.index_name:
                 columns.append(Column(
                     table=index_name,
-                    abs_name=query_path,
-                    name=query_path,
+                    es_index=index_name,
+                    es_column=column_name,
+                    name=column_name,
+                    nested_path=ROOT_PATH,
                     type=property.type
                 ))
         elif property.enabled == None or property.enabled == False:
             columns.append(Column(
                 table=index_name,
-                name=query_path,
-                abs_name=query_path,
+                es_index=index_name,
+                name=column_name,
+                es_column=column_name,
+                nested_path=ROOT_PATH,
                 type="source" if property.enabled==False else "object"
             ))
         else:
@@ -1061,7 +1175,7 @@ def _merge_mapping(a, b):
         if a_details:
             a_details.type = _merge_type[a_details.type][b_details.type]
 
-            if b_details.type in ["object", "nested"]:
+            if b_details.type in ES_STRUCT:
                 _merge_mapping(a_details.properties, b_details.properties)
         else:
             a[literal_field(name)] = deepcopy(b_details)

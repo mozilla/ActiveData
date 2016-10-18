@@ -28,7 +28,7 @@ class Namespace(ActiveDataBaseTest):
     def test_rename_select(self):
         self._run_test(
             query={
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": ["o", "w"],
                 "format": "table"
             },
@@ -40,7 +40,7 @@ class Namespace(ActiveDataBaseTest):
                     [3, 2],
                     [1, 5],
                     [2, 7],
-                    [4, None]
+                    [4, NULL]
                 ]
             }
         )
@@ -49,7 +49,7 @@ class Namespace(ActiveDataBaseTest):
     def test_rename_select_to_struct(self):
         self._run_test(
             query={
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": ["o", "w"],
                 "format": "table"
             },
@@ -61,7 +61,7 @@ class Namespace(ActiveDataBaseTest):
                     [3, 2, "x"],
                     [1, 5, "x"],
                     [2, 7, "x"],
-                    [4, None, None]
+                    [4, NULL, NULL]
                 ]
             }
         )
@@ -70,7 +70,7 @@ class Namespace(ActiveDataBaseTest):
     def test_rename_select_to_list(self):
         self._run_test(
             query={
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": ["o", "w"],
                 "format": "table"
             },
@@ -82,7 +82,7 @@ class Namespace(ActiveDataBaseTest):
                     [3, [2, "x"]],
                     [1, [5, "x"]],
                     [2, [7, "x"]],
-                    [4, [None, None]]
+                    [4, [NULL, NULL]]
                 ]
             }
         )
@@ -91,7 +91,7 @@ class Namespace(ActiveDataBaseTest):
     def test_rename_edge(self):
         self._run_test(
             query={
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": ["w"],
                 "format": "table"
             },
@@ -101,7 +101,7 @@ class Namespace(ActiveDataBaseTest):
                 "header": ["w", "count"],
                 "data": [
                     ["x", 3],
-                    [None, 1]
+                    [NULL, 1]
                 ]
             }
         )
@@ -109,12 +109,12 @@ class Namespace(ActiveDataBaseTest):
     @skip("not working yet")
     def test_rename_edge_to_struct(self):
         query = {
-            "from": base_test_class.settings.backend_es.index,
+            "from": TEST_TABLE,
             "edges": ["w"],
             "format": "table"
         }
 
-        self._fill_es({"query":query, "data": deep_test_data})
+        self.utils.fill_container({"query":query, "data": deep_test_data})
         db = FromES(settings=base_test_class.settings.backend_es)
         db.namespaces += [Rename(dimensions={"name": "w", "fields": {"a": "a.v", "b": "a.b"}}), Typed()]
         result = db.query(query)
@@ -124,7 +124,7 @@ class Namespace(ActiveDataBaseTest):
                 [2, "x", 1],
                 [5, "x", 1],
                 [7, "x", 1],
-                [None, None, 1]
+                [NULL, NULL, 1]
             ]
         })
 
@@ -135,7 +135,7 @@ class Namespace(ActiveDataBaseTest):
         """
         self._run_test(
             query={
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": ["w"],
                 "format": "cube"
             },
@@ -148,7 +148,7 @@ class Namespace(ActiveDataBaseTest):
                         {"value": [2, "x"]},
                         {"value": [5, "x"]},
                         {"value": [7, "x"]},
-                        {"value": None}
+                        {"value": NULL}
                     ]}
                 }],
                 "data": {"count": [1, 1, 1, 1]}
@@ -156,7 +156,7 @@ class Namespace(ActiveDataBaseTest):
         )
 
     def _run_test(self, data, query, expect, dimensions):
-        new_settings = self._fill_es({"query": query, "data": data}, tjson=True)
+        new_settings = self.utils.fill_container({"query": query, "data": data}, tjson=True)
         db = FromES(settings=new_settings)
         db.namespaces += [Rename(dimensions=dimensions, source=db)]
         result = db.query(query)

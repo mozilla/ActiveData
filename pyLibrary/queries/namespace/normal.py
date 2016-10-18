@@ -7,26 +7,25 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from collections import Mapping
 from copy import copy
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import coalesce, Null
-from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, listwrap
+from pyLibrary.dot.dicts import Dict
+from pyLibrary.dot.lists import DictList
 from pyLibrary.maths import Math
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain
 from pyLibrary.queries.expressions import TRUE_FILTER
 from pyLibrary.queries.namespace import Namespace, convert_list
-from pyLibrary.queries.query import Query, get_all_vars
-
+from pyLibrary.queries.query import QueryOp, get_all_vars
 
 DEFAULT_LIMIT = 10
 
@@ -47,7 +46,7 @@ class Normal(Namespace):
         #     Log.error('Expecting from clause to be a Container')
         query = wrap(query)
 
-        output = Query()
+        output = QueryOp("from", None)
         output["from"] = self._convert_from(query["from"])
 
         output.format = query.format
@@ -56,7 +55,7 @@ class Normal(Namespace):
             output.select = convert_list(self._convert_select, query.select)
         else:
             if query.edges or query.groupby:
-                output.select = {"name": "count", "value": ".", "aggregate": "count"}
+                output.select = {"name": "count", "value": ".", "aggregate": "count", "default": 0}
             else:
                 output.select = {"name": "__all__", "value": "*", "aggregate": "none"}
 
@@ -86,7 +85,7 @@ class Normal(Namespace):
         # THE from SOURCE IS.
         vars = get_all_vars(output, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
         for c in query.columns:
-            if c.name in vars and c.nested_path:
+            if c.name in vars and len(c.nested_path) != 1:
                 Log.error("This query, with variable {{var_name}} is too deep", var_name=c.name)
 
         output.having = convert_list(self._convert_having, query.having)
@@ -96,7 +95,7 @@ class Normal(Namespace):
     def _convert_from(self, frum):
         if isinstance(frum, basestring):
             return Dict(name=frum)
-        elif isinstance(frum, (Container, Query)):
+        elif isinstance(frum, (Container, QueryOp)):
             return frum
         else:
             Log.error("Expecting from clause to be a name, or a container")

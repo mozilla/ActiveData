@@ -1,3 +1,16 @@
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+
 from collections import Mapping
 from datetime import date, timedelta, datetime
 from decimal import Decimal
@@ -5,10 +18,11 @@ import json
 import re
 from types import NoneType
 
+import math
+
 from pyLibrary.dot import DictList, NullType, Dict, unwrap
 from pyLibrary.dot.objects import DictObject
 from pyLibrary.times.dates import Date
-
 from pyLibrary.times.durations import Duration
 
 
@@ -22,10 +36,10 @@ def _late_import():
     global datetime2unix
     global utf82unicode
 
-    from pyLibrary.debugs.logs import Log
+    from pyLibrary.debugs.logs import Log as _Log
     from pyLibrary.convert import datetime2unix, utf82unicode
 
-    _ = Log
+    _ = _Log
     _ = datetime2unix
     _ = utf82unicode
 
@@ -53,6 +67,33 @@ def quote(value):
     return "\"" + ESCAPE.sub(replace, value) + "\""
 
 
+def float2json(value):
+    """
+    CONVERT NUMBER TO JSON STRING, WITH BETTER CONTROL OVER ACCURACY
+    :param value: float, int, long, Decimal
+    :return: unicode
+    """
+    if value == 0:
+        return u'0'
+    try:
+        sign = "-" if value < 0 else ""
+        value = abs(value)
+        sci = value.__format__(".15e")
+        mantissa, exp = sci.split("e")
+        exp = int(exp)
+        if 0 <= exp:
+            digits = u"".join(mantissa.split("."))
+            return sign+(digits[:1+exp]+u"."+digits[1+exp:].rstrip('0')).rstrip(".")
+        elif -4 < exp:
+            digits = ("0"*(-exp))+u"".join(mantissa.split("."))
+            return sign+(digits[:1]+u"."+digits[1:].rstrip('0')).rstrip(".")
+        else:
+            return sign+mantissa.rstrip("0")+u"e"+unicode(exp)
+    except Exception, e:
+        from pyLibrary.debugs.logs import Log
+        Log.error("not expected", e)
+
+
 def scrub(value):
     """
     REMOVE/REPLACE VALUES THAT CAN NOT BE JSON-IZED
@@ -67,7 +108,17 @@ def _scrub(value, is_done):
 
     if type_ in (NoneType, NullType):
         return None
-    elif type_ in (unicode, int, float, long, bool):
+    elif type_ is unicode:
+        value_ = value.strip()
+        if value_:
+            return value_
+        else:
+            return None
+    elif type_ is float:
+        if math.isnan(value) or math.isinf(value):
+            return None
+        return value
+    elif type_ in (int, long, bool):
         return value
     elif type_ in (date, datetime):
         return float(datetime2unix(value))
@@ -86,7 +137,8 @@ def _scrub(value, is_done):
     elif isinstance(value, Mapping):
         _id = id(value)
         if _id in is_done:
-            _Log.error("possible loop in structure detected")
+            _Log.warning("possible loop in structure detected")
+            return '"<LOOP IN STRUCTURE>"'
         is_done.add(_id)
 
         output = {}
@@ -96,7 +148,6 @@ def _scrub(value, is_done):
             elif hasattr(k, "__unicode__"):
                 k = unicode(k)
             else:
-
                 _Log.error("keys must be strings")
             v = _scrub(v, is_done)
             if v != None or isinstance(v, Mapping):

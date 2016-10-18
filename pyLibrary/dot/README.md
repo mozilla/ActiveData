@@ -3,56 +3,56 @@ Consistent dicts, lists and Nones
 =================================
 
 This library is solves Python's lack of consistency (lack of closure) under the dot (`.`)
-and slice `[::]` operators.  The most significant differences involve dealing
-with None, missing property names, and missing items.
+and slice `[::]` operators. The most significant differences involve dealing
+with `None`, missing property names, and missing items.
 
 Dict replaces dict
 --------------------
 
 `Dict` is used to declare an instance of an anonymous type, and has good
-features for manipulating JSON.  Anonymous types are necessary when
+features for manipulating JSON. Anonymous types are necessary when
 writing sophisticated list comprehensions, or queries, and to keep them
-readable.  In many ways, `dict()` can act as an anonymous type, but it does
+readable. In many ways, `dict()` can act as an anonymous type, but it does
 not have the features listed here.
 
  1. `a.b == a["b"]`
  2. missing property names are handled gracefully, which is beneficial when being used in
     set operations (database operations) without raising exceptions <pre>
-a = wrap({})
-&gt;&gt;&gt; a == {}
-a.b == None
-&gt;&gt;&gt; True
-a.b.c == None
-&gt;&gt;&gt; True
-a[None] == None
-&gt;&gt;&gt; True</pre>
+&gt;&gt;&gt; a = wrap({})
+a == {}
+&gt;&gt;&gt; a.b == None
+True
+&gt;&gt;&gt; a.b.c == None
+True
+&gt;&gt;&gt; a[None] == None
+True</pre>
     missing property names are common when dealing with JSON, which is often almost anything.
     Unfortunately, you do loose the ability to perform <code>a is None</code>
-    checks:  **You must always use <code>a == None</code> instead**.
+    checks: **You must always use <code>a == None</code> instead**.
  3. remove an attribute by assigning `None` (eg `a.b = None`)
- 4. you can access paths as a variable:  `a["b.c"] == a.b.c`.  Of course,
+ 4. you can access paths as a variable: `a["b.c"] == a.b.c`. Of course,
  this creates a need to refer to literal dot (`.`), which can be done by
  escaping with backslash: `a["b\\.c"] == a["b\.c"]`
  5. you can set paths to values, missing dicts along the path are created:<pre>
-a = wrap({})
-&gt;&gt;&gt; a == {}
-a["b.c"] = 42   # same as a.b.c = 42
-&gt;&gt;&gt; a == {"b": {"c": 42}}</pre>
+&gt;&gt;&gt; a = wrap({})
+a == {}
+&gt;&gt;&gt; a["b.c"] = 42   # same as a.b.c = 42
+a == {"b": {"c": 42}}</pre>
  6. path assignment also works for the `+=` operator <pre>
-a = wrap({})
-&gt;&gt;&gt; a == {}
-a.b.c += 1
-&gt;&gt;&gt; a == {"b": {"c": 1}}
-a.b.c += 42
-&gt;&gt;&gt; a == {"b": {"c": 43}}
+&gt;&gt;&gt; a = wrap({})
+a == {}
+&gt;&gt;&gt; a.b.c += 1
+a == {"b": {"c": 1}}
+&gt;&gt;&gt; a.b.c += 42
+a == {"b": {"c": 43}}
 </pre>
- 7. `+=` on lists (`[]`) will `append()`<pre>
-a = wrap({})
-&gt;&gt;&gt; a == {}
-a.b.c += [1]
-&gt;&gt;&gt; a == {"b": {"c": [1]}}
-a.b.c += [42]
-&gt;&gt;&gt; a == {"b": {"c": [1, 42]}}
+ 7. `+=` with a list (`[]`) will `append()`<pre>
+&gt;&gt;&gt; a = wrap({})
+a == {}
+&gt;&gt;&gt; a.b.c += [1]
+a == {"b": {"c": [1]}}
+&gt;&gt;&gt; a.b.c += [42]
+a == {"b": {"c": [1, 42]}}
 </pre>
  8. property names are coerced to unicode - it appears Python's
  object.getattribute() is called with str() even when using `from __future__
@@ -65,7 +65,8 @@ a.b.c += [42]
 `Dict` is a common pattern in many frameworks even though it goes by
 different names and slightly different variations, some examples are:
 
- * `jinja2.environment.Environment.getattr()`  to allow convenient dot notation
+ * [PEP 0505] calls this ["safe navigation"](https://www.python.org/dev/peps/pep-0505/)
+ * `jinja2.environment.Environment.getattr()` to allow convenient dot notation
  * `argparse.Environment()` - code performs `setattr(e, name, value)` on
   instances of Environment to provide dot(`.`) accessors
  * `collections.namedtuple()` - gives attribute names to tuple indices
@@ -91,19 +92,19 @@ Null is the new None
 --------------------
 
 In many applications the meaning of None (or null) is always in the context of
-a known type:  Each type has a list of expected properties, and if an instance
-is missing one of those properties we set it to None.  Let us call it this the
-"*Missing Value*" definition.  Also known as ["my billion dollar mistake"](https://en.wikipedia.org/wiki/Tony_Hoare).
+a known type: Each type has a list of expected properties, and if an instance
+is missing one of those properties we set it to None. Let us call it this the
+"*Missing Value*" definition. Also known as ["my billion dollar mistake"](https://en.wikipedia.org/wiki/Tony_Hoare).
 
 Another interpretation for None (or null), is that the instance simply does not
 have that property: Asking for the physical height of poem is nonsense, and
-we return None/null to indicate this.  Databases use `null` in this way to
+we return None/null to indicate this. Databases use `null` in this way to
 simultaneously deal with multiple (sub)types and keep records in fewer tables
-to minimize query complexity.  Call this version of None the "*Out of Context*"
+to minimize query complexity. Call this version of None the "*Out of Context*"
 definition.
 
 Python, and the *pythonic way*, and many of its libraries, assume None is a
-*Missing Value*.  This assumption results in an excess of exception handling
+*Missing Value*. This assumption results in an excess of exception handling
 and edge-case detection code when processing a multitude of types with a single
 method, or when dealing with unknown future polymorphic types, or working with
 one of many ephemeral 'types' that only have meaning in a few lines of a method.
@@ -114,9 +115,8 @@ more generic when dealing with sets and lists with members of non-uniform type.
 
 I would like to override `None` in order to change its behaviour.
 Unfortunately, `None` is a primitive that can not be extended, so we create
-a new type, `NullType` and instances, `Null`, which are closed under the dot(.)
-and slice [::] operators.  In many ways, `Null` acts as both an impotent
-list and an impotent dict.
+a new type, `NullType` and instances, `Null` ([a null object](https://en.wikipedia.org/wiki/Null_Object_pattern)), which are closed under the dot(`.`), access (`[]`), and slice (`[::]`)
+operators. `Null` acts as both an impotent list and an impotent dict:
 
  1. `a[Null] == Null`
  2. `Null.a == Null`
@@ -131,14 +131,13 @@ replaced with `None` in all cases.
 
 ###Identity and Absorbing (Zero) Elements###
 
-With closure we can realize we have defined an [algebraic semigroup](https://en.wikipedia.org/wiki/Semigroup):  The 
-identity element is the dot string (`"."`) and the zero element is `Null` 
+With `Null` defined, we have met the requirements for an [algebraic semigroup](https://en.wikipedia.org/wiki/Semigroup): The identity element is the dot string (`"."`) and the zero element is `Null`
 (or `None`).
 
  1. `a[Null] == Null`
  2. `a["."] == a`
 
-which are true for all `a`
+which are true for all `a`.  I hope, dear reader, you do not see this a some peculiar pattern, but rather a clean basis that allows us to perform complex operations over heterogeneous data with less code.
 
 
 ###NullTypes are Lazy###
@@ -154,8 +153,8 @@ NullTypes can also perform lazy assignment for increased expressibility.
     a.b.c == 42
     >>> True
 ```
-in this case, specific `Nulls`, like  `x`, keep track of the path
-assignment so it can be used in later programming logic.  This feature proves
+in this case, specific `Nulls`, like `x`, keep track of the path
+assignment so it can be used in later programming logic. This feature proves
 useful when transforming hierarchical data; adding deep children to an
 incomplete tree.
 
@@ -167,7 +166,7 @@ in `Null`:
  * `a ∘ Null == Null`
  * `Null ∘ a == Null`
 
-where `∘` is standing in for most binary operators.  Operators `and` and `or` 
+where `∘` is standing in for most binary operators. Operators `and` and `or`
 are exceptions, and behave as expected with [three-valued logic](https://en.wikipedia.org/wiki/Three-valued_logic):
 
  * `True or Null == True`
@@ -178,7 +177,7 @@ are exceptions, and behave as expected with [three-valued logic](https://en.wiki
 DictList is "Flat"
 ----------------------------------------
 `DictList` uses a *flat-list* assumption to interpret slicing and indexing
-operations.  This assumes lists are defined over all integer (**ℤ**)
+operations. This assumes lists are defined over all integer (**ℤ**)
 indices; defaulting to `Null` for indices not explicitly defined otherwise.
 This is distinctly different from Python's *loop-around* assumption,
 where negative indices are interpreted modulo-the-list-length.
@@ -203,7 +202,7 @@ Here is table comparing behaviours
 |    5   |     `<error>`      |       `Null`       |
 
 The *flat list* assumption reduces exception handling and simplifies code for
-window functions.  For example, `Math.min(flat_list[a:b:])` is valid for
+window functions. For example, `Math.min(flat_list[a:b:])` is valid for
 all `a<=b`
 
   * Python 2.x binary slicing `[:]` throws a warning if used on a DictList (see implementation issues below)
@@ -233,17 +232,17 @@ The dot operator on a `DictList` performs a simple projection; it will return a 
 DictObject for data
 -------------------
 
-There are two major families of objects in Object Oriented programming.  The 
-first, are ***Actors***: characterized by a number of useful instance methods 
-and some state bundled into a package.  The second are ***Data***: Primarily 
-a set of properties, with only (de)serialization functions, or algebraic 
-operators defined.  Boto has many examples of these *Data* classes, 
+There are two major families of objects in Object Oriented programming. The
+first, are ***Actors***: characterized by a number of useful instance methods
+and some state bundled into a package. The second are ***Data***: Primarily
+a set of properties, with only (de)serialization functions, or algebraic
+operators defined. Boto has many examples of these *Data* classes,
 [here is one](https://github.com/boto/boto/blob/4b8269562e663f090403e57ba1a3a471b6e0aa0e/boto/ec2/networkinterface.py).
 
-The problem with *Data* objects is they have an useless distinction between 
-attributes and properties.  This prevents us from using the dot (`.`) operator for 
-dereferencing, forcing us to use the verbose `getattr()` for parametric 
-dereferencing.  It also prevents the use of query operators over these objects.
+The problem with *Data* objects is they have an useless distinction between
+attributes and properties. This prevents us from using the dot (`.`) operator for
+dereferencing, forcing us to use the verbose `getattr()` for parametric
+dereferencing. It also prevents the use of query operators over these objects.
 
 You can wrap any object to make it appear like a Dict.
 
@@ -251,26 +250,26 @@ You can wrap any object to make it appear like a Dict.
 	d = DictObject(my_data_object)
 ```
 
-This allows you to use the query operators of this `dot` library on this 
-object.  Care is required though:  Your object may not be a pure data object, 
-and there can be conflicts between the object methods and the properties it 
+This allows you to use the query operators of this `dot` library on this
+object. Care is required though: Your object may not be a pure data object,
+and there can be conflicts between the object methods and the properties it
 is expected to have.
 
 
 Mapping Leaves
 --------------
 
-The implications of allowing `a["b.c"] == a.b.c` opens up two different Dict 
+The implications of allowing `a["b.c"] == a.b.c` opens up two different Dict
 forms: *standard form* and *leaf form*
 
 ###Standard Form
 
-The `[]` operator in `Dict` has been overridden to assume dots (`.`) represent 
-paths rather than literal string values; but, the internal representation of 
-`Dict` is the same as `dict`; the property names are treated as black box 
-strings.  `[]` just provides convenience.
+The `[]` operator in `Dict` has been overridden to assume dots (`.`) represent
+paths rather than literal string values; but, the internal representation of
+`Dict` is the same as `dict`; the property names are treated as black box
+strings. `[]` just provides convenience.
 
-When wrapping `dict`, the property names are **NOT** interpreted as paths; 
+When wrapping `dict`, the property names are **NOT** interpreted as paths;
 property names can include dots (`.`).
 
 ```python
@@ -283,12 +282,12 @@ property names can include dots (`.`).
 	Null    # because b.c path does not exist
 
 	>>> a["b\.c"]
-	42      # escaping the dot (`.`) makes it literal 
+	42      # escaping the dot (`.`) makes it literal
 ```
 
 ###Leaf form
 
-Leaf form is used in some JSON, or YAML, configuration files.  Here is an 
+Leaf form is used in some JSON, or YAML, configuration files. Here is an
 example from my ElasticSearch configuration:
 
 **YAML**
@@ -309,19 +308,19 @@ Both are intended to represent the deeply nested JSON
 	{"discovery": {"zen": {"ping": {"multicast": {"enabled": true}}}}}
 ```
 
-Upon importing such files, it is good practice to convert it to standard form 
+Upon importing such files, it is good practice to convert it to standard form
 immediately:
 
 ```python
 	config = wrap_leaves(config)
 ```
 
-`wrap_leaves()` assumes any dots found in JSON names are referring to paths 
+`wrap_leaves()` assumes any dots found in JSON names are referring to paths
 into objects, not a literal dots.
 
-When accepting input from other automations and users, your property names 
-can potentially contain dots; which must be properly escaped to produce the 
-JSON you are expecting.  Specifically, this happens with URLs:
+When accepting input from other automations and users, your property names
+can potentially contain dots; which must be properly escaped to produce the
+JSON you are expecting. Specifically, this happens with URLs:
 
 **BAD** - dots in url are interpreted as paths
 
@@ -351,7 +350,7 @@ JSON you are expecting.  Specifically, this happens with URLs:
 	Dict({u'example.html': 3})
 ```
 
-You can produce leaf form by iterating over all leaves.  This is good for 
+You can produce leaf form by iterating over all leaves. This is good for
 simplifying iteration over deep object structures.
 
 ```python
@@ -370,7 +369,7 @@ Motivation for DictList (optional reading)
 ------------------------------------------
 
 `DictList` is the final type required to to provide closure under the
-dot(.) and slice [::] operators.  Not only must `DictList` deal with
+dot(.) and slice [::] operators. Not only must `DictList` deal with
 `Nulls` (and `Nones`) but also provide fixes to Python's inconsistent
 slice operator.
 
@@ -405,7 +404,7 @@ Looks good, but this time let's use negative indices:
 ```
 
 Using negative indices `[-num:]` allows the programmer to slice relative to
-the right rather than the left.  When `num` is a constant this problem is
+the right rather than the left. When `num` is a constant this problem is
 never revealed, but when `num` is a variable, then the inconsistency can
 reveal itself.
 
@@ -417,7 +416,7 @@ reveal itself.
 So, clearly, `[-num:]` can not be understood as a suffix slice, rather
 something more complicated; given `num` <= 0.
 
-I advocate never using negative indices in the slice operator.  Rather, use the
+I advocate never using negative indices in the slice operator. Rather, use the
 `right()` method instead which is consistent for `num` ∈ ℤ:
 
 ```python
@@ -432,11 +431,11 @@ I advocate never using negative indices in the slice operator.  Rather, use the
 ###Python 2.7 `__getslice__` is broken###
 
 It would be nice to have our own list-like class that implements slicing in a
-way that is consistent.  Specifically, we expect to solve the inconsistent
+way that is consistent. Specifically, we expect to solve the inconsistent
 behaviour seen when dealing with negative indices.
 
 As an example, I would like to ensure my over-sliced-to-the-right and over-
-sliced-to-the-left  behave the same.  Let's look at over-slicing-to-the-right,
+sliced-to-the-left behave the same. Let's look at over-slicing-to-the-right,
 which behaves as expected on a regular list:
 
 ```python
@@ -488,7 +487,7 @@ Here is an attempt:
             return len(self.list)
 ```
 
-Unfortunately this does not work.  When the `__len__` method is defined
+Unfortunately this does not work. When the `__len__` method is defined
 `__getslice__` defines `i = i % len(self)`: Which
 makes it impossible to identify if a negative value is passed to the slice
 operator.

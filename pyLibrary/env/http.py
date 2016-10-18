@@ -12,31 +12,32 @@
 # WITH ADDED default_headers THAT CAN BE SET USING pyLibrary.debugs.settings
 # EG
 # {"debug.constants":{
-# "pyLibrary.env.http.default_headers={
-# "From":"klahnakoski@mozilla.com"
-#     }
+#     "pyLibrary.env.http.default_headers":{"From":"klahnakoski@mozilla.com"}
 # }}
 
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 from copy import copy
+from mmap import mmap
 from numbers import Number
+from tempfile import TemporaryFile
 
 from requests import sessions, Response
 
 from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, coalesce, wrap, set_default
-from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines, GzipLines
+from pyLibrary.dot import Dict, coalesce, wrap, set_default, unwrap
+from pyLibrary.env.big_data import safe_size, ibytes2ilines, icompressed2ibytes
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx
-from pyLibrary.thread.threads import Thread
-from pyLibrary.times.durations import SECOND
+from pyLibrary.thread.threads import Thread, Lock
+from pyLibrary.times.durations import Duration
 
-
+DEBUG = False
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
 MIN_READ_SIZE = 8 * 1024
 ZIP_REQUEST = False
@@ -88,7 +89,11 @@ def request(method, url, zip=None, retry=None, **kwargs):
                 failures.append(e)
         Log.error("Tried {{num}} urls", num=len(url), cause=failures)
 
-    session = sessions.Session()
+    if b"session" in kwargs:
+        session = kwargs[b"session"]
+        del kwargs[b"session"]
+    else:
+        session = sessions.Session()
     session.headers.update(default_headers)
 
     if zip is None:
@@ -101,29 +106,32 @@ def request(method, url, zip=None, retry=None, **kwargs):
     _to_ascii_dict(kwargs)
     timeout = kwargs[b'timeout'] = coalesce(kwargs.get(b'timeout'), default_timeout)
 
-    if retry is None:
+    if retry == None:
         retry = Dict(times=1, sleep=0)
     elif isinstance(retry, Number):
-        retry = Dict(times=retry, sleep=SECOND)
+        retry = Dict(times=retry, sleep=1)
     else:
         retry = wrap(retry)
-        set_default(retry.sleep, {"times": 1, "sleep": 0})
+        if isinstance(retry.sleep, Duration):
+            retry.sleep = retry.sleep.seconds
+        set_default(retry, {"times": 1, "sleep": 0})
 
     if b'json' in kwargs:
         kwargs[b'data'] = convert.value2json(kwargs[b'json']).encode("utf8")
         del kwargs[b'json']
 
     try:
+        headers = kwargs[b"headers"] = unwrap(coalesce(wrap(kwargs)[b"headers"], {}))
+        set_default(headers, {b"accept-encoding": b"compress, gzip"})
+
         if zip and len(coalesce(kwargs.get(b"data"))) > 1000:
             compressed = convert.bytes2zip(kwargs[b"data"])
-            if b"headers" not in kwargs:
-                kwargs[b"headers"] = {}
-            kwargs[b"headers"][b'content-encoding'] = b'gzip'
+            headers[b'content-encoding'] = b'gzip'
             kwargs[b"data"] = compressed
 
-            _to_ascii_dict(kwargs[b"headers"])
+            _to_ascii_dict(headers)
         else:
-            _to_ascii_dict(kwargs.get(b"headers"))
+            _to_ascii_dict(headers)
     except Exception, e:
         Log.error("Request setup failure on {{url}}", url=url, cause=e)
 
@@ -133,6 +141,8 @@ def request(method, url, zip=None, retry=None, **kwargs):
             Thread.sleep(retry.sleep)
 
         try:
+            if DEBUG:
+                Log.note("http {{method}} to {{url}}", method=method, url=url)
             return session.request(method=method, url=url, **kwargs)
         except Exception, e:
             errors.append(Except.wrap(e))
@@ -188,15 +198,32 @@ def post(url, **kwargs):
     return HttpResponse(request(b'post', url, **kwargs))
 
 
+def delete(url, **kwargs):
+    return HttpResponse(request(b'delete', url, **kwargs))
+
+
 def post_json(url, **kwargs):
     """
     ASSUME RESPONSE IN IN JSON
     """
-    kwargs["data"] = convert.unicode2utf8(convert.value2json(kwargs["data"]))
+    if b"json" in kwargs:
+        kwargs[b"data"] = convert.unicode2utf8(convert.value2json(kwargs[b"json"]))
+    elif b'data':
+        kwargs[b"data"] = convert.unicode2utf8(convert.value2json(kwargs[b"data"]))
+    else:
+        Log.error("Expecting `json` parameter")
 
     response = post(url, **kwargs)
-    c=response.content
-    return convert.json2value(convert.utf82unicode(c))
+    c = response.content
+    try:
+        details = convert.json2value(convert.utf82unicode(c))
+    except Exception, e:
+        Log.error("Unexpected return value {{content}}", content=c, cause=e)
+
+    if response.status_code not in [200, 201]:
+        Log.error("Bad response", cause=Except.wrap(details))
+
+    return details
 
 
 def put(url, **kwargs):
@@ -245,20 +272,101 @@ class HttpResponse(Response):
 
     @property
     def all_lines(self):
-        return self._all_lines()
+        return self.get_all_lines()
 
-    def _all_lines(self, encoding="utf8"):
+    def get_all_lines(self, encoding="utf8", flexible=False):
         try:
-            content = self.raw.read(decode_content=False)
+            iterator = self.raw.stream(4096, decode_content=False)
+
             if self.headers.get('content-encoding') == 'gzip':
-                return CompressedLines(content, encoding=encoding)
+                return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding, flexible=flexible)
             elif self.headers.get('content-type') == 'application/zip':
-                return ZipfileLines(content, encoding=encoding)
+                return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding, flexible=flexible)
             elif self.url.endswith(".gz"):
-                return GzipLines(content, encoding)
+                return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding, flexible=flexible)
             else:
-                return content.decode(encoding).split("\n")
+                return ibytes2ilines(iterator, encoding=encoding, flexible=flexible, closer=self.close)
         except Exception, e:
             Log.error("Can not read content", cause=e)
+
+
+class Generator_usingStream(object):
+    """
+    A BYTE GENERATOR USING A STREAM, AND BUFFERING IT FOR RE-PLAY
+    """
+
+    def __init__(self, stream, length, _shared=None):
+        """
+        :param stream:  THE STREAM WE WILL GET THE BYTES FROM
+        :param length:  THE MAX NUMBER OF BYTES WE ARE EXPECTING
+        :param _shared: FOR INTERNAL USE TO SHARE THE BUFFER
+        :return:
+        """
+        self.position = 0
+        file_ = TemporaryFile()
+        if not _shared:
+            self.shared = Dict(
+                length=length,
+                locker=Lock(),
+                stream=stream,
+                done_read=0,
+                file=file_,
+                buffer=mmap(file_.fileno(), length)
+            )
+        else:
+            self.shared = _shared
+
+        self.shared.ref_count += 1
+
+    def __iter__(self):
+        return Generator_usingStream(None, self.shared.length, self.shared)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
+    def next(self):
+        if self.position >= self.shared.length:
+            raise StopIteration
+
+        end = min(self.position + MIN_READ_SIZE, self.shared.length)
+        s = self.shared
+        with s.locker:
+            while end > s.done_read:
+                data = s.stream.read(MIN_READ_SIZE)
+                s.buffer.write(data)
+                s.done_read += MIN_READ_SIZE
+                if s.done_read >= s.length:
+                    s.done_read = s.length
+                    s.stream.close()
+        try:
+            return s.buffer[self.position:end]
         finally:
-            self.close()
+            self.position = end
+
+    def close(self):
+        with self.shared.locker:
+            if self.shared:
+                s, self.shared = self.shared, None
+                s.ref_count -= 1
+
+                if s.ref_count==0:
+                    try:
+                        s.stream.close()
+                    except Exception:
+                        pass
+
+                    try:
+                        s.buffer.close()
+                    except Exception:
+                        pass
+
+                    try:
+                        s.file.close()
+                    except Exception:
+                        pass
+
+    def __del__(self):
+        self.close()

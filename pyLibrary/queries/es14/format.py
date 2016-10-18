@@ -24,24 +24,30 @@ from pyLibrary.queries.es14.aggs import count_dim, aggs_iterator, format_dispatc
 def format_cube(decoders, aggs, start, query, select):
     new_edges = count_dim(aggs, decoders)
     dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-    matricies = [(s, Matrix(dims=dims, zeros=coalesce(s.default, 0 if s.aggregate == "count" else Null))) for s in select]
-    for row, agg in aggs_iterator(aggs, decoders):
-        coord = tuple(d.get_index(row) for d in decoders)
+    matricies = [(s, Matrix(dims=dims, zeros=s.default)) for s in select]
+    for row, coord, agg in aggs_iterator(aggs, decoders):
         for s, m in matricies:
             try:
                 v = _pull(s, agg)
                 m[coord] = v
             except Exception, e:
-                tuple(d.get_index(row) for d in decoders)
                 Log.error("", e)
+
     cube = Cube(query.select, new_edges, {s.name: m for s, m in matricies})
     cube.frum = query
     return cube
 
 
+
+
+
+
+
+
+
 def format_cube_from_aggop(decoders, aggs, start, query, select):
     agg = drill(aggs)
-    matricies = [(s, Matrix(dims=[], zeros=coalesce(s.default, 0 if s.aggregate == "count" else Null))) for s in select]
+    matricies = [(s, Matrix(dims=[], zeros=s.default)) for s in select]
     for s, m in matricies:
         m[tuple()] = _pull(s, agg)
     cube = Cube(query.select, [], {s.name: m for s, m in matricies})
@@ -56,8 +62,7 @@ def format_table(decoders, aggs, start, query, select):
     def data():
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
         is_sent = Matrix(dims=dims, zeros=0)
-        for row, agg in aggs_iterator(aggs, decoders):
-            coord = tuple(d.get_index(row) for d in decoders)
+        for row, coord, agg in aggs_iterator(aggs, decoders):
             is_sent[coord] = 1
 
             output = [d.get_value(c) for c, d in zip(coord, decoders)]
@@ -66,15 +71,16 @@ def format_table(decoders, aggs, start, query, select):
             yield output
 
         # EMIT THE MISSING CELLS IN THE CUBE
-        # for c, v in is_sent:
-        #     if not v:
-        #         record = [d.get_value(c[i]) for i, d in enumerate(decoders)]
-        #         for s in select:
-        #             if s.aggregate == "count":
-        #                 record.append(0)
-        #             else:
-        #                 record.append(None)
-        #         yield record
+        if not query.groupby:
+            for c, v in is_sent:
+                if not v:
+                    record = [d.get_value(c[i]) for i, d in enumerate(decoders)]
+                    for s in select:
+                        if s.aggregate == "count":
+                            record.append(0)
+                        else:
+                            record.append(None)
+                    yield record
 
     return Dict(
         meta={"format": "table"},
@@ -87,7 +93,7 @@ def format_table_from_groupby(decoders, aggs, start, query, select):
     header = [d.edge.name for d in decoders] + select.name
 
     def data():
-        for row, agg in aggs_iterator(aggs, decoders):
+        for row, coord, agg in aggs_iterator(aggs, decoders):
             output = [d.get_value_from_row(row) for d in decoders]
             for s in select:
                 output.append(_pull(s, agg))
@@ -138,7 +144,7 @@ def format_csv(decoders, aggs, start, query, select):
 
 def format_list_from_groupby(decoders, aggs, start, query, select):
     def data():
-        for row, agg in aggs_iterator(aggs, decoders):
+        for row, coord, agg in aggs_iterator(aggs, decoders):
             output = Dict()
             for g, d in zip(query.groupby, decoders):
                 output[g.name] = d.get_value_from_row(row)
@@ -160,8 +166,7 @@ def format_list(decoders, aggs, start, query, select):
     def data():
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
         is_sent = Matrix(dims=dims, zeros=0)
-        for row, agg in aggs_iterator(aggs, decoders):
-            coord = tuple(d.get_index(row) for d in decoders)
+        for row, coord, agg in aggs_iterator(aggs, decoders):
             is_sent[coord] = 1
 
             output = Dict()
@@ -171,6 +176,19 @@ def format_list(decoders, aggs, start, query, select):
             for s in select:
                 output[s.name] = _pull(s, agg)
             yield output
+
+        # EMIT THE MISSING CELLS IN THE CUBE
+        if not query.groupby:
+            for c, v in is_sent:
+                if not v:
+                    output = Dict()
+                    for i, d in enumerate(decoders):
+                        output[query.edges[i].name] = d.get_value(c[i])
+
+                    for s in select:
+                        if s.aggregate == "count":
+                            output[s.name] = 0
+                    yield output
 
     output = Dict(
         meta={"format": "list"},

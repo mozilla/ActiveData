@@ -20,7 +20,7 @@ from pyLibrary.maths import Math
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.namespace import Namespace, convert_list
-from pyLibrary.queries.query import Query
+from pyLibrary.queries.query import QueryOp
 from pyLibrary.times.dates import Date
 
 
@@ -53,7 +53,7 @@ class Rename(Namespace):
             Log.error("{{name|quote}} is not a valid variable name", name=expr)
         elif isinstance(expr, Date):
             return expr
-        elif isinstance(expr, Query):
+        elif isinstance(expr, QueryOp):
             return self._convert_query(expr)
         elif isinstance(expr, Mapping):
             if expr["from"]:
@@ -71,7 +71,7 @@ class Rename(Namespace):
             return expr
 
     def _convert_query(self, query):
-        output = Query(None)
+        output = QueryOp(None)
         output.select = self._convert_clause(query.select)
         output.where = self.convert(query.where)
         output.frum = self._convert_from(query.frum)

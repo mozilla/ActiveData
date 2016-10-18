@@ -624,14 +624,15 @@ def utf82unicode(value):
         try:
             latin1 = _unicode(value.decode("latin1"))
             _Log.error("Can not explain conversion failure, but seems to be latin1", e)
-        except Exception, f:
+        except Exception:
             pass
 
         try:
             a = _unicode(value.decode("iso-8859-1"))
             _Log.error("Can not explain conversion failure, but seems to be iso-8859-1", e)
-        except Exception, f:
+        except Exception:
             pass
+
 
         _Log.error("Can not explain conversion failure of " + type(value).__name__ + "!", e)
 

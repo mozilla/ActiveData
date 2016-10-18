@@ -14,7 +14,6 @@ from __future__ import absolute_import
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import jx
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.maths.randoms import Random
 from pyLibrary.vendor.aespython import key_expander, aes_cipher, cbc_mode
@@ -27,11 +26,14 @@ def encrypt(text, _key, salt=None):
     """
     RETURN JSON OF ENCRYPTED DATA   {"salt":s, "length":l, "data":d}
     """
+    from pyLibrary.queries import jx
+
     if not isinstance(text, unicode):
         Log.error("only unicode is encrypted")
     if _key is None:
         Log.error("Expecting a key")
-
+    if isinstance(_key, str):
+        _key = bytearray(_key)
     if salt is None:
         salt = Random.bytes(16)
 
@@ -67,6 +69,8 @@ def decrypt(data, _key):
     """
     ACCEPT JSON OF ENCRYPTED DATA  {"salt":s, "length":l, "data":d}
     """
+    from pyLibrary.queries import jx
+
     # Key and iv have not been generated or provided, bail out
     if _key is None:
         Log.error("Expecting a key")

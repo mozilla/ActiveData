@@ -43,20 +43,18 @@ class TextLog_usingLogger(TextLog):
         self.queue.add({"template": template, "params": params})
 
     def stop(self):
-        try:
+        with suppress_exception:
             if DEBUG_LOGGING:
                 sys.stdout.write("TextLog_usingLogger sees stop, adding stop to queue\n")
             self.queue.add(Thread.STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
             if DEBUG_LOGGING:
                 sys.stdout.write("TextLog_usingLogger done\n")
-        except Exception, e:
-            pass
 
-        try:
+
+        with suppress_exception:
             self.queue.close()
-        except Exception, f:
-            pass
+
 
 
 def make_log_from_settings(settings):

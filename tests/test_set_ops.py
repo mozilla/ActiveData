@@ -8,14 +8,16 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
-import base_test_class
+from __future__ import unicode_literals
+
+from unittest import skipIf
+
 from pyLibrary.dot import wrap
 from pyLibrary.maths import Math
 from pyLibrary.queries import query
-from tests.base_test_class import ActiveDataBaseTest
-
+from tests import NULL
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
@@ -27,13 +29,13 @@ class TestSetOps(ActiveDataBaseTest):
            "data": [{"a": 1}],
            "query": {
                "select": "*",
-               "from": base_test_class.settings.backend_es.index
+               "from": TEST_TABLE
            },
            "expecting_list": {
                "meta": {"format": "list"}, "data": [{"a": 1}]
            }
        }
-       self._execute_es_tests(test)
+       self.utils.execute_es_tests(test)
 
     def test_simplest(self):
         test = {
@@ -41,7 +43,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"a": "b"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "a"
             },
             "expecting_list": {
@@ -64,7 +66,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_select_on_missing_field(self):
@@ -77,7 +79,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"a": {"b": {"c": 5}}}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "a.b.d"
             },
             "expecting_list": {
@@ -91,7 +93,7 @@ class TestSetOps(ActiveDataBaseTest):
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a.b.d"],
-                "data": [[None], [None], [None], [None], [None]]
+                "data": [[NULL], [NULL], [NULL], [NULL], [NULL]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -102,11 +104,11 @@ class TestSetOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "a.b.d": [None, None, None, None, None]
+                    "a.b.d": [NULL, NULL, NULL, NULL, NULL]
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_single_deep_select(self):
@@ -120,7 +122,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"a": {"b": {"c": 5}}}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "a.b.c",
                 "sort": "a.b.c"  # SO THE CUBE COMPARISON WILL PASS
             },
@@ -145,7 +147,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_single_select_alpha(self):
@@ -154,7 +156,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"a": "b"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "a"
             },
             "expecting_list": {
@@ -177,7 +179,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_single_rename(self):
@@ -187,7 +189,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"a": "b"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"name": "value", "value": "a"}
             },
             "expecting_list": {
@@ -210,7 +212,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_single_no_select(self):
         test = {
@@ -218,7 +220,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"a": "b"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index
+                "from": TEST_TABLE
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
@@ -242,8 +244,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
-
+        self.utils.execute_es_tests(test)
 
     def test_id_select(self):
         """
@@ -255,7 +256,7 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": "_id",
-                "from": base_test_class.settings.backend_es.index
+                "from": TEST_TABLE
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
@@ -279,7 +280,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_id_value_select(self):
         """
@@ -291,7 +292,7 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": "_id",
-                "from": base_test_class.settings.backend_es.index
+                "from": TEST_TABLE
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -300,7 +301,7 @@ class TestSetOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_single_star_select(self):
@@ -310,7 +311,7 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": "*",
-                "from": base_test_class.settings.backend_es.index
+                "from": TEST_TABLE
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
@@ -334,7 +335,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_dot_select(self):
         test = {
@@ -343,7 +344,7 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "select": {"name": "value", "value": "."},
-                "from": base_test_class.settings.backend_es.index
+                "from": TEST_TABLE
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -367,7 +368,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_list_of_values(self):
         test = {
@@ -375,7 +376,7 @@ class TestSetOps(ActiveDataBaseTest):
             "not": "elasticsearch",  # CAN NOT TEST VALUES AGAINST ES
             "data": ["a", "b"],
             "query": {
-                "from": base_test_class.settings.backend_es.index
+                "from": TEST_TABLE
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -401,7 +402,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select_all_from_list_of_objects(self):
         test = {
@@ -410,7 +411,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"a": "d"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "*"
             },
             "expecting_list": {
@@ -439,7 +440,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select_into_children(self):
         test = {
@@ -506,34 +507,34 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index + ".a.b",
+                "from": TEST_TABLE + ".a.b",
                 "select": ["...x", "c"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"x": 5, "c": None},
+                    {"x": 5, "c": NULL},
                     {"x": 3, "c": 13},
                     {"x": 3, "c": 17},
                     {"x": 3, "c": 19},
                     {"x": 7, "c": 23},
                     {"x": 11, "c": 29},
                     {"x": 11, "c": 37},
-                    {"x": 11, "c": None},
+                    {"x": 11, "c": NULL},
                     {"x": 11, "c": 53}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["x", "c"],
                 "data": [
-                    [5, None],
+                    [5, NULL],
                     [3, 13],
                     [3, 17],
                     [3, 19],
                     [7, 23],
                     [11, 29],
                     [11, 37],
-                    [11, None],
+                    [11, NULL],
                     [11, 53]
                 ]
             },
@@ -547,84 +548,84 @@ class TestSetOps(ActiveDataBaseTest):
                 ],
                 "data": {
                     "x": [5, 3, 3, 3, 7, 11, 11, 11, 11],
-                    "c": [None, 13, 17, 19, 23, 29, 37, None, 53]
+                    "c": [NULL, 13, 17, 19, 23, 29, 37, NULL, 53]
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_max_limit(self):
         test = wrap({
             "data": lots_of_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"name": "value", "value": "a"},
                 "limit": 1000000000
             }
         })
 
-        settings = self._fill_es(test)
-        result = self._execute_query(test.query)
+        self.utils.fill_container(test)
+        result = self.utils.execute_query(test.query)
         self.assertEqual(result.meta.es_query.size, query.MAX_LIMIT)
 
     def test_default_limit(self):
         test = wrap({
             "data": lots_of_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"name": "value", "value": "a"},
             },
         })
 
-        settings = self._fill_es(test)
+        self.utils.fill_container(test)
         test.query.format = "list"
-        result = self._execute_query(test.query)
+        result = self.utils.execute_query(test.query)
         self.assertEqual(len(result.data), query.DEFAULT_LIMIT)
 
         test.query.format = "table"
-        result = self._execute_query(test.query)
+        result = self.utils.execute_query(test.query)
         self.assertEqual(len(result.data), query.DEFAULT_LIMIT)
 
         test.query.format = "cube"
-        result = self._execute_query(test.query)
+        result = self.utils.execute_query(test.query)
         self.assertEqual(len(result.data.value), query.DEFAULT_LIMIT)
 
     def test_specific_limit(self):
         test = wrap({
             "data": lots_of_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"name": "value", "value": "a"},
                 "limit": 5
             },
         })
 
-        settings = self._fill_es(test)
+        self.utils.fill_container(test)
         test.query.format = "list"
-        result = self._execute_query(test.query)
+        result = self.utils.execute_query(test.query)
         self.assertEqual(len(result.data), 5)
 
         test.query.format = "table"
-        result = self._execute_query(test.query)
+        result = self.utils.execute_query(test.query)
         self.assertEqual(len(result.data), 5)
 
         test.query.format = "cube"
-        result = self._execute_query(test.query)
+        result = self.utils.execute_query(test.query)
         self.assertEqual(len(result.data.value), 5)
 
     def test_negative_limit(self):
         test = wrap({
             "data": lots_of_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"name": "value", "value": "a"},
                 "limit": -1
             },
         })
 
-        settings = self._fill_es(test)
+        self.utils.fill_container(test)
         test.query.format = "list"
-        self.assertRaises(Exception, self._execute_query, test.query)
+        self.assertRaises(Exception, self.utils.execute_query, test.query)
 
     def test_select_expression(self):
         test = {
@@ -635,7 +636,7 @@ class TestSetOps(ActiveDataBaseTest):
                        {"a": {"b": 1, "c": 1}},
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": [
                     {"name": "sum", "value": {"add": ["a.b", "a.c"]}},
                     {"name": "sub", "value": {"sub": ["a.b", "a.c"]}}
@@ -668,7 +669,7 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select_object(self):
         """
@@ -683,7 +684,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"o": 4, "c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": ["a"],
                 "sort": "a.v"
             },
@@ -693,7 +694,7 @@ class TestSetOps(ActiveDataBaseTest):
                     {"a": {"b": "x", "v": 2}},
                     {"a": {"b": "x", "v": 5}},
                     {"a": {"b": "x", "v": 7}},
-                    None
+                    NULL
                 ]
             },
             "expecting_table": {
@@ -703,7 +704,7 @@ class TestSetOps(ActiveDataBaseTest):
                     [{"b": "x", "v": 2}],
                     [{"b": "x", "v": 5}],
                     [{"b": "x", "v": 7}],
-                    [None]
+                    [NULL]
                 ]
             },
             "expecting_cube": {
@@ -719,12 +720,12 @@ class TestSetOps(ActiveDataBaseTest):
                         {"b": "x", "v": 2},
                         {"b": "x", "v": 5},
                         {"b": "x", "v": 7},
-                        None
+                        NULL
                     ]
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select_leaves(self):
         """
@@ -739,7 +740,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"o": 4, "c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": ["a.*"],
                 "sort": "a.v"
             },
@@ -749,7 +750,7 @@ class TestSetOps(ActiveDataBaseTest):
                     {"a": {"b": "x", "v": 2}},
                     {"a": {"b": "x", "v": 5}},
                     {"a": {"b": "x", "v": 7}},
-                    None
+                    NULL
                 ]
             },
             "expecting_table": {
@@ -759,7 +760,7 @@ class TestSetOps(ActiveDataBaseTest):
                     ["x", 2],
                     ["x", 5],
                     ["x", 7],
-                    [None, None]
+                    [NULL, NULL]
                 ]
             },
             "expecting_cube": {
@@ -771,12 +772,12 @@ class TestSetOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "a.b": ["x", "x", "x", None],
-                    "a.v": [2, 5, 7, None]
+                    "a.b": ["x", "x", "x", NULL],
+                    "a.v": [2, 5, 7, NULL]
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select_value_object(self):
         """
@@ -791,7 +792,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"o": 4, "c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "a",
                 "sort": "a.v"
             },
@@ -801,7 +802,7 @@ class TestSetOps(ActiveDataBaseTest):
                     {"b": "x", "v": 2},
                     {"b": "x", "v": 5},
                     {"b": "x", "v": 7},
-                    None
+                    NULL
                 ]
             },
             "expecting_table": {
@@ -811,7 +812,7 @@ class TestSetOps(ActiveDataBaseTest):
                     [{"b": "x", "v": 2}],
                     [{"b": "x", "v": 5}],
                     [{"b": "x", "v": 7}],
-                    [None]
+                    [NULL]
                 ]
             },
             "expecting_cube": {
@@ -827,12 +828,12 @@ class TestSetOps(ActiveDataBaseTest):
                         {"b": "x", "v": 2},
                         {"b": "x", "v": 5},
                         {"b": "x", "v": 7},
-                        None
+                        NULL
                     ]
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select2_object(self):
         """
@@ -847,7 +848,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"o": 4, "c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": ["o", "a"],
                 "sort": "a.v"
             },
@@ -867,7 +868,7 @@ class TestSetOps(ActiveDataBaseTest):
                     [3, {"b": "x", "v": 2}],
                     [1, {"b": "x", "v": 5}],
                     [2, {"b": "x", "v": 7}],
-                    [4, None]
+                    [4, NULL]
                 ]
             },
             "expecting_cube": {
@@ -883,13 +884,13 @@ class TestSetOps(ActiveDataBaseTest):
                         {"b": "x", "v": 2},
                         {"b": "x", "v": 5},
                         {"b": "x", "v": 7},
-                        None
+                        NULL
                     ],
                     "o": [3, 1, 2, 4]
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_select3_object(self):
         """
@@ -904,7 +905,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"o": 4, "c": "x"}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": ["o", "a.*"],
                 "sort": "a.v"
             },
@@ -924,7 +925,7 @@ class TestSetOps(ActiveDataBaseTest):
                     [3, "x", 2],
                     [1, "x", 5],
                     [2, "x", 7],
-                    [4, None, None]
+                    [4, NULL, NULL]
                 ]
             },
             "expecting_cube": {
@@ -936,14 +937,15 @@ class TestSetOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "a.b": ["x", "x", "x", None],
-                    "a.v": [2, 5, 7, None],
+                    "a.b": ["x", "x", "x", NULL],
+                    "a.v": [2, 5, 7, NULL],
                     "o": [3, 1, 2, 4]
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
+    @skipIf(global_settings.is_travis, "not expected to pass yet")
     def test_select_nested_column(self):
         test = {
             "data": [
@@ -951,7 +953,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"_a": [{"b": 1, "c": 2}, {"b": 2, "c": 2}]}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": "_a"
             },
             "expecting_list": {
@@ -985,5 +987,5 @@ class TestSetOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 

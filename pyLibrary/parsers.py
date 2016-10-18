@@ -40,6 +40,9 @@ class URL(object):
     """
 
     def __init__(self, value):
+        if not _convert:
+            _late_import()
+
         try:
             self.scheme = None
             self.host = None
@@ -51,16 +54,12 @@ class URL(object):
             if value == None:
                 return
 
-            if not _convert:
-                _late_import()
             if value.startswith("file://") or value.startswith("//"):
                 # urlparse DOES NOT WORK IN THESE CASES
                 scheme, suffix = value.split("//")
                 self.scheme = scheme.rstrip(":")
                 parse(self, suffix, 0, 1)
-
                 self.query = wrap(_convert.url_param2value(self.query))
-                self.fragment = self.fragment
             else:
                 output = urlparse(value)
                 self.scheme = output.scheme

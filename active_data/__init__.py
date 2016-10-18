@@ -10,6 +10,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import flask
+
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
 from pyLibrary.times.dates import Date
@@ -43,16 +45,13 @@ def record_request(request, query_, data, error):
 
 
 def cors_wrapper(func):
-    def _default(obj, key, value):
-        v = obj.get(key)
-        if v == None:
-            obj[key] = value
-
     def output(*args, **kwargs):
         response = func(*args, **kwargs)
         headers = response.headers
-        _default(headers, "Access-Control-Allow-Origin", "*")
-        _default(headers, "Content-Type", "application/json")
+        headers.setdefault("Access-Control-Allow-Origin", "*")
+        headers.setdefault("Access-Control-Allow-Headers", flask.request.headers.get("Access-Control-Request-Headers"))
+        headers.setdefault("Access-Control-Allow-Methods", flask.request.headers.get("Access-Control-Request-Methods"))
+        headers.setdefault("Content-Type", "application/json")
         return response
 
     output.provide_automatic_options = False

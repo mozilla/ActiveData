@@ -4,7 +4,7 @@ Provide high speed filtering and aggregation over data see [ActiveData Wiki Page
 
 ## Use it now!
 
-ActiveData is a service!  You can certainly setup your own service, but it is easier to use Mozilla's!
+ActiveData is a service! You can certainly setup your own service, but it is easier to use Mozilla's!
 
 	curl -XPOST -d "{\"from\":\"unittest\"}" http://activedata.allizom.org/query
 
@@ -29,8 +29,8 @@ and install your requirements:
 ## Configuration
 
 The ActiveData service requires a configuration file that will point to the
-default Elasticsearch index.  You can find a few sample config files in
-`resources/config`.  `simple_settings.json` is simplest one:
+default Elasticsearch index. You can find a few sample config files in
+`resources/config`. `simple_settings.json` is simplest one:
 
 ```javascript
     {
@@ -55,7 +55,7 @@ default Elasticsearch index.  You can find a few sample config files in
 ```
 
 The `elasticsearch` property must be updated to point to a specific cluster,
-index and type.  It is used as a default, and to find other indexes by name.
+index and type. It is used as a default, and to find other indexes by name.
 
 ## Run
 
@@ -71,20 +71,20 @@ Jump to your git project directory, set your `PYTHONPATH` and run:
 
 Assuming you used the defaults, you can verify the service is up if you can
 access the Query Tool at [http://localhost:5000/tools/query.html](http://localhost:5000/tools/query.html).
-You may use it to send queries to your instance of the service.  For example:
+You may use it to send queries to your instance of the service. For example:
 
 ```javascript
     {"from":"unittest"}
 ```
 
-This query can be used on [Engineering Productivity's](https://wiki.mozilla.org/EngineeringProductivity) 
+This query can be used on [Engineering Productivity's](https://wiki.mozilla.org/EngineeringProductivity)
 [public ActiveData instance](http://activedata.allizom.org/tools/query.html),
 and you can use a similar query to get a few sample lines from your cluster.
 
 ## Tests
 
 The Github repo also included the test suite, and you can run it against
-your service if you wish.  **The tests will create indexes on your
+your service if you wish. **The tests will create indexes on your
 cluster which are filled, queried, and destroyed**
 
 ```bash

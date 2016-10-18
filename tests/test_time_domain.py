@@ -8,18 +8,15 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
+from __future__ import unicode_literals
 
 from pyLibrary.dot import wrap
-from pyLibrary.queries.expressions import NullOp
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import WEEK, DAY
+from tests import NULL
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
-import base_test_class
-from tests.base_test_class import ActiveDataBaseTest
-
-null = None
 TODAY = Date.today()
 
 test_data_1 = [
@@ -29,7 +26,7 @@ test_data_1 = [
     {"a": "x", "t": Date("today-3day").unix, "v": 5},
     {"a": "x", "t": Date("today-4day").unix, "v": 7},
     {"a": "x", "t": Date("today-5day").unix, "v": 11},
-    {"a": "x", "t": None, "v": 27},
+    {"a": "x", "t": NULL, "v": 27},
     {"a": "y", "t": Date("today-day").unix, "v": 13},
     {"a": "y", "t": Date("today-2day").unix, "v": 17},
     {"a": "y", "t": Date("today-4day").unix, "v": 19},
@@ -37,8 +34,8 @@ test_data_1 = [
 ]
 
 expected_list_1 = wrap([
-    {"t": (TODAY - WEEK).unix, "v": None},
-    {"t": (TODAY - 6 * DAY).unix, "v": None},
+    {"t": (TODAY - WEEK).unix, "v": NULL},
+    {"t": (TODAY - 6 * DAY).unix, "v": NULL},
     {"t": (TODAY - 5 * DAY).unix, "v": 34},
     {"t": (TODAY - 4 * DAY).unix, "v": 26},
     {"t": (TODAY - 3 * DAY).unix, "v": 5},
@@ -48,22 +45,22 @@ expected_list_1 = wrap([
 ])
 
 expected2 = wrap([
-    {"a": "x", "t": (TODAY - WEEK).unix, "v": None},
-    {"a": "x", "t": (TODAY - 6 * DAY).unix, "v": None},
+    {"a": "x", "t": (TODAY - WEEK).unix, "v": NULL},
+    {"a": "x", "t": (TODAY - 6 * DAY).unix, "v": NULL},
     {"a": "x", "t": (TODAY - 5 * DAY).unix, "v": 11},
     {"a": "x", "t": (TODAY - 4 * DAY).unix, "v": 7},
     {"a": "x", "t": (TODAY - 3 * DAY).unix, "v": 5},
     {"a": "x", "t": (TODAY - 2 * DAY).unix, "v": 3},
     {"a": "x", "t": (TODAY - 1 * DAY).unix, "v": 2},
     {"a": "x", "v": 29},
-    {"a": "y", "t": (TODAY - WEEK).unix, "v": None},
-    {"a": "y", "t": (TODAY - 6 * DAY).unix, "v": None},
+    {"a": "y", "t": (TODAY - WEEK).unix, "v": NULL},
+    {"a": "y", "t": (TODAY - 6 * DAY).unix, "v": NULL},
     {"a": "y", "t": (TODAY - 5 * DAY).unix, "v": 23},
     {"a": "y", "t": (TODAY - 4 * DAY).unix, "v": 19},
-    {"a": "y", "t": (TODAY - 3 * DAY).unix, "v": None},
+    {"a": "y", "t": (TODAY - 3 * DAY).unix, "v": NULL},
     {"a": "y", "t": (TODAY - 2 * DAY).unix, "v": 17},
     {"a": "y", "t": (TODAY - 1 * DAY).unix, "v": 13},
-    {"a": "y", "v": None}
+    {"a": "y", "v": NULL}
 ])
 
 test_data_3 = [
@@ -73,7 +70,7 @@ test_data_3 = [
     {"a": TODAY, "t": Date("today-3day").unix, "v": 5},
     {"a": TODAY, "t": Date("today-4day").unix, "v": 7},
     {"a": TODAY, "t": Date("today-5day").unix, "v": 11},
-    {"a": TODAY, "t": None, "v": 27},
+    {"a": TODAY, "t": NULL, "v": 27},
     {"a": TODAY, "t": Date("today-day").unix, "v": 13},
     {"a": TODAY, "t": Date("today-2day").unix, "v": 17},
     {"a": TODAY, "t": Date("today-4day").unix, "v": 19},
@@ -81,15 +78,15 @@ test_data_3 = [
 ]
 
 expected3 = wrap([
-    {"since": -7 * DAY.seconds, "v": NullOp()},
-    {"since": -6 * DAY.seconds, "v": NullOp()},
+    {"since": -7 * DAY.seconds, "v": NULL},
+    {"since": -6 * DAY.seconds, "v": NULL},
     {"since": -5 * DAY.seconds, "v": 34},
     {"since": -4 * DAY.seconds, "v": 26},
     {"since": -3 * DAY.seconds, "v": 5},
     {"since": -2 * DAY.seconds, "v": 20},
     {"since": -1 * DAY.seconds, "v": 15},
     {"since": 0, "v": 2},
-    {"since": NullOp(), "v": 27}
+    {"since": NULL, "v": 27}
 ])
 
 
@@ -99,7 +96,7 @@ class TestTime(ActiveDataBaseTest):
             "metadata": {},
             "data": test_data_1,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": [
                     {
                         "value": "t",
@@ -117,12 +114,12 @@ class TestTime(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [r for r in expected_list_1 if r.v != None]
+                "data": [r for r in expected_list_1]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["t", "v"],
-                "data": [[r.t, r.v] for r in expected_list_1 if r.v != None]
+                "data": [[r.t, r.v] for r in expected_list_1]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -142,14 +139,14 @@ class TestTime(ActiveDataBaseTest):
                 "data": {"v": [r.v for r in expected_list_1]}
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_time2_variables(self):
         test = {
             "metadata": {},
             "data": test_data_1,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": [
                     "a",
                     {
@@ -168,12 +165,12 @@ class TestTime(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [r for r in expected2 if r.v != None]
+                "data": [r for r in expected2]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "t", "v"],
-                "data": [[r.a, r.t, r.v] for r in expected2 if r.v != None]
+                "data": [[r.a, r.t, r.v] for r in expected2]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -203,17 +200,17 @@ class TestTime(ActiveDataBaseTest):
                 "data": {"v": [
                     [r.v for r in expected2 if r.a == "x"],
                     [r.v for r in expected2 if r.a == "y"],
-                    [null for r in expected2 if r.a == "x"]
+                    [NULL for r in expected2 if r.a == "x"]
                 ]}
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_time_expression(self):
         test = {
             "data": test_data_3,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "edges": [
                     {
                         "name": "since",
@@ -232,12 +229,12 @@ class TestTime(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [r for r in expected3 if r.v != None]
+                "data": [r for r in expected3]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["since", "v"],
-                "data": [[r.since, r.v] for r in expected3 if r.v != None]
+                "data": [[r.since, r.v] for r in expected3]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -257,4 +254,4 @@ class TestTime(ActiveDataBaseTest):
                 "data": {"v": [e.v for e in expected3]}
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)

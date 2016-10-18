@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary.dot import split_field, _setdefault
+from pyLibrary.dot import split_field, _setdefault, wrap, literal_field
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -44,6 +44,8 @@ class NullType(object):
         return False
 
     def __add__(self, other):
+        if isinstance(other, list):
+            return other
         return Null
 
     def __radd__(self, other):
@@ -60,7 +62,7 @@ class NullType(object):
                 return self
             key = d["__key__"]
 
-            _assign(o, [key], other)
+            _assign_to_null(o, [key], other)
         except Exception, e:
             raise e
         return other
@@ -105,29 +107,18 @@ class NullType(object):
         return False
 
     def __eq__(self, other):
-        return other is None or isinstance(other, NullType)
+        return other == None or isinstance(other, NullType)
 
     def __ne__(self, other):
         return other is not None and not isinstance(other, NullType)
-
-    def __getitem__(self, key):
-        if isinstance(key, slice):
-            return Null
-        elif isinstance(key, str):
-            key = key.decode("utf8")
-        elif isinstance(key, int):
-            return NullType(self, key)
-
-        path = split_field(key)
-        output = self
-        for p in path:
-            output = NullType(output, p)
-        return output
 
     def __or__(self, other):
         if other is True:
             return True
         return Null
+
+    def __ror__(self, other):
+        return other
 
     def __and__(self, other):
         if other is False:
@@ -155,28 +146,57 @@ class NullType(object):
     def right(self, num=None):
         return Null
 
-    def __getattribute__(self, key):
-        try:
-            output = _get(self, key)
-            return output
-        except Exception, e:
+    def __getitem__(self, key):
+        assert not isinstance(key, str)
+        if isinstance(key, slice):
+            return Null
+        elif isinstance(key, str):
+            key = key.decode("utf8")
+        elif isinstance(key, int):
             return NullType(self, key)
 
+        path = split_field(key)
+        output = self
+        for p in path:
+            output = NullType(output, p)
+        return output
+
+    def __getattribute__(self, key):
+        if key == b"__class__":
+            return NullType
+        key = key.decode('utf8')
+
+        d = _get(self, "__dict__")
+        o = wrap(d["_obj"])
+        k = d["__key__"]
+        if o is None:
+            return Null
+        elif isinstance(o, NullType):
+            return NullType(self, key)
+        v = o.get(k)
+        if v == None:
+            return NullType(self, key)
+        return wrap(v).get(key)
+
     def __setattr__(self, key, value):
-        NullType.__setitem__(self, key, value)
+        key = key.decode('utf8')
+
+        d = _get(self, "__dict__")
+        o = wrap(d["_obj"])
+        k = d["__key__"]
+
+        seq = [k] + [key]
+        _assign_to_null(o, seq, value)
 
     def __setitem__(self, key, value):
-        try:
-            d = _get(self, "__dict__")
-            o = d["_obj"]
-            path = d["__key__"]
-            if path is None:
-                return   # NO NEED TO DO ANYTHING
+        assert not isinstance(key, str)
 
-            seq = [path] + split_field(key)
-            _assign(o, seq, value)
-        except Exception, e:
-            raise e
+        d = _get(self, "__dict__")
+        o = d["_obj"]
+        k = d["__key__"]
+
+        seq = [k] + split_field(key)
+        _assign_to_null(o, seq, value)
 
     def keys(self):
         return set()
@@ -201,7 +221,7 @@ class NullType(object):
 Null = NullType()   # INSTEAD OF None!!!
 
 
-def _assign(obj, path, value, force=True):
+def _assign_to_null(obj, path, value, force=True):
     """
     value IS ASSIGNED TO obj[self.path][key]
     path IS AN ARRAY OF PROPERTY NAMES
@@ -212,7 +232,7 @@ def _assign(obj, path, value, force=True):
         o = d["_obj"]
         p = d["__key__"]
         s = [p]+path
-        return _assign(o, s, value)
+        return _assign_to_null(o, s, value)
 
     path0 = path[0]
 
@@ -228,7 +248,7 @@ def _assign(obj, path, value, force=True):
         if value == None:
             return
         else:
-            old_value = {}
-            obj[path0] = old_value
-    _assign(old_value, path[1:], value)
+            obj[path0] = old_value = {}
+
+    _assign_to_null(old_value, path[1:], value)
 

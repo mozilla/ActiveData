@@ -8,10 +8,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
-from pyLibrary.dot import set_default, wrap
+from __future__ import unicode_literals
 
+from pyLibrary.dot import set_default, wrap
 from tests.base_test_class import ActiveDataBaseTest
 
 
@@ -26,7 +26,7 @@ class TestMetadata(ActiveDataBaseTest):
             ]
         })
 
-        settings = self._fill_es(test, tjson=False)
+        settings = self.utils.fill_container(test, tjson=False)
 
         table_name = settings.index
 
@@ -39,7 +39,7 @@ class TestMetadata(ActiveDataBaseTest):
                 "meta": {"format": "list"}, "data": [{"a": "b"}]
             }
         }
-        self._send_queries(settings, pre_test, delete_index=False)
+        self.utils.send_queries(pre_test)
 
         test = set_default(test, {
             "query": {
@@ -49,12 +49,13 @@ class TestMetadata(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
-                {"table": table_name, "name": "a", "type": "string", "nested_path": None}
-            ]},
+                    {"table": table_name, "name": "a", "type": "string", "nested_path": "."}
+                ]
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["table", "name", "type", "nested_path"],
-                "data": [[table_name, "a", "string", None]]
+                "data": [[table_name, "a", "string", "."]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -68,14 +69,14 @@ class TestMetadata(ActiveDataBaseTest):
                     "table": [table_name],
                     "name": ["a"],
                     "type": ["string"],
-                    "nested_type": [None]
+                    "nested_path": ["."]
                 }
             }
         })
-        self._send_queries(settings, test)
+        self.utils.send_queries(test)
 
     def test_get_nested_columns(self):
-        settings = self._fill_es({
+        settings = self.utils.fill_container({
             "query": {"from": "meta.columns"},  # DUMMY QUERY
             "data": [
                 {"o": 1, "_a": [
@@ -108,7 +109,7 @@ class TestMetadata(ActiveDataBaseTest):
                     {"o": 4, "c": "x"}
                 ]}
         }
-        self._send_queries(settings, pre_test, delete_index=False)
+        self.utils.send_queries(pre_test)
 
         test = {
             "query": {
@@ -119,23 +120,23 @@ class TestMetadata(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"table": table_name, "name": "_a", "type": "nested", "nested_path": "_a"},
-                    {"table": table_name, "name": "_a.b", "type": "string", "nested_path": "_a"},
-                    {"table": table_name, "name": "_a.v", "type": "long", "nested_path": "_a"},
-                    {"table": table_name, "name": "c", "type": "string", "nested_path": None},
-                    {"table": table_name, "name": "o", "type": "long", "nested_path": None},
+                    {"table": table_name, "name": "_a", "type": "nested", "nested_path": "."},
+                    {"table": table_name, "name": "_a.b", "type": "string", "nested_path": ["_a", "."]},
+                    {"table": table_name, "name": "_a.v", "type": "double", "nested_path": ["_a", "."]},
+                    {"table": table_name, "name": "c", "type": "string", "nested_path": "."},
+                    {"table": table_name, "name": "o", "type": "double", "nested_path": "."},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["table", "name", "nested_path", "type"],
                 "data": [
-                    [table_name, "_a", "_a", "nested"],
-                    [table_name, "_a.b", "_a", "string"],
-                    [table_name, "_a.v", "_a", "long"],
-                    [table_name, "c", None, "string"],
-                    [table_name, "o", None, "long"]
+                    [table_name, "_a", ".", "nested"],
+                    [table_name, "_a.b", ["_a", "."], "string"],
+                    [table_name, "_a.v", ["_a", "."], "double"],
+                    [table_name, "c", ".", "string"],
+                    [table_name, "o", ".", "double"]
                 ]
             }
         }
 
-        self._send_queries(settings, test)
+        self.utils.send_queries(test)

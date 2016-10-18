@@ -1,10 +1,11 @@
-curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}"  http://localhost:9200/_cluster/settings
+curl -XPUT http://localhost:9200/_cluster/settings -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}"
 
 
 
 
-curl -XPUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"all\"}}"  http://localhost:9200/_cluster/settings
-
+curl -XPUT http://localhost:9200/_cluster/settings -d "{\"persistent\": {\"cluster.routing.allocation.balance.primary\": 1}}"
+curl -XPUT http://localhost:9200/_cluster/settings -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"all\"}}"
+curl -XPUT http://localhost:9200/_cluster/settings -d '{"transient": {"cluster.routing.allocation.disk.watermark.low": "80%"}}'
 
 curl -XPUT -d '{"index": {"number_of_replicas": 1}}'  http://localhost:9200/_settings
 
@@ -22,3 +23,5 @@ curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : ""}}
 # MOVING TO SPOT TAKES SO LONG WE LOSE THE NODES BEFORE WE CAN USE THEM
 curl -XPUT -d '{"index.routing.allocation.exclude.zone" : "spot"}' localhost:9200/unittest20150803_045709/_settings
 curl -XPUT -d '{"index": {"number_of_replicas": 0}}'  http://localhost:9200/unittest20150803_045709/_settings
+
+

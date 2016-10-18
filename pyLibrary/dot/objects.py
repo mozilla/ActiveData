@@ -15,6 +15,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from types import NoneType, GeneratorType
 from pyLibrary.dot import wrap, unwrap, Dict, Null, NullType, get_attr, set_attr
+from pyLibrary.times.dates import Date
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -105,9 +106,11 @@ def dictwrap(v):
         return DictList(v)
     elif type_ is GeneratorType:
         return (wrap(vv) for vv in v)
+    elif isinstance(v, Mapping):
+        return v
     elif hasattr(v, "as_dict"):
         return v.as_dict()
-    elif isinstance(v, (basestring, int, float, Decimal, datetime, date, Dict, DictList, NullType, NoneType)):
+    elif isinstance(v, (basestring, int, float, Decimal, Date, datetime, date, Dict, DictList, NullType, NoneType)):
         return v
     else:
         return DictObject(v)

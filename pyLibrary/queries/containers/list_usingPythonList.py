@@ -7,31 +7,39 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 from collections import Mapping
+from types import NoneType
+
+import itertools
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList
-from pyLibrary.queries import jx
+from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList, unwrap, join_field, split_field, NullType, Null
+from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.domains import is_keyword
-from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression
+from pyLibrary.queries.expression_compiler import compile_expression
+from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression, TrueOp, jx_expression_to_function, Variable
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
-from pyLibrary.queries.meta import Column
+from pyLibrary.queries.meta import Column, ROOT_PATH
 from pyLibrary.thread.threads import Lock
 from pyLibrary.times.dates import Date
+
+_get = object.__getattribute__
 
 
 class ListContainer(Container):
     def __init__(self, name, data, schema=None):
         #TODO: STORE THIS LIKE A CUBE FOR FASTER ACCESS AND TRANSFORMATION
-        data = list(data)
+        data = list(unwrap(data))
         Container.__init__(self, data, schema)
         if schema == None:
-            self.schema = get_schema_from_list(data)
+            self._schema = get_schema_from_list(data)
+        else:
+            self._schema = schema
         self.name = name
         self.data = data
         self.locker = Lock()  # JUST IN CASE YOU WANT TO DO MORE THAN ONE THING
@@ -40,7 +48,21 @@ class ListContainer(Container):
     def query_path(self):
         return None
 
+    @property
+    def schema(self):
+        return self._schema
+
+    def last(self):
+        """
+        :return:  Last element in the list, or Null
+        """
+        if self.data:
+            return self.data[-1]
+        else:
+            return Null
+
     def query(self, q):
+        q = wrap(q)
         frum = self
         if is_aggs(q):
             frum = list_aggs(frum.data, q)
@@ -51,7 +73,7 @@ class ListContainer(Container):
             except AttributeError, e:
                 pass
 
-            if q.where is not TRUE_FILTER:
+            if q.where is not TRUE_FILTER and not isinstance(q.where, TrueOp):
                 frum = frum.filter(q.where)
 
             if q.sort:
@@ -72,17 +94,15 @@ class ListContainer(Container):
         THE where CLAUSE IS A JSON EXPRESSION FILTER
         """
         command = wrap(command)
-        if command.where == None:
-            filter_ = lambda: True
-        else:
-            filter_ = _exec("temp = lambda row: " + jx_expression(command.where).to_python())
-
+        command_clear = listwrap(command["clear"])
+        command_set = command.set.items()
+        command_where = jx.get(command.where)
 
         for c in self.data:
-            if filter_(c):
-                for k in listwrap(command["clear"]):
+            if command_where(c):
+                for k in command_clear:
                     c[k] = None
-                for k, v in command.set.items():
+                for k, v in command_set:
                     c[k] = v
 
     def filter(self, where):
@@ -93,28 +113,50 @@ class ListContainer(Container):
         if isinstance(where, Mapping):
             exec("def temp(row):\n    return "+jx_expression(where).to_python())
         elif isinstance(where, Expression):
-            exec("def temp(row):\n    return "+where.to_python())
+            temp = compile_expression(where.to_python())
         else:
             temp = where
 
         return ListContainer("from "+self.name, filter(temp, self.data), self.schema)
 
     def sort(self, sort):
-        return ListContainer("from "+self.name, jx.sort(self.data, sort), self.schema)
+        return ListContainer("from "+self.name, jx.sort(self.data, sort, already_normalized=True), self.schema)
+
+    def get(self, select):
+        """
+        :param select: the variable to extract from list
+        :return:  a simple list of the extraction
+        """
+        if isinstance(select, list):
+            return [(d[s] for s in select) for d in self.data]
+        else:
+            return [d[select] for d in self.data]
 
     def select(self, select):
         selects = listwrap(select)
-        if selects[0].value == "." and selects[0].name == ".":
-            return self
 
-        for s in selects:
-            if not isinstance(s.value, basestring) or not is_keyword(s.value):
-                Log.error("selecting on structure, or expressions, not supported yet")
+        if not all(isinstance(s.value, Variable) for s in selects):
+            Log.error("selecting on structure, or expressions, not supported yet")
+        if len(selects) == 1 and isinstance(selects[0].value, Variable) and selects[0].value.var == ".":
+            new_schema = self.schema
+            if selects[0].name == ".":
+                return self
+        else:
+            new_schema = None
 
-        #TODO: DO THIS WITH JUST A SCHEMA TRANSFORM, DO NOT TOUCH DATA
-        #TODO: HANDLE STRUCTURE AND EXPRESSIONS
-        new_schema = {s.name: self.schema[s.value] for s in selects}
-        new_data = [{s.name: d[s.value] for s in selects} for d in self.data]
+        if isinstance(select, list):
+            push_and_pull = [(s.name, jx_expression_to_function(s.value)) for s in selects]
+            def selector(d):
+                output = Dict()
+                for n, p in push_and_pull:
+                    output[n] = p(wrap(d))
+                return unwrap(output)
+
+            new_data = map(selector, self.data)
+        else:
+            select_value = jx_expression_to_function(select.value)
+            new_data = map(select_value, self.data)
+
         return ListContainer("from "+self.name, data=new_data, schema=new_schema)
 
     def window(self, window):
@@ -136,14 +178,29 @@ class ListContainer(Container):
 
         return frum
 
+    def groupby(self, keys, contiguous=False):
+        try:
+            keys = listwrap(keys)
+            get_key = jx_expression_to_function(keys)
+            if not contiguous:
+                data = sorted(self.data, key=get_key)
+
+            def _output():
+                for g, v in itertools.groupby(data, get_key):
+                    group = Dict()
+                    for k, gg in zip(keys, g):
+                        group[k] = gg
+                    yield (group, wrap(list(v)))
+
+            return _output()
+        except Exception, e:
+            Log.error("Problem grouping", e)
+
     def insert(self, documents):
         self.data.extend(documents)
 
     def extend(self, documents):
         self.data.extend(documents)
-
-    def add(self, doc):
-        self.data.append(doc)
 
     def to_dict(self):
         return wrap({
@@ -151,14 +208,19 @@ class ListContainer(Container):
             "data": [{k: unwraplist(v) for k, v in row.items()} for row in self.data]
         })
 
-    def get_columns(self, table=None):
+    def get_columns(self, table_name=None):
         return self.schema.values()
 
+    def add(self, value):
+        self.data.append(value)
+
     def __getitem__(self, item):
+        if item < 0 or len(self.data) <= item:
+            return Null
         return self.data[item]
 
     def __iter__(self):
-        return self.data.__iter__()
+        return (wrap(d) for d in self.data)
 
     def __len__(self):
         return len(self.data)
@@ -167,9 +229,9 @@ def get_schema_from_list(frum):
     """
     SCAN THE LIST FOR COLUMN TYPES
     """
-    columns = {}
-    _get_schema_from_list(frum, columns, prefix=[], nested_path=[])
-    return columns
+    columns = []
+    _get_schema_from_list(frum, columns, prefix=[], nested_path=ROOT_PATH)
+    return Schema(columns)
 
 def _get_schema_from_list(frum, columns, prefix, nested_path):
     """
@@ -177,33 +239,48 @@ def _get_schema_from_list(frum, columns, prefix, nested_path):
     """
     names = {}
     for d in frum:
-        for name, value in d.items():
-            agg_type = names.get(name, "undefined")
-            this_type = _type_to_name[value.__class__]
-            new_type = _merge_type[agg_type][this_type]
-            names[name] = new_type
+        row_type = _type_to_name[d.__class__]
+        if row_type!="object":
+            agg_type = names.get(".", "undefined")
+            names["."] = _merge_type[agg_type][row_type]
+        else:
+            for name, value in d.items():
+                agg_type = names.get(name, "undefined")
+                if isinstance(value, list):
+                    if len(value)==0:
+                        this_type = "undefined"
+                    else:
+                        this_type=_type_to_name[value[0].__class__]
+                        if this_type=="object":
+                            this_type="nested"
+                else:
+                    this_type = _type_to_name[value.__class__]
+                new_type = _merge_type[agg_type][this_type]
+                names[name] = new_type
 
-            if this_type == "object":
-                _get_schema_from_list([value], columns, prefix + [name], nested_path)
-            elif this_type == "nested":
-                np = listwrap(nested_path)
-                newpath = unwraplist([".".join((np[0], name))]+np)
-                _get_schema_from_list(value, columns, prefix + [name], newpath)
+                if this_type == "object":
+                    _get_schema_from_list([value], columns, prefix + [name], nested_path)
+                elif this_type == "nested":
+                    np = listwrap(nested_path)
+                    newpath = unwraplist([join_field(split_field(np[0])+[name])]+np)
+                    _get_schema_from_list(value, columns, prefix + [name], newpath)
 
     for n, t in names.items():
         full_name = ".".join(prefix + [n])
         column = Column(
-            table=".",
             name=full_name,
-            abs_name=full_name,
+            table=".",
+            es_column=full_name,
+            es_index=".",
             type=t,
             nested_path=nested_path
         )
-        columns[column.name] = column
+        columns.append(column)
 
 
 _type_to_name = {
-    None: "undefined",
+    NoneType: "undefined",
+    NullType: "undefined",
     str: "string",
     unicode: "string",
     int: "integer",
@@ -219,6 +296,7 @@ _type_to_name = {
 
 _merge_type = {
     "undefined": {
+        "undefined": "undefined",
         "boolean": "boolean",
         "integer": "integer",
         "long": "long",
@@ -229,6 +307,7 @@ _merge_type = {
         "nested": "nested"
     },
     "boolean": {
+        "undefined": "boolean",
         "boolean": "boolean",
         "integer": "integer",
         "long": "long",
@@ -239,6 +318,7 @@ _merge_type = {
         "nested": None
     },
     "integer": {
+        "undefined": "integer",
         "boolean": "integer",
         "integer": "integer",
         "long": "long",
@@ -249,6 +329,7 @@ _merge_type = {
         "nested": None
     },
     "long": {
+        "undefined": "long",
         "boolean": "long",
         "integer": "long",
         "long": "long",
@@ -259,6 +340,7 @@ _merge_type = {
         "nested": None
     },
     "float": {
+        "undefined": "float",
         "boolean": "float",
         "integer": "float",
         "long": "double",
@@ -269,6 +351,7 @@ _merge_type = {
         "nested": None
     },
     "double": {
+        "undefined": "double",
         "boolean": "double",
         "integer": "double",
         "long": "double",
@@ -279,6 +362,7 @@ _merge_type = {
         "nested": None
     },
     "string": {
+        "undefined": "string",
         "boolean": "string",
         "integer": "string",
         "long": "string",
@@ -289,6 +373,7 @@ _merge_type = {
         "nested": None
     },
     "object": {
+        "undefined": "object",
         "boolean": None,
         "integer": None,
         "long": None,
@@ -299,6 +384,7 @@ _merge_type = {
         "nested": "nested"
     },
     "nested": {
+        "undefined": "nested",
         "boolean": None,
         "integer": None,
         "long": None,
@@ -315,7 +401,7 @@ _merge_type = {
 def _exec(code):
     try:
         temp = None
-        exec code
+        exec "temp = " + code
         return temp
     except Exception, e:
         Log.error("Could not execute {{code|quote}}", code=code, cause=e)

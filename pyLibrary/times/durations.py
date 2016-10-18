@@ -35,6 +35,8 @@ def _delayed_import():
 
 
 class Duration(object):
+    __slots__ = ["_milli", "month"]
+
     def __new__(cls, value=None, **kwargs):
         output = object.__new__(cls)
         if value == None:
@@ -44,8 +46,9 @@ class Duration(object):
                 return output
             else:
                 return None
+
         if Math.is_number(value):
-            output._milli = float(value)*1000
+            output._milli = float(value) * 1000
             output.month = 0
             return output
         elif isinstance(value, basestring):
@@ -54,7 +57,7 @@ class Duration(object):
             output.milli = value.milli
             output.month = value.month
             return output
-        elif Math.is_nan(value):
+        elif isinstance(value, float) and Math.is_nan(value):
             return None
         else:
             from pyLibrary import convert

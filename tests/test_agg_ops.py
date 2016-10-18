@@ -8,12 +8,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
+from __future__ import unicode_literals
 
-import base_test_class
-from tests.base_test_class import ActiveDataBaseTest
-
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 
 class TestAggOps(ActiveDataBaseTest):
@@ -22,7 +20,7 @@ class TestAggOps(ActiveDataBaseTest):
         test = {
             "data": [{"a": i} for i in range(30)],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"aggregate": "count"}
             },
             "expecting_list": {
@@ -41,13 +39,13 @@ class TestAggOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_max(self):
         test = {
             "data": [{"a": i*2} for i in range(30)],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "a", "aggregate": "max"}
             },
             "expecting_list": {
@@ -66,14 +64,14 @@ class TestAggOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_median(self):
         test = {
             "data": [{"a": i**2} for i in range(30)],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "a", "aggregate": "median"}
             },
             "expecting_list": {
@@ -92,14 +90,14 @@ class TestAggOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_percentile(self):
         test = {
             "data": [{"a": i**2} for i in range(30)],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "a", "aggregate": "percentile", "percentile": 0.90}
             },
             "expecting_list": {
@@ -118,13 +116,13 @@ class TestAggOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_stats(self):
         test = {
             "data": [{"a": i**2} for i in range(30)],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "a", "aggregate": "stats"}
             },
             "expecting_list": {
@@ -173,13 +171,13 @@ class TestAggOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_bad_percentile(self):
         test = {
             "data": [{"a": i**2} for i in range(30)],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "a", "aggregate": "percentile", "percentile": "0.90"}
             },
             "expecting_list": {
@@ -187,14 +185,14 @@ class TestAggOps(ActiveDataBaseTest):
             }
         }
 
-        self.assertRaises("Expecting percentile to be a float", self._execute_es_tests, test)
+        self.assertRaises("Expecting percentile to be a float", self.utils.execute_es_tests, test)
 
     def test_many_aggs_on_one_column(self):
         # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
         test = {
             "data": [{"a": i*2} for i in range(30)],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": [
                     {"name": "maxi", "value": "a", "aggregate": "max"},
                     {"name": "mini", "value": "a", "aggregate": "min"},
@@ -213,14 +211,14 @@ class TestAggOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
     def test_simplest_on_value(self):
         test = {
             "data": range(30),
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"aggregate": "count"}
             },
             "expecting_list": {
@@ -239,13 +237,13 @@ class TestAggOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test, tjson=True)
+        self.utils.execute_es_tests(test, tjson=True)
 
     def test_max_on_value(self):
         test = {
             "data": [{"a": i*2} for i in range(30)],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": ".", "aggregate": "max"}
             },
             "expecting_list": {
@@ -264,14 +262,14 @@ class TestAggOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test, tjson=True)
+        self.utils.execute_es_tests(test, tjson=True)
 
 
     def test_max_object_on_value(self):
         test = {
             "data": [{"a": i*2} for i in range(30)],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": [{"value": ".", "aggregate": "max"}]
             },
             "expecting_list": {
@@ -290,14 +288,14 @@ class TestAggOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test, tjson=True)
+        self.utils.execute_es_tests(test, tjson=True)
 
 
     def test_median_on_value(self):
         test = {
             "data": [i**2 for i in range(30)],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": ".", "aggregate": "median"}
             },
             "expecting_list": {
@@ -316,7 +314,7 @@ class TestAggOps(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test, tjson=True)
+        self.utils.execute_es_tests(test, tjson=True)
 
 
     def test_many_aggs_on_value(self):
@@ -324,7 +322,7 @@ class TestAggOps(ActiveDataBaseTest):
         test = {
             "data": [i*2 for i in range(30)],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": [
                     {"name": "maxi", "value": ".", "aggregate": "max"},
                     {"name": "mini", "value": ".", "aggregate": "min"},
@@ -343,7 +341,7 @@ class TestAggOps(ActiveDataBaseTest):
                 ]
             }
         }
-        self._execute_es_tests(test, tjson=True)
+        self.utils.execute_es_tests(test, tjson=True)
 
     def test_cardinality(self):
         test = {
@@ -357,7 +355,7 @@ class TestAggOps(ActiveDataBaseTest):
                 {"a": 3, "d": "x"},
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": [
                     {"value": "a", "aggregate": "cardinality"},
                     {"value": "b", "aggregate": "cardinality"},
@@ -370,7 +368,7 @@ class TestAggOps(ActiveDataBaseTest):
                 "data": {"a": 3, "b": 1, "c": 0, "d": 1}
             }
         }
-        self._execute_es_tests(test, tjson=False)
+        self.utils.execute_es_tests(test, tjson=False)
 
     def test_union(self):
         test = {
@@ -394,14 +392,14 @@ class TestAggOps(ActiveDataBaseTest):
                 {"b": "z"},
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": [
                     {"value": "b", "aggregate": "union"}
                 ]
             },
             "expecting_list": {
                 "meta": {"format": "value"},
-                "data": {"b": ["x", "y", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "z"]}
+                "data": {"b": {"x", "y", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "z"}}
             }
         }
-        self._execute_es_tests(test, tjson=False)
+        self.utils.execute_es_tests(test, tjson=False)

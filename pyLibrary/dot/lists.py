@@ -10,6 +10,8 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+
+from collections import Mapping
 from copy import deepcopy
 
 from pyLibrary.dot.nones import Null
@@ -74,11 +76,17 @@ class DictList(list):
         return wrap(_get(self, "list")[index])
 
     def __setitem__(self, i, y):
-        _list = _get(self, "list")
-        if i <= len(_list):
-            for i in range(len(_list), i):
-                _list.append(None)
-        _list[i] = unwrap(y)
+        try:
+            _list = _get(self, "list")
+            if i <= len(_list):
+                for i in range(len(_list), i):
+                    _list.append(None)
+            _list[i] = unwrap(y)
+        except Exception, e:
+            if not _dictwrap:
+                _late_import()
+
+            _Log.error("problem", cause = e)
 
     def __getattribute__(self, key):
         try:
@@ -88,9 +96,9 @@ class DictList(list):
         except Exception, e:
             if key[0:2] == "__":  # SYSTEM LEVEL ATTRIBUTES CAN NOT BE USED FOR SELECT
                 raise e
-        return DictList.select(self, key)
+        return DictList.get(self, key)
 
-    def select(self, key):
+    def get(self, key):
         """
         simple `select`
         """
@@ -99,8 +107,20 @@ class DictList(list):
 
         return DictList(vals=[unwrap(coalesce(_dictwrap(v), Null)[key]) for v in _get(self, "list")])
 
+    def select(self, key):
+        if not _Log:
+            _late_import()
+
+        _Log.error("Not supported.  Use `get()`")
+
     def filter(self, _filter):
         return DictList(vals=[unwrap(u) for u in (wrap(v) for v in _get(self, "list")) if _filter(u)])
+
+    def __delslice__(self, i, j):
+        _Log.error("Can not perform del on slice: modulo arithmetic was performed on the parameters.  You can try using clear()")
+
+    def __clear__(self):
+        self.list = []
 
     def __iter__(self):
         return (wrap(v) for v in _get(self, "list"))
@@ -151,8 +171,8 @@ class DictList(list):
             _get(self, "list").append(unwrap(v))
         return self
 
-    def pop(self):
-        return wrap(_get(self, "list").pop())
+    def pop(self, index=None):
+        return wrap(_get(self, "list").pop(index))
 
     def __add__(self, value):
         output = list(_get(self, "list"))

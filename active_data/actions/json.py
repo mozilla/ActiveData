@@ -14,12 +14,13 @@ import flask
 from flask import Response
 
 from active_data import cors_wrapper
+from active_data.actions.query import _send_error
 from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict
 from pyLibrary.dot import wrap
-from pyLibrary.queries import jx
+from pyLibrary.queries import jx, wrap_from
 from pyLibrary.queries.containers import Container
 from pyLibrary.times.timer import Timer
 
@@ -33,12 +34,13 @@ def get_raw_json(path):
             args = wrap(Dict(**flask.request.args))
             limit = args.limit if args.limit else 10
             args.limit = None
+            frum = wrap_from(path)
             result = jx.run({
                 "from": path,
                 "where": {"eq": args},
                 "limit": limit,
                 "format": "list"
-            })
+            }, frum)
 
             if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                 result = result.format("list")
@@ -53,5 +55,5 @@ def get_raw_json(path):
         )
     except Exception, e:
         e = Except.wrap(e)
-        return send_error(active_data_timer, body, e)
+        return _send_error(active_data_timer, body, e)
 

@@ -47,7 +47,6 @@ config = None
 @app.route('/<path:path>', methods=['OPTIONS', 'HEAD'])
 @cors_wrapper
 def _head(path):
-    record_request(flask.request, None, flask.request.get_data(), None)
     return Response(b'', status=200)
 
 app.add_url_rule('/tools/<path:filename>', None, download)
@@ -173,9 +172,12 @@ def setup_ssl():
 
 
 def _exit():
+    Log.note("Got request to shutdown")
     shutdown = flask.request.environ.get('werkzeug.server.shutdown')
     if shutdown:
         shutdown()
+    else:
+        Log.warning("werkzeug.server.shutdown does not exist")
 
     return Response(
         convert.unicode2utf8(OVERVIEW),

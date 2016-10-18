@@ -14,9 +14,9 @@ from collections import Mapping
 from types import FunctionType
 
 from pyLibrary import dot, convert
-from pyLibrary.debugs.exceptions import Except
+from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, wrap, _get_attr, Null
+from pyLibrary.dot import set_default, wrap, _get_attr, Null, coalesce
 from pyLibrary.maths.randoms import Random
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Lock
@@ -58,10 +58,8 @@ def new_instance(settings):
         Log.error("Can not find class {{class}}", {"class": path}, cause=e)
 
     settings['class'] = None
-    try:
+    with suppress_exception:
         return constructor(settings=settings)  # MAYBE IT TAKES A SETTINGS OBJECT
-    except Exception, _:
-        pass
 
     try:
         return constructor(**settings)
@@ -253,25 +251,28 @@ def wrap_function(cache_store, func_):
 
             timeout, key, value, exception = _cache.get(args, (Null, Null, Null, Null))
 
-            if now > timeout:
-                value = func(self, *args)
+        if now > timeout:
+            value = func(self, *args)
+            with cache_store.locker:
                 _cache[args] = (now + cache_store.timeout, args, value, None)
-                return value
+            return value
 
-            if value == None:
-                if exception == None:
-                    try:
-                        value = func(self, *args)
+        if value == None:
+            if exception == None:
+                try:
+                    value = func(self, *args)
+                    with cache_store.locker:
                         _cache[args] = (now + cache_store.timeout, args, value, None)
-                        return value
-                    except Exception, e:
-                        e = Except.wrap(e)
+                    return value
+                except Exception, e:
+                    e = Except.wrap(e)
+                    with cache_store.locker:
                         _cache[args] = (now + cache_store.timeout, args, None, e)
-                        raise e
-                else:
-                    raise exception
+                    raise e
             else:
-                return value
+                raise exception
+        else:
+            return value
 
     return output
 
@@ -299,19 +300,21 @@ class _FakeLock():
 
 def DataClass(name, columns):
     """
-    Each column has {"name", "required", "nulls", "default"} properties
+    Each column has {"name", "required", "nulls", "default", "type"} properties
     """
 
-    columns = wrap([{"name": c, "required": True, "nulls": False} if isinstance(c, basestring) else c for c in columns])
+    columns = wrap([{"name": c, "required": True, "nulls": False, "type": object} if isinstance(c, basestring) else c for c in columns])
     slots = columns.name
     required = wrap(filter(lambda c: c.required and not c.nulls and not c.default, columns)).name
     nulls = wrap(filter(lambda c: c.nulls, columns)).name
+    types = {c.name: coalesce(c.type, object) for c in columns}
 
     code = expand_template("""
 from __future__ import unicode_literals
 from collections import Mapping
 
 meta = None
+types_ = {{types}}
 
 class {{name}}(Mapping):
     __slots__ = {{slots}}
@@ -341,6 +344,8 @@ class {{name}}(Mapping):
     def __setattr__(self, item, value):
         if item not in {{slots}}:
             Log.error("{"+"{item|quote}} not valid attribute", item=item)
+        #if not isinstance(value, types_[item]):
+        #    Log.error("{"+"{item|quote}} not of type "+"{"+"{type}}", item=item, type=types_[item])
         object.__setattr__(self, item, value)
 
     def __getattr__(self, item):
@@ -384,17 +389,16 @@ temp = {{name}}
             "nulls": "{" + (", ".join(convert.value2quote(s) for s in nulls)) + "}",
             "len_slots": len(slots),
             "dict": "{" + (", ".join(convert.value2quote(s) + ": self." + s for s in slots)) + "}",
-            "assign": "; ".join("_set(output, "+convert.value2quote(s)+", self."+s+")" for s in slots)
+            "assign": "; ".join("_set(output, "+convert.value2quote(s)+", self."+s+")" for s in slots),
+            "types": "{" + (",".join(convert.string2quote(k) + ": " + v.__name__ for k, v in types.items())) + "}"
         }
     )
 
     return _exec(code, name)
 
+
 def _exec(code, name):
     temp = None
-    exec(code)
-    globals()[name]=temp
+    exec (code)
+    globals()[name] = temp
     return temp
-
-
-

@@ -8,11 +8,11 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
-import base_test_class
+from __future__ import unicode_literals
 
-from tests.base_test_class import ActiveDataBaseTest
+from tests import NULL
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 
 class TestEdge2(ActiveDataBaseTest):
@@ -22,42 +22,45 @@ class TestEdge2(ActiveDataBaseTest):
             "metadata": {},
             "data": two_dim_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"aggregate": "count"},
-                "edges": ["a", "b"]
+                "edges": [
+                    {"value": "a", "domain": {"type": "set", "partitions": ["x", "y", "z"]}},
+                    "b"
+                ]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
                     {"a": "x", "b": "m", "count": 2},
                     {"a": "x", "b": "n", "count": 1},
-                    {"a": "x", "b": None, "count": 1},
+                    {"a": "x", "b": NULL, "count": 1},
                     {"a": "y", "b": "m", "count": 1},
                     {"a": "y", "b": "n", "count": 2},
-                    {"a": "y", "b": None, "count": 1},
+                    {"a": "y", "b": NULL, "count": 1},
+                    {"a": NULL, "b": "m", "count": 1},
+                    {"a": NULL, "b": "n", "count": 1},
+                    {"a": "z", "b": NULL, "count": 0},
+                    {"a": NULL, "b": NULL, "count": 0},
                     {"a": "z", "b": "m", "count": 0},
-                    {"a": "z", "b": "n", "count": 0},
-                    {"a": "z", "b": None, "count": 0},
-                    {"a": None, "b": "m", "count": 1},
-                    {"a": None, "b": "n", "count": 1},
-                    {"a": None, "b": None, "count": 0}
+                    {"a": "z", "b": "n", "count": 0}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "b", "count"],
                 "data": [
+                    [NULL, "m", 1],
+                    [NULL, "n", 1],
+                    ["x", NULL, 1],
                     ["x", "m", 2],
                     ["x", "n", 1],
-                    ["x", None, 1],
+                    ["y", NULL, 1],
                     ["y", "m", 1],
                     ["y", "n", 2],
-                    ["y", None, 1],
+                    ["z", NULL, 0],
+                    [NULL, NULL, 0],
                     ["z", "m", 0],
-                    ["z", "n", 0],
-                    ["z", None, 0],
-                    [None, "m", 1],
-                    [None, "n", 1],
-                    [None, None, 0]
+                    ["z", "n", 0]
                 ]
             },
             "expecting_cube": {
@@ -65,20 +68,45 @@ class TestEdge2(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "a",
-                        "type": "string",
                         "allowNulls": True,
                         "domain": {
                             "type": "set",
-                            "partitions": ["x", "y", "z"]
+                            "partitions": [
+                                {
+                                    "dataIndex": 0,
+                                    "name": "x",
+                                    "value": "x"
+                                },
+                                {
+                                    "dataIndex": 1,
+                                    "name": "y",
+                                    "value": "y"
+                                },
+                                {
+                                    "dataIndex": 2,
+                                    "name": "z",
+                                    "value": "z"
+                                }
+                            ]
                         }
                     },
                     {
                         "name": "b",
-                        "type": "string",
                         "allowNulls": True,
                         "domain": {
                             "type": "set",
-                            "partitions": ["m", "n"]
+                            "partitions": [
+                                {
+                                    "dataIndex": 0,
+                                    "name": "m",
+                                    "value": "m"
+                                },
+                                {
+                                    "dataIndex": 1,
+                                    "name": "n",
+                                    "value": "n"
+                                }
+                            ]
                         }
                     }
                 ],
@@ -92,7 +120,7 @@ class TestEdge2(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_sum_rows(self):
         test = {
@@ -100,7 +128,7 @@ class TestEdge2(ActiveDataBaseTest):
             "metadata": {},
             "data": two_dim_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "sum"},
                 "edges": ["a", "b"]
             },
@@ -109,12 +137,12 @@ class TestEdge2(ActiveDataBaseTest):
                 "data": [
                     {"a": "x", "b": "m", "v": 29},
                     {"a": "x", "b": "n", "v": 3},
-                    {"a": "x", "b": None, "v": 5},
+                    {"a": "x", "b": NULL, "v": 5},
                     {"a": "y", "b": "m", "v": 7},
                     {"a": "y", "b": "n", "v": 50},
-                    {"a": "y", "b": None, "v": 13},
-                    {"a": None, "b": "m", "v": 17},
-                    {"a": None, "b": "n", "v": 19}
+                    {"a": "y", "b": NULL, "v": 13},
+                    {"a": NULL, "b": "m", "v": 17},
+                    {"a": NULL, "b": "n", "v": 19}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -122,12 +150,12 @@ class TestEdge2(ActiveDataBaseTest):
                 "data": [
                     ["x", "m", 29],
                     ["x", "n", 3],
-                    ["x", None, 5],
+                    ["x", NULL, 5],
                     ["y", "m", 7],
                     ["y", "n", 50],
-                    ["y", None, 13],
-                    [None, "m", 17],
-                    [None, "n", 19]
+                    ["y", NULL, 13],
+                    [NULL, "m", 17],
+                    [NULL, "n", 19]
                 ]
             },
             "expecting_cube": {
@@ -160,12 +188,12 @@ class TestEdge2(ActiveDataBaseTest):
                     "v": [
                         [29, 3, 5],
                         [7, 50, 13],
-                        [17, 19, None]
+                        [17, 19, NULL]
                     ]
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_avg_rows_w_default(self):
         test = {
@@ -183,7 +211,7 @@ class TestEdge2(ActiveDataBaseTest):
                 {"b": "n", "v": 19}
             ],
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "average", "default": 0},
                 "edges": ["a", "b"]
             },
@@ -203,14 +231,14 @@ class TestEdge2(ActiveDataBaseTest):
                 "meta": {"format": "table"},
                 "header": ["a", "b", "v"],
                 "data": [
-                    ["x", None, 0],
+                    ["x", NULL, 0],
                     ["x", "m", 2],
                     ["x", "n", 3],
-                    ["y", None, 13],
+                    ["y", NULL, 13],
                     ["y", "m", 7],
                     ["y", "n", 0],
-                    [None, "m", 17],
-                    [None, "n", 19]
+                    [NULL, "m", 17],
+                    [NULL, "n", 19]
                 ]
             },
             "expecting_cube": {
@@ -264,7 +292,7 @@ class TestEdge2(ActiveDataBaseTest):
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
 
@@ -274,7 +302,7 @@ class TestEdge2(ActiveDataBaseTest):
             "metadata": {},
             "data": two_dim_test_data,
             "query": {
-                "from": base_test_class.settings.backend_es.index,
+                "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "sum"},
                 "edges": [
                     {
@@ -298,12 +326,16 @@ class TestEdge2(ActiveDataBaseTest):
                 "data": [
                     {"a": "x", "b": "m", "v": 29},
                     {"a": "x", "b": "n", "v": 3},
-                    {"a": "x", "b": None, "v": 5},
+                    {"a": "x", "b": NULL, "v": 5},
                     {"a": "y", "b": "m", "v": 7},
                     {"a": "y", "b": "n", "v": 50},
-                    {"a": "y", "b": None, "v": 13},
-                    {"a": None, "b": "m", "v": 17},
-                    {"a": None, "b": "n", "v": 19}
+                    {"a": "y", "b": NULL, "v": 13},
+                    {"a": "z", "b": "m"},
+                    {"a": "z", "b": "n"},
+                    {"a": "z"},
+                    {"a": NULL, "b": "m", "v": 17},
+                    {"a": NULL, "b": "n", "v": 19},
+                    {}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -311,12 +343,16 @@ class TestEdge2(ActiveDataBaseTest):
                 "data": [
                     ["x", "m", 29],
                     ["x", "n", 3],
-                    ["x", None, 5],
+                    ["x", NULL, 5],
                     ["y", "m", 7],
                     ["y", "n", 50],
-                    ["y", None, 13],
-                    [None, "m", 17],
-                    [None, "n", 19]
+                    ["y", NULL, 13],
+                    ["z", "m", NULL],
+                    ["z", "n", NULL],
+                    ["z", NULL, NULL],
+                    [NULL, "m", 17],
+                    [NULL, "n", 19],
+                    [NULL, NULL, NULL]
                 ]
             },
             "expecting_cube": {
@@ -352,24 +388,24 @@ class TestEdge2(ActiveDataBaseTest):
                     "v": [
                         [29, 3, 5],
                         [7, 50, 13],
-                        [None, None, None],
-                        [17, 19, None]
+                        [NULL, NULL, NULL],
+                        [17, 19, NULL]
                     ]
                 }
             }
         }
-        self._execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
 
 two_dim_test_data = [
     {"a": "x", "b": "m", "v": 2},
     {"a": "x", "b": "n", "v": 3},
-    {"a": "x", "b": None, "v": 5},
+    {"a": "x", "b": NULL, "v": 5},
     {"a": "y", "b": "m", "v": 7},
     {"a": "y", "b": "n", "v": 11},
-    {"a": "y", "b": None, "v": 13},
-    {"a": None, "b": "m", "v": 17},
-    {"a": None, "b": "n", "v": 19},
+    {"a": "y", "b": NULL, "v": 13},
+    {"a": NULL, "b": "m", "v": 17},
+    {"a": NULL, "b": "n", "v": 19},
     {"a": "x", "b": "m", "v": 27},
     {"a": "y", "b": "n", "v": 39}
 ]

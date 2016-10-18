@@ -7,17 +7,19 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from collections import Mapping
 from copy import copy
 from types import GeneratorType
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, split_field, wrap, DictList
+from pyLibrary.dot import set_default, split_field, wrap, join_field
 from pyLibrary.dot.dicts import Dict
+
+STRUCT = ["object", "nested"]
 
 type2container = Dict()
 config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
@@ -41,14 +43,16 @@ def _delayed_imports():
         _MySQL = None
 
     from pyLibrary.queries.jx_usingES import FromES as _FromES
-    from pyLibrary.queries.containers.lists import ListContainer as _ListContainer
+    from pyLibrary.queries.containers.list_usingPythonList import ListContainer as _ListContainer
     from pyLibrary.queries.containers.cube import Cube as _Cube
     from pyLibrary.queries.jx import run as _run
-    from pyLibrary.queries.query import Query as _Query
+    from pyLibrary.queries.query import QueryOp as _Query
+    from pyLibrary.queries.containers import Table_usingSQLite
 
     set_default(type2container, {
         "elasticsearch": _FromES,
         "mysql": _MySQL,
+        "sqlite": Table_usingSQLite,
         "memory": None
     })
 
@@ -58,7 +62,11 @@ def _delayed_imports():
 
 
 class Container(object):
-    __slots__ = ["data", "schema", "namespaces"]
+    """
+    Containers are data storage capable of handing queries on that storage
+    """
+
+    __slots__ = ["data", "namespaces"]
 
     @classmethod
     def new_instance(type, frum, schema=None):
@@ -83,7 +91,7 @@ class Container(object):
 
             settings = set_default(
                 {
-                    "index": split_field(frum)[0],
+                    "index": join_field(split_field(frum)[:1:]),
                     "name": frum,
                 },
                 config.default.settings
@@ -97,7 +105,7 @@ class Container(object):
             elif frum["from"]:
                 frum = copy(frum)
                 frum["from"] = Container(frum["from"])
-                return _Query(frum)
+                return _Query.wrap(frum)
             else:
                 Log.error("Do not know how to handle {{frum|json}}", frum=frum)
         else:
@@ -111,9 +119,7 @@ class Container(object):
 
         self.data = frum
         if isinstance(schema, list):
-            Log.error("expecting map from abs_name to column object")
-        self.schema = schema
-        # self.namespaces = wrap([_Normal()])
+            Log.error("expecting map from es_column to column object")
 
     def query(self, query):
         if query.frum != self:
@@ -136,7 +142,6 @@ class Container(object):
         Log.error("not implemented")
 
     def window(self, window):
-        _ = window
         Log.error("not implemented")
 
     def having(self, having):
@@ -147,9 +152,12 @@ class Container(object):
         _ = format
         Log.error("not implemented")
 
-    def get_columns(self, table):
+    def get_columns(self, table_name):
         """
         USE THE frum TO DETERMINE THE COLUMNS
         """
         Log.error("Not implemented")
 
+    @property
+    def schema(self):
+        Log.error("Not implemented")

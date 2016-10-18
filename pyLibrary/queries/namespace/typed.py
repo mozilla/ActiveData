@@ -7,23 +7,28 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from collections import Mapping
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, wrap, Dict, Null
+from pyLibrary.dot import set_default, wrap, split_field, join_field
 from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expressions import Expression
 from pyLibrary.queries.namespace import convert_list, Namespace
-from pyLibrary.queries.query import Query
+from pyLibrary.queries.query import QueryOp
 from pyLibrary.times.dates import Date
 
 
 class Typed(Namespace):
+    """
+     NOTE: USING THE ".$value" SUFFIX IS DEPRECIATED: CURRENT VERSIONS OF ES ARE STRONGLY TYPED, LEAVING NO
+     CASE WHERE A GENERAL "value" IS USEFUL.  WE WOULD LIKE TO MOVE TO ".$number", ".$string", ETC. FOR
+     EACH TYPE, LIKE WE DO WITH DATABASES
+    """
 
     def __init__(self):
         self.converter_map = {
@@ -40,7 +45,7 @@ class Typed(Namespace):
         """
         if isinstance(expr, Expression):
             vars_ = expr.vars()
-            rename = {v: v+".$value" for v in vars_}
+            rename = {v: join_field(split_field(v)+["$value"]) for v in vars_}
             return expr.map(rename)
 
         if expr is True or expr == None or expr is False:
@@ -56,7 +61,7 @@ class Typed(Namespace):
             Log.error("{{name|quote}} is not a valid variable name", name=expr)
         elif isinstance(expr, Date):
             return expr
-        elif isinstance(expr, Query):
+        elif isinstance(expr, QueryOp):
             return self._convert_query(expr)
         elif isinstance(expr, Mapping):
             if expr["from"]:
@@ -72,7 +77,7 @@ class Typed(Namespace):
             return wrap([self.convert(value) for value in expr])
 
     def _convert_query(self, query):
-        output = Query(Null)
+        output = QueryOp("from", None)
         output.select = self._convert_clause(query.select)
         output.where = self.convert(query.where)
         output.frum = self._convert_from(query.frum)

@@ -12,6 +12,15 @@
 			},
 			"dynamic_templates": [
 				{
+					"default_numbers": {
+						"mapping": {
+							"type": "double"
+						},
+						"match_mapping_type": "long",
+						"match": "*"
+					}
+				},
+				{
 					"default_strings": {
 						"mapping": {
 							"index": "not_analyzed",

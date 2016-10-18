@@ -12,6 +12,11 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
 from types import GeneratorType, NoneType, ModuleType
+from __builtin__ import zip as _builtin_zip
+
+
+SELF_PATH = "."
+ROOT_PATH = [SELF_PATH]
 
 
 _get = object.__getattribute__
@@ -53,7 +58,7 @@ def zip(keys, values):
 
 def literal_field(field):
     """
-    RETURN SAME WITH . ESCAPED
+    RETURN SAME WITH DOTS (`.`) ESCAPED
     """
     try:
         return field.replace(".", "\.")
@@ -83,6 +88,41 @@ def join_field(field):
     if not potent:
         return "."
     return ".".join([f.replace(".", "\.") for f in potent])
+
+
+def startswith_field(field, prefix):
+    """
+    RETURN True IF field PATH STRING STARTS WITH prefix PATH STRING
+    """
+    if prefix == ".":
+        return True
+
+    if field.startswith(prefix):
+        if len(field) == len(prefix) or field[len(prefix)] == ".":
+            return True
+    return False
+
+
+def relative_field(field, parent):
+    """
+    RETURN field PATH WITH RESPECT TO parent
+    """
+    if parent==".":
+        return field
+
+    field_path = split_field(field)
+    parent_path = split_field(parent)
+    common = 0
+    for f, p in _builtin_zip(field_path, parent_path):
+        if f != p:
+            break
+        common += 1
+
+    if len(parent_path) == common:
+        return join_field(field_path[common:])
+    else:
+        dots = "." * (len(parent_path) - common)
+        return dots + "." + join_field(field_path[common:])
 
 
 def hash_value(v):
@@ -131,8 +171,8 @@ def _all_default(d, default, seen=None):
         return
     if isinstance(default, Dict):
         default = object.__getattribute__(default, "_dict")  # REACH IN AND GET THE dict
-        from pyLibrary.debugs.logs import Log
-        Log.error("strictly dict (or object) allowed: got {{type}}", type=default.__class__.__name__)
+        # from pyLibrary.debugs.logs import Log
+        # Log.error("strictly dict (or object) allowed: got {{type}}", type=default.__class__.__name__)
 
     for k, default_value in default.items():
         default_value = unwrap(default_value)  # TWO DIFFERENT Dicts CAN SHARE id() BECAUSE THEY ARE SHORT LIVED
@@ -181,14 +221,16 @@ def _getdefault(obj, key):
 
     try:
         return getattr(obj, key)
-    except Exception, e:
+    except Exception, f:
         pass
+
 
     try:
         if float(key) == round(float(key), 0):
             return obj[int(key)]
     except Exception, f:
         pass
+
 
     # TODO: FIGURE OUT WHY THIS WAS EVER HERE (AND MAKE A TEST)
     # try:
@@ -245,6 +287,7 @@ def _get_attr(obj, path):
 
         # TRY FILESYSTEM
         from pyLibrary.env.files import File
+        possible_error = None
         if File.new_instance(File(obj.__file__).parent, attr_name).set_extension("py").exists:
             try:
                 # THIS CASE IS WHEN THE __init__.py DOES NOT IMPORT THE SUBDIR FILE
@@ -258,30 +301,30 @@ def _get_attr(obj, path):
                     output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[1]], 0)
                     return _get_attr(output, path[1:])
             except Exception, e:
-                pass
+                from pyLibrary.debugs.exceptions import Except
+                possible_error = Except.wrap(e)
 
         # TRY A CASE-INSENSITIVE MATCH
         attr_name = lower_match(attr_name, dir(obj))
         if not attr_name:
             from pyLibrary.debugs.logs import Log
-            Log.error(PATH_NOT_FOUND)
-        elif len(attr_name)>1:
+            Log.warning(PATH_NOT_FOUND + ". Returning None.", cause=possible_error)
+        elif len(attr_name) > 1:
             from pyLibrary.debugs.logs import Log
-            Log.error(AMBIGUOUS_PATH_FOUND+" {{paths}}",  paths=attr_name)
+            Log.error(AMBIGUOUS_PATH_FOUND + " {{paths}}", paths=attr_name)
         else:
             return _get_attr(obj[attr_name[0]], path[1:])
-
 
     try:
         obj = obj[int(attr_name)]
         return _get_attr(obj, path[1:])
-    except Exception, e:
+    except Exception:
         pass
 
     try:
         obj = getattr(obj, attr_name)
         return _get_attr(obj, path[1:])
-    except Exception, e:
+    except Exception:
         pass
 
     try:
@@ -449,6 +492,8 @@ def listwrap(value):
         return DictList()
     elif isinstance(value, list):
         return wrap(value)
+    elif isinstance(value, set):
+        return wrap(list(value))
     else:
         return wrap([unwrap(value)])
 

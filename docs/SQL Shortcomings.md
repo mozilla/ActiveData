@@ -9,16 +9,28 @@ benefits of JSON query expressions.
 
 This document serves to provide motivation for a query language beyond SQL. JSON query expressions are a query language optimized specifically for hierarchical databases, nested JSON, and data warehouses.  
 
+Some common requests that are hard to don in SQL
+http://www2.sqlite.org/cvstrac/wiki?p=UnsupportedSqlAnalyticalFunctions
+
+
+* **Calculate a running total** - Show the cumulative salary within a department row by row, with each row including a summation of the prior rows' salary.
+* **Find percentages within a group** - Show the percentage of the total salary paid to an individual in a certain department. Take their salary and divide it by the sum of the salary in the department.
+* **Top-N queries** - Find the top N highest-paid people or the top N sales by region.
+* **Compute a moving average** - Average the current row's value and the previous N rows values together.
+* **Perform ranking queries** - Show the relative rank of an individual's salary within their department. 
+
+
+
 JSON vs SQL
 ------------
 
-A deliberate feature of a JSON expressions is it's JSON.  It can be easily declared in Python and Javascript, and easily manipulated by code.  
+A deliberate feature of a JSON expressions is it's JSON. It can be easily declared in Python and Javascript, and easily manipulated by code.  
 
-Many of the SQL's shortcomings, which I touch on below, are overcome by string concatenation on client-side code.  Good ORM libraries will formalize this string manipulation with a series of function calls, which are used to create a abstract syntax tree, which is serialized to SQL.  SQLAlchemy is a particularly good ORM because it leverages Python's magic methods to make elegant imperative Python expressions generate those data structures behind the scenes.  But, in every case, you are running code that generates a data structure, which is then used to generate SQL.      
+Many of the SQL's shortcomings, which I touch on below, are overcome by string concatenation on client-side code. Good ORM libraries will formalize this string manipulation with a series of function calls, which are used to create a abstract syntax tree, which is serialized to SQL. SQLAlchemy is a particularly good ORM because it leverages Python's magic methods to make elegant imperative Python expressions generate those data structures behind the scenes. But, in every case, you are running code that generates a data structure, which is then used to generate SQL.      
 
 	ORM Expressions -> AST -> SQL -> network -> SQL -> AST -> Query
 
-JSON expressions are slightly better in this regard;  It is its own AST, and does not require serialization to a complex intermediate language.  Furthermore, an ORM library would be trivial to write, so trivial that it would provide negligible benefit over simply stating the JSON structure directly.
+JSON expressions are slightly better in this regard; It is its own AST, and does not require serialization to a complex intermediate language. Furthermore, an ORM library would be trivial to write, so trivial that it would provide negligible benefit over simply stating the JSON structure directly.
 
 	JSON Expressions -> JSON -> network -> JSON -> JSON Expressions -> Query 
 
@@ -34,8 +46,7 @@ columns, like in accounting:
     FROM
         transactions
 
-
-JSON Expressions can (re)use domain definitions to abstract-away the query complexities:
+JSON Expressions can (re)use domain definitions to abstract-away the query complexities.  For example, consider the `money` domain:
 
     money = {
         "name":"money",
@@ -46,38 +57,47 @@ JSON Expressions can (re)use domain definitions to abstract-away the query compl
         ]
     }
 
+Domains are useful abstraction that give names to complex business rules.  Our `money` example is not a complicated domain, so the JSON Query Expression  
+
     {
     "from": "transactions",
-    "select": "account_number",
-    "edges":[
-        {"value":"amount", "domain":money}
-    ]
+    "select": [
+		"account_number",
+		"money*"
     }
 
-
-**Money**
 
 Partitioning records along more dimensions gets more painful with SQL:
 
     SELECT
         account_number,
-        CASE WHEN txn_type='SEND' THEN principal_amount  ELSE 0 end SendAmount,
-        CASE WHEN txn_type='SEND' THEN charges  else 0 end SendFees,
-        CASE WHEN txn_type='RECEIVE' THEN principal_amount  ELSE 0 end RefundAmount,
-        CASE WHEN txn_type='RECEIVE' THEN charges  else 0 end RefundFees
+        CASE WHEN txn_type='SEND' THEN principal_amount ELSE 0 end SendAmount,
+        CASE WHEN txn_type='SEND' THEN charges else 0 end SendFees,
+        CASE WHEN txn_type='RECEIVE' THEN principal_amount ELSE 0 end RefundAmount,
+        CASE WHEN txn_type='RECEIVE' THEN charges else 0 end RefundFees
     FROM
         transfers
 
+We put the business logic into a domain definition
 
+    charge_breakdown = {
+        "name":"Charge Breakdown",
+        "type":"set",
+        "partitions":[
+            {"name":"SendAmount",   "value":"principal_amount", "where":{"eq":{"txn_type": "SEND"}},
+            {"name":"SendFees",     "value":"charges",          "where":{"eq":{"txn_type": "SEND"}},
+            {"name":"RefundAmount", "value":"principal_amount", "where":{"eq":{"txn_type": "RECEIVE"}},
+            {"name":"RefyundFees",  "value":"charges",          "where":{"eq":{"txn_type": "RECEIVE"}},
+        ]
+    }
+
+And 
 
     {
     "from": "transactions",
     "select": [
-        "principal_amount",
-        "charges"
-    ],
-    "edges":[
-        {"value":"txn_type", "domain":"txn_type"}
+        "account_number",
+		"charge_breakdown*"
     ]
     }
 
@@ -111,12 +131,12 @@ Here is a common SQL pattern:
 ```
 
 The high level objective of this code is to pick the latest record from each
-branch.  But, this code is wrong; possibly returning more than one record per
-category.  The example is also very simple, and ranking algorithms can get
-complicated.  Given we got this one wrong, we have little chance of writing
+branch. But, this code is wrong; possibly returning more than one record per
+category. The example is also very simple, and ranking algorithms can get
+complicated. Given we got this one wrong, we have little chance of writing
 complicated ranking algorithms correctly.
 
-Window functions almost do what we want:  They can categorize using edges, and
+Window functions almost do what we want: They can categorize using edges, and
 rank using sort, but they do not change the number of rows returned.
 Generally, we what a clause that can pick the "best" record according to some
 ranking algorithm, by category.
@@ -246,8 +266,8 @@ Report by timezone, using num open, num closed, and net
     sum(CASE WHEN t.type='Corporate Load' THEN 1 ELSE 0 END)/91*30 numCorporate
 
 
-The benefit of partitions is that they are guaranteed to not overlap.  In this
-case, the `Other` part is left with all remaining transaction types.  There is
+The benefit of partitions is that they are guaranteed to not overlap. In this
+case, the `Other` part is left with all remaining transaction types. There is
 no double counting, and no missed values.
 
 ```javascript
@@ -395,7 +415,7 @@ And then same logic to show name
 ### Summarize Everything
 
 You would think a database constraint would avoid certain impossibilities, but
-you would be wrong:  There are legal reasons the foreign key can be
+you would be wrong: There are legal reasons the foreign key can be
 missing:
 
     SELECT
@@ -485,7 +505,7 @@ using distinct to determine what the partitions are
 
 ###Quazi-LogScale Tables
 
-SQL demands I build a table that represents the irregular, but intuitive, data partitions.  Tables seem heavy-weight compared to a domain definition; if only because the details are realized as records, and those records must be constructed explicitly.
+SQL demands I build a table that represents the irregular, but intuitive, data partitions. Tables seem heavy-weight compared to a domain definition; if only because the details are realized as records, and those records must be constructed explicitly.
 
     CREATE PROCEDURE temp_fill_log_performance_ranges ()
     BEGIN
@@ -600,7 +620,7 @@ Ordering, roll-up and style
 
 
 In SQL it is important to ```LEFT JOIN``` the categories in the event there are
-zero transactions in that category.  We also require an explicit ```ORDER BY```
+zero transactions in that category. We also require an explicit ```ORDER BY```
 to maintain consistent presentation.
 
     SELECT

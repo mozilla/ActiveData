@@ -30,7 +30,7 @@ from pyLibrary.times.timer import Timer
 
 _elasticsearch = None
 
-MAX_COLUMN_METADATA_AGE = 5 * MINUTE
+MAX_COLUMN_METADATA_AGE = 12 * HOUR
 ENABLE_META_SCAN = False
 DEBUG = True
 TOO_OLD = 2*HOUR

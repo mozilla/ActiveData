@@ -552,7 +552,6 @@ class TestEdge1(ActiveDataBaseTest):
 
     def test_select_empty_list(self):
         test = {
-            "name": "sum column",
             "metadata": {},
             "data": simple_test_data,
             "query": {
@@ -720,7 +719,6 @@ class TestEdge1(ActiveDataBaseTest):
             }
         }
         self.utils.execute_es_tests(test)
-
 
     def test_empty_default_domain(self):
         test = {

@@ -550,6 +550,178 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
+    def test_select_empty_list(self):
+        test = {
+            "name": "sum column",
+            "metadata": {},
+            "data": simple_test_data,
+            "query": {
+                "from": TEST_TABLE,
+                "select": [],
+                "edges": ["a"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b"},
+                    {"a": "c"},
+                    {}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [
+                    ["b"],
+                    ["c"],
+                    [NULL]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "a",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [
+                                {
+                                    "dataIndex": 0,
+                                    "name": "b",
+                                    "value": "b"
+                                },
+                                {
+                                    "dataIndex": 1,
+                                    "name": "c",
+                                    "value": "c"
+                                 }
+                            ]
+                        }
+                    }
+                ],
+                "data": {
+                }
+            }
+        }
+        self.utils.execute_es_tests(test)
+
+    def test_empty_select(self):
+        test = {
+            "name": "sum column",
+            "metadata": {},
+            "data": simple_test_data,
+            "query": {
+                "from": TEST_TABLE,
+                "select": {},
+                "edges": ["a"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b"},
+                    {"a": "c"},
+                    {}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [
+                    ["b"],
+                    ["c"],
+                    [NULL]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "a",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [
+                                {
+                                    "dataIndex": 0,
+                                    "name": "b",
+                                    "value": "b"
+                                },
+                                {
+                                    "dataIndex": 1,
+                                    "name": "c",
+                                    "value": "c"
+                                 }
+                            ]
+                        }
+                    }
+                ],
+                "data": {
+                }
+            }
+        }
+        self.utils.execute_es_tests(test)
+
+    def test_empty_select_w_dot_edge(self):
+        test = {
+            "name": "sum column",
+            "metadata": {},
+            "data": simple_test_data,
+            "query": {
+                "from": TEST_TABLE,
+                "select": {},
+                "edges": {"name":".", "value":"a"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    "b",
+                    "c",
+                    NULL
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["."],
+                "data": [
+                    ["b"],
+                    ["c"],
+                    [NULL]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": ".",
+                        "allowNulls": True,
+                        "domain": {
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [
+                                {
+                                    "dataIndex": 0,
+                                    "name": "b",
+                                    "value": "b"
+                                },
+                                {
+                                    "dataIndex": 1,
+                                    "name": "c",
+                                    "value": "c"
+                                 }
+                            ]
+                        }
+                    }
+                ],
+                "data": {
+                }
+            }
+        }
+        self.utils.execute_es_tests(test)
+
+
     def test_empty_default_domain(self):
         test = {
             "name": "sum column",

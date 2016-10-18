@@ -19,7 +19,7 @@ import sys
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, listwrap, Dict
+from pyLibrary.dot import wrap, listwrap
 from pyLibrary.dot.lists import DictList
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.expressions import jx_expression_to_function
@@ -38,23 +38,23 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
                  values IS GENERATOR OF ALL VALUE THAT MATCH keys
         contiguous -
     """
+    if isinstance(data, Container):
+        return data.groupby(keys)
 
     if size != None or min_size != None or max_size != None:
         if size != None:
             max_size = size
         return groupby_min_max_size(data, min_size=min_size, max_size=max_size)
 
-    if isinstance(data, Container):
-        return data.groupby(keys)
-
     try:
         keys = listwrap(keys)
-        get_key = jx_expression_to_function(keys)
         if not contiguous:
-            data = sorted(data, key=get_key)
+            from pyLibrary.queries import jx
+            data = jx.sort(data, keys)
 
+        accessor = jx_expression_to_function(keys)  # CAN RETURN Null, WHICH DOES NOT PLAY WELL WITH __cmp__
         def _output():
-            for g, v in itertools.groupby(data, get_key):
+            for g, v in itertools.groupby(data, accessor):
                 group = {}
                 for k, gg in zip(keys, g):
                     group[k] = gg

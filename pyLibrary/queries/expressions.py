@@ -280,6 +280,8 @@ class Variable(Expression):
             row = row.get(p)
             if row is None:
                 return None
+        if isinstance(row, list) and len(row) == 1:
+            return row[0]
         return row
 
     def to_dict(self):

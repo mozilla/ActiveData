@@ -62,6 +62,10 @@ def _delayed_imports():
 
 
 class Container(object):
+    """
+    Containers are data storage capable of handing queries on that storage
+    """
+
     __slots__ = ["data", "namespaces"]
 
     @classmethod

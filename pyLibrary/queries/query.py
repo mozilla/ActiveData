@@ -22,6 +22,7 @@ from pyLibrary.dot import wrap, unwrap, listwrap
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.maths import Math
+from pyLibrary.meta import use_settings
 from pyLibrary.queries import Schema, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.dimensions import Dimension
@@ -55,7 +56,6 @@ class QueryOp(Expression):
         for s in QueryOp.__slots__:
             setattr(output, s, None)
         return output
-
 
     def __init__(self, op, frum, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None):
         if isinstance(frum, Container):

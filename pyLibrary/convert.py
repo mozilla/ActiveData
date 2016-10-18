@@ -308,7 +308,7 @@ def list2cube(rows, column_names=None):
 
     for r in rows:
         for k in keys:
-            data[k].append(r[k])
+            data[k].append(unwraplist(r[k]))
 
     return output
 

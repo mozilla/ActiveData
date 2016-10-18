@@ -69,7 +69,7 @@ class TestMetadata(ActiveDataBaseTest):
                     "table": [table_name],
                     "name": ["a"],
                     "type": ["string"],
-                    "nested_path": [["."]]
+                    "nested_path": ["."]
                 }
             }
         })

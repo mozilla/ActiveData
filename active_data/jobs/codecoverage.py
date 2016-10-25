@@ -17,14 +17,13 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, wrap, unwrap
 from pyLibrary.env import http
 from pyLibrary.env.elasticsearch import Index
-from pyLibrary.maths.randoms import Random
 from pyLibrary.queries import jx
 from pyLibrary.testing import elasticsearch
 from pyLibrary.thread.threads import Signal, Queue
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 
-NUM_THREAD = 1
+NUM_THREAD = 4
 
 
 def process_batch(todo, coverage_index, coverage_summary_index, settings, please_stop):

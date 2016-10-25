@@ -169,7 +169,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
 
         rows = [{"id": d._id, "value": d} for d in file_level_coverage_records.data]
         coverage_summary_index.extend(rows)
-        coverage_index.extend(rows)  # TODO: WITH MULTIPLE INDICES, THIS MAY NOT PUSH BACK TO THE SAME, MAKING DUPS
+        coverage_index.extend(rows)
 
         all_test_summary = []
         for g, records in jx.groupby(file_level_coverage_records.data, "source.file.name"):
@@ -184,8 +184,8 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
                         "covered": jx.sort(cov, "line"),
                         "uncovered": jx.sort(uncov),
                         "total_covered": len(cov),
-                        "total_uncovered": len(uncov)
-
+                        "total_uncovered": len(uncov),
+                        "source.file.min_line_siblings": 0  # PLACEHOLDER TO INDICATE DONE
                     }
                 },
                 "build": records[0].build,
@@ -209,7 +209,7 @@ def loop(source, coverage_summary_index, settings, please_stop):
         for pairs in aliases:
             if pairs.alias == source.index:
                 candidates.append(pairs.index)
-        candidates = jx.sort(candidates)
+        candidates = jx.sort(candidates, {".": "desc"})
 
         for index_name in candidates:
             Log.note("Working on index {{index}}", index=index_name)

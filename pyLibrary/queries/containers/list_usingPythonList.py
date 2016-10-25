@@ -220,7 +220,7 @@ class ListContainer(Container):
         return self.data[item]
 
     def __iter__(self):
-        return self.data.__iter__()
+        return (wrap(d) for d in self.data)
 
     def __len__(self):
         return len(self.data)

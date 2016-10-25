@@ -51,9 +51,6 @@
 		//			"filename":"./results/profile.tab"
 		//		},
 		"log": [
-//			{
-//				"log_type": "nothing"
-//			}
 			{
 				"log_type": "console"
 			},

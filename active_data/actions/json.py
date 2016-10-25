@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 import flask
 from flask import Response
 
+from active_data import cors_wrapper
 from active_data.actions.query import _send_error
 from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except
@@ -24,6 +25,7 @@ from pyLibrary.queries.containers import Container
 from pyLibrary.times.timer import Timer
 
 
+@cors_wrapper
 def get_raw_json(path):
     active_data_timer = Timer("total duration")
     body = flask.request.get_data()
@@ -49,11 +51,7 @@ def get_raw_json(path):
         Log.note("Response is {{num}} bytes", num=len(response_data))
         return Response(
             response_data,
-            status=200,
-            headers={
-                "access-control-allow-origin": "*",
-                "content-type": "text/plain"
-            }
+            status=200
         )
     except Exception, e:
         e = Except.wrap(e)

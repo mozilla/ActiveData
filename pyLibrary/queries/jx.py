@@ -21,7 +21,7 @@ import itertools
 from pyLibrary import dot, convert
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, wrap, unwrap
+from pyLibrary.dot import listwrap, wrap, unwrap, unwraplist
 from pyLibrary.dot import set_default, Null, Dict, split_field, coalesce, join_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot.objects import DictObject
@@ -54,31 +54,32 @@ def get(expr):
     return jx_expression_to_function(expr)
 
 
-def run(query, frum=None):
+def run(query, frum=Null):
     """
     THIS FUNCTION IS SIMPLY SWITCHING BASED ON THE query["from"] CONTAINER,
     BUT IT IS ALSO PROCESSING A list CONTAINER; SEPARATE TO A ListContainer
     """
-    try:
-        query = QueryOp.wrap(query, frum.schema)
-    except Exception, e:
-        Log.error("impossible", cause=e)
-    frum = coalesce(frum, query["from"])
+    if frum == None:
+        query_op = QueryOp.wrap(query)
+        frum = query_op.frum
+    else:
+        query_op = QueryOp.wrap(query, frum.schema)
+
     if isinstance(frum, Container):
-        return frum.query(query)
+        return frum.query(query_op)
     elif isinstance(frum, (list, set, GeneratorType)):
         frum = wrap(list(frum))
     elif isinstance(frum, Cube):
-        if is_aggs(query):
-            return cube_aggs(frum, query)
+        if is_aggs(query_op):
+            return cube_aggs(frum, query_op)
 
     elif isinstance(frum, QueryOp):
         frum = run(frum)
     else:
-        Log.error("Do not know how to handle {{type}}",  type=frum.__class__.__name__)
+        Log.error("Do not know how to handle {{type}}", type=frum.__class__.__name__)
 
-    if is_aggs(query):
-        frum = list_aggs(frum, query)
+    if is_aggs(query_op):
+        frum = list_aggs(frum, query_op)
     else:  # SETOP
         # try:
         #     if query.filter != None or query.esfilter != None:
@@ -86,26 +87,26 @@ def run(query, frum=None):
         # except AttributeError:
         #     pass
 
-        if query.where is not TRUE_FILTER:
-            frum = filter(frum, query.where)
+        if query_op.where is not TRUE_FILTER:
+            frum = filter(frum, query_op.where)
 
-        if query.sort:
-            frum = sort(frum, query.sort, already_normalized=True)
+        if query_op.sort:
+            frum = sort(frum, query_op.sort, already_normalized=True)
 
-        if query.select:
-            frum = select(frum, query.select)
+        if query_op.select:
+            frum = select(frum, query_op.select)
 
-    if query.window:
+    if query_op.window:
         if isinstance(frum, Cube):
             frum = list(frum.values())
 
-        for param in query.window:
+        for param in query_op.window:
             window(frum, param)
 
     # AT THIS POINT frum IS IN LIST FORMAT, NOW PACKAGE RESULT
-    if query.format == "cube":
+    if query_op.format == "cube":
         frum = convert.list2cube(frum)
-    elif query.format == "table":
+    elif query_op.format == "table":
         frum = convert.list2table(frum)
         frum.meta.format = "table"
     else:

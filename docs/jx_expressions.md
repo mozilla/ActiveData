@@ -317,7 +317,19 @@ Test if property contains given substring, return the index of the first charact
 
 		{"find": {variable, substring}}
 
-`find` will return a default value if the substring is not found. The default value is usually `null`, but can be set with the `default` clause.   
+JSON Expressions treat zero (`0`) as a truthy value; this implies `find` can be used in conditional expressions, even if the `substring` happens to be the prefix.
+
+		{
+			"when": {"find": [
+				{"literal": "hello world"}, 
+				{"literal": "hello"}
+			]}
+			"then": {"literal": "always reached"}
+			"else": {"literal": "not reached"}
+		}
+
+
+`find` will return a default value if the substring is not found, that default value is usually `null`, but can be set with the `default` clause.   
 
 		{"find": {variable, substring}, "default": -1}
 
@@ -410,7 +422,7 @@ Convert a number to a string value
 
 ###`date` Operator###
 
-Convert a literal value to an absolute, or relative, unix datestamp.   Only literal values, and not JSON Expressions, are acceptable operands. 
+Convert a literal value to an absolute, or relative, unix datestamp. Only literal values, and not JSON Expressions, are acceptable operands. 
 
 		{"date": literal}
 
@@ -477,13 +489,15 @@ Window functions are given additional context variables to facilitate calculatio
 
 ### `rows` Operator ###
 
-JSON Expressions reference inner property names using dot-separated paths. In the case of referencing specific rows in a window function, this is possible, but painful:
+JSON Expressions reference inner property names using dot-separated paths. In the case of referencing specific rows in a window function, this is possible, but verbose:
 
-		{"get": ["rows", offset, variable]}
+		{"get": ["rows", {"add":{"rownum": offset}}, variable]}
 
-The `rows` operator exists to get the properties of an offset a little easier:
+Here we are accessing the `rows` array at `rownum + offset`, where `offset` can be positive or negative. The `rows` operator exists to simplify this access pattern:
 
-		{"rows": {variable: offset}}  
+		{"rows": {variable: offset}}
+
+Please notice `offset` is relative to `rownum`, not an absolute index into the `rows` array.  JSON expressions allow array indexing outside the limits an array; returning `null` when doing so.
 
 
 Reflective Operators
@@ -493,14 +507,14 @@ Reflective Operators
 
 JSON Expressions reference inner property names using dot-separated paths. Sometimes you will want to compose that path from dynamic values:
 
+		{"get": [accessor1, accessor2, ... accessorN]}
+
+The benefits are easier to see in an example where `t == "test"`, `d == "duration"`. The following are equivalent:
+
 		"run.test.duration"
+		{"get": {"run.test", "d"}} 
+		{"get": ["run", "t", "d"]}
 
-can be made explicit:
-
-		{"get": ["get": {"run": "test"}}, "duration"]}
-		{"get": {"run": ["test", "duration"]}}
-		{"get": ["run", ["test", "duration"]]}
-		{"get": ["run", "test", "duration"]}
 
 This can also be used to refer to numeric offsets found in tuples, or lists.  Let `temp == {"tuple": [3, 5]}`:
 

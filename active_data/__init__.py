@@ -45,13 +45,18 @@ def record_request(request, query_, data, error):
 
 
 def cors_wrapper(func):
+    def _setdefault(obj, key, value):
+        if value != None:
+            obj.setdefault(key, value)
+
     def output(*args, **kwargs):
         response = func(*args, **kwargs)
         headers = response.headers
-        headers.setdefault("Access-Control-Allow-Origin", "*")
-        headers.setdefault("Access-Control-Allow-Headers", flask.request.headers.get("Access-Control-Request-Headers"))
-        headers.setdefault("Access-Control-Allow-Methods", flask.request.headers.get("Access-Control-Request-Methods"))
-        headers.setdefault("Content-Type", "application/json")
+        _setdefault(headers, "Access-Control-Allow-Origin", "*")
+        _setdefault(headers, "Access-Control-Allow-Headers", flask.request.headers.get("Access-Control-Request-Headers"))
+        _setdefault(headers, "Access-Control-Allow-Methods", flask.request.headers.get("Access-Control-Request-Methods"))
+        _setdefault(headers, "Content-Type", "application/json")
+        _setdefault(headers, "Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
         return response
 
     output.provide_automatic_options = False

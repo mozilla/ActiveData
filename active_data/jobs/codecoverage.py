@@ -17,13 +17,14 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, wrap, unwrap
 from pyLibrary.env import http
 from pyLibrary.env.elasticsearch import Index
+from pyLibrary.maths.randoms import Random
 from pyLibrary.queries import jx
 from pyLibrary.testing import elasticsearch
 from pyLibrary.thread.threads import Signal, Queue
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 
-NUM_THREAD = 4
+NUM_THREAD = 1
 
 
 def process_batch(todo, coverage_index, coverage_summary_index, settings, please_stop):
@@ -168,8 +169,8 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             Log.warning("expecting all records to have summary. Example:\n{{example}}", example=bad_example[0])
 
         rows = [{"id": d._id, "value": d} for d in file_level_coverage_records.data]
-        coverage_index.extend(rows)  # TODO: WITH MULTIPLE INDEXS, THIS MAY NOT PUSH BACK TO THE SAME, MAKING DUPS
         coverage_summary_index.extend(rows)
+        coverage_index.extend(rows)  # TODO: WITH MULTIPLE INDICES, THIS MAY NOT PUSH BACK TO THE SAME, MAKING DUPS
 
         all_test_summary = []
         for g, records in jx.groupby(file_level_coverage_records.data, "source.file.name"):
@@ -196,55 +197,69 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             all_test_summary.append(coverage)
 
         rows = [{"id": d["_id"], "value": d} for d in all_test_summary]
-        coverage_index.extend(rows)
         coverage_summary_index.extend(rows)
+        coverage_index.extend(rows)
 
 
-def loop(coverage_index, coverage_summary_index, settings, please_stop):
+def loop(source, coverage_summary_index, settings, please_stop):
     try:
-        while not please_stop:
+        # PICK A RANDOM INDEX
+        cluster = elasticsearch.Cluster(source)
+        aliases = cluster.get_aliases()
+        candidates = []
+        for pairs in aliases:
+            if pairs.alias == source.index:
+                candidates.append(pairs.index)
+        candidates = jx.sort(candidates)
+
+        for index_name in candidates:
+            Log.note("Working on index {{index}}", index=index_name)
+            coverage_index = Index(index=index_name, read_only=False, settings=source)
             coverage_index.refresh()
 
-            # IDENTIFY NEW WORK
-            Log.note("Identify new coverage to work on")
-            todo = http.post_json(settings.url, json={
-                "from": "coverage",
-                "groupby": ["source.file.name", "build.revision12"],
-                "where": {"and": [
-                    {"missing": "source.method.name"},
-                    {"missing": "source.file.min_line_siblings"}
-                ]},
-                "format": "list",
-                "limit": coalesce(settings.batch_size, 100)
-            })
+            while not please_stop:
+                # IDENTIFY NEW WORK
+                Log.note("Identify new coverage to work on")
+                todo = http.post_json(settings.url, json={
+                    "from": "coverage",
+                    "groupby": ["source.file.name", "build.revision12"],
+                    "where": {"and": [
+                        {"missing": "source.method.name"},
+                        {"missing": "source.file.min_line_siblings"}
+                    ]},
+                    "format": "list",
+                    "limit": coalesce(settings.batch_size, 100)
+                })
 
-            if not todo.data:
-                please_stop.go()
-                return
+                if not todo.data:
+                    break
 
-            queue = Queue("pending source files to review")
-            queue.extend(todo.data[0:coalesce(settings.batch_size, 100):])
+                queue = Queue("pending source files to review")
+                queue.extend(todo.data[0:coalesce(settings.batch_size, 100):])
 
-            threads = [
-                Thread.run(
-                    "processor" + unicode(i),
-                    process_batch,
-                    queue,
-                    coverage_index,
-                    coverage_summary_index,
-                    settings,
-                    please_stop=please_stop
-                )
-                for i in range(NUM_THREAD)
-            ]
+                threads = [
+                    Thread.run(
+                        "processor" + unicode(i),
+                        process_batch,
+                        queue,
+                        coverage_index,
+                        coverage_summary_index,
+                        settings,
+                        please_stop=please_stop
+                    )
+                    for i in range(NUM_THREAD)
+                ]
 
-            # ADD A STOP MESSAGE FOR EACH THREAD
-            for i in range(NUM_THREAD):
-                queue.add(Thread.STOP)
+                # ADD A STOP MESSAGE FOR EACH THREAD
+                for i in range(NUM_THREAD):
+                    queue.add(Thread.STOP)
 
-            # WAIT FOR THEM TO COMPLETE
-            for t in threads:
-                t.join()
+                # WAIT FOR THEM TO COMPLETE
+                for t in threads:
+                    t.join()
+
+        please_stop.go()
+        return
 
     except Exception, e:
         Log.warning("Problem processing", cause=e)
@@ -260,14 +275,14 @@ def main():
             Log.start(config.debug)
 
             please_stop = Signal("main stop signal")
-            coverage_index = elasticsearch.Cluster(config.source).get_index(read_only=False, settings=config.source)
+            coverage_index = elasticsearch.Cluster(config.source).get_index(settings=config.source)
             config.destination.schema = coverage_index.get_schema()
             coverage_summary_index = elasticsearch.Cluster(config.destination).get_or_create_index(read_only=False, settings=config.destination)
             coverage_summary_index.add_alias(config.destination.index)
             Thread.run(
                 "processing loop",
                 loop,
-                coverage_index,
+                config.source,
                 coverage_summary_index,
                 config,
                 please_stop=please_stop

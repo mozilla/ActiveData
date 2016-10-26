@@ -4,7 +4,7 @@ Future Data Strategy
 
 As of Oct2016, we are approaching 2 years of ActiveData. The objective is to confirm, or deny, or give feedback on our current path.
 
-### Scale
+## Scale
 
 ActiveData is a data warehouse meant to provide aggregates fast. It is ingesting structured logs at a rate of [61 thousand files, 327 gigabytes, per day](http://activedata.allizom.org/tools/query.html#query_id=7kiXcEIe) and [serving 30 thousand requests per day](http://activedata.allizom.org/tools/query.html#query_id=07I3Z76e) (mostly to its own peripheral services) 
 
@@ -16,6 +16,8 @@ ActiveData is a data warehouse meant to provide aggregates fast. It is ingesting
 | Buildbot      |    29,885,568 | jobs counted in 0.4sec (180+ columns, 3K each ) 1T                 |
 
 *Code Coverage reached 100 billion in early October
+
+##Effort
 
 ###Time Consuming Categories
 

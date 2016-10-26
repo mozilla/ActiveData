@@ -1,0 +1,183 @@
+
+Future Data Strategy
+====================
+
+As of Oct2016, we are approaching 2 years of ActiveData. The objective is to confirm, or deny, or give feedback on our current path.
+
+###Time Consuming Categories
+
+* ETL is a problem - Transformation, denormalization, scrubbing, multiple sources
+	* JSON solves the denormalization problem
+	  * many2one (a variation on properties)
+	  * one2many (nested documents)
+	* JSON solves the more common data migrations (add/remove columns)
+	* audit trail (multiple sources)
+	* <s>Common data time line transformations (slowly changing dimensions)</s> (not relevant)
+* Liveliness is a problem
+	* Monitoring processes 
+	* Managing server
+	* Machine replacement
+	* CPU/Memory costs
+* Big is a problem
+	* Think global, act local 
+	* build to fail
+	* distributed transactions
+
+
+###Combinations are also time consuming
+
+* Big ETL
+	* Data/Processing anomalies
+	* Schema diversity
+	* Constant change
+* Big and Lively
+	* <s>Manage loosing machines</s> (solved by ES, and opens up using spot instances)
+	* <s>Fast response time</s> (solved by ES) 
+	* Automate management of machines
+	* Automate management of cost
+	* Automate load balancing
+* Live ETL
+	* <s>Optimizations to process fast</s> (not attempted)
+	* <s>Responsiveness to deal with failure</s> (not attempted)
+
+¿Using Telemetry?
+-----------------
+
+It is an open question whether we move the data to Telemetry: As of **London Jun2016**, their tools are sufficiently powerful to support ActiveData use cases. Open questions remain:
+
+- How strict must the schemas be? How much ETL work is required to move data to Telemetry? ActiveData is a semi-structured "data lake" that does not fit into explicit-schema databases.  Will it look like the crash-stats migration? [Publish public crash stats to the data platform (1273657)](https://bugzilla.mozilla.org/show_bug.cgi?id=1273657)
+- What is the query latency; is it fast enough to drive dashboards?
+- What is the size limit, or is there a cost barrier?
+
+Answering these questions will not provide us with resolution: The BI strategy team is looking into large-data solutions from vendors that can support Telemetry and ActiveData in a centralized way. The technology may change again.
+
+
+Architectural Options
+----------------------
+
+There are three architectural classes that can solve this problem. I believe it is better we decide on the architectural class, rather than a specific solution. This will guide our choice of technology for at least a few years.
+
+###Current architecture - Big/Hot
+
+A single warehouse with low latency access to raw data and aggregates. Young-company BI vendors offer this type of solution to trillions of records, or more.  
+
+* Problems listed above
+* Are they good investments? 
+* Are we getting value? Do we believe there is future potential value?
+* Costly:  We should properly fund this. 
+
+###Alternate Architecture - Big/Cold with Small/Hot extracts
+
+Central data warehouse with fast, focused, extracts to satellite datamarts. Similar to Telemetry's architecture, and the most common BI architecture that balances resources. 
+
+* Two ETL stages: Inevitably one will require table schemas, transformation scripts, and schedule. 
+* Adds resistance to ad-hoc analysis
+
+###Alternate Architecture - Small/Hot
+
+Small focused apps: OrangeFactor, Perfherder, AreWeFastYet  
+
+* Proactive ETL focused on answering specific questions (limiting scope) 
+* Can not scale
+* Anomalies are invisible
+* No Adhoc queries - turn around time will be days, at best. We can assume it will not be done.
+
+
+##Other Mozilla Datasets
+
+What else is out there? How big are they? How fast do they respond?
+
+- CrashStats ES cluster 60Mrecords/6months x 10Kb
+- Telemetry synch_stats.rollup  192Mrecords
+- Telemetry synch_stats.device_counts 174Mrecords
+- Telemetry presto.crash_aggregates 315Mrecords (count in 4sec, small schema, stats)
+
+
+Pricing Review 
+--------------
+
+Looking at market rates for comparative pricing. Enough money may solve the problem.
+
+ * ES Pricing [link](https://www.elastic.co/cloud/as-a-service/pricing) $4000/month for 256G mem/6T SSD
+ * ActiveData [link](https://docs.google.com/spreadsheets/d/1lb6yQdIZZVOggd_0pAt__NHleNtv3XSZ_PZ6IEkMbFs/edit) $4000/month for 750G mem/150T SSD
+ * Require $1000/month for ETL pipeline in either case                
+
+
+##History
+
+Some personal notes regarding the future of ActiveData.  
+
+###BugzillaETL
+
+* Elasticsearch is a real-time replacement for Hadoop
+* Common data timeline transformations (slowly changing dimensions)
+* JSON solves the denormalization problem
+  * many2one (a variation on properties)
+  * one2many (nested documents)
+* JSON solves the more common data migrations (add/remove columns)
+
+###DatazillaAlerts
+
+* Single instance MySQL can not handle data at scale, while still being normalized
+* ES can handle 100M records, on single instance, because perf data fits in snowflake data model
+* Tracking Alert lifecycles is the complex problem
+
+Dashboarding Problem 
+
+* BI Tools - Graphical or SQL - both are dead ends to further automation
+* 
+
+
+
+##Past Work
+
+A review of past work to help characterize where the time went.  Only includes the ETL, and does not include the ActiveData service, or the few other satellite applications required. 
+
+**PORTLAND** 
+
+- Jan 2015 dealing with gigabyte logs
+- Feb 2015 drive space limits 
+- Feb 2015 robust logging to deal with volume 300,000,000 per week
+- Mar 2015 Redshift strict typing, slow: Leart that a new database takes time to tune
+- Apr 2015 SpotManager to reduce cost of ETL jobs 
+- May 2015 Too much work in one queue, split by task type
+- May 2015 Import talos
+- May 2015 import hg
+- May 2015 Add etl property to all records for easier tracing ETL pipeline mistakes
+- Jun 2015 Fix timeouts in mozilla pulse (add as vendor project and wrap)
+- Jun 2015 Hg caching
+- Jun 2015 Add subtests - Add deep query ability to ActiveData
+
+**WHISTLER**  
+
+- Jul 2015 Add beta branch
+- Jul 2015 Shard balancing problems
+- Jul 2015 coordinator node to send requests to spot zone, not backup
+- Aug 2015 Fix shutdown, many logg enhancements and special cases 
+- Aug 2015 Add performance to ActiveData
+- Sep 2015 Upgrade ES from 1.4.* to 1.7.* - Change from MVEL to jRuby
+- Oct 2015 Add buildbot and mozharness steps
+- Nov 2015 Start taskcluster import - Test Infrastructure metrics
+- Dec 2015 Perfherder import changes
+
+**ORLANDO**
+
+- Jan 2016 Dealing with data volume 
+- Feb 2016 Add code coverage
+- - Mar 2016 OPtimize Memeory usage in ETL machines
+- Mar 2016 Handle DAG paths of ETL Pipeline
+- Apr 2016 Fix ETL pipeline with multipaths
+- May 2016 Taskclsuter importing, long tail of 
+- May 2016 Dealing with 1,000,000,000 per week
+- Jun 2016 Make manager machine for CodeCoverage, TestFailures, SpotManager, and buildbot jobs
+
+**LONDON** - Telemetry has usable data tools
+
+- Jul 2016 Vacation
+- Aug 2016 Import TH, Deal with long time problem of incomplete files
+- Sep 2016 TH Import failed, OFv2 on pause, Resume End-to-End times project.  add Shard Balancer 
+- Oct 2016 TC properties all changed, updated ETL to deal.  
+- Oct 2016 CodeCoverage 100,000,000,000 per week
+
+
+

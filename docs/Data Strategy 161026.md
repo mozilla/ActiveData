@@ -4,6 +4,20 @@ Future Data Strategy
 
 As of Oct2016, we are approaching 2 years of ActiveData. The objective is to confirm, or deny, or give feedback on our current path.
 
+### Scale
+
+ActiveData is a data warehouse meant to provide aggregates fast  
+
+| Table         |  Record Count | Description                                                        |        
+| ------------- | -------------:|:------------------------------------------------------------------ |
+| Test Results  | 2,653,634,853 | 1 month test results counted in 2sec (130+ columns, 5K each) 15T   |
+| CodeCoverage  | 3,431,492,266 | 3 days of covered lines counted in 19sec (90+ columns, 1K each) 3T |
+| TaskCluster   |    16,504,753 | tasks counted in 0.4sec (300+ columns, 4K each) 700G               |
+| Buildbot      |    29,885,568 | jobs counted in 0.4sec (180+ columns, 3K each ) 1T                 |
+
+Daily Structured Log Ingestion: 327Gb (61K files)
+
+
 ###Time Consuming Categories
 
 * ETL is a problem - Transformation, denormalization, scrubbing, multiple sources

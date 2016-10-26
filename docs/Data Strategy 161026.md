@@ -6,17 +6,16 @@ As of Oct2016, we are approaching 2 years of ActiveData. The objective is to con
 
 ### Scale
 
-ActiveData is a data warehouse meant to provide aggregates fast  
+ActiveData is a data warehouse meant to provide aggregates fast. It is ingesting structured logs at a rate of [61 thousand files, 327 gigabytes, per day](http://activedata.allizom.org/tools/query.html#query_id=7kiXcEIe) and [serving 30 thousand requests per day](http://activedata.allizom.org/tools/query.html#query_id=07I3Z76e) (mostly to its own peripheral services) 
 
 | Table         |  Record Count | Description                                                        |        
 | ------------- | -------------:|:------------------------------------------------------------------ |
 | Test Results  | 2,653,634,853 | 1 month test results counted in 2sec (130+ columns, 5K each) 15T   |
-| CodeCoverage  | 3,431,492,266 | 3 days of covered lines counted in 19sec (90+ columns, 1K each) 3T |
+| CodeCoverage* | 3,431,492,266 | 3 days of covered lines counted in 19sec (90+ columns, 1K each) 3T |
 | TaskCluster   |    16,504,753 | tasks counted in 0.4sec (300+ columns, 4K each) 700G               |
 | Buildbot      |    29,885,568 | jobs counted in 0.4sec (180+ columns, 3K each ) 1T                 |
 
-Daily Structured Log Ingestion: 327Gb (61K files)
-
+*Code Coverage reached 100 billion in early October
 
 ###Time Consuming Categories
 
@@ -38,7 +37,7 @@ Daily Structured Log Ingestion: 327Gb (61K files)
 	* distributed transactions
 
 
-###Combinations are also time consuming
+###Time Consuming Combinations
 
 * Big ETL
 	* Data/Processing anomalies

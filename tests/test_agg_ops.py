@@ -11,7 +11,9 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
+from unittest import skipIf
+
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
 
 
 class TestAggOps(ActiveDataBaseTest):
@@ -66,7 +68,7 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-
+    @skipIf(global_settings.use=="sqlite", "not expected to pass yet")
     def test_median(self):
         test = {
             "data": [{"a": i**2} for i in range(30)],
@@ -92,7 +94,7 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-
+    @skipIf(global_settings.use == "sqlite", "not expected to pass yet")
     def test_percentile(self):
         test = {
             "data": [{"a": i**2} for i in range(30)],
@@ -118,6 +120,7 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
+    @skipIf(global_settings.use=="sqlite", "not expected to pass yet")
     def test_stats(self):
         test = {
             "data": [{"a": i**2} for i in range(30)],
@@ -290,7 +293,7 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test, tjson=True)
 
-
+    @skipIf(global_settings.use == "sqlite", "not expected to pass yet")
     def test_median_on_value(self):
         test = {
             "data": [i**2 for i in range(30)],

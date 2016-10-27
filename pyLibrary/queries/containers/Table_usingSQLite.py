@@ -925,7 +925,7 @@ class Table_usingSQLite(Container):
                         )
             else:  # STANDARD AGGREGATES
                 for details in s.value.to_sql(columns):
-                    for json_type, sql in details.sql.items():
+                    for sql_type, sql in details.sql.items():
                         column_number = len(outer_selects)
                         sql = sql_aggs[s.aggregate] + "(" + sql + ")"
                         if s.default != None:
@@ -934,10 +934,10 @@ class Table_usingSQLite(Container):
                         index_to_column[column_number] = Dict(
                             push_name=s.name,
                             push_column=si,
-                            push_child=details.name,
+                            push_child=join_field(split_field(details.name)[1::]),
                             pull=get_column(column_number),
                             sql=sql,
-                            type=sql_type_to_json_type[json_type]
+                            type=sql_type_to_json_type[sql_type]
                         )
 
         for w in query.window:
@@ -1585,7 +1585,7 @@ class Table_usingSQLite(Container):
                             type=value_type,
                             es_column=typed_column(cname, value_type),
                             es_index=self.name,  # THIS MAY BE THE WRONG TABLE, IF THIS PATH IS A NESTED DOC
-                            nested_path=unwraplist(nested_path[:-1])
+                            nested_path=nested_path
                         )
                         add_column_to_schema(columns, c)
                         if value_type == "nested":

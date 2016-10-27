@@ -16,7 +16,7 @@ class List_usingNumpy(object):
                 column[rownum] = v
 
     def window(self, value, edges, sort):
-
+        pass
         # {"rows":1}  # IF IN THE CONTEXT THAT HAS `rows` AND `rownum` FIELDS, THEN THIS IS rows[rownum+n]
         # {"rows":{<field>: offset}} =>  rows[rownum+offset].field
 

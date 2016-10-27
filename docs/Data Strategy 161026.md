@@ -17,6 +17,16 @@ ActiveData is a data warehouse meant to provide aggregates fast. It is ingesting
 
 *Code Coverage reached 100 billion in early October
 
+##Cost
+
+The current scale is good, but should be increased for faster speeds and higher reliability
+
+| Description                                       | Cost        |        
+| ------------------------------------------------- | ----------- |
+| Approx 28 ElasticSearch nodes (750G mem/150T SSD) | $4000/month | 
+| Up to 400 vCPUs for ETL pipeline                  | $1000/month |
+
+
 ##Effort
 
 ###Time Consuming Categories

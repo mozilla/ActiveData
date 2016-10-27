@@ -43,6 +43,7 @@ The current scale is good, but should be increased for faster speeds and higher 
 	* Managing server
 	* Machine replacement
 	* CPU/Memory costs
+	* **Uptime is not a priority** reduces effort and cost
 * Big is a problem
 	* Think global, act local 
 	* build to fail

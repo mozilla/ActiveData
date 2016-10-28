@@ -188,7 +188,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
                         "uncovered": jx.sort(uncov),
                         "total_covered": len(cov),
                         "total_uncovered": len(uncov),
-                        "source.file.min_line_siblings": 0  # PLACEHOLDER TO INDICATE DONE
+                        "min_line_siblings": 0  # PLACEHOLDER TO INDICATE DONE
                     }
                 },
                 "build": records[0].build,

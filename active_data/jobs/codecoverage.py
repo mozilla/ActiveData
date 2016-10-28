@@ -23,7 +23,10 @@ from pyLibrary.thread.threads import Signal, Queue
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 
+DEBUG = True
 NUM_THREAD = 4
+
+
 def process_batch(todo, coverage_index, coverage_summary_index, settings, please_stop):
     for not_summarized in todo:
         if please_stop:
@@ -201,6 +204,22 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
         rows = [{"id": d["_id"], "value": d} for d in all_test_summary]
         coverage_summary_index.extend(rows)
 
+        if DEBUG:
+            coverage_index.refresh()
+            todo = http.post_json(settings.url, json={
+                "from": "coverage",
+                "where": {"and": [
+                    {"missing": "source.method.name"},
+                    {"missing": "source.file.min_line_siblings"},
+                    {"eq": {"source.file.name": not_summarized.source.file.name}},
+                    {"eq": {"build.revision12": not_summarized.build.revision12}}
+                ]},
+                "format": "list",
+                "limit": 10
+            })
+            if todo.data:
+                Log.error("Failure to update")
+
 
 def loop(source, coverage_summary_index, settings, please_stop):
     try:
@@ -251,8 +270,7 @@ def loop(source, coverage_summary_index, settings, please_stop):
                 ]
 
                 # ADD A STOP MESSAGE FOR EACH THREAD
-                for i in range(NUM_THREAD):
-                    queue.add(Thread.STOP)
+                queue.add(Thread.STOP)
 
                 # WAIT FOR THEM TO COMPLETE
                 for t in threads:

@@ -126,7 +126,6 @@ class Queue(object):
 
         _Log.note("queue iterator is done")
 
-
     def add(self, value, timeout=None):
         if not self.keep_running and not self.allow_add_after_close:
             _Log.error("Do not add to closed queue")
@@ -157,6 +156,7 @@ class Queue(object):
     def pop_message(self, wait=SECOND, till=None):
         """
         RETURN TUPLE (message, payload) CALLER IS RESPONSIBLE FOR CALLING message.delete() WHEN DONE
+        DUMMY IMPLEMENTATION FOR DEBUGGING
         """
         return Null, self.pop(timeout=wait, till=till)
 

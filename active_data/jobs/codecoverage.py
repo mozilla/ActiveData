@@ -269,7 +269,7 @@ def loop(source, coverage_summary_index, settings, please_stop):
                     for i in range(NUM_THREAD)
                 ]
 
-                # ADD A STOP MESSAGE FOR EACH THREAD
+                # ADD STOP MESSAGE
                 queue.add(Thread.STOP)
 
                 # WAIT FOR THEM TO COMPLETE

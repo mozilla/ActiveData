@@ -22,7 +22,8 @@ from pyLibrary import convert
 from pyLibrary.collections import UNION
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, coalesce, Dict, wrap, Null, unwraplist, split_field, join_field, startswith_field, literal_field, unwrap
+from pyLibrary.dot import listwrap, coalesce, Dict, wrap, Null, unwraplist, split_field, join_field, startswith_field, literal_field, unwrap, \
+    relative_field
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
@@ -54,6 +55,7 @@ def late_import():
     from pyLibrary.queries import containers as _containers
 
     _ = _containers
+
 
 class Table_usingSQLite(Container):
 
@@ -503,10 +505,6 @@ class Table_usingSQLite(Container):
         if query.format == "container":
             output = Table_usingSQLite(new_table, db=self.db, uid=self.uid, exists=True)
         elif query.format == "cube" or (not query.format and query.edges):
-
-            # temp=self.db.query("""
-	        # """)
-
             if len(query.edges) == 0 and len(query.groupby) == 0:
                 data = {n: Dict() for n in column_names}
                 for s in index_to_columns.values():
@@ -1165,8 +1163,9 @@ class Table_usingSQLite(Container):
                             # SQL HAS ABS TABLE REFERENCE
                             selects.append(sql + " AS " + _make_column_name(column_number))
                             index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
-                                push_name=join_field(([s.name] if isinstance(query.select, list) else [])+split_field(column.name)),
+                                push_name=s.name,
                                 push_column=si,
+                                push_child=column.name,
                                 pull=get_column(column_number),
                                 sql=sql,
                                 type=json_type,
@@ -1185,6 +1184,7 @@ class Table_usingSQLite(Container):
                     index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
                         push_name=c.name,
                         push_column=ci,
+                        push_child=".",
                         pull=get_column(column_number),
                         sql=sql,
                         type=c.type,
@@ -1208,13 +1208,21 @@ class Table_usingSQLite(Container):
                     for t in ALL_TYPES:
                         if sql_column.sql[t]:
                             if s.sort == -1:
+                                sorts.append(sql_column.sql[t]+" IS NOT NULL")
                                 sorts.append(sql_column.sql[t]+" DESC")
                             else:
+                                sorts.append(sql_column.sql[t]+" IS NULL")
                                 sorts.append(sql_column.sql[t])
         for n, _ in self.nested_tables.items():
             sorts.append(COLUMN+unicode(index_to_uid[n]))
 
-        ordered_sql = "SELECT * FROM (\n" + sql + "\n) ORDER BY\n" + ",\n".join(sorts)
+        ordered_sql = (
+            "SELECT * FROM (\n" +
+            sql +
+            "\n)" +
+            "\nORDER BY\n" + ",\n".join(sorts) +
+            "\nLIMIT\n" + quote_value(query.limit)
+        )
         result = self.db.query(ordered_sql)
 
         def _accumulate_nested(rows, row, nested_doc_details, parent_doc_id, parent_id_coord):
@@ -1235,7 +1243,6 @@ class Table_usingSQLite(Container):
             output = []
             id_coord = nested_doc_details['id_coord']
 
-
             while True:
                 doc_id = row[id_coord]
 
@@ -1247,15 +1254,27 @@ class Table_usingSQLite(Container):
                 if doc_id != previous_doc_id:
                     previous_doc_id = doc_id
                     doc = Dict()
-                    # ASSIGN INNER PROPERTIES
-                    for i, c in nested_doc_details['index_to_column'].items():
-                        value = row[i]
-                        if value is not None:
-                            relative_path = relative_field(c.push_name, nested_doc_details['nested_path'][0])
-                            if relative_path == ".":
-                                doc = value
-                            else:
-                                doc[relative_path] = value
+                    curr_nested_path = nested_doc_details['nested_path'][0]
+                    if isinstance(query.select, list):
+                        # ASSIGN INNER PROPERTIES
+                        for i, c in nested_doc_details['index_to_column'].items():
+                            value = row[i]
+                            if value is not None:
+                                relative_path = relative_field(join_field(split_field(c.push_name)+[c.push_child]), curr_nested_path)
+                                if relative_path == ".":
+                                    doc = value
+                                else:
+                                    doc[relative_path] = value
+                    else:
+                        # ASSIGN INNER PROPERTIES
+                        for i, c in nested_doc_details['index_to_column'].items():
+                            value = row[i]
+                            if value is not None:
+                                relative_path = relative_field(c.push_child, curr_nested_path)
+                                if relative_path == ".":
+                                    doc = value
+                                else:
+                                    doc[relative_path] = value
                     output.append(doc)
 
                 # ASSIGN NESTED ARRAYS
@@ -1273,13 +1292,56 @@ class Table_usingSQLite(Container):
                     output = unwraplist(output)
                     return output if output else None
 
-        rows = list(reversed(unwrap(result.data)))
-        row = rows.pop()
-        output = Dict(
-            meta={"format": "list"},
-            data=_accumulate_nested(rows, row, primary_doc_details, None, None)
-        )
-        return output
+        cols = tuple(index_to_column.values())
+
+        if query.format=="cube":
+            output_data = []
+            for d in result.data:
+                row = [None]*len(cols)
+                for c in cols:
+                    set_column(row, c.push_column, c.push_child, c.pull(d))
+                output_data.append(row)
+
+            output = Dict(
+                meta={"format": "cube"},
+                data={c.push_name: list(d) for c, d in zip(cols, zip(*output_data))},
+                edges=[{
+                    "name": "rownum",
+                    "domain": {
+                        "type": "rownum",
+                        "min": 0,
+                        "max": len(output_data),
+                        "interval": 1
+                    }
+                }]
+            )
+            return output
+        elif query.format=="table":
+            num_column = Math.MAX([c.push_column for c in cols])+1
+            header = [None]*num_column
+
+            for c in cols:
+                header[c.push_column]=c.push_name
+
+            output_data = []
+            for d in result.data:
+                row = [None]*num_column
+                for c in cols:
+                    set_column(row, c.push_column, c.push_child, c.pull(d))
+                output_data.append(row)
+            return Dict(
+                meta={"format": "table"},
+                header=header,
+                data=output_data
+            )
+        else:
+            rows = list(reversed(unwrap(result.data)))
+            row = rows.pop()
+            output = Dict(
+                meta={"format": "list"},
+                data=listwrap(_accumulate_nested(rows, row, primary_doc_details, None, None))
+            )
+            return output
 
     def _make_sql_for_one_nest_in_set_op(
         self,
@@ -1894,3 +1956,13 @@ def get_column(column):
     def _get(row):
         return row[column]
     return _get
+
+
+def set_column(row, col, child, value):
+    if child==".":
+        row[col]=value
+    else:
+        column = row[col]
+        if column is None:
+            column = row[col] = {}
+        Dict(column)[child] = value

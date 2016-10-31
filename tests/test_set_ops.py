@@ -370,10 +370,9 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
+    @skipIf(global_settings.use == "elasticsearch", "ES only accepts objects, not values")
     def test_list_of_values(self):
         test = {
-            "name": "list of values",
-            "not": "elasticsearch",  # CAN NOT TEST VALUES AGAINST ES
             "data": ["a", "b"],
             "query": {
                 "from": TEST_TABLE
@@ -386,19 +385,19 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["value"],
+                "header": ["."],
                 "data": [["a"], ["b"]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "edges": [
                     {
-                        "name": "index",
-                        "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 2, "interval": 1}
                     }
                 ],
                 "data": {
-                    "value": ["a", "b"]
+                    ".": ["a", "b"]
                 }
             }
         }
@@ -415,10 +414,12 @@ class TestSetOps(ActiveDataBaseTest):
                 "select": "*"
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                {"a": "b"},
-                {"a": "d"}
-            ]},
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b"},
+                    {"a": "d"}
+                ]
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a"],
@@ -442,10 +443,10 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
+    @skipIf(True, "Too complicated")
     def test_select_into_children(self):
         test = {
             "name": "select into children to table",
-            "disable": True,  # TODO: PLEASE ENABLE, TOO COMPLICATED FOR v1
             "metadata": {
                 "properties": {
                     "x": {"type": "integer"},

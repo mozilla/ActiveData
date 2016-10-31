@@ -780,12 +780,15 @@ class LeavesOp(Expression):
         term = self.term.var
         path = split_field(term)
         return [
-            (literal_field(join_field(split_field(c.name)[:len(path)])), term.to_sql())
+            {
+                "name": literal_field(join_field(split_field(c.name)[:len(path)])),
+                "sql": Variable(c.name).to_sql(schema)[0].sql
+            }
             for n, cols in schema.items()
             if startswith_field(n, term)
             for c in cols
             if c.type not in STRUCT
-            ]
+        ]
 
     def to_esfilter(self):
         Log.error("not supported")

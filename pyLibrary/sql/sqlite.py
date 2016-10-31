@@ -76,7 +76,7 @@ class Sqlite(object):
 
     def query(self, command):
         """
-        WILL STALL CALLING THREAD UNTIL THE command IS COMPLETED
+        WILL BLOCK CALLING THREAD UNTIL THE command IS COMPLETED
         :param command: COMMAND FOR SQLITE
         :return: list OF RESULTS
         """
@@ -116,6 +116,7 @@ class Sqlite(object):
                         try:
                             curr = self.db.execute(command)
                             result.meta.format = "table"
+                            result.header = [d[0] for d in curr.description] if curr.description else None
                             result.data = curr.fetchall()
                         except Exception, e:
                             e = Except.wrap(e)

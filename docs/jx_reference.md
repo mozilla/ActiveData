@@ -12,18 +12,31 @@ Nomenclature
 
 The nomenclature closely follows that used in business intelligence.
 
-  - **cube** – a set of values in an n-space. A good example for n=2 is a spreadsheet.
-  - **edge** – each edge defines a dimension of the cube and the topology of that dimension. Our spreadsheet example has two dimensions: Rows and Columns.
-  - **domain** – every edge has a domain which defines it’s valid values. The spreadsheet's rows have natural numbers as their domain (1, 2, 3, ...) and the columns are in the alphabet domain (A, B, C, ....)
-  - **partition** – every domain can be partitioned in multiple ways. Each partition is an ordered array of mutually exclusive parts that cover the domain. In the case of the spreadsheet, you may want to group many rows, or many columns together and treat them all the same. Maybe columns are retail outlets, grouped by region, and rows are customers, group by demographic
+  - **cube** – a set of values in an n-space. A good example for n=2 is a 
+  spreadsheet.
+  - **edge** – each edge defines a dimension of the cube and the topology of 
+  that dimension. Our spreadsheet example has two dimensions: Rows and Columns.
+  - **domain** – every edge has a domain which defines it’s valid values. The 
+  spreadsheet's rows have natural numbers as their domain (1, 2, 3, ...) and 
+  the columns are in the alphabet domain (A, B, C, ....)
+  - **partition** – every domain can be partitioned in multiple ways. Each 
+  partition is an ordered array of mutually exclusive parts that cover the 
+  domain. In the case of the spreadsheet, you may want to group many rows, or 
+  many columns together and treat them all the same. Maybe columns are retail 
+  outlets, grouped by region, and rows are customers, group by demographic
   - **part** – one part of a partition. Eg "north-east region", or "under 20"
-  - **part objects** - Partitions are often an array of objects (with a name, value, and other attributes). These objects usually represent the values along the axis of a chart. Eg {"name": "NorthEast", "director":"Ann"} {"name":"Under 20", "display color":"blue"}
-  - **coordinates** - a unique tuple representing one part from each edge: Simply an array of part objects.
+  - **part objects** - Partitions are often an array of objects, rather than 
+  an array of values. These objects describe the part better than a value can.  
+  For example: `{"name": "NorthEast", "director":"Ann"} {"name":"Under 20", 
+  "display color":"blue"}`
+  - **coordinates** - a unique tuple representing one part from each edge: 
+  Simply an array of part objects.
   - **cell** – the conceptual space located at a set of coordinate
   - **fact** - the value/number/object in the cell at given coordinates
-  - **attribute** - any one coordinate, which is a *part*
-  - **record/row** – analogous to a database row. In the case of a cube, there is one record for every cell: which is an object with having attributes
-  - **column** – analogous to a database column, a dimension or an edges
+  - **attribute** - any one coordinate, or fact
+  - **record/row** – analogous to a database row. In the case of a cube, there 
+  is one record for every cell: which is an object with many attributes
+  - **column** – analogous to a database column, a dimension or atribute
 
 Order of Operations
 -------------------
@@ -32,31 +45,35 @@ Each of the clauses are executed in a particular order, irrespective of their
 order in the JSON structure.   This is most limiting in the case of the
 where clause. Use sub queries to get around this limitation for now.
 
-  - **from** – the array, or list, to operate on. Can also be the results of a query, or an in-lined sub-query.
+  - **from** – the array, or list, to operate on. Can also be the results of 
+  a query, or an in-lined sub-query.
   - **edges** – definition of the edge names and their domains
   - **groupby** - names of the attributes to group by
-  - **where** – early in the processing to limit rows and aggregation: has access to domain names
+  - **where** – early in the processing to limit rows and aggregation: has 
+  access to domain names
   - **select** – additional aggregate columns added
   - **window** – window columns added
   - **having** - advanced filtering
   - **sort** – run at end, but only if output to a list.
-  - **isLean** - used by ElasticSearch to use _source on all fields
+  - **isLean** - used by ElasticSearch to use `_source` on all fields
 
 Query Clauses
 =============
 
-Queries are complex operators over sets, tables, and lists. Technically, queries are `from` operators with a variety of optional clauses that direct data transformation.
+Queries are complex operators over sets, tables, and lists. Technically, 
+queries are `from` operators with a variety of optional clauses that 
+direct data transformation.
 
-`from` Clause
--------------
+`from` Operator
+---------------
 
-The `from` clause states the table, index, or relation that is being processed
-by the query. In Javascript this can be an array of objects, a cube, or
-another JSON query expressions. In the case of ES, this is the name of the index being
-scanned. Nested ES documents can be pulled by using a dots (.) as a path
-separator to nested property.
+The `from` operator accepts one parameter: the table, an index, or relation that 
+is being processed by the query. In Javascript this can be an array of 
+objects, a cube, or another JSON query expression. In the case of Elasticsearch, this 
+is the name of the index being scanned. Nested Elasticsearch documents can be pulled by 
+using a dots (.) as a path separator to nested property.
 
-Example: Patches are pulled from the BZ
+Example: Patches are pulled from the BugzillES cluster:
 
     {
     "from":"bugs.attachments",
@@ -75,10 +92,12 @@ Example: Pull review requests from BZ:
 `select` Clause
 ---------------
 
-The select clause can be a single object, or an array of objects. The former will result
-in nameless value inside each cell of the resulting cube. The latter will result in an object, with given attributes, in each cell.
+The select clause can be a single object, or an array of objects. The former 
+will result in nameless value inside each cell of the resulting cube. The 
+latter will result in an object, with given attributes, in each cell.
 
-Here is an example counting the current number of bugs (open and closed) in the KOI project:
+Here is an example counting the current number of bugs (open and closed) in 
+the KOI project:
 
     {
     "from":"bugs",
@@ -103,8 +122,8 @@ We can pull some details on those bugs
     ]}
     }
 
-if you find the `select` objects are a little verbose, and you have no need to rename the attribute, they can be
-replaced with simply the value:
+if you find the `select` objects are a little verbose, and you have no need 
+to rename the attribute, they can be replaced with simply the value:
 
     {
     "from":"bugs",
@@ -117,16 +136,18 @@ replaced with simply the value:
 
 
 
-  - **name** – The name given to the resulting attribute. Optional if `value` is a simple variable name.
+  - **name** – The name given to the resulting attribute. Optional if `value` 
+  is a simple variable name.
   - **value** – Expression to calculate the result value
   - **aggregate** – one of many aggregate operations
   - **default** to replace null in the event there is no data
-  - **sort** – one of `increasing`, `decreasing` or `none` (default). Only meaningful when the output of the query is a list, not a cube.
+  - **sort** – one of `increasing`, `decreasing` or `none` (default). Only 
+  meaningful when the output of the query is a list, not a cube.
 
 `select.aggregate` Subclause
 ----------------------------
 
-The `aggregate` sub-clause has many options. 
+The `aggregate` sub-clause directs the particular aggregation 
 
   - **none** – when expecting only one value
   - **one** – when expecting all values to be identical
@@ -144,7 +165,8 @@ The `aggregate` sub-clause has many options.
     - **select.percentile** defined from 0.0 to 1.0 (required)
     - **select.default** to replace null in the event there is no data
   - **median** – return median (percentile = 50%)
-  - **middle** - return middle percentile, a range min, max that ignores total and bottom (1-middle)/2 parts
+  - **middle** - return middle percentile, a range min, max that ignores total 
+  and bottom (1-middle)/2 parts
     - **select.percentile** defined from 0.0 to 1.0 (required)
     - **select.default** to replace null in the event there is no data
   - **join** – concatenate all values to a single string
@@ -153,10 +175,13 @@ The `aggregate` sub-clause has many options.
     - **select.sort** - optional, to return the array sorted
   - **list** - return an list of values (alternate name for array aggregate)
     - **select.sort** - optional, to return the array sorted
-  - **union** - return an array of unique values. In the case of javascript, uniqueness is defined as the string the object can be coerced to (`""+a == ""+b`).
+  - **union** - return an array of unique values. In the case of javascript, 
+  uniqueness is defined as the string the object can be coerced to 
+  (`""+a == ""+b`).
     - **select.limit** - limit on the size of the set
 
-All aggregates ignore the null values; If all values are null, it is the same as having no data.
+All aggregates ignore the null values; If all values are null, it is the same 
+as having no data.
 
 
 `where` Clause
@@ -214,9 +239,12 @@ The domain is defined as an attribute of every edge. Each domain defines a cover
 `edges.domain.type` Subclause
 -----------------------------
 
-Every edge must be limited to one of a few basic domain types. Which further defines the other domain attributes which can be assigned.
+Every edge must be limited to one of a few basic domain types. Which further 
+defines the other domain attributes which can be assigned.
 
-  - **default**- For when the type parameter is missing: Defines parts of domain as an unlimited set of unique values. Useful for numbers and strings, but can be used on objects in general.
+  - **default**- For when the type parameter is missing: Defines parts of 
+  domain as an unlimited set of unique values. Useful for numbers and strings, 
+  but can be used on objects in general.
   - **time** – Defines parts of a time domain.
       - **edge.domain.min** – Minimum value of domain (optional)
       - **edge.domain.max** – Supremum of domain (optional)
@@ -231,45 +259,61 @@ Every edge must be limited to one of a few basic domain types. Which further def
       - **edge.domain.interval** – The size of each time part. (max-min)/interval must be an integer
   - **count** – just like numeric, but limited to integers >= 0
   - **set** – An explicit set of unique values
-      - **edge.domain.partitions** – the set of values allowed. These can be compound objects, but `edge.test` and `edge.domain.value` need to be defined.
-  - **range** - A list of ranges, probably not of the same interval, over some algebraic field. The ranges can have holes, but can not overlap.
+      - **edge.domain.partitions** – the set of values allowed. These can be 
+      compound objects, but `edge.test` and `edge.domain.value` need to be defined.
+  - **range** - A list of ranges, probably not of the same interval, over some 
+  algebraic field. The ranges can have holes, but can not overlap.
       - **edge.domain.partitions.N.min** - minimum value for this partition
       - **edge.domain.partitions.N.max** - supremum value for this partition
 
 `window` Clause
 ---------------
 
-The `window` clause defines a sequence of window functions to be applied to the result set. Each window function defines an additional attribute, and does not affect the number of rows returned. For each window, the data is grouped, sorted and assigned a `rownum` attribute that can be used to calculate the attribute value.
+The `window` clause defines a sequence of window functions to be applied to 
+the result set. Each window function defines an additional attribute, and 
+does not affect the number of rows returned. For each window, the data is 
+grouped, sorted and assigned a `rownum` attribute that can be used to 
+calculate the attribute value.
 
   - **name** – name given to resulting attribute
-  - **value** – can be a function (or a string containing javascript code) to determine the attribute value. The functions is passed three special variables:
+  - **value** – a JSON expression used to determine the attribute value. The 
+  functions is passed three special variables:
       - `row` – the row being processed
-      - `rownum` – which is integer, starting at zero for the first row
+      - `rownum` – an integer, starting at zero for the first row
       - `rows` – an array of all data in the group.
   - **edges** – an array of column names used to determine the groups
-  - **where** – code that returns true/false to indicate if a record is a member of any group. This will not affect the number of rows returned, only how the window is calculated. If where returns false then rownum and rows will both be null: Be sure to properly handle those values in your code.
-  - **sort** – a single attribute name, or array of attribute names, used to sort the members of each group
-  - **range** - the interval which the window function will apply, outside the range the `row` is null. Only makes sense when **sort** is defined
+  - **where** – code that returns true/false to indicate if a record is a 
+  member of any group. This will not affect the number of rows returned, 
+  only how the window is calculated. If where returns false then rownum and 
+  rows will both be null: Be sure to properly handle those values in your code.
+  - **sort** – a single attribute name, or array of attribute names, used to 
+  sort the members of each group
+  - **range** - the interval which the window function will apply, outside the 
+  range the `row` is null. Only makes sense when **sort** is defined
       - **min** - offset from `rownum` where window starts
       - **max** - offset from `rownum` where window ends (`rows[rownum + max] == null`)
-  - **aggregate** - an aggregate function to apply on **value** over the **range**, (or whole group if range is not defined)
+  - **aggregate** - an aggregate function to apply on **value** over the 
+  **range**, (or whole group if range is not defined)
 
 **Please note: The javascript JSON Expressions library uses "analytic" instead of "window".**
 
 having
 ------
 
-The `having` clause is a filter that uses aggregates and partitions to determine inclusion in the resultant cube.
+The `having` clause is a filter that uses aggregates and partitions to 
+determine inclusion in the resultant cube.
 
-  - **edges** – an array of column names used to determine how the rows are partitioned
-  - **sort** – a single attribute name, or array of attribute names, used to declare the rank of every row in the group
+  - **edges** – an array of column names used to determine how the rows are 
+  partitioned
+  - **sort** – a single attribute name, or array of attribute names, used to 
+  declare the rank of every row in the group
   - **aggregate** - an aggregate function used to determine which row is selected
 
 Pre-Defined Dimensions
 ----------------------
 
-Pre-defined dimensions simplify queries, and double as type information for the dataset. In this project [`Mozilla.*`
-have been pre-defined](https://github.com/klahnakoski/Qb/blob/master/html/es/js/Dimension-Bugzilla.js).
+Pre-defined dimensions simplify queries, and double as type information for 
+the dataset. In this project [`Mozilla.*` have been pre-defined](https://github.com/klahnakoski/Qb/blob/master/html/es/js/Dimension-Bugzilla.js).
 [More documentation on dimension definitions here](Dimension Definitions.md).
 
   - **select** - Any pre-defined dimension with a partition defined can be used in a select clause. Each record will be

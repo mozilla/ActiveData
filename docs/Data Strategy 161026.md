@@ -6,7 +6,7 @@ As of Oct2016, we are approaching 2 years of ActiveData. The objective is to con
 
 ## Scale
 
-ActiveData is a data warehouse meant to provide aggregates fast. It is ingesting structured logs at a rate of [61 thousand files, 327 gigabytes, per day](http://activedata.allizom.org/tools/query.html#query_id=7kiXcEIe) and [serving 30 thousand requests per day](http://activedata.allizom.org/tools/query.html#query_id=07I3Z76e) (mostly to its own peripheral services) 
+ActiveData is a data warehouse meant to provide aggregates fast. It is ingesting structured logs at a rate of [61 thousand files, 327 gigabytes, per day](http://activedata.allizom.org/tools/query.html#query_id=7kiXcEIe) and [serving 30 thousand requests per day](http://activedata.allizom.org/tools/query.html#query_id=07I3Z76e) (not including static assets, not include direct-to-cluster requests, most from its own peripheral services) 
 
 | Table         |  Record Count | Description                                                        |        
 | ------------- | -------------:|:------------------------------------------------------------------ |
@@ -48,7 +48,7 @@ The current scale is good, but should be increased for faster speeds and higher 
 	* Think global, act local 
 	* build to fail
 	* distributed transactions
-
+	* streaming, memory/disk limits
 
 ###Time Consuming Combinations
 
@@ -113,10 +113,10 @@ Small focused apps: OrangeFactor, Perfherder, AreWeFastYet
 
 What else is out there? How big are they? How fast do they respond?
 
-- CrashStats ES cluster 60Mrecords/6months x 10Kb
-- Telemetry synch_stats.rollup  192Mrecords
-- Telemetry synch_stats.device_counts 174Mrecords
-- Telemetry presto.crash_aggregates 315Mrecords (count in 4sec, small schema, stats)
+- Soccoro **CrashStats** 60M records/6 months x 10Kb
+- Telemetry **synch_stats.rollup**  192M records
+- Telemetry **synch\_stats.device_counts** 174M records
+- Telemetry **presto.crash_aggregates** 315M records (count in 4sec, small schema, stats)
 
 
 Pricing Review 

@@ -11,6 +11,12 @@
             "shards":1
         }
     ],
+    "nodes":[
+        {
+            "name":"secondary",
+            "disk": 0  // SHARD BALANCER WILL MOVE SHARDS OFF OF NODE
+        }
+    ],
     "finally":{
         "/_cluster/settings": [
             {"transient": {

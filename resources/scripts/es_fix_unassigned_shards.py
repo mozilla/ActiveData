@@ -81,6 +81,13 @@ def assign_shards(settings):
 
     risky_zone_names = set(z.name for z in settings.zones if z.risky)
 
+    for n in settings.nodes:
+        node = nodes[n.name]
+        if node:
+            for k, v in n.items():
+                node[k] = v
+            node.disk_free = Math.min(node.disk_free, node.disk)
+
     # REVIEW NODE STATUS, AND ANY CHANGES
     first_run = not last_known_node_status
     for n in nodes:
@@ -92,14 +99,13 @@ def assign_shards(settings):
 
         if not n.zone:
             Log.error("Expecting all nodes to have a zone")
-        if n.role == 'd':
-            n.disk = 0 if n.disk == "" else float(n.disk)
-        else:
+        if n.role != 'd':
             n.disk = 0
+            n.disk_free = 0
             n.memory = 0
     for n, status in last_known_node_status.copy().items():
         if not nodes[n] and status == ALIVE:
-            Log.alert("Lost node {{node}}", node=n)
+            Log.warning("Lost node {{node}}", node=n)
             last_known_node_status[n] = DEAD
 
     for g, siblings in jx.groupby(nodes, "zone.name"):
@@ -543,6 +549,8 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
             elif n.name in existing_on_nodes:
                 list_node_weight[i] = 0
             elif busy_nodes[n.name] >= move.concurrent*BIG_SHARD_SIZE:
+                list_node_weight[i] = 0
+            elif n.disk_free == 0:
                 list_node_weight[i] = 0
             elif n.disk and float(n.disk_free - shard.size)/float(n.disk) < 0.10:
                 list_node_weight[i] = 0

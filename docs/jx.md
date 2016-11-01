@@ -19,6 +19,11 @@ Specific Reading
 * [Reference](jx_reference.md) - A bare list of allowed clauses and options for JSON query expressions
 
 
+Comparisons
+-----------
+
+* [GraphQL vs JSON Query Expressions](GraphQL.md)
+
 Motivation
 ----------
 
@@ -123,7 +128,7 @@ is responsible for record-wise translation.
 
 A specific type of data transformation involves converting general sets into
 data frames, which pivot tables are specific instances. The full domain of
-each dimension is representing in a data frame, an that domain is not affected
+each dimension is representing in a data frame, and that domain is not affected
 by the filter; and can result in a sparse matrix. The columns of a SQL
 `group by` clause have their domain affected by the resultant rows, a denser
 data set, but missing domain values. 
@@ -158,8 +163,8 @@ ORDER BY
 </pre>
 </td></tr></table>
 
-An inspection of this table may have you conclude AL (Alaska) does not exist. A pivot table does not have this problem:
-
+An inspection of this table may have you conclude AK (Alaska) does not exist. A pivot table does not have this problem:
+is representing in 
 <table><tr><td>
 <b>JSON Query Expression</b><br>
 <pre>

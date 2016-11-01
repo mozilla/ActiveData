@@ -250,7 +250,7 @@ class WarnOnException(object):
         template,  # human readable template
         **more_params
     ):
-        self.template = template,
+        self.template = template
         self.more_params = more_params
 
     def __enter__(self):

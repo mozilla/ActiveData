@@ -22,8 +22,10 @@
     },
     "replication_priority":[
         "saved*",
-        "repo*",
         "branches*",
+        "repo*",
+        "test_failuers*",
+        "coverage-summary*",
         "job*",
         "treeherder*",
         "unit*"

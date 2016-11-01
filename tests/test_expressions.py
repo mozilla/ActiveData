@@ -96,7 +96,6 @@ class TestExpressions(FuzzyTestCase):
         result = simplify_esfilter(jx_expression(where).to_esfilter())
         self.assertEqual(result, {"terms": {"a": [1, 2]}})
 
-
     def test_in_map(self):
         where = {"in": {"a": [1, 2]}}
         result = jx_expression(where).map({"a": "c"}).to_dict()

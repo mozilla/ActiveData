@@ -298,17 +298,11 @@ Return the length of a string.
 
 ###`left` Operator###
 
-Return the left-part of given string. `null` parameters result in `null`; negative length results in the empty string.  
+Return the left-part of given string. `null` parameters result in `null`. `left` accepts a numeric `length`: negative length results in the empty string.  `left` also accepts a string `sentinel`: If found, will return everything to the left of the `sentinel`, otherwise will return the whole string.
 
 		{"left": {variable: length}}
+		{"left": {variable: sentinel}}
 		{"left": [expression, length]}
-
-###`not_left` Operator###
-
-Removes the `length` left-most characters from the given string, returning the rest. `null` parameters result in `null`; negative `length` returns the whole string. Notice that concatenating `left` and `not_left` will return the original expression for all integer `length`.    
-
-		{"not_left": {variable: length}}
-		{"not_left": [expression, length]}
 
 ###`right` Operator###
 
@@ -317,18 +311,27 @@ Return the right-part of given string. `null` parameters result in `null`; negat
 		{"right": {variable: length}}
 		{"right": [expression, length]}
 
-###`not_right` Operator###
+###`find` Operator###
 
-Removes the `length` right-most characters from the given string, returning the rest. `null` parameters result in `null`; negative `length` returns the whole string. Notice that concatenating `right` and `not_right` will return the original expression for all integer `length`.    
+Test if property contains given substring, return the index of the first character if found.
 
-		{"not_right": {variable: length}}
-		{"not_right": [expression, length]}
+		{"find": {variable, substring}}
 
-###`contains` Operator###
+JSON Expressions treat zero (`0`) as a truthy value; this implies `find` can be used in conditional expressions, even if the `substring` happens to be the prefix.
 
-Test if property contains given substring.
+		{
+			"when": {"find": [
+				{"literal": "hello world"}, 
+				{"literal": "hello"}
+			]}
+			"then": {"literal": "always reached"}
+			"else": {"literal": "not reached"}
+		}
 
-		{"contains": {variable, substring}}
+
+`find` will return a default value if the substring is not found, that default value is usually `null`, but can be set with the `default` clause.   
+
+		{"find": {variable, substring}, "default": -1}
 
 
 ###`prefix` Operator###
@@ -342,6 +345,21 @@ Test if a property has the given prefix. Only the *simple* form exists.
 Return `true` if a property matches a given regular expression. The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term. Also be sure you escape special characters: This is a JSON string of a regular expression, not a regular expression itself. Only the *simple* form exists.
 
 		{"regexp": {variable: regular_expression}}
+
+###`not_left` Operator###
+
+Removes the `length` left-most characters from the given string, returning the rest. `null` parameters result in `null`; negative `length` returns the whole string. Notice that concatenating `left` and `not_left` will return the original expression for all integer `length`.    
+
+		{"not_left": {variable: length}}
+		{"not_left": [expression, length]}
+
+###`not_right` Operator###
+
+Removes the `length` right-most characters from the given string, returning the rest. `null` parameters result in `null`; negative `length` returns the whole string. Notice that concatenating `right` and `not_right` will return the original expression for all integer `length`.    
+
+		{"not_right": {variable: length}}
+		{"not_right": [expression, length]}
+
 
 
 
@@ -404,7 +422,7 @@ Convert a number to a string value
 
 ###`date` Operator###
 
-Convert a literal value to an absolute, or relative, unix datestamp.   Only literal values, and not JSON Expressions, are acceptable operands. 
+Convert a literal value to an absolute, or relative, unix datestamp. Only literal values, and not JSON Expressions, are acceptable operands. 
 
 		{"date": literal}
 
@@ -471,13 +489,15 @@ Window functions are given additional context variables to facilitate calculatio
 
 ### `rows` Operator ###
 
-JSON Expressions reference inner property names using dot-separated paths. In the case of referencing specific rows in a window function, this is possible, but painful:
+JSON Expressions reference inner property names using dot-separated paths. In the case of referencing specific rows in a window function, this is possible, but verbose:
 
-		{"get": ["rows", offset, variable]}
+		{"get": ["rows", {"add":{"rownum": offset}}, variable]}
 
-The `rows` operator exists to get the properties of an offset a little easier:
+Here we are accessing the `rows` array at `rownum + offset`, where `offset` can be positive or negative. The `rows` operator exists to simplify this access pattern:
 
-		{"rows": {variable: offset}}  
+		{"rows": {variable: offset}}
+
+Please notice `offset` is relative to `rownum`, not an absolute index into the `rows` array.  JSON expressions allow array indexing outside the limits an array; returning `null` when doing so.
 
 
 Reflective Operators
@@ -487,14 +507,14 @@ Reflective Operators
 
 JSON Expressions reference inner property names using dot-separated paths. Sometimes you will want to compose that path from dynamic values:
 
+		{"get": [accessor1, accessor2, ... accessorN]}
+
+The benefits are easier to see in an example where `t == "test"`, `d == "duration"`. The following are equivalent:
+
 		"run.test.duration"
+		{"get": {"run.test", "d"}} 
+		{"get": ["run", "t", "d"]}
 
-can be made explicit:
-
-		{"get": ["get": {"run": "test"}}, "duration"]}
-		{"get": {"run": ["test", "duration"]}}
-		{"get": ["run", ["test", "duration"]]}
-		{"get": ["run", "test", "duration"]}
 
 This can also be used to refer to numeric offsets found in tuples, or lists.  Let `temp == {"tuple": [3, 5]}`:
 

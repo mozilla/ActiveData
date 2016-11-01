@@ -1,5 +1,6 @@
 {
 	"is_travis": true,
+	"use": "elasticsearch",
 	"service_url": "http://127.0.0.1:5000/query",
 	"backend_es": {
 		"index": "testdata",
@@ -46,7 +47,7 @@
 		"port": 9200,
 		"index": "testdata",
 		"type": "test_result",
-		"debug": false
+		"debug": true
 	},
 	"debug": {
 		"trace": true

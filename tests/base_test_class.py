@@ -25,7 +25,7 @@ from pyLibrary.debugs.logs import Log, Except, constants
 from pyLibrary.dot import wrap, coalesce, unwrap, listwrap, Dict
 from pyLibrary.env import http
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import jx
+from pyLibrary.queries import jx, containers
 from pyLibrary.queries.containers.Table_usingSQLite import Table_usingSQLite
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.strings import expand_template
@@ -46,6 +46,8 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
     @classmethod
     def setUpClass(cls):
+        if not utils:
+            Log.error("Something wrong with test setup")
         utils.setUpClass()
 
     @classmethod
@@ -244,6 +246,7 @@ class ESUtils(object):
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
                 compare_to_expected(subtest.query, result, expected)
+                Log.note("Test result compares well")
             if num_expectations == 0:
                 Log.error("Expecting test {{name|quote}} to have property named 'expecting_*' for testing the various format clauses", {
                     "name": subtest.name
@@ -524,7 +527,7 @@ global_settings = jsons.ref.get("file://tests/config/elasticsearch.json")
 constants.set(global_settings.constants)
 NEXT = 0
 
-containers = Dict(
+container_types = Dict(
     elasticsearch=ESUtils,
     sqlite=SQLiteUtils
 )
@@ -537,9 +540,11 @@ try:
     if filename:
         global_settings = jsons.ref.get("file://"+filename)
     else:
-        raise Log.error("Expecting TEST_CONFIG environment variable to point to config file for container")
+        Log.alert("No TEST_CONFIG environment variable to point to config file.  Using /tests/config/elasticsearch.json")
 
-    utils = containers[global_settings.use](global_settings)
+    if not global_settings.use:
+        Log.error('Must have a {"use": type} set in the config file')
+    utils = container_types[global_settings.use](global_settings)
 except Exception, e:
     Log.warning("problem", e)
 

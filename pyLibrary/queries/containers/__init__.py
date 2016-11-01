@@ -43,7 +43,7 @@ def _delayed_imports():
         _MySQL = None
 
     from pyLibrary.queries.jx_usingES import FromES as _FromES
-    from pyLibrary.queries.containers.lists import ListContainer as _ListContainer
+    from pyLibrary.queries.containers.list_usingPythonList import ListContainer as _ListContainer
     from pyLibrary.queries.containers.cube import Cube as _Cube
     from pyLibrary.queries.jx import run as _run
     from pyLibrary.queries.query import QueryOp as _Query
@@ -62,6 +62,10 @@ def _delayed_imports():
 
 
 class Container(object):
+    """
+    Containers are data storage capable of handing queries on that storage
+    """
+
     __slots__ = ["data", "namespaces"]
 
     @classmethod

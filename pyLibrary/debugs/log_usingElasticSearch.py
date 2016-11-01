@@ -11,6 +11,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from collections import Mapping
+
 from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
@@ -21,6 +23,9 @@ from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.thread.threads import Thread, Queue
 from pyLibrary.times.durations import MINUTE, Duration
+
+MAX_BAD_COUNT = 5
+LOG_STRING_LENGTH = 2000
 
 
 class TextLog_usingElasticSearch(TextLog):
@@ -57,18 +62,26 @@ class TextLog_usingElasticSearch(TextLog):
             try:
                 Thread.sleep(seconds=1)
                 messages = wrap(self.queue.pop_all())
-                if messages:
-                    # for m in messages:
-                    #     m.value.params = leafer(m.value.params)
-                    #     m.value.error = leafer(m.value.error)
-                    for g, mm in jx.groupby(messages, size=self.batch_size):
-                        self.es.extend(mm)
+                if not messages:
+                    continue
+
+                for g, mm in jx.groupby(messages, size=self.batch_size):
+                    scrubbed = []
+                    try:
+                        for i, message in enumerate(mm):
+                            if message is Thread.STOP:
+                                please_stop.go()
+                                return
+                            scrubbed.append(_deep_json_to_string(message, depth=3))
+                    finally:
+                        self.es.extend(scrubbed)
                     bad_count = 0
             except Exception, e:
                 Log.warning("Problem inserting logs into ES", cause=e)
                 bad_count += 1
-                if bad_count > 5:
+                if bad_count > MAX_BAD_COUNT:
                     break
+                Thread.sleep(seconds=30)
         Log.warning("Given up trying to write debug logs to ES index {{index}}", index=self.es.settings.index)
 
         # CONTINUE TO DRAIN THIS QUEUE
@@ -87,13 +100,25 @@ class TextLog_usingElasticSearch(TextLog):
             self.queue.close()
 
 
+def _deep_json_to_string(value, depth):
+    """
+    :param value: SOME STRUCTURE
+    :param depth: THE MAX DEPTH OF PROPERTIES, DEEPER WILL BE STRING-IFIED
+    :return: FLATTER STRUCTURE
+    """
+    if isinstance(value, Mapping):
+        if depth == 0:
+            return strings.limit(convert.value2json(value), LOG_STRING_LENGTH)
 
-def leafer(param):
-    temp = unwrap(param.leaves())
-    if temp:
-        return dict(temp)
+        return {k: _deep_json_to_string(v, depth - 1) for k, v in value.items()}
+    elif isinstance(value, list):
+        return strings.limit(convert.value2json(value), LOG_STRING_LENGTH)
+    elif isinstance(value, (float, int, long)):
+        return value
+    elif isinstance(value, basestring):
+        return strings.limit(value, LOG_STRING_LENGTH)
     else:
-        return None
+        return strings.limit(convert.value2json(value), LOG_STRING_LENGTH)
 
 
 SCHEMA = {

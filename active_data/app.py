@@ -22,7 +22,7 @@ from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
 import active_data
-from active_data import record_request
+from active_data import record_request, cors_wrapper
 from active_data.actions import save_query
 from active_data.actions.json import get_raw_json
 from active_data.actions.query import query
@@ -42,6 +42,13 @@ OVERVIEW = File("active_data/public/index.html").read()
 app = Flask(__name__)
 config = None
 
+
+@app.route('/', defaults={'path': ''}, methods=['OPTIONS', 'HEAD'])
+@app.route('/<path:path>', methods=['OPTIONS', 'HEAD'])
+@cors_wrapper
+def _head(path):
+    return Response(b'', status=200)
+
 app.add_url_rule('/tools/<path:filename>', None, download)
 app.add_url_rule('/find/<path:hash>', None, find_query)
 app.add_url_rule('/query', None, query, defaults={'path': ''}, methods=['GET', 'POST'])
@@ -50,20 +57,32 @@ app.add_url_rule('/query/<path:path>', None, query, defaults={'path': ''}, metho
 app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
 
 
-@app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
 @app.route('/<path:path>', methods=['GET', 'POST'])
-def catch_all(path):
+@cors_wrapper
+def _default(path):
     record_request(flask.request, None, flask.request.get_data(), None)
 
     return Response(
         convert.unicode2utf8(OVERVIEW),
         status=400,
         headers={
-            "access-control-allow-origin": "*",
-            "content-type": "text/html"
+            "Content-Type": "text/html"
         }
     )
 
+
+@app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
+@cors_wrapper
+def _default(path):
+    record_request(flask.request, None, flask.request.get_data(), None)
+
+    return Response(
+        convert.unicode2utf8(OVERVIEW),
+        status=200,
+        headers={
+            "Content-Type": "text/html"
+        }
+    )
 
 def setup(settings=None):
     global config
@@ -165,16 +184,18 @@ def setup_ssl():
 
 
 def _exit():
+    Log.note("Got request to shutdown")
     shutdown = flask.request.environ.get('werkzeug.server.shutdown')
     if shutdown:
         shutdown()
+    else:
+        Log.warning("werkzeug.server.shutdown does not exist")
 
     return Response(
         convert.unicode2utf8(OVERVIEW),
         status=400,
         headers={
-            "access-control-allow-origin": "*",
-            "content-type": "text/html"
+            "Content-Type": "text/html"
         }
     )
 

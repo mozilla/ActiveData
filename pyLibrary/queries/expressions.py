@@ -20,9 +20,10 @@ from pyLibrary.collections import OR, MAX
 from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null, split_field, startswith_field, \
-    Dict, join_field, unwraplist, unwrap
+    Dict, join_field, unwraplist, unwrap, ROOT_PATH
 from pyLibrary.maths import Math
 from pyLibrary.queries.containers import STRUCT
+from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.times.dates import Date
@@ -111,7 +112,7 @@ def jx_expression(expr):
         else:
             return class_(op, jx_expression(term), **clauses)
     else:
-        if op in ["literal", "date"]:
+        if op in ["literal", "date", "offset"]:
             return class_(op, term, **clauses)
         else:
             return class_(op, jx_expression(term), **clauses)
@@ -263,12 +264,12 @@ class Variable(Expression):
         cols = schema.get(self.var, None)
         if cols is None:
             # DOES NOT EXIST
-            return wrap([{"name": ".", "sql": {"n": "NULL"}, "nested_path": ["."]}])
+            return wrap([{"name": ".", "sql": {"n": "NULL"}, "nested_path": ROOT_PATH}])
 
         acc = Dict()
-        nested_path = ["."]
+        nested_path = ROOT_PATH
         for c in cols:
-            nested_path = wrap_nested_path(c.nested_path)
+            nested_path = c.nested_path
             acc[json_type_to_sql_type[c.type]] = c.es_index + "." + convert.string2quote(c.es_column)
 
         return wrap([{"name": ".", "sql": acc, "nested_path": nested_path}])
@@ -279,6 +280,8 @@ class Variable(Expression):
             row = row.get(p)
             if row is None:
                 return None
+        if isinstance(row, list) and len(row) == 1:
+            return row[0]
         return row
 
     def to_dict(self):
@@ -300,9 +303,6 @@ class Variable(Expression):
     def exists(self):
         return ExistsOp("exists", self)
 
-    def __call__(self, row=None, rownum=None, rows=None):
-        return row[self.var]
-
     def __hash__(self):
         return self.var.__hash__()
 
@@ -314,6 +314,53 @@ class Variable(Expression):
 
     def __str__(self):
         return str(self.var)
+
+
+class OffsetOp(Expression):
+    """
+    OFFSET INDEX INTO A TUPLE
+    """
+
+    def __init__(self, op, var):
+        Expression.__init__(self, "offset", None)
+        if not Math.is_integer(var):
+            Log.error("Expecting an integer")
+        self.var = var
+
+    def to_python(self, not_null=False, boolean=False):
+        return "row[" + unicode(self.var) + "] if 0<=" + unicode(self.var) + "<len(row) else None"
+
+    def __call__(self, row, rownum=None, rows=None):
+        try:
+            return row[self.var]
+        except Exception:
+            return None
+
+    def to_dict(self):
+        return {"offset": self.var}
+
+    def vars(self):
+        return {}
+
+    def missing(self):
+        # RETURN FILTER THAT INDICATE THIS EXPRESSION RETURNS null
+        return MissingOp("missing", self)
+
+    def exists(self):
+        return ExistsOp("exists", self)
+
+    def __hash__(self):
+        return self.var.__hash__()
+
+    def __eq__(self, other):
+        return self.var == other
+
+    def __unicode__(self):
+        return unicode(self.var)
+
+    def __str__(self):
+        return str(self.var)
+
 
 class RowsOp(Expression):
     has_simple_form = True
@@ -791,7 +838,7 @@ class BinaryOp(Expression):
         script = "(" + lhs + ") " + BinaryOp.operators[self.op] + " (" + rhs + ")"
         missing = OrOp("or", [self.lhs.missing(), self.rhs.missing()])
 
-        if self.op in BinaryOp.algebra_ops:
+        if self.op in BinaryOp.operators:
             script = "(" + script + ").doubleValue()"  # RETURN A NUMBER, NOT A STRING
 
         output = WhenOp(
@@ -1566,7 +1613,7 @@ class RegExpOp(Expression):
         self.var, self.pattern = term
 
     def to_python(self, not_null=False, boolean=False):
-        return "re.match(" + self.pattern + ", " + self.var.to_python() + ")"
+        return "re.match(" + convert.string2quote(convert.json2value(self.pattern.json)) + ", " + self.var.to_python() + ")"
 
     def to_esfilter(self):
         return {"regexp": {self.var.var: convert.json2value(self.pattern.json)}}
@@ -1635,6 +1682,8 @@ class ContainsOp(Expression):
 
 
 class CoalesceOp(Expression):
+    has_simple_form = True
+
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
         self.terms = terms
@@ -2361,7 +2410,7 @@ def split_expression_by_depth(where, schema, map_, output=None, var_to_depth=Non
         if not vars_:
             return Null
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
-        var_to_depth = {v: len(listwrap(schema[v].nested_path)) for v in vars_}
+        var_to_depth = {v: len(schema[v].nested_path)-1 for v in vars_}
         all_depths = set(var_to_depth.values())
         output = wrap([[] for _ in range(MAX(all_depths) + 1)])
     else:
@@ -2415,6 +2464,7 @@ operators = {
     "not_right": NotRightOp,
     "null": NullOp,
     "number": NumberOp,
+    "offset": OffsetOp,
     "or": OrOp,
     "prefix": PrefixOp,
     "range": RangeOp,
@@ -2461,14 +2511,3 @@ sql_type_to_json_type = {
     "j": "object",
     "b": "boolean"
 }
-
-
-def wrap_nested_path(nested_path):
-    return listwrap(nested_path) + ["."]
-
-
-def unwrap_nested_path(nested_path):
-    if unwrap(nested_path)[-1] == ".":
-        nested_path = nested_path[:-1]
-
-    return unwraplist(nested_path)

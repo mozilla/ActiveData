@@ -76,11 +76,17 @@ class DictList(list):
         return wrap(_get(self, "list")[index])
 
     def __setitem__(self, i, y):
-        _list = _get(self, "list")
-        if i <= len(_list):
-            for i in range(len(_list), i):
-                _list.append(None)
-        _list[i] = unwrap(y)
+        try:
+            _list = _get(self, "list")
+            if i <= len(_list):
+                for i in range(len(_list), i):
+                    _list.append(None)
+            _list[i] = unwrap(y)
+        except Exception, e:
+            if not _dictwrap:
+                _late_import()
+
+            _Log.error("problem", cause = e)
 
     def __getattribute__(self, key):
         try:
@@ -165,8 +171,8 @@ class DictList(list):
             _get(self, "list").append(unwrap(v))
         return self
 
-    def pop(self):
-        return wrap(_get(self, "list").pop())
+    def pop(self, index=None):
+        return wrap(_get(self, "list").pop(index))
 
     def __add__(self, value):
         output = list(_get(self, "list"))

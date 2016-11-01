@@ -53,14 +53,17 @@ class Date(object):
     def floor(self, duration=None):
         if duration is None:  # ASSUME DAY
             return unix2Date(math.floor(self.unix / 86400) * 86400)
+        elif duration.month:
+            dt = unix2datetime(self.unix)
+            month = int(math.floor((dt.year*12+dt.month-1) / duration.month) * duration.month)
+            year = int(math.floor(month/12))
+            month -= 12*year
+            return Date(datetime(year, month+1, 1))
         elif duration.milli % (7 * 86400000) == 0:
             offset = 4*86400
             return unix2Date(math.floor((self.unix + offset) / duration.seconds) * duration.seconds - offset)
-        elif not duration.month:
-            return unix2Date(math.floor(self.unix / duration.seconds) * duration.seconds)
         else:
-            month = int(math.floor(self.value.month / duration.month) * duration.month)
-            return Date(datetime(self.value.year, month, 1))
+            return unix2Date(math.floor(self.unix / duration.seconds) * duration.seconds)
 
     def format(self, format="%Y-%m-%d %H:%M:%S"):
         try:
@@ -75,7 +78,7 @@ class Date(object):
         return self.unix*1000
 
     def addDay(self):
-        return Date(self.value + timedelta(days=1))
+        return Date(unix2datetime(self.unix) + timedelta(days=1))
 
     def add(self, other):
         if other==None:
@@ -228,7 +231,7 @@ def parse(*args):
 
 
 def add_month(offset, months):
-    month = offset.month+months-1
+    month = int(offset.month+months-1)
     year = offset.year
     if not 0 <= month < 12:
         r = Math.mod(month, 12)

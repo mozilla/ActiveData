@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from tests import NULL
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 
@@ -28,12 +29,12 @@ class TestGroupBy2(ActiveDataBaseTest):
                 "data": [
                     {"a": "x", "b": "m", "count": 2},
                     {"a": "x", "b": "n", "count": 1},
-                    {"a": "x", "b": None, "count": 1},
+                    {"a": "x", "b": NULL, "count": 1},
                     {"a": "y", "b": "m", "count": 1},
                     {"a": "y", "b": "n", "count": 2},
-                    {"a": "y", "b": None, "count": 1},
-                    {"a": None, "b": "m", "count": 1},
-                    {"a": None, "b": "n", "count": 1},
+                    {"a": "y", "b": NULL, "count": 1},
+                    {"a": NULL, "b": "m", "count": 1},
+                    {"a": NULL, "b": "n", "count": 1},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -41,12 +42,12 @@ class TestGroupBy2(ActiveDataBaseTest):
                 "data": [
                     ["x", "m", 2],
                     ["x", "n", 1],
-                    ["x", None, 1],
+                    ["x", NULL, 1],
                     ["y", "m", 1],
                     ["y", "n", 2],
-                    ["y", None, 1],
-                    [None, "m", 1],
-                    [None, "n", 1],
+                    ["y", NULL, 1],
+                    [NULL, "m", 1],
+                    [NULL, "n", 1],
                 ]
             }
         }
@@ -67,12 +68,12 @@ class TestGroupBy2(ActiveDataBaseTest):
                 "data": [
                     {"a": "x", "b": "m", "v": 29},
                     {"a": "x", "b": "n", "v": 3},
-                    {"a": "x", "b": None, "v": 5},
+                    {"a": "x", "b": NULL, "v": 5},
                     {"a": "y", "b": "m", "v": 7},
                     {"a": "y", "b": "n", "v": 50},
-                    {"a": "y", "b": None, "v": 13},
-                    {"a": None, "b": "m", "v": 17},
-                    {"a": None, "b": "n", "v": 19}
+                    {"a": "y", "b": NULL, "v": 13},
+                    {"a": NULL, "b": "m", "v": 17},
+                    {"a": NULL, "b": "n", "v": 19}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -80,12 +81,12 @@ class TestGroupBy2(ActiveDataBaseTest):
                 "data": [
                     ["x", "m", 29],
                     ["x", "n", 3],
-                    ["x", None, 5],
+                    ["x", NULL, 5],
                     ["y", "m", 7],
                     ["y", "n", 50],
-                    ["y", None, 13],
-                    [None, "m", 17],
-                    [None, "n", 19]
+                    ["y", NULL, 13],
+                    [NULL, "m", 17],
+                    [NULL, "n", 19]
                 ]
             }
         }
@@ -106,12 +107,12 @@ class TestGroupBy2(ActiveDataBaseTest):
                 "data": [
                     {"a": "x", "b": "m", "v": 29},
                     {"a": "x", "b": "n", "v": 3},
-                    {"a": "x", "b": None, "v": 5},
+                    {"a": "x", "b": NULL, "v": 5},
                     {"a": "y", "b": "m", "v": 7},
                     {"a": "y", "b": "n", "v": 50},
-                    {"a": "y", "b": None, "v": 13},
-                    {"a": None, "b": "m", "v": 17},
-                    {"a": None, "b": "n", "v": 19},
+                    {"a": "y", "b": NULL, "v": 13},
+                    {"a": NULL, "b": "m", "v": 17},
+                    {"a": NULL, "b": "n", "v": 19},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -119,12 +120,12 @@ class TestGroupBy2(ActiveDataBaseTest):
                 "data": [
                     ["x", "m", 29],
                     ["x", "n", 3],
-                    ["x", None, 5],
+                    ["x", NULL, 5],
                     ["y", "m", 7],
                     ["y", "n", 50],
-                    ["y", None, 13],
-                    [None, "m", 17],
-                    [None, "n", 19],
+                    ["y", NULL, 13],
+                    [NULL, "m", 17],
+                    [NULL, "n", 19],
                 ]
             }
         }
@@ -154,12 +155,12 @@ class TestGroupBy2(ActiveDataBaseTest):
 two_dim_test_data = [
     {"a": "x", "b": "m", "v": 2},
     {"a": "x", "b": "n", "v": 3},
-    {"a": "x", "b": None, "v": 5},
+    {"a": "x", "b": NULL, "v": 5},
     {"a": "y", "b": "m", "v": 7},
     {"a": "y", "b": "n", "v": 11},
-    {"a": "y", "b": None, "v": 13},
-    {"a": None, "b": "m", "v": 17},
-    {"a": None, "b": "n", "v": 19},
+    {"a": "y", "b": NULL, "v": 13},
+    {"a": NULL, "b": "m", "v": 17},
+    {"a": NULL, "b": "n", "v": 19},
     {"a": "x", "b": "m", "v": 27},
     {"a": "y", "b": "n", "v": 39}
 ]

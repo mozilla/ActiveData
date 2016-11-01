@@ -10,9 +10,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from copy import deepcopy
-
-from pyLibrary import convert
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
@@ -24,7 +21,9 @@ from pyLibrary.queries import jx
 from pyLibrary.testing import elasticsearch
 from pyLibrary.thread.threads import Signal, Queue
 from pyLibrary.thread.threads import Thread
+from pyLibrary.times.dates import Date
 
+DEBUG = True
 NUM_THREAD = 4
 
 
@@ -107,7 +106,12 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
         all_tests_covering_file = UNION(test_count.data.get("test.url"))
         num_tests = len(all_tests_covering_file)
         max_siblings = num_tests - 1
-        Log.note("{{filename}} is covered by {{num}} tests", filename=not_summarized.source.file.name, num=num_tests)
+        Log.note(
+            "{{filename}} rev {{revision}} is covered by {{num}} tests",
+            filename=not_summarized.source.file.name,
+            num=num_tests,
+            revision=not_summarized.build.revision12
+        )
         line_summary = list(
             (k, unwrap(wrap(list(v)).get("test.url")))
             for k, v in jx.groupby(test_count.data, keys="line")
@@ -134,10 +138,10 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             coverage_candidates = jx.filter(file_level_coverage_records.data, lambda row, rownum, rows: row.test.url == test_name)
             if coverage_candidates:
 
-                if len(coverage_candidates) > 1:
+                if len(coverage_candidates) > 1 and any(coverage_candidates[0]._id != c._id for c in coverage_candidates):
                     Log.warning(
                         "Duplicate coverage\n{{cov|json|indent}}",
-                        cov=[{"run": c.run, "test": c.test} for c in coverage_candidates]
+                        cov=[{"_id": c._id, "run": c.run, "test": c.test} for c in coverage_candidates]
                     )
 
                 # MORE THAN ONE COVERAGE CANDIDATE CAN HAPPEN WHEN THE SAME TEST IS IN TWO DIFFERENT CHUNKS OF THE SAME SUITE
@@ -170,54 +174,110 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             Log.warning("expecting all records to have summary. Example:\n{{example}}", example=bad_example[0])
 
         rows = [{"id": d._id, "value": d} for d in file_level_coverage_records.data]
+        coverage_summary_index.extend(rows)
         coverage_index.extend(rows)
+
+        all_test_summary = []
+        for g, records in jx.groupby(file_level_coverage_records.data, "source.file.name"):
+            cov = UNION(records.source.file.covered)
+            uncov = UNION(records.source.file.uncovered)
+            coverage = {
+                "_id": "|".join([records[0].build.revision12, g["source.file.name"]]),  # SOMETHING UNIQUE, IN CASE WE RECALCULATE
+                "source": {
+                    "file": {
+                        "name": g["source.file.name"],
+                        "is_file": True,
+                        "covered": jx.sort(cov, "line"),
+                        "uncovered": jx.sort(uncov),
+                        "total_covered": len(cov),
+                        "total_uncovered": len(uncov),
+                        "min_line_siblings": 0  # PLACEHOLDER TO INDICATE DONE
+                    }
+                },
+                "build": records[0].build,
+                "repo": records[0].repo,
+                "run": records[0].run,
+                "etl": {"timestamp": Date.now()}
+            }
+            all_test_summary.append(coverage)
+
+        rows = [{"id": d["_id"], "value": d} for d in all_test_summary]
         coverage_summary_index.extend(rows)
 
-def loop(coverage_index, coverage_summary_index, settings, please_stop):
-    try:
-        while not please_stop:
+        if DEBUG:
             coverage_index.refresh()
-
-            # IDENTIFY NEW WORK
-            Log.note("Identify new coverage to work on")
             todo = http.post_json(settings.url, json={
                 "from": "coverage",
-                "groupby": ["source.file.name", "build.revision12"],
                 "where": {"and": [
                     {"missing": "source.method.name"},
-                    {"missing": "source.file.min_line_siblings"}
+                    {"missing": "source.file.min_line_siblings"},
+                    {"eq": {"source.file.name": not_summarized.source.file.name}},
+                    {"eq": {"build.revision12": not_summarized.build.revision12}}
                 ]},
                 "format": "list",
-                "limit": coalesce(settings.batch_size, 100)
+                "limit": 10
             })
+            if todo.data:
+                Log.error("Failure to update")
 
-            if not todo.data:
-                please_stop.go()
-                return
 
-            queue = Queue("work queue")
-            queue.extend(todo.data)
+def loop(source, coverage_summary_index, settings, please_stop):
+    try:
+        cluster = elasticsearch.Cluster(source)
+        aliases = cluster.get_aliases()
+        candidates = []
+        for pairs in aliases:
+            if pairs.alias == source.index:
+                candidates.append(pairs.index)
+        candidates = jx.sort(candidates, {".": "desc"})
 
-            threads = [
-                Thread.run(
-                    "processor" + unicode(i),
-                    process_batch,
-                    queue,
-                    coverage_index,
-                    coverage_summary_index,
-                    settings,
-                    please_stop=please_stop
-                )
-                for i in range(NUM_THREAD)
-            ]
+        for index_name in candidates:
+            coverage_index = Index(index=index_name, read_only=False, settings=source)
 
-            # ADD A STOP MESSAGE FOR EACH THREAD
-            for i in range(NUM_THREAD):
+            while not please_stop:
+                # IDENTIFY NEW WORK
+                Log.note("Working on index {{index}}", index=index_name)
+                coverage_index.refresh()
+
+                todo = http.post_json(settings.url, json={
+                    "from": "coverage",
+                    "groupby": ["source.file.name", "build.revision12"],
+                    "where": {"and": [
+                        {"missing": "source.method.name"},
+                        {"missing": "source.file.min_line_siblings"}
+                    ]},
+                    "format": "list",
+                    "limit": coalesce(settings.batch_size, 100)
+                })
+
+                if not todo.data:
+                    break
+
+                queue = Queue("pending source files to review")
+                queue.extend(todo.data[0:coalesce(settings.batch_size, 100):])
+
+                threads = [
+                    Thread.run(
+                        "processor" + unicode(i),
+                        process_batch,
+                        queue,
+                        coverage_index,
+                        coverage_summary_index,
+                        settings,
+                        please_stop=please_stop
+                    )
+                    for i in range(NUM_THREAD)
+                ]
+
+                # ADD STOP MESSAGE
                 queue.add(Thread.STOP)
 
-            # WAIT FOR THEM TO COMPLETE
-            for t in threads:
-                t.join()
+                # WAIT FOR THEM TO COMPLETE
+                for t in threads:
+                    t.join()
+
+        please_stop.go()
+        return
 
     except Exception, e:
         Log.warning("Problem processing", cause=e)
@@ -233,14 +293,14 @@ def main():
             Log.start(config.debug)
 
             please_stop = Signal("main stop signal")
-            coverage_index = elasticsearch.Cluster(config.source).get_index(read_only=False, settings=config.source)
+            coverage_index = elasticsearch.Cluster(config.source).get_index(settings=config.source)
             config.destination.schema = coverage_index.get_schema()
             coverage_summary_index = elasticsearch.Cluster(config.destination).get_or_create_index(read_only=False, settings=config.destination)
             coverage_summary_index.add_alias(config.destination.index)
             Thread.run(
                 "processing loop",
                 loop,
-                coverage_index,
+                config.source,
                 coverage_summary_index,
                 config,
                 please_stop=please_stop

@@ -8,10 +8,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
-from pyLibrary.dot import set_default, wrap
+from __future__ import unicode_literals
 
+from pyLibrary.dot import set_default, wrap
 from tests.base_test_class import ActiveDataBaseTest
 
 
@@ -49,12 +49,13 @@ class TestMetadata(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
-                {"table": table_name, "name": "a", "type": "string", "nested_path": None}
-            ]},
+                    {"table": table_name, "name": "a", "type": "string", "nested_path": "."}
+                ]
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["table", "name", "type", "nested_path"],
-                "data": [[table_name, "a", "string", None]]
+                "data": [[table_name, "a", "string", "."]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -68,7 +69,7 @@ class TestMetadata(ActiveDataBaseTest):
                     "table": [table_name],
                     "name": ["a"],
                     "type": ["string"],
-                    "nested_type": [None]
+                    "nested_path": ["."]
                 }
             }
         })
@@ -119,21 +120,21 @@ class TestMetadata(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"table": table_name, "name": "_a", "type": "nested", "nested_path": "_a"},
-                    {"table": table_name, "name": "_a.b", "type": "string", "nested_path": "_a"},
-                    {"table": table_name, "name": "_a.v", "type": "double", "nested_path": "_a"},
-                    {"table": table_name, "name": "c", "type": "string", "nested_path": None},
-                    {"table": table_name, "name": "o", "type": "double", "nested_path": None},
+                    {"table": table_name, "name": "_a", "type": "nested", "nested_path": "."},
+                    {"table": table_name, "name": "_a.b", "type": "string", "nested_path": ["_a", "."]},
+                    {"table": table_name, "name": "_a.v", "type": "double", "nested_path": ["_a", "."]},
+                    {"table": table_name, "name": "c", "type": "string", "nested_path": "."},
+                    {"table": table_name, "name": "o", "type": "double", "nested_path": "."},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["table", "name", "nested_path", "type"],
                 "data": [
-                    [table_name, "_a", "_a", "nested"],
-                    [table_name, "_a.b", "_a", "string"],
-                    [table_name, "_a.v", "_a", "double"],
-                    [table_name, "c", None, "string"],
-                    [table_name, "o", None, "double"]
+                    [table_name, "_a", ".", "nested"],
+                    [table_name, "_a.b", ["_a", "."], "string"],
+                    [table_name, "_a.v", ["_a", "."], "double"],
+                    [table_name, "c", ".", "string"],
+                    [table_name, "o", ".", "double"]
                 ]
             }
         }

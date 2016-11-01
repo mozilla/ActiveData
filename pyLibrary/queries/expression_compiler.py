@@ -11,6 +11,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import re
+
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, Dict
@@ -20,6 +22,7 @@ true = True
 false = False
 null = None
 EMPTY_DICT = {}
+
 
 def compile_expression(source):
     """
@@ -36,6 +39,7 @@ def compile_expression(source):
     _ = Log
     _ = Dict
     _ = EMPTY_DICT
+    _ = re
 
     output = None
     exec """

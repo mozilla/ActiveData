@@ -24,6 +24,22 @@ from pyLibrary.times.timer import Timer
 DEBUG = True
 
 
+_upgraded = False
+def _upgrade():
+    global _upgraded
+    _upgraded = True
+    try:
+        import sys
+
+        sqlite_dll = File.new_instance(sys.exec_prefix, "dlls/sqlite3.dll")
+        python_dll = File("pyLibrary/vendor/sqlite/sqlite3.dll")
+        if python_dll.read_bytes() != sqlite_dll.read_bytes():
+            backup = sqlite_dll.backup()
+            File.copy(python_dll, sqlite_dll)
+    except Exception, e:
+        Log.warning("could not upgrade python's sqlite", cause=e)
+
+
 class Sqlite(object):
     """
     Allows multi-threaded access
@@ -37,6 +53,9 @@ class Sqlite(object):
         :param db:  Optional, wrap a sqlite db in a thread
         :return: Multithread save database
         """
+        if not _upgraded:
+            _upgrade()
+
         self.db = None
         self.queue = Queue("sql commands")   # HOLD (command, result, signal) PAIRS
         self.worker = Thread.run("sqlite db thread", self._worker)
@@ -121,13 +140,3 @@ class Sqlite(object):
             self.db.close()
 
 
-try:
-    import sys
-
-    sqlite_dll = File.new_instance(sys.exec_prefix, "dlls/sqlite3.dll")
-    python_dll = File("pyLibrary/vendor/sqlite/sqlite3.dll")
-    if python_dll.read_bytes() != sqlite_dll.read_bytes():
-        backup = sqlite_dll.backup()
-        File.copy(python_dll, sqlite_dll)
-except Exception, e:
-    Log.warning("could not upgrade python's sqlite", cause=e)

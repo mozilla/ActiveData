@@ -187,6 +187,7 @@ def assign_shards(settings):
     allocation = UniqueIndex(["index", "node.name"])
 
     for g, replicas in jx.groupby(shards, "index"):
+        Log.note("review replicas of {{index}}", index=g.index)
         replicas = wrap(list(replicas))
         num_primaries = len(filter(lambda r: r.type == 'p', replicas))
 
@@ -215,7 +216,7 @@ def assign_shards(settings):
                 "node": n,
                 "min_allowed": min_allowed,
                 "max_allowed": max_allowed,
-                "shards": list(filter(lambda r: r.node.name == n.name and r.index == g.index, shards))
+                "shards": list(filter(lambda r: r.node.name == n.name, replicas))
             })
 
         index_size = Math.sum(replicas.size)
@@ -238,8 +239,8 @@ def assign_shards(settings):
                     break  # ONLY NEED ONE
     if not_started:
         # TODO: CANCEL ANYTHING MOVING IN SPOT
-        Log.note("{{num}} shards have not started", num=len(not_started))
-        Log.warning("Shards not started!!\n{{shards|json|indent}}", shards=not_started)
+        Log.warning("{{num}} shards have not started", num=len(not_started))
+        # Log.warning("Shards not started!!\n{{shards|json|indent}}", shards=not_started)
         initailizing_indexes = set(relocating.index)
         busy = [n for n in not_started if n.index in initailizing_indexes]
         please_initialize = [n for n in not_started if n.index not in initailizing_indexes]
@@ -612,6 +613,11 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
             elif main_reason and main_reason.find("after allocation more than allowed") != -1:
                 pass
                 Log.note("failed: out of space")
+            elif "failed to resolve [" in result.error:
+                # LOST A NODE WHILE SENDING UPDATES
+                lost_node_name = strings.between(result.error, "failed to resolve [", "]").strip()
+                Log.warning("Lost node {{node}}", node=lost_node_name)
+                nodes[lost_node_name].zone = None
             else:
                 Log.warning(
                     "{{code}} Can not move/allocate:\n\treason={{reason}}\n\tdetails={{error|quote}}",

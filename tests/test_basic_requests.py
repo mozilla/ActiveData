@@ -31,7 +31,7 @@ class TestBasicRequests(ActiveDataBaseTest):
         url.path = ""
         url = str(url)
         response = self.utils.try_till_response(url, data=b"")
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, OVERVIEW)
 
     def test_bad_file_request(self):

@@ -19,7 +19,8 @@ from pyLibrary import convert, strings
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, Dict, coalesce, DictList, listwrap, unwrap, set_default
+from pyLibrary.dot import wrap, Dict, coalesce, DictList, listwrap, unwrap, set_default, wrap_leaves
+from pyLibrary.dot.dicts import leaves
 from pyLibrary.env import http
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
@@ -81,6 +82,7 @@ def assign_shards(settings):
 
     risky_zone_names = set(z.name for z in settings.zones if z.risky)
 
+    # USE SETTINGS TO OVERRIDE NODE PROPERTIES
     for n in settings.nodes:
         node = nodes[n.name]
         if node:
@@ -108,8 +110,7 @@ def assign_shards(settings):
             Log.warning("Lost node {{node}}", node=n)
             last_known_node_status[n] = DEAD
 
-    for g, siblings in jx.groupby(nodes, "zone.name"):
-        siblings = list(siblings)
+    for _, siblings in jx.groupby(nodes, "zone.name"):
         siblings = wrap(filter(lambda n: n.role == "d", siblings))
         for s in siblings:
             s.siblings = len(siblings)
@@ -160,7 +161,6 @@ def assign_shards(settings):
 
     # ASSIGN SIZE TO ALL SHARDS
     for g, replicas in jx.groupby(shards, ["index", "i"]):
-        replicas = wrap(list(replicas))
         size = Math.MAX(replicas.size)
         for r in replicas:
             r.size = size
@@ -194,7 +194,6 @@ def assign_shards(settings):
 
     for g, replicas in jx.groupby(shards, "index"):
         Log.note("review replicas of {{index}}", index=g.index)
-        replicas = wrap(list(replicas))
         num_primaries = len(filter(lambda r: r.type == 'p', replicas))
 
         multiplier = Math.MAX(settings.zones.shards)
@@ -235,7 +234,6 @@ def assign_shards(settings):
     # LOOKING FOR SHARDS WITH ZERO INSTANCES, IN THE spot ZONE
     not_started = []
     for g, replicas in jx.groupby(shards, ["index", "i"]):
-        replicas = list(replicas)
         started_replicas = list(set([s.zone.name for s in replicas if s.status in {"STARTED", "RELOCATING"}]))
         if len(started_replicas) == 0:
             # MARK NODE AS RISKY
@@ -262,7 +260,6 @@ def assign_shards(settings):
     high_risk_shards = []
     for g, replicas in jx.groupby(shards, ["index", "i"]):
         # TODO: CANCEL ANYTHING MOVING IN SPOT
-        replicas = list(replicas)
         realized_zone_names = set([s.node.zone.name for s in replicas if s.status in {"STARTED", "RELOCATING"}])
         if len(realized_zone_names-risky_zone_names) == 0:
             # MARK NODE AS RISKY
@@ -280,7 +277,6 @@ def assign_shards(settings):
     overloaded_zone_index_pairs = set()
     over_allocated_shards = Dict()
     for g, replicas in jx.groupby(shards, ["index", "i"]):
-        replicas = wrap(list(replicas))
         for z in zones:
             safe_replicas = filter(lambda r: r.status == "STARTED" and r.node.zone.name == z.name, replicas)
             if len(safe_replicas) > z.shards:
@@ -329,7 +325,6 @@ def assign_shards(settings):
     # IN THEORY THIS IS FASTER BECAUSE THEY ARE IN THE SAME ZONE (AND BETTER MACHINES)
     dup_shards = Dict()
     for g, replicas in jx.groupby(shards, ["index", "i"]):
-        replicas = wrap(list(replicas))
         # WE CAN ASSIGN THIS REPLICA WITHIN THE SAME ZONE
         for s in replicas:
             if s.status != "UNASSIGNED" or s.type != "p":
@@ -352,8 +347,6 @@ def assign_shards(settings):
     # LOOK FOR UNALLOCATED SHARDS
     low_risk_shards = Dict()
     for g, replicas in jx.groupby(shards, ["index", "i"]):
-        replicas = wrap(list(replicas))
-
         # WE CAN ASSIGN THIS REPLICA TO spot
         for s in replicas:
             if s.status != "UNASSIGNED":
@@ -374,6 +367,7 @@ def assign_shards(settings):
     # LOOK FOR SHARD IMBALANCE
     rebalance_candidates = Dict()
     for g, replicas in jx.groupby(filter(lambda r: r.status == "STARTED", shards), ["node.name", "index"]):
+        g = wrap_leaves(g)
         replicas = list(replicas)
         if not g.node:
             continue
@@ -396,8 +390,7 @@ def assign_shards(settings):
 
     # LOOK FOR OTHER, SLOWER, DUPLICATION OPPORTUNITIES
     dup_shards = Dict()
-    for g, replicas in jx.groupby(shards, ["index", "i"]):
-        replicas = wrap(list(replicas))
+    for _, replicas in jx.groupby(shards, ["index", "i"]):
         # WE CAN ASSIGN THIS REPLICA WITHIN THE SAME ZONE
         for s in replicas:
             if s.status != "UNASSIGNED":
@@ -533,9 +526,9 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
             for n in nodes
         }
         for g, ss in jx.groupby(filter(lambda s: s.status == "STARTED" and s.node, shards_for_this_index), "node.name"):
-            ss = wrap(list(ss))
+            g = wrap_leaves(g)
             index_count = len(ss)
-            node_weight[g.node.name] = nodes[g.node.name].memory * (1 - float(Math.sum(ss.size))/float(index_size))
+            node_weight[g.node.name] = nodes[g.node.name].memory * (1 - float(Math.sum(ss.size))/float(index_size+1))
             min_allowed = allocation[shard.index, g.node.name].min_allowed
             node_weight[g.node.name] *= 4 ** Math.MIN([-1, min_allowed - index_count - 1])
 

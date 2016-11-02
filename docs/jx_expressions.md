@@ -59,6 +59,16 @@ which is logically equivalent to:
 Reference
 =========
 
+###`coalesce` Operator###
+
+Return the first not `null` value in the list of evaluated expressions. 
+
+		{"coalesce": {variable, constant}}
+		{"coalesce": [expr1, expr2, ... exprN]}
+
+For the *simple* form; `null` is a legitimate `constant`. Generally, if all expressions evaluate to `null`, or the expression list is empty, then the result is `null` 
+
+
 
 Boolean Operators
 -----------------
@@ -280,6 +290,18 @@ Test is a property is not `null`
 
 		{"exists": variable}
 
+###`prefix` Operator###
+
+Test if a property has the given prefix. Only the *simple* form exists.
+
+		{"prefix": {variable: prefix}}
+
+###`regexp` Operator###
+
+Return `true` if a property matches a given regular expression. The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term. Also be sure you escape special characters: This is a JSON string of a regular expression, not a regular expression itself. Only the *simple* form exists.
+
+		{"regexp": {variable: regular_expression}}
+
 ###`match_all` Operator###
 
 Dummy operator that always returns `true`. It is an artifact of ElasticSearch filter expressions. Use `true` instead.
@@ -334,17 +356,56 @@ JSON Expressions treat zero (`0`) as a truthy value; this implies `find` can be 
 		{"find": {variable, substring}, "default": -1}
 
 
-###`prefix` Operator###
+###`concat` Operator###
 
-Test if a property has the given prefix. Only the *simple* form exists.
+Concatenate an array of strings. with the given `separator`
 
-		{"prefix": {variable: prefix}}
+	{"concat": [string1, string2, ... stringN], "separator":separator}
 
-###`regexp` Operator###
+The `separator` defaults to the empty string (`""`).
 
-Return `true` if a property matches a given regular expression. The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term. Also be sure you escape special characters: This is a JSON string of a regular expression, not a regular expression itself. Only the *simple* form exists.
+	{"concat": [
+		{"literal":"hello"}, 
+		{"literal":"world"}
+	]}
+	⇒ "helloworld"
 
-		{"regexp": {variable: regular_expression}}
+You must specify your separator, if you want it 
+
+	{
+		"concat": [
+			{"literal":"hello"}, 
+			{"literal":"world"}
+		], 
+		"separator":" "
+	} 
+	⇒ "hello world"
+
+If any of the strings are `null`, they are ignored. 
+
+	{
+		"concat": [
+			None, 
+			{"literal":"hello"}, 
+			None, 
+			{"literal":"world"}
+		], 
+		"separator":"-"
+	} 
+	⇒ "hello-world"
+
+To get consecutive separators, use the empty string.
+ 
+	{
+		"concat": [
+			{"literal":"hello"}, 
+			{'literal": ""}, 
+			{"literal":"world"}
+		], 
+		"separator":" "
+	} 
+	⇒ "hello--world"
+
 
 ###`not_left` Operator###
 
@@ -360,22 +421,10 @@ Removes the `length` right-most characters from the given string, returning the 
 		{"not_right": {variable: length}}
 		{"not_right": [expression, length]}
 
-
-
-
 Conditional Operators
 ---------------------
 
 Conditional operators expect a Boolean value to decide on. If the value provided is not Boolean, it is considered `true`; if the value is missing or `null`, it is considered `false`. This is different than many other languages: ***Numeric zero (`0`) is truthy***  
-
-###`coalesce` Operator###
-
-Return the first not `null` value in the list of evaluated expressions. 
-
-		{"coalesce": {variable, constant}}
-		{"coalesce": [expr1, expr2, ... exprN]}
-
-For the *simple* form; `null` is a legitimate `constant`. Generally, if all expressions evaluate to `null`, or the expression list is empty, then the result is `null` 
 
 ###`when` Operator###
 

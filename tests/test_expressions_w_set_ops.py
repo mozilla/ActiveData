@@ -171,6 +171,71 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
+
+    def test_concat(self):
+        test = {
+            "data": [
+                {"v": "hello", "w": NULL},
+                {"v": "hello", "w": ""},
+                {"v": "hello", "w": "world"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": [
+                    {"name": "a", "value": {"concat": []}},
+                    {"name": "b", "value": {"concat": {"v": "test"}}},
+                    {"name": "c", "value": {"concat": ["v", "w"]}},
+                    {"name": "d", "value": {"concat": ["w", "v"]}},
+                    {"name": "e", "value": {"concat": [], "separator": "-"}},
+                    {"name": "f", "value": {"concat": {"v": 0}, "separator": "-"}},
+                    {"name": "g", "value": {"concat": ["v", "w"], "separator": "-"}},
+                    {"name": "h", "value": {"concat": ["w", "v"], "separator": "-"}},
+                    {"name": "i", "value": {"concat": [{"literal": ""}, "v"], "separator": "-"}}
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {
+                        "a": NULL,
+                        "b": "hellotest",
+                        "c": "helloworld",
+                        "d": "worldhello",
+                        "e": NULL,
+                        "f": "hello-0",
+                        "g": "hello-world",
+                        "h": "world-hello",
+                        "i": "hello"
+                    },
+                    {
+                        "a": NULL,
+                        "b": "hellotest",
+                        "c": "hello",
+                        "d": "hello",
+                        "e": NULL,
+                        "f": "hello-0",
+                        "g": "hello",
+                        "h": "hello",
+                        "i": "hello"
+                    },
+                    {
+                        "a": NULL,
+                        "b": "hellotest",
+                        "c": "hello",
+                        "d": "hello",
+                        "e": NULL,
+                        "f": "hello-0",
+                        "g": "hello",
+                        "h": "hello",
+                        "i": "hello"
+                    }
+                ]
+            }
+        }
+        self.utils.execute_es_tests(test)
+
+
+
     def test_select_when(self):
         test = {
             "data": [

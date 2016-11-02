@@ -381,30 +381,18 @@ You must specify your separator, if you want it
 	} 
 	⇒ "hello world"
 
-If any of the strings are `null`, they are ignored. 
+If any of the strings empty, or are `null`, they are ignored. 
 
 	{
 		"concat": [
 			None, 
 			{"literal":"hello"}, 
-			None, 
+			{"literal":""}, 
 			{"literal":"world"}
 		], 
 		"separator":"-"
 	} 
 	⇒ "hello-world"
-
-To get consecutive separators, use the empty string.
- 
-	{
-		"concat": [
-			{"literal":"hello"}, 
-			{'literal": ""}, 
-			{"literal":"world"}
-		], 
-		"separator":" "
-	} 
-	⇒ "hello--world"
 
 
 ###`not_left` Operator###

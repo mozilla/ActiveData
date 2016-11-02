@@ -57,20 +57,6 @@ app.add_url_rule('/query/<path:path>', None, query, defaults={'path': ''}, metho
 app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
 
 
-@app.route('/<path:path>', methods=['GET', 'POST'])
-@cors_wrapper
-def _default(path):
-    record_request(flask.request, None, flask.request.get_data(), None)
-
-    return Response(
-        convert.unicode2utf8(OVERVIEW),
-        status=400,
-        headers={
-            "Content-Type": "text/html"
-        }
-    )
-
-
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
 @cors_wrapper
 def _default(path):
@@ -83,6 +69,7 @@ def _default(path):
             "Content-Type": "text/html"
         }
     )
+
 
 def setup(settings=None):
     global config

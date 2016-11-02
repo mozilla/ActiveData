@@ -624,7 +624,7 @@ def _allocate(relocating, path, nodes, all_shards, allocation):
             elif "failed to resolve [" in result.error:
                 # LOST A NODE WHILE SENDING UPDATES
                 lost_node_name = strings.between(result.error, "failed to resolve [", "]").strip()
-                Log.warning("Lost node {{node}}", node=lost_node_name)
+                Log.warning("Lost node during allocate {{node}}", node=lost_node_name)
                 nodes[lost_node_name].zone = None
             else:
                 Log.warning(

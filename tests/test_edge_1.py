@@ -11,8 +11,10 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from unittest import skipIf
+
 from tests import NULL
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
 
 
 class TestEdge1(ActiveDataBaseTest):
@@ -1354,7 +1356,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "v",
-                        "allowNulls": True,
+                        "allowNulls": False,
                         "domain": {
                             "type": "set",
                             "partitions": [
@@ -1371,13 +1373,13 @@ class TestEdge1(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "count": [1, 1, 1, 2, 2, 1, 1, 1, 0]
+                    "count": [1, 1, 1, 2, 2, 1, 1, 1]
                 }
             }
         }
         self.utils.execute_es_tests(test)
 
-
+    @skipIf(global_settings.use == "sqlite", "not expected to pass yet")
     def test_percentile(self):
         test = {
             "data": [

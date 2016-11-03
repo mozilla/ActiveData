@@ -87,8 +87,6 @@ class Table_usingSQLite(Container):
                 "settings": {"db": db}
             }
 
-
-
         self.uid_accessor = jx.get(self.uid)
         self.nested_tables = OrderedDict() # MAP FROM NESTED PATH TO Table OBJECT, PARENTS PROCEED CHILDREN
         self.nested_tables["."] = self
@@ -748,6 +746,7 @@ class Table_usingSQLite(Container):
                     pull = get_column(column_index)
 
                 if isinstance(query_edge.value, TupleOp):
+                    query_edge.allowNulls = False
                     push_child = column_index
                     num_push_columns=len(query_edge.value.terms)
                 else:
@@ -932,7 +931,7 @@ class Table_usingSQLite(Container):
                         index_to_column[column_number] = Dict(
                             push_name=s.name,
                             push_column=si,
-                            push_child=join_field(split_field(details.name)[1::]),
+                            push_child=".", #join_field(split_field(details.name)[1::]),
                             pull=get_column(column_number),
                             sql=sql,
                             type=sql_type_to_json_type[sql_type]

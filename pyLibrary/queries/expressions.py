@@ -275,7 +275,7 @@ class Variable(Expression):
             acc[literal_field(nested_path)][literal_field(c.name)][json_type_to_sql_type[c.type]] = c.es_index + "." + convert.string2quote(c.es_column)
 
         return wrap([
-            {"name": cname, "sql": types, "nested_path": nested_path}
+            {"name": ".", "sql": types, "nested_path": nested_path}
             for nested_path, pairs in acc.items() for cname, types in pairs.items()
         ])
 

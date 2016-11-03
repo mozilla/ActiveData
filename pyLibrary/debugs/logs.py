@@ -149,7 +149,7 @@ class Log(object):
             return TextLog_usingSES(settings)
         if settings.log_type.lower() in ["nothing", "none", "null"]:
             from .log_usingNothing import TextLog_usingNothing
-            return TextLog_usingNothing(settings)
+            return TextLog_usingNothing()
 
         Log.error("Log type of {{log_type|quote}} is not recognized", log_type=settings.log_type)
 

@@ -1,11 +1,6 @@
 {
     "zones":[
         {
-            "name":"spot",
-            "risky":true,
-            "shards":2
-        },
-        {
             "name":"primary",
             "risky":false,
             "shards":1
@@ -29,7 +24,7 @@
         "unit*"
     ],
     "elasticsearch": {
-        "host": "http://activedata.allizom.org",
+        "host": "http://localhost",
         "port": 9200,
         "debug": true
     },

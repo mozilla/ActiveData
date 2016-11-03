@@ -34,6 +34,8 @@ from pyLibrary.times.durations import SECOND, Duration
 _Log = None
 _Except = None
 DEBUG = True
+DEBUG_SIGNAL = False
+
 MAX_DATETIME = datetime(2286, 11, 20, 17, 46, 39)
 DEFAULT_WAIT_TIME = timedelta(minutes=10)
 
@@ -124,7 +126,6 @@ class Queue(object):
 
         _Log.note("queue iterator is done")
 
-
     def add(self, value, timeout=None):
         if not self.keep_running and not self.allow_add_after_close:
             _Log.error("Do not add to closed queue")
@@ -155,6 +156,7 @@ class Queue(object):
     def pop_message(self, wait=SECOND, till=None):
         """
         RETURN TUPLE (message, payload) CALLER IS RESPONSIBLE FOR CALLING message.delete() WHEN DONE
+        DUMMY IMPLEMENTATION FOR DEBUGGING
         """
         return Null, self.pop(timeout=wait, till=till)
 
@@ -727,10 +729,9 @@ class Signal(object):
             if self._go:
                 return
 
-            if DEBUG:
+            if DEBUG_SIGNAL:
                 if not _Log:
                     _late_import()
-                _Log.note("Thread {{thread|quote}} signaled {{name|quote}}", thread=Thread.current().name, name=self.name)
             self._go = True
             jobs = self.job_queue
             self.job_queue = []
@@ -740,6 +741,8 @@ class Signal(object):
             try:
                 j()
             except Exception, e:
+                if not _Log:
+                    _late_import()
                 _Log.warning("Trigger on Signal.go() failed!", cause=e)
 
     def is_go(self):
@@ -754,11 +757,13 @@ class Signal(object):
         RUN target WHEN SIGNALED
         """
         if not target:
+            if not _Log:
+                _late_import()
             _Log.error("expecting target")
 
         with self.lock:
             if self._go:
-                if DEBUG:
+                if DEBUG_SIGNAL:
                     if not _Log:
                         _late_import()
                     _Log.note("Signal {{name|quote}} already triggered, running job immediately", name=self.name)

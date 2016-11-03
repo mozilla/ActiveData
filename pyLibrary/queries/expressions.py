@@ -82,7 +82,7 @@ def jx_expression(expr):
             op, term = item
             class_ = operators.get(op)
             if class_:
-                clauses = {k: jx_expression(v) for k, v in expr.items() if k != op}
+                clauses = class_.preprocess(op, expr)
                 break
         else:
             raise Log.error("{{operator|quote}} is not a known operator", operator=op)
@@ -150,6 +150,10 @@ class Expression(object):
     @property
     def name(self):
         return self.__class_.__name__
+
+    @classmethod
+    def preprocess(self, op, clauses):
+        return {k: jx_expression(v) for k, v in clauses.items() if k != op}
 
     def to_ruby(self, not_null=False, boolean=False):
         """
@@ -281,6 +285,8 @@ class Variable(Expression):
             row = row.get(p)
             if row is None:
                 return None
+        if isinstance(row, list) and len(row) == 1:
+            return row[0]
         return row
 
     def to_dict(self):
@@ -443,7 +449,10 @@ class Literal(Expression):
 
     def __init__(self, op, term):
         Expression.__init__(self, "", None)
-        self.json = convert.value2json(term)
+        if term == "":
+            self.json = '""'
+        else:
+            self.json = convert.value2json(term)
 
     def __nonzero__(self):
         return True
@@ -526,7 +535,6 @@ class Literal(Expression):
 
     def __str__(self):
         return str(self.json)
-
 
 class NullOp(Literal):
     """
@@ -1706,6 +1714,8 @@ class CoalesceOp(Expression):
         self.terms = terms
 
     def to_ruby(self, not_null=False, boolean=False):
+        if not self.terms:
+            return "null"
         acc = self.terms[-1].to_ruby()
         for v in reversed(self.terms[:-1]):
             r = v.to_ruby()
@@ -1900,6 +1910,54 @@ class PrefixOp(Expression):
 
     def map(self, map_):
         return PrefixOp("prefix", [self.field.map(map_), self.prefix.map(map_)])
+
+
+class ConcatOp(Expression):
+    has_simple_form = True
+
+    def __init__(self, op, term, **clauses):
+        Expression.__init__(self, op, term)
+        if isinstance(term, Mapping):
+            self.terms = term.items()[0]
+        else:
+            self.terms = term
+        self.separator = clauses.get("separator", Literal(None, ""))
+        self.default = clauses.get("default", NullOp())
+        if not isinstance(self.separator, Literal):
+            Log.error("Expecting a literal separator")
+
+    @classmethod
+    def preprocess(self, op, clauses):
+        return {k: Literal(None, v) for k, v in clauses.items() if k in ["default", "separator"]}
+
+    def to_ruby(self, not_null=False, boolean=False):
+        if len(self.terms) == 0:
+            return self.default.to_ruby()
+
+        acc = []
+        for t in self.terms:
+            acc.append("((" + t.missing().to_ruby(boolean=True) + ") ? \"\" : (" + self.separator.json+"+"+t.to_ruby(not_null=True) + "))")
+        expr_ = "("+"+".join(acc)+").substring("+unicode(len(convert.json2value(self.separator.json)))+")"
+
+        return "("+self.missing().to_ruby()+") ? ("+self.default.to_ruby()+") : ("+expr_+")"
+
+    def to_dict(self):
+        if isinstance(self.value, Variable) and isinstance(self.length, Literal):
+            output = {"concat": {self.terms[0].var: convert.json2value(self.terms[2].json)}}
+        else:
+            output = {"concat": [t.to_dict() for t in self.terms]}
+        if self.separator.json != '""':
+            output["separator"] = convert.json2value(self.terms[2].json)
+        return output
+
+    def vars(self):
+        return set.union(*(t.vars() for t in self.terms))
+
+    def map(self, map_):
+        return ConcatOp("concat", [t.map(map_) for t in self.terms], separator=self.separator)
+
+    def missing(self):
+        return AndOp("and", [t.missing() for t in self.terms])
 
 
 class LeftOp(Expression):
@@ -2454,6 +2512,7 @@ operators = {
     "and": AndOp,
     "case": CaseOp,
     "coalesce": CoalesceOp,
+    "concat": ConcatOp,
     "contains": ContainsOp,
     "count": CountOp,
     "date": DateOp,

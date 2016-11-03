@@ -15,7 +15,7 @@ import mimetypes
 import flask
 from werkzeug.wrappers import Response
 
-from active_data import record_request
+from active_data import record_request, cors_wrapper
 from pyLibrary.debugs.logs import Log
 from pyLibrary.env.files import File
 from pyLibrary.meta import cache
@@ -23,7 +23,7 @@ from pyLibrary.times.durations import DAY
 
 STATIC_DIRECTORY = File.new_instance("active_data/public")
 
-
+@cors_wrapper
 def download(filename):
     """
     DOWNLOAD FILE CONTENTS
@@ -37,7 +37,7 @@ def download(filename):
             content,
             status=status,
             headers={
-                "content-type": mimetype
+                "Content-Type": mimetype
             }
         )
     except Exception, e:

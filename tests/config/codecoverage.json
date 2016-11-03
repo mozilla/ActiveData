@@ -1,6 +1,6 @@
 {
 	"url":"http://activedata.allizom.org/query",
-	"batch_size": 1000,
+	"batch_size": 100,
 	"elasticsearch": {
 		"host": "http://localhost",
 		"port": 9200,

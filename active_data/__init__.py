@@ -10,7 +10,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from active_data.actions import save_query
+import flask
+
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
 from pyLibrary.times.dates import Date
@@ -43,4 +44,23 @@ def record_request(request, query_, data, error):
         Log.warning("Can not record", cause=e)
 
 
+def cors_wrapper(func):
+    def _setdefault(obj, key, value):
+        if value == None:
+            return
+        obj.setdefault(key, value)
+
+    def output(*args, **kwargs):
+        response = func(*args, **kwargs)
+        headers = response.headers
+        _setdefault(headers, "Access-Control-Allow-Origin", "*")
+        _setdefault(headers, "Access-Control-Allow-Headers", flask.request.headers.get("Access-Control-Request-Headers"))
+        _setdefault(headers, "Access-Control-Allow-Methods", flask.request.headers.get("Access-Control-Request-Methods"))
+        _setdefault(headers, "Content-Type", "application/json")
+        _setdefault(headers, "Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+        return response
+
+    output.provide_automatic_options = False
+    output.__name__ = func.__name__
+    return output
 

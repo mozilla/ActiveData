@@ -733,7 +733,7 @@ class Table_usingSQLite(Container):
 
             edge_names = []
             for column_index, (json_type, sql) in enumerate(edge_values):
-                sql_name = "ec"+unicode(column_index)
+                sql_name = "e"+unicode(edge_index)+"c"+unicode(column_index)
                 edge_names.append(sql_name)
 
                 if not query_edge.value and any(query_edge.domain.partitions.where):
@@ -753,7 +753,7 @@ class Table_usingSQLite(Container):
                     push_child = "."
                     num_push_columns = None
 
-                index_to_column[column_index] = Dict(
+                index_to_column[len(index_to_column)] = Dict(
                     is_edge=True,
                     push_name=query_edge.name,
                     push_column=edge_index,

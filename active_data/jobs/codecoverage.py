@@ -10,18 +10,17 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from pyLibrary import convert
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, wrap, unwrap
-from pyLibrary.env import http
-from pyLibrary.env.elasticsearch import Index
+from pyLibrary.env import http, elasticsearch
 from pyLibrary.queries import jx
-from pyLibrary.testing import elasticsearch
 from pyLibrary.thread.threads import Signal, Queue
 from pyLibrary.thread.threads import Thread
-from pyLibrary.times.dates import Date
+from pyLibrary.times.dates import Date, unicode2Date
 
 DEBUG = True
 NUM_THREAD = 4
@@ -76,7 +75,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
                     if p.alias == coverage_index.settings.alias
                 ]
                 for index_name in all_indexes:
-                    Index(index=index_name, read_only=False, cluster=coverage_index.cluster).delete_record({"and": [
+                    elasticsearch.Index(index=index_name, read_only=False, cluster=coverage_index.cluster).delete_record({"and": [
                         {"not": {"term": {"etl.source.id": int(d.max_id)}}},
                         {"term": {"test.url": d.test.url}},
                         {"term": {"source.file.name": not_summarized.source.file.name}},
@@ -201,8 +200,8 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             }
             all_test_summary.append(coverage)
 
-        rows = [{"id": d["_id"], "value": d} for d in all_test_summary]
-        coverage_summary_index.extend(rows)
+        sum_rows = [{"id": d["_id"], "value": d} for d in all_test_summary]
+        coverage_summary_index.extend(sum_rows)
 
         if DEBUG:
             coverage_index.refresh()
@@ -232,7 +231,8 @@ def loop(source, coverage_summary_index, settings, please_stop):
         candidates = jx.sort(candidates, {".": "desc"})
 
         for index_name in candidates:
-            coverage_index = Index(index=index_name, read_only=False, settings=source)
+            coverage_index = elasticsearch.Index(index=index_name, read_only=False, settings=source)
+            push_date_filter = unicode2Date(coverage_index.settings.index[-15::], elasticsearch.INDEX_DATE_FORMAT)
 
             while not please_stop:
                 # IDENTIFY NEW WORK
@@ -244,7 +244,8 @@ def loop(source, coverage_summary_index, settings, please_stop):
                     "groupby": ["source.file.name", "build.revision12"],
                     "where": {"and": [
                         {"missing": "source.method.name"},
-                        {"missing": "source.file.min_line_siblings"}
+                        {"missing": "source.file.min_line_siblings"},
+                        {"gte": {"repo.push.date": push_date_filter}}
                     ]},
                     "format": "list",
                     "limit": coalesce(settings.batch_size, 100)

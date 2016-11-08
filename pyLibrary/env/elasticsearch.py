@@ -669,7 +669,7 @@ class Cluster(object):
         try:
             response = http.delete(url)
             if response.status_code != 200:
-                Log.error("Expecting a 200")
+                Log.error("Expecting a 200, got {{code}}", code=response.status_code)
             details = convert.json2value(utf82unicode(response.content))
             if self.debug:
                 Log.note("delete response {{response}}", response=details)
@@ -697,7 +697,7 @@ class Cluster(object):
             Log.error("Metadata exploration has been disabled")
 
         if not self._metadata or force:
-            response = self.get("/_cluster/state", retry={"times": 5}, timeout=3)
+            response = self.get("/_cluster/state", retry={"times": 3}, timeout=30)
             with self.metadata_locker:
                 self._metadata = wrap(response.metadata)
                 # REPLICATE MAPPING OVER ALL ALIASES

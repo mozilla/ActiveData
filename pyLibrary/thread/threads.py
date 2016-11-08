@@ -772,7 +772,7 @@ class Signal(object):
                 if DEBUG:
                     if not _Log:
                         _late_import()
-                    _Log.note("Adding job to signal {{name|quote}}", name=self.name)
+                    _Log.note("Adding target to signal {{name|quote}}", name=self.name)
                 self.job_queue.append(target)
 
     @property

@@ -260,7 +260,10 @@ class Variable(Expression):
                 Log.error("do not know what {{var}} of `rows` is", var=path[1])
 
         for p in path[:-1]:
-            agg = agg+".get("+convert.value2quote(p)+", EMPTY_DICT)"
+            if not_null:
+                agg = agg+".get("+convert.value2quote(p)+")"
+            else:
+                agg = agg+".get("+convert.value2quote(p)+", EMPTY_DICT)"
         return agg+".get("+convert.value2quote(path[-1])+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
@@ -373,12 +376,17 @@ class RowsOp(Expression):
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
         self.var, self.offset = term
-        if isinstance(self.var, Variable) and not any(self.var.var.startswith(p) for p in ["row.", "rows.", "rownum"]):  # VARIABLES ARE INTERPRETED LITERALLY
-            self.var = Literal("literal", self.var.var)
+        if isinstance(self.var, Variable):
+            if isinstance(self.var, Variable) and not any(self.var.var.startswith(p) for p in ["row.", "rows.", "rownum"]):  # VARIABLES ARE INTERPRETED LITERALLY
+                self.var = Literal("literal", self.var.var)
+            else:
+                Log.error("can not handle")
+        else:
+            Log.error("can not handle")
 
     def to_python(self, not_null=False, boolean=False):
-        path = split_field(self.var.to_python(not_null=True))
-        agg = "rows[rownum+" + unicode(self.offset) + "]"
+        agg = "rows[rownum+" + self.offset.to_python() + "]"
+        path = split_field(convert.json2value(self.var.json))
         if not path:
             return agg
 
@@ -705,7 +713,7 @@ class DateOp(Literal):
         Literal.__init__(self, op, Date(term.date).unix)
 
     def to_python(self, not_null=False, boolean=False):
-        return "Date("+convert.string2quote(self.value)+")"
+        return "Date("+convert.string2quote(self.value)+").unix"
 
     def to_sql(self, schema, not_null=False, boolean=False):
         return {"n": sql_quote(self.value.unix)}

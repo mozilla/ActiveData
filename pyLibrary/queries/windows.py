@@ -201,24 +201,40 @@ class Min(WindowFunction):
         return MIN(self.total)
 
 
+# class Max(WindowFunction):
+#     def __init__(self, **kwargs):
+#         object.__init__(self)
+#         self.total = Multiset()
+#
+#
+#     def add(self, value):
+#         if value == None:
+#             return
+#         self.total.add(value)
+#
+#     def sub(self, value):
+#         if value == None:
+#             return
+#         self.total.remove(value)
+#
+#     def end(self):
+#         return MAX(self.total.dic.keys())
+
+
 class Max(WindowFunction):
     def __init__(self, **kwargs):
         object.__init__(self)
-        self.total = Multiset()
+        self.max = None
 
 
     def add(self, value):
-        if value == None:
-            return
-        self.total.add(value)
+        self.max = Math.max(self.max, value)
 
     def sub(self, value):
-        if value == None:
-            return
-        self.total.remove(value)
+        Log.error("Not implemented")
 
     def end(self):
-        return MAX(self.total)
+        return self.max
 
 
 class Count(WindowFunction):
@@ -304,9 +320,6 @@ class List(WindowFunction):
 
     def end(self):
         return copy(self.agg)
-
-
-
 
 
 name2accumulator = {

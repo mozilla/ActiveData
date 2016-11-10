@@ -19,10 +19,10 @@ import sys
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, listwrap, Null
+from pyLibrary.dot import wrap, listwrap, Null, Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.expressions import jx_expression_to_function, TupleOp
+from pyLibrary.queries.expressions import jx_expression_to_function, TupleOp, Expression, jx_expression
 
 
 def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous=False):
@@ -55,7 +55,8 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
         if not data:
             return Null
 
-        accessor = jx_expression_to_function(TupleOp("tuple", keys))  # CAN RETURN Null, WHICH DOES NOT PLAY WELL WITH __cmp__
+
+        accessor = jx_expression_to_function(jx_expression({"tuple": keys}))  # CAN RETURN Null, WHICH DOES NOT PLAY WELL WITH __cmp__
         def _output():
             start = 0
             prev = accessor(data[0])
@@ -65,13 +66,13 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
                     group = {}
                     for k, gg in zip(keys, prev):
                         group[k] = gg
-                    yield prev, data[start:i:]
+                    yield Dict(group), data[start:i:]
                     start = i
                     prev = curr
             group = {}
             for k, gg in zip(keys, prev):
                 group[k] = gg
-            yield prev, data[start::]
+            yield Dict(group), data[start::]
 
         return _output()
     except Exception, e:

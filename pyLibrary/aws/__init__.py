@@ -138,14 +138,14 @@ def capture_termination_signal(please_stop):
             except Exception, e:
                 e = Except.wrap(e)
                 if "Failed to establish a new connection: [Errno 10060]" in e:
-                    Log.warning("AWS Spot Detection has shutdown (http://169.254.169.254 is unreachable)")
+                    Log.warning("AWS Spot Detection has shutdown, probably not a spot node, (http://169.254.169.254 is unreachable)")
                     return
                 else:
                     Log.warning("AWS shutdown detection has problems", cause=e)
                 Thread.sleep(seconds=61, please_stop=please_stop)
             Thread.sleep(seconds=11, please_stop=please_stop)
 
-    Thread.run("listen for termination", worker)
+    Thread.run("listen for termination", worker, please_stop=please_stop)
 
 
 def get_instance_metadata(timeout=None):

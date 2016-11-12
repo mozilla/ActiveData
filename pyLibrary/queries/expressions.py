@@ -70,22 +70,17 @@ def jx_expression(expr):
         items = expr.items()
     except Exception, e:
         Log.error("programmer error expr = {{value|quote}}", value=expr, cause=e)
-    op, term = items[0]
 
-    if len(items) == 1:
+    for item in items:
+        op, term = item
         class_ = operators.get(op)
-        if not class_:
-            Log.error("{{operator|quote}} is not a known operator", operator=op)
-        clauses = {}
+        if class_:
+            term, clauses = class_.preprocess(op, expr)
+            break
     else:
-        for item in items:
-            op, term = item
-            class_ = operators.get(op)
-            if class_:
-                clauses = class_.preprocess(op, expr)
-                break
-        else:
-            raise Log.error("{{operator|quote}} is not a known operator", operator=op)
+        if not items:
+            return NullOp()
+        raise Log.error("{{operator|quote}} is not a known operator", operator=op)
 
     if class_ is Literal:
         return class_(op, term)
@@ -152,8 +147,8 @@ class Expression(object):
         return self.__class_.__name__
 
     @classmethod
-    def preprocess(self, op, clauses):
-        return {k: jx_expression(v) for k, v in clauses.items() if k != op}
+    def preprocess(cls, op, clauses):
+        return clauses[op], {k: jx_expression(v) for k, v in clauses.items() if k != op}
 
     def to_ruby(self, not_null=False, boolean=False):
         """
@@ -1935,8 +1930,8 @@ class ConcatOp(Expression):
             Log.error("Expecting a literal separator")
 
     @classmethod
-    def preprocess(self, op, clauses):
-        return {k: Literal(None, v) for k, v in clauses.items() if k in ["default", "separator"]}
+    def preprocess(cls, op, clauses):
+        return clauses[op], {k: Literal(None, v) for k, v in clauses.items() if k in ["default", "separator"]}
 
     def to_ruby(self, not_null=False, boolean=False):
         if len(self.terms) == 0:
@@ -2145,6 +2140,126 @@ class NotRightOp(Expression):
             return MissingOp(None, self.value)
         else:
             return OrOp(None, [self.value.missing(), self.length.missing()])
+
+
+class FindOp(Expression):
+    has_simple_form = True
+
+    def __init__(self, op, term, **kwargs):
+        Expression.__init__(self, op, term)
+        self.value, self.find = term
+        self.default = coalesce(kwargs["default"], NullOp)
+        self.start = coalesce(kwargs["start"], Literal(None, 0))
+
+    def to_ruby(self, not_null=False, boolean=False):
+        missing = self.missing().to_ruby(boolean=True)
+        v = self.value.to_ruby(not_null=True)
+        find = self.find.to_ruby(not_null=True)
+        index = v + ".indexOf(" + find + ", " + self.start.to_ruby() + ")"
+
+        expr = "(" + missing + ") ? " + self.default.to_ruby() + " : " + index
+        return expr
+
+    def missing(self):
+        v = self.value.to_ruby(not_null=True)
+        find = self.find.to_ruby(not_null=True)
+        index = v+".indexOf("+find+")"
+
+        return OrOp("or", [
+            self.value.missing(),
+            self.find.missing(),
+            EqOp("eq", [ScriptOp("script", index), Literal(None, -1)])
+        ])
+
+
+class BetweenOp(Expression):
+
+    def __init__(self, op, term, **clauses):
+        Expression.__init__(self, op, term)
+        self.value, self.prefix, self.suffix = term
+        self.default = coalesce(clauses["default"], NullOp())
+        self.start = coalesce(clauses["start"], NullOp())
+        if isinstance(self.prefix, Literal) and isinstance(self.suffix, Literal):
+            pass
+        else:
+            Log.error("Exepcting literal prefix and sufix only")
+
+    @classmethod
+    def preprocess(cls, op, clauses):
+        param = clauses["between"]
+        if isinstance(param, list):
+            param = param
+        elif isinstance(param, Mapping):
+            var, vals = param.items()[0]
+            if isinstance(vals, list) and len(vals)==2:
+                param = [var, {"literal":vals[0]}, {"literal":vals[1]}]
+            else:
+                Log.error("`between` parameters are expected to be in {var: [prefix, suffix]} form")
+        else:
+            Log.error("`between` parameters are expected to be in {var: [prefix, suffix]} form")
+
+        return param, {
+            "default": clauses["default"],
+            "start": clauses["start"]
+        }
+
+    def to_ruby(self, not_null=False, boolean=False):
+        if isinstance(self.prefix, Literal) and isinstance(convert.json2value(self.prefix.json), int):
+            value_is_missing = self.value.missing().to_ruby()
+            value = self.value.to_ruby(not_null=True)
+            start = "max("+self.prefix.json+", 0)"
+
+            if isinstance(self.suffix, Literal) and isinstance(convert.json2value(self.suffix.json), int):
+                check = "(" + value_is_missing + ")"
+                end = "min(" + self.suffix.to_ruby() + ", " + value + ".length())"
+            else:
+                end = value + ".indexOf(" + self.suffix.to_ruby() + ", " + start + ")"
+                check = "((" + value_is_missing + ") || ("+end+"==-1))"
+
+            expr = check + " ? " + self.default.to_ruby() + " : ((" + value + ").substring(" + start + ", " + end + "))"
+            return expr
+
+        else:
+            #((Runnable)(() -> {int a=2; int b=3; System.out.println(a+b);})).run();
+            value_is_missing = self.value.missing().to_ruby()
+            value = self.value.to_ruby(not_null=True)
+            prefix = self.prefix.to_ruby()
+            len_prefix = unicode(len(convert.json2value(self.prefix.json))) if isinstance(self.prefix, Literal) else "("+prefix+").length()"
+            suffix = self.suffix.to_ruby()
+            start_index = self.start.to_ruby()
+            if start_index == "null":
+                if prefix == "null":
+                    start = "0"
+                else:
+                    start = value+".indexOf("+prefix+")"
+            else:
+                start = value+".indexOf("+prefix+", "+start_index+")"
+
+            if suffix=="null":
+                expr = "((" + value_is_missing + ") || (" + start + "==-1)) ? "+self.default.to_ruby()+" : ((" + value + ").substring(" + start + "+" + len_prefix + "))"
+            else:
+                end = value+".indexOf("+suffix+", "+start+"+"+len_prefix+")"
+                expr = "((" + value_is_missing + ") || (" + start + "==-1) || ("+end+"==-1)) ? "+self.default.to_ruby()+" : ((" + value + ").substring(" + start + "+" + len_prefix + ", " + end + "))"
+
+            return expr
+
+    def vars(self):
+        return self.value.vars() | self.prefix.vars() | self.suffix.vars()
+
+    def map(self, map_):
+        return LeftOp("left", [self.value.map(map_), self.length.map(map_)])
+
+    def missing(self):
+        value_is_missing = self.value.missing().to_ruby()
+        value = self.value.to_ruby(not_null=True)
+        prefix = self.prefix.to_ruby()
+        len_prefix = "("+self.prefix+").length()"
+        suffix = self.suffix.to_ruby()
+        start = value+".indexOf("+prefix+")"
+        end = value+".indexOf("+suffix+", "+start+"+"+len_prefix+")"
+
+        expr = "(" + value_is_missing + ") || (" + start + "==-1) || ("+end+"==-1)"
+        return ScriptOp("script", expr)
 
 
 class InOp(Expression):
@@ -2523,6 +2638,7 @@ def split_expression_by_depth(where, schema, map_, output=None, var_to_depth=Non
 operators = {
     "add": MultiOp,
     "and": AndOp,
+    "between": BetweenOp,
     "case": CaseOp,
     "coalesce": CoalesceOp,
     "concat": ConcatOp,

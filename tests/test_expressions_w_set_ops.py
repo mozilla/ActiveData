@@ -309,8 +309,6 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-
-
     def test_select_add(self):
         test = {
             "data": [
@@ -670,6 +668,32 @@ class TestSetOps(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [0, 0.5, 1, NULL]
+            }
+        }
+        self.utils.execute_es_tests(test)
+
+    def test_between(self):
+        test = {
+            "data": [
+                {"v": "/this/is/a/directory"},
+                {"v": "/"}
+            ],
+            "query": {
+                "select": [
+                    {"name": "a", "value": {"between": {"v": ["/this/", "/"]}}},
+                    {"name": "c", "value": {"between": ["v", {"literal": "/this/"}, {"literal": "/"}]}},
+                    {"name": "d", "value": {"between": {"v": [-1, 5]}}},
+                    {"name": "e", "value": {"between": {"v": [NULL, "/is"]}}},
+                    {"name": "f", "value": {"between": {"v": ["/is", NULL]}}}
+                ],
+                "from": TEST_TABLE
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "is", "c": "is", "d": "/this", "e": "/this", "f": "/a/directory"},
+                    {"d": "/"}
+                ]
             }
         }
         self.utils.execute_es_tests(test)

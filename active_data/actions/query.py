@@ -11,6 +11,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import flask
+import sqlparse
 from flask import Response
 
 from active_data import record_request, cors_wrapper
@@ -24,6 +25,7 @@ from pyLibrary.maths import Math
 from pyLibrary.queries import jx, meta, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.meta import TOO_OLD
+from pyLibrary.sql.parse import simpleSQL
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
@@ -65,6 +67,8 @@ def query(path):
 
                 translate_timer = Timer("translate")
                 with translate_timer:
+                    if data.sql:
+                        data = parse_sql(data.sql)
                     frum = wrap_from(data['from'])
                     result = jx.run(data, frum=frum)
 
@@ -202,3 +206,8 @@ def replace_vars(text, params=None):
 
     text = expand_template(text, coalesce(params, {}))
     return text
+
+
+def parse_sql(sql):
+    res = simpleSQL.parseString(sql)
+    Log.note("{{result}}", result=res)

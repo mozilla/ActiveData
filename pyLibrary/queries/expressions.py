@@ -1324,9 +1324,11 @@ class AndOp(Expression):
 
     def to_sql(self, schema, not_null=False, boolean=False):
         if not self.terms:
-            return {"b": "1"}
+            return wrap([{"sql": {"b": "1"}}])
+        elif all(self.terms):
+            return wrap([{"sql": {"b": " AND ".join("(" + t.to_sql(schema, boolean=True)[0].sql.b + ")" for t in self.terms)}}])
         else:
-            return {"b": " AND ".join("(" + t.to_sql(schema).b + ")" for t in self.terms)}
+            return wrap([{"sql": {"b": "0"}}])
 
     def to_esfilter(self):
         if not len(self.terms):
@@ -1400,8 +1402,16 @@ class LengthOp(Expression):
         return "len(" + value + ") if (" + value + ") != None else None"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        value = self.term.to_sql(schema).s
-        return {"n": "CASE WHEN (" + value + ") IS NULL THEN NULL ELSE LENGTH(" + value + ") END"}
+        if isinstance(self.term, Literal):
+            val = convert.json2value(self.term)
+            if isinstance(val, unicode):
+                return wrap([{"sql": {"n": convert.value2json(len(val))}}])
+            elif isinstance(val, (float, int)):
+                return wrap([{"sql": {"n": convert.value2json(len(convert.value2json(val)))}}])
+            else:
+                return Null
+        value = self.term.to_sql(schema)[0].sql.s
+        return wrap([{"sql": {"n": "LENGTH(" + value + ")"}}])
 
     def to_dict(self):
         return {"length": self.term.to_dict()}
@@ -1475,7 +1485,7 @@ class StringOp(Expression):
         return "null if (" + missing + ") else unicode(" + value + ")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        test = self.term.missing().to_sql(boolean=True).b
+        test = self.term.missing().to_sql(schema, boolean=True).b
         value = self.term.to_sql(not_null=True)
         acc = []
         for t, v in value:
@@ -1663,7 +1673,7 @@ class RegExpOp(Expression):
 
 
 
-class ContainsOp(Expression):
+class FindOp(Expression):
     """
     RETURN true IF substring CAN BE FOUND IN var, ELSE RETURN false
     """
@@ -1700,7 +1710,7 @@ class ContainsOp(Expression):
         return {self.var.var}
 
     def map(self, map_):
-        return ContainsOp(None, [self.var.map(map_), self.substring])
+        return FindOp(None, [self.var.map(map_), self.substring])
 
     def missing(self):
         return FalseOp()
@@ -1944,6 +1954,37 @@ class ConcatOp(Expression):
 
         return "("+self.missing().to_ruby()+") ? ("+self.default.to_ruby()+") : ("+expr_+")"
 
+    def to_sql(self, schema, not_null=False, boolean=False):
+        defult = self.default.to_sql(schema)
+        if len(self.terms) == 0:
+            return defult
+        defult = coalesce(defult[0].sql, "NULL")
+        sep = self.separator.to_sql(schema)[0].sql.s
+
+        acc = []
+        for t in self.terms:
+            missing = t.missing()
+
+            term = t.to_sql(schema, not_null=True)[0].sql
+            term_sql = coalesce(
+                term.s,
+                "cast(" + term.n + " as text)",
+                "CASE WHEN " + term.b + " THEN `true` ELSE `false` END"
+            )
+
+            if missing:
+                acc.append("CASE WHEN (" + missing.to_sql(schema, boolean=True)[0].sql.b + ") THEN '' ELSE  ((" + sep +") || ("+term_sql + ")) END")
+            else:
+                acc.append("(" + sep + ") || (" + term_sql + ")")
+
+        expr_ = "substr(" + " || ".join(acc) + ", " + LengthOp(None, self.separator).to_sql(schema)[0].sql.n + ")"
+
+        missing = self.missing()
+        if not missing:
+            return wrap([{"sql":{"s":expr_}}])
+        else:
+            return wrap([{"sql":{"s":"CASE WHEN ("+missing.to_sql(schema, boolean=True)[0].sql.b+") THEN ("+defult+") ELSE ("+expr_+") END"}}])
+
     def to_dict(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
             output = {"concat": {self.terms[0].var: convert.json2value(self.terms[2].json)}}
@@ -1954,13 +1995,19 @@ class ConcatOp(Expression):
         return output
 
     def vars(self):
+        if not self.terms:
+            return set()
         return set.union(*(t.vars() for t in self.terms))
 
     def map(self, map_):
         return ConcatOp("concat", [t.map(map_) for t in self.terms], separator=self.separator)
 
     def missing(self):
-        return AndOp("and", [t.missing() for t in self.terms])
+        terms = [t.missing() for t in self.terms]
+        if all(terms):
+            return AndOp("and", terms)
+        else:
+            return FalseOp()
 
 
 class LeftOp(Expression):
@@ -2260,6 +2307,7 @@ class BetweenOp(Expression):
 
         expr = "(" + value_is_missing + ") || (" + start + "==-1) || ("+end+"==-1)"
         return ScriptOp("script", expr)
+
 
 
 class InOp(Expression):
@@ -2642,7 +2690,6 @@ operators = {
     "case": CaseOp,
     "coalesce": CoalesceOp,
     "concat": ConcatOp,
-    "contains": ContainsOp,
     "count": CountOp,
     "date": DateOp,
     "div": DivOp,
@@ -2650,11 +2697,12 @@ operators = {
     "eq": EqOp,
     "exists": ExistsOp,
     "exp": BinaryOp,
+    "find": FindOp,
     "floor": FloorOp,
     "gt": InequalityOp,
     "gte": InequalityOp,
     "in": InOp,
-    "instr": ContainsOp,
+    "instr": FindOp,
     "left": LeftOp,
     "length": LengthOp,
     "literal": Literal,

@@ -766,34 +766,50 @@ class Table_usingSQLite(Container):
 
             vals = [g[1] for g in edge_values]
             if query_edge.domain.type == "set":
-                domain_name = "dc"+unicode(edge_index)
+                domain_name = "d"+unicode(edge_index)+"c"+unicode(column_index)
                 domain_names =[domain_name]
                 if len(edge_names) > 1:
                     Log.error("Do not know how to handle")
                 if query_edge.value:
                     domain = "\nUNION ALL\n".join(
-                        "SELECT " + quote_value(p) + " AS " + domain_name for p in query_edge.domain.partitions.value
+                        "SELECT " +quote_value(coalesce(p.dataIndex, i))+" AS rownum, " + quote_value(p.value) + " AS " + domain_name
+                        for i, p in enumerate(query_edge.domain.partitions)
                     )
-                    on_clause = " AND ".join(
-                        edge_alias + "." + k + " = " + v
-                        for k, (t, v) in zip(domain_names, edge_values)
+                    domain += "\nUNION ALL\nSELECT "+quote_value(len(query_edge.domain.partitions))+" AS rownum, NULL AS " + domain_name
+                    on_clause = (
+                        " OR ".join(
+                            edge_alias + "." + k + " = " + v
+                            for k, (t, v) in zip(domain_names, edge_values)
+                        ) + " OR (" + (
+                            " AND ".join(edge_alias + "." + dn + " IS NULL" for dn in domain_names) +
+                            " AND (" + edge_values[0][1] + " IS NULL OR " + edge_values[0][1] + " NOT IN (" + ",".join(
+                                map(quote_value, query_edge.domain.partitions.value)
+                            ) + "))"
+                        ) +
+                        ")"
                     )
                 else:
                     domain = "\nUNION ALL\n".join(
                         "SELECT " + quote_value(pp) + " AS " + domain_name for pp, p in enumerate(query_edge.domain.partitions)
                     )
+                    limit = Math.min(query.limit, query_edge.domain.limit)
+                    domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
+                              "\nLIMIT\n"+unicode(limit)
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " = " + sql
                         for k, (t, sql) in zip(domain_names, edge_values)
                     )
             elif query_edge.domain.type == "range":
-                domain_name = "dc0"
+                domain_name = "d"+unicode(edge_index)+"c0"
                 domain_names = [domain_name]  # ONLY EVER SEEN ONE DOMAIN VALUE, DOMAIN TUPLES CERTAINLY EXIST
                 d = query_edge.domain
                 if d.max == None or d.min == None or d.min == d.max:
                     Log.error("Invalid range: {{range|json}}", range=d)
                 if len(edge_names) == 1:
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
+                    limit = Math.min(query.limit, query_edge.domain.limit)
+                    domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
+                              "\nLIMIT\n"+unicode(limit)
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " <= " + v + " AND " + v + "< (" + edge_alias + "." + k + " + " + unicode(
                             d.interval) + ")"
@@ -801,35 +817,54 @@ class Table_usingSQLite(Container):
                     )
                 elif query_edge.range:
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
+                    limit = Math.min(query.limit, query_edge.domain.limit)
+                    domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
+                              "\nLIMIT\n"+unicode(limit)
                     on_clause = edge_alias + "." + domain_name + " < " + edge_values[1][1] + " AND " + \
                                 edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + unicode(d.interval) + ")"
                 else:
                     Log.error("do not know how to handle")
                 # select_clause.extend(v[0] + " " + k for k, v in zip(domain_names, edge_values))
             elif len(edge_names) > 1:
-                domain_names = ["dc" + unicode(i) for i, _ in enumerate(edge_names)]
+                domain_names = ["d" + unicode(edge_index) + "c" + unicode(i) for i, _ in enumerate(edge_names)]
                 query_edge.allowNulls = False
                 domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(domain_names, vals)) + \
                          "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
                           "\nGROUP BY\n" + ",\n".join(vals)
+                limit = Math.min(query.limit, query_edge.domain.limit)
+                domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
+                          "\nLIMIT\n"+unicode(limit)
                 on_clause = " AND ".join(
                     "((" + edge_alias + "." + k + " IS NULL AND " + v + " IS NULL) OR " + edge_alias + "." + k + " = " + v + ")"
                     for k, v in zip(domain_names, vals)
                 )
             elif isinstance(query_edge.domain, DefaultDomain):
-                domain_names = ["dc"+unicode(i) for i, _ in enumerate(edge_names)]
-                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(domain_names, vals)) + \
-                         "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
-                         "\nWHERE\n" + " AND ".join(g + " IS NOT NULL" for g in vals) + \
-                         "\nGROUP BY\n" + ",\n".join(g for g in vals)
-                on_clause = " AND ".join(
-                    edge_alias + "." + k + " = " + v
-                    for k, v in zip(domain_names, vals)
+                domain_names = ["d"+unicode(edge_index)+"c"+unicode(i) for i, _ in enumerate(edge_names)]
+                domain = (
+                    "\nSELECT " + ",".join(domain_names) + " FROM ("
+                    "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(domain_names, vals)) +
+                    "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] +
+                    "\nWHERE\n" + " AND ".join(g + " IS NOT NULL" for g in vals) +
+                    "\nGROUP BY\n" + ",\n".join(g for g in vals)
                 )
-
                 limit = Math.min(query.limit, query_edge.domain.limit)
-                domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
-                          "\nLIMIT\n"+unicode(limit)
+                domain += (
+                    "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) +
+                    "\nLIMIT\n" + unicode(limit) +
+                    ")"
+                )
+                domain += "\nUNION ALL SELECT " + ",\n".join("NULL AS " + dn for dn in domain_names)
+
+                on_clause = (
+                    " OR ".join(
+                        edge_alias + "." + k + " = " + v
+                        for k, v in zip(domain_names, vals)
+                    ) + " OR (" + (
+                        " AND ".join(edge_alias + "." + dn + " IS NULL" for dn in domain_names) + " AND " +
+                        " AND ".join(v + " IS NULL" for v in vals)
+                    ) +
+                    ")"
+                )
             else:
                 Log.note("not handled")
 
@@ -942,52 +977,38 @@ class Table_usingSQLite(Container):
         main_filter = query.where.to_sql(columns)[0].sql.b
 
         all_parts = []
-        combos = list(itertools.product(*[
-            # FOR EACH EDGE, WE MUST INCLUDE THE NULL PART, CARTESIAN PRODUCT WITH ALL THE OTHER EDGES WITH NULL PART
-            [[False, edge_index, query_edge], [True, edge_index, query_edge]]
-            if query_edge.allowNulls else [[False, edge_index, query_edge]]
-            for edge_index, query_edge in enumerate(query.edges)
-            ]))
-        for p in combos:
-            if not all(pp[0] for pp in p):
-                continue
+        sources = [
+            "(" +
+            "\nSELECT\n" + ",\n".join(select_clause) + ",\n" + "*" +
+            "\nFROM " + from_sql +
+            "\nWHERE " + main_filter +
+            ") " + nest_to_alias["."]
+        ]
 
-            sources = [
-                "(" +
-                "\nSELECT\n" + ",\n".join(select_clause) + ",\n" + "*" +
-                "\nFROM " + from_sql +
-                "\nWHERE " + main_filter +
-                ") " + nest_to_alias["."]
-            ]
+        joins = []
+        join_types = []
+        where_clause = []
+        for edge_index, query_edge in enumerate(query.edges):
+            edge_alias = "e" + unicode(edge_index)
+            domain = domains[edge_index]
+            sources.insert(0, "(" + domain + ") "+edge_alias)
+            if ons:
+                join_types.insert(0, "LEFT JOIN")
+                joins.insert(0, "\nAND\n".join("(" + o + ")" for o in ons))
+                ons = []
+            else:
+                join_types.insert(0, "JOIN")
+                joins.insert(0, "1=1")
 
-            joins = []
-            join_types = []
-            where_clause = []
-            for is_null, edge_index, query_edge in p:
-                edge_alias = "e" + unicode(edge_index)
-                domain = domains[edge_index]
-                if is_null:
-                    sources.append("(" + domain + ") "+edge_alias)
-                    join_types.append("LEFT JOIN")
-                    joins.append(ons[edge_index])
-                    where_clause.append(" AND ".join(
-                        edge_alias + "." + k + " IS NULL "
-                        for k in domain_names
-                    ))
-                else:
-                    sources.insert(0, "(" + domain + ") "+edge_alias)
-                    join_types.insert(0, "LEFT JOIN")
-                    joins.insert(0, ons[edge_index])
+        part = "SELECT " + (",\n".join(outer_selects)) + "\nFROM\n" + sources[0]
+        for join_type, s, j in zip(join_types, sources[1:], joins):
+            part += "\n"+join_type+"\n" + s + "\nON\n" + j
+        if where_clause:
+            part += "\nWHERE\n" + "\nAND\n".join(where_clause)
+        if groupby:
+            part += "\nGROUP BY\n" + ",\n".join(groupby)
 
-            part = "SELECT " + (",\n".join(outer_selects)) + "\nFROM\n" + sources[0]
-            for join_type, s, j in zip(join_types, sources[1:], joins):
-                part += "\n"+join_type+"\n" + s + "\nON\n" + j
-            if where_clause:
-                part += "\nWHERE\n" + "\nAND\n".join(where_clause)
-            if groupby:
-                part += "\nGROUP BY\n" + ",\n".join(groupby)
-
-            all_parts.append(part)
+        all_parts.append(part)
 
         command = "SELECT * FROM (\n"+"\nUNION ALL\n".join(all_parts)+"\n)"
 

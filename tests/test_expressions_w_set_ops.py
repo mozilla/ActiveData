@@ -11,10 +11,12 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from unittest import skipIf
+
 from pyLibrary.dot import wrap
 from pyLibrary.queries.expressions import NullOp
 from tests import NULL
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
@@ -233,8 +235,6 @@ class TestSetOps(ActiveDataBaseTest):
             }
         }
         self.utils.execute_es_tests(test)
-
-
 
     def test_select_when(self):
         test = {
@@ -490,7 +490,7 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-    def test_contains(self):
+    def test_find(self):
         test = {
             "data": [
                 {"v": "test"},
@@ -501,7 +501,7 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "from": TEST_TABLE,
-                "where": {"contains": {"v": "test"}}
+                "where": {"find": {"v": "test"}}
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -672,6 +672,7 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
+    @skipIf(global_settings.use=="sqlite", "not implemented")
     def test_between(self):
         test = {
             "data": [

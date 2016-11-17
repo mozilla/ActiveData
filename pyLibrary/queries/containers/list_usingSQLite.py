@@ -20,7 +20,7 @@ from copy import copy
 
 from pyLibrary import convert
 from pyLibrary.collections import UNION
-from pyLibrary.collections.matrix import Matrix
+from pyLibrary.collections.matrix import Matrix, index_to_coordinate
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, coalesce, Dict, wrap, Null, unwraplist, split_field, join_field, startswith_field, literal_field, unwrap, \
     relative_field
@@ -512,9 +512,6 @@ class Table_usingSQLite(Container):
                     meta={"format": "cube"}
                 )
 
-            elif len(query.edges) > 1:
-                Log.error("Only support one dimension right now")
-
             if not result.data:
                 edges = []
                 dims = []
@@ -522,7 +519,7 @@ class Table_usingSQLite(Container):
                     allowNulls = coalesce(e.allowNulls, True)
 
                     if e.domain.type == "set" and e.domain.partitions:
-                        domain=SimpleSetDomain(partitions=e.domain.partitions.name)
+                        domain = SimpleSetDomain(partitions=e.domain.partitions.name)
                     elif e.domain.type == "range":
                         domain = e.domain
                     elif isinstance(e.value, TupleOp):
@@ -557,7 +554,7 @@ class Table_usingSQLite(Container):
                     data={k: v.cube for k, v in data.items()}
                 )
 
-            columns = zip(*result.data)
+            columns = None
 
             edges = []
             dims = []
@@ -573,11 +570,10 @@ class Table_usingSQLite(Container):
                     parts = [tuple(p(d) for p in pulls) for d in result.data]
                     domain = SimpleSetDomain(partitions=jx.sort(set(parts)))
                 else:
-                    parts = columns[i]
-                    if parts[-1] == None:
-                        # ONLY ONE EDGE, SO WE CAN DO THIS
-                        parts = parts[:-1]
-                    domain = SimpleSetDomain(partitions=jx.sort(set(parts)))
+                    if not columns:
+                        columns = zip(*result.data)
+                    parts = set(columns[i]) - {None}
+                    domain = SimpleSetDomain(partitions=jx.sort(parts))
 
                 dims.append(len(domain.partitions)+(1 if allowNulls else 0))
                 edges.append(Dict(
@@ -591,14 +587,17 @@ class Table_usingSQLite(Container):
                 for si, s in enumerate(listwrap(query.select))
             ]
             data = {s.name: Matrix(dims=dims, zeros=zeros[si]) for si, s in enumerate(listwrap(query.select))}
-            for r, d in enumerate(result.data):
+            r2c = index_to_coordinate(dims)  # WORKS BECAUSE THE DATABASE SORTED THE EDGES TO CONFORM
+            for rownum, row in enumerate(result.data):
+                coord = r2c(rownum)
+
                 for i, s in enumerate(index_to_columns.values()):
                     if s.is_edge:
                         continue
                     if s.push_child == ".":
-                        data[s.push_name][r] = s.pull(d)
+                        data[s.push_name][coord] = s.pull(row)
                     else:
-                        data[s.push_name][r][s.push_child] = s.pull(d)
+                        data[s.push_name][coord][s.push_child] = s.pull(row)
 
             if isinstance(query.select, list):
                 select = [{"name": s.name} for s in query.select]
@@ -661,18 +660,18 @@ class Table_usingSQLite(Container):
                     )
             else:
                 data = []
-                for r in result.data:
+                for rownum in result.data:
                     row = Dict()
                     for c in index_to_columns.values():
                         if c.push_child == ".":
-                            row[c.push_name] = c.pull(r)
+                            row[c.push_name] = c.pull(rownum)
                         elif c.num_push_columns:
                             tuple_value = row[c.push_name]
                             if not tuple_value:
                                 tuple_value = row[c.push_name] = [None] * c.num_push_columns
-                            tuple_value[c.push_child] = c.pull(r)
+                            tuple_value[c.push_child] = c.pull(rownum)
                         else:
-                            row[c.push_name][c.push_child] = c.pull(r)
+                            row[c.push_name][c.push_child] = c.pull(rownum)
 
                     data.append(row)
 
@@ -736,14 +735,15 @@ class Table_usingSQLite(Container):
                 sql_name = "e"+unicode(edge_index)+"c"+unicode(column_index)
                 edge_names.append(sql_name)
 
+                num_sql_columns = len(index_to_column)
                 if not query_edge.value and any(query_edge.domain.partitions.where):
-                    def __(parts, column_index):
+                    def __(parts, num_sql_columns):
                         def _get(row):
-                            return parts[row[column_index]].name
+                            return parts[row[num_sql_columns]].name
                         return _get
-                    pull = __(query_edge.domain.partitions, column_index)
+                    pull = __(query_edge.domain.partitions, num_sql_columns)
                 else:
-                    pull = get_column(column_index)
+                    pull = get_column(num_sql_columns)
 
                 if isinstance(query_edge.value, TupleOp):
                     query_edge.allowNulls = False
@@ -753,7 +753,7 @@ class Table_usingSQLite(Container):
                     push_child = "."
                     num_push_columns = None
 
-                index_to_column[len(index_to_column)] = Dict(
+                index_to_column[num_sql_columns] = Dict(
                     is_edge=True,
                     push_name=query_edge.name,
                     push_column=edge_index,
@@ -766,7 +766,7 @@ class Table_usingSQLite(Container):
 
             vals = [g[1] for g in edge_values]
             if query_edge.domain.type == "set":
-                domain_name = "dc0"
+                domain_name = "dc"+unicode(edge_index)
                 domain_names =[domain_name]
                 if len(edge_names) > 1:
                     Log.error("Do not know how to handle")
@@ -839,7 +839,6 @@ class Table_usingSQLite(Container):
             for d in domain_names:
                 groupby.append(edge_alias + "." + d)
 
-        if query.edges:
             for k in domain_names:
                 outer_selects.append(edge_alias + "." + k + " AS " + k)
 
@@ -943,12 +942,15 @@ class Table_usingSQLite(Container):
         main_filter = query.where.to_sql(columns)[0].sql.b
 
         all_parts = []
-        for p in itertools.product(*[
+        combos = list(itertools.product(*[
             # FOR EACH EDGE, WE MUST INCLUDE THE NULL PART, CARTESIAN PRODUCT WITH ALL THE OTHER EDGES WITH NULL PART
             [[False, edge_index, query_edge], [True, edge_index, query_edge]]
             if query_edge.allowNulls else [[False, edge_index, query_edge]]
             for edge_index, query_edge in enumerate(query.edges)
-        ]):
+            ]))
+        for p in combos:
+            if not all(pp[0] for pp in p):
+                continue
 
             sources = [
                 "(" +
@@ -974,7 +976,7 @@ class Table_usingSQLite(Container):
                     ))
                 else:
                     sources.insert(0, "(" + domain + ") "+edge_alias)
-                    join_types.append("LEFT JOIN")
+                    join_types.insert(0, "LEFT JOIN")
                     joins.insert(0, ons[edge_index])
 
             part = "SELECT " + (",\n".join(outer_selects)) + "\nFROM\n" + sources[0]

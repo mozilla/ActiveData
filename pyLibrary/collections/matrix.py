@@ -7,13 +7,12 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-
-from pyLibrary.collections import PRODUCT, reverse, MAX, MIN, OR
 from pyLibrary import convert
+from pyLibrary.collections import PRODUCT, reverse, MAX, MIN, OR
 from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Null, Dict, coalesce
@@ -349,3 +348,41 @@ def _getitem(c, i):
                 return _getitem(c[select], i[1::])
 
 
+def _identity(value):
+    return value
+
+
+def index_to_coordinate(dims):
+    """
+    RETURN A FUNCTION THAT WILL TAKE AN INDEX, AND MAP IT TO A coordinate IN dims
+
+    :param dims: TUPLE WITH NUMBER OF POINTS IN EACH DIMENSION
+    :return: FUNCTION
+    """
+    _ = divmod  # SO WE KEEP THE IMPORT
+
+    if len(dims) == 1:
+        return _identity
+
+    num_dims = len(dims)
+    prod = [1] * num_dims
+    acc = 1
+    domain = range(0, num_dims)
+    for i in reversed(domain):
+        prod[i] = acc
+        acc *= dims[i]
+
+    commands = []
+    coords = []
+    for i in domain:
+        if i == num_dims - 1:
+            commands.append("\tc" + unicode(i) + " = index")
+        else:
+            commands.append("\tc" + unicode(i) + ", index = divmod(index, " + unicode(prod[i]) + ")")
+        coords.append("c" + unicode(i))
+    output = None
+    code = "def output(index):\n" + \
+         "\n".join(commands) + "\n" + \
+         "\treturn " + ", ".join(coords)
+    exec code
+    return output

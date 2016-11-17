@@ -171,12 +171,6 @@ class ESUtils(object):
         subtest = wrap(subtest)
         subtest.name = extract_stack()[1]['method']
 
-        if subtest.disable:
-            return
-
-        if "elasticsearch" in subtest["not"]:
-            return
-
         self.fill_container(subtest, tjson=tjson)
         self.send_queries(subtest)
 

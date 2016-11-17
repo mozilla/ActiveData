@@ -1,4 +1,4 @@
 Flask
 pymysql
 requests
-pyparsing
+moz-sql-parser

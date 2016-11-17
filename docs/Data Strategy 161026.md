@@ -4,7 +4,15 @@ Future Data Strategy
 
 As of Oct2016, we are approaching 2 years of ActiveData. The objective is to confirm, or deny, or give feedback on our current path.
 
-## Scale
+## Original Objective
+
+Dec 2014 (Portland): As I remember, the original objective was to ingest the structured logs from our test results and analyze our oranges. I decided that the lightning-fast response time of ES, plus its ability to scale to 100million records easily, should provide us with a quick win.
+
+## Problem
+
+The scope of the problem has gently expanded, without me noticing, to the point where it is nothing like the original problem. It should be evaluated.
+
+## Current Scale
 
 ActiveData is a data warehouse meant to provide aggregates fast. It is ingesting structured logs at a rate of [61 thousand files, 327 gigabytes, per day](http://activedata.allizom.org/tools/query.html#query_id=7kiXcEIe) and [serving 30 thousand requests per day](http://activedata.allizom.org/tools/query.html#query_id=07I3Z76e) (not including static assets, not include direct-to-cluster requests, most from its own peripheral services) 
 
@@ -17,7 +25,7 @@ ActiveData is a data warehouse meant to provide aggregates fast. It is ingesting
 
 *Code Coverage reached 100 billion in early October
 
-##Cost
+## Cost
 
 The current scale is good, but should be increased for faster speeds and higher reliability
 
@@ -129,9 +137,20 @@ Looking at market rates for comparative pricing. Enough money may solve the prob
  * Require $1000/month for ETL pipeline in either case                
 
 
-##History
+## History of ActiveData
 
-Some personal notes regarding the future of ActiveData.  
+Generally, this is a story about scope creep.
+
+* The ETL effort required $4/hour to keep up with the log volume. Some logs were gigabytes when expanded; and Python is terrible at catching OoM errors.  SpotManager was made to actively bid, and setup, ETL machines to reduce cost by 10x, or more. 
+* As soon as we could visualize the Pass/Fail, and calculate fail rates, the next request was to expose the reasons for failure (not ingested at the time). This broke most assumptions: ES would be required to hold a billion records, and the query lanaguage was especially complicated when dealing with annotations (effectively joins).
+* Interest in test results waned for interest Buildbot test times, build times, and the individual steps, then OrangeFactor, and then TaskCluster. Hg was also included to include push info to all records; which required a cache to prevent crushing hg.m.o.
+* Reftests started using structured logs, Taskcluster test results were then ingested.  First doubling, and then doubling again. Now at 10billion records; ES could not handle both the size and diversity of indexes; constant crashing because load would land on single machine. ShardBalancer was not completed in time...
+* CodeCoverage gets turned on for most try builds: 20billion records ingested in a single day, 100billion records in total before turned off. ETL array could not keep up.
+
+
+## Previous Projects
+
+ActiveData is one part of an overall arch towards a queryable datastore that does not require ETL to load. 
 
 ###BugzillaETL
 

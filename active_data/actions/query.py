@@ -10,29 +10,30 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from collections import Mapping
+
 import flask
-import sqlparse
+import moz_sql_parser
 from flask import Response
+from pyLibrary.testing.fuzzytestcase import FuzzyTestCase, assertAlmostEqual
 
 from active_data import record_request, cors_wrapper
+from active_data.actions import save_query
 from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.debugs.profiles import CProfiler
-from pyLibrary.dot import coalesce, listwrap, join_field, split_field
+from pyLibrary.dot import coalesce, join_field, split_field, wrap, listwrap
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx, meta, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.meta import TOO_OLD
-from pyLibrary.sql.parse import simpleSQL
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import MINUTE
 from pyLibrary.times.timer import Timer
-
-from active_data.actions import save_query
 
 BLANK = convert.unicode2utf8(File("active_data/public/error.html").read())
 QUERY_SIZE_LIMIT = 10*1024*1024
@@ -208,6 +209,29 @@ def replace_vars(text, params=None):
     return text
 
 
+KNOWN_SQL_AGGREGATES = {"count", "sum"}
+
+
 def parse_sql(sql):
-    res = simpleSQL.parseString(sql)
-    Log.note("{{result}}", result=res)
+    query = wrap(moz_sql_parser.parse(sql))
+    # PULL OUT THE AGGREGATES
+    for s in listwrap(query.select):
+        val = s.value
+        # LOOK FOR GROUPBY COLUMN IN SELECT CLAUSE, REMOVE DUPLICATION
+        for g in listwrap(query.groupby):
+            try:
+                assertAlmostEqual(g.value, val, "")
+                g.name = s.name
+                s.value = None  # MARK FOR REMOVAL
+                break
+            except Exception, e:
+                pass
+
+        if isinstance(val, Mapping):
+            for a in KNOWN_SQL_AGGREGATES:
+                if val[a]:
+                    s.aggregate = a
+                    s.value = val[a]
+    query.select = [s for s in listwrap(query.select) if s.value != None]
+    query.format = "table"
+    return query

@@ -73,6 +73,11 @@ def get_decoders_by_depth(query):
 
         try:
             depths = set(len(schema[v].nested_path)-1 for v in vars_)
+            if -1 in depths:
+                Log.error(
+                    "Do not know of column {{column}}",
+                    column=unwraplist([v for v in vars_ if schema[v]==None])
+                )
             if len(depths) > 1:
                 Log.error("expression {{expr}} spans tables, can not handle", expr=e.value)
             max_depth = Math.MAX(depths)

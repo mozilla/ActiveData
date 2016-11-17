@@ -163,7 +163,6 @@ class Bucket(object):
 
     def get_meta(self, key, conforming=True):
         try:
-            # key_prefix("2")
             metas = list(self.bucket.list(prefix=key))
             metas = wrap([m for m in metas if m.name.find(".json") != -1])
 
@@ -273,7 +272,7 @@ class Bucket(object):
     def read_lines(self, key):
         source = self.get_meta(key)
         if source is None:
-            Log.error("{{key}} does not exist",  key= key)
+            Log.error("{{key}} does not exist", key=key)
         if source.size < MAX_STRING_SIZE:
             if source.key.endswith(".gz"):
                 return LazyLines(ibytes2ilines(scompressed2ibytes(source)))

@@ -333,11 +333,37 @@ Return the right-part of given string. `null` parameters result in `null`; negat
 		{"right": {variable: length}}
 		{"right": [expression, length]}
 
+###`between` Operator###
+
+Return the leftmost substring between a given `prefix` and `suffix`
+
+		{"between": {variable: [literal_prefix, literal_suffix]}}
+
+The prefix and suffix are interpreted as literals when using the object form. The array form will accept JSON expressions:
+
+		{"between": [value, prefix, suffix]}
+
+For example, the following two expressions are identical:
+
+		{"between": {"a": ["http://", "/"]}}
+		{"between": ["a", {"literal": "http://"}, {"literal": "/"}]}
+
+If the `prefix` is `null`, everything from the beginning of the string to the suffix will be returned. If `suffix` is `null`, everything from the `prefix` to the end of the string will be returned.
+
+`between` has two optional parameters: 
+
+* `default` can be set in the event there is no match.
+* `start` is an index into the string where the search begins
+
+		{"between": {"a": ["http://", "/"]}, "start":200, "default":"<none>"}
+
+
+
 ###`find` Operator###
 
 Test if property contains given substring, return the index of the first character if found.
 
-		{"find": {variable, substring}}
+		{"find": {variable: substring}}
 
 JSON Expressions treat zero (`0`) as a truthy value; this implies `find` can be used in conditional expressions, even if the `substring` happens to be the prefix.
 
@@ -393,6 +419,8 @@ If any of the strings empty, or are `null`, they are ignored.
 		"separator":"-"
 	} 
 	⇒ "hello-world"
+
+
 
 
 ###`not_left` Operator###

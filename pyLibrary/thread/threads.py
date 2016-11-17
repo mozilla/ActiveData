@@ -494,6 +494,9 @@ class Thread(object):
                     response = self.target(*a, **k)
                     with self.synch_lock:
                         self.end_of_thread = Dict(response=response)
+                else:
+                    with self.synch_lock:
+                        self.end_of_thread = Null
             except Exception, e:
                 with self.synch_lock:
                     self.end_of_thread = Dict(exception=_Except.wrap(e))
@@ -772,7 +775,7 @@ class Signal(object):
                 if DEBUG:
                     if not _Log:
                         _late_import()
-                    _Log.note("Adding job to signal {{name|quote}}", name=self.name)
+                    _Log.note("Adding target to signal {{name|quote}}", name=self.name)
                 self.job_queue.append(target)
 
     @property

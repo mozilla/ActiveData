@@ -546,13 +546,22 @@ Please notice the dots (`.`) from the original properties are escaped with backs
 Set Operators (and Variables)
 -----------------------------
 
+### `last` Operator ###
+
+Return the last element of a list, or tuple.
+
+		{"last": expression}
+
+If the `expression` value is not a list, then the expression value is returned. If list is empty, or if the expression is `null`, then `null` is returned.
+
+
+### `rows` Operator ###
+
 Window functions are given additional context variables to facilitate calculation over a set of (sorted) values covered by the window. These are 
 
 * `row` - for the current row; which is implied, but can sometimes be useful
 * `rownum` - the index into the window
 * `rows` - an array representing the window
-
-### `rows` Operator ###
 
 JSON Expressions reference inner property names using dot-separated paths. In the case of referencing specific rows in a window function, this is possible, but verbose:
 

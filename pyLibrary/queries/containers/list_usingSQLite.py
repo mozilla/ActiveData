@@ -26,7 +26,7 @@ from pyLibrary.dot import listwrap, coalesce, Dict, wrap, Null, unwraplist, spli
     relative_field
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
-from pyLibrary.meta import use_settings
+from pyLibrary.meta import use_settings, DataClass
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
@@ -1184,7 +1184,7 @@ class Table_usingSQLite(Container):
                             column_number = len(selects)
                             # SQL HAS ABS TABLE REFERENCE
                             selects.append(sql + " AS " + _make_column_name(column_number))
-                            index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
+                            index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Column(
                                 push_name=s.name,
                                 push_column=si,
                                 push_child=column.name,
@@ -1213,7 +1213,7 @@ class Table_usingSQLite(Container):
                         nested_path=nested_path
                     )
 
-        where_clause = query.where.to_sql(columns)[0].sql.b
+        where_clause = query.where.to_sql(columns, boolean=True)[0].sql.b
 
         sql = self._make_sql_for_one_nest_in_set_op(
             ".",
@@ -1281,12 +1281,16 @@ class Table_usingSQLite(Container):
                         # ASSIGN INNER PROPERTIES
                         for i, c in nested_doc_details['index_to_column'].items():
                             value = row[i]
-                            if value is not None:
-                                relative_path = relative_field(join_field(split_field(c.push_name)+[c.push_child]), curr_nested_path)
-                                if relative_path == ".":
-                                    doc = value
-                                else:
-                                    doc[relative_path] = value
+                            if value == None:
+                                continue
+                            if value == '':
+                                continue
+
+                            relative_path = relative_field(join_field(split_field(c.push_name)+[c.push_child]), curr_nested_path)
+                            if relative_path == ".":
+                                doc = value
+                            else:
+                                doc[relative_path] = value
                     else:
                         # ASSIGN INNER PROPERTIES
                         for i, c in nested_doc_details['index_to_column'].items():
@@ -1988,3 +1992,5 @@ def set_column(row, col, child, value):
         if column is None:
             column = row[col] = {}
         Dict(column)[child] = value
+
+

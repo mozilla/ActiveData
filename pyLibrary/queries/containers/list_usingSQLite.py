@@ -1121,7 +1121,7 @@ class Table_usingSQLite(Container):
         # EVERY COLUMN, AND THE INDEX IT TAKES UP
         index_to_column = {}  # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
         index_to_uid = {}  # FROM NESTED PATH TO THE INDEX OF UID
-        selects = []  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE)
+        sql_selects = []  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE)
         nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
 
         # WE MUST HAVE THE ALIAS NAMES FOR THE TABLES
@@ -1161,10 +1161,10 @@ class Table_usingSQLite(Container):
             alias = nested_doc_details['alias'] = nest_to_alias[nested_path]
 
             # WE ALWAYS ADD THE UID AND ORDER
-            column_number = index_to_uid[nested_path] = nested_doc_details['id_coord'] = len(selects)
-            selects.append(alias + "." + quoted_UID + " AS " + _make_column_name(column_number))
+            column_number = index_to_uid[nested_path] = nested_doc_details['id_coord'] = len(sql_selects)
+            sql_selects.append(alias + "." + quoted_UID + " AS " + _make_column_name(column_number))
             if nested_path != ".":
-                selects.append(alias + "." + quote_table(ORDER) + " AS " + _make_column_name(column_number + 1))
+                sql_selects.append(alias + "." + quote_table(ORDER) + " AS " + _make_column_name(column_number + 1))
 
             # WE DO NOT NEED DATA FROM TABLES WE REQUEST NOTHING FROM
             if nested_path not in active_columns:
@@ -1173,7 +1173,7 @@ class Table_usingSQLite(Container):
             if primary_nested_path == nested_path:
                 # ADD SQL SELECT COLUMNS FOR EACH jx SELECT CLAUSE
                 for si, s in enumerate(listwrap(query.select)):
-                    column_number = len(selects)
+                    column_number = len(sql_selects)
                     s.pull = get_column(column_number)
                     db_columns = listwrap(s.value.to_sql(columns))
                     for column in db_columns:
@@ -1181,17 +1181,17 @@ class Table_usingSQLite(Container):
                             json_type = sql_type_to_json_type[t]
                             if json_type in STRUCT:
                                 continue
-                            column_number = len(selects)
+                            column_number = len(sql_selects)
                             # SQL HAS ABS TABLE REFERENCE
-                            selects.append(sql + " AS " + _make_column_name(column_number))
-                            index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Column(
+                            sql_selects.append(sql + " AS " + _make_column_name(column_number))
+                            index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
                                 push_name=s.name,
                                 push_column=si,
                                 push_child=column.name,
                                 pull=get_column(column_number),
                                 sql=sql,
                                 type=json_type,
-                                nested_path=column.nested_path
+                                nested_path=[nested_path]  # fake the real nested path, we only look at [0] anyway
                             )
             elif startswith_field(nested_path, primary_nested_path):
                 # ADD REQUIRED COLUMNS, FOR DEEP STUFF
@@ -1199,10 +1199,10 @@ class Table_usingSQLite(Container):
                     if c.type in STRUCT:
                         continue
 
-                    column_number = len(selects)
+                    column_number = len(sql_selects)
                     nested_path = c.nested_path
                     sql = nest_to_alias[nested_path[0]] + "." + quote_table(c.es_column)
-                    selects.append(sql + " AS " + _make_column_name(column_number))
+                    sql_selects.append(sql + " AS " + _make_column_name(column_number))
                     index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
                         push_name=c.name,
                         push_column=ci,
@@ -1217,7 +1217,7 @@ class Table_usingSQLite(Container):
 
         sql = self._make_sql_for_one_nest_in_set_op(
             ".",
-            selects,
+            sql_selects,
             where_clause,
             active_columns,
             index_to_column
@@ -1411,10 +1411,10 @@ class Table_usingSQLite(Container):
                         continue
 
                     if startswith_field(sql_select.nested_path[0], nested_path):
-                        select_clause.append(sql_select.sql)
+                        select_clause.append(sql_select.sql + " AS " + _make_column_name(select_index))
                     else:
                         # DO NOT INCLUDE DEEP STUFF AT THIS LEVEL
-                        select_clause.append("NULL")
+                        select_clause.append("NULL AS " + _make_column_name(select_index))
 
                 if nested_path == ".":
                     from_clause += "\nFROM "+quote_table(self.name) + " " + alias + "\n"

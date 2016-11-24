@@ -30,9 +30,10 @@ def _late_import():
     global _Log
 
     from pyLibrary.debugs.logs import Log as _Log
+    from pyLibrary.thread.threads import Queue
 
-    _ = _Log
-
+    if _Log.cprofiler_stats == None:
+        _Log.cprofiler_stats = Queue("cprofiler stats")  # ACCUMULATION OF STATS FROM ALL THREADS
 
 
 class Profiler(object):
@@ -116,8 +117,6 @@ def write(profile_settings):
     ]
     if stats:
         stats_file2.write(convert.list2tab(stats))
-
-
 
 
 class CProfiler(object):

@@ -12,7 +12,7 @@ import types
 import unittest
 
 from pyLibrary import dot
-from pyLibrary.debugs.exceptions import suppress_exception
+from pyLibrary.debugs.exceptions import suppress_exception, Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, literal_field
 from pyLibrary.maths import Math
@@ -57,6 +57,7 @@ class FuzzyTestCase(unittest.TestCase):
         try:
             function(*args, **kwargs)
         except Exception, e:
+            e = Except.wrap(e)
             if isinstance(problem, basestring):
                 if problem in e:
                     return

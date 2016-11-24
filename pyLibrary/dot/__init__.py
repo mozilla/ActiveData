@@ -293,11 +293,11 @@ def _get_attr(obj, path):
                 # THIS CASE IS WHEN THE __init__.py DOES NOT IMPORT THE SUBDIR FILE
                 # WE CAN STILL PUT THE PATH TO THE FILE IN THE from CLAUSE
                 if len(path)==1:
-                    #GET MODULE OBJECT
+                    # GET MODULE OBJECT
                     output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[0]], 0)
                     return output
                 else:
-                    #GET VARIABLE IN MODULE
+                    # GET VARIABLE IN MODULE
                     output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[1]], 0)
                     return _get_attr(output, path[1:])
             except Exception, e:

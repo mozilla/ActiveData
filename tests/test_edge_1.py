@@ -1301,6 +1301,47 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
+    def test_edge_using_between(self):
+        test = {
+            "data": [
+                {"url": NULL},
+                {"url": "/"},
+                {"url": "https://hg.mozilla.org/"},
+                {"url": "https://hg.mozilla.org/a/"},
+                {"url": "https://hg.mozilla.org/b/"},
+                {"url": "https://hg.mozilla.org/b/1"},
+                {"url": "https://hg.mozilla.org/b/2"},
+                {"url": "https://hg.mozilla.org/b/3"},
+                {"url": "https://hg.mozilla.org/c/"},
+                {"url": "https://hg.mozilla.org/d"},
+                {"url": "https://hg.mozilla.org/e"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": {
+                    "name": "subdir",
+                    "value": {
+                        "between": {
+                            "url": [
+                                "https://hg.mozilla.org/",
+                                "/"
+                            ]
+                        }
+                    }
+                }
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"subdir": NULL, "count": 5},
+                    {"subdir": "a", "count": 1},
+                    {"subdir": "b", "count": 4},
+                    {"subdir": "c", "count": 1}
+                ]}
+
+        }
+        self.utils.execute_es_tests(test)
+
     def test_edge_using_list(self):
         data = [
             {"r": "a", "s": "aa"},

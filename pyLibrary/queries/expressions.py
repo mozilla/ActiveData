@@ -420,6 +420,9 @@ class ScriptOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return self.script
 
+    def to_esfilter(self):
+        return {"script": {"script": self.script}}
+
     def vars(self):
         return set()
 
@@ -2244,16 +2247,21 @@ class BetweenOp(Expression):
             return expr
 
     def vars(self):
-        return self.value.vars() | self.prefix.vars() | self.suffix.vars()
+        return self.value.vars() | self.prefix.vars() | self.suffix.vars() | self.default.vars() | self.start.vars()
 
     def map(self, map_):
-        return LeftOp("left", [self.value.map(map_), self.length.map(map_)])
+        return BetweenOp(
+            "between",
+            [self.value.map(map_), self.prefix.map(map_), self.suffix.map(map_)],
+            default=self.default.map(map_),
+            start=self.start.map(map_)
+        )
 
     def missing(self):
         value_is_missing = self.value.missing().to_ruby()
         value = self.value.to_ruby(not_null=True)
         prefix = self.prefix.to_ruby()
-        len_prefix = "("+self.prefix+").length()"
+        len_prefix = "("+prefix+").length()"
         suffix = self.suffix.to_ruby()
         start = value+".indexOf("+prefix+")"
         end = value+".indexOf("+suffix+", "+start+"+"+len_prefix+")"

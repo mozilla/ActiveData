@@ -275,7 +275,7 @@ Let us restrict ourselves to `mozilla-inbound`, the principal branch for Firefox
 
 ###6. Request Aggregates
 
-Individual records are useful for understanding the data and building a query. They are also useful to the people that are familiar with the events that produced those record. But, you will need aggregate statistics to get a better holistic understanding of trends.
+Individual records are useful for understanding the data and building a query. They are also useful to the people that are familiar with the events that produced those records. But, you will need aggregate statistics to get a better holistic understanding of trends.
 
 Once you are confident your `where` clause is focused on the records you're interested in, you can start requesting aggregates. Up to this point in this guide, ActiveData has either returned individual records, or provided a `count` (which is the default aggregate). [We can request many other aggregates](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_reference.md#selectaggregate-subclause)
 
@@ -309,7 +309,7 @@ In the following query we are going to use `edges`, which acts much like `groupb
 
 ###7. Further processing
 
-Whether you are pulling long streams of raw records, or pulling compact aggregates, you are done with ActiveData, but your task is not complete. The most enlightening answers come from data that has undergone a complex series of transformations; required to properly correlate it to other data, and organize it for presentation. ActiveData does not do that, it is not an analysis tool, its responsibilities are to make a large amount of data searchable, provide basic aggregates, and allow data reshaping. Analysis and charting is better done by other tools.
+Whether you are pulling long streams of raw records, or pulling compact aggregates, your adventure with ActiveData is over, but your job is not complete. The most enlightening answers come from data that has undergone a complex series of transformations; required to properly correlate it to other data, and organize it for presentation. ActiveData does not do that, it is not an analysis tool, its responsibilities are to make a large amount of data searchable, provide basic aggregates, and allow data reshaping. Analysis and charting is better done by other tools.
 
 ActiveData is a service. Once you have a prototype query that gets the data you want, you must go to your analysis tool and import that data. ActiveData is fast enough that you can make your request at presentation time, so your presentation is near-real time.
 

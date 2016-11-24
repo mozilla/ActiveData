@@ -10,19 +10,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from pyLibrary import convert
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, wrap, unwrap
-from pyLibrary.env import http
-from pyLibrary.env.elasticsearch import Index
+from pyLibrary.env import http, elasticsearch
 from pyLibrary.queries import jx
-from pyLibrary.testing import elasticsearch
 from pyLibrary.thread.threads import Signal, Queue
 from pyLibrary.thread.threads import Thread
-from pyLibrary.times.dates import Date
+from pyLibrary.times.dates import Date, unicode2Date
 
+DEBUG = True
 NUM_THREAD = 4
 
 
@@ -75,7 +75,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
                     if p.alias == coverage_index.settings.alias
                 ]
                 for index_name in all_indexes:
-                    Index(index=index_name, read_only=False, cluster=coverage_index.cluster).delete_record({"and": [
+                    elasticsearch.Index(index=index_name, read_only=False, cluster=coverage_index.cluster).delete_record({"and": [
                         {"not": {"term": {"etl.source.id": int(d.max_id)}}},
                         {"term": {"test.url": d.test.url}},
                         {"term": {"source.file.name": not_summarized.source.file.name}},
@@ -105,7 +105,12 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
         all_tests_covering_file = UNION(test_count.data.get("test.url"))
         num_tests = len(all_tests_covering_file)
         max_siblings = num_tests - 1
-        Log.note("{{filename}} is covered by {{num}} tests", filename=not_summarized.source.file.name, num=num_tests)
+        Log.note(
+            "{{filename}} rev {{revision}} is covered by {{num}} tests",
+            filename=not_summarized.source.file.name,
+            num=num_tests,
+            revision=not_summarized.build.revision12
+        )
         line_summary = list(
             (k, unwrap(wrap(list(v)).get("test.url")))
             for k, v in jx.groupby(test_count.data, keys="line")
@@ -168,8 +173,8 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             Log.warning("expecting all records to have summary. Example:\n{{example}}", example=bad_example[0])
 
         rows = [{"id": d._id, "value": d} for d in file_level_coverage_records.data]
-        coverage_index.extend(rows)  # TODO: WITH MULTIPLE INDEXS, THIS MAY NOT PUSH BACK TO THE SAME, MAKING DUPS
         coverage_summary_index.extend(rows)
+        coverage_index.extend(rows)
 
         all_test_summary = []
         for g, records in jx.groupby(file_level_coverage_records.data, "source.file.name"):
@@ -184,8 +189,8 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
                         "covered": jx.sort(cov, "line"),
                         "uncovered": jx.sort(uncov),
                         "total_covered": len(cov),
-                        "total_uncovered": len(uncov)
-
+                        "total_uncovered": len(uncov),
+                        "min_line_siblings": 0  # PLACEHOLDER TO INDICATE DONE
                     }
                 },
                 "build": records[0].build,
@@ -195,56 +200,85 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             }
             all_test_summary.append(coverage)
 
-        rows = [{"id": d["_id"], "value": d} for d in all_test_summary]
-        coverage_index.extend(rows)
-        coverage_summary_index.extend(rows)
+        sum_rows = [{"id": d["_id"], "value": d} for d in all_test_summary]
+        coverage_summary_index.extend(sum_rows)
 
-
-def loop(coverage_index, coverage_summary_index, settings, please_stop):
-    try:
-        while not please_stop:
+        if DEBUG:
             coverage_index.refresh()
-
-            # IDENTIFY NEW WORK
-            Log.note("Identify new coverage to work on")
             todo = http.post_json(settings.url, json={
                 "from": "coverage",
-                "groupby": ["source.file.name", "build.revision12"],
                 "where": {"and": [
                     {"missing": "source.method.name"},
-                    {"missing": "source.file.min_line_siblings"}
+                    {"missing": "source.file.min_line_siblings"},
+                    {"eq": {"source.file.name": not_summarized.source.file.name}},
+                    {"eq": {"build.revision12": not_summarized.build.revision12}}
                 ]},
                 "format": "list",
-                "limit": coalesce(settings.batch_size, 100)
+                "limit": 10
             })
+            if todo.data:
+                Log.error("Failure to update")
 
-            if not todo.data:
-                please_stop.go()
-                return
 
-            queue = Queue("pending source files to review")
-            queue.extend(todo.data[0:coalesce(settings.batch_size, 100):])
+def loop(source, coverage_summary_index, settings, please_stop):
+    try:
+        cluster = elasticsearch.Cluster(source)
+        aliases = cluster.get_aliases()
+        candidates = []
+        for pairs in aliases:
+            if pairs.alias == source.index:
+                candidates.append(pairs.index)
+        candidates = jx.sort(candidates, {".": "desc"})
 
-            threads = [
-                Thread.run(
-                    "processor" + unicode(i),
-                    process_batch,
-                    queue,
-                    coverage_index,
-                    coverage_summary_index,
-                    settings,
-                    please_stop=please_stop
-                )
-                for i in range(NUM_THREAD)
-            ]
+        for index_name in candidates:
+            coverage_index = elasticsearch.Index(index=index_name, read_only=False, settings=source)
+            push_date_filter = unicode2Date(coverage_index.settings.index[-15::], elasticsearch.INDEX_DATE_FORMAT)
 
-            # ADD A STOP MESSAGE FOR EACH THREAD
-            for i in range(NUM_THREAD):
+            while not please_stop:
+                # IDENTIFY NEW WORK
+                Log.note("Working on index {{index}}", index=index_name)
+                coverage_index.refresh()
+
+                todo = http.post_json(settings.url, json={
+                    "from": "coverage",
+                    "groupby": ["source.file.name", "build.revision12"],
+                    "where": {"and": [
+                        {"missing": "source.method.name"},
+                        {"missing": "source.file.min_line_siblings"},
+                        {"gte": {"repo.push.date": push_date_filter}}
+                    ]},
+                    "format": "list",
+                    "limit": coalesce(settings.batch_size, 100)
+                })
+
+                if not todo.data:
+                    break
+
+                queue = Queue("pending source files to review")
+                queue.extend(todo.data[0:coalesce(settings.batch_size, 100):])
+
+                threads = [
+                    Thread.run(
+                        "processor" + unicode(i),
+                        process_batch,
+                        queue,
+                        coverage_index,
+                        coverage_summary_index,
+                        settings,
+                        please_stop=please_stop
+                    )
+                    for i in range(NUM_THREAD)
+                ]
+
+                # ADD STOP MESSAGE
                 queue.add(Thread.STOP)
 
-            # WAIT FOR THEM TO COMPLETE
-            for t in threads:
-                t.join()
+                # WAIT FOR THEM TO COMPLETE
+                for t in threads:
+                    t.join()
+
+        please_stop.go()
+        return
 
     except Exception, e:
         Log.warning("Problem processing", cause=e)
@@ -260,14 +294,14 @@ def main():
             Log.start(config.debug)
 
             please_stop = Signal("main stop signal")
-            coverage_index = elasticsearch.Cluster(config.source).get_index(read_only=False, settings=config.source)
+            coverage_index = elasticsearch.Cluster(config.source).get_index(settings=config.source)
             config.destination.schema = coverage_index.get_schema()
             coverage_summary_index = elasticsearch.Cluster(config.destination).get_or_create_index(read_only=False, settings=config.destination)
             coverage_summary_index.add_alias(config.destination.index)
             Thread.run(
                 "processing loop",
                 loop,
-                coverage_index,
+                config.source,
                 coverage_summary_index,
                 config,
                 please_stop=please_stop

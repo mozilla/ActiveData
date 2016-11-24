@@ -16,6 +16,7 @@ import math
 import re
 from datetime import datetime, date, timedelta
 from decimal import Decimal
+from time import time as _time
 
 from pyLibrary.maths import Math
 
@@ -112,7 +113,14 @@ class Date(object):
 
     @staticmethod
     def now():
-        return unix2Date(datetime2unix(datetime.utcnow()))
+        candidate = _time()
+        temp = datetime.utcnow()
+        unix = datetime2unix(temp)
+        if abs(candidate - unix) > 0.1:
+            from pyLibrary.debugs.logs import Log
+
+            Log.warning("_time() and datetime.utcnow() is off by {{amount}}", amount=candidate - unix)
+        return unix2Date(datetime2unix(temp))
 
     @staticmethod
     def eod():

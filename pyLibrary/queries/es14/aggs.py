@@ -19,7 +19,7 @@ from pyLibrary.queries import es09
 from pyLibrary.queries.es14.decoders import DefaultDecoder, AggsDecoder
 from pyLibrary.queries.es14.decoders import DimFieldListDecoder
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp
+from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp, TupleOp
 from pyLibrary.queries.query import MAX_LIMIT
 from pyLibrary.times.timer import Timer
 
@@ -73,6 +73,11 @@ def get_decoders_by_depth(query):
 
         try:
             depths = set(len(schema[v].nested_path)-1 for v in vars_)
+            if -1 in depths:
+                Log.error(
+                    "Do not know of column {{column}}",
+                    column=unwraplist([v for v in vars_ if schema[v]==None])
+                )
             if len(depths) > 1:
                 Log.error("expression {{expr}} spans tables, can not handle", expr=e.value)
             max_depth = Math.MAX(depths)

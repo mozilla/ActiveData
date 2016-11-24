@@ -574,7 +574,8 @@ def _normalize_range(range):
 
     return Dict(
         min=None if range.min == None else jx_expression(range.min),
-        max=None if range.max == None else jx_expression(range.max)
+        max=None if range.max == None else jx_expression(range.max),
+        mode=range.mode
     )
 
 
@@ -713,6 +714,8 @@ def _normalize_sort(sort=None):
     for s in listwrap(sort):
         if isinstance(s, basestring):
             output.append({"value": jx_expression(s), "sort": 1})
+        elif isinstance(s, Expression):
+            output.append({"value": s, "sort": 1})
         elif Math.is_integer(s):
             output.append({"value": OffsetOp("offset", s), "sort": 1})
         elif all(d in sort_direction for d in s.values()) and not s.sort and not s.value:

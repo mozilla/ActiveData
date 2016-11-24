@@ -71,7 +71,7 @@ def wrap_from(frum, schema=None):
         if frum.startswith("meta."):
             if frum == "meta.columns":
                 return _meta.singlton.meta.columns
-            elif frum == "meta.table":
+            elif frum == "meta.tables":
                 return _meta.singlton.meta.tables
             else:
                 Log.error("{{name}} not a recognized table", name=frum)
@@ -119,3 +119,4 @@ class Schema(object):
 
     def keys(self):
         return set(k[0] for k in self.lookup._data.keys())
+

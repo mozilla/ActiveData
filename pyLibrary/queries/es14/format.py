@@ -19,11 +19,24 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, set_default, coalesce, wrap, split_field, Null
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.es14.aggs import count_dim, aggs_iterator, format_dispatch, drill
+from pyLibrary.queries.expressions import TupleOp
 
 
 def format_cube(decoders, aggs, start, query, select):
     new_edges = count_dim(aggs, decoders)
-    dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
+
+    dims = []
+    for e in new_edges:
+        if isinstance(e.value, TupleOp):
+            e.allowNulls = False
+
+        if e.allowNulls is False:
+            extra = 0
+        else:
+            extra = 1
+        dims.append(len(e.domain.partitions)+extra)
+
+    dims = tuple(dims)
     matricies = [(s, Matrix(dims=dims, zeros=s.default)) for s in select]
     for row, coord, agg in aggs_iterator(aggs, decoders):
         for s, m in matricies:

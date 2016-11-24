@@ -863,16 +863,16 @@ class TestDeepOps(ActiveDataBaseTest):
 
     def test_deep_edge_using_list(self):
         data = [{"a": {"_b": [
-            {"r": "a", "s": "aa"},
-            {"s": "bb"},
+            {"r": "a",  "s": "aa"},
+            {           "s": "bb"},
             {"r": "bb", "s": "bb"},
-            {"r": "c", "s": "cc"},
-            {"s": "dd"},
-            {"r": "e", "s": "ee"},
-            {"r": "e", "s": "ee"},
+            {"r": "c",  "s": "cc"},
+            {           "s": "dd"},
+            {"r": "e",  "s": "ee"},
+            {"r": "e",  "s": "ee"},
             {"r": "f"},
             {"r": "f"},
-            {"k": 1}
+            {                     "k": 1}
         ]}}]
 
         test = {
@@ -916,7 +916,7 @@ class TestDeepOps(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "v",
-                        "allowNulls": True,
+                        "allowNulls": False,
                         "domain": {
                             "type": "set",
                             "partitions": [
@@ -933,7 +933,7 @@ class TestDeepOps(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "count": [1, 1, 1, 2, 2, 1, 1, 1, 0]
+                    "count": [1, 1, 1, 2, 2, 1, 1, 1]
                 }
             }
         }

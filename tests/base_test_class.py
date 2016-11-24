@@ -26,7 +26,7 @@ from pyLibrary.dot import wrap, coalesce, unwrap, listwrap, Dict
 from pyLibrary.env import http
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, containers
-from pyLibrary.queries.containers.Table_usingSQLite import Table_usingSQLite
+from pyLibrary.queries.containers.list_usingSQLite import Table_usingSQLite
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
@@ -170,12 +170,6 @@ class ESUtils(object):
     def execute_es_tests(self, subtest, tjson=False):
         subtest = wrap(subtest)
         subtest.name = extract_stack()[1]['method']
-
-        if subtest.disable:
-            return
-
-        if "elasticsearch" in subtest["not"]:
-            return
 
         self.fill_container(subtest, tjson=tjson)
         self.send_queries(subtest)

@@ -51,74 +51,45 @@ The path separator is the dot (`.`), with literal dots escaped using backslash. 
 
 ###Example Transformation
 
-<table><tr><td>
-<b>Source Data</b><br>
-<pre>
-test = [{
-    "build": {
-        "branch": {
-            "name": "mozilla-inbound",
-            "locale": "en-US"
-        }
-        "date": "2015-09-18"
-    },
-    "run": {
-        "suite": "mochitest"
-        "chunk": 2
-    }
-}]
+**Source Data**
 
+	test = [{
+	    "build": {
+	        "branch": {
+	            "name": "mozilla-inbound",
+	            "locale": "en-US"
+	        }
+	        "date": "2015-09-18"
+	    },
+	    "run": {
+	        "suite": "mochitest"
+	        "chunk": 2
+	    }
+	}]
 
+**Query**
 
+	{
+	    "from": test,
+	    "select": [
+	        {"name":"branch.name", "value":"build.branch.name"},
+	        {"name":"suite.name", "value":"run.suite"},
+	        {"name":"suite.chunk", "value":"run.chunk"}
+	    ],
+	    "format": "list
+	}
 
+**Result**
 
-</pre>
-
-</td><td>
-<b>Query</b><br>
-<pre>
-{
-    "from": test,
-    "select": [
-        {
-            "name":"branch.name", 
-            "value":"build.branch.name"
-        },
-        {
-            "name":"suite.name", 
-            "value":"run.suite"
-        },
-        {
-            "name":"suite.chunk", 
-            "value":"run.chunk"
-        }
-    ],
-    "format": "list
-}
-</pre>
-</td><td>
-<b>Result</b><br>
-<pre>
-test = [{
-    "branch": {
-        "name": "mozilla-inbound"
-    },
-    "suite": {
-        "name": "mochitest"
-        "chunk": 2
-    }
-}]
-
-
-
-
-
-
-
-
-
-</pre>
-</td></tr></table>
+	test = [{
+	    "branch": {
+	        "name": "mozilla-inbound"
+	    },
+	    "suite": {
+	        "name": "mochitest"
+	        "chunk": 2
+	    }
+	}]
 
 
 `select` Simplifications

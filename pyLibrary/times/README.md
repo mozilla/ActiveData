@@ -1,8 +1,5 @@
 
 
-
-
-
 `Date` class
 ============
 
@@ -69,8 +66,6 @@ Add a `duration` to the time to get a new `Date` instance. The `self` is not mod
 Convenience method for `self.add(DAY)`
 
 
-
-
 `Duration` class
 ================
 
@@ -81,13 +76,11 @@ Represents the difference between two `Dates`. There are two scales:
 
 ### `Duration()` constructor###
 
-Create a new `Duration` by name, by formula, by timespan, or (more rarely) number of milliseconds.
-
+Create a new `Duration` by name, by formula, by `timespan`, or (more rarely) number of milliseconds.
 
 ### `floor(interval=None)` method###
 
 Round down to nearest `interval` size.
-
 
 ### `seconds` property###
 
@@ -106,10 +99,10 @@ Return number of given `interval` rounded to given `decimal` places
 Return a string representing `self` using given `interval` and `decimal` rounding
 
 
-`Time Vector Space`
+Time Vector Space
+=================
 
-The `Date` and `Duration` objects form a one dimensional vector space, upon which `+` and `-` operators are allowed.   Comparisons with (`>`, `>=', `<=`, `<`) are also supported.
-
+The `Date` and `Duration` objects are the point and vectors in a one dimensional vector space respectively.  As such, the `+` and `-` operators are allowed. Comparisons with (`>`, `>=', `<=`, `<`) are also supported.
 
 
 GMT vs UTC
@@ -120,6 +113,6 @@ The solar day is he most popular timekeeping unit. This library chose GMT (UT1) 
 Error Analysis
 --------------
 
-Assuming we need a generous leap second each 6 months (the past decade saw only 4 leap seconds), then GMT deviates from UTC by up to 1 seconds over 181 days (December to June, 15,638,400 seconds) which is an error rate `error = 1/15,638,400 = 0.00000006395%`. If we want to call the error "noise", we have a 70dB signal/noise ratio. All applications that can tolerate this error should use GMT as their time basis.
+Assuming we need a generous leap second each 6 months (the past decade saw only 4 leap seconds), then GMT deviates from UTC by up to 1 seconds over 181 days (December to June, 15,638,400 seconds) which is an error rate `error = 1/15,638,400 = 0.000006395%`. If we want to call the error "noise", we have a 70dB signal/noise ratio. All applications that can tolerate this level of error should use GMT as their time basis.
 
 

@@ -11,8 +11,10 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from unittest import skipIf
+
 from tests import NULL
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
 
 
 class TestEdge1(ActiveDataBaseTest):
@@ -1299,6 +1301,47 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
+    def test_edge_using_between(self):
+        test = {
+            "data": [
+                {"url": NULL},
+                {"url": "/"},
+                {"url": "https://hg.mozilla.org/"},
+                {"url": "https://hg.mozilla.org/a/"},
+                {"url": "https://hg.mozilla.org/b/"},
+                {"url": "https://hg.mozilla.org/b/1"},
+                {"url": "https://hg.mozilla.org/b/2"},
+                {"url": "https://hg.mozilla.org/b/3"},
+                {"url": "https://hg.mozilla.org/c/"},
+                {"url": "https://hg.mozilla.org/d"},
+                {"url": "https://hg.mozilla.org/e"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": {
+                    "name": "subdir",
+                    "value": {
+                        "between": {
+                            "url": [
+                                "https://hg.mozilla.org/",
+                                "/"
+                            ]
+                        }
+                    }
+                }
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"subdir": NULL, "count": 5},
+                    {"subdir": "a", "count": 1},
+                    {"subdir": "b", "count": 4},
+                    {"subdir": "c", "count": 1}
+                ]}
+
+        }
+        self.utils.execute_es_tests(test)
+
     def test_edge_using_list(self):
         data = [
             {"r": "a", "s": "aa"},
@@ -1354,7 +1397,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "edges": [
                     {
                         "name": "v",
-                        "allowNulls": True,
+                        "allowNulls": False,
                         "domain": {
                             "type": "set",
                             "partitions": [
@@ -1371,13 +1414,13 @@ class TestEdge1(ActiveDataBaseTest):
                     }
                 ],
                 "data": {
-                    "count": [1, 1, 1, 2, 2, 1, 1, 1, 0]
+                    "count": [1, 1, 1, 2, 2, 1, 1, 1]
                 }
             }
         }
         self.utils.execute_es_tests(test)
 
-
+    @skipIf(global_settings.use == "sqlite", "not expected to pass yet")
     def test_percentile(self):
         test = {
             "data": [
@@ -1450,9 +1493,9 @@ class TestEdge1(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"k": "a", "count": 3, "v":2},
-                    {"k": "b", "count": 3, "v":1},
-                    {"count": 1, "v":1}
+                    {"k": "a", "count": 3, "v": 2},
+                    {"k": "b", "count": 3, "v": 1},
+                    {"count": 1, "v": 1}
                 ]
             },
             "expecting_table": {

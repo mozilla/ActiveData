@@ -19,10 +19,10 @@ import sys
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, listwrap
+from pyLibrary.dot import wrap, listwrap, Null, Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.expressions import jx_expression_to_function
+from pyLibrary.queries.expressions import jx_expression_to_function, TupleOp, Expression, jx_expression
 
 
 def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous=False):
@@ -52,17 +52,31 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
             from pyLibrary.queries import jx
             data = jx.sort(data, keys)
 
-        accessor = jx_expression_to_function(keys)  # CAN RETURN Null, WHICH DOES NOT PLAY WELL WITH __cmp__
+        if not data:
+            return Null
+
+
+        accessor = jx_expression_to_function(jx_expression({"tuple": keys}))  # CAN RETURN Null, WHICH DOES NOT PLAY WELL WITH __cmp__
         def _output():
-            for g, v in itertools.groupby(data, accessor):
-                group = {}
-                for k, gg in zip(keys, g):
-                    group[k] = gg
-                yield (group, wrap(list(v)))
+            start = 0
+            prev = accessor(data[0])
+            for i, d in enumerate(data):
+                curr = accessor(d)
+                if curr != prev:
+                    group = {}
+                    for k, gg in zip(keys, prev):
+                        group[k] = gg
+                    yield Dict(group), data[start:i:]
+                    start = i
+                    prev = curr
+            group = {}
+            for k, gg in zip(keys, prev):
+                group[k] = gg
+            yield Dict(group), data[start::]
 
         return _output()
     except Exception, e:
-        Log.error("Problem grouping", e)
+        Log.error("Problem grouping", cause=e)
 
 
 def groupby_size(data, size):

@@ -59,6 +59,16 @@ which is logically equivalent to:
 Reference
 =========
 
+###`coalesce` Operator###
+
+Return the first not `null` value in the list of evaluated expressions. 
+
+		{"coalesce": {variable, constant}}
+		{"coalesce": [expr1, expr2, ... exprN]}
+
+For the *simple* form; `null` is a legitimate `constant`. Generally, if all expressions evaluate to `null`, or the expression list is empty, then the result is `null` 
+
+
 
 Boolean Operators
 -----------------
@@ -280,6 +290,18 @@ Test is a property is not `null`
 
 		{"exists": variable}
 
+###`prefix` Operator###
+
+Test if a property has the given prefix. Only the *simple* form exists.
+
+		{"prefix": {variable: prefix}}
+
+###`regexp` Operator###
+
+Return `true` if a property matches a given regular expression. The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term. Also be sure you escape special characters: This is a JSON string of a regular expression, not a regular expression itself. Only the *simple* form exists.
+
+		{"regexp": {variable: regular_expression}}
+
 ###`match_all` Operator###
 
 Dummy operator that always returns `true`. It is an artifact of ElasticSearch filter expressions. Use `true` instead.
@@ -311,11 +333,37 @@ Return the right-part of given string. `null` parameters result in `null`; negat
 		{"right": {variable: length}}
 		{"right": [expression, length]}
 
+###`between` Operator###
+
+Return the leftmost substring between a given `prefix` and `suffix`
+
+		{"between": {variable: [literal_prefix, literal_suffix]}}
+
+The prefix and suffix are interpreted as literals when using the object form. The array form will accept JSON expressions:
+
+		{"between": [value, prefix, suffix]}
+
+For example, the following two expressions are identical:
+
+		{"between": {"a": ["http://", "/"]}}
+		{"between": ["a", {"literal": "http://"}, {"literal": "/"}]}
+
+If the `prefix` is `null`, everything from the beginning of the string to the suffix will be returned. If `suffix` is `null`, everything from the `prefix` to the end of the string will be returned.
+
+`between` has two optional parameters: 
+
+* `default` can be set in the event there is no match.
+* `start` is an index into the string where the search begins
+
+		{"between": {"a": ["http://", "/"]}, "start":200, "default":"<none>"}
+
+
+
 ###`find` Operator###
 
 Test if property contains given substring, return the index of the first character if found.
 
-		{"find": {variable, substring}}
+		{"find": {variable: substring}}
 
 JSON Expressions treat zero (`0`) as a truthy value; this implies `find` can be used in conditional expressions, even if the `substring` happens to be the prefix.
 
@@ -334,17 +382,46 @@ JSON Expressions treat zero (`0`) as a truthy value; this implies `find` can be 
 		{"find": {variable, substring}, "default": -1}
 
 
-###`prefix` Operator###
+###`concat` Operator###
 
-Test if a property has the given prefix. Only the *simple* form exists.
+Concatenate an array of strings. with the given `separator`
 
-		{"prefix": {variable: prefix}}
+	{"concat": [string1, string2, ... stringN], "separator":separator}
 
-###`regexp` Operator###
+The `separator` defaults to the empty string (`""`).
 
-Return `true` if a property matches a given regular expression. The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term. Also be sure you escape special characters: This is a JSON string of a regular expression, not a regular expression itself. Only the *simple* form exists.
+	{"concat": [
+		{"literal":"hello"}, 
+		{"literal":"world"}
+	]}
+	⇒ "helloworld"
 
-		{"regexp": {variable: regular_expression}}
+You must specify your separator, if you want it 
+
+	{
+		"concat": [
+			{"literal":"hello"}, 
+			{"literal":"world"}
+		], 
+		"separator":" "
+	} 
+	⇒ "hello world"
+
+If any of the strings empty, or are `null`, they are ignored. 
+
+	{
+		"concat": [
+			None, 
+			{"literal":"hello"}, 
+			{"literal":""}, 
+			{"literal":"world"}
+		], 
+		"separator":"-"
+	} 
+	⇒ "hello-world"
+
+
+
 
 ###`not_left` Operator###
 
@@ -360,22 +437,10 @@ Removes the `length` right-most characters from the given string, returning the 
 		{"not_right": {variable: length}}
 		{"not_right": [expression, length]}
 
-
-
-
 Conditional Operators
 ---------------------
 
 Conditional operators expect a Boolean value to decide on. If the value provided is not Boolean, it is considered `true`; if the value is missing or `null`, it is considered `false`. This is different than many other languages: ***Numeric zero (`0`) is truthy***  
-
-###`coalesce` Operator###
-
-Return the first not `null` value in the list of evaluated expressions. 
-
-		{"coalesce": {variable, constant}}
-		{"coalesce": [expr1, expr2, ... exprN]}
-
-For the *simple* form; `null` is a legitimate `constant`. Generally, if all expressions evaluate to `null`, or the expression list is empty, then the result is `null` 
 
 ###`when` Operator###
 
@@ -455,7 +520,7 @@ gives
 		[1459619303.633, 1459555200.0]
 
 
-###`leaves`###
+###`leaves` Operator###
 
 Flattens a (deep) JSON structure to leaf form - where each property name is a dot-delimited path to the values found. Shallow JSON objects are not changed. The `leaves` operator can be used in queries to act like the star (`*`) special form. 
 
@@ -477,6 +542,52 @@ results in
 		}
 
 Please notice the dots (`.`) from the original properties are escaped with backslash.
+
+### `items` Operator
+
+Return an array of `{"name":name, "value":value}` pairs for a given object. 
+
+		{"items": {"literal": {"name": "Kyle Lahnakoski", "age": 41}}}
+
+returns
+
+		[
+			{"name": "name", "value": "Kyle"},
+			{"name": "age", "value": 41}
+		]
+
+The `items` operator, and its complement, the `object` operator, can be used to manipulate property names via JSON Query expressions. This example accepts a table of `people`, and returns the same, but with all property names in uppercase.
+
+		{
+			"from": "people",
+			"select":[
+				{"name":".", "value":{"object":{
+					"from":{"items":"."},
+					"select":[
+						{"name":"name", "value":{"upper":"name"}},
+						"value"
+					]
+				}}}
+			]
+		}
+
+The most important column in these situations is the `name` column; it must be provided, in order for the `object` operator to work, and to perform any transform needed on that name.  At least one `value` column should be provided, plucking multiple inner values out of the `value` can be done with many select columns, just be sure all have a name starting with `"value."`.
+
+
+### `object` Operator
+
+Accept an array of `{"name":name, "value":value}` pairs, and return an object with property names assigned to the values.
+
+		{"object": {"literal": [
+			{"name": "name", "value": "Kyle"},
+			{"name": "age", "value": 41}
+		]}}
+
+returns
+
+		{"name": "Kyle Lahnakoski", "age": 41}
+
+
 
 Set Operators (and Variables)
 -----------------------------
@@ -502,6 +613,20 @@ Please notice `offset` is relative to `rownum`, not an absolute index into the `
 
 Reflective Operators
 --------------------
+
+### `with` Operator ###
+
+Effectively assigns expressions to variables so they can be used in subsequent expressions
+
+		{"with": [
+			{name1: expression1},
+			{name2: expression2},
+			...
+			{nameN: expressionN},
+			expression
+		]} 
+
+Each expression may use any of the names defined before it.
 
 ### `get` Operator ###
 

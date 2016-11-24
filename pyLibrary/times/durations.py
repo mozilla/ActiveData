@@ -211,7 +211,7 @@ class Duration(object):
 
     @property
     def seconds(self):
-        return self.milli / 1000
+        return self._milli / 1000
 
     @property
     def milli(self):

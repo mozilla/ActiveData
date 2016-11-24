@@ -80,9 +80,8 @@ class TextLog_usingElasticSearch(TextLog):
                 Log.warning("Problem inserting logs into ES", cause=e)
                 bad_count += 1
                 if bad_count > MAX_BAD_COUNT:
-                    break
+                    Log.warning("Given up trying to write debug logs to ES index {{index}}", index=self.es.settings.index)
                 Thread.sleep(seconds=30)
-        Log.warning("Given up trying to write debug logs to ES index {{index}}", index=self.es.settings.index)
 
         # CONTINUE TO DRAIN THIS QUEUE
         while not please_stop:

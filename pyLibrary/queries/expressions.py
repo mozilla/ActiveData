@@ -1775,24 +1775,24 @@ class CoalesceOp(Expression):
 class MissingOp(Expression):
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
-        self.field = term
+        self.expr = term
 
     def to_ruby(self, not_null=False, boolean=True):
         if not_null:
             return "false"
         else:
-            if isinstance(self.field, Variable):
-                return "doc[" + convert.string2quote(self.field.var) + "].isEmpty()"
-            elif isinstance(self.field, Literal):
-                return self.field.missing().to_ruby()
+            if isinstance(self.expr, Variable):
+                return "doc[" + convert.string2quote(self.expr.var) + "].isEmpty()"
+            elif isinstance(self.expr, Literal):
+                return self.expr.missing().to_ruby()
             else:
-                return self.field.to_ruby() + " == null"
+                return self.expr.to_ruby() + " == null"
 
     def to_python(self, not_null=False, boolean=False):
-        return self.field.to_python() + " == None"
+        return self.expr.to_python() + " == None"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        field = self.field.to_sql(schema)
+        field = self.expr.to_sql(schema)
 
         if len(field)>1:
             return wrap([{"name": ".", "sql": {"b": "0"}}])
@@ -1809,19 +1809,19 @@ class MissingOp(Expression):
             return wrap([{"name": ".", "sql": {"b": " AND ".join(acc)}}])
 
     def to_esfilter(self):
-        if isinstance(self.field, Variable):
-            return {"missing": {"field": self.field.var}}
+        if isinstance(self.expr, Variable):
+            return {"missing": {"field": self.expr.var}}
         else:
             return {"script": {"script": self.to_ruby()}}
 
     def to_dict(self):
-        return {"missing": self.field.var}
+        return {"missing": self.expr.var}
 
     def vars(self):
-        return {self.field.var}
+        return self.expr.vars()
 
     def map(self, map_):
-        return MissingOp("missing", self.field.map(map_))
+        return MissingOp("missing", self.expr.map(map_))
 
     def missing(self):
         return FalseOp()

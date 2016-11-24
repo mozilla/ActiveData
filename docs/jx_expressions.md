@@ -571,6 +571,7 @@ The `items` operator, and its complement, the `object` operator, can be used to 
 			]
 		}
 
+The most important column in these situations is the `name` column; it must be provided, in order for the `object` operator to work, and to perform any transform needed on that name.  At least one `value` column should be provided, plucking multiple inner values out of the `value` can be done with many select columns, just be sure all have a name starting with `"value."`.
 
 
 ### `object` Operator

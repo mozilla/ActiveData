@@ -452,7 +452,7 @@ If the `when` clause evaluates to `true` then return the value found in the `the
 			"else": fail_expression
 		}
 
-Both the `then` and `else` clause are optional
+Both the `then` and `else` clause are optional, and default to returning `null`.
 
 ###`case` Operator###
 
@@ -555,6 +555,10 @@ returns
 			{"name": "name", "value": "Kyle"},
 			{"name": "age", "value": 41}
 		]
+
+`items` on an empty object, or `null` will return `null` (effectively an empty list).  `items` on a primitive `value` will return a list with one name/value pair, like so:
+
+		{"items": value}  ⇒  [{"name":".", "value":value}]
 
 The `items` operator, and its complement, the `object` operator, can be used to manipulate property names via JSON Query expressions. This example accepts a table of `people`, and returns the same, but with all property names in uppercase.
 

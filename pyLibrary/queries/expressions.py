@@ -1396,7 +1396,8 @@ class LengthOp(Expression):
 
     def to_ruby(self, not_null=False, boolean=False):
         value = self.term.to_ruby()
-        return "((" + value + ") == null ) ? null : (" + value + ").length()"
+        missing = self.missing().to_ruby()
+        return "(" + missing + " ) ? null : (" + value + ").length()"
 
     def to_python(self, not_null=False, boolean=False):
         value = self.term.to_python()
@@ -1778,15 +1779,12 @@ class MissingOp(Expression):
         self.expr = term
 
     def to_ruby(self, not_null=False, boolean=True):
-        if not_null:
-            return "false"
+        if isinstance(self.expr, Variable):
+            return "doc[" + convert.string2quote(self.expr.var) + "].isEmpty()"
+        elif isinstance(self.expr, Literal):
+            return self.expr.missing().to_ruby()
         else:
-            if isinstance(self.expr, Variable):
-                return "doc[" + convert.string2quote(self.expr.var) + "].isEmpty()"
-            elif isinstance(self.expr, Literal):
-                return self.expr.missing().to_ruby()
-            else:
-                return self.expr.to_ruby() + " == null"
+            return self.expr.missing().to_ruby()
 
     def to_python(self, not_null=False, boolean=False):
         return self.expr.to_python() + " == None"
@@ -2158,7 +2156,8 @@ class FindOp(Expression):
         missing = self.missing().to_ruby(boolean=True)
         v = self.value.to_ruby(not_null=True)
         find = self.find.to_ruby(not_null=True)
-        index = v + ".indexOf(" + find + ", " + self.start.to_ruby() + ")"
+        start = self.start.to_ruby(not_null=True)
+        index = v + ".indexOf(" + find + ", " + start + ")"
 
         expr = "(" + missing + ") ? " + self.default.to_ruby() + " : " + index
         return expr
@@ -2166,14 +2165,16 @@ class FindOp(Expression):
     def missing(self):
         v = self.value.to_ruby(not_null=True)
         find = self.find.to_ruby(not_null=True)
-        index = v+".indexOf("+find+")"
+        index = v + ".indexOf(" + find + ", " + self.start.to_ruby() + ")"
 
-        return OrOp("or", [
-            self.value.missing(),
-            self.find.missing(),
-            EqOp("eq", [ScriptOp("script", index), Literal(None, -1)])
+        return AndOp("and", [
+            self.default.missing(),
+            OrOp("or", [
+                self.value.missing(),
+                self.find.missing(),
+                ScriptOp("script", index + "==-1")
+            ])
         ])
-
 
 class BetweenOp(Expression):
 
@@ -2258,7 +2259,6 @@ class BetweenOp(Expression):
         )
 
     def missing(self):
-        value_is_missing = self.value.missing().to_ruby()
         value = self.value.to_ruby(not_null=True)
         prefix = self.prefix.to_ruby()
         len_prefix = "("+prefix+").length()"
@@ -2266,8 +2266,12 @@ class BetweenOp(Expression):
         start = value+".indexOf("+prefix+")"
         end = value+".indexOf("+suffix+", "+start+"+"+len_prefix+")"
 
-        expr = "(" + value_is_missing + ") || (" + start + "==-1) || ("+end+"==-1)"
-        return ScriptOp("script", expr)
+        expr = OrOp("or", [
+            self.value.missing(),
+            ScriptOp("script", start + "==-1"),
+            ScriptOp("script", end + "==-1")
+        ])
+        return expr
 
 
 class InOp(Expression):
@@ -2323,6 +2327,7 @@ class RangeOp(Expression):
 class WhenOp(Expression):
     def __init__(self, op, term, **clauses):
         Expression.__init__(self, op, [term])
+
         self.when = term
         self.then = coalesce(clauses.get("then"), NullOp())
         self.els_ = coalesce(clauses.get("else"), NullOp())

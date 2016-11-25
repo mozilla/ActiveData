@@ -28,11 +28,7 @@ from pyLibrary.queries.query import MAX_LIMIT, DEFAULT_LIMIT
 
 class AggsDecoder(object):
     def __new__(cls, e=None, query=None, *args, **kwargs):
-        if query.groupby:
-            # GROUPBY ASSUMES WE IGNORE THE DOMAIN RANGE
-            e.allowNulls = False
-        else:
-            e.allowNulls = coalesce(e.allowNulls, True)
+        e.allowNulls = coalesce(e.allowNulls, True)
 
         if e.value and e.domain.type == "default":
             if query.groupby:
@@ -449,7 +445,7 @@ class DefaultDecoder(SetDecoder):
 
         if not isinstance(self.edge.value, Variable):
             script_field = self.edge.value.to_ruby()
-            missing = self.edge.value.missing().to_esfilter()
+            missing = self.edge.value.missing()
 
             output = wrap({"aggs": {
                 "_match": set_default(
@@ -459,7 +455,7 @@ class DefaultDecoder(SetDecoder):
                     }},
                     es_query
                 ),
-                "_missing": set_default({"filter": missing}, es_query)
+                "_missing": set_default({"filter": missing.to_esfilter()}, es_query) if missing else None
             }})
             return output
 

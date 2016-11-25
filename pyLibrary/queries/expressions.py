@@ -1395,9 +1395,12 @@ class LengthOp(Expression):
         self.term = term
 
     def to_ruby(self, not_null=False, boolean=False):
-        value = self.term.to_ruby()
-        missing = self.missing().to_ruby()
-        return "(" + missing + " ) ? null : (" + value + ").length()"
+        value = self.term.to_ruby(not_null=True)
+        if not_null:
+            return "(" + value + ").length()"
+        else:
+            missing = self.missing().to_ruby()
+            return "(" + missing + " ) ? null : (" + value + ").length()"
 
     def to_python(self, not_null=False, boolean=False):
         value = self.term.to_python()
@@ -2153,13 +2156,17 @@ class FindOp(Expression):
         self.start = coalesce(kwargs["start"], Literal(None, 0))
 
     def to_ruby(self, not_null=False, boolean=False):
-        missing = self.missing().to_ruby(boolean=True)
         v = self.value.to_ruby(not_null=True)
         find = self.find.to_ruby(not_null=True)
         start = self.start.to_ruby(not_null=True)
         index = v + ".indexOf(" + find + ", " + start + ")"
 
-        expr = "(" + missing + ") ? " + self.default.to_ruby() + " : " + index
+        if not_null:
+            missing = index + "==-1"
+        else:
+            missing = self.missing().to_ruby(boolean=True)
+
+        expr = "(" + missing + ") ? (" + self.default.to_ruby(not_null=not_null) + ") : (" + index + ")"
         return expr
 
     def missing(self):
@@ -2175,6 +2182,18 @@ class FindOp(Expression):
                 ScriptOp("script", index + "==-1")
             ])
         ])
+
+    def vars(self):
+        return self.value.vars() | self.find.vars() | self.default.vars() | self.start.vars()
+
+    def map(self, map_):
+        return FindOp(
+            "find",
+            [self.value.map(map_), self.find.map(map_)],
+            start=self.start.map(map_),
+            default=self.default.map(map_)
+        )
+
 
 class BetweenOp(Expression):
 
@@ -2663,6 +2682,7 @@ operators = {
     "eq": EqOp,
     "exists": ExistsOp,
     "exp": BinaryOp,
+    "find": FindOp,
     "floor": FloorOp,
     "gt": InequalityOp,
     "gte": InequalityOp,

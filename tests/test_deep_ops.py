@@ -1101,6 +1101,29 @@ class TestDeepOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
+    def test_missing_on_not_exists(self):
+        # CHECKING FOR A MISSING COLUMN THAT DOES NOT EXIST SHOULD NOT THROW AN ERROR, RATHER RETURN true
+        test = {
+            "data": [
+                {"a": 0, "b": 0},
+            ],
+            "query": {
+                "from": TEST_TABLE+".a._b",
+                "select": [
+                    "a",
+                    "b"
+                ],
+                "where": {"missing": "c"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 0, "b": 0},
+                ]
+            }
+        }
+        self.utils.execute_es_tests(test)
+
     def test_exists(self):
         test = {
             "data": [{"a": {"_b": [
@@ -1135,7 +1158,6 @@ class TestDeepOps(ActiveDataBaseTest):
             }
         }
         self.utils.execute_es_tests(test)
-
 
     def test_deep_or(self):
         test = {

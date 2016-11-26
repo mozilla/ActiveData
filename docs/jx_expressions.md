@@ -452,7 +452,7 @@ If the `when` clause evaluates to `true` then return the value found in the `the
 			"else": fail_expression
 		}
 
-Both the `then` and `else` clause are optional
+Both the `then` and `else` clause are optional, and default to returning `null`.
 
 ###`case` Operator###
 
@@ -520,7 +520,7 @@ gives
 		[1459619303.633, 1459555200.0]
 
 
-###`leaves`###
+###`leaves` Operator###
 
 Flattens a (deep) JSON structure to leaf form - where each property name is a dot-delimited path to the values found. Shallow JSON objects are not changed. The `leaves` operator can be used in queries to act like the star (`*`) special form. 
 
@@ -542,6 +542,56 @@ results in
 		}
 
 Please notice the dots (`.`) from the original properties are escaped with backslash.
+
+### `items` Operator
+
+Return an array of `{"name":name, "value":value}` pairs for a given object. 
+
+		{"items": {"literal": {"name": "Kyle Lahnakoski", "age": 41}}}
+
+returns
+
+		[
+			{"name": "name", "value": "Kyle"},
+			{"name": "age", "value": 41}
+		]
+
+`items` on an empty object, or `null` will return `null` (effectively an empty list).  `items` on a primitive `value` will return a list with one name/value pair, like so:
+
+		{"items": value}  ⇒  [{"name":".", "value":value}]
+
+The `items` operator, and its complement, the `object` operator, can be used to manipulate property names via JSON Query expressions. This example accepts a table of `people`, and returns the same, but with all property names in uppercase.
+
+		{
+			"from": "people",
+			"select":[
+				{"name":".", "value":{"object":{
+					"from":{"items":"."},
+					"select":[
+						{"name":"name", "value":{"upper":"name"}},
+						"value"
+					]
+				}}}
+			]
+		}
+
+The most important column in these situations is the `name` column; it must be provided, in order for the `object` operator to work, and to perform any transform needed on that name.  At least one `value` column should be provided, plucking multiple inner values out of the `value` can be done with many select columns, just be sure all have a name starting with `"value."`.
+
+
+### `object` Operator
+
+Accept an array of `{"name":name, "value":value}` pairs, and return an object with property names assigned to the values.
+
+		{"object": {"literal": [
+			{"name": "name", "value": "Kyle"},
+			{"name": "age", "value": 41}
+		]}}
+
+returns
+
+		{"name": "Kyle Lahnakoski", "age": 41}
+
+
 
 Set Operators (and Variables)
 -----------------------------
@@ -576,6 +626,20 @@ Please notice `offset` is relative to `rownum`, not an absolute index into the `
 
 Reflective Operators
 --------------------
+
+### `with` Operator ###
+
+Effectively assigns expressions to variables so they can be used in subsequent expressions
+
+		{"with": [
+			{name1: expression1},
+			{name2: expression2},
+			...
+			{nameN: expressionN},
+			expression
+		]} 
+
+Each expression may use any of the names defined before it.
 
 ### `get` Operator ###
 

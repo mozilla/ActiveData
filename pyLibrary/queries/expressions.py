@@ -420,6 +420,9 @@ class ScriptOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return self.script
 
+    def to_esfilter(self):
+        return {"script": {"script": self.script}}
+
     def vars(self):
         return set()
 
@@ -1396,8 +1399,12 @@ class LengthOp(Expression):
         self.term = term
 
     def to_ruby(self, not_null=False, boolean=False):
-        value = self.term.to_ruby()
-        return "((" + value + ") == null ) ? null : (" + value + ").length()"
+        value = self.term.to_ruby(not_null=True)
+        if not_null:
+            return "(" + value + ").length()"
+        else:
+            missing = self.missing().to_ruby()
+            return "(" + missing + " ) ? null : (" + value + ").length()"
 
     def to_python(self, not_null=False, boolean=False):
         value = self.term.to_python()
@@ -1736,24 +1743,21 @@ class CoalesceOp(Expression):
 class MissingOp(Expression):
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
-        self.field = term
+        self.expr = term
 
     def to_ruby(self, not_null=False, boolean=True):
-        if not_null:
-            return "false"
+        if isinstance(self.expr, Variable):
+            return "doc[" + convert.string2quote(self.expr.var) + "].isEmpty()"
+        elif isinstance(self.expr, Literal):
+            return self.expr.missing().to_ruby()
         else:
-            if isinstance(self.field, Variable):
-                return "doc[" + convert.string2quote(self.field.var) + "].isEmpty()"
-            elif isinstance(self.field, Literal):
-                return self.field.missing().to_ruby()
-            else:
-                return self.field.to_ruby() + " == null"
+            return self.expr.missing().to_ruby()
 
     def to_python(self, not_null=False, boolean=False):
-        return self.field.to_python() + " == None"
+        return self.expr.to_python() + " == None"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        field = self.field.to_sql(schema)
+        field = self.expr.to_sql(schema)
 
         if len(field) > 1:
             return wrap([{"name": ".", "sql": {"b": "0"}}])
@@ -1774,19 +1778,19 @@ class MissingOp(Expression):
             return wrap([{"name": ".", "sql": {"b": " AND ".join(acc)}}])
 
     def to_esfilter(self):
-        if isinstance(self.field, Variable):
-            return {"missing": {"field": self.field.var}}
+        if isinstance(self.expr, Variable):
+            return {"missing": {"field": self.expr.var}}
         else:
             return {"script": {"script": self.to_ruby()}}
 
     def to_dict(self):
-        return {"missing": self.field.var}
+        return {"missing": self.expr.var}
 
     def vars(self):
-        return {self.field.var}
+        return self.expr.vars()
 
     def map(self, map_):
-        return MissingOp("missing", self.field.map(map_))
+        return MissingOp("missing", self.expr.map(map_))
 
     def missing(self):
         return FalseOp()
@@ -2244,7 +2248,13 @@ class FindOp(Expression):
         missing = self.missing()
         v = self.value.to_ruby(not_null=True)
         find = self.find.to_ruby(not_null=True)
-        index = v + ".indexOf(" + find + ", " + self.start.to_ruby() + ")"
+        start = self.start.to_ruby(not_null=True)
+        index = v + ".indexOf(" + find + ", " + start + ")"
+
+        if not_null:
+            missing = index + "==-1"
+        else:
+            missing = self.missing().to_ruby(boolean=True)
 
         if missing:
             expr = "(" + missing.to_ruby(boolean=True) + ") ? " + self.default.to_ruby() + " : " + index
@@ -2268,13 +2278,27 @@ class FindOp(Expression):
     def missing(self):
         v = self.value.to_ruby(not_null=True)
         find = self.find.to_ruby(not_null=True)
-        index = v+".indexOf("+find+")"
+        index = v + ".indexOf(" + find + ", " + self.start.to_ruby() + ")"
 
-        return OrOp("or", [
-            self.value.missing(),
-            self.find.missing(),
-            EqOp("eq", [ScriptOp("script", index), Literal(None, -1)])
+        return AndOp("and", [
+            self.default.missing(),
+            OrOp("or", [
+                self.value.missing(),
+                self.find.missing(),
+                ScriptOp("script", index + "==-1")
+            ])
         ])
+
+    def vars(self):
+        return self.value.vars() | self.find.vars() | self.default.vars() | self.start.vars()
+
+    def map(self, map_):
+        return FindOp(
+            "find",
+            [self.value.map(map_), self.find.map(map_)],
+            start=self.start.map(map_),
+            default=self.default.map(map_)
+        )
 
 
 
@@ -2350,22 +2374,30 @@ class BetweenOp(Expression):
             return expr
 
     def vars(self):
-        return self.value.vars() | self.prefix.vars() | self.suffix.vars()
+        return self.value.vars() | self.prefix.vars() | self.suffix.vars() | self.default.vars() | self.start.vars()
 
     def map(self, map_):
-        return LeftOp("left", [self.value.map(map_), self.length.map(map_)])
+        return BetweenOp(
+            "between",
+            [self.value.map(map_), self.prefix.map(map_), self.suffix.map(map_)],
+            default=self.default.map(map_),
+            start=self.start.map(map_)
+        )
 
     def missing(self):
-        value_is_missing = self.value.missing().to_ruby()
         value = self.value.to_ruby(not_null=True)
         prefix = self.prefix.to_ruby()
-        len_prefix = "("+self.prefix+").length()"
+        len_prefix = "("+prefix+").length()"
         suffix = self.suffix.to_ruby()
         start = value+".indexOf("+prefix+")"
         end = value+".indexOf("+suffix+", "+start+"+"+len_prefix+")"
 
-        expr = "(" + value_is_missing + ") || (" + start + "==-1) || ("+end+"==-1)"
-        return ScriptOp("script", expr)
+        expr = OrOp("or", [
+            self.value.missing(),
+            ScriptOp("script", start + "==-1"),
+            ScriptOp("script", end + "==-1")
+        ])
+        return expr
 
 
 
@@ -2422,6 +2454,7 @@ class RangeOp(Expression):
 class WhenOp(Expression):
     def __init__(self, op, term, **clauses):
         Expression.__init__(self, op, [term])
+
         self.when = term
         self.then = coalesce(clauses.get("then"), NullOp())
         self.els_ = coalesce(clauses.get("else"), NullOp())

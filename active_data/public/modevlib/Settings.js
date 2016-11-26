@@ -19,7 +19,7 @@ importScript("charts/aColor.js");
     "indexes" : {
 
       // BUGZILLA TABLES (ElasticSearch Indexes)
-      "bugs" : {"name" : "private bugs cluster", "style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "path" : "/private_bugs/bug_version"},
+      "bugs" : {"name" : "private bugs cluster", "style" : {"color" : "black", "background-color" : yellow}, "host" : "http://esfrontline-private-vip.bugs.scl3.mozilla.com:9200", "path" : "/private_bugs/bug_version"},
       "public_bugs" : {"name" : "Mozilla public bugs cluster", "style" : {"color" : "white", "background-color" : green}, "host" : "https://esfrontline.bugzilla.mozilla.org:443", "path" : "/public_bugs/bug_version"},
       "public_bugs_backend" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch1.bugs.scl3.mozilla.com:9200", "path" : "/public_bugs/bug_version"},
       "public_bugs_proxy" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://klahnakoski-es.corp.tor1.mozilla.com:9201", "path" : "/public_bugs/bug_version"},
@@ -31,8 +31,8 @@ importScript("charts/aColor.js");
       "tor_public_bugs" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://klahnakoski-es.corp.tor1.mozilla.com:9200", "path" : "/public_bugs/bug_version"},
       "tor_private_bugs" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://klahnakoski-es.corp.tor1.mozilla.com:9200", "path" : "/private_bugs/bug_version"},
 
-      "bug_hierarchy" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "path" : "/bug_hierarchy/bug_hierarchy"},
-      "bug_dependencies" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "path" : "/private_bugs/bug_version"},
+      "bug_hierarchy" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://esfrontline-private-vip.bugs.scl3.mozilla.com:9200", "path" : "/bug_hierarchy/bug_hierarchy"},
+      "bug_dependencies" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://esfrontline-private-vip.bugs.scl3.mozilla.com:9200", "path" : "/private_bugs/bug_version"},
 
       "public_bug_hierarchy" : {"style" : {"color" : "white", "background-color" : green}, "host" : "https://esfrontline.bugzilla.mozilla.org:443", "path" : "/bug_hierarchy/bug_hierarchy"},
       "public_bug_dependencies" : {"style" : {"color" : "white", "background-color" : green}, "host" : "https://esfrontline.bugzilla.mozilla.org:443", "path" : "/bug_hierarchy/bug_version"},
@@ -52,12 +52,12 @@ importScript("charts/aColor.js");
 
       //        "reviews": {"style":{"color":"black","background-color":green}, "host": "http://klahnakoski-es.corp.tor1.mozilla.com:9200", "path": "/reviews/patch_review"},
       "public_reviews" : {"style" : {"color" : "white", "background-color" : green}, "host" : "https://esfrontline.bugzilla.mozilla.org:443", "path" : "/reviews/patch_review"},
-      "reviews" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "path" : "/reviews/patch_review"},
-      "bug_summary" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "path" : "/bug_summary/bug_summary"},
-      "bug_tags" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "path" : "/bug_tags/bug_tags"},
-      "org_chart" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "alias" : "org_chart", "path" : "/org_chart/person"},
-      "temp" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "path" : ""},
-      "telemetry" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "path" : "/telemetry_agg_valid_201305/data"},
+      "reviews" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://esfrontline-private-vip.bugs.scl3.mozilla.com:9200", "path" : "/reviews/patch_review"},
+      "bug_summary" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://esfrontline-private-vip.bugs.scl3.mozilla.com:9200", "path" : "/bug_summary/bug_summary"},
+      "bug_tags" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://esfrontline-private-vip.bugs.scl3.mozilla.com:9200", "path" : "/bug_tags/bug_tags"},
+      "org_chart" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://esfrontline-private-vip.bugs.scl3.mozilla.com:9200", "alias" : "org_chart", "path" : "/org_chart/person"},
+      "temp" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://esfrontline-private-vip.bugs.scl3.mozilla.com:9200", "path" : ""},
+      "telemetry" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://esfrontline-private-vip.bugs.scl3.mozilla.com:9200", "path" : "/telemetry_agg_valid_201305/data"},
       "raw_telemetry" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://klahnakoski-es.corp.tor1.mozilla.com:9200", "path" : "/raw_telemetry/data"},
 
 //      "talos" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://klahnakoski-es.corp.tor1.mozilla.com:9200", "path" : "/talos/test_results"},
@@ -69,12 +69,12 @@ importScript("charts/aColor.js");
       "public_talos" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://67.55.30.33:9201", "path" : "/talos/test_results"},
       "local_talos" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://localhost:9200", "path" : "/talos/test_results"},
 
-      "b2g_tests" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "path" : "/b2g_tests/results"},
-      "b2g" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "path" : "/b2g_tests/results"},
+      "b2g_tests" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://esfrontline-private-vip.bugs.scl3.mozilla.com:9200", "path" : "/b2g_tests/results"},
+      "b2g" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://esfrontline-private-vip.bugs.scl3.mozilla.com:9200", "path" : "/b2g_tests/results"},
       "public_b2g": {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://67.55.30.33:9201", "path" : "/b2g_tests/test_results"},
       "local_b2g": {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://192.168.0.98:9200", "path" : "/b2g_tests/test_results"},
 
-      "perfy" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://elasticsearch-private.bugs.scl3.mozilla.com:9200", "path" : "/perfy/scores"},
+      "perfy" : {"style" : {"color" : "black", "background-color" : yellow}, "host" : "http://esfrontline-private-vip.bugs.scl3.mozilla.com:9200", "path" : "/perfy/scores"},
       "local_perfy" : {"style" : {"background-color" : red}, "host" : "http://localhost:9200", "path" : "/perfy/scores"},
 
       "eideticker" : {"style" : {"background-color" : red}, "host" : "http://67.55.30.33:9201", "path" : "/eideticker/results"},

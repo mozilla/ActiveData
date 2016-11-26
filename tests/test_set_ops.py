@@ -555,6 +555,7 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
+    @skipIf(global_settings.use=="sqlite", "no need for limit when using own resources")
     def test_max_limit(self):
         test = wrap({
             "data": lots_of_data,

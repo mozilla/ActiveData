@@ -24,6 +24,7 @@ from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import STRUCT, Container
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.thread.threads import Queue, Thread, Lock
+from pyLibrary.thread.till import Till
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import HOUR, MINUTE
 from pyLibrary.times.timer import Timer
@@ -401,7 +402,7 @@ class FromESMetadata(Schema):
                         else:
                             Log.note("no more metatdata to update")
 
-                column = self.todo.pop(timeout=10*MINUTE)
+                column = self.todo.pop(Till(timeout=10*MINUTE))
                 if column:
                     Log.note("update {{table}}.{{column}}", table=column.table, column=column.es_column)
                     if column.type in STRUCT:

@@ -23,7 +23,7 @@ DEBUG = True
 class Process(object):
     def __init__(self, name, params, cwd=None, env=None, debug=False):
         self.name = name
-        self.service_stopped = Signal()
+        self.service_stopped = Signal("stopped signal for " + convert.string2quote(name))
         self.stdin = Queue("stdin for process " + convert.string2quote(name), silent=True)
         self.stdout = Queue("stdout for process " + convert.string2quote(name), silent=True)
         self.stderr = Queue("stderr for process " + convert.string2quote(name), silent=True)
@@ -43,7 +43,7 @@ class Process(object):
             self.stopper = Signal()
             self.stopper.on_go(self._kill)
             self.thread_locker = Lock()
-            self.child_threads = [
+            self.children = [
                 Thread.run(self.name + " waiter", self._monitor, parent_thread=self),
                 Thread.run(self.name + " stdin", self._writer, service.stdin, self.stdin, please_stop=self.stopper, parent_thread=self),
                 Thread.run(self.name + " stdout", self._reader, service.stdout, self.stdout, please_stop=self.stopper, parent_thread=self),
@@ -62,13 +62,13 @@ class Process(object):
     def join(self):
         self.service_stopped.wait_for_go()
         with self.thread_locker:
-            child_threads, self.child_threads = self.child_threads, []
+            child_threads, self.children = self.children, []
         for c in child_threads:
             c.join()
 
     def remove_child(self, child):
         with self.thread_locker:
-            self.child_threads.remove(child)
+            self.children.remove(child)
 
     def _monitor(self, please_stop):
         self.service.wait()
@@ -110,7 +110,6 @@ class Process(object):
             if line:
                 pipe.write(line + "\n")
         pipe.close()
-
 
     def _kill(self):
         try:

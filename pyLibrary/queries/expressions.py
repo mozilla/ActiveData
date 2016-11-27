@@ -22,7 +22,7 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null, split_field, startswith_field, Dict, join_field, unwraplist, unwrap, \
     ROOT_PATH, relative_field
 from pyLibrary.maths import Math
-from pyLibrary.queries.containers import STRUCT
+from pyLibrary.queries.containers import STRUCT, OBJECT
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.times.dates import Date
@@ -266,11 +266,17 @@ class Variable(Expression):
         if cols is None:
             # DOES NOT EXIST
             return wrap([{"name": ".", "sql": {"n": "NULL"}, "nested_path": ROOT_PATH}])
-
         acc = Dict()
-        for c in cols:
-            nested_path = c.nested_path[0]
-            acc[literal_field(nested_path)][literal_field(c.name)][json_type_to_sql_type[c.type]] = c.es_index + "." + convert.string2quote(c.es_column)
+        for col in cols:
+            if col.type == OBJECT:
+                prefix = self.var + "."
+                for cn, cs in schema.items():
+                    if cn.startswith(prefix):
+                        for child_col in cs:
+                            acc[literal_field(child_col.nested_path[0])][literal_field(child_col.name)][json_type_to_sql_type[child_col.type]] = child_col.es_index + "." + convert.string2quote(child_col.es_column)
+            else:
+                nested_path = col.nested_path[0]
+                acc[literal_field(nested_path)][literal_field(col.name)][json_type_to_sql_type[col.type]] = col.es_index + "." + convert.string2quote(col.es_column)
 
         return wrap([
             {"name": relative_field(cname, self.var), "sql": types, "nested_path": nested_path}

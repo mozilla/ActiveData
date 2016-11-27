@@ -68,7 +68,6 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-
     def test_select_on_missing_field(self):
         test = {
             "data": [
@@ -246,6 +245,7 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
+    @skipIf(global_settings.use=="sqlite", "not implemented yet, is not needed for small data")
     def test_id_select(self):
         """
         ALWAYS GOOD TO HAVE AN ID, CALL IT "_id"

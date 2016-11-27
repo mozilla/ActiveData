@@ -800,17 +800,17 @@ class LeavesOp(Expression):
         if not isinstance(self.term, Variable):
             Log.error("Can only handle Variable")
         term = self.term.var
-        path = split_field(term)
-        return [
+        prefix_length = len(split_field(term))
+        return wrap([
             {
-                "name": literal_field(join_field(split_field(c.name)[:len(path)])),
+                "name": literal_field(join_field(split_field(c.name)[prefix_length:])),
                 "sql": Variable(c.name).to_sql(schema)[0].sql
             }
             for n, cols in schema.items()
             if startswith_field(n, term)
             for c in cols
             if c.type not in STRUCT
-        ]
+        ])
 
     def to_esfilter(self):
         Log.error("not supported")

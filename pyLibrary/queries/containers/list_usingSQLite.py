@@ -30,7 +30,7 @@ from pyLibrary.meta import use_settings, DataClass
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
-from pyLibrary.queries.expressions import jx_expression, Variable, sql_type_to_json_type, TupleOp
+from pyLibrary.queries.expressions import jx_expression, Variable, sql_type_to_json_type, TupleOp, LeavesOp
 from pyLibrary.queries.meta import Column
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.sql.sqlite import Sqlite
@@ -1195,28 +1195,54 @@ class Table_usingSQLite(Container):
 
             if primary_nested_path == nested_path:
                 # ADD SQL SELECT COLUMNS FOR EACH jx SELECT CLAUSE
-                for si, s in enumerate(listwrap(query.select)):
-                    column_number = len(sql_selects)
-                    s.pull = get_column(column_number)
-                    db_columns = s.value.to_sql(columns)
-                    for column in db_columns:
-                        for t, unsorted_sql in column.sql.items():
-                            json_type = sql_type_to_json_type[t]
-                            if json_type in STRUCT:
-                                continue
-                            column_number = len(sql_selects)
-                            # SQL HAS ABS TABLE REFERENCE
-                            column_alias = _make_column_name(column_number)
-                            sql_selects.append(unsorted_sql + " AS " + column_alias)
-                            index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
-                                push_name=s.name,
-                                push_column=si,
-                                push_child=column.name,
-                                pull=get_column(column_number),
-                                sql=unsorted_sql,
-                                type=json_type,
-                                nested_path=[nested_path]  # fake the real nested path, we only look at [0] anyway
-                            )
+                si = 0
+                for s in listwrap(query.select):
+                    try:
+                        column_number = len(sql_selects)
+                        s.pull = get_column(column_number)
+                        db_columns = s.value.to_sql(columns)
+
+                        if isinstance(s.value, LeavesOp):
+                            for column in db_columns:
+                                for t, unsorted_sql in column.sql.items():
+                                    json_type = sql_type_to_json_type[t]
+                                    if json_type in STRUCT:
+                                        continue
+                                    column_number = len(sql_selects)
+                                    # SQL HAS ABS TABLE REFERENCE
+                                    column_alias = _make_column_name(column_number)
+                                    sql_selects.append(unsorted_sql + " AS " + column_alias)
+                                    index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
+                                        push_name=join_field(split_field(s.name)+split_field(column.name)),
+                                        push_column=si,
+                                        push_child=".",
+                                        pull=get_column(column_number),
+                                        sql=unsorted_sql,
+                                        type=json_type,
+                                        nested_path=[nested_path]  # fake the real nested path, we only look at [0] anyway
+                                    )
+                                    si += 1
+                        else:
+                            for column in db_columns:
+                                for t, unsorted_sql in column.sql.items():
+                                    json_type = sql_type_to_json_type[t]
+                                    if json_type in STRUCT:
+                                        continue
+                                    column_number = len(sql_selects)
+                                    # SQL HAS ABS TABLE REFERENCE
+                                    column_alias = _make_column_name(column_number)
+                                    sql_selects.append(unsorted_sql + " AS " + column_alias)
+                                    index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
+                                        push_name=s.name,
+                                        push_column=si,
+                                        push_child=column.name,
+                                        pull=get_column(column_number),
+                                        sql=unsorted_sql,
+                                        type=json_type,
+                                        nested_path=[nested_path]  # fake the real nested path, we only look at [0] anyway
+                                    )
+                    finally:
+                        si += 1
             elif startswith_field(nested_path, primary_nested_path):
                 # ADD REQUIRED COLUMNS, FOR DEEP STUFF
                 for ci, c in enumerate(active_columns[nested_path]):

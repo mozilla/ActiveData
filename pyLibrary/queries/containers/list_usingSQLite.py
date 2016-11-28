@@ -1316,7 +1316,7 @@ class Table_usingSQLite(Container):
                     previous_doc_id = doc_id
                     doc = Dict()
                     curr_nested_path = nested_doc_details['nested_path'][0]
-                    if isinstance(query.select, list):
+                    if isinstance(query.select, list) or isinstance(query.select.value, LeavesOp):
                         # ASSIGN INNER PROPERTIES
                         for i, c in nested_doc_details['index_to_column'].items():
                             value = row[i]
@@ -1656,9 +1656,9 @@ class Table_usingSQLite(Container):
         nested_tables = copy(self.nested_tables)  # KEEP TRACK OF WHAT TABLE WILL BE MADE (SHORTLY)
         columns = copy(self.columns)
 
-        def _flatten(d, uid, parent_id, order, full_path, nested_path, row=None):
+        def _flatten(data, uid, parent_id, order, full_path, nested_path, row=None):
             """
-            :param d: the data we are pulling appart
+            :param data: the data we are pulling apart
             :param uid: the uid we are giving this doc
             :param parent_id: the parent id of this (sub)doc
             :param order: the number of siblings before this one
@@ -1672,8 +1672,8 @@ class Table_usingSQLite(Container):
                 row = {UID: uid, PARENT: parent_id, ORDER: order}
                 insertion.rows.append(row)
 
-            if isinstance(d, Mapping):
-                for k, v in d.items():
+            if isinstance(data, Mapping):
+                for k, v in data.items():
                     cname = join_field(split_field(full_path) + [k])
                     value_type = get_type(v)
                     if value_type is None:
@@ -1681,11 +1681,11 @@ class Table_usingSQLite(Container):
 
                     if value_type in STRUCT:
                         c = unwraplist(
-                            [c for c in columns.get(cname, Null) if c.type in STRUCT]
+                            [cc for cc in columns.get(cname, Null) if cc.type in STRUCT]
                         )
                     else:
                         c = unwraplist(
-                            [c for c in columns.get(cname, Null) if c.type == value_type]
+                            [cc for cc in columns.get(cname, Null) if cc.type == value_type]
                         )
 
                     if not c:
@@ -1697,7 +1697,7 @@ class Table_usingSQLite(Container):
                         if deeper_nested_path != nested_path[0]:
                             # I HIGHLY SUSPECT, THROUGH CALLING _flatten() AGAIN THE REST OF THIS BLOCK IS NOT NEEDED
                             nested_column = unwraplist(
-                                [c for c in columns.get(deeper_nested_path, Null) if c.type in STRUCT]
+                                [cc for cc in columns.get(deeper_nested_path, Null) if cc.type in STRUCT]
                             )
                             insertion.active_columns.add(nested_column)
                             row[nested_column.es_column] = "."
@@ -1727,7 +1727,8 @@ class Table_usingSQLite(Container):
 
                         required_changes.append({"add": c})
 
-                    insertion.active_columns.add(c)
+                        # INSIDE IF BLOCK BECAUSE WE DO NOT WANT IT TO ADD WHAT WE columns.get() ALREADY
+                        insertion.active_columns.add(c)
 
                     # BE SURE TO NEST VALUES, IF NEEDED
                     if value_type == "nested":
@@ -1749,7 +1750,7 @@ class Table_usingSQLite(Container):
                         row[c.es_column] = v
             else:
                 k = "."
-                v = d
+                v = data
                 cname = join_field(split_field(full_path) + [k])
                 value_type = get_type(v)
                 if value_type is None:
@@ -1815,8 +1816,6 @@ class Table_usingSQLite(Container):
             required_changes = []
 
         return doc_collection
-
-
 
     def _insert(self, collection):
         for nested_path, details in collection.items():

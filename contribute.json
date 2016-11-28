@@ -1,0 +1,31 @@
+{
+    "name": "ActiveData",
+    "description": "Billions of Records! Available to query!",
+    "repository": {
+        "url": "https://github.com/klahnakoski/ActiveData",
+        "license": "MPL2",
+        "type": "git",
+        "tests": "https://github.com/klahnakoski/ActiveData/tree/dev/tests",
+        "clone": "https://github.com/klahnakoski/ActiveData.git"
+    },
+    "participate": {
+        "home": "https://wiki.mozilla.org/EngineeringProductivity/Projects/ActiveData",
+        "docs": "https://github.com/klahnakoski/ActiveData/tree/dev/docs",
+        "irc": "irc://irc.mozilla.org/#ateam",
+        "irc-contacts": [
+            "ekyle"
+        ]
+    },
+    "bugs": {
+        "list": "https://bugzilla.mozilla.org/buglist.cgi?resolution=---&bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&bug_status=VERIFIED&component=ActiveData&product=Testing&list_id=13271577&query_format=advanced",
+        "report": "https://bugzilla.mozilla.org/enter_bug.cgi?product=Testing&component=ActiveData"
+    },
+    "urls": {
+        "stage": "https://activedata.allizom.org"
+    },
+    "keywords": [
+        "python",
+        "elasticsearch",
+        "awesome"
+    ]
+}

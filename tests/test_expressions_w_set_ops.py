@@ -171,6 +171,71 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
+
+    def test_concat(self):
+        test = {
+            "data": [
+                {"v": "hello", "w": NULL},
+                {"v": "hello", "w": ""},
+                {"v": "hello", "w": "world"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": [
+                    {"name": "a", "value": {"concat": []}},
+                    {"name": "b", "value": {"concat": {"v": "test"}}},
+                    {"name": "c", "value": {"concat": ["v", "w"]}},
+                    {"name": "d", "value": {"concat": ["w", "v"]}},
+                    {"name": "e", "value": {"concat": [], "separator": "-"}},
+                    {"name": "f", "value": {"concat": {"v": 0}, "separator": "-"}},
+                    {"name": "g", "value": {"concat": ["v", "w"], "separator": "-"}},
+                    {"name": "h", "value": {"concat": ["w", "v"], "separator": "-"}},
+                    {"name": "i", "value": {"concat": [{"literal": ""}, "v"], "separator": "-"}}
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {
+                        "a": NULL,
+                        "b": "hellotest",
+                        "c": "helloworld",
+                        "d": "worldhello",
+                        "e": NULL,
+                        "f": "hello-0",
+                        "g": "hello-world",
+                        "h": "world-hello",
+                        "i": "hello"
+                    },
+                    {
+                        "a": NULL,
+                        "b": "hellotest",
+                        "c": "hello",
+                        "d": "hello",
+                        "e": NULL,
+                        "f": "hello-0",
+                        "g": "hello",
+                        "h": "hello",
+                        "i": "hello"
+                    },
+                    {
+                        "a": NULL,
+                        "b": "hellotest",
+                        "c": "hello",
+                        "d": "hello",
+                        "e": NULL,
+                        "f": "hello-0",
+                        "g": "hello",
+                        "h": "hello",
+                        "i": "hello"
+                    }
+                ]
+            }
+        }
+        self.utils.execute_es_tests(test)
+
+
+
     def test_select_when(self):
         test = {
             "data": [
@@ -243,8 +308,6 @@ class TestSetOps(ActiveDataBaseTest):
             }
         }
         self.utils.execute_es_tests(test)
-
-
 
     def test_select_add(self):
         test = {
@@ -607,6 +670,83 @@ class TestSetOps(ActiveDataBaseTest):
                 "data": [0, 0.5, 1, NULL]
             }
         }
+        self.utils.execute_es_tests(test)
+
+    def test_between(self):
+        test = {
+            "data": [
+                {"v": "/this/is/a/directory"},
+                {"v": "/"}
+            ],
+            "query": {
+                "select": [
+                    {"name": "a", "value": {"between": {"v": ["/this/", "/"]}}},
+                    {"name": "c", "value": {"between": ["v", {"literal": "/this/"}, {"literal": "/"}]}},
+                    {"name": "d", "value": {"between": {"v": [-1, 5]}}},
+                    {"name": "e", "value": {"between": {"v": [NULL, "/is"]}}},
+                    {"name": "f", "value": {"between": {"v": ["/is", NULL]}}}
+                ],
+                "from": TEST_TABLE
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "is", "c": "is", "d": "/this", "e": "/this", "f": "/a/directory"},
+                    {"d": "/"}
+                ]
+            }
+        }
+        self.utils.execute_es_tests(test)
+
+    def test_not_left(self):
+        test = {
+            "data": [
+                {"url": NULL},
+                {"url": "/"},
+                {"url": "https://hg.mozilla.org/"},
+                {"url": "https://hg.mozilla.org/a/"},
+                {"url": "https://hg.mozilla.org/b/"},
+                {"url": "https://hg.mozilla.org/b/1"},
+                {"url": "https://hg.mozilla.org/b/2"},
+                {"url": "https://hg.mozilla.org/b/3"},
+                {"url": "https://hg.mozilla.org/c/"},
+                {"url": "https://hg.mozilla.org/d"},
+                {"url": "https://hg.mozilla.org/e"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": {
+                    "name": "f",
+                    "value": {
+                        "left": [
+                            "url",
+                            {"add": [
+                                1,
+                                {
+                                    "find": {"url": "/"},
+                                    "start": 23,
+                                    "default": {"length": "url"}
+                                }
+                            ]}
+                        ]
+                    }
+                }
+            },
+            "expecting_list":{
+                "meta": {"format": "list"},
+                "data": [
+                    {"f": NULL, "count": 1},
+                    {"f": "/", "count": 1},
+                    {"f": "https://hg.mozilla.org/", "count": 1},
+                    {"f": "https://hg.mozilla.org/a/", "count": 1},
+                    {"f": "https://hg.mozilla.org/b/", "count": 4},
+                    {"f": "https://hg.mozilla.org/c/", "count": 1},
+                    {"f": "https://hg.mozilla.org/d", "count": 1},
+                    {"f": "https://hg.mozilla.org/e", "count": 1}
+                ]
+            }
+        }
+
         self.utils.execute_es_tests(test)
 
 

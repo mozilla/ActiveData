@@ -16,29 +16,32 @@ from __future__ import absolute_import
 import sys
 
 from pyLibrary.debugs.exceptions import suppress_exception
-from pyLibrary.thread.threads import Thread, Lock
+from pyLibrary.thread.lock import Lock
 from pyLibrary.strings import expand_template
 
 DEBUG_LOGGING = False
 
-_Log = None
 _Except = None
 _Queue = None
+_Thread = None
+_Log = None
 
 
 def _delayed_imports():
-    global _Log
     global _Except
     global _Queue
+    global _Thread
+    global _Log
 
-    from pyLibrary.debugs.logs import Log as _Log
     from pyLibrary.debugs.exceptions import Except as _Except
     from pyLibrary.thread.threads import Queue as _Queue
+    from pyLibrary.thread.threads import Thread as _Thread
+    from pyLibrary.debugs.logs import Log as _Log
 
-    _ = _Log
     _ = _Except
     _ = _Queue
-
+    _ = _Thread
+    _ = _Log
 
 class TextLog(object):
     def write(self, template, params):
@@ -77,17 +80,17 @@ class TextLog_usingThread(TextLog):
 
         def worker(please_stop):
             while not please_stop:
-                Thread.sleep(1)
+                _Thread.sleep(1)
                 logs = self.queue.pop_all()
                 for log in logs:
-                    if log is Thread.STOP:
+                    if log is _Thread.STOP:
                         if DEBUG_LOGGING:
                             sys.stdout.write(b"TextLog_usingThread.worker() sees stop, filling rest of queue\n")
                         please_stop.go()
                     else:
                         self.logger.write(**log)
 
-        self.thread = Thread("log thread", worker)
+        self.thread = _Thread("log thread", worker)
         self.thread.parent.remove_child(self.thread)  # LOGGING WILL BE RESPONSIBLE FOR THREAD stop()
         self.thread.start()
 
@@ -104,7 +107,7 @@ class TextLog_usingThread(TextLog):
         try:
             if DEBUG_LOGGING:
                 sys.stdout.write(b"injecting stop into queue\n")
-            self.queue.add(Thread.STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
+            self.queue.add(_Thread.STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
             if DEBUG_LOGGING:
                 sys.stdout.write(b"TextLog_usingThread telling logger to stop\n")

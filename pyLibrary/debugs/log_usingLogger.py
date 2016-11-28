@@ -9,21 +9,21 @@
 #
 
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from datetime import timedelta
 import logging
 import sys
+from datetime import timedelta
 
+from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.log_usingThreadedStream import TextLog_usingThreadedStream, time_delta_pusher
 from pyLibrary.debugs.logs import Log
 from pyLibrary.debugs.text_logs import TextLog, DEBUG_LOGGING
 from pyLibrary.dot import unwrap
 from pyLibrary.thread import threads
 from pyLibrary.thread.threads import Thread
-
 
 
 # WRAP PYTHON CLASSIC logger OBJECTS
@@ -51,10 +51,8 @@ class TextLog_usingLogger(TextLog):
             if DEBUG_LOGGING:
                 sys.stdout.write("TextLog_usingLogger done\n")
 
-
         with suppress_exception:
             self.queue.close()
-
 
 
 def make_log_from_settings(settings):

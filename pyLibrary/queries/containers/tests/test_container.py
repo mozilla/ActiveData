@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import wrap
-from pyLibrary.queries.containers.Table_usingSQLite import Table_usingSQLite
+from pyLibrary.queries.containers.list_usingSQLite import Table_usingSQLite
 from pyLibrary.queries.expressions import NullOp
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 

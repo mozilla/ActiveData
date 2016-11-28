@@ -46,8 +46,9 @@ def record_request(request, query_, data, error):
 
 def cors_wrapper(func):
     def _setdefault(obj, key, value):
-        if value != None:
-            obj.setdefault(key, value)
+        if value == None:
+            return
+        obj.setdefault(key, value)
 
     def output(*args, **kwargs):
         response = func(*args, **kwargs)

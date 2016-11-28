@@ -233,7 +233,7 @@ class File(object):
             except Exception, e:
                 from pyLibrary.debugs.logs import Log
 
-                Log.error("Can not read line from {{filename}}",  filename= self._filename, cause=e)
+                Log.error("Can not read line from {{filename}}", filename=self._filename, cause=e)
 
         return output()
 

@@ -229,58 +229,70 @@ def get_schema_from_list(frum):
     """
     SCAN THE LIST FOR COLUMN TYPES
     """
-    columns = []
-    _get_schema_from_list(frum, columns, prefix=[], nested_path=ROOT_PATH)
-    return Schema(columns)
+    columns = {}
+    _get_schema_from_list(frum, columns, prefix=[], nested_path=ROOT_PATH, name_to_column=columns)
+    return Schema(columns.values())
 
-def _get_schema_from_list(frum, columns, prefix, nested_path):
+def _get_schema_from_list(frum, columns, prefix, nested_path, name_to_column):
     """
     SCAN THE LIST FOR COLUMN TYPES
     """
-    names = {}
     for d in frum:
         row_type = _type_to_name[d.__class__]
-        if row_type!="object":
-            agg_type = names.get(".", "undefined")
-            names["."] = _merge_type[agg_type][row_type]
+        if row_type != "object":
+            full_name = join_field(prefix)
+            column = name_to_column.get(full_name)
+            if not column:
+                column = Column(
+                    name=full_name,
+                    table=".",
+                    es_column=full_name,
+                    es_index=".",
+                    type="undefined",
+                    nested_path=nested_path
+                )
+                columns[full_name] = column
+            column.type = _merge_type[column.type][row_type]
         else:
             for name, value in d.items():
-                agg_type = names.get(name, "undefined")
+                full_name = join_field(prefix + [name])
+                column = name_to_column.get(full_name)
+                if not column:
+                    column = Column(
+                        name=full_name,
+                        table=".",
+                        es_column=full_name,
+                        es_index=".",
+                        type="undefined",
+                        nested_path=nested_path
+                    )
+                columns[full_name] = column
                 if isinstance(value, list):
                     if len(value)==0:
                         this_type = "undefined"
+                    elif len(value)==1:
+                        this_type = _type_to_name[value[0].__class__]
                     else:
-                        this_type=_type_to_name[value[0].__class__]
-                        if this_type=="object":
-                            this_type="nested"
+                        this_type = _type_to_name[value[0].__class__]
+                        if this_type == "object":
+                            this_type = "nested"
                 else:
                     this_type = _type_to_name[value.__class__]
-                new_type = _merge_type[agg_type][this_type]
-                names[name] = new_type
+                new_type = _merge_type[column.type][this_type]
+                column.type = new_type
 
                 if this_type == "object":
-                    _get_schema_from_list([value], columns, prefix + [name], nested_path)
+                    _get_schema_from_list([value], columns, prefix + [name], nested_path, name_to_column)
                 elif this_type == "nested":
                     np = listwrap(nested_path)
                     newpath = unwraplist([join_field(split_field(np[0])+[name])]+np)
-                    _get_schema_from_list(value, columns, prefix + [name], newpath)
-
-    for n, t in names.items():
-        full_name = ".".join(prefix + [n])
-        column = Column(
-            name=full_name,
-            table=".",
-            es_column=full_name,
-            es_index=".",
-            type=t,
-            nested_path=nested_path
-        )
-        columns.append(column)
+                    _get_schema_from_list(value, columns, prefix + [name], newpath, name_to_column)
 
 
 _type_to_name = {
     NoneType: "undefined",
     NullType: "undefined",
+    bool: "boolean",
     str: "string",
     unicode: "string",
     int: "integer",

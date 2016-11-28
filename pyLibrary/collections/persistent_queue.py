@@ -141,8 +141,7 @@ class PersistentQueue(object):
                         if self.db.status.end <= self.start:
                             return None
                 else:
-                    with suppress_exception:
-                        self.lock.wait()
+                    self.lock.wait()
 
             if DEBUG:
                 Log.note("persistent queue already stopped")

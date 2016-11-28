@@ -59,7 +59,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
                 dups_found = True
 
                 Log.note(
-                    "removing dups {{details|json}}\n{{dups|json|indent}}",
+                    "removing dups {{details|json}}",
                     details={
                         "id": int(d.max_id),
                         "test": d.test.url,

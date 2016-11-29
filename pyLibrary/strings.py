@@ -36,22 +36,22 @@ _Duration = None
 
 def _late_import():
     global _json_encoder
-    global _convert
     global _Log
     global _Except
     global _Duration
+    global _convert
 
     from pyLibrary.jsons.encoder import json_encoder as _json_encoder
-    from pyLibrary import convert as _convert
     from pyLibrary.debugs.logs import Log as _Log
     from pyLibrary.debugs.exceptions import Except as _Except
     from pyLibrary.times.durations import Duration as _Duration
+    from pyLibrary import convert as _convert
 
     _ = _json_encoder
-    _ = _convert
     _ = _Log
     _ = _Except
     _ = _Duration
+    _ = _convert
 
 
 def datetime(value):

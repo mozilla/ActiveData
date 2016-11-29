@@ -144,7 +144,7 @@ def capture_termination_signal(please_stop):
                     return
             except Exception, e:
                 e = Except.wrap(e)
-                if "Failed to establish a new connection: [Errno 10060]" in e:
+                if "Failed to establish a new connection: [Errno 10060]" in e or "A socket operation was attempted to an unreachable network" in e:
                     Log.warning("AWS Spot Detection has shutdown, probably not a spot node, (http://169.254.169.254 is unreachable)")
                     return
                 else:

@@ -112,6 +112,8 @@ class Dict(MutableMapping):
             from pyLibrary.debugs.logs import Log
 
             Log.error("key is empty string.  Probably a bad idea")
+        if key == None:
+            return Null
         if key == ".":
             # SOMETHING TERRIBLE HAPPENS WHEN value IS NOT A Mapping;
             # HOPEFULLY THE ONLY OTHER METHOD RUN ON self IS unwrap()

@@ -95,7 +95,8 @@ class MySQL(object):
                 passwd=coalesce(self.settings.password, self.settings.passwd),
                 db=coalesce(self.settings.schema, self.settings.db),
                 charset=u"utf8",
-                use_unicode=True
+                use_unicode=True,
+                ssl=coalesce(self.settings.ssl, None)
             )
         except Exception, e:
             if self.settings.host.find("://") == -1:
@@ -587,7 +588,9 @@ class MySQL(object):
             Log.error("problem quoting SQL", e)
 
     def quote_column(self, column_name, table=None):
-        if isinstance(column_name, basestring):
+        if column_name==None:
+            Log.error("missing column_name")
+        elif isinstance(column_name, basestring):
             if table:
                 column_name = table + "." + column_name
             return SQL("`" + column_name.replace(".", "`.`") + "`")    # MY SQL QUOTE OF COLUMN NAMES
@@ -732,3 +735,28 @@ def json_encode(value):
     """
     return unicode(json_encoder.encode(jsons.scrub(value)))
 
+
+mysql_type_to_json_type = {
+    "bigint": "number",
+    "blob": "string",
+    "char": "string",
+    "datetime": "number",
+    "decimal": "number",
+    "double": "number",
+    "enum": "number",
+    "float": "number",
+    "int": "number",
+    "longblob": "string",
+    "longtext": "string",
+    "mediumblob": "string",
+    "mediumint": "number",
+    "mediumtext": "string",
+    "set": "array",
+    "smallint": "number",
+    "text": "string",
+    "time": "number",
+    "timestamp": "number",
+    "tinyint": "number",
+    "tinytext": "number",
+    "varchar": "string"
+}

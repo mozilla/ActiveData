@@ -61,6 +61,6 @@ class Timer(object):
     @property
     def duration(self):
         if not self.end:
-            return Duration(clock() - self.start)
+            return Duration(time() - self.start)
 
         return Duration(self.interval)

@@ -161,9 +161,9 @@ class Queue(object):
                 _Log.error(Thread.TIMEOUT)
 
             if self.silent:
-                self.lock.wait(till=time_to_stop_waiting)
+                self.lock.wait(Till(till=time_to_stop_waiting))
             else:
-                self.lock.wait(wait_time)
+                self.lock.wait(Till(timeout=wait_time))
                 if len(self.queue) > self.max:
                     now = Date.now()
                     if self.next_warning < now:

@@ -170,6 +170,9 @@ class Signal(object):
         other.on_go(output.go)
         return output
 
+    def __ror__(self, other):
+        return self.__or__(other)
+
     def __and__(self, other):
         if other == None:
             return self

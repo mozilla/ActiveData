@@ -81,10 +81,10 @@ sudo ln -s /usr/local/bin/supervisorctl supervisorctl
 
 
 #INSTALL gunicorn
-sudo pip install gunicorn
+sudo pip install -y gunicorn
 
 #INSTALL nginx
-sudo yum install nginx
+sudo yum install -y nginx
 # IMPORTANT: nginx INSTALL SCREWS UP PERMISSIONS
 sudo chown -R ec2-user:ec2-user /var/lib/nginx/
 

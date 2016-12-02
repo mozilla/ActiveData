@@ -197,7 +197,11 @@ class Expression(object):
         raise Log.error("{{type}} has no `missing` method", type=self.__class__.__name__)
 
     def exists(self):
-        return NotOp("not", self.missing())
+        missing = self.missing()
+        if not missing:
+            return TrueOp()
+        else:
+            return NotOp("not", missing)
 
     def is_true(self):
         """
@@ -275,10 +279,10 @@ class Variable(Expression):
                 for cn, cs in schema.items():
                     if cn.startswith(prefix):
                         for child_col in cs:
-                            acc[literal_field(child_col.nested_path[0])][literal_field(child_col.name)][json_type_to_sql_type[child_col.type]] = child_col.es_index + "." + convert.string2quote(child_col.es_column)
+                            acc[literal_field(child_col.nested_path[0])][literal_field(child_col.name)][json_type_to_sql_type[child_col.type]] = schema._db.quote_column(child_col.es_column, child_col.es_index).sql
             else:
                 nested_path = col.nested_path[0]
-                acc[literal_field(nested_path)][literal_field(col.name)][json_type_to_sql_type[col.type]] = col.es_index + "." + convert.string2quote(col.es_column)
+                acc[literal_field(nested_path)][literal_field(col.name)][json_type_to_sql_type[col.type]] = schema._db.quote_column(col.es_column, col.es_index).sql
 
         return wrap([
             {"name": relative_field(cname, self.var), "sql": types, "nested_path": nested_path}
@@ -749,7 +753,7 @@ class DateOp(Literal):
         return "Date("+convert.string2quote(self.value)+").unix"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        return {"n": sql_quote(self.value.unix)}
+        return wrap([{"name": ".", "sql": {"n": sql_quote(convert.json2value(self.json))}}])
 
     def to_esfilter(self):
         return convert.json2value(self.json)
@@ -987,15 +991,15 @@ class InequalityOp(Expression):
         return "(" + self.lhs.to_python() + ") " + InequalityOp.operators[self.op] + " (" + self.rhs.to_python()+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        lhs = self.lhs.to_sql(schema)[0]
-        rhs = self.rhs.to_sql(schema)[0]
-        lhs_exists = self.lhs.exists().to_sql()[0]
-        rhs_exists = self.rhs.exists().to_sql()[0]
+        lhs = self.lhs.to_sql(schema, not_null=True)[0].sql
+        rhs = self.rhs.to_sql(schema, not_null=True)[0].sql
+        lhs_exists = self.lhs.exists().to_sql(schema)[0].sql
+        rhs_exists = self.rhs.exists().to_sql(schema)[0].sql
 
         if len(lhs) == 1 and len(rhs) == 1:
-            return [{"name":".", "sql": {
+            return wrap([{"name":".", "sql": {
                 "b": "(" + lhs.values()[0] + ") " + InequalityOp.operators[self.op] + " (" + rhs.values()[0] + ")"
-            }}]
+            }}])
 
         ors = []
         for l in "bns":
@@ -1849,16 +1853,16 @@ class ExistsOp(Expression):
         return self.field.to_python() + " != None"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        field = self.field.to_sql(schema)
+        field = self.field.to_sql(schema)[0].sql
         acc = []
         for t, v in field.items():
-            if t in ["b", "s", "n"]:
+            if t in "bns":
                 acc.append("(" + v + " IS NOT NULL)")
 
         if not acc:
-            return "0"
+            return wrap([{"name": ".", "sql": {"b": "0"}}])
         else:
-            return " OR ".join(acc)
+            return wrap([{"name": ".", "sql": {"b":" OR ".join(acc)}}])
 
     def to_esfilter(self):
         if isinstance(self.field, Variable):
@@ -2013,6 +2017,59 @@ class ConcatOp(Expression):
             return AndOp("and", terms)
         else:
             return FalseOp()
+
+
+class UnixOp(Expression):
+    """
+    FOR USING ON DATABASES WHICH HAVE A DATE COLUMNS: CONVERT TO UNIX
+    """
+    has_simple_form = True
+
+    def __init__(self, op, term):
+        Expression.__init__(self, op, term)
+        self.value = term
+
+    def to_sql(self, schema, not_null=False, boolean=False):
+        v = self.value.to_sql(schema)[0].sql
+        return wrap([{
+            "name": ".",
+            "sql": {"n": "UNIX_TIMESTAMP("+v.n+")"}
+        }])
+
+    def vars(self):
+        return self.value.vars()
+
+    def map(self, map_):
+        return UnixOp("map", self.value.map(map_))
+
+    def missing(self):
+        return self.value.missing()
+
+
+class FromUnixOp(Expression):
+    """
+    FOR USING ON DATABASES WHICH HAVE A DATE COLUMNS: CONVERT TO UNIX
+    """
+
+    def __init__(self, op, term):
+        Expression.__init__(self, op, term)
+        self.value = term
+
+    def to_sql(self, schema, not_null=False, boolean=False):
+        v = self.value.to_sql(schema)[0].sql
+        return wrap([{
+            "name": ".",
+            "sql": {"n": "FROM_UNIXTIME("+v.n+")"}
+        }])
+
+    def vars(self):
+        return self.value.vars()
+
+    def map(self, map_):
+        return FromUnixOp("map", self.value.map(map_))
+
+    def missing(self):
+        return self.value.missing()
 
 
 class LeftOp(Expression):
@@ -2318,7 +2375,7 @@ class FindOp(Expression):
             OrOp("or", [
                 self.value.missing(),
                 self.find.missing(),
-                ScriptOp("script", index + "==-1")
+                EqOp("eq", [ScriptOp("script", index), Literal(None, -1)])
             ])
         ])
 
@@ -2824,6 +2881,7 @@ operators = {
     "exp": BinaryOp,
     "find": FindOp,
     "floor": FloorOp,
+    "from_unix": FromUnixOp,
     "get": GetOp,
     "gt": InequalityOp,
     "gte": InequalityOp,
@@ -2864,6 +2922,7 @@ operators = {
     "term": EqOp,
     "terms": InOp,
     "tuple": TupleOp,
+    "unix": UnixOp,
     "when": WhenOp,
 }
 

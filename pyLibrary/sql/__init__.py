@@ -32,3 +32,12 @@ class SQL(unicode):
     def __str__(self):
         Log.error("do not do this")
 
+
+class DB(object):
+
+    def quote_column(self, column_name, table=None):
+        raise NotImplementedError()
+
+    def db_type_to_json_type(self, type):
+        raise NotImplementedError()
+

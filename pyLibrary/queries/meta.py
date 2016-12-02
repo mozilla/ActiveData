@@ -572,6 +572,7 @@ Column = DataClass(
         "table",
         "es_column",
         "es_index",
+        "es_type",
         "type",
         {"name": "useSource", "default": False},
         {"name": "nested_path", "nulls": True},  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS

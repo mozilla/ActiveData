@@ -90,6 +90,10 @@ def join_field(field):
     return ".".join([f.replace(".", "\.") for f in potent])
 
 
+def concat_field(prefix, suffix):
+    return join_field(split_field(prefix) + split_field(suffix))
+
+
 def startswith_field(field, prefix):
     """
     RETURN True IF field PATH STRING STARTS WITH prefix PATH STRING

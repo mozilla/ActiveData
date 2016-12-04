@@ -268,7 +268,7 @@ class Variable(Expression):
         return agg+".get("+convert.value2quote(path[-1])+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        cols = schema.get(self.var, None)
+        cols = schema.columns.get(self.var, None)
         if cols is None:
             # DOES NOT EXIST
             return wrap([{"name": ".", "sql": {"n": "NULL"}, "nested_path": ROOT_PATH}])
@@ -276,13 +276,13 @@ class Variable(Expression):
         for col in cols:
             if col.type == OBJECT:
                 prefix = self.var + "."
-                for cn, cs in schema.items():
+                for cn, cs in schema.columns.items():
                     if cn.startswith(prefix):
                         for child_col in cs:
-                            acc[literal_field(child_col.nested_path[0])][literal_field(child_col.name)][json_type_to_sql_type[child_col.type]] = schema._db.quote_column(child_col.es_column, child_col.es_index).sql
+                            acc[literal_field(child_col.nested_path[0])][literal_field(child_col.name)][json_type_to_sql_type[child_col.type]] = schema.quote_column(child_col.es_column).sql
             else:
                 nested_path = col.nested_path[0]
-                acc[literal_field(nested_path)][literal_field(col.name)][json_type_to_sql_type[col.type]] = schema._db.quote_column(col.es_column, col.es_index).sql
+                acc[literal_field(nested_path)][literal_field(col.name)][json_type_to_sql_type[col.type]] = schema.quote_column(col.es_column).sql
 
         return wrap([
             {"name": relative_field(cname, self.var), "sql": types, "nested_path": nested_path}
@@ -837,7 +837,7 @@ class LeavesOp(Expression):
                 "name": literal_field(join_field(split_field(c.name)[prefix_length:])),
                 "sql": Variable(c.name).to_sql(schema)[0].sql
             }
-            for n, cols in schema.items()
+            for n, cols in schema.columns.items()
             if startswith_field(n, term)
             for c in cols
             if c.type not in STRUCT
@@ -2843,7 +2843,7 @@ def split_expression_by_depth(where, schema, map_, output=None, var_to_depth=Non
         if not vars_:
             return Null
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
-        var_to_depth = {v: len(schema[v].nested_path)-1 for v in vars_}
+        var_to_depth = {v: len(schema.columns[v].nested_path)-1 for v in vars_}
         all_depths = set(var_to_depth.values())
         if -1 in all_depths:
             Log.error(

@@ -101,17 +101,19 @@ class Table_usingSQLite(Container):
                     c = Column(name=u, table=name, type="string", es_column=typed_column(u, "string"), es_index=name)
                     add_column_to_schema(self.columns, c)
 
-            command = "CREATE TABLE " + quote_table(name) + "(" + \
-                      (",".join(
-                          [quoted_UID + " INTEGER"] +
-                          [_quote_column(c) + " " + sql_types[c.type] for u, cs in self.columns.items() for c in cs]
-                      )) + \
-                      ", PRIMARY KEY (" + \
-                      (", ".join(
-                          [quoted_UID] +
-                          [_quote_column(c) for u in self.uid for c in self.columns[u]]
-                      )) + \
-                      "))"
+            command = (
+                "CREATE TABLE " + quote_table(name) + "(" +
+                (",".join(
+                    [quoted_UID + " INTEGER"] +
+                    [_quote_column(c) + " " + sql_types[c.type] for u, cs in self.columns.items() for c in cs]
+                )) +
+                ", PRIMARY KEY (" +
+                (", ".join(
+                    [quoted_UID] +
+                    [_quote_column(c) for u in self.uid for c in self.columns[u]]
+                )) +
+                "))"
+            )
 
             self.db.execute(command)
         else:
@@ -132,6 +134,9 @@ class Table_usingSQLite(Container):
 
                 add_column_to_schema(self.columns, column)
             # TODO: FOR ALL TABLES, FIND THE MAX ID
+
+    def quote_column(self, column, table=None):
+        return self.db.quote_column(column, table)
 
     def _make_digits_table(self):
         existence = self.db.query("PRAGMA table_info(__digits__)")
@@ -168,9 +173,6 @@ class Table_usingSQLite(Container):
         :param nest: the path to the nested sub-table
         :return: relative schema for the sub-table; change `es_index` to sql alias
         """
-        nest_path = split_field(frum)[len(split_field(self.name)):]
-        nest = join_field(nest_path)
-
         # WE MUST HAVE THE ALIAS NAMES FOR THE TABLES
         nest_to_alias = {
             nested_path: "__" + unichr(ord('a') + i) + "__"
@@ -191,7 +193,7 @@ class Table_usingSQLite(Container):
                     c = copy(c)
                     c.es_index = nest_to_alias[c.nested_path[0]]
                     columns[literal_field(k)] += [c]
-
+        columns._db = self.db
         return unwrap(columns)
 
     def insert(self, docs):
@@ -493,8 +495,10 @@ class Table_usingSQLite(Container):
 
         if query.sort:
             command += "\nORDER BY " + ",\n".join(
-                s.value.to_sql() + (" DESC" if s.sort == -1 else "")
-                for s in query.sort
+                "(" + sql[t] + ") IS NULL" + (" DESC" if s.sort == -1 else "") + ",\n" +
+                sql[t] + (" DESC" if s.sort == -1 else "")
+                for s, sql in [(s, s.value.to_sql(self)[0].sql) for s in query.sort]
+                for t in "bns" if sql[t]
             )
 
         result = self.db.query(command)
@@ -558,6 +562,9 @@ class Table_usingSQLite(Container):
 
             edges = []
             dims = []
+            for g in query.groupby:
+                g.is_groupby=True
+
             for i, e in enumerate(query.edges+query.groupby):
                 allowNulls = coalesce(e.allowNulls, True)
 
@@ -572,7 +579,10 @@ class Table_usingSQLite(Container):
                 else:
                     if not columns:
                         columns = zip(*result.data)
-                    parts = set(columns[i]) - {None}
+                    parts = set(columns[i])
+                    if e.is_groupby and None in parts:
+                        allowNulls = True
+                    parts -= {None}
                     domain = SimpleSetDomain(partitions=jx.sort(parts))
 
                 dims.append(len(domain.partitions)+(1 if allowNulls else 0))
@@ -586,7 +596,7 @@ class Table_usingSQLite(Container):
                 0 if s.aggregate == "count" and index_to_columns[si].push_child == "." else Dict
                 for si, s in enumerate(listwrap(query.select))
             ]
-            data = {s.name: Matrix(dims=dims, zeros=zeros[si]) for si, s in enumerate(listwrap(query.select))}
+            data_cubes = {s.name: Matrix(dims=dims, zeros=zeros[si]) for si, s in enumerate(listwrap(query.select))}
             r2c = index_to_coordinate(dims)  # WORKS BECAUSE THE DATABASE SORTED THE EDGES TO CONFORM
             for rownum, row in enumerate(result.data):
                 coord = r2c(rownum)
@@ -595,9 +605,9 @@ class Table_usingSQLite(Container):
                     if s.is_edge:
                         continue
                     if s.push_child == ".":
-                        data[s.push_name][coord] = s.pull(row)
+                        data_cubes[s.push_name][coord] = s.pull(row)
                     else:
-                        data[s.push_name][coord][s.push_child] = s.pull(row)
+                        data_cubes[s.push_name][coord][s.push_child] = s.pull(row)
 
             if isinstance(query.select, list):
                 select = [{"name": s.name} for s in query.select]
@@ -608,7 +618,7 @@ class Table_usingSQLite(Container):
                 meta={"format": "cube"},
                 edges=edges,
                 select=select,
-                data={k: v.cube for k, v in data.items()}
+                data={k: v.cube for k, v in data_cubes.items()}
             )
         elif query.format == "table" or (not query.format and query.groupby):
             data = []
@@ -716,17 +726,17 @@ class Table_usingSQLite(Container):
             edge_alias = "e" + unicode(edge_index)
 
             if query_edge.value:
-                edge_values = [p for c in query_edge.value.to_sql(columns).sql for p in c.items()]
+                edge_values = [p for c in query_edge.value.to_sql(self).sql for p in c.items()]
             elif not query_edge.value and any(query_edge.domain.partitions.where):
                 case = "CASE "
                 for pp, p in enumerate(query_edge.domain.partitions):
-                    w = p.where.to_sql(columns)[0].sql.b
+                    w = p.where.to_sql(self)[0].sql.b
                     t = quote_value(pp)
                     case += " WHEN " + w + " THEN " + t
                 case += " ELSE NULL END "
                 edge_values = [("n", case)]
             elif query_edge.range:
-                edge_values = query_edge.range.min.to_sql(columns)[0].sql.items() + query_edge.range.max.to_sql(columns)[0].sql.items()
+                edge_values = query_edge.range.min.to_sql(self)[0].sql.items() + query_edge.range.max.to_sql(self)[0].sql.items()
             else:
                 Log.error("Do not know how to handle")
 
@@ -903,7 +913,7 @@ class Table_usingSQLite(Container):
 
                 Log.error("not implemented")
             elif s.aggregate == "cardinality":
-                for details in s.value.to_sql(columns):
+                for details in s.value.to_sql(self):
                     for json_type, sql in details.sql.items():
                         column_number = len(outer_selects)
                         count_sql = "COUNT(DISTINCT(" + sql + ")) AS " + _make_column_name(column_number)
@@ -917,7 +927,7 @@ class Table_usingSQLite(Container):
                             type=sql_type_to_json_type[json_type]
                         )
             elif s.aggregate == "union":
-                for details in s.value.to_sql(columns):
+                for details in s.value.to_sql(self):
                     concat_sql = []
                     column_number = len(outer_selects)
 
@@ -940,7 +950,7 @@ class Table_usingSQLite(Container):
                     )
 
             elif s.aggregate == "stats":  # THE STATS OBJECT
-                for details in s.value.to_sql(columns):
+                for details in s.value.to_sql(self):
                     sql = details.sql["n"]
                     for name, code in STATS.items():
                         full_sql = expand_template(code, {"value": sql})
@@ -955,7 +965,7 @@ class Table_usingSQLite(Container):
                             type="number"
                         )
             else:  # STANDARD AGGREGATES
-                for details in s.value.to_sql(columns):
+                for details in s.value.to_sql(self):
                     for sql_type, sql in details.sql.items():
                         column_number = len(outer_selects)
                         sql = sql_aggs[s.aggregate] + "(" + sql + ")"
@@ -974,7 +984,7 @@ class Table_usingSQLite(Container):
         for w in query.window:
             outer_selects.append(self._window_op(self, query, w))
 
-        main_filter = query.where.to_sql(columns)[0].sql.b
+        main_filter = query.where.to_sql(self)[0].sql.b
 
         all_parts = []
         sources = [
@@ -1055,11 +1065,12 @@ class Table_usingSQLite(Container):
         groupby = []
         for i, e in enumerate(query.groupby):
             column_number = len(selects)
-            sql_type, sql = e.value.to_sql(columns)[0].sql.items()[0]
+            sql_type, sql = e.value.to_sql(self)[0].sql.items()[0]
             groupby.append(sql)
             selects.append(sql+" AS "+e.name)
 
             index_to_column[column_number] = Dict(
+                is_edge=True,
                 push_name=e.name,
                 push_column=column_number,
                 push_child=".",
@@ -1070,7 +1081,7 @@ class Table_usingSQLite(Container):
 
         for s in listwrap(query.select):
             column_number = len(selects)
-            sql_type, sql =s.value.to_sql(columns)[0].sql.items()[0]
+            sql_type, sql =s.value.to_sql(self)[0].sql.items()[0]
 
             if s.value == "." and s.aggregate == "count":
                 selects.append("COUNT(1) AS " + quote_table(s.name))
@@ -1089,7 +1100,7 @@ class Table_usingSQLite(Container):
         for w in query.window:
             selects.append(self._window_op(self, query, w))
 
-        where = query.where.to_sql(columns)[0].sql.b
+        where = query.where.to_sql(self)[0].sql.b
 
         command = "SELECT\n" + (",\n".join(selects)) + \
                   "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
@@ -1133,11 +1144,12 @@ class Table_usingSQLite(Container):
                 output.add(c)
             return output
         columns = {k: copy_cols(v) for k, v in self.columns.items()}
+        columns['_db'] = self.db
 
         sorts = []
         if query.sort:
             for s in query.sort:
-                col = s.value.to_sql(columns)[0]
+                col = s.value.to_sql(self)[0]
                 for t, sql in col.sql.items():
                     json_type = sql_type_to_json_type[t]
                     if json_type in STRUCT:
@@ -1200,7 +1212,7 @@ class Table_usingSQLite(Container):
                     try:
                         column_number = len(sql_selects)
                         s.pull = get_column(column_number)
-                        db_columns = s.value.to_sql(columns)
+                        db_columns = s.value.to_sql(self)
 
                         if isinstance(s.value, LeavesOp):
                             for column in db_columns:
@@ -1848,9 +1860,13 @@ def add_column_to_schema(schema, column):
     if not columns:
         columns = schema[column.name] = set()
     for var_name, db_columns in schema.items():
-        if startswith_field(column.name, var_name):
+        if var_name==column.name and column.type in STRUCT:
+            columns.add(column)
             db_columns.add(column)
-        if startswith_field(var_name, column.name):
+            continue
+        if startswith_field(column.name, var_name) and column.type not in STRUCT:
+            db_columns.add(column)
+        if startswith_field(var_name, column.name) and column.type not in STRUCT:
             columns.add(column)
 
 _do_not_quote = re.compile(r"^\w+$", re.UNICODE)

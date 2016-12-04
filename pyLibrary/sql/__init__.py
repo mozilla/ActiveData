@@ -29,8 +29,16 @@ class SQL(unicode):
     def sql(self):
         return expand_template(self.template, self.param)
 
+    def __add__(self, other):
+        if not isinstance(other, SQL):
+            Log.error("Can only concat other SQL")
+        else:
+            return SQL(self.sql+other.sql)
+
     def __str__(self):
         Log.error("do not do this")
+
+
 
 
 class DB(object):

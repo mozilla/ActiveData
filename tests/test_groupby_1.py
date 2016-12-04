@@ -290,7 +290,13 @@ class TestgroupBy1(ActiveDataBaseTest):
         # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
         test = {
             # d = {"a": a, "v", v}
-            "data": [{"a": {"b": {"c": d.v}}, "b": d.a} for d in wrap(simple_test_data)],
+            "data": [
+                {
+                    "a": {"b": {"c": d.v}},
+                    "b": d.a
+                }
+                for d in wrap(simple_test_data)
+            ],
             "query": {
                 "from": TEST_TABLE,
                 "select": [

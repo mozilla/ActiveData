@@ -14,10 +14,12 @@ from __future__ import unicode_literals
 
 import sqlite3
 
+from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except, extract_stack, ERROR
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict
 from pyLibrary.env.files import File
+from pyLibrary.sql import DB, SQL
 from pyLibrary.thread.threads import Queue, Signal, Thread
 from pyLibrary.times.timer import Timer
 
@@ -40,7 +42,7 @@ def _upgrade():
         Log.warning("could not upgrade python's sqlite", cause=e)
 
 
-class Sqlite(object):
+class Sqlite(DB):
     """
     Allows multi-threaded access
     Loads extension functions (like SQRT)
@@ -140,4 +142,8 @@ class Sqlite(object):
         finally:
             self.db.close()
 
-
+    def quote_column(self, column_name, table=None):
+        if table != None:
+            return SQL(convert.value2quote(table)+"."+convert.value2quote(column_name))
+        else:
+            return SQL(convert.value2quote(column_name))

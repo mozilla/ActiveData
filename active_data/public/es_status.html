@@ -101,7 +101,7 @@ importScript([
 		Thread.run(function * ()
 		{
 			//ALL NODES
-			var result = yield Rest.get({"url":"http://activedata.allizom.org:9200/_nodes"});
+			var result = yield Rest.get({"url":"http://54.148.242.195:9200/_nodes"});
 
 			var lookupNode = {};
 			var nodes = Map.map(result.nodes, function(nodeID, node, i){
@@ -112,7 +112,7 @@ importScript([
 			});
 
 			//ALL INDEXES
-			var response = yield Rest.get({"url":"http://activedata.allizom.org:9200/_status"});
+			var response = yield Rest.get({"url":"http://54.148.242.195:9200/_status"});
 
 			var displayOptions = Session.URL.getFragment();
 			Map.forall(response.indices, function(index, indexDetails){

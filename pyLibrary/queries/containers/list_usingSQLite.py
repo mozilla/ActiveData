@@ -1128,6 +1128,26 @@ class Table_usingSQLite(Container):
                     if not active:
                         active = active_columns[nest] = []
                     active.append(c)
+        # ANY VARS MENTIONED WITH NO COLUMNS?
+        for v in vars_:
+            if not any(startswith_field(cname, v) for cname in self.columns.keys()):
+                active_columns.append(Column(
+                    "name",
+                    "table",
+                    "es_column",
+                    "es_index",
+                    # "es_type",
+                    "type",
+                    {"name": "useSource", "default": False},
+                    {"name": "nested_path", "nulls": True},  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
+                    {"name": "relative", "nulls": True},
+                    {"name": "count", "nulls": True},
+                    {"name": "cardinality", "nulls": True},
+                    {"name": "partitions", "nulls": True},
+                    {"name": "last_updated", "nulls": True}
+
+                ))
+
 
         # EVERY COLUMN, AND THE INDEX IT TAKES UP
         index_to_column = {}  # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
@@ -1373,7 +1393,7 @@ class Table_usingSQLite(Container):
 
         if query.format == "cube":
             num_rows = len(result.data)
-            num_cols = Math.MAX([c.push_column for c in cols])+1
+            num_cols = Math.MAX([c.push_column for c in cols]) + 1 if len(cols) else 0
             map_index_to_name = {c.push_column: c.push_name for c in cols}
             temp_data = [[None]*num_rows for _ in range(num_cols)]
             for rownum, d in enumerate(result.data):
@@ -1401,9 +1421,11 @@ class Table_usingSQLite(Container):
             )
             return output
         elif query.format=="table":
+            # selects = listwrap(query.select)
+            # num_column = len(selects)
+            # header = selects.name
             num_column = Math.MAX([c.push_column for c in cols])+1
             header = [None]*num_column
-
             for c in cols:
                 header[c.push_column]=c.push_name
 
@@ -1465,7 +1487,7 @@ class Table_usingSQLite(Container):
                 for select_index, s in enumerate(selects):
                     sql_select = index_to_sql_select.get(select_index)
                     if not sql_select:
-                        select_clause.append(s)
+                        select_clause.append("NULL AS " + _make_column_name(select_index))
                         continue
 
                     if startswith_field(sql_select.nested_path[0], nested_path):

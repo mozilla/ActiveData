@@ -1114,10 +1114,12 @@ class Table_usingSQLite(Container):
         primary_nested_path = join_field(split_field(frum)[1:])
         vars_ = UNION([s.value.vars() for s in listwrap(query.select)])
 
-        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
-        # columns = self._get_sql_schema(frum)
+        nest_to_alias = {
+            nested_path: "__" + unichr(ord('a') + i) + "__"
+            for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())
+        }
 
-        active_columns = {}
+        active_columns = {".": []}
         for cname, cols in self.columns.items():
             if any(startswith_field(cname, v) for v in vars_):
                 for c in cols:
@@ -1131,21 +1133,13 @@ class Table_usingSQLite(Container):
         # ANY VARS MENTIONED WITH NO COLUMNS?
         for v in vars_:
             if not any(startswith_field(cname, v) for cname in self.columns.keys()):
-                active_columns.append(Column(
-                    "name",
-                    "table",
-                    "es_column",
-                    "es_index",
-                    # "es_type",
-                    "type",
-                    {"name": "useSource", "default": False},
-                    {"name": "nested_path", "nulls": True},  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
-                    {"name": "relative", "nulls": True},
-                    {"name": "count", "nulls": True},
-                    {"name": "cardinality", "nulls": True},
-                    {"name": "partitions", "nulls": True},
-                    {"name": "last_updated", "nulls": True}
-
+                active_columns["."].append(Column(
+                    name=v,
+                    table=".",
+                    type="unknown",
+                    es_column=".",
+                    es_index=".",
+                    nested_path=["."]
                 ))
 
 
@@ -1153,18 +1147,12 @@ class Table_usingSQLite(Container):
         index_to_column = {}  # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
         index_to_uid = {}  # FROM NESTED PATH TO THE INDEX OF UID
         sql_selects = []  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE)
-        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
+        nest_to_alias = {
+            nested_path: "__" + unichr(ord('a') + i) + "__"
+            for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())
+        }
 
-        # WE MUST HAVE THE ALIAS NAMES FOR THE TABLES
-        def copy_cols(cols):
-            output = set()
-            for c in cols:
-                c = copy(c)
-                c.es_index = nest_to_alias[c.nested_path[0]]
-                output.add(c)
-            return output
-        columns = {k: copy_cols(v) for k, v in self.columns.items()}
-        columns['_db'] = self.db
+        columns = {k: copy_cols(v, nest_to_alias) for k, v in self.columns.items()}
 
         sorts = []
         if query.sort:
@@ -1212,14 +1200,11 @@ class Table_usingSQLite(Container):
 
             # WE ALWAYS ADD THE UID AND ORDER
             column_number = index_to_uid[nested_path] = nested_doc_details['id_coord'] = len(sql_selects)
-            column_alias = _make_column_name(column_number)
-            sql_selects.append(alias + "." + quoted_UID + " AS " +column_alias)
+            sql_select = alias + "." + quoted_UID
+            sql_selects.append(sql_select+ " AS "+_make_column_name(column_number))
             if nested_path != ".":
-                column_alias = _make_column_name(column_number + 1)
-                sql_selects.append(alias + "." + quote_table(ORDER) + " AS " + column_alias)
-
-            # ALWAYS ADD SORTS
-
+                sql_select = alias + "." + quote_table(ORDER)
+                sql_selects.append(sql_select+ " AS "+_make_column_name(column_number))
 
             # WE DO NOT NEED DATA FROM TABLES WE REQUEST NOTHING FROM
             if nested_path not in active_columns:
@@ -1420,7 +1405,7 @@ class Table_usingSQLite(Container):
                 }]
             )
             return output
-        elif query.format=="table":
+        elif query.format == "table":
             # selects = listwrap(query.select)
             # num_column = len(selects)
             # header = selects.name
@@ -1487,7 +1472,7 @@ class Table_usingSQLite(Container):
                 for select_index, s in enumerate(selects):
                     sql_select = index_to_sql_select.get(select_index)
                     if not sql_select:
-                        select_clause.append("NULL AS " + _make_column_name(select_index))
+                        select_clause.append(selects[select_index])
                         continue
 
                     if startswith_field(sql_select.nested_path[0], nested_path):
@@ -2077,3 +2062,16 @@ def set_column(row, col, child, value):
         Dict(column)[child] = value
 
 
+def copy_cols(cols, nest_to_alias):
+    """
+    MAKE ALIAS FOR EACH COLUMN
+    :param cols:
+    :param nest_to_alias:  map from nesting level to subquery alias
+    :return:
+    """
+    output = set()
+    for c in cols:
+        c = copy(c)
+        c.es_index = nest_to_alias[c.nested_path[0]]
+        output.add(c)
+    return output

@@ -425,13 +425,13 @@ def compare_to_expected(query, result, expect):
     elif result.meta.format == "cube" and len(result.edges) == 1 and result.edges[0].name == "rownum" and not query.sort:
         header = list(result.data.keys())
 
-        result.data = cube2list(result.data)
-        result.data = jx.sort(result.data, header)
-        result.data = list2cube(result.data, header)
+        result_data = cube2list(result.data)
+        result_data = unwrap(jx.sort(result_data, header))
+        result.data = list2cube(result_data, header)
 
-        expect.data = cube2list(expect.data)
-        expect.data = jx.sort(expect.data, header)
-        expect.data = list2cube(expect.data, header)
+        expect_data = cube2list(expect.data)
+        expect_data = jx.sort(expect_data, header)
+        expect.data = list2cube(expect_data, header)
 
     # CONFIRM MATCH
     assertAlmostEqual(result, expect, places=6)
@@ -439,7 +439,7 @@ def compare_to_expected(query, result, expect):
 
 def cube2list(c):
     rows = zip(*[[(k, v) for v in a] for k, a in c.items()])
-    rows = [dict(r) for r in rows]
+    rows = [dict(list(r)) for r in rows]
     return rows
 
 

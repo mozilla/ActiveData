@@ -23,7 +23,7 @@ from pyLibrary.collections import UNION
 from pyLibrary.collections.matrix import Matrix, index_to_coordinate
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import listwrap, coalesce, Dict, wrap, Null, unwraplist, split_field, join_field, startswith_field, literal_field, unwrap, \
-    relative_field
+    relative_field, concat_field
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings, DataClass
@@ -210,7 +210,7 @@ class Table_usingSQLite(Container):
             self.columns[column.name].add(column)
 
         if column.type == "nested":
-            nested_table_name = join_field(split_field(self.name) + split_field(column.name))
+            nested_table_name = concat_field(self.name, column.name)
             # MAKE THE TABLE
             table = Table_usingSQLite(nested_table_name, self.db, exists=False)
             self.nested_tables[column.name] = table
@@ -303,7 +303,7 @@ class Table_usingSQLite(Container):
         # UPDATE THE NESTED VALUES
         for nested_column_name, nested_value in command.set.items():
             if get_type(nested_value) == "nested":
-                nested_table_name = join_field(split_field(self.name)+split_field(nested_column_name))
+                nested_table_name = concat_field(self.name, nested_column_name)
                 nested_table = nested_tables[nested_column_name]
                 self_primary_key = ",".join(quote_table(c.es_column) for u in self.uid for c in self.columns[u])
                 extra_key_name = UID_PREFIX+"id"+unicode(len(self.uid))
@@ -1230,7 +1230,7 @@ class Table_usingSQLite(Container):
                                     column_alias = _make_column_name(column_number)
                                     sql_selects.append(unsorted_sql + " AS " + column_alias)
                                     index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
-                                        push_name=join_field(split_field(s.name)+split_field(column.name)),
+                                        push_name=concat_field(s.name, column.name),
                                         push_column=si,
                                         push_child=".",
                                         pull=get_column(column_number),
@@ -1272,9 +1272,9 @@ class Table_usingSQLite(Container):
                     column_alias = _make_column_name(column_number)
                     sql_selects.append(unsorted_sql + " AS " + column_alias)
                     index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Dict(
-                        push_name=c.name,
-                        push_column=ci,
-                        push_child=".",
+                        push_name=s.name,
+                        push_column=si,
+                        push_child=relative_field(c.name, s.name),
                         pull=get_column(column_number),
                         sql=unsorted_sql,
                         type=c.type,
@@ -1342,7 +1342,7 @@ class Table_usingSQLite(Container):
                             if value == '':
                                 continue
 
-                            relative_path = relative_field(join_field(split_field(c.push_name)+[c.push_child]), curr_nested_path)
+                            relative_path = relative_field(concat_field(c.push_name, c.push_child), curr_nested_path)
                             if relative_path == ".":
                                 doc = value
                             else:
@@ -1693,7 +1693,7 @@ class Table_usingSQLite(Container):
 
             if isinstance(data, Mapping):
                 for k, v in data.items():
-                    cname = join_field(split_field(full_path) + [k])
+                    cname = concat_field(full_path, k)
                     value_type = get_type(v)
                     if value_type is None:
                         continue
@@ -1770,7 +1770,7 @@ class Table_usingSQLite(Container):
             else:
                 k = "."
                 v = data
-                cname = join_field(split_field(full_path) + [k])
+                cname = concat_field(full_path, k)
                 value_type = get_type(v)
                 if value_type is None:
                     return
@@ -1840,7 +1840,7 @@ class Table_usingSQLite(Container):
         for nested_path, details in collection.items():
             active_columns = wrap(list(details.active_columns))
             rows = details.rows
-            table_name = join_field(split_field(self.name)+split_field(nested_path))
+            table_name = concat_field(self.name, nested_path)
 
             if table_name == self.name:
                 # DO NOT REQUIRE PARENT OR ORDER COLUMNS
@@ -1977,7 +1977,7 @@ def is_type(value, type):
 def typed_column(name, type_):
     if type_ == "nested":
         type_ = "object"
-    return join_field(split_field(name) + ["$" + type_])
+    return concat_field(name, "$" + type_)
 
 
 def untyped_column(column_name):

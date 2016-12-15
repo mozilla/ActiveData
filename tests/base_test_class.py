@@ -22,7 +22,7 @@ from active_data.actions.query import replace_vars
 from pyLibrary import convert, jsons
 from pyLibrary.debugs.exceptions import extract_stack
 from pyLibrary.debugs.logs import Log, Except, constants
-from pyLibrary.dot import wrap, coalesce, unwrap, listwrap, Dict
+from pyLibrary.dot import wrap, coalesce, unwrap, listwrap, Dict, literal_field
 from pyLibrary.env import http
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, containers
@@ -423,31 +423,41 @@ def compare_to_expected(query, result, expect):
                     pass
 
     elif result.meta.format == "cube" and len(result.edges) == 1 and result.edges[0].name == "rownum" and not query.sort:
-        header = list(result.data.keys())
+        result_data, result_header = cube2list(result.data)
+        result_data = unwrap(jx.sort(result_data, result_header))
+        result.data = list2cube(result_data, result_header)
 
-        result.data = cube2list(result.data)
-        result.data = jx.sort(result.data, header)
-        result.data = list2cube(result.data, header)
-
-        expect.data = cube2list(expect.data)
-        expect.data = jx.sort(expect.data, header)
-        expect.data = list2cube(expect.data, header)
+        expect_data, expect_header = cube2list(expect.data)
+        expect_data = jx.sort(expect_data, expect_header)
+        expect.data = list2cube(expect_data, expect_header)
 
     # CONFIRM MATCH
     assertAlmostEqual(result, expect, places=6)
 
 
-def cube2list(c):
-    rows = zip(*[[(k, v) for v in a] for k, a in c.items()])
-    rows = [dict(r) for r in rows]
-    return rows
+def cube2list(cube):
+    """
+    RETURNS header SO THAT THE ORIGINAL CUBE CAN BE RECREATED
+    :param cube: A dict WITH VALUES BEING A MULTIDIMENSIONAL ARRAY OF UNIFORM VALUES
+    :return: (rows, header) TUPLE
+    """
+    header = list(unwrap(cube).keys())
+    rows = []
+    for r in zip(*[[(k, v) for v in a] for k, a in cube.items()]):
+        row = Dict()
+        for k, v in r:
+           row[k]=v
+        rows.append(unwrap(row))
+    return rows, header
 
 
 def list2cube(rows, header):
-    return {
-        h: [r[h] for r in rows]
-        for h in header
-    }
+    output = {h: [] for h in header}
+    for r in rows:
+        r = wrap(r)
+        for h in header:
+            output[h].append(r[h])
+    return output
 
 
 def sort_table(result):

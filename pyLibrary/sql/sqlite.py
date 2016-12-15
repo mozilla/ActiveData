@@ -13,6 +13,9 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import sqlite3
+from string import join
+
+from pyLibrary.strings import expand_template
 
 from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except, extract_stack, ERROR
@@ -120,6 +123,9 @@ class Sqlite(DB):
                             result.meta.format = "table"
                             result.header = [d[0] for d in curr.description] if curr.description else None
                             result.data = curr.fetchall()
+                            if DEBUG and result.data:
+                                text = convert.table2csv(list(result.data))
+                                Log.note("Result:\n{{data}}", data=text)
                         except Exception, e:
                             e = Except.wrap(e)
                             result.exception = Except(ERROR, "Problem with\n{{command|indent}}", command=command, cause=e)

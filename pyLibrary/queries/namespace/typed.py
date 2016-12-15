@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, wrap, split_field, join_field
+from pyLibrary.dot import set_default, wrap, split_field, join_field, concat_field
 from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expressions import Expression
@@ -45,7 +45,7 @@ class Typed(Namespace):
         """
         if isinstance(expr, Expression):
             vars_ = expr.vars()
-            rename = {v: join_field(split_field(v)+["$value"]) for v in vars_}
+            rename = {v: concat_field(v, "$value") for v in vars_}
             return expr.map(rename)
 
         if expr is True or expr == None or expr is False:

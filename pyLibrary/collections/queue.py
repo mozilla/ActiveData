@@ -28,6 +28,7 @@ class Queue(object):
     +------------+---------+----------+
     """
     def __init__(self):
+        self.set = set()
         self.list = []
 
     def __nonzero__(self):
@@ -37,8 +38,9 @@ class Queue(object):
         return self.list.__len__()
 
     def add(self, value):
-        if value in self.list:
+        if value in self.set:
             return self
+        self.set.add(value)
         self.list.append(value)
 
     def push(self, value):
@@ -53,5 +55,6 @@ class Queue(object):
             return None
 
         output = self.list.pop(0)
+        self.set.remove(output)
         return output
 

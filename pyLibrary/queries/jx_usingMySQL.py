@@ -388,7 +388,7 @@ def _esfilter2sqlwhere(db, esfilter):
                         return esfilter2sqlwhere(db, {"missing": col})
                     else:
                         return "false"
-            return db.quote_column(col) + " in (" + ",\n".join([db.quote_value(val) for val in v]) + ")"
+            return db.quote_column(col) + SQL(" in (" + ",\n".join([db.quote_value(val) for val in v]) + ")")
     elif esfilter.script:
         return "(" + esfilter.script + ")"
     elif esfilter.range:
@@ -404,7 +404,7 @@ def _esfilter2sqlwhere(db, esfilter):
             max = coalesce(r["lte"], r["<="])
             if min and max:
                 # SPECIAL CASE (BETWEEN)
-                return db.quote_column(col) + " BETWEEN " + db.quote_value(min) + " AND " + db.quote_value(max)
+                return db.quote_column(col) + SQL(" BETWEEN ") + db.quote_value(min) + SQL(" AND ") + db.quote_value(max)
             else:
                 return " AND ".join(
                     db.quote_column(col) + name2sign[sign] + db.quote_value(value)

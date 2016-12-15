@@ -543,23 +543,23 @@ class MySQL(object):
         """
         try:
             if value == None:
-                return "NULL"
+                return SQL("NULL")
             elif isinstance(value, SQL):
                 if not value.param:
                     # value.template CAN BE MORE THAN A TEMPLATE STRING
                     return self.quote_sql(value.template)
                 param = {k: self.quote_sql(v) for k, v in value.param.items()}
-                return expand_template(value.template, param)
+                return SQL(expand_template(value.template, param))
             elif isinstance(value, basestring):
-                return self.db.literal(value)
+                return SQL(self.db.literal(value))
             elif isinstance(value, datetime):
-                return "str_to_date('" + value.strftime("%Y%m%d%H%M%S") + "', '%Y%m%d%H%i%s')"
+                return SQL("str_to_date('" + value.strftime("%Y%m%d%H%M%S") + "', '%Y%m%d%H%i%s')")
             elif hasattr(value, '__iter__'):
-                return self.db.literal(json_encode(value))
+                return SQL(self.db.literal(json_encode(value)))
             elif isinstance(value, Mapping):
-                return self.db.literal(json_encode(value))
+                return SQL(self.db.literal(json_encode(value)))
             elif Math.is_number(value):
-                return unicode(value)
+                return SQL(unicode(value))
             else:
                 return self.db.literal(value)
         except Exception, e:

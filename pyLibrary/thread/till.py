@@ -25,6 +25,8 @@ from pyLibrary.times.durations import Duration
 
 DEBUG = True
 INTERVAL = 0.1
+
+_till_locker = _allocate_lock()
 next_ping = _time()
 done = Signal("Timers shutdown")
 done.go()
@@ -35,9 +37,7 @@ class Till(Signal):
     TIMEOUT AS A SIGNAL
     """
     enabled = False
-    all_timers = []
-    locker = _allocate_lock()
-
+    new_timers = []
 
     def __new__(cls, till=None, timeout=None, seconds=None):
         if not Till.enabled:
@@ -58,38 +58,47 @@ class Till(Signal):
         elif seconds != None:
             timeout = _time() + seconds
 
-        with Till.locker:
+        with _till_locker:
             next_ping = min(next_ping, timeout)
-            Till.all_timers.append((timeout, self))
+            Till.new_timers.append((timeout, self))
 
     @classmethod
     def daemon(cls, please_stop):
         global next_ping
 
         Till.enabled = True
+        sorted_timers = []
+
         try:
             while not please_stop:
                 now = _time()
-                with Till.locker:
-                    if next_ping > now:
-                        _sleep(min(next_ping - now, INTERVAL))
-                        continue
 
+                with _till_locker:
+                    later = next_ping > now
+
+                if later:
+                    _sleep(min(next_ping - now, INTERVAL))
+                    continue
+
+                with _till_locker:
                     next_ping = now + INTERVAL
-                    work = None
-                    if Till.all_timers:
-                        Till.all_timers.sort(key=lambda r: r[0])
-                        for i, (t, s) in enumerate(Till.all_timers):
-                            if now < t:
-                                work, Till.all_timers[:i] = Till.all_timers[:i], []
-                                next_ping = min(next_ping, Till.all_timers[0][0])
-                                break
-                        else:
-                            work, Till.all_timers = Till.all_timers, []
+                    new_timers, Till.new_timers = Till.new_timers, []
 
-                if work:
-                    for t, s in work:
-                        s.go()
+                sorted_timers.extend(new_timers)
+
+                if sorted_timers:
+                    sorted_timers.sort(key=lambda r: r[0])
+                    for i, (t, s) in enumerate(sorted_timers):
+                        if now < t:
+                            work, sorted_timers[:i] = sorted_timers[:i], []
+                            next_ping = min(next_ping, sorted_timers[0][0])
+                            break
+                    else:
+                        work, sorted_timers = sorted_timers, []
+
+                    if work:
+                        for t, s in work:
+                            s.go()
 
         except Exception, e:
             from pyLibrary.debugs.logs import Log
@@ -98,8 +107,8 @@ class Till(Signal):
         finally:
             Till.enabled = False
             # TRIGGER ALL REMAINING TIMERS RIGHT NOW
-            with Till.locker:
-                work, Till.all_timers = Till.all_timers, []
+            with _till_locker:
+                work, Till.new_timers = Till.new_timers, []
             for t, s in work:
                 s.go()
 

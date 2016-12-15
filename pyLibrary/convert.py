@@ -31,7 +31,7 @@ from pyLibrary import strings
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, wrap_leaves, unwrap, unwraplist, split_field, join_field
+from pyLibrary.dot import wrap, wrap_leaves, unwrap, unwraplist, split_field, join_field, concat_field
 from pyLibrary.env.big_data import FileString, safe_size
 from pyLibrary.jsons import quote
 from pyLibrary.jsons.encoder import json_encoder, pypy_json_encode
@@ -674,7 +674,7 @@ def json_schema_to_markdown(schema):
     def _inner(schema, parent_name, indent):
         more_lines = []
         for k,v in schema.items():
-            full_name = join_field(split_field(parent_name)+[k])
+            full_name = concat_field(parent_name, k)
             details = indent+"* "+_md_code(full_name)
             if v.type:
                 details += " - "+_md_italic(v.type)
@@ -711,3 +711,21 @@ def json_schema_to_markdown(schema):
                 lines.append(v.description)
 
     return "\n".join(lines)
+
+
+def table2csv(table_data):
+    """
+    :param table_data: expecting a list of tuples
+    :return: text in nice formatted csv
+    """
+    text_data = [tuple(value2json(vals, pretty=True) for vals in rows) for rows in table_data]
+
+    col_widths = [max(len(text) for text in cols) for cols in zip(*text_data)]
+    template = ", ".join(
+        "{{" + unicode(i) + "|left_align(" + unicode(w) + ")}}"
+        for i, w in enumerate(col_widths)
+    )
+    text = "\n".join(expand_template(template, d) for d in text_data)
+    return text
+
+

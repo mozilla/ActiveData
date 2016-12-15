@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import __builtin__
 from __builtin__ import unicode as _unicode
+from __builtin__ import round as _round
 
 
 import re
@@ -302,6 +303,18 @@ def right_align(value, length):
         return value[-length:]
 
 
+def left_align(value, length):
+    if length <= 0:
+        return u""
+
+    value = _unicode(value)
+
+    if len(value) < length:
+        return value + (" " * (length - len(value)))
+    else:
+        return value[:length]
+
+
 def left(value, len):
     if len <= 0:
         return u""
@@ -438,7 +451,10 @@ def _simple_expand(template, seq):
         try:
             val = seq[-depth]
             if var:
-                val = val[var]
+                if isinstance(val, (list, tuple)) and float(var) == _round(float(var), 0):
+                    val = val[int(var)]
+                else:
+                    val = val[var]
             for func_name in ops[1:]:
                 parts = func_name.split('(')
                 if len(parts) > 1:

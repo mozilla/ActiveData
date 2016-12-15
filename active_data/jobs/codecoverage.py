@@ -261,7 +261,7 @@ def loop(source, coverage_summary_index, settings, please_stop):
                         settings,
                         please_stop=please_stop
                     )
-                    for i in range(NUM_THREAD)
+                    for i in range(coalesce(settings.threads, NUM_THREAD))
                 ]
 
                 # ADD STOP MESSAGE

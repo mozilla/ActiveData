@@ -11,17 +11,17 @@ The main distinction between this library and Python's is:
 1. **Multi-threaded queues do not use serialization** - Serialization is great in the general case, where you may also be communicating between processes, but it is a needless overhead for single-process multi-threading. It is left to the programmer to ensure the messages put on the queue are not changed, which is not ominous demand.
 2. **Shutdown order is deterministic and explicit** - Python's threading library is missing strict conventions for controlled and orderly shutdown. These conventions eliminate the need for `interrupt()` and `abort()`, both of which are unstable idioms when using resources.   Each thread can shutdown on its own terms, but is expected to do so expediently.
 
-  * All threads are required to accept a `please_stop` token and are expected to test for its signal in a timely manner and exit when signalled.
-  * All threads have a parent - The parent is responsible for ensuring their children get the `please_stop` signal, and are dead, before stopping themselves.
-3. Uses **Signals** to simplify logical dependencies among multiple threads, events, and timeouts.
-4. **Logging and Profiling is Integrated** - Logging and exception handling is seamlessly included: This means logs are centrally handled, and thread safe. Parent threads have access to uncaught child thread exceptions, and the cProfiler properly aggregates results from the multiple threads.
+  * All threads are required to accept a `please_stop` token and are expected to test it in a timely manner and exit when signalled.
+  * All threads have a parent - The parent is responsible for ensuring their children get the `please_stop` signal, and are dead, before stopping themselves. This responsibility is baked into the thread spawning process, so you need not deal with it unless you want.
+3. Uses [**Signals**](#the-signal-and-till-classes) to simplify logical dependencies among multiple threads, events, and timeouts.
+4. **Logging and Profiling is Integrated** - Logging and exception handling is seamlessly integrated: This means logs are centrally handled, and thread safe. Parent threads have access to uncaught child thread exceptions, and the cProfiler properly aggregates results from the multiple threads.
 
 
 ###What's it used for###
 
 A good amount of time is spent waiting for underlying C libraries and OS
 services to respond to network and file access requests. Multiple
-threads can make your code faster despite the GIL when dealing with those
+threads can make your code faster, despite the GIL, when dealing with those
 requests. For example, by moving logging off the main thread, we can get
 up to 15% increase in overall speed because we no longer have the main thread
 waiting for disk writes or remote logging posts. Please note, this level of
@@ -83,10 +83,9 @@ Locks are identical to [threading monitors](https://en.wikipedia.org/wiki/Monito
 In this example, we look for stuff `todo`, and if there is none, we wait for a second. During that time others can acquire the `lock` and add `todo` items. Upon releasing the the `lock`, our example code will immediately resume to see what's available, waiting again if nothing is found.
 
 
-
 ##The `Signal` and `Till` Classes
 
-[The `Signal` class](https://github.com/klahnakoski/pyLibrary/blob/dev/pyLibrary/thread/signal.py) is like a binary semaphore that can only be signalled once. It can be signalled by any thread, subsequent signals have no effect. Any thread can wait on a `Signal`; and once signalled, all waits are unblocked, including all subsequent waits. Its current state can be accessed by any thread without blocking. `Signal` is used to model thread-safe state advancement. It initializes to `False`, and when signalled (with `go()`) becomes `True`.  It can not be reversed.  
+[The `Signal` class](https://github.com/klahnakoski/pyLibrary/blob/dev/pyLibrary/thread/signal.py) is like a binary semaphore that can be signalled only once. It can be signalled by any thread. Subsequent signals have no effect. Any thread can wait on a `Signal`; and once signalled, all waits are unblocked, including all subsequent waits. Its current state can be accessed by any thread without blocking. `Signal` is used to model thread-safe state advancement. It initializes to `False`, and when signalled (with `go()`) becomes `True`.  It can not be reversed.  
 
 	is_done = Signal()
 	yield is_done

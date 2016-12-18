@@ -1,5 +1,6 @@
 {
-	"url":"http://activedata.allizom.org/query",
+	"threads": 1,
+	"url": "http://activedata.allizom.org/query",
 	"batch_size": 1,
 	"constants":{
 		"pyLibrary.env.http.default_headers":{

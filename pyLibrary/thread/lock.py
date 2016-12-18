@@ -76,11 +76,9 @@ class Lock(object):
             waiter = self.waiting.pop()
             waiter.go()
 
-        try:
-            waiter = Signal()
-            self.waiting.appendleft(waiter)
-            self.lock.release()
-            (waiter | till).wait_for_go()
-            return not not waiter
-        finally:
-            self.lock.acquire()
+        waiter = Signal()
+        self.waiting.appendleft(waiter)
+        self.lock.release()
+        (waiter | till).wait_for_go()
+        self.lock.acquire()
+        return not not waiter

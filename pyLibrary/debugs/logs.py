@@ -196,7 +196,7 @@ class Log(object):
             template = "\n" + template
 
         if cls.trace:
-            log_template = "{{machine.name}} - {{timestamp|datetime}} - {{thread.name}} - \"{{location.file}}:{{location.line}}\" ({{location.method}}) - " + template.replace("{{", "{{params.")
+            log_template = "{{machine.name}} (pid{{machine.pid}}) - {{timestamp|datetime}} - {{thread.name}} - \"{{location.file}}:{{location.line}}\" ({{location.method}}) - " + template.replace("{{", "{{params.")
             f = sys._getframe(stack_depth + 1)
             log_params.location = {
                 "line": f.f_lineno,
@@ -452,6 +452,7 @@ def write_profile(profile_settings, stats):
 
 # GET THE MACHINE METADATA
 machine_metadata = wrap({
+    "pid":  os.getpid(),
     "python": platform.python_implementation(),
     "os": (platform.system() + platform.release()).strip(),
     "name": platform.node()

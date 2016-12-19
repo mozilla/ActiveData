@@ -77,7 +77,7 @@ def zipall(*args):
     """
     LOOP THROUGH LONGEST OF THE LISTS, None-FILL THE REMAINDER
     """
-    iters = [a.__iter__() for a in args]
+    iters = [iter(a) for a in args]
 
     def _next(_iter):
         try:
@@ -86,11 +86,11 @@ def zipall(*args):
             return True, None
 
     while True:
-        output = zip(*(_next(a) for a in iters))
-        if all(output[0]):
+        is_done, value = zip(*(_next(a) for a in iters))
+        if all(is_done):
             return
         else:
-            yield output[1]
+            yield value
 
 
 def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=None):

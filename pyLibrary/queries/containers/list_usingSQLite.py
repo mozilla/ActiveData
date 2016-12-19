@@ -29,7 +29,7 @@ from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings, DataClass
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container, STRUCT
-from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
+from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, TimeDomain
 from pyLibrary.queries.expressions import jx_expression, Variable, sql_type_to_json_type, TupleOp, LeavesOp
 from pyLibrary.queries.meta import Column
 from pyLibrary.queries.query import QueryOp
@@ -875,6 +875,31 @@ class Table_usingSQLite(Container):
                     ) +
                     ")"
                 )
+            elif isinstance(query_edge.domain, TimeDomain):
+                domain_name = "d"+unicode(edge_index)+"c0"
+                domain_names = [domain_name]
+                d = query_edge.domain
+                if d.max == None or d.min == None or d.min == d.max:
+                    Log.error("Invalid time domain: {{range|json}}", range=d)
+                if len(edge_names) == 1:
+                    domain = self._make_range_domain(domain=d, column_name=domain_name)
+                    limit = Math.min(query.limit, query_edge.domain.limit)
+                    domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
+                              "\nLIMIT\n"+unicode(limit)
+                    on_clause = " AND ".join(
+                        edge_alias + "." + k + " <= " + v + " AND " + v + "< (" + edge_alias + "." + k + " + " + unicode(
+                            d.interval) + ")"
+                        for k, (t, v) in zip(domain_names, edge_values)
+                    )
+                elif query_edge.range:
+                    domain = self._make_range_domain(domain=d, column_name=domain_name)
+                    limit = Math.min(query.limit, query_edge.domain.limit)
+                    domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
+                              "\nLIMIT\n"+unicode(limit)
+                    on_clause = edge_alias + "." + domain_name + " < " + edge_values[1][1] + " AND " + \
+                                edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + unicode(d.interval) + ")"
+                else:
+                    Log.error("do not know how to handle")
             else:
                 Log.note("not handled")
 

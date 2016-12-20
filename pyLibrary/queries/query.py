@@ -728,7 +728,9 @@ def _normalize_sort(sort=None):
 
 sort_direction = {
     "asc": 1,
+    "ascending": 1,
     "desc": -1,
+    "descending": -1,
     "none": 0,
     1: 1,
     0: 0,

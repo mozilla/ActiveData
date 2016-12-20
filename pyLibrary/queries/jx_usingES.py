@@ -52,7 +52,20 @@ class FromES(Container):
             return Container.__new__(cls)
 
     @use_settings
-    def __init__(self, host, index, type=None, alias=None, name=None, port=9200, read_only=True, typed=None, settings=None):
+    def __init__(
+        self,
+        host,
+        index,
+        type=None,
+        alias=None,
+        name=None,
+        port=9200,
+        read_only=True,
+        timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
+        consistency="one",  # ES WRITE CONSISTENCY (https://www.elastic.co/guide/en/elasticsearch/reference/1.7/docs-index_.html#index-consistency)
+        typed=None,
+        settings=None
+    ):
         Container.__init__(self, None)
         if not containers.config.default:
             containers.config.default.settings = settings
@@ -238,7 +251,9 @@ class FromES(Container):
             response = self._es.cluster.post(
                 self._es.path + "/_bulk",
                 data=content,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
+                timeout=self.settings.timeout,
+                params={"consistency": self.settings.consistency}
             )
             if response.errors:
                 Log.error("could not update: {{error}}", error=[e.error for i in response["items"] for e in i.values() if e.status not in (200, 201)])

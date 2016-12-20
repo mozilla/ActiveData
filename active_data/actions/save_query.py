@@ -117,7 +117,7 @@ class SaveQueries(object):
         json = convert.value2json(query)
         hash = convert.unicode2utf8(json)
 
-        #TRY MANY HASHES AT ONCE
+        # TRY MANY HASHES AT ONCE
         hashes = [None] * HASH_BLOCK_SIZE
         for i in range(HASH_BLOCK_SIZE):
             hash = hashlib.sha1(hash).digest()

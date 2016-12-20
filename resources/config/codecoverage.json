@@ -1,5 +1,5 @@
 {
-	"threads": 4,
+	"threads": 1,
 	"url": "http://activedata.allizom.org/query",
 	"batch_size": 1000,
 	"constants":{

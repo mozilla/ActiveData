@@ -18,7 +18,7 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 from time import time as _time
 
-from pyLibrary.maths import Math
+_utcnow = datetime.utcnow
 
 try:
     import pytz
@@ -26,6 +26,7 @@ except Exception:
     pass
 
 from pyLibrary.dot import Null
+from pyLibrary.maths import Math
 from pyLibrary.times.durations import Duration, MILLI_VALUES
 from pyLibrary.vendor.dateutil.parser import parse as parse_date
 from pyLibrary.strings import deformat
@@ -114,12 +115,12 @@ class Date(object):
     @staticmethod
     def now():
         candidate = _time()
-        temp = datetime.utcnow()
+        temp = _utcnow()
         unix = datetime2unix(temp)
         if abs(candidate - unix) > 0.1:
             from pyLibrary.debugs.logs import Log
 
-            Log.warning("_time() and datetime.utcnow() is off by {{amount}}", amount=candidate - unix)
+            Log.warning("_time() and _utcnow() is off by {{amount}}", amount=unix - candidate)
         return unix2Date(datetime2unix(temp))
 
     @staticmethod
@@ -131,7 +132,7 @@ class Date(object):
 
     @staticmethod
     def today():
-        return unix2Date(math.floor(datetime2unix(datetime.utcnow()) / 86400) * 86400)
+        return unix2Date(math.floor(datetime2unix(_utcnow()) / 86400) * 86400)
 
     @staticmethod
     def range(min, max, interval):
@@ -337,11 +338,11 @@ def unicode2Date(value, format=None):
 
     value = value.strip()
     if value.lower() == "now":
-        return unix2Date(datetime2unix(datetime.utcnow()))
+        return unix2Date(datetime2unix(_utcnow()))
     elif value.lower() == "today":
-        return unix2Date(math.floor(datetime2unix(datetime.utcnow()) / 86400) * 86400)
+        return unix2Date(math.floor(datetime2unix(_utcnow()) / 86400) * 86400)
     elif value.lower() in ["eod", "tomorrow"]:
-        return unix2Date(math.floor(datetime2unix(datetime.utcnow()) / 86400) * 86400 + 86400)
+        return unix2Date(math.floor(datetime2unix(_utcnow()) / 86400) * 86400 + 86400)
 
     if any(value.lower().find(n) >= 0 for n in ["now", "today", "eod", "tomorrow"] + list(MILLI_VALUES.keys())):
         return parse_time_expression(value)

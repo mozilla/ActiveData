@@ -93,4 +93,8 @@ class TextLog_usingEmail(TextLog):
             Log.warning("Could not send", e)
 
 
-
+# TODO: ADD CC PARAMETER TO SEND EMAIL TO OTHERS:
+#
+#     "cc":[
+#         {"to_address": "gmierz1@live.ca", "where":{"eq":{"type":"warning"}}}
+#     ]

@@ -74,10 +74,20 @@ class Till(Signal):
                 now = _time()
 
                 with _till_locker:
-                    later = next_ping > now
+                    later = next_ping - now
 
-                if later:
-                    _sleep(min(next_ping - now, INTERVAL))
+                if later > 0:
+                    try:
+                        _sleep(min(later, INTERVAL))
+                    except Exception, e:
+                        from pyLibrary.debugs.logs import Log
+
+                        Log.warning(
+                            "Call to sleep failed with ({{later}}, {{interval}})",
+                            later=later,
+                            interval=INTERVAL,
+                            cause=e
+                        )
                     continue
 
                 with _till_locker:

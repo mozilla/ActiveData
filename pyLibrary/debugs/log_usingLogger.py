@@ -14,12 +14,11 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import logging
-import sys
 
 from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.log_usingThreadedStream import TextLog_usingThreadedStream, time_delta_pusher
 from pyLibrary.debugs.logs import Log
-from pyLibrary.debugs.text_logs import TextLog, DEBUG_LOGGING
+from pyLibrary.debugs.text_logs import TextLog
 from pyLibrary.dot import unwrap
 from pyLibrary.thread import threads
 from pyLibrary.thread.threads import Thread

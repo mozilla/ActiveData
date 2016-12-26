@@ -36,7 +36,7 @@ from pyLibrary.times.durations import SECOND
 _convert = None
 _Except = None
 _Log = None
-DEBUG = True
+DEBUG = False
 
 MAX_DATETIME = datetime(2286, 11, 20, 17, 46, 39)
 DEFAULT_WAIT_TIME = timedelta(minutes=10)
@@ -328,7 +328,7 @@ class MainThread(object):
 
         children = copy(self.children)
         for c in reversed(children):
-            if c.name and DEBUG:
+            if DEBUG and c.name:
                 _Log.note("Stopping thread {{name|quote}}", name=c.name)
             try:
                 c.stop()
@@ -419,7 +419,7 @@ class Thread(object):
 
     def stop(self):
         for c in copy(self.children):
-            if c.name and DEBUG:
+            if DEBUG and c.name:
                 _Log.note("Stopping thread {{name|quote}}", name=c.name)
             c.stop()
         self.please_stop.go()

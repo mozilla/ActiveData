@@ -18,15 +18,15 @@ from __future__ import unicode_literals
 import sys
 import thread
 import types
-from collections import deque, Mapping
+from collections import deque
 from copy import copy
 from datetime import datetime, timedelta
+from time import sleep as _sleep
 
-from pyLibrary import strings, convert
+from pyLibrary import strings
 from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.profiles import CProfiler
-from pyLibrary.dot import coalesce, Dict, unwraplist, Null, wrap
-from pyLibrary.maths.randoms import Random
+from pyLibrary.dot import coalesce, Dict, unwraplist, Null
 from pyLibrary.thread.lock import Lock
 from pyLibrary.thread.signal import Signal
 from pyLibrary.thread.till import Till
@@ -95,6 +95,11 @@ class Queue(object):
             _Log.error("Do not add to closed queue")
 
         with self.lock:
+            if value is Thread.STOP:
+                # INSIDE THE lock SO THAT EXITING WILL RELEASE wait()
+                self.keep_running = False
+                return
+
             self._wait_for_queue_space(timeout=None)
             if self.keep_running:
                 if self.unique:
@@ -137,10 +142,17 @@ class Queue(object):
             if self.keep_running:
                 if self.unique:
                     for v in values:
+                        if v is Thread.STOP:
+                            self.keep_running = False
+                            continue
                         if v not in self.queue:
                             self.queue.append(v)
                 else:
-                    self.queue.extend(values)
+                    for v in values:
+                        if v is Thread.STOP:
+                            self.keep_running = False
+                            continue
+                        self.queue.append(v)
         return self
 
     def _wait_for_queue_space(self, timeout=DEFAULT_WAIT_TIME):
@@ -199,16 +211,13 @@ class Queue(object):
         if till is not None and not isinstance(till, Signal):
             _Log.error("expecting a signal")
 
-        with self.lock:
-            while self.keep_running:
+        while self.keep_running:
+            with self.lock:
                 if self.queue:
                     value = self.queue.popleft()
-                    if value is Thread.STOP:  # SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
-                        self.keep_running = False
                     return value
 
-                if not self.lock.wait(till=till):
-                    break
+                self.lock.wait(till=till)
             if self.keep_running:
                 return None
 
@@ -221,18 +230,13 @@ class Queue(object):
         NON-BLOCKING POP ALL IN QUEUE, IF ANY
         """
         with self.lock:
-            if not self.keep_running:
-                return [Thread.STOP]
-            if not self.queue:
-                return []
-
-            for v in self.queue:
-                if v is Thread.STOP:  # SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
-                    self.keep_running = False
-
             output = list(self.queue)
             self.queue.clear()
+
+        if self.keep_running:
             return output
+        else:
+            return output + [Thread.STOP]
 
     def pop_one(self):
         """
@@ -501,7 +505,7 @@ class Thread(object):
 
         if DEBUG:
             _Log.note("{{parent|quote}} waiting on thread {{child|quote}}", parent=Thread.current().name, child=self.name)
-        (self.stopped | till).wait_for_go()
+        (self.stopped | till).wait()
         if self.stopped:
             self.parent.remove_child(self)
             if not self.end_of_thread.exception:
@@ -531,7 +535,7 @@ class Thread(object):
     @staticmethod
     def sleep(seconds=None, till=None, timeout=None, please_stop=None):
         waiter = Till(seconds=seconds, till=till, timeout=timeout) | please_stop
-        waiter.wait_for_go()
+        waiter.wait()
 
     @staticmethod
     def wait_for_shutdown_signal(
@@ -543,25 +547,20 @@ class Thread(object):
         SHUTDOWN IS REQUESTED
 
         SLEEP UNTIL keyboard interrupt, OR please_stop, OR "exit"
+
+        :param please_stop:
+        :param allow_exit:
+        :return:
         """
         if not isinstance(please_stop, Signal):
             please_stop = Signal()
 
-        def stopper():
-            try:
-                MAIN_THREAD.stop()
-            except Exception, e:
-                e = Except.wrap(e)
-                _Log.warning("Problem with threads", cause=e)
-            sys.exit(0)
-
-        please_stop.on_go(lambda: thread.start_new_thread(stopper, ()))
+        please_stop.on_go(lambda: thread.start_new_thread(_stop_main_thread, ()))
 
         if Thread.current() != MAIN_THREAD:
             if not _Log:
                 _late_import()
             _Log.error("Only the main thread can sleep forever (waiting for KeyboardInterrupt)")
-
 
         try:
             if allow_exit:
@@ -569,10 +568,9 @@ class Thread(object):
             else:
                 _wait_for_interrupt(please_stop)
         except (KeyboardInterrupt, SystemExit), _:
-            please_stop.go()
             _Log.alert("SIGINT Detected!  Stopping...")
-
-        MAIN_THREAD.stop()
+        finally:
+            please_stop.go()
 
     @staticmethod
     def current():
@@ -582,6 +580,16 @@ class Thread(object):
                 return ALL[id]
             except KeyError:
                 return MAIN_THREAD
+
+
+def _stop_main_thread():
+    try:
+        MAIN_THREAD.stop()
+    except Exception, e:
+        e = Except.wrap(e)
+        _Log.warning("Problem with threads", cause=e)
+    sys.exit(0)
+
 
 
 class ThreadedQueue(Queue):
@@ -754,7 +762,7 @@ def _wait_for_exit(please_stop):
         # if DEBUG:
         #     Log.note("inside wait-for-shutdown loop")
         if cr_count > 30:
-            Thread.sleep(seconds=3, please_stop=please_stop)
+            (Till(seconds=3)|please_stop).wait()
         try:
             line = sys.stdin.readline()
         except Exception, e:
@@ -776,11 +784,11 @@ def _wait_for_exit(please_stop):
 
 
 def _wait_for_interrupt(please_stop):
+    if DEBUG:
+        _Log.note("inside wait-for-shutdown loop")
     while not please_stop:
-        if DEBUG:
-            _Log.note("inside wait-for-shutdown loop")
         with suppress_exception:
-            Thread.sleep(please_stop=please_stop)
+            _sleep(1)
 
 
 def _interrupt_main_safely():

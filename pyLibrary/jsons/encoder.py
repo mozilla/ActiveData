@@ -51,10 +51,10 @@ try:
 except Exception, e:
     if use_pypy:
         sys.stdout.write(
-            "*********************************************************\n"
-            "** The PyLibrary JSON serializer for PyPy is in use!\n"
-            "** Currently running CPython: This will run sloooow!\n"
-            "*********************************************************\n"
+            b"*********************************************************\n"
+            b"** The PyLibrary JSON serializer for PyPy is in use!\n"
+            b"** Currently running CPython: This will run sloooow!\n"
+            b"*********************************************************\n"
         )
 
     class UnicodeBuilder(list):

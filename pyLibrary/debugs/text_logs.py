@@ -9,21 +9,19 @@
 #
 
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
-
-import sys
+from __future__ import division
+from __future__ import unicode_literals
 
 from pyLibrary.debugs.exceptions import suppress_exception
-from pyLibrary.thread.lock import Lock
 from pyLibrary.strings import expand_template
-
-DEBUG_LOGGING = False
+from pyLibrary.thread.lock import Lock
 
 _Except = None
 _Queue = None
 _Thread = None
+_Till = None
+_File = None
 _Log = None
 
 
@@ -31,19 +29,29 @@ def _delayed_imports():
     global _Except
     global _Queue
     global _Thread
+    global _Till
+    global _File
     global _Log
 
     from pyLibrary.debugs.exceptions import Except as _Except
     from pyLibrary.thread.threads import Queue as _Queue
     from pyLibrary.thread.threads import Thread as _Thread
+    from pyLibrary.thread.threads import Till as _Till
+    from pyLibrary.env.files import File as _File
     from pyLibrary.debugs.logs import Log as _Log
 
     _ = _Except
     _ = _Queue
     _ = _Thread
+    _ = _Till
+    _ = _File
     _ = _Log
 
+
 class TextLog(object):
+    """
+    ABSTRACT BASE CLASS FOR JSON LOGGING
+    """
     def write(self, template, params):
         pass
 
@@ -55,9 +63,10 @@ class TextLog_usingFile(TextLog):
     def __init__(self, file):
         assert file
 
-        from pyLibrary.env.files import File
+        if not _Log:
+            _delayed_imports()
 
-        self.file = File(file)
+        self.file = _File(file)
         if self.file.exists:
             self.file.backup()
             self.file.delete()
@@ -65,8 +74,12 @@ class TextLog_usingFile(TextLog):
         self.file_lock = Lock("file lock for logging")
 
     def write(self, template, params):
-        with self.file_lock:
-            self.file.append(expand_template(template, params))
+        try:
+            with self.file_lock:
+                self.file.append(expand_template(template, params))
+        except Exception, e:
+            _Log.warning("Problem writing to file {{file}}, waiting...", file=file.name, cause=e)
+            _Till(seconds=5).wait()
 
 
 class TextLog_usingThread(TextLog):
@@ -74,23 +87,26 @@ class TextLog_usingThread(TextLog):
     def __init__(self, logger):
         if not _Log:
             _delayed_imports()
+        if not isinstance(logger, TextLog):
+            _Log.error("Expecting a TextLog")
 
-        self.queue = _Queue("logs", max=10000, silent=True, allow_add_after_close=True)
+        self.queue = _Queue("Queue for " + self.__class__.__name__, max=10000, silent=True, allow_add_after_close=True)
         self.logger = logger
 
-        def worker(please_stop):
-            while not please_stop:
-                _Thread.sleep(1)
-                logs = self.queue.pop_all()
-                for log in logs:
-                    if log is _Thread.STOP:
-                        if DEBUG_LOGGING:
-                            sys.stdout.write(b"TextLog_usingThread.worker() sees stop, filling rest of queue\n")
-                        please_stop.go()
-                    else:
-                        self.logger.write(**log)
+        def worker(logger, please_stop):
+            try:
+                while not please_stop:
+                    _Till(seconds=1).wait()
+                    logs = self.queue.pop_all()
+                    for log in logs:
+                        if log is _Thread.STOP:
+                            please_stop.go()
+                        else:
+                            logger.write(**log)
+            finally:
+                logger.stop()
 
-        self.thread = _Thread("log thread", worker)
+        self.thread = _Thread("Thread for " + self.__class__.__name__, worker, logger)
         self.thread.parent.remove_child(self.thread)  # LOGGING WILL BE RESPONSIBLE FOR THREAD stop()
         self.thread.start()
 
@@ -100,27 +116,16 @@ class TextLog_usingThread(TextLog):
             return self
         except Exception, e:
             e = _Except.wrap(e)
-            sys.stdout.write(b"IF YOU SEE THIS, IT IS LIKELY YOU FORGOT TO RUN Log.start() FIRST\n")
             raise e  # OH NO!
 
     def stop(self):
-        try:
-            if DEBUG_LOGGING:
-                sys.stdout.write(b"injecting stop into queue\n")
+        with suppress_exception:
             self.queue.add(_Thread.STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
-            if DEBUG_LOGGING:
-                sys.stdout.write(b"TextLog_usingThread telling logger to stop\n")
             self.logger.stop()
-        except Exception, e:
-            if DEBUG_LOGGING:
-                raise e
 
-        try:
+        with suppress_exception:
             self.queue.close()
-        except Exception, f:
-            if DEBUG_LOGGING:
-                raise f
 
 
 class TextLog_usingMulti(TextLog):
@@ -134,7 +139,6 @@ class TextLog_usingMulti(TextLog):
                 m.write(template, params)
             except Exception, e:
                 bad.append(m)
-                sys.stdout.write(b"a logger failed")
                 if not _Log:
                     _delayed_imports()
 
@@ -146,7 +150,7 @@ class TextLog_usingMulti(TextLog):
         return self
 
     def add_log(self, logger):
-        if logger==None:
+        if logger == None:
             if not _Log:
                 _delayed_imports()
 

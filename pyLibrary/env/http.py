@@ -35,6 +35,7 @@ from pyLibrary.env.big_data import safe_size, ibytes2ilines, icompressed2ibytes
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx
 from pyLibrary.thread.threads import Thread, Lock
+from pyLibrary.thread.till import Till
 from pyLibrary.times.durations import Duration
 
 DEBUG = False
@@ -138,7 +139,7 @@ def request(method, url, zip=None, retry=None, **kwargs):
     errors = []
     for r in range(retry.times):
         if r:
-            Thread.sleep(retry.sleep)
+            Till(seconds=retry.sleep).wait()
 
         try:
             if DEBUG:

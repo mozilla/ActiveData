@@ -243,7 +243,7 @@ class FromESMetadata(Schema):
                 # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
                 while len(self.todo) and not all(columns.get("last_updated")):
                     Log.note("waiting for columns to update {{columns|json}}", columns=[c.table+"."+c.es_column for c in columns if not c.last_updated])
-                    Thread.sleep(seconds=1)
+                    Till(seconds=1).wait()
                 return columns
         except Exception, e:
             Log.error("Not expected", cause=e)

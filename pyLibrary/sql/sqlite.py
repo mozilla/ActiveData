@@ -88,7 +88,7 @@ class Sqlite(DB):
         signal = Signal()
         result = Dict()
         self.queue.add((command, result, signal, None))
-        signal.wait_for_go()
+        signal.wait()
         if result.exception:
             Log.error("Problem with Sqlite call", cause=result.exception)
         return result

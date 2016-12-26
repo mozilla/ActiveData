@@ -16,8 +16,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from thread import allocate_lock as _allocate_lock
-from time import sleep as _sleep
-from time import time as _time
+from time import sleep, time
 
 from pyLibrary.thread.signal import Signal
 from pyLibrary.times.dates import Date
@@ -27,7 +26,7 @@ DEBUG = True
 INTERVAL = 0.1
 
 _till_locker = _allocate_lock()
-next_ping = _time()
+next_ping = time()
 done = Signal("Timers shutdown")
 done.go()
 
@@ -50,13 +49,14 @@ class Till(Signal):
     def __init__(self, till=None, timeout=None, seconds=None):
         global next_ping
 
-        Signal.__init__(self, "a timeout")
         if till != None:
             timeout = Date(till).unix
-        elif timeout != None:
-            timeout = _time() + Duration(timeout).seconds
         elif seconds != None:
-            timeout = _time() + seconds
+            timeout = time() + seconds
+        elif timeout != None:
+            timeout = time() + Duration(timeout).seconds
+
+        Signal.__init__(self, name=unicode(timeout))
 
         with _till_locker:
             next_ping = min(next_ping, timeout)
@@ -71,14 +71,14 @@ class Till(Signal):
 
         try:
             while not please_stop:
-                now = _time()
+                now = time()
 
                 with _till_locker:
                     later = next_ping - now
 
                 if later > 0:
                     try:
-                        _sleep(min(later, INTERVAL))
+                        sleep(min(later, INTERVAL))
                     except Exception, e:
                         from pyLibrary.debugs.logs import Log
 
@@ -118,7 +118,8 @@ class Till(Signal):
             Till.enabled = False
             # TRIGGER ALL REMAINING TIMERS RIGHT NOW
             with _till_locker:
-                work, Till.new_timers = Till.new_timers, []
-            for t, s in work:
+                new_work, Till.new_timers = Till.new_timers, []
+            for t, s in new_work + sorted_timers:
                 s.go()
+
 

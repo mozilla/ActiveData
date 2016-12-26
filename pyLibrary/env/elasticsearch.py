@@ -31,6 +31,7 @@ from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.strings import utf82unicode
 from pyLibrary.thread.threads import ThreadedQueue, Thread, Lock
+from pyLibrary.thread.till import Till
 from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
 
@@ -183,7 +184,7 @@ class Index(Features):
             if alias in response.metadata.indices[self.settings.index].aliases:
                 return
             Log.note("Waiting for alias {{alias}} to appear", alias=alias)
-            Thread.sleep(seconds=1)
+            Till(seconds=1).wait()
 
     def get_index(self, alias):
         """
@@ -645,7 +646,7 @@ class Cluster(object):
                 Log.note("Waiting for index {{index}} to appear", index=index)
             except Exception, e:
                 Log.warning("Problem while waiting for index {{index}} to appear", index=index, cause=e)
-            Thread.sleep(seconds=1)
+            Till(seconds=1).wait()
         Log.alert("Made new index {{index|quote}}", index=index)
 
         es = Index(settings=settings)
@@ -1020,7 +1021,7 @@ class Alias(Features):
                 if status._shards.failed > 0:
                     if status._shards.failures[0].reason.find("rejected execution (queue capacity ") >= 0:
                         keep_trying = True
-                        Thread.sleep(seconds=5)
+                        Till(seconds=5).wait()
                         break
 
             if not keep_trying:

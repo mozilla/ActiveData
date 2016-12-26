@@ -60,7 +60,7 @@ class Process(object):
         self.stderr.add(Thread.STOP)
 
     def join(self):
-        self.service_stopped.wait_for_go()
+        self.service_stopped.wait()
         with self.thread_locker:
             child_threads, self.children = self.children, []
         for c in child_threads:

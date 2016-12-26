@@ -17,6 +17,9 @@ from __future__ import unicode_literals
 
 from thread import allocate_lock as _allocate_lock
 
+import sys
+from time import time
+
 _Log = None
 DEBUG = False
 DEBUG_SIGNAL = False
@@ -35,7 +38,7 @@ class Signal(object):
     SINGLE-USE THREAD SAFE SIGNAL
 
     go() - ACTIVATE SIGNAL (DOES NOTHING IF SIGNAL IS ALREADY ACTIVATED)
-    wait_for_go() - PUT THREAD IN WAIT STATE UNTIL SIGNAL IS ACTIVATED
+    wait() - PUT THREAD IN WAIT STATE UNTIL SIGNAL IS ACTIVATED
     is_go() - TEST IF SIGNAL IS ACTIVATED, DO NOT WAIT (you can also check truthiness)
     on_go() - METHOD FOR OTHER THREAD TO RUN WHEN ACTIVATING SIGNAL
     """
@@ -64,10 +67,11 @@ class Signal(object):
         with self.lock:
             return self._go
 
-    def wait_for_go(self):
+    def wait(self):
         """
         PUT THREAD IN WAIT STATE UNTIL SIGNAL IS ACTIVATED
         """
+
         with self.lock:
             if self._go:
                 return True
@@ -108,9 +112,9 @@ class Signal(object):
             threads, self.waiting_threads = self.waiting_threads, None
 
         if threads:
+            if DEBUG:
+                _Log.note("Release {{num}} threads", num=len(threads))
             for t in threads:
-                if DEBUG:
-                    _Log.note("Release")
                 t.release()
 
         if jobs:
@@ -173,7 +177,7 @@ class Signal(object):
                 _late_import()
             _Log.error("Expecting OR with other signal")
 
-        output = Signal()
+        output = Signal(self.name + " | " + other.name)
         self.on_go(output.go)
         other.on_go(output.go)
         return output

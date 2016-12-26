@@ -17,6 +17,7 @@ from pyLibrary.env.files import File
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.multiprocess import Process
 from pyLibrary.thread.threads import Signal, Thread
+from pyLibrary.thread.till import Till
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import DAY
 
@@ -46,7 +47,7 @@ class Scheduler(object):
 
                 next = Date.min(next, j.next_run_time)
 
-            Thread.sleep(till=next, please_stop=self.please_stop)
+            (Till(till=next) | self.please_stop).wait()
 
     def run_job(self, job):
         process = Process(

@@ -273,13 +273,12 @@ def loop(source, coverage_summary_index, settings, please_stop):
                 # WAIT FOR THEM TO COMPLETE
                 for t in threads:
                     t.join()
-
-        please_stop.go()
         return
 
     except Exception, e:
         Log.warning("Problem processing", cause=e)
     finally:
+        Log.note("Processing loop is done")
         please_stop.go()
 
 

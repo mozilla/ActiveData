@@ -31,6 +31,7 @@ from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.meta import TOO_OLD
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Thread
+from pyLibrary.thread.till import Till
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import MINUTE
 from pyLibrary.times.timer import Timer
@@ -154,7 +155,7 @@ def _test_mode_wait(query):
                     break
             else:
                 break
-            Thread.sleep(seconds=1)
+            Till(seconds=1).wait()
         for c in cols:
             Log.note(
                 "fresh column name={{column.name}} updated={{column.last_updated|date}} parts={{column.partitions}}",

@@ -22,7 +22,6 @@ from pyLibrary.thread.signal import Signal
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
-DEBUG = True
 INTERVAL = 0.1
 
 _till_locker = _allocate_lock()

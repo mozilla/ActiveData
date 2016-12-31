@@ -6,19 +6,19 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 import hashlib
 
 from flask import Response
 
 from active_data import cors_wrapper
+from pyDots import wrap
 from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.queries.containers.cube import Cube
@@ -26,7 +26,6 @@ from pyLibrary.queries.jx_usingES import FromES
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import SECOND
-
 
 HASH_BLOCK_SIZE = 100
 

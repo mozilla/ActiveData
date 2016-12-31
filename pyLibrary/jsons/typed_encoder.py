@@ -18,7 +18,7 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, DictList, NullType
+from pyDots import Data, FlatList, NullType
 from pyLibrary.jsons import ESCAPE_DCT, float2json
 from pyLibrary.jsons.encoder import pretty_json, problem_serializing, _repr, UnicodeBuilder
 from pyLibrary.maths.stats import Stats
@@ -64,7 +64,7 @@ def _typed_encode(value, _buffer):
             return
 
         _type = value.__class__
-        if _type in (dict, Dict):
+        if _type in (dict, Data):
             if value:
                 _dict2json(value, _buffer)
             else:
@@ -92,7 +92,7 @@ def _typed_encode(value, _buffer):
             append(_buffer, u'{"$value": ')
             append(_buffer, float2json(value))
             append(_buffer, u'}')
-        elif _type in (set, list, tuple, DictList):
+        elif _type in (set, list, tuple, FlatList):
             _list2json(value, _buffer)
         elif _type is date:
             append(_buffer, u'{"$value": ')

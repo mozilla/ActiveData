@@ -19,7 +19,7 @@ import math
 from pyLibrary import convert
 from pyLibrary.collections import OR
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, Dict, Null
+from pyDots import coalesce, Data, Null
 from pyLibrary.maths import almost_equal, Math
 from pyLibrary.vendor import strangman
 
@@ -148,9 +148,9 @@ def ZeroMoment2Stats(z_moment):
     return stats
 
 
-class Stats(Dict):
+class Stats(Data):
     def __init__(self, **kwargs):
-        Dict.__init__(self)
+        Data.__init__(self)
 
         self.count = 0
         self.mean = None

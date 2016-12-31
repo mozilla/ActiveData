@@ -16,7 +16,7 @@ from datetime import datetime
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, Dict, DictList, literal_field
+from pyDots import wrap, Data, FlatList, literal_field
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import is_keyword
@@ -247,7 +247,7 @@ _type_map = {
     float: "real",
     datetime: "real",
     list: "nested",
-    DictList: "nested",
+    FlatList: "nested",
     dict: "object",
-    Dict: "object"
+    Data: "object"
 }

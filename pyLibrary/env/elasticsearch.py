@@ -19,10 +19,10 @@ from datetime import datetime
 from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, Null, Dict, set_default, join_field, split_field, unwraplist, listwrap, literal_field, \
+from pyDots import coalesce, Null, Data, set_default, join_field, split_field, unwraplist, listwrap, literal_field, \
     ROOT_PATH
-from pyLibrary.dot import wrap
-from pyLibrary.dot.lists import DictList
+from pyDots import wrap
+from pyDots.lists import FlatList
 from pyLibrary.env import http
 from pyLibrary.jsons.typed_encoder import json2typed
 from pyLibrary.maths import Math
@@ -863,7 +863,7 @@ def _scrub(r):
         elif Math.is_number(r):
             return convert.value2number(r)
         elif isinstance(r, Mapping):
-            if isinstance(r, Dict):
+            if isinstance(r, Data):
                 r = object.__getattribute__(r, "_dict")
             output = {}
             for k, v in r.items():
@@ -874,7 +874,7 @@ def _scrub(r):
                 return None
             return output
         elif hasattr(r, '__iter__'):
-            if isinstance(r, DictList):
+            if isinstance(r, FlatList):
                 r = r.list
             output = []
             for v in r:
@@ -1064,7 +1064,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
     """
     from pyLibrary.queries.meta import Column
 
-    columns = DictList()
+    columns = FlatList()
     for name, property in esProperties.items():
         index_name = parent_index_name
         column_name = join_field(split_field(parent_name) + [name])

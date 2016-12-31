@@ -16,7 +16,7 @@ from __future__ import unicode_literals
 import sys
 from collections import Mapping
 
-from pyLibrary.dot import Dict, listwrap, unwraplist, set_default, Null
+from pyDots import Data, listwrap, unwraplist, set_default, Null
 from pyLibrary.jsons.encoder import json_encoder
 from pyLibrary.strings import indent, expand_template
 
@@ -110,7 +110,7 @@ class Except(Exception):
         return self.__unicode__().encode('latin1', 'replace')
 
     def as_dict(self):
-        return Dict(
+        return Data(
             type=self.type,
             template=self.template,
             params=self.params,

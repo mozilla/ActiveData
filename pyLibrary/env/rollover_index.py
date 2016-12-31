@@ -11,7 +11,7 @@ from pyLibrary import convert, strings
 from pyLibrary.aws.s3 import strip_extension
 from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, wrap, Null
+from pyDots import coalesce, wrap, Null
 from pyLibrary.env import elasticsearch
 from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
@@ -21,7 +21,7 @@ from pyLibrary.times.dates import Date, unicode2Date, unix2Date
 from pyLibrary.times.durations import Duration
 from pyLibrary.times.timer import Timer
 
-MAX_RECORD_LENGTH = 100000
+MAX_RECORD_LENGTH = 400000
 
 
 class RolloverIndex(object):
@@ -173,8 +173,8 @@ class RolloverIndex(object):
                         if not line:
                             continue
 
-                        if rownum%1000==0:
-                            Log.note("Ingested {{num}} records from {{key}}", num=rownum, key=key)
+                        if rownum > 0 and rownum % 1000 == 0:
+                            Log.note("Ingested {{num}} records from {{key}} in bucket {{bucket}}", num=rownum, key=key, bucket=source.name)
 
                         row, please_stop = fix(rownum, line, source, sample_only_filter, sample_size)
                         num_keys += 1

@@ -1,6 +1,6 @@
 from urlparse import urlparse, parse_qs
-from pyLibrary.dot import Null, coalesce, wrap
-from pyLibrary.dot.dicts import Dict
+from pyDots import Null, coalesce, wrap
+from pyDots import Data
 
 
 _convert = None

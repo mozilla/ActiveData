@@ -15,7 +15,7 @@ from collections import Mapping
 from copy import copy
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, wrap, coalesce, Dict, listwrap, unwraplist
+from pyDots import set_default, wrap, coalesce, Data, listwrap, unwraplist
 from pyLibrary.maths import Math
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import is_keyword
@@ -97,7 +97,7 @@ class Rename(Namespace):
 
     def _convert_from(self, frum):
         if isinstance(frum, Mapping):
-            return Dict(name=self.convert(frum.name))
+            return Data(name=self.convert(frum.name))
         else:
             return self.convert(frum)
 

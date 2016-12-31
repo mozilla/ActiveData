@@ -21,7 +21,7 @@ from decimal import Decimal
 from math import floor
 from repr import Repr
 
-from pyLibrary.dot import Dict, DictList, NullType, Null
+from pyDots import Data, FlatList, NullType, Null
 from pyLibrary.jsons import quote, ESCAPE_DCT, scrub, float2json
 from pyLibrary.strings import utf82unicode
 from pyLibrary.times.dates import Date
@@ -169,7 +169,7 @@ def _value2json(value, _buffer):
             else:
                 _dict2json(value, _buffer)
             return
-        elif type is Dict:
+        elif type is Data:
             d = _get(value, "_dict")  # MIGHT BE A VALUE NOT A DICT
             _value2json(d, _buffer)
             return
@@ -180,7 +180,7 @@ def _value2json(value, _buffer):
                 append(_buffer, u'null')
             else:
                 append(_buffer, float2json(value))
-        elif type in (set, list, tuple, DictList):
+        elif type in (set, list, tuple, FlatList):
             _list2json(value, _buffer)
         elif type is date:
             append(_buffer, float2json(time.mktime(value.timetuple())))

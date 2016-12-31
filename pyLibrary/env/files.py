@@ -15,7 +15,7 @@ import shutil
 from datetime import datetime
 
 from pyLibrary import convert
-from pyLibrary.dot import coalesce
+from pyDots import coalesce
 from pyLibrary.maths import crypto
 from pyLibrary.strings import utf82unicode
 

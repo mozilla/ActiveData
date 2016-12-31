@@ -19,9 +19,9 @@ from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.dot import coalesce, Dict, set_default, Null, listwrap
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import wrap
+from pyDots import coalesce, Data, set_default, Null, listwrap
+from pyDots.lists import FlatList
+from pyDots import wrap
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
@@ -132,7 +132,7 @@ class DefaultDomain(Domain):
         Domain.__init__(self, **desc)
 
         self.NULL = Null
-        self.partitions = DictList()
+        self.partitions = FlatList()
         self.map = dict()
         self.map[None] = self.NULL
         self.limit = desc.get('limit')
@@ -148,7 +148,7 @@ class DefaultDomain(Domain):
         if canonical:
             return canonical
 
-        canonical = Dict(name=key, value=key)
+        canonical = Data(name=key, value=key)
 
         self.partitions.append(canonical)
         self.map[key] = canonical
@@ -187,7 +187,7 @@ class SimpleSetDomain(Domain):
         self.type = "set"
         self.order = {}
         self.NULL = Null
-        self.partitions = DictList()
+        self.partitions = FlatList()
         self.primitive = True  # True IF DOMAIN IS A PRIMITIVE VALUE SET
 
         if isinstance(self.key, set):
@@ -337,7 +337,7 @@ class SetDomain(Domain):
         self.type = "set"
         self.order = {}
         self.NULL = Null
-        self.partitions = DictList()
+        self.partitions = FlatList()
 
         if isinstance(self.key, set):
             Log.error("problem")

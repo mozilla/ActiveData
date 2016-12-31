@@ -15,8 +15,8 @@ from datetime import timedelta
 from time import time
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce
-from pyLibrary.dot import wrap
+from pyDots import coalesce
+from pyDots import wrap
 from pyLibrary.times.durations import Duration
 
 

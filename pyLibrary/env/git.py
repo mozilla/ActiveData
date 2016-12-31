@@ -45,7 +45,8 @@ def get_remote_revision(url, branch):
 
     try:
         while True:
-            line = proc.stdout.pop().strip()
+            raw_line = proc.stdout.pop()
+            line = raw_line.strip()
             if not line:
                 continue
             return line.split("\t")[0]

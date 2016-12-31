@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 from pyLibrary import queries, convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import split_field, DictList, listwrap, literal_field, coalesce, Dict, unwrap
+from pyDots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap
 from pyLibrary.queries import es09, es14
 from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.es14.setop import format_dispatch
@@ -91,7 +91,7 @@ def es_deepop(es, query):
     es_query.fields = []
 
     is_list = isinstance(query.select, list)
-    new_select = DictList()
+    new_select = FlatList()
 
     def get_pull(column):
         if len(column.nested_path) != 1:
@@ -216,7 +216,7 @@ def es_deepop(es, query):
     def get_more(please_stop):
         more.append(es09.util.post(
             es,
-            Dict(
+            Data(
                 filter=more_filter,
                 fields=es_query.fields
             ),

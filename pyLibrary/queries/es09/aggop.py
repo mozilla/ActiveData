@@ -13,7 +13,7 @@ from __future__ import absolute_import
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND
-from pyLibrary.dot import listwrap, unwrap, literal_field
+from pyDots import listwrap, unwrap, literal_field
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09.util import aggregates, fix_es_stats, build_es_query
 from pyLibrary.queries import es09

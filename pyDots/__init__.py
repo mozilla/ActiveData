@@ -10,9 +10,11 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
+
+from __builtin__ import zip as _builtin_zip
+
 from collections import Mapping
 from types import GeneratorType, NoneType, ModuleType
-from __builtin__ import zip as _builtin_zip
 
 
 SELF_PATH = "."
@@ -47,13 +49,12 @@ def zip(keys, values):
     CONVERT LIST OF KEY/VALUE PAIRS TO A DICT
     PLEASE `import dot`, AND CALL `dot.zip()`
     """
-    output = Dict()
+    output = Data()
     for i, k in enumerate(keys):
         if i >= len(values):
             break
         output[k] = values[i]
     return output
-
 
 
 def literal_field(field):
@@ -66,6 +67,7 @@ def literal_field(field):
         from pyLibrary.debugs.logs import Log
 
         Log.error("bad literal", e)
+
 
 def split_field(field):
     """
@@ -173,7 +175,7 @@ def _all_default(d, default, seen=None):
     """
     if default is None:
         return
-    if isinstance(default, Dict):
+    if isinstance(default, Data):
         default = object.__getattribute__(default, "_dict")  # REACH IN AND GET THE dict
         # from pyLibrary.debugs.logs import Log
         # Log.error("strictly dict (or object) allowed: got {{type}}", type=default.__class__.__name__)
@@ -309,15 +311,15 @@ def _get_attr(obj, path):
                 possible_error = Except.wrap(e)
 
         # TRY A CASE-INSENSITIVE MATCH
-        attr_name = lower_match(attr_name, dir(obj))
-        if not attr_name:
+        matched_attr_name = lower_match(attr_name, dir(obj))
+        if not matched_attr_name:
             from pyLibrary.debugs.logs import Log
-            Log.warning(PATH_NOT_FOUND + ". Returning None.", cause=possible_error)
-        elif len(attr_name) > 1:
+            Log.warning(PATH_NOT_FOUND + "({{name|quote}}) Returning None.", name=attr_name, cause=possible_error)
+        elif len(matched_attr_name) > 1:
             from pyLibrary.debugs.logs import Log
             Log.error(AMBIGUOUS_PATH_FOUND + " {{paths}}", paths=attr_name)
         else:
-            return _get_attr(obj[attr_name[0]], path[1:])
+            return _get_attr(obj[matched_attr_name[0]], path[1:])
 
     try:
         obj = obj[int(attr_name)]
@@ -378,16 +380,16 @@ def wrap(v):
     type_ = _get(v, "__class__")
 
     if type_ is dict:
-        m = Dict(v)
+        m = Data(v)
         return m
-        # m = object.__new__(Dict)
+        # m = object.__new__(Data)
         # object.__setattr__(m, "_dict", v)
         # return m
 
     elif type_ is NoneType:
         return Null
     elif type_ is list:
-        return DictList(v)
+        return FlatList(v)
     elif type_ is GeneratorType:
         return (wrap(vv) for vv in v)
     else:
@@ -407,7 +409,7 @@ def _wrap_leaves(value):
     if isinstance(value, (basestring, int, float)):
         return value
     if isinstance(value, Mapping):
-        if isinstance(value, Dict):
+        if isinstance(value, Data):
             value = unwrap(value)
 
         output = {}
@@ -451,10 +453,10 @@ def _wrap_leaves(value):
 
 def unwrap(v):
     _type = _get(v, "__class__")
-    if _type is Dict:
+    if _type is Data:
         d = _get(v, "_dict")
         return d
-    elif _type is DictList:
+    elif _type is FlatList:
         return v.list
     elif _type is NullType:
         return None
@@ -493,7 +495,7 @@ def listwrap(value):
 
     """
     if value == None:
-        return DictList()
+        return FlatList()
     elif isinstance(value, list):
         return wrap(value)
     elif isinstance(value, set):
@@ -525,6 +527,6 @@ def tuplewrap(value):
     return unwrap(value),
 
 
-from pyLibrary.dot.nones import Null, NullType
-from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot.lists import DictList
+from pyDots.nones import Null, NullType
+from pyDots.datas import Data
+from pyDots.lists import FlatList

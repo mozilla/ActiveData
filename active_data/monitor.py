@@ -6,13 +6,13 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
+from pyDots import coalesce
 from pyLibrary.debugs import constants, startup
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce
 from pyLibrary.env.files import File
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.multiprocess import Process

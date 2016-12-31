@@ -16,7 +16,7 @@ from collections import Iterable
 from types import GeneratorType
 
 from pyLibrary import convert
-from pyLibrary.dot import coalesce
+from pyDots import coalesce
 from pyLibrary.debugs.logs import Log
 from pyLibrary.thread.threads import Queue, Thread
 from pyLibrary.times.timer import Timer
@@ -139,7 +139,7 @@ class worker_thread(Thread):
 
     def event_loop(self, please_stop):
         got_stop_message = False
-        while not please_stop.is_go():
+        while not please_stop:
             with Timer("get more work", debug=DEBUG):
                 request = self.in_queue.pop()
             if request == Thread.STOP:
@@ -152,7 +152,7 @@ class worker_thread(Thread):
                         requests= list(self.in_queue.queue)[:5:] + list(self.in_queue.queue)[-5::]
                     )
                 break
-            if please_stop.is_go():
+            if please_stop:
                 break
 
             with Timer("run {{function}}", {"function": get_function_name(self.function)}, debug=DEBUG):

@@ -16,7 +16,7 @@ import itertools
 from pyLibrary.collections import UNION
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, wrap, coalesce
+from pyDots import listwrap, wrap, coalesce
 from pyLibrary.queries import windows
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
 from pyLibrary.queries.expression_compiler import compile_expression

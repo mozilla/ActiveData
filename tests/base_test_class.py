@@ -19,10 +19,10 @@ from copy import deepcopy
 from string import ascii_lowercase
 
 from active_data.actions.query import replace_vars
+from pyDots import wrap, coalesce, unwrap, listwrap, Data
 from pyLibrary import convert, jsons
 from pyLibrary.debugs.exceptions import extract_stack
 from pyLibrary.debugs.logs import Log, Except, constants
-from pyLibrary.dot import wrap, coalesce, unwrap, listwrap, Dict, literal_field
 from pyLibrary.env import http
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, containers
@@ -333,7 +333,7 @@ class SQLiteUtils(object):
             Log.error("Do not know how to handle")
 
 
-        return Dict()
+        return Data()
 
     def send_queries(self, subtest):
         subtest = wrap(subtest)
@@ -444,7 +444,7 @@ def cube2list(cube):
     header = list(unwrap(cube).keys())
     rows = []
     for r in zip(*[[(k, v) for v in a] for k, a in cube.items()]):
-        row = Dict()
+        row = Data()
         for k, v in r:
            row[k]=v
         rows.append(unwrap(row))
@@ -531,7 +531,7 @@ global_settings = jsons.ref.get("file://tests/config/elasticsearch.json")
 constants.set(global_settings.constants)
 NEXT = 0
 
-container_types = Dict(
+container_types = Data(
     elasticsearch=ESUtils,
     sqlite=SQLiteUtils
 )

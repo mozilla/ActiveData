@@ -10,8 +10,9 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 import sys
-from pyLibrary import dot
-from pyLibrary.dot import wrap, join_field, split_field
+
+import pyDots
+from pyDots import wrap, join_field, split_field
 
 
 DEBUG = True
@@ -29,7 +30,7 @@ def set(constants):
     for k, new_value in constants.leaves():
         errors = []
         try:
-            old_value = dot.set_attr(sys.modules, k, new_value)
+            old_value = pyDots.set_attr(sys.modules, k, new_value)
             continue
         except Exception, e:
             errors.append(e)
@@ -49,7 +50,7 @@ def set(constants):
                 prefix = join_field(path[:1])
                 name = join_field(path[i:])
                 if caller_module.endswith(prefix):
-                    old_value = dot.set_attr(caller_globals, name, new_value)
+                    old_value = pyDots.set_attr(caller_globals, name, new_value)
                     if DEBUG:
                         from pyLibrary.debugs.logs import Log
 

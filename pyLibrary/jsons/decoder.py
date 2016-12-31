@@ -12,9 +12,9 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
 
-from pyLibrary.dot import Null
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import wrap, unwrap
+from pyDots import Null
+from pyDots.lists import FlatList
+from pyDots import wrap, unwrap
 from pyLibrary.jsons.encoder import UnicodeBuilder, use_pypy, pypy_json_encode
 
 DEBUG = False
@@ -34,9 +34,9 @@ def decode(json):
     INEVITABLE JSON OUTPUT
     """
     var = ""
-    curr = DictList()
+    curr = FlatList()
     mode = ARRAY
-    stack = DictList()
+    stack = FlatList()
     # FIRST PASS SIMPLY GETS STRUCTURE
     i = 0
     while i < len(json):
@@ -309,7 +309,7 @@ class JSONList(object):
                 j = length
             else:
                 j = max(min(j, length), 0)
-            return DictList(self.list[i:j])
+            return FlatList(self.list[i:j])
 
         if index < 0 or len(self.list) <= index:
             return Null
@@ -373,19 +373,19 @@ class JSONList(object):
         self._convert()
         output = list(self.list)
         output.extend(value)
-        return DictList(vals=output)
+        return FlatList(vals=output)
 
     def __or__(self, value):
         self._convert()
         output = list(self.list)
         output.append(value)
-        return DictList(vals=output)
+        return FlatList(vals=output)
 
     def __radd__(self, other):
         self._convert()
         output = list(other)
         output.extend(self.list)
-        return DictList(vals=output)
+        return FlatList(vals=output)
 
     def right(self, num=None):
         """
@@ -393,10 +393,10 @@ class JSONList(object):
         """
         self._convert()
         if num == None:
-            return DictList([self.list[-1]])
+            return FlatList([self.list[-1]])
         if num <= 0:
             return Null
-        return DictList(self.list[-num])
+        return FlatList(self.list[-num])
 
     def not_right(self, num):
         """
@@ -404,14 +404,14 @@ class JSONList(object):
         """
         self._convert()
         if num == None:
-            return DictList([self.list[:-1:]])
+            return FlatList([self.list[:-1:]])
         if num <= 0:
             return Null
-        return DictList(self.list[:-num:])
+        return FlatList(self.list[:-num:])
 
     def last(self):
         """
-        RETURN LAST ELEMENT IN DictList
+        RETURN LAST ELEMENT IN FlatList
         """
         self._convert()
         if self.list:
@@ -421,9 +421,9 @@ class JSONList(object):
     def map(self, oper, includeNone=True):
         self._convert()
         if includeNone:
-            return DictList([oper(v) for v in self.list])
+            return FlatList([oper(v) for v in self.list])
         else:
-            return DictList([oper(v) for v in self.list if v != None])
+            return FlatList([oper(v) for v in self.list if v != None])
 
     def __json__(self):
         if self.json is not None:

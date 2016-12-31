@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import __builtin__
 import math
 
-from pyLibrary.dot import Null, coalesce
+from pyDots import Null, coalesce
 from pyLibrary.strings import find_first
 
 
@@ -182,8 +182,10 @@ class Math(object):
                 except Exception, e:
                     from pyLibrary.debugs.logs import Log
                     Log.error("not expected", e)
-
-        return __builtin__.round(value, decimal)
+        elif decimal <= 0:
+            return int(__builtin__.round(value, decimal))
+        else:
+            return __builtin__.round(value, decimal)
 
 
     @staticmethod

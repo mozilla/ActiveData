@@ -15,8 +15,8 @@ from collections import Mapping
 
 from pyLibrary.collections import MAX
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, coalesce, literal_field, Dict
-from pyLibrary.dot import wrap
+from pyDots import set_default, coalesce, literal_field, Data
+from pyDots import wrap
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx
 from pyLibrary.queries.dimensions import Dimension
@@ -43,7 +43,7 @@ class AggsDecoder(object):
                 if not all(isinstance(t, Variable) for t in e.value.terms):
                     Log.error("Can only handle variables in tuples")
 
-                e.domain = Dict(
+                e.domain = Data(
                     dimension={"fields":e.value.terms}
                 )
                 return object.__new__(DimFieldListDecoder, e)

@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, DictList, unwrap, \
+from pyDots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
     unwraplist
 from pyLibrary.maths import Math
 from pyLibrary.queries import es09
@@ -36,7 +36,7 @@ def get_decoders_by_depth(query):
     RETURN A LIST OF DECODER ARRAYS, ONE ARRAY FOR EACH NESTED DEPTH
     """
     schema = query.frum
-    output = DictList()
+    output = FlatList()
     for e in wrap(coalesce(query.edges, query.groupby, [])):
         if e.value != None and not isinstance(e.value, NullOp):
             e = e.copy()
@@ -97,8 +97,8 @@ def es_aggsop(es, frum, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
     es_column_map = {c.name: unwraplist(c.es_column) for c in frum.schema.all_columns}
 
-    es_query = Dict()
-    new_select = Dict()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
+    es_query = Data()
+    new_select = Data()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
     formula = []
     for s in select:
         if s.aggregate == "count" and isinstance(s.value, Variable) and s.value.var == ".":
@@ -273,7 +273,7 @@ def es_aggsop(es, frum, query):
         if split_where[1]:
             #TODO: INCLUDE FILTERS ON EDGES
             filter_ = simplify_esfilter(AndOp("and", split_where[1]).to_esfilter())
-            es_query = Dict(
+            es_query = Data(
                 aggs={"_filter": set_default({"filter": filter_}, es_query)}
             )
 
@@ -298,7 +298,7 @@ def es_aggsop(es, frum, query):
     if split_where[0]:
         #TODO: INCLUDE FILTERS ON EDGES
         filter = simplify_esfilter(AndOp("and", split_where[0]).to_esfilter())
-        es_query = Dict(
+        es_query = Data(
             aggs={"_filter": set_default({"filter": filter}, es_query)}
         )
     # </TERRIBLE SECTION>

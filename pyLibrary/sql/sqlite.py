@@ -13,14 +13,12 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import sqlite3
-from string import join
-
-from pyLibrary.strings import expand_template
+from collections import Mapping
 
 from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except, extract_stack, ERROR
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict
+from pyDots import Data, coalesce
 from pyLibrary.env.files import File
 from pyLibrary.sql import DB, SQL
 from pyLibrary.thread.threads import Queue, Signal, Thread
@@ -53,7 +51,7 @@ class Sqlite(DB):
 
     canonical = None
 
-    def __init__(self, db=None):
+    def __init__(self, filename=None, db=None):
         """
         :param db:  Optional, wrap a sqlite db in a thread
         :return: Multithread save database
@@ -61,7 +59,8 @@ class Sqlite(DB):
         if not _upgraded:
             _upgrade()
 
-        self.db = None
+        self.filename = filename
+        self.db = db
         self.queue = Queue("sql commands")   # HOLD (command, result, signal) PAIRS
         self.worker = Thread.run("sqlite db thread", self._worker)
         self.get_trace = DEBUG
@@ -86,7 +85,7 @@ class Sqlite(DB):
         :return: list OF RESULTS
         """
         signal = Signal()
-        result = Dict()
+        result = Data()
         self.queue.add((command, result, signal, None))
         signal.wait()
         if result.exception:
@@ -97,12 +96,12 @@ class Sqlite(DB):
         if Sqlite.canonical:
             self.db = Sqlite.canonical
         else:
-            self.db = sqlite3.connect(':memory:')
+            self.db = sqlite3.connect(coalesce(self.filename, ':memory:'))
             try:
                 full_path = File("pyLibrary/vendor/sqlite/libsqlitefunctions.so").abspath
                 # self.db.execute("SELECT sqlite3_enable_load_extension(1)")
                 self.db.enable_load_extension(True)
-                self.db.execute("SELECT load_extension('"+full_path+"')")
+                self.db.execute("SELECT load_extension('" + full_path + "')")
             except Exception, e:
                 Log.warning("loading sqlite extension functions failed, doing without. (no SQRT for you!)", cause=e)
 
@@ -110,7 +109,7 @@ class Sqlite(DB):
             while not please_stop:
                 if DEBUG:
                     Log.note("begin pop")
-                command, result, signal, trace = self.queue.pop()
+                command, result, signal, trace = self.queue.pop(till=please_stop)
                 if DEBUG:
                     Log.note("done pop")
 
@@ -146,10 +145,26 @@ class Sqlite(DB):
         except Exception, e:
             Log.error("Problem with sql thread", e)
         finally:
+            if DEBUG:
+                Log.note("Database is closed")
             self.db.close()
 
     def quote_column(self, column_name, table=None):
         if table != None:
-            return SQL(convert.value2quote(table)+"."+convert.value2quote(column_name))
+            return SQL(convert.value2quote(table) + "." + convert.value2quote(column_name))
         else:
             return SQL(convert.value2quote(column_name))
+
+    def quote_value(self, value):
+        if isinstance(value, (Mapping, list)):
+            return "."
+        elif isinstance(value, basestring):
+            return "'" + value.replace("'", "''") + "'"
+        elif value == None:
+            return "NULL"
+        elif value is True:
+            return "1"
+        elif value is False:
+            return "0"
+        else:
+            return unicode(value)

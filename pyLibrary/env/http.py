@@ -30,7 +30,7 @@ from requests import sessions, Response
 from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, coalesce, wrap, set_default, unwrap
+from pyDots import Data, coalesce, wrap, set_default, unwrap
 from pyLibrary.env.big_data import safe_size, ibytes2ilines, icompressed2ibytes
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx
@@ -42,7 +42,7 @@ DEBUG = False
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
 MIN_READ_SIZE = 8 * 1024
 ZIP_REQUEST = False
-default_headers = Dict()  # TODO: MAKE THIS VARIABLE A SPECIAL TYPE OF EXPECTED MODULE PARAMETER SO IT COMPLAINS IF NOT SET
+default_headers = Data()  # TODO: MAKE THIS VARIABLE A SPECIAL TYPE OF EXPECTED MODULE PARAMETER SO IT COMPLAINS IF NOT SET
 default_timeout = 600
 
 _warning_sent = False
@@ -108,9 +108,9 @@ def request(method, url, zip=None, retry=None, **kwargs):
     timeout = kwargs[b'timeout'] = coalesce(kwargs.get(b'timeout'), default_timeout)
 
     if retry == None:
-        retry = Dict(times=1, sleep=0)
+        retry = Data(times=1, sleep=0)
     elif isinstance(retry, Number):
-        retry = Dict(times=retry, sleep=1)
+        retry = Data(times=retry, sleep=1)
     else:
         retry = wrap(retry)
         if isinstance(retry.sleep, Duration):
@@ -264,7 +264,7 @@ class HttpResponse(Response):
                     self.close()
                     return None
 
-            self._cached_content = safe_size(Dict(read=read))
+            self._cached_content = safe_size(Data(read=read))
 
         if hasattr(self._cached_content, "read"):
             self._cached_content.seek(0)
@@ -306,7 +306,7 @@ class Generator_usingStream(object):
         self.position = 0
         file_ = TemporaryFile()
         if not _shared:
-            self.shared = Dict(
+            self.shared = Data(
                 length=length,
                 locker=Lock(),
                 stream=stream,

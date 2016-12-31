@@ -10,17 +10,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary.times.timer import Timer
-
+from pyDots import coalesce, wrap, unwrap
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, wrap, unwrap
 from pyLibrary.env import http, elasticsearch
 from pyLibrary.queries import jx
 from pyLibrary.thread.threads import Thread, Signal, Queue
 from pyLibrary.times.dates import Date, unicode2Date
+from pyLibrary.times.timer import Timer
 
 DEBUG = True
 NUM_THREAD = 4

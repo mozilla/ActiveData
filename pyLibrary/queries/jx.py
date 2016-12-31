@@ -18,13 +18,14 @@ from types import GeneratorType
 
 import itertools
 
-from pyLibrary import dot, convert
+import pyDots
+from pyLibrary import convert
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, wrap, unwrap, unwraplist
-from pyLibrary.dot import set_default, Null, Dict, split_field, coalesce, join_field
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot.objects import DictObject
+from pyDots import listwrap, wrap, unwrap, unwraplist
+from pyDots import set_default, Null, Data, split_field, coalesce, join_field
+from pyDots.lists import FlatList as FL
+from pyDots.objects import DataObject
 from pyLibrary.maths import Math
 from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.containers import Container
@@ -129,7 +130,7 @@ def index(data, keys=None):
         if data.edges[0].name==keys[0]:
             #QUICK PATH
             names = list(data.data.keys())
-            for d in (set_default(dot.zip(names, r), {keys[0]: p}) for r, p in zip(zip(*data.data.values()), data.edges[0].domain.partitions.value)):
+            for d in (set_default(pyDots.zip(names, r), {keys[0]: p}) for r, p in zip(zip(*data.data.values()), data.edges[0].domain.partitions.value)):
                 o.add(d)
             return o
         else:
@@ -170,8 +171,8 @@ def map2set(data, relation):
     """
     if data == None:
         return Null
-    if isinstance(relation, Dict):
-        Log.error("Does not accept a Dict")
+    if isinstance(relation, Data):
+        Log.error("Does not accept a Data")
 
     if isinstance(relation, Mapping):
         try:
@@ -225,19 +226,19 @@ def tuple(data, field_name):
             return output
     elif isinstance(field_name, list):
         paths = [_select_a_field(f) for f in field_name]
-        output = DictList()
+        output = FL()
         _tuple((), unwrap(data), paths, 0, output)
         return output
     else:
         paths = [_select_a_field(field_name)]
-        output = DictList()
+        output = FL()
         _tuple((), data, paths, 0, output)
         return output
 
 
 def _tuple(template, data, fields, depth, output):
     deep_path = None
-    deep_fields = DictList()
+    deep_fields = FL()
     for d in data:
         record = template
         for f in fields:
@@ -279,11 +280,11 @@ def select(data, field_name):
     if isinstance(data, Cube):
         return data._select(_normalize_selects(field_name))
 
-    if isinstance(data, FlatList):
+    if isinstance(data, FL):
         return data.select(field_name)
 
     if isinstance(data, UniqueIndex):
-        data = data._data.values()  # THE SELECT ROUTINE REQUIRES dicts, NOT Dict WHILE ITERATING
+        data = data._data.values()  # THE SELECT ROUTINE REQUIRES dicts, NOT Data WHILE ITERATING
 
     if isinstance(data, Mapping):
         return select_one(data, field_name)
@@ -301,17 +302,17 @@ def select(data, field_name):
     if isinstance(field_name, basestring):
         path = split_field(field_name)
         if len(path) == 1:
-            return DictList([d[field_name] for d in data])
+            return FL([d[field_name] for d in data])
         else:
-            output = DictList()
+            output = FL()
             flat_list._select1(data, path, 0, output)
             return output
     elif isinstance(field_name, list):
         keys = [_select_a_field(wrap(f)) for f in field_name]
-        return _select(Dict(), unwrap(data), keys, 0)
+        return _select(Data(), unwrap(data), keys, 0)
     else:
         keys = [_select_a_field(field_name)]
-        return _select(Dict(), unwrap(data), keys, 0)
+        return _select(Data(), unwrap(data), keys, 0)
 
 
 def _select_a_field(field):
@@ -325,12 +326,12 @@ def _select_a_field(field):
 
 
 def _select(template, data, fields, depth):
-    output = DictList()
+    output = FL()
     deep_path = []
     deep_fields = UniqueIndex(["name"])
     for d in data:
-        if isinstance(d, Dict):
-            Log.error("programmer error, _select can not handle Dict")
+        if isinstance(d, Data):
+            Log.error("programmer error, _select can not handle Data")
 
         record = template.copy()
         children = None
@@ -458,10 +459,10 @@ type_to_name = {
     unicode: "string",
     float: "double",
     Number: "double",
-    Dict: "object",
+    Data: "object",
     dict: "object",
     list: "nested",
-    DictList: "nested"
+    FlatList: "nested"
 }
 
 def _deep_iterator(data, schema):
@@ -541,9 +542,9 @@ def sort(data, fieldnames=None, already_normalized=False):
             return 0
 
         if isinstance(data, list):
-            output = DictList([unwrap(d) for d in sorted(data, cmp=comparer)])
+            output = FL([unwrap(d) for d in sorted(data, cmp=comparer)])
         elif hasattr(data, "__iter__"):
-            output = DictList([unwrap(d) for d in sorted(list(data), cmp=comparer)])
+            output = FL([unwrap(d) for d in sorted(list(data), cmp=comparer)])
         else:
             Log.error("Do not know how to handle")
             output = None
@@ -639,7 +640,7 @@ def filter(data, where):
         return drill_filter(where, data)
     except Exception, _:
         # WOW!  THIS IS INEFFICIENT!
-        return wrap([unwrap(d) for d in drill_filter(where, [DictObject(d) for d in data])])
+        return wrap([unwrap(d) for d in drill_filter(where, [DataObject(d) for d in data])])
 
 
 def drill_filter(esfilter, data):
@@ -697,7 +698,7 @@ def drill_filter(esfilter, data):
 
         if filter["and"]:
             result = True
-            output = DictList()
+            output = FL()
             for a in filter[u"and"]:
                 f = pe_filter(a, data, depth)
                 if f is False:
@@ -709,7 +710,7 @@ def drill_filter(esfilter, data):
             else:
                 return result
         elif filter["or"]:
-            output = DictList()
+            output = FL()
             for o in filter[u"or"]:
                 f = pe_filter(o, data, depth)
                 if f is True:
@@ -887,7 +888,7 @@ def drill_filter(esfilter, data):
 
     # OUTPUT IS A LIST OF ROWS,
     # WHERE EACH ROW IS A LIST OF VALUES SEEN DURING A WALK DOWN A PATH IN THE HIERARCHY
-    uniform_output = DictList()
+    uniform_output = FL()
     def recurse(row, depth):
         if depth == max:
             uniform_output.append(row)

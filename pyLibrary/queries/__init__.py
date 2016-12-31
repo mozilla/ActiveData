@@ -11,11 +11,11 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, set_default, split_field, join_field
-from pyLibrary.dot.dicts import Dict
+from pyDots import wrap, set_default, split_field, join_field
+from pyDots import Data
 from pyLibrary.queries.index import Index
 
-config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
+config = Data()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
 _ListContainer = None
 _meta = None
 _containers = None

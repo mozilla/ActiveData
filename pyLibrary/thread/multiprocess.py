@@ -47,7 +47,7 @@ class Process(object):
                 Thread.run(self.name + " waiter", self._monitor, parent_thread=self),
                 Thread.run(self.name + " stdin", self._writer, service.stdin, self.stdin, please_stop=self.stopper, parent_thread=self),
                 Thread.run(self.name + " stdout", self._reader, service.stdout, self.stdout, please_stop=self.stopper, parent_thread=self),
-                Thread.run(self.name + " stderr", self._reader, service.stderr, self.stderr, please_stop=self.stopper, parent_thread=self),
+                # Thread.run(self.name + " stderr", self._reader, service.stderr, self.stderr, please_stop=self.stopper, parent_thread=self),
             ]
         except Exception, e:
             Log.error("Can not call", e)
@@ -69,6 +69,10 @@ class Process(object):
     def remove_child(self, child):
         with self.thread_locker:
             self.children.remove(child)
+
+    @property
+    def pid(self):
+        return self.service.pid
 
     def _monitor(self, please_stop):
         self.service.wait()

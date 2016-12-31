@@ -22,10 +22,11 @@ from datetime import datetime
 from pyLibrary.debugs import constants, exceptions
 from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.text_logs import TextLog_usingMulti, TextLog_usingThread, TextLog_usingStream, TextLog_usingFile
-from pyLibrary.dot import coalesce, listwrap, wrap, unwrap, unwraplist, set_default
+from pyDots import coalesce, listwrap, wrap, unwrap, unwraplist, set_default
 from pyLibrary.strings import indent
 
 _Thread = None
+
 
 class Log(object):
     """

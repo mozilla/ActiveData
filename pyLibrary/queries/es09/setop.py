@@ -14,9 +14,9 @@ from collections import Mapping
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND, SUM, OR
-from pyLibrary.dot import coalesce, split_field, Dict, wrap
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import listwrap, unwrap
+from pyDots import coalesce, split_field, Data, wrap
+from pyDots.lists import FlatList
+from pyDots import listwrap, unwrap
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09.expressions import unpack_terms
 from pyLibrary.queries.es09.util import aggregates
@@ -57,7 +57,7 @@ def es_fieldop(es, query):
         }
     }
     FromES.size = coalesce(query.limit, 200000)
-    FromES.fields = DictList()
+    FromES.fields = FlatList()
     for s in select.value:
         if s == "*":
             FromES.fields = None
@@ -175,7 +175,7 @@ def es_setop(es, mvel, query):
             output = zip(*data_list)
             cube = Cube(select, [], {s.name: Matrix(list=output[i]) for i, s in enumerate(select)})
 
-    return Dict(
+    return Data(
         meta={"esquery": FromES},
         data=cube
     )
@@ -206,7 +206,7 @@ def es_deepop(es, mvel, query):
 
     temp_query = query.copy()
     temp_query.select = select
-    temp_query.edges = DictList()
+    temp_query.edges = FlatList()
     FromES.facets.mvel = {
         "terms": {
             "script_field": mvel.code(temp_query),

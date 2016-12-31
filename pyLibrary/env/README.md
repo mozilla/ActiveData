@@ -17,7 +17,7 @@ It also provides better OO over some common file manipulations.
 emailer
 -------
 
-A simple emailer, the primary purpose is to accept a [Dict](../dot/README.md)
+A simple emailer, the primary purpose is to accept a [Data](../dot/README.md)
 of settings.
 
 

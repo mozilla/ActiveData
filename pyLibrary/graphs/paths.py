@@ -117,7 +117,7 @@ class Path(list):
 
     def last(self):
         """
-        RETURN LAST ELEMENT IN DictList [-1]
+        RETURN LAST ELEMENT IN FlatList [-1]
         """
         return self.last.node
 

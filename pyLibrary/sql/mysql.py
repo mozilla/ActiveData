@@ -24,7 +24,7 @@ from pyLibrary.maths import Math
 from pyLibrary.meta import use_settings
 from pyLibrary.sql import SQL
 from pyLibrary.strings import expand_template
-from pyLibrary.dot import coalesce, wrap, listwrap, unwrap
+from pyDots import coalesce, wrap, listwrap, unwrap
 from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.logs import Log
@@ -514,7 +514,7 @@ class MySQL(object):
 
     def update(self, table_name, where_slice, new_values):
         """
-        where_slice - A Dict WHICH WILL BE USED TO MATCH ALL IN table
+        where_slice - A Data WHICH WILL BE USED TO MATCH ALL IN table
                       eg {"id": 42}
         new_values  - A dict WITH COLUMN NAME, COLUMN VALUE PAIRS TO SET
         """

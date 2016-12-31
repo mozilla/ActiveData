@@ -81,4 +81,4 @@ class Lock(object):
         self.lock.release()
         (waiter | till).wait()
         self.lock.acquire()
-        return not not waiter
+        return bool(waiter)

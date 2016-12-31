@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from collections import MutableMapping, Mapping
 from copy import deepcopy
 
-from pyLibrary.dot import _getdefault, hash_value, literal_field, coalesce, listwrap
+from pyDots import _getdefault, hash_value, literal_field, coalesce, listwrap
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -22,7 +22,7 @@ _set = object.__setattr__
 DEBUG = False
 
 
-class Dict(MutableMapping):
+class Data(MutableMapping):
     """
     Please see README.md
     """
@@ -31,7 +31,7 @@ class Dict(MutableMapping):
 
     def __init__(self, *args, **kwargs):
         """
-        CALLING Dict(**something) WILL RESULT IN A COPY OF something, WHICH
+        CALLING Data(**something) WILL RESULT IN A COPY OF something, WHICH
         IS UNLIKELY TO BE USEFUL. USE wrap() INSTEAD
         """
         if DEBUG:
@@ -43,10 +43,12 @@ class Dict(MutableMapping):
                 args0 = args[0]
                 if isinstance(args0, dict):
                     _set(self, "_dict", args0)
-                elif isinstance(args0, Dict):
+                elif isinstance(args0, Data):
                     _set(self, "_dict", _get(args0, "_dict"))
+                elif isinstance(args0, list):
+                    _set(self, "_dict", dict(args0))
                 else:
-                    _set(self, "_dict", _get(args[0], "__dict__"))
+                    raise TypeError()
             elif kwargs:
                 _set(self, "_dict", unwrap(kwargs))
             else:
@@ -63,7 +65,7 @@ class Dict(MutableMapping):
             return d != None
 
     def __contains__(self, item):
-        if Dict.__getitem__(self, item):
+        if Data.__getitem__(self, item):
             return True
         return False
 
@@ -239,11 +241,11 @@ class Dict(MutableMapping):
         return dict.__len__(d)
 
     def copy(self):
-        return Dict(**self)
+        return Data(**self)
 
     def __copy__(self):
         d = _get(self, "_dict")
-        return Dict(**d)
+        return Data(**d)
 
     def __deepcopy__(self, memo):
         d = _get(self, "_dict")
@@ -278,15 +280,15 @@ class Dict(MutableMapping):
 
     def __str__(self):
         try:
-            return "Dict("+dict.__str__(_get(self, "_dict"))+")"
-        except Exception, e:
-            return "Dict{}"
+            return dict.__str__(_get(self, "_dict"))
+        except Exception:
+            return "{}"
 
     def __repr__(self):
         try:
-            return "Dict("+dict.__repr__(_get(self, "_dict"))+")"
+            return "Data("+dict.__repr__(_get(self, "_dict"))+")"
         except Exception, e:
-            return "Dict()"
+            return "Data()"
 
 
 def leaves(value, prefix=None):
@@ -296,7 +298,7 @@ def leaves(value, prefix=None):
 
     :param value: THE Mapping TO TRAVERSE
     :param prefix:  OPTIONAL PREFIX GIVEN TO EACH KEY
-    :return: Dict, WHICH EACH KEY BEING A PATH INTO value TREE
+    :return: Data, WHICH EACH KEY BEING A PATH INTO value TREE
     """
     prefix = coalesce(prefix, "")
     output = []
@@ -324,7 +326,7 @@ class _DictUsingSelf(dict):
 
     def __init__(self, **kwargs):
         """
-        CALLING Dict(**something) WILL RESULT IN A COPY OF something, WHICH
+        CALLING Data(**something) WILL RESULT IN A COPY OF something, WHICH
         IS UNLIKELY TO BE USEFUL. USE wrap() INSTEAD
         """
         dict.__init__(self)
@@ -468,10 +470,10 @@ class _DictUsingSelf(dict):
         return d.__len__()
 
     def copy(self):
-        return Dict(**self)
+        return Data(**self)
 
     def __copy__(self):
-        return Dict(**self)
+        return Data(**self)
 
     def __deepcopy__(self, memo):
         return wrap(dict.__deepcopy__(self, memo))
@@ -509,9 +511,9 @@ class _DictUsingSelf(dict):
 
     def __repr__(self):
         try:
-            return "Dict("+dict.__repr__(self)+")"
+            return "Data("+dict.__repr__(self)+")"
         except Exception, e:
-            return "Dict()"
+            return "Data()"
 
 
 def _str(value, depth):
@@ -531,5 +533,5 @@ def _str(value, depth):
         return str(type(value))
 
 
-from pyLibrary.dot.nones import Null, NullType
-from pyLibrary.dot import unwrap, wrap
+from pyDots.nones import Null, NullType
+from pyDots import unwrap, wrap

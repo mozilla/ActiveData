@@ -19,7 +19,7 @@ from pyLibrary import convert
 from pyLibrary.collections import OR, MAX
 from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, wrap, set_default, literal_field, listwrap, Null, split_field, startswith_field, Dict, join_field, unwraplist, unwrap, \
+from pyDots import coalesce, wrap, set_default, literal_field, listwrap, Null, split_field, startswith_field, Data, join_field, unwraplist, unwrap, \
     ROOT_PATH, relative_field
 from pyLibrary.maths import Math
 from pyLibrary.queries.containers import STRUCT, OBJECT
@@ -272,7 +272,7 @@ class Variable(Expression):
         if cols is None:
             # DOES NOT EXIST
             return wrap([{"name": ".", "sql": {"n": "NULL"}, "nested_path": ROOT_PATH}])
-        acc = Dict()
+        acc = Data()
         for col in cols:
             if col.type == OBJECT:
                 prefix = self.var + "."
@@ -825,7 +825,7 @@ class LeavesOp(Expression):
         Log.error("not supported")
 
     def to_python(self, not_null=False, boolean=False):
-        return "Dict(" + self.term.to_python() + ").leaves()"
+        return "Data(" + self.term.to_python() + ").leaves()"
 
     def to_sql(self, schema, not_null=False, boolean=False):
         if not isinstance(self.term, Variable):

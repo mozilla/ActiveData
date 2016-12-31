@@ -17,8 +17,8 @@ from datetime import datetime
 from time import clock
 
 from pyLibrary.collections import MAX
-from pyLibrary.dot import wrap
-from pyLibrary.dot import Dict
+from pyDots import wrap
+from pyDots import Data
 
 ON = False
 profiles = {}
@@ -110,7 +110,7 @@ def write(profile_settings):
         return
 
     r = range(max_samples)
-    profs.insert(0, Dict(description="index", samples=r))
+    profs.insert(0, Data(description="index", samples=r))
     stats = [
         {p.description: wrap(p.samples)[i] for p in profs if p.samples}
         for i in r

@@ -16,6 +16,7 @@ import math
 import re
 from datetime import datetime, date, timedelta
 from decimal import Decimal
+from thread import allocate_lock as _allocate_lock
 from time import time as _time
 
 _utcnow = datetime.utcnow
@@ -25,7 +26,7 @@ try:
 except Exception:
     pass
 
-from pyLibrary.dot import Null
+from pyDots import Null
 from pyLibrary.maths import Math
 from pyLibrary.times.durations import Duration, MILLI_VALUES
 from pyLibrary.vendor.dateutil.parser import parse as parse_date
@@ -117,11 +118,13 @@ class Date(object):
         candidate = _time()
         temp = _utcnow()
         unix = datetime2unix(temp)
-        if abs(candidate - unix) > 0.1:
+        _leap_logging(candidate, unix)
+
+        if abs(unix - candidate) > 0.1:
             from pyLibrary.debugs.logs import Log
 
             Log.warning("_time() and _utcnow() is off by {{amount}}", amount=unix - candidate)
-        return unix2Date(datetime2unix(temp))
+        return unix2Date(unix)
 
     @staticmethod
     def eod():
@@ -395,17 +398,19 @@ def unicode2Date(value, format=None):
         Log.error("Can not interpret {{value}} as a datetime",  value= value)
 
 
+DATETIME_EPOCH = datetime(1970, 1, 1)
+DATE_EPOCH = date(1970, 1, 1)
+
+
 def datetime2unix(value):
     try:
         if value == None:
             return None
         elif isinstance(value, datetime):
-            epoch = datetime(1970, 1, 1)
-            diff = value - epoch
+            diff = value - DATETIME_EPOCH
             return diff.total_seconds()
         elif isinstance(value, date):
-            epoch = date(1970, 1, 1)
-            diff = value - epoch
+            diff = value - DATE_EPOCH
             return diff.total_seconds()
         else:
             from pyLibrary.debugs.logs import Log
@@ -427,6 +432,39 @@ def unix2Date(unix):
     output = object.__new__(Date)
     output.unix = unix
     return output
+
+
+LEAP_SECOND = Date("1jan2017").unix
+_leap_log = []
+_leap_lock = _allocate_lock()
+_Log = None
+
+
+def _leap_logging(clock_time, utc_time):
+    global _Log
+    global _leap_log
+
+    diff = clock_time - LEAP_SECOND
+    with _leap_lock:
+        if not _Log:
+            from pyLibrary.debugs.logs import Log as _Log
+            _Log.warning("preparing for leap seconds near {{date|datetime}}", date=LEAP_SECOND)
+
+    if abs(diff) < 30:  # RECORD AROUND THE LEAP SECOND
+        with _leap_lock:
+            _leap_log.append((clock_time, utc_time))
+    if diff > 60 and _leap_log:
+        with _leap_lock:
+            temp, _leap_log = _leap_log, Null
+        if temp:
+            clocks, utcs = zip(*temp)
+            _Log.warning(
+                "Leap second logging results\ntime.time\n{{clocks|json}}\ntime.time diff\n{{clocks_diff|json}}\nutcnow\n{{utc|json}}\nutc diff\n{{utc_diff|json}}",
+                clocks=clocks,
+                clocks_diff=[b - a for a, b in zip(clocks, clocks[1:])],
+                utc=utcs,
+                utc_diff=[b - a for a, b in zip(utcs, utcs[1:])]
+            )
 
 
 Date.MIN = Date(datetime(1, 1, 1))

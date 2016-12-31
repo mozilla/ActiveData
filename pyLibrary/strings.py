@@ -25,7 +25,7 @@ from collections import Mapping
 from datetime import timedelta, date
 from datetime import datetime as builtin_datetime
 
-from pyLibrary.dot import coalesce, wrap
+from pyDots import coalesce, wrap
 
 
 _json_encoder = None

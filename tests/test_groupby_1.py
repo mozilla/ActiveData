@@ -8,12 +8,11 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
-import base_test_class
-from pyLibrary.dot import wrap
-from tests import NULL
+from __future__ import unicode_literals
 
+from pyDots import wrap, set_default
+from tests import NULL
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 
@@ -361,6 +360,23 @@ class TestgroupBy1(ActiveDataBaseTest):
                     ["b", 2],
                     ["c", 31],
                     [NULL, 3]
+                ]
+            }
+        }
+        self.utils.execute_es_tests(test)
+
+    def test_groupby_left_id(self):
+        test = {
+            "data": [set_default(d, {"_id": "aa"+unicode(i)}) for i, d in enumerate(simple_test_data)],
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": {"name": "prefix", "value": {"left": {"_id": 2}}}
+            },
+            "expecting": {
+                "meta": {"format": "table"},
+                "header": ["prefix", "count"],
+                "data": [
+                    ["aa", 6]
                 ]
             }
         }

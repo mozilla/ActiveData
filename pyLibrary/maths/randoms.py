@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import random
 import string
 
-from pyLibrary.dot import unwrap
+from pyDots import unwrap
 
 SIMPLE_ALPHABET = string.ascii_letters + string.digits
 SEED = random.Random()

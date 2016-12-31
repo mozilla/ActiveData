@@ -8,8 +8,8 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
+from __future__ import unicode_literals
 
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expressions import simplify_esfilter, jx_expression, USE_BOOL_MUST

@@ -11,7 +11,7 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary.dot import wrap
+from pyDots import wrap
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import WEEK, DAY
 from tests import NULL

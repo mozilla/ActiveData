@@ -16,7 +16,7 @@ from pyLibrary import regex
 from pyLibrary.vendor.dateutil.relativedelta import relativedelta
 from pyLibrary.collections import MIN
 from pyLibrary.maths import Math
-from pyLibrary.dot import wrap
+from pyDots import wrap
 
 
 _Date = None

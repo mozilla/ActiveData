@@ -31,7 +31,7 @@ from pyLibrary import strings
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, wrap_leaves, unwrap, unwraplist, split_field, join_field, concat_field
+from pyDots import wrap, wrap_leaves, unwrap, unwraplist, split_field, join_field, concat_field
 from pyLibrary.env.big_data import FileString, safe_size
 from pyLibrary.jsons import quote
 from pyLibrary.jsons.encoder import json_encoder, pypy_json_encode
@@ -602,7 +602,7 @@ def bytes2zip(bytes):
 
 def ini2value(ini_content):
     """
-    INI FILE CONTENT TO Dict
+    INI FILE CONTENT TO Data
     """
     from ConfigParser import ConfigParser
 

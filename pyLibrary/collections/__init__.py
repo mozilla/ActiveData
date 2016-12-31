@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import math
 
 from pyLibrary.collections.multiset import Multiset
-from pyLibrary.dot import Null
+from pyDots import Null
 
 
 def reverse(values):

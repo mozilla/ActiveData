@@ -17,7 +17,7 @@ from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.env.files import File
 from pyLibrary.maths.randoms import Random
-from pyLibrary.dot import Dict, wrap
+from pyDots import Data, wrap
 from pyLibrary.thread.threads import Lock, Thread, Signal
 
 
@@ -41,7 +41,7 @@ class PersistentQueue(object):
         self.file = File.new_instance(_file)
         self.lock = Lock("lock for persistent queue using file " + self.file.name)
         self.please_stop = Signal()
-        self.db = Dict()
+        self.db = Data()
         self.pending = []
 
         if self.file.exists:
@@ -67,7 +67,7 @@ class PersistentQueue(object):
             if DEBUG:
                 Log.note("Persistent queue {{name}} found with {{num}} items", name=self.file.abspath, num=len(self))
         else:
-            self.db.status = Dict(
+            self.db.status = Data(
                 start=0,
                 end=0
             )

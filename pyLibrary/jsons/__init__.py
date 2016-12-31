@@ -20,8 +20,8 @@ from types import NoneType
 
 import math
 
-from pyLibrary.dot import DictList, NullType, Dict, unwrap
-from pyLibrary.dot.objects import DictObject
+from pyDots import FlatList, NullType, Data, unwrap
+from pyDots.objects import DataObject
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
@@ -132,7 +132,7 @@ def _scrub(value, is_done):
         return utf82unicode(value)
     elif type_ is Decimal:
         return float(value)
-    elif type_ is Dict:
+    elif type_ is Data:
         return _scrub(unwrap(value), is_done)
     elif isinstance(value, Mapping):
         _id = id(value)
@@ -155,7 +155,7 @@ def _scrub(value, is_done):
 
         is_done.discard(_id)
         return output
-    elif type_ in (tuple, list, DictList):
+    elif type_ in (tuple, list, FlatList):
         output = []
         for v in value:
             v = _scrub(v, is_done)
@@ -185,7 +185,7 @@ def _scrub(value, is_done):
     elif hasattr(value, '__call__'):
         return repr(value)
     else:
-        return _scrub(DictObject(value), is_done)
+        return _scrub(DataObject(value), is_done)
 
 
 from . import encoder as json_encoder

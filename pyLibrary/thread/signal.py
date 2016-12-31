@@ -39,7 +39,6 @@ class Signal(object):
 
     go() - ACTIVATE SIGNAL (DOES NOTHING IF SIGNAL IS ALREADY ACTIVATED)
     wait() - PUT THREAD IN WAIT STATE UNTIL SIGNAL IS ACTIVATED
-    is_go() - TEST IF SIGNAL IS ACTIVATED, DO NOT WAIT (you can also check truthiness)
     on_go() - METHOD FOR OTHER THREAD TO RUN WHEN ACTIVATING SIGNAL
     """
 
@@ -60,8 +59,7 @@ class Signal(object):
         return str(self._go)
 
     def __bool__(self):
-        with self.lock:
-            return self._go
+        return self._go
 
     def __nonzero__(self):
         with self.lock:
@@ -125,13 +123,6 @@ class Signal(object):
                     if not _Log:
                         _late_import()
                     _Log.warning("Trigger on Signal.go() failed!", cause=e)
-
-    def is_go(self):
-        """
-        TEST IF SIGNAL IS ACTIVATED, DO NOT WAIT
-        """
-        with self.lock:
-            return self._go
 
     def on_go(self, target):
         """

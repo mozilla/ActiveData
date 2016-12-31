@@ -7,14 +7,16 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 from collections import Mapping
 from datetime import date, datetime
 from decimal import Decimal
 from types import NoneType, GeneratorType
-from pyLibrary.dot import wrap, unwrap, Dict, Null, NullType, get_attr, set_attr
+
+from pyDots import wrap, unwrap, Data, FlatList, NullType, get_attr, set_attr
 from pyLibrary.times.dates import Date
 
 _get = object.__getattribute__
@@ -22,7 +24,7 @@ _set = object.__setattr__
 WRAPPED_CLASSES = set()
 
 
-class DictObject(Mapping):
+class DataObject(Mapping):
     """
     TREAT AN OBJECT LIKE DATA
     """
@@ -33,7 +35,7 @@ class DictObject(Mapping):
     def __getattr__(self, item):
         obj = _get(self, "_obj")
         output = get_attr(obj, item)
-        return dictwrap(output)
+        return datawrap(output)
 
     def __setattr__(self, key, value):
         obj = _get(self, "_obj")
@@ -42,7 +44,7 @@ class DictObject(Mapping):
     def __getitem__(self, item):
         obj = _get(self, "_obj")
         output = get_attr(obj, item)
-        return dictwrap(output)
+        return datawrap(output)
 
     def keys(self):
         obj = _get(self, "_obj")
@@ -89,31 +91,31 @@ class DictObject(Mapping):
         return obj(*args, **kwargs)
 
 
-def dictwrap(v):
+def datawrap(v):
     type_ = _get(v, "__class__")
 
     if type_ is dict:
-        m = Dict()
+        m = Data()
         _set(m, "_dict", v)  # INJECT m.__dict__=v SO THERE IS NO COPY
         return m
-    elif type_ is Dict:
+    elif type_ is Data:
         return v
-    elif type_ is DictObject:
+    elif type_ is DataObject:
         return v
     elif type_ is NoneType:
         return None   # So we allow `is None`
     elif type_ is list:
-        return DictList(v)
+        return FlatList(v)
     elif type_ is GeneratorType:
         return (wrap(vv) for vv in v)
     elif isinstance(v, Mapping):
         return v
     elif hasattr(v, "as_dict"):
         return v.as_dict()
-    elif isinstance(v, (basestring, int, float, Decimal, Date, datetime, date, Dict, DictList, NullType, NoneType)):
+    elif isinstance(v, (basestring, int, float, Decimal, Date, datetime, date, Data, FlatList, NullType, NoneType)):
         return v
     else:
-        return DictObject(v)
+        return DataObject(v)
 
 
 class DictClass(object):
@@ -139,7 +141,7 @@ class DictClass(object):
         ordered_params = dict(zip(params, args))
 
         output = self.class_(**params_pack(params, ordered_params, kwargs, settings, defaults))
-        return DictObject(output)
+        return DataObject(output)
 
 
 def params_pack(params, *args):
@@ -155,4 +157,3 @@ def params_pack(params, *args):
     return output
 
 
-from pyLibrary.dot import DictList

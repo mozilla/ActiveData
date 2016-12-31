@@ -17,7 +17,7 @@ from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.debugs.text_logs import TextLog
-from pyLibrary.dot import wrap, unwrap, coalesce, set_default
+from pyDots import wrap, coalesce
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
@@ -82,7 +82,7 @@ class TextLog_usingElasticSearch(TextLog):
                 bad_count += 1
                 if bad_count > MAX_BAD_COUNT:
                     Log.warning("Given up trying to write debug logs to ES index {{index}}", index=self.es.settings.index)
-                Till(seconds=20).wait()
+                Till(seconds=30).wait()
 
         # CONTINUE TO DRAIN THIS QUEUE
         while not please_stop:

@@ -21,12 +21,12 @@ import types
 from collections import deque
 from copy import copy
 from datetime import datetime, timedelta
-from time import sleep as _sleep
+from time import sleep
 
 from pyLibrary import strings
 from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.profiles import CProfiler
-from pyLibrary.dot import coalesce, Dict, unwraplist, Null
+from pyDots import coalesce, Data, unwraplist, Null
 from pyLibrary.thread.lock import Lock
 from pyLibrary.thread.signal import Signal
 from pyLibrary.thread.till import Till
@@ -83,7 +83,7 @@ class Queue(object):
         while self.keep_running:
             try:
                 value = self.pop()
-                if value is not Thread.STOP:
+                if value is not None and value is not Thread.STOP:
                     yield value
             except Exception, e:
                 _Log.warning("Tell me about what happened here", e)
@@ -162,7 +162,7 @@ class Queue(object):
         wait_time = 5 * SECOND
 
         now = Date.now()
-        if timeout!=None:
+        if timeout != None:
             time_to_stop_waiting = now + timeout
         else:
             time_to_stop_waiting = None
@@ -211,16 +211,12 @@ class Queue(object):
         if till is not None and not isinstance(till, Signal):
             _Log.error("expecting a signal")
 
-        while self.keep_running:
-            with self.lock:
+        with self.lock:
+            while self.keep_running:
                 if self.queue:
                     value = self.queue.popleft()
                     return value
-
                 self.lock.wait(till=till)
-            if self.keep_running:
-                return None
-
         if DEBUG or not self.silent:
             _Log.note(self.name + " queue stopped")
         return Thread.STOP
@@ -449,13 +445,13 @@ class Thread(object):
                     a, k, self.args, self.kwargs = self.args, self.kwargs, None, None
                     response = self.target(*a, **k)
                     with self.synch_lock:
-                        self.end_of_thread = Dict(response=response)
+                        self.end_of_thread = Data(response=response)
                 else:
                     with self.synch_lock:
                         self.end_of_thread = Null
             except Exception, e:
                 with self.synch_lock:
-                    self.end_of_thread = Dict(exception=_Except.wrap(e))
+                    self.end_of_thread = Data(exception=_Except.wrap(e))
                 if self not in self.parent.children:
                     # THREAD FAILURES ARE A PROBLEM ONLY IF NO ONE WILL BE JOINING WITH IT
                     try:
@@ -531,11 +527,6 @@ class Thread(object):
         output = Thread(name, target, *args, **kwargs)
         output.start()
         return output
-
-    @staticmethod
-    def sleep(seconds=None, till=None, timeout=None, please_stop=None):
-        waiter = Till(seconds=seconds, till=till, timeout=timeout) | please_stop
-        waiter.wait()
 
     @staticmethod
     def wait_for_shutdown_signal(
@@ -788,7 +779,7 @@ def _wait_for_interrupt(please_stop):
         _Log.note("inside wait-for-shutdown loop")
     while not please_stop:
         with suppress_exception:
-            _sleep(1)
+            sleep(1)
 
 
 def _interrupt_main_safely():

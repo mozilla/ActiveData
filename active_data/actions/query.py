@@ -15,22 +15,21 @@ from collections import Mapping
 import flask
 import moz_sql_parser
 from flask import Response
-from pyLibrary.testing.fuzzytestcase import FuzzyTestCase, assertAlmostEqual
 
 from active_data import record_request, cors_wrapper
 from active_data.actions import save_query
+from pyDots import coalesce, join_field, split_field, wrap, listwrap
 from pyLibrary import convert, strings
 from pyLibrary.debugs.exceptions import Except
 from pyLibrary.debugs.logs import Log
 from pyLibrary.debugs.profiles import CProfiler
-from pyLibrary.dot import coalesce, join_field, split_field, wrap, listwrap
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx, meta, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.meta import TOO_OLD
 from pyLibrary.strings import expand_template
-from pyLibrary.thread.threads import Thread
+from pyLibrary.testing.fuzzytestcase import assertAlmostEqual
 from pyLibrary.thread.till import Till
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import MINUTE

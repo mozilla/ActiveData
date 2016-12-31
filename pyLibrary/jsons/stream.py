@@ -15,7 +15,7 @@ import json
 from types import GeneratorType
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import split_field
+from pyDots import split_field
 from pyLibrary.env.files import File
 from pyLibrary.env.http import MIN_READ_SIZE
 

@@ -19,7 +19,7 @@ from boto.sqs.message import Message
 from pyLibrary import convert
 from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.logs import Log, machine_metadata
-from pyLibrary.dot import wrap, unwrap, coalesce
+from pyDots import wrap, unwrap, coalesce
 from pyLibrary.maths import Math
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.signal import Signal

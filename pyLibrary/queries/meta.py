@@ -16,9 +16,9 @@ from copy import copy
 from itertools import product
 
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
-from pyLibrary.dot import wrap
-from pyLibrary.dot.dicts import Dict
+from pyDots import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
+from pyDots import wrap
+from pyDots import Data
 from pyLibrary.meta import use_settings, DataClass
 from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import STRUCT, Container
@@ -69,7 +69,7 @@ class FromESMetadata(Schema):
         self.es_metadata = Null
         self.last_es_metadata = Date.now()-OLD_METADATA
 
-        self.meta=Dict()
+        self.meta=Data()
         table_columns = metadata_tables()
         column_columns = metadata_columns()
         self.meta.tables = ListContainer("meta.tables", [], wrap({c.name: c for c in table_columns}))
@@ -299,7 +299,7 @@ class FromESMetadata(Schema):
             if cardinality == None:
                 Log.error("logic error")
 
-            query = Dict(size=0)
+            query = Data(size=0)
             if cardinality > 1000 or (count >= 30 and cardinality == count) or (count >= 1000 and cardinality / count > 0.99):
                 Log.note("{{table}}.{{field}} has {{num}} parts", table=c.table, field=c.es_column, num=cardinality)
                 with self.meta.columns.locker:

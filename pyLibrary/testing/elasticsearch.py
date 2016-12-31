@@ -17,8 +17,8 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.env.files import File
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
-from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import unwrap, wrap
+from pyDots import Data
+from pyDots import unwrap, wrap
 
 
 def make_test_instance(name, settings):
@@ -54,7 +54,7 @@ class Fake_ES():
         try:
             self.data = convert.json2value(File(self.filename).read())
         except Exception:
-            self.data = Dict()
+            self.data = Data()
 
     def search(self, query):
         query = wrap(query)

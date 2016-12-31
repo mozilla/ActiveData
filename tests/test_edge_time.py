@@ -8,12 +8,11 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
-import base_test_class
+from __future__ import unicode_literals
+
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import DAY
-
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 FROM_DATE = Date.today()-7*DAY

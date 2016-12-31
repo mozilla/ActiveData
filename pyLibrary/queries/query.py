@@ -17,10 +17,10 @@ from copy import copy
 from pyLibrary import convert
 from pyLibrary.collections import AND, UNION
 from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, Null, set_default, unwraplist, literal_field
-from pyLibrary.dot import wrap, unwrap, listwrap
-from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot.lists import DictList
+from pyDots import coalesce, Null, set_default, unwraplist, literal_field
+from pyDots import wrap, unwrap, listwrap
+from pyDots import Data
+from pyDots.lists import FlatList
 from pyLibrary.maths import Math
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import Schema, wrap_from
@@ -211,7 +211,7 @@ class QueryOp(Expression):
             output.select = _normalize_selects(query.select, query.frum, schema=schema)
         else:
             if query.edges or query.groupby:
-                output.select = Dict(name="count", value=jx_expression("."), aggregate="count", default=0)
+                output.select = Data(name="count", value=jx_expression("."), aggregate="count", default=0)
             else:
                 output.select = _normalize_selects(".", query.frum)
 
@@ -256,7 +256,7 @@ class QueryOp(Expression):
     def __getitem__(self, item):
         if item == "from":
             return self.frum
-        return Dict.__getitem__(self, item)
+        return Data.__getitem__(self, item)
 
     def copy(self):
         output = object.__new__(QueryOp)
@@ -283,7 +283,7 @@ def _normalize_selects(selects, frum, schema=None, ):
     if frum == None or isinstance(frum, (list, set, unicode)):
         if isinstance(selects, list):
             if len(selects) == 0:
-                output = Dict()
+                output = Data()
                 return output
             else:
                 output = [_normalize_select_no_context(s, schema=schema) for s in selects]
@@ -313,7 +313,7 @@ def _normalize_select(select, frum, schema=None):
         _late_import()
 
     if isinstance(select, basestring):
-        canonical = select = Dict(value=select)
+        canonical = select = Data(value=select)
     else:
         select = wrap(select)
         canonical = select.copy()
@@ -386,7 +386,7 @@ def _normalize_select_no_context(select, schema=None):
         _late_import()
 
     if isinstance(select, basestring):
-        select = Dict(value=select)
+        select = Data(value=select)
     else:
         select = wrap(select)
 
@@ -443,26 +443,26 @@ def _normalize_edge(edge, schema=None):
             e = unwraplist(e)
             if e and not isinstance(e, (_Column, set, list)):
                 if isinstance(e, _Column):
-                    return Dict(
+                    return Data(
                         name=edge,
                         value=jx_expression(edge),
                         allowNulls=True,
                         domain=_normalize_domain(domain=e, schema=schema)
                     )
                 elif isinstance(e.fields, list) and len(e.fields) == 1:
-                    return Dict(
+                    return Data(
                         name=e.name,
                         value=jx_expression(e.fields[0]),
                         allowNulls=True,
                         domain=e.getDomain()
                     )
                 else:
-                    return Dict(
+                    return Data(
                         name=e.name,
                         allowNulls=True,
                         domain=e.getDomain()
                     )
-        return Dict(
+        return Data(
             name=edge,
             value=jx_expression(edge),
             allowNulls=True,
@@ -476,9 +476,9 @@ def _normalize_edge(edge, schema=None):
         if isinstance(edge.value, (list, set)) and not edge.domain:
             # COMPLEX EDGE IS SHORT HAND
             domain = _normalize_domain(schema=schema)
-            domain.dimension = Dict(fields=edge.value)
+            domain.dimension = Data(fields=edge.value)
 
-            return Dict(
+            return Data(
                 name=edge.name,
                 value=jx_expression(edge.value),
                 allowNulls=bool(coalesce(edge.allowNulls, True)),
@@ -487,7 +487,7 @@ def _normalize_edge(edge, schema=None):
 
         domain = _normalize_domain(edge.domain, schema=schema)
 
-        return Dict(
+        return Data(
             name=coalesce(edge.name, edge.value),
             value=jx_expression(edge.value),
             range=_normalize_range(edge.range),
@@ -557,7 +557,7 @@ def _normalize_window(window, schema=None):
         expr = ScriptOp("script", v)
 
 
-    return Dict(
+    return Data(
         name=coalesce(window.name, window.value),
         value=expr,
         edges=[_normalize_edge(e, schema) for e in listwrap(window.edges)],
@@ -572,7 +572,7 @@ def _normalize_range(range):
     if range == None:
         return None
 
-    return Dict(
+    return Data(
         min=None if range.min == None else jx_expression(range.min),
         max=None if range.max == None else jx_expression(range.max),
         mode=range.mode
@@ -589,7 +589,7 @@ def _map_term_using_schema(master, path, term, schema_edges):
     """
     IF THE WHERE CLAUSE REFERS TO FIELDS IN THE SCHEMA, THEN EXPAND THEM
     """
-    output = DictList()
+    output = FlatList()
     for k, v in term.items():
         dimension = schema_edges[k]
         if isinstance(dimension, Dimension):
@@ -662,7 +662,7 @@ def _where_terms(master, where, schema):
                 Log.error("programmer problem?", e)
         elif where.terms:
             # MAP TERM
-            output = DictList()
+            output = FlatList()
             for k, v in where.terms.items():
                 if not isinstance(v, (list, set)):
                     Log.error("terms filter expects list of values")
@@ -708,9 +708,9 @@ def _normalize_sort(sort=None):
     """
 
     if sort==None:
-        return DictList.EMPTY
+        return FlatList.EMPTY
 
-    output = DictList()
+    output = FlatList()
     for s in listwrap(sort):
         if isinstance(s, basestring):
             output.append({"value": jx_expression(s), "sort": 1})

@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 from unittest import skipIf
 
-from pyLibrary.dot import wrap
+from pyDots import wrap
 from pyLibrary.maths import Math
 from pyLibrary.queries import query
 from tests import NULL

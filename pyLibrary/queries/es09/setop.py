@@ -21,7 +21,7 @@ from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09.expressions import unpack_terms
 from pyLibrary.queries.es09.util import aggregates
 from pyLibrary.queries import domains, es09
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.expressions import simplify_esfilter, TRUE_FILTER, jx_expression, Variable
 

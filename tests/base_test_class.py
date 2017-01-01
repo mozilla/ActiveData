@@ -21,8 +21,8 @@ from string import ascii_lowercase
 from active_data.actions.query import replace_vars
 from pyDots import wrap, coalesce, unwrap, listwrap, Data
 from pyLibrary import convert, jsons
-from pyLibrary.debugs.exceptions import extract_stack
-from pyLibrary.debugs.logs import Log, Except, constants
+from MoLogs.exceptions import extract_stack
+from MoLogs import Log, Except, constants
 from pyLibrary.env import http
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, containers

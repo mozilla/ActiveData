@@ -30,7 +30,7 @@ class File(object):
         YOU MAY SET filename TO {"path":p, "key":k} FOR CRYPTO FILES
         """
         if filename == None:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error("File must be given a filename")
         elif isinstance(filename, basestring):
@@ -180,7 +180,7 @@ class File(object):
             with open(self._filename, "rb") as f:
                 return f.read()
         except Exception, e:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error("Problem reading file {{filename}}", self.abspath)
 
@@ -195,7 +195,7 @@ class File(object):
             self.parent.create()
         with open(self._filename, "wb") as f:
             if isinstance(data, list) and self.key:
-                from pyLibrary.debugs.logs import Log
+                from MoLogs import Log
 
                 Log.error("list of data and keys are not supported, encrypt before sending to file")
 
@@ -208,7 +208,7 @@ class File(object):
 
             for d in data:
                 if not isinstance(d, unicode):
-                    from pyLibrary.debugs.logs import Log
+                    from MoLogs import Log
 
                     Log.error("Expecting unicode data only")
                 if self.key:
@@ -231,7 +231,7 @@ class File(object):
                     for line in f:
                         yield utf82unicode(line)
             except Exception, e:
-                from pyLibrary.debugs.logs import Log
+                from MoLogs import Log
 
                 Log.error("Can not read line from {{filename}}", filename=self._filename, cause=e)
 
@@ -245,7 +245,7 @@ class File(object):
             self.parent.create()
         with open(self._filename, "ab") as output_file:
             if isinstance(content, str):
-                from pyLibrary.debugs.logs import Log
+                from MoLogs import Log
 
                 Log.error("expecting to write unicode only")
             output_file.write(content.encode("utf-8"))
@@ -261,14 +261,14 @@ class File(object):
             with open(self._filename, "ab") as output_file:
                 for c in content:
                     if isinstance(c, str):
-                        from pyLibrary.debugs.logs import Log
+                        from MoLogs import Log
 
                         Log.error("expecting to write unicode only")
 
                     output_file.write(c.encode("utf-8"))
                     output_file.write(b"\n")
         except Exception, e:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error("Could not write to file", e)
 
@@ -282,7 +282,7 @@ class File(object):
         except Exception, e:
             if e.strerror == "The system cannot find the path specified":
                 return
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error("Could not remove file", e)
 
@@ -303,7 +303,7 @@ class File(object):
         try:
             os.makedirs(self._filename)
         except Exception, e:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error("Could not make directory {{dir_name}}",  dir_name= self._filename, cause=e)
 

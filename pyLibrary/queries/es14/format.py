@@ -15,7 +15,7 @@ from collections import Mapping
 
 from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import Data, set_default, coalesce, wrap, split_field, Null
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.es14.aggs import count_dim, aggs_iterator, format_dispatch, drill

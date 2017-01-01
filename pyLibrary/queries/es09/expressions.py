@@ -17,7 +17,7 @@ import re
 
 from pyLibrary import convert
 from pyLibrary.collections import reverse
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyLibrary.maths import Math
 from pyDots import split_field, Data, Null, join_field, coalesce
 from pyDots import listwrap

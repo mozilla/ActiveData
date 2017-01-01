@@ -9,7 +9,7 @@
 
 # MIMICS THE requests API (http://docs.python-requests.org/en/latest/)
 # DEMANDS data IS A JSON-SERIALIZABLE STRUCTURE
-# WITH ADDED default_headers THAT CAN BE SET USING pyLibrary.debugs.settings
+# WITH ADDED default_headers THAT CAN BE SET USING MoLogs.settings
 # EG
 # {"debug.constants":{
 #     "pyLibrary.env.http.default_headers":{"From":"klahnakoski@mozilla.com"}
@@ -28,8 +28,8 @@ from tempfile import TemporaryFile
 from requests import sessions, Response
 
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import Except
+from MoLogs import Log
 from pyDots import Data, coalesce, wrap, set_default, unwrap
 from pyLibrary.env.big_data import safe_size, ibytes2ilines, icompressed2ibytes
 from pyLibrary.maths import Math

@@ -16,7 +16,7 @@ import re
 import itertools
 
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyDots import coalesce, Data, set_default, Null, listwrap

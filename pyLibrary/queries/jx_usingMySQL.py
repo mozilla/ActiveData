@@ -14,11 +14,11 @@ from collections import Mapping
 
 from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.debugs.exceptions import suppress_exception
+from MoLogs.exceptions import suppress_exception
 from pyLibrary.meta import use_settings
 from pyLibrary.sql import SQL
 from pyLibrary.sql.mysql import int_list_packer
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyLibrary.strings import indent, expand_template
 from pyDots import coalesce
 from pyDots.lists import FlatList

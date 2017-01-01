@@ -36,7 +36,7 @@ def _late_import():
     global datetime2unix
     global utf82unicode
 
-    from pyLibrary.debugs.logs import Log as _Log
+    from MoLogs import Log as _Log
     from pyLibrary.convert import datetime2unix, utf82unicode
 
     _ = _Log
@@ -90,7 +90,7 @@ def float2json(value):
         else:
             return sign+mantissa.rstrip("0")+u"e"+unicode(exp)
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("not expected", e)
 
 

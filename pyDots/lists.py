@@ -27,7 +27,7 @@ def _late_import():
     global _Log
     global _datawrap
 
-    from pyLibrary.debugs.logs import Log as _Log
+    from MoLogs import Log as _Log
     from pyDots.objects import datawrap as _datawrap
 
     _ = _Log

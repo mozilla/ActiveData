@@ -11,8 +11,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from pyLibrary import convert
-from pyLibrary.debugs import constants, startup
-from pyLibrary.debugs.logs import Log
+from MoLogs import constants, startup
+from MoLogs import Log
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 

@@ -79,7 +79,7 @@ class Till(Signal):
                     try:
                         sleep(min(later, INTERVAL))
                     except Exception, e:
-                        from pyLibrary.debugs.logs import Log
+                        from MoLogs import Log
 
                         Log.warning(
                             "Call to sleep failed with ({{later}}, {{interval}})",
@@ -110,7 +110,7 @@ class Till(Signal):
                             s.go()
 
         except Exception, e:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.warning("timer shutdown", cause=e)
         finally:

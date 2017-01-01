@@ -17,8 +17,8 @@ import pyDots
 from pyDots import set_default, wrap, _get_attr, Null, coalesce
 
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except, suppress_exception
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import Except, suppress_exception
+from MoLogs import Log
 from pyLibrary.maths.randoms import Random
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Lock
@@ -33,7 +33,7 @@ def get_class(path):
         return _get_attr(output, path[-1:])
         # return output
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.error("Could not find module {{module|quote}}",  module= ".".join(path))
 

@@ -16,7 +16,7 @@ from datetime import datetime
 from pyLibrary import convert
 from pyLibrary import strings
 from pyLibrary.collections import COUNT
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import coalesce
 from pyDots import wrap
 from pyDots import Data

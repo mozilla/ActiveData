@@ -15,7 +15,7 @@ import itertools
 from copy import copy
 from itertools import product
 
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
 from pyDots import wrap
 from pyDots import Data

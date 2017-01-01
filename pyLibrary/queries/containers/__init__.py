@@ -15,7 +15,7 @@ from collections import Mapping
 from copy import copy
 from types import GeneratorType
 
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import set_default, split_field, wrap, join_field
 from pyDots import Data
 

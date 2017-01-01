@@ -16,8 +16,8 @@ import sqlite3
 from collections import Mapping
 
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except, extract_stack, ERROR
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import Except, extract_stack, ERROR
+from MoLogs import Log
 from pyDots import Data, coalesce
 from pyLibrary.env.files import File
 from pyLibrary.sql import DB, SQL

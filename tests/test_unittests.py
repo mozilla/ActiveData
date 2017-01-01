@@ -15,7 +15,7 @@ from unittest import skip
 
 from pyDots import wrap
 from pyLibrary import convert, jsons
-from pyLibrary.debugs.logs import Log, Except
+from MoLogs import Log, Except
 from pyLibrary.env import http
 from pyLibrary.times.dates import Date, Duration
 from pyLibrary.times.durations import DAY

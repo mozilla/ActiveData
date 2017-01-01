@@ -20,9 +20,9 @@ from active_data import record_request, cors_wrapper
 from active_data.actions import save_query
 from pyDots import coalesce, join_field, split_field, wrap, listwrap
 from pyLibrary import convert, strings
-from pyLibrary.debugs.exceptions import Except
-from pyLibrary.debugs.logs import Log
-from pyLibrary.debugs.profiles import CProfiler
+from MoLogs.exceptions import Except
+from MoLogs import Log
+from MoLogs.profiles import CProfiler
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx, meta, wrap_from

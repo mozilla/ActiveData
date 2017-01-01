@@ -15,8 +15,8 @@ from __future__ import absolute_import
 from collections import Mapping, Iterable
 from sets import BaseSet
 
-from pyLibrary.debugs.exceptions import suppress_exception
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import suppress_exception
+from MoLogs import Log
 from pyDots import unwrap, tuplewrap, wrap
 from pyDots.objects import datawrap
 

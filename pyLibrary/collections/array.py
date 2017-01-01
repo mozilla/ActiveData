@@ -16,7 +16,7 @@ from __future__ import division
 from __future__ import absolute_import
 
 from pyLibrary.collections import PRODUCT
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyLibrary.testing.fuzzytestcase import assertAlmostEqual
 
 

@@ -35,8 +35,8 @@ def _late_import():
     if _Thread:
         return
 
-    from pyLibrary.debugs.logs import Log as _Log
-    from pyLibrary.debugs.exceptions import Except as _Except
+    from MoLogs import Log as _Log
+    from MoLogs.exceptions import Except as _Except
     from pyLibrary.thread.threads import Thread as _Thread
 
     _ = _Log

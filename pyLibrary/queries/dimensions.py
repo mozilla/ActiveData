@@ -18,7 +18,7 @@ from pyLibrary.queries.domains import Domain, ALGEBRAIC, KNOWN
 from pyDots import Null, coalesce, join_field, split_field, Data
 from pyDots.lists import FlatList
 from pyLibrary.times.timer import Timer
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import wrap, listwrap
 
 

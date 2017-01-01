@@ -15,7 +15,7 @@ import itertools
 
 from pyLibrary.collections import UNION
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import listwrap, wrap, coalesce
 from pyLibrary.queries import windows
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain

@@ -12,9 +12,7 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
 
-from pyDots import Null
-from pyDots.lists import FlatList
-from pyDots import wrap, unwrap
+from pyDots import Null, FlatList, wrap, unwrap
 from pyLibrary.jsons.encoder import UnicodeBuilder, use_pypy, pypy_json_encode
 
 DEBUG = False
@@ -277,7 +275,7 @@ def parse_const(i, json):
                 mode = float
             j += 1
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.error("Can not parse const", e)
 
@@ -297,7 +295,7 @@ class JSONList(object):
         if isinstance(index, slice):
             # IMPLEMENT FLAT SLICES (for i not in range(0, len(self)): assert self[i]==None)
             if index.step is not None:
-                from pyLibrary.debugs.logs import Log
+                from MoLogs import Log
 
                 Log.error("slice step must be None, do not know how to deal with values")
             length = len(self.list)
@@ -342,7 +340,7 @@ class JSONList(object):
         return self.list.__len__()
 
     def __getslice__(self, i, j):
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.error("slicing is broken in Python 2.7: a[i:j] == a[i+len(a), j] sometimes.  Use [start:stop:step]")
 

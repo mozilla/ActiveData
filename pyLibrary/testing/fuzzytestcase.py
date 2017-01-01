@@ -12,8 +12,8 @@ import types
 import unittest
 
 import pyDots
-from pyLibrary.debugs.exceptions import suppress_exception, Except
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import suppress_exception, Except
+from MoLogs import Log
 from pyDots import coalesce, literal_field, unwrap
 from pyLibrary.maths import Math
 from pyLibrary.queries.unique_index import UniqueIndex

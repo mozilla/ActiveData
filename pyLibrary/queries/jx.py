@@ -21,7 +21,7 @@ import itertools
 import pyDots
 from pyLibrary import convert
 from pyLibrary.collections import UNION, MIN
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import listwrap, wrap, unwrap, unwraplist
 from pyDots import set_default, Null, Data, split_field, coalesce, join_field
 from pyDots.lists import FlatList as FL

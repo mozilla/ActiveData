@@ -17,7 +17,7 @@ from pyLibrary.queries import domains
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09.util import aggregates, build_es_query, compileEdges2Term
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyLibrary.queries.es09.expressions import UID
 from pyLibrary.queries import es09
 from pyDots import literal_field, coalesce

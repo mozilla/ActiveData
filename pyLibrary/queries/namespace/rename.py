@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from collections import Mapping
 from copy import copy
 
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import set_default, wrap, coalesce, Data, listwrap, unwraplist
 from pyLibrary.maths import Math
 from pyLibrary.queries.dimensions import Dimension

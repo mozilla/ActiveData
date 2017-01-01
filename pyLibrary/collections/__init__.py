@@ -28,7 +28,7 @@ def reverse(values):
 
 def MIN(values, *others):
     if len(others) > 0:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("no longer accepting args, use a single list")
 
     output = Null
@@ -46,7 +46,7 @@ def MIN(values, *others):
 
 def MAX(values, *others):
     if len(others) > 0:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("Expecting an list, or iterable, only")
 
     output = Null
@@ -64,7 +64,7 @@ def MAX(values, *others):
 
 def PRODUCT(values, *others):
     if len(others) > 0:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("no longer accepting args, use a single list")
 
     output = Null
@@ -82,7 +82,7 @@ def PRODUCT(values, *others):
 
 def COUNT(values, *others):
     if len(others) > 0:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("no longer accepting args, use a single list")
 
     output = 0
@@ -94,7 +94,7 @@ def COUNT(values, *others):
 
 def SUM(values, *others):
     if len(others) > 0:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("no longer accepting args, use a single list")
 
     output = Null
@@ -112,7 +112,7 @@ def SUM(values, *others):
 
 def AND(values, *others):
     if len(others) > 0:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("no longer accepting args, use a single list")
 
     for v in values:
@@ -125,7 +125,7 @@ def AND(values, *others):
 
 def OR(values, *others):
     if len(others) > 0:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("no longer accepting args, use a single list")
 
     for v in values:
@@ -138,7 +138,7 @@ def OR(values, *others):
 
 def UNION(values, *others):
     if len(others) > 0:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("no longer accepting args, use a single list")
 
     output = set()
@@ -155,7 +155,7 @@ def UNION(values, *others):
 
 def INTERSECT(values, *others):
     if len(others) > 0:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("no longer accepting args, use a single list")
 
     output = set(values[0])

@@ -13,8 +13,8 @@ from __future__ import division
 from __future__ import absolute_import
 
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import suppress_exception
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import suppress_exception
+from MoLogs import Log
 from pyLibrary.env.files import File
 from pyLibrary.maths.randoms import Random
 from pyDots import Data, wrap

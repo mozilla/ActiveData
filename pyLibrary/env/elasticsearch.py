@@ -17,8 +17,8 @@ from copy import deepcopy
 from datetime import datetime
 
 from pyLibrary import convert, strings
-from pyLibrary.debugs.exceptions import Except
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import Except
+from MoLogs import Log
 from pyDots import coalesce, Null, Data, set_default, join_field, split_field, unwraplist, listwrap, literal_field, \
     ROOT_PATH
 from pyDots import wrap

@@ -9,7 +9,7 @@ Algorithm per NIST SP 800-38A http://csrc.nist.gov/publications/nistpubs/800-38a
 Copyright (c) 2010, Adam Newman http://www.caller9.com/
 Licensed under the MIT license http://www.opensource.org/licenses/mit-license.php
 """
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 
 __author__ = "Adam Newman"
 

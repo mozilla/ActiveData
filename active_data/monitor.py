@@ -11,8 +11,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from pyDots import coalesce
-from pyLibrary.debugs import constants, startup
-from pyLibrary.debugs.logs import Log
+from MoLogs import constants, startup
+from MoLogs import Log
 from pyLibrary.env.files import File
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.multiprocess import Process

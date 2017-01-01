@@ -17,8 +17,8 @@ from decimal import Decimal
 
 from pyLibrary import convert
 from pyLibrary.collections import OR, MAX
-from pyLibrary.debugs.exceptions import suppress_exception
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import suppress_exception
+from MoLogs import Log
 from pyDots import coalesce, wrap, set_default, literal_field, listwrap, Null, split_field, startswith_field, Data, join_field, unwraplist, unwrap, \
     ROOT_PATH, relative_field
 from pyLibrary.maths import Math
@@ -2668,7 +2668,7 @@ def simplify_esfilter(esfilter):
         output.isNormal = None
         return output
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.unexpected("programmer error", cause=e)
 
@@ -2723,7 +2723,7 @@ def _normalize(esfilter):
             output = []
             for a in terms:
                 if isinstance(a, (list, set)):
-                    from pyLibrary.debugs.logs import Log
+                    from MoLogs import Log
 
                     Log.error("and clause is not allowed a list inside a list")
                 a_ = normalize_esfilter(a)

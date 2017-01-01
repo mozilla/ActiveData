@@ -7,19 +7,17 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 import json
 from types import GeneratorType
 
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import split_field
-from pyLibrary.env.files import File
-from pyLibrary.env.http import MIN_READ_SIZE
 
-
+MIN_READ_SIZE = 8*1024
 DEBUG = False
 WHITESPACE = b" \n\r\t"
 CLOSE = {

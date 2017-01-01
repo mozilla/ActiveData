@@ -23,10 +23,10 @@ from copy import copy
 from datetime import datetime, timedelta
 from time import sleep
 
-from pyLibrary import strings
-from pyLibrary.debugs.exceptions import Except, suppress_exception
-from pyLibrary.debugs.profiles import CProfiler
+from MoLogs.exceptions import Except, suppress_exception
+from MoLogs.profiles import CProfiler
 from pyDots import coalesce, Data, unwraplist, Null
+from pyLibrary import strings
 from pyLibrary.thread.lock import Lock
 from pyLibrary.thread.signal import Signal
 from pyLibrary.thread.till import Till
@@ -49,8 +49,8 @@ def _late_import():
     global _Except
     global _Log
 
-    from pyLibrary.debugs.exceptions import Except as _Except
-    from pyLibrary.debugs.logs import Log as _Log
+    from MoLogs.exceptions import Except as _Except
+    from MoLogs import Log as _Log
 
     _ = _convert
     _ = _Except
@@ -509,7 +509,7 @@ class Thread(object):
             else:
                 _Log.error("Thread {{name|quote}} did not end well", name=self.name, cause=self.end_of_thread.exception)
         else:
-            from pyLibrary.debugs.exceptions import Except
+            from MoLogs.exceptions import Except
 
             raise Except(type=Thread.TIMEOUT)
 

@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from pyLibrary import queries, convert
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap
 from pyLibrary.queries import es09, es14
 from pyLibrary.queries.containers import STRUCT

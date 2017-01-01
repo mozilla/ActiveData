@@ -16,7 +16,7 @@ from copy import copy
 
 from pyLibrary import convert
 from pyLibrary.collections import AND, UNION
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import coalesce, Null, set_default, unwraplist, literal_field
 from pyDots import wrap, unwrap, listwrap
 from pyDots import Data

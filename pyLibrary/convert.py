@@ -29,8 +29,8 @@ from tempfile import TemporaryFile
 
 from pyLibrary import strings
 from pyLibrary.collections.multiset import Multiset
-from pyLibrary.debugs.exceptions import Except, suppress_exception
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import Except, suppress_exception
+from MoLogs import Log
 from pyDots import wrap, wrap_leaves, unwrap, unwraplist, split_field, join_field, concat_field
 from pyLibrary.env.big_data import FileString, safe_size
 from pyLibrary.jsons import quote
@@ -170,7 +170,7 @@ def datetime2string(value, format="%Y-%m-%d %H:%M:%S"):
     try:
         return value.strftime(format)
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
 

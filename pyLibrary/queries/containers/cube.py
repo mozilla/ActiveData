@@ -17,7 +17,7 @@ from pyLibrary import convert
 import pyDots as dot
 from pyLibrary.collections import MAX, OR
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import Null, Data
 from pyDots import wrap, wrap_leaves, listwrap
 from pyDots.lists import FlatList

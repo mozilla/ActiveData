@@ -14,8 +14,8 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import Except
+from MoLogs import Log
 from pyDots import coalesce, split_field, literal_field, unwraplist, join_field
 from pyDots import wrap, listwrap
 from pyDots import Data

@@ -16,7 +16,7 @@ import flask
 from werkzeug.wrappers import Response
 
 from active_data import record_request, cors_wrapper
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyLibrary.env.files import File
 from pyLibrary.meta import cache
 from pyLibrary.times.durations import DAY

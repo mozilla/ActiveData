@@ -16,7 +16,6 @@ import math
 import re
 from datetime import datetime, date, timedelta
 from decimal import Decimal
-from thread import allocate_lock as _allocate_lock
 from time import time as _time
 
 _utcnow = datetime.utcnow
@@ -72,7 +71,7 @@ class Date(object):
         try:
             return unix2datetime(self.unix).strftime(format)
         except Exception, e:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error("Can not format {{value}} with {{format}}", value=unix2datetime(self.unix), format=format, cause=e)
 
@@ -109,7 +108,7 @@ class Date(object):
             else:
                 return unix2Date(self.unix + other.seconds)
         else:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error("can not subtract {{type}} from Date", type=other.__class__.__name__)
 
@@ -118,10 +117,9 @@ class Date(object):
         candidate = _time()
         temp = _utcnow()
         unix = datetime2unix(temp)
-        _leap_logging(candidate, unix)
 
         if abs(unix - candidate) > 0.1:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.warning("_time() and _utcnow() is off by {{amount}}", amount=unix - candidate)
         return unix2Date(unix)
@@ -237,7 +235,7 @@ def parse(*args):
 
         return output
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.error("Can not convert {{args}} to Date", args=args, cause=e)
 
@@ -279,7 +277,7 @@ def set_day(offset, day):
 def parse_time_expression(value):
     def simple_date(sign, dig, type, floor):
         if dig or sign:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
             Log.error("can not accept a multiplier on a datetime")
 
         if floor:
@@ -312,7 +310,7 @@ def parse_time_expression(value):
         op = {"+": "__add__", "-": "__sub__"}[sign]
         if type in MILLI_VALUES.keys():
             if floor:
-                from pyLibrary.debugs.logs import Log
+                from MoLogs import Log
                 Log.error("floor (|) of duration not accepted")
             value = value.__getattribute__(op)(Duration(dig+type))
         else:
@@ -335,7 +333,7 @@ def unicode2Date(value, format=None):
                 value += ".000"
             return unix2Date(datetime2unix(datetime.strptime(value, format)))
         except Exception, e:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
 
@@ -394,7 +392,7 @@ def unicode2Date(value, format=None):
             pass
 
     else:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("Can not interpret {{value}} as a datetime",  value= value)
 
 
@@ -413,10 +411,10 @@ def datetime2unix(value):
             diff = value - DATE_EPOCH
             return diff.total_seconds()
         else:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
             Log.error("Can not convert {{value}} of type {{type}}", value=value, type=value.__class__)
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("Can not convert {{value}}", value=value, cause=e)
 
 
@@ -426,45 +424,12 @@ def unix2datetime(unix):
 
 def unix2Date(unix):
     if not isinstance(unix, float):
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("problem")
 
     output = object.__new__(Date)
     output.unix = unix
     return output
-
-
-LEAP_SECOND = Date("1jan2017").unix
-_leap_log = []
-_leap_lock = _allocate_lock()
-_Log = None
-
-
-def _leap_logging(clock_time, utc_time):
-    global _Log
-    global _leap_log
-
-    diff = clock_time - LEAP_SECOND
-    with _leap_lock:
-        if not _Log:
-            from pyLibrary.debugs.logs import Log as _Log
-            _Log.warning("preparing for leap seconds near {{date|datetime}}", date=LEAP_SECOND)
-
-    if abs(diff) < 30:  # RECORD AROUND THE LEAP SECOND
-        with _leap_lock:
-            _leap_log.append((clock_time, utc_time))
-    if diff > 60 and _leap_log:
-        with _leap_lock:
-            temp, _leap_log = _leap_log, Null
-        if temp:
-            clocks, utcs = zip(*temp)
-            _Log.warning(
-                "Leap second logging results\ntime.time\n{{clocks|json}}\ntime.time diff\n{{clocks_diff|json}}\nutcnow\n{{utc|json}}\nutc diff\n{{utc_diff|json}}",
-                clocks=clocks,
-                clocks_diff=[b - a for a, b in zip(clocks, clocks[1:])],
-                utc=utcs,
-                utc_diff=[b - a for a, b in zip(utcs, utcs[1:])]
-            )
 
 
 Date.MIN = Date(datetime(1, 1, 1))

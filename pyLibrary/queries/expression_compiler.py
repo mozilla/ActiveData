@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import re
 
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import coalesce, Data
 from pyLibrary.times.dates import Date
 

@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from pyLibrary import queries
 from pyLibrary.collections import AND
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import coalesce, split_field, set_default, Data, unwraplist, literal_field, join_field, unwrap, wrap
 from pyDots import listwrap
 from pyDots.lists import FlatList

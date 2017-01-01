@@ -1,5 +1,5 @@
-from pyLibrary.debugs.exceptions import suppress_exception
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import suppress_exception
+from MoLogs import Log
 from pyLibrary.strings import expand_template
 
 _using_mozlog = False
@@ -21,7 +21,7 @@ def use():
 
 class ToMozLog(object):
     """
-    MAP CALLS pyLibrary.debugs.logs.Log TO mozlog.structured.structuredlog.StructuredLogger
+    MAP CALLS MoLogs.logs.Log TO mozlog.structured.structuredlog.StructuredLogger
     """
     logger = None
     old_class = None

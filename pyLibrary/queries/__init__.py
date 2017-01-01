@@ -10,7 +10,7 @@
 from __future__ import unicode_literals
 from collections import Mapping
 
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import wrap, set_default, split_field, join_field
 from pyDots import Data
 from pyLibrary.queries.index import Index

@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from pyLibrary.collections import MAX
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import set_default, coalesce, literal_field, Data
 from pyDots import wrap
 from pyLibrary.maths import Math

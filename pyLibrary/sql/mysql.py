@@ -26,8 +26,8 @@ from pyLibrary.sql import SQL
 from pyLibrary.strings import expand_template
 from pyDots import coalesce, wrap, listwrap, unwrap
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except, suppress_exception
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import Except, suppress_exception
+from MoLogs import Log
 from pyLibrary.queries import jx
 from pyLibrary.strings import indent
 from pyLibrary.strings import outdent

@@ -64,7 +64,7 @@ def literal_field(field):
     try:
         return field.replace(".", "\.")
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.error("bad literal", e)
 
@@ -177,7 +177,7 @@ def _all_default(d, default, seen=None):
         return
     if isinstance(default, Data):
         default = object.__getattribute__(default, "_dict")  # REACH IN AND GET THE dict
-        # from pyLibrary.debugs.logs import Log
+        # from MoLogs import Log
         # Log.error("strictly dict (or object) allowed: got {{type}}", type=default.__class__.__name__)
 
     for k, default_value in default.items():
@@ -201,7 +201,7 @@ def _all_default(d, default, seen=None):
                         _set_attr(d, [k], default_value)
                     except Exception, e:
                         if PATH_NOT_FOUND not in e:
-                            from pyLibrary.debugs.logs import Log
+                            from MoLogs import Log
                             Log.error("Can not set attribute {{name}}", name=k, cause=e)
         elif isinstance(existing_value, list) or isinstance(default_value, list):
             _set_attr(d, [k], listwrap(existing_value) + listwrap(default_value))
@@ -258,7 +258,7 @@ def set_attr(obj, path, value):
     try:
         return _set_attr(obj, split_field(path), value)
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         if PATH_NOT_FOUND in e:
             Log.warning(PATH_NOT_FOUND + ": {{path}}",  path= path)
         else:
@@ -272,7 +272,7 @@ def get_attr(obj, path):
     try:
         return _get_attr(obj, split_field(path))
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         if PATH_NOT_FOUND in e:
             Log.error(PATH_NOT_FOUND+": {{path}}",  path=path, cause=e)
         else:
@@ -307,16 +307,16 @@ def _get_attr(obj, path):
                     output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[1]], 0)
                     return _get_attr(output, path[1:])
             except Exception, e:
-                from pyLibrary.debugs.exceptions import Except
+                from MoLogs.exceptions import Except
                 possible_error = Except.wrap(e)
 
         # TRY A CASE-INSENSITIVE MATCH
         matched_attr_name = lower_match(attr_name, dir(obj))
         if not matched_attr_name:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
             Log.warning(PATH_NOT_FOUND + "({{name|quote}}) Returning None.", name=attr_name, cause=possible_error)
         elif len(matched_attr_name) > 1:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
             Log.error(AMBIGUOUS_PATH_FOUND + " {{paths}}", paths=attr_name)
         else:
             return _get_attr(obj[matched_attr_name[0]], path[1:])
@@ -343,7 +343,7 @@ def _get_attr(obj, path):
 def _set_attr(obj, path, value):
     obj = _get_attr(obj, path[:-1])
     if obj is None:  # DELIBERATE, WE DO NOT WHAT TO CATCH Null HERE (THEY CAN BE SET)
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error(PATH_NOT_FOUND)
 
     attr_name = path[-1]
@@ -368,7 +368,7 @@ def _set_attr(obj, path, value):
             obj[attr_name] = new_value
             return old_value
         except Exception, f:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
             Log.error(PATH_NOT_FOUND)
 
 
@@ -417,7 +417,7 @@ def _wrap_leaves(value):
             value = _wrap_leaves(value)
 
             if key == "":
-                from pyLibrary.debugs.logs import Log
+                from MoLogs import Log
 
                 Log.error("key is empty string.  Probably a bad idea")
             if isinstance(key, str):

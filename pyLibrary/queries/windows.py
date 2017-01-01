@@ -16,7 +16,7 @@ import functools
 
 from pyLibrary.maths import stats
 from pyLibrary.collections import MIN, MAX
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots.lists import FlatList
 from pyLibrary.maths import Math
 from pyLibrary.collections.multiset import Multiset

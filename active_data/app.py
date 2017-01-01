@@ -29,8 +29,8 @@ from active_data.actions.query import query
 from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.static import download
 from pyLibrary import convert
-from pyLibrary.debugs import constants, startup
-from pyLibrary.debugs.logs import Log
+from MoLogs import constants, startup
+from MoLogs import Log
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.queries import containers

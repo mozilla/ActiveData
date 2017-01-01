@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyLibrary.strings import expand_template
 
 

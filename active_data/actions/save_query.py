@@ -17,8 +17,8 @@ from flask import Response
 from active_data import cors_wrapper
 from pyDots import wrap
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import Except
+from MoLogs import Log
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.queries.containers.cube import Cube

@@ -17,7 +17,7 @@ from collections import deque
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyDots import Data, FlatList, NullType
 from pyLibrary.jsons import ESCAPE_DCT, float2json
 from pyLibrary.jsons.encoder import pretty_json, problem_serializing, _repr, UnicodeBuilder
@@ -42,7 +42,7 @@ def typed_encode(value):
         return output
     except Exception, e:
         # THE PRETTY JSON WILL PROVIDE MORE DETAIL ABOUT THE SERIALIZATION CONCERNS
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.warning("Serialization of JSON problems", e)
         try:
@@ -123,11 +123,11 @@ def _typed_encode(value, _buffer):
         elif hasattr(value, '__iter__'):
             _iter2json(value, _buffer)
         else:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error(_repr(value) + " is not JSON serializable")
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.error(_repr(value) + " is not JSON serializable", e)
 

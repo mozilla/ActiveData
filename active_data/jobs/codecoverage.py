@@ -12,9 +12,9 @@ from __future__ import unicode_literals
 
 from pyDots import coalesce, wrap, unwrap
 from pyLibrary.collections import UNION, MIN
-from pyLibrary.debugs import constants
-from pyLibrary.debugs import startup
-from pyLibrary.debugs.logs import Log
+from MoLogs import constants
+from MoLogs import startup
+from MoLogs import Log
 from pyLibrary.env import http, elasticsearch
 from pyLibrary.queries import jx
 from pyLibrary.thread.threads import Thread, Signal, Queue

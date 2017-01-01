@@ -65,7 +65,7 @@ def jx_sort_to_es_sort(sort):
             else:
                 output.append(s.value.var)
         else:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error("do not know how to handle")
     return output

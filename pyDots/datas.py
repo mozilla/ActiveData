@@ -86,7 +86,7 @@ class Data(MutableMapping):
         if isinstance(key, str):
             key = key.decode("utf8")
         elif not isinstance(key, unicode):
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
             Log.error("only string keys are supported")
 
         d = _get(self, "_dict")
@@ -111,7 +111,7 @@ class Data(MutableMapping):
 
     def __setitem__(self, key, value):
         if key == "":
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error("key is empty string.  Probably a bad idea")
         if key == None:
@@ -233,7 +233,7 @@ class Data(MutableMapping):
         return listwrap(d.values())
 
     def clear(self):
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("clear() not supported")
 
     def __len__(self):
@@ -309,7 +309,7 @@ def leaves(value, prefix=None):
             else:
                 output.append((prefix + literal_field(k), unwrap(v)))
         except Exception, e:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error("Do not know how to handle", cause=e)
     return output
@@ -355,7 +355,7 @@ class _DictUsingSelf(dict):
 
     def __setitem__(self, key, value):
         if key == "":
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error("key is empty string.  Probably a bad idea")
         if isinstance(key, str):
@@ -462,7 +462,7 @@ class _DictUsingSelf(dict):
         return listwrap(dict.values(self))
 
     def clear(self):
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("clear() not supported")
 
     def __len__(self):

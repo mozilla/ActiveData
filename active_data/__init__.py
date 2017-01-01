@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 import flask
 
 from pyDots import wrap
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyLibrary.times.dates import Date
 
 request_log_queue = None

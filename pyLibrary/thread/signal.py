@@ -28,7 +28,7 @@ DEBUG_SIGNAL = False
 def _late_import():
     global _Log
 
-    from pyLibrary.debugs.logs import Log as _Log
+    from MoLogs import Log as _Log
 
     _ = _Log
 

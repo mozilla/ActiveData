@@ -48,13 +48,13 @@ class MySQL(object):
         self.settings = settings
         self._db = MySQL(settings)
 
-    def as_dict(self):
+    def as_data(self):
         settings = self.settings.copy()
         settings.settings = None
         return unwrap(settings)
 
     def __json__(self):
-        return convert.value2json(self.as_dict())
+        return convert.value2json(self.as_data())
 
     def query(self, query, stacked=False):
         """

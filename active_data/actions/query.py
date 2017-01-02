@@ -166,7 +166,7 @@ def _test_mode_wait(query):
 def _send_error(active_data_timer, body, e):
     record_request(flask.request, None, body, e)
     Log.warning("Could not process\n{{body}}", body=body.decode("latin1"), cause=e)
-    e = e.as_dict()
+    e = e.as_data()
     e.meta.timing.total = active_data_timer.duration.seconds
 
     # REMOVE TRACES, BECAUSE NICER TO HUMANS

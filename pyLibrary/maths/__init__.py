@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import __builtin__
 import math
 
-from MoLogs.strings import find_first
+# from MoLogs.strings import find_first
 from pyDots import Null, coalesce
 
 
@@ -235,11 +235,13 @@ class Math(object):
         if Math.round(value) == value:
             return int(value)
 
-        i = find_first(v, ["9999", "0000"], d)
-        if i != -1:
-            Math.round(value, decimal=i - d - 1)
+        i = v.find("9999", d)
+        if i == -1:
+            i = v.find("0000", d)
+            if i == -1:
+                return value
 
-        return value
+        return Math.round(value, decimal=i - d - 1)
 
     @staticmethod
     def ceiling(value, mod=1):

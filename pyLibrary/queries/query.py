@@ -75,26 +75,26 @@ class QueryOp(Expression):
     def to_sql(self, not_null=False, boolean=False):
         raise Log.error("{{type}} has no `to_sql` method", type=self.__class__.__name__)
 
-    def to_dict(self):
-        def select_to_dict():
+    def as_data(self):
+        def select_as_data():
             if isinstance(self.select, list):
-                return [s.to_dict() for s in self.select]
+                return [s.as_data() for s in self.select]
             else:
-                return self.select.to_dict()
+                return self.select.as_data()
 
         return {
-            "from": self.frum.to_dict(),
-            "select": select_to_dict(),
-            "edges": [e.to_dict() for e in self.edges],
-            "groupby": [g.to_dict() for g in self.groupby],
-            "window": [w.to_dict() for w in self.window],
-            "where": self.where.to_dict(),
-            "sort": self.sort.to_dict(),
-            "limit": self.limit.to_dict()
+            "from": self.frum.as_data(),
+            "select": select_as_data(),
+            "edges": [e.as_data() for e in self.edges],
+            "groupby": [g.as_data() for g in self.groupby],
+            "window": [w.as_data() for w in self.window],
+            "where": self.where.as_data(),
+            "sort": self.sort.as_data(),
+            "limit": self.limit.as_data()
         }
 
     def __json__(self):
-        return convert.value2json(self.to_dict())
+        return convert.value2json(self.as_data())
 
     def vars(self, exclude_where=False, exclude_select=False):
         """
@@ -264,7 +264,7 @@ class QueryOp(Expression):
             setattr(output, s, getattr(self, s))
         return output
 
-    def as_dict(self):
+    def as_data(self):
         output = wrap({s: getattr(self, s) for s in QueryOp.__slots__})
         return output
 

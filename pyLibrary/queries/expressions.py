@@ -180,11 +180,11 @@ class Expression(object):
     def to_esfilter(self):
         raise Log.error("{{type}} has no `to_esfilter` method", type=self.__class__.__name__)
 
-    def to_dict(self):
+    def as_data(self):
         raise NotImplementedError
 
     def __json__(self):
-        return convert.value2json(self.to_dict())
+        return convert.value2json(self.as_data())
 
     def vars(self):
         raise Log.error("{{type}} has no `vars` method", type=self.__class__.__name__)
@@ -301,7 +301,7 @@ class Variable(Expression):
             return row[0]
         return row
 
-    def to_dict(self):
+    def as_data(self):
         return self.var
 
     def vars(self):
@@ -353,7 +353,7 @@ class OffsetOp(Expression):
         except Exception:
             return None
 
-    def to_dict(self):
+    def as_data(self):
         return {"offset": self.var}
 
     def vars(self):
@@ -403,11 +403,11 @@ class RowsOp(Expression):
             agg = agg+".get("+convert.value2quote(p)+", EMPTY_DICT)"
         return agg+".get("+convert.value2quote(path[-1])+")"
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.var, Literal) and isinstance(self.offset, Literal):
             return {"rows": {self.var.json, convert.json2value(self.offset.json)}}
         else:
-            return {"rows": [self.var.to_dict(), self.offset.to_dict()]}
+            return {"rows": [self.var.as_data(), self.offset.as_data()]}
 
     def vars(self):
         return self.var.vars() | self.offset.vars() | {"rows", "rownum"}
@@ -431,11 +431,11 @@ class GetOp(Expression):
         code = self.offset.to_python()
         return obj + "[" + code + "]"
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.var, Literal) and isinstance(self.offset, Literal):
             return {"get": {self.var.json, convert.json2value(self.offset.json)}}
         else:
-            return {"get": [self.var.to_dict(), self.offset.to_dict()]}
+            return {"get": [self.var.as_data(), self.offset.as_data()]}
 
     def vars(self):
         return self.var.vars() | self.offset.vars()
@@ -560,7 +560,7 @@ class Literal(Expression):
     def to_esfilter(self):
         return convert.json2value(self.json)
 
-    def to_dict(self):
+    def as_data(self):
         return {"literal": convert.json2value(self.json)}
 
     def vars(self):
@@ -613,7 +613,7 @@ class NullOp(Literal):
     def to_esfilter(self):
         return {"not": {"match_all": {}}}
 
-    def to_dict(self):
+    def as_data(self):
         return {"null": {}}
 
     def vars(self):
@@ -665,7 +665,7 @@ class TrueOp(Literal):
     def to_esfilter(self):
         return {"match_all": {}}
 
-    def to_dict(self):
+    def as_data(self):
         return True
 
     def vars(self):
@@ -718,7 +718,7 @@ class FalseOp(Literal):
     def to_esfilter(self):
         return {"not": {"match_all": {}}}
 
-    def to_dict(self):
+    def as_data(self):
         return False
 
     def vars(self):
@@ -760,7 +760,7 @@ class DateOp(Literal):
     def to_esfilter(self):
         return convert.json2value(self.json)
 
-    def to_dict(self):
+    def as_data(self):
         return {"date": self.value}
 
     def __call__(self, row=None, rownum=None, rows=None):
@@ -801,8 +801,8 @@ class TupleOp(Expression):
     def to_esfilter(self):
         Log.error("not supported")
 
-    def to_dict(self):
-        return {"tuple": [t.to_dict() for t in self.terms]}
+    def as_data(self):
+        return {"tuple": [t.as_data() for t in self.terms]}
 
     def vars(self):
         output = set()
@@ -848,8 +848,8 @@ class LeavesOp(Expression):
     def to_esfilter(self):
         Log.error("not supported")
 
-    def to_dict(self):
-        return {"leaves": self.term.to_dict()}
+    def as_data(self):
+        return {"leaves": self.term.as_data()}
 
     def vars(self):
         return self.term.vars()
@@ -931,11 +931,11 @@ class BinaryOp(Expression):
         else:
             Log.error("Logic error")
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
             return {self.op: {self.lhs.var, convert.json2value(self.rhs.json)}, "default": self.default}
         else:
-            return {self.op: [self.lhs.to_dict(), self.rhs.to_dict()], "default": self.default}
+            return {self.op: [self.lhs.as_data(), self.rhs.as_data()], "default": self.default}
 
     def vars(self):
         return self.lhs.vars() | self.rhs.vars() | self.default.vars()
@@ -1031,11 +1031,11 @@ class InequalityOp(Expression):
         else:
             return {"script": {"script": self.to_ruby()}}
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
             return {self.op: {self.lhs.var, convert.json2value(self.rhs.json)}, "default": self.default}
         else:
-            return {self.op: [self.lhs.to_dict(), self.rhs.to_dict()], "default": self.default}
+            return {self.op: [self.lhs.as_data(), self.rhs.as_data()], "default": self.default}
 
     def vars(self):
         return self.lhs.vars() | self.rhs.vars() | self.default.vars()
@@ -1102,11 +1102,11 @@ class DivOp(Expression):
         else:
             Log.error("Logic error")
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
             return {"div": {self.lhs.var, convert.json2value(self.rhs.json)}, "default": self.default}
         else:
-            return {"div": [self.lhs.to_dict(), self.rhs.to_dict()], "default": self.default}
+            return {"div": [self.lhs.as_data(), self.rhs.as_data()], "default": self.default}
 
     def vars(self):
         return self.lhs.vars() | self.rhs.vars() | self.default.vars()
@@ -1151,11 +1151,11 @@ class FloorOp(Expression):
     def to_esfilter(self):
         Log.error("Logic error")
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
             return {"floor": {self.lhs.var, convert.json2value(self.rhs.json)}, "default": self.default}
         else:
-            return {"floor": [self.lhs.to_dict(), self.rhs.to_dict()], "default": self.default}
+            return {"floor": [self.lhs.as_data(), self.rhs.as_data()], "default": self.default}
 
     def vars(self):
         return self.lhs.vars() | self.rhs.vars() | self.default.vars()
@@ -1231,11 +1231,11 @@ class EqOp(Expression):
         else:
             return {"script": {"script": self.to_ruby()}}
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
             return {"eq": {self.lhs.var, convert.json2value(self.rhs.json)}}
         else:
-            return {"eq": [self.lhs.to_dict(), self.rhs.to_dict()]}
+            return {"eq": [self.lhs.as_data(), self.rhs.as_data()]}
 
     def vars(self):
         return self.lhs.vars() | self.rhs.vars()
@@ -1293,11 +1293,11 @@ class NeOp(Expression):
                 {"script": {"script": self.to_ruby()}}
             ]}
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
             return {"ne": {self.lhs.var, convert.json2value(self.rhs.json)}}
         else:
-            return {"ne": [self.lhs.to_dict(), self.rhs.to_dict()]}
+            return {"ne": [self.lhs.as_data(), self.rhs.as_data()]}
 
     def vars(self):
         return self.lhs.vars() | self.rhs.vars()
@@ -1334,8 +1334,8 @@ class NotOp(Expression):
         else:
             return {"not": operand}
 
-    def to_dict(self):
-        return {"not": self.term.to_dict()}
+    def as_data(self):
+        return {"not": self.term.as_data()}
 
     def map(self, map_):
         return NotOp("not", self.term.map(map_))
@@ -1380,8 +1380,8 @@ class AndOp(Expression):
         else:
             return {"bool": {"must": [t.to_esfilter() for t in self.terms]}}
 
-    def to_dict(self):
-        return {"and": [t.to_dict() for t in self.terms]}
+    def as_data(self):
+        return {"and": [t.as_data() for t in self.terms]}
 
     def vars(self):
         output = set()
@@ -1413,8 +1413,8 @@ class OrOp(Expression):
     def to_esfilter(self):
         return {"or": [t.to_esfilter() for t in self.terms]}
 
-    def to_dict(self):
-        return {"or": [t.to_dict() for t in self.terms]}
+    def as_data(self):
+        return {"or": [t.as_data() for t in self.terms]}
 
     def vars(self):
         output = set()
@@ -1461,8 +1461,8 @@ class LengthOp(Expression):
         value = self.term.to_sql(schema)[0].sql.s
         return wrap([{"name":".", "sql": {"n": "LENGTH(" + value + ")"}}])
 
-    def to_dict(self):
-        return {"length": self.term.to_dict()}
+    def as_data(self):
+        return {"length": self.term.as_data()}
 
     def vars(self):
         return self.term.vars()
@@ -1504,8 +1504,8 @@ class NumberOp(Expression):
         else:
             return [{"name":".", "sql":{"n": "COALESCE(" + ",".join(acc) + ")"}}]
 
-    def to_dict(self):
-        return {"number": self.term.to_dict()}
+    def as_data(self):
+        return {"number": self.term.as_data()}
 
     def vars(self):
         return self.term.vars()
@@ -1550,8 +1550,8 @@ class StringOp(Expression):
         else:
             return {"s": "COALESCE(" + ",".join(acc) + ")"}
 
-    def to_dict(self):
-        return {"string": self.term.to_dict()}
+    def as_data(self):
+        return {"string": self.term.as_data()}
 
     def vars(self):
         return self.term.vars()
@@ -1590,8 +1590,8 @@ class CountOp(Expression):
         else:
             return {"n": "+".join(acc)}
 
-    def to_dict(self):
-        return {"count": [t.to_dict() for t in self.terms]}
+    def as_data(self):
+        return {"count": [t.as_data() for t in self.terms]}
 
     def vars(self):
         output = set()
@@ -1660,8 +1660,8 @@ class MultiOp(Expression):
 
         return wrap([{"name": ".", "sql": {"n": acc}}])
 
-    def to_dict(self):
-        return {self.op: [t.to_dict() for t in self.terms], "default": self.default, "nulls": self.nulls}
+    def as_data(self):
+        return {self.op: [t.as_data() for t in self.terms], "default": self.default, "nulls": self.nulls}
 
     def vars(self):
         output = set()
@@ -1704,7 +1704,7 @@ class RegExpOp(Expression):
     def to_esfilter(self):
         return {"regexp": {self.var.var: convert.json2value(self.pattern.json)}}
 
-    def to_dict(self):
+    def as_data(self):
         return {"regexp": {self.var.var: self.pattern}}
 
     def vars(self):
@@ -1762,8 +1762,8 @@ class CoalesceOp(Expression):
     def to_esfilter(self):
         return {"or": [{"exists": {"field": v}} for v in self.terms]}
 
-    def to_dict(self):
-        return {"coalesce": [t.to_dict() for t in self.terms]}
+    def as_data(self):
+        return {"coalesce": [t.as_data() for t in self.terms]}
 
     def missing(self):
         # RETURN true FOR RECORDS THE WOULD RETURN NULL
@@ -1825,7 +1825,7 @@ class MissingOp(Expression):
         else:
             return {"script": {"script": self.to_ruby()}}
 
-    def to_dict(self):
+    def as_data(self):
         return {"missing": self.expr.var}
 
     def vars(self):
@@ -1875,8 +1875,8 @@ class ExistsOp(Expression):
         else:
             return {"script": {"script": self.to_ruby()}}
 
-    def to_dict(self):
-        return {"exists": self.field.to_dict()}
+    def as_data(self):
+        return {"exists": self.field.as_data()}
 
     def vars(self):
         return self.field.vars()
@@ -1916,11 +1916,11 @@ class PrefixOp(Expression):
         else:
             return {"script": {"script": self.to_ruby()}}
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
             return {"prefix": {self.field.var: convert.json2value(self.prefix.json)}}
         else:
-            return {"prefix": [self.field.to_dict(), self.prefix.to_dict()]}
+            return {"prefix": [self.field.as_data(), self.prefix.as_data()]}
 
     def vars(self):
         return {self.field.var}
@@ -1999,11 +1999,11 @@ class ConcatOp(Expression):
                 }
             }])
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
             output = {"concat": {self.terms[0].var: convert.json2value(self.terms[2].json)}}
         else:
-            output = {"concat": [t.to_dict() for t in self.terms]}
+            output = {"concat": [t.as_data() for t in self.terms]}
         if self.separator.json != '""':
             output["separator"] = convert.json2value(self.terms[2].json)
         return output
@@ -2113,11 +2113,11 @@ class LeftOp(Expression):
             "sql": {"s": "substr(" + v + ", 1, " + l + ")"}
         }])
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
             return {"left": {self.value.var: convert.json2value(self.length.json)}}
         else:
-            return {"left": [self.value.to_dict(), self.length.to_dict()]}
+            return {"left": [self.value.as_data(), self.length.as_data()]}
 
     def vars(self):
         return self.value.vars() | self.length.vars()
@@ -2165,11 +2165,11 @@ class NotLeftOp(Expression):
         expr = "substr(" + v + ", " + l + "+1)"
         return wrap([{"name": ".", "sql": {"s": expr}}])
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
             return {"not_left": {self.value.var: convert.json2value(self.length.json)}}
         else:
-            return {"not_left": [self.value.to_dict(), self.length.to_dict()]}
+            return {"not_left": [self.value.as_data(), self.length.as_data()]}
 
     def vars(self):
         return self.value.vars() | self.length.vars()
@@ -2215,11 +2215,11 @@ class RightOp(Expression):
         expr = "substr(" + v + ", " + l + "+1)"
         return wrap([{"name": ".", "sql": {"s": expr}}])
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
             return {"right": {self.value.var: convert.json2value(self.length.json)}}
         else:
-            return {"right": [self.value.to_dict(), self.length.to_dict()]}
+            return {"right": [self.value.as_data(), self.length.as_data()]}
 
     def vars(self):
         return self.value.vars() | self.length.vars()
@@ -2265,11 +2265,11 @@ class NotRightOp(Expression):
         return wrap([{"name": ".", "sql": {"s": expr}}])
 
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
             return {"not_right": {self.value.var: convert.json2value(self.length.json)}}
         else:
-            return {"not_right": [self.value.to_dict(), self.length.to_dict()]}
+            return {"not_right": [self.value.as_data(), self.length.as_data()]}
 
     def vars(self):
         return self.value.vars() | self.length.vars()
@@ -2333,7 +2333,7 @@ class FindOp(Expression):
         else:
             return {"script": {"script": self.to_ruby()}}
 
-    def to_dict(self):
+    def as_data(self):
         return {"contains": {self.var.var: self.substring}}
 
     def vars(self):
@@ -2489,11 +2489,11 @@ class InOp(Expression):
         else:
             return {"script": self.to_ruby()}
 
-    def to_dict(self):
+    def as_data(self):
         if isinstance(self.field, Variable) and isinstance(self.values, Literal):
             return {"in": {self.field.var: convert.json2value(self.values.json)}}
         else:
-            return {"in": [self.field.to_dict(), self.values.to_dict()]}
+            return {"in": [self.field.as_data(), self.values.as_data()]}
 
     def vars(self):
         return self.field.vars()
@@ -2559,8 +2559,8 @@ class WhenOp(Expression):
         ]}
         # return {"script": {"script": self.to_ruby()}}
 
-    def to_dict(self):
-        return {"when": self.when.to_dict(), "then": self.then.to_dict() if self.then else None, "else": self.els_.to_dict() if self.els_ else None}
+    def as_data(self):
+        return {"when": self.when.as_data(), "then": self.then.as_data() if self.then else None, "else": self.els_.as_data() if self.els_ else None}
 
     def vars(self):
         return self.when.vars() | self.then.vars() | self.els_.vars()
@@ -2612,8 +2612,8 @@ class CaseOp(Expression):
     def to_esfilter(self):
         return {"script": {"script": self.to_ruby()}}
 
-    def to_dict(self):
-        return {"case": [w.to_dict() for w in self.whens]}
+    def as_data(self):
+        return {"case": [w.as_data() for w in self.whens]}
 
     def vars(self):
         output = set()

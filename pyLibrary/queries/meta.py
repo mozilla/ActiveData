@@ -210,7 +210,7 @@ class FromESMetadata(Schema):
                 "from": self.meta.columns,
                 "sort": ["table", "name"]
             },
-            _query.as_dict()
+            _query.as_data()
         )))
 
     def get_columns(self, table_name, column_name=None, force=False):

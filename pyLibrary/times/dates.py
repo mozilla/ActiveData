@@ -191,6 +191,8 @@ class Date(object):
     def __add__(self, other):
         return self.add(other)
 
+    def as_data(self):
+        return self
 
     @classmethod
     def min(cls, *values):

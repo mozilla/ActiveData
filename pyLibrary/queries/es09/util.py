@@ -13,15 +13,13 @@ from __future__ import unicode_literals
 
 from datetime import datetime
 
-from pyLibrary import convert
-from pyLibrary import strings
-from pyLibrary.collections import COUNT
-from MoLogs import Log
+from MoLogs import Log, strings
+from pyDots import Data
 from pyDots import coalesce
 from pyDots import wrap
-from pyDots import Data
 from pyDots.lists import FlatList
-from pyLibrary.env import elasticsearch
+from pyLibrary import convert
+from pyLibrary.collections import COUNT
 from pyLibrary.maths import Math
 from pyLibrary.maths import stats
 from pyLibrary.queries import domains

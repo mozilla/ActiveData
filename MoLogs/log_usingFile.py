@@ -17,15 +17,15 @@ import time
 from thread import allocate_lock
 
 from MoLogs import Log
-from MoLogs.log_usingNothing import TextLog
-from pyLibrary.strings import expand_template
+from MoLogs.log_usingNothing import StructuredLogger
+from MoLogs.strings import expand_template
 
 
 # from pyLibrary.thread.lock import Lock
 # from pyLibrary.thread.till import Till
 
 
-class TextLog_usingFile(TextLog):
+class StructuredLogger_usingFile(StructuredLogger):
     def __init__(self, file):
         assert file
         from pyLibrary.env.files import File

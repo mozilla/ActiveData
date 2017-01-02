@@ -13,11 +13,11 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from pyLibrary import convert, strings
+from MoLogs import Log, strings
 from MoLogs.exceptions import suppress_exception
-from MoLogs import Log
-from MoLogs.log_usingNothing import TextLog
+from MoLogs.log_usingNothing import StructuredLogger
 from pyDots import wrap, coalesce
+from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
@@ -29,7 +29,7 @@ MAX_BAD_COUNT = 5
 LOG_STRING_LENGTH = 2000
 
 
-class TextLog_usingElasticSearch(TextLog):
+class StructuredLogger_usingElasticSearch(StructuredLogger):
     @use_settings
     def __init__(self, host, index, type="log", max_size=1000, batch_size=100, settings=None):
         """

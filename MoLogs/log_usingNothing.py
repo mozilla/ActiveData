@@ -14,7 +14,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 
-class TextLog(object):
+class StructuredLogger(object):
     """
     ABSTRACT BASE CLASS FOR JSON LOGGING
     """

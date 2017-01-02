@@ -62,7 +62,7 @@ def es_deepop(es, query):
     es_query, es_filters = es14.util.es_query_template(query.frum.name)
 
     # SPLIT WHERE CLAUSE BY DEPTH
-    wheres = split_expression_by_depth(query.where, query.frum, map_to_es_columns)
+    wheres = split_expression_by_depth(query.where, query.frum.schema, map_to_es_columns)
     for i, f in enumerate(es_filters):
         # PROBLEM IS {"match_all": {}} DOES NOT SURVIVE set_default()
         for k, v in unwrap(simplify_esfilter(AndOp("and", wheres[i]).to_esfilter())).items():

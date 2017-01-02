@@ -17,10 +17,10 @@ from MoLogs import Log
 
 from MoLogs.exceptions import suppress_exception
 
-from MoLogs.log_usingNothing import TextLog
+from MoLogs.log_usingNothing import StructuredLogger
 
 
-class TextLog_usingMulti(TextLog):
+class StructuredLogger_usingMulti(StructuredLogger):
     def __init__(self):
         self.many = []
 

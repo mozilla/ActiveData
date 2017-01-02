@@ -14,10 +14,10 @@ import os
 import shutil
 from datetime import datetime
 
-from pyLibrary import convert
+from MoLogs.strings import utf82unicode
 from pyDots import coalesce
+from pyLibrary import convert
 from pyLibrary.maths import crypto
-from pyLibrary.strings import utf82unicode
 
 
 class File(object):

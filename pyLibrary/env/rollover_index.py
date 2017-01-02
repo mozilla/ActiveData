@@ -7,15 +7,17 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
-from pyLibrary import convert, strings
-from pyLibrary.aws.s3 import strip_extension
+
+from MoLogs import Log, strings
 from MoLogs.exceptions import suppress_exception
-from MoLogs import Log
 from pyDots import coalesce, wrap, Null
+from pyLibrary import convert
+from pyLibrary.aws.s3 import strip_extension
 from pyLibrary.env import elasticsearch
 from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
+
 # from activedata_etl import key2etl, etl2path
 from pyLibrary.times.dates import Date, unicode2Date, unix2Date
 from pyLibrary.times.durations import Duration

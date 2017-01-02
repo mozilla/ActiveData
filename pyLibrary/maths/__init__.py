@@ -14,8 +14,8 @@ from __future__ import unicode_literals
 import __builtin__
 import math
 
+from MoLogs.strings import find_first
 from pyDots import Null, coalesce
-from pyLibrary.strings import find_first
 
 
 class Math(object):

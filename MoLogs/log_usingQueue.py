@@ -9,16 +9,16 @@
 #
 
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from MoLogs.log_usingNothing import TextLog
-from pyLibrary.strings import expand_template
+from MoLogs.log_usingNothing import StructuredLogger
+from MoLogs.strings import expand_template
 from pyLibrary.thread.threads import Queue
 
 
-class TextLog_usingQueue(TextLog):
+class StructuredLogger_usingQueue(StructuredLogger):
 
     def __init__(self, name=None):
         queue_name = "log messages to queue"

@@ -13,11 +13,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from MoLogs.log_usingNothing import TextLog
-from pyLibrary.strings import expand_template
+from MoLogs.log_usingNothing import StructuredLogger
+from MoLogs.strings import expand_template
 
 
-class TextLog_usingStream(TextLog):
+class StructuredLogger_usingStream(StructuredLogger):
     def __init__(self, stream):
         assert stream
         self.stream = stream

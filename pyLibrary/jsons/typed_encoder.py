@@ -18,11 +18,11 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 
 from MoLogs import Log
+from MoLogs.strings import utf82unicode
 from pyDots import Data, FlatList, NullType
 from pyLibrary.jsons import ESCAPE_DCT, float2json
 from pyLibrary.jsons.encoder import pretty_json, problem_serializing, _repr, UnicodeBuilder
 from pyLibrary.maths.stats import Stats
-from pyLibrary.strings import utf82unicode
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 

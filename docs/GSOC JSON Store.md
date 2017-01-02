@@ -86,7 +86,13 @@ The easy part is making the schema, and changing it dynamically as new JSON sche
 
 Under a changing schema, can we write queries that do not change meaning as the schema expands? For hierarchical data: Yes! Yes we can!!!
 
-[MDX](https://en.wikipedia.org/wiki/MultiDimensional_eXpressions) is used to query multidimensional fact cubes from a data warehouse. Cubes can be described with [snowflake schemas](https://en.wikipedia.org/wiki/Snowflake_schemahierarchical). Snowflake schemas can be used to hold JSON, no matter how pathological. This means we can use MDX as inspiration to query JSON datastores!! 
+Each JSON document can be seen as a single point in a multidimensional Cartesian space; where the properties represent coordinates in that space. Inner objects simply add dimensions, and nested objects represent constellations of points in an even-higher dimensional space.
+
+These multidimensional "data cubes" can be represented by fact tables in a data warehouse. Fact tables can be queried with [MDX](https://en.wikipedia.org/wiki/MultiDimensional_eXpressions) 
+
+With this in mind, we should be able to use MDX as inspiration to query JSON datastores!! 
+
+Cubes can be described with [snowflake schemas](https://en.wikipedia.org/wiki/Snowflake_schemahierarchical). 
 
 For this project we will gloss over the specific syntax of the query language, and use a parse tree of MDX/SQL, and translate those parse trees to SQL. 
 

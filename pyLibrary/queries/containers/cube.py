@@ -13,14 +13,12 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from pyLibrary import convert
 import pyDots as dot
+from MoLogs import Log
+from pyDots import Null, Data, FlatList, wrap, wrap_leaves, listwrap
+from pyLibrary import convert
 from pyLibrary.collections import MAX, OR
 from pyLibrary.collections.matrix import Matrix
-from MoLogs import Log
-from pyDots import Null, Data
-from pyDots import wrap, wrap_leaves, listwrap
-from pyDots.lists import FlatList
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.cubes.aggs import cube_aggs
 from pyLibrary.queries.lists.aggs import is_aggs

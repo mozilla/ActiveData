@@ -16,16 +16,16 @@ from __future__ import unicode_literals
 import logging
 
 from MoLogs.exceptions import suppress_exception
-from MoLogs.log_usingThreadedStream import TextLog_usingThreadedStream, time_delta_pusher
+from MoLogs.log_usingThreadedStream import StructuredLogger_usingThreadedStream, time_delta_pusher
 from MoLogs import Log
-from MoLogs.log_usingNothing import TextLog
+from MoLogs.log_usingNothing import StructuredLogger
 from pyDots import unwrap
 from pyLibrary.thread import threads
 from pyLibrary.thread.threads import Thread
 
 
 # WRAP PYTHON CLASSIC logger OBJECTS
-class TextLog_usingLogger(TextLog):
+class StructuredLogger_usingLogger(StructuredLogger):
     def __init__(self, settings):
         self.logger = logging.Logger("unique name", level=logging.INFO)
         self.logger.addHandler(make_log_from_settings(settings))
@@ -69,7 +69,7 @@ def make_log_from_settings(settings):
     except Exception, e:
         if settings.stream and not constructor:
             # PROVIDE A DEFAULT STREAM HANLDER
-            constructor = TextLog_usingThreadedStream
+            constructor = StructuredLogger_usingThreadedStream
         else:
             Log.error("Can not find class {{class}}",  {"class": path}, cause=e)
 

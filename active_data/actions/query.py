@@ -16,19 +16,19 @@ import flask
 import moz_sql_parser
 from flask import Response
 
+from MoLogs import Log, strings
+from MoLogs.exceptions import Except
+from MoLogs.profiles import CProfiler
+from MoLogs.strings import expand_template
 from active_data import record_request, cors_wrapper
 from active_data.actions import save_query
 from pyDots import coalesce, join_field, split_field, wrap, listwrap
-from pyLibrary import convert, strings
-from MoLogs.exceptions import Except
-from MoLogs import Log
-from MoLogs.profiles import CProfiler
+from pyLibrary import convert
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx, meta, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.meta import TOO_OLD
-from pyLibrary.strings import expand_template
 from pyLibrary.testing.fuzzytestcase import assertAlmostEqual
 from pyLibrary.thread.till import Till
 from pyLibrary.times.dates import Date
@@ -83,7 +83,6 @@ def query(path):
                             result.meta.saved_as = save_query.query_finder.save(data)
                         except Exception, e:
                             Log.warning("Unexpected save problem", cause=e)
-
 
                 result.meta.timing.preamble = Math.round(preamble_timer.duration.seconds, digits=4)
                 result.meta.timing.translate = Math.round(translate_timer.duration.seconds, digits=4)

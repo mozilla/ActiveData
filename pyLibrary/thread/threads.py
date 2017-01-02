@@ -23,10 +23,10 @@ from copy import copy
 from datetime import datetime, timedelta
 from time import sleep
 
+from MoLogs import strings
 from MoLogs.exceptions import Except, suppress_exception
 from MoLogs.profiles import CProfiler
 from pyDots import coalesce, Data, unwraplist, Null
-from pyLibrary import strings
 from pyLibrary.thread.lock import Lock
 from pyLibrary.thread.signal import Signal
 from pyLibrary.thread.till import Till

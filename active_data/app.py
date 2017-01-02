@@ -22,6 +22,8 @@ from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
 import active_data
+from MoLogs import Log
+from MoLogs import constants, startup
 from active_data import record_request, cors_wrapper
 from active_data.actions import save_query
 from active_data.actions.json import get_raw_json
@@ -29,8 +31,6 @@ from active_data.actions.query import query
 from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.static import download
 from pyLibrary import convert
-from MoLogs import constants, startup
-from MoLogs import Log
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.queries import containers

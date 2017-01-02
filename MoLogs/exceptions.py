@@ -16,9 +16,9 @@ from __future__ import unicode_literals
 import sys
 from collections import Mapping
 
+from MoLogs.strings import indent, expand_template
 from pyDots import Data, listwrap, unwraplist, set_default, Null
 from pyLibrary.jsons.encoder import json_encoder
-from pyLibrary.strings import indent, expand_template
 
 FATAL = "FATAL"
 ERROR = "ERROR"

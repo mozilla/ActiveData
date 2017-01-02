@@ -7,17 +7,17 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from collections import Mapping
 import types
 import unittest
+from collections import Mapping
 
 import pyDots
-from MoLogs.exceptions import suppress_exception, Except
 from MoLogs import Log
+from MoLogs.exceptions import suppress_exception, Except
+from MoLogs.strings import expand_template
 from pyDots import coalesce, literal_field, unwrap
 from pyLibrary.maths import Math
 from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.strings import expand_template
 
 
 class FuzzyTestCase(unittest.TestCase):
@@ -105,7 +105,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
             test = unwrap(test)
             expected = unwrap(expected)
             for k, v2 in unwrap(expected).items():
-                v1 = test[k]
+                v1 = test.get(k)
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
         elif isinstance(expected, Mapping):
             for k, v2 in expected.items():

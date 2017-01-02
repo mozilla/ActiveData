@@ -2843,7 +2843,7 @@ def split_expression_by_depth(where, schema, map_, output=None, var_to_depth=Non
         if not vars_:
             return Null
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
-        var_to_depth = {v: len(schema.columns[v].nested_path)-1 for v in vars_}
+        var_to_depth = {v: len(schema.lookup[v].nested_path)-1 for v in vars_}
         all_depths = set(var_to_depth.values())
         if -1 in all_depths:
             Log.error(

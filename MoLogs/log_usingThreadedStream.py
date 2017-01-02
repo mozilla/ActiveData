@@ -17,13 +17,13 @@ import sys
 from time import time
 
 from MoLogs import Log
-from MoLogs.log_usingNothing import TextLog
-from pyLibrary.strings import expand_template
+from MoLogs.log_usingNothing import StructuredLogger
+from MoLogs.strings import expand_template
 from pyLibrary.thread.threads import Thread
 from pyLibrary.thread.till import Till
 
 
-class TextLog_usingThreadedStream(TextLog):
+class StructuredLogger_usingThreadedStream(StructuredLogger):
     # stream CAN BE AN OBJCET WITH write() METHOD, OR A STRING
     # WHICH WILL eval() TO ONE
     def __init__(self, stream):

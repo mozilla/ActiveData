@@ -15,16 +15,16 @@ from __future__ import unicode_literals
 
 from MoLogs.exceptions import suppress_exception, Except
 from MoLogs import Log
-from MoLogs.log_usingNothing import TextLog
+from MoLogs.log_usingNothing import StructuredLogger
 from pyLibrary.thread.threads import Thread, Queue
 from pyLibrary.thread.till import Till
 
 
-class TextLog_usingThread(TextLog):
+class StructuredLogger_usingThread(StructuredLogger):
 
     def __init__(self, logger):
-        if not isinstance(logger, TextLog):
-            Log.error("Expecting a TextLog")
+        if not isinstance(logger, StructuredLogger):
+            Log.error("Expecting a StructuredLogger")
 
         self.queue = Queue("Queue for " + self.__class__.__name__, max=10000, silent=True, allow_add_after_close=True)
         self.logger = logger

@@ -21,9 +21,9 @@ from decimal import Decimal
 from math import floor
 from repr import Repr
 
+from MoLogs.strings import utf82unicode
 from pyDots import Data, FlatList, NullType, Null
 from pyLibrary.jsons import quote, ESCAPE_DCT, scrub, float2json
-from pyLibrary.strings import utf82unicode
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 

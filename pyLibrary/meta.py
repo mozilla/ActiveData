@@ -7,20 +7,20 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 from collections import Mapping
 from types import FunctionType
 
 import pyDots
-from pyDots import set_default, wrap, _get_attr, Null, coalesce
-
-from pyLibrary import convert
-from MoLogs.exceptions import Except, suppress_exception
 from MoLogs import Log
+from MoLogs.exceptions import Except, suppress_exception
+from MoLogs.strings import expand_template
+from pyDots import set_default, wrap, _get_attr, Null, coalesce
+from pyLibrary import convert
 from pyLibrary.maths.randoms import Random
-from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Lock
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import DAY

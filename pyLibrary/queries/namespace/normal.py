@@ -18,7 +18,7 @@ from MoLogs import Log
 from pyDots import coalesce, Null
 from pyDots import wrap, listwrap
 from pyDots import Data
-from pyDots.lists import FlatList
+from pyDots import FlatList
 from pyLibrary.maths import Math
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.dimensions import Dimension
@@ -232,7 +232,7 @@ def normalize_sort(sort=None):
     """
 
     if not sort:
-        return FlatList.EMPTY
+        return Null
 
     output = FlatList()
     for s in listwrap(sort):

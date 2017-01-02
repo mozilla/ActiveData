@@ -16,9 +16,7 @@ from collections import Mapping
 import functools
 from pyLibrary.collections import MIN
 from MoLogs import Log
-from pyDots import split_field, coalesce, Data
-from pyDots.lists import FlatList
-from pyDots import wrap
+from pyDots import split_field, coalesce, Data, FlatList, wrap
 
 
 class FlatList(list):

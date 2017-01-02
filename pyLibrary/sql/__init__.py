@@ -8,12 +8,12 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from MoLogs import Log
-from pyLibrary.strings import expand_template
+from MoLogs.strings import expand_template
 
 
 class SQL(unicode):

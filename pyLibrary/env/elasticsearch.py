@@ -273,14 +273,16 @@ class Index(Features):
         try:
             for r in records:
                 id = r.get("id")
-
+                r_value = r.get('value')
+                if id == None and r_value:
+                    id = r_value.get('_id')
                 if id == None:
                     id = random_id()
 
                 if "json" in r:
                     json_bytes = r["json"].encode("utf8")
-                elif "value" in r:
-                    json_bytes = convert.value2json(r["value"]).encode("utf8")
+                elif r_value:
+                    json_bytes = convert.value2json(r_value).encode("utf8")
                 else:
                     json_bytes = None
                     Log.error("Expecting every record given to have \"value\" or \"json\" property")

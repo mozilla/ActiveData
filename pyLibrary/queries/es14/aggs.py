@@ -35,7 +35,7 @@ def get_decoders_by_depth(query):
     """
     RETURN A LIST OF DECODER ARRAYS, ONE ARRAY FOR EACH NESTED DEPTH
     """
-    schema = query.frum
+    schema = query.frum.schema
     output = FlatList()
     for e in wrap(coalesce(query.edges, query.groupby, [])):
         if e.value != None and not isinstance(e.value, NullOp):
@@ -46,7 +46,7 @@ def get_decoders_by_depth(query):
                 if not schema[v]:
                     Log.error("{{var}} does not exist in schema", var=v)
 
-            e.value = e.value.map({schema[v].name: schema[v].es_column for v in vars_})
+            e.value = e.value.map({c.name: c.es_column for v in vars_ for c in schema.lookup[v]})
         elif e.range:
             e = e.copy()
             min_ = e.range.min

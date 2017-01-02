@@ -126,7 +126,7 @@ class FromESMetadata(Schema):
         if not meta or self.last_es_metadata < Date.now() - OLD_METADATA:
             self.es_metadata = self.default_es.get_metadata(force=True)
             meta = self.es_metadata.indices[table]
-
+        self._parse_properties(meta.index, Data(properties={"_id": {"type": "string", "index": "not_analyzed"}}), meta)
         for _, properties in meta.mappings.items():
             self._parse_properties(meta.index, properties, meta)
 

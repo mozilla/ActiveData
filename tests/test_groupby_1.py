@@ -194,8 +194,6 @@ class TestgroupBy1(ActiveDataBaseTest):
 
     def test_where(self):
         test = {
-            "name": "sum column",
-            "metadata": {},
             "data": simple_test_data,
             "query": {
                 "from": TEST_TABLE,
@@ -220,8 +218,6 @@ class TestgroupBy1(ActiveDataBaseTest):
 
     def test_where_w_dimension(self):
         test = {
-            "name": "sum column",
-            "metadata": {},
             "data": simple_test_data,
             "query": {
                 "from": TEST_TABLE,

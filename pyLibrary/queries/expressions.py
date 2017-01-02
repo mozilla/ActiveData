@@ -228,6 +228,8 @@ class Variable(Expression):
         if self.var == ".":
             return "_source"
         else:
+            if self.var == "_id":
+                return 'doc["_uid"].value.substring(doc["_uid"].value.indexOf(\'#\')+1)'
             q = convert.string2quote(self.var)
             if not_null:
                 if boolean:
@@ -1784,7 +1786,10 @@ class MissingOp(Expression):
 
     def to_ruby(self, not_null=False, boolean=True):
         if isinstance(self.expr, Variable):
-            return "doc[" + convert.string2quote(self.expr.var) + "].isEmpty()"
+            if self.expr.var == "_id":
+                return "false"
+            else:
+                return "doc[" + convert.string2quote(self.expr.var) + "].isEmpty()"
         elif isinstance(self.expr, Literal):
             return self.expr.missing().to_ruby()
         else:
@@ -2083,13 +2088,17 @@ class LeftOp(Expression):
             self.value, self.length = term
 
     def to_ruby(self, not_null=False, boolean=False):
-        test_v = self.value.missing().to_ruby(boolean=True)
-        test_l = self.length.missing().to_ruby(boolean=True)
+        test_v = self.value.missing()
+        test_l = self.length.missing()
         v = self.value.to_ruby(not_null=True)
         l = self.length.to_ruby(not_null=True)
 
-        expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
+        if (not test_v or test_v.to_ruby(boolean=True)=="false") and not test_l:
+            expr = v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue())"
+        else:
+            expr = "((" + test_v.to_ruby(boolean=True) + ") || (" + test_l.to_ruby(boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
         return expr
+
 
     def to_python(self, not_null=False, boolean=False):
         v = self.value.to_python()
@@ -2281,58 +2290,14 @@ class FindOp(Expression):
     """
     has_simple_form = True
 
-    def __init__(self, op, term):
-        Expression.__init__(self, op, term)
-        self.var, self.substring = term
-
-    def to_python(self, not_null=False, boolean=False):
-        return "((" + convert.string2quote(self.substring) + " in " + self.var.to_python() + ") if " + self.var.to_python() + "!=None else False)"
-
-    def to_ruby(self, not_null=False, boolean=False):
-        v = self.var.to_ruby()
-        c = self.substring.to_ruby()
-        return "((" + v + ") == null ? false : q.indexOf(" + c + ")>=0)"
-
-    def to_sql(self, schema):
-        v = self.var.to_sql(schema)
-        c = self.substring.to_sql(schema)
-        sql = "COALESCE(" + v[0].sql.s + ", '') LIKE '%' || " + c[0].sql.s + " || '%'"
-        return wrap([{"name": ".", "sql": {"b": sql}}])
-
-    def to_esfilter(self):
-        if isinstance(self.var, Variable) and isinstance(self.substring, Literal):
-            return {"regexp": {self.var.var: ".*" + convert.string2regexp(convert.json2value(self.substring.json)) + ".*"}}
-        else:
-            return {"script": {"script": self.to_ruby()}}
-
-    def to_dict(self):
-        return {"contains": {self.var.var: self.substring}}
-
-    def vars(self):
-        return {self.var.var}
-
-    def map(self, map_):
-        return FindOp(None, [self.var.map(map_), self.substring])
-
-    def missing(self):
-        return FalseOp()
-
-    def exists(self):
-        return TrueOp()
-
-
-
-class FindOp(Expression):
-    """
-    RETURN index OF THE SUBSTRING find
-    """
-    has_simple_form = True
-
     def __init__(self, op, term, **kwargs):
         Expression.__init__(self, op, term)
         self.value, self.find = term
         self.default = kwargs.get("default", NullOp())
         self.start = kwargs.get("start", Literal(None, 0))
+
+    def to_python(self, not_null=False, boolean=False):
+        return "((" + convert.string2quote(self.substring) + " in " + self.var.to_python() + ") if " + self.var.to_python() + "!=None else False)"
 
     def to_ruby(self, not_null=False, boolean=False):
         missing = self.missing()
@@ -2342,14 +2307,11 @@ class FindOp(Expression):
         index = v + ".indexOf(" + find + ", " + start + ")"
 
         if not_null:
-            missing = index + "==-1"
+            no_index = index + "==-1"
         else:
-            missing = self.missing().to_ruby(boolean=True)
+            no_index = missing.to_ruby(boolean=True)
 
-        if missing:
-            expr = "(" + missing.to_ruby(boolean=True) + ") ? " + self.default.to_ruby() + " : " + index
-        else:
-            index
+        expr = "(" + no_index + ") ? " + self.default.to_ruby() + " : " + index
         return expr
 
     def to_sql(self, schema, not_null=False, boolean=False):
@@ -2365,6 +2327,26 @@ class FindOp(Expression):
                 "n": "INSTR(" + value + "," + find + ")-1"
             }}])
 
+    def to_esfilter(self):
+        if isinstance(self.value, Variable) and isinstance(self.find, Literal):
+            return {"regexp": {self.value.var: ".*" + convert.string2regexp(convert.json2value(self.find.json)) + ".*"}}
+        else:
+            return {"script": {"script": self.to_ruby()}}
+
+    def to_dict(self):
+        return {"contains": {self.var.var: self.substring}}
+
+    def vars(self):
+        return self.value.vars() | self.find.vars() | self.default.vars() | self.start.vars()
+
+    def map(self, map_):
+        return FindOp(
+            "find",
+            [self.value.map(map_), self.find.map(map_)],
+            start=self.start.map(map_),
+            default=self.default.map(map_)
+        )
+
     def missing(self):
         v = self.value.to_ruby(not_null=True)
         find = self.find.to_ruby(not_null=True)
@@ -2379,17 +2361,8 @@ class FindOp(Expression):
             ])
         ])
 
-    def vars(self):
-        return self.value.vars() | self.find.vars() | self.default.vars() | self.start.vars()
-
-    def map(self, map_):
-        return FindOp(
-            "find",
-            [self.value.map(map_), self.find.map(map_)],
-            start=self.start.map(map_),
-            default=self.default.map(map_)
-        )
-
+    def exists(self):
+        return TrueOp()
 
 
 class BetweenOp(Expression):

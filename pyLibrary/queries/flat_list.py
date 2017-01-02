@@ -19,7 +19,7 @@ from MoLogs import Log
 from pyDots import split_field, coalesce, Data, FlatList, wrap
 
 
-class FlatList(list):
+class PartFlatList(list):
     """
     FlatList IS A RESULT OF FILTERING SETS OF TREES
     WE SAVED OURSELVES FROM COPYING ALL OBJECTS IN ALL PATHS OF ALL TREES,

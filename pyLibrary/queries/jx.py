@@ -16,16 +16,13 @@ import __builtin__
 from collections import Mapping
 from types import GeneratorType
 
-import itertools
-
 import pyDots
+from MoLogs import Log
+from pyDots import listwrap, wrap, unwrap, FlatList
+from pyDots import set_default, Null, Data, split_field, coalesce, join_field
+from pyDots.objects import DataObject
 from pyLibrary import convert
 from pyLibrary.collections import UNION, MIN
-from MoLogs import Log
-from pyDots import listwrap, wrap, unwrap, unwraplist
-from pyDots import set_default, Null, Data, split_field, coalesce, join_field
-from pyDots.lists import FlatList as FL
-from pyDots.objects import DataObject
 from pyLibrary.maths import Math
 from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.containers import Container
@@ -33,9 +30,9 @@ from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.cubes.aggs import cube_aggs
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, jx_expression_to_function
-from pyLibrary.queries.flat_list import FlatList
+from pyLibrary.queries.flat_list import PartFlatList
 from pyLibrary.queries.index import Index
-from pyLibrary.queries.query import QueryOp, _normalize_selects, sort_direction
+from pyLibrary.queries.query import QueryOp, _normalize_selects
 from pyLibrary.queries.unique_index import UniqueIndex
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
@@ -226,19 +223,19 @@ def tuple(data, field_name):
             return output
     elif isinstance(field_name, list):
         paths = [_select_a_field(f) for f in field_name]
-        output = FL()
+        output = FlatList()
         _tuple((), unwrap(data), paths, 0, output)
         return output
     else:
         paths = [_select_a_field(field_name)]
-        output = FL()
+        output = FlatList()
         _tuple((), data, paths, 0, output)
         return output
 
 
 def _tuple(template, data, fields, depth, output):
     deep_path = None
-    deep_fields = FL()
+    deep_fields = FlatList()
     for d in data:
         record = template
         for f in fields:
@@ -280,7 +277,7 @@ def select(data, field_name):
     if isinstance(data, Cube):
         return data._select(_normalize_selects(field_name))
 
-    if isinstance(data, FL):
+    if isinstance(data, PartFlatList):
         return data.select(field_name)
 
     if isinstance(data, UniqueIndex):
@@ -302,9 +299,9 @@ def select(data, field_name):
     if isinstance(field_name, basestring):
         path = split_field(field_name)
         if len(path) == 1:
-            return FL([d[field_name] for d in data])
+            return FlatList([d[field_name] for d in data])
         else:
-            output = FL()
+            output = FlatList()
             flat_list._select1(data, path, 0, output)
             return output
     elif isinstance(field_name, list):
@@ -326,7 +323,7 @@ def _select_a_field(field):
 
 
 def _select(template, data, fields, depth):
-    output = FL()
+    output = FlatList()
     deep_path = []
     deep_fields = UniqueIndex(["name"])
     for d in data:
@@ -542,9 +539,9 @@ def sort(data, fieldnames=None, already_normalized=False):
             return 0
 
         if isinstance(data, list):
-            output = FL([unwrap(d) for d in sorted(data, cmp=comparer)])
+            output = FlatList([unwrap(d) for d in sorted(data, cmp=comparer)])
         elif hasattr(data, "__iter__"):
-            output = FL([unwrap(d) for d in sorted(list(data), cmp=comparer)])
+            output = FlatList([unwrap(d) for d in sorted(list(data), cmp=comparer)])
         else:
             Log.error("Do not know how to handle")
             output = None
@@ -698,7 +695,7 @@ def drill_filter(esfilter, data):
 
         if filter["and"]:
             result = True
-            output = FL()
+            output = FlatList()
             for a in filter[u"and"]:
                 f = pe_filter(a, data, depth)
                 if f is False:
@@ -710,7 +707,7 @@ def drill_filter(esfilter, data):
             else:
                 return result
         elif filter["or"]:
-            output = FL()
+            output = FlatList()
             for o in filter[u"or"]:
                 f = pe_filter(o, data, depth)
                 if f is True:
@@ -888,7 +885,7 @@ def drill_filter(esfilter, data):
 
     # OUTPUT IS A LIST OF ROWS,
     # WHERE EACH ROW IS A LIST OF VALUES SEEN DURING A WALK DOWN A PATH IN THE HIERARCHY
-    uniform_output = FL()
+    uniform_output = FlatList()
     def recurse(row, depth):
         if depth == max:
             uniform_output.append(row)
@@ -912,7 +909,7 @@ def drill_filter(esfilter, data):
         # SIMPLE LIST AS RESULT
         return wrap([unwrap(u[0]) for u in uniform_output])
 
-    return FlatList(primary_column[0:max], uniform_output)
+    return PartFlatList(primary_column[0:max], uniform_output)
 
 
 def wrap_function(func):

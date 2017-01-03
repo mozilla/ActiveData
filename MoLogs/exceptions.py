@@ -109,7 +109,7 @@ class Except(Exception):
     def __str__(self):
         return self.__unicode__().encode('latin1', 'replace')
 
-    def as_data(self):
+    def __data__(self):
         return Data(
             type=self.type,
             template=self.template,
@@ -119,7 +119,7 @@ class Except(Exception):
         )
 
     def __json__(self):
-        return json_encoder(self.as_data())
+        return json_encoder(self.__data__())
 
 
 

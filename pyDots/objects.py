@@ -71,7 +71,7 @@ class DataObject(Mapping):
                     yield k, getattr(obj, k, None)
             return output()
 
-    def as_data(self):
+    def __data__(self):
         return self
 
     def __iter__(self):
@@ -107,12 +107,10 @@ def datawrap(v):
         return FlatList(v)
     elif type_ is GeneratorType:
         return (wrap(vv) for vv in v)
-    elif isinstance(v, Mapping):
+    elif isinstance(v, (Mapping, basestring, int, float, Decimal, datetime, date, Data, FlatList, NullType, NoneType)):
         return v
-    elif hasattr(v, "as_dict"):
-        return v.as_data()
-    elif isinstance(v, (basestring, int, float, Decimal, datetime, date, Data, FlatList, NullType, NoneType)):
-        return v
+    elif hasattr(v, "__data__"):
+        return v.__data__()
     else:
         return DataObject(v)
 

@@ -191,7 +191,7 @@ class Date(object):
     def __add__(self, other):
         return self.add(other)
 
-    def as_data(self):
+    def __data__(self):
         return self
 
     @classmethod

@@ -98,6 +98,6 @@ class TestExpressions(FuzzyTestCase):
 
     def test_in_map(self):
         where = {"in": {"a": [1, 2]}}
-        result = jx_expression(where).map({"a": "c"}).as_data()
+        result = jx_expression(where).map({"a": "c"}).__data__()
         self.assertEqual(result, {"in": {"c": [1, 2]}})
 

@@ -174,7 +174,7 @@ class ListContainer(Container):
         elif format == "cube":
             frum = convert.list2cube(self.data, self.schema.keys())
         else:
-            frum = self.as_data()
+            frum = self.__data__()
 
         return frum
 
@@ -202,7 +202,7 @@ class ListContainer(Container):
     def extend(self, documents):
         self.data.extend(documents)
 
-    def as_data(self):
+    def __data__(self):
         return wrap({
             "meta": {"format": "list"},
             "data": [{k: unwraplist(v) for k, v in row.items()} for row in self.data]

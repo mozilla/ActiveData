@@ -100,13 +100,13 @@ class FromES(Container):
         output._es = es
         return output
 
-    def as_data(self):
+    def __data__(self):
         settings = self.settings.copy()
         settings.settings = None
         return settings
 
     def __json__(self):
-        return convert.value2json(self.as_data())
+        return convert.value2json(self.__data__())
 
     def __enter__(self):
         Log.error("No longer used")

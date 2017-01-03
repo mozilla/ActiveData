@@ -206,7 +206,7 @@ def es_deepop(es, query):
             new_select.append({
                 "name": s.name if is_list else ".",
                 "pull": pull,
-                "value": expr.as_data(),
+                "value": expr.__data__(),
                 "put": {"name": s.name, "index": i, "child": "."}
             })
             i += 1

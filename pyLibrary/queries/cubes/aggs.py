@@ -33,7 +33,7 @@ def cube_aggs(frum, query):
             # DEFAULT DOMAINS CAN EASILY BE LOOKED UP FROM frum
             for fe in frum.edges:
                 if fe.name == e.value:
-                    e.domain = SimpleSetDomain(**fe.domain.as_data())
+                    e.domain = SimpleSetDomain(**fe.domain.__data__())
                     e.value = e.value + "." + fe.domain.key
                     break
         else:

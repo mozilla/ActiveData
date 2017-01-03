@@ -454,7 +454,7 @@ class Cube(Container):
         else:
             return float(self.data)
 
-    def as_data(self):
+    def __data__(self):
         return Data(
             select=self.select,
             edges=self.edges,
@@ -463,4 +463,4 @@ class Cube(Container):
         )
 
     def __json__(self):
-        return convert.value2json(self.as_data())
+        return convert.value2json(self.__data__())

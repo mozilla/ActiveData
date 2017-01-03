@@ -57,7 +57,7 @@ class AggsDecoder(object):
                 if col.partitions != None:
                     e.domain = SimpleSetDomain(partitions=col.partitions[:limit:])
                 else:
-                    e.domain = set_default(DefaultDomain(limit=limit), e.domain.as_data())
+                    e.domain = set_default(DefaultDomain(limit=limit), e.domain.__data__())
                     return object.__new__(DefaultDecoder, e)
 
             else:

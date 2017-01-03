@@ -642,12 +642,12 @@ class TestSetOps(ActiveDataBaseTest):
                 {}
             ],
             "query": {
-                "select": {"name": "v", "value": {"div": {"v": 2}, "default": 0}},
+                "select": {"name": "v", "value": {"div": {"v": 2}, "default": 10}},
                 "from": TEST_TABLE
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [0, 0.5, 1, 0]
+                "data": [0, 0.5, 1, 10]
             }
         }
         self.utils.execute_es_tests(test)

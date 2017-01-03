@@ -21,10 +21,10 @@ class TestFilters(ActiveDataBaseTest):
     def test_where_expression(self):
         test = {
             "data": [  # PROPERTIES STARTING WITH _ ARE NESTED AUTOMATICALLY
-                       {"a": {"b": 0, "c": 0}},
-                       {"a": {"b": 0, "c": 1}},
-                       {"a": {"b": 1, "c": 0}},
-                       {"a": {"b": 1, "c": 1}},
+                {"a": {"b": 0, "c": 0}},
+                {"a": {"b": 0, "c": 1}},
+                {"a": {"b": 1, "c": 0}},
+                {"a": {"b": 1, "c": 1}},
             ],
             "query": {
                 "from": TEST_TABLE,

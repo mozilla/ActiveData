@@ -57,7 +57,7 @@ def get_decoders_by_depth(query):
                 if not schema[v]:
                     Log.error("{{var}} does not exist in schema", var=v)
 
-            map_ = {schema[v].name: schema[v].es_column for v in vars_}
+            map_ = {c.name: c.es_column for v in vars_ for c in schema[v]}
             edge.range = {
                 "min": min_.map(map_),
                 "max": max_.map(map_)

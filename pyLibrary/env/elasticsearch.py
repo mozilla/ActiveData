@@ -281,7 +281,7 @@ class Index(Features):
 
                 if "json" in r:
                     json_bytes = r["json"].encode("utf8")
-                elif r_value:
+                elif r_value or isinstance(r_value, (dict, Data)):
                     json_bytes = convert.value2json(r_value).encode("utf8")
                 else:
                     json_bytes = None

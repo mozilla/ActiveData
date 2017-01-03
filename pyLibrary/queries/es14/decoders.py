@@ -13,16 +13,16 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from pyLibrary.collections import MAX
 from MoLogs import Log
-from pyDots import set_default, coalesce, literal_field, Data
+from pyDots import set_default, coalesce, literal_field, Data, unwraplist
 from pyDots import wrap
+from pyLibrary.collections import MAX, UNION
 from pyLibrary.maths import Math
 from pyLibrary.queries import jx
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from pyLibrary.queries.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, BinaryOp, AndOp, \
-    InequalityOp, TupleOp, LeavesOp
+from pyLibrary.queries.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, \
+    InequalityOp, TupleOp
 from pyLibrary.queries.query import MAX_LIMIT, DEFAULT_LIMIT
 
 
@@ -95,7 +95,7 @@ class AggsDecoder(object):
         self.edge = edge
         self.name = literal_field(self.edge.name)
         self.query = query
-        self.limit= limit
+        self.limit = limit
 
     def append_query(self, es_query, start):
         Log.error("Not supported")
@@ -440,6 +440,13 @@ class DefaultDecoder(SetDecoder):
         self.key2index = {}
         self.computed_domain = False
 
+        # WE ASSUME IF THE VARIABLES MATCH, THEN THE SORT TERM AND EDGE TERM MATCH, AND WE SORT BY TERM
+        self.sorted = None
+        edge_var = edge.value.vars()
+        for s in query.sort:
+            if not edge_var - s.value.vars():
+                self.sorted = {1: "asc", -1: "desc"}[s.sort]
+
     def append_query(self, es_query, start):
         self.start = start
 
@@ -451,7 +458,8 @@ class DefaultDecoder(SetDecoder):
                 "_match": set_default(
                     {"terms": {
                         "script_field": script_field,
-                        "size": self.domain.limit
+                        "size": self.domain.limit,
+                        "order": {"_term": self.sorted} if self.sorted else None
                     }},
                     es_query
                 ),
@@ -463,7 +471,8 @@ class DefaultDecoder(SetDecoder):
             "_match": set_default(
                 {"terms": {
                     "field": self.edge.value.var,
-                    "size": self.domain.limit
+                    "size": self.domain.limit,
+                    "order": {"_term": self.sorted} if self.sorted else None
                 }},
                 es_query
             ),

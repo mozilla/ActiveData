@@ -82,7 +82,7 @@ def extract_rows(es, es_query, query):
                     es_query.fields = None
                     source = "_source"
 
-                    net_columns = leaf_columns - set(selects.name)
+                    net_columns = leaf_columns - set(selects.name) - {"_id"}
                     for n in net_columns:
                         new_select.append({
                             "name": n,

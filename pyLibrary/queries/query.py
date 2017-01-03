@@ -720,7 +720,7 @@ def _normalize_sort(sort=None):
             output.append({"value": OffsetOp("offset", s), "sort": 1})
         elif all(d in sort_direction for d in s.values()) and not s.sort and not s.value:
             for v, d in s.items():
-                output.append({"value": jx_expression(v), "sort": -1})
+                output.append({"value": jx_expression(v), "sort": sort_direction[d]})
         else:
             output.append({"value": jx_expression(coalesce(s.value, s.field)), "sort": coalesce(sort_direction[s.sort], 1)})
     return output

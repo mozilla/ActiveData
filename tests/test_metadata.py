@@ -49,27 +49,31 @@ class TestMetadata(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
+                    {"table": table_name, "name": "_id", "type": "string", "nested_path": "."},
                     {"table": table_name, "name": "a", "type": "string", "nested_path": "."}
                 ]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["table", "name", "type", "nested_path"],
-                "data": [[table_name, "a", "string", "."]]
+                "data": [
+                    [table_name, "_id", "string", "."],
+                    [table_name, "a", "string", "."]
+                ]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "rownum",
-                        "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                        "domain": {"type": "rownum", "min": 0, "max": 2, "interval": 1}
                     }
                 ],
                 "data": {
                     "table": [table_name],
-                    "name": ["a"],
-                    "type": ["string"],
-                    "nested_path": ["."]
+                    "name": ["_id", "a"],
+                    "type": ["string", "string"],
+                    "nested_path": [".", "."]
                 }
             }
         })

@@ -37,20 +37,20 @@ def get_decoders_by_depth(query):
     """
     schema = query.frum.schema
     output = FlatList()
-    for e in wrap(coalesce(query.edges, query.groupby, [])):
-        if e.value != None and not isinstance(e.value, NullOp):
-            e = e.copy()
-            vars_ = e.value.vars()
+    for edge in wrap(coalesce(query.edges, query.groupby, [])):
+        if edge.value != None and not isinstance(edge.value, NullOp):
+            edge = edge.copy()
+            vars_ = edge.value.vars()
 
             for v in vars_:
                 if not schema[v]:
                     Log.error("{{var}} does not exist in schema", var=v)
 
-            e.value = e.value.map({c.name: c.es_column for v in vars_ for c in schema.lookup[v]})
-        elif e.range:
-            e = e.copy()
-            min_ = e.range.min
-            max_ = e.range.max
+            edge.value = edge.value.map({c.name: c.es_column for v in vars_ for c in schema.lookup[v]})
+        elif edge.range:
+            edge = edge.copy()
+            min_ = edge.range.min
+            max_ = edge.range.max
             vars_ = min_.vars() | max_.vars()
 
             for v in vars_:
@@ -58,38 +58,38 @@ def get_decoders_by_depth(query):
                     Log.error("{{var}} does not exist in schema", var=v)
 
             map_ = {schema[v].name: schema[v].es_column for v in vars_}
-            e.range = {
+            edge.range = {
                 "min": min_.map(map_),
                 "max": max_.map(map_)
             }
-        elif e.domain.dimension:
-            vars_ = e.domain.dimension.fields
-            e.domain.dimension = e.domain.dimension.copy()
-            e.domain.dimension.fields = [schema[v].es_column for v in vars_]
-        elif all(e.domain.partitions.where):
+        elif edge.domain.dimension:
+            vars_ = edge.domain.dimension.fields
+            edge.domain.dimension = edge.domain.dimension.copy()
+            edge.domain.dimension.fields = [schema[v].es_column for v in vars_]
+        elif all(edge.domain.partitions.where):
             vars_ = set()
-            for p in e.domain.partitions:
+            for p in edge.domain.partitions:
                 vars_ |= p.where.vars()
 
         try:
-            depths = set(len(schema[v].nested_path)-1 for v in vars_)
+            depths = set(len(c.nested_path)-1 for v in vars_ for c in schema[v])
             if -1 in depths:
                 Log.error(
                     "Do not know of column {{column}}",
                     column=unwraplist([v for v in vars_ if schema[v]==None])
                 )
             if len(depths) > 1:
-                Log.error("expression {{expr}} spans tables, can not handle", expr=e.value)
+                Log.error("expression {{expr}} spans tables, can not handle", expr=edge.value)
             max_depth = Math.MAX(depths)
             while len(output) <= max_depth:
                 output.append([])
-        except Exception, e:
+        except Exception, edge:
             # USUALLY THE SCHEMA IS EMPTY, SO WE ASSUME THIS IS A SIMPLE QUERY
             max_depth = 0
             output.append([])
 
         limit = 0
-        output[max_depth].append(AggsDecoder(e, query, limit))
+        output[max_depth].append(AggsDecoder(edge, query, limit))
     return output
 
 

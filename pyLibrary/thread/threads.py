@@ -668,7 +668,7 @@ class ThreadedQueue(Queue):
                         )
 
                 try:
-                    _Log.note("got data")
+                    _Log.note("got data now={{now}}, next_push={{next}}", now=now, next=next_push)
                     if len(_buffer) >= batch_size or now > next_push:
                         next_push = now + period
                         if _buffer:

@@ -326,18 +326,31 @@ class Index(Features):
                     Log.error("version not supported {{version}}", version=self.cluster.version)
 
                 if fails:
-                    Log.error("Problems with insert", cause=[
-                        Except(
+                    if len(fails) <= 3:
+                        cause = [
+                            Except(
+                                template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
+                                status=items[i].index.status,
+                                error=items[i].index.error,
+                                some=len(fails) - 1,
+                                line=strings.limit(lines[i * 2 + 1], 500 if not self.debug else 100000),
+                                index=self.settings.index,
+                                id=items[i].index._id
+                            )
+                            for i in fails
+                        ]
+                    else:
+                        i=fails[0]
+                        cause = Except(
                             template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
                             status=items[i].index.status,
                             error=items[i].index.error,
                             some=len(fails) - 1,
-                            line=strings.limit(lines[fails[0] * 2 + 1], 500 if not self.debug else 100000),
+                            line=strings.limit(lines[i * 2 + 1], 500 if not self.debug else 100000),
                             index=self.settings.index,
                             id=items[i].index._id
                         )
-                        for i in fails
-                    ])
+                    Log.error("Problems with insert", cause=cause)
 
         except Exception, e:
             if e.message.startswith("sequence item "):

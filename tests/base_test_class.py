@@ -529,6 +529,7 @@ class FakeHttp(object):
 
 global_settings = jsons.ref.get("file://tests/config/elasticsearch.json")
 constants.set(global_settings.constants)
+Log.alert("Resetting test count")
 NEXT = 0
 
 container_types = Data(

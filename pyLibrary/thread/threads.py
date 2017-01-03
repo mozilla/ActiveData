@@ -617,6 +617,8 @@ class ThreadedQueue(Queue):
 
             please_stop.on_go(stopper)
 
+            _Log.note("running")
+
             _buffer = []
             _post_push_functions = []
             next_push = Date.now() + period  # THE TIME WE SHOULD DO A PUSH
@@ -632,23 +634,20 @@ class ThreadedQueue(Queue):
                 try:
                     if not _buffer:
                         item = self.pop()
-                        items = [item] + self.pop_all()  # PLEASE REMOVE
                         now = Date.now()
                         next_push = now + period
                     else:
                         item = self.pop(till=Till(till=next_push))
-                        items = [item]+self.pop_all()  # PLEASE REMOVE
                         now = Date.now()
 
-                    for item in items:  # PLEASE REMOVE
-                        if item is Thread.STOP:
-                            push_to_queue()
-                            please_stop.go()
-                            break
-                        elif isinstance(item, types.FunctionType):
-                            _post_push_functions.append(item)
-                        elif item is not None:
-                            _buffer.append(item)
+                    if item is Thread.STOP:
+                        push_to_queue()
+                        please_stop.go()
+                        break
+                    elif isinstance(item, types.FunctionType):
+                        _post_push_functions.append(item)
+                    elif item is not None:
+                        _buffer.append(item)
 
                 except Exception, e:
                     e = Except.wrap(e)
@@ -699,6 +698,8 @@ class ThreadedQueue(Queue):
             if _buffer:
                 # ONE LAST PUSH, DO NOT HAVE TIME TO DEAL WITH ERRORS
                 push_to_queue()
+
+            _Log.note("done")
 
         self.thread = Thread.run("threaded queue for " + name, worker_bee, parent_thread=self)
 

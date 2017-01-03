@@ -10,7 +10,7 @@ To understand ActiveData you have two paths forward:
 
 ##Best Option: Please Ask a Question
 
-If you an occasional user, please [ask me, `:ekyle`](klahnakoski@mozilla.com), for a query that will pull the information you need; this is the most efficient use of your time. You probably came to ActiveData because you have a question that data may answer for you. If you only have a question every couple of months, you should not be wasting your time (re)learning the schema, and the query language. By asking a question, you will get the data you need faster, and I get to learn what people are interested in and make dashboards that present that information in a meaningful way.
+If you an occasional user, please [ask me, `:ekyle`](mailto://klahnakoski@mozilla.com), for a query that will pull the information you need; this is the most efficient use of your time. You probably came to ActiveData because you have a question that data may answer for you. If you only have a question every couple of months, you should not be wasting your time (re)learning the schema, and the query language. By asking a question, you will get the data you need faster, and I get to learn what people are interested in and make dashboards that present that information in a meaningful way.
 
 Asking just one question is not enough. The schemas are enormous and and growing; trying to find the needle in the haystack is not a good use of your time. After asking several questions, you will have a constellation of queries that are relevant to your role. These queries will serve as meaningful examples upon which you can learn the query language, and will give you hints about the topology of data you are most interested in.
    

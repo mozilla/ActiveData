@@ -16,7 +16,7 @@ Asking just one question is not enough. The schemas are enormous and and growing
    
 ##Second Option: Explore the schemas yourself
 
-If you plan to interact with ActiveData over an extended period of time, then it will be worth your time to learn the query language and the relevant schema. If you have used raw SQL in the past to explore the contents of a database, then you will be familiar with the process of exploring ActiveData. In general, a database schema is only a superficial description of the data; you will need to know many more details before you can use it effectively. For example, you must be familiar with the domain-of-values for given columns, their cardinality, and which values are most common. There will be business-specific meaning given to he values, and there will be important correlations between columns that you can use to reduce apparent complexity.
+If you plan to interact with ActiveData over an extended period of time, then it will be worth your time to learn the query language and the relevant schema. If you have used raw SQL in the past to explore the contents of a database, then you will be familiar with the process of exploring ActiveData. In general, a database schema is only a superficial description of the data; you will need to know many more details before you can use it effectively. For example, you must be familiar with the domain-of-values for given columns, their cardinality, and which values are most common. There will be business-specific meaning given to the values, and there will be important correlations between columns that you can use to reduce apparent complexity.
 
 ### 0) Prerequisites
 

@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 import hashlib
 
+from MoLogs import Log
 from pyDots import wrap
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch
@@ -53,6 +54,8 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
         wrap(test).expecting_list.meta.saved_as = expected_hash
 
         self.utils.send_queries(test)
+
+        Log.note("Saving query worked")
 
         # ENSURE THE QUERY HAS BEEN INDEXED
         container = elasticsearch.Index(index="saved_queries", settings=settings)

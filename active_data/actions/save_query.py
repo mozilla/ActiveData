@@ -95,6 +95,7 @@ class SaveQueries(object):
             "where": {"prefix": {"hash": hash}},
             "format": "list"
         })
+        Log.note("Saved query response: {{result|json}}", result=result)
 
         try:
             query = wrap(result.data).query

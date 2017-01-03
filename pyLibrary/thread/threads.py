@@ -582,7 +582,6 @@ def _stop_main_thread():
     sys.exit(0)
 
 
-
 class ThreadedQueue(Queue):
     """
     DISPATCH TO ANOTHER (SLOWER) queue IN BATCHES OF GIVEN size
@@ -631,6 +630,7 @@ class ThreadedQueue(Queue):
                 del _post_push_functions[:]
 
             while not please_stop:
+                _Log.note("wait for more data")
                 try:
                     if not _buffer:
                         item = self.pop()
@@ -668,9 +668,11 @@ class ThreadedQueue(Queue):
                         )
 
                 try:
+                    _Log.note("got data")
                     if len(_buffer) >= batch_size or now > next_push:
                         next_push = now + period
                         if _buffer:
+                            _Log.note("push data")
                             push_to_queue()
                             # A LITTLE MORE TIME TO FILL THE NEXT BUFFER
                             now = Date.now()

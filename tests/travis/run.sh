@@ -6,5 +6,5 @@ sleep 5
 
 export TEST_CONFIG=tests/travis/app.json
 #python -m unittest -m unittest discover tests --failfast
-python -m unittest -m unittest test_load_and_save_queries.TestLoadAndSaveQueries
+python -m unittest test_load_and_save_queries.TestLoadAndSaveQueries
 exit

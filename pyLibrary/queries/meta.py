@@ -33,11 +33,12 @@ _elasticsearch = None
 
 MAX_COLUMN_METADATA_AGE = 12 * HOUR
 ENABLE_META_SCAN = False
-DEBUG = True
+DEBUG = False
 TOO_OLD = 2*HOUR
 OLD_METADATA = MINUTE
 singlton = None
 TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
+
 
 class FromESMetadata(Schema):
     """

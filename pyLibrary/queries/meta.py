@@ -103,7 +103,8 @@ class FromESMetadata(Schema):
             self.todo.add(c)
 
             if ENABLE_META_SCAN:
-                Log.note("todo: {{table}}::{{column}}", table=c.table, column=c.es_column)
+                if DEBUG:
+                    Log.note("todo: {{table}}::{{column}}", table=c.table, column=c.es_column)
                 # MARK meta.columns AS DIRTY TOO
                 cols = self.meta.columns.find("meta.columns", None)
                 for cc in cols:
@@ -117,7 +118,8 @@ class FromESMetadata(Schema):
 
             for key in Column.__slots__:
                 canonical[key] = c[key]
-            Log.note("todo: {{table}}::{{column}}", table=canonical.table, column=canonical.es_column)
+            if DEBUG:
+                Log.note("todo: {{table}}::{{column}}", table=canonical.table, column=canonical.es_column)
             self.todo.add(canonical)
 
     def _get_columns(self, table=None):
@@ -242,7 +244,8 @@ class FromESMetadata(Schema):
                 columns = jx.sort(columns, "name")
                 # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
                 while len(self.todo) and not all(columns.get("last_updated")):
-                    Log.note("waiting for columns to update {{columns|json}}", columns=[c.table+"."+c.es_column for c in columns if not c.last_updated])
+                    if DEBUG:
+                        Log.note("waiting for columns to update {{columns|json}}", columns=[c.table+"."+c.es_column for c in columns if not c.last_updated])
                     Till(seconds=1).wait()
                 return columns
         except Exception, e:
@@ -301,7 +304,8 @@ class FromESMetadata(Schema):
 
             query = Data(size=0)
             if cardinality > 1000 or (count >= 30 and cardinality == count) or (count >= 1000 and cardinality / count > 0.99):
-                Log.note("{{table}}.{{field}} has {{num}} parts", table=c.table, field=c.es_column, num=cardinality)
+                if DEBUG:
+                    Log.note("{{table}}.{{field}} has {{num}} parts", table=c.table, field=c.es_column, num=cardinality)
                 with self.meta.columns.locker:
                     self.meta.columns.update({
                         "set": {
@@ -314,7 +318,8 @@ class FromESMetadata(Schema):
                     })
                 return
             elif c.type in _elasticsearch.ES_NUMERIC_TYPES and cardinality > 30:
-                Log.note("{{field}} has {{num}} parts", field=c.name, num=cardinality)
+                if DEBUG:
+                    Log.note("{{field}} has {{num}} parts", field=c.name, num=cardinality)
                 with self.meta.columns.locker:
                     self.meta.columns.update({
                         "set": {
@@ -342,7 +347,8 @@ class FromESMetadata(Schema):
             else:
                 parts = jx.sort(aggs.buckets.key)
 
-            Log.note("{{field}} has {{parts}}", field=c.name, parts=parts)
+            if DEBUG:
+                Log.note("{{field}} has {{parts}}", field=c.name, parts=parts)
             with self.meta.columns.locker:
                 self.meta.columns.update({
                     "set": {
@@ -393,18 +399,21 @@ class FromESMetadata(Schema):
                             if (c.last_updated == None or c.last_updated < Date.now()-TOO_OLD) and c.type not in STRUCT
                         ]
                         if old_columns:
-                            Log.note("Old columns wth dates {{dates|json}}", dates=wrap(old_columns).last_updated)
+                            if DEBUG:
+                                Log.note("Old columns wth dates {{dates|json}}", dates=wrap(old_columns).last_updated)
                             self.todo.extend(old_columns)
                             # TEST CONSISTENCY
                             for c, d in product(list(self.todo.queue), list(self.todo.queue)):
                                 if c.es_column == d.es_column and c.table == d.table and c != d:
                                     Log.error("")
                         else:
-                            Log.note("no more metatdata to update")
+                            if DEBUG:
+                                Log.note("no more metatdata to update")
 
                 column = self.todo.pop(Till(timeout=10*MINUTE))
                 if column:
-                    Log.note("update {{table}}.{{column}}", table=column.table, column=column.es_column)
+                    if DEBUG:
+                        Log.note("update {{table}}.{{column}}", table=column.table, column=column.es_column)
                     if column.type in STRUCT:
                         with self.meta.columns.locker:
                             column.last_updated = Date.now()
@@ -443,7 +452,8 @@ class FromESMetadata(Schema):
                     ],
                     "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                 })
-            Log.note("Could not get {{col.es_index}}.{{col.es_column}} info", col=c)
+            if DEBUG:
+                Log.note("Could not get {{col.es_index}}.{{col.es_column}} info", col=c)
 
 
 def _counting_query(c):

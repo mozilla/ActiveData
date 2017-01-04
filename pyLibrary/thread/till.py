@@ -19,9 +19,10 @@ from thread import allocate_lock as _allocate_lock
 from time import sleep, time
 
 from pyLibrary.thread.signal import Signal
-from pyLibrary.times.dates import Date
+from pyLibrary.times.dates import Date, unix2Date
 from pyLibrary.times.durations import Duration
 
+DEBUG = False
 INTERVAL = 0.1
 
 _till_locker = _allocate_lock()
@@ -64,6 +65,7 @@ class Till(Signal):
     @classmethod
     def daemon(cls, please_stop):
         global next_ping
+        from MoLogs import Log
 
         Till.enabled = True
         sorted_timers = []
@@ -93,27 +95,37 @@ class Till(Signal):
                     next_ping = now + INTERVAL
                     new_timers, Till.new_timers = Till.new_timers, []
 
+                if DEBUG and new_timers:
+                    Log.note("new timers: {{timers}}", timers=[t for t, s in new_timers])
+
                 sorted_timers.extend(new_timers)
 
                 if sorted_timers:
                     sorted_timers.sort(key=lambda r: r[0])
                     for i, (t, s) in enumerate(sorted_timers):
                         if now < t:
-                            work, sorted_timers[:i] = sorted_timers[:i], []
+                            work, sorted_timers = sorted_timers[:i], sorted_timers[i:]
                             next_ping = min(next_ping, sorted_timers[0][0])
                             break
                     else:
                         work, sorted_timers = sorted_timers, []
 
                     if work:
+                        if DEBUG:
+                            Log.note(
+                                "done: {{timers}}.  Remaining {{pending}}",
+                                timers=[t for t, s in work],
+                                pending=[t for t, s in sorted_timers]
+                            )
+
                         for t, s in work:
                             s.go()
 
         except Exception, e:
-            from MoLogs import Log
-
             Log.warning("timer shutdown", cause=e)
         finally:
+            if DEBUG:
+                Log.alert("TIMER SHUTDOWN")
             Till.enabled = False
             # TRIGGER ALL REMAINING TIMERS RIGHT NOW
             with _till_locker:

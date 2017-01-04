@@ -98,7 +98,7 @@ class SaveQueries(object):
 
         try:
             query = wrap(result.data).query
-            if len(query) != 1:
+            if len(query) == 0:
                 return None
         except Exception, e:
             return None

@@ -15,7 +15,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from collections import deque
 from thread import allocate_lock as _allocate_lock
 
 from pyLibrary.thread.signal import Signal
@@ -23,6 +22,8 @@ from pyLibrary.thread.signal import Signal
 _Log = None
 _Except = None
 _Thread = None
+_extract_stack = None
+
 DEBUG = False
 DEBUG_SIGNAL = False
 
@@ -31,29 +32,34 @@ def _late_import():
     global _Log
     global _Except
     global _Thread
+    global _extract_stack
 
     if _Thread:
         return
 
-    from MoLogs import Log as _Log
     from MoLogs.exceptions import Except as _Except
+    from MoLogs.exceptions import extract_stack as _extract_stack
     from pyLibrary.thread.threads import Thread as _Thread
+    from MoLogs import Log as _Log
 
     _ = _Log
     _ = _Except
     _ = _Thread
+    _ = _extract_stack
 
 
 class Lock(object):
     """
-    SIMPLE LOCK (ACTUALLY, A PYTHON threadind.Condition() WITH notify() BEFORE EVERY RELEASE)
+    A NON-RE-ENTRANT LOCK WITH wait() AND
     """
     __slots__ = ["name", "lock", "waiting"]
 
     def __init__(self, name=""):
+        if DEBUG and not _Log:
+            _late_import()
         self.name = name
         self.lock = _allocate_lock()
-        self.waiting = deque()
+        self.waiting = None
 
     def __enter__(self):
         # with pyLibrary.times.timer.Timer("get lock"):
@@ -72,13 +78,32 @@ class Lock(object):
         :param till: WHEN TO GIVE UP WAITING FOR ANOTHER THREAD TO SIGNAL
         :return:
         """
-        if self.waiting:
-            waiter = self.waiting.pop()
-            waiter.go()
-
         waiter = Signal()
-        self.waiting.appendleft(waiter)
-        self.lock.release()
-        (waiter | till).wait()
-        self.lock.acquire()
+        if self.waiting:
+            if DEBUG:
+                _Log.note("{{name}} waiting with others", name=self.name)
+            self.waiting.insert(0, waiter)
+        else:
+            self.waiting = [waiter]
+
+        try:
+            self.lock.release()
+            (waiter | till).wait()
+            if DEBUG:
+                trace = _extract_stack(0)[2]
+                _Log.note("{{name|quote}} out of lock waiting till {{till|quote}}\n{{trace}} ", till=till.name if till else "", name=self.name, trace=trace)
+        except Exception, e:
+            _Log.warning("problem", cause=e)
+        finally:
+            self.lock.acquire()
+            if DEBUG:
+                _Log.note("{{name}} acquired old lock", name=self.name)
+
+        try:
+            self.waiting.remove(waiter)
+            if DEBUG:
+                _Log.note("{{name}} removed own signal", name=self.name)
+        except Exception:
+            pass
+
         return bool(waiter)

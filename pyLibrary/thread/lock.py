@@ -23,6 +23,8 @@ from pyLibrary.thread.signal import Signal
 _Log = None
 _Except = None
 _Thread = None
+_extract_stack = None
+
 DEBUG = True
 DEBUG_SIGNAL = False
 
@@ -31,17 +33,20 @@ def _late_import():
     global _Log
     global _Except
     global _Thread
+    global _extract_stack
 
     if _Thread:
         return
 
-    from MoLogs import Log as _Log
     from MoLogs.exceptions import Except as _Except
+    from MoLogs.exceptions import extract_stack as _extract_stack
     from pyLibrary.thread.threads import Thread as _Thread
+    from MoLogs import Log as _Log
 
     _ = _Log
     _ = _Except
     _ = _Thread
+    _ = _extract_stack
 
 
 class Lock(object):
@@ -88,7 +93,8 @@ class Lock(object):
         self.lock.release()
         waiter.wait()
         if DEBUG:
-            _Log.note("{{name}} out of lock waiting", name=self.name)
+            trace = _extract_stack(0)[1]
+            _Log.note("{{name}} out of lock waiting {{trace}}", name=self.name, trace=trace)
 
         self.lock.acquire()
         if DEBUG:

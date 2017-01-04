@@ -46,14 +46,16 @@ def _late_import():
 
 class Lock(object):
     """
-    SIMPLE LOCK (ACTUALLY, A PYTHON threadind.Condition() WITH notify() BEFORE EVERY RELEASE)
+    A NON-RE-ENTRANT LOCK WITH wait() AND
     """
     __slots__ = ["name", "lock", "waiting"]
 
     def __init__(self, name=""):
+        if DEBUG and not _Log:
+            _late_import()
         self.name = name
         self.lock = _allocate_lock()
-        self.waiting = deque()
+        self.waiting = None
 
     def __enter__(self):
         # with pyLibrary.times.timer.Timer("get lock"):
@@ -72,13 +74,28 @@ class Lock(object):
         :param till: WHEN TO GIVE UP WAITING FOR ANOTHER THREAD TO SIGNAL
         :return:
         """
+        waiter = Signal()
+        if till is not None:
+            till.on_go(lambda: waiter.go())
+
         if self.waiting:
             waiter = self.waiting.pop()
             waiter.go()
+        if self.waiting:
+            self.waiting.append(waiter)
+        else:
+            self.waiting = [waiter]
 
-        waiter = Signal()
-        self.waiting.appendleft(waiter)
         self.lock.release()
-        (waiter | till).wait()
+        waiter.wait()
+        if DEBUG:
+            _Log.note("{{name}} out of lock waiting", name=self.name)
+
         self.lock.acquire()
+        if DEBUG:
+            _Log.note("{{name}} acquired old lock", name=self.name)
+
+
+
+
         return bool(waiter)

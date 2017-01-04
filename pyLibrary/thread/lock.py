@@ -79,9 +79,6 @@ class Lock(object):
             till.on_go(lambda: waiter.go())
 
         if self.waiting:
-            waiter = self.waiting.pop()
-            waiter.go()
-        if self.waiting:
             if DEBUG:
                 _Log.note("{{name}} waiting with others", name=self.name)
             self.waiting.insert(0, waiter)

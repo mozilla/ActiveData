@@ -637,8 +637,10 @@ class ThreadedQueue(Queue):
                         now = Date.now()
                         next_push = now + period
                     else:
+                        _Log.note("wait for more data until {{time|datetime}}", time=next_push)
                         item = self.pop(till=Till(till=next_push))
                         now = Date.now()
+                        _Log.note("done wait {{now|datetime}}", now=now)
 
                     if item is Thread.STOP:
                         push_to_queue()
@@ -668,7 +670,7 @@ class ThreadedQueue(Queue):
                         )
 
                 try:
-                    _Log.note("got data now={{now}}, next_push={{next}}", now=now, next=next_push)
+                    _Log.note("got data len={{len}}, now={{now}}, next_push={{next}}", len=len(_buffer), now=now, next=next_push)
                     if len(_buffer) >= batch_size or now > next_push:
                         next_push = now + period
                         if _buffer:

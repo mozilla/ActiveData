@@ -82,7 +82,9 @@ class Lock(object):
             waiter = self.waiting.pop()
             waiter.go()
         if self.waiting:
-            self.waiting.append(waiter)
+            if DEBUG:
+                _Log.note("{{name}} waiting with others", name=self.name)
+            self.waiting.insert(0, waiter)
         else:
             self.waiting = [waiter]
 
@@ -95,7 +97,11 @@ class Lock(object):
         if DEBUG:
             _Log.note("{{name}} acquired old lock", name=self.name)
 
-
-
+        try:
+            self.waiting.remove(waiter)
+            if DEBUG:
+                _Log.note("{{name}} removed own signal", name=self.name)
+        except Exception:
+            pass
 
         return bool(waiter)

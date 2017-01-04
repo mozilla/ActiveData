@@ -606,7 +606,6 @@ class ThreadedQueue(Queue):
         batch_size = coalesce(batch_size, int(max_size / 2) if max_size else None, 900)
         max_size = coalesce(max_size, batch_size * 2)  # REASONABLE DEFAULT
         period = coalesce(period, SECOND)
-        bit_more_time = 5 * SECOND
 
         Queue.__init__(self, name=name, max=max_size, silent=silent)
 
@@ -620,7 +619,9 @@ class ThreadedQueue(Queue):
 
             _buffer = []
             _post_push_functions = []
-            next_push = Date.now() + period  # THE TIME WE SHOULD DO A PUSH
+            now = Date.now()
+            next_push = now + period  # THE TIME WE SHOULD DO A PUSH
+            last_push = now - period
 
             def push_to_queue():
                 queue.extend(_buffer)
@@ -630,17 +631,19 @@ class ThreadedQueue(Queue):
                 del _post_push_functions[:]
 
             while not please_stop:
-                _Log.note("wait for more data")
                 try:
                     if not _buffer:
+                        _Log.note("wait for more data")
                         item = self.pop()
                         now = Date.now()
-                        next_push = now + period
+                        if now > last_push + period:
+                            next_push = now + period
                     else:
                         _Log.note("wait for more data until {{time|datetime}}", time=next_push)
                         item = self.pop(till=Till(till=next_push))
                         now = Date.now()
-                        _Log.note("done wait {{now|datetime}}", now=now)
+
+                    _Log.note("done wait {{now|datetime}}", now=now)
 
                     if item is Thread.STOP:
                         push_to_queue()
@@ -676,9 +679,8 @@ class ThreadedQueue(Queue):
                         if _buffer:
                             _Log.note("push data")
                             push_to_queue()
-                            # A LITTLE MORE TIME TO FILL THE NEXT BUFFER
                             now = Date.now()
-                            next_push = max(next_push, now + bit_more_time)
+                            last_push = now
 
                 except Exception, e:
                     e = Except.wrap(e)

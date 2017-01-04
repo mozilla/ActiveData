@@ -15,7 +15,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from collections import deque
 from thread import allocate_lock as _allocate_lock
 
 from pyLibrary.thread.signal import Signal
@@ -80,9 +79,6 @@ class Lock(object):
         :return:
         """
         waiter = Signal()
-        if till is not None:
-            till.on_go(lambda: waiter.go())
-
         if self.waiting:
             if DEBUG:
                 _Log.note("{{name}} waiting with others", name=self.name)
@@ -90,15 +86,18 @@ class Lock(object):
         else:
             self.waiting = [waiter]
 
-        self.lock.release()
-        waiter.wait()
-        if DEBUG:
-            trace = _extract_stack(0)[1]
-            _Log.note("{{name}} out of lock waiting {{trace}}", name=self.name, trace=trace)
-
-        self.lock.acquire()
-        if DEBUG:
-            _Log.note("{{name}} acquired old lock", name=self.name)
+        try:
+            self.lock.release()
+            (waiter | till).wait()
+            if DEBUG:
+                trace = _extract_stack(0)[2]
+                _Log.note("{{name|quote}} out of lock waiting till {{till|quote}}\n{{trace}} ", till=till.name if till else "", name=self.name, trace=trace)
+        except Exception, e:
+            _Log.warning("problem", cause=e)
+        finally:
+            self.lock.acquire()
+            if DEBUG:
+                _Log.note("{{name}} acquired old lock", name=self.name)
 
         try:
             self.waiting.remove(waiter)

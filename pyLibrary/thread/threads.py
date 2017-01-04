@@ -216,7 +216,8 @@ class Queue(object):
                 if self.queue:
                     value = self.queue.popleft()
                     return value
-                self.lock.wait(till=till)
+                if not self.lock.wait(till=till):
+                    return None
         if DEBUG or not self.silent:
             _Log.note(self.name + " queue stopped")
         return Thread.STOP

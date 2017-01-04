@@ -104,7 +104,7 @@ class Till(Signal):
                     sorted_timers.sort(key=lambda r: r[0])
                     for i, (t, s) in enumerate(sorted_timers):
                         if now < t:
-                            work, sorted_timers[:i] = sorted_timers[:i], []
+                            work, sorted_timers = sorted_timers[:i], sorted_timers[i:]
                             next_ping = min(next_ping, sorted_timers[0][0])
                             break
                     else:
@@ -114,7 +114,7 @@ class Till(Signal):
                         if DEBUG:
                             Log.note(
                                 "done: {{timers}}.  Remaining {{pending}}",
-                                timers=[t for t, s in new_timers],
+                                timers=[t for t, s in work],
                                 pending=[t for t, s in sorted_timers]
                             )
 

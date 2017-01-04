@@ -96,7 +96,7 @@ class Till(Signal):
                     new_timers, Till.new_timers = Till.new_timers, []
 
                 if DEBUG and new_timers:
-                    Log.note("new timers: {{timers}}", timers=[unix2Date(t[0]).format() for t in new_timers])
+                    Log.note("new timers: {{timers}}", timers=[t for t, s in new_timers])
 
                 sorted_timers.extend(new_timers)
 
@@ -111,6 +111,9 @@ class Till(Signal):
                         work, sorted_timers = sorted_timers, []
 
                     if work:
+                        if DEBUG:
+                            Log.note("done: {{timers}}.  Remaining {{num}}", timers=[t for t, s in new_timers], num=len(sorted_timers))
+
                         for t, s in work:
                             s.go()
 

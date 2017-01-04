@@ -637,6 +637,7 @@ class ThreadedQueue(Queue):
                         item = self.pop()
                         now = Date.now()
                         if now > last_push + period:
+                            _Log.note("delay next push")
                             next_push = now + period
                     else:
                         _Log.note("wait for more data until {{time|datetime}}", time=next_push)
@@ -679,8 +680,7 @@ class ThreadedQueue(Queue):
                         if _buffer:
                             _Log.note("push data")
                             push_to_queue()
-                            now = Date.now()
-                            last_push = now
+                            last_push = now = Date.now()
 
                 except Exception, e:
                     e = Except.wrap(e)

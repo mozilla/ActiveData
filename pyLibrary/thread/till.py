@@ -30,7 +30,6 @@ next_ping = time()
 done = Signal("Timers shutdown")
 done.go()
 
-_Log = None
 
 class Till(Signal):
     """
@@ -49,11 +48,6 @@ class Till(Signal):
 
     def __init__(self, till=None, timeout=None, seconds=None):
         global next_ping
-        global _Log
-
-        if not _Log:
-            from MoLogs import Log as _Log
-            _ = _Log
 
         if till != None:
             timeout = Date(till).unix
@@ -71,6 +65,7 @@ class Till(Signal):
     @classmethod
     def daemon(cls, please_stop):
         global next_ping
+        from MoLogs import Log
 
         Till.enabled = True
         sorted_timers = []
@@ -100,8 +95,8 @@ class Till(Signal):
                     next_ping = now + INTERVAL
                     new_timers, Till.new_timers = Till.new_timers, []
 
-                if DEBUG:
-                    _Log.note("new timers: {{timers}}", timers=[unix2Date(t[0]).format() for t in new_timers])
+                if DEBUG and new_timers:
+                    Log.note("new timers: {{timers}}", timers=[unix2Date(t[0]).format() for t in new_timers])
 
                 sorted_timers.extend(new_timers)
 
@@ -120,8 +115,6 @@ class Till(Signal):
                             s.go()
 
         except Exception, e:
-            from MoLogs import Log
-
             Log.warning("timer shutdown", cause=e)
         finally:
             Till.enabled = False

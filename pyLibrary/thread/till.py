@@ -19,9 +19,10 @@ from thread import allocate_lock as _allocate_lock
 from time import sleep, time
 
 from pyLibrary.thread.signal import Signal
-from pyLibrary.times.dates import Date
+from pyLibrary.times.dates import Date, unix2Date
 from pyLibrary.times.durations import Duration
 
+DEBUG = True
 INTERVAL = 0.1
 
 _till_locker = _allocate_lock()
@@ -29,6 +30,7 @@ next_ping = time()
 done = Signal("Timers shutdown")
 done.go()
 
+_Log = None
 
 class Till(Signal):
     """
@@ -47,6 +49,11 @@ class Till(Signal):
 
     def __init__(self, till=None, timeout=None, seconds=None):
         global next_ping
+
+        if not _Log:
+            global _Log
+            from MoLogs import Log as _Log
+            _ = _Log
 
         if till != None:
             timeout = Date(till).unix
@@ -92,6 +99,9 @@ class Till(Signal):
                 with _till_locker:
                     next_ping = now + INTERVAL
                     new_timers, Till.new_timers = Till.new_timers, []
+
+                if DEBUG:
+                    _Log.note("new timers: {{timers}}", timers=[unix2Date(t[0]).format() for t in new_timers])
 
                 sorted_timers.extend(new_timers)
 

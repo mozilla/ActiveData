@@ -120,6 +120,8 @@ class Till(Signal):
         except Exception, e:
             Log.warning("timer shutdown", cause=e)
         finally:
+            if DEBUG:
+                Log.alert("TIMER SHUTDOWN")
             Till.enabled = False
             # TRIGGER ALL REMAINING TIMERS RIGHT NOW
             with _till_locker:

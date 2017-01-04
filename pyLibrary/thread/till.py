@@ -112,7 +112,11 @@ class Till(Signal):
 
                     if work:
                         if DEBUG:
-                            Log.note("done: {{timers}}.  Remaining {{num}}", timers=[t for t, s in new_timers], num=len(sorted_timers))
+                            Log.note(
+                                "done: {{timers}}.  Remaining {{pending}}",
+                                timers=[t for t, s in new_timers],
+                                pending=[t for t, s in sorted_timers]
+                            )
 
                         for t, s in work:
                             s.go()

@@ -616,7 +616,7 @@ class ThreadedQueue(Queue):
 
             please_stop.on_go(stopper)
 
-            _Log.note("running")
+            # _Log.note("running")
 
             _buffer = []
             _post_push_functions = []
@@ -634,18 +634,18 @@ class ThreadedQueue(Queue):
             while not please_stop:
                 try:
                     if not _buffer:
-                        _Log.note("wait for more data")
+                        # _Log.note("wait for more data")
                         item = self.pop()
                         now = Date.now()
                         if now > last_push + period:
-                            _Log.note("delay next push")
+                            # _Log.note("delay next push")
                             next_push = now + period
                     else:
-                        _Log.note("wait for more data until {{time|datetime}}", time=next_push)
+                        # _Log.note("wait for more data until {{time|datetime}}", time=next_push)
                         item = self.pop(till=Till(till=next_push))
                         now = Date.now()
 
-                    _Log.note("done wait {{now|datetime}}", now=now)
+                    # _Log.note("done wait {{now|datetime}}", now=now)
 
                     if item is Thread.STOP:
                         push_to_queue()
@@ -675,11 +675,11 @@ class ThreadedQueue(Queue):
                         )
 
                 try:
-                    _Log.note("got data len={{len}}, now={{now}}, next_push={{next}}", len=len(_buffer), now=now, next=next_push)
+                    # _Log.note("got data len={{len}}, now={{now}}, next_push={{next}}", len=len(_buffer), now=now, next=next_push)
                     if len(_buffer) >= batch_size or now > next_push:
                         next_push = now + period
                         if _buffer:
-                            _Log.note("push data")
+                            # _Log.note("push data")
                             push_to_queue()
                             last_push = now = Date.now()
 
@@ -706,7 +706,7 @@ class ThreadedQueue(Queue):
                 # ONE LAST PUSH, DO NOT HAVE TIME TO DEAL WITH ERRORS
                 push_to_queue()
 
-            _Log.note("done")
+            # _Log.note("done")
 
         self.thread = Thread.run("threaded queue for " + name, worker_bee, parent_thread=self)
 

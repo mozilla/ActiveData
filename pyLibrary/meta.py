@@ -7,18 +7,20 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 from collections import Mapping
 from types import FunctionType
 
-from pyLibrary import dot, convert
-from pyLibrary.debugs.exceptions import Except, suppress_exception
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, wrap, _get_attr, Null, coalesce
+import pyDots
+from MoLogs import Log
+from MoLogs.exceptions import Except, suppress_exception
+from MoLogs.strings import expand_template
+from pyDots import set_default, wrap, _get_attr, Null, coalesce
+from pyLibrary import convert
 from pyLibrary.maths.randoms import Random
-from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Lock
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import DAY
@@ -31,7 +33,7 @@ def get_class(path):
         return _get_attr(output, path[-1:])
         # return output
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.error("Could not find module {{module|quote}}",  module= ".".join(path))
 
@@ -125,7 +127,7 @@ def use_settings(func):
     def wrapper(*args, **kwargs):
         try:
             if func.func_name in ("__init__", "__new__") and "settings" in kwargs:
-                packed = params_pack(params, kwargs, dot.zip(params[1:], args[1:]), kwargs["settings"], defaults)
+                packed = params_pack(params, kwargs, pyDots.zip(params[1:], args[1:]), kwargs["settings"], defaults)
                 return func(args[0], **packed)
             elif func.func_name in ("__init__", "__new__") and len(args) == 2 and len(kwargs) == 0 and isinstance(args[1], Mapping):
                 # ASSUME SECOND UNNAMED PARAM IS settings
@@ -133,17 +135,17 @@ def use_settings(func):
                 return func(args[0], **packed)
             elif func.func_name in ("__init__", "__new__"):
                 # DO NOT INCLUDE self IN SETTINGS
-                packed = params_pack(params, kwargs, dot.zip(params[1:], args[1:]), defaults)
+                packed = params_pack(params, kwargs, pyDots.zip(params[1:], args[1:]), defaults)
                 return func(args[0], **packed)
             elif params[0] == "self" and "settings" in kwargs:
-                packed = params_pack(params, kwargs, dot.zip(params[1:], args[1:]), kwargs["settings"], defaults)
+                packed = params_pack(params, kwargs, pyDots.zip(params[1:], args[1:]), kwargs["settings"], defaults)
                 return func(args[0], **packed)
             elif params[0] == "self" and len(args) == 2 and len(kwargs) == 0 and isinstance(args[1], Mapping):
                 # ASSUME SECOND UNNAMED PARAM IS settings
                 packed = params_pack(params, args[1], defaults)
                 return func(args[0], **packed)
             elif params[0] == "self":
-                packed = params_pack(params, kwargs, dot.zip(params[1:], args[1:]), defaults)
+                packed = params_pack(params, kwargs, pyDots.zip(params[1:], args[1:]), defaults)
                 return func(args[0], **packed)
             elif len(args) == 1 and len(kwargs) == 0 and isinstance(args[0], Mapping):
                 # ASSUME SINGLE PARAMETER IS A SETTING
@@ -151,11 +153,11 @@ def use_settings(func):
                 return func(**packed)
             elif "settings" in kwargs and isinstance(kwargs["settings"], Mapping):
                 # PUT args INTO SETTINGS
-                packed = params_pack(params, kwargs, dot.zip(params, args), kwargs["settings"], defaults)
+                packed = params_pack(params, kwargs, pyDots.zip(params, args), kwargs["settings"], defaults)
                 return func(**packed)
             else:
                 # PULL SETTINGS OUT INTO PARAMS
-                packed = params_pack(params, kwargs, dot.zip(params, args), defaults)
+                packed = params_pack(params, kwargs, pyDots.zip(params, args), defaults)
                 return func(**packed)
         except TypeError, e:
             if e.message.find("takes at least") >= 0:
@@ -251,7 +253,7 @@ def wrap_function(cache_store, func_):
 
             timeout, key, value, exception = _cache.get(args, (Null, Null, Null, Null))
 
-        if now > timeout:
+        if now >= timeout:
             value = func(self, *args)
             with cache_store.locker:
                 _cache[args] = (now + cache_store.timeout, args, value, None)

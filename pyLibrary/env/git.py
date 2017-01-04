@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary.debugs.exceptions import suppress_exception
+from MoLogs.exceptions import suppress_exception
 from pyLibrary.meta import cache
 from pyLibrary.thread.multiprocess import Process
 
@@ -45,7 +45,8 @@ def get_remote_revision(url, branch):
 
     try:
         while True:
-            line = proc.stdout.pop().strip()
+            raw_line = proc.stdout.pop()
+            line = raw_line.strip()
             if not line:
                 continue
             return line.split("\t")[0]

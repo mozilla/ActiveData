@@ -16,7 +16,7 @@ Copyright (c) 2010, Adam Newman http://www.caller9.com/
                     Demur Rumed https://github.com/serprex
 Licensed under the MIT license http://www.opensource.org/licenses/mit-license.php
 """
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 
 __author__ = "Adam Newman"
 

@@ -10,17 +10,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary import convert
+from pyDots import coalesce, wrap, unwrap
 from pyLibrary.collections import UNION, MIN
-from pyLibrary.debugs import constants
-from pyLibrary.debugs import startup
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, wrap, unwrap
+from MoLogs import constants
+from MoLogs import startup
+from MoLogs import Log
 from pyLibrary.env import http, elasticsearch
 from pyLibrary.queries import jx
-from pyLibrary.thread.threads import Signal, Queue
-from pyLibrary.thread.threads import Thread
+from pyLibrary.thread.threads import Thread, Signal, Queue
 from pyLibrary.times.dates import Date, unicode2Date
+from pyLibrary.times.timer import Timer
 
 DEBUG = True
 NUM_THREAD = 4
@@ -215,6 +214,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
 
 
 def loop(source, coverage_summary_index, settings, please_stop):
+    Log.note("Started loop")
     try:
         cluster = elasticsearch.Cluster(source)
         aliases = cluster.get_aliases()
@@ -230,20 +230,20 @@ def loop(source, coverage_summary_index, settings, please_stop):
 
             while not please_stop:
                 # IDENTIFY NEW WORK
-                Log.note("Working on index {{index}}", index=index_name)
-                coverage_index.refresh()
+                with Timer("Pulling work from index {{index}}", param={"index":index_name}):
+                    coverage_index.refresh()
 
-                todo = http.post_json(settings.url, json={
-                    "from": "coverage",
-                    "groupby": ["source.file.name", "build.revision12"],
-                    "where": {"and": [
-                        {"missing": "source.method.name"},
-                        {"missing": "source.file.min_line_siblings"},
-                        {"gte": {"repo.push.date": push_date_filter}}
-                    ]},
-                    "format": "list",
-                    "limit": coalesce(settings.batch_size, 100)
-                })
+                    todo = http.post_json(settings.url, json={
+                        "from": "coverage",
+                        "groupby": ["source.file.name", "build.revision12"],
+                        "where": {"and": [
+                            {"missing": "source.method.name"},
+                            {"missing": "source.file.min_line_siblings"},
+                            {"gte": {"repo.push.date": push_date_filter}}
+                        ]},
+                        "format": "list",
+                        "limit": coalesce(settings.batch_size, 100)
+                    })
 
                 if not todo.data:
                     break
@@ -251,6 +251,8 @@ def loop(source, coverage_summary_index, settings, please_stop):
                 queue = Queue("pending source files to review")
                 queue.extend(todo.data[0:coalesce(settings.batch_size, 100):])
 
+                num_threads = coalesce(settings.threads, NUM_THREAD)
+                Log.note("Launch {{num}} threads", num=num_threads)
                 threads = [
                     Thread.run(
                         "processor" + unicode(i),
@@ -261,7 +263,7 @@ def loop(source, coverage_summary_index, settings, please_stop):
                         settings,
                         please_stop=please_stop
                     )
-                    for i in range(coalesce(settings.threads, NUM_THREAD))
+                    for i in range(num_threads)
                 ]
 
                 # ADD STOP MESSAGE
@@ -270,13 +272,12 @@ def loop(source, coverage_summary_index, settings, please_stop):
                 # WAIT FOR THEM TO COMPLETE
                 for t in threads:
                     t.join()
-
-        please_stop.go()
         return
 
     except Exception, e:
         Log.warning("Problem processing", cause=e)
     finally:
+        Log.note("Processing loop is done")
         please_stop.go()
 
 
@@ -292,6 +293,7 @@ def main():
             config.destination.schema = coverage_index.get_schema()
             coverage_summary_index = elasticsearch.Cluster(config.destination).get_or_create_index(read_only=False, settings=config.destination)
             coverage_summary_index.add_alias(config.destination.index)
+            Log.note("start processing")
             Thread.run(
                 "processing loop",
                 loop,

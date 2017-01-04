@@ -21,9 +21,9 @@ from decimal import Decimal
 from math import floor
 from repr import Repr
 
-from pyLibrary.dot import Dict, DictList, NullType, Null
+from MoLogs.strings import utf82unicode
+from pyDots import Data, FlatList, NullType, Null
 from pyLibrary.jsons import quote, ESCAPE_DCT, scrub, float2json
-from pyLibrary.strings import utf82unicode
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
@@ -51,10 +51,10 @@ try:
 except Exception, e:
     if use_pypy:
         sys.stdout.write(
-            "*********************************************************\n"
-            "** The PyLibrary JSON serializer for PyPy is in use!\n"
-            "** Currently running CPython: This will run sloooow!\n"
-            "*********************************************************\n"
+            b"*********************************************************\n"
+            b"** The PyLibrary JSON serializer for PyPy is in use!\n"
+            b"** Currently running CPython: This will run sloooow!\n"
+            b"*********************************************************\n"
         )
 
     class UnicodeBuilder(list):
@@ -84,7 +84,7 @@ def pypy_json_encode(value, pretty=False):
         return output
     except Exception, e:
         # THE PRETTY JSON WILL PROVIDE MORE DETAIL ABOUT THE SERIALIZATION CONCERNS
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         if _dealing_with_problem:
             Log.error("Serialization of JSON problems", e)
@@ -126,8 +126,8 @@ class cPythonJSONEncoder(object):
             scrubbed = scrub(value)
             return unicode(self.encoder.encode(scrubbed))
         except Exception, e:
-            from pyLibrary.debugs.exceptions import Except
-            from pyLibrary.debugs.logs import Log
+            from MoLogs.exceptions import Except
+            from MoLogs import Log
 
             e = Except.wrap(e)
             Log.warning("problem serializing {{type}}", type=_repr(value), cause=e)
@@ -169,7 +169,7 @@ def _value2json(value, _buffer):
             else:
                 _dict2json(value, _buffer)
             return
-        elif type is Dict:
+        elif type is Data:
             d = _get(value, "_dict")  # MIGHT BE A VALUE NOT A DICT
             _value2json(d, _buffer)
             return
@@ -180,7 +180,7 @@ def _value2json(value, _buffer):
                 append(_buffer, u'null')
             else:
                 append(_buffer, float2json(value))
-        elif type in (set, list, tuple, DictList):
+        elif type in (set, list, tuple, FlatList):
             _list2json(value, _buffer)
         elif type is date:
             append(_buffer, float2json(time.mktime(value.timetuple())))
@@ -206,11 +206,11 @@ def _value2json(value, _buffer):
         elif hasattr(value, '__iter__'):
             _iter2json(value, _buffer)
         else:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error(_repr(value) + " is not JSON serializable")
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.error(_repr(value) + " is not JSON serializable", cause=e)
 
@@ -251,7 +251,7 @@ def _dict2json(value, _buffer):
             _value2json(v, _buffer)
         append(_buffer, u"}")
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.error(_repr(value) + " is not JSON serializable", cause=e)
 
@@ -279,7 +279,7 @@ def pretty_json(value):
                 values = [unicode_key(k) + ": " + indent(pretty_json(v)).strip() for k, v in items if v != None]
                 return "{\n" + INDENT + (",\n" + INDENT).join(values) + "\n}"
             except Exception, e:
-                from pyLibrary.debugs.logs import Log
+                from MoLogs import Log
                 from pyLibrary.collections import OR
 
                 if OR(not isinstance(k, basestring) for k in value.keys()):
@@ -302,7 +302,7 @@ def pretty_json(value):
             try:
                 return quote(value)
             except Exception, e:
-                from pyLibrary.debugs.logs import Log
+                from MoLogs import Log
 
                 try:
                     Log.note("try explicit convert of string with length {{length}}", length=len(value))
@@ -364,7 +364,7 @@ def pretty_json(value):
                         output.append(",\n")
                     output.append(indent(p))
                 except Exception, e:
-                    from pyLibrary.debugs.logs import Log
+                    from MoLogs import Log
 
                     Log.warning("problem concatenating string of length {{len1}} and {{len2}}",
                         len1=len("".join(output)),
@@ -406,7 +406,7 @@ def problem_serializing(value, e=None):
     """
     THROW ERROR ABOUT SERIALIZING
     """
-    from pyLibrary.debugs.logs import Log
+    from MoLogs import Log
 
     try:
         typename = type(value).__name__
@@ -476,7 +476,7 @@ def unicode_key(key):
     CONVERT PROPERTY VALUE TO QUOTED NAME OF SAME
     """
     if not isinstance(key, basestring):
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error("{{key|quote}} is not a valid key", key=key)
     return quote(unicode(key))
 

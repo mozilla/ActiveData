@@ -15,12 +15,12 @@ from __future__ import unicode_literals
 
 from boto.ses import connect_to_region
 
-from pyLibrary.debugs.exceptions import ALARM, NOTE
-from pyLibrary.debugs.logs import Log
-from pyLibrary.debugs.text_logs import TextLog
-from pyLibrary.dot import listwrap, unwrap
+from MoLogs import Log
+from MoLogs.exceptions import ALARM, NOTE
+from MoLogs.log_usingNothing import StructuredLogger
+from MoLogs.strings import expand_template
+from pyDots import listwrap, unwrap
 from pyLibrary.meta import use_settings
-from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Lock
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import HOUR, MINUTE
@@ -28,7 +28,7 @@ from pyLibrary.times.durations import HOUR, MINUTE
 WAIT_TO_SEND_MORE = HOUR
 
 
-class TextLog_usingSES(TextLog):
+class StructuredLogger_usingSES(StructuredLogger):
 
     @use_settings
     def __init__(

@@ -14,8 +14,8 @@ from __future__ import unicode_literals
 import re
 
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, Dict
+from MoLogs import Log
+from pyDots import coalesce, Data
 from pyLibrary.times.dates import Date
 
 true = True
@@ -37,7 +37,7 @@ def compile_expression(source):
     _ = Date
     _ = convert
     _ = Log
-    _ = Dict
+    _ = Data
     _ = EMPTY_DICT
     _ = re
 

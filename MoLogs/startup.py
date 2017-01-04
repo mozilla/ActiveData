@@ -8,20 +8,19 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 import argparse as _argparse
 import os
-import tempfile
 import sys
+import tempfile
 
-from pyLibrary.jsons import ref
-from pyLibrary.dot import listwrap, wrap, unwrap
-from pyLibrary.debugs.logs import Log
+from pyDots import listwrap, wrap, unwrap
+from MoLogs import Log
 from pyLibrary.env.files import File
-
-
+from pyLibrary.jsons import ref
 
 
 # PARAMETERS MATCH argparse.ArgumentParser.add_argument()
@@ -118,9 +117,10 @@ class SingleInstance:
             try:
                 fcntl.lockf(self.fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except IOError:
-                Log.note("\n"+
-                    "**********************************************************************\n"+
-                    "** Another instance is already running, quitting.\n"+
+                Log.note(
+                    "\n"
+                    "**********************************************************************\n"
+                    "** Another instance is already running, quitting.\n"
                     "**********************************************************************\n"
                 )
                 sys.exit(-1)

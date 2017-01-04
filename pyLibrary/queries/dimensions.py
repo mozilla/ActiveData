@@ -11,15 +11,15 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
-from pyLibrary import dot
+import pyDots as dot
 from pyLibrary.collections import SUM
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import Domain, ALGEBRAIC, KNOWN
-from pyLibrary.dot import Null, coalesce, join_field, split_field, Dict
-from pyLibrary.dot.lists import DictList
+from pyDots import Null, coalesce, join_field, split_field, Data
+from pyDots.lists import FlatList
 from pyLibrary.times.timer import Timer
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, listwrap
+from MoLogs import Log
+from pyDots import wrap, listwrap
 
 
 DEFAULT_QUERY_LIMIT = 20
@@ -45,7 +45,7 @@ class Dimension(Container):
             Log.error("Expecting an index name")
 
         # ALLOW ACCESS TO SUB-PART BY NAME (IF ONLY THERE IS NO NAME COLLISION)
-        self.edges = Dict()
+        self.edges = Data()
         for e in listwrap(dim.edges):
             new_e = Dimension(e, self, jx)
             self.edges[new_e.full_name] = new_e
@@ -85,7 +85,7 @@ class Dimension(Container):
             if len(edges) > 1:
                 Log.error("Not supported yet")
             # EACH TERM RETURNED IS A PATH INTO A PARTITION TREE
-            temp = Dict(partitions=[])
+            temp = Data(partitions=[])
             for i, count in enumerate(parts):
                 a = dim.path(d.getEnd(d.partitions[i]))
                 if not isinstance(a, list):
@@ -101,7 +101,7 @@ class Dimension(Container):
         elif isinstance(fields, Mapping):
             self.value = "name"  # USE THE "name" ATTRIBUTE OF PARTS
 
-            partitions = DictList()
+            partitions = FlatList()
             for g, p in parts.groupby(edges):
                 if p:
                     partitions.append({
@@ -136,7 +136,7 @@ class Dimension(Container):
 
             def edges2value(*values):
                 if isinstance(fields, Mapping):
-                    output = Dict()
+                    output = Data()
                     for e, v in zip(edges, values):
                         output[e.name] = v
                     return output
@@ -209,7 +209,7 @@ class Dimension(Container):
             ]
             self.isFacet = True
         elif kwargs.depth == None:  # ASSUME self.fields IS A dict
-            partitions = DictList()
+            partitions = FlatList()
             for i, part in enumerate(self.partitions):
                 if i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT):
                     break
@@ -232,7 +232,7 @@ class Dimension(Container):
                 for i, v in enumerate(self.partitions)
                 if i < coalesce(self.limit, DEFAULT_QUERY_LIMIT)]
         elif kwargs.depth == 1:
-            partitions = DictList()
+            partitions = FlatList()
             rownum = 0
             for i, part in enumerate(self.partitions):
                 if i >= coalesce(self.limit, DEFAULT_QUERY_LIMIT):
@@ -280,13 +280,13 @@ class Dimension(Container):
     def getSelect(self, **kwargs):
         if self.fields:
             if len(self.fields) == 1:
-                return Dict(
+                return Data(
                     name=self.full_name,
                     value=self.fields[0],
                     aggregate="none"
                 )
             else:
-                return Dict(
+                return Data(
                     name=self.full_name,
                     value=self.fields,
                     aggregate="none"
@@ -298,7 +298,7 @@ class Dimension(Container):
         if not domain.NULL:
             Log.error("Should not happen")
 
-        return Dict(
+        return Data(
             name=self.full_name,
             domain=domain,
             aggregate="none"
@@ -317,7 +317,7 @@ def addParts(parentPart, childPath, count, index):
     parentPart.count = coalesce(parentPart.count, 0) + count
 
     if parentPart.partitions == None:
-        parentPart.partitions = DictList()
+        parentPart.partitions = FlatList()
     for i, part in enumerate(parentPart.partitions):
         if part.name == c.name:
             addParts(part, childPath, count, index + 1)

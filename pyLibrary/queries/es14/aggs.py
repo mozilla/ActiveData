@@ -11,8 +11,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, Dict, wrap, literal_field, set_default, coalesce, Null, split_field, DictList, unwrap, \
+from MoLogs import Log
+from pyDots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
     unwraplist
 from pyLibrary.maths import Math
 from pyLibrary.queries import es09
@@ -35,61 +35,61 @@ def get_decoders_by_depth(query):
     """
     RETURN A LIST OF DECODER ARRAYS, ONE ARRAY FOR EACH NESTED DEPTH
     """
-    schema = query.frum
-    output = DictList()
-    for e in wrap(coalesce(query.edges, query.groupby, [])):
-        if e.value != None and not isinstance(e.value, NullOp):
-            e = e.copy()
-            vars_ = e.value.vars()
+    schema = query.frum.schema
+    output = FlatList()
+    for edge in wrap(coalesce(query.edges, query.groupby, [])):
+        if edge.value != None and not isinstance(edge.value, NullOp):
+            edge = edge.copy()
+            vars_ = edge.value.vars()
 
             for v in vars_:
                 if not schema[v]:
                     Log.error("{{var}} does not exist in schema", var=v)
 
-            e.value = e.value.map({schema[v].name: schema[v].es_column for v in vars_})
-        elif e.range:
-            e = e.copy()
-            min_ = e.range.min
-            max_ = e.range.max
+            edge.value = edge.value.map({c.name: c.es_column for v in vars_ for c in schema.lookup[v]})
+        elif edge.range:
+            edge = edge.copy()
+            min_ = edge.range.min
+            max_ = edge.range.max
             vars_ = min_.vars() | max_.vars()
 
             for v in vars_:
                 if not schema[v]:
                     Log.error("{{var}} does not exist in schema", var=v)
 
-            map_ = {schema[v].name: schema[v].es_column for v in vars_}
-            e.range = {
+            map_ = {c.name: c.es_column for v in vars_ for c in schema[v]}
+            edge.range = {
                 "min": min_.map(map_),
                 "max": max_.map(map_)
             }
-        elif e.domain.dimension:
-            vars_ = e.domain.dimension.fields
-            e.domain.dimension = e.domain.dimension.copy()
-            e.domain.dimension.fields = [schema[v].es_column for v in vars_]
-        elif all(e.domain.partitions.where):
+        elif edge.domain.dimension:
+            vars_ = edge.domain.dimension.fields
+            edge.domain.dimension = edge.domain.dimension.copy()
+            edge.domain.dimension.fields = [schema[v].es_column for v in vars_]
+        elif all(edge.domain.partitions.where):
             vars_ = set()
-            for p in e.domain.partitions:
+            for p in edge.domain.partitions:
                 vars_ |= p.where.vars()
 
         try:
-            depths = set(len(schema[v].nested_path)-1 for v in vars_)
+            depths = set(len(c.nested_path)-1 for v in vars_ for c in schema[v])
             if -1 in depths:
                 Log.error(
                     "Do not know of column {{column}}",
                     column=unwraplist([v for v in vars_ if schema[v]==None])
                 )
             if len(depths) > 1:
-                Log.error("expression {{expr}} spans tables, can not handle", expr=e.value)
+                Log.error("expression {{expr}} spans tables, can not handle", expr=edge.value)
             max_depth = Math.MAX(depths)
             while len(output) <= max_depth:
                 output.append([])
-        except Exception, e:
+        except Exception, edge:
             # USUALLY THE SCHEMA IS EMPTY, SO WE ASSUME THIS IS A SIMPLE QUERY
             max_depth = 0
             output.append([])
 
         limit = 0
-        output[max_depth].append(AggsDecoder(e, query, limit))
+        output[max_depth].append(AggsDecoder(edge, query, limit))
     return output
 
 
@@ -97,8 +97,8 @@ def es_aggsop(es, frum, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
     es_column_map = {c.name: unwraplist(c.es_column) for c in frum.schema.all_columns}
 
-    es_query = Dict()
-    new_select = Dict()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
+    es_query = Data()
+    new_select = Data()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
     formula = []
     for s in select:
         if s.aggregate == "count" and isinstance(s.value, Variable) and s.value.var == ".":
@@ -260,7 +260,7 @@ def es_aggsop(es, frum, query):
     vars_ = query.where.vars()
 
     #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
-    split_where = split_expression_by_depth(query.where, schema=frum, map_=es_column_map)
+    split_where = split_expression_by_depth(query.where, schema=frum.schema, map_=es_column_map)
 
     if len(split_field(frum.name)) > 1:
         if any(split_where[2::]):
@@ -273,7 +273,7 @@ def es_aggsop(es, frum, query):
         if split_where[1]:
             #TODO: INCLUDE FILTERS ON EDGES
             filter_ = simplify_esfilter(AndOp("and", split_where[1]).to_esfilter())
-            es_query = Dict(
+            es_query = Data(
                 aggs={"_filter": set_default({"filter": filter_}, es_query)}
             )
 
@@ -298,7 +298,7 @@ def es_aggsop(es, frum, query):
     if split_where[0]:
         #TODO: INCLUDE FILTERS ON EDGES
         filter = simplify_esfilter(AndOp("and", split_where[0]).to_esfilter())
-        es_query = Dict(
+        es_query = Data(
             aggs={"_filter": set_default({"filter": filter}, es_query)}
         )
     # </TERRIBLE SECTION>

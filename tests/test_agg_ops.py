@@ -216,7 +216,7 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-
+    @skipIf(global_settings.use == "elasticsearch", "require dynamic typing before primitives are expected to pass")
     def test_simplest_on_value(self):
         test = {
             "data": range(30),
@@ -293,7 +293,7 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test, tjson=True)
 
-    @skipIf(global_settings.use == "sqlite", "not expected to pass yet")
+    @skipIf(global_settings.use in ["sqlite", "elasticsearch"], "not expected to pass yet")
     def test_median_on_value(self):
         test = {
             "data": [i**2 for i in range(30)],
@@ -319,7 +319,7 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test, tjson=True)
 
-
+    @skipIf(global_settings.use == "elasticsearch", "require dynamic typing before primitives are expected to pass")
     def test_many_aggs_on_value(self):
         # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
         test = {

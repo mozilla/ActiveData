@@ -1,7 +1,7 @@
 JSON Query Expression Documentation
 ===================================
 
-JSON query expressions are structures that mimic SQL query semantics; each
+JSON query expressions are best considered as SQL parse trees, in JSON format; each
 property corresponds to a SQL clause. There are some differences from SQL,
 especially when it comes to using default clauses, but I hope your knowledge
 of SQL can jump-start your use of JSON Expressions.
@@ -27,12 +27,13 @@ Comparisons
 Motivation
 ----------
 
-JSON Expressions have the following benefits
+JSON Expressions have the following benefits over SQL
 
 * Simplified expressions over unclean data.
 * Ability to translate shape of the data.
 * Extract data as pivot tables and data frames
 * Easy Meta-Programming
+* Impervious to injection attacks
 * Language independence
 
 

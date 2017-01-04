@@ -14,23 +14,23 @@ from __future__ import unicode_literals
 import re
 from collections import Mapping
 from copy import deepcopy
-from datetime import datetime
 
-from pyLibrary import convert, strings
-from pyLibrary.debugs.exceptions import Except
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, Null, Dict, set_default, join_field, split_field, unwraplist, listwrap, literal_field, \
+from MoLogs import Log, strings
+from MoLogs.exceptions import Except
+from MoLogs.strings import utf82unicode
+from pyDots import coalesce, Null, Data, set_default, join_field, split_field, listwrap, literal_field, \
     ROOT_PATH
-from pyLibrary.dot import wrap
-from pyLibrary.dot.lists import DictList
+from pyDots import wrap
+from pyDots.lists import FlatList
+from pyLibrary import convert
 from pyLibrary.env import http
 from pyLibrary.jsons.typed_encoder import json2typed
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
-from pyLibrary.strings import utf82unicode
-from pyLibrary.thread.threads import ThreadedQueue, Thread, Lock
+from pyLibrary.thread.threads import ThreadedQueue, Lock
+from pyLibrary.thread.till import Till
 from pyLibrary.times.dates import Date
 from pyLibrary.times.timer import Timer
 
@@ -183,7 +183,7 @@ class Index(Features):
             if alias in response.metadata.indices[self.settings.index].aliases:
                 return
             Log.note("Waiting for alias {{alias}} to appear", alias=alias)
-            Thread.sleep(seconds=1)
+            Till(seconds=1).wait()
 
     def get_index(self, alias):
         """
@@ -273,14 +273,16 @@ class Index(Features):
         try:
             for r in records:
                 id = r.get("id")
-
+                r_value = r.get('value')
+                if id == None and r_value:
+                    id = r_value.get('_id')
                 if id == None:
                     id = random_id()
 
                 if "json" in r:
                     json_bytes = r["json"].encode("utf8")
-                elif "value" in r:
-                    json_bytes = convert.value2json(r["value"]).encode("utf8")
+                elif r_value or isinstance(r_value, (dict, Data)):
+                    json_bytes = convert.value2json(r_value).encode("utf8")
                 else:
                     json_bytes = None
                     Log.error("Expecting every record given to have \"value\" or \"json\" property")
@@ -324,18 +326,31 @@ class Index(Features):
                     Log.error("version not supported {{version}}", version=self.cluster.version)
 
                 if fails:
-                    Log.error("Problems with insert", cause=[
-                        Except(
+                    if len(fails) <= 3:
+                        cause = [
+                            Except(
+                                template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
+                                status=items[i].index.status,
+                                error=items[i].index.error,
+                                some=len(fails) - 1,
+                                line=strings.limit(lines[i * 2 + 1], 500 if not self.debug else 100000),
+                                index=self.settings.index,
+                                id=items[i].index._id
+                            )
+                            for i in fails
+                        ]
+                    else:
+                        i=fails[0]
+                        cause = Except(
                             template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
                             status=items[i].index.status,
                             error=items[i].index.error,
                             some=len(fails) - 1,
-                            line=strings.limit(lines[fails[0] * 2 + 1], 500 if not self.debug else 100000),
+                            line=strings.limit(lines[i * 2 + 1], 500 if not self.debug else 100000),
                             index=self.settings.index,
                             id=items[i].index._id
                         )
-                        for i in fails
-                    ])
+                    Log.error("Problems with insert", cause=cause)
 
         except Exception, e:
             if e.message.startswith("sequence item "):
@@ -645,7 +660,7 @@ class Cluster(object):
                 Log.note("Waiting for index {{index}} to appear", index=index)
             except Exception, e:
                 Log.warning("Problem while waiting for index {{index}} to appear", index=index, cause=e)
-            Thread.sleep(seconds=1)
+            Till(seconds=1).wait()
         Log.alert("Made new index {{index|quote}}", index=index)
 
         es = Index(settings=settings)
@@ -862,7 +877,7 @@ def _scrub(r):
         elif Math.is_number(r):
             return convert.value2number(r)
         elif isinstance(r, Mapping):
-            if isinstance(r, Dict):
+            if isinstance(r, Data):
                 r = object.__getattribute__(r, "_dict")
             output = {}
             for k, v in r.items():
@@ -873,7 +888,7 @@ def _scrub(r):
                 return None
             return output
         elif hasattr(r, '__iter__'):
-            if isinstance(r, DictList):
+            if isinstance(r, FlatList):
                 r = r.list
             output = []
             for v in r:
@@ -1020,7 +1035,7 @@ class Alias(Features):
                 if status._shards.failed > 0:
                     if status._shards.failures[0].reason.find("rejected execution (queue capacity ") >= 0:
                         keep_trying = True
-                        Thread.sleep(seconds=5)
+                        Till(seconds=5).wait()
                         break
 
             if not keep_trying:
@@ -1063,7 +1078,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
     """
     from pyLibrary.queries.meta import Column
 
-    columns = DictList()
+    columns = FlatList()
     for name, property in esProperties.items():
         index_name = parent_index_name
         column_name = join_field(split_field(parent_name) + [name])

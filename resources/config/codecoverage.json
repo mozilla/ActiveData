@@ -1,5 +1,5 @@
 {
-	"threads": 4,
+	"threads": 1,
 	"url": "http://activedata.allizom.org/query",
 	"batch_size": 1000,
 	"constants":{
@@ -27,6 +27,9 @@
 		"cprofile": false,
 		"log": [
 			{
+				"log_type": "console"
+			},
+			{
 				"class": "logging.handlers.RotatingFileHandler",
 				"filename": "/logs/codecoverage.log",
 				"maxBytes": 10000000,
@@ -39,9 +42,6 @@
 				"to_address": "klahnakoski@mozilla.com",
 				"subject": "[ALERT][Manager] Problem in CodeCoverage Post Processing",
 				"$ref": "file://~/private.json#aws_credentials"
-			},
-			{
-				"log_type": "console"
 			}
 		]
 	}

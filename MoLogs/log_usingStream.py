@@ -13,18 +13,21 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary.debugs.text_logs import TextLog
-from pyLibrary.meta import use_settings
+from MoLogs.log_usingNothing import StructuredLogger
+from MoLogs.strings import expand_template
 
 
-class TextLog_usingNothing(TextLog):
-
-    @use_settings
-    def __init__(self, settings=None):
-        TextLog.__init__(self)
+class StructuredLogger_usingStream(StructuredLogger):
+    def __init__(self, stream):
+        assert stream
+        self.stream = stream
 
     def write(self, template, params):
-        pass
+        value = expand_template(template, params)
+        if isinstance(value, unicode):
+            value = value.encode('utf8')
+        self.stream.write(value + b"\n")
 
     def stop(self):
         pass
+

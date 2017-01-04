@@ -17,13 +17,14 @@ from boto import utils as boto_utils
 from boto.sqs.message import Message
 
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except, suppress_exception
-from pyLibrary.debugs.logs import Log, machine_metadata
-from pyLibrary.dot import wrap, unwrap, coalesce
+from MoLogs.exceptions import Except, suppress_exception
+from MoLogs import Log, machine_metadata
+from pyDots import wrap, unwrap, coalesce
 from pyLibrary.maths import Math
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.signal import Signal
 from pyLibrary.thread.threads import Thread
+from pyLibrary.thread.till import Till
 from pyLibrary.times.durations import SECOND, Duration
 
 
@@ -149,8 +150,8 @@ def capture_termination_signal(please_stop):
                     return
                 else:
                     Log.warning("AWS shutdown detection has problems", cause=e)
-                Thread.sleep(seconds=61, please_stop=please_stop)
-            Thread.sleep(seconds=11, please_stop=please_stop)
+                (Till(seconds=61) | please_stop).wait()
+            (Till(seconds=11) | please_stop).wait()
 
     Thread.run("listen for termination", worker, please_stop=please_stop)
 

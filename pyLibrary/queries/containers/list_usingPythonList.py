@@ -17,8 +17,8 @@ from types import NoneType
 import itertools
 
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList, unwrap, join_field, split_field, NullType, Null
+from MoLogs import Log
+from pyDots import Data, wrap, listwrap, unwraplist, FlatList, unwrap, join_field, split_field, NullType, Null
 from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.expression_compiler import compile_expression
@@ -147,7 +147,7 @@ class ListContainer(Container):
         if isinstance(select, list):
             push_and_pull = [(s.name, jx_expression_to_function(s.value)) for s in selects]
             def selector(d):
-                output = Dict()
+                output = Data()
                 for n, p in push_and_pull:
                     output[n] = p(wrap(d))
                 return unwrap(output)
@@ -174,7 +174,7 @@ class ListContainer(Container):
         elif format == "cube":
             frum = convert.list2cube(self.data, self.schema.keys())
         else:
-            frum = self.to_dict()
+            frum = self.__data__()
 
         return frum
 
@@ -187,7 +187,7 @@ class ListContainer(Container):
 
             def _output():
                 for g, v in itertools.groupby(data, get_key):
-                    group = Dict()
+                    group = Data()
                     for k, gg in zip(keys, g):
                         group[k] = gg
                     yield (group, wrap(list(v)))
@@ -202,7 +202,7 @@ class ListContainer(Container):
     def extend(self, documents):
         self.data.extend(documents)
 
-    def to_dict(self):
+    def __data__(self):
         return wrap({
             "meta": {"format": "list"},
             "data": [{k: unwraplist(v) for k, v in row.items()} for row in self.data]
@@ -298,11 +298,11 @@ _type_to_name = {
     int: "integer",
     long: "long",
     float: "double",
-    Dict: "object",
+    Data: "object",
     dict: "object",
     set: "nested",
     list: "nested",
-    DictList: "nested",
+    FlatList: "nested",
     Date: "double"
 }
 

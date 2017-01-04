@@ -8,25 +8,21 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 import __builtin__
-from __builtin__ import unicode as _unicode
-from __builtin__ import round as _round
-
-
-import re
 import math
+import re
 import string
-
+from __builtin__ import round as _round
+from __builtin__ import unicode as _unicode
 from collections import Mapping
-from datetime import timedelta, date
 from datetime import datetime as builtin_datetime
+from datetime import timedelta, date
 
-from pyLibrary.dot import coalesce, wrap
-
+from pyDots import coalesce, wrap
 
 _json_encoder = None
 _convert = None
@@ -43,8 +39,8 @@ def _late_import():
     global _convert
 
     from pyLibrary.jsons.encoder import json_encoder as _json_encoder
-    from pyLibrary.debugs.logs import Log as _Log
-    from pyLibrary.debugs.exceptions import Except as _Except
+    from MoLogs import Log as _Log
+    from MoLogs.exceptions import Except as _Except
     from pyLibrary.times.durations import Duration as _Duration
     from pyLibrary import convert as _convert
 
@@ -53,6 +49,19 @@ def _late_import():
     _ = _Except
     _ = _Duration
     _ = _convert
+
+
+def expand_template(template, value):
+    """
+    :param template: A UNICODE STRING WITH VARIABLE NAMES IN MOUSTACHES `{{}}`
+    :param value: Data HOLDING THE PARAMTER VALUES
+    :return: UNICODE STRING WITH VARIABLES EXPANDED
+    """
+    value = wrap(value)
+    if isinstance(template, basestring):
+        return _simple_expand(template, (value,))
+
+    return _expand(template, (value,))
 
 
 def datetime(value):
@@ -73,6 +82,7 @@ def unicode(value):
     if value == None:
         return ""
     return _unicode(value)
+
 
 def unix(value):
     if not _convert:
@@ -146,6 +156,7 @@ def tab(value):
             "\t".join(map(_convert.value2json, d))
     else:
         _unicode(value)
+
 
 def indent(value, prefix=u"\t", indent=None):
     if indent != None:
@@ -345,6 +356,7 @@ def quote(value):
 
 _SNIP = "...<snip>..."
 
+
 def limit(value, length):
     # LIMIT THE STRING value TO GIVEN LENGTH
     if len(value) <= length:
@@ -396,18 +408,6 @@ def is_hex(value):
 
 
 pattern = re.compile(r"\{\{([\w_\.]+(\|[^\}^\|]+)*)\}\}")
-
-
-def expand_template(template, value):
-    """
-    template IS A STRING WITH {{variable_name}} INSTANCES, WHICH WILL
-    BE EXPANDED TO WHAT IS IS IN THE value dict
-    """
-    value = wrap(value)
-    if isinstance(template, basestring):
-        return _simple_expand(template, (value,))
-
-    return _expand(template, (value,))
 
 
 def _expand(template, seq):
@@ -649,8 +649,8 @@ def utf82unicode(value):
         except Exception:
             pass
 
-
         _Log.error("Can not explain conversion failure of " + type(value).__name__ + "!", e)
+
 
 def wordify(value):
     return [w for w in re.split(r"[\W_]", value) if strip(w)]

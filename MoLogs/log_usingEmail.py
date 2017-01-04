@@ -9,22 +9,22 @@
 #
 
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from pyLibrary.debugs.exceptions import ALARM, NOTE
-from pyLibrary.debugs.text_logs import TextLog
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
+from MoLogs.exceptions import ALARM, NOTE
+from MoLogs.log_usingNothing import StructuredLogger
+from MoLogs.strings import expand_template
 from pyLibrary.env.emailer import Emailer
 from pyLibrary.meta import use_settings
-from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Lock
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import HOUR, YEAR, MINUTE, Duration
+from pyLibrary.times.durations import HOUR, MINUTE, Duration
 
 
-class TextLog_usingEmail(TextLog):
+class StructuredLogger_usingEmail(StructuredLogger):
 
     @use_settings
     def __init__(
@@ -93,4 +93,8 @@ class TextLog_usingEmail(TextLog):
             Log.warning("Could not send", e)
 
 
-
+# TODO: ADD CC PARAMETER TO SEND EMAIL TO OTHERS:
+#
+#     "cc":[
+#         {"to_address": "gmierz1@live.ca", "where":{"eq":{"type":"warning"}}}
+#     ]

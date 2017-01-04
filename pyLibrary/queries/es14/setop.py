@@ -14,10 +14,10 @@ from __future__ import unicode_literals
 from pyLibrary import queries
 from pyLibrary.collections import AND
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field, join_field, unwrap, wrap
-from pyLibrary.dot import listwrap
-from pyLibrary.dot.lists import DictList
+from MoLogs import Log
+from pyDots import coalesce, split_field, set_default, Data, unwraplist, literal_field, join_field, unwrap, wrap
+from pyDots import listwrap
+from pyDots.lists import FlatList
 from pyLibrary.maths import Math
 from pyLibrary.queries import es14, es09
 from pyLibrary.queries.containers import STRUCT
@@ -57,7 +57,7 @@ def es_setop(es, query):
     set_default(filters[0], simplify_esfilter(query.where.to_esfilter()))
     es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort)
-    es_query.fields = DictList()
+    es_query.fields = FlatList()
 
     return extract_rows(es, es_query, query)
 
@@ -65,7 +65,7 @@ def es_setop(es, query):
 def extract_rows(es, es_query, query):
     is_list = isinstance(query.select, list)
     selects = wrap([s.copy() for s in listwrap(query.select)])
-    new_select = DictList()
+    new_select = FlatList()
     columns = query.frum.get_columns()
     leaf_columns = set(c.name for c in columns if c.type not in STRUCT and (c.nested_path[0] == "." or c.es_column == c.nested_path))
     nested_columns = set(c.name for c in columns if len(c.nested_path) != 1)
@@ -82,7 +82,7 @@ def extract_rows(es, es_query, query):
                     es_query.fields = None
                     source = "_source"
 
-                    net_columns = leaf_columns - set(selects.name)
+                    net_columns = leaf_columns - set(selects.name) - {"_id"}
                     for n in net_columns:
                         new_select.append({
                             "name": n,
@@ -198,24 +198,24 @@ def format_list(T, select, query=None):
     data = []
     if isinstance(query.select, list):
         for row in T:
-            r = Dict()
+            r = Data()
             for s in select:
                 r[s.put.name][s.put.child] = unwraplist(row[s.pull])
             data.append(r if r else None)
     elif isinstance(query.select.value, LeavesOp):
         for row in T:
-            r = Dict()
+            r = Data()
             for s in select:
                 r[s.put.name][s.put.child] = unwraplist(row[s.pull])
             data.append(r if r else None)
     else:
         for row in T:
-            r = Dict()
+            r = Data()
             for s in select:
                 r[s.put.child] = unwraplist(row[s.pull])
             data.append(r if r else None)
 
-    return Dict(
+    return Data(
         meta={"format": "list"},
         data=data
     )
@@ -237,7 +237,7 @@ def format_table(T, select, query=None):
                 r[index] = value
             else:
                 if r[index] is None:
-                    r[index] = Dict()
+                    r[index] = Data()
                 r[index][child] = value
 
         data.append(r)
@@ -248,7 +248,7 @@ def format_table(T, select, query=None):
             continue
         header[s.put.index] = s.name
 
-    return Dict(
+    return Data(
         meta={"format": "table"},
         header=header,
         data=data

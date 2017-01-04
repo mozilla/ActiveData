@@ -13,9 +13,9 @@ from __future__ import unicode_literals
 
 from pyLibrary import convert
 from pyLibrary.collections import PRODUCT, reverse, MAX, MIN, OR
-from pyLibrary.debugs.exceptions import suppress_exception
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Null, Dict, coalesce
+from MoLogs.exceptions import suppress_exception
+from MoLogs import Log
+from pyDots import Null, Data, coalesce
 from pyLibrary.meta import use_settings
 
 
@@ -271,7 +271,7 @@ def _min(depth, cube):
         return MIN(_min(depth - 1, c) for c in cube)
 
 
-aggregates = Dict(
+aggregates = Data(
     max=_max,
     maximum=_max,
     min=_min,

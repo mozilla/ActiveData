@@ -15,10 +15,10 @@ from __future__ import absolute_import
 from collections import Mapping, Iterable
 from sets import BaseSet
 
-from pyLibrary.debugs.exceptions import suppress_exception
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import unwrap, tuplewrap, wrap
-from pyLibrary.dot.objects import dictwrap
+from MoLogs.exceptions import suppress_exception
+from MoLogs import Log
+from pyDots import unwrap, tuplewrap, wrap
+from pyDots.objects import datawrap
 
 
 DEBUG = False
@@ -78,7 +78,7 @@ class UniqueIndex(BaseSet, Mapping):
         return wrap(output)
 
     def add(self, val):
-        val = dictwrap(val)
+        val = datawrap(val)
         key = value2key(self._keys, val)
         if key == None:
             Log.error("Expecting key to be not None")
@@ -102,7 +102,7 @@ class UniqueIndex(BaseSet, Mapping):
             self.add(v)
 
     def remove(self, val):
-        key = value2key(self._keys, dictwrap(val))
+        key = value2key(self._keys, datawrap(val))
         if key == None:
             Log.error("Expecting key to not be None")
 
@@ -179,8 +179,8 @@ def value2key(keys, val):
             return val
     else:
         if isinstance(val, Mapping):
-            return dictwrap({k: val[k] for k in keys})
+            return datawrap({k: val[k] for k in keys})
         elif isinstance(val, (list, tuple)):
-            return dictwrap(dict(zip(keys, val)))
+            return datawrap(dict(zip(keys, val)))
         else:
             Log.error("do not know what to do here")

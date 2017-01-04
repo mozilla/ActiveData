@@ -1,4 +1,4 @@
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 
 
 class List_usingNumpy(object):

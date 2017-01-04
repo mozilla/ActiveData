@@ -6,19 +6,19 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 import hashlib
 
 from flask import Response
 
+from MoLogs import Log
+from MoLogs.exceptions import Except
 from active_data import cors_wrapper
+from pyDots import wrap
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.queries.containers.cube import Cube
@@ -26,7 +26,6 @@ from pyLibrary.queries.jx_usingES import FromES
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import SECOND
-
 
 HASH_BLOCK_SIZE = 100
 
@@ -99,7 +98,7 @@ class SaveQueries(object):
 
         try:
             query = wrap(result.data).query
-            if len(query) != 1:
+            if len(query) == 0:
                 return None
         except Exception, e:
             return None
@@ -117,7 +116,7 @@ class SaveQueries(object):
         json = convert.value2json(query)
         hash = convert.unicode2utf8(json)
 
-        #TRY MANY HASHES AT ONCE
+        # TRY MANY HASHES AT ONCE
         hashes = [None] * HASH_BLOCK_SIZE
         for i in range(HASH_BLOCK_SIZE):
             hash = hashlib.sha1(hash).digest()

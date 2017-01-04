@@ -13,12 +13,12 @@ from __future__ import unicode_literals
 
 import hashlib
 
-from base_test_class import ActiveDataBaseTest, TEST_TABLE
+from pyDots import wrap
 from pyLibrary import convert
-from pyLibrary.dot import wrap
 from pyLibrary.env import elasticsearch
 from pyLibrary.parsers import URL
-from pyLibrary.thread.threads import Thread
+from pyLibrary.thread.till import Till
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 
 class TestLoadAndSaveQueries(ActiveDataBaseTest):
@@ -54,10 +54,10 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
 
         self.utils.send_queries(test)
 
-        #ENSURE THE QUERY HAS BEEN INDEXED
+        # ENSURE THE QUERY HAS BEEN INDEXED
         container = elasticsearch.Index(index="saved_queries", settings=settings)
         container.flush()
-        Thread.sleep(seconds=5)
+        Till(seconds=5).wait()
 
         url = URL(self.utils.service_url)
 

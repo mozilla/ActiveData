@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 
 from unittest import skipIf
 
-from pyLibrary.dot import wrap
+from pyDots import wrap
 from pyLibrary.maths import Math
 from tests import NULL
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
@@ -1105,20 +1105,23 @@ class TestDeepOps(ActiveDataBaseTest):
         # CHECKING FOR A MISSING COLUMN THAT DOES NOT EXIST SHOULD NOT THROW AN ERROR, RATHER RETURN true
         test = {
             "data": [
-                {"a": 0, "b": 0},
+                {
+                    "a": {"_b": [{"a": 1}, {"a": 2}]},
+                    "b": 0
+                }
             ],
             "query": {
                 "from": TEST_TABLE+".a._b",
                 "select": [
-                    "a",
-                    "b"
+                    "a"
                 ],
                 "where": {"missing": "c"}
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a": 0, "b": 0},
+                    {"a": 1},
+                    {"a": 2}
                 ]
             }
         }

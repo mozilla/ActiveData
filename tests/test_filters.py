@@ -8,11 +8,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
-import base_test_class
+from __future__ import unicode_literals
 
-from pyLibrary.dot import wrap
+from pyDots import wrap
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
@@ -22,10 +21,10 @@ class TestFilters(ActiveDataBaseTest):
     def test_where_expression(self):
         test = {
             "data": [  # PROPERTIES STARTING WITH _ ARE NESTED AUTOMATICALLY
-                       {"a": {"b": 0, "c": 0}},
-                       {"a": {"b": 0, "c": 1}},
-                       {"a": {"b": 1, "c": 0}},
-                       {"a": {"b": 1, "c": 1}},
+                {"a": {"b": 0, "c": 0}},
+                {"a": {"b": 0, "c": 1}},
+                {"a": {"b": 1, "c": 0}},
+                {"a": {"b": 1, "c": 1}},
             ],
             "query": {
                 "from": TEST_TABLE,

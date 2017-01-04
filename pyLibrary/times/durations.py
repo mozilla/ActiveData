@@ -16,7 +16,7 @@ from pyLibrary import regex
 from pyLibrary.vendor.dateutil.relativedelta import relativedelta
 from pyLibrary.collections import MIN
 from pyLibrary.maths import Math
-from pyLibrary.dot import wrap
+from pyDots import wrap
 
 
 _Date = None
@@ -28,7 +28,7 @@ def _delayed_import():
     global _Log
 
     from pyLibrary.times.dates import Date as _Date
-    from pyLibrary.debugs.logs import Log as _Log
+    from MoLogs import Log as _Log
 
     _ = _Date
     _ = _Log
@@ -61,7 +61,7 @@ class Duration(object):
             return None
         else:
             from pyLibrary import convert
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
             Log.error("Do not know type of object (" + convert.value2json(value) + ")of to make a Duration")
 
     @staticmethod
@@ -130,7 +130,7 @@ class Duration(object):
             else:
                 r = r - (self.month * MILLI_VALUES.month)
                 if r >= MILLI_VALUES.day * 31:
-                    from pyLibrary.debugs.logs import Log
+                    from MoLogs import Log
                     Log.error("Do not know how to handle")
             r = MIN(29 / 30, (r + tod) / (MILLI_VALUES.day * 30))
 
@@ -192,7 +192,7 @@ class Duration(object):
 
     def floor(self, interval=None):
         if not isinstance(interval, Duration):
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
             Log.error("Expecting an interval as a Duration object")
 
         output = Duration(0)
@@ -220,7 +220,7 @@ class Duration(object):
     @milli.setter
     def milli(self, value):
         if not isinstance(value, float):
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
             Log.error("not allowed")
         self._milli = value
 
@@ -322,7 +322,7 @@ def _string2Duration(text):
     amount = int(amount) if amount else 1
 
     if MILLI_VALUES[interval] == None:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
         Log.error(interval + " is not a recognized duration type (did you use the pural form by mistake?")
 
     output = Duration(0)

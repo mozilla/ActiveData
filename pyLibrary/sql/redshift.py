@@ -8,9 +8,9 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 # FOR WINDOWS INSTALL OF psycopg2
 # http://stickpeople.com/projects/python/win-psycopg/2.6.0/psycopg2-2.6.0.win32-py2.7-pg9.4.1-release.exe
@@ -18,12 +18,12 @@ import psycopg2
 from psycopg2.extensions import adapt
 
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import suppress_exception
-from pyLibrary.debugs.logs import Log
+from MoLogs.exceptions import suppress_exception
+from MoLogs import Log
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.sql import SQL
-from pyLibrary.strings import expand_template
+from MoLogs.strings import expand_template
 from pyLibrary.thread.threads import Lock
 
 

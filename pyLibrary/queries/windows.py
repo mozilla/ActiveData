@@ -16,8 +16,8 @@ import functools
 
 from pyLibrary.maths import stats
 from pyLibrary.collections import MIN, MAX
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot.lists import DictList
+from MoLogs import Log
+from pyDots.lists import FlatList
 from pyLibrary.maths import Math
 from pyLibrary.collections.multiset import Multiset
 from pyLibrary.maths.stats import ZeroMoment, ZeroMoment2Stats
@@ -130,7 +130,7 @@ class _Stats(WindowFunction):
     def __init__(self, middle=None, *args, **kwargs):
         object.__init__(self)
         self.middle = middle
-        self.samples = DictList()
+        self.samples = FlatList()
 
     def add(self, value):
         if value == None:

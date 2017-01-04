@@ -9,20 +9,21 @@
 #
 
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from datetime import datetime, timedelta
 import sys
-from pyLibrary.debugs.text_logs import TextLog, DEBUG_LOGGING
-from pyLibrary.debugs.logs import Log
-from pyLibrary.strings import expand_template
+from time import time
+
+from MoLogs import Log
+from MoLogs.log_usingNothing import StructuredLogger
+from MoLogs.strings import expand_template
 from pyLibrary.thread.threads import Thread
+from pyLibrary.thread.till import Till
 
 
-
-class TextLog_usingThreadedStream(TextLog):
+class StructuredLogger_usingThreadedStream(StructuredLogger):
     # stream CAN BE AN OBJCET WITH write() METHOD, OR A STRING
     # WHICH WILL eval() TO ONE
     def __init__(self, stream):
@@ -52,8 +53,8 @@ class TextLog_usingThreadedStream(TextLog):
         else:
             appender = self.stream.write
 
-        self.queue = Queue("log to stream", max=10000, silent=True)
-        self.thread = Thread("log to " + name, time_delta_pusher, appender=appender, queue=self.queue, interval=timedelta(seconds=0.3))
+        self.queue = Queue("queue for " + self.__class__.__name__ + "(" + name + ")", max=10000, silent=True)
+        self.thread = Thread("log to " + self.__class__.__name__ + "(" + name + ")", time_delta_pusher, appender=appender, queue=self.queue, interval=0.3)
         self.thread.parent.remove_child(self.thread)  # LOGGING WILL BE RESPONSIBLE FOR THREAD stop()
         self.thread.start()
 
@@ -66,12 +67,8 @@ class TextLog_usingThreadedStream(TextLog):
 
     def stop(self):
         try:
-            if DEBUG_LOGGING:
-                sys.stdout.write("TextLog_usingThreadedStream sees stop, adding stop to queue\n")
             self.queue.add(Thread.STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
-            if DEBUG_LOGGING:
-                sys.stdout.write("TextLog_usingThreadedStream done\n")
         except Exception, e:
             if DEBUG_LOGGING:
                 raise e
@@ -83,7 +80,6 @@ class TextLog_usingThreadedStream(TextLog):
                 raise f
 
 
-
 def time_delta_pusher(please_stop, appender, queue, interval):
     """
     appender - THE FUNCTION THAT ACCEPTS A STRING
@@ -92,35 +88,31 @@ def time_delta_pusher(please_stop, appender, queue, interval):
     USE IN A THREAD TO BATCH LOGS BY TIME INTERVAL
     """
 
-    if not isinstance(interval, timedelta):
-        Log.error("Expecting interval to be a timedelta")
-
-    next_run = datetime.utcnow() + interval
+    next_run = time() + interval
 
     while not please_stop:
-        Thread.sleep(till=next_run)
-        next_run = datetime.utcnow() + interval
+        (Till(till=next_run) | please_stop).wait()
+        next_run = time() + interval
         logs = queue.pop_all()
-        if logs:
-            lines = []
-            for log in logs:
-                try:
-                    if log is Thread.STOP:
-                        please_stop.go()
-                        next_run = datetime.utcnow()
-                    else:
-                        expanded = expand_template(log.get("template"), log.get("params"))
-                        lines.append(expanded)
-                except Exception, e:
-                    Log.warning("Trouble formatting logs", e)
-                    # SWALLOW ERROR, GOT TO KEEP RUNNING
+        if not logs:
+            continue
+
+        lines = []
+        for log in logs:
             try:
-                if DEBUG_LOGGING and please_stop:
-                    sys.stdout.write("Call to appender with " + str(len(lines)) + " lines\n")
-                appender(u"\n".join(lines) + u"\n")
-                if DEBUG_LOGGING and please_stop:
-                    sys.stdout.write("Done call to appender with " + str(len(lines)) + " lines\n")
+                if log is Thread.STOP:
+                    please_stop.go()
+                    next_run = time()
+                else:
+                    expanded = expand_template(log.get("template"), log.get("params"))
+                    lines.append(expanded)
             except Exception, e:
-                sys.stderr.write("Trouble with appender: " + str(e.message) + "\n")
-                # SWALLOW ERROR, GOT TO KEEP RUNNNIG
+                Log.warning("Trouble formatting logs", cause=e)
+                # SWALLOW ERROR, GOT TO KEEP RUNNING
+        try:
+            appender(u"\n".join(lines) + u"\n")
+        except Exception, e:
+            sys.stderr.write(b"Trouble with appender: " + str(e.message) + b"\n")
+            # SWALLOW ERROR, GOT TO KEEP RUNNNIG
+
 

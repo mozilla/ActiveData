@@ -8,14 +8,15 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
+from __future__ import unicode_literals
+
 from unittest import skip
 
 import base_test_class
+from pyLibrary.queries.jx_usingES import FromES
 from pyLibrary.queries.namespace.rename import Rename
 from pyLibrary.queries.namespace.typed import Typed
-from pyLibrary.queries.jx_usingES import FromES
 from tests.base_test_class import ActiveDataBaseTest
 
 

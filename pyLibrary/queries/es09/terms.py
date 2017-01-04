@@ -17,9 +17,9 @@ from pyLibrary.queries import jx
 from pyLibrary.queries.es09.util import aggregates, build_es_query, compileEdges2Term
 from pyLibrary.queries import es09
 from pyLibrary.queries.containers.cube import Cube
-from pyLibrary.dot import coalesce
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import wrap, listwrap
+from pyDots import coalesce
+from pyDots.lists import FlatList
+from pyDots import wrap, listwrap
 
 
 def is_terms(query):
@@ -128,7 +128,7 @@ def _es_terms2(es, mvel, query):
         values2.update(f.terms.term)
     values2 = jx.sort(values2)
     term2index = {v: i for i, v in enumerate(values2)}
-    query.edges[1].domain.partitions = DictList([{"name": v, "value": v} for v in values2])
+    query.edges[1].domain.partitions = FlatList([{"name": v, "value": v} for v in values2])
 
     # MAKE CUBE
     output = {}

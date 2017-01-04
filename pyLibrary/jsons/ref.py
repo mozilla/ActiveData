@@ -8,17 +8,16 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
-from collections import Mapping
+from __future__ import division
+from __future__ import unicode_literals
 
 import os
+from collections import Mapping
 
-from pyLibrary import dot
-from pyLibrary.dot import set_default, wrap, unwrap
+import pyDots
+from pyDots import set_default, wrap, unwrap
 from pyLibrary.parsers import URL
-
 
 DEBUG = False
 _convert = None
@@ -31,8 +30,8 @@ def _late_import():
     global _Log
     global _Except
     from pyLibrary import convert as _convert
-    from pyLibrary.debugs.logs import Log as _Log
-    from pyLibrary.debugs.exceptions import Except as _Except
+    from MoLogs import Log as _Log
+    from MoLogs.exceptions import Except as _Except
 
     _ = _convert
     _ = _Log
@@ -117,7 +116,7 @@ def _replace_ref(node, url):
             raise _Log.error("unknown protocol {{scheme}}", scheme=ref.scheme)
 
         if ref.fragment:
-            new_value = dot.get_attr(new_value, ref.fragment)
+            new_value = pyDots.get_attr(new_value, ref.fragment)
 
         if DEBUG:
             _Log.note("Replace {{ref}} with {{new_value}}", ref=ref, new_value=new_value)
@@ -164,13 +163,13 @@ def _replace_locals(node, doc_path):
                 if p != ".":
                     if i>len(doc_path):
                         _Log.error("{{frag|quote}} reaches up past the root document",  frag=frag)
-                    new_value = dot.get_attr(doc_path[i-1], frag[i::])
+                    new_value = pyDots.get_attr(doc_path[i-1], frag[i::])
                     break
             else:
                 new_value = doc_path[len(frag) - 1]
         else:
             # ABSOLUTE
-            new_value = dot.get_attr(doc_path[-1], frag)
+            new_value = pyDots.get_attr(doc_path[-1], frag)
 
         new_value = _replace_locals(new_value, [new_value] + doc_path)
 

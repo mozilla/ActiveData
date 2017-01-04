@@ -17,12 +17,12 @@ from collections import deque
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, DictList, NullType
+from MoLogs import Log
+from MoLogs.strings import utf82unicode
+from pyDots import Data, FlatList, NullType
 from pyLibrary.jsons import ESCAPE_DCT, float2json
 from pyLibrary.jsons.encoder import pretty_json, problem_serializing, _repr, UnicodeBuilder
 from pyLibrary.maths.stats import Stats
-from pyLibrary.strings import utf82unicode
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
@@ -42,7 +42,7 @@ def typed_encode(value):
         return output
     except Exception, e:
         # THE PRETTY JSON WILL PROVIDE MORE DETAIL ABOUT THE SERIALIZATION CONCERNS
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.warning("Serialization of JSON problems", e)
         try:
@@ -64,7 +64,7 @@ def _typed_encode(value, _buffer):
             return
 
         _type = value.__class__
-        if _type in (dict, Dict):
+        if _type in (dict, Data):
             if value:
                 _dict2json(value, _buffer)
             else:
@@ -92,7 +92,7 @@ def _typed_encode(value, _buffer):
             append(_buffer, u'{"$value": ')
             append(_buffer, float2json(value))
             append(_buffer, u'}')
-        elif _type in (set, list, tuple, DictList):
+        elif _type in (set, list, tuple, FlatList):
             _list2json(value, _buffer)
         elif _type is date:
             append(_buffer, u'{"$value": ')
@@ -123,11 +123,11 @@ def _typed_encode(value, _buffer):
         elif hasattr(value, '__iter__'):
             _iter2json(value, _buffer)
         else:
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error(_repr(value) + " is not JSON serializable")
     except Exception, e:
-        from pyLibrary.debugs.logs import Log
+        from MoLogs import Log
 
         Log.error(_repr(value) + " is not JSON serializable", e)
 

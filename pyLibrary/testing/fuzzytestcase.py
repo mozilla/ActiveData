@@ -7,17 +7,17 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from collections import Mapping
 import types
 import unittest
+from collections import Mapping
 
-from pyLibrary import dot
-from pyLibrary.debugs.exceptions import suppress_exception, Except
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, literal_field
+import pyDots
+from MoLogs import Log
+from MoLogs.exceptions import suppress_exception, Except
+from MoLogs.strings import expand_template
+from pyDots import coalesce, literal_field, unwrap
 from pyLibrary.maths import Math
 from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.strings import expand_template
 
 
 class FuzzyTestCase(unittest.TestCase):
@@ -57,16 +57,16 @@ class FuzzyTestCase(unittest.TestCase):
         try:
             function(*args, **kwargs)
         except Exception, e:
-            e = Except.wrap(e)
+            f = Except.wrap(e)
             if isinstance(problem, basestring):
-                if problem in e:
+                if problem in f:
                     return
                 Log.error(
                     "expecting an exception returning {{problem|quote}} got something else instead",
                     problem=problem,
-                    cause=e
+                    cause=f
                 )
-            elif not isinstance(e, problem):
+            elif not isinstance(f, problem) and not isinstance(e, problem):
                 Log.error("expecting an exception of type {{type}} to be raised", type=problem)
             else:
                 return
@@ -101,12 +101,17 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
         elif isinstance(test, UniqueIndex):
             if test ^ expected:
                 Log.error("Sets do not match")
+        elif isinstance(expected, Mapping) and isinstance(test, Mapping):
+            test = unwrap(test)
+            expected = unwrap(expected)
+            for k, v2 in unwrap(expected).items():
+                v1 = test.get(k)
+                assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
         elif isinstance(expected, Mapping):
             for k, v2 in expected.items():
                 if isinstance(k, basestring):
-                    v1 = dot.get_attr(test, literal_field(k))
+                    v1 = pyDots.get_attr(test, literal_field(k))
                 else:
-                    show_deta =False
                     v1 = test[k]
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
         elif isinstance(test, (set, list)) and isinstance(expected, set):

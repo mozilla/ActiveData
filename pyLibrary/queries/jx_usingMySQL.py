@@ -14,15 +14,15 @@ from collections import Mapping
 
 from pyLibrary import convert
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.debugs.exceptions import suppress_exception
+from MoLogs.exceptions import suppress_exception
 from pyLibrary.meta import use_settings
 from pyLibrary.sql import SQL
 from pyLibrary.sql.mysql import int_list_packer
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyLibrary.strings import indent, expand_template
-from pyLibrary.dot import coalesce
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import wrap, listwrap, unwrap
+from pyDots import coalesce
+from pyDots.lists import FlatList
+from pyDots import wrap, listwrap, unwrap
 
 
 class MySQL(object):
@@ -48,13 +48,13 @@ class MySQL(object):
         self.settings = settings
         self._db = MySQL(settings)
 
-    def as_dict(self):
+    def __data__(self):
         settings = self.settings.copy()
         settings.settings = None
         return unwrap(settings)
 
     def __json__(self):
-        return convert.value2json(self.as_dict())
+        return convert.value2json(self.__data__())
 
     def query(self, query, stacked=False):
         """
@@ -109,8 +109,8 @@ class MySQL(object):
             if s.aggregate not in aggregates:
                 Log.error("Expecting all columns to have an aggregate: {{select}}", select=s)
 
-        selects = DictList()
-        groups = DictList()
+        selects = FlatList()
+        groups = FlatList()
         edges = query.edges
         for e in edges:
             if e.domain.type != "default":
@@ -156,7 +156,7 @@ class MySQL(object):
 
             # FILL THE DATA CUBE
             maps = [(unwrap(e.domain.map), result[i]) for i, e in enumerate(edges)]
-            cubes = DictList()
+            cubes = FlatList()
             for c, s in enumerate(select):
                 data = Matrix(*[len(e.domain.partitions) + (1 if e.allow_nulls else 0) for e in edges])
                 for rownum, value in enumerate(result[c + num_edges]):
@@ -181,7 +181,7 @@ class MySQL(object):
                 if s.aggregate not in aggregates:
                     Log.error("Expecting all columns to have an aggregate: {{select}}", select=s)
 
-            selects = DictList()
+            selects = FlatList()
             for s in query.select:
                 selects.append(aggregates[s.aggregate].replace("{{code}}", s.value) + " AS " + self.db.quote_column(s.name))
 
@@ -230,7 +230,7 @@ class MySQL(object):
         """
         if isinstance(query.select, list):
             # RETURN BORING RESULT SET
-            selects = DictList()
+            selects = FlatList()
             for s in listwrap(query.select):
                 if isinstance(s.value, Mapping):
                     for k, v in s.value.items:

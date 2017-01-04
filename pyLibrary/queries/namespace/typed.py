@@ -13,8 +13,8 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, wrap, split_field, join_field, concat_field
+from MoLogs import Log
+from pyDots import set_default, wrap, split_field, join_field, concat_field
 from pyLibrary.maths import Math
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expressions import Expression

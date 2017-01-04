@@ -11,7 +11,9 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary.dot import wrap
+import json
+
+from pyDots import wrap
 from tests import NULL
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
@@ -114,7 +116,7 @@ class TestSorting(ActiveDataBaseTest):
                 "data": [
                     {"a": "a", "b": 2, "count": 2},
                     {"a": "c", "b": 2, "count": 1},
-                    {"a": "a", "b": 1, "count": 1},
+                    {"a": "a", "b": 1, "count": 2},
                     {"a": "c", "b": 1, "count": 2},
                     {"a": "a", "b": NULL, "count": 1},
                     {"a": "c", "b": NULL, "count": 1},
@@ -127,7 +129,7 @@ class TestSorting(ActiveDataBaseTest):
                 "data": [
                     ["a", 2, 2],
                     ["c", 2, 1],
-                    ["a", 1, 1],
+                    ["a", 1, 2],
                     ["c", 1, 2],
                     ["a", NULL, 1],
                     ["c", NULL, 1],

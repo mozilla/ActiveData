@@ -13,8 +13,8 @@ from __future__ import division
 from __future__ import absolute_import
 
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot.dicts import Dict
+from MoLogs import Log
+from pyDots import Data
 from pyLibrary.maths.randoms import Random
 from pyLibrary.vendor.aespython import key_expander, aes_cipher, cbc_mode
 
@@ -46,7 +46,7 @@ def encrypt(text, _key, salt=None):
     aes_cbc_256 = cbc_mode.CBCMode(aes_cipher_256, 16)
     aes_cbc_256.set_iv(salt)
 
-    output = Dict()
+    output = Data()
     output.type = "AES256"
     output.salt = convert.bytes2base64(salt)
     output.length = len(data)

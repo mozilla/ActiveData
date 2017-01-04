@@ -8,31 +8,30 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
-from collections import Mapping
+from __future__ import division
+from __future__ import unicode_literals
 
-from datetime import datetime
 import json
 import subprocess
+from collections import Mapping
+from datetime import datetime
 
 from pymysql import connect, InterfaceError
 
+from MoLogs import Log
+from MoLogs.exceptions import Except, suppress_exception
+from MoLogs.strings import expand_template
+from MoLogs.strings import indent
+from MoLogs.strings import outdent
+from pyDots import coalesce, wrap, listwrap, unwrap
+from pyLibrary import convert
 from pyLibrary import jsons
+from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.meta import use_settings
-from pyLibrary.sql import SQL
-from pyLibrary.strings import expand_template
-from pyLibrary.dot import coalesce, wrap, listwrap, unwrap
-from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except, suppress_exception
-from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import jx
-from pyLibrary.strings import indent
-from pyLibrary.strings import outdent
-from pyLibrary.env.files import File
-
+from pyLibrary.sql import SQL
 
 DEBUG = False
 MAX_BATCH_SIZE = 100
@@ -514,7 +513,7 @@ class MySQL(object):
 
     def update(self, table_name, where_slice, new_values):
         """
-        where_slice - A Dict WHICH WILL BE USED TO MATCH ALL IN table
+        where_slice - A Data WHICH WILL BE USED TO MATCH ALL IN table
                       eg {"id": 42}
         new_values  - A dict WITH COLUMN NAME, COLUMN VALUE PAIRS TO SET
         """

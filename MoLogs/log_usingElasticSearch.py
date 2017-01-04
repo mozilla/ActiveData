@@ -13,22 +13,23 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from pyLibrary import convert, strings
-from pyLibrary.debugs.exceptions import suppress_exception
-from pyLibrary.debugs.logs import Log
-from pyLibrary.debugs.text_logs import TextLog
-from pyLibrary.dot import wrap, unwrap, coalesce, set_default
+from MoLogs import Log, strings
+from MoLogs.exceptions import suppress_exception
+from MoLogs.log_usingNothing import StructuredLogger
+from pyDots import wrap, coalesce
+from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.thread.threads import Thread, Queue
+from pyLibrary.thread.till import Till
 from pyLibrary.times.durations import MINUTE, Duration
 
 MAX_BAD_COUNT = 5
 LOG_STRING_LENGTH = 2000
 
 
-class TextLog_usingElasticSearch(TextLog):
+class StructuredLogger_usingElasticSearch(StructuredLogger):
     @use_settings
     def __init__(self, host, index, type="log", max_size=1000, batch_size=100, settings=None):
         """
@@ -60,7 +61,7 @@ class TextLog_usingElasticSearch(TextLog):
         bad_count = 0
         while not please_stop:
             try:
-                Thread.sleep(seconds=1)
+                Till(seconds=1).wait()
                 messages = wrap(self.queue.pop_all())
                 if not messages:
                     continue
@@ -81,12 +82,12 @@ class TextLog_usingElasticSearch(TextLog):
                 bad_count += 1
                 if bad_count > MAX_BAD_COUNT:
                     Log.warning("Given up trying to write debug logs to ES index {{index}}", index=self.es.settings.index)
-                Thread.sleep(seconds=30)
+                Till(seconds=30).wait()
 
         # CONTINUE TO DRAIN THIS QUEUE
         while not please_stop:
             try:
-                Thread.sleep(seconds=1)
+                Till(seconds=1).wait()
                 self.queue.pop_all()
             except Exception, e:
                 Log.warning("Should not happen", cause=e)

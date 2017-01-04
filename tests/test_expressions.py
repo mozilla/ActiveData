@@ -8,8 +8,8 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
+from __future__ import unicode_literals
 
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expressions import simplify_esfilter, jx_expression, USE_BOOL_MUST
@@ -98,6 +98,6 @@ class TestExpressions(FuzzyTestCase):
 
     def test_in_map(self):
         where = {"in": {"a": [1, 2]}}
-        result = jx_expression(where).map({"a": "c"}).to_dict()
+        result = jx_expression(where).map({"a": "c"}).__data__()
         self.assertEqual(result, {"in": {"c": [1, 2]}})
 

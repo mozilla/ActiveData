@@ -1,5 +1,4 @@
-from functools import partial
-from pyLibrary.dot import listwrap, Dict, unwrap
+from pyDots import listwrap
 from pyLibrary.queries.expressions import NullOp
 
 NULL = NullOp()

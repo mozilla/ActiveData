@@ -16,12 +16,12 @@ import re
 import itertools
 
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
+from MoLogs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.dot import coalesce, Dict, set_default, Null, listwrap
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import wrap
+from pyDots import coalesce, Data, set_default, Null, listwrap
+from pyDots.lists import FlatList
+from pyDots import wrap
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
@@ -65,12 +65,12 @@ class Domain(object):
 
 
     def __copy__(self):
-        return self.__class__(**self.as_dict())
+        return self.__class__(**self.__data__())
 
     def copy(self):
-        return self.__class__(**self.as_dict())
+        return self.__class__(**self.__data__())
 
-    def as_dict(self):
+    def __data__(self):
         return wrap({
             "name": self.name,
             "type": self.type,
@@ -82,7 +82,7 @@ class Domain(object):
         })
 
     def __json__(self):
-        return convert.value2json(self.as_dict())
+        return convert.value2json(self.__data__())
 
     @property
     def __all_slots__(self):
@@ -132,7 +132,7 @@ class DefaultDomain(Domain):
         Domain.__init__(self, **desc)
 
         self.NULL = Null
-        self.partitions = DictList()
+        self.partitions = FlatList()
         self.map = dict()
         self.map[None] = self.NULL
         self.limit = desc.get('limit')
@@ -148,7 +148,7 @@ class DefaultDomain(Domain):
         if canonical:
             return canonical
 
-        canonical = Dict(name=key, value=key)
+        canonical = Data(name=key, value=key)
 
         self.partitions.append(canonical)
         self.map[key] = canonical
@@ -166,8 +166,8 @@ class DefaultDomain(Domain):
     def getLabel(self, part):
         return part.value
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
         output.partitions = self.partitions
         output.limit = self.limit
         return output
@@ -187,7 +187,7 @@ class SimpleSetDomain(Domain):
         self.type = "set"
         self.order = {}
         self.NULL = Null
-        self.partitions = DictList()
+        self.partitions = FlatList()
         self.primitive = True  # True IF DOMAIN IS A PRIMITIVE VALUE SET
 
         if isinstance(self.key, set):
@@ -321,8 +321,8 @@ class SimpleSetDomain(Domain):
     def getLabel(self, part):
         return part[self.label]
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
         output.partitions = self.partitions
         return output
 
@@ -337,7 +337,7 @@ class SetDomain(Domain):
         self.type = "set"
         self.order = {}
         self.NULL = Null
-        self.partitions = DictList()
+        self.partitions = FlatList()
 
         if isinstance(self.key, set):
             Log.error("problem")
@@ -423,8 +423,8 @@ class SetDomain(Domain):
     def getLabel(self, part):
         return part[self.label]
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
         output.partitions = self.partitions
         return output
 
@@ -484,8 +484,8 @@ class TimeDomain(Domain):
     def getKeyByIndex(self, index):
         return self.partitions[index][self.key]
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
 
         output.partitions = self.partitions
         output.min = self.min
@@ -544,8 +544,8 @@ class DurationDomain(Domain):
     def getKeyByIndex(self, index):
         return self.partitions[index][self.key]
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
 
         output.partitions = self.partitions
         output.min = self.min
@@ -591,8 +591,8 @@ class NumericDomain(Domain):
     def getKeyByIndex(self, index):
         return index
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
 
         output.min = self.min
         output.max = self.max
@@ -678,8 +678,8 @@ class RangeDomain(Domain):
     def getKeyByIndex(self, index):
         return self.partitions[index][self.key]
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
 
         output.partitions = self.partitions
         output.min = self.min

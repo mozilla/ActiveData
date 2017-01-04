@@ -18,17 +18,17 @@ import subprocess
 from copy import deepcopy
 from string import ascii_lowercase
 
+from MoLogs import Log, Except, constants
+from MoLogs.exceptions import extract_stack
+from MoLogs.strings import expand_template
 from active_data.actions.query import replace_vars
+from pyDots import wrap, coalesce, unwrap, listwrap, Data
 from pyLibrary import convert, jsons
-from pyLibrary.debugs.exceptions import extract_stack
-from pyLibrary.debugs.logs import Log, Except, constants
-from pyLibrary.dot import wrap, coalesce, unwrap, listwrap, Dict, literal_field
 from pyLibrary.env import http
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, containers
 from pyLibrary.queries.containers.list_usingSQLite import Table_usingSQLite
 from pyLibrary.queries.query import QueryOp
-from pyLibrary.strings import expand_template
 from pyLibrary.testing import elasticsearch
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase, assertAlmostEqual
 from pyLibrary.times.dates import Date
@@ -333,7 +333,7 @@ class SQLiteUtils(object):
             Log.error("Do not know how to handle")
 
 
-        return Dict()
+        return Data()
 
     def send_queries(self, subtest):
         subtest = wrap(subtest)
@@ -444,7 +444,7 @@ def cube2list(cube):
     header = list(unwrap(cube).keys())
     rows = []
     for r in zip(*[[(k, v) for v in a] for k, a in cube.items()]):
-        row = Dict()
+        row = Data()
         for k, v in r:
            row[k]=v
         rows.append(unwrap(row))
@@ -529,9 +529,10 @@ class FakeHttp(object):
 
 global_settings = jsons.ref.get("file://tests/config/elasticsearch.json")
 constants.set(global_settings.constants)
+Log.alert("Resetting test count")
 NEXT = 0
 
-container_types = Dict(
+container_types = Data(
     elasticsearch=ESUtils,
     sqlite=SQLiteUtils
 )

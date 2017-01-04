@@ -8,15 +8,14 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
+from __future__ import unicode_literals
 
 from unittest import skipIf
 
 from active_data.app import OVERVIEW
 from pyLibrary import convert
 from pyLibrary.parsers import URL
-
 from tests.base_test_class import ActiveDataBaseTest, global_settings
 
 

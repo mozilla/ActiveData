@@ -16,9 +16,9 @@ from __future__ import unicode_literals
 import sys
 from collections import Mapping
 
-from pyLibrary.dot import Dict, listwrap, unwraplist, set_default, Null
+from MoLogs.strings import indent, expand_template
+from pyDots import Data, listwrap, unwraplist, set_default, Null
 from pyLibrary.jsons.encoder import json_encoder
-from pyLibrary.strings import indent, expand_template
 
 FATAL = "FATAL"
 ERROR = "ERROR"
@@ -109,8 +109,8 @@ class Except(Exception):
     def __str__(self):
         return self.__unicode__().encode('latin1', 'replace')
 
-    def as_dict(self):
-        return Dict(
+    def __data__(self):
+        return Data(
             type=self.type,
             template=self.template,
             params=self.params,
@@ -119,13 +119,15 @@ class Except(Exception):
         )
 
     def __json__(self):
-        return json_encoder(self.as_dict())
+        return json_encoder(self.__data__())
 
 
 
 def extract_stack(start=0):
     """
     SNAGGED FROM traceback.py
+    Altered to return Data
+
     Extract the raw traceback from the current stack frame.
 
     Each item in the returned list is a quadruple (filename,
@@ -227,7 +229,7 @@ class Explanation(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if isinstance(exc_val, Exception):
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error(
                 template="Failure in " + self.template,
@@ -258,7 +260,7 @@ class WarnOnException(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if isinstance(exc_val, Exception):
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.warning(
                 template="Ignored failure while " + self.template,
@@ -283,7 +285,7 @@ class AssertNoException(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if isinstance(exc_val, Exception):
-            from pyLibrary.debugs.logs import Log
+            from MoLogs import Log
 
             Log.error(
                 template="Not expected to fail",

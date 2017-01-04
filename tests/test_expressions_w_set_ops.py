@@ -13,8 +13,7 @@ from __future__ import unicode_literals
 
 from unittest import skipIf
 
-from pyLibrary.dot import wrap
-from pyLibrary.queries.expressions import NullOp
+from pyDots import wrap
 from tests import NULL
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
 
@@ -643,12 +642,12 @@ class TestSetOps(ActiveDataBaseTest):
                 {}
             ],
             "query": {
-                "select": {"name": "v", "value": {"div": {"v": 2}, "default": 0}},
+                "select": {"name": "v", "value": {"div": {"v": 2}, "default": 10}},
                 "from": TEST_TABLE
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [0, 0.5, 1, 0]
+                "data": [0, 0.5, 1, 10]
             }
         }
         self.utils.execute_es_tests(test)

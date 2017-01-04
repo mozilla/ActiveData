@@ -18,11 +18,11 @@ from kombu import Connection, Producer, Exchange
 from pytz import timezone
 from mozillapulse.utils import time_to_string
 
-from pyLibrary.debugs import constants
+from MoLogs import constants
 from pyLibrary import jsons
-from pyLibrary.debugs.exceptions import Except, suppress_exception
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, coalesce, Dict, set_default
+from MoLogs.exceptions import Except, suppress_exception
+from MoLogs import Log
+from pyDots import wrap, coalesce, Data, set_default
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.threads import Thread, Lock
 from mozillapulse.consumers import GenericConsumer
@@ -194,7 +194,7 @@ class Publisher(object):
 
         # The message is actually a simple envelope format with a payload and
         # some metadata.
-        final_data = Dict(
+        final_data = Data(
             payload=message.data,
             _meta=set_default({
                 'exchange': self.settings.exchange,

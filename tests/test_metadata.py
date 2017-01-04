@@ -11,7 +11,7 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary.dot import set_default, wrap
+from pyDots import set_default, wrap
 from tests.base_test_class import ActiveDataBaseTest
 
 
@@ -49,27 +49,31 @@ class TestMetadata(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
+                    {"table": table_name, "name": "_id", "type": "string", "nested_path": "."},
                     {"table": table_name, "name": "a", "type": "string", "nested_path": "."}
                 ]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["table", "name", "type", "nested_path"],
-                "data": [[table_name, "a", "string", "."]]
+                "data": [
+                    [table_name, "_id", "string", "."],
+                    [table_name, "a", "string", "."]
+                ]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "edges": [
                     {
                         "name": "rownum",
-                        "domain": {"type": "rownum", "min": 0, "max": 1, "interval": 1}
+                        "domain": {"type": "rownum", "min": 0, "max": 2, "interval": 1}
                     }
                 ],
                 "data": {
                     "table": [table_name],
-                    "name": ["a"],
-                    "type": ["string"],
-                    "nested_path": ["."]
+                    "name": ["_id", "a"],
+                    "type": ["string", "string"],
+                    "nested_path": [".", "."]
                 }
             }
         })
@@ -120,6 +124,7 @@ class TestMetadata(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
+                    {"table": table_name, "name": "_id", "type": "string", "nested_path": "."},
                     {"table": table_name, "name": "_a", "type": "nested", "nested_path": "."},
                     {"table": table_name, "name": "_a.b", "type": "string", "nested_path": ["_a", "."]},
                     {"table": table_name, "name": "_a.v", "type": "double", "nested_path": ["_a", "."]},
@@ -130,6 +135,7 @@ class TestMetadata(ActiveDataBaseTest):
                 "meta": {"format": "table"},
                 "header": ["table", "name", "nested_path", "type"],
                 "data": [
+                    [table_name, "_id", ".", "string"],
                     [table_name, "_a", ".", "nested"],
                     [table_name, "_a.b", ["_a", "."], "string"],
                     [table_name, "_a.v", ["_a", "."], "double"],

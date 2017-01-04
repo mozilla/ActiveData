@@ -49,9 +49,9 @@ class Till(Signal):
 
     def __init__(self, till=None, timeout=None, seconds=None):
         global next_ping
+        global _Log
 
         if not _Log:
-            global _Log
             from MoLogs import Log as _Log
             _ = _Log
 

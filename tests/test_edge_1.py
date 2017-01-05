@@ -1345,10 +1345,10 @@ class TestEdge1(ActiveDataBaseTest):
     def test_edge_using_list(self):
         data = [
             {"r": "a", "s": "aa"},
-            {"s": "bb"},
-            {"r": "bb", "s": "bb"},
+            {          "s": "bb"},
+            {"r": "b", "s": "bb"},
             {"r": "c", "s": "cc"},
-            {"s": "dd"},
+            {          "s": "dd"},
             {"r": "e", "s": "ee"},
             {"r": "e", "s": "ee"},
             {"r": "f"},
@@ -1370,7 +1370,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "data": [
                     {"v": ["a", "aa"], "count": 1},
                     {"v": [NULL, "bb"], "count": 1},
-                    {"v": ["bb", "bb"], "count": 1},
+                    {"v": ["b", "bb"], "count": 1},
                     {"v": ["c", "cc"], "count": 1},
                     {"v": [NULL, "dd"], "count": 1},
                     {"v": ["e", "ee"], "count": 2},
@@ -1384,7 +1384,7 @@ class TestEdge1(ActiveDataBaseTest):
                 "data": [
                     [["a", "aa"], 1],
                     [[NULL, "bb"], 1],
-                    [["bb", "bb"], 1],
+                    [["b", "bb"], 1],
                     [["c", "cc"], 1],
                     [[NULL, "dd"], 1],
                     [["e", "ee"], 2],
@@ -1402,7 +1402,7 @@ class TestEdge1(ActiveDataBaseTest):
                             "type": "set",
                             "partitions": [
                                 {"dataIndex": 0, "value": ["a", "aa"]},
-                                {"dataIndex": 1, "value": ["bb", "bb"]},
+                                {"dataIndex": 1, "value": ["b", "bb"]},
                                 {"dataIndex": 2, "value": ["c", "cc"]},
                                 {"dataIndex": 3, "value": ["e", "ee"]},
                                 {"dataIndex": 4, "value": ["f", NULL]},

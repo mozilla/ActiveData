@@ -720,6 +720,7 @@ class Table_usingSQLite(Container):
         ons = []
         not_ons = []
         groupby = []
+        not_groupby = []
         orderby = []
         domains = []
         select_clause = ["1 __exists__"]  # USED TO DISTINGUISH BETWEEN NULL-BECAUSE-LEFT-JOIN OR NULL-BECAUSE-NULL-VALUE
@@ -806,7 +807,7 @@ class Table_usingSQLite(Container):
                     )
                     limit = Math.min(query.limit, query_edge.domain.limit)
                     domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
-                              "\nLIMIT\n"+unicode(limit)
+                              "\nLIMIT "+unicode(limit)
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " = " + sql
                         for k, (t, sql) in zip(domain_names, edge_values)
@@ -821,7 +822,7 @@ class Table_usingSQLite(Container):
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
                     limit = Math.min(query.limit, query_edge.domain.limit)
                     domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
-                              "\nLIMIT\n"+unicode(limit)
+                              "\nLIMIT "+unicode(limit)
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " <= " + v + " AND " + v + "< (" + edge_alias + "." + k + " + " + unicode(
                             d.interval) + ")"
@@ -831,7 +832,7 @@ class Table_usingSQLite(Container):
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
                     limit = Math.min(query.limit, query_edge.domain.limit)
                     domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
-                              "\nLIMIT\n"+unicode(limit)
+                              "\nLIMIT "+unicode(limit)
                     on_clause = edge_alias + "." + domain_name + " < " + edge_values[1][1] + " AND " + \
                                 edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + unicode(d.interval) + ")"
                 else:
@@ -840,16 +841,21 @@ class Table_usingSQLite(Container):
             elif len(edge_names) > 1:
                 domain_names = ["d" + unicode(edge_index) + "c" + unicode(i) for i, _ in enumerate(edge_names)]
                 query_edge.allowNulls = False
-                domain = "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(domain_names, vals)) + \
-                         "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] + \
-                          "\nGROUP BY\n" + ",\n".join(vals)
+                domain = (
+                    "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(domain_names, vals)) +
+                    "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] +
+                    "\nGROUP BY\n" + ",\n".join(vals)
+                )
                 limit = Math.min(query.limit, query_edge.domain.limit)
-                domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
-                          "\nLIMIT\n"+unicode(limit)
+                domain += (
+                    "\nORDER BY COUNT(1) DESC" +
+                    "\nLIMIT "+unicode(limit)
+                )
                 on_clause = " AND ".join(
                     "((" + edge_alias + "." + k + " IS NULL AND " + v + " IS NULL) OR " + edge_alias + "." + k + " = " + v + ")"
                     for k, v in zip(domain_names, vals)
                 )
+                not_on_clause = "__exists__ IS NULL"
             elif isinstance(query_edge.domain, DefaultDomain):
                 domain_names = ["d"+unicode(edge_index)+"c"+unicode(i) for i, _ in enumerate(edge_names)]
                 domain = (
@@ -861,8 +867,8 @@ class Table_usingSQLite(Container):
                 )
                 limit = Math.min(query.limit, query_edge.domain.limit)
                 domain += (
-                    "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) +
-                    "\nLIMIT\n" + unicode(limit)
+                    "\nORDER BY \n" + ",\n".join("COUNT(1) DESC" for g in vals) +
+                    "\nLIMIT " + unicode(limit)
                 )
                 domain += ")"
 
@@ -872,7 +878,7 @@ class Table_usingSQLite(Container):
                         for k, v in zip(domain_names, vals)
                     )
                 )
-                not_on_clause = " AND ".join(v + " IS NULL" for v in vals)
+                not_on_clause = "__exists__ IS NULL"
 
             elif isinstance(query_edge.domain, TimeDomain):
                 domain_name = "d"+unicode(edge_index)+"c0"
@@ -884,7 +890,7 @@ class Table_usingSQLite(Container):
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
                     limit = Math.min(query.limit, query_edge.domain.limit)
                     domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
-                              "\nLIMIT\n"+unicode(limit)
+                              "\nLIMIT "+unicode(limit)
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " <= " + v + " AND " + v + "< (" + edge_alias + "." + k + " + " + unicode(
                             d.interval) + ")"
@@ -894,7 +900,7 @@ class Table_usingSQLite(Container):
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
                     limit = Math.min(query.limit, query_edge.domain.limit)
                     domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
-                              "\nLIMIT\n"+unicode(limit)
+                              "\nLIMIT "+unicode(limit)
                     on_clause = edge_alias + "." + domain_name + " < " + edge_values[1][1] + " AND " + \
                                 edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + unicode(d.interval) + ")"
                 else:
@@ -906,8 +912,8 @@ class Table_usingSQLite(Container):
             ons.append(on_clause)
             not_ons.append(not_on_clause)
 
-            for d in domain_names:
-                groupby.append(edge_alias + "." + d)
+            groupby.append(",\n".join(nest_to_alias["."] + "." + g for g in vals))
+            not_groupby.append(",\n".join(edge_alias + "." + d for d in domain_names))
 
             for k in domain_names:
                 outer_selects.append(edge_alias + "." + k + " AS " + k)
@@ -1030,10 +1036,11 @@ class Table_usingSQLite(Container):
                 if reverse:
                     add = lambda l, value: l.insert(0, value)
                     where_clause.append(not_ons[edge_index])
+                    groupby_clause.append(not_groupby[edge_index])
                 else:
                     add = lambda l, value: l.append(value)
+                    groupby_clause.append(groupby[edge_index])
 
-                groupby_clause.append(groupby[edge_index])
                 edge_alias = "e" + unicode(edge_index)
                 domain = domains[edge_index]
                 add(sources, "(" + domain + ") "+edge_alias)
@@ -1331,7 +1338,7 @@ class Table_usingSQLite(Container):
             unsorted_sql +
             "\n)" +
             "\nORDER BY\n" + ",\n".join(sorts) +
-            "\nLIMIT\n" + quote_value(query.limit)
+            "\nLIMIT " + quote_value(query.limit)
         )
         result = self.db.query(ordered_sql)
 

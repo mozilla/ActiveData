@@ -25,9 +25,9 @@ from pyLibrary.thread.threads import Queue, Signal, Thread
 from pyLibrary.times.timer import Timer
 
 DEBUG = True
-
-
 _upgraded = False
+
+
 def _upgrade():
     global _upgraded
     _upgraded = True

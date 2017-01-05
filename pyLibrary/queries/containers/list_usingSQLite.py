@@ -17,6 +17,8 @@ import re
 from collections import Mapping, OrderedDict
 from copy import copy
 
+import itertools
+
 from MoLogs import Log
 # from MoLogs.strings import expand_template
 from pyDots import listwrap, coalesce, Data, wrap, Null, unwraplist, split_field, join_field, startswith_field, literal_field, unwrap, \
@@ -27,7 +29,7 @@ from pyLibrary.collections.matrix import Matrix, index_to_coordinate
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import jx
+from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, TimeDomain
 from pyLibrary.queries.expressions import jx_expression, Variable, sql_type_to_json_type, TupleOp, LeavesOp
@@ -716,6 +718,7 @@ class Table_usingSQLite(Container):
 
         # SHIFT THE COLUMN DEFINITIONS BASED ON THE NESTED QUERY DEPTH
         ons = []
+        not_ons = []
         groupby = []
         orderby = []
         domains = []
@@ -773,7 +776,7 @@ class Table_usingSQLite(Container):
                     type=sql_type_to_json_type[json_type]
                 )
 
-            vals = [g[1] for g in edge_values]
+            vals = [v for t, v in edge_values]
             if query_edge.domain.type == "set":
                 domain_name = "d"+unicode(edge_index)+"c"+unicode(column_index)
                 domain_names =[domain_name]
@@ -859,21 +862,18 @@ class Table_usingSQLite(Container):
                 limit = Math.min(query.limit, query_edge.domain.limit)
                 domain += (
                     "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) +
-                    "\nLIMIT\n" + unicode(limit) +
-                    ")"
+                    "\nLIMIT\n" + unicode(limit)
                 )
-                domain += "\nUNION ALL SELECT " + ",\n".join("NULL AS " + dn for dn in domain_names)
+                domain += ")"
 
                 on_clause = (
                     " OR ".join(
                         edge_alias + "." + k + " = " + v
                         for k, v in zip(domain_names, vals)
-                    ) + " OR (" + (
-                        " AND ".join(edge_alias + "." + dn + " IS NULL" for dn in domain_names) + " AND " +
-                        " AND ".join(v + " IS NULL" for v in vals)
-                    ) +
-                    ")"
+                    )
                 )
+                not_on_clause = " AND ".join(v + " IS NULL" for v in vals)
+
             elif isinstance(query_edge.domain, TimeDomain):
                 domain_name = "d"+unicode(edge_index)+"c0"
                 domain_names = [domain_name]
@@ -904,6 +904,7 @@ class Table_usingSQLite(Container):
 
             domains.append(domain)
             ons.append(on_clause)
+            not_ons.append(not_on_clause)
 
             for d in domain_names:
                 groupby.append(edge_alias + "." + d)
@@ -1011,38 +1012,47 @@ class Table_usingSQLite(Container):
         main_filter = query.where.to_sql(self)[0].sql.b
 
         all_parts = []
-        sources = [
-            "(" +
-            "\nSELECT\n" + ",\n".join(select_clause) + ",\n" + "*" +
-            "\nFROM " + from_sql +
-            "\nWHERE " + main_filter +
-            ") " + nest_to_alias["."]
-        ]
 
-        joins = []
-        join_types = []
-        where_clause = []
-        for edge_index, query_edge in enumerate(query.edges):
-            edge_alias = "e" + unicode(edge_index)
-            domain = domains[edge_index]
-            sources.insert(0, "(" + domain + ") "+edge_alias)
-            if ons:
-                join_types.insert(0, "LEFT JOIN")
-                joins.insert(0, "\nAND\n".join("(" + o + ")" for o in ons))
-                ons = []
-            else:
-                join_types.insert(0, "JOIN")
-                joins.insert(0, "1=1")
+        for combos in itertools.product(*[[(i,e) for i in ([0, 1] if e.allowNulls else [0])] for e in query.edges]):
+            sources = [
+                "(" +
+                "\nSELECT\n" + ",\n".join(select_clause) + ",\n" + "*" +
+                "\nFROM " + from_sql +
+                "\nWHERE " + main_filter +
+                ") " + nest_to_alias["."]
+            ]
 
-        part = "SELECT " + (",\n".join(outer_selects)) + "\nFROM\n" + sources[0]
-        for join_type, s, j in zip(join_types, sources[1:], joins):
-            part += "\n"+join_type+"\n" + s + "\nON\n" + j
-        if where_clause:
-            part += "\nWHERE\n" + "\nAND\n".join(where_clause)
-        if groupby:
-            part += "\nGROUP BY\n" + ",\n".join(groupby)
+            joins = []
+            join_types = []
+            where_clause = []
+            groupby_clause = []
+            for edge_index, (reverse, query_edge) in enumerate(combos):
+                if reverse:
+                    add = lambda l, value: l.insert(0, value)
+                    where_clause.append(not_ons[edge_index])
+                else:
+                    add = lambda l, value: l.append(value)
 
-        all_parts.append(part)
+                groupby_clause.append(groupby[edge_index])
+                edge_alias = "e" + unicode(edge_index)
+                domain = domains[edge_index]
+                add(sources, "(" + domain + ") "+edge_alias)
+                if ons:
+                    add(join_types, "LEFT JOIN")
+                    add(joins, ons[edge_index])
+                else:
+                    add(join_types, "JOIN")
+                    add(joins, "1=1")
+
+            part = "SELECT " + (",\n".join(outer_selects)) + "\nFROM\n" + sources[0]
+            for join_type, s, j in zip(join_types, sources[1:], joins):
+                part += "\n"+join_type+"\n" + s + "\nON\n" + j
+            if where_clause:
+                part += "\nWHERE\n" + "\nAND\n".join(where_clause)
+            if groupby_clause:
+                part += "\nGROUP BY\n" + ",\n".join(groupby_clause)
+
+            all_parts.append(part)
 
         command = "SELECT * FROM (\n"+"\nUNION ALL\n".join(all_parts)+"\n)"
 
@@ -1176,8 +1186,6 @@ class Table_usingSQLite(Container):
             for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())
         }
 
-        columns = {k: copy_cols(v, nest_to_alias) for k, v in self.columns.items()}
-
         sorts = []
         if query.sort:
             for s in query.sort:
@@ -1305,7 +1313,7 @@ class Table_usingSQLite(Container):
                         nested_path=nested_path
                     )
 
-        where_clause = query.where.to_sql(columns, boolean=True)[0].sql.b
+        where_clause = query.where.to_sql(self, boolean=True)[0].sql.b
 
         unsorted_sql = self._make_sql_for_one_nest_in_set_op(
             ".",

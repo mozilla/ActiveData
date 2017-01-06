@@ -1617,7 +1617,7 @@ class TestEdge1(ActiveDataBaseTest):
                          {"min": 9, "max": 10}
                      ]}}
                 ],
-                "data": {"count": [1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 0]}  # NOT SURE HOW WE ARE COUNTING NULLS
+                "data": {"count": [1, 1, 2, 3, 3, 3, 3, 3, 3, 2]}  # NOT SURE HOW WE ARE COUNTING NULLS
             }
         }
         self.utils.execute_es_tests(test)

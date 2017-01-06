@@ -671,7 +671,6 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-    @skipIf(global_settings.use=="sqlite", "not implemented")
     def test_between(self):
         test = {
             "data": [

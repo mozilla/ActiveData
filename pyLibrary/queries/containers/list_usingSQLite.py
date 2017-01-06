@@ -821,20 +821,25 @@ class Table_usingSQLite(Container):
                 if len(edge_names) == 1:
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
                     limit = Math.min(query.limit, query_edge.domain.limit)
-                    domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
+                    domain += "\nORDER BY \n" + ",\n".join(vals) + \
                               "\nLIMIT "+unicode(limit)
                     on_clause = " AND ".join(
-                        edge_alias + "." + k + " <= " + v + " AND " + v + "< (" + edge_alias + "." + k + " + " + unicode(
-                            d.interval) + ")"
+                        edge_alias + "." + k + " <= " + v + " AND " + v + " < (" + edge_alias + "." + k + " + " + unicode(d.interval) + ")"
                         for k, (t, v) in zip(domain_names, edge_values)
                     )
+                    not_on_clause = " OR ".join(
+                        v + " < " + quote_value(d.min) + " OR " + quote_value(d.max) + " <= " + v + " OR " + v + " IS NULL"
+                        for t, v in edge_values
+                    )
                 elif query_edge.range:
+                    query_edge.allowNulls = False
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
                     limit = Math.min(query.limit, query_edge.domain.limit)
-                    domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
+                    domain += "\nORDER BY \n" + ",\n".join(vals) + \
                               "\nLIMIT "+unicode(limit)
                     on_clause = edge_alias + "." + domain_name + " < " + edge_values[1][1] + " AND " + \
                                 edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + unicode(d.interval) + ")"
+                    not_on_clause = None
                 else:
                     Log.error("do not know how to handle")
                 # select_clause.extend(v[0] + " " + k for k, v in zip(domain_names, edge_values))
@@ -912,7 +917,8 @@ class Table_usingSQLite(Container):
             ons.append(on_clause)
             not_ons.append(not_on_clause)
 
-            groupby.append(",\n".join(nest_to_alias["."] + "." + g for g in vals))
+            # groupby.append(",\n".join(nest_to_alias["."] + "." + g for g in vals))
+            groupby.append(",\n".join(edge_alias + "." + d for d in domain_names))
             not_groupby.append(",\n".join(edge_alias + "." + d for d in domain_names))
 
             for k in domain_names:

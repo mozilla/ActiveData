@@ -795,7 +795,7 @@ class TupleOp(Expression):
         else:
             return "(" + (",".join(t.to_python() for t in self.terms)) + ")"
 
-    def to_sql(self, schema):
+    def to_sql(self, schema, not_null=False, boolean=False):
         return wrap([{"name": ".", "sql": t.to_sql(schema)[0].sql} for t in self.terms])
 
     def to_esfilter(self):
@@ -1810,7 +1810,7 @@ class MissingOp(Expression):
                 if t == "b":
                     acc.append(v + " IS NULL")
                 if t == "s":
-                    acc.append("(" + v + " IS NULL OR " + v + "=='')")
+                    acc.append("(" + v + " IS NULL OR " + v + "='')")
                 if t == "n":
                     acc.append(v + " IS NULL")
 
@@ -2435,6 +2435,74 @@ class BetweenOp(Expression):
                 expr = "((" + value_is_missing + ") || (" + start + "==-1) || ("+end+"==-1)) ? "+self.default.to_ruby()+" : ((" + value + ").substring(" + start + "+" + len_prefix + ", " + end + "))"
 
             return expr
+
+    def to_sql(self, schema, not_null=False, boolean=False):
+        if isinstance(self.prefix, Literal) and isinstance(convert.json2value(self.prefix.json), int):
+            value_is_missing = self.value.missing().to_sql(schema, boolean=True)[0].sql.b
+            value = self.value.to_sql(schema, not_null=True)[0].sql.s
+            prefix = "max(0, " + self.prefix.to_sql(schema)[0].sql.n + ")"
+            suffix = self.suffix.to_sql(schema)[0].sql.n
+            start_index = self.start.to_sql(schema)[0].sql.n
+            default = self.default.to_sql(schema, not_null=True).sql.s if self.default else "NULL"
+
+            if start_index:
+                start = prefix + "+" + start_index + "+1"
+            else:
+                if prefix:
+                    start = prefix + "+1"
+                else:
+                    start = "1"
+
+            if suffix:
+                length = ","+suffix + "-" + prefix
+            else:
+                length = ""
+
+            expr = (
+                "CASE WHEN (" + value_is_missing + ")" +
+                " THEN " + default +
+                " ELSE substr(" + value + ", " + start + length + ")" +
+                " END"
+            )
+            return wrap([{"name": ".", "sql": {"s": expr}}])
+        else:
+            value_is_missing = self.value.missing().to_sql(schema, boolean=True)[0].sql.b
+            value = self.value.to_sql(schema, not_null=True)[0].sql.s
+            prefix = self.prefix.to_sql(schema)[0].sql.s
+            len_prefix = unicode(len(convert.json2value(self.prefix.json))) if isinstance(self.prefix, Literal) else "length(" + prefix + ")"
+            suffix = self.suffix.to_sql(schema)[0].sql.s
+            start_index = self.start.to_sql(schema)[0].sql.n
+            default = self.default.to_sql(schema, not_null=True).sql.s if self.default else "NULL"
+
+            if start_index:
+                start = "instr(substr(" + value + ", " + start_index + "+1), " + prefix + ")+" + len_prefix
+            else:
+                if prefix:
+                    start = "instr(" + value + ", " + prefix + ") + " + len_prefix
+                else:
+                    start = "1"
+
+            if suffix:
+                end = "instr(substr(" + value + "," + start + "), " + suffix + ")"
+                length = "(" + end + "-1)"
+
+                expr = (
+                    " CASE WHEN (" + value_is_missing + ") OR NOT (" + start + ") OR NOT (" + end + ")" +
+                    " THEN " + default +
+                    " ELSE substr(" + value + ", " + start + ", " + length + ")" +
+                    " END"
+                )
+
+            else:
+                expr = (
+                    "CASE WHEN (" + value_is_missing + ") OR NOT (" + start + ")" +
+                    " THEN " + default +
+                    " ELSE substr(" + value + ", " + start  + ")" +
+                    " END"
+                )
+
+            return wrap([{"name": ".", "sql": {"s": expr}}])
+
 
     def vars(self):
         return self.value.vars() | self.prefix.vars() | self.suffix.vars() | self.default.vars() | self.start.vars()

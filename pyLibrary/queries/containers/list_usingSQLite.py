@@ -805,13 +805,14 @@ class Table_usingSQLite(Container):
                     domain = "\nUNION ALL\n".join(
                         "SELECT " + quote_value(pp) + " AS " + domain_name for pp, p in enumerate(query_edge.domain.partitions)
                     )
-                    limit = Math.min(query.limit, query_edge.domain.limit)
-                    domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
-                              "\nLIMIT "+unicode(limit)
+                    # limit = Math.min(query.limit, query_edge.domain.limit)
+                    # domain += "\nORDER BY \n" + ",\n".join("COUNT(1) DESC" for g in vals) + \
+                    #           "\nLIMIT "+unicode(limit)
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " = " + sql
                         for k, (t, sql) in zip(domain_names, edge_values)
                     )
+                    not_on_clause = "__exists__ IS NULL"
             elif query_edge.domain.type == "range":
                 domain_name = "d"+unicode(edge_index)+"c0"
                 domain_names = [domain_name]  # ONLY EVER SEEN ONE DOMAIN VALUE, DOMAIN TUPLES CERTAINLY EXIST

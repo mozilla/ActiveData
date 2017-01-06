@@ -1420,7 +1420,7 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-    @skipIf(global_settings.use == "sqlite", "not expected to pass yet")
+    @skipIf(global_settings.use == "sqlite", "no median support")
     def test_percentile(self):
         test = {
             "data": [

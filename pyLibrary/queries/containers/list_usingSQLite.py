@@ -788,19 +788,13 @@ class Table_usingSQLite(Container):
                         "SELECT " +quote_value(coalesce(p.dataIndex, i))+" AS rownum, " + quote_value(p.value) + " AS " + domain_name
                         for i, p in enumerate(query_edge.domain.partitions)
                     )
-                    domain += "\nUNION ALL\nSELECT "+quote_value(len(query_edge.domain.partitions))+" AS rownum, NULL AS " + domain_name
-                    on_clause = (
-                        " OR ".join(
-                            edge_alias + "." + k + " = " + v
-                            for k, (t, v) in zip(domain_names, edge_values)
-                        ) + " OR (" + (
-                            " AND ".join(edge_alias + "." + dn + " IS NULL" for dn in domain_names) +
-                            " AND (" + edge_values[0][1] + " IS NULL OR " + edge_values[0][1] + " NOT IN (" + ",".join(
-                                map(quote_value, query_edge.domain.partitions.value)
-                            ) + "))"
-                        ) +
-                        ")"
+                    if query_edge.allowNulls:
+                        domain += "\nUNION ALL\nSELECT "+quote_value(len(query_edge.domain.partitions))+" AS rownum, NULL AS " + domain_name
+                    on_clause = " OR ".join(
+                        edge_alias + "." + k + " = " + v
+                        for k, (t, v) in zip(domain_names, edge_values)
                     )
+                    not_on_clause = "__exists__ IS NULL"
                 else:
                     domain = "\nUNION ALL\n".join(
                         "SELECT " + quote_value(pp) + " AS " + domain_name for pp, p in enumerate(query_edge.domain.partitions)
@@ -840,7 +834,7 @@ class Table_usingSQLite(Container):
                               "\nLIMIT "+unicode(limit)
                     on_clause = edge_alias + "." + domain_name + " < " + edge_values[1][1] + " AND " + \
                                 edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + unicode(d.interval) + ")"
-                    not_on_clause = None
+                    not_on_clause = "__exists__ IS NULL"
                 else:
                     Log.error("do not know how to handle")
                 # select_clause.extend(v[0] + " " + k for k, v in zip(domain_names, edge_values))
@@ -1026,7 +1020,10 @@ class Table_usingSQLite(Container):
 
         all_parts = []
 
-        for combos in itertools.product(*[[(i,e) for i in ([0, 1] if e.allowNulls else [0])] for e in query.edges]):
+        for combos in itertools.product(*[
+            [(i,e) for i in ([0] if isinstance(e.domain, DefaultDomain) and not e.allowNulls else [0, 1])]
+            for e in query.edges
+        ]):
             sources = [
                 "(" +
                 "\nSELECT\n" + ",\n".join(select_clause) + ",\n" + "*" +

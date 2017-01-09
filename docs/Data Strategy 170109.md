@@ -1,8 +1,31 @@
-
 Future Data Strategy
 ====================
 
 As of Oct2016, we are approaching 2 years of ActiveData. The objective is to confirm, or deny, or give feedback on our current path.
+
+
+## Presentation Results
+
+On [Jan2016 I made a presentation](Data%20Strategy%20170109.pdf) to my team. Here are the points they brought up:
+
+**Questions**
+
+* Telemetry has Presto, what is its cross-datasource querying speed? - I wonder if s.t.m.o can answer this for us? What system is responding to those SQL queries?
+* Exactly what are the query differences between the architectures? - I did a poor job of explaining this part. Adding slides to bullet-point these, instead of leaving it to myself to verbalize them, will help.    
+
+**Telemetry Benefits**
+
+* Telemetry uses a standard set of tools, which has more support, and more documentation
+* Telemetry will not use ActiveData - If there can be only one, we must conclude it will be whatever Telemetry decides.
+* Spark has more expressive capabilities
+ 
+**ActiveData Detriments**
+
+* bespoke query language is hard to use
+* although some queries are fast, specific queries are not fast enough
+* no SQL support
+* ActiveData depends on only Kyle, which is a dangerous single point of failure
+
 
 ## Original Objective
 
@@ -104,7 +127,7 @@ A single warehouse with low latency access to raw data and aggregates. Young-com
 
 Central data warehouse with fast, focused, extracts to satellite datamarts. Similar to Telemetry's architecture, and the most common BI architecture that balances resources. 
 
-* Two ETL stages: Inevitably one will require table schemas, transformation scripts, and schedule. 
+* Two extract stages: Inevitably one will require table schemas, transformation scripts, and schedule. 
 * Adds resistance to ad-hoc analysis
 
 ###Alternate Architecture - Small/Hot

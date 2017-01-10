@@ -22,7 +22,7 @@ On [Jan2016 I made a presentation](Data%20Strategy%20170109.pdf) to my team. Her
 **ActiveData Detriments**
 
 * bespoke query language is hard to use
-* although some queries are fast, specific queries are not fast enough
+* The performance for specific queries can be slow compared with acceptable latency for an interactive system
 * no SQL support
 * ActiveData depends on only Kyle, which is a dangerous single point of failure
 

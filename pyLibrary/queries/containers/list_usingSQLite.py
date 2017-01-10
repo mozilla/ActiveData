@@ -13,30 +13,29 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import itertools
 import re
 from collections import Mapping, OrderedDict
 from copy import copy
 
-import itertools
-
 from MoLogs import Log
-# from MoLogs.strings import expand_template
-from pyDots import listwrap, coalesce, Data, wrap, Null, unwraplist, split_field, join_field, startswith_field, literal_field, unwrap, \
-    relative_field, concat_field
-from pyLibrary import convert
+from pyDots import listwrap, coalesce, Data, wrap, Null, unwraplist, split_field, join_field, startswith_field, \
+    literal_field, unwrap, relative_field, concat_field
+from pyLibrary import convert, jsons
 from pyLibrary.collections import UNION
 from pyLibrary.collections.matrix import Matrix, index_to_coordinate
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import jx, Schema
+from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container, STRUCT
-from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, TimeDomain
+from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, TimeDomain, DurationDomain
 from pyLibrary.queries.expressions import jx_expression, Variable, sql_type_to_json_type, TupleOp, LeavesOp
 from pyLibrary.queries.meta import Column
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.sql.sqlite import Sqlite
 from pyLibrary.times.dates import Date
+from pyLibrary.times.durations import Duration
 
 _containers = None
 
@@ -573,6 +572,10 @@ class Table_usingSQLite(Container):
                     domain=SimpleSetDomain(partitions=e.domain.partitions.name)
                 elif e.domain.type == "range":
                     domain = e.domain
+                elif e.domain.type == "time":
+                    domain = wrap(jsons.scrub(e.domain))
+                elif e.domain.type == "duration":
+                    domain = wrap(jsons.scrub(e.domain))
                 elif isinstance(e.value, TupleOp):
                     pulls = jx.sort([c for c in index_to_columns.values() if c.push_name==e.name], "push_child").pull
                     parts = [tuple(p(d) for p in pulls) for d in result.data]
@@ -880,7 +883,7 @@ class Table_usingSQLite(Container):
                 )
                 not_on_clause = "__exists__ IS NULL"
 
-            elif isinstance(query_edge.domain, TimeDomain):
+            elif isinstance(query_edge.domain, (DurationDomain, TimeDomain)):
                 domain_name = "d"+unicode(edge_index)+"c0"
                 domain_names = [domain_name]
                 d = query_edge.domain
@@ -888,25 +891,33 @@ class Table_usingSQLite(Container):
                     Log.error("Invalid time domain: {{range|json}}", range=d)
                 if len(edge_names) == 1:
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
-                    limit = Math.min(query.limit, query_edge.domain.limit)
-                    domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
-                              "\nLIMIT "+unicode(limit)
+                    if query_edge.allowNulls:
+                        domain += "\nUNION ALL SELECT NULL AS "+domain_name+"\n"
                     on_clause = " AND ".join(
-                        edge_alias + "." + k + " <= " + v + " AND " + v + "< (" + edge_alias + "." + k + " + " + unicode(
-                            d.interval) + ")"
+                        edge_alias + "." + k + " <= " + v + " AND " +
+                        v + " < (" + edge_alias + "." + k + " + " + quote_value(d.interval) + ")" +
+                        (
+                            "" if not query_edge.allowNulls else
+                            (
+                                " OR (" + edge_alias + "." + k + " IS NULL AND (" +
+                                v + " IS NULL OR " +
+                                v + ">=" + quote_value(d.max) + " OR " +
+                                v + "<" + quote_value(d.min) +
+                                "))"
+                            )
+                        )
                         for k, (t, v) in zip(domain_names, edge_values)
                     )
+                    not_on_clause = None
                 elif query_edge.range:
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
-                    limit = Math.min(query.limit, query_edge.domain.limit)
-                    domain += "\nORDER BY \n" + ",\n".join("COUNT(" + g + ") DESC" for g in vals) + \
-                              "\nLIMIT "+unicode(limit)
                     on_clause = edge_alias + "." + domain_name + " < " + edge_values[1][1] + " AND " + \
-                                edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + unicode(d.interval) + ")"
+                                edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + quote_value(d.interval) + ")"
+                    not_on_clause = "__exists__ IS NULL"
                 else:
                     Log.error("do not know how to handle")
             else:
-                Log.note("not handled")
+                Log.error("not handled")
 
             domains.append(domain)
             ons.append(on_clause)
@@ -1037,7 +1048,7 @@ class Table_usingSQLite(Container):
             where_clause = []
             groupby_clause = []
             for edge_index, (reverse, query_edge) in enumerate(combos):
-                if reverse:
+                if reverse and not_ons[edge_index]:
                     add = lambda l, value: l.insert(0, value)
                     where_clause.append(not_ons[edge_index])
                     groupby_clause.append(not_groupby[edge_index])
@@ -1082,17 +1093,17 @@ class Table_usingSQLite(Container):
 
         if domain.interval == 1:
             if domain.min == 0:
-                domain = "SELECT " + value + " " + column_name + \
+                domain = "SELECT 1 __exists__, " + value + " " + column_name + \
                          "\nFROM __digits__ a"
             else:
-                domain = "SELECT (" + value + ") - " + quote_value(domain.min) + " " + column_name + \
+                domain = "SELECT (1 __exists__, " + value + ") + " + quote_value(domain.min) + " " + column_name + \
                          "\nFROM __digits__ a"
         else:
             if domain.min == 0:
-                domain = "SELECT " + value + " * " + unicode(domain.interval) + " " + column_name + \
+                domain = "SELECT 1 __exists__, " + value + " * " + quote_value(domain.interval) + " " + column_name + \
                          "\nFROM __digits__ a"
             else:
-                domain = "SELECT (" + value + " * " + unicode(domain.interval) + ") - " + quote_value(
+                domain = "SELECT (1 __exists__, " + value + " * " + quote_value(domain.interval) + ") + " + quote_value(
                     domain.min) + " " + column_name + \
                          "\nFROM __digits__ a"
 
@@ -1935,6 +1946,10 @@ def _quote_column(column):
 def quote_value(value):
     if isinstance(value, (Mapping, list)):
         return "."
+    elif isinstance(value, Date):
+        return unicode(value.unix)
+    elif isinstance(value, Duration):
+        return unicode(value.seconds)
     elif isinstance(value, basestring):
         return "'" + value.replace("'", "''") + "'"
     elif value == None:

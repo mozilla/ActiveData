@@ -45,22 +45,22 @@ expected_list_1 = wrap([
 ])
 
 expected2 = wrap([
-    {"a": "x", "t": (TODAY - WEEK).unix, "v": NULL},
+    {"a": "x", "t": (TODAY - WEEK).unix,    "v": NULL},
     {"a": "x", "t": (TODAY - 6 * DAY).unix, "v": NULL},
     {"a": "x", "t": (TODAY - 5 * DAY).unix, "v": 11},
     {"a": "x", "t": (TODAY - 4 * DAY).unix, "v": 7},
     {"a": "x", "t": (TODAY - 3 * DAY).unix, "v": 5},
     {"a": "x", "t": (TODAY - 2 * DAY).unix, "v": 3},
     {"a": "x", "t": (TODAY - 1 * DAY).unix, "v": 2},
-    {"a": "x", "v": 29},
-    {"a": "y", "t": (TODAY - WEEK).unix, "v": NULL},
+    {"a": "x",                              "v": 29},
+    {"a": "y", "t": (TODAY - WEEK).unix,    "v": NULL},
     {"a": "y", "t": (TODAY - 6 * DAY).unix, "v": NULL},
     {"a": "y", "t": (TODAY - 5 * DAY).unix, "v": 23},
     {"a": "y", "t": (TODAY - 4 * DAY).unix, "v": 19},
     {"a": "y", "t": (TODAY - 3 * DAY).unix, "v": NULL},
     {"a": "y", "t": (TODAY - 2 * DAY).unix, "v": 17},
     {"a": "y", "t": (TODAY - 1 * DAY).unix, "v": 13},
-    {"a": "y", "v": NULL}
+    {"a": "y",                              "v": NULL}
 ])
 
 test_data_3 = [

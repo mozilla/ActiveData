@@ -29,7 +29,6 @@ from pyDots import Null
 from pyLibrary.maths import Math
 from pyLibrary.times.durations import Duration, MILLI_VALUES
 from pyLibrary.vendor.dateutil.parser import parse as parse_date
-from MoLogs.strings import deformat
 
 ISO8601 = '%Y-%m-%dT%H:%M:%SZ'
 
@@ -432,6 +431,23 @@ def unix2Date(unix):
     output = object.__new__(Date)
     output.unix = unix
     return output
+
+
+delchars = "".join(c.decode("latin1") for c in map(chr, range(256)) if not c.decode("latin1").isalnum())
+def deformat(value):
+    """
+    REMOVE NON-ALPHANUMERIC CHARACTERS
+
+    FOR SOME REASON translate CAN NOT BE CALLED:
+        ERROR: translate() takes exactly one argument (2 given)
+	    File "C:\Python27\lib\string.py", line 493, in translate
+    """
+    output = []
+    for c in value:
+        if c in delchars:
+            continue
+        output.append(c)
+    return "".join(output)
 
 
 Date.MIN = Date(datetime(1, 1, 1))

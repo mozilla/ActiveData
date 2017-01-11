@@ -721,7 +721,7 @@ class Table_usingSQLite(Container):
 
         # SHIFT THE COLUMN DEFINITIONS BASED ON THE NESTED QUERY DEPTH
         ons = []
-        not_ons = []
+        # not_ons = []
         groupby = []
         not_groupby = []
         orderby = []
@@ -797,7 +797,7 @@ class Table_usingSQLite(Container):
                         edge_alias + "." + k + " = " + v
                         for k, (t, v) in zip(domain_names, edge_values)
                     )
-                    not_on_clause = "__exists__ IS NULL"
+                    # not_on_clause = "__exists__ IS NULL"
                 else:
                     domain = "\nUNION ALL\n".join(
                         "SELECT " + quote_value(pp) + " AS " + domain_name for pp, p in enumerate(query_edge.domain.partitions)
@@ -809,7 +809,7 @@ class Table_usingSQLite(Container):
                         edge_alias + "." + k + " = " + sql
                         for k, (t, sql) in zip(domain_names, edge_values)
                     )
-                    not_on_clause = "__exists__ IS NULL"
+                    # not_on_clause = "__exists__ IS NULL"
             elif query_edge.domain.type == "range":
                 domain_name = "d"+unicode(edge_index)+"c0"
                 domain_names = [domain_name]  # ONLY EVER SEEN ONE DOMAIN VALUE, DOMAIN TUPLES CERTAINLY EXIST
@@ -825,10 +825,10 @@ class Table_usingSQLite(Container):
                         edge_alias + "." + k + " <= " + v + " AND " + v + " < (" + edge_alias + "." + k + " + " + unicode(d.interval) + ")"
                         for k, (t, v) in zip(domain_names, edge_values)
                     )
-                    not_on_clause = " OR ".join(
-                        v + " < " + quote_value(d.min) + " OR " + quote_value(d.max) + " <= " + v + " OR " + v + " IS NULL"
-                        for t, v in edge_values
-                    )
+                    # not_on_clause = " OR ".join(
+                    #     v + " < " + quote_value(d.min) + " OR " + quote_value(d.max) + " <= " + v + " OR " + v + " IS NULL"
+                    #     for t, v in edge_values
+                    # )
                 elif query_edge.range:
                     query_edge.allowNulls = False
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
@@ -837,7 +837,7 @@ class Table_usingSQLite(Container):
                               "\nLIMIT "+unicode(limit)
                     on_clause = edge_alias + "." + domain_name + " < " + edge_values[1][1] + " AND " + \
                                 edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + unicode(d.interval) + ")"
-                    not_on_clause = "__exists__ IS NULL"
+                    # not_on_clause = "__exists__ IS NULL"
                 else:
                     Log.error("do not know how to handle")
                 # select_clause.extend(v[0] + " " + k for k, v in zip(domain_names, edge_values))
@@ -858,7 +858,7 @@ class Table_usingSQLite(Container):
                     "((" + edge_alias + "." + k + " IS NULL AND " + v + " IS NULL) OR " + edge_alias + "." + k + " = " + v + ")"
                     for k, v in zip(domain_names, vals)
                 )
-                not_on_clause = "__exists__ IS NULL"
+                # not_on_clause = "__exists__ IS NULL"
             elif isinstance(query_edge.domain, DefaultDomain):
                 domain_names = ["d"+unicode(edge_index)+"c"+unicode(i) for i, _ in enumerate(edge_names)]
                 domain = (
@@ -876,12 +876,17 @@ class Table_usingSQLite(Container):
                 domain += ")"
 
                 on_clause = (
-                    " OR ".join(
+                    # "__exists__ AND " +
+                    " OR ".join(  # "OR" IS FOR MATCHING DIFFERENT TYPES OF SAME NAME
                         edge_alias + "." + k + " = " + v
                         for k, v in zip(domain_names, vals)
-                    )
+                    ) +
+                    " OR (" +
+                    edge_alias + "." + domain_names[0] + " IS NULL AND " +
+                    " AND ".join(v + " IS NULL" for v in vals) +
+                    ")"
                 )
-                not_on_clause = "__exists__ IS NULL"
+                # not_on_clause = "__exists__ IS NULL"
 
             elif isinstance(query_edge.domain, (DurationDomain, TimeDomain)):
                 domain_name = "d"+unicode(edge_index)+"c0"
@@ -893,27 +898,23 @@ class Table_usingSQLite(Container):
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
                     if query_edge.allowNulls:
                         domain += "\nUNION ALL SELECT NULL AS "+domain_name+"\n"
-                    on_clause = " AND ".join(
-                        edge_alias + "." + k + " <= " + v + " AND " +
-                        v + " < (" + edge_alias + "." + k + " + " + quote_value(d.interval) + ")" +
-                        (
-                            "" if not query_edge.allowNulls else
-                            (
-                                " OR (" + edge_alias + "." + k + " IS NULL AND (" +
-                                v + " IS NULL OR " +
-                                v + ">=" + quote_value(d.max) + " OR " +
-                                v + "<" + quote_value(d.min) +
-                                "))"
-                            )
-                        )
-                        for k, (t, v) in zip(domain_names, edge_values)
+                    on_clause = (
+                        " AND ".join(
+                            edge_alias + "." + k + " <= " + v + " AND " +
+                            v + " < (" + edge_alias + "." + k + " + " + quote_value(d.interval) + ")"
+                            for k, (t, v) in zip(domain_names, edge_values)
+                        ) +
+                        " OR (" + " AND ".join(
+                            edge_alias + "." + k + " IS NULL AND " + v + " IS NULL"
+                            for k, v in zip(domain_names, vals)
+                        ) + ")"
                     )
-                    not_on_clause = None
+                    # not_on_clause = "__exists__ IS NULL"
                 elif query_edge.range:
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
                     on_clause = edge_alias + "." + domain_name + " < " + edge_values[1][1] + " AND " + \
                                 edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + quote_value(d.interval) + ")"
-                    not_on_clause = "__exists__ IS NULL"
+                    # not_on_clause = "__exists__ IS NULL"
                 else:
                     Log.error("do not know how to handle")
             else:
@@ -921,7 +922,7 @@ class Table_usingSQLite(Container):
 
             domains.append(domain)
             ons.append(on_clause)
-            not_ons.append(not_on_clause)
+            # not_ons.append(not_on_clause)
 
             # groupby.append(",\n".join(nest_to_alias["."] + "." + g for g in vals))
             groupby.append(",\n".join(edge_alias + "." + d for d in domain_names))
@@ -1031,50 +1032,36 @@ class Table_usingSQLite(Container):
 
         all_parts = []
 
-        for combos in itertools.product(*[
-            [(i,e) for i in ([0] if isinstance(e.domain, DefaultDomain) and not e.allowNulls else [0, 1])]
-            for e in query.edges
-        ]):
-            sources = [
-                "(" +
-                "\nSELECT\n" + ",\n".join(select_clause) + ",\n" + "*" +
-                "\nFROM " + from_sql +
-                "\nWHERE " + main_filter +
-                ") " + nest_to_alias["."]
-            ]
+        primary = (
+            "(" +
+            "\nSELECT\n" + ",\n".join(select_clause) + ",\n" + "*" +
+            "\nFROM " + from_sql +
+            "\nWHERE " + main_filter +
+            ") " + nest_to_alias["."]
+        )
+        sources = []
+        for edge_index, query_edge in enumerate(query.edges):
+            edge_alias = "e" + unicode(edge_index)
+            domain = domains[edge_index]
+            sources.append("(" + domain + ") "+edge_alias)
 
-            joins = []
-            join_types = []
-            where_clause = []
-            groupby_clause = []
-            for edge_index, (reverse, query_edge) in enumerate(combos):
-                if reverse and not_ons[edge_index]:
-                    add = lambda l, value: l.insert(0, value)
-                    where_clause.append(not_ons[edge_index])
-                    groupby_clause.append(not_groupby[edge_index])
-                else:
-                    add = lambda l, value: l.append(value)
-                    groupby_clause.append(groupby[edge_index])
+        # COORDINATES OF ALL primary DATA
+        part = "SELECT " + (",\n".join(outer_selects)) + "\nFROM\n" + primary
+        for s, j in zip(sources, ons):
+            part += "\nLEFT JOIN\n" + s + "\nON\n" + j
+        if groupby:
+            part += "\nGROUP BY\n" + ",\n".join(groupby)
+        all_parts.append(part)
 
-                edge_alias = "e" + unicode(edge_index)
-                domain = domains[edge_index]
-                add(sources, "(" + domain + ") "+edge_alias)
-                if ons:
-                    add(join_types, "LEFT JOIN")
-                    add(joins, ons[edge_index])
-                else:
-                    add(join_types, "JOIN")
-                    add(joins, "1=1")
-
-            part = "SELECT " + (",\n".join(outer_selects)) + "\nFROM\n" + sources[0]
-            for join_type, s, j in zip(join_types, sources[1:], joins):
-                part += "\n"+join_type+"\n" + s + "\nON\n" + j
-            if where_clause:
-                part += "\nWHERE\n" + "\nAND\n".join(where_clause)
-            if groupby_clause:
-                part += "\nGROUP BY\n" + ",\n".join(groupby_clause)
-
-            all_parts.append(part)
+        # ALL COORINATES MISSED BY primary DATA
+        part = "SELECT " + (",\n".join(outer_selects)) + "\nFROM\n" + sources[0]
+        for s in sources[1:]:
+            part += "\nLEFT JOIN\n" + s + "\nON 1=1\n"
+        part += "\nLEFT JOIN\n"+primary+"\nON ("+") AND (".join(ons)+")"
+        part += "\nWHERE __exists__ IS NULL"
+        if groupby:
+            part += "\nGROUP BY\n" + ",\n".join(groupby)
+        all_parts.append(part)
 
         command = "SELECT * FROM (\n"+"\nUNION ALL\n".join(all_parts)+"\n)"
 
@@ -1093,17 +1080,17 @@ class Table_usingSQLite(Container):
 
         if domain.interval == 1:
             if domain.min == 0:
-                domain = "SELECT 1 __exists__, " + value + " " + column_name + \
+                domain = "SELECT  " + value + " " + column_name + \
                          "\nFROM __digits__ a"
             else:
-                domain = "SELECT (1 __exists__, " + value + ") + " + quote_value(domain.min) + " " + column_name + \
+                domain = "SELECT  (" + value + ") + " + quote_value(domain.min) + " " + column_name + \
                          "\nFROM __digits__ a"
         else:
             if domain.min == 0:
-                domain = "SELECT 1 __exists__, " + value + " * " + quote_value(domain.interval) + " " + column_name + \
+                domain = "SELECT  " + value + " * " + quote_value(domain.interval) + " " + column_name + \
                          "\nFROM __digits__ a"
             else:
-                domain = "SELECT (1 __exists__, " + value + " * " + quote_value(domain.interval) + ") + " + quote_value(
+                domain = "SELECT  (" + value + " * " + quote_value(domain.interval) + ") + " + quote_value(
                     domain.min) + " " + column_name + \
                          "\nFROM __digits__ a"
 

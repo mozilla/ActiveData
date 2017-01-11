@@ -1342,7 +1342,7 @@ class TestEdge1(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-    def test_edge_using_list(self):
+    def test_edge_using_tuple(self):
         data = [
             {"r": "a", "s": "aa"},
             {          "s": "bb"},

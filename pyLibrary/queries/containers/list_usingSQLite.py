@@ -39,14 +39,13 @@ from pyLibrary.times.durations import Duration
 
 _containers = None
 
-
 UID = "__id__"  # will not be quoted
 GUID = "__guid__"
 ORDER = "__order__"
 PARENT = "__parent__"
 COLUMN = "__column"
 
-ALL_TYPES="bns"
+ALL_TYPES = "bns"
 
 
 def late_import():
@@ -58,7 +57,6 @@ def late_import():
 
 
 class Table_usingSQLite(Container):
-
     @use_settings
     def __init__(self, name, db=None, uid=GUID, exists=False, settings=None):
         """
@@ -88,9 +86,10 @@ class Table_usingSQLite(Container):
             }
 
         self.uid_accessor = jx.get(self.uid)
-        self.nested_tables = OrderedDict() # MAP FROM NESTED PATH TO Table OBJECT, PARENTS PROCEED CHILDREN
+        self.nested_tables = OrderedDict()  # MAP FROM NESTED PATH TO Table OBJECT, PARENTS PROCEED CHILDREN
         self.nested_tables["."] = self
-        self.columns = {".": set()}  # MAP FROM DOCUMENT ABS PROPERTY NAME TO THE SET OF SQL COLUMNS IT REPRESENTS (ONE FOR EACH REALIZED DATATYPE)
+        self.columns = {
+            ".": set()}  # MAP FROM DOCUMENT ABS PROPERTY NAME TO THE SET OF SQL COLUMNS IT REPRESENTS (ONE FOR EACH REALIZED DATATYPE)
 
         if not exists:
             for u in self.uid:
@@ -133,7 +132,7 @@ class Table_usingSQLite(Container):
                 )
 
                 add_column_to_schema(self.columns, column)
-            # TODO: FOR ALL TABLES, FIND THE MAX ID
+                # TODO: FOR ALL TABLES, FIND THE MAX ID
 
     def quote_column(self, column, table=None):
         return self.db.quote_column(column, table)
@@ -177,11 +176,11 @@ class Table_usingSQLite(Container):
         nest_to_alias = {
             nested_path: "__" + unichr(ord('a') + i) + "__"
             for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())
-        }
+            }
 
         def paths(field):
             path = split_field(field)
-            for i in range(len(path)+1):
+            for i in range(len(path) + 1):
                 yield join_field(path[0:i])
 
         columns = Data()
@@ -306,7 +305,7 @@ class Table_usingSQLite(Container):
                 nested_table_name = concat_field(self.name, nested_column_name)
                 nested_table = nested_tables[nested_column_name]
                 self_primary_key = ",".join(quote_table(c.es_column) for u in self.uid for c in self.columns[u])
-                extra_key_name = UID_PREFIX+"id"+unicode(len(self.uid))
+                extra_key_name = UID_PREFIX + "id" + unicode(len(self.uid))
                 extra_key = [e for e in nested_table.columns[extra_key_name]][0]
 
                 sql_command = "DELETE FROM " + quote_table(nested_table.name) + \
@@ -352,7 +351,7 @@ class Table_usingSQLite(Container):
                 # BUILD THE RECORDS
                 children = " UNION ALL ".join(
                     "\nSELECT " +
-                    quote_value(i) + " " +quote_table(extra_key.es_column) + "," +
+                    quote_value(i) + " " + quote_table(extra_key.es_column) + "," +
                     ",".join(
                         quote_value(row[c.name]) + " " + quote_table(c.es_column)
                         for c in doc_collection.get(".", Null).active_columns
@@ -387,7 +386,7 @@ class Table_usingSQLite(Container):
                             table=self.name,
                             es_index=c.es_index,
                             es_column=c.es_column,
-                            nested_path=[nested_column_name]+c.nested_path
+                            nested_path=[nested_column_name] + c.nested_path
                         )
                         if c.name not in self.columns:
                             self.columns[column.name] = {column}
@@ -476,7 +475,7 @@ class Table_usingSQLite(Container):
         # sql_query = query.map(type_map)
         query = query
 
-        new_table = "temp_"+unique_name()
+        new_table = "temp_" + unique_name()
 
         if query.format == "container":
             create_table = "CREATE TABLE " + quote_table(new_table) + " AS "
@@ -486,7 +485,7 @@ class Table_usingSQLite(Container):
         if query.groupby:
             op, index_to_columns = self._groupby_op(query, frum)
             command = create_table + op
-        elif query.edges or any(a!="none" for a in listwrap(query.select).aggregate):
+        elif query.edges or any(a != "none" for a in listwrap(query.select).aggregate):
             op, index_to_columns = self._edges_op(query, frum)
             command = create_table + op
         else:
@@ -519,7 +518,7 @@ class Table_usingSQLite(Container):
             if not result.data:
                 edges = []
                 dims = []
-                for i, e in enumerate(query.edges+query.groupby):
+                for i, e in enumerate(query.edges + query.groupby):
                     allowNulls = coalesce(e.allowNulls, True)
 
                     if e.domain.type == "set" and e.domain.partitions:
@@ -527,7 +526,8 @@ class Table_usingSQLite(Container):
                     elif e.domain.type == "range":
                         domain = e.domain
                     elif isinstance(e.value, TupleOp):
-                        pulls = jx.sort([c for c in index_to_columns.values() if c.push_name==e.name], "push_child").pull
+                        pulls = jx.sort([c for c in index_to_columns.values() if c.push_name == e.name],
+                                        "push_child").pull
                         parts = [tuple(p(d) for p in pulls) for d in result.data]
                         domain = SimpleSetDomain(partitions=jx.sort(set(parts)))
                     else:
@@ -543,7 +543,7 @@ class Table_usingSQLite(Container):
                 zeros = [
                     0 if s.aggregate == "count" and index_to_columns[si].push_child == "." else Data
                     for si, s in enumerate(listwrap(query.select))
-                ]
+                    ]
                 data = {s.name: Matrix(dims=dims, zeros=zeros[si]) for si, s in enumerate(listwrap(query.select))}
 
                 if isinstance(query.select, list):
@@ -563,13 +563,13 @@ class Table_usingSQLite(Container):
             edges = []
             dims = []
             for g in query.groupby:
-                g.is_groupby=True
+                g.is_groupby = True
 
-            for i, e in enumerate(query.edges+query.groupby):
+            for i, e in enumerate(query.edges + query.groupby):
                 allowNulls = coalesce(e.allowNulls, True)
 
                 if e.domain.type == "set" and e.domain.partitions:
-                    domain=SimpleSetDomain(partitions=e.domain.partitions.name)
+                    domain = SimpleSetDomain(partitions=e.domain.partitions.name)
                 elif e.domain.type == "range":
                     domain = e.domain
                 elif e.domain.type == "time":
@@ -577,7 +577,7 @@ class Table_usingSQLite(Container):
                 elif e.domain.type == "duration":
                     domain = wrap(jsons.scrub(e.domain))
                 elif isinstance(e.value, TupleOp):
-                    pulls = jx.sort([c for c in index_to_columns.values() if c.push_name==e.name], "push_child").pull
+                    pulls = jx.sort([c for c in index_to_columns.values() if c.push_name == e.name], "push_child").pull
                     parts = [tuple(p(d) for p in pulls) for d in result.data]
                     domain = SimpleSetDomain(partitions=jx.sort(set(parts)))
                 else:
@@ -589,7 +589,7 @@ class Table_usingSQLite(Container):
                     parts -= {None}
                     domain = SimpleSetDomain(partitions=jx.sort(parts))
 
-                dims.append(len(domain.partitions)+(1 if allowNulls else 0))
+                dims.append(len(domain.partitions) + (1 if allowNulls else 0))
                 edges.append(Data(
                     name=e.name,
                     allowNulls=allowNulls,
@@ -599,7 +599,7 @@ class Table_usingSQLite(Container):
             zeros = [
                 0 if s.aggregate == "count" and index_to_columns[si].push_child == "." else Data
                 for si, s in enumerate(listwrap(query.select))
-            ]
+                ]
             data_cubes = {s.name: Matrix(dims=dims, zeros=zeros[si]) for si, s in enumerate(listwrap(query.select))}
             r2c = index_to_coordinate(dims)  # WORKS BECAUSE THE DATABASE SORTED THE EDGES TO CONFORM
             for rownum, row in enumerate(result.data):
@@ -654,7 +654,7 @@ class Table_usingSQLite(Container):
                 if isinstance(query.select, list):
                     data = Data()
                     for c in index_to_columns.values():
-                        if c.push_child==".":
+                        if c.push_child == ".":
                             data[c.push_name] = c.pull(result.data[0])
                         else:
                             data[c.push_name][c.push_child] = c.pull(result.data[0])
@@ -704,7 +704,8 @@ class Table_usingSQLite(Container):
         tables = []
         base_table = split_field(frum)[0]
         path = join_field(split_field(frum)[1:])
-        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
+        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in
+                         enumerate(self.nested_tables.items())}
 
         columns = self._get_sql_schema(frum)
 
@@ -717,16 +718,21 @@ class Table_usingSQLite(Container):
         from_sql = join_field([base_table] + split_field(tables[0].nest)) + " " + tables[0].alias
         previous = tables[0]
         for t in tables[1::]:
-            from_sql += "\nLEFT JOIN\n" + join_field([base_table] + split_field(t.nest)) + " " + t.alias + " ON " + t.alias + "." + PARENT + " = " + previous.alias + "." + GUID
+            from_sql += "\nLEFT JOIN\n" + join_field([base_table] + split_field(
+                t.nest)) + " " + t.alias + " ON " + t.alias + "." + PARENT + " = " + previous.alias + "." + GUID
 
         # SHIFT THE COLUMN DEFINITIONS BASED ON THE NESTED QUERY DEPTH
         ons = []
-        # not_ons = []
+        join_types = []
+        wheres = []
+        not_ons = ["__exists__ IS NULL"]
         groupby = []
         not_groupby = []
         orderby = []
         domains = []
-        select_clause = ["1 __exists__"]  # USED TO DISTINGUISH BETWEEN NULL-BECAUSE-LEFT-JOIN OR NULL-BECAUSE-NULL-VALUE
+        select_clause = [
+            "1 __exists__"  # USED TO DISTINGUISH BETWEEN NULL-BECAUSE-LEFT-JOIN OR NULL-BECAUSE-NULL-VALUE
+        ]
 
         for edge_index, query_edge in enumerate(query.edges):
             edge_alias = "e" + unicode(edge_index)
@@ -742,13 +748,14 @@ class Table_usingSQLite(Container):
                 case += " ELSE NULL END "
                 edge_values = [("n", case)]
             elif query_edge.range:
-                edge_values = query_edge.range.min.to_sql(self)[0].sql.items() + query_edge.range.max.to_sql(self)[0].sql.items()
+                edge_values = query_edge.range.min.to_sql(self)[0].sql.items() + query_edge.range.max.to_sql(self)[
+                    0].sql.items()
             else:
                 Log.error("Do not know how to handle")
 
             edge_names = []
             for column_index, (json_type, sql) in enumerate(edge_values):
-                sql_name = "e"+unicode(edge_index)+"c"+unicode(column_index)
+                sql_name = "e" + unicode(edge_index) + "c" + unicode(column_index)
                 edge_names.append(sql_name)
 
                 num_sql_columns = len(index_to_column)
@@ -756,7 +763,9 @@ class Table_usingSQLite(Container):
                     def __(parts, num_sql_columns):
                         def _get(row):
                             return parts[row[num_sql_columns]].name
+
                         return _get
+
                     pull = __(query_edge.domain.partitions, num_sql_columns)
                 else:
                     pull = get_column(num_sql_columns)
@@ -764,7 +773,7 @@ class Table_usingSQLite(Container):
                 if isinstance(query_edge.value, TupleOp):
                     query_edge.allowNulls = False
                     push_child = column_index
-                    num_push_columns=len(query_edge.value.terms)
+                    num_push_columns = len(query_edge.value.terms)
                 else:
                     push_child = "."
                     num_push_columns = None
@@ -782,36 +791,40 @@ class Table_usingSQLite(Container):
 
             vals = [v for t, v in edge_values]
             if query_edge.domain.type == "set":
-                domain_name = "d"+unicode(edge_index)+"c"+unicode(column_index)
-                domain_names =[domain_name]
+                domain_name = "d" + unicode(edge_index) + "c" + unicode(column_index)
+                domain_names = [domain_name]
                 if len(edge_names) > 1:
                     Log.error("Do not know how to handle")
                 if query_edge.value:
                     domain = "\nUNION ALL\n".join(
-                        "SELECT " +quote_value(coalesce(p.dataIndex, i))+" AS rownum, " + quote_value(p.value) + " AS " + domain_name
+                        "SELECT " + quote_value(coalesce(p.dataIndex, i)) + " AS rownum, " + quote_value(
+                            p.value) + " AS " + domain_name
                         for i, p in enumerate(query_edge.domain.partitions)
                     )
                     if query_edge.allowNulls:
-                        domain += "\nUNION ALL\nSELECT "+quote_value(len(query_edge.domain.partitions))+" AS rownum, NULL AS " + domain_name
+                        domain += "\nUNION ALL\nSELECT " + quote_value(
+                            len(query_edge.domain.partitions)) + " AS rownum, NULL AS " + domain_name
+                    where = None
+                    join_type = "LEFT JOIN" if query_edge.allowNulls else "JOIN"
                     on_clause = " OR ".join(
                         edge_alias + "." + k + " = " + v
                         for k, (t, v) in zip(domain_names, edge_values)
                     )
-                    # not_on_clause = "__exists__ IS NULL"
+                    not_on_clause = None
                 else:
                     domain = "\nUNION ALL\n".join(
-                        "SELECT " + quote_value(pp) + " AS " + domain_name for pp, p in enumerate(query_edge.domain.partitions)
+                        "SELECT " + quote_value(pp) + " AS " + domain_name for pp, p in
+                        enumerate(query_edge.domain.partitions)
                     )
-                    # limit = Math.min(query.limit, query_edge.domain.limit)
-                    # domain += "\nORDER BY \n" + ",\n".join("COUNT(1) DESC" for g in vals) + \
-                    #           "\nLIMIT "+unicode(limit)
+                    where = None
+                    join_type = "LEFT JOIN" if query_edge.allowNulls else "JOIN"
                     on_clause = " AND ".join(
                         edge_alias + "." + k + " = " + sql
                         for k, (t, sql) in zip(domain_names, edge_values)
                     )
-                    # not_on_clause = "__exists__ IS NULL"
+                    not_on_clause = None
             elif query_edge.domain.type == "range":
-                domain_name = "d"+unicode(edge_index)+"c0"
+                domain_name = "d" + unicode(edge_index) + "c0"
                 domain_names = [domain_name]  # ONLY EVER SEEN ONE DOMAIN VALUE, DOMAIN TUPLES CERTAINLY EXIST
                 d = query_edge.domain
                 if d.max == None or d.min == None or d.min == d.max:
@@ -820,27 +833,31 @@ class Table_usingSQLite(Container):
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
                     limit = Math.min(query.limit, query_edge.domain.limit)
                     domain += "\nORDER BY \n" + ",\n".join(vals) + \
-                              "\nLIMIT "+unicode(limit)
+                              "\nLIMIT " + unicode(limit)
+
+                    where = None
+                    join_type = "LEFT JOIN" if query_edge.allowNulls else "JOIN"
                     on_clause = " AND ".join(
-                        edge_alias + "." + k + " <= " + v + " AND " + v + " < (" + edge_alias + "." + k + " + " + unicode(d.interval) + ")"
+                        edge_alias + "." + k + " <= " + v + " AND " + v + " < (" + edge_alias + "." + k + " + " + unicode(
+                            d.interval) + ")"
                         for k, (t, v) in zip(domain_names, edge_values)
                     )
-                    # not_on_clause = " OR ".join(
-                    #     v + " < " + quote_value(d.min) + " OR " + quote_value(d.max) + " <= " + v + " OR " + v + " IS NULL"
-                    #     for t, v in edge_values
-                    # )
+                    not_on_clause = None
                 elif query_edge.range:
                     query_edge.allowNulls = False
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
                     limit = Math.min(query.limit, query_edge.domain.limit)
                     domain += "\nORDER BY \n" + ",\n".join(vals) + \
-                              "\nLIMIT "+unicode(limit)
+                              "\nLIMIT " + unicode(limit)
+                    where = None
+                    join_type = "LEFT JOIN" if query_edge.allowNulls else "JOIN"
                     on_clause = edge_alias + "." + domain_name + " < " + edge_values[1][1] + " AND " + \
-                                edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + unicode(d.interval) + ")"
-                    # not_on_clause = "__exists__ IS NULL"
+                                edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + unicode(
+                        d.interval) + ")"
+                    not_on_clause = None
                 else:
                     Log.error("do not know how to handle")
-                # select_clause.extend(v[0] + " " + k for k, v in zip(domain_names, edge_values))
+                    # select_clause.extend(v[0] + " " + k for k, v in zip(domain_names, edge_values))
             elif len(edge_names) > 1:
                 domain_names = ["d" + unicode(edge_index) + "c" + unicode(i) for i, _ in enumerate(edge_names)]
                 query_edge.allowNulls = False
@@ -852,18 +869,21 @@ class Table_usingSQLite(Container):
                 limit = Math.min(query.limit, query_edge.domain.limit)
                 domain += (
                     "\nORDER BY COUNT(1) DESC" +
-                    "\nLIMIT "+unicode(limit)
+                    "\nLIMIT " + unicode(limit)
                 )
+                where = None
+                join_type = "LEFT JOIN" if query_edge.allowNulls else "JOIN"
                 on_clause = " AND ".join(
                     "((" + edge_alias + "." + k + " IS NULL AND " + v + " IS NULL) OR " + edge_alias + "." + k + " = " + v + ")"
                     for k, v in zip(domain_names, vals)
                 )
-                # not_on_clause = "__exists__ IS NULL"
+                not_on_clause = None
             elif isinstance(query_edge.domain, DefaultDomain):
-                domain_names = ["d"+unicode(edge_index)+"c"+unicode(i) for i, _ in enumerate(edge_names)]
+                domain_names = ["d" + unicode(edge_index) + "c" + unicode(i) for i, _ in enumerate(edge_names)]
                 domain = (
                     "\nSELECT " + ",".join(domain_names) + " FROM ("
-                    "\nSELECT " + ",\n".join(g + " AS " + n for n, g in zip(domain_names, vals)) +
+                                                           "\nSELECT " + ",\n".join(
+                        g + " AS " + n for n, g in zip(domain_names, vals)) +
                     "\nFROM\n" + quote_table(self.name) + " " + nest_to_alias["."] +
                     "\nWHERE\n" + " AND ".join(g + " IS NOT NULL" for g in vals) +
                     "\nGROUP BY\n" + ",\n".join(g for g in vals)
@@ -875,6 +895,8 @@ class Table_usingSQLite(Container):
                 )
                 domain += ")"
 
+                where = None
+                join_type = "LEFT JOIN" if query_edge.allowNulls else "JOIN"
                 on_clause = (
                     # "__exists__ AND " +
                     " OR ".join(  # "OR" IS FOR MATCHING DIFFERENT TYPES OF SAME NAME
@@ -886,10 +908,10 @@ class Table_usingSQLite(Container):
                     " AND ".join(v + " IS NULL" for v in vals) +
                     ")"
                 )
-                # not_on_clause = "__exists__ IS NULL"
+                not_on_clause = None
 
             elif isinstance(query_edge.domain, (DurationDomain, TimeDomain)):
-                domain_name = "d"+unicode(edge_index)+"c0"
+                domain_name = "d" + unicode(edge_index) + "c0"
                 domain_names = [domain_name]
                 d = query_edge.domain
                 if d.max == None or d.min == None or d.min == d.max:
@@ -897,7 +919,7 @@ class Table_usingSQLite(Container):
                 if len(edge_names) == 1:
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
                     if query_edge.allowNulls:
-                        domain += "\nUNION ALL SELECT NULL AS "+domain_name+"\n"
+                        domain += "\nUNION ALL SELECT NULL AS " + domain_name + "\n"
                     on_clause = (
                         " AND ".join(
                             edge_alias + "." + k + " <= " + v + " AND " +
@@ -909,11 +931,17 @@ class Table_usingSQLite(Container):
                             for k, v in zip(domain_names, vals)
                         ) + ")"
                     )
-                    # not_on_clause = "__exists__ IS NULL"
+                    where = None
+                    join_type = "LEFT JOIN" if query_edge.allowNulls else "JOIN"
+                    if query_edge.allowNulls:
+                        not_on_clause = None
+                    else:
+                        not_on_clause = " AND ".join(edge_alias + "." + k + " IS NOT NULL" for k in domain_names)
                 elif query_edge.range:
                     domain = self._make_range_domain(domain=d, column_name=domain_name)
                     on_clause = edge_alias + "." + domain_name + " < " + edge_values[1][1] + " AND " + \
-                                edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + quote_value(d.interval) + ")"
+                                edge_values[0][1] + " < (" + edge_alias + "." + domain_name + " + " + quote_value(
+                        d.interval) + ")"
                     # not_on_clause = "__exists__ IS NULL"
                 else:
                     Log.error("do not know how to handle")
@@ -922,7 +950,10 @@ class Table_usingSQLite(Container):
 
             domains.append(domain)
             ons.append(on_clause)
-            # not_ons.append(not_on_clause)
+            wheres.append(where)
+            join_types.append(join_type)
+            if not_on_clause:
+                not_ons.append(not_on_clause)
 
             # groupby.append(",\n".join(nest_to_alias["."] + "." + g for g in vals))
             groupby.append(",\n".join(edge_alias + "." + d for d in domain_names))
@@ -936,7 +967,7 @@ class Table_usingSQLite(Container):
 
         offset = len(query.edges)
         for ssi, s in enumerate(listwrap(query.select)):
-            si = ssi+offset
+            si = ssi + offset
             if isinstance(s.value, Variable) and s.value.var == "." and s.aggregate == "count":
                 # COUNT RECORDS, NOT ANY ONE VALUE
                 sql = "COUNT(__exists__) AS " + quote_table(s.name)
@@ -976,9 +1007,9 @@ class Table_usingSQLite(Container):
                     column_number = len(outer_selects)
 
                     for json_type, sql in details.sql.items():
-                        concat_sql.append("GROUP_CONCAT(QUOTE(DISTINCT("+sql+")))")
+                        concat_sql.append("GROUP_CONCAT(QUOTE(DISTINCT(" + sql + ")))")
 
-                    if len(concat_sql)>1:
+                    if len(concat_sql) > 1:
                         concat_sql = "CONCAT(" + ",".join(concat_sql) + ") AS " + _make_column_name(column_number)
                     else:
                         concat_sql = concat_sql[0] + " AS " + _make_column_name(column_number)
@@ -1015,11 +1046,11 @@ class Table_usingSQLite(Container):
                         sql = sql_aggs[s.aggregate] + "(" + sql + ")"
                         if s.default != None:
                             sql = "COALESCE(" + sql + ", " + quote_value(s.default) + ")"
-                        outer_selects.append(sql+" AS " + _make_column_name(column_number))
+                        outer_selects.append(sql + " AS " + _make_column_name(column_number))
                         index_to_column[column_number] = Data(
                             push_name=s.name,
                             push_column=si,
-                            push_child=".", #join_field(split_field(details.name)[1::]),
+                            push_child=".",  # join_field(split_field(details.name)[1::]),
                             pull=get_column(column_number),
                             sql=sql,
                             type=sql_type_to_json_type[sql_type]
@@ -1043,12 +1074,14 @@ class Table_usingSQLite(Container):
         for edge_index, query_edge in enumerate(query.edges):
             edge_alias = "e" + unicode(edge_index)
             domain = domains[edge_index]
-            sources.append("(" + domain + ") "+edge_alias)
+            sources.append("(" + domain + ") " + edge_alias)
 
         # COORDINATES OF ALL primary DATA
         part = "SELECT " + (",\n".join(outer_selects)) + "\nFROM\n" + primary
-        for s, j in zip(sources, ons):
-            part += "\nLEFT JOIN\n" + s + "\nON\n" + j
+        for t, s, j in zip(join_types, sources, ons):
+            part += " " + t + "\n" + s + " ON " + j
+        if any(wheres):
+            part += "\nWHERE " + " AND ".join("(" + w + ")" for w in wheres if w)
         if groupby:
             part += "\nGROUP BY\n" + ",\n".join(groupby)
         all_parts.append(part)
@@ -1057,13 +1090,13 @@ class Table_usingSQLite(Container):
         part = "SELECT " + (",\n".join(outer_selects)) + "\nFROM\n" + sources[0]
         for s in sources[1:]:
             part += "\nLEFT JOIN\n" + s + "\nON 1=1\n"
-        part += "\nLEFT JOIN\n"+primary+"\nON ("+") AND (".join(ons)+")"
-        part += "\nWHERE __exists__ IS NULL"
+        part += "\nLEFT JOIN\n" + primary + "\nON (" + ") AND (".join(ons) + ")"
+        part += "\nWHERE " + " AND ".join("(" + w + ")" for w in not_ons if w)
         if groupby:
             part += "\nGROUP BY\n" + ",\n".join(groupby)
         all_parts.append(part)
 
-        command = "SELECT * FROM (\n"+"\nUNION ALL\n".join(all_parts)+"\n)"
+        command = "SELECT * FROM (\n" + "\nUNION ALL\n".join(all_parts) + "\n)"
 
         if orderby:
             command += "\nORDER BY\n" + ",\n".join(orderby)
@@ -1072,7 +1105,7 @@ class Table_usingSQLite(Container):
 
     def _make_range_domain(self, domain, column_name):
         width = (domain.max - domain.min) / domain.interval
-        digits = Math.floor(Math.log10(width-1))
+        digits = Math.floor(Math.log10(width - 1))
         if digits == 0:
             value = "a.value"
         else:
@@ -1080,17 +1113,17 @@ class Table_usingSQLite(Container):
 
         if domain.interval == 1:
             if domain.min == 0:
-                domain = "SELECT  " + value + " " + column_name + \
+                domain = "SELECT " + value + " " + column_name + \
                          "\nFROM __digits__ a"
             else:
-                domain = "SELECT  (" + value + ") + " + quote_value(domain.min) + " " + column_name + \
+                domain = "SELECT (" + value + ") + " + quote_value(domain.min) + " " + column_name + \
                          "\nFROM __digits__ a"
         else:
             if domain.min == 0:
-                domain = "SELECT  " + value + " * " + quote_value(domain.interval) + " " + column_name + \
+                domain = "SELECT " + value + " * " + quote_value(domain.interval) + " " + column_name + \
                          "\nFROM __digits__ a"
             else:
-                domain = "SELECT  (" + value + " * " + quote_value(domain.interval) + ") + " + quote_value(
+                domain = "SELECT (" + value + " * " + quote_value(domain.interval) + ") + " + quote_value(
                     domain.min) + " " + column_name + \
                          "\nFROM __digits__ a"
 
@@ -1101,8 +1134,9 @@ class Table_usingSQLite(Container):
 
     def _groupby_op(self, query, frum):
         columns = self._get_sql_schema(frum)
-        index_to_column={}
-        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())}
+        index_to_column = {}
+        nest_to_alias = {nested_path: "__" + unichr(ord('a') + i) + "__" for i, (nested_path, sub_table) in
+                         enumerate(self.nested_tables.items())}
 
         selects = []
         groupby = []
@@ -1110,7 +1144,7 @@ class Table_usingSQLite(Container):
             column_number = len(selects)
             sql_type, sql = e.value.to_sql(self)[0].sql.items()[0]
             groupby.append(sql)
-            selects.append(sql+" AS "+e.name)
+            selects.append(sql + " AS " + e.name)
 
             index_to_column[column_number] = Data(
                 is_edge=True,
@@ -1124,7 +1158,7 @@ class Table_usingSQLite(Container):
 
         for s in listwrap(query.select):
             column_number = len(selects)
-            sql_type, sql =s.value.to_sql(self)[0].sql.items()[0]
+            sql_type, sql = s.value.to_sql(self)[0].sql.items()[0]
 
             if s.value == "." and s.aggregate == "count":
                 selects.append("COUNT(1) AS " + quote_table(s.name))
@@ -1160,7 +1194,7 @@ class Table_usingSQLite(Container):
         nest_to_alias = {
             nested_path: "__" + unichr(ord('a') + i) + "__"
             for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())
-        }
+            }
 
         active_columns = {".": []}
         for cname, cols in self.columns.items():
@@ -1185,7 +1219,6 @@ class Table_usingSQLite(Container):
                     nested_path=["."]
                 ))
 
-
         # EVERY COLUMN, AND THE INDEX IT TAKES UP
         index_to_column = {}  # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
         index_to_uid = {}  # FROM NESTED PATH TO THE INDEX OF UID
@@ -1193,7 +1226,7 @@ class Table_usingSQLite(Container):
         nest_to_alias = {
             nested_path: "__" + unichr(ord('a') + i) + "__"
             for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())
-        }
+            }
 
         sorts = []
         if query.sort:
@@ -1208,10 +1241,10 @@ class Table_usingSQLite(Container):
                     column_alias = _make_column_name(column_number)
                     sql_selects.append(sql + " AS " + column_alias)
                     if s.sort == -1:
-                        sorts.append(column_alias+" IS NOT NULL")
-                        sorts.append(column_alias+" DESC")
+                        sorts.append(column_alias + " IS NOT NULL")
+                        sorts.append(column_alias + " DESC")
                     else:
-                        sorts.append(column_alias+" IS NULL")
+                        sorts.append(column_alias + " IS NULL")
                         sorts.append(column_alias)
 
         primary_doc_details = Data()
@@ -1219,7 +1252,7 @@ class Table_usingSQLite(Container):
         # WE WILL CREATE THEM ACCORDING TO THE DEPTH REQUIRED
         for nested_path, sub_table in self.nested_tables.items():
             nested_doc_details = {
-                "sub_table":sub_table,
+                "sub_table": sub_table,
                 "children": [],
                 "index_to_column": {},
                 "nested_path": [nested_path]  # fake the real nested path, we only look at [0] anyway
@@ -1235,6 +1268,7 @@ class Table_usingSQLite(Container):
                             if place(c):
                                 return True
                         parent_doc_details['children'].append(nested_doc_details)
+
                 place(primary_doc_details)
 
             alias = nested_doc_details['alias'] = nest_to_alias[nested_path]
@@ -1242,10 +1276,10 @@ class Table_usingSQLite(Container):
             # WE ALWAYS ADD THE UID AND ORDER
             column_number = index_to_uid[nested_path] = nested_doc_details['id_coord'] = len(sql_selects)
             sql_select = alias + "." + quoted_UID
-            sql_selects.append(sql_select+ " AS "+_make_column_name(column_number))
+            sql_selects.append(sql_select + " AS " + _make_column_name(column_number))
             if nested_path != ".":
                 sql_select = alias + "." + quote_table(ORDER)
-                sql_selects.append(sql_select+ " AS "+_make_column_name(column_number))
+                sql_selects.append(sql_select + " AS " + _make_column_name(column_number))
 
             # WE DO NOT NEED DATA FROM TABLES WE REQUEST NOTHING FROM
             if nested_path not in active_columns:
@@ -1270,14 +1304,16 @@ class Table_usingSQLite(Container):
                                     # SQL HAS ABS TABLE REFERENCE
                                     column_alias = _make_column_name(column_number)
                                     sql_selects.append(unsorted_sql + " AS " + column_alias)
-                                    index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Data(
+                                    index_to_column[column_number] = nested_doc_details['index_to_column'][
+                                        column_number] = Data(
                                         push_name=concat_field(s.name, column.name),
                                         push_column=si,
                                         push_child=".",
                                         pull=get_column(column_number),
                                         sql=unsorted_sql,
                                         type=json_type,
-                                        nested_path=[nested_path]  # fake the real nested path, we only look at [0] anyway
+                                        nested_path=[nested_path]
+                                        # fake the real nested path, we only look at [0] anyway
                                     )
                                     si += 1
                         else:
@@ -1290,14 +1326,16 @@ class Table_usingSQLite(Container):
                                     # SQL HAS ABS TABLE REFERENCE
                                     column_alias = _make_column_name(column_number)
                                     sql_selects.append(unsorted_sql + " AS " + column_alias)
-                                    index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Data(
+                                    index_to_column[column_number] = nested_doc_details['index_to_column'][
+                                        column_number] = Data(
                                         push_name=s.name,
                                         push_column=si,
                                         push_child=column.name,
                                         pull=get_column(column_number),
                                         sql=unsorted_sql,
                                         type=json_type,
-                                        nested_path=[nested_path]  # fake the real nested path, we only look at [0] anyway
+                                        nested_path=[nested_path]
+                                        # fake the real nested path, we only look at [0] anyway
                                     )
                     finally:
                         si += 1
@@ -1333,7 +1371,7 @@ class Table_usingSQLite(Container):
         )
 
         for n, _ in self.nested_tables.items():
-            sorts.append(COLUMN+unicode(index_to_uid[n]))
+            sorts.append(COLUMN + unicode(index_to_uid[n]))
 
         ordered_sql = (
             "SELECT * FROM (\n" +
@@ -1421,11 +1459,11 @@ class Table_usingSQLite(Container):
             num_rows = len(result.data)
             num_cols = Math.MAX([c.push_column for c in cols]) + 1 if len(cols) else 0
             map_index_to_name = {c.push_column: c.push_name for c in cols}
-            temp_data = [[None]*num_rows for _ in range(num_cols)]
+            temp_data = [[None] * num_rows for _ in range(num_cols)]
             for rownum, d in enumerate(result.data):
                 for c in cols:
                     if c.push_child == ".":
-                        temp_data[c.push_column][rownum]=c.pull(d)
+                        temp_data[c.push_column][rownum] = c.pull(d)
                     else:
                         column = temp_data[c.push_column][rownum]
                         if column is None:
@@ -1450,14 +1488,14 @@ class Table_usingSQLite(Container):
             # selects = listwrap(query.select)
             # num_column = len(selects)
             # header = selects.name
-            num_column = Math.MAX([c.push_column for c in cols])+1
-            header = [None]*num_column
+            num_column = Math.MAX([c.push_column for c in cols]) + 1
+            header = [None] * num_column
             for c in cols:
-                header[c.push_column]=c.push_name
+                header[c.push_column] = c.push_name
 
             output_data = []
             for d in result.data:
-                row = [None]*num_column
+                row = [None] * num_column
                 for c in cols:
                     set_column(row, c.push_column, c.push_child, c.pull(d))
                 output_data.append(row)
@@ -1481,7 +1519,7 @@ class Table_usingSQLite(Container):
         selects,  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE
         where_clause,
         active_columns,
-        index_to_sql_select   # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
+        index_to_sql_select  # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
     ):
         """
         FOR EACH NESTED LEVEL, WE MAKE A QUERY THAT PULLS THE VALUES/COLUMNS REQUIRED
@@ -1523,29 +1561,29 @@ class Table_usingSQLite(Container):
                         select_clause.append("NULL AS " + _make_column_name(select_index))
 
                 if nested_path == ".":
-                    from_clause += "\nFROM "+quote_table(self.name) + " " + alias + "\n"
+                    from_clause += "\nFROM " + quote_table(self.name) + " " + alias + "\n"
                 else:
                     from_clause += "\nLEFT JOIN " + quote_table(sub_table.name) + " " + alias + "\n" \
-                       " ON " + alias + "." + quoted_PARENT + " = " + parent_alias + "." + quoted_UID+"\n"
-                    where_clause = "("+where_clause+") AND " + alias + "." + quote_table(ORDER) + " > 0\n"
+                                                                                                " ON " + alias + "." + quoted_PARENT + " = " + parent_alias + "." + quoted_UID + "\n"
+                    where_clause = "(" + where_clause + ") AND " + alias + "." + quote_table(ORDER) + " > 0\n"
 
             elif startswith_field(primary_nested_path, nested_path):
                 # PARENT TABLE
                 # NO NEED TO INCLUDE COLUMNS, BUT WILL INCLUDE ID AND ORDER
                 if nested_path == ".":
-                    from_clause += "\nFROM "+quote_table(self.name) + " " + alias + "\n"
+                    from_clause += "\nFROM " + quote_table(self.name) + " " + alias + "\n"
                 else:
                     parent_alias = alias = unichr(ord('a') + i - 1)
                     from_clause += "\nLEFT JOIN " + quote_table(sub_table.name) + " " + alias + \
-                           " ON " + alias + "." + quoted_PARENT + " = " + parent_alias + "." + quoted_UID
-                    where_clause = "("+where_clause+") AND " + parent_alias + "." + quote_table(ORDER) + " > 0\n"
+                                   " ON " + alias + "." + quoted_PARENT + " = " + parent_alias + "." + quoted_UID
+                    where_clause = "(" + where_clause + ") AND " + parent_alias + "." + quote_table(ORDER) + " > 0\n"
 
             elif startswith_field(nested_path, primary_nested_path):
                 # CHILD TABLE
                 # GET FIRST ROW FOR EACH NESTED TABLE
                 from_clause += "\nLEFT JOIN " + quote_table(sub_table.name) + " " + alias + \
-                       " ON " + alias + "." + quoted_PARENT + " = " + parent_alias + "." + quoted_UID + \
-                       " AND " + alias + "." + quote_table(ORDER) + " = 0\n"
+                               " ON " + alias + "." + quoted_PARENT + " = " + parent_alias + "." + quoted_UID + \
+                               " AND " + alias + "." + quote_table(ORDER) + " = 0\n"
 
                 # IMMEDIATE CHILDREN ONLY
                 done.append(nested_path)
@@ -1555,7 +1593,7 @@ class Table_usingSQLite(Container):
                     selects,  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE
                     where_clause,
                     active_columns,
-                    index_to_sql_select   # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
+                    index_to_sql_select  # MAP FROM INDEX TO COLUMN (OR SELECT CLAUSE)
                 ))
             else:
                 # SIBLING PATHS ARE IGNORED
@@ -1618,7 +1656,8 @@ class Table_usingSQLite(Container):
                 table = join_field([self.name] + split_field(column.nested_path[0]))
 
                 self.db.execute(
-                    "ALTER TABLE " + quote_table(table) + " ADD COLUMN " + _quote_column(column) + " " + sql_types[column.type]
+                    "ALTER TABLE " + quote_table(table) + " ADD COLUMN " + _quote_column(column) + " " + sql_types[
+                        column.type]
                 )
 
                 cols = self.columns.get(column.name)
@@ -1674,8 +1713,8 @@ class Table_usingSQLite(Container):
             has_nested_data = _quote_column(all_cols[0]) + " is NOT NULL"
         else:
             has_nested_data = "COALESCE(" + \
-                       ",".join(_quote_column(c) for c in all_cols) + \
-                       ") IS NOT NULL"
+                              ",".join(_quote_column(c) for c in all_cols) + \
+                              ") IS NOT NULL"
 
         # FILL TABLE WITH EXISTING COLUMN DATA
         command = "INSERT INTO " + quote_table(destination_table) + "(\n" + \
@@ -1685,9 +1724,9 @@ class Table_usingSQLite(Container):
                   ) + \
                   "\n)\n" + \
                   "\nSELECT\n" + ",".join(
-                      [quoted_UID, quoted_UID, "0"] +
-                      [_quote_column(c) for _, cols in sub_table.columns.items() for c in cols]
-                  ) + \
+            [quoted_UID, quoted_UID, "0"] +
+            [_quote_column(c) for _, cols in sub_table.columns.items() for c in cols]
+        ) + \
                   "\nFROM\n" + quote_table(existing_table) + \
                   "\nWHERE\n" + has_nested_data
         self.db.execute(command)
@@ -1908,7 +1947,7 @@ def add_column_to_schema(schema, column):
     if not columns:
         columns = schema[column.name] = set()
     for var_name, db_columns in schema.items():
-        if var_name==column.name and column.type in STRUCT:
+        if var_name == column.name and column.type in STRUCT:
             columns.add(column)
             db_columns.add(column)
             continue
@@ -1916,6 +1955,7 @@ def add_column_to_schema(schema, column):
             db_columns.add(column)
         if startswith_field(var_name, column.name) and column.type not in STRUCT:
             columns.add(column)
+
 
 _do_not_quote = re.compile(r"^\w+$", re.UNICODE)
 
@@ -1954,7 +1994,6 @@ def unique_name():
 
 
 def column_key(k, v):
-
     if v == None:
         return None
     elif isinstance(v, basestring):
@@ -2030,12 +2069,11 @@ def untyped_column(column_name):
         return join_field(split_field(column_name)[:-1])
     else:
         return column_name
-    # return column_name.split(".$")[0]
+        # return column_name.split(".$")[0]
 
 
 def _make_column_name(number):
-    return COLUMN+unicode(number)
-
+    return COLUMN + unicode(number)
 
 
 sql_aggs = {
@@ -2073,7 +2111,6 @@ STATS = {
     "avg": "AVG({{value}})"
 }
 
-
 quoted_UID = quote_table(UID)
 quoted_ORDER = quote_table(ORDER)
 quoted_PARENT = quote_table(PARENT)
@@ -2082,7 +2119,7 @@ quoted_PARENT = quote_table(PARENT)
 def sql_text_array_to_set(column):
     def _convert(row):
         text = row[column]
-        return set(eval('['+text.replace("''", "\'")+']'))
+        return set(eval('[' + text.replace("''", "\'") + ']'))
 
     return _convert
 
@@ -2092,14 +2129,16 @@ def get_column(column):
     :param column: The column you want extracted
     :return: a function that can pull the given column out of sql resultset
     """
+
     def _get(row):
         return row[column]
+
     return _get
 
 
 def set_column(row, col, child, value):
-    if child==".":
-        row[col]=value
+    if child == ".":
+        row[col] = value
     else:
         column = row[col]
         if column is None:

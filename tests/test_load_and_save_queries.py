@@ -12,17 +12,19 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import hashlib
+from unittest import skipIf
 
 from pyDots import wrap
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch
 from pyLibrary.parsers import URL
 from pyLibrary.thread.till import Till
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
+from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
 
 
 class TestLoadAndSaveQueries(ActiveDataBaseTest):
 
+    @skipIf(global_settings.use=="sqlite", "sqlite can not save queries")
     def test_save_then_load(self):
 
         test = {

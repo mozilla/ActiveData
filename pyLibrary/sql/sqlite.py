@@ -12,6 +12,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import re
 import sqlite3
 from collections import Mapping
 
@@ -20,6 +21,7 @@ from MoLogs.exceptions import Except, extract_stack, ERROR
 from MoLogs import Log
 from pyDots import Data, coalesce
 from pyLibrary.env.files import File
+from pyLibrary.maths.stats import percentile, median
 from pyLibrary.sql import DB, SQL
 from pyLibrary.thread.threads import Queue, Signal, Thread
 from pyLibrary.times.timer import Timer
@@ -64,6 +66,24 @@ class Sqlite(DB):
         self.queue = Queue("sql commands")   # HOLD (command, result, signal) PAIRS
         self.worker = Thread.run("sqlite db thread", self._worker)
         self.get_trace = DEBUG
+
+    def _enhancements(self):
+        def regex(pattern, value):
+            return 1 if re.match(pattern+"$", value) else 0
+        con = self.db.create_function("regex", 2, regex)
+
+        class Percentile(object):
+            def __init__(self, percentile):
+                self.percentile=percentile
+                self.acc=[]
+
+            def step(self, value):
+                self.acc.append(value)
+
+            def finalize(self):
+                return percentile(self.acc, self.percentile)
+
+        con.create_aggregate("percentile", 2, Percentile)
 
     def execute(self, command):
         """

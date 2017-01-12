@@ -88,8 +88,7 @@ class Table_usingSQLite(Container):
         self.uid_accessor = jx.get(self.uid)
         self.nested_tables = OrderedDict()  # MAP FROM NESTED PATH TO Table OBJECT, PARENTS PROCEED CHILDREN
         self.nested_tables["."] = self
-        self.columns = {
-            ".": set()}  # MAP FROM DOCUMENT ABS PROPERTY NAME TO THE SET OF SQL COLUMNS IT REPRESENTS (ONE FOR EACH REALIZED DATATYPE)
+        self.columns = {".": set()}  # MAP FROM DOCUMENT ABS PROPERTY NAME TO THE SET OF SQL COLUMNS IT REPRESENTS (ONE FOR EACH REALIZED DATATYPE)
 
         if not exists:
             for u in self.uid:
@@ -1304,8 +1303,7 @@ class Table_usingSQLite(Container):
                                     # SQL HAS ABS TABLE REFERENCE
                                     column_alias = _make_column_name(column_number)
                                     sql_selects.append(unsorted_sql + " AS " + column_alias)
-                                    index_to_column[column_number] = nested_doc_details['index_to_column'][
-                                        column_number] = Data(
+                                    index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Data(
                                         push_name=concat_field(s.name, column.name),
                                         push_column=si,
                                         push_child=".",
@@ -1326,8 +1324,7 @@ class Table_usingSQLite(Container):
                                     # SQL HAS ABS TABLE REFERENCE
                                     column_alias = _make_column_name(column_number)
                                     sql_selects.append(unsorted_sql + " AS " + column_alias)
-                                    index_to_column[column_number] = nested_doc_details['index_to_column'][
-                                        column_number] = Data(
+                                    index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Data(
                                         push_name=s.name,
                                         push_column=si,
                                         push_child=column.name,
@@ -1468,7 +1465,7 @@ class Table_usingSQLite(Container):
                         column = temp_data[c.push_column][rownum]
                         if column is None:
                             column = temp_data[c.push_column][rownum] = {}
-                        Data(column)[c.push_child] = c.pull(d)
+                        column[c.push_child] = c.pull(d)
 
             output = Data(
                 meta={"format": "cube"},
@@ -1485,13 +1482,13 @@ class Table_usingSQLite(Container):
             )
             return output
         elif query.format == "table":
-            # selects = listwrap(query.select)
-            # num_column = len(selects)
-            # header = selects.name
             num_column = Math.MAX([c.push_column for c in cols]) + 1
             header = [None] * num_column
             for c in cols:
-                header[c.push_column] = c.push_name
+                sf = split_field(c.push_name)
+                if len(sf)>1:
+                    Log.error("programming error, do not know what to do")
+                header[c.push_column] = sf[0]
 
             output_data = []
             for d in result.data:
@@ -1946,15 +1943,17 @@ def add_column_to_schema(schema, column):
     columns = schema.get(column.name)
     if not columns:
         columns = schema[column.name] = set()
-    for var_name, db_columns in schema.items():
-        if var_name == column.name and column.type in STRUCT:
-            columns.add(column)
-            db_columns.add(column)
-            continue
-        if startswith_field(column.name, var_name) and column.type not in STRUCT:
-            db_columns.add(column)
-        if startswith_field(var_name, column.name) and column.type not in STRUCT:
-            columns.add(column)
+    columns.add(column)
+
+    # for var_name, db_columns in schema.items():
+    #     if var_name == column.name and column.type in STRUCT:
+    #         columns.add(column)
+    #         db_columns.add(column)
+    #         continue
+    #     if startswith_field(column.name, var_name) and column.type not in STRUCT:
+    #         db_columns.add(column)
+    #     if startswith_field(var_name, column.name) and column.type not in STRUCT:
+    #         columns.add(column)
 
 
 _do_not_quote = re.compile(r"^\w+$", re.UNICODE)

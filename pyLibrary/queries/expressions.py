@@ -273,7 +273,7 @@ class Variable(Expression):
         cols = schema.columns.get(self.var, None)
         if cols is None:
             # DOES NOT EXIST
-            return wrap([{"name": ".", "sql": {"n": "NULL"}, "nested_path": ROOT_PATH}])
+            return wrap([{"name": ".", "sql": {}, "nested_path": ROOT_PATH}])
         acc = Data()
         for col in cols:
             if col.type == OBJECT:
@@ -1699,7 +1699,14 @@ class RegExpOp(Expression):
         self.var, self.pattern = term
 
     def to_python(self, not_null=False, boolean=False):
-        return "re.match(" + convert.string2quote(convert.json2value(self.pattern.json)) + ", " + self.var.to_python() + ")"
+        return "re.match(" + convert.string2quote(convert.json2value(self.pattern.json)+"$") + ", " + self.var.to_python() + ")"
+
+    def to_sql(self, schema, not_null=False, boolean=False):
+        pattern = schema.db.quote_value(convert.json2value(self.pattern.json))
+        value = self.var.to_sql(schema)[0].sql.s
+        return wrap([
+            {"name": ".", "sql": {"s": value + " REGEXP " + pattern}}
+        ])
 
     def to_esfilter(self):
         return {"regexp": {self.var.var: convert.json2value(self.pattern.json)}}

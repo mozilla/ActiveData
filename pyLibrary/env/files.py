@@ -229,7 +229,7 @@ class File(object):
 
                 with io.open(path, "rb") as f:
                     for line in f:
-                        yield utf82unicode(line)
+                        yield utf82unicode(line).rstrip()
             except Exception, e:
                 from MoLogs import Log
 
@@ -250,6 +250,9 @@ class File(object):
                 Log.error("expecting to write unicode only")
             output_file.write(content.encode("utf-8"))
             output_file.write(b"\n")
+
+    def __len__(self):
+        return os.path.getsize(self.abspath)
 
     def add(self, content):
         return self.append(content)

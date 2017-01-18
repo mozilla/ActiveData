@@ -16,8 +16,7 @@ from pyLibrary import regex
 from pyLibrary.vendor.dateutil.relativedelta import relativedelta
 from pyLibrary.collections import MIN
 from pyLibrary.maths import Math
-from pyDots import wrap
-
+from pyDots import wrap, Null
 
 _Date = None
 _Log = None
@@ -89,6 +88,8 @@ class Duration(object):
         if not _Date:
             _delayed_import()
 
+        if other == None:
+            return None
         if isinstance(other, datetime.datetime):
             return _Date(other).add(self)
         elif isinstance(other, _Date):

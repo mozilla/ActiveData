@@ -105,9 +105,6 @@ class FromES(Container):
         settings.settings = None
         return settings
 
-    def __json__(self):
-        return convert.value2json(self.__data__())
-
     def __enter__(self):
         Log.error("No longer used")
         return self

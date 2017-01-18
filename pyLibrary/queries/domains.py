@@ -81,9 +81,6 @@ class Domain(object):
             "dimension": self.dimension
         })
 
-    def __json__(self):
-        return convert.value2json(self.__data__())
-
     @property
     def __all_slots__(self):
         return self._all_slots(self.__class__)

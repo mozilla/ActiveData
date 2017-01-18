@@ -10,8 +10,10 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
+import os
 import subprocess
 
+from pyDots import set_default, unwrap
 from pyLibrary import convert
 from MoLogs.exceptions import Except
 from MoLogs import Log
@@ -21,7 +23,7 @@ DEBUG = True
 
 
 class Process(object):
-    def __init__(self, name, params, cwd=None, env=None, debug=False):
+    def __init__(self, name, params, cwd=None, env=None, debug=False, shell=False, bufsize=-1):
         self.name = name
         self.service_stopped = Signal("stopped signal for " + convert.string2quote(name))
         self.stdin = Queue("stdin for process " + convert.string2quote(name), silent=True)
@@ -29,15 +31,16 @@ class Process(object):
         self.stderr = Queue("stderr for process " + convert.string2quote(name), silent=True)
 
         try:
-            self.debug=debug or DEBUG
+            self.debug = debug or DEBUG
             self.service = service = subprocess.Popen(
                 params,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                bufsize=-1,
+                bufsize=bufsize,
                 cwd=cwd,
-                env=env
+                env=unwrap(set_default(env, os.environ)),
+                shell=shell
             )
 
             self.stopper = Signal()
@@ -79,6 +82,8 @@ class Process(object):
         if self.debug:
             Log.alert("{{name}} stopped with returncode={{returncode}}", name=self.name, returncode=self.service.returncode)
         self.stdin.add(Thread.STOP)
+        self.stdout.add(Thread.STOP)
+        self.stderr.add(Thread.STOP)
         self.service_stopped.go()
 
     def _reader(self, pipe, recieve, please_stop):
@@ -112,7 +117,9 @@ class Process(object):
                 break
 
             if line:
-                pipe.write(line + "\n")
+                if self.debug:
+                    Log.note("TO   {{process}}: {{line}}", process=self.name, line=line.rstrip())
+                pipe.write(line + b"\n")
         pipe.close()
 
     def _kill(self):

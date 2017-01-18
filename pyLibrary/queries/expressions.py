@@ -183,9 +183,6 @@ class Expression(object):
     def __data__(self):
         raise NotImplementedError
 
-    def __json__(self):
-        return convert.value2json(self.__data__())
-
     def vars(self):
         raise Log.error("{{type}} has no `vars` method", type=self.__class__.__name__)
 
@@ -637,8 +634,9 @@ class NullOp(Literal):
     def __str__(self):
         return b"null"
 
-    def __json__(self):
-        return "null"
+    def __data__(self):
+        return None
+
 
 class TrueOp(Literal):
     def __new__(cls, *args, **kwargs):

@@ -79,6 +79,13 @@ class Date(object):
     def milli(self):
         return self.unix*1000
 
+    @property
+    def hour(self):
+        """
+        :return: HOUR (int) IN THE GMT DAY
+        """
+        return int(int(self.unix)/60/60 % 24)
+
     def addDay(self):
         return Date(unix2datetime(self.unix) + timedelta(days=1))
 

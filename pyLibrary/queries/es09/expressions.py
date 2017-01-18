@@ -315,8 +315,8 @@ class Compiled(object):
     def __str__(self):
         return self.code
 
-    def __json__(self):
-        return convert.string2quote(self.code)
+    def __data__(self):
+        return self.code
 
 
 

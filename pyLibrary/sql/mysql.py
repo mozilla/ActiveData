@@ -17,7 +17,7 @@ import subprocess
 from collections import Mapping
 from datetime import datetime
 
-from pymysql import connect, InterfaceError
+from pymysql import connect, InterfaceError, cursors
 
 from MoLogs import Log
 from MoLogs.exceptions import Except, suppress_exception
@@ -48,9 +48,9 @@ class MySQL(object):
     def __init__(
         self,
         host,
-        port,
         username,
         password,
+        port=3306,
         debug=False,
         schema=None,
         preamble=None,
@@ -95,7 +95,8 @@ class MySQL(object):
                 db=coalesce(self.settings.schema, self.settings.db),
                 charset=u"utf8",
                 use_unicode=True,
-                ssl=coalesce(self.settings.ssl, None)
+                ssl=coalesce(self.settings.ssl, None),
+                cursorclass=cursors.SSCursor
             )
         except Exception, e:
             if self.settings.host.find("://") == -1:
@@ -403,6 +404,7 @@ class MySQL(object):
             )
 
     @staticmethod
+    @use_settings
     def execute_file(
         filename,
         host,
@@ -420,7 +422,7 @@ class MySQL(object):
             with suppress_exception:
                 MySQL.execute_sql(sql=sql, param=param, settings=settings)
         else:
-            MySQL.execute_sql(settings, sql, param)
+            MySQL.execute_sql(sql=sql, param=param, settings=settings)
 
     def _execute_backlog(self):
         if not self.backlog: return

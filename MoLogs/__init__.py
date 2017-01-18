@@ -58,8 +58,10 @@ class Log(object):
             return
         settings = wrap(settings)
 
+        Log.stop()
+
         cls.settings = settings
-        cls.trace = cls.trace | coalesce(settings.trace, False)
+        cls.trace = coalesce(settings.trace, False)
         if cls.trace:
             from pyLibrary.thread.threads import Thread as _Thread
             _ = _Thread
@@ -90,8 +92,7 @@ class Log(object):
 
         if settings.log:
             cls.logging_multi = StructuredLogger_usingMulti()
-            if cls.main_log:
-                cls.main_log.stop()
+            from MoLogs.log_usingThread import StructuredLogger_usingThread
             cls.main_log = StructuredLogger_usingThread(cls.logging_multi)
 
             for log in listwrap(settings.log):
@@ -463,7 +464,7 @@ machine_metadata = wrap({
 from MoLogs.log_usingFile import StructuredLogger_usingFile
 from MoLogs.log_usingMulti import StructuredLogger_usingMulti
 from MoLogs.log_usingStream import StructuredLogger_usingStream
-from MoLogs.log_usingThread import StructuredLogger_usingThread
+
 
 if not Log.main_log:
     Log.main_log = StructuredLogger_usingStream(sys.stdout)

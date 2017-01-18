@@ -17,9 +17,6 @@ from __future__ import unicode_literals
 
 from thread import allocate_lock as _allocate_lock
 
-import sys
-from time import time
-
 _Log = None
 DEBUG = False
 DEBUG_SIGNAL = False

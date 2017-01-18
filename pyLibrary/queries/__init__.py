@@ -114,7 +114,7 @@ class Schema(object):
         return self.lookup[name]
 
     @property
-    def all_columns(self):
+    def columns(self):
         return list(self.lookup)
 
     def keys(self):

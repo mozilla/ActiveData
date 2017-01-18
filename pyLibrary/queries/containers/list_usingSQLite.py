@@ -27,7 +27,7 @@ from pyLibrary.collections.matrix import Matrix, index_to_coordinate
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import jx
+from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, TimeDomain, DurationDomain
 from pyLibrary.queries.expressions import jx_expression, Variable, sql_type_to_json_type, TupleOp, LeavesOp
@@ -1193,7 +1193,7 @@ class Table_usingSQLite(Container):
         nest_to_alias = {
             nested_path: "__" + unichr(ord('a') + i) + "__"
             for i, (nested_path, sub_table) in enumerate(self.nested_tables.items())
-            }
+        }
 
         active_columns = {".": []}
         for cname, cols in self.columns.items():
@@ -1939,11 +1939,20 @@ class Table_usingSQLite(Container):
             self.db.execute(prefix + records)
 
 
-def add_column_to_schema(schema, column):
-    columns = schema.get(column.name)
-    if not columns:
-        columns = schema[column.name] = set()
-    columns.add(column)
+def add_column_to_schema(nest_to_schema, column):
+    for nest, schema in nest_to_schema.items():
+        # MODIFY COLUMN BASED ON NESTED LEVEL
+        relative_column = copy(column)
+
+
+
+
+        columns = schema.get(column.name)
+        if not columns:
+            columns = schema[column.name] = set()
+        columns.add(column)
+
+
 
     # for var_name, db_columns in schema.items():
     #     if var_name == column.name and column.type in STRUCT:
@@ -2158,3 +2167,6 @@ def copy_cols(cols, nest_to_alias):
         c.es_index = nest_to_alias[c.nested_path[0]]
         output.add(c)
     return output
+
+
+

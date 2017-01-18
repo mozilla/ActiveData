@@ -209,7 +209,7 @@ def post_json(url, **kwargs):
     """
     if b"json" in kwargs:
         kwargs[b"data"] = convert.unicode2utf8(convert.value2json(kwargs[b"json"]))
-    elif b'data':
+    elif b'data' in kwargs:
         kwargs[b"data"] = convert.unicode2utf8(convert.value2json(kwargs[b"data"]))
     else:
         Log.error("Expecting `json` parameter")

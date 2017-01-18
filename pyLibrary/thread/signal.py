@@ -17,9 +17,6 @@ from __future__ import unicode_literals
 
 from thread import allocate_lock as _allocate_lock
 
-import sys
-from time import time
-
 _Log = None
 DEBUG = False
 DEBUG_SIGNAL = False
@@ -62,13 +59,14 @@ class Signal(object):
         return self._go
 
     def __nonzero__(self):
-        with self.lock:
-            return self._go
+        return self._go
 
     def wait(self):
         """
         PUT THREAD IN WAIT STATE UNTIL SIGNAL IS ACTIVATED
         """
+        if self._go:
+            return True
 
         with self.lock:
             if self._go:
@@ -101,13 +99,14 @@ class Signal(object):
             _Log.note("GO! {{name|quote}}", name=self.name)
 
         with self.lock:
-            if DEBUG:
-                _Log.note("internal GO! {{name|quote}}", name=self.name)
             if self._go:
                 return
             self._go = True
-            jobs, self.job_queue = self.job_queue, None
-            threads, self.waiting_threads = self.waiting_threads, None
+
+        if DEBUG:
+            _Log.note("internal GO! {{name|quote}}", name=self.name)
+        jobs, self.job_queue = self.job_queue, None
+        threads, self.waiting_threads = self.waiting_threads, None
 
         if threads:
             if DEBUG:
@@ -134,13 +133,7 @@ class Signal(object):
             _Log.error("expecting target")
 
         with self.lock:
-            if self._go:
-                if DEBUG_SIGNAL:
-                    if not _Log:
-                        _late_import()
-                    _Log.note("Signal {{name|quote}} already triggered, running job immediately", name=self.name)
-                target()
-            else:
+            if not self._go:
                 if DEBUG:
                     if not _Log:
                         _late_import()
@@ -149,6 +142,13 @@ class Signal(object):
                     self.job_queue = [target]
                 else:
                     self.job_queue.append(target)
+                return
+
+        if DEBUG_SIGNAL:
+            if not _Log:
+                _late_import()
+            _Log.note("Signal {{name|quote}} already triggered, running job immediately", name=self.name)
+        target()
 
     @property
     def name(self):

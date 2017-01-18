@@ -15,12 +15,12 @@ import itertools
 from collections import Mapping
 from decimal import Decimal
 
+from MoLogs import Log
+from MoLogs.exceptions import suppress_exception
+from pyDots import coalesce, wrap, set_default, literal_field, Null, split_field, startswith_field, Data, join_field, unwraplist, \
+    ROOT_PATH, relative_field
 from pyLibrary import convert
 from pyLibrary.collections import OR, MAX
-from MoLogs.exceptions import suppress_exception
-from MoLogs import Log
-from pyDots import coalesce, wrap, set_default, literal_field, listwrap, Null, split_field, startswith_field, Data, join_field, unwraplist, unwrap, \
-    ROOT_PATH, relative_field
 from pyLibrary.maths import Math
 from pyLibrary.queries.containers import STRUCT, OBJECT
 from pyLibrary.queries.domains import is_keyword
@@ -182,9 +182,6 @@ class Expression(object):
 
     def __data__(self):
         raise NotImplementedError
-
-    def __json__(self):
-        return convert.value2json(self.__data__())
 
     def vars(self):
         raise Log.error("{{type}} has no `vars` method", type=self.__class__.__name__)
@@ -637,8 +634,9 @@ class NullOp(Literal):
     def __str__(self):
         return b"null"
 
-    def __json__(self):
-        return "null"
+    def __data__(self):
+        return None
+
 
 class TrueOp(Literal):
     def __new__(cls, *args, **kwargs):
@@ -3004,3 +3002,5 @@ sql_type_to_json_type = {
     "j": "object",
     "b": "boolean"
 }
+
+

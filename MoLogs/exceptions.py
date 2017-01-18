@@ -13,12 +13,25 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import json
 import sys
 from collections import Mapping
 
 from MoLogs.strings import indent, expand_template
 from pyDots import Data, listwrap, unwraplist, set_default, Null
-from pyLibrary.jsons.encoder import json_encoder
+
+json_encoder = json.JSONEncoder(
+    skipkeys=False,
+    ensure_ascii=False,  # DIFF FROM DEFAULTS
+    check_circular=True,
+    allow_nan=True,
+    indent=None,
+    separators=None,
+    encoding='utf-8',
+    default=None,
+    sort_keys=False
+).encode
+
 
 FATAL = "FATAL"
 ERROR = "ERROR"
@@ -117,10 +130,6 @@ class Except(Exception):
             cause=self.cause,
             trace=self.trace
         )
-
-    def __json__(self):
-        return json_encoder(self.__data__())
-
 
 
 def extract_stack(start=0):

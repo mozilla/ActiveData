@@ -19,7 +19,6 @@ from pyDots.nones import Null
 _get = object.__getattribute__
 _set = object.__setattr__
 _emit_slice_warning = True
-_Log = None
 _datawrap = None
 
 
@@ -27,10 +26,8 @@ def _late_import():
     global _Log
     global _datawrap
 
-    from MoLogs import Log as _Log
     from pyDots.objects import datawrap as _datawrap
 
-    _ = _Log
     _ = _datawrap
 
 

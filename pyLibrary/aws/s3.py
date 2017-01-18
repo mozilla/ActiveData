@@ -48,6 +48,9 @@ class File(object):
     def write(self, value):
         self.bucket.write(self.key, value)
 
+    def write_lines(self, lines):
+        self.bucket.write_lines(self.key, lines)
+
     @property
     def meta(self):
         return self.bucket.meta(self.key)

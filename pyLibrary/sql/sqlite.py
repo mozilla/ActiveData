@@ -26,7 +26,10 @@ from pyLibrary.sql import DB, SQL
 from pyLibrary.thread.threads import Queue, Signal, Thread
 from pyLibrary.times.timer import Timer
 
-DEBUG = True
+DEBUG = False
+DEBUG_INSERT = False
+
+_load_extension_warning_sent = False
 _upgraded = False
 
 
@@ -104,6 +107,9 @@ class Sqlite(DB):
         :param command: COMMAND FOR SQLITE
         :return: list OF RESULTS
         """
+        if not self.worker:
+            self.worker = Thread.run("sqlite db thread", self._worker)
+
         signal = Signal()
         result = Data()
         self.queue.add((command, result, signal, None))
@@ -113,17 +119,21 @@ class Sqlite(DB):
         return result
 
     def _worker(self, please_stop):
+        global _load_extension_warning_sent
+
         if Sqlite.canonical:
             self.db = Sqlite.canonical
         else:
             self.db = sqlite3.connect(coalesce(self.filename, ':memory:'))
+            full_path = File("pyLibrary/vendor/sqlite/libsqlitefunctions.so").abspath
             try:
-                full_path = File("pyLibrary/vendor/sqlite/libsqlitefunctions.so").abspath
-                # self.db.execute("SELECT sqlite3_enable_load_extension(1)")
                 self.db.enable_load_extension(True)
-                self.db.execute("SELECT load_extension('" + full_path + "')")
+                self.db.execute("SELECT load_extension(" + self.quote_value(full_path) + ")")
             except Exception, e:
-                Log.warning("loading sqlite extension functions failed, doing without. (no SQRT for you!)", cause=e)
+                if not _load_extension_warning_sent:
+                    _load_extension_warning_sent = True
+                    Log.warning("Could not load {{file}}}, doing without. (no SQRT for you!)", file=full_path, cause=e)
+
 
         try:
             while not please_stop:
@@ -133,12 +143,15 @@ class Sqlite(DB):
                 if DEBUG:
                     Log.note("done pop")
 
-                if DEBUG:
+                if DEBUG_INSERT and command.strip().lower().startswith("insert"):
+                    Log.note("Running command\n{{command|indent}}", command=command)
+                if DEBUG and not command.strip().lower().startswith("insert"):
                     Log.note("Running command\n{{command|indent}}", command=command)
                 with Timer("Run command", debug=DEBUG):
                     if signal is not None:
                         try:
                             curr = self.db.execute(command)
+                            self.db.commit()
                             result.meta.format = "table"
                             result.header = [d[0] for d in curr.description] if curr.description else None
                             result.data = curr.fetchall()
@@ -153,6 +166,7 @@ class Sqlite(DB):
                     else:
                         try:
                             self.db.execute(command)
+                            self.db.commit()
                         except Exception, e:
                             e = Except.wrap(e)
                             e.cause = Except(
@@ -167,6 +181,7 @@ class Sqlite(DB):
         finally:
             if DEBUG:
                 Log.note("Database is closed")
+            self.db.commit()
             self.db.close()
 
     def quote_column(self, column_name, table=None):

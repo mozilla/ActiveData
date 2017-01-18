@@ -7,24 +7,23 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
+import math
+import re
 from collections import Mapping
 from datetime import date, timedelta, datetime
 from decimal import Decimal
-import json
-import re
 from types import NoneType
 
-import math
-
-from pyDots import FlatList, NullType, Data, unwrap
+from pyDots import FlatList, NullType, Data
 from pyDots.objects import DataObject
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
+_get = object.__getattribute__
 
 _Log = None
 datetime2unix = None
@@ -133,7 +132,7 @@ def _scrub(value, is_done):
     elif type_ is Decimal:
         return float(value)
     elif type_ is Data:
-        return _scrub(unwrap(value), is_done)
+        return _scrub(_get(value, '_dict'), is_done)
     elif isinstance(value, Mapping):
         _id = id(value)
         if _id in is_done:
@@ -168,10 +167,9 @@ def _scrub(value, is_done):
             return False
         else:
             return True
-    elif hasattr(value, '__json__'):
+    elif hasattr(value, '__data__'):
         try:
-            output = json._default_decoder.decode(value.__json__())
-            return output
+            return _scrub(value.__data__(), is_done)
         except Exception, e:
             _Log.error("problem with calling __json__()", e)
     elif hasattr(value, 'co_code') or hasattr(value, "f_locals"):

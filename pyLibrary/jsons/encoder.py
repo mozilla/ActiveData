@@ -21,6 +21,7 @@ from decimal import Decimal
 from math import floor
 from repr import Repr
 
+from MoLogs import Except
 from MoLogs.strings import utf82unicode
 from pyDots import Data, FlatList, NullType, Null
 from pyLibrary.jsons import quote, ESCAPE_DCT, scrub, float2json
@@ -30,6 +31,7 @@ from pyLibrary.times.durations import Duration
 json_decoder = json.JSONDecoder().decode
 _get = object.__getattribute__
 
+_ = Except
 
 # THIS FILE EXISTS TO SERVE AS A FAST REPLACEMENT FOR JSON ENCODING
 # THE DEFAULT JSON ENCODERS CAN NOT HANDLE A DIVERSITY OF TYPES *AND* BE FAST
@@ -200,6 +202,9 @@ def _value2json(value, _buffer):
             else:
                 _dict2json(value, _buffer)
             return
+        elif hasattr(value, '__data__'):
+            d = value.__data__()
+            _value2json(d, _buffer)
         elif hasattr(value, '__json__'):
             j = value.__json__()
             append(_buffer, j)
@@ -372,6 +377,9 @@ def pretty_json(value):
                     )
             output.append("\n]")
             return "".join(output)
+        elif hasattr(value, '__data__'):
+            d = value.__data__()
+            return pretty_json(d)
         elif hasattr(value, '__json__'):
             j = value.__json__()
             if j == None:

@@ -93,8 +93,6 @@ class QueryOp(Expression):
             "limit": self.limit.__data__()
         }
 
-    def __json__(self):
-        return convert.value2json(self.__data__())
 
     def vars(self, exclude_where=False, exclude_select=False):
         """

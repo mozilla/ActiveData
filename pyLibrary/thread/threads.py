@@ -23,7 +23,6 @@ from copy import copy
 from datetime import datetime, timedelta
 from time import sleep
 
-from MoLogs import strings
 from MoLogs.exceptions import Except, suppress_exception
 from MoLogs.profiles import CProfiler
 from pyDots import coalesce, Data, unwraplist, Null
@@ -97,6 +96,7 @@ class Queue(object):
         with self.lock:
             if value is Thread.STOP:
                 # INSIDE THE lock SO THAT EXITING WILL RELEASE wait()
+                self.queue.append(value)
                 self.keep_running = False
                 return
 
@@ -464,15 +464,22 @@ class Thread(object):
                     children = copy(self.children)
                     for c in children:
                         try:
+                            if DEBUG:
+                                sys.stdout.write(b"Stopping thread " + str(c.name) + b"\n")
                             c.stop()
                         except Exception, e:
                             _Log.warning("Problem stopping thread {{thread}}", thread=c.name, cause=e)
 
                     for c in children:
                         try:
+                            if DEBUG:
+                                sys.stdout.write(b"Joining on thread " + str(c.name) + b"\n")
                             c.join()
                         except Exception, e:
                             _Log.warning("Problem joining thread {{thread}}", thread=c.name, cause=e)
+                        finally:
+                            if DEBUG:
+                                sys.stdout.write(b"Joined on thread " + str(c.name) + b"\n")
 
                     self.stopped.go()
                     if DEBUG:
@@ -496,6 +503,9 @@ class Thread(object):
         """
         RETURN THE RESULT {"response":r, "exception":e} OF THE THREAD EXECUTION (INCLUDING EXCEPTION, IF EXISTS)
         """
+        if self is Thread:
+            _Log.error("Thread.join() is not a valid call, use t.join()")
+
         children = copy(self.children)
         for c in children:
             c.join(till=till)
@@ -767,7 +777,7 @@ def _wait_for_exit(please_stop):
         else:
             cr_count = -1000000  # NOT /dev/null
 
-        if strings.strip(line) == "exit":
+        if line.strip() == "exit":
             _Log.alert("'exit' Detected!  Stopping...")
             return
 

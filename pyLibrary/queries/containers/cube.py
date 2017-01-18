@@ -461,6 +461,3 @@ class Cube(Container):
             data={k: v.cube for k, v in self.data.items()},
             meta=self.meta
         )
-
-    def __json__(self):
-        return convert.value2json(self.__data__())

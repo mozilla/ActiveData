@@ -423,12 +423,6 @@ class JSONList(object):
         else:
             return FlatList([oper(v) for v in self.list if v != None])
 
-    def __json__(self):
-        if self.json is not None:
-            return self.json[self.start:self.end]
-        else:
-            return pypy_json_encode(self)
-
 
 if use_pypy:
     json_decoder = decode

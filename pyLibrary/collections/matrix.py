@@ -247,8 +247,8 @@ class Matrix(object):
     def __str__(self):
         return "Matrix " + convert.value2json(self.dims) + ": " + str(self.cube)
 
-    def __json__(self):
-        return convert.value2json(self.cube)
+    def __data__(self):
+        return self.cube
 
 
 Matrix.ZERO = Matrix(value=None)

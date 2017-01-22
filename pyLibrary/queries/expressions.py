@@ -1084,15 +1084,15 @@ class DivOp(Expression):
 
         if lhs and rhs:
             if d == None:
-                return [{
+                return wrap([{
                     "name": ".",
                     "sql": {"n": "(" + lhs + ") / (" + rhs + ")"}
-                }]
+                }])
             else:
-                return [{
+                return wrap([{
                     "name": ".",
                     "sql": {"n": "COALESCE((" + lhs + ") / (" + rhs + "), " + d + ")"}
-                }]
+                }])
         else:
             return Null
 

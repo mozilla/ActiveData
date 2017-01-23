@@ -267,7 +267,7 @@ class Variable(Expression):
         return agg+".get("+convert.value2quote(path[-1])+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        cols = schema.columns.get(self.var, None)
+        cols = schema.columns[self.var]
         if cols is None:
             # DOES NOT EXIST
             return wrap([{"name": ".", "sql": {}, "nested_path": ROOT_PATH}])
@@ -278,10 +278,10 @@ class Variable(Expression):
                 for cn, cs in schema.columns.items():
                     if cn.startswith(prefix):
                         for child_col in cs:
-                            acc[literal_field(child_col.nested_path[0])][literal_field(child_col.name)][json_type_to_sql_type[child_col.type]] = schema.quote_column(child_col.es_column).sql
+                            acc[literal_field(child_col.nested_path[0])][literal_field(schema.get_column_name(child_col))][json_type_to_sql_type[child_col.type]] = schema.quote_column(child_col.es_column).sql
             else:
                 nested_path = col.nested_path[0]
-                acc[literal_field(nested_path)][literal_field(col.name)][json_type_to_sql_type[col.type]] = schema.quote_column(col.es_column).sql
+                acc[literal_field(nested_path)][literal_field(schema.get_column_name(col))][json_type_to_sql_type[col.type]] = schema.quote_column(col.es_column).sql
 
         return wrap([
             {"name": relative_field(cname, self.var), "sql": types, "nested_path": nested_path}
@@ -834,8 +834,8 @@ class LeavesOp(Expression):
         prefix_length = len(split_field(term))
         return wrap([
             {
-                "name": literal_field(join_field(split_field(c.name)[prefix_length:])),
-                "sql": Variable(c.name).to_sql(schema)[0].sql
+                "name": literal_field(join_field(split_field(schema.get_column_name(c))[prefix_length:])),
+                "sql": Variable(schema.get_column_name(c)).to_sql(schema)[0].sql
             }
             for n, cols in schema.columns.items()
             if startswith_field(n, term)

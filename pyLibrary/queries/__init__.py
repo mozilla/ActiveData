@@ -104,14 +104,23 @@ def wrap_from(frum, schema=None):
 
 class Schema(object):
 
-    def __init__(self, columns):
-        self.lookup = Index(keys=["name"], data=columns)
+    def __init__(self, table_name, columns):
+        self.table = table_name  # USED AS AN EXPLICIT STATEMENT OF PERSPECTIVE IN THE DATABASE
+        self.lookup = Index(keys=[self.table], data=columns)
 
     def __getitem__(self, column_name):
         return self.lookup[column_name]
 
     def get_column(self, name, table=None):
         return self.lookup[name]
+
+    def get_column_name(self, column):
+        """
+        RETURN THE COLUMN NAME, FROM THE PERSPECTIVE OF THIS SCHEMA
+        :param column:
+        :return: NAME OF column
+        """
+        return column.names[self.table]
 
     @property
     def columns(self):

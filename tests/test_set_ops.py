@@ -960,9 +960,9 @@ class TestSetOps(ActiveDataBaseTest):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"o": 3, "a": {"b": "x", "v": 2}},
-                    {"o": 1, "a": {"b": "x", "v": 5}},
-                    {"o": 2, "a": {"b": "x", "v": 7}},
+                    {"o": 3, "a.b": "x", "a.v": 2},
+                    {"o": 1, "a.b": "x", "a.v": 5},
+                    {"o": 2, "a.b": "x", "a.v": 7},
                     {"o": 4}
                 ]
             },

@@ -69,6 +69,21 @@ def literal_field(field):
         Log.error("bad literal", e)
 
 
+def unliteral_field(field):
+    """
+    DUE TO PATHOLOGY IN MY CODE WE HAVE A path WITH ESCAPED DOTS BUT WE WANT OT USE IT ON A dict, NOT A Data
+    a = dict()
+    b = Data(a)
+    a[unliteral_field(k)]==b[k] (for all k)
+
+    :param field: THE STRING TO DE-literal IZE
+    :return: SIMPLER STRING
+    """
+    if len(split_field(field))>1:
+        from MoLogs import Log
+        Log.error("Bad call! Dude!")
+    return field.replace("\.", ".")
+
 def split_field(field):
     """
     RETURN field AS ARRAY OF DOT-SEPARATED FIELDS

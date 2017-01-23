@@ -579,15 +579,13 @@ class Table(DataClass("Table", [
 Column = DataClass(
     "Column",
     [
-        "name",
-        "table",
+        "names",
         "es_column",
         "es_index",
         # "es_type",
         "type",
         {"name": "useSource", "default": False},
         {"name": "nested_path", "nulls": True},  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
-        {"name": "relative", "nulls": True},
         {"name": "count", "nulls": True},
         {"name": "cardinality", "nulls": True},
         {"name": "partitions", "nulls": True},

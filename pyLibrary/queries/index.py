@@ -16,7 +16,7 @@ from collections import Mapping
 from copy import copy
 
 from MoLogs import Log
-from pyDots import wrap, unwrap, tuplewrap
+from pyDots import wrap, unwrap, tuplewrap, get_attr
 from pyLibrary.queries.unique_index import UniqueIndex
 
 
@@ -90,8 +90,17 @@ class Index(object):
         except Exception, e:
             Log.error("something went wrong", e)
 
+    def keys(self):
+        if len(self._keys) == 1:
+            return (k[0] for k in self._data.keys())
+        else:
+            return self._data.keys()
 
-
+    def items(self):
+        if len(self._keys)==1:
+            return ((k[0], d) for k,d in self._data.items())
+        else:
+            return self._data.items()
 
     def __nonzero__(self):
         if self._data.keys():
@@ -150,7 +159,7 @@ class Index(object):
 def value2key(keys, val):
     if len(keys) == 1:
         if isinstance(val, Mapping):
-            return val[keys[0]],
+            return get_attr(val, keys[0]),
         elif isinstance(val, (list, tuple)):
             return val[0],
         return val,

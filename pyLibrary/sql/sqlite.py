@@ -16,6 +16,8 @@ import re
 import sqlite3
 from collections import Mapping
 
+import sys
+
 from pyLibrary import convert
 from MoLogs.exceptions import Except, extract_stack, ERROR
 from MoLogs import Log
@@ -125,7 +127,9 @@ class Sqlite(DB):
             self.db = Sqlite.canonical
         else:
             self.db = sqlite3.connect(coalesce(self.filename, ':memory:'))
-            full_path = File("pyLibrary/vendor/sqlite/libsqlitefunctions.so").abspath
+
+            library_loc = File.new_instance(sys.modules[__name__].__file__, "../..")
+            full_path = File.new_instance(library_loc, "vendor/sqlite/libsqlitefunctions.so").abspath
             try:
                 self.db.enable_load_extension(True)
                 self.db.execute("SELECT load_extension(" + self.quote_value(full_path) + ")")
@@ -133,7 +137,6 @@ class Sqlite(DB):
                 if not _load_extension_warning_sent:
                     _load_extension_warning_sent = True
                     Log.warning("Could not load {{file}}}, doing without. (no SQRT for you!)", file=full_path, cause=e)
-
 
         try:
             while not please_stop:

@@ -13,21 +13,20 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import itertools
 import re
 from collections import Mapping, OrderedDict
 from copy import copy
 
 from MoLogs import Log
 from pyDots import listwrap, coalesce, Data, wrap, Null, unwraplist, split_field, join_field, startswith_field, \
-    literal_field, unwrap, relative_field, concat_field
+    literal_field, unwrap, relative_field, concat_field, unliteral_field
 from pyLibrary import convert, jsons
 from pyLibrary.collections import UNION
 from pyLibrary.collections.matrix import Matrix, index_to_coordinate
 from pyLibrary.maths import Math
 from pyLibrary.maths.randoms import Random
 from pyLibrary.meta import use_settings
-from pyLibrary.queries import jx, Schema
+from pyLibrary.queries import jx, Index
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, TimeDomain, DurationDomain
 from pyLibrary.queries.expressions import jx_expression, Variable, sql_type_to_json_type, TupleOp, LeavesOp
@@ -88,16 +87,20 @@ class Table_usingSQLite(Container):
         self.uid_accessor = jx.get(self.uid)
         self.nested_tables = OrderedDict()  # MAP FROM NESTED PATH TO Table OBJECT, PARENTS PROCEED CHILDREN
         self.nested_tables["."] = self
-        self.columns = {".": set()}  # MAP FROM DOCUMENT ABS PROPERTY NAME TO THE SET OF SQL COLUMNS IT REPRESENTS (ONE FOR EACH REALIZED DATATYPE)
+        self.columns = Index(keys=[join_field(["names", self.name])])  # MAP FROM DOCUMENT ABS PROPERTY NAME TO THE SET OF SQL COLUMNS IT REPRESENTS (ONE FOR EACH REALIZED DATATYPE)
 
         if not exists:
             for u in self.uid:
                 if u == GUID:
-                    if self.columns.get(u) is None:
-                        self.columns[u] = set()
+                    pass
                 else:
-                    c = Column(name=u, table=name, type="string", es_column=typed_column(u, "string"), es_index=name)
-                    add_column_to_schema(self.columns, c)
+                    c = Column(
+                        names={name: u},
+                        type="string",
+                        es_column=typed_column(u, "string"),
+                        es_index=name
+                    )
+                    self.add_column_to_schema(self.nested_tables, c)
 
             command = (
                 "CREATE TABLE " + quote_table(name) + "(" +
@@ -123,14 +126,13 @@ class Table_usingSQLite(Container):
                 cname = untyped_column(r[1])
                 ctype = r[2].lower()
                 column = Column(
-                    name=cname,
-                    table=name,
+                    names={name: cname},
                     type=ctype,
                     es_column=typed_column(cname, ctype),
                     es_index=name
                 )
 
-                add_column_to_schema(self.columns, column)
+                self.add_column_to_schema(self.columns, column)
                 # TODO: FOR ALL TABLES, FIND THE MAX ID
 
     def quote_column(self, column, table=None):
@@ -217,6 +219,9 @@ class Table_usingSQLite(Container):
                 "ALTER TABLE " + quote_table(self.name) + " ADD COLUMN " + _quote_column(column) + " " + column.type
             )
 
+    def get_column_name(self, column):
+        return column.names[self.name]
+
     def __len__(self):
         counter = self.db.query("SELECT COUNT(*) FROM " + quote_table(self.name))[0][0]
         return counter
@@ -290,9 +295,8 @@ class Table_usingSQLite(Container):
             nested_value = command.set[new_column_name]
             ctype = get_type(nested_value)
             column = Column(
-                name=new_column_name,
+                names={self.name: new_column_name},
                 type=ctype,
-                table=self.name,
                 es_index=self.name,
                 es_column=typed_column(new_column_name, ctype)
             )
@@ -380,9 +384,8 @@ class Table_usingSQLite(Container):
                 for n, cs in nested_table.columns.items():
                     for c in cs:
                         column = Column(
-                            name=c.name,
+                            names={self.name: c.name},
                             type=c.type,
-                            table=self.name,
                             es_index=c.es_index,
                             es_column=c.es_column,
                             nested_path=[nested_column_name] + c.nested_path
@@ -1210,8 +1213,7 @@ class Table_usingSQLite(Container):
         for v in vars_:
             if not any(startswith_field(cname, v) for cname in self.columns.keys()):
                 active_columns["."].append(Column(
-                    name=v,
-                    table=".",
+                    names={self.name: v},
                     type="unknown",
                     es_column=".",
                     es_index=".",
@@ -1304,7 +1306,7 @@ class Table_usingSQLite(Container):
                                     column_alias = _make_column_name(column_number)
                                     sql_selects.append(unsorted_sql + " AS " + column_alias)
                                     index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Data(
-                                        push_name=concat_field(s.name, column.name),
+                                        push_name=literal_field(concat_field(s.name, column.name)),
                                         push_column=si,
                                         push_child=".",
                                         pull=get_column(column_number),
@@ -1455,7 +1457,7 @@ class Table_usingSQLite(Container):
         if query.format == "cube":
             num_rows = len(result.data)
             num_cols = Math.MAX([c.push_column for c in cols]) + 1 if len(cols) else 0
-            map_index_to_name = {c.push_column: c.push_name for c in cols}
+            map_index_to_name = {c.push_column: unliteral_field(c.push_name) for c in cols}
             temp_data = [[None] * num_rows for _ in range(num_cols)]
             for rownum, d in enumerate(result.data):
                 for c in cols:
@@ -1486,7 +1488,7 @@ class Table_usingSQLite(Container):
             header = [None] * num_column
             for c in cols:
                 sf = split_field(c.push_name)
-                if len(sf)>1:
+                if len(sf) > 1:
                     Log.error("programming error, do not know what to do")
                 header[c.push_column] = sf[0]
 
@@ -1657,10 +1659,7 @@ class Table_usingSQLite(Container):
                         column.type]
                 )
 
-                cols = self.columns.get(column.name)
-                if cols is None:
-                    cols = self.columns[column.name] = set()
-                cols.add(column)
+                self.columns.add(column)
 
             elif required_change.nest:
                 column = required_change.nest
@@ -1777,11 +1776,11 @@ class Table_usingSQLite(Container):
 
                     if value_type in STRUCT:
                         c = unwraplist(
-                            [cc for cc in columns.get(cname, Null) if cc.type in STRUCT]
+                            [cc for cc in columns[cname] if cc.type in STRUCT]
                         )
                     else:
                         c = unwraplist(
-                            [cc for cc in columns.get(cname, Null) if cc.type == value_type]
+                            [cc for cc in columns[cname] if cc.type == value_type]
                         )
 
                     if not c:
@@ -1810,14 +1809,13 @@ class Table_usingSQLite(Container):
                             insertion.rows.append(row)
 
                         c = Column(
-                            name=cname,
-                            table=self.name,
+                            names={self.name: cname},
                             type=value_type,
                             es_column=typed_column(cname, value_type),
                             es_index=self.name,  # THIS MAY BE THE WRONG TABLE, IF THIS PATH IS A NESTED DOC
                             nested_path=nested_path
                         )
-                        add_column_to_schema(columns, c)
+                        self.add_column_to_schema(self.nested_tables, c)
                         if value_type == "nested":
                             nested_tables[cname] = "fake table"
 
@@ -1862,14 +1860,13 @@ class Table_usingSQLite(Container):
 
                 if not c:
                     c = Column(
-                        name=cname,
-                        table=self.name,
+                        names={self.name: cname},
                         type=value_type,
                         es_column=typed_column(cname, value_type),
                         es_index=self.name,
                         nested_path=nested_path
                     )
-                    add_column_to_schema(columns, c)
+                    self.add_column_to_schema(columns, c)
                     if value_type == "nested":
                         nested_tables[cname] = "fake table"
                     required_changes.append({"add": c})
@@ -1938,31 +1935,15 @@ class Table_usingSQLite(Container):
 
             self.db.execute(prefix + records)
 
+    def add_column_to_schema(self, nest_to_schema, column):
+        abs_table = literal_field(self.name)
+        abs_name = column.names[abs_table]
 
-def add_column_to_schema(nest_to_schema, column):
-    for nest, schema in nest_to_schema.items():
-        # MODIFY COLUMN BASED ON NESTED LEVEL
-        relative_column = copy(column)
+        for nest, schema in nest_to_schema.items():
+            rel_table = literal_field(join_field([self.name] + split_field(nest)))
+            rel_name = relative_field(abs_name, nest)
 
-
-
-
-        columns = schema.get(column.name)
-        if not columns:
-            columns = schema[column.name] = set()
-        columns.add(column)
-
-
-
-    # for var_name, db_columns in schema.items():
-    #     if var_name == column.name and column.type in STRUCT:
-    #         columns.add(column)
-    #         db_columns.add(column)
-    #         continue
-    #     if startswith_field(column.name, var_name) and column.type not in STRUCT:
-    #         db_columns.add(column)
-    #     if startswith_field(var_name, column.name) and column.type not in STRUCT:
-    #         columns.add(column)
+            column.names[rel_table] = rel_name
 
 
 _do_not_quote = re.compile(r"^\w+$", re.UNICODE)

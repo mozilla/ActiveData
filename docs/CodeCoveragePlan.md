@@ -66,7 +66,7 @@ A review (2015) showed a few shortcomings:
 
 ###Consideration of #`lcov` HTML output
 
-Has all the same drawbacks of Coveralls, but with better monetary cost. There is nothing preventing us from turning this on, except maybe computational cost, as `lcov` is proving slow at our size. 
+Has all the same drawbacks of Coveralls, but with less monetary cost. There is nothing preventing us from turning this on, except maybe computational cost, as `lcov` is proving slow at our size. 
 
 
 ##Time Frame

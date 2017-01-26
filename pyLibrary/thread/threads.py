@@ -27,7 +27,7 @@ from MoLogs.exceptions import Except, suppress_exception
 from MoLogs.profiles import CProfiler
 from pyDots import coalesce, Data, unwraplist, Null
 from pyLibrary.thread.lock import Lock
-from pyLibrary.thread.signal import Signal
+from pyLibrary.thread.signal import Signal, AndSignals
 from pyLibrary.thread.till import Till
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import SECOND
@@ -170,7 +170,7 @@ class Queue(object):
         if self.next_warning < now:
             self.next_warning = now + wait_time
 
-        while self.keep_running and len(self.queue) > self.max:
+        while self.keep_running and len(self.queue) >= self.max:
             if now > time_to_stop_waiting:
                 if not _Log:
                     _late_import()
@@ -542,7 +542,8 @@ class Thread(object):
     @staticmethod
     def wait_for_shutdown_signal(
         please_stop=False,  # ASSIGN SIGNAL TO STOP EARLY
-        allow_exit=False  # ALLOW "exit" COMMAND ON CONSOLE TO ALSO STOP THE APP
+        allow_exit=False,  # ALLOW "exit" COMMAND ON CONSOLE TO ALSO STOP THE APP
+        wait_forever=True  # IGNORE CHILD THREADS, NEVER EXIT.  False -> IF NO CHILD THREADS LEFT, THEN EXIT
     ):
         """
         FOR USE BY PROCESSES NOT EXPECTED TO EVER COMPLETE UNTIL EXTERNAL
@@ -552,6 +553,7 @@ class Thread(object):
 
         :param please_stop:
         :param allow_exit:
+        :param wait_forever:: Assume all needed threads have been launched. When done
         :return:
         """
         if not isinstance(please_stop, Signal):
@@ -559,10 +561,18 @@ class Thread(object):
 
         please_stop.on_go(lambda: thread.start_new_thread(_stop_main_thread, ()))
 
-        if Thread.current() != MAIN_THREAD:
+        self_thread = Thread.current()
+        if self_thread != MAIN_THREAD:
             if not _Log:
                 _late_import()
             _Log.error("Only the main thread can sleep forever (waiting for KeyboardInterrupt)")
+
+        if not wait_forever:
+            # TRIGGER SIGNAL WHEN ALL EXITING THREADS ARE DONE
+            pending = copy(self_thread.children)
+            all = AndSignals(please_stop, len(pending))
+            for p in pending:
+                p.stopped.on_go(all.done)
 
         try:
             if allow_exit:

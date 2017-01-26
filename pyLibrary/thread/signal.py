@@ -185,27 +185,33 @@ class Signal(object):
             _Log.error("Expecting OR with other signal")
 
         if DEBUG:
-            output = Signal(self.name+" and "+other.name)
+            output = Signal(self.name + " and " + other.name)
         else:
-            output = Signal(self.name+" and "+other.name)
+            output = Signal(self.name + " and " + other.name)
 
-        gen = BinaryAndSignals(output)
-        self.on_go(gen.advance)
-        other.on_go(gen.advance)
+        gen = AndSignals(output, 2)
+        self.on_go(gen.done)
+        other.on_go(gen.done)
         return output
 
 
-class BinaryAndSignals(object):
-    __slots__ = ["signal", "inc", "locker"]
+class AndSignals(object):
+    __slots__ = ["signal", "remaining", "locker"]
 
-    def __init__(self, signal):
+    def __init__(self, signal, count):
+        """
+        CALL signal.go() WHEN done() IS CALLED count TIMES
+        :param signal:
+        :param count:
+        :return:
+        """
         self.signal = signal
         self.locker = _allocate_lock()
-        self.inc = 0
+        self.remaining = count
 
-    def advance(self):
+    def done(self):
         with self.locker:
-            if self.inc is 0:
-                self.inc = 1
-            else:
-                self.signal.go()
+            self.remaining -= 1
+            remaining = self.remaining
+        if not remaining:
+            self.signal.go()

@@ -350,13 +350,13 @@ class TestSetOps(ActiveDataBaseTest):
             ],
             "query": {
                 "from": TEST_TABLE,
-                "select": ["a", "b", {"name": "t", "value": {"add": ["a", "b"], "default": 0}}]
+                "select": ["a", "b", {"name": "t", "value": {"add": ["a", "b"], "default": -5}}]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
                     {"a": 1, "b": -1, "t": 0},
-                    {"t": 0}
+                    {"t": -5}
                 ]
             }
         }

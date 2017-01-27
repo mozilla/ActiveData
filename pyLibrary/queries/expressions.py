@@ -1498,9 +1498,9 @@ class NumberOp(Expression):
                     acc.append(v)
 
         if not acc:
-            return [{"name":".", "sql":{}}]
+            return wrap([])
         else:
-            return [{"name":".", "sql":{"n": "COALESCE(" + ",".join(acc) + ")"}}]
+            return wrap([{"name": ".", "sql": {"n": "COALESCE(" + ",".join(acc) + ")"}}])
 
     def __data__(self):
         return {"number": self.term.__data__()}
@@ -1646,21 +1646,36 @@ class MultiOp(Expression):
 
     def to_sql(self, schema, not_null=False, boolean=False):
         terms = [t.to_sql(schema) for t in self.terms]
+        default = coalesce(self.default.to_sql(schema)[0].sql.n, "NULL")
 
-        acc = "CASE "
-        op, total = MultiOp.operators[self.op]
-        total = [total]
+        op, identity = MultiOp.operators[self.op]
+        sql_terms = []
         for t in terms:
             if len(t) > 1:
                 return wrap([{"name": ".", "sql": {}}])
             sql = t[0].sql.n
             if not sql:
                 return wrap([{"name": ".", "sql": {}}])
-            acc += "WHEN " + sql + " IS NULL THEN NULL "
-            total.append(sql)
-        acc += "ELSE " + op.join(total) + " END"
+            sql_terms.append(sql)
 
-        return wrap([{"name": ".", "sql": {"n": acc}}])
+        if self.nulls.json=="true":
+            sql = (
+                " CASE " +
+                " WHEN " + " AND ".join("(" + s + " IS NULL)" for s in sql_terms) +
+                " THEN " + default +
+                " ELSE " + op.join("COALESCE(" + s + ", 0)" for s in sql_terms) +
+                " END"
+            )
+            return wrap([{"name": ".", "sql": {"n": sql}}])
+        else:
+            sql = (
+                " CASE " +
+                " WHEN " + " OR ".join("(" + s + " IS NULL)" for s in sql_terms) +
+                " THEN " + default +
+                " ELSE " + op.join("(" + s + ")" for s in sql_terms) +
+                " END"
+            )
+            return wrap([{"name": ".", "sql": {"n": sql}}])
 
     def __data__(self):
         return {self.op: [t.__data__() for t in self.terms], "default": self.default, "nulls": self.nulls}

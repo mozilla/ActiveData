@@ -697,7 +697,7 @@ class TestSetOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-    def test_not_left(self):
+    def test_param_left(self):
         test = {
             "data": [
                 {"url": NULL},
@@ -719,14 +719,12 @@ class TestSetOps(ActiveDataBaseTest):
                     "value": {
                         "left": [
                             "url",
-                            {"add": [
-                                1,
-                                {
-                                    "find": {"url": "/"},
-                                    "start": 23,
-                                    "default": {"length": "url"}
-                                }
-                            ]}
+                            {
+                                "find": {"url": "/"},
+                                "start": 23,
+                                "default": {"length": "url"}
+                            }
+
                         ]
                     }
                 }

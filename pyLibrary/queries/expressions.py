@@ -267,7 +267,7 @@ class Variable(Expression):
         return agg+".get("+convert.value2quote(path[-1])+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        cols = schema.columns[self.var]
+        cols = [c for c in schema.columns if startswith_field(schema.get_column_name(c), self.var)]
         if cols is None:
             # DOES NOT EXIST
             return wrap([{"name": ".", "sql": {}, "nested_path": ROOT_PATH}])
@@ -1271,16 +1271,16 @@ class NeOp(Expression):
         return "((" + lhs + ") != None and (" + rhs + ") != None and (" + lhs + ") != (" + rhs + "))"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        lhs = self.lhs.to_sql(schema)
-        rhs = self.rhs.to_sql(schema)
+        lhs = self.lhs.to_sql(schema)[0].sql
+        rhs = self.rhs.to_sql(schema)[0].sql
         acc = []
         for t in "bsnj":
             if lhs[t] and rhs[t]:
-                acc.append("(" + self.lhs[t] + ") = (" + self.rhs[t] + ")")
+                acc.append("(" + lhs[t] + ") = (" + rhs[t] + ")")
         if not acc:
             return FalseOp().to_sql(schema)
         else:
-            return {"b": "NOT (" + " OR ".join(acc) + ")"}
+            return wrap([{"name": ".", "sql": {"b": "NOT (" + " OR ".join(acc) + ")"}}])
 
     def to_esfilter(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
@@ -1542,11 +1542,11 @@ class StringOp(Expression):
             else:
                 acc.append("CASE WHEN (" + test + ") THEN NULL ELSE CAST(" + v + " as TEXT) END")
         if not acc:
-            return {}
+            return wrap([{}])
         elif len(acc) == 1:
-            return {"s": acc[0]}
+            return wrap([{"name": ".", "sql": {"s": acc[0]}}])
         else:
-            return {"s": "COALESCE(" + ",".join(acc) + ")"}
+            return wrap([{"name": ".", "sql": {"s": "COALESCE(" + ",".join(acc) + ")"}}])
 
     def __data__(self):
         return {"string": self.term.__data__()}
@@ -1577,16 +1577,20 @@ class CountOp(Expression):
     def to_sql(self, schema, not_null=False, boolean=False):
         acc = []
         for term in self.terms:
-            for t, v in term.to_sql(schema).items():
-                if t in ["b", "s", "n"]:
-                    acc.append("CASE WHEN (" + v + ") IS NULL THEN 0 ELSE 1 END")
-                else:
-                    acc.append("1")
+            sqls = term.to_sql(schema)
+            if len(sqls)>1:
+                acc.append("1")
+            else:
+                for t, v in sqls[0].sql.items():
+                    if t in ["b", "s", "n"]:
+                        acc.append("CASE WHEN (" + v + ") IS NULL THEN 0 ELSE 1 END")
+                    else:
+                        acc.append("1")
 
         if not acc:
-            return {}
+            return wrap([{}])
         else:
-            return {"n": "+".join(acc)}
+            return wrap([{"nanme":".", "sql":{"n": "+".join(acc)}}])
 
     def __data__(self):
         return {"count": [t.__data__() for t in self.terms]}
@@ -2322,15 +2326,28 @@ class FindOp(Expression):
     def to_sql(self, schema, not_null=False, boolean=False):
         value = self.value.to_sql(schema)[0].sql.s
         find = self.find.to_sql(schema)[0].sql.s
+        start_index = self.start.to_sql(schema)[0].sql.n
 
         if boolean:
-            return wrap([{"sql": {
-                "b": "INSTR(" + value + "," + find + ")"
-            }}])
+            if start_index == "0":
+                return wrap([{"name": ".", "sql": {
+                    "b": "INSTR(" + value + "," + find + ")"
+                }}])
+            else:
+                return wrap([{"name": ".", "sql": {
+                    "b": "INSTR(SUBSTR(" + value + "," + start_index + "+1)," + find + ")"
+                }}])
         else:
-            return wrap([{"sql": {
-                "n": "INSTR(" + value + "," + find + ")-1"
-            }}])
+            default = self.default.to_sql(schema, not_null=True)[0].sql.n if self.default else "NULL"
+            test = self.to_sql(schema, boolean=True)[0].sql.b
+            if start_index == "0":
+                index = "INSTR(" + value + "," + find + ")-1"
+            else:
+                index = "INSTR(SUBSTR(" + value + "," + start_index + "+1)," + find + ")+" + start_index
+
+            sql = "CASE WHEN (" + test + ") THEN (" + index + ") ELSE (" + default + ") END"
+            return wrap([{"name": ".", "sql": {"n": sql}}])
+
 
     def to_esfilter(self):
         if isinstance(self.value, Variable) and isinstance(self.find, Literal):

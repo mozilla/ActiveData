@@ -15,24 +15,25 @@ import re
 from collections import Mapping
 from copy import deepcopy
 
-from MoLogs import Log, strings
-from MoLogs.exceptions import Except
-from MoLogs.strings import utf82unicode
+from mo_logs import Log, strings
+from mo_logs.exceptions import Except
+from mo_logs.strings import utf82unicode
+from mo_threads import Lock
 from pyDots import coalesce, Null, Data, set_default, join_field, split_field, listwrap, literal_field, \
     ROOT_PATH
 from pyDots import wrap
 from pyDots.lists import FlatList
 from pyLibrary import convert
 from pyLibrary.env import http
-from pyLibrary.jsons.typed_encoder import json2typed
-from pyLibrary.maths import Math
-from pyLibrary.maths.randoms import Random
+from mo_json.typed_encoder import json2typed
+from mo_math import Math
+from mo_math.randoms import Random
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
-from pyLibrary.thread.threads import ThreadedQueue, Lock
-from pyLibrary.thread.till import Till
-from pyLibrary.times.dates import Date
-from pyLibrary.times.timer import Timer
+from mo_threads import ThreadedQueue
+from mo_threads import Till
+from mo_times.dates import Date
+from mo_times.timer import Timer
 
 ES_STRUCT = ["object", "nested"]
 ES_NUMERIC_TYPES = ["long", "integer", "double", "float"]

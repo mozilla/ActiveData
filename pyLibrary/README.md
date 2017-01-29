@@ -83,7 +83,7 @@ The creation of this function was motivated by the desire to extend Python's
 `format()` function with more features and replace the [formatting mini language](https://docs.python.org/2/library/string.html#formatspec),
 because it appears to be Perl-inspired line noise.
 
-    	MoLogs.strings.expand_template(template, value)
+    	mo_logs.strings.expand_template(template, value)
 
 A simple function that replaces variables in `template` with the properties
 found in `value`. Variables are indicated by the double moustaches;
@@ -94,7 +94,7 @@ of complex properties; converted to JSON. Further string formatting can be
 performed by feeding properties to functions using the pipe (`|`) symbol:
 
 ```python
-    >>> from MoLogs.strings import expand_template
+    >>> from mo_logs.strings import expand_template
     >>> total = 123.45
     >>> some_list = [10, 11, 14, 80]
 
@@ -109,7 +109,7 @@ performed by feeding properties to functions using the pipe (`|`) symbol:
             [10, 11, 14, 80]
 ```
 
-Look into the [`MoLogs.strings.py`](https://github.com/klahnakoski/pyLibrary/blob/dev/MoLogs/strings.py) to see a full list of transformation
+Look into the [`mo_logs.strings.py`](https://github.com/klahnakoski/pyLibrary/blob/dev/mo_logs/strings.py) to see a full list of transformation
 functions.
 
 Variables are not limited to simple names: You may use dot (`.`) to specify

@@ -14,15 +14,13 @@ from __future__ import unicode_literals
 from collections import Mapping
 from copy import copy
 
-from pyLibrary import convert
-from pyLibrary.collections import AND, UNION
-from MoLogs import Log
+from mo_logs import Log
+from mo_math import AND, UNION
+from mo_math import Math
+from pyDots import Data
 from pyDots import coalesce, Null, set_default, unwraplist, literal_field
 from pyDots import wrap, unwrap, listwrap
-from pyDots import Data
 from pyDots.lists import FlatList
-from pyLibrary.maths import Math
-from pyLibrary.meta import use_settings
 from pyLibrary.queries import Schema, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.dimensions import Dimension

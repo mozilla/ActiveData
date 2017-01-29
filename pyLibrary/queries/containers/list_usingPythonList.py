@@ -17,7 +17,7 @@ from types import NoneType
 import itertools
 
 from pyLibrary import convert
-from MoLogs import Log
+from mo_logs import Log
 from pyDots import Data, wrap, listwrap, unwraplist, FlatList, unwrap, join_field, split_field, NullType, Null
 from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import Container
@@ -25,8 +25,8 @@ from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression, TrueOp, jx_expression_to_function, Variable
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
 from pyLibrary.queries.meta import Column, ROOT_PATH
-from pyLibrary.thread.threads import Lock
-from pyLibrary.times.dates import Date
+from mo_threads import Lock
+from mo_times.dates import Date
 
 _get = object.__getattribute__
 

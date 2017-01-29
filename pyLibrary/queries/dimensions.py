@@ -12,13 +12,13 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
 import pyDots as dot
-from pyLibrary.collections import SUM
+from mo_math import SUM
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import Domain, ALGEBRAIC, KNOWN
 from pyDots import Null, coalesce, join_field, split_field, Data
 from pyDots.lists import FlatList
-from pyLibrary.times.timer import Timer
-from MoLogs import Log
+from mo_times.timer import Timer
+from mo_logs import Log
 from pyDots import wrap, listwrap
 
 

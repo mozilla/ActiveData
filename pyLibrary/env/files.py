@@ -14,10 +14,10 @@ import os
 import shutil
 from datetime import datetime
 
-from MoLogs.strings import utf82unicode
+from mo_logs.strings import utf82unicode
 from pyDots import coalesce
 from pyLibrary import convert
-from pyLibrary.maths import crypto
+from mo_math import crypto
 
 
 class File(object):
@@ -30,7 +30,7 @@ class File(object):
         YOU MAY SET filename TO {"path":p, "key":k} FOR CRYPTO FILES
         """
         if filename == None:
-            from MoLogs import Log
+            from mo_logs import Log
 
             Log.error("File must be given a filename")
         elif isinstance(filename, basestring):
@@ -161,14 +161,14 @@ class File(object):
                 return content
 
     def read_json(self, encoding="utf8"):
-        from pyLibrary.jsons import ref
+        import mo_json_config
 
         content = self.read(encoding=encoding)
         value = convert.json2value(content, flexible=True, leaves=True)
         abspath = self.abspath
         if os.sep == "\\":
             abspath = "/" + abspath.replace(os.sep, "/")
-        return ref.expand(value, "file://" + abspath)
+        return mo_json_config.expand(value, "file://" + abspath)
 
     def is_directory(self):
         return os.path.isdir(self._filename)
@@ -180,7 +180,7 @@ class File(object):
             with open(self._filename, "rb") as f:
                 return f.read()
         except Exception, e:
-            from MoLogs import Log
+            from mo_logs import Log
 
             Log.error("Problem reading file {{filename}}", self.abspath)
 
@@ -195,7 +195,7 @@ class File(object):
             self.parent.create()
         with open(self._filename, "wb") as f:
             if isinstance(data, list) and self.key:
-                from MoLogs import Log
+                from mo_logs import Log
 
                 Log.error("list of data and keys are not supported, encrypt before sending to file")
 
@@ -208,7 +208,7 @@ class File(object):
 
             for d in data:
                 if not isinstance(d, unicode):
-                    from MoLogs import Log
+                    from mo_logs import Log
 
                     Log.error("Expecting unicode data only")
                 if self.key:
@@ -231,7 +231,7 @@ class File(object):
                     for line in f:
                         yield utf82unicode(line).rstrip()
             except Exception, e:
-                from MoLogs import Log
+                from mo_logs import Log
 
                 Log.error("Can not read line from {{filename}}", filename=self._filename, cause=e)
 
@@ -245,7 +245,7 @@ class File(object):
             self.parent.create()
         with open(self._filename, "ab") as output_file:
             if isinstance(content, str):
-                from MoLogs import Log
+                from mo_logs import Log
 
                 Log.error("expecting to write unicode only")
             output_file.write(content.encode("utf-8"))
@@ -264,14 +264,14 @@ class File(object):
             with open(self._filename, "ab") as output_file:
                 for c in content:
                     if isinstance(c, str):
-                        from MoLogs import Log
+                        from mo_logs import Log
 
                         Log.error("expecting to write unicode only")
 
                     output_file.write(c.encode("utf-8"))
                     output_file.write(b"\n")
         except Exception, e:
-            from MoLogs import Log
+            from mo_logs import Log
 
             Log.error("Could not write to file", e)
 
@@ -285,7 +285,7 @@ class File(object):
         except Exception, e:
             if e.strerror == "The system cannot find the path specified":
                 return
-            from MoLogs import Log
+            from mo_logs import Log
 
             Log.error("Could not remove file", e)
 
@@ -306,7 +306,7 @@ class File(object):
         try:
             os.makedirs(self._filename)
         except Exception, e:
-            from MoLogs import Log
+            from mo_logs import Log
 
             Log.error("Could not make directory {{dir_name}}",  dir_name= self._filename, cause=e)
 

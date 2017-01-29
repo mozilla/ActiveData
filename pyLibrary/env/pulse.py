@@ -18,13 +18,13 @@ from kombu import Connection, Producer, Exchange
 from pytz import timezone
 from mozillapulse.utils import time_to_string
 
-from MoLogs import constants
+from mo_logs import constants
 from pyLibrary import jsons
-from MoLogs.exceptions import Except, suppress_exception
-from MoLogs import Log
+from mo_logs.exceptions import Except, suppress_exception
+from mo_logs import Log
 from pyDots import wrap, coalesce, Data, set_default
 from pyLibrary.meta import use_settings
-from pyLibrary.thread.threads import Thread, Lock
+from mo_threads import Thread, Lock
 from mozillapulse.consumers import GenericConsumer
 
 count_locker=Lock()

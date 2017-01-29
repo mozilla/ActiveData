@@ -13,7 +13,7 @@ from __future__ import absolute_import
 
 from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Index, Cluster
-from MoLogs import Log
+from mo_logs import Log
 from pyLibrary.env.files import File
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx

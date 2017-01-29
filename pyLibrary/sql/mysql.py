@@ -19,16 +19,16 @@ from datetime import datetime
 
 from pymysql import connect, InterfaceError, cursors
 
-from MoLogs import Log
-from MoLogs.exceptions import Except, suppress_exception
-from MoLogs.strings import expand_template
-from MoLogs.strings import indent
-from MoLogs.strings import outdent
+import mo_json
+from mo_logs import Log
+from mo_logs.exceptions import Except, suppress_exception
+from mo_logs.strings import expand_template
+from mo_logs.strings import indent
+from mo_logs.strings import outdent
 from pyDots import coalesce, wrap, listwrap, unwrap
 from pyLibrary import convert
-from pyLibrary import jsons
 from pyLibrary.env.files import File
-from pyLibrary.maths import Math
+from mo_math import Math
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
 from pyLibrary.sql import SQL
@@ -734,7 +734,7 @@ def json_encode(value):
     FOR PUTTING JSON INTO DATABASE (sort_keys=True)
     dicts CAN BE USED AS KEYS
     """
-    return unicode(json_encoder.encode(jsons.scrub(value)))
+    return unicode(json_encoder.encode(mo_json.scrub(value)))
 
 
 mysql_type_to_json_type = {

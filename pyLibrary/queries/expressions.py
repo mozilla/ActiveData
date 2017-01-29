@@ -15,17 +15,17 @@ import itertools
 from collections import Mapping
 from decimal import Decimal
 
-from MoLogs import Log
-from MoLogs.exceptions import suppress_exception
+from mo_logs import Log
+from mo_logs.exceptions import suppress_exception
 from pyDots import coalesce, wrap, set_default, literal_field, Null, split_field, startswith_field, Data, join_field, unwraplist, \
     ROOT_PATH, relative_field
 from pyLibrary import convert
-from pyLibrary.collections import OR, MAX
-from pyLibrary.maths import Math
+from mo_math import OR, MAX
+from mo_math import Math
 from pyLibrary.queries.containers import STRUCT, OBJECT
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expression_compiler import compile_expression
-from pyLibrary.times.dates import Date
+from mo_times.dates import Date
 
 ALLOW_SCRIPTING = False
 TRUE_FILTER = True
@@ -2639,7 +2639,7 @@ def simplify_esfilter(esfilter):
         output.isNormal = None
         return output
     except Exception, e:
-        from MoLogs import Log
+        from mo_logs import Log
 
         Log.unexpected("programmer error", cause=e)
 
@@ -2694,7 +2694,7 @@ def _normalize(esfilter):
             output = []
             for a in terms:
                 if isinstance(a, (list, set)):
-                    from MoLogs import Log
+                    from mo_logs import Log
 
                     Log.error("and clause is not allowed a list inside a list")
                 a_ = normalize_esfilter(a)

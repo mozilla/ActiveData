@@ -14,14 +14,14 @@ from __future__ import absolute_import
 from collections import Mapping
 from copy import copy
 
-from MoLogs import Log
+from mo_logs import Log
 from pyDots import set_default, wrap, coalesce, Data, listwrap, unwraplist
-from pyLibrary.maths import Math
+from mo_math import Math
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.namespace import Namespace, convert_list
 from pyLibrary.queries.query import QueryOp
-from pyLibrary.times.dates import Date
+from mo_times.dates import Date
 
 
 class Rename(Namespace):

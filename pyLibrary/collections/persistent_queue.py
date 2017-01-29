@@ -13,13 +13,12 @@ from __future__ import division
 from __future__ import absolute_import
 
 from pyLibrary import convert
-from MoLogs.exceptions import suppress_exception
-from MoLogs import Log
+from mo_logs.exceptions import suppress_exception
+from mo_logs import Log
 from pyLibrary.env.files import File
-from pyLibrary.maths.randoms import Random
+from mo_math.randoms import Random
 from pyDots import Data, wrap
-from pyLibrary.thread.threads import Lock, Thread, Signal
-
+from mo_threads import Lock, Thread, Signal, THREAD_STOP
 
 DEBUG = True
 
@@ -92,7 +91,7 @@ class PersistentQueue(object):
         while not self.please_stop:
             try:
                 value = self.pop()
-                if value is not Thread.STOP:
+                if value is not THREAD_STOP:
                     yield value
             except Exception, e:
                 Log.warning("Tell me about what happened here", cause=e)
@@ -104,7 +103,7 @@ class PersistentQueue(object):
             if self.closed:
                 Log.error("Queue is closed")
 
-            if value is Thread.STOP:
+            if value is THREAD_STOP:
                 if DEBUG:
                     Log.note("Stop is seen in persistent queue")
                 self.please_stop.go()
@@ -145,7 +144,7 @@ class PersistentQueue(object):
 
             if DEBUG:
                 Log.note("persistent queue already stopped")
-            return Thread.STOP
+            return THREAD_STOP
 
     def pop_all(self):
         """
@@ -153,7 +152,7 @@ class PersistentQueue(object):
         """
         with self.lock:
             if self.please_stop:
-                return [Thread.STOP]
+                return [THREAD_STOP]
             if self.db.status.end == self.start:
                 return []
 
@@ -207,7 +206,7 @@ class PersistentQueue(object):
             if self.db is None:
                 return
 
-            self.add(Thread.STOP)
+            self.add(THREAD_STOP)
 
             if self.db.status.end == self.start:
                 if DEBUG:

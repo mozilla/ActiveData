@@ -34,7 +34,7 @@ class Multiset(object):
             else:
                 return _Multiset(list, key_field, count_field)
         except Exception, e:
-            from MoLogs import Log
+            from mo_logs import Log
 
             Log.error("Not expected", e)
 
@@ -90,7 +90,7 @@ class _Multiset(Multiset):
 
     def remove(self, value):
         if value not in self.dic:
-            from MoLogs import Log
+            from mo_logs import Log
 
             Log.error("{{value}} is not in multiset",  value= value)
         self._remove(value)

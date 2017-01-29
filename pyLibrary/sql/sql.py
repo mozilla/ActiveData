@@ -8,13 +8,12 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from pyLibrary.env import elasticsearch
-from pyLibrary.queries.jx_usingMySQL import esfilter2sqlwhere
 from pyDots import wrap
+from pyLibrary.queries.jx_usingMySQL import esfilter2sqlwhere
 
 
 def find_holes(db, table_name, column_name, _range, filter=None):

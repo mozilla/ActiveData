@@ -12,13 +12,13 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from pyLibrary import queries
-from pyLibrary.collections import AND
+from mo_math import AND
 from pyLibrary.collections.matrix import Matrix
-from MoLogs import Log
+from mo_logs import Log
 from pyDots import coalesce, split_field, set_default, Data, unwraplist, literal_field, join_field, unwrap, wrap
 from pyDots import listwrap
 from pyDots.lists import FlatList
-from pyLibrary.maths import Math
+from mo_math import Math
 from pyLibrary.queries import es14, es09
 from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.containers.cube import Cube
@@ -26,7 +26,7 @@ from pyLibrary.queries.domains import ALGEBRAIC
 from pyLibrary.queries.es14.util import jx_sort_to_es_sort
 from pyLibrary.queries.expressions import simplify_esfilter, Variable, LeavesOp
 from pyLibrary.queries.query import DEFAULT_LIMIT
-from pyLibrary.times.timer import Timer
+from mo_times.timer import Timer
 
 format_dispatch = {}
 

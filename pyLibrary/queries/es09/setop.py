@@ -13,7 +13,7 @@ from __future__ import absolute_import
 from collections import Mapping
 
 from pyLibrary.collections.matrix import Matrix
-from pyLibrary.collections import AND, SUM, OR
+from mo_math import AND, SUM, OR
 from pyDots import coalesce, split_field, Data, wrap
 from pyDots.lists import FlatList
 from pyDots import listwrap, unwrap
@@ -21,7 +21,7 @@ from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09.expressions import unpack_terms
 from pyLibrary.queries.es09.util import aggregates
 from pyLibrary.queries import domains, es09
-from MoLogs import Log
+from mo_logs import Log
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.expressions import simplify_esfilter, TRUE_FILTER, jx_expression, Variable
 

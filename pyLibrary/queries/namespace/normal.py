@@ -14,12 +14,12 @@ from __future__ import unicode_literals
 from collections import Mapping
 from copy import copy
 
-from MoLogs import Log
+from mo_logs import Log
 from pyDots import coalesce, Null
 from pyDots import wrap, listwrap
 from pyDots import Data
 from pyDots import FlatList
-from pyLibrary.maths import Math
+from mo_math import Math
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain

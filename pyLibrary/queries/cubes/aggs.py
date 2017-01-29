@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import itertools
 
 from pyLibrary.collections.matrix import Matrix
-from MoLogs import Log
+from mo_logs import Log
 from pyDots import listwrap
 from pyLibrary.queries import windows
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain

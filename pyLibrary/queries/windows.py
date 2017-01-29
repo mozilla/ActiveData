@@ -8,20 +8,20 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
-from copy import copy
+from __future__ import division
+from __future__ import unicode_literals
+
 import functools
+from copy import copy
 
-from pyLibrary.maths import stats
-from pyLibrary.collections import MIN, MAX
-from MoLogs import Log
+from mo_logs import Log
+from mo_math import MIN
+from mo_math import Math
+from mo_math import stats
+from mo_math.stats import ZeroMoment, ZeroMoment2Stats
 from pyDots.lists import FlatList
-from pyLibrary.maths import Math
 from pyLibrary.collections.multiset import Multiset
-from pyLibrary.maths.stats import ZeroMoment, ZeroMoment2Stats
-
 
 
 # A VARIETY OF SLIDING WINDOW FUNCTIONS

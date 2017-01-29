@@ -15,15 +15,15 @@ from collections import Mapping
 from types import FunctionType
 
 import pyDots
-from MoLogs import Log
-from MoLogs.exceptions import Except, suppress_exception
-from MoLogs.strings import expand_template
+from mo_logs import Log
+from mo_logs.exceptions import Except, suppress_exception
+from mo_logs.strings import expand_template
 from pyDots import set_default, wrap, _get_attr, Null, coalesce
 from pyLibrary import convert
-from pyLibrary.maths.randoms import Random
-from pyLibrary.thread.threads import Lock
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import DAY
+from mo_math.randoms import Random
+from mo_threads import Lock
+from mo_times.dates import Date
+from mo_times.durations import DAY
 
 
 def get_class(path):
@@ -33,7 +33,7 @@ def get_class(path):
         return _get_attr(output, path[-1:])
         # return output
     except Exception, e:
-        from MoLogs import Log
+        from mo_logs import Log
 
         Log.error("Could not find module {{module|quote}}",  module= ".".join(path))
 

@@ -13,19 +13,19 @@ from __future__ import unicode_literals
 
 from datetime import datetime
 
-from MoLogs import Log, strings
+from mo_logs import Log, strings
 from pyDots import Data
 from pyDots import coalesce
 from pyDots import wrap
 from pyDots.lists import FlatList
 from pyLibrary import convert
-from pyLibrary.collections import COUNT
-from pyLibrary.maths import Math
-from pyLibrary.maths import stats
+from mo_math import COUNT
+from mo_math import Math
+from mo_math import stats
 from pyLibrary.queries import domains
 from pyLibrary.queries.es09.expressions import value2MVEL, isKeyword
 from pyLibrary.queries.expressions import simplify_esfilter
-from pyLibrary.times import durations
+from mo_times import durations
 
 TrueFilter = {"match_all": {}}
 DEBUG = False

@@ -17,13 +17,13 @@ from collections import Mapping
 from types import GeneratorType
 
 import pyDots
-from MoLogs import Log
+from mo_logs import Log
 from pyDots import listwrap, wrap, unwrap, FlatList
 from pyDots import set_default, Null, Data, split_field, coalesce, join_field
 from pyDots.objects import DataObject
 from pyLibrary import convert
-from pyLibrary.collections import UNION, MIN
-from pyLibrary.maths import Math
+from mo_math import UNION, MIN
+from mo_math import Math
 from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.containers.cube import Cube

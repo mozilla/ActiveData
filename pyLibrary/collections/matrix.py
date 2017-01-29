@@ -11,11 +11,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary import convert
-from pyLibrary.collections import PRODUCT, reverse, MAX, MIN, OR
-from MoLogs.exceptions import suppress_exception
-from MoLogs import Log
+from mo_logs import Log
+from mo_logs.exceptions import suppress_exception
+from mo_math import PRODUCT, MAX, MIN, OR
 from pyDots import Null, Data, coalesce
+from pyLibrary import convert
 from pyLibrary.meta import use_settings
 
 
@@ -186,7 +186,7 @@ class Matrix(object):
         offsets = []
         new_dim = []
         acc = 1
-        for i, d in reverse(enumerate(self.dims)):
+        for i, d in reversed(enumerate(self.dims)):
             if not io_select[i]:
                 new_dim.insert(0, d)
             offsets.insert(0, acc * io_select[i])

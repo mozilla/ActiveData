@@ -27,134 +27,22 @@ from decimal import Decimal
 from io import BytesIO
 from tempfile import TemporaryFile
 
-from MoLogs import Log, strings
-from MoLogs.exceptions import Except, suppress_exception
-from MoLogs.strings import expand_template
-from pyDots import wrap, wrap_leaves, unwrap, unwraplist, concat_field
-from pyLibrary.collections.multiset import Multiset
-from pyLibrary.env.big_data import FileString, safe_size
-from pyLibrary.jsons import quote
-from pyLibrary.jsons.encoder import json_encoder, pypy_json_encode
-from pyLibrary.times.dates import Date
+import mo_json
+import mo_math
+from mo_json import quote
+from mo_logs import Log
+from mo_logs.exceptions import suppress_exception
+from mo_logs.strings import expand_template
+from mo_times.dates import Date
+from pyDots import wrap, unwrap, unwraplist, concat_field
 
 """
 DUE TO MY POOR MEMORY, THIS IS A LIST OF ALL CONVERSION ROUTINES
 IN <from_type> "2" <to_type> FORMAT
 """
 
-
-def value2json(obj, pretty=False, sort_keys=False):
-    try:
-        json = json_encoder(obj, pretty=pretty)
-        if json == None:
-            Log.note(str(type(obj)) + " is not valid{{type}}JSON",  type= " (pretty) " if pretty else " ")
-            Log.error("Not valid JSON: " + str(obj) + " of type " + str(type(obj)))
-        return json
-    except Exception, e:
-        e = Except.wrap(e)
-        with suppress_exception:
-            json = pypy_json_encode(obj)
-            return json
-
-        Log.error("Can not encode into JSON: {{value}}", value=repr(obj), cause=e)
-
-
-def remove_line_comment(line):
-    mode = 0  # 0=code, 1=inside_string, 2=escaping
-    for i, c in enumerate(line):
-        if c == '"':
-            if mode == 0:
-                mode = 1
-            elif mode == 1:
-                mode = 0
-            else:
-                mode = 1
-        elif c == '\\':
-            if mode == 0:
-                mode = 0
-            elif mode == 1:
-                mode = 2
-            else:
-                mode = 1
-        elif mode == 2:
-            mode = 1
-        elif c == "#" and mode == 0:
-            return line[0:i]
-        elif c == "/" and mode == 0 and line[i + 1] == "/":
-            return line[0:i]
-    return line
-
-
-
-def json2value(json_string, params={}, flexible=False, leaves=False):
-    """
-    :param json_string: THE JSON
-    :param params: STANDARD JSON PARAMS
-    :param flexible: REMOVE COMMENTS
-    :param leaves: ASSUME JSON KEYS ARE DOT-DELIMITED
-    :return: Python value
-    """
-    if isinstance(json_string, str):
-        Log.error("only unicode json accepted")
-
-    try:
-        if flexible:
-            # REMOVE """COMMENTS""", # COMMENTS, //COMMENTS, AND \n \r
-            # DERIVED FROM https://github.com/jeads/datasource/blob/master/datasource/bases/BaseHub.py# L58
-            json_string = re.sub(r"\"\"\".*?\"\"\"", r"\n", json_string, flags=re.MULTILINE)
-            json_string = "\n".join(remove_line_comment(l) for l in json_string.split("\n"))
-            # ALLOW DICTIONARY'S NAME:VALUE LIST TO END WITH COMMA
-            json_string = re.sub(r",\s*\}", r"}", json_string)
-            # ALLOW LISTS TO END WITH COMMA
-            json_string = re.sub(r",\s*\]", r"]", json_string)
-
-        if params:
-            # LOOKUP REFERENCES
-            json_string = expand_template(json_string, params)
-
-        try:
-            value = wrap(json_decoder(unicode(json_string)))
-        except Exception, e:
-            Log.error("can not decode\n{{content}}", content=json_string, cause=e)
-
-        if leaves:
-            value = wrap_leaves(value)
-
-        return value
-
-    except Exception, e:
-        e = Except.wrap(e)
-
-        if not json_string.strip():
-            Log.error("JSON string is only whitespace")
-
-        c = e
-        while "Expecting '" in c.cause and "' delimiter: line" in c.cause:
-            c = c.cause
-
-        if "Expecting '" in c and "' delimiter: line" in c:
-            line_index = int(strings.between(c.message, " line ", " column ")) - 1
-            column = int(strings.between(c.message, " column ", " ")) - 1
-            line = json_string.split("\n")[line_index].replace("\t", " ")
-            if column > 20:
-                sample = "..." + line[column - 20:]
-                pointer = "   " + (" " * 20) + "^"
-            else:
-                sample = line
-                pointer = (" " * column) + "^"
-
-            if len(sample) > 43:
-                sample = sample[:43] + "..."
-
-            Log.error("Can not decode JSON at:\n\t" + sample + "\n\t" + pointer + "\n")
-
-        base_str = unicode2utf8(strings.limit(json_string, 1000))
-        hexx_str = bytes2hex(base_str, " ")
-        try:
-            char_str = " " + "  ".join((c.decode("latin1") if ord(c) >= 32 else ".") for c in base_str)
-        except Exception, e:
-            char_str = " "
-        Log.error("Can not decode JSON:\n" + char_str + "\n" + hexx_str + "\n", e)
+value2json = mo_json.value2json
+json2value = mo_json.json2value
 
 
 def string2datetime(value, format=None):
@@ -169,7 +57,7 @@ def datetime2string(value, format="%Y-%m-%d %H:%M:%S"):
     try:
         return value.strftime(format)
     except Exception, e:
-        from MoLogs import Log
+        from mo_logs import Log
 
         Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
 
@@ -223,7 +111,7 @@ def milli2datetime(u):
 def dict2Multiset(dic):
     if dic == None:
         return None
-
+    from pyLibrary.collections.multiset import Multiset
     output = Multiset()
     output.dic = unwrap(dic).copy()
     return output
@@ -576,6 +464,7 @@ def zip2bytes(compressed):
 
     buff = BytesIO(compressed)
     archive = gzip.GzipFile(fileobj=buff, mode='r')
+    from pyLibrary.env.big_data import safe_size
     return safe_size(archive)
 
 
@@ -590,6 +479,7 @@ def bytes2zip(bytes):
             archive.write(b)
         archive.close()
         buff.seek(0)
+        from pyLibrary.env.big_data import FileString, safe_size
         return FileString(buff)
 
     buff = BytesIO()
@@ -615,17 +505,6 @@ def ini2value(ini_content):
         for k, v in config.items(section):
             s[k]=v
     return wrap(output)
-
-
-
-
-
-
-
-
-
-
-
 
 
 _map2url = {chr(i): latin12unicode(chr(i)) for i in range(32, 256)}
@@ -726,5 +605,8 @@ def table2csv(table_data):
     )
     text = "\n".join(expand_template(template, d) for d in text_data)
     return text
+
+ZeroMoment2dict = mo_math.stats.ZeroMoment2dict
+
 
 

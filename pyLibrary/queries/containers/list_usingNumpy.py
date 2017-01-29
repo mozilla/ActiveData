@@ -1,4 +1,4 @@
-from MoLogs import Log
+from mo_logs import Log
 
 
 class List_usingNumpy(object):

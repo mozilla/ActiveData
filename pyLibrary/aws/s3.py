@@ -21,12 +21,12 @@ import boto
 from boto.s3.connection import Location
 
 from pyLibrary import convert
-from MoLogs import Log
+from mo_logs import Log
 from pyDots import wrap, Null, coalesce, unwrap
 from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, GzipLines, LazyLines, ibytes2ilines, scompressed2ibytes
 from pyLibrary.meta import use_settings
-from pyLibrary.times.dates import Date
-from pyLibrary.times.timer import Timer
+from mo_times.dates import Date
+from mo_times.timer import Timer
 
 TOO_MANY_KEYS = 1000 * 1000 * 1000
 READ_ERROR = "S3 read error"

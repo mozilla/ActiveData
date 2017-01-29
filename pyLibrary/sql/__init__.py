@@ -12,8 +12,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from MoLogs import Log
-from MoLogs.strings import expand_template
+from mo_logs import Log
+from mo_logs.strings import expand_template
 
 
 class SQL(unicode):

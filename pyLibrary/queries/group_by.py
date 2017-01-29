@@ -16,8 +16,8 @@ import math
 import sys
 
 from pyLibrary.collections.multiset import Multiset
-from MoLogs.exceptions import Except
-from MoLogs import Log
+from mo_logs.exceptions import Except
+from mo_logs import Log
 from pyDots import listwrap, Null, Data
 from pyDots.lists import FlatList
 from pyLibrary.queries.containers import Container

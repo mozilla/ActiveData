@@ -14,9 +14,9 @@ from __future__ import unicode_literals
 import re
 
 from pyLibrary import convert
-from MoLogs import Log
+from mo_logs import Log
 from pyDots import coalesce, Data
-from pyLibrary.times.dates import Date
+from mo_times.dates import Date
 
 true = True
 false = False

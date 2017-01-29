@@ -8,18 +8,18 @@
 #
 from __future__ import unicode_literals
 
-from MoLogs import Log, strings
-from MoLogs.exceptions import suppress_exception
+from mo_logs import Log, strings
+from mo_logs.exceptions import suppress_exception
 from pyDots import coalesce, wrap, Null
 from pyLibrary import convert
 from pyLibrary.aws.s3 import strip_extension
 from pyLibrary.env import elasticsearch
-from pyLibrary.maths.randoms import Random
+from mo_math.randoms import Random
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
-from pyLibrary.times.dates import Date, unicode2Date, unix2Date
-from pyLibrary.times.durations import Duration
-from pyLibrary.times.timer import Timer
+from mo_times.dates import Date, unicode2Date, unix2Date
+from mo_times.durations import Duration
+from mo_times.timer import Timer
 
 MAX_RECORD_LENGTH = 400000
 

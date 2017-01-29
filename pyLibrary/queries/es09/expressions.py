@@ -17,11 +17,11 @@ import re
 
 from pyLibrary import convert
 from pyLibrary.collections import reverse
-from MoLogs import Log
-from pyLibrary.maths import Math
+from mo_logs import Log
+from mo_math import Math
 from pyDots import split_field, Data, Null, join_field, coalesce
 from pyDots import listwrap
-from pyLibrary.times.durations import Duration
+from mo_times.durations import Duration
 
 
 class _MVEL(object):

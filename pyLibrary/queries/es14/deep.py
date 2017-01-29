@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from pyLibrary import queries, convert
-from MoLogs import Log
+from mo_logs import Log
 from pyDots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap
 from pyLibrary.queries import es09, es14
 from pyLibrary.queries.containers import STRUCT
@@ -21,8 +21,8 @@ from pyLibrary.queries.es14.util import jx_sort_to_es_sort
 from pyLibrary.queries.expressions import split_expression_by_depth, simplify_esfilter, AndOp, compile_expression, \
     Variable, LeavesOp
 from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.thread.threads import Thread
-from pyLibrary.times.timer import Timer
+from mo_threads import Thread
+from mo_times.timer import Timer
 
 EXPRESSION_PREFIX = "_expr."
 

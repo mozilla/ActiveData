@@ -16,13 +16,13 @@ import sqlite3
 from collections import Mapping
 
 from pyLibrary import convert
-from MoLogs.exceptions import Except, extract_stack, ERROR
-from MoLogs import Log
+from mo_logs.exceptions import Except, extract_stack, ERROR, _extract_traceback
+from mo_logs import Log
 from pyDots import Data, coalesce
 from pyLibrary.env.files import File
 from pyLibrary.sql import DB, SQL
-from pyLibrary.thread.threads import Queue, Signal, Thread
-from pyLibrary.times.timer import Timer
+from mo_threads import Queue, Signal, Thread
+from mo_times.timer import Timer
 
 DEBUG = False
 DEBUG_INSERT = False
@@ -106,6 +106,9 @@ class Sqlite(DB):
             self.db = sqlite3.connect(coalesce(self.filename, ':memory:'))
             full_path = File("pyLibrary/vendor/sqlite/libsqlitefunctions.so").abspath
             try:
+                trace = _extract_traceback(0)[0]
+                file = File.new_instance(trace.file, "../../pyLibrary/vendor/sqlite/libsqlitefunctions.so")
+                full_path = file.abspath
                 self.db.enable_load_extension(True)
                 self.db.execute("SELECT load_extension(" + self.quote_value(full_path) + ")")
             except Exception, e:

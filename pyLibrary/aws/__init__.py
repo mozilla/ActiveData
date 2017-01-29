@@ -17,15 +17,15 @@ from boto import utils as boto_utils
 from boto.sqs.message import Message
 
 from pyLibrary import convert
-from MoLogs.exceptions import Except, suppress_exception
-from MoLogs import Log, machine_metadata
+from mo_logs.exceptions import Except, suppress_exception
+from mo_logs import Log, machine_metadata
 from pyDots import wrap, unwrap, coalesce
-from pyLibrary.maths import Math
+from mo_math import Math
 from pyLibrary.meta import use_settings
-from pyLibrary.thread.signal import Signal
-from pyLibrary.thread.threads import Thread
-from pyLibrary.thread.till import Till
-from pyLibrary.times.durations import SECOND, Duration
+from mo_threads.signal import Signal
+from mo_threads import Thread
+from mo_threads.till import Till
+from mo_times.durations import SECOND, Duration
 
 
 class Queue(object):

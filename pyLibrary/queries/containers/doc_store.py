@@ -15,7 +15,7 @@ from copy import copy
 from datetime import datetime
 
 from pyLibrary import convert
-from MoLogs import Log
+from mo_logs import Log
 from pyDots import wrap, Data, FlatList, literal_field
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container

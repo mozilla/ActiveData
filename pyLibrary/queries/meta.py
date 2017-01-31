@@ -413,7 +413,7 @@ class FromESMetadata(Schema):
                             if DEBUG:
                                 Log.note("no more metatdata to update")
 
-                column = self.todo.pop(Till(timeout=10*MINUTE))
+                column = self.todo.pop(Till(seconds=(10*MINUTE).seconds))
                 if column:
                     if DEBUG:
                         Log.note("update {{table}}.{{column}}", table=column.table, column=column.es_column)

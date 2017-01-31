@@ -19,8 +19,7 @@ from time import time
 from mo_logs import Log
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_logs.strings import expand_template
-from mo_threads import Thread
-from mo_threads.till import Till
+from mo_threads import Thread, THREAD_STOP, Till
 
 
 class StructuredLogger_usingThreadedStream(StructuredLogger):

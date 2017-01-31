@@ -11,14 +11,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary import queries
-from mo_math import AND
 from mo_collections.matrix import Matrix
-from mo_logs import Log
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, join_field, unwrap, wrap
 from mo_dots import listwrap
 from mo_dots.lists import FlatList
-from mo_math import Math
+from mo_logs import Log
+from mo_math import AND
+from mo_math import MAX
+from mo_times.timer import Timer
+from pyLibrary import queries
 from pyLibrary.queries import es14, es09
 from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.containers.cube import Cube
@@ -26,7 +27,6 @@ from pyLibrary.queries.domains import ALGEBRAIC
 from pyLibrary.queries.es14.util import jx_sort_to_es_sort
 from pyLibrary.queries.expressions import simplify_esfilter, Variable, LeavesOp
 from pyLibrary.queries.query import DEFAULT_LIMIT
-from mo_times.timer import Timer
 
 format_dispatch = {}
 
@@ -223,7 +223,7 @@ def format_list(T, select, query=None):
 
 def format_table(T, select, query=None):
     data = []
-    num_columns = (Math.MAX(select.put.index) + 1)
+    num_columns = (MAX(select.put.index) + 1)
     for row in T:
         r = [None] * num_columns
         for s in select:

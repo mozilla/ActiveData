@@ -11,9 +11,9 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
-from pyLibrary.times.dates import parse, Date
-from pyLibrary.times.durations import WEEK, MONTH, DAY
+from mo_testing.fuzzytestcase import FuzzyTestCase
+from mo_times.dates import parse, Date
+from mo_times.durations import WEEK, MONTH, DAY
 
 
 class TestTimeParser(FuzzyTestCase):

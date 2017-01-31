@@ -12,9 +12,9 @@ from __future__ import unicode_literals
 
 import flask
 
-from pyDots import wrap
-from MoLogs import Log
-from pyLibrary.times.dates import Date
+from mo_dots import wrap
+from mo_logs import Log
+from mo_times.dates import Date
 
 request_log_queue = None
 

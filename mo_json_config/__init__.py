@@ -17,20 +17,12 @@ from collections import Mapping
 from urlparse import urlparse
 
 import mo_dots
+from mo_dots import set_default, wrap, unwrap
+from mo_json import json2value
 from mo_json_config.convert import value2url, ini2value
 from mo_logs import Log, Except
-from mo_dots import set_default, wrap, unwrap
-from pyLibrary.convert import json2value
 
 DEBUG = False
-# _convert = None
-
-
-# def _late_import():
-#     global _convert
-#     from pyLibrary import convert as _convert
-#
-#     _ = _convert
 
 
 def get(url):
@@ -285,9 +277,6 @@ class URL(object):
     """
 
     def __init__(self, value):
-        if not _convert:
-            _late_import()
-
         try:
             self.scheme = None
             self.host = None
@@ -343,4 +332,55 @@ class URL(object):
         if self.fragment:
             url = url + '#' + value2url(self.fragment)
         return url
+
+
+def url_param2value(param):
+    """
+    CONVERT URL QUERY PARAMETERS INTO DICT
+    """
+    if isinstance(param, unicode):
+        param = param.encode("ascii")
+
+    def _decode(v):
+        output = []
+        i = 0
+        while i < len(v):
+            c = v[i]
+            if c == "%":
+                d = (v[i + 1:i + 3]).decode("hex")
+                output.append(d)
+                i += 3
+            else:
+                output.append(c)
+                i += 1
+
+        output = (b"".join(output)).decode("latin1")
+        try:
+            return json2value(output)
+        except Exception:
+            pass
+        return output
+
+
+    query = {}
+    for p in param.split(b'&'):
+        if not p:
+            continue
+        if p.find(b"=") == -1:
+            k = p
+            v = True
+        else:
+            k, v = p.split(b"=")
+            v = _decode(v)
+
+        u = query.get(k)
+        if u is None:
+            query[k] = v
+        elif isinstance(u, list):
+            u += [v]
+        else:
+            query[k] = [u, v]
+
+    return query
+
 

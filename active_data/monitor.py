@@ -10,16 +10,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyDots import coalesce
-from MoLogs import constants, startup
-from MoLogs import Log
-from pyLibrary.env.files import File
+from mo_dots import coalesce
+from mo_logs import constants, startup
+from mo_logs import Log
+from mo_files import File
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.multiprocess import Process
-from pyLibrary.thread.threads import Signal, Thread
-from pyLibrary.thread.till import Till
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import DAY
+from mo_threads import Signal, Thread
+from mo_threads import Till
+from mo_times.dates import Date
+from mo_times.durations import DAY
 
 
 class Scheduler(object):

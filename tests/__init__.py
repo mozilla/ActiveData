@@ -1,4 +1,4 @@
-from pyDots import listwrap
+from mo_dots import listwrap
 from pyLibrary.queries.expressions import NullOp
 
 NULL = NullOp()

@@ -14,18 +14,18 @@ import hashlib
 
 from flask import Response
 
-from MoLogs import Log
-from MoLogs.exceptions import Except
+from mo_logs import Log
+from mo_logs.exceptions import Except
 from active_data import cors_wrapper
-from pyDots import wrap
+from mo_dots import wrap
 from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.jx_usingES import FromES
-from pyLibrary.thread.threads import Thread
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import SECOND
+from mo_threads import Thread
+from mo_times.dates import Date
+from mo_times.durations import SECOND
 
 HASH_BLOCK_SIZE = 100
 

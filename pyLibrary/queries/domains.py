@@ -16,14 +16,14 @@ import re
 from collections import Mapping
 from numbers import Number
 
+from mo_collections.unique_index import UniqueIndex
 from mo_dots import coalesce, Data, set_default, Null, listwrap
 from mo_dots import wrap
 from mo_dots.lists import FlatList
 from mo_logs import Log
-from mo_math import Math
+from mo_math import Math, MAX, MIN
 from mo_times.dates import Date
 from mo_times.durations import Duration
-from mo_collections.unique_index import UniqueIndex
 
 ALGEBRAIC = {"time", "duration", "numeric", "count", "datetime"}  # DOMAINS THAT HAVE ALGEBRAIC OPERATIONS DEFINED
 KNOWN = {"set", "boolean", "duration", "time", "numeric"}  # DOMAINS THAT HAVE A KNOWN NUMBER FOR PARTS AT QUERY TIME
@@ -629,8 +629,8 @@ class RangeDomain(Domain):
 
             parts = listwrap(self.partitions)
             for i, p in enumerate(parts):
-                self.min = Math.min(self.min, p.min)
-                self.max = Math.max(self.max, p.max)
+                self.min = MIN([self.min, p.min])
+                self.max = MAX([self.max, p.max])
                 if p.dataIndex != None and p.dataIndex != i:
                     Log.error("Expecting `dataIndex` to agree with the order of the parts")
                 if p[self.key] == None:

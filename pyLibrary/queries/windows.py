@@ -15,13 +15,14 @@ from __future__ import unicode_literals
 import functools
 from copy import copy
 
+import mo_math
+from mo_collections.multiset import Multiset
+from mo_dots.lists import FlatList
 from mo_logs import Log
 from mo_math import MIN
 from mo_math import Math
 from mo_math import stats
 from mo_math.stats import ZeroMoment, ZeroMoment2Stats
-from mo_dots.lists import FlatList
-from mo_collections.multiset import Multiset
 
 
 # A VARIETY OF SLIDING WINDOW FUNCTIONS
@@ -228,7 +229,7 @@ class Max(WindowFunction):
 
 
     def add(self, value):
-        self.max = Math.max(self.max, value)
+        self.max = mo_math.MAX(self.max, value)
 
     def sub(self, value):
         Log.error("Not implemented")

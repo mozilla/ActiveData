@@ -13,11 +13,11 @@ from __future__ import unicode_literals
 
 import hashlib
 
-from pyDots import wrap
+from mo_dots import wrap
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch
 from pyLibrary.parsers import URL
-from pyLibrary.thread.till import Till
+from mo_threads import Till
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 

@@ -256,7 +256,7 @@ class Math(object):
 
     @staticmethod
     def min(*values):
-        return Math.MIN(values)
+        return MIN(values)
 
     @staticmethod
     def range(start, stop, interval):
@@ -267,7 +267,7 @@ class Math(object):
 
     @staticmethod
     def max(*values):
-        return Math.MAX(values)
+        return MAX(values)
 
 
 def COUNT(values):

@@ -10,16 +10,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyDots import coalesce, wrap, unwrap
+from mo_dots import coalesce, wrap, unwrap
 from pyLibrary.collections import UNION, MIN
-from MoLogs import constants
-from MoLogs import startup
-from MoLogs import Log
+from mo_logs import constants
+from mo_logs import startup
+from mo_logs import Log
 from pyLibrary.env import http, elasticsearch
 from pyLibrary.queries import jx
-from pyLibrary.thread.threads import Thread, Signal, Queue
-from pyLibrary.times.dates import Date, unicode2Date
-from pyLibrary.times.timer import Timer
+from mo_threads import Thread, Signal, Queue
+from mo_times.dates import Date, unicode2Date
+from mo_times.timer import Timer
 
 DEBUG = True
 NUM_THREAD = 4

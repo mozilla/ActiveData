@@ -16,24 +16,24 @@ import flask
 import moz_sql_parser
 from flask import Response
 
-from MoLogs import Log, strings
-from MoLogs.exceptions import Except
-from MoLogs.profiles import CProfiler
-from MoLogs.strings import expand_template
+from mo_logs import Log, strings
+from mo_logs.exceptions import Except
+from mo_logs.profiles import CProfiler
+from mo_logs.strings import expand_template
 from active_data import record_request, cors_wrapper
 from active_data.actions import save_query
-from pyDots import coalesce, join_field, split_field, wrap, listwrap
+from mo_dots import coalesce, join_field, split_field, wrap, listwrap
 from pyLibrary import convert
-from pyLibrary.env.files import File
-from pyLibrary.maths import Math
+from mo_files import File
+from mo_math import Math
 from pyLibrary.queries import jx, meta, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.meta import TOO_OLD
-from pyLibrary.testing.fuzzytestcase import assertAlmostEqual
-from pyLibrary.thread.till import Till
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import MINUTE
-from pyLibrary.times.timer import Timer
+from mo_testing.fuzzytestcase import assertAlmostEqual
+from mo_threads import Till
+from mo_times.dates import Date
+from mo_times.durations import MINUTE
+from mo_times.timer import Timer
 
 BLANK = convert.unicode2utf8(File("active_data/public/error.html").read())
 QUERY_SIZE_LIMIT = 10*1024*1024

@@ -1377,7 +1377,7 @@ class Table_usingSQLite(Container):
 
         if query.format == "cube":
             num_rows = len(result.data)
-            num_cols = Math.MAX([c.push_column for c in cols]) + 1 if len(cols) else 0
+            num_cols = MAX([c.push_column for c in cols]) + 1 if len(cols) else 0
             map_index_to_name = {c.push_column: c.push_name for c in cols}
             temp_data = [[None]*num_rows for _ in range(num_cols)]
             for rownum, d in enumerate(result.data):
@@ -1408,7 +1408,7 @@ class Table_usingSQLite(Container):
             # selects = listwrap(query.select)
             # num_column = len(selects)
             # header = selects.name
-            num_column = Math.MAX([c.push_column for c in cols])+1
+            num_column = MAX([c.push_column for c in cols])+1
             header = [None]*num_column
             for c in cols:
                 header[c.push_column]=c.push_name

@@ -11,9 +11,9 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyDots import wrap
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import WEEK, DAY
+from mo_dots import wrap
+from mo_times.dates import Date
+from mo_times.durations import WEEK, DAY
 from tests import NULL
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 

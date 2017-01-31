@@ -15,6 +15,7 @@ import re
 from collections import Mapping
 from copy import deepcopy
 
+import mo_json
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except
 from mo_logs.strings import utf82unicode

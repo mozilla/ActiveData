@@ -15,6 +15,7 @@ import itertools
 from collections import Mapping
 from decimal import Decimal
 
+import mo_json
 from mo_dots import coalesce, wrap, set_default, literal_field, Null, split_field, startswith_field, Data, join_field, unwraplist, \
     ROOT_PATH, relative_field
 from mo_logs import Log

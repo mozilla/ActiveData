@@ -13,15 +13,15 @@ from __future__ import unicode_literals
 import flask
 from flask import Response
 
-from MoLogs import Log
-from MoLogs.exceptions import Except
+from mo_logs import Log
+from mo_logs.exceptions import Except
 from active_data import cors_wrapper
 from active_data.actions.query import _send_error
-from pyDots import Data, wrap
+from mo_dots import Data, wrap
 from pyLibrary import convert
 from pyLibrary.queries import jx, wrap_from
 from pyLibrary.queries.containers import Container
-from pyLibrary.times.timer import Timer
+from mo_times.timer import Timer
 
 
 @cors_wrapper

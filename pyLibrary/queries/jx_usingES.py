@@ -16,10 +16,10 @@ from collections import Mapping
 from pyLibrary import convert
 from mo_logs.exceptions import Except
 from mo_logs import Log
-from pyDots import coalesce, split_field, literal_field, unwraplist, join_field
-from pyDots import wrap, listwrap
-from pyDots import Data
-from pyDots.lists import FlatList
+from mo_dots import coalesce, split_field, literal_field, unwraplist, join_field
+from mo_dots import wrap, listwrap
+from mo_dots import Data
+from mo_dots.lists import FlatList
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, containers, Schema

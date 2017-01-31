@@ -14,10 +14,10 @@ from __future__ import unicode_literals
 from datetime import datetime
 
 from mo_logs import Log, strings
-from pyDots import Data
-from pyDots import coalesce
-from pyDots import wrap
-from pyDots.lists import FlatList
+from mo_dots import Data
+from mo_dots import coalesce
+from mo_dots import wrap
+from mo_dots.lists import FlatList
 from pyLibrary import convert
 from mo_math import COUNT
 from mo_math import Math

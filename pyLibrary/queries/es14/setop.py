@@ -13,11 +13,11 @@ from __future__ import unicode_literals
 
 from pyLibrary import queries
 from mo_math import AND
-from pyLibrary.collections.matrix import Matrix
+from mo_collections.matrix import Matrix
 from mo_logs import Log
-from pyDots import coalesce, split_field, set_default, Data, unwraplist, literal_field, join_field, unwrap, wrap
-from pyDots import listwrap
-from pyDots.lists import FlatList
+from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, join_field, unwrap, wrap
+from mo_dots import listwrap
+from mo_dots.lists import FlatList
 from mo_math import Math
 from pyLibrary.queries import es14, es09
 from pyLibrary.queries.containers import STRUCT

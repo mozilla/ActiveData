@@ -11,13 +11,13 @@ import types
 import unittest
 from collections import Mapping
 
-import pyDots
+import mo_dots
+from mo_dots import coalesce, literal_field, unwrap
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception, Except
 from mo_logs.strings import expand_template
-from pyDots import coalesce, literal_field, unwrap
 from mo_math import Math
-from pyLibrary.queries.unique_index import UniqueIndex
+from mo_collections.unique_index import UniqueIndex
 
 
 class FuzzyTestCase(unittest.TestCase):
@@ -110,7 +110,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
         elif isinstance(expected, Mapping):
             for k, v2 in expected.items():
                 if isinstance(k, basestring):
-                    v1 = pyDots.get_attr(test, literal_field(k))
+                    v1 = mo_dots.get_attr(test, literal_field(k))
                 else:
                     v1 = test[k]
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)

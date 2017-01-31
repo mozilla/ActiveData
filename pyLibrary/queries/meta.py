@@ -23,9 +23,9 @@ from mo_threads import Till
 from mo_times.dates import Date
 from mo_times.durations import HOUR, MINUTE
 from mo_times.timer import Timer
-from pyDots import Data
-from pyDots import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
-from pyDots import wrap
+from mo_dots import Data
+from mo_dots import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
+from mo_dots import wrap
 from pyLibrary.meta import use_settings, DataClass
 from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import STRUCT, Container

@@ -19,7 +19,7 @@ from decimal import Decimal
 from time import time as _time
 
 from mo_logs.strings import deformat
-from pyDots import Null
+from mo_dots import Null
 
 from mo_times.durations import Duration, MILLI_VALUES
 from mo_times.vendor.dateutil.parser import parse as parse_date

@@ -19,7 +19,7 @@ from boto.sqs.message import Message
 from pyLibrary import convert
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs import Log, machine_metadata
-from pyDots import wrap, unwrap, coalesce
+from mo_dots import wrap, unwrap, coalesce
 from mo_math import Math
 from pyLibrary.meta import use_settings
 from mo_threads.signal import Signal
@@ -87,7 +87,7 @@ class Queue(object):
             return None
 
         self.pending.append(m)
-        output = convert.json2value(m.get_body())
+        output = mo_json.json2value(m.get_body())
         return output
 
     def pop_message(self, wait=SECOND, till=None):
@@ -102,7 +102,7 @@ class Queue(object):
             return None
         message.delete = lambda: self.queue.delete_message(message)
 
-        payload = convert.json2value(message.get_body())
+        payload = mo_json.json2value(message.get_body())
         return message, payload
 
     def commit(self):

@@ -11,17 +11,14 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from copy import copy
-
 from datetime import datetime
 
-from pyLibrary import convert
+from mo_dots import wrap, Data, FlatList, literal_field
 from mo_logs import Log
-from pyDots import wrap, Data, FlatList, literal_field
+from pyLibrary import convert
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expressions import Variable, Literal
-from pyLibrary.queries.jx import value_compare
 from pyLibrary.queries.query import QueryOp
 
 INDEX = "__index__"

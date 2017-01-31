@@ -21,7 +21,7 @@ from mo_logs.log_usingNothing import StructuredLogger
 from mo_logs.strings import expand_template
 from mo_times.dates import Date
 from mo_times.durations import HOUR, MINUTE
-from pyDots import listwrap, unwrap
+from mo_dots import listwrap, unwrap
 from pyLibrary.meta import use_settings
 from mo_threads import Lock
 

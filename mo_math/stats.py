@@ -16,11 +16,11 @@ import math
 import sys
 from math import sqrt
 
+from mo_dots import coalesce, Data, Null
 from mo_logs import Log
 from mo_math import OR
 from mo_math import almost_equal
 from mo_math.vendor import strangman
-from pyDots import coalesce, Data, Null
 
 DEBUG = True
 DEBUG_STRANGMAN = True
@@ -46,7 +46,7 @@ def chisquare(f_obs, f_exp):
         Log.error("problem with call", e)
 
     if DEBUG_STRANGMAN:
-        from pyLibrary.testing.fuzzytestcase import assertAlmostEqualValue
+        from mo_testing.fuzzytestcase import assertAlmostEqualValue
 
         sp_result = scipy.stats.chisquare(
             np.array(f_obs),
@@ -73,7 +73,7 @@ def Stats2ZeroMoment(stats):
 
     m = ZeroMoment(mz0, mz1, mz2, mz3, mz4)
     if DEBUG:
-        from pyLibrary.testing.fuzzytestcase import assertAlmostEqualValue
+        from mo_testing.fuzzytestcase import assertAlmostEqualValue
 
         globals()["DEBUG"] = False
         try:
@@ -126,7 +126,7 @@ def ZeroMoment2Stats(z_moment):
     )
 
     if DEBUG:
-        from pyLibrary.testing.fuzzytestcase import assertAlmostEqualValue
+        from mo_testing.fuzzytestcase import assertAlmostEqualValue
 
         globals()["DEBUG"] = False
         v = Null

@@ -22,8 +22,8 @@ from mo_logs import Except, strings, suppress_exception, Log
 from mo_logs.strings import expand_template
 from mo_times.dates import Date
 from mo_times.durations import Duration
-from pyDots import FlatList, NullType, Data, wrap_leaves, wrap
-from pyDots.objects import DataObject
+from mo_dots import FlatList, NullType, Data, wrap_leaves, wrap
+from mo_dots.objects import DataObject
 
 _get = object.__getattribute__
 

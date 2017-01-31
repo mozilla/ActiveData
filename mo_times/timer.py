@@ -15,8 +15,8 @@ from datetime import timedelta
 from time import time
 
 from mo_logs import Log
-from pyDots import coalesce
-from pyDots import wrap
+from mo_dots import coalesce
+from mo_dots import wrap
 from mo_times.durations import Duration
 
 

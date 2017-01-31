@@ -13,6 +13,7 @@ from __future__ import division
 from __future__ import absolute_import
 from mo_math import SUM
 
+
 class Relation_usingList(object):
     def __init__(self):
         self.all=set()
@@ -44,6 +45,7 @@ class Relation_usingList(object):
         RETURN AN ARRAY OF OBJECTS THAT key MAPS TO
         """
         return [v for k, v in self.all if k == key]
+
 
 class Relation(object):
     def __init__(self):

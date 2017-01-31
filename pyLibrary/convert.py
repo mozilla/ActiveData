@@ -34,7 +34,7 @@ from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_logs.strings import expand_template
 from mo_times.dates import Date
-from pyDots import wrap, unwrap, unwraplist, concat_field
+from mo_dots import wrap, unwrap, unwraplist, concat_field
 
 """
 DUE TO MY POOR MEMORY, THIS IS A LIST OF ALL CONVERSION ROUTINES
@@ -111,7 +111,7 @@ def milli2datetime(u):
 def dict2Multiset(dic):
     if dic == None:
         return None
-    from pyLibrary.collections.multiset import Multiset
+    from mo_collections.multiset import Multiset
     output = Multiset()
     output.dic = unwrap(dic).copy()
     return output

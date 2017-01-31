@@ -7,18 +7,19 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
+import mo_json
+from mo_files import File
+from mo_logs import Log
+from mo_dots import Data
+from mo_dots import unwrap, wrap
 from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Index, Cluster
-from mo_logs import Log
-from pyLibrary.env.files import File
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
-from pyDots import Data
-from pyDots import unwrap, wrap
 
 
 def make_test_instance(name, settings):
@@ -52,7 +53,7 @@ class Fake_ES():
         self.settings = settings
         self.filename = settings.filename
         try:
-            self.data = convert.json2value(File(self.filename).read())
+            self.data = mo_json.json2value(File(self.filename).read())
         except Exception:
             self.data = Data()
 

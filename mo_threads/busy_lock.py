@@ -1,3 +1,4 @@
+
 # encoding: utf-8
 #
 #
@@ -15,14 +16,33 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from thread import get_ident as _get_ident
 from time import sleep
 
-from mo_threads.threads import Thread, THREAD_STOP, THREAD_TIMEOUT
-from mo_threads.lock import Lock
-from mo_threads.signal import Signal
-from mo_threads.till import Till
-from mo_threads.queues import Queue
-from mo_threads.queues import ThreadedQueue
-from mo_threads.multiprocess import Process
+_get = dict.get
+_set = dict.setdefault
 
 
+class BusyLock(object):
+    """
+    ONLY USE IF HOLDING THE LOCK FOR A SHORT TIME
+    """
+
+    def __init__(self):
+        self.lock = {}
+
+    def __enter__(self):
+        id = _get_ident()
+        lock = self.lock
+
+        while True:
+            v = _get(lock, 0)
+            if not v:
+                _set(lock, 0, id)
+            elif v == id:
+                break
+            else:
+                sleep(0.000001)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del self.lock[0]

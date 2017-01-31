@@ -16,14 +16,16 @@ import __builtin__
 from collections import Mapping
 from types import GeneratorType
 
-import pyDots
+import mo_dots
+from mo_dots import listwrap, wrap, unwrap, FlatList
+from mo_dots import set_default, Null, Data, split_field, coalesce, join_field
+from mo_dots.objects import DataObject
 from mo_logs import Log
-from pyDots import listwrap, wrap, unwrap, FlatList
-from pyDots import set_default, Null, Data, split_field, coalesce, join_field
-from pyDots.objects import DataObject
-from pyLibrary import convert
-from mo_math import UNION, MIN
 from mo_math import Math
+from mo_math import UNION, MIN
+from pyLibrary import convert
+from mo_collections.index import Index
+from mo_collections.unique_index import UniqueIndex
 from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.containers.cube import Cube
@@ -31,9 +33,7 @@ from pyLibrary.queries.cubes.aggs import cube_aggs
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, jx_expression_to_function
 from pyLibrary.queries.flat_list import PartFlatList
-from pyLibrary.queries.index import Index
 from pyLibrary.queries.query import QueryOp, _normalize_selects
-from pyLibrary.queries.unique_index import UniqueIndex
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
 # JSON QUERY EXPRESSION DOCUMENTATION: https://github.com/klahnakoski/jx/tree/master/docs
@@ -127,7 +127,7 @@ def index(data, keys=None):
         if data.edges[0].name==keys[0]:
             #QUICK PATH
             names = list(data.data.keys())
-            for d in (set_default(pyDots.zip(names, r), {keys[0]: p}) for r, p in zip(zip(*data.data.values()), data.edges[0].domain.partitions.value)):
+            for d in (set_default(mo_dots.zip(names, r), {keys[0]: p}) for r, p in zip(zip(*data.data.values()), data.edges[0].domain.partitions.value)):
                 o.add(d)
             return o
         else:

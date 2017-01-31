@@ -15,14 +15,14 @@ from __future__ import unicode_literals
 from collections import Mapping
 from copy import copy
 
+from mo_dots import wrap, unwrap, tuplewrap
 from mo_logs import Log
-from pyDots import wrap, unwrap, tuplewrap
-from pyLibrary.queries.unique_index import UniqueIndex
 
 
 class Index(object):
     """
     USING DATABASE TERMINOLOGY, THIS IS A NON-UNIQUE INDEX
+    KEYS CAN BE DOT-DELIMITED PATHS TO DEEP INNER OBJECTS
     """
 
     def __init__(self, keys, data=None):
@@ -60,7 +60,7 @@ class Index(object):
         expected = True if self[key] else False
         testing = self._test_contains(key)
 
-        if testing==expected:
+        if testing == expected:
             return testing
         else:
             Log.error("not expected")
@@ -113,21 +113,21 @@ class Index(object):
         return iter(self._data, len(self._keys))
 
     def __sub__(self, other):
-        output = UniqueIndex(self._keys)
+        output = Index(self._keys)
         for v in self:
             if v not in other:
                 output.add(v)
         return output
 
     def __and__(self, other):
-        output = UniqueIndex(self._keys)
+        output = Index(self._keys)
         for v in self:
             if v in other:
                 output.add(v)
         return output
 
     def __or__(self, other):
-        output = UniqueIndex(self._keys)
+        output = Index(self._keys)
         for v in self:
             output.add(v)
         for v in other:

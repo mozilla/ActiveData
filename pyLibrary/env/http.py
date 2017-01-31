@@ -27,10 +27,11 @@ from tempfile import TemporaryFile
 
 from requests import sessions, Response
 
+import mo_json
 from pyLibrary import convert
 from mo_logs.exceptions import Except
 from mo_logs import Log
-from pyDots import Data, coalesce, wrap, set_default, unwrap
+from mo_dots import Data, coalesce, wrap, set_default, unwrap
 from pyLibrary.env.big_data import safe_size, ibytes2ilines, icompressed2ibytes
 from mo_math import Math
 from pyLibrary.queries import jx
@@ -180,7 +181,7 @@ def get_json(url, **kwargs):
     """
     response = get(url, **kwargs)
     c = response.all_content
-    return convert.json2value(convert.utf82unicode(c))
+    return mo_json.json2value(convert.utf82unicode(c))
 
 def options(url, **kwargs):
     kwargs.setdefault(b'allow_redirects', True)
@@ -217,7 +218,7 @@ def post_json(url, **kwargs):
     response = post(url, **kwargs)
     c = response.content
     try:
-        details = convert.json2value(convert.utf82unicode(c))
+        details = mo_json.json2value(convert.utf82unicode(c))
     except Exception, e:
         Log.error("Unexpected return value {{content}}", content=c, cause=e)
 

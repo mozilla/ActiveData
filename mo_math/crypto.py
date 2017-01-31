@@ -18,7 +18,7 @@ from mo_json import json2value, value2json
 from mo_logs import Log
 from mo_math.randoms import Random
 from mo_math.vendor.aespython import key_expander, aes_cipher, cbc_mode
-from pyDots import Data
+from mo_dots import Data
 
 DEBUG = False
 

@@ -8,17 +8,17 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from pyLibrary import convert
-from mo_logs.exceptions import suppress_exception
+import mo_json
+from mo_dots import Data, wrap
+from mo_files import File
 from mo_logs import Log
-from pyLibrary.env.files import File
+from mo_logs.exceptions import suppress_exception
 from mo_math.randoms import Random
-from pyDots import Data, wrap
-from mo_threads import Lock, Thread, Signal, THREAD_STOP
+from mo_threads import Lock, Signal, THREAD_STOP
 
 DEBUG = True
 
@@ -46,7 +46,7 @@ class PersistentQueue(object):
         if self.file.exists:
             for line in self.file:
                 with suppress_exception:
-                    delta = convert.json2value(line)
+                    delta = mo_json.json2value(line)
                     apply_delta(self.db, delta)
             if self.db.status.start == None:  # HAPPENS WHEN ONLY ADDED TO QUEUE, THEN CRASH
                 self.db.status.start = 0
@@ -190,14 +190,14 @@ class PersistentQueue(object):
                                 continue
                             Log.error("Not expecting {{key}}", key=k)
                     self._commit()
-                    self.file.write(convert.value2json({"add": self.db}) + "\n")
+                    self.file.write(mo_json.value2json({"add": self.db}) + "\n")
                 else:
                     self._commit()
             except Exception, e:
                 raise e
 
     def _commit(self):
-        self.file.append("\n".join(convert.value2json(p) for p in self.pending))
+        self.file.append("\n".join(mo_json.value2json(p) for p in self.pending))
         self._apply_pending()
 
     def close(self):
@@ -219,7 +219,7 @@ class PersistentQueue(object):
                     self._add_pending({"add": {"status.start": self.start}})
                     for i in range(self.db.status.start, self.start):
                         self._add_pending({"remove": str(i)})
-                    self.file.write(convert.value2json({"add": self.db}) + "\n" + ("\n".join(convert.value2json(p) for p in self.pending)) + "\n")
+                    self.file.write(mo_json.value2json({"add": self.db}) + "\n" + ("\n".join(mo_json.value2json(p) for p in self.pending)) + "\n")
                     self._apply_pending()
                 except Exception, e:
                     raise e

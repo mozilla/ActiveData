@@ -12,8 +12,8 @@ from __future__ import unicode_literals
 
 import sys
 
-import pyDots
-from pyDots import wrap, join_field, split_field
+import mo_dots
+from mo_dots import wrap, join_field, split_field
 
 DEBUG = True
 
@@ -30,7 +30,7 @@ def set(constants):
     for k, new_value in constants.leaves():
         errors = []
         try:
-            old_value = pyDots.set_attr(sys.modules, k, new_value)
+            old_value = mo_dots.set_attr(sys.modules, k, new_value)
             continue
         except Exception, e:
             errors.append(e)
@@ -50,7 +50,7 @@ def set(constants):
                 prefix = join_field(path[:1])
                 name = join_field(path[i:])
                 if caller_module.endswith(prefix):
-                    old_value = pyDots.set_attr(caller_globals, name, new_value)
+                    old_value = mo_dots.set_attr(caller_globals, name, new_value)
                     if DEBUG:
                         from mo_logs import Log
 

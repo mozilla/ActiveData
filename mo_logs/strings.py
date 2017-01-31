@@ -22,7 +22,7 @@ from collections import Mapping
 from datetime import datetime as builtin_datetime
 from datetime import timedelta, date
 
-from pyDots import coalesce, wrap
+from mo_dots import coalesce, wrap
 
 _json_encoder = None
 _convert = None

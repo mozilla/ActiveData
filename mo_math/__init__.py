@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import __builtin__
 import math
 
-from pyDots import Null, coalesce
+from mo_dots import Null, coalesce
 
 
 class Math(object):

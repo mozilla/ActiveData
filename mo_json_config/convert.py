@@ -16,7 +16,7 @@ import StringIO
 from collections import Mapping
 
 from mo_logs import Log
-from pyDots import wrap
+from mo_dots import wrap
 
 
 def int2hex(value, size):

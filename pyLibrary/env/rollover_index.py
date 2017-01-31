@@ -10,7 +10,7 @@ from __future__ import unicode_literals
 
 from mo_logs import Log, strings
 from mo_logs.exceptions import suppress_exception
-from pyDots import coalesce, wrap, Null
+from mo_dots import coalesce, wrap, Null
 from pyLibrary import convert
 from pyLibrary.aws.s3 import strip_extension
 from pyLibrary.env import elasticsearch
@@ -54,7 +54,7 @@ class RolloverIndex(object):
     def _get_queue(self, row):
         row = wrap(row)
         if row.json:
-            row.value, row.json = convert.json2value(row.json), None
+            row.value, row.json = mo_json.json2value(row.json), None
         timestamp = Date(self.rollover_field(wrap(row).value))
         if timestamp == None or timestamp < Date.today() - self.rollover_max:
             return Null
@@ -218,12 +218,12 @@ def fix(rownum, line, source, sample_only_filter, sample_size):
         if found:
             suite_json = '{' + found + "}"
             if suite_json:
-                suite = convert.json2value(suite_json)
+                suite = mo_json.json2value(suite_json)
                 suite = convert.value2json(coalesce(suite.fullname, suite.name))
                 line = line.replace(suite_json, suite)
 
     if rownum == 0:
-        value = convert.json2value(line)
+        value = mo_json.json2value(line)
         if len(line) > MAX_RECORD_LENGTH:
             _shorten(value, source)
         _id, value = _fix(value)
@@ -234,12 +234,12 @@ def fix(rownum, line, source, sample_only_filter, sample_size):
                 Log.error("Expecting etl.id==0")
             return row, True
     elif len(line) > MAX_RECORD_LENGTH:
-        value = convert.json2value(line)
+        value = mo_json.json2value(line)
         _shorten(value, source)
         _id, value = _fix(value)
         row = {"id": _id, "value": value}
     elif line.find('"resource_usage":') != -1:
-        value = convert.json2value(line)
+        value = mo_json.json2value(line)
         _id, value = _fix(value)
         row = {"id": _id, "value": value}
     else:

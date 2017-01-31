@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from mo_logs import Log
-from pyDots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
+from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
     unwraplist
 from mo_math import Math
 from pyLibrary.queries import es09

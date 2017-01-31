@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyDots import wrap, split_field, join_field
+from mo_dots import wrap, split_field, join_field
 from pyLibrary.queries.expressions import Variable
 
 

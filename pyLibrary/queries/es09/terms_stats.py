@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary.collections.matrix import Matrix
+from mo_collections.matrix import Matrix
 from mo_math import COUNT, PRODUCT
 from pyLibrary.queries import domains
 from pyLibrary.queries.containers.cube import Cube
@@ -20,9 +20,9 @@ from pyLibrary.queries.es09.util import aggregates, build_es_query, compileEdges
 from mo_logs import Log
 from pyLibrary.queries.es09.expressions import UID
 from pyLibrary.queries import es09
-from pyDots import literal_field, coalesce
-from pyDots.lists import FlatList
-from pyDots import wrap, listwrap
+from mo_dots import literal_field, coalesce
+from mo_dots.lists import FlatList
+from mo_dots import wrap, listwrap
 from pyLibrary.queries.expressions import simplify_esfilter
 
 

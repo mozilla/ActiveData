@@ -14,8 +14,8 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from mo_logs import Log
-from pyDots import set_default, coalesce, literal_field, Data, unwraplist
-from pyDots import wrap
+from mo_dots import set_default, coalesce, literal_field, Data, unwraplist
+from mo_dots import wrap
 from mo_math import MAX, UNION
 from mo_math import Math
 from pyLibrary.queries import jx

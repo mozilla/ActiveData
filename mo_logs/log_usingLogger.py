@@ -19,20 +19,26 @@ from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_logs.log_usingThreadedStream import StructuredLogger_usingThreadedStream, time_delta_pusher
-from pyDots import unwrap
+from mo_dots import unwrap
 
+
+_THREAD_STOP = None
 _Queue = None
 _Thread = None
 
+
 def _late_import():
+    global _THREAD_STOP
     global _Queue
     global _Thread
 
-    from mo_threads import Thread as _Thread
+    from mo_threads import THREAD_STOP as _THREAD_STOP
     from mo_threads import Queue as _Queue
+    from mo_threads import Thread as _Thread
 
-    _ = Queue
-    _ = Thread
+    _ = _THREAD_STOP
+    _ = _Queue
+    _ = _Thread
 
 
 # WRAP PYTHON CLASSIC logger OBJECTS
@@ -62,7 +68,7 @@ class StructuredLogger_usingLogger(StructuredLogger):
 
     def stop(self):
         with suppress_exception:
-            self.queue.add(THREAD_STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
+            self.queue.add(_THREAD_STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
 
         with suppress_exception:
@@ -89,7 +95,7 @@ def make_log_from_settings(settings):
 
     # IF WE NEED A FILE, MAKE SURE DIRECTORY EXISTS
     if settings.filename:
-        from pyLibrary.env.files import File
+        from mo_files import File
 
         f = File(settings.filename)
         if not f.parent.exists:

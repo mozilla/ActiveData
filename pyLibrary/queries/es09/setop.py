@@ -12,11 +12,11 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
 
-from pyLibrary.collections.matrix import Matrix
+from mo_collections.matrix import Matrix
 from mo_math import AND, SUM, OR
-from pyDots import coalesce, split_field, Data, wrap
-from pyDots.lists import FlatList
-from pyDots import listwrap, unwrap
+from mo_dots import coalesce, split_field, Data, wrap
+from mo_dots.lists import FlatList
+from mo_dots import listwrap, unwrap
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.es09.expressions import unpack_terms
 from pyLibrary.queries.es09.util import aggregates

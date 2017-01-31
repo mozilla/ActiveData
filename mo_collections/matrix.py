@@ -11,11 +11,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import mo_json
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_math import PRODUCT, MAX, MIN, OR
-from pyDots import Null, Data, coalesce
-from pyLibrary import convert
+from mo_dots import Null, Data, coalesce
 from pyLibrary.meta import use_settings
 
 
@@ -245,7 +245,7 @@ class Matrix(object):
             yield tuple(int(c / dd) % mm for dd, mm in calc)
 
     def __str__(self):
-        return "Matrix " + convert.value2json(self.dims) + ": " + str(self.cube)
+        return "Matrix " + mo_json.value2json(self.dims) + ": " + str(self.cube)
 
     def __data__(self):
         return self.cube

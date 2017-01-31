@@ -22,7 +22,7 @@ from boto.s3.connection import Location
 
 from pyLibrary import convert
 from mo_logs import Log
-from pyDots import wrap, Null, coalesce, unwrap
+from mo_dots import wrap, Null, coalesce, unwrap
 from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, GzipLines, LazyLines, ibytes2ilines, scompressed2ibytes
 from pyLibrary.meta import use_settings
 from mo_times.dates import Date

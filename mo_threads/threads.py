@@ -24,7 +24,7 @@ from time import sleep
 from mo_threads.signal import AndSignals, Signal
 from mo_threads.till import Till
 from mo_threads.lock import Lock
-from pyDots import Data, unwraplist, Null
+from mo_dots import Data, unwraplist, Null
 
 _convert = None
 _Except = None

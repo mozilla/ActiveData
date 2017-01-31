@@ -17,10 +17,10 @@ import os
 import sys
 import tempfile
 
-from mo_logs import Log
-from pyDots import listwrap, wrap, unwrap
-from pyLibrary.env.files import File
 import mo_json_config
+from mo_files import File
+from mo_logs import Log
+from mo_dots import listwrap, wrap, unwrap
 
 
 # PARAMETERS MATCH argparse.ArgumentParser.add_argument()

@@ -16,11 +16,11 @@ from datetime import datetime
 import re
 
 from pyLibrary import convert
-from pyLibrary.collections import reverse
+from mo_collections import reverse
 from mo_logs import Log
 from mo_math import Math
-from pyDots import split_field, Data, Null, join_field, coalesce
-from pyDots import listwrap
+from mo_dots import split_field, Data, Null, join_field, coalesce
+from mo_dots import listwrap
 from mo_times.durations import Duration
 
 

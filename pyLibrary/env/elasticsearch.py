@@ -19,10 +19,10 @@ from mo_logs import Log, strings
 from mo_logs.exceptions import Except
 from mo_logs.strings import utf82unicode
 from mo_threads import Lock
-from pyDots import coalesce, Null, Data, set_default, join_field, split_field, listwrap, literal_field, \
+from mo_dots import coalesce, Null, Data, set_default, join_field, split_field, listwrap, literal_field, \
     ROOT_PATH
-from pyDots import wrap
-from pyDots.lists import FlatList
+from mo_dots import wrap
+from mo_dots.lists import FlatList
 from pyLibrary import convert
 from pyLibrary.env import http
 from mo_json.typed_encoder import json2typed
@@ -388,7 +388,7 @@ class Index(Features):
                 **kwargs
             )
 
-            result = convert.json2value(utf82unicode(response.all_content))
+            result = mo_json.json2value(utf82unicode(response.all_content))
             if not result.ok:
                 Log.error("Can not set refresh interval ({{error}})", {
                     "error": utf82unicode(response.all_content)
@@ -400,7 +400,7 @@ class Index(Features):
                 **kwargs
             )
 
-            result = convert.json2value(utf82unicode(response.all_content))
+            result = mo_json.json2value(utf82unicode(response.all_content))
             if not result.acknowledged:
                 Log.error("Can not set refresh interval ({{error}})", {
                     "error": utf82unicode(response.all_content)
@@ -633,9 +633,9 @@ class Cluster(object):
         if schema == None:
             Log.error("Expecting a schema")
         elif isinstance(schema, basestring):
-            schema = convert.json2value(schema, leaves=True)
+            schema = mo_json.json2value(schema, leaves=True)
         else:
-            schema = convert.json2value(convert.value2json(schema), leaves=True)
+            schema = mo_json.json2value(convert.value2json(schema), leaves=True)
 
         if limit_replicas:
             # DO NOT ASK FOR TOO MANY REPLICAS
@@ -688,7 +688,7 @@ class Cluster(object):
             response = http.delete(url)
             if response.status_code != 200:
                 Log.error("Expecting a 200, got {{code}}", code=response.status_code)
-            details = convert.json2value(utf82unicode(response.content))
+            details = mo_json.json2value(utf82unicode(response.content))
             if self.debug:
                 Log.note("delete response {{response}}", response=details)
             return response
@@ -756,7 +756,7 @@ class Cluster(object):
                 Log.error(response.reason.decode("latin1") + ": " + strings.limit(response.content.decode("latin1"), 100 if self.debug else 10000))
             if self.debug:
                 Log.note("response: {{response}}", response=utf82unicode(response.content)[:130])
-            details = convert.json2value(utf82unicode(response.content))
+            details = mo_json.json2value(utf82unicode(response.content))
             if details.error:
                 Log.error(convert.quote2string(details.error))
             if details._shards.failed > 0:
@@ -788,7 +788,7 @@ class Cluster(object):
                 Log.error(response.reason+": "+response.all_content)
             if self.debug:
                 Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 130))
-            details = wrap(convert.json2value(utf82unicode(response.all_content)))
+            details = wrap(mo_json.json2value(utf82unicode(response.all_content)))
             if details.error:
                 Log.error(details.error)
             return details
@@ -805,7 +805,7 @@ class Cluster(object):
                 Log.error(response.reason + ": " + response.all_content)
             if self.debug:
                 Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 130))
-            details = wrap(convert.json2value(utf82unicode(response.all_content)))
+            details = wrap(mo_json.json2value(utf82unicode(response.all_content)))
             if details.error:
                 Log.error(details.error)
             return details
@@ -821,7 +821,7 @@ class Cluster(object):
             if self.debug:
                 Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 130))
             if response.all_content:
-                details = wrap(convert.json2value(utf82unicode(response.all_content)))
+                details = wrap(mo_json.json2value(utf82unicode(response.all_content)))
                 if details.error:
                     Log.error(details.error)
                 return details

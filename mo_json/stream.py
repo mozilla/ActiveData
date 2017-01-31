@@ -15,7 +15,7 @@ import json
 from types import GeneratorType
 
 from mo_logs import Log
-from pyDots import split_field
+from mo_dots import split_field
 
 MIN_READ_SIZE = 8*1024
 DEBUG = False

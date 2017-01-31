@@ -15,7 +15,7 @@ import re
 
 from pyLibrary import convert
 from mo_logs import Log
-from pyDots import coalesce, Data
+from mo_dots import coalesce, Data
 from mo_times.dates import Date
 
 true = True

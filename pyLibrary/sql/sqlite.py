@@ -15,14 +15,14 @@ from __future__ import unicode_literals
 import sqlite3
 from collections import Mapping
 
-from pyLibrary import convert
-from mo_logs.exceptions import Except, extract_stack, ERROR, _extract_traceback
+from mo_files import File
 from mo_logs import Log
-from pyDots import Data, coalesce
-from pyLibrary.env.files import File
-from pyLibrary.sql import DB, SQL
+from mo_logs.exceptions import Except, extract_stack, ERROR, _extract_traceback
 from mo_threads import Queue, Signal, Thread
 from mo_times.timer import Timer
+from mo_dots import Data, coalesce
+from pyLibrary import convert
+from pyLibrary.sql import DB, SQL
 
 DEBUG = False
 DEBUG_INSERT = False

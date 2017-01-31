@@ -16,11 +16,11 @@ from collections import Mapping
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_logs.strings import indent, expand_template
-from pyDots import coalesce
-from pyDots import wrap, listwrap, unwrap
-from pyDots.lists import FlatList
+from mo_dots import coalesce
+from mo_dots import wrap, listwrap, unwrap
+from mo_dots.lists import FlatList
 from pyLibrary import convert
-from pyLibrary.collections.matrix import Matrix
+from mo_collections.matrix import Matrix
 from pyLibrary.meta import use_settings
 from pyLibrary.sql import SQL
 from pyLibrary.sql.mysql import int_list_packer
@@ -435,7 +435,7 @@ def expand_json(rows):
         for k, json in list(r.items()):
             if isinstance(json, basestring) and json[0:1] in ("[", "{"):
                 with suppress_exception:
-                    value = convert.json2value(json)
+                    value = mo_json.json2value(json)
                     r[k] = value
 
 

@@ -22,7 +22,7 @@ from mo_logs import constants
 from pyLibrary import jsons
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs import Log
-from pyDots import wrap, coalesce, Data, set_default
+from mo_dots import wrap, coalesce, Data, set_default
 from pyLibrary.meta import use_settings
 from mo_threads import Thread, Lock
 from mozillapulse.consumers import GenericConsumer

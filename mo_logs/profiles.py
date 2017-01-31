@@ -7,9 +7,9 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 import cProfile
 import pstats
@@ -17,8 +17,8 @@ from datetime import datetime
 from time import clock
 
 from mo_math import MAX
-from pyDots import wrap
-from pyDots import Data
+from mo_dots import Data
+from mo_dots import wrap
 
 ON = False
 profiles = {}
@@ -81,7 +81,7 @@ class Profiler(object):
 
 def write(profile_settings):
     from pyLibrary import convert
-    from pyLibrary.env.files import File
+    from mo_files import File
 
     profs = list(profiles.values())
     for p in profs:

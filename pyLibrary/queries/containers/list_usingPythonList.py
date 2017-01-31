@@ -18,7 +18,7 @@ import itertools
 
 from pyLibrary import convert
 from mo_logs import Log
-from pyDots import Data, wrap, listwrap, unwraplist, FlatList, unwrap, join_field, split_field, NullType, Null
+from mo_dots import Data, wrap, listwrap, unwraplist, FlatList, unwrap, join_field, split_field, NullType, Null
 from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.expression_compiler import compile_expression

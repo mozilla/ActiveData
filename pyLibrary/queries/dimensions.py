@@ -11,15 +11,15 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
-import pyDots as dot
+import mo_dots as dot
 from mo_math import SUM
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.domains import Domain, ALGEBRAIC, KNOWN
-from pyDots import Null, coalesce, join_field, split_field, Data
-from pyDots.lists import FlatList
+from mo_dots import Null, coalesce, join_field, split_field, Data
+from mo_dots.lists import FlatList
 from mo_times.timer import Timer
 from mo_logs import Log
-from pyDots import wrap, listwrap
+from mo_dots import wrap, listwrap
 
 
 DEFAULT_QUERY_LIMIT = 20

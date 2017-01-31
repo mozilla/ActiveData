@@ -27,7 +27,7 @@ from mo_threads.threads import Thread, THREAD_STOP
 from mo_threads.till import Till
 from mo_times.dates import Date
 from mo_times.durations import SECOND
-from pyDots import coalesce, Null
+from mo_dots import coalesce, Null
 
 _convert = None
 _Except = None

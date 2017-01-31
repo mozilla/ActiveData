@@ -17,10 +17,10 @@ from copy import copy
 from mo_logs import Log
 from mo_math import AND, UNION
 from mo_math import Math
-from pyDots import Data
-from pyDots import coalesce, Null, set_default, unwraplist, literal_field
-from pyDots import wrap, unwrap, listwrap
-from pyDots.lists import FlatList
+from mo_dots import Data
+from mo_dots import coalesce, Null, set_default, unwraplist, literal_field
+from mo_dots import wrap, unwrap, listwrap
+from mo_dots.lists import FlatList
 from pyLibrary.queries import Schema, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.dimensions import Dimension

@@ -16,10 +16,10 @@ import os
 from collections import Mapping
 from urlparse import urlparse
 
-import pyDots
+import mo_dots
 from mo_json_config.convert import value2url, ini2value
 from mo_logs import Log, Except
-from pyDots import set_default, wrap, unwrap
+from mo_dots import set_default, wrap, unwrap
 from pyLibrary.convert import json2value
 
 DEBUG = False
@@ -105,7 +105,7 @@ def _replace_ref(node, url):
             raise Log.error("unknown protocol {{scheme}}", scheme=ref.scheme)
 
         if ref.fragment:
-            new_value = pyDots.get_attr(new_value, ref.fragment)
+            new_value = mo_dots.get_attr(new_value, ref.fragment)
 
         if DEBUG:
             Log.note("Replace {{ref}} with {{new_value}}", ref=ref, new_value=new_value)
@@ -152,13 +152,13 @@ def _replace_locals(node, doc_path):
                 if p != ".":
                     if i>len(doc_path):
                         Log.error("{{frag|quote}} reaches up past the root document",  frag=frag)
-                    new_value = pyDots.get_attr(doc_path[i-1], frag[i::])
+                    new_value = mo_dots.get_attr(doc_path[i-1], frag[i::])
                     break
             else:
                 new_value = doc_path[len(frag) - 1]
         else:
             # ABSOLUTE
-            new_value = pyDots.get_attr(doc_path[-1], frag)
+            new_value = mo_dots.get_attr(doc_path[-1], frag)
 
         new_value = _replace_locals(new_value, [new_value] + doc_path)
 
@@ -181,7 +181,7 @@ def _replace_locals(node, doc_path):
 ###############################################################################
 
 def get_file(ref, url):
-    from pyLibrary.env.files import File
+    from mo_files import File
 
     if ref.path.startswith("~"):
         home_path = os.path.expanduser("~")

@@ -16,6 +16,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from thread import allocate_lock as _allocate_lock
+from thread import get_ident as _get_ident
 
 _Log = None
 DEBUG = False
@@ -98,6 +99,9 @@ class Signal(object):
                 _late_import()
             _Log.note("GO! {{name|quote}}", name=self.name)
 
+        if self._go:
+            return
+
         with self.lock:
             if self._go:
                 return
@@ -150,6 +154,14 @@ class Signal(object):
             _Log.note("Signal {{name|quote}} already triggered, running job immediately", name=self.name)
         target()
 
+    def remove_go(self, target):
+        """
+        FOR SAVING MEMORY
+        """
+        with self.lock:
+            if not self._go:
+                self.job_queue.remove(target)
+
     @property
     def name(self):
         if not self._name:
@@ -171,6 +183,12 @@ class Signal(object):
         output = Signal(self.name + " | " + other.name)
         self.on_go(output.go)
         other.on_go(output.go)
+
+        # REMOVE output FROM self AND other
+        def remove_goes():
+            self.remove_go(output.go)
+            other.remove_go(output.go)
+        output.on_go(remove_goes)
         return output
 
     def __ror__(self, other):

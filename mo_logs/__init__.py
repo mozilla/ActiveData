@@ -22,7 +22,7 @@ from datetime import datetime
 from mo_logs import constants
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.strings import indent
-from pyDots import coalesce, listwrap, wrap, unwrap, unwraplist, set_default
+from mo_dots import coalesce, listwrap, wrap, unwrap, unwraplist, set_default
 
 _Thread = None
 
@@ -433,7 +433,7 @@ class Log(object):
 
 def write_profile(profile_settings, stats):
     from pyLibrary import convert
-    from pyLibrary.env.files import File
+    from mo_files import File
 
     acc = stats[0]
     for s in stats[1:]:

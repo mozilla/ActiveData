@@ -16,13 +16,12 @@ from collections import Mapping
 from mo_logs import Log, strings
 from mo_logs.exceptions import suppress_exception
 from mo_logs.log_usingNothing import StructuredLogger
-from pyDots import wrap, coalesce
+from mo_dots import wrap, coalesce
 from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx
-from mo_threads import Thread, Queue
-from mo_threads.till import Till
+from mo_threads import Thread, Queue, Till
 from mo_times.durations import MINUTE, Duration
 
 MAX_BAD_COUNT = 5
@@ -36,7 +35,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         settings ARE FOR THE ELASTICSEARCH INDEX
         """
         self.es = Cluster(settings).get_or_create_index(
-            schema=convert.json2value(convert.value2json(SCHEMA), leaves=True),
+            schema=mo_json.json2value(convert.value2json(SCHEMA), leaves=True),
             limit_replicas=True,
             tjson=True,
             settings=settings

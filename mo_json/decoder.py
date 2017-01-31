@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
 
-from pyDots import Null, FlatList, wrap, unwrap
+from mo_dots import Null, FlatList, wrap, unwrap
 from mo_json.encoder import UnicodeBuilder, use_pypy, pypy_json_encode
 
 DEBUG = False

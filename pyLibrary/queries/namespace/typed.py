@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from mo_logs import Log
-from pyDots import set_default, wrap, split_field, join_field, concat_field
+from mo_dots import set_default, wrap, split_field, join_field, concat_field
 from mo_math import Math
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expressions import Expression

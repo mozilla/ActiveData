@@ -25,7 +25,7 @@ from mo_logs import Except
 from mo_logs.strings import utf82unicode
 from mo_times.dates import Date
 from mo_times.durations import Duration
-from pyDots import Data, FlatList, NullType, Null
+from mo_dots import Data, FlatList, NullType, Null
 
 from mo_json import quote, ESCAPE_DCT, scrub, float2json
 

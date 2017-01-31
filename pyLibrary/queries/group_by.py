@@ -15,11 +15,11 @@ from __future__ import unicode_literals
 import math
 import sys
 
-from pyLibrary.collections.multiset import Multiset
+from mo_collections.multiset import Multiset
 from mo_logs.exceptions import Except
 from mo_logs import Log
-from pyDots import listwrap, Null, Data
-from pyDots.lists import FlatList
+from mo_dots import listwrap, Null, Data
+from mo_dots.lists import FlatList
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.expressions import jx_expression_to_function, jx_expression
 

@@ -7,24 +7,23 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
+import itertools
+import re
 from collections import Mapping
 from numbers import Number
-import re
-import itertools
 
-from pyLibrary import convert
+from mo_dots import coalesce, Data, set_default, Null, listwrap
+from mo_dots import wrap
+from mo_dots.lists import FlatList
 from mo_logs import Log
 from mo_math import Math
-from pyLibrary.queries.unique_index import UniqueIndex
-from pyDots import coalesce, Data, set_default, Null, listwrap
-from pyDots.lists import FlatList
-from pyDots import wrap
 from mo_times.dates import Date
 from mo_times.durations import Duration
-
+from mo_collections.unique_index import UniqueIndex
 
 ALGEBRAIC = {"time", "duration", "numeric", "count", "datetime"}  # DOMAINS THAT HAVE ALGEBRAIC OPERATIONS DEFINED
 KNOWN = {"set", "boolean", "duration", "time", "numeric"}  # DOMAINS THAT HAVE A KNOWN NUMBER FOR PARTS AT QUERY TIME

@@ -8,27 +8,26 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from collections import Mapping, Iterable
-from sets import BaseSet
+from collections import Mapping, Iterable, Set
 
-from mo_logs.exceptions import suppress_exception
+from mo_dots import unwrap, tuplewrap, wrap
+from mo_dots.objects import datawrap
 from mo_logs import Log
-from pyDots import unwrap, tuplewrap, wrap
-from pyDots.objects import datawrap
-
+from mo_logs.exceptions import suppress_exception
 
 DEBUG = False
 
 
-class UniqueIndex(BaseSet, Mapping):
+class UniqueIndex(Set, Mapping):
     """
     DEFINE A SET OF ATTRIBUTES THAT UNIQUELY IDENTIFIES EACH OBJECT IN A list.
     THIS ALLOWS set-LIKE COMPARISIONS (UNION, INTERSECTION, DIFFERENCE, ETC) WHILE
     STILL MAINTAINING list-LIKE FEATURES
+    KEYS CAN BE DOT-DELIMITED PATHS TO DEEP INNER OBJECTS
     """
 
     def __init__(self, keys, data=None, fail_on_dup=True):

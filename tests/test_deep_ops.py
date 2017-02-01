@@ -14,8 +14,8 @@ from __future__ import unicode_literals
 
 from unittest import skipIf
 
-from pyDots import wrap
-from pyLibrary.maths import Math
+from mo_dots import wrap
+from mo_math import Math
 from tests import NULL
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
 

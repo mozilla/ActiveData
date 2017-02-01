@@ -18,9 +18,9 @@ import sys
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from MoLogs import Log
-from pyDots import listwrap
-from pyDots import coalesce
+from mo_logs import Log
+from mo_dots import listwrap
+from mo_dots import coalesce
 from pyLibrary.meta import use_settings
 
 

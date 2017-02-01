@@ -18,21 +18,21 @@ import subprocess
 from copy import deepcopy
 from string import ascii_lowercase
 
-from MoLogs import Log, Except, constants
-from MoLogs.exceptions import extract_stack
-from MoLogs.strings import expand_template
+from mo_logs import Log, Except, constants
+from mo_logs.exceptions import extract_stack
+from mo_logs.strings import expand_template
 from active_data.actions.query import replace_vars
-from pyDots import wrap, coalesce, unwrap, listwrap, Data
+from mo_dots import wrap, coalesce, unwrap, listwrap, Data
 from pyLibrary import convert, jsons
 from pyLibrary.env import http
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, containers
 from pyLibrary.queries.containers.list_usingSQLite import Table_usingSQLite
 from pyLibrary.queries.query import QueryOp
-from pyLibrary.testing import elasticsearch
-from pyLibrary.testing.fuzzytestcase import FuzzyTestCase, assertAlmostEqual
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import MINUTE
+from mo_testing import elasticsearch
+from mo_testing.fuzzytestcase import FuzzyTestCase, assertAlmostEqual
+from mo_times.dates import Date
+from mo_times.durations import MINUTE
 
 TEST_TABLE = "testdata"
 

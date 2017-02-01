@@ -13,13 +13,13 @@ from __future__ import unicode_literals
 
 from unittest import skip
 
-from pyDots import wrap
+from mo_dots import wrap
 from pyLibrary import convert, jsons
-from MoLogs import Log, Except
+from mo_logs import Log, Except
 from pyLibrary.env import http
-from pyLibrary.times.dates import Date, Duration
-from pyLibrary.times.durations import DAY
-from pyLibrary.times.timer import Timer
+from mo_times.dates import Date, Duration
+from mo_times.durations import DAY
+from mo_times.timer import Timer
 from tests.base_test_class import ActiveDataBaseTest, error, global_settings
 
 APP_CONFIG_FILE = "tests/config/app_staging_settings.json"

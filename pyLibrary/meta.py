@@ -14,16 +14,17 @@ from __future__ import unicode_literals
 from collections import Mapping
 from types import FunctionType
 
-import pyDots
-from MoLogs import Log
-from MoLogs.exceptions import Except, suppress_exception
-from MoLogs.strings import expand_template
-from pyDots import set_default, wrap, _get_attr, Null, coalesce
+import mo_dots
+import mo_json
+from mo_dots import set_default, wrap, _get_attr, Null, coalesce
+from mo_logs import Log
+from mo_logs.exceptions import Except
+from mo_logs.strings import expand_template
+from mo_math.randoms import Random
+from mo_threads import Lock
+from mo_times.dates import Date
+from mo_times.durations import DAY
 from pyLibrary import convert
-from pyLibrary.maths.randoms import Random
-from pyLibrary.thread.threads import Lock
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import DAY
 
 
 def get_class(path):
@@ -33,7 +34,7 @@ def get_class(path):
         return _get_attr(output, path[-1:])
         # return output
     except Exception, e:
-        from MoLogs import Log
+        from mo_logs import Log
 
         Log.error("Could not find module {{module|quote}}",  module= ".".join(path))
 
@@ -60,8 +61,10 @@ def new_instance(settings):
         Log.error("Can not find class {{class}}", {"class": path}, cause=e)
 
     settings['class'] = None
-    with suppress_exception:
+    try:
         return constructor(settings=settings)  # MAYBE IT TAKES A SETTINGS OBJECT
+    except Exception, e:
+        pass
 
     try:
         return constructor(**settings)
@@ -127,7 +130,7 @@ def use_settings(func):
     def wrapper(*args, **kwargs):
         try:
             if func.func_name in ("__init__", "__new__") and "settings" in kwargs:
-                packed = params_pack(params, kwargs, pyDots.zip(params[1:], args[1:]), kwargs["settings"], defaults)
+                packed = params_pack(params, kwargs, mo_dots.zip(params[1:], args[1:]), kwargs["settings"], defaults)
                 return func(args[0], **packed)
             elif func.func_name in ("__init__", "__new__") and len(args) == 2 and len(kwargs) == 0 and isinstance(args[1], Mapping):
                 # ASSUME SECOND UNNAMED PARAM IS settings
@@ -135,17 +138,17 @@ def use_settings(func):
                 return func(args[0], **packed)
             elif func.func_name in ("__init__", "__new__"):
                 # DO NOT INCLUDE self IN SETTINGS
-                packed = params_pack(params, kwargs, pyDots.zip(params[1:], args[1:]), defaults)
+                packed = params_pack(params, kwargs, mo_dots.zip(params[1:], args[1:]), defaults)
                 return func(args[0], **packed)
             elif params[0] == "self" and "settings" in kwargs:
-                packed = params_pack(params, kwargs, pyDots.zip(params[1:], args[1:]), kwargs["settings"], defaults)
+                packed = params_pack(params, kwargs, mo_dots.zip(params[1:], args[1:]), kwargs["settings"], defaults)
                 return func(args[0], **packed)
             elif params[0] == "self" and len(args) == 2 and len(kwargs) == 0 and isinstance(args[1], Mapping):
                 # ASSUME SECOND UNNAMED PARAM IS settings
                 packed = params_pack(params, args[1], defaults)
                 return func(args[0], **packed)
             elif params[0] == "self":
-                packed = params_pack(params, kwargs, pyDots.zip(params[1:], args[1:]), defaults)
+                packed = params_pack(params, kwargs, mo_dots.zip(params[1:], args[1:]), defaults)
                 return func(args[0], **packed)
             elif len(args) == 1 and len(kwargs) == 0 and isinstance(args[0], Mapping):
                 # ASSUME SINGLE PARAMETER IS A SETTING
@@ -153,11 +156,11 @@ def use_settings(func):
                 return func(**packed)
             elif "settings" in kwargs and isinstance(kwargs["settings"], Mapping):
                 # PUT args INTO SETTINGS
-                packed = params_pack(params, kwargs, pyDots.zip(params, args), kwargs["settings"], defaults)
+                packed = params_pack(params, kwargs, mo_dots.zip(params, args), kwargs["settings"], defaults)
                 return func(**packed)
             else:
                 # PULL SETTINGS OUT INTO PARAMS
-                packed = params_pack(params, kwargs, pyDots.zip(params, args), defaults)
+                packed = params_pack(params, kwargs, mo_dots.zip(params, args), defaults)
                 return func(**packed)
         except TypeError, e:
             if e.message.find("takes at least") >= 0:
@@ -405,3 +408,11 @@ def _exec(code, name):
     exec (code)
     globals()[name] = temp
     return temp
+
+
+def value2quote(value):
+    # RETURN PRETTY PYTHON CODE FOR THE SAME
+    if isinstance(value, basestring):
+        return mo_json.quote(value)
+    else:
+        return repr(value)

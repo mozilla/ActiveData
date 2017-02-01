@@ -16,9 +16,9 @@ from tempfile import TemporaryFile
 import zipfile
 import zlib
 
-from MoLogs.exceptions import suppress_exception
-from MoLogs import Log
-from pyLibrary.maths import Math
+from mo_logs.exceptions import suppress_exception
+from mo_logs import Log
+from mo_math import Math
 
 # LIBRARY TO DEAL WITH BIG DATA ARRAYS AS ITERATORS OVER (IR)REGULAR SIZED
 # BLOCKS, OR AS ITERATORS OVER LINES

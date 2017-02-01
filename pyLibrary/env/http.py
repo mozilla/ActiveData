@@ -9,7 +9,7 @@
 
 # MIMICS THE requests API (http://docs.python-requests.org/en/latest/)
 # DEMANDS data IS A JSON-SERIALIZABLE STRUCTURE
-# WITH ADDED default_headers THAT CAN BE SET USING MoLogs.settings
+# WITH ADDED default_headers THAT CAN BE SET USING mo_logs.settings
 # EG
 # {"debug.constants":{
 #     "pyLibrary.env.http.default_headers":{"From":"klahnakoski@mozilla.com"}
@@ -27,16 +27,17 @@ from tempfile import TemporaryFile
 
 from requests import sessions, Response
 
+import mo_json
 from pyLibrary import convert
-from MoLogs.exceptions import Except
-from MoLogs import Log
-from pyDots import Data, coalesce, wrap, set_default, unwrap
+from mo_logs.exceptions import Except
+from mo_logs import Log
+from mo_dots import Data, coalesce, wrap, set_default, unwrap
 from pyLibrary.env.big_data import safe_size, ibytes2ilines, icompressed2ibytes
-from pyLibrary.maths import Math
+from mo_math import Math
 from pyLibrary.queries import jx
-from pyLibrary.thread.threads import Thread, Lock
-from pyLibrary.thread.till import Till
-from pyLibrary.times.durations import Duration
+from mo_threads import Thread, Lock
+from mo_threads import Till
+from mo_times.durations import Duration
 
 DEBUG = False
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
@@ -180,7 +181,7 @@ def get_json(url, **kwargs):
     """
     response = get(url, **kwargs)
     c = response.all_content
-    return convert.json2value(convert.utf82unicode(c))
+    return mo_json.json2value(convert.utf82unicode(c))
 
 def options(url, **kwargs):
     kwargs.setdefault(b'allow_redirects', True)
@@ -217,7 +218,7 @@ def post_json(url, **kwargs):
     response = post(url, **kwargs)
     c = response.content
     try:
-        details = convert.json2value(convert.utf82unicode(c))
+        details = mo_json.json2value(convert.utf82unicode(c))
     except Exception, e:
         Log.error("Unexpected return value {{content}}", content=c, cause=e)
 

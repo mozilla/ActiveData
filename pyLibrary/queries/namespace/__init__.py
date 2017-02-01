@@ -13,7 +13,7 @@ from __future__ import absolute_import
 
 from collections import Mapping
 
-from pyDots import set_default, Data
+from mo_dots import set_default, Data
 from pyLibrary.queries.query import QueryOp
 
 

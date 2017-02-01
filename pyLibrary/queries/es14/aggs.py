@@ -11,17 +11,17 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from MoLogs import Log
-from pyDots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
+from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
     unwraplist
-from pyLibrary.maths import Math
+from mo_logs import Log
+from mo_math import Math, MAX
+from mo_times.timer import Timer
 from pyLibrary.queries import es09
 from pyLibrary.queries.es14.decoders import DefaultDecoder, AggsDecoder
 from pyLibrary.queries.es14.decoders import DimFieldListDecoder
 from pyLibrary.queries.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp, TupleOp
+from pyLibrary.queries.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp
 from pyLibrary.queries.query import MAX_LIMIT
-from pyLibrary.times.timer import Timer
 
 
 def is_aggsop(es, query):
@@ -80,7 +80,7 @@ def get_decoders_by_depth(query):
                 )
             if len(depths) > 1:
                 Log.error("expression {{expr}} spans tables, can not handle", expr=edge.value)
-            max_depth = Math.MAX(depths)
+            max_depth = MAX(depths)
             while len(output) <= max_depth:
                 output.append([])
         except Exception, edge:

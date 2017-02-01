@@ -11,8 +11,8 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import DAY
+from mo_times.dates import Date
+from mo_times.durations import DAY
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
 
 FROM_DATE = Date.today()-7*DAY

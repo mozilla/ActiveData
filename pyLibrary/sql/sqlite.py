@@ -18,15 +18,15 @@ from collections import Mapping
 
 import sys
 
+from mo_dots import Data, coalesce
+from mo_files import File
+from mo_logs import Log
+from mo_logs.exceptions import Except, extract_stack, ERROR, _extract_traceback
+from mo_math.stats import percentile
+from mo_threads import Queue, Signal, Thread
+from mo_times.timer import Timer
 from pyLibrary import convert
-from MoLogs.exceptions import Except, extract_stack, ERROR
-from MoLogs import Log
-from pyDots import Data, coalesce
-from pyLibrary.env.files import File
-from pyLibrary.maths.stats import percentile, median
 from pyLibrary.sql import DB, SQL
-from pyLibrary.thread.threads import Queue, Signal, Thread
-from pyLibrary.times.timer import Timer
 
 DEBUG = False
 DEBUG_INSERT = False
@@ -131,6 +131,9 @@ class Sqlite(DB):
             library_loc = File.new_instance(sys.modules[__name__].__file__, "../..")
             full_path = File.new_instance(library_loc, "vendor/sqlite/libsqlitefunctions.so").abspath
             try:
+                trace = _extract_traceback(0)[0]
+                file = File.new_instance(trace.file, "../../pyLibrary/vendor/sqlite/libsqlitefunctions.so")
+                full_path = file.abspath
                 self.db.enable_load_extension(True)
                 self.db.execute("SELECT load_extension(" + self.quote_value(full_path) + ")")
             except Exception, e:

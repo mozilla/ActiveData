@@ -17,14 +17,15 @@ import re
 from collections import Mapping, OrderedDict
 from copy import copy
 
-from MoLogs import Log
-from pyDots import listwrap, coalesce, Data, wrap, Null, unwraplist, split_field, join_field, startswith_field, \
-    literal_field, unwrap, relative_field, concat_field, unliteral_field
-from pyLibrary import convert, jsons
-from pyLibrary.collections import UNION
-from pyLibrary.collections.matrix import Matrix, index_to_coordinate
-from pyLibrary.maths import Math
-from pyLibrary.maths.randoms import Random
+from mo_collections.matrix import Matrix, index_to_coordinate
+from mo_dots import listwrap, coalesce, Data, wrap, Null, unwraplist, split_field, join_field, startswith_field, literal_field, unwrap, \
+    relative_field, concat_field
+from mo_logs import Log
+from mo_math import Math
+from mo_math import UNION, MAX
+from mo_math.randoms import Random
+from mo_times import Date
+from pyLibrary import convert
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, Index
 from pyLibrary.queries.containers import Container, STRUCT
@@ -33,8 +34,6 @@ from pyLibrary.queries.expressions import jx_expression, Variable, sql_type_to_j
 from pyLibrary.queries.meta import Column
 from pyLibrary.queries.query import QueryOp
 from pyLibrary.sql.sqlite import Sqlite
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import Duration
 
 _containers = None
 
@@ -1456,9 +1455,9 @@ class Table_usingSQLite(Container):
 
         if query.format == "cube":
             num_rows = len(result.data)
-            num_cols = Math.MAX([c.push_column for c in cols]) + 1 if len(cols) else 0
-            map_index_to_name = {c.push_column: unliteral_field(c.push_name) for c in cols}
-            temp_data = [[None] * num_rows for _ in range(num_cols)]
+            num_cols = MAX([c.push_column for c in cols]) + 1 if len(cols) else 0
+            map_index_to_name = {c.push_column: c.push_name for c in cols}
+            temp_data = [[None]*num_rows for _ in range(num_cols)]
             for rownum, d in enumerate(result.data):
                 for c in cols:
                     if c.push_child == ".":
@@ -1484,8 +1483,8 @@ class Table_usingSQLite(Container):
             )
             return output
         elif query.format == "table":
-            num_column = Math.MAX([c.push_column for c in cols]) + 1
-            header = [None] * num_column
+            num_column = MAX([c.push_column for c in cols])+1
+            header = [None]*num_column
             for c in cols:
                 sf = split_field(c.push_name)
                 if len(sf) > 1:

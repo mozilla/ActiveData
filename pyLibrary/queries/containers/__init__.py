@@ -15,9 +15,9 @@ from collections import Mapping
 from copy import copy
 from types import GeneratorType
 
-from MoLogs import Log
-from pyDots import set_default, split_field, wrap, join_field
-from pyDots import Data
+from mo_logs import Log
+from mo_dots import set_default, split_field, wrap, join_field
+from mo_dots import Data
 
 OBJECT = "object"
 NESTED = "nested"

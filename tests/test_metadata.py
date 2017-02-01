@@ -11,7 +11,7 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyDots import set_default, wrap
+from mo_dots import set_default, wrap
 from tests.base_test_class import ActiveDataBaseTest
 
 

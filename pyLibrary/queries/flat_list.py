@@ -14,9 +14,9 @@ from __future__ import absolute_import
 from collections import Mapping
 
 import functools
-from pyLibrary.collections import MIN
-from MoLogs import Log
-from pyDots import split_field, coalesce, Data, FlatList, wrap
+from mo_math import MIN
+from mo_logs import Log
+from mo_dots import split_field, coalesce, Data, FlatList, wrap
 
 
 class PartFlatList(list):

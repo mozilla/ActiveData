@@ -11,9 +11,9 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import deque
-from pyLibrary.collections import INTERSECT
+from mo_math import INTERSECT
 from pyLibrary.graphs.paths import Step, Path
-from pyDots import Data
+from mo_dots import Data
 
 
 def dfs(graph, func, head, reverse=None):

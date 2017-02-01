@@ -138,7 +138,7 @@ importScript([
 				});
 
 				//SUMMARY ON SHARDS
-				var max_size = aMath.MAX(shards.select("index.size_in_bytes"));
+				var max_size = amo_math.MAX(shards.select("index.size_in_bytes"));
 				var num_shards = Map.getKeys(indexDetails.shards).length;
 
 				var VISUAL_RATIO = 1/2;  //OUR TARGET RATIO FOR PRESENTING THE INDEX

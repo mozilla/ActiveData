@@ -14,11 +14,13 @@ from __future__ import unicode_literals
 import hashlib
 from unittest import skipIf
 
-from pyDots import wrap
+from mo_dots import wrap
+from mo_json import value2json
+from mo_json_config import URL
+from mo_threads import Till
 from pyLibrary import convert
+from pyLibrary.convert import unicode2utf8
 from pyLibrary.env import elasticsearch
-from pyLibrary.parsers import URL
-from pyLibrary.thread.till import Till
 from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
 
 
@@ -46,7 +48,7 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
 
         settings = self.utils.fill_container(test)
 
-        bytes = convert.unicode2utf8(convert.value2json({
+        bytes = unicode2utf8(value2json({
             "from": settings.index,
             "select": "a",
             "format": "list"

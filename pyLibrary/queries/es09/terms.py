@@ -11,15 +11,15 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary.collections.matrix import Matrix
-from pyLibrary.collections import AND
+from mo_collections.matrix import Matrix
+from mo_math import AND
 from pyLibrary.queries import jx
 from pyLibrary.queries.es09.util import aggregates, build_es_query, compileEdges2Term
 from pyLibrary.queries import es09
 from pyLibrary.queries.containers.cube import Cube
-from pyDots import coalesce
-from pyDots.lists import FlatList
-from pyDots import wrap, listwrap
+from mo_dots import coalesce
+from mo_dots.lists import FlatList
+from mo_dots import wrap, listwrap
 
 
 def is_terms(query):

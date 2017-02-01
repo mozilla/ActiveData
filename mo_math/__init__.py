@@ -278,7 +278,13 @@ def COUNT(values):
     return count
 
 
-def MIN(values):
+def MIN(values, *others):
+
+    if others:
+        from mo_logs import Log
+        Log.warning("Calling wrong")
+        return MIN([values] + list(others))
+
     output = None
     for v in values:
         if v == None:
@@ -290,7 +296,13 @@ def MIN(values):
     return output
 
 
-def MAX(values):
+def MAX(values, *others):
+
+    if others:
+        from mo_logs import Log
+        Log.warning("Calling wrong")
+        return MAX([values] + list(others))
+
     output = Null
     for v in values:
         if v == None:

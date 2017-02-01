@@ -16,6 +16,7 @@ from boto import sqs
 from boto import utils as boto_utils
 from boto.sqs.message import Message
 
+import mo_json
 from pyLibrary import convert
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs import Log, machine_metadata

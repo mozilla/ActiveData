@@ -8,18 +8,19 @@
 #
 from __future__ import unicode_literals
 
+import mo_json
+from mo_dots import coalesce, wrap, Null
 from mo_logs import Log, strings
 from mo_logs.exceptions import suppress_exception
-from mo_dots import coalesce, wrap, Null
-from pyLibrary import convert
-from pyLibrary.aws.s3 import strip_extension
-from pyLibrary.env import elasticsearch
 from mo_math.randoms import Random
-from pyLibrary.meta import use_settings
-from pyLibrary.queries import jx
 from mo_times.dates import Date, unicode2Date, unix2Date
 from mo_times.durations import Duration
 from mo_times.timer import Timer
+from pyLibrary import convert
+from pyLibrary.aws.s3 import strip_extension
+from pyLibrary.env import elasticsearch
+from pyLibrary.meta import use_settings
+from pyLibrary.queries import jx
 
 MAX_RECORD_LENGTH = 400000
 
@@ -88,7 +89,7 @@ class RolloverIndex(object):
                 es = elasticsearch.Index(read_only=False, alias=best.alias, index=best.index, settings=self.settings)
 
             with suppress_exception:
-                es.set_refresh_interval(seconds=60 * 10, timeout=5)
+                es.set_refresh_interval(seconds=60 * 5, timeout=5)
 
             self._delete_old_indexes(candidates)
 

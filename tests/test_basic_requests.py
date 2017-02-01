@@ -14,8 +14,8 @@ from __future__ import unicode_literals
 from unittest import skipIf
 
 from active_data.app import OVERVIEW
+from mo_json_config import URL
 from pyLibrary import convert
-from pyLibrary.parsers import URL
 from tests.base_test_class import ActiveDataBaseTest, global_settings
 
 

@@ -13,8 +13,9 @@ from __future__ import unicode_literals
 
 from unittest import skip
 
+import mo_json_config
 from mo_dots import wrap
-from pyLibrary import convert, jsons
+from pyLibrary import convert
 from mo_logs import Log, Except
 from pyLibrary.env import http
 from mo_times.dates import Date, Duration
@@ -36,7 +37,7 @@ class TestUnittests(ActiveDataBaseTest):
         # START DIRECT-TO-ACTIVEDATA-ES SERVICE
         global ES_CLUSTER_LOCATION
 
-        app_config = jsons.ref.get("file://"+APP_CONFIG_FILE)
+        app_config = mo_json_config.get("file://"+APP_CONFIG_FILE)
         global_settings.service_url = "http://localhost:"+unicode(app_config.flask.port)+"/query"
         ES_CLUSTER_LOCATION = app_config.elasticsearch.host
 

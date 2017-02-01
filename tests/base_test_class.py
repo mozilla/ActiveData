@@ -18,18 +18,20 @@ import subprocess
 from copy import deepcopy
 from string import ascii_lowercase
 
+import mo_json
+import mo_json_config
 from mo_logs import Log, Except, constants
 from mo_logs.exceptions import extract_stack
 from mo_logs.strings import expand_template
 from active_data.actions.query import replace_vars
 from mo_dots import wrap, coalesce, unwrap, listwrap, Data
-from pyLibrary import convert, jsons
+from pyLibrary import convert
 from pyLibrary.env import http
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, containers
 from pyLibrary.queries.containers.list_usingSQLite import Table_usingSQLite
 from pyLibrary.queries.query import QueryOp
-from mo_testing import elasticsearch
+from pyLibrary.testing import elasticsearch
 from mo_testing.fuzzytestcase import FuzzyTestCase, assertAlmostEqual
 from mo_times.dates import Date
 from mo_times.durations import MINUTE
@@ -189,7 +191,7 @@ class ESUtils(object):
                 "type": _settings.type,
                 "metadata": subtest.metadata
             })
-            _settings.schema = jsons.ref.get(url)
+            _settings.schema = mo_json_config.get(url)
 
             # MAKE CONTAINER
             container = self._es_cluster.get_or_create_index(tjson=tjson, settings=_settings)
@@ -527,7 +529,7 @@ class FakeHttp(object):
         })
 
 
-global_settings = jsons.ref.get("file://tests/config/elasticsearch.json")
+global_settings = mo_json_config.get("file://tests/config/elasticsearch.json")
 constants.set(global_settings.constants)
 Log.alert("Resetting test count")
 NEXT = 0
@@ -543,7 +545,7 @@ utils = None
 try:
     filename = os.environ.get("TEST_CONFIG")
     if filename:
-        global_settings = jsons.ref.get("file://"+filename)
+        global_settings = mo_json_config.get("file://"+filename)
     else:
         Log.alert("No TEST_CONFIG environment variable to point to config file.  Using /tests/config/elasticsearch.json")
 

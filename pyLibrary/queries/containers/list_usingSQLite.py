@@ -24,7 +24,7 @@ from mo_logs import Log
 from mo_math import Math
 from mo_math import UNION, MAX
 from mo_math.randoms import Random
-from mo_times import Date
+from mo_times import Date, Duration
 from pyLibrary import convert
 from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, Index

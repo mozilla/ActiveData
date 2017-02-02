@@ -77,10 +77,11 @@ def unliteral_field(field):
     :param field: THE STRING TO DE-literal IZE
     :return: SIMPLER STRING
     """
-    if len(split_field(field))>1:
-        from MoLogs import Log
+    if len(split_field(field)) > 1:
+        from mo_logs import Log
         Log.error("Bad call! Dude!")
     return field.replace("\.", ".")
+
 
 def split_field(field):
     """

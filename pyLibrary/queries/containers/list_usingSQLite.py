@@ -20,7 +20,7 @@ from copy import copy
 import mo_json
 from mo_collections.matrix import Matrix, index_to_coordinate
 from mo_dots import listwrap, coalesce, Data, wrap, Null, unwraplist, split_field, join_field, startswith_field, literal_field, unwrap, \
-    relative_field, concat_field
+    relative_field, concat_field, unliteral_field
 from mo_logs import Log
 from mo_math import Math
 from mo_math import UNION, MAX
@@ -1306,7 +1306,7 @@ class Table_usingSQLite(Container):
                                     column_alias = _make_column_name(column_number)
                                     sql_selects.append(unsorted_sql + " AS " + column_alias)
                                     index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = Data(
-                                        push_name=literal_field(concat_field(s.name, column.name)),
+                                        push_name=concat_field(s.name, column.name),
                                         push_column=si,
                                         push_child=".",
                                         pull=get_column(column_number),
@@ -1487,13 +1487,14 @@ class Table_usingSQLite(Container):
             num_column = MAX([c.push_column for c in cols])+1
             header = [None]*num_column
             for c in cols:
-                sf = split_field(c.push_name)
-                if len(sf) == 0:
-                    header[c.push_column] = "."
-                elif len(sf) == 1:
-                    header[c.push_column] = sf[0]
-                else:
-                    Log.error("programming error, do not know what to do")
+                header[c.push_column] = c.push_name
+                # sf = split_field(c.push_name)
+                # if len(sf) == 0:
+                #     header[c.push_column] = "."
+                # elif len(sf) == 1:
+                #     header[c.push_column] = sf[0]
+                # else:
+                #     Log.error("programming error, do not know what to do")
 
             output_data = []
             for d in result.data:

@@ -131,8 +131,8 @@ class Sqlite(DB):
             library_loc = File.new_instance(sys.modules[__name__].__file__, "../..")
             full_path = File.new_instance(library_loc, "vendor/sqlite/libsqlitefunctions.so").abspath
             try:
-                trace = _extract_traceback(0)[0]
-                file = File.new_instance(trace.file, "../../pyLibrary/vendor/sqlite/libsqlitefunctions.so")
+                trace = extract_stack(0)[0]
+                file = File.new_instance(trace["file"], "../../vendor/sqlite/libsqlitefunctions.so")
                 full_path = file.abspath
                 self.db.enable_load_extension(True)
                 self.db.execute("SELECT load_extension(" + self.quote_value(full_path) + ")")

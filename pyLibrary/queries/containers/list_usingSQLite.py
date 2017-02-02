@@ -17,6 +17,7 @@ import re
 from collections import Mapping, OrderedDict
 from copy import copy
 
+import mo_json
 from mo_collections.matrix import Matrix, index_to_coordinate
 from mo_dots import listwrap, coalesce, Data, wrap, Null, unwraplist, split_field, join_field, startswith_field, literal_field, unwrap, \
     relative_field, concat_field
@@ -574,9 +575,9 @@ class Table_usingSQLite(Container):
                 elif e.domain.type == "range":
                     domain = e.domain
                 elif e.domain.type == "time":
-                    domain = wrap(jsons.scrub(e.domain))
+                    domain = wrap(mo_json.scrub(e.domain))
                 elif e.domain.type == "duration":
-                    domain = wrap(jsons.scrub(e.domain))
+                    domain = wrap(mo_json.scrub(e.domain))
                 elif isinstance(e.value, TupleOp):
                     pulls = jx.sort([c for c in index_to_columns.values() if c.push_name == e.name], "push_child").pull
                     parts = [tuple(p(d) for p in pulls) for d in result.data]
@@ -1487,9 +1488,12 @@ class Table_usingSQLite(Container):
             header = [None]*num_column
             for c in cols:
                 sf = split_field(c.push_name)
-                if len(sf) > 1:
+                if len(sf) == 0:
+                    header[c.push_column] = "."
+                elif len(sf) == 1:
+                    header[c.push_column] = sf[0]
+                else:
                     Log.error("programming error, do not know what to do")
-                header[c.push_column] = sf[0]
 
             output_data = []
             for d in result.data:
@@ -1850,10 +1854,10 @@ class Table_usingSQLite(Container):
                     return
 
                 if value_type in STRUCT:
-                    c = unwraplist([c for c in columns.get(cname, Null) if c.type in STRUCT])
+                    c = unwraplist([c for c in self.columns if c.type in STRUCT])
                 else:
                     try:
-                        c = unwraplist([c for c in columns.get(cname, Null) if c.type == value_type])
+                        c = unwraplist([c for c in self.columns if c.type == value_type])
                     except Exception, e:
                         Log.error("not expected", cause=e)
 

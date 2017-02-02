@@ -456,9 +456,12 @@ def cube2list(cube):
 def list2cube(rows, header):
     output = {h: [] for h in header}
     for r in rows:
-        r = wrap(r)
         for h in header:
-            output[h].append(r[h])
+            if h==".":
+                output[h].append(r)
+            else:
+                r = wrap(r)
+                output[h].append(r[h])
     return output
 
 

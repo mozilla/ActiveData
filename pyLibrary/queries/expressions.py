@@ -269,9 +269,9 @@ class Variable(Expression):
 
     def to_sql(self, schema, not_null=False, boolean=False):
         cols = [c for c in schema.columns if startswith_field(schema.get_column_name(c), self.var)]
-        if cols is None:
+        if not cols:
             # DOES NOT EXIST
-            return wrap([{"name": ".", "sql": {}, "nested_path": ROOT_PATH}])
+            return wrap([{"name": ".", "sql": {"0": "NULL"}, "nested_path": ROOT_PATH}])
         acc = Data()
         for col in cols:
             if col.type == OBJECT:
@@ -1653,10 +1653,10 @@ class MultiOp(Expression):
         sql_terms = []
         for t in terms:
             if len(t) > 1:
-                return wrap([{"name": ".", "sql": {}}])
+                return wrap([{"name": ".", "sql": {"0": "NULL"}}])
             sql = t[0].sql.n
             if not sql:
-                return wrap([{"name": ".", "sql": {}}])
+                return wrap([{"name": ".", "sql": {"0": "NULL"}}])
             sql_terms.append(sql)
 
         if self.nulls.json=="true":
@@ -3022,18 +3022,20 @@ def sql_quote(value):
 
 
 json_type_to_sql_type = {
-    "string": "s",
-    "number": "n",
-    "object": "j",
+    "null": "0",
     "boolean": "b",
+    "number": "n",
+    "string": "s",
+    "object": "j",
     "nested": "j"
 }
 
 sql_type_to_json_type = {
-    "s": "string",
+    "0": "null",
+    "b": "boolean",
     "n": "number",
-    "j": "object",
-    "b": "boolean"
+    "s": "string",
+    "j": "object"
 }
 
 

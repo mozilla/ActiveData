@@ -1214,7 +1214,7 @@ class Table_usingSQLite(Container):
             if not any(startswith_field(cname, v) for cname in self.columns.keys()):
                 active_columns["."].append(Column(
                     names={self.name: v},
-                    type="unknown",
+                    type="null",
                     es_column=".",
                     es_index=".",
                     nested_path=["."]
@@ -1487,14 +1487,17 @@ class Table_usingSQLite(Container):
             num_column = MAX([c.push_column for c in cols])+1
             header = [None]*num_column
             for c in cols:
-                header[c.push_column] = c.push_name
-                # sf = split_field(c.push_name)
-                # if len(sf) == 0:
-                #     header[c.push_column] = "."
-                # elif len(sf) == 1:
-                #     header[c.push_column] = sf[0]
-                # else:
-                #     Log.error("programming error, do not know what to do")
+                # header[c.push_column] = c.push_name
+                sf = split_field(c.push_name)
+                if len(sf) == 0:
+                    header[c.push_column] = "."
+                elif len(sf) == 1:
+                    header[c.push_column] = sf[0]
+                else:
+                    # TABLES ONLY USE THE FIRST-LEVEL PROPERTY NAMES
+                    # PUSH ALL DEEPER NAMES TO CHILD
+                    header[c.push_column] = sf[0]
+                    c.push_child = join_field(sf[1:] + split_field(c.push_child))
 
             output_data = []
             for d in result.data:

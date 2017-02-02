@@ -68,7 +68,7 @@ class TestAggOps(ActiveDataBaseTest):
         }
         self.utils.execute_es_tests(test)
 
-    @skipIf(global_settings.use=="sqlite", "not expected to pass yet")
+    @skipIf(global_settings.use == "sqlite", "not expected to pass yet")
     def test_median(self):
         test = {
             "data": [{"a": i**2} for i in range(30)],

@@ -18,6 +18,8 @@ import subprocess
 from copy import deepcopy
 from string import ascii_lowercase
 
+from mo_kwargs import override
+
 import mo_json
 import mo_json_config
 from mo_logs import Log, Except, constants
@@ -27,7 +29,6 @@ from active_data.actions.query import replace_vars
 from mo_dots import wrap, coalesce, unwrap, listwrap, Data
 from pyLibrary import convert
 from pyLibrary.env import http
-from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, containers
 from pyLibrary.queries.containers.list_usingSQLite import Table_usingSQLite
 from pyLibrary.queries.query import QueryOp
@@ -85,13 +86,13 @@ class ESUtils(object):
     """
     indexes = []
 
-    @use_settings
+    @override
     def __init__(
         self,
         service_url,  # location of the ActiveData server we are testing
         backend_es,  # the ElasticSearch settings for filling the backend
         fastTesting=False,
-        settings=None
+        kwargs=None
     ):
         if backend_es.schema==None:
             Log.error("Expecting backed_es to have a schema defined")
@@ -100,7 +101,7 @@ class ESUtils(object):
         self.random_letter = letters[int(Date.now().unix / 30) % 26]
         self.service_url = service_url
         self.backend_es = backend_es
-        self.settings = settings
+        self.settings = kwargs
         self._es_test_settings = None
         self._es_cluster = None
         self._index = None
@@ -121,7 +122,7 @@ class ESUtils(object):
             self.server = FakeHttp()
             containers.config.default = {
                 "type": "elasticsearch",
-                "settings": settings.backend_es.copy()
+                "settings": kwargs.backend_es.copy()
             }
 
     def setUp(self):
@@ -281,10 +282,10 @@ class ESUtils(object):
 
 
 class SQLiteUtils(object):
-    @use_settings
+    @override
     def __init__(
         self,
-        settings=None
+        kwargs=None
     ):
         self._index = None
 

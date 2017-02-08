@@ -1657,7 +1657,7 @@ class Table_usingSQLite(Container):
                 column = required_change.add
                 if column.type == "nested":
                     # WE ARE ALSO NESTING
-                    self._nest_column(column, column.name)
+                    self._nest_column(column, column.names[self.name])
 
                 table = join_field([self.name] + split_field(column.nested_path[0]))
 
@@ -1682,7 +1682,7 @@ class Table_usingSQLite(Container):
         # FIND THE INNER COLUMNS WE WILL BE MOVING
         new_columns = {}
         for cname, cols in self.columns.items():
-            if startswith_field(cname, column.name):
+            if startswith_field(cname, column.names[self.name]):
                 new_columns[cname] = set()
                 for col in cols:
                     new_columns[cname].add(col)

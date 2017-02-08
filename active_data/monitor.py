@@ -24,12 +24,12 @@ from mo_times.durations import DAY
 
 class Scheduler(object):
 
-    @use_settings
-    def __init__(self, please_stop, settings=None):
+    @override
+    def __init__(self, please_stop, kwargs=None):
         self.please_stop = please_stop
-        self.jobs = settings.jobs
+        self.jobs = kwargs.jobs
 
-        for j in settings.jobs:
+        for j in kwargs.jobs:
             j.next_run_time = next_run(j)
             j.logger = Log.start_process(j.name)
 

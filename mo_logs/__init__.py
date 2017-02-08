@@ -19,12 +19,14 @@ import sys
 from collections import Mapping
 from datetime import datetime
 
+from mo_dots import coalesce, listwrap, wrap, unwrap, unwraplist, set_default
+
 from mo_logs import constants
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.strings import indent
-from mo_dots import coalesce, listwrap, wrap, unwrap, unwraplist, set_default
 
-_Thread = None
+
+# _Thread = None
 
 
 class Log(object):

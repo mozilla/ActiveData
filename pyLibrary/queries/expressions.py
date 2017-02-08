@@ -2635,9 +2635,9 @@ class WhenOp(Expression):
         return "(" + self.when.to_python(boolean=True) + ") ? (" + self.then.to_python(not_null=not_null) + ") : (" + self.els_.to_python(not_null=not_null) + ")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        when = self.when.to_sql(boolean=True)
-        then = self.then.to_sql(not_null=not_null)
-        els_ = self.els_.to_sql(not_null=not_null)
+        when = self.when.to_sql(schema, boolean=True)[0].sql
+        then = self.then.to_sql(schema, not_null=not_null)[0].sql
+        els_ = self.els_.to_sql(schema, not_null=not_null)[0].sql
         output = {}
         for t in "bsn":
             if then[t] == None:
@@ -2650,7 +2650,10 @@ class WhenOp(Expression):
                     output[t] = "CASE WHEN " + when.b + " THEN " + then[t] + " END"
                 else:
                     output[t] = "CASE WHEN " + when.b + " THEN " + then[t] + " ELSE " + els_[t] + " END"
-        return output
+        if not output:
+            return wrap([{"name": ".", "sql": {"0": "NULL"}}])
+        else:
+            return wrap([{"name": ".", "sql": output}])
 
     def to_esfilter(self):
         return {"or": [

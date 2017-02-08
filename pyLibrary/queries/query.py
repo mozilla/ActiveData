@@ -202,6 +202,8 @@ class QueryOp(Expression):
         output.frum = wrap_from(query["from"], schema=schema)
         if not schema and isinstance(output.frum, Schema):
             schema = output.frum
+        if not schema and hasattr(output.frum, "schema"):
+            schema = output.frum.schema
 
         if query.select or isinstance(query.select, (Mapping, list)):
             output.select = _normalize_selects(query.select, query.frum, schema=schema)

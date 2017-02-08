@@ -26,7 +26,8 @@ from mo_times.timer import Timer
 from mo_dots import Data
 from mo_dots import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
 from mo_dots import wrap
-from pyLibrary.meta import use_settings, DataClass
+from mo_kwargs import override
+from pyLibrary.meta import DataClass
 from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import STRUCT, Container
 from pyLibrary.queries.query import QueryOp
@@ -55,8 +56,8 @@ class FromESMetadata(Schema):
             singlton = object.__new__(cls)
             return singlton
 
-    @use_settings
-    def __init__(self, host, index, alias=None, name=None, port=9200, settings=None):
+    @override
+    def __init__(self, host, index, alias=None, name=None, port=9200, kwargs=None):
         global _elasticsearch
         if hasattr(self, "settings"):
             return
@@ -64,9 +65,9 @@ class FromESMetadata(Schema):
         from pyLibrary.queries.containers.list_usingPythonList import ListContainer
         from pyLibrary.env import elasticsearch as _elasticsearch
 
-        self.settings = settings
+        self.settings = kwargs
         self.default_name = coalesce(name, alias, index)
-        self.default_es = _elasticsearch.Cluster(settings=settings)
+        self.default_es = _elasticsearch.Cluster(kwargs=kwargs)
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
         self.es_metadata = Null
@@ -564,9 +565,6 @@ def metadata_tables():
     )
 
 
-
-
-
 class Table(DataClass("Table", [
     "name",
     "url",
@@ -581,6 +579,7 @@ class Table(DataClass("Table", [
 Column = DataClass(
     "Column",
     [
+        # "table",
         "names",
         "es_column",
         "es_index",
@@ -594,7 +593,6 @@ Column = DataClass(
         {"name": "last_updated", "nulls": True}
     ]
 )
-
 
 
 class ColumnList(Container):

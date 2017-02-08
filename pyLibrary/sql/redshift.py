@@ -20,7 +20,7 @@ from psycopg2.extensions import adapt
 from pyLibrary import convert
 from mo_logs.exceptions import suppress_exception
 from mo_logs import Log
-from pyLibrary.meta import use_settings
+from mo_kwargs import override
 from pyLibrary.queries import jx
 from pyLibrary.sql import SQL
 from mo_logs.strings import expand_template
@@ -30,9 +30,9 @@ from mo_threads import Lock
 class Redshift(object):
 
 
-    @use_settings
-    def __init__(self, host, user, password, database=None, port=5439, settings=None):
-        self.settings=settings
+    @override
+    def __init__(self, host, user, password, database=None, port=5439, kwargs=None):
+        self.settings=kwargs
         self.locker = Lock()
         self.connection = None
 

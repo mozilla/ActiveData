@@ -14,9 +14,9 @@ from __future__ import unicode_literals
 from datetime import timedelta
 from time import time
 
+from mo_dots import coalesce, wrap
 from mo_logs import Log
-from mo_dots import coalesce
-from mo_dots import wrap
+
 from mo_times.durations import Duration
 
 

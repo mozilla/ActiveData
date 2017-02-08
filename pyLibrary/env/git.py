@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
+import mo_threads
 from mo_logs.exceptions import suppress_exception
 from pyLibrary.meta import cache
 from mo_threads import Process
@@ -41,6 +42,7 @@ def get_remote_revision(url, branch):
     GET REVISION OF A REMOTE BRANCH
     """
 
+    mo_threads.DEBUG = True
     proc = Process("git remote revision", ["git", "ls-remote", url, "refs/heads/" + branch])
 
     try:

@@ -11,22 +11,24 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import itertools
 from collections import Mapping
+from datetime import date
+from datetime import datetime
 from types import NoneType
 
-import itertools
-
-from pyLibrary import convert
-from mo_logs import Log
+from mo_collections import UniqueIndex
 from mo_dots import Data, wrap, listwrap, unwraplist, FlatList, unwrap, join_field, split_field, NullType, Null
+from mo_logs import Log
+from mo_threads import Lock
+from mo_times.dates import Date
+from pyLibrary import convert
 from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression, TrueOp, jx_expression_to_function, Variable
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
 from pyLibrary.queries.meta import Column, ROOT_PATH
-from mo_threads import Lock
-from mo_times.dates import Date
 
 _get = object.__getattribute__
 
@@ -37,7 +39,7 @@ class ListContainer(Container):
         data = list(unwrap(data))
         Container.__init__(self, data, schema)
         if schema == None:
-            self._schema = get_schema_from_list(data)
+            self._schema = get_schema_from_list(name, data)
         else:
             self._schema = schema
         self.name = name
@@ -225,52 +227,58 @@ class ListContainer(Container):
     def __len__(self):
         return len(self.data)
 
-def get_schema_from_list(frum):
-    """
-    SCAN THE LIST FOR COLUMN TYPES
-    """
-    columns = {}
-    _get_schema_from_list(frum, columns, prefix=[], nested_path=ROOT_PATH, name_to_column=columns)
-    return Schema(columns.values())
 
-def _get_schema_from_list(frum, columns, prefix, nested_path, name_to_column):
+def get_schema_from_list(table_name, frum):
     """
     SCAN THE LIST FOR COLUMN TYPES
     """
+    columns = UniqueIndex(keys=(join_field(["names", table_name]),))
+    _get_schema_from_list(frum, table_name, prefix_path=[], nested_path=ROOT_PATH, columns=columns)
+    return Schema(table_name=table_name, columns=columns)
+
+
+def _get_schema_from_list(frum, table_name, prefix_path, nested_path, columns):
+    """
+    :param frum:  The list
+    :param table_name: Name of the table this list holds records for
+    :param prefix_path: parent path
+    :param nested_path: each nested array, in reverse order
+    :param columns: map from full name to column definition
+    :return:
+    """
+
     for d in frum:
         row_type = _type_to_name[d.__class__]
         if row_type != "object":
-            full_name = join_field(prefix)
-            column = name_to_column.get(full_name)
+            full_name = join_field(prefix_path)
+            column = columns[full_name]
             if not column:
                 column = Column(
-                    name=full_name,
-                    table=".",
+                    names={table_name: full_name},
                     es_column=full_name,
                     es_index=".",
                     type="undefined",
                     nested_path=nested_path
                 )
-                columns[full_name] = column
+                columns.add(column)
             column.type = _merge_type[column.type][row_type]
         else:
             for name, value in d.items():
-                full_name = join_field(prefix + [name])
-                column = name_to_column.get(full_name)
+                full_name = join_field(prefix_path + [name])
+                column = columns[full_name]
                 if not column:
                     column = Column(
-                        name=full_name,
-                        table=".",
+                        names={table_name: full_name},
                         es_column=full_name,
                         es_index=".",
                         type="undefined",
                         nested_path=nested_path
                     )
-                columns[full_name] = column
+                    columns.add(column)
                 if isinstance(value, list):
-                    if len(value)==0:
+                    if len(value) == 0:
                         this_type = "undefined"
-                    elif len(value)==1:
+                    elif len(value) == 1:
                         this_type = _type_to_name[value[0].__class__]
                     else:
                         this_type = _type_to_name[value[0].__class__]
@@ -282,11 +290,11 @@ def _get_schema_from_list(frum, columns, prefix, nested_path, name_to_column):
                 column.type = new_type
 
                 if this_type == "object":
-                    _get_schema_from_list([value], columns, prefix + [name], nested_path, name_to_column)
+                    _get_schema_from_list([value], table_name, prefix_path + [name], nested_path, columns)
                 elif this_type == "nested":
                     np = listwrap(nested_path)
                     newpath = unwraplist([join_field(split_field(np[0])+[name])]+np)
-                    _get_schema_from_list(value, columns, prefix + [name], newpath, name_to_column)
+                    _get_schema_from_list(value, table_name, prefix_path + [name], newpath, columns)
 
 
 _type_to_name = {
@@ -303,7 +311,9 @@ _type_to_name = {
     set: "nested",
     list: "nested",
     FlatList: "nested",
-    Date: "double"
+    Date: "double",
+    datetime: "double",
+    date: "double"
 }
 
 _merge_type = {

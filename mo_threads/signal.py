@@ -16,7 +16,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from thread import allocate_lock as _allocate_lock
-from thread import get_ident as _get_ident
 
 _Log = None
 DEBUG = False
@@ -171,6 +170,9 @@ class Signal(object):
 
     def __str__(self):
         return self.name.decode(unicode)
+
+    def __repr__(self):
+        return repr(self._go)
 
     def __or__(self, other):
         if other == None:

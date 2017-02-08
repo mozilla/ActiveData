@@ -27,7 +27,7 @@ from mo_math import UNION, MAX
 from mo_math.randoms import Random
 from mo_times import Date, Duration
 from pyLibrary import convert
-from pyLibrary.meta import use_settings
+from mo_kwargs import override
 from pyLibrary.queries import jx, Index
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, TimeDomain, DurationDomain
@@ -56,8 +56,8 @@ def late_import():
 
 
 class Table_usingSQLite(Container):
-    @use_settings
-    def __init__(self, name, db=None, uid=GUID, exists=False, settings=None):
+    @override
+    def __init__(self, name, db=None, uid=GUID, exists=False, kwargs=None):
         """
         :param name: NAME FOR THIS TABLE
         :param db: THE DB TO USE

@@ -50,7 +50,7 @@ class FlatList(list):
         if isinstance(index, slice):
             # IMPLEMENT FLAT SLICES (for i not in range(0, len(self)): assert self[i]==None)
             if index.step is not None:
-                from mo_logs import Log
+                Log = _late_import()
                 Log.error("slice step must be None, do not know how to deal with values")
             length = len(_get(self, "list"))
 
@@ -75,7 +75,7 @@ class FlatList(list):
                     _list.append(None)
             _list[i] = unwrap(y)
         except Exception, e:
-            from mo_logs import Log
+            Log = _late_import()
             Log.error("problem", cause=e)
 
     def __getattribute__(self, key):
@@ -98,14 +98,14 @@ class FlatList(list):
         return FlatList(vals=[unwrap(coalesce(_datawrap(v), Null)[key]) for v in _get(self, "list")])
 
     def select(self, key):
-        from mo_logs import Log
+        Log = _late_import()
         Log.error("Not supported.  Use `get()`")
 
     def filter(self, _filter):
         return FlatList(vals=[unwrap(u) for u in (wrap(v) for v in _get(self, "list")) if _filter(u)])
 
     def __delslice__(self, i, j):
-        from mo_logs import Log
+        Log = _late_import()
         Log.error("Can not perform del on slice: modulo arithmetic was performed on the parameters.  You can try using clear()")
 
     def __clear__(self):
@@ -132,7 +132,7 @@ class FlatList(list):
 
         if _emit_slice_warning:
             _emit_slice_warning=False
-            from mo_logs import Log
+            Log = _late_import()
             Log.warning("slicing is broken in Python 2.7: a[i:j] == a[i+len(a), j] sometimes.  Use [start:stop:step] (see https://github.com/klahnakoski/pyLibrary/blob/master/pyLibrary/dot/README.md#the-slice-operator-in-python27-is-inconsistent)")
         return self[i:j:]
 

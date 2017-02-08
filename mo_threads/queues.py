@@ -21,13 +21,12 @@ from collections import deque
 from datetime import datetime, timedelta
 from time import time
 
+from mo_dots import coalesce, Null
 from mo_threads.lock import Lock
 from mo_threads.signal import Signal
-from mo_threads.threads import Thread, THREAD_STOP
+from mo_threads.threads import Thread, THREAD_STOP, THREAD_TIMEOUT
 from mo_threads.till import Till
-from mo_times.dates import Date
 from mo_times.durations import SECOND
-from mo_dots import coalesce, Null
 
 _convert = None
 _Except = None
@@ -35,8 +34,8 @@ _CProfiler = None
 _Log = None
 DEBUG = False
 
-MAX_DATETIME = datetime(2286, 11, 20, 17, 46, 39)
-DEFAULT_WAIT_TIME = timedelta(minutes=10)
+# MAX_DATETIME = datetime(2286, 11, 20, 17, 46, 39)
+DEFAULT_WAIT_TIME = 10 * 60  # SECONDS
 
 datetime.strptime('2012-01-01', '%Y-%m-%d')  # http://bugs.python.org/issue7980
 
@@ -57,8 +56,6 @@ def _late_import():
     _ = _Log
 
 
-
-
 class Queue(object):
     """
      SIMPLE MESSAGE QUEUE, multiprocessing.Queue REQUIRES SERIALIZATION, WHICH
@@ -71,40 +68,45 @@ class Queue(object):
         silent - COMPLAIN IF THE READERS ARE TOO SLOW
         unique - SET True IF YOU WANT ONLY ONE INSTANCE IN THE QUEUE AT A TIME
         """
+        if not _Log:
+            _late_import()
+
         self.name = name
         self.max = coalesce(max, 2 ** 10)
         self.silent = silent
         self.allow_add_after_close=allow_add_after_close
         self.unique = unique
-        self.keep_running = True
+        self.please_stop = Signal("stop signal for " + name)
         self.lock = Lock("lock for queue " + name)
         self.queue = deque()
-        self.next_warning = Date.now()  # FOR DEBUGGING
+        self.next_warning = time()  # FOR DEBUGGING
 
     def __iter__(self):
-        while self.keep_running:
-            try:
-                value = self.pop()
-                if value is not None and value is not THREAD_STOP:
+        try:
+            while True:
+                value = self.pop(self.please_stop)
+                if value is THREAD_STOP:
+                    break
+                if value is not None:
                     yield value
-            except Exception, e:
-                _Log.warning("Tell me about what happened here", e)
+        except Exception, e:
+            _Log.warning("Tell me about what happened here", e)
 
-        _Log.note("queue iterator is done")
+        if not self.silent:
+            _Log.note("queue iterator is done")
 
     def add(self, value, timeout=None):
-        if not self.keep_running and not self.allow_add_after_close:
-            _Log.error("Do not add to closed queue")
-
         with self.lock:
             if value is THREAD_STOP:
                 # INSIDE THE lock SO THAT EXITING WILL RELEASE wait()
                 self.queue.append(value)
-                self.keep_running = False
+                self.please_stop.go()
                 return
 
-            self._wait_for_queue_space(timeout=None)
-            if self.keep_running:
+            self._wait_for_queue_space(timeout=timeout)
+            if self.please_stop and not self.allow_add_after_close:
+                _Log.error("Do not add to closed queue")
+            else:
                 if self.unique:
                     if value not in self.queue:
                         self.queue.append(value)
@@ -116,12 +118,12 @@ class Queue(object):
         """
         SNEAK value TO FRONT OF THE QUEUE
         """
-        if not self.keep_running and not self.allow_add_after_close:
+        if self.please_stop and not self.allow_add_after_close:
             _Log.error("Do not push to closed queue")
 
         with self.lock:
             self._wait_for_queue_space()
-            if self.keep_running:
+            if not self.please_stop:
                 self.queue.appendleft(value)
         return self
 
@@ -136,24 +138,24 @@ class Queue(object):
         return Null, self.pop(till=till)
 
     def extend(self, values):
-        if not self.keep_running and not self.allow_add_after_close:
+        if self.please_stop and not self.allow_add_after_close:
             _Log.error("Do not push to closed queue")
 
         with self.lock:
             # ONCE THE queue IS BELOW LIMIT, ALLOW ADDING MORE
             self._wait_for_queue_space()
-            if self.keep_running:
+            if not self.please_stop:
                 if self.unique:
                     for v in values:
                         if v is THREAD_STOP:
-                            self.keep_running = False
+                            self.please_stop.go()
                             continue
                         if v not in self.queue:
                             self.queue.append(v)
                 else:
                     for v in values:
                         if v is THREAD_STOP:
-                            self.keep_running = False
+                            self.please_stop.go()
                             continue
                         self.queue.append(v)
         return self
@@ -162,29 +164,29 @@ class Queue(object):
         """
         EXPECT THE self.lock TO BE HAD, WAITS FOR self.queue TO HAVE A LITTLE SPACE
         """
-        wait_time = 5 * SECOND
+        wait_time = 5
 
-        now = Date.now()
+        now = time()
         if timeout != None:
             time_to_stop_waiting = now + timeout
         else:
-            time_to_stop_waiting = None
+            time_to_stop_waiting = Null
 
         if self.next_warning < now:
             self.next_warning = now + wait_time
 
-        while self.keep_running and len(self.queue) >= self.max:
+        while not self.please_stop and len(self.queue) >= self.max:
             if now > time_to_stop_waiting:
                 if not _Log:
                     _late_import()
-                _Log.error(Thread.TIMEOUT)
+                _Log.error(THREAD_TIMEOUT)
 
             if self.silent:
                 self.lock.wait(Till(till=time_to_stop_waiting))
             else:
                 self.lock.wait(Till(timeout=wait_time))
                 if len(self.queue) > self.max:
-                    now = Date.now()
+                    now = time()
                     if self.next_warning < now:
                         self.next_warning = now + wait_time
                         _Log.alert(
@@ -215,11 +217,15 @@ class Queue(object):
             _Log.error("expecting a signal")
 
         with self.lock:
-            while self.keep_running:
+            while True:
                 if self.queue:
                     value = self.queue.popleft()
                     return value
-                if not self.lock.wait(till=till):
+                if self.please_stop:
+                    break
+                if not self.lock.wait(till=till | self.please_stop):
+                    if self.please_stop:
+                        break
                     return None
         if DEBUG or not self.silent:
             _Log.note(self.name + " queue stopped")
@@ -233,29 +239,26 @@ class Queue(object):
             output = list(self.queue)
             self.queue.clear()
 
-        if self.keep_running:
-            return output
-        else:
-            return output + [THREAD_STOP]
+        return output
 
     def pop_one(self):
         """
         NON-BLOCKING POP IN QUEUE, IF ANY
         """
         with self.lock:
-            if not self.keep_running:
+            if self.please_stop:
                 return [THREAD_STOP]
             elif not self.queue:
                 return None
             else:
                 v =self.queue.pop()
                 if v is THREAD_STOP:  # SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
-                    self.keep_running = False
+                    self.please_stop.go()
                 return v
 
     def close(self):
         with self.lock:
-            self.keep_running = False
+            self.please_stop.go()
 
     def commit(self):
         pass
@@ -387,7 +390,7 @@ class ThreadedQueue(Queue):
     def add(self, value, timeout=None):
         with self.lock:
             self._wait_for_queue_space(timeout=timeout)
-            if self.keep_running:
+            if not self.please_stop:
                 self.queue.append(value)
             # if Random.range(0, 50) == 0:
             #     sizes = wrap([{"id":i["id"], "size":len(convert.value2json(i))} for i in self.queue if isinstance(i, Mapping)])
@@ -404,7 +407,7 @@ class ThreadedQueue(Queue):
         with self.lock:
             # ONCE THE queue IS BELOW LIMIT, ALLOW ADDING MORE
             self._wait_for_queue_space()
-            if self.keep_running:
+            if not self.please_stop:
                 self.queue.extend(values)
             _Log.note("{{name}} has {{num}} items", name=self.name, num=len(self.queue))
         return self

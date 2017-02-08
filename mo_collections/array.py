@@ -16,8 +16,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from mo_logs import Log
-from mo_math import PRODUCT
-from mo_testing.fuzzytestcase import assertAlmostEqual
 
 
 def zeros(dim):
@@ -112,7 +110,6 @@ for k, f in MORE_MATH.items():
 AGGS = {
     "min": min,
     "sum": sum,
-    "prod": PRODUCT,
     "max": max,
     "argmax": max,
     "argmin": min,

@@ -46,7 +46,7 @@ class Till(Signal):
 
     def __init__(self, till=None, timeout=None, seconds=None):
         global next_ping
-
+        now = time()
         if till != None:
             if not isinstance(till, float):
                 from mo_logs import Log
@@ -54,19 +54,20 @@ class Till(Signal):
                 Log.error("Date objects for Till are no longer allowed")
             timeout = till
         elif seconds != None:
-            timeout = time() + seconds
+            timeout = now + seconds
         elif timeout != None:
             if not isinstance(till, float):
                 from mo_logs import Log
 
                 Log.error("Duration objects for Till are no longer allowed")
 
-            timeout = time() + timeout
+            timeout = now + timeout
 
         Signal.__init__(self, name=unicode(timeout))
 
         with _till_locker:
-            next_ping = min(next_ping, timeout)
+            if timeout != None:
+                next_ping = min(next_ping, timeout)
             Till.new_timers.append((timeout, self))
 
     @classmethod

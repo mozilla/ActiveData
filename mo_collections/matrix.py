@@ -11,12 +11,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import mo_json
+from mo_dots import Null, Data, coalesce, get_module
+from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
-from mo_math import PRODUCT, MAX, MIN, OR
-from mo_dots import Null, Data, coalesce
-from pyLibrary.meta import use_settings
 
 
 class Matrix(object):
@@ -25,8 +23,8 @@ class Matrix(object):
     """
     ZERO = None
 
-    @use_settings
-    def __init__(self, dims=[], list=None, value=None, zeros=None, settings=None):
+    @override
+    def __init__(self, dims=[], list=None, value=None, zeros=None, kwargs=None):
         if list:
             self.num = 1
             self.dims = (len(list), )
@@ -42,7 +40,7 @@ class Matrix(object):
         self.num = len(dims)
         self.dims = tuple(dims)
         if zeros != None:
-            if self.num == 0 or OR(d == 0 for d in dims):  #NO DIMS, OR HAS A ZERO DIM, THEN IT IS A NULL CUBE
+            if self.num == 0 or any(d == 0 for d in dims):  #NO DIMS, OR HAS A ZERO DIM, THEN IT IS A NULL CUBE
                 if hasattr(zeros, "__call__"):
                     self.cube = zeros()
                 else:
@@ -50,7 +48,7 @@ class Matrix(object):
             else:
                 self.cube = _zeros(dims, zero=zeros)
         else:
-            if self.num == 0 or OR(d == 0 for d in dims):  #NO DIMS, OR HAS A ZERO DIM, THEN IT IS A NULL CUBE
+            if self.num == 0 or any(d == 0 for d in dims):  #NO DIMS, OR HAS A ZERO DIM, THEN IT IS A NULL CUBE
                 self.cube = Null
             else:
                 self.cube = _zeros(dims, zero=Null)
@@ -119,7 +117,7 @@ class Matrix(object):
     def __len__(self):
         if self.num == 0:
             return 0
-        return PRODUCT(self.dims)
+        return _product(self.dims)
 
     @property
     def value(self):
@@ -222,7 +220,6 @@ class Matrix(object):
         for c in self._all_combos():
             method(self[c], c, self.cube)
 
-
     def items(self):
         """
         ITERATE THROUGH ALL coord, value PAIRS
@@ -235,17 +232,17 @@ class Matrix(object):
         """
         RETURN AN ITERATOR OF ALL COORDINATES
         """
-        combos = PRODUCT(self.dims)
+        combos = _product(self.dims)
         if not combos:
             return
 
-        calc = [(coalesce(PRODUCT(self.dims[i+1:]), 1), mm) for i, mm in enumerate(self.dims)]
+        calc = [(coalesce(_product(self.dims[i+1:]), 1), mm) for i, mm in enumerate(self.dims)]
 
         for c in xrange(combos):
             yield tuple(int(c / dd) % mm for dd, mm in calc)
 
     def __str__(self):
-        return "Matrix " + mo_json.value2json(self.dims) + ": " + str(self.cube)
+        return "Matrix " + get_module("mo_json").value2json(self.dims) + ": " + str(self.cube)
 
     def __data__(self):
         return self.cube
@@ -253,22 +250,23 @@ class Matrix(object):
 
 Matrix.ZERO = Matrix(value=None)
 
+
 def _max(depth, cube):
     if depth == 0:
         return cube
     elif depth == 1:
-        return MAX(cube)
+        return _MAX(cube)
     else:
-        return MAX(_max(depth - 1, c) for c in cube)
+        return _MAX(_max(depth - 1, c) for c in cube)
 
 
 def _min(depth, cube):
     if depth == 0:
         return cube
     elif depth == 1:
-        return MIN(cube)
+        return _MIN(cube)
     else:
-        return MIN(_min(depth - 1, c) for c in cube)
+        return _MIN(_min(depth - 1, c) for c in cube)
 
 
 aggregates = Data(
@@ -385,4 +383,35 @@ def index_to_coordinate(dims):
          "\n".join(commands) + "\n" + \
          "\treturn " + ", ".join(coords)
     exec code
+    return output
+
+
+def _product(values):
+    output = 1
+    for v in values:
+        output *= v
+    return output
+
+
+def _MIN(values):
+    output = None
+    for v in values:
+        if v == None:
+            continue
+        elif output == None or v < output:
+            output = v
+        else:
+            pass
+    return output
+
+
+def _MAX(values):
+    output = Null
+    for v in values:
+        if v == None:
+            continue
+        elif output == None or v > output:
+            output = v
+        else:
+            pass
     return output

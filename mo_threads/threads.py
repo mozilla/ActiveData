@@ -21,10 +21,11 @@ from copy import copy
 from datetime import datetime, timedelta
 from time import sleep
 
+from mo_dots import Data, unwraplist, Null
+
+from mo_threads.lock import Lock
 from mo_threads.signal import AndSignals, Signal
 from mo_threads.till import Till
-from mo_threads.lock import Lock
-from mo_dots import Data, unwraplist, Null
 
 _convert = None
 _Except = None

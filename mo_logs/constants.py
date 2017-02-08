@@ -17,6 +17,7 @@ from mo_dots import wrap, join_field, split_field
 
 DEBUG = True
 
+
 def set(constants):
     """
     REACH INTO THE MODULES AND OBJECTS TO SET CONSTANTS.

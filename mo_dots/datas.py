@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from collections import MutableMapping, Mapping
 from copy import deepcopy
 
-from mo_dots import _getdefault, hash_value, literal_field, coalesce, listwrap
+from mo_dots import _getdefault, hash_value, literal_field, coalesce, listwrap, get_logger
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -86,8 +86,7 @@ class Data(MutableMapping):
         if isinstance(key, str):
             key = key.decode("utf8")
         elif not isinstance(key, unicode):
-            from mo_logs import Log
-            Log.error("only string keys are supported")
+            get_logger().error("only string keys are supported")
 
         d = _get(self, "_dict")
 
@@ -111,9 +110,7 @@ class Data(MutableMapping):
 
     def __setitem__(self, key, value):
         if key == "":
-            from mo_logs import Log
-
-            Log.error("key is empty string.  Probably a bad idea")
+            get_logger().error("key is empty string.  Probably a bad idea")
         if key == None:
             return Null
         if key == ".":
@@ -233,8 +230,7 @@ class Data(MutableMapping):
         return listwrap(d.values())
 
     def clear(self):
-        from mo_logs import Log
-        Log.error("clear() not supported")
+        get_logger().error("clear() not supported")
 
     def __len__(self):
         d = _get(self, "_dict")
@@ -309,9 +305,7 @@ def leaves(value, prefix=None):
             else:
                 output.append((prefix + literal_field(k), unwrap(v)))
         except Exception, e:
-            from mo_logs import Log
-
-            Log.error("Do not know how to handle", cause=e)
+            get_logger().error("Do not know how to handle", cause=e)
     return output
 
 
@@ -355,9 +349,7 @@ class _DictUsingSelf(dict):
 
     def __setitem__(self, key, value):
         if key == "":
-            from mo_logs import Log
-
-            Log.error("key is empty string.  Probably a bad idea")
+            get_logger().error("key is empty string.  Probably a bad idea")
         if isinstance(key, str):
             key = key.decode("utf8")
         d=self
@@ -462,8 +454,7 @@ class _DictUsingSelf(dict):
         return listwrap(dict.values(self))
 
     def clear(self):
-        from mo_logs import Log
-        Log.error("clear() not supported")
+        get_logger().error("clear() not supported")
 
     def __len__(self):
         d = _get(self, "_dict")

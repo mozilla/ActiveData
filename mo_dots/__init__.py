@@ -15,6 +15,9 @@ from __builtin__ import zip as _builtin_zip
 from collections import Mapping
 from types import GeneratorType, NoneType, ModuleType
 
+from mo_dots import utils
+from mo_dots.utils import get_logger, get_module
+
 SELF_PATH = "."
 ROOT_PATH = [SELF_PATH]
 
@@ -44,7 +47,7 @@ def coalesce(*args):
 
 def zip(keys, values):
     """
-    CONVERT LIST OF KEY/VALUE PAIRS TO A DICT
+    CONVERT LIST OF KEY/VALUE PAIRS TO Data
     PLEASE `import dot`, AND CALL `dot.zip()`
     """
     output = Data()
@@ -62,9 +65,7 @@ def literal_field(field):
     try:
         return field.replace(".", "\.")
     except Exception, e:
-        from mo_logs import Log
-
-        Log.error("bad literal", e)
+        get_logger().error("bad literal", e)
 
 
 def unliteral_field(field):
@@ -78,8 +79,7 @@ def unliteral_field(field):
     :return: SIMPLER STRING
     """
     if len(split_field(field)) > 1:
-        from mo_logs import Log
-        Log.error("Bad call! Dude!")
+        get_logger().error("Bad call! Dude!")
     return field.replace("\.", ".")
 
 
@@ -191,7 +191,7 @@ def _all_default(d, default, seen=None):
         return
     if isinstance(default, Data):
         default = object.__getattribute__(default, "_dict")  # REACH IN AND GET THE dict
-        # from mo_logs import Log
+        # Log = _late_import()
         # Log.error("strictly dict (or object) allowed: got {{type}}", type=default.__class__.__name__)
 
     for k, default_value in default.items():
@@ -215,8 +215,7 @@ def _all_default(d, default, seen=None):
                         _set_attr(d, [k], default_value)
                     except Exception, e:
                         if PATH_NOT_FOUND not in e:
-                            from mo_logs import Log
-                            Log.error("Can not set attribute {{name}}", name=k, cause=e)
+                            get_logger().error("Can not set attribute {{name}}", name=k, cause=e)
         elif isinstance(existing_value, list) or isinstance(default_value, list):
             _set_attr(d, [k], listwrap(existing_value) + listwrap(default_value))
         elif (hasattr(existing_value, "__setattr__") or isinstance(existing_value, Mapping)) and isinstance(default_value, Mapping):
@@ -272,7 +271,7 @@ def set_attr(obj, path, value):
     try:
         return _set_attr(obj, split_field(path), value)
     except Exception, e:
-        from mo_logs import Log
+        Log = get_logger()
         if PATH_NOT_FOUND in e:
             Log.warning(PATH_NOT_FOUND + ": {{path}}",  path= path)
         else:
@@ -286,7 +285,7 @@ def get_attr(obj, path):
     try:
         return _get_attr(obj, split_field(path))
     except Exception, e:
-        from mo_logs import Log
+        Log = get_logger()
         if PATH_NOT_FOUND in e:
             Log.error(PATH_NOT_FOUND+": {{path}}",  path=path, cause=e)
         else:
@@ -306,7 +305,7 @@ def _get_attr(obj, path):
             return _get_attr(obj[attr_name], path[1:])
 
         # TRY FILESYSTEM
-        from mo_files import File
+        File = get_module("mo_files").File
         possible_error = None
         if File.new_instance(File(obj.__file__).parent, attr_name).set_extension("py").exists:
             try:
@@ -321,17 +320,15 @@ def _get_attr(obj, path):
                     output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[1]], 0)
                     return _get_attr(output, path[1:])
             except Exception, e:
-                from mo_logs.exceptions import Except
+                Except = get_module("mo_logs.exceptions.Except")
                 possible_error = Except.wrap(e)
 
         # TRY A CASE-INSENSITIVE MATCH
         matched_attr_name = lower_match(attr_name, dir(obj))
         if not matched_attr_name:
-            from mo_logs import Log
-            Log.warning(PATH_NOT_FOUND + "({{name|quote}}) Returning None.", name=attr_name, cause=possible_error)
+            get_logger().warning(PATH_NOT_FOUND + "({{name|quote}}) Returning None.", name=attr_name, cause=possible_error)
         elif len(matched_attr_name) > 1:
-            from mo_logs import Log
-            Log.error(AMBIGUOUS_PATH_FOUND + " {{paths}}", paths=attr_name)
+            get_logger().error(AMBIGUOUS_PATH_FOUND + " {{paths}}", paths=attr_name)
         else:
             return _get_attr(obj[matched_attr_name[0]], path[1:])
 
@@ -357,8 +354,7 @@ def _get_attr(obj, path):
 def _set_attr(obj, path, value):
     obj = _get_attr(obj, path[:-1])
     if obj is None:  # DELIBERATE, WE DO NOT WHAT TO CATCH Null HERE (THEY CAN BE SET)
-        from mo_logs import Log
-        Log.error(PATH_NOT_FOUND)
+        get_logger().error(PATH_NOT_FOUND)
 
     attr_name = path[-1]
 
@@ -382,8 +378,7 @@ def _set_attr(obj, path, value):
             obj[attr_name] = new_value
             return old_value
         except Exception, f:
-            from mo_logs import Log
-            Log.error(PATH_NOT_FOUND)
+            get_logger().error(PATH_NOT_FOUND)
 
 
 def lower_match(value, candidates):
@@ -431,9 +426,7 @@ def _wrap_leaves(value):
             value = _wrap_leaves(value)
 
             if key == "":
-                from mo_logs import Log
-
-                Log.error("key is empty string.  Probably a bad idea")
+                get_logger().error("key is empty string.  Probably a bad idea")
             if isinstance(key, str):
                 key = key.decode("utf8")
 
@@ -539,6 +532,7 @@ def tuplewrap(value):
     if isinstance(value, (list, set, tuple, GeneratorType)):
         return tuple(tuplewrap(v) if isinstance(v, (list, tuple, GeneratorType)) else v for v in value)
     return unwrap(value),
+
 
 
 from mo_dots.nones import Null, NullType

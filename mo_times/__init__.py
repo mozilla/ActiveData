@@ -15,3 +15,4 @@ from __future__ import unicode_literals
 
 from mo_times.dates import Date
 from mo_times.durations import Duration, MINUTE
+from mo_times.timer import Timer

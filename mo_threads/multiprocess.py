@@ -12,8 +12,9 @@ from __future__ import unicode_literals
 
 import os
 import subprocess
+from types import NoneType
 
-from mo_dots import set_default, unwrap, get_module
+from mo_dots import set_default, unwrap, get_module, NullType
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except
 
@@ -22,9 +23,9 @@ from mo_threads.queues import Queue
 from mo_threads.signal import Signal
 from mo_threads.threads import Thread, THREAD_STOP
 
-DEBUG = True
-
 string2quote = get_module("mo_json").quote
+DEBUG = False
+
 
 class Process(object):
     def __init__(self, name, params, cwd=None, env=None, debug=False, shell=False, bufsize=-1):
@@ -42,7 +43,7 @@ class Process(object):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 bufsize=bufsize,
-                cwd=cwd if isinstance(cwd, basestring) else cwd.abspath,
+                cwd=cwd if isinstance(cwd, (basestring, NullType, NoneType)) else cwd.abspath,
                 env=unwrap(set_default(env, os.environ)),
                 shell=shell
             )
@@ -60,8 +61,7 @@ class Process(object):
             Log.error("Can not call", e)
 
         if self.debug:
-            Log.note("  TO {{name}}: {{command}}", name=self.name, command=" ".join(map(strings.quote, params)))
-
+            Log.note("{{process}} START: {{command}}", process=self.name, command=" ".join(map(strings.quote, params)))
 
     def stop(self):
         self.stdin.add("exit")  # ONE MORE SEND
@@ -74,7 +74,7 @@ class Process(object):
         for c in child_threads:
             c.join()
         if raise_on_error and self.returncode != 0:
-            Log.error("Process failed with returncode={{code}}", code=self.service.returncode)
+            Log.error("{{process}} FAIL: returncode={{code}}", process=self.name, code=self.service.returncode)
         return self
 
     def remove_child(self, child):
@@ -95,7 +95,7 @@ class Process(object):
     def _monitor(self, please_stop):
         self.service.wait()
         if self.debug:
-            Log.alert("{{name}} stopped with returncode={{returncode}}", name=self.name, returncode=self.service.returncode)
+            Log.note("{{process}} STOP: returncode={{returncode}}", process=self.name, returncode=self.service.returncode)
         self.service_stopped.go()
         please_stop.go()
 
@@ -117,7 +117,7 @@ class Process(object):
                         max = 100
                         recieve.add(line)
                         if self.debug:
-                            Log.note("FROM {{process}}: {{line}}", process=self.name, line=line)
+                            Log.note("{{process}} ({{name}}): {{line}}", name=name, process=self.name, line=line)
                     else:
                         max -= 1
                 except Exception:
@@ -136,7 +136,7 @@ class Process(object):
 
             if line:
                 if self.debug:
-                    Log.note("TO   {{process}}: {{line}}", process=self.name, line=line.rstrip())
+                    Log.note("{{process}} (stdin): {{line}}", process=self.name, line=line.rstrip())
                 pipe.write(line + b"\n")
         pipe.close()
 

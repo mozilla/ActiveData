@@ -194,6 +194,9 @@ def repr(obj):
     return _repr.repr(obj)
 
 
+
+
+
 class _FakeLock():
 
 
@@ -317,3 +320,18 @@ def value2quote(value):
         return mo_json.quote(value)
     else:
         return repr(value)
+
+
+class extenstion_method(object):
+    def __init__(self, value, name=None):
+        self.value = value
+        self.name = name
+
+    def __call__(self, func):
+        if self.name is None:
+            setattr(self.value, self.name, func)
+            return func
+        else:
+            setattr(self.value, func.__name__, func)
+            return func
+

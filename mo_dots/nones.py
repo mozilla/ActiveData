@@ -193,6 +193,8 @@ class NullType(object):
 
         d = _get(self, "__dict__")
         o = d["_obj"]
+        if o is None:
+            return
         k = d["__key__"]
 
         seq = [k] + split_field(key)

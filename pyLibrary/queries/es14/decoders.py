@@ -458,18 +458,32 @@ class DefaultDecoder(SetDecoder):
                 "_missing": set_default({"filter": missing.to_esfilter()}, es_query) if missing else None
             }})
             return output
-
-        output = wrap({"aggs": {
-            "_match": set_default(
-                {"terms": {
-                    "field": self.edge.value.var,
-                    "size": self.domain.limit
-                }},
-                es_query
-            ),
-            "_missing": set_default({"missing": {"field": self.edge.value}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
-        }})
-        return output
+        elif self.edge.value.var in self.query.sort.value.var:
+            sort_dir = [s.sort for s in self.query.sort if s.value.var==self.edge.value.var][0]
+            output = wrap({"aggs": {
+                "_match": set_default(
+                    {"terms": {
+                        "field": self.edge.value.var,
+                        "size": self.domain.limit,
+                        "order": {"_term": "asc" if sort_dir == 1 else "desc"}
+                    }},
+                    es_query
+                ),
+                "_missing": set_default({"missing": {"field": self.edge.value}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+            }})
+            return output
+        else:
+            output = wrap({"aggs": {
+                "_match": set_default(
+                    {"terms": {
+                        "field": self.edge.value.var,
+                        "size": self.domain.limit
+                    }},
+                    es_query
+                ),
+                "_missing": set_default({"missing": {"field": self.edge.value}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+            }})
+            return output
 
     def count(self, row):
         part = row[self.start]

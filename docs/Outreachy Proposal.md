@@ -3,7 +3,7 @@
 
 ##About ActiveData
 
-ActiveData is a publicly accessible data warehouse holding many billions of records, for some dozen+ datasets concerning Mozilla's testing infrastructure: This includes test results, job results, code coverage, and extracts from other systems. The ActiveData code itself is really only a stateless query translation layer; leaving all the hard work of high speed filtering and aggregation to Elasticsearch.
+ActiveData is a publicly accessible data warehouse holding many billions of records, for some dozen+ datasets concerning Mozilla's testing infrastructure: This includes test results, job results, code coverage, and extracts from other systems. The ActiveData code itself is really only a stateless query translation layer; leaving the hard work of high speed filtering and aggregation to Elasticsearch.
 
 ##Background
 
@@ -27,6 +27,16 @@ ElasticSearch's schema merging is great, but has always been incomplete:
 2. Merging numbers `{"a": 1}` with strings `{"b": "1"}` did not cause failure, but did leave the schema ambiguous, and made the queries clumsy.
 
 This upgrade will help with ActiveData's service stability, and provide a step towards promoting this project to production.
+
+##Required Skills
+
+Some particular experience will make this task easier (most important first):
+
+* Python 
+* SQL and query languages
+* Database normalization and functional dependencies 
+* Denormalization and data warehousing
+
 
 ##References
 

@@ -97,6 +97,9 @@ class Sqlite(DB):
         :param command: COMMAND FOR SQLITE
         :return: None
         """
+        if DEBUG:  # EXECUTE IMMEDIATELY FOR BETTER STACK TRACE
+            return self.query(command)
+
         if self.get_trace:
             trace = extract_stack(1)
         else:

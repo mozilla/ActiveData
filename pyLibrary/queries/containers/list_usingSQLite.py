@@ -112,12 +112,12 @@ class Table_usingSQLite(Container):
                     )
                     self.add_column_to_schema(c)
 
-            table_columns = [c for k, cs in self.columns.items() for c in cs if c.nested_path[0] == current_nested_level]
+            table_columns = []  # [c for k, cs in self.columns.items() for c in cs if c.nested_path[0] == current_nested_level]
             command = (
                 "CREATE TABLE " + quote_table(name) + "(" +
                 (",".join(
                     [quoted_UID + " INTEGER"] +
-                    [self._quote_column(c) + " " + sql_types[c.type] for c in table_columns]
+                    [self._quote_column(c) + " " + json_types_to_sql_types[c.type] for c in table_columns]
                 )) +
                 ", PRIMARY KEY (" +
                 (", ".join(
@@ -210,19 +210,17 @@ class Table_usingSQLite(Container):
         doc_collection = self.flatten_many(docs)
         self._insert(doc_collection)
 
-    def _add_column_to_db(self, table_name, column):
+    def _add_column_to_table(self, table_name, column):
         """
         ADD COLUMN, IF IT DOES NOT EXIST ALREADY
         """
         cname = column.names[table_name]
         if column.type == "nested":
-            nested_table_name = concat_field(table_name, cname)
-            # MAKE THE TABLE
-            table = Table_usingSQLite(nested_table_name, self.db, exists=False, columns=self.columns)
-            self.nested_tables[cname] = table
+            Log.error("not expected, make table on your own")
         else:
             self.db.execute(
-                "ALTER TABLE " + quote_table(table_name) + " ADD COLUMN " + self._quote_column(column) + " " + column.type
+                "ALTER TABLE " + quote_table(table_name) +
+                " ADD COLUMN " + self._quote_column(column) + " " + json_types_to_sql_types[column.type]
             )
 
     def get_column_name(self, column):
@@ -1669,7 +1667,7 @@ class Table_usingSQLite(Container):
 
                 self.db.execute(
                     "ALTER TABLE " + quote_table(table) +
-                    " ADD COLUMN " + self._quote_column(column) + " " + sql_types[column.type]
+                    " ADD COLUMN " + self._quote_column(column) + " " + json_types_to_sql_types[column.type]
                 )
 
                 self.columns.add(column)
@@ -1686,7 +1684,7 @@ class Table_usingSQLite(Container):
         destination_table = concat_field(self.name, nested_column_name)
 
         # FIND THE INNER COLUMNS WE WILL BE MOVING
-        # WE ARE DOING THIS INSIDE THE TABLE CONSTRUCTOR TOO, WHRE DOES IT BELONG
+        # WE ARE DOING THIS INSIDE THE TABLE CONSTRUCTOR TOO, WHERE DOES IT BELONG?
         new_columns = Index(keys=destination_table)
         for cname, cols in self.columns.items():
             if startswith_field(cname, nested_column_name):
@@ -2096,7 +2094,7 @@ sql_aggs = {
     "sum": "SUM"
 }
 
-sql_types = {
+json_types_to_sql_types = {
     "string": "TEXT",
     "integer": "INTEGER",
     "number": "REAL",

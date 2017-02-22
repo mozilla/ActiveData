@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 import hashlib
 
 from flask import Response
+from mo_kwargs import override
 
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -20,7 +21,6 @@ from active_data import cors_wrapper
 from mo_dots import wrap
 from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Cluster
-from pyLibrary.meta import use_settings
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.jx_usingES import FromES
 from mo_threads import Thread
@@ -63,15 +63,15 @@ def find_query(hash):
 
 
 class SaveQueries(object):
-    @use_settings
-    def __init__(self, host, index, type="query", max_size=10, batch_size=10, settings=None):
+    @override
+    def __init__(self, host, index, type="query", max_size=10, batch_size=10, kwargs=None):
         """
         settings ARE FOR THE ELASTICSEARCH INDEX
         """
-        es = Cluster(settings).get_or_create_index(
+        es = Cluster(kwargs).get_or_create_index(
             schema=convert.json2value(convert.value2json(SCHEMA), leaves=True),
             limit_replicas=True,
-            settings=settings
+            settings=kwargs
         )
         #ENSURE THE TYPE EXISTS FOR PROBING
         try:

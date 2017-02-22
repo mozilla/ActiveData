@@ -107,8 +107,10 @@ def datawrap(v):
         return FlatList(v)
     elif type_ is GeneratorType:
         return (wrap(vv) for vv in v)
-    elif isinstance(v, (Mapping, basestring, int, float, Decimal, datetime, date, Data, FlatList, NullType, NoneType)):
+    elif isinstance(v, (basestring, int, float, Decimal, datetime, date, Data, FlatList, NullType, NoneType)):
         return v
+    elif isinstance(v, Mapping):
+        return DataObject(v)
     elif hasattr(v, "__data__"):
         return v.__data__()
     else:
@@ -118,7 +120,7 @@ def datawrap(v):
 class DictClass(object):
     """
     ALLOW INSTANCES OF class_ TO ACK LIKE dicts
-    ALLOW CONSTRUCTOR TO ACCEPT @use_settings
+    ALLOW CONSTRUCTOR TO ACCEPT @override
     """
 
     def __init__(self, class_):

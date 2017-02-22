@@ -600,6 +600,7 @@ class TestSetOps(ActiveDataBaseTest):
                 {"v": "2"},
                 {"v": 3},
                 {"v": "4"},
+                {"v": "100"},
                 {}
             ],
             "query": {
@@ -608,7 +609,7 @@ class TestSetOps(ActiveDataBaseTest):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": ["1", "2", "3", "4", NULL]
+                "data": ["1", "2", "3", "4", "100", NULL]
             }
         }
         self.utils.execute_es_tests(test)

@@ -16,19 +16,11 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from thread import allocate_lock as _allocate_lock
-from thread import get_ident as _get_ident
 
-_Log = None
+from mo_logs import Log
+
 DEBUG = False
 DEBUG_SIGNAL = False
-
-
-def _late_import():
-    global _Log
-
-    from mo_logs import Log as _Log
-
-    _ = _Log
 
 
 class Signal(object):
@@ -44,9 +36,7 @@ class Signal(object):
 
     def __init__(self, name=None):
         if DEBUG:
-            if not _Log:
-                _late_import()
-            _Log.note("New signal {{name|quote}}", name=name)
+            Log.note("New signal {{name|quote}}", name=name)
         self._name = name
         self.lock = _allocate_lock()
         self._go = False
@@ -80,14 +70,10 @@ class Signal(object):
                 self.waiting_threads.append(stopper)
 
         if DEBUG:
-            if not _Log:
-                _late_import()
-            _Log.note("wait for go {{name|quote}}", name=self.name)
+            Log.note("wait for go {{name|quote}}", name=self.name)
         stopper.acquire()
         if DEBUG:
-            if not _Log:
-                _late_import()
-            _Log.note("GOing! {{name|quote}}", name=self.name)
+            Log.note("GOing! {{name|quote}}", name=self.name)
         return True
 
     def go(self):
@@ -95,9 +81,7 @@ class Signal(object):
         ACTIVATE SIGNAL (DOES NOTHING IF SIGNAL IS ALREADY ACTIVATED)
         """
         if DEBUG:
-            if not _Log:
-                _late_import()
-            _Log.note("GO! {{name|quote}}", name=self.name)
+            Log.note("GO! {{name|quote}}", name=self.name)
 
         if self._go:
             return
@@ -108,13 +92,13 @@ class Signal(object):
             self._go = True
 
         if DEBUG:
-            _Log.note("internal GO! {{name|quote}}", name=self.name)
+            Log.note("internal GO! {{name|quote}}", name=self.name)
         jobs, self.job_queue = self.job_queue, None
         threads, self.waiting_threads = self.waiting_threads, None
 
         if threads:
             if DEBUG:
-                _Log.note("Release {{num}} threads", num=len(threads))
+                Log.note("Release {{num}} threads", num=len(threads))
             for t in threads:
                 t.release()
 
@@ -123,25 +107,19 @@ class Signal(object):
                 try:
                     j()
                 except Exception, e:
-                    if not _Log:
-                        _late_import()
-                    _Log.warning("Trigger on Signal.go() failed!", cause=e)
+                    Log.warning("Trigger on Signal.go() failed!", cause=e)
 
     def on_go(self, target):
         """
         RUN target WHEN SIGNALED
         """
         if not target:
-            if not _Log:
-                _late_import()
-            _Log.error("expecting target")
+            Log.error("expecting target")
 
         with self.lock:
             if not self._go:
                 if DEBUG:
-                    if not _Log:
-                        _late_import()
-                    _Log.note("Adding target to signal {{name|quote}}", name=self.name)
+                    Log.note("Adding target to signal {{name|quote}}", name=self.name)
                 if not self.job_queue:
                     self.job_queue = [target]
                 else:
@@ -149,9 +127,7 @@ class Signal(object):
                 return
 
         if DEBUG_SIGNAL:
-            if not _Log:
-                _late_import()
-            _Log.note("Signal {{name|quote}} already triggered, running job immediately", name=self.name)
+            Log.note("Signal {{name|quote}} already triggered, running job immediately", name=self.name)
         target()
 
     def remove_go(self, target):
@@ -172,13 +148,14 @@ class Signal(object):
     def __str__(self):
         return self.name.decode(unicode)
 
+    def __repr__(self):
+        return repr(self._go)
+
     def __or__(self, other):
         if other == None:
             return self
         if not isinstance(other, Signal):
-            if not _Log:
-                _late_import()
-            _Log.error("Expecting OR with other signal")
+            Log.error("Expecting OR with other signal")
 
         output = Signal(self.name + " | " + other.name)
         self.on_go(output.go)
@@ -198,9 +175,7 @@ class Signal(object):
         if other == None:
             return self
         if not isinstance(other, Signal):
-            if not _Log:
-                _late_import()
-            _Log.error("Expecting OR with other signal")
+            Log.error("Expecting OR with other signal")
 
         if DEBUG:
             output = Signal(self.name + " and " + other.name)

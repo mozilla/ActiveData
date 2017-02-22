@@ -14,23 +14,27 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from boto.ses import connect_to_region
+from mo_dots import listwrap, unwrap
+from mo_kwargs import override
+from mo_kwargs import override
+from mo_threads import Lock
+from mo_threads.threads import Lock
+from mo_times.dates import Date
+from mo_times.dates import Date
+from mo_times.durations import HOUR, MINUTE
+from mo_times.durations import HOUR, MINUTE
 
 from mo_logs import Log
 from mo_logs.exceptions import ALARM, NOTE
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_logs.strings import expand_template
-from mo_times.dates import Date
-from mo_times.durations import HOUR, MINUTE
-from mo_dots import listwrap, unwrap
-from pyLibrary.meta import use_settings
-from mo_threads import Lock
 
 WAIT_TO_SEND_MORE = HOUR
 
 
 class StructuredLogger_usingSES(StructuredLogger):
 
-    @use_settings
+    @override
     def __init__(
         self,
         from_address,
@@ -40,10 +44,10 @@ class StructuredLogger_usingSES(StructuredLogger):
         aws_access_key_id=None,
         aws_secret_access_key=None,
         log_type="ses",
-        settings=None
+        kwargs=None
     ):
-        assert settings.log_type == "ses", "Expecing settings to be of type 'ses'"
-        self.settings = settings
+        assert kwargs.log_type == "ses", "Expecing settings to be of type 'ses'"
+        self.settings = kwargs
         self.accumulation = []
         self.next_send = Date.now() + MINUTE
         self.locker = Lock()

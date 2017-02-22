@@ -11,6 +11,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from copy import copy
+
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
     unwraplist
 from mo_logs import Log
@@ -37,11 +39,28 @@ def get_decoders_by_depth(query):
     """
     schema = query.frum.schema
     output = FlatList()
+
+    if query.sort:
+        # REORDER EDGES/GROUPBY TO MATCH THE SORT
+        if query.edges:
+            Log.error("can not use sort clause with edges: add sort clause to each edge")
+        ordered_edges = []
+        remaining_edges = copy(query.groupby)
+        for s in query.sort:
+            if not isinstance(s.value, Variable):
+                Log.error("can only sort by terms")
+            for e in remaining_edges:
+                if e.value.var == s.value.var:
+                    ordered_edges.append(e)
+                    remaining_edges.remove(e)
+                    break
+        ordered_edges.extend(remaining_edges)
+        query.groupby = wrap(list(reversed(ordered_edges)))
+
     for edge in wrap(coalesce(query.edges, query.groupby, [])):
         if edge.value != None and not isinstance(edge.value, NullOp):
             edge = edge.copy()
             vars_ = edge.value.vars()
-
             for v in vars_:
                 if not schema[v]:
                     Log.error("{{var}} does not exist in schema", var=v)

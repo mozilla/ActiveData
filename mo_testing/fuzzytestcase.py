@@ -12,12 +12,12 @@ import unittest
 from collections import Mapping
 
 import mo_dots
+from mo_collections.unique_index import UniqueIndex
 from mo_dots import coalesce, literal_field, unwrap
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception, Except
 from mo_logs.strings import expand_template
 from mo_math import Math
-from mo_collections.unique_index import UniqueIndex
 
 
 class FuzzyTestCase(unittest.TestCase):

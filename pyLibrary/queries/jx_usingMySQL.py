@@ -21,7 +21,7 @@ from mo_dots import wrap, listwrap, unwrap
 from mo_dots.lists import FlatList
 from pyLibrary import convert
 from mo_collections.matrix import Matrix
-from pyLibrary.meta import use_settings
+from mo_kwargs import override
 from pyLibrary.sql import SQL
 from pyLibrary.sql.mysql import int_list_packer
 
@@ -31,7 +31,7 @@ class MySQL(object):
     jx to MySQL DATABASE QUERIES
     """
 
-    @use_settings
+    @override
     def __init__(
         self,
         host,
@@ -42,12 +42,12 @@ class MySQL(object):
         schema=None,
         preamble=None,
         readonly=False,
-        settings=None
+        kwargs=None
     ):
         from pyLibrary.sql.mysql import MySQL
 
-        self.settings = settings
-        self._db = MySQL(settings)
+        self.settings = kwargs
+        self._db = MySQL(kwargs)
 
     def __data__(self):
         settings = self.settings.copy()

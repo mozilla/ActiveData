@@ -6,32 +6,34 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 import os
 import subprocess
+from types import NoneType
+
+from mo_dots import set_default, unwrap, get_module, NullType
+from mo_logs import Log, strings
+from mo_logs.exceptions import Except
 
 from mo_threads.lock import Lock
 from mo_threads.queues import Queue
 from mo_threads.signal import Signal
 from mo_threads.threads import Thread, THREAD_STOP
-from mo_dots import set_default, unwrap
-from pyLibrary import convert
-from mo_logs.exceptions import Except
-from mo_logs import Log
 
-DEBUG = True
+string2quote = get_module("mo_json").quote
+DEBUG = False
 
 
 class Process(object):
     def __init__(self, name, params, cwd=None, env=None, debug=False, shell=False, bufsize=-1):
         self.name = name
-        self.service_stopped = Signal("stopped signal for " + convert.string2quote(name))
-        self.stdin = Queue("stdin for process " + convert.string2quote(name), silent=True)
-        self.stdout = Queue("stdout for process " + convert.string2quote(name), silent=True)
-        self.stderr = Queue("stderr for process " + convert.string2quote(name), silent=True)
+        self.service_stopped = Signal("stopped signal for " + string2quote(name))
+        self.stdin = Queue("stdin for process " + string2quote(name), silent=True)
+        self.stdout = Queue("stdout for process " + string2quote(name), silent=True)
+        self.stderr = Queue("stderr for process " + string2quote(name), silent=True)
 
         try:
             self.debug = debug or DEBUG
@@ -41,87 +43,100 @@ class Process(object):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 bufsize=bufsize,
-                cwd=cwd,
+                cwd=cwd if isinstance(cwd, (basestring, NullType, NoneType)) else cwd.abspath,
                 env=unwrap(set_default(env, os.environ)),
                 shell=shell
             )
 
-            self.stopper = Signal()
-            self.stopper.on_go(self._kill)
+            self.please_stop = Signal()
+            self.please_stop.on_go(self._kill)
             self.thread_locker = Lock()
             self.children = [
+                Thread.run(self.name + " stdin", self._writer, service.stdin, self.stdin, please_stop=self.service_stopped, parent_thread=self),
+                Thread.run(self.name + " stdout", self._reader, "stdout", service.stdout, self.stdout, please_stop=self.service_stopped, parent_thread=self),
+                Thread.run(self.name + " stderr", self._reader, "stderr", service.stderr, self.stderr, please_stop=self.service_stopped, parent_thread=self),
                 Thread.run(self.name + " waiter", self._monitor, parent_thread=self),
-                Thread.run(self.name + " stdin", self._writer, service.stdin, self.stdin, please_stop=self.stopper, parent_thread=self),
-                Thread.run(self.name + " stdout", self._reader, service.stdout, self.stdout, please_stop=self.stopper, parent_thread=self),
-                # Thread.run(self.name + " stderr", self._reader, service.stderr, self.stderr, please_stop=self.stopper, parent_thread=self),
             ]
         except Exception, e:
             Log.error("Can not call", e)
 
+        if self.debug:
+            Log.note("{{process}} START: {{command}}", process=self.name, command=" ".join(map(strings.quote, params)))
+
     def stop(self):
         self.stdin.add("exit")  # ONE MORE SEND
-        self.stopper.go()
-        self.stdin.add(THREAD_STOP)
-        self.stdout.add(THREAD_STOP)
-        self.stderr.add(THREAD_STOP)
+        self.please_stop.go()
 
-    def join(self):
+    def join(self, raise_on_error=False):
         self.service_stopped.wait()
         with self.thread_locker:
             child_threads, self.children = self.children, []
         for c in child_threads:
             c.join()
+        if raise_on_error and self.returncode != 0:
+            Log.error("{{process}} FAIL: returncode={{code}}", process=self.name, code=self.service.returncode)
+        return self
 
     def remove_child(self, child):
         with self.thread_locker:
-            self.children.remove(child)
+            try:
+                self.children.remove(child)
+            except Exception:
+                pass
 
     @property
     def pid(self):
         return self.service.pid
 
+    @property
+    def returncode(self):
+        return self.service.returncode
+
     def _monitor(self, please_stop):
         self.service.wait()
         if self.debug:
-            Log.alert("{{name}} stopped with returncode={{returncode}}", name=self.name, returncode=self.service.returncode)
-        self.stdin.add(THREAD_STOP)
-        self.stdout.add(THREAD_STOP)
-        self.stderr.add(THREAD_STOP)
+            Log.note("{{process}} STOP: returncode={{returncode}}", process=self.name, returncode=self.service.returncode)
         self.service_stopped.go()
+        please_stop.go()
 
-    def _reader(self, pipe, recieve, please_stop):
+    def _reader(self, name, pipe, recieve, please_stop):
         try:
-            while not please_stop:
-                line = pipe.readline()
-                if self.service.returncode is not None:
-                    # GRAB A FEW MORE LINES
-                    for i in range(100):
-                        try:
-                            line = pipe.readline()
-                            if line:
-                                recieve.add(line)
-                                if self.debug:
-                                    Log.note("FROM {{process}}: {{line}}", process=self.name, line=line.rstrip())
-                        except Exception:
-                            break
-                    return
-
-                recieve.add(line)
+            line = "dummy"
+            while not please_stop and self.service.returncode is None and line:
+                line = pipe.readline().rstrip()
+                if line:
+                    recieve.add(line)
                 if self.debug:
-                    Log.note("FROM {{process}}: {{line}}", process=self.name, line=line.rstrip())
+                    Log.note("{{process}} ({{name}}): {{line}}", name=name, process=self.name, line=line)
+            # GRAB A FEW MORE LINES
+            max = 100
+            while max:
+                try:
+                    line = pipe.readline().rstrip()
+                    if line:
+                        max = 100
+                        recieve.add(line)
+                        if self.debug:
+                            Log.note("{{process}} ({{name}}): {{line}}", name=name, process=self.name, line=line)
+                    else:
+                        max -= 1
+                except Exception:
+                    break
         finally:
             pipe.close()
 
+        recieve.add(THREAD_STOP)
+
     def _writer(self, pipe, send, please_stop):
         while not please_stop:
-            line = send.pop()
+            line = send.pop(till=please_stop)
             if line == THREAD_STOP:
                 please_stop.go()
                 break
 
             if line:
                 if self.debug:
-                    Log.note("TO   {{process}}: {{line}}", process=self.name, line=line.rstrip())
+                    Log.note("{{process}} (stdin): {{line}}", process=self.name, line=line.rstrip())
                 pipe.write(line + b"\n")
         pipe.close()
 
@@ -136,3 +151,5 @@ class Process(object):
                 return
 
             Log.warning("Failure to kill process {{process|quote}}", process=self.name, cause=ee)
+
+

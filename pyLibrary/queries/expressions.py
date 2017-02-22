@@ -1210,8 +1210,16 @@ class EqOp(Expression):
             Log.error("lhs and rhs have different dimensionality!?")
         for l, r in zip(lhs, rhs):
             for t in "bsnj":
-                if l.sql[t] and r.sql[t]:
-                    acc.append("(" + l.sql[t] + ") = (" + r.sql[t] + ")")
+                if l.sql[t] == None:
+                    if r.sql[t] == None:
+                        pass
+                    else:
+                        acc.append("(" + r.sql[t] + ") IS NULL")
+                else:
+                    if r.sql[t] == None:
+                        acc.append("(" + l.sql[t] + ") IS NULL")
+                    else:
+                        acc.append("((" + l.sql[t] + ") = (" + r.sql[t] + ") OR ((" + l.sql[t] + ") IS NULL AND (" + r.sql[t] + ") IS NULL))")
         if not acc:
             return FalseOp().to_sql(schema)
         else:
@@ -1321,7 +1329,7 @@ class NotOp(Expression):
         return "not (" + self.term.to_python() + ")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        return wrap([{"b": "NOT (" + self.term.to_sql(schema).b + ")"}])
+        return wrap([{"name": ".", "sql": {"b": "NOT (" + self.term.to_sql(schema).b + ")"}}])
 
     def vars(self):
         return self.term.vars()
@@ -1407,7 +1415,7 @@ class OrOp(Expression):
         return " or ".join("(" + t.to_python() + ")" for t in self.terms)
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        return {"b": " OR ".join("(" + t.to_sql(schema).b + ")" for t in self.terms)}
+        return wrap([{"name":".", "sql":{"b": " OR ".join("(" + t.to_sql(schema, boolean=True)[0].sql.b + ")" for t in self.terms)}}])
 
     def to_esfilter(self):
         return {"or": [t.to_esfilter() for t in self.terms]}
@@ -1532,16 +1540,16 @@ class StringOp(Expression):
         return "null if (" + missing + ") else unicode(" + value + ")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        test = self.term.missing().to_sql(schema, boolean=True).b
-        value = self.term.to_sql(not_null=True)
+        test = self.term.missing().to_sql(schema, boolean=True)[0].sql.b
+        value = self.term.to_sql(schema, not_null=True)[0].sql
         acc = []
-        for t, v in value:
+        for t, v in value.items():
             if t == "b":
                 acc.append("CASE WHEN (" + test + ") THEN NULL WHEN (" + v + ") THEN 'true' ELSE 'false' END")
             elif t == "s":
                 acc.append(v)
             else:
-                acc.append("CASE WHEN (" + test + ") THEN NULL ELSE CAST(" + v + " as TEXT) END")
+                acc.append("CASE WHEN (" + test + ") THEN NULL ELSE RTRIM(RTRIM(CAST(" + v + " as TEXT), '0'), '.') END")
         if not acc:
             return wrap([{}])
         elif len(acc) == 1:
@@ -2635,9 +2643,9 @@ class WhenOp(Expression):
         return "(" + self.when.to_python(boolean=True) + ") ? (" + self.then.to_python(not_null=not_null) + ") : (" + self.els_.to_python(not_null=not_null) + ")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        when = self.when.to_sql(boolean=True)
-        then = self.then.to_sql(not_null=not_null)
-        els_ = self.els_.to_sql(not_null=not_null)
+        when = self.when.to_sql(schema, boolean=True)[0].sql
+        then = self.then.to_sql(schema, not_null=not_null)[0].sql
+        els_ = self.els_.to_sql(schema, not_null=not_null)[0].sql
         output = {}
         for t in "bsn":
             if then[t] == None:
@@ -2650,7 +2658,10 @@ class WhenOp(Expression):
                     output[t] = "CASE WHEN " + when.b + " THEN " + then[t] + " END"
                 else:
                     output[t] = "CASE WHEN " + when.b + " THEN " + then[t] + " ELSE " + els_[t] + " END"
-        return output
+        if not output:
+            return wrap([{"name": ".", "sql": {"0": "NULL"}}])
+        else:
+            return wrap([{"name": ".", "sql": output}])
 
     def to_esfilter(self):
         return {"or": [

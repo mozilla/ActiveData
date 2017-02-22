@@ -13,36 +13,20 @@ from __future__ import unicode_literals
 
 import math
 import re
+
 from collections import Mapping
+
 from datetime import date, timedelta, datetime
 from decimal import Decimal
 from types import NoneType
 
-from mo_logs import Except, strings, suppress_exception, Log
-from mo_logs.strings import expand_template
-from mo_times.dates import Date
-from mo_times.durations import Duration
-from mo_dots import FlatList, NullType, Data, wrap_leaves, wrap
+from mo_dots import FlatList, NullType, Data, wrap_leaves, wrap, Null
 from mo_dots.objects import DataObject
+from mo_logs import Except, strings, Log
+from mo_logs.strings import expand_template
+from mo_times import Date, Duration
 
 _get = object.__getattribute__
-
-_Log = None
-datetime2unix = None
-utf82unicode = None
-
-
-def _late_import():
-    global _Log
-    global datetime2unix
-    global utf82unicode
-
-    from mo_logs import Log as _Log
-    from pyLibrary.convert import datetime2unix, utf82unicode
-
-    _ = _Log
-    _ = datetime2unix
-    _ = utf82unicode
 
 
 ESCAPE_DCT = {
@@ -65,6 +49,8 @@ def replace(match):
 
 
 def quote(value):
+    if value == None:
+        return ""
     return "\"" + ESCAPE.sub(replace, value) + "\""
 
 
@@ -99,8 +85,6 @@ def scrub(value):
     """
     REMOVE/REPLACE VALUES THAT CAN NOT BE JSON-IZED
     """
-    if not _Log:
-        _late_import()
     return _scrub(value, set())
 
 
@@ -138,7 +122,7 @@ def _scrub(value, is_done):
     elif isinstance(value, Mapping):
         _id = id(value)
         if _id in is_done:
-            _Log.warning("possible loop in structure detected")
+            Log.warning("possible loop in structure detected")
             return '"<LOOP IN STRUCTURE>"'
         is_done.add(_id)
 
@@ -149,7 +133,7 @@ def _scrub(value, is_done):
             elif hasattr(k, "__unicode__"):
                 k = unicode(k)
             else:
-                _Log.error("keys must be strings")
+                Log.error("keys must be strings")
             v = _scrub(v, is_done)
             if v != None or isinstance(v, Mapping):
                 output[k] = v
@@ -173,7 +157,7 @@ def _scrub(value, is_done):
         try:
             return _scrub(value.__data__(), is_done)
         except Exception, e:
-            _Log.error("problem with calling __json__()", e)
+            Log.error("problem with calling __json__()", e)
     elif hasattr(value, 'co_code') or hasattr(value, "f_locals"):
         return None
     elif hasattr(value, '__iter__'):
@@ -197,10 +181,11 @@ def value2json(obj, pretty=False, sort_keys=False):
         return json
     except Exception, e:
         e = Except.wrap(e)
-        with suppress_exception:
+        try:
             json = pypy_json_encode(obj)
             return json
-
+        except Exception, _:
+            pass
         Log.error("Can not encode into JSON: {{value}}", value=repr(obj), cause=e)
 
 
@@ -230,7 +215,7 @@ def remove_line_comment(line):
     return line
 
 
-def json2value(json_string, params={}, flexible=False, leaves=False):
+def json2value(json_string, params=Null, flexible=False, leaves=False):
     """
     :param json_string: THE JSON
     :param params: STANDARD JSON PARAMS
@@ -303,6 +288,27 @@ def json2value(json_string, params={}, flexible=False, leaves=False):
 
 def bytes2hex(value, separator=" "):
     return separator.join("%02X" % ord(x) for x in value)
+
+
+def utf82unicode(value):
+    return value.decode('utf8')
+
+
+def datetime2unix(d):
+    try:
+        if d == None:
+            return None
+        elif isinstance(d, datetime):
+            epoch = datetime(1970, 1, 1)
+        elif isinstance(d, date):
+            epoch = date(1970, 1, 1)
+        else:
+            Log.error("Can not convert {{value}} of type {{type}}",  value= d,  type= d.__class__)
+
+        diff = d - epoch
+        return float(diff.total_seconds())
+    except Exception, e:
+        Log.error("Can not convert {{value}}",  value= d, cause=e)
 
 
 from mo_json.decoder import json_decoder

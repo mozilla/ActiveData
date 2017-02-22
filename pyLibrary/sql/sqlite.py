@@ -28,7 +28,7 @@ from mo_times.timer import Timer
 from pyLibrary import convert
 from pyLibrary.sql import DB, SQL
 
-DEBUG = False
+DEBUG = True
 DEBUG_INSERT = False
 
 _load_extension_warning_sent = False
@@ -123,6 +123,8 @@ class Sqlite(DB):
     def _worker(self, please_stop):
         global _load_extension_warning_sent
 
+        if DEBUG:
+            Log.note("Sqlite version {{version}}", version=sqlite3.sqlite_version)
         if Sqlite.canonical:
             self.db = Sqlite.canonical
         else:

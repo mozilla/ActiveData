@@ -13,13 +13,14 @@ from mo_dots import coalesce, wrap, Null
 from mo_logs import Log, strings
 from mo_logs.exceptions import suppress_exception
 from mo_math.randoms import Random
+from mo_threads import Lock
 from mo_times.dates import Date, unicode2Date, unix2Date
 from mo_times.durations import Duration
 from mo_times.timer import Timer
 from pyLibrary import convert
 from pyLibrary.aws.s3 import strip_extension
 from pyLibrary.env import elasticsearch
-from pyLibrary.meta import use_settings
+from mo_kwargs import override
 from pyLibrary.queries import jx
 
 MAX_RECORD_LENGTH = 400000
@@ -30,21 +31,22 @@ class RolloverIndex(object):
     MIMIC THE elasticsearch.Index, WITH EXTRA keys() FUNCTION
     AND THREADED QUEUE AND SPLIT DATA BY
     """
-    @use_settings
-    def __init__(self, rollover_field, rollover_interval, rollover_max, queue_size=10000, batch_size=5000, settings=None):
+    @override
+    def __init__(self, rollover_field, rollover_interval, rollover_max, queue_size=10000, batch_size=5000, kwargs=None):
         """
         :param rollover_field: the FIELD with a timestamp to use for determining which index to push to
         :param rollover_interval: duration between roll-over to new index
         :param rollover_max: remove old indexes, do not add old records
         :param queue_size: number of documents to queue in memory
         :param batch_size: number of documents to push at once
-        :param settings: plus additional ES settings
+        :param kwargs: plus additional ES settings
         :return:
         """
-        self.settings = settings
+        self.settings = kwargs
+        self.locker = Lock("lock for rollover_index")
         self.rollover_field = jx.get(rollover_field)
-        self.rollover_interval = self.settings.rollover_interval = Duration(settings.rollover_interval)
-        self.rollover_max = self.settings.rollover_max = Duration(settings.rollover_max)
+        self.rollover_interval = self.settings.rollover_interval = Duration(kwargs.rollover_interval)
+        self.rollover_max = self.settings.rollover_max = Duration(kwargs.rollover_max)
         self.known_queues = {}  # MAP DATE TO INDEX
         self.cluster = elasticsearch.Cluster(self.settings)
 
@@ -61,7 +63,8 @@ class RolloverIndex(object):
             return Null
 
         rounded_timestamp = timestamp.floor(self.rollover_interval)
-        queue = self.known_queues.get(rounded_timestamp.unix)
+        with self.locker:
+            queue = self.known_queues.get(rounded_timestamp.unix)
         if queue == None:
             candidates = jx.run({
                 "from": self.cluster.get_aliases(),
@@ -76,24 +79,25 @@ class RolloverIndex(object):
                     best = c
             if not best or rounded_timestamp > best.date:
                 if rounded_timestamp < wrap(candidates[-1]).date:
-                    es = elasticsearch.Index(read_only=False, alias=best.alias, index=best.index, settings=self.settings)
+                    es = elasticsearch.Index(read_only=False, alias=best.alias, index=best.index, kwargs=self.settings)
                 else:
                     try:
-                        es = self.cluster.create_index(create_timestamp=rounded_timestamp, settings=self.settings)
+                        es = self.cluster.create_index(create_timestamp=rounded_timestamp, kwargs=self.settings)
                         es.add_alias(self.settings.index)
                     except Exception, e:
                         if "IndexAlreadyExistsException" not in e:
                             Log.error("Problem creating index", cause=e)
                         return self._get_queue(row)  # TRY AGAIN
             else:
-                es = elasticsearch.Index(read_only=False, alias=best.alias, index=best.index, settings=self.settings)
+                es = elasticsearch.Index(read_only=False, alias=best.alias, index=best.index, kwargs=self.settings)
 
             with suppress_exception:
                 es.set_refresh_interval(seconds=60 * 5, timeout=5)
 
             self._delete_old_indexes(candidates)
-
-            queue = self.known_queues[rounded_timestamp.unix] = es.threaded_queue(max_size=self.settings.queue_size, batch_size=self.settings.batch_size, silent=True)
+            threaded_queue = es.threaded_queue(max_size=self.settings.queue_size, batch_size=self.settings.batch_size, silent=True)
+            with self.locker:
+                queue = self.known_queues[rounded_timestamp.unix] = threaded_queue
         return queue
 
     def _delete_old_indexes(self, candidates):
@@ -107,7 +111,8 @@ class RolloverIndex(object):
                     Log.warning("could not delete index {{index}}", index=c.index, cause=e)
         for t, q in list(self.known_queues.items()):
             if unix2Date(t) + self.rollover_interval < Date.today() - self.rollover_max:
-                del self.known_queues[t]
+                with self.locker:
+                    del self.known_queues[t]
 
         pass
 

@@ -95,16 +95,16 @@ class NullType(object):
         return Null
 
     def __gt__(self, other):
-        return False
+        return Null
 
     def __ge__(self, other):
-        return False
+        return Null
 
     def __le__(self, other):
-        return False
+        return Null
 
     def __lt__(self, other):
-        return False
+        return Null
 
     def __eq__(self, other):
         return other == None or isinstance(other, NullType)
@@ -193,6 +193,8 @@ class NullType(object):
 
         d = _get(self, "__dict__")
         o = d["_obj"]
+        if o is None:
+            return
         k = d["__key__"]
 
         seq = [k] + split_field(key)

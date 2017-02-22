@@ -23,7 +23,7 @@ from pyLibrary import jsons
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs import Log
 from mo_dots import wrap, coalesce, Data, set_default
-from pyLibrary.meta import use_settings
+from mo_kwargs import override
 from mo_threads import Thread, Lock
 from mozillapulse.consumers import GenericConsumer
 
@@ -32,7 +32,7 @@ count=0
 
 
 class Consumer(Thread):
-    @use_settings
+    @override
     def __init__(
         self,
         exchange,  # name of the Pulse exchange
@@ -51,7 +51,7 @@ class Consumer(Thread):
         durable=False,  # True to keep queue after shutdown
         serializer='json',
         broker_timezone='GMT',
-        settings=None
+        kwargs=None
     ):
         global count
         count = coalesce(start, 0)
@@ -61,14 +61,14 @@ class Consumer(Thread):
         if (target_queue == None and target == None) or (target_queue != None and target != None):
             Log.error("Expecting a queue (for fast digesters) or a target (for slow digesters)")
 
-        Thread.__init__(self, name="Pulse consumer for " + settings.exchange, target=self._worker)
-        self.settings = settings
-        settings.callback = self._got_result
-        settings.user = coalesce(settings.user, settings.username)
-        settings.applabel = coalesce(settings.applable, settings.queue, settings.queue_name)
-        settings.topic = topic
+        Thread.__init__(self, name="Pulse consumer for " + kwargs.exchange, target=self._worker)
+        self.settings = kwargs
+        kwargs.callback = self._got_result
+        kwargs.user = coalesce(kwargs.user, kwargs.username)
+        kwargs.applabel = coalesce(kwargs.applable, kwargs.queue, kwargs.queue_name)
+        kwargs.topic = topic
 
-        self.pulse = ModifiedGenericConsumer(settings, connect=True, **settings)
+        self.pulse = ModifiedGenericConsumer(kwargs, connect=True, **kwargs)
         self.start()
 
     def _got_result(self, data, message):
@@ -137,7 +137,7 @@ class Publisher(object):
     Mimic GenericPublisher https://github.com/bhearsum/mozillapulse/blob/master/mozillapulse/publishers.py
     """
 
-    @use_settings
+    @override
     def __init__(
         self,
         exchange,  # name of the Pulse exchange
@@ -153,9 +153,9 @@ class Publisher(object):
         durable=False,  # True to keep queue after shutdown
         serializer='json',
         broker_timezone='GMT',
-        settings=None
+        kwargs=None
     ):
-        self.settings = settings
+        self.settings = kwargs
         self.connection = None
         self.count = 0
 

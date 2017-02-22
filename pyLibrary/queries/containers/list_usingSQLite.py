@@ -20,14 +20,14 @@ from copy import copy
 import mo_json
 from mo_collections.matrix import Matrix, index_to_coordinate
 from mo_dots import listwrap, coalesce, Data, wrap, Null, unwraplist, split_field, join_field, startswith_field, literal_field, unwrap, \
-    relative_field, concat_field, unliteral_field
+    relative_field, concat_field
+from mo_kwargs import override
 from mo_logs import Log
 from mo_math import Math
 from mo_math import UNION, MAX
 from mo_math.randoms import Random
 from mo_times import Date, Duration
 from pyLibrary import convert
-from pyLibrary.meta import use_settings
 from pyLibrary.queries import jx, Index
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, TimeDomain, DurationDomain
@@ -56,12 +56,13 @@ def late_import():
 
 
 class Table_usingSQLite(Container):
-    @use_settings
-    def __init__(self, name, db=None, uid=GUID, exists=False, settings=None):
+    @override
+    def __init__(self, name, db=None, uid=GUID, exists=False, columns=None, kwargs=None):
         """
         :param name: NAME FOR THIS TABLE
         :param db: THE DB TO USE
         :param uid: THE UNIQUE INDEX FOR THIS TABLE
+        :param columns: LIST OF KNOWN COLUMNS IN THE SNOWFLAKE
         :return: HANDLE FOR TABLE IN db
         """
         global _containers
@@ -87,7 +88,16 @@ class Table_usingSQLite(Container):
         self.uid_accessor = jx.get(self.uid)
         self.nested_tables = OrderedDict()  # MAP FROM NESTED PATH TO Table OBJECT, PARENTS PROCEED CHILDREN
         self.nested_tables["."] = self
-        self.columns = Index(keys=[join_field(["names", self.name])])  # MAP FROM DOCUMENT ABS PROPERTY NAME TO THE SET OF SQL COLUMNS IT REPRESENTS (ONE FOR EACH REALIZED DATATYPE)
+        self.columns = Index(  # MAP FROM DOCUMENT ABS PROPERTY NAME TO THE SET OF SQL COLUMNS IT REPRESENTS (ONE FOR EACH REALIZED DATATYPE)
+            keys=[join_field(["names", self.name])]
+        )
+
+        current_nested_level = join_field(split_field(self.name)[1::])
+        if columns:  # ENSURE THE COLUMNS HAVE NAMES FROM THIS PERSPECTIVE
+            for k, cs in columns.items():
+                for c in cs:
+                    c.names[self.name]=relative_field(k, current_nested_level)
+                    self.columns.add(c)
 
         if not exists:
             for u in self.uid:
@@ -100,18 +110,19 @@ class Table_usingSQLite(Container):
                         es_column=typed_column(u, "string"),
                         es_index=name
                     )
-                    self.add_column_to_schema(self.nested_tables, c)
+                    self.add_column_to_schema(c)
 
+            table_columns = [c for k, cs in self.columns.items() for c in cs if c.nested_path[0] == current_nested_level]
             command = (
                 "CREATE TABLE " + quote_table(name) + "(" +
                 (",".join(
                     [quoted_UID + " INTEGER"] +
-                    [_quote_column(c) + " " + sql_types[c.type] for u, cs in self.columns.items() for c in cs]
+                    [self._quote_column(c) + " " + sql_types[c.type] for c in table_columns]
                 )) +
                 ", PRIMARY KEY (" +
                 (", ".join(
                     [quoted_UID] +
-                    [_quote_column(c) for u in self.uid for c in self.columns[u]]
+                    [self._quote_column(c) for u in self.uid for c in self.columns[u]]
                 )) +
                 "))"
             )
@@ -122,9 +133,9 @@ class Table_usingSQLite(Container):
             command = "PRAGMA table_info(" + quote_table(name) + ")"
             details = self.db.query(command)
 
-            for r in details:
-                cname = untyped_column(r[1])
-                ctype = r[2].lower()
+            for n, t in details:
+                cname = untyped_column(n)
+                ctype = t.lower()
                 column = Column(
                     names={name: cname},
                     type=ctype,
@@ -132,7 +143,7 @@ class Table_usingSQLite(Container):
                     es_index=name
                 )
 
-                self.add_column_to_schema(self.columns, column)
+                self.add_column_to_schema(column)
                 # TODO: FOR ALL TABLES, FIND THE MAX ID
 
     def quote_column(self, column, table=None):
@@ -158,14 +169,13 @@ class Table_usingSQLite(Container):
 
     def get_leaves(self, table_name=None):
         output = []
-        for columns_by_type in self.columns.values():
-            for c in columns_by_type:
-                if c.type in STRUCT:
-                    continue
-                c = c.__copy__()
-                c.type = "value"  # MULTI-VALUED, SO HIDE THE TYPE IN THIS GENERIC NAME
-                output.append(c)
-                break
+        for c in self.columns:
+            if c.type in STRUCT:
+                continue
+            c = c.__copy__()
+            c.type = "value"  # MULTI-VALUED, SO HIDE THE TYPE IN THIS GENERIC NAME
+            output.append(c)
+            break
         return output
 
     def _get_sql_schema(self, frum):
@@ -200,23 +210,19 @@ class Table_usingSQLite(Container):
         doc_collection = self.flatten_many(docs)
         self._insert(doc_collection)
 
-    def add_column(self, column):
+    def _add_column_to_db(self, table_name, column):
         """
         ADD COLUMN, IF IT DOES NOT EXIST ALREADY
         """
-        if column.name not in self.columns:
-            self.columns[column.name] = {column}
-        elif column.type not in [c.type for c in self.columns[column.name]]:
-            self.columns[column.name].add(column)
-
+        cname = column.names[table_name]
         if column.type == "nested":
-            nested_table_name = concat_field(self.name, column.name)
+            nested_table_name = concat_field(table_name, cname)
             # MAKE THE TABLE
-            table = Table_usingSQLite(nested_table_name, self.db, exists=False)
-            self.nested_tables[column.name] = table
+            table = Table_usingSQLite(nested_table_name, self.db, exists=False, columns=self.columns)
+            self.nested_tables[cname] = table
         else:
             self.db.execute(
-                "ALTER TABLE " + quote_table(self.name) + " ADD COLUMN " + _quote_column(column) + " " + column.type
+                "ALTER TABLE " + quote_table(table_name) + " ADD COLUMN " + self._quote_column(column) + " " + column.type
             )
 
     def get_column_name(self, column):
@@ -239,7 +245,7 @@ class Table_usingSQLite(Container):
             return [Null]
 
         command = " UNION ALL ".join(
-            "SELECT " + _quote_column(c) + " FROM " + quote_table(c.es_index)
+            "SELECT " + self._quote_column(c) + " FROM " + quote_table(c.es_index)
             for c in cs
         )
 
@@ -249,7 +255,7 @@ class Table_usingSQLite(Container):
     def __iter__(self):
         columns = [c for c, cs in self.columns.items() for c in cs if c.type not in STRUCT]
         command = "SELECT " + \
-                  ",\n".join(_quote_column(c) for c in columns) + \
+                  ",\n".join(self._quote_column(c) for c in columns) + \
                   " FROM " + quote_table(self.name)
         rows = self.db.query(command)
         for r in rows:
@@ -300,13 +306,13 @@ class Table_usingSQLite(Container):
                 es_index=self.name,
                 es_column=typed_column(new_column_name, ctype)
             )
-            self.add_column(column)
+            self._add_column_to_db(self.name, column)
 
         # UPDATE THE NESTED VALUES
         for nested_column_name, nested_value in command.set.items():
             if get_type(nested_value) == "nested":
                 nested_table_name = concat_field(self.name, nested_column_name)
-                nested_table = nested_tables[nested_column_name]
+                nested_table = self.nested_tables[nested_column_name]
                 self_primary_key = ",".join(quote_table(c.es_column) for u in self.uid for c in self.columns[u])
                 extra_key_name = UID_PREFIX + "id" + unicode(len(self.uid))
                 extra_key = [e for e in nested_table.columns[extra_key_name]][0]
@@ -339,7 +345,7 @@ class Table_usingSQLite(Container):
                 prefix = "INSERT INTO " + quote_table(nested_table.name) + \
                          "(" + \
                          self_primary_key + "," + \
-                         _quote_column(extra_key) + "," + \
+                         self._quote_column(extra_key) + "," + \
                          ",".join(
                              quote_table(c.es_column)
                              for c in doc_collection.get(".", Null).active_columns
@@ -368,7 +374,7 @@ class Table_usingSQLite(Container):
                                   "p." + quote_table(c.es_column)
                                   for u in self.uid for c in self.columns[u]
                               ) + "," + \
-                              "c." + _quote_column(extra_key) + "," + \
+                              "c." + self._quote_column(extra_key) + "," + \
                               ",".join(
                                   "c." + quote_table(c.es_column)
                                   for c in doc_collection.get(".", Null).active_columns
@@ -398,14 +404,14 @@ class Table_usingSQLite(Container):
         command = "UPDATE " + quote_table(self.name) + " SET " + \
                   ",\n".join(
                       [
-                          _quote_column(c) + "=" + quote_value(get_if_type(v, c.type))
+                          self._quote_column(c) + "=" + quote_value(get_if_type(v, c.type))
                           for k, v in command.set.items()
                           if get_type(v) != "nested"
                           for c in self.columns[k]
                           if c.type != "nested" and len(c.nested_path) == 1
                           ] +
                       [
-                          _quote_column(c) + "=NULL"
+                          self._quote_column(c) + "=NULL"
                           for k in listwrap(command['clear'])
                           if k in self.columns
                           for c in self.columns[k]
@@ -1657,13 +1663,13 @@ class Table_usingSQLite(Container):
                 column = required_change.add
                 if column.type == "nested":
                     # WE ARE ALSO NESTING
-                    self._nest_column(column, column.name)
+                    self._add_nested_column(column, column.names[self.name])
 
                 table = join_field([self.name] + split_field(column.nested_path[0]))
 
                 self.db.execute(
-                    "ALTER TABLE " + quote_table(table) + " ADD COLUMN " + _quote_column(column) + " " + sql_types[
-                        column.type]
+                    "ALTER TABLE " + quote_table(table) +
+                    " ADD COLUMN " + self._quote_column(column) + " " + sql_types[column.type]
                 )
 
                 self.columns.add(column)
@@ -1671,22 +1677,22 @@ class Table_usingSQLite(Container):
             elif required_change.nest:
                 column = required_change.nest
                 new_path = required_change.new_path
-                self._nest_column(column, new_path)
+                self._add_nested_column(column, new_path)
                 # REMOVE KNOWLEDGE OF PARENT COLUMNS (DONE AUTOMATICALLY)
                 # TODO: DELETE PARENT COLUMNS?
 
-    def _nest_column(self, column, new_path):
-        destination_table = join_field([self.name] + split_field(new_path))
-        existing_table = join_field([self.name] + split_field(column.nested_path[0]))
+    def _add_nested_column(self, column, nested_column_name):
+        existing_table = concat_field(self.name, column.nested_path[0])
+        destination_table = concat_field(self.name, nested_column_name)
 
         # FIND THE INNER COLUMNS WE WILL BE MOVING
-        new_columns = {}
+        # WE ARE DOING THIS INSIDE THE TABLE CONSTRUCTOR TOO, WHRE DOES IT BELONG
+        new_columns = Index(keys=destination_table)
         for cname, cols in self.columns.items():
-            if startswith_field(cname, column.name):
-                new_columns[cname] = set()
+            if startswith_field(cname, nested_column_name):
                 for col in cols:
-                    new_columns[cname].add(col)
-                    col.nested_path = [new_path] + col.nested_path
+                    new_columns.add(col)
+                    col.nested_path = [nested_column_name] + col.nested_path
 
         # TODO: IF THERE ARE CHILD TABLES, WE MUST UPDATE THEIR RELATIONS TOO?
 
@@ -1696,7 +1702,7 @@ class Table_usingSQLite(Container):
         details = self.db.query(command)
         if details.data:
             raise Log.error("not expected, new nesting!")
-        self.nested_tables[new_path] = sub_table = Table_usingSQLite(destination_table, self.db, exists=False)
+        self.nested_tables[nested_column_name] = sub_table = Table_usingSQLite(destination_table, self.db, exists=False, columns=self.columns)
 
         self.db.execute(
             "ALTER TABLE " + quote_table(sub_table.name) + " ADD COLUMN " + quoted_PARENT + " INTEGER"
@@ -1706,29 +1712,30 @@ class Table_usingSQLite(Container):
         )
         for cname, cols in new_columns.items():
             for c in cols:
-                sub_table.add_column(c)
+                if c.nested_path[0] == nested_column_name:
+                    sub_table._add_column_to_db(sub_table.name, c)
 
         # TEST IF THERE IS ANY DATA IN THE NEW NESTED ARRAY
         all_cols = [c for _, cols in sub_table.columns.items() for c in cols]
         if not all_cols:
             has_nested_data = "0"
         elif len(all_cols) == 1:
-            has_nested_data = _quote_column(all_cols[0]) + " is NOT NULL"
+            has_nested_data = self._quote_column(all_cols[0]) + " is NOT NULL"
         else:
             has_nested_data = "COALESCE(" + \
-                              ",".join(_quote_column(c) for c in all_cols) + \
+                              ",".join(self._quote_column(c) for c in all_cols) + \
                               ") IS NOT NULL"
 
         # FILL TABLE WITH EXISTING COLUMN DATA
         command = "INSERT INTO " + quote_table(destination_table) + "(\n" + \
                   ",\n".join(
                       [quoted_UID, quoted_PARENT, quote_table(ORDER)] +
-                      [_quote_column(c) for _, cols in sub_table.columns.items() for c in cols]
+                      [self._quote_column(c) for _, cols in sub_table.columns.items() for c in cols]
                   ) + \
                   "\n)\n" + \
                   "\nSELECT\n" + ",".join(
             [quoted_UID, quoted_UID, "0"] +
-            [_quote_column(c) for _, cols in sub_table.columns.items() for c in cols]
+            [self._quote_column(c) for _, cols in sub_table.columns.items() for c in cols]
         ) + \
                   "\nFROM\n" + quote_table(existing_table) + \
                   "\nWHERE\n" + has_nested_data
@@ -1755,8 +1762,8 @@ class Table_usingSQLite(Container):
             rows=[]
         )
         doc_collection = {".": _insertion}
-        nested_tables = copy(self.nested_tables)  # KEEP TRACK OF WHAT TABLE WILL BE MADE (SHORTLY)
-        columns = copy(self.columns)
+        # nested_tables = copy(self.nested_tables)  # KEEP TRACK OF WHAT TABLES WILL BE MADE (SHORTLY)
+        # columns = self.columns
 
         def _flatten(data, uid, parent_id, order, full_path, nested_path, row=None):
             """
@@ -1783,23 +1790,23 @@ class Table_usingSQLite(Container):
 
                     if value_type in STRUCT:
                         c = unwraplist(
-                            [cc for cc in columns[cname] if cc.type in STRUCT]
+                            [cc for cc in self.columns[cname] if cc.type in STRUCT]
                         )
                     else:
                         c = unwraplist(
-                            [cc for cc in columns[cname] if cc.type == value_type]
+                            [cc for cc in self.columns[cname] if cc.type == value_type]
                         )
 
                     if not c:
                         # WHAT IS THE NESTING LEVEL FOR THIS PATH?
                         deeper_nested_path = "."
-                        for path, _ in nested_tables.items():
+                        for path, _ in self.nested_tables.items():
                             if startswith_field(cname, path) and len(deeper_nested_path) < len(path):
                                 deeper_nested_path = path
                         if deeper_nested_path != nested_path[0]:
                             # I HIGHLY SUSPECT, THROUGH CALLING _flatten() AGAIN THE REST OF THIS BLOCK IS NOT NEEDED
                             nested_column = unwraplist(
-                                [cc for cc in columns.get(deeper_nested_path, Null) if cc.type in STRUCT]
+                                [cc for cc in self.columns.get(deeper_nested_path, Null) if cc.type in STRUCT]
                             )
                             insertion.active_columns.add(nested_column)
                             row[nested_column.es_column] = "."
@@ -1822,9 +1829,9 @@ class Table_usingSQLite(Container):
                             es_index=self.name,  # THIS MAY BE THE WRONG TABLE, IF THIS PATH IS A NESTED DOC
                             nested_path=nested_path
                         )
-                        self.add_column_to_schema(self.nested_tables, c)
                         if value_type == "nested":
-                            nested_tables[cname] = "fake table"
+                            self.nested_tables[cname] = Data(name=concat_field(self.name, cname))  # PLACEHOLDER, UNTIL WE MAKE A TABLE
+                        self.add_column_to_schema(c)
 
                         required_changes.append({"add": c})
 
@@ -1873,9 +1880,9 @@ class Table_usingSQLite(Container):
                         es_index=self.name,
                         nested_path=nested_path
                     )
-                    self.add_column_to_schema(columns, c)
+                    self.add_column_to_schema(c)
                     if value_type == "nested":
-                        nested_tables[cname] = "fake table"
+                        self.nested_tables[cname] = "fake table"
                     required_changes.append({"add": c})
 
                 insertion.active_columns.add(c)
@@ -1942,12 +1949,18 @@ class Table_usingSQLite(Container):
 
             self.db.execute(prefix + records)
 
-    def add_column_to_schema(self, nest_to_schema, column):
+    def _quote_column(self, column):
+        return convert.string2quote(self.get_column_name(column))
+
+
+    def add_column_to_schema(self, column):
+        self.columns.add(column)
         abs_table = literal_field(self.name)
         abs_name = column.names[abs_table]
 
-        for nest, schema in nest_to_schema.items():
-            rel_table = literal_field(join_field([self.name] + split_field(nest)))
+        for nest, nested_table in self.nested_tables.items():
+            rel_table = join_field([self.name] + split_field(nest))
+            assert rel_table == nested_table.name
             rel_name = relative_field(abs_name, nest)
 
             column.names[rel_table] = rel_name
@@ -1956,14 +1969,11 @@ class Table_usingSQLite(Container):
 _do_not_quote = re.compile(r"^\w+$", re.UNICODE)
 
 
-def quote_table(column):
-    if _do_not_quote.match(column):
-        return column
-    return convert.string2quote(column)
+def quote_table(table_name):
+    if _do_not_quote.match(table_name):
+        return table_name
+    return convert.string2quote(table_name)
 
-
-def _quote_column(column):
-    return convert.string2quote(column.es_column)
 
 
 def quote_value(value):

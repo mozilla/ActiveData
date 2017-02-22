@@ -13,19 +13,22 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import __builtin__
+import cgi
 import math
 import re
 import string
+import json as _json
 from __builtin__ import round as _round
 from __builtin__ import unicode as _unicode
 from collections import Mapping
 from datetime import datetime as builtin_datetime
 from datetime import timedelta, date
 
-from mo_dots import coalesce, wrap
+from mo_dots import coalesce, wrap, get_module
+from mo_logs.convert import datetime2unix, datetime2string, value2url, value2json
+from mo_logs.convert import milli2datetime, unix2datetime
 
 _json_encoder = None
-_convert = None
 _Log = None
 _Except = None
 _Duration = None
@@ -36,19 +39,16 @@ def _late_import():
     global _Log
     global _Except
     global _Duration
-    global _convert
 
-    from mo_json.encoder import json_encoder as _json_encoder
+    _json_encoder = get_module("mo_json.encoder").json_encoder
     from mo_logs import Log as _Log
     from mo_logs.exceptions import Except as _Except
     from mo_times.durations import Duration as _Duration
-    from pyLibrary import convert as _convert
 
     _ = _json_encoder
     _ = _Log
     _ = _Except
     _ = _Duration
-    _ = _convert
 
 
 def expand_template(template, value):
@@ -65,17 +65,14 @@ def expand_template(template, value):
 
 
 def datetime(value):
-    if not _convert:
-        _late_import()
-
     if isinstance(value, (date, builtin_datetime)):
         pass
     elif value < 10000000000:
-        value = _convert.unix2datetime(value)
+        value = unix2datetime(value)
     else:
-        value = _convert.milli2datetime(value)
+        value = milli2datetime(value)
 
-    return _convert.datetime2string(value, "%Y-%m-%d %H:%M:%S")
+    return datetime2string(value, "%Y-%m-%d %H:%M:%S")
 
 
 def unicode(value):
@@ -85,37 +82,28 @@ def unicode(value):
 
 
 def unix(value):
-    if not _convert:
-        _late_import()
-
     if isinstance(value, (date, builtin_datetime)):
         pass
     elif value < 10000000000:
-        value = _convert.unix2datetime(value)
+        value = unix2datetime(value)
     else:
-        value = _convert.milli2datetime(value)
+        value = milli2datetime(value)
 
-    return str(_convert.datetime2unix(value))
+    return str(datetime2unix(value))
 
 
 def url(value):
     """
-    _CONVERT FROM dict OR string TO URL PARAMETERS
+    convert FROM dict OR string TO URL PARAMETERS
     """
-    if not _convert:
-        _late_import()
-
-    return _convert.value2url(value)
+    return value2url(value)
 
 
 def html(value):
     """
-    _CONVERT FROM unicode TO HTML OF THE SAME
+    convert FROM unicode TO HTML OF THE SAME
     """
-    if not _convert:
-        _late_import()
-
-    return _convert.unicode2HTML(value)
+    return cgi.escape(value)
 
 
 def upper(value):
@@ -138,22 +126,18 @@ def replace(value, find, replace):
 
 
 def json(value):
-    if not _convert:
+    if not _Duration:
         _late_import()
-
-    return _convert.value2json(value, pretty=True)
+    return _json_encoder(value, pretty=True)
 
 
 def tab(value):
-    if not _convert:
-        _late_import()
-
     if isinstance(value, Mapping):
         h, d = zip(*wrap(value).leaves())
         return \
-            "\t".join(map(_convert.value2json, h)) + \
+            "\t".join(map(value2json, h)) + \
             "\n" + \
-            "\t".join(map(_convert.value2json, d))
+            "\t".join(map(value2json, d))
     else:
         _unicode(value)
 
@@ -348,10 +332,7 @@ def comma(value):
 
 
 def quote(value):
-    if not _convert:
-        _late_import()
-
-    return _convert.string2quote(value)
+    return _json.dumps(value)
 
 
 _SNIP = "...<snip>..."
@@ -503,7 +484,7 @@ def deformat(value):
 
 
 def toString(val):
-    if not _convert:
+    if not _Duration:
         _late_import()
 
     if val == None:
@@ -517,14 +498,29 @@ def toString(val):
     elif isinstance(val, timedelta):
         duration = val.total_seconds()
         return _unicode(round(duration, 3)) + " seconds"
+    elif isinstance(val, _unicode):
+        return val
+    elif isinstance(val, str):
+        try:
+            return val.decode('utf8')
+        except Exception, _:
+            pass
 
-    try:
-        return _unicode(val)
-    except Exception, e:
-        if not _Log:
-            _late_import()
+        try:
+            return val.decode('latin1')
+        except Exception, e:
+            if not _Log:
+                _late_import()
 
-        _Log.error(str(type(val)) + " type can not be converted to unicode", e)
+            _Log.error(unicode(type(val)) + " type can not be converted to unicode", cause=e)
+    else:
+        try:
+            return _unicode(val)
+        except Exception, e:
+            if not _Log:
+                _late_import()
+
+            _Log.error(unicode(type(val)) + " type can not be converted to unicode", cause=e)
 
 
 def edit_distance(s1, s2):
@@ -628,14 +624,14 @@ def utf82unicode(value):
             _late_import()
 
         if not isinstance(value, basestring):
-            _Log.error("Can not _convert {{type}} to unicode because it's not a string",  type= type(value).__name__)
+            _Log.error("Can not convert {{type}} to unicode because it's not a string",  type= type(value).__name__)
 
         e = _Except.wrap(e)
         for i, c in enumerate(value):
             try:
                 c.decode("utf8")
             except Exception, f:
-                _Log.error("Can not _convert charcode {{c}} in string  index {{i}}", i=i, c=ord(c), cause=[e, _Except.wrap(f)])
+                _Log.error("Can not convert charcode {{c}} in string  index {{i}}", i=i, c=ord(c), cause=[e, _Except.wrap(f)])
 
         try:
             latin1 = _unicode(value.decode("latin1"))

@@ -18,7 +18,7 @@ from mo_dots import Data
 from mo_dots import unwrap, wrap
 from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Index, Cluster
-from pyLibrary.meta import use_settings
+from mo_kwargs import override
 from pyLibrary.queries import jx
 
 
@@ -39,7 +39,7 @@ def open_test_instance(name, settings):
             host= settings.host,
             type= name)
 
-        Index(read_only=False, settings=settings).delete()
+        Index(read_only=False, kwargs=settings).delete()
 
         es = Cluster(settings).create_index(settings, limit_replicas=True)
         return es
@@ -48,10 +48,10 @@ def open_test_instance(name, settings):
 
 
 class Fake_ES():
-    @use_settings
-    def __init__(self, filename, host="fake", index="fake", settings=None):
-        self.settings = settings
-        self.filename = settings.filename
+    @override
+    def __init__(self, filename, host="fake", index="fake", kwargs=None):
+        self.settings = kwargs
+        self.filename = kwargs.filename
         try:
             self.data = mo_json.json2value(File(self.filename).read())
         except Exception:

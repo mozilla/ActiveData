@@ -11,7 +11,6 @@
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
-from mo_math import SUM
 
 
 class Relation_usingList(object):
@@ -52,7 +51,7 @@ class Relation(object):
         self.map = dict()
 
     def len(self):
-        return SUM(len(v) for k, v in self.map.items())
+        return sum(len(v) for k, v in self.map.items() if v)
 
     def add(self, key, value):
         to = self.map.get(key)

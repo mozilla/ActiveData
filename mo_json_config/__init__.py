@@ -21,6 +21,7 @@ from mo_dots import set_default, wrap, unwrap
 from mo_json import json2value
 from mo_json_config.convert import value2url, ini2value
 from mo_logs import Log, Except
+from mo_files import File
 
 DEBUG = False
 
@@ -173,7 +174,6 @@ def _replace_locals(node, doc_path):
 ###############################################################################
 
 def get_file(ref, url):
-    from mo_files import File
 
     if ref.path.startswith("~"):
         home_path = os.path.expanduser("~")
@@ -195,7 +195,6 @@ def get_file(ref, url):
         else:
             parent = url.path.rstrip("/").split("/")[:-1]
             ref.path = "/".join(parent) + "/" + ref.path
-
 
     path = ref.path if os.sep != "\\" else ref.path[1::].replace("/", "\\")
 
@@ -220,10 +219,10 @@ def get_file(ref, url):
 
 
 def get_http(ref, url):
-    from pyLibrary.env import http
+    import requests
 
     params = url.query
-    new_value = json2value(http.get(ref), params=params, flexible=True, leaves=True)
+    new_value = json2value(requests.get(ref), params=params, flexible=True, leaves=True)
     return new_value
 
 

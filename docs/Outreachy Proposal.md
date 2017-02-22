@@ -26,7 +26,7 @@ ElasticSearch's schema merging is great, but has always been incomplete:
 1. It could not merge inner objects `{"a":{"b":1}}` with nested objects `{"a":[{"b":0}]}`, and 
 2. Merging numbers `{"a": 1}` with strings `{"b": "1"}` did not cause failure, but did leave the schema ambiguous, and made the queries clumsy.
 
-This upgrade will help with ActiveData's service stability, and provide a step towards promoting this project to production.
+This upgrade will make ActiveData more flexible, improve service stability, and provide a step towards promoting this project to production.
 
 ##Required Skills
 
@@ -40,7 +40,7 @@ Some particular experience will make this task easier (most important first):
 
 ##References
 
-1. Similar problem: [Mapping JSON to strict DB schema](https://github.com/klahnakoski/JSONQueryExpressionTests/blob/master/docs/GSOC%20Proposal.md)
+1. Similar project for smaller data: [Mapping JSON to strict DB schema](https://github.com/klahnakoski/JSONQueryExpressionTests/blob/master/docs/GSOC%20Proposal.md)
 2. [ELT](https://en.wikipedia.org/wiki/Extract,_transform,_load) Links: [A](http://hexanika.com/why-shift-from-etl-to-elt/), [B](https://www.ironsidegroup.com/2015/03/01/etl-vs-elt-whats-the-big-difference/)
 3. [data cubes](https://en.wikipedia.org/wiki/OLAP_cube) 
 4. [fact tables](https://en.wikipedia.org/wiki/Fact_table) in a [data warehouse](https://en.wikipedia.org/wiki/Data_warehouse). 

@@ -14,19 +14,18 @@ from __future__ import unicode_literals
 import StringIO
 import gzip
 import zipfile
-from io import BytesIO
 from tempfile import TemporaryFile
 
 import boto
 from boto.s3.connection import Location
 
-from pyLibrary import convert
-from mo_logs import Log
 from mo_dots import wrap, Null, coalesce, unwrap
-from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, GzipLines, LazyLines, ibytes2ilines, scompressed2ibytes
 from mo_kwargs import override
+from mo_logs import Log
 from mo_times.dates import Date
 from mo_times.timer import Timer
+from pyLibrary import convert
+from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, LazyLines, ibytes2ilines, scompressed2ibytes
 
 TOO_MANY_KEYS = 1000 * 1000 * 1000
 READ_ERROR = "S3 read error"

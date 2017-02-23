@@ -900,11 +900,9 @@ def _scrub(r):
                     output.append(v)
             if not output:
                 return None
-            if len(output) == 1:
+            elif len(output) == 1:
                 return output[0]
-            try:
-                return sort(output)
-            except Exception:
+            else:
                 return output
         else:
             return r

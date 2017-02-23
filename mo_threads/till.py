@@ -48,7 +48,7 @@ class Till(Signal):
         global next_ping
         now = time()
         if till != None:
-            if not isinstance(till, float):
+            if not isinstance(till, (float, int)):
                 from mo_logs import Log
 
                 Log.error("Date objects for Till are no longer allowed")
@@ -56,7 +56,7 @@ class Till(Signal):
         elif seconds != None:
             timeout = now + seconds
         elif timeout != None:
-            if not isinstance(till, float):
+            if not isinstance(timeout, (float, int)):
                 from mo_logs import Log
 
                 Log.error("Duration objects for Till are no longer allowed")

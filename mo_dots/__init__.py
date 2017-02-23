@@ -467,6 +467,9 @@ def unwrap(v):
         return v.list
     elif _type is NullType:
         return None
+    elif _type is DataObject:
+        d = _get(v, "_obj")
+        return d
     elif _type is GeneratorType:
         return (unwrap(vv) for vv in v)
     else:
@@ -538,3 +541,4 @@ def tuplewrap(value):
 from mo_dots.nones import Null, NullType
 from mo_dots.datas import Data
 from mo_dots.lists import FlatList
+from mo_dots.objects import DataObject

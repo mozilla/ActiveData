@@ -13,6 +13,7 @@ import os
 import shutil
 from datetime import datetime
 
+import re
 from mo_dots import get_module, coalesce
 from mo_logs import Log
 
@@ -121,6 +122,21 @@ class File(object):
             return parts[0]
         else:
             return ".".join(parts[0:-1])
+
+    def find(self, pattern):
+        """
+        :param pattern: REGULAR EXPRESSION TO MATCH NAME (NOT INCLUDING PATH)
+        :return: LIST OF File OBJECTS THAT HAVE MATCHING NAME
+        """
+        output = []
+        def _find(dir):
+            if re.match(pattern, dir._filename.split("/")[-1]):
+                output.append(dir)
+            if dir.is_directory():
+                for c in dir.children:
+                    _find(c)
+        _find(self)
+        return output
 
     def set_extension(self, ext):
         """

@@ -17,19 +17,20 @@ import subprocess
 from collections import Mapping
 from datetime import datetime
 
-from pymysql import connect, InterfaceError, cursors
-
 import mo_json
+from mo_dots import coalesce, wrap, listwrap, unwrap
 from mo_files import File
+from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.strings import expand_template
 from mo_logs.strings import indent
 from mo_logs.strings import outdent
 from mo_math import Math
-from mo_dots import coalesce, wrap, listwrap, unwrap
+from mo_times import Date
+from pymysql import connect, InterfaceError, cursors
+
 from pyLibrary import convert
-from mo_kwargs import override
 from pyLibrary.queries import jx
 from pyLibrary.sql import SQL
 
@@ -392,15 +393,15 @@ class MySQL(object):
                 sql = sql.encode("utf8")
             (output, _) = proc.communicate(sql)
         except Exception, e:
-            Log.error("Can not call \"mysql\"", e)
+            raise Log.error("Can not call \"mysql\"", e)
 
         if proc.returncode:
             if len(sql) > 10000:
                 sql = "<" + unicode(len(sql)) + " bytes of sql>"
             Log.error("Unable to execute sql: return code {{return_code}}, {{output}}:\n {{sql}}\n",
-                sql= indent(sql),
-                return_code= proc.returncode,
-                output= output
+                sql=indent(sql),
+                return_code=proc.returncode,
+                output=output
             )
 
     @staticmethod
@@ -553,14 +554,16 @@ class MySQL(object):
                 return SQL(expand_template(value.template, param))
             elif isinstance(value, basestring):
                 return SQL(self.db.literal(value))
-            elif isinstance(value, datetime):
-                return SQL("str_to_date('" + value.strftime("%Y%m%d%H%M%S") + "', '%Y%m%d%H%i%s')")
-            elif hasattr(value, '__iter__'):
-                return SQL(self.db.literal(json_encode(value)))
             elif isinstance(value, Mapping):
                 return SQL(self.db.literal(json_encode(value)))
             elif Math.is_number(value):
                 return SQL(unicode(value))
+            elif isinstance(value, datetime):
+                return SQL("str_to_date('" + value.strftime("%Y%m%d%H%M%S") + "', '%Y%m%d%H%i%s')")
+            elif isinstance(value, Date):
+                return SQL("str_to_date('"+value.format("%Y%m%d%H%M%S")+"', '%Y%m%d%H%i%s')")
+            elif hasattr(value, '__iter__'):
+                return SQL(self.db.literal(json_encode(value)))
             else:
                 return self.db.literal(value)
         except Exception, e:

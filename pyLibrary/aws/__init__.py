@@ -143,7 +143,6 @@ def capture_termination_signal(please_stop):
                 if response.status_code not in [400, 404]:
                     Log.warning("Shutdown AWS Spot Node {{name}} {{type}}", name=machine_metadata.name, type=machine_metadata.aws_instance_type)
                     please_stop.go()
-                    return
             except Exception, e:
                 e = Except.wrap(e)
                 if "Failed to establish a new connection: [Errno 10060]" in e or "A socket operation was attempted to an unreachable network" in e:

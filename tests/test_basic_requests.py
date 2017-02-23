@@ -11,15 +11,13 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from unittest import skipIf
-
 from active_data.app import OVERVIEW
 from mo_json_config import URL
 from pyLibrary import convert
-from tests.base_test_class import ActiveDataBaseTest, global_settings
+from tests.test_jx import BaseTestCase
 
 
-class TestBasicRequests(ActiveDataBaseTest):
+class TestBasicRequests(BaseTestCase):
 
     def test_empty_request(self):
         response = self.utils.try_till_response(self.utils.service_url, data=b"")
@@ -54,7 +52,7 @@ class TestBasicRequests(ActiveDataBaseTest):
 
     def test_rest_get(self):
         settings = self.utils.fill_container({
-            "data":[
+            "data": [
                 {"a": 0, "b": 0},
                 {"a": 0, "b": 1},
                 {"a": 1, "b": 0},

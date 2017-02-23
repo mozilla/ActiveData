@@ -11,16 +11,14 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from unittest import skipIf
-
 from mo_dots import wrap
-from tests import NULL
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
+
+from tests.test_jx import BaseTestCase, TEST_TABLE, NULL
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
-class TestSetOps(ActiveDataBaseTest):
+class TestSetOps(BaseTestCase):
 
     def test_length(self):
         test = {

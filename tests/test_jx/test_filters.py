@@ -12,12 +12,12 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from mo_dots import wrap
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
+from tests.test_jx import BaseTestCase, TEST_TABLE
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
-class TestFilters(ActiveDataBaseTest):
+class TestFilters(BaseTestCase):
     def test_where_expression(self):
         test = {
             "data": [  # PROPERTIES STARTING WITH _ ARE NESTED AUTOMATICALLY

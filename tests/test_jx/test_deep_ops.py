@@ -16,13 +16,12 @@ from unittest import skipIf
 
 from mo_dots import wrap
 from mo_math import Math
-from tests import NULL
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
+from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings, NULL
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
 
-class TestDeepOps(ActiveDataBaseTest):
+class TestDeepOps(BaseTestCase):
     def test_deep_select_column(self):
         test = {
             "data": [

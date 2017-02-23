@@ -15,25 +15,26 @@ from unittest import skip
 
 import mo_json_config
 from mo_dots import wrap
-from pyLibrary import convert
 from mo_logs import Log, Except
-from pyLibrary.env import http
 from mo_times.dates import Date, Duration
 from mo_times.durations import DAY
 from mo_times.timer import Timer
-from tests.base_test_class import ActiveDataBaseTest, error, global_settings
+from pyLibrary import convert
+from pyLibrary.env import http
+from tests import error
+from tests.test_jx import BaseTestCase, global_settings
 
 APP_CONFIG_FILE = "tests/config/app_staging_settings.json"
 ES_CLUSTER_LOCATION = None
 
 
 @skip("not usually run")
-class TestUnittests(ActiveDataBaseTest):
+class TestUnittests(BaseTestCase):
     process = None
 
     @classmethod
     def setUpClass(cls):
-        ActiveDataBaseTest.setUpClass(assume_server_started=False)
+        BaseTestCase.setUpClass(assume_server_started=False)
 
         # START DIRECT-TO-ACTIVEDATA-ES SERVICE
         global ES_CLUSTER_LOCATION

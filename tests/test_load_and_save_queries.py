@@ -12,7 +12,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import hashlib
-from unittest import skipIf
 
 from mo_dots import wrap
 from mo_json import value2json
@@ -21,10 +20,10 @@ from mo_threads import Till
 from pyLibrary import convert
 from pyLibrary.convert import unicode2utf8
 from pyLibrary.env import elasticsearch
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_settings
+from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
-class TestLoadAndSaveQueries(ActiveDataBaseTest):
+class TestLoadAndSaveQueries(BaseTestCase):
 
     def test_save_then_load(self):
 

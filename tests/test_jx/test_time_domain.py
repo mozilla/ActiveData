@@ -14,8 +14,7 @@ from __future__ import unicode_literals
 from mo_dots import wrap
 from mo_times.dates import Date
 from mo_times.durations import WEEK, DAY
-from tests import NULL
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
+from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings, NULL
 
 TODAY = Date.today()
 
@@ -90,7 +89,7 @@ expected3 = wrap([
 ])
 
 
-class TestTime(ActiveDataBaseTest):
+class TestTime(BaseTestCase):
     def test_time_variables(self):
         test = {
             "metadata": {},

@@ -13,7 +13,8 @@ from __future__ import unicode_literals
 
 from mo_times.dates import Date
 from mo_times.durations import DAY
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
+
+from tests.test_jx import BaseTestCase, TEST_TABLE
 
 FROM_DATE = Date.today()-7*DAY
 TO_DATE = Date.today()
@@ -47,7 +48,7 @@ simple_test_data =[
 ]
 
 
-class TestEdge1(ActiveDataBaseTest):
+class TestEdge1(BaseTestCase):
 
     def test_count_over_time(self):
         test = {

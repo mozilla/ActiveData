@@ -11,11 +11,10 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from tests import NULL
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
+from tests.test_jx import BaseTestCase, TEST_TABLE, NULL
 
 
-class TestEdge2(ActiveDataBaseTest):
+class TestEdge2(BaseTestCase):
     def test_count_rows(self):
         test = {
             "name": "count rows, 2d",

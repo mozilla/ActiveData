@@ -11,12 +11,13 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_dots import set_default, wrap, Data
+from mo_dots import set_default, wrap
+
 from pyLibrary.meta import extenstion_method
-from tests.base_test_class import ActiveDataBaseTest
+from tests.test_jx import BaseTestCase
 
 
-class TestMetadata(ActiveDataBaseTest):
+class TestMetadata(BaseTestCase):
 
 
     def test_meta(self):

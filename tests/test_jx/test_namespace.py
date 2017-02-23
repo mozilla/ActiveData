@@ -13,14 +13,13 @@ from __future__ import unicode_literals
 
 from unittest import skip
 
-import base_test_class
 from pyLibrary.queries.jx_usingES import FromES
 from pyLibrary.queries.namespace.rename import Rename
 from pyLibrary.queries.namespace.typed import Typed
-from tests.base_test_class import ActiveDataBaseTest
+from tests.test_jx import BaseTestCase, TEST_TABLE, NULL
 
 
-class Namespace(ActiveDataBaseTest):
+class Namespace(BaseTestCase):
     """
     TEST A VARIETY OF RE-NAMINGS
     """
@@ -116,7 +115,7 @@ class Namespace(ActiveDataBaseTest):
         }
 
         self.utils.fill_container({"query":query, "data": deep_test_data})
-        db = FromES(settings=base_test_class.settings.backend_es)
+        db = FromES(settings=base_test_case.settings.backend_es)
         db.namespaces += [Rename(dimensions={"name": "w", "fields": {"a": "a.v", "b": "a.b"}}), Typed()]
         result = db.query(query)
         self.compare_to_expected(query, result, {

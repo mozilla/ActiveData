@@ -26,7 +26,6 @@ from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE, global_setting
 
 class TestLoadAndSaveQueries(ActiveDataBaseTest):
 
-    @skipIf(global_settings.use=="sqlite", "sqlite can not save queries")
     def test_save_then_load(self):
 
         test = {

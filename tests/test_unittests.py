@@ -26,6 +26,7 @@ from tests.base_test_class import ActiveDataBaseTest, error, global_settings
 APP_CONFIG_FILE = "tests/config/app_staging_settings.json"
 ES_CLUSTER_LOCATION = None
 
+
 @skip("not usually run")
 class TestUnittests(ActiveDataBaseTest):
     process = None

@@ -21,12 +21,10 @@ from tests.base_test_class import ActiveDataBaseTest, global_settings
 
 class TestBasicRequests(ActiveDataBaseTest):
 
-    @skipIf(global_settings.use=="sqlite", "not expected to pass yet")
     def test_empty_request(self):
         response = self.utils.try_till_response(self.utils.service_url, data=b"")
         self.assertEqual(response.status_code, 400)
 
-    @skipIf(global_settings.use=="sqlite", "not expected to pass yet")
     def test_root_request(self):
         if self.utils.not_real_service():
             return
@@ -38,7 +36,6 @@ class TestBasicRequests(ActiveDataBaseTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, OVERVIEW)
 
-    @skipIf(global_settings.use=="sqlite", "not expected to pass yet")
     def test_bad_file_request(self):
         url = URL(self.utils.service_url)
         url.path = "/tools/../../README.md"
@@ -47,7 +44,6 @@ class TestBasicRequests(ActiveDataBaseTest):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.all_content, "")
 
-    @skipIf(global_settings.use=="sqlite", "not expected to pass yet")
     def test_query_on_static_file(self):
         url = URL(self.utils.service_url)
         url.path = "/tools/index.html?123"
@@ -56,7 +52,6 @@ class TestBasicRequests(ActiveDataBaseTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, OVERVIEW)
 
-    @skipIf(global_settings.use=="sqlite", "not expected to pass yet")
     def test_rest_get(self):
         settings = self.utils.fill_container({
             "data":[

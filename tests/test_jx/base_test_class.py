@@ -16,26 +16,18 @@ import os
 import signal
 import subprocess
 from copy import deepcopy
-from string import ascii_lowercase
 
-from mo_kwargs import override
-
-import mo_json
 import mo_json_config
-from mo_logs import Log, Except, constants
-from mo_logs.exceptions import extract_stack
-from mo_logs.strings import expand_template
 from active_data.actions.query import replace_vars
 from mo_dots import wrap, coalesce, unwrap, listwrap, Data
+from mo_kwargs import override
+from mo_logs import Log, Except, constants
+from mo_logs.exceptions import extract_stack
+from mo_testing.fuzzytestcase import FuzzyTestCase, assertAlmostEqual
 from pyLibrary import convert
-from pyLibrary.env import http
-from pyLibrary.queries import jx, containers
+from pyLibrary.queries import jx
 from pyLibrary.queries.containers.list_usingSQLite import Table_usingSQLite
 from pyLibrary.queries.query import QueryOp
-from pyLibrary.testing import elasticsearch
-from mo_testing.fuzzytestcase import FuzzyTestCase, assertAlmostEqual
-from mo_times.dates import Date
-from mo_times.durations import MINUTE
 
 TEST_TABLE = "testdata"
 
@@ -61,222 +53,6 @@ class ActiveDataBaseTest(FuzzyTestCase):
 
     def tearDown(self):
         self.utils.tearDown()
-
-
-class ESUtils(object):
-    """
-    RESPONSIBLE FOR SETTING UP THE RAW CONTAINER,
-    EXECUTING QUERIES, AND CONFIRMING EXPECTED RESULTS
-
-    BASIC TEST FORMAT:
-    {
-        "name": "EXAMPLE TEMPLATE",
-        "metadata": {},             # OPTIONAL DATA SHAPE REQUIRED FOR NESTED DOCUMENT QUERIES
-        "data": [],                  # THE DOCUMENTS NEEDED FOR THIS TEST
-        "query": {                   # THE JSON QUERY EXPRESSION
-            "from": TEST_TABLE,      # TEST_TABLE WILL BE REPLACED WITH DATASTORE FILLED WITH data
-            "edges": []              # THIS FILE IS EXPECTING EDGES (OR GROUP BY)
-        },
-        "expecting_list": []         # THE EXPECTATION WHEN "format":"list"
-        "expecting_table": {}        # THE EXPECTATION WHEN "format":"table"
-        "expecting_cube": {}         # THE EXPECTATION WHEN "format":"cube" (INCLUDING METADATA)
-    }
-    """
-    indexes = []
-
-    @override
-    def __init__(
-        self,
-        service_url,  # location of the ActiveData server we are testing
-        backend_es,  # the ElasticSearch settings for filling the backend
-        fastTesting=False,
-        kwargs=None
-    ):
-        if backend_es.schema==None:
-            Log.error("Expecting backed_es to have a schema defined")
-
-        letters = unicode(ascii_lowercase)
-        self.random_letter = letters[int(Date.now().unix / 30) % 26]
-        self.service_url = service_url
-        self.backend_es = backend_es
-        self.settings = kwargs
-        self._es_test_settings = None
-        self._es_cluster = None
-        self._index = None
-
-        if not containers.config.default:
-            containers.config.default = {
-                "type": "elasticsearch",
-                "settings": backend_es
-            }
-
-        if not fastTesting:
-            self.server = http
-        else:
-            Log.alert("TESTS WILL RUN FAST, BUT NOT ALL TESTS ARE RUN!\nEnsure the `file://tests/config/elasticsearch.json#fastTesting=true` to turn on the network response tests.")
-            # WE WILL USE THE ActiveServer CODE, AND CONNECT TO ES DIRECTLY.
-            # THIS MAKES FOR SLIGHTLY FASTER TEST TIMES BECAUSE THE PROXY IS
-            # MISSING
-            self.server = FakeHttp()
-            containers.config.default = {
-                "type": "elasticsearch",
-                "settings": kwargs.backend_es.copy()
-            }
-
-    def setUp(self):
-        global NEXT
-
-        index_name = "testing_" + ("000"+unicode(NEXT))[-3:] + "_" + self.random_letter
-        NEXT += 1
-
-        self._es_test_settings = self.backend_es.copy()
-        self._es_test_settings.index = index_name
-        self._es_test_settings.alias = None
-        self._es_cluster = elasticsearch.Cluster(self._es_test_settings)
-        self._index = self._es_cluster.get_or_create_index(self._es_test_settings)
-
-        ESUtils.indexes.append(self._index)
-
-    def tearDown(self):
-        if self._index in ESUtils.indexes:
-            self._es_cluster.delete_index(self._index.settings.index)
-            ESUtils.indexes.remove(self._index)
-
-    def setUpClass(self):
-        # REMOVE OLD INDEXES
-        cluster = elasticsearch.Cluster(global_settings.backend_es)
-        aliases = cluster.get_aliases()
-        for a in aliases:
-            try:
-                if a.index.startswith("testing_"):
-                    create_time = Date(a.index[-15:], "%Y%m%d_%H%M%S")  # EXAMPLE testing_0ef53e45b320160118_180420
-                    if create_time < Date.now() - 10 * MINUTE:
-                        cluster.delete_index(a.index)
-            except Exception, e:
-                Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
-
-    def tearDownClass(self):
-        cluster = elasticsearch.Cluster(global_settings.backend_es)
-        for i in ESUtils.indexes:
-            try:
-                cluster.delete_index(i.settings.index)
-                Log.note("remove index {{index}}", index=i)
-            except Exception, e:
-                pass
-        Log.stop()
-
-    def not_real_service(self):
-        return self.settings.fastTesting
-
-    def execute_es_tests(self, subtest, tjson=False):
-        subtest = wrap(subtest)
-        subtest.name = extract_stack()[1]['method']
-
-        self.fill_container(subtest, tjson=tjson)
-        self.send_queries(subtest)
-
-    def fill_container(self, subtest, tjson=False):
-        """
-        RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
-        """
-        subtest = wrap(subtest)
-        _settings = self._es_test_settings  # ALREADY COPIED AT setUp()
-        # _settings.index = "testing_" + Random.hex(10).lower()
-        # settings.type = "test_result"
-
-        try:
-            url = "file://resources/schema/basic_schema.json.template?{{.|url}}"
-            url = expand_template(url, {
-                "type": _settings.type,
-                "metadata": subtest.metadata
-            })
-            _settings.schema = mo_json_config.get(url)
-
-            # MAKE CONTAINER
-            container = self._es_cluster.get_or_create_index(tjson=tjson, settings=_settings)
-            container.add_alias(_settings.index)
-
-            # INSERT DATA
-            container.extend([
-                {"value": v} for v in subtest.data
-            ])
-            container.flush()
-            # ENSURE query POINTS TO CONTAINER
-            frum = subtest.query["from"]
-            if isinstance(frum, basestring):
-                subtest.query["from"] = frum.replace(TEST_TABLE, _settings.index)
-            else:
-                Log.error("Do not know how to handle")
-        except Exception, e:
-            Log.error("can not load {{data}} into container", {"data":subtest.data}, e)
-
-        return _settings
-
-    def send_queries(self, subtest):
-        subtest = wrap(subtest)
-
-        try:
-            # EXECUTE QUERY
-            num_expectations = 0
-            for k, v in subtest.items():
-                if k.startswith("expecting_"):  # WHAT FORMAT ARE WE REQUESTING
-                    format = k[len("expecting_"):]
-                elif k == "expecting":  # NO FORMAT REQUESTED (TO TEST DEFAULT FORMATS)
-                    format = None
-                else:
-                    continue
-
-                num_expectations += 1
-                expected = v
-
-                subtest.query.format = format
-                subtest.query.meta.testing = True  # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
-                query = convert.unicode2utf8(convert.value2json(subtest.query))
-                # EXECUTE QUERY
-                response = self.try_till_response(self.service_url, data=query)
-
-                if response.status_code != 200:
-                    error(response)
-                result = convert.json2value(convert.utf82unicode(response.all_content))
-
-                # HOW TO COMPARE THE OUT-OF-ORDER DATA?
-                compare_to_expected(subtest.query, result, expected)
-                Log.note("Test result compares well")
-            if num_expectations == 0:
-                Log.error("Expecting test {{name|quote}} to have property named 'expecting_*' for testing the various format clauses", {
-                    "name": subtest.name
-                })
-        except Exception, e:
-            Log.error("Failed test {{name|quote}}", {"name": subtest.name}, e)
-
-    def execute_query(self, query):
-        query = wrap(query)
-
-        try:
-            query = convert.unicode2utf8(convert.value2json(query))
-            # EXECUTE QUERY
-            response = self.try_till_response(self.service_url, data=query)
-
-            if response.status_code != 200:
-                error(response)
-            result = convert.json2value(convert.utf82unicode(response.all_content))
-
-            return result
-        except Exception, e:
-            Log.error("Failed query", e)
-
-    def try_till_response(self, *args, **kwargs):
-        while True:
-            try:
-                response = self.server.get(*args, **kwargs)
-                return response
-            except Exception, e:
-                e = Except.wrap(e)
-                if "No connection could be made because the target machine actively refused it" in e:
-                    Log.alert("Problem connecting")
-                else:
-                    Log.error("Server raised exception", e)
-
 
 
 class SQLiteUtils(object):

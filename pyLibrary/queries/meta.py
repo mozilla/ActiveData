@@ -580,7 +580,7 @@ Column = DataClass(
     "Column",
     [
         # "table",
-        "names",
+        "names",  # MAP FROM TABLE NAME TO COLUMN NAME (ONE COLUMN CAN HAVE MULTIPLE NAMES)
         "es_column",
         "es_index",
         # "es_type",

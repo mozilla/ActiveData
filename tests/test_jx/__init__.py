@@ -28,7 +28,10 @@ class BaseTestCase(FuzzyTestCase):
     def __init__(self, *args, **kwargs):
         FuzzyTestCase.__init__(self, *args, **kwargs)
         if not utils:
-            Log.error("Something wrong with test setup")
+            try:
+                import tests
+            except Exception, e:
+                Log.error("Expecting ./tests/__init__.py to set `global_settings` and `utils` so tests can be run")
         self.utils = utils
 
     @classmethod

@@ -116,7 +116,7 @@ class ESUtils(object):
 
     def setUpClass(self):
         # REMOVE OLD INDEXES
-        cluster = elasticsearch.Cluster(global_settings.backend_es)
+        cluster = elasticsearch.Cluster(test_jx.global_settings.backend_es)
         aliases = cluster.get_aliases()
         for a in aliases:
             try:
@@ -128,7 +128,7 @@ class ESUtils(object):
                 Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
 
     def tearDownClass(self):
-        cluster = elasticsearch.Cluster(global_settings.backend_es)
+        cluster = elasticsearch.Cluster(test_jx.global_settings.backend_es)
         for i in ESUtils.indexes:
             try:
                 cluster.delete_index(i.settings.index)
@@ -406,8 +406,8 @@ class FakeHttp(object):
         })
 
 
-global_settings = mo_json_config.get("file://tests/config/elasticsearch.json")
-constants.set(global_settings.constants)
+test_jx.global_settings = mo_json_config.get("file://tests/config/elasticsearch.json")
+constants.set(test_jx.global_settings.constants)
 Log.alert("Resetting test count")
 NEXT = 0
 
@@ -416,20 +416,19 @@ container_types = Data(
 )
 
 
-# read_alternate_settings
-utils = None
 try:
+    # read_alternate_settings
     filename = os.environ.get("TEST_CONFIG")
     if filename:
-        global_settings = mo_json_config.get("file://"+filename)
+        test_jx.global_settings = mo_json_config.get("file://"+filename)
     else:
         Log.alert("No TEST_CONFIG environment variable to point to config file.  Using /tests/config/elasticsearch.json")
 
-    Log.start(global_settings.debug)
+    Log.start(test_jx.global_settings.debug)
 
-    if not global_settings.use:
+    if not test_jx.global_settings.use:
         Log.error('Must have a {"use": type} set in the config file')
-    utils = container_types[global_settings.use](global_settings)
+    test_jx.utils = container_types[test_jx.global_settings.use](test_jx.global_settings)
 except Exception, e:
     Log.warning("problem", e)
 

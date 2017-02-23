@@ -554,8 +554,7 @@ def metadata_tables():
             ]
         ]+[
             Column(
-                table="meta.tables",
-                name="timestamp",
+                names={"meta.tables": "timestamp"},
                 es_index=None,
                 es_column="timestamp",
                 type="integer",

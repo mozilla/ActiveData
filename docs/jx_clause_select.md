@@ -99,7 +99,7 @@ All other select clause variations are shortcuts for the standard clause.
 
 ### Simple String
 
-If the name of the name, or path, of the value is not changed, a string will do just fine:
+If the name, or path, of the value is not changed, a string will do just fine:
 
 <table><tr><td>
 <b>Use String Names</b><br>

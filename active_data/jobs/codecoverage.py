@@ -10,14 +10,17 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from mo_math import MIN
+
+from mo_math import UNION
+
 from mo_dots import coalesce, wrap, unwrap
-from pyLibrary.collections import UNION, MIN
 from mo_logs import constants
 from mo_logs import startup
 from mo_logs import Log
 from pyLibrary.env import http, elasticsearch
 from pyLibrary.queries import jx
-from mo_threads import Thread, Signal, Queue
+from mo_threads import Thread, Signal, Queue, THREAD_STOP
 from mo_times.dates import Date, unicode2Date
 from mo_times.timer import Timer
 
@@ -267,7 +270,7 @@ def loop(source, coverage_summary_index, settings, please_stop):
                 ]
 
                 # ADD STOP MESSAGE
-                queue.add(Thread.STOP)
+                queue.add(THREAD_STOP)
 
                 # WAIT FOR THEM TO COMPLETE
                 for t in threads:

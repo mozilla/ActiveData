@@ -27,7 +27,7 @@ class StructuredLogger_usingMulti(StructuredLogger):
         for m in self.many:
             try:
                 m.write(template, params)
-            except Exception, e:
+            except Exception as e:
                 bad.append(m)
                 Log.warning("Logger failed!  It will be removed: {{type}}", type=m.__class__.__name__, cause=e)
         with suppress_exception:

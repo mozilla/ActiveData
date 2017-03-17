@@ -74,6 +74,10 @@ class File(object):
 
         return File('/'.join(scrub(i, p) for i, p in enumerate(path)))
 
+    @property
+    def timestamp(self):
+        output = os.path.getmtime(self.abspath)
+        return output
 
     @property
     def filename(self):
@@ -179,6 +183,11 @@ class File(object):
             else:
                 return content
 
+    def read_lines(self, encoding="utf8"):
+        with open(self._filename, "rb") as f:
+            for line in f:
+                yield line.decode(encoding).rstrip()
+
     def read_json(self, encoding="utf8"):
         content = self.read(encoding=encoding)
         value = get_module("mo_json").json2value(content, flexible=True, leaves=True)
@@ -196,7 +205,7 @@ class File(object):
                 self.parent.create()
             with open(self._filename, "rb") as f:
                 return f.read()
-        except Exception, e:
+        except Exception as e:
             Log.error("Problem reading file {{filename}}", filename=self.abspath, cause=e)
 
     def write_bytes(self, content):
@@ -241,7 +250,7 @@ class File(object):
                 with io.open(path, "rb") as f:
                     for line in f:
                         yield line.decode('utf8').rstrip()
-            except Exception, e:
+            except Exception as e:
                 Log.error("Can not read line from {{filename}}", filename=self._filename, cause=e)
 
         return output()
@@ -275,7 +284,7 @@ class File(object):
 
                     output_file.write(c.encode("utf-8"))
                     output_file.write(b"\n")
-        except Exception, e:
+        except Exception as e:
             Log.error("Could not write to file", e)
 
     def delete(self):
@@ -285,7 +294,7 @@ class File(object):
             elif os.path.isfile(self._filename):
                 os.remove(self._filename)
             return self
-        except Exception, e:
+        except Exception as e:
             if e.strerror == "The system cannot find the path specified":
                 return
             Log.error("Could not remove file", e)
@@ -306,7 +315,7 @@ class File(object):
     def create(self):
         try:
             os.makedirs(self._filename)
-        except Exception, e:
+        except Exception as e:
             Log.error("Could not make directory {{dir_name}}",  dir_name= self._filename, cause=e)
 
     @property
@@ -323,7 +332,7 @@ class File(object):
             return True
         try:
             return os.path.exists(self._filename)
-        except Exception, e:
+        except Exception as e:
             return False
 
     def __bool__(self):
@@ -337,7 +346,7 @@ class File(object):
             return True
         try:
             return os.path.exists(self._filename)
-        except Exception, e:
+        except Exception as e:
             return False
 
     @classmethod
@@ -365,5 +374,5 @@ def base642bytearray(value):
 def datetime2string(value, format="%Y-%m-%d %H:%M:%S"):
     try:
         return value.strftime(format)
-    except Exception, e:
+    except Exception as e:
         Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)

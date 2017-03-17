@@ -74,7 +74,7 @@ class FlatList(list):
                 for i in range(len(_list), i):
                     _list.append(None)
             _list[i] = unwrap(y)
-        except Exception, e:
+        except Exception as e:
             Log = _late_import()
             Log.error("problem", cause=e)
 
@@ -83,7 +83,7 @@ class FlatList(list):
             if key != "index":  # WE DO NOT WANT TO IMPLEMENT THE index METHOD
                 output = _get(self, key)
                 return output
-        except Exception, e:
+        except Exception as e:
             if key[0:2] == "__":  # SYSTEM LEVEL ATTRIBUTES CAN NOT BE USED FOR SELECT
                 raise e
         return FlatList.get(self, key)

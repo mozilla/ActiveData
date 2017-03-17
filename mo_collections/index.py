@@ -42,7 +42,7 @@ class Index(object):
 
             key = value2key(self._keys, key)
             return wrap(copy(self._data.get(key, [])))
-        except Exception, e:
+        except Exception as e:
             Log.error("something went wrong", e)
 
     def __setitem__(self, key, value):
@@ -75,7 +75,7 @@ class Index(object):
                 for k in key[:length]:
                     try:
                         d = d[k]
-                    except Exception, e:
+                    except Exception as e:
                         return False
                 return True
 
@@ -84,10 +84,10 @@ class Index(object):
             for k in key:
                 try:
                     d = d[k]
-                except Exception, e:
+                except Exception as e:
                     return False
             return True
-        except Exception, e:
+        except Exception as e:
             Log.error("something went wrong", e)
 
     def keys(self):

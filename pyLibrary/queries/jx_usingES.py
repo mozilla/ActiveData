@@ -162,7 +162,7 @@ class FromES(Container):
             if es09_aggop.is_aggop(query):
                 return es09_aggop.es_aggop(self._es, None, query)
             Log.error("Can not handle")
-        except Exception, e:
+        except Exception as e:
             e = Except.wrap(e)
             if "Data too large, data for" in e:
                 http.post(self._es.cluster.path+"/_cache/clear")
@@ -255,3 +255,5 @@ class FromES(Container):
             if response.errors:
                 Log.error("could not update: {{error}}", error=[e.error for i in response["items"] for e in i.values() if e.status not in (200, 201)])
 
+from pyLibrary.queries.containers import type2container
+type2container["elasticsearch"]=FromES

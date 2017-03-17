@@ -352,7 +352,7 @@ class List_usingStream(object):
 
         try:
             return self.buffer[offset]
-        except Exception, e:
+        except Exception as e:
             Log.error("error", cause=e)
 
     def slice(self, start, stop):

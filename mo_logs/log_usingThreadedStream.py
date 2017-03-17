@@ -61,14 +61,14 @@ class StructuredLogger_usingThreadedStream(StructuredLogger):
         try:
             self.queue.add({"template": template, "params": params})
             return self
-        except Exception, e:
+        except Exception as e:
             raise e  # OH NO!
 
     def stop(self):
         try:
             self.queue.add(THREAD_STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
-        except Exception, e:
+        except Exception as e:
             if DEBUG_LOGGING:
                 raise e
 
@@ -105,12 +105,12 @@ def time_delta_pusher(please_stop, appender, queue, interval):
                 else:
                     expanded = expand_template(log.get("template"), log.get("params"))
                     lines.append(expanded)
-            except Exception, e:
+            except Exception as e:
                 Log.warning("Trouble formatting logs", cause=e)
                 # SWALLOW ERROR, GOT TO KEEP RUNNING
         try:
             appender(u"\n".join(lines) + u"\n")
-        except Exception, e:
+        except Exception as e:
             sys.stderr.write(b"Trouble with appender: " + str(e.message) + b"\n")
             # SWALLOW ERROR, GOT TO KEEP RUNNNIG
 

@@ -76,7 +76,7 @@ def float2json(value):
             return sign+(digits[:1]+u"."+digits[1:].rstrip('0')).rstrip(".")
         else:
             return sign+mantissa.rstrip("0")+u"e"+unicode(exp)
-    except Exception, e:
+    except Exception as e:
         from mo_logs import Log
         Log.error("not expected", e)
 
@@ -156,7 +156,7 @@ def _scrub(value, is_done):
     elif hasattr(value, '__data__'):
         try:
             return _scrub(value.__data__(), is_done)
-        except Exception, e:
+        except Exception as e:
             Log.error("problem with calling __json__()", e)
     elif hasattr(value, 'co_code') or hasattr(value, "f_locals"):
         return None
@@ -179,7 +179,7 @@ def value2json(obj, pretty=False, sort_keys=False):
             Log.note(str(type(obj)) + " is not valid{{type}}JSON",  type= " (pretty) " if pretty else " ")
             Log.error("Not valid JSON: " + str(obj) + " of type " + str(type(obj)))
         return json
-    except Exception, e:
+    except Exception as e:
         e = Except.wrap(e)
         try:
             json = pypy_json_encode(obj)
@@ -243,7 +243,7 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
 
         try:
             value = wrap(json_decoder(unicode(json_string)))
-        except Exception, e:
+        except Exception as e:
             Log.error("can not decode\n{{content}}", content=json_string, cause=e)
 
         if leaves:
@@ -251,7 +251,7 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
 
         return value
 
-    except Exception, e:
+    except Exception as e:
         e = Except.wrap(e)
 
         if not json_string.strip():
@@ -281,7 +281,7 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
         hexx_str = bytes2hex(base_str, " ")
         try:
             char_str = " " + "  ".join((c.decode("latin1") if ord(c) >= 32 else ".") for c in base_str)
-        except Exception, e:
+        except Exception as e:
             char_str = " "
         Log.error("Can not decode JSON:\n" + char_str + "\n" + hexx_str + "\n", e)
 
@@ -307,7 +307,7 @@ def datetime2unix(d):
 
         diff = d - epoch
         return float(diff.total_seconds())
-    except Exception, e:
+    except Exception as e:
         Log.error("Can not convert {{value}}",  value= d, cause=e)
 
 

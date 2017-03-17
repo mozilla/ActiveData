@@ -86,7 +86,7 @@ def make_log_from_settings(settings):
     try:
         temp = __import__(path, globals(), locals(), [class_name], -1)
         constructor = object.__getattribute__(temp, class_name)
-    except Exception, e:
+    except Exception as e:
         if settings.stream and not constructor:
             # PROVIDE A DEFAULT STREAM HANLDER
             constructor = StructuredLogger_usingThreadedStream

@@ -334,7 +334,7 @@ def _isolate(separator, list):
             return "(\n" + indent((" " + separator + "\n").join(list)) + "\n)"
         else:
             return list[0]
-    except Exception, e:
+    except Exception as e:
         Log.error("Programming problem: separator={{separator}}, list={{list}",
             list=list,
             separator=separator,
@@ -462,3 +462,6 @@ aggregates = {
     "var": "POWER(STDDEV({{code}}), 2)",
     "variance": "POWER(STDDEV({{code}}), 2)"
 }
+
+from pyLibrary.queries.containers import type2container
+type2container["mysql"]=MySQL

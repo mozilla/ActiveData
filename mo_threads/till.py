@@ -88,7 +88,7 @@ class Till(Signal):
                 if later > 0:
                     try:
                         sleep(min(later, INTERVAL))
-                    except Exception, e:
+                    except Exception as e:
                         from mo_logs import Log
 
                         Log.warning(
@@ -129,7 +129,7 @@ class Till(Signal):
                         for t, s in work:
                             s.go()
 
-        except Exception, e:
+        except Exception as e:
             Log.warning("timer shutdown", cause=e)
         finally:
             if DEBUG:

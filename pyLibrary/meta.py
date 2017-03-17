@@ -17,7 +17,7 @@ import mo_json
 from mo_dots import set_default, wrap, _get_attr, Null, coalesce
 from mo_logs import Log
 from mo_logs.exceptions import Except
-from mo_logs.strings import expand_template
+from mo_logs.strings import expand_template, quote
 from mo_math.randoms import Random
 from mo_threads import Lock
 from mo_times.dates import Date
@@ -31,7 +31,7 @@ def get_class(path):
         output = __import__(".".join(path[0:-1]), globals(), locals(), [path[-1]], 0)
         return _get_attr(output, path[-1:])
         # return output
-    except Exception, e:
+    except Exception as e:
         from mo_logs import Log
 
         Log.error("Could not find module {{module|quote}}",  module= ".".join(path))
@@ -55,18 +55,18 @@ def new_instance(settings):
     try:
         temp = __import__(path, globals(), locals(), [class_name], -1)
         constructor = object.__getattribute__(temp, class_name)
-    except Exception, e:
+    except Exception as e:
         Log.error("Can not find class {{class}}", {"class": path}, cause=e)
 
     settings['class'] = None
     try:
         return constructor(kwargs=settings)  # MAYBE IT TAKES A KWARGS OBJECT
-    except Exception, e:
+    except Exception as e:
         pass
 
     try:
         return constructor(**settings)
-    except Exception, e:
+    except Exception as e:
         Log.error("Can not create instance of {{name}}", name=".".join(path), cause=e)
 
 
@@ -84,7 +84,7 @@ def get_function_by_name(full_name):
         temp = __import__(path, globals(), locals(), [function_name], -1)
         output = object.__getattribute__(temp, function_name)
         return output
-    except Exception, e:
+    except Exception as e:
         Log.error("Can not find function {{name}}",  name= full_name, cause=e)
 
 
@@ -170,7 +170,7 @@ def wrap_function(cache_store, func_):
                     with cache_store.locker:
                         _cache[args] = (now + cache_store.timeout, args, value, None)
                     return value
-                except Exception, e:
+                except Exception as e:
                     e = Except.wrap(e)
                     with cache_store.locker:
                         _cache[args] = (now + cache_store.timeout, args, None, e)
@@ -300,7 +300,7 @@ temp = {{name}}
             "len_slots": len(slots),
             "dict": "{" + (", ".join(convert.value2quote(s) + ": self." + s for s in slots)) + "}",
             "assign": "; ".join("_set(output, "+convert.value2quote(s)+", self."+s+")" for s in slots),
-            "types": "{" + (",".join(convert.string2quote(k) + ": " + v.__name__ for k, v in types.items())) + "}"
+            "types": "{" + (",".join(quote(k) + ": " + v.__name__ for k, v in types.items())) + "}"
         }
     )
 

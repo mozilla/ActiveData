@@ -25,7 +25,7 @@ def get_logger():
     try:
         from mo_logs import Log as _Log
         return _Log
-    except Exception, e:
+    except Exception as e:
         _Log = PoorLogger()
         _Log.warning("`pip install mo-logs` for better logging.", cause=e)
         return _Log
@@ -34,7 +34,7 @@ def get_logger():
 def get_module(name):
     try:
         return importlib.import_module(name)
-    except Exception, e:
+    except Exception as e:
         get_logger().error("`pip install " + name.split(".")[0].replace("_", "-") + "` to enable this feature", cause=e)
 
 

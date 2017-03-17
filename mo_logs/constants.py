@@ -33,7 +33,7 @@ def set(constants):
         try:
             old_value = mo_dots.set_attr(sys.modules, k, new_value)
             continue
-        except Exception, e:
+        except Exception as e:
             errors.append(e)
 
         # ONE MODULE IS MISSING, THE CALLING MODULE
@@ -61,7 +61,7 @@ def set(constants):
                             old_value= old_value,
                             new_value= new_value)
                     break
-        except Exception, e:
+        except Exception as e:
             errors.append[e]
 
         if errors:

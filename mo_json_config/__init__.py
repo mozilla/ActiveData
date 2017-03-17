@@ -46,7 +46,7 @@ def get(url):
     try:
         phase2 = _replace_locals(phase1, [phase1])
         return wrap(phase2)
-    except Exception, e:
+    except Exception as e:
         Log.error("problem replacing locals in\n{{phase1}}", phase1=phase1, cause=e)
 
 
@@ -202,13 +202,13 @@ def get_file(ref, url):
         if DEBUG:
             Log.note("reading file {{path}}", path=path)
         content = File(path).read()
-    except Exception, e:
+    except Exception as e:
         content = None
         Log.error("Could not read file {{filename}}", filename=path, cause=e)
 
     try:
         new_value = json2value(content, params=ref.query, flexible=True, leaves=True)
-    except Exception, e:
+    except Exception as e:
         e = Except.wrap(e)
         try:
             new_value = ini2value(content)
@@ -231,7 +231,7 @@ def get_env(ref, url):
     ref = ref.host
     try:
         new_value = json2value(os.environ[ref])
-    except Exception, e:
+    except Exception as e:
         new_value = os.environ[ref]
     return new_value
 
@@ -289,7 +289,7 @@ class URL(object):
 
             if value.startswith("file://") or value.startswith("//"):
                 # urlparse DOES NOT WORK IN THESE CASES
-                scheme, suffix = value.split("//")
+                scheme, suffix = value.split("//", 2)
                 self.scheme = scheme.rstrip(":")
                 parse(self, suffix, 0, 1)
                 self.query = wrap(url_param2value(self.query))
@@ -301,8 +301,9 @@ class URL(object):
                 self.path = output.path
                 self.query = wrap(url_param2value(output.query))
                 self.fragment = output.fragment
-        except Exception, e:
+        except Exception as e:
             Log.error("problem parsing {{value}} to URL", value=value, cause=e)
+
     def __nonzero__(self):
         if self.scheme or self.host or self.port or self.path or self.query or self.fragment:
             return True

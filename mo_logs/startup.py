@@ -113,7 +113,7 @@ class SingleInstance:
                 if os.path.exists(self.lockfile):
                     os.unlink(self.lockfile)
                 self.fd = os.open(self.lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-            except Exception, e:
+            except Exception as e:
                 Log.alarm("Another instance is already running, quitting.")
                 sys.exit(-1)
         else: # non Windows

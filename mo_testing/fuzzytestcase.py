@@ -56,7 +56,7 @@ class FuzzyTestCase(unittest.TestCase):
     def assertRaises(self, problem, function, *args, **kwargs):
         try:
             function(*args, **kwargs)
-        except Exception, e:
+        except Exception as e:
             f = Except.wrap(e)
             if isinstance(problem, basestring):
                 if problem in f:
@@ -144,7 +144,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                 assertAlmostEqual(a, b, msg=msg, digits=digits, places=places, delta=delta)
         else:
             assertAlmostEqualValue(test, expected, msg=msg, digits=digits, places=places, delta=delta)
-    except Exception, e:
+    except Exception as e:
         Log.error(
             "{{test|json}} does not match expected {{expected|json}}",
             test=test if show_detail else "[can not show]",

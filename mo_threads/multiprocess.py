@@ -57,11 +57,17 @@ class Process(object):
                 Thread.run(self.name + " stderr", self._reader, "stderr", service.stderr, self.stderr, please_stop=self.service_stopped, parent_thread=self),
                 Thread.run(self.name + " waiter", self._monitor, parent_thread=self),
             ]
-        except Exception, e:
+        except Exception as e:
             Log.error("Can not call", e)
 
         if self.debug:
             Log.note("{{process}} START: {{command}}", process=self.name, command=" ".join(map(strings.quote, params)))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.join(raise_on_error=True)
 
     def stop(self):
         self.stdin.add("exit")  # ONE MORE SEND
@@ -74,7 +80,12 @@ class Process(object):
         for c in child_threads:
             c.join()
         if raise_on_error and self.returncode != 0:
-            Log.error("{{process}} FAIL: returncode={{code}}", process=self.name, code=self.service.returncode)
+            Log.error(
+                "{{process}} FAIL: returncode={{code}}\n{{stderr}}",
+                process=self.name,
+                code=self.service.returncode,
+                stderr=list(self.stderr)
+            )
         return self
 
     def remove_child(self, child):
@@ -143,7 +154,7 @@ class Process(object):
     def _kill(self):
         try:
             self.service.kill()
-        except Exception, e:
+        except Exception as e:
             ee = Except.wrap(e)
             if 'The operation completed successfully' in ee:
                 return

@@ -33,7 +33,7 @@ def latin12unicode(value):
         Log.error("can not convert unicode from latin1")
     try:
         return unicode(value.decode('iso-8859-1'))
-    except Exception, e:
+    except Exception as e:
         Log.error("Can not convert {{value|quote}} to unicode", value=value)
 
 _map2url = {chr(i): latin12unicode(chr(i)) for i in range(32, 256)}

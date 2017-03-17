@@ -78,7 +78,7 @@ class Math(object):
             if base == None:
                 return math.log(v)
             return math.log(v, base)
-        except Exception, e:
+        except Exception as e:
             from mo_logs import Log
             Log.error("error in log")
 
@@ -87,7 +87,7 @@ class Math(object):
     def log10(v):
         try:
             return math.log(v, 10)
-        except Exception, e:
+        except Exception as e:
             return Null
 
     # FOR GOODNESS SAKE - IF YOU PROVIDE A METHOD abs(), PLEASE PROVIDE ITS COMPLEMENT
@@ -168,7 +168,7 @@ class Math(object):
                 try:
                     m = pow(10, math.ceil(math.log10(abs(value))))
                     return int(__builtin__.round(value / m, digits) * m)
-                except Exception, e:
+                except Exception as e:
                     from mo_logs import Log
 
                     Log.error("not expected", e)
@@ -178,7 +178,7 @@ class Math(object):
                 try:
                     m = pow(10, math.ceil(math.log10(abs(value))))
                     return __builtin__.round(value / m, digits) * m
-                except Exception, e:
+                except Exception as e:
                     from mo_logs import Log
                     Log.error("not expected", e)
         elif decimal <= 0:
@@ -417,7 +417,7 @@ def almost_equal(first, second, digits=None, places=None, delta=None):
                 return True
 
         return False
-    except Exception, e:
+    except Exception as e:
         from mo_logs import Log
         Log.error("problem comparing", cause=e)
 

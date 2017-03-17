@@ -142,7 +142,7 @@ class Data(MutableMapping):
             else:
                 d[seq[-1]] = value
             return self
-        except Exception, e:
+        except Exception as e:
             raise e
 
     def __getattr__(self, key):
@@ -283,7 +283,7 @@ class Data(MutableMapping):
     def __repr__(self):
         try:
             return "Data("+dict.__repr__(_get(self, "_dict"))+")"
-        except Exception, e:
+        except Exception as e:
             return "Data()"
 
 
@@ -304,7 +304,7 @@ def leaves(value, prefix=None):
                 output.extend(leaves(v, prefix=prefix + literal_field(k) + "."))
             else:
                 output.append((prefix + literal_field(k), unwrap(v)))
-        except Exception, e:
+        except Exception as e:
             get_logger().error("Do not know how to handle", cause=e)
     return output
 
@@ -370,7 +370,7 @@ class _DictUsingSelf(dict):
             else:
                 dict.__setitem__(d, seq[-1], value)
             return self
-        except Exception, e:
+        except Exception as e:
             raise e
 
     def __getattr__(self, key):
@@ -497,13 +497,13 @@ class _DictUsingSelf(dict):
     def __str__(self):
         try:
             return dict.__str__(self)
-        except Exception, e:
+        except Exception as e:
             return "{}"
 
     def __repr__(self):
         try:
             return "Data("+dict.__repr__(self)+")"
-        except Exception, e:
+        except Exception as e:
             return "Data()"
 
 

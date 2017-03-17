@@ -92,7 +92,7 @@ class Lock(object):
             if DEBUG:
                 trace = _extract_stack(0)[2]
                 _Log.note("{{name|quote}} out of lock waiting till {{till|quote}}\n{{trace}} ", till=till.name if till else "", name=self.name, trace=trace)
-        except Exception, e:
+        except Exception as e:
             if not _Log:
                 _late_import()
             _Log.warning("problem", cause=e)

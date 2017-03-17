@@ -32,7 +32,7 @@ if DEBUG_STRANGMAN:
         import numpy as np
         from scipy import stats
         import scipy
-    except Exception, e:
+    except Exception as e:
         DEBUG_STRANGMAN = False
 
 
@@ -42,7 +42,7 @@ def chisquare(f_obs, f_exp):
             f_obs,
             f_exp
         )
-    except Exception, e:
+    except Exception as e:
         Log.error("problem with call", e)
 
     if DEBUG_STRANGMAN:
@@ -83,7 +83,7 @@ def Stats2ZeroMoment(stats):
             assertAlmostEqualValue(v.variance, stats.variance, places=10)
             assertAlmostEqualValue(v.skew, stats.skew, places=10)
             assertAlmostEqualValue(v.kurtosis, stats.kurtosis, places=10)
-        except Exception, e:
+        except Exception as e:
             v = ZeroMoment2Stats(m)
             Log.error("programmer error")
         globals()["DEBUG"] = True
@@ -134,7 +134,7 @@ def ZeroMoment2Stats(z_moment):
             v = Stats2ZeroMoment(stats)
             for i in range(5):
                 assertAlmostEqualValue(v.S[i], Z[i], places=7)
-        except Exception, e:
+        except Exception as e:
             Log.error("Conversion failed.  Programmer error:\nfrom={{from|indent}},\nresult stats={{stats|indent}},\nexpected param={{expected|indent}}",
                 {"from": Z},
                 stats=stats,
@@ -347,7 +347,7 @@ def median(values, simple=True, mean_weight=0.0):
                 return (1 - mean_weight) * _median + mean_weight * (_sorted[middle - 1] + _sorted[middle + 1]) / 2
             else:
                 return (_median - 0.5) + (middle + 0.5 - start_index) / num_middle
-    except Exception, e:
+    except Exception as e:
         Log.error("problem with median of {{values}}",  values= values, cause=e)
 
 

@@ -95,7 +95,7 @@ a failure.
 ```python
     try:
         # Do something that might raise exception
-    except Exception, e:
+    except Exception as e:
         Log.error("Describe what you were trying to do", cause=e)
 ```
 
@@ -131,7 +131,7 @@ Error logging accepts keyword parameters just like `Log.note()` does
         try:
             Log.note("Start working with {{key1}}", key1=value1)
             # Do something that might raise exception
-        except Exception, e:
+        except Exception as e:
             Log.error("Failure to work with {{key2}}", key2=value2, cause=e)
 ```
 
@@ -152,7 +152,7 @@ the `in` keyword:
     def worker(value):
         try:
             # Do something that might raise exception
-        except Exception, e:
+        except Exception as e:
             if "Failure to work with {{key2}}" in e:
 				# Deal with exception thrown in above code, no matter
 				# how many other exception handlers where in the chain
@@ -169,7 +169,7 @@ logging an error would be deceptive.
     def worker(value):
         try:
             Log.error("Failure to work with {{key3}}", key3=value3)
-        except Exception, e:
+        except Exception as e:
             # Try something else
 ```
 
@@ -181,7 +181,7 @@ want to log it as an issue**
         try:
             Log.note("Start working with {{key4}}", key4=value4)
             # Do something that might raise exception
-        except Exception, e:
+        except Exception as e:
             Log.warning("Failure to work with {{key4}}", key4=value4, cause=e)
 ```
 **Don't loose your stack trace!**
@@ -196,7 +196,7 @@ object, you simply get back the object you passed.
 ```python
 	try:
 		# DO SOME WORK		
-    except Exception, e:
+    except Exception as e:
         e = Except.wrap(e)
         # DO SOME FANCY ERROR RECOVERY
  ```
@@ -259,7 +259,7 @@ output.
 
             # DO WORK HERE
 
-        except Exception, e:
+        except Exception as e:
             Log.error("Complain, or not", e)
         finally:
             Log.stop()
@@ -302,7 +302,7 @@ structure:
 
             # DO WORK HERE
 
-        except Exception, e:
+        except Exception as e:
             Log.error("Complain, or not", e)
         finally:
             Log.stop()

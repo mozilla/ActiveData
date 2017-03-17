@@ -51,7 +51,7 @@ try:
     from __pypy__.builders import UnicodeBuilder
 
     use_pypy = True
-except Exception, e:
+except Exception as e:
     if use_pypy:
         sys.stdout.write(
             b"*********************************************************\n"
@@ -85,7 +85,7 @@ def pypy_json_encode(value, pretty=False):
         _value2json(value, _buffer)
         output = _buffer.build()
         return output
-    except Exception, e:
+    except Exception as e:
         # THE PRETTY JSON WILL PROVIDE MORE DETAIL ABOUT THE SERIALIZATION CONCERNS
         from mo_logs import Log
 
@@ -128,7 +128,7 @@ class cPythonJSONEncoder(object):
         try:
             scrubbed = scrub(value)
             return unicode(self.encoder.encode(scrubbed))
-        except Exception, e:
+        except Exception as e:
             from mo_logs.exceptions import Except
             from mo_logs import Log
 
@@ -155,7 +155,7 @@ def _value2json(value, _buffer):
             append(_buffer, u"\"")
             try:
                 v = utf82unicode(value)
-            except Exception, e:
+            except Exception as e:
                 problem_serializing(value, e)
 
             for c in v:
@@ -215,7 +215,7 @@ def _value2json(value, _buffer):
             from mo_logs import Log
 
             Log.error(_repr(value) + " is not JSON serializable")
-    except Exception, e:
+    except Exception as e:
         from mo_logs import Log
 
         Log.error(_repr(value) + " is not JSON serializable", cause=e)
@@ -256,7 +256,7 @@ def _dict2json(value, _buffer):
             append(_buffer, u"\": ")
             _value2json(v, _buffer)
         append(_buffer, u"}")
-    except Exception, e:
+    except Exception as e:
         from mo_logs import Log
 
         Log.error(_repr(value) + " is not JSON serializable", cause=e)
@@ -284,7 +284,7 @@ def pretty_json(value):
                 items = sorted(items, lambda a, b: value_compare(a[0], b[0]))
                 values = [unicode_key(k) + ": " + indent(pretty_json(v)).strip() for k, v in items if v != None]
                 return "{\n" + INDENT + (",\n" + INDENT).join(values) + "\n}"
-            except Exception, e:
+            except Exception as e:
                 from mo_logs import Log
                 from mo_math import OR
 
@@ -307,7 +307,7 @@ def pretty_json(value):
                 value = utf82unicode(value)
             try:
                 return quote(value)
-            except Exception, e:
+            except Exception as e:
                 from mo_logs import Log
 
                 try:
@@ -369,7 +369,7 @@ def pretty_json(value):
                     if i > 0:
                         output.append(",\n")
                     output.append(indent(p))
-                except Exception, e:
+                except Exception as e:
                     from mo_logs import Log
 
                     Log.warning("problem concatenating string of length {{len1}} and {{len2}}",
@@ -407,7 +407,7 @@ def pretty_json(value):
 
             return pypy_json_encode(value)
 
-    except Exception, e:
+    except Exception as e:
         problem_serializing(value, e)
 
 
@@ -448,7 +448,7 @@ def indent(value, prefix=INDENT):
         suffix = value[len(content):]
         lines = content.splitlines()
         return prefix + (u"\n" + prefix).join(lines) + suffix
-    except Exception, e:
+    except Exception as e:
         raise Exception(u"Problem with indent of value (" + e.message + u")\n" + value)
 
 
@@ -476,7 +476,7 @@ def datetime2milli(d, type):
             diff = d - date(1970, 1, 1)
 
         return long(diff.total_seconds()) * 1000L + long(diff.microseconds / 1000)
-    except Exception, e:
+    except Exception as e:
         problem_serializing(d, e)
 
 

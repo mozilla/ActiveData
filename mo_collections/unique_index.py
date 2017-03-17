@@ -52,7 +52,7 @@ class UniqueIndex(Set, Mapping):
                     if all(wrap(d)[k] == v for k, v in _key.items())
                 ])
                 return output
-        except Exception, e:
+        except Exception as e:
             Log.error("something went wrong", e)
 
     def __setitem__(self, key, value):
@@ -65,7 +65,7 @@ class UniqueIndex(Set, Mapping):
         #     self._data[key] = unwrap(value)
         #     self.count += 1
         #
-        # except Exception, e:
+        # except Exception as e:
         #     Log.error("something went wrong", e)
 
     def keys(self):

@@ -33,7 +33,7 @@ class Multiset(object):
                 return _NegMultiset(list, key_field, count_field)
             else:
                 return _Multiset(list, key_field, count_field)
-        except Exception, e:
+        except Exception as e:
             from mo_logs import Log
 
             Log.error("Not expected", e)

@@ -143,7 +143,7 @@ def allclose(a, b):
     try:
         assertAlmostEqual(a, b)
         return True
-    except Exception, e:
+    except Exception as e:
         return False
 
 

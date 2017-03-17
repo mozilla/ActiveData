@@ -93,7 +93,7 @@ class PersistentQueue(object):
                 value = self.pop()
                 if value is not THREAD_STOP:
                     yield value
-            except Exception, e:
+            except Exception as e:
                 Log.warning("Tell me about what happened here", cause=e)
         if DEBUG:
             Log.note("queue iterator is done")
@@ -193,7 +193,7 @@ class PersistentQueue(object):
                     self.file.write(mo_json.value2json({"add": self.db}) + "\n")
                 else:
                     self._commit()
-            except Exception, e:
+            except Exception as e:
                 raise e
 
     def _commit(self):
@@ -221,7 +221,7 @@ class PersistentQueue(object):
                         self._add_pending({"remove": str(i)})
                     self.file.write(mo_json.value2json({"add": self.db}) + "\n" + ("\n".join(mo_json.value2json(p) for p in self.pending)) + "\n")
                     self._apply_pending()
-                except Exception, e:
+                except Exception as e:
                     raise e
             self.db = None
 

@@ -49,7 +49,7 @@ class StructuredLogger_usingThread(StructuredLogger):
         try:
             self.queue.add({"template": template, "params": params})
             return self
-        except Exception, e:
+        except Exception as e:
             e = Except.wrap(e)
             raise e  # OH NO!
 

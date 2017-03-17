@@ -49,21 +49,21 @@ class DataObject(Mapping):
         obj = _get(self, "_obj")
         try:
             return obj.__dict__.keys()
-        except Exception, e:
+        except Exception as e:
             raise e
 
     def items(self):
         obj = _get(self, "_obj")
         try:
             return obj.__dict__.items()
-        except Exception, e:
+        except Exception as e:
             raise e
 
     def iteritems(self):
         obj = _get(self, "_obj")
         try:
             return obj.__dict__.iteritems()
-        except Exception, e:
+        except Exception as e:
             def output():
                 for k in dir(obj):
                     if k.startswith("__"):

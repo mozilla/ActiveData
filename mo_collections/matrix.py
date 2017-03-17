@@ -105,7 +105,7 @@ class Matrix(object):
             for k in key[0:last:]:
                 m = m[k]
             m[key[last]] = value
-        except Exception, e:
+        except Exception as e:
             Log.error("can not set item", e)
 
     def __bool__(self):

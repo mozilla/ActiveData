@@ -54,7 +54,7 @@ class Date(object):
 
     def floor(self, duration=None):
         if duration is None:  # ASSUME DAY
-            return unix2Date(math.floor(self.unix / 86400) * 86400)
+            return _unix2Date(math.floor(self.unix / 86400) * 86400)
         elif duration.month:
             dt = unix2datetime(self.unix)
             month = int(math.floor((dt.year*12+dt.month-1) / duration.month) * duration.month)
@@ -63,14 +63,14 @@ class Date(object):
             return Date(datetime(year, month+1, 1))
         elif duration.milli % (7 * 86400000) == 0:
             offset = 4*86400
-            return unix2Date(math.floor((self.unix + offset) / duration.seconds) * duration.seconds - offset)
+            return _unix2Date(math.floor((self.unix + offset) / duration.seconds) * duration.seconds - offset)
         else:
-            return unix2Date(math.floor(self.unix / duration.seconds) * duration.seconds)
+            return _unix2Date(math.floor(self.unix / duration.seconds) * duration.seconds)
 
     def format(self, format="%Y-%m-%d %H:%M:%S"):
         try:
             return unix2datetime(self.unix).strftime(format)
-        except Exception, e:
+        except Exception as e:
             from mo_logs import Log
 
             Log.error("Can not format {{value}} with {{format}}", value=unix2datetime(self.unix), format=format, cause=e)
@@ -93,9 +93,9 @@ class Date(object):
         if other==None:
             return Null
         elif isinstance(other, (datetime, date)):
-            return unix2Date(self.unix - datetime2unix(other))
+            return _unix2Date(self.unix - datetime2unix(other))
         elif isinstance(other, Date):
-            return unix2Date(self.unix - other.unix)
+            return _unix2Date(self.unix - other.unix)
         elif isinstance(other, timedelta):
             return Date(unix2datetime(self.unix) + other)
         elif isinstance(other, Duration):
@@ -113,7 +113,7 @@ class Date(object):
                     output = add_month(curr, other.month)
                     return Date(output)
             else:
-                return unix2Date(self.unix + other.seconds)
+                return _unix2Date(self.unix + other.seconds)
         else:
             from mo_logs import Log
 
@@ -121,26 +121,18 @@ class Date(object):
 
     @staticmethod
     def now():
-        candidate = _time()
-        temp = _utcnow()
-        unix = datetime2unix(temp)
-
-        if abs(unix - candidate) > 0.1:
-            from mo_logs import Log
-
-            Log.warning("_time() and _utcnow() is off by {{amount}}", amount=unix - candidate)
-        return unix2Date(unix)
+        return _unix2Date(_time())
 
     @staticmethod
     def eod():
         """
         RETURN END-OF-TODAY (WHICH IS SAME AS BEGINNING OF TOMORROW)
         """
-        return unix2Date(Date.today().unix + 86400)
+        return _unix2Date(Date.today().unix + 86400)
 
     @staticmethod
     def today():
-        return unix2Date(math.floor(datetime2unix(_utcnow()) / 86400) * 86400)
+        return _unix2Date(math.floor(_time() / 86400) * 86400)
 
     @staticmethod
     def range(min, max, interval):
@@ -217,33 +209,33 @@ def parse(*args):
         if len(args) == 1:
             a0 = args[0]
             if isinstance(a0, (datetime, date)):
-                output = unix2Date(datetime2unix(a0))
+                output = _unix2Date(datetime2unix(a0))
             elif isinstance(a0, Date):
-                output = unix2Date(a0.unix)
+                output = _unix2Date(a0.unix)
             elif isinstance(a0, (int, long, float, Decimal)):
                 a0 = float(a0)
                 if a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
-                    output = unix2Date(a0 / 1000)
+                    output = _unix2Date(a0 / 1000)
                 else:
-                    output = unix2Date(a0)
+                    output = _unix2Date(a0)
             elif isinstance(a0, basestring) and len(a0) in [9, 10, 12, 13] and is_integer(a0):
                 a0 = float(a0)
                 if a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
-                    output = unix2Date(a0 / 1000)
+                    output = _unix2Date(a0 / 1000)
                 else:
-                    output = unix2Date(a0)
+                    output = _unix2Date(a0)
             elif isinstance(a0, basestring):
                 output = unicode2Date(a0)
             else:
-                output = unix2Date(datetime2unix(datetime(*args)))
+                output = _unix2Date(datetime2unix(datetime(*args)))
         else:
             if isinstance(args[0], basestring):
                 output = unicode2Date(*args)
             else:
-                output = unix2Date(datetime2unix(datetime(*args)))
+                output = _unix2Date(datetime2unix(datetime(*args)))
 
         return output
-    except Exception, e:
+    except Exception as e:
         from mo_logs import Log
 
         Log.error("Can not convert {{args}} to Date", args=args, cause=e)
@@ -340,26 +332,26 @@ def unicode2Date(value, format=None):
         try:
             if format.endswith("%S.%f") and "." not in value:
                 value += ".000"
-            return unix2Date(datetime2unix(datetime.strptime(value, format)))
-        except Exception, e:
+            return _unix2Date(datetime2unix(datetime.strptime(value, format)))
+        except Exception as e:
             from mo_logs import Log
 
             Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
 
     value = value.strip()
     if value.lower() == "now":
-        return unix2Date(datetime2unix(_utcnow()))
+        return _unix2Date(datetime2unix(_utcnow()))
     elif value.lower() == "today":
-        return unix2Date(math.floor(datetime2unix(_utcnow()) / 86400) * 86400)
+        return _unix2Date(math.floor(datetime2unix(_utcnow()) / 86400) * 86400)
     elif value.lower() in ["eod", "tomorrow"]:
-        return unix2Date(math.floor(datetime2unix(_utcnow()) / 86400) * 86400 + 86400)
+        return _unix2Date(math.floor(datetime2unix(_utcnow()) / 86400) * 86400 + 86400)
 
     if any(value.lower().find(n) >= 0 for n in ["now", "today", "eod", "tomorrow"] + list(MILLI_VALUES.keys())):
         return parse_time_expression(value)
 
     try:  # 2.7 DOES NOT SUPPORT %z
         local_value = parse_date(value)  #eg 2014-07-16 10:57 +0200
-        return unix2Date(datetime2unix((local_value - local_value.utcoffset()).replace(tzinfo=None)))
+        return _unix2Date(datetime2unix((local_value - local_value.utcoffset()).replace(tzinfo=None)))
     except Exception:
         pass
 
@@ -369,7 +361,7 @@ def unicode2Date(value, format=None):
     ]
     for f in formats:
         try:
-            return unix2Date(datetime2unix(datetime.strptime(value, f)))
+            return _unix2Date(datetime2unix(datetime.strptime(value, f)))
         except Exception:
             pass
 
@@ -422,7 +414,7 @@ def datetime2unix(value):
         else:
             from mo_logs import Log
             Log.error("Can not convert {{value}} of type {{type}}", value=value, type=value.__class__)
-    except Exception, e:
+    except Exception as e:
         from mo_logs import Log
         Log.error("Can not convert {{value}}", value=value, cause=e)
 
@@ -435,13 +427,18 @@ def unix2Date(unix):
     if not isinstance(unix, float):
         from mo_logs import Log
         Log.error("problem")
+    return _unix2Date(unix)
 
+
+def _unix2Date(unix):
     output = object.__new__(Date)
     output.unix = unix
     return output
 
 
 delchars = "".join(c.decode("latin1") for c in map(chr, range(256)) if not c.decode("latin1").isalnum())
+
+
 def deformat(value):
     """
     REMOVE NON-ALPHANUMERIC CHARACTERS

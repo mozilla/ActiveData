@@ -39,7 +39,7 @@ def typed_encode(value):
         _typed_encode(value, _buffer)
         output = _buffer.build()
         return output
-    except Exception, e:
+    except Exception as e:
         # THE PRETTY JSON WILL PROVIDE MORE DETAIL ABOUT THE SERIALIZATION CONCERNS
         from mo_logs import Log
 
@@ -72,7 +72,7 @@ def _typed_encode(value, _buffer):
             append(_buffer, u'{"$value": "')
             try:
                 v = utf82unicode(value)
-            except Exception, e:
+            except Exception as e:
                 raise problem_serializing(value, e)
 
             for c in v:
@@ -125,7 +125,7 @@ def _typed_encode(value, _buffer):
             from mo_logs import Log
 
             Log.error(_repr(value) + " is not JSON serializable")
-    except Exception, e:
+    except Exception as e:
         from mo_logs import Log
 
         Log.error(_repr(value) + " is not JSON serializable", e)

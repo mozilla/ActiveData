@@ -43,12 +43,14 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             ],
             "where": {"and": [
                 {"missing": "source.method.name"},
+                {"not": {"missing": "source.file.covered"}},
                 {"eq": {
                     "source.file.name": not_summarized.source.file.name,
                     "build.revision12": not_summarized.build.revision12
                 }},
             ]},
             "groupby": [
+                "test.suite",
                 "test.url"
             ],
             "limit": 100000,
@@ -84,12 +86,14 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             "from": "coverage.source.file.covered",
             "where": {"and": [
                 {"missing": "source.method.name"},
+                {"not": {"missing": "source.file.covered"}},
                 {"eq": {
                     "source.file.name": not_summarized.source.file.name,
                     "build.revision12": not_summarized.build.revision12
                 }},
             ]},
             "groupby": [
+                "test.suite",
                 "test.url",
                 "line"
             ],
@@ -97,7 +101,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             "format": "list"
         })
 
-        all_tests_covering_file = UNION(test_count.data.get("test.url"))
+        all_tests_covering_file = UNION(test_count.data.get("test"))
         num_tests = len(all_tests_covering_file)
         max_siblings = num_tests - 1
         Log.note(
@@ -116,6 +120,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             "from": "coverage",
             "where": {"and": [
                 {"missing": "source.method.name"},
+                {"not": {"missing": "source.file.covered"}},
                 {"in": {"test.url": all_tests_covering_file}},
                 {"eq": {
                     "source.file.name": not_summarized.source.file.name,
@@ -204,6 +209,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             todo = http.post_json(settings.url, json={
                 "from": "coverage",
                 "where": {"and": [
+                    {"not": {"missing": "source.file.covered"}},
                     {"missing": "source.method.name"},
                     {"missing": "source.file.min_line_siblings"},
                     {"eq": {"source.file.name": not_summarized.source.file.name}},
@@ -228,7 +234,7 @@ def loop(source, coverage_summary_index, settings, please_stop):
         candidates = jx.sort(candidates, {".": "desc"})
 
         for index_name in candidates:
-            coverage_index = elasticsearch.Index(index=index_name, read_only=False, settings=source)
+            coverage_index = elasticsearch.Index(index=index_name, read_only=False, kwargs=source)
             push_date_filter = unicode2Date(coverage_index.settings.index[-15::], elasticsearch.INDEX_DATE_FORMAT)
 
             while not please_stop:
@@ -292,9 +298,9 @@ def main():
             Log.start(config.debug)
 
             please_stop = Signal("main stop signal")
-            coverage_index = elasticsearch.Cluster(config.source).get_index(settings=config.source)
+            coverage_index = elasticsearch.Cluster(config.source).get_index(kwargs=config.source)
             config.destination.schema = coverage_index.get_schema()
-            coverage_summary_index = elasticsearch.Cluster(config.destination).get_or_create_index(read_only=False, settings=config.destination)
+            coverage_summary_index = elasticsearch.Cluster(config.destination).get_or_create_index(read_only=False, kwargs=config.destination)
             coverage_summary_index.add_alias(config.destination.index)
             Log.note("start processing")
             Thread.run(

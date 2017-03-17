@@ -10,6 +10,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from mo_dots.datas import leaves
+
 from mo_math import MIN
 
 from mo_math import UNION
@@ -43,7 +45,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             ],
             "where": {"and": [
                 {"missing": "source.method.name"},
-                {"not": {"missing": "source.file.covered"}},
+                {"neq":{"source.file.total_covered":0}},
                 {"eq": {
                     "source.file.name": not_summarized.source.file.name,
                     "build.revision12": not_summarized.build.revision12
@@ -86,7 +88,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             "from": "coverage.source.file.covered",
             "where": {"and": [
                 {"missing": "source.method.name"},
-                {"not": {"missing": "source.file.covered"}},
+                {"neq":{"source.file.total_covered":0}},
                 {"eq": {
                     "source.file.name": not_summarized.source.file.name,
                     "build.revision12": not_summarized.build.revision12
@@ -95,6 +97,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             "groupby": [
                 "test.suite",
                 "test.url",
+                "test.name",
                 "line"
             ],
             "limit": 100000,
@@ -111,17 +114,30 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             revision=not_summarized.build.revision12
         )
         line_summary = list(
-            (k, unwrap(wrap(list(v)).get("test.url")))
+            (k, unwrap(wrap(list(v)).get("test")))
             for k, v in jx.groupby(test_count.data, keys="line")
         )
+
+        test_urls = set(wrap(list(all_tests_covering_file)).url) - set([None])
+        test_suites = set(wrap(list(all_tests_covering_file)).suite) - set([None])
+
+        if test_urls:
+            if test_suites:
+                Log.error("expecting test.url or test suite, but not both at this time")
+            test_filter = {"in": {"test.url": test_urls}}
+        elif test_suites:
+            test_filter = {"in": {"test.suite": test_suites}}
+        else:
+            Log.error("expecting some tests")
+
 
         # PULL THE RAW RECORD FOR MODIFICATION
         file_level_coverage_records = http.post_json(settings.url, json={
             "from": "coverage",
             "where": {"and": [
                 {"missing": "source.method.name"},
-                {"not": {"missing": "source.file.covered"}},
-                {"in": {"test.url": all_tests_covering_file}},
+                {"neq": {"source.file.total_covered": 0}},
+                test_filter,
                 {"eq": {
                     "source.file.name": not_summarized.source.file.name,
                     "build.revision12": not_summarized.build.revision12
@@ -134,7 +150,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
         for test_name in all_tests_covering_file:
             siblings = [len(test_names)-1 for g, test_names in line_summary if test_name in test_names]
             min_siblings = MIN(siblings)
-            coverage_candidates = jx.filter(file_level_coverage_records.data, lambda row, rownum, rows: row.test.url == test_name)
+            coverage_candidates = wrap([row for row in file_level_coverage_records.data if row.test == test_name])
             if coverage_candidates:
 
                 if len(coverage_candidates) > 1 and any(coverage_candidates[0]._id != c._id for c in coverage_candidates):
@@ -151,11 +167,13 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             else:
                 example = http.post_json(settings.url, json={
                     "from": "coverage",
-                    "where": {"eq": {
-                        "test.url": test_name,
-                        "source.file.name": not_summarized.source.file.name,
-                        "build.revision12": not_summarized.build.revision12
-                    }},
+                    "where": {"and": [
+                        {"eq": {k: v for k, v in leaves({"test": test_name})}},
+                        {"eq": {
+                            "source.file.name": not_summarized.source.file.name,
+                            "build.revision12": not_summarized.build.revision12
+                        }}
+                    ]},
                     "limit": 1,
                     "format": "list"
                 })
@@ -197,6 +215,8 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
                 "build": records[0].build,
                 "repo": records[0].repo,
                 "run": records[0].run,
+                "task": records[0].task,
+                "treeherder": records[0].treeherder,
                 "etl": {"timestamp": Date.now()}
             }
             all_test_summary.append(coverage)
@@ -209,7 +229,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             todo = http.post_json(settings.url, json={
                 "from": "coverage",
                 "where": {"and": [
-                    {"not": {"missing": "source.file.covered"}},
+                    {"neq": {"source.file.total_covered": 0}},
                     {"missing": "source.method.name"},
                     {"missing": "source.file.min_line_siblings"},
                     {"eq": {"source.file.name": not_summarized.source.file.name}},
@@ -246,6 +266,7 @@ def loop(source, coverage_summary_index, settings, please_stop):
                         "from": "coverage",
                         "groupby": ["source.file.name", "build.revision12"],
                         "where": {"and": [
+                            {"neq": {"source.file.total_covered": 0}},
                             {"missing": "source.method.name"},
                             {"missing": "source.file.min_line_siblings"},
                             {"gte": {"repo.push.date": push_date_filter}}

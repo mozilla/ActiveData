@@ -15,16 +15,16 @@ from collections import Mapping
 from copy import copy
 from types import GeneratorType
 
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, split_field, wrap, join_field
-from pyLibrary.dot.dicts import Dict
+from mo_dots import Data
+from mo_dots import set_default, split_field, wrap, join_field
+from mo_logs import Log
 
 OBJECT = "object"
 NESTED = "nested"
 STRUCT = [OBJECT, NESTED]
 
-type2container = Dict()
-config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
+type2container = Data()
+config = Data()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
 _ListContainer = None
 _Cube = None
 _run = None
@@ -49,7 +49,7 @@ def _delayed_imports():
     from pyLibrary.queries.containers.cube import Cube as _Cube
     from pyLibrary.queries.jx import run as _run
     from pyLibrary.queries.query import QueryOp as _Query
-    from pyLibrary.queries.containers.list_usingSQLite import Table_usingSQLite
+    from jx_sqlite.list_usingSQLite import Table_usingSQLite
 
     set_default(type2container, {
         "elasticsearch": _FromES,

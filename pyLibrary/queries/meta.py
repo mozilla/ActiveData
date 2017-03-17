@@ -15,29 +15,33 @@ import itertools
 from copy import copy
 from itertools import product
 
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
-from pyLibrary.dot import wrap
-from pyLibrary.dot.dicts import Dict
-from pyLibrary.meta import use_settings, DataClass
+from mo_logs import Log
+from mo_threads import Lock, THREAD_STOP
+from mo_threads import Queue
+from mo_threads import Thread
+from mo_threads import Till
+from mo_times.dates import Date
+from mo_times.durations import HOUR, MINUTE
+from mo_times.timer import Timer
+from mo_dots import Data
+from mo_dots import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
+from mo_dots import wrap
+from mo_kwargs import override
+from pyLibrary.meta import DataClass
 from pyLibrary.queries import jx, Schema
 from pyLibrary.queries.containers import STRUCT, Container
 from pyLibrary.queries.query import QueryOp
-from pyLibrary.thread.threads import Queue, Thread, Lock
-from pyLibrary.thread.till import Till
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import HOUR, MINUTE
-from pyLibrary.times.timer import Timer
 
 _elasticsearch = None
 
 MAX_COLUMN_METADATA_AGE = 12 * HOUR
 ENABLE_META_SCAN = False
-DEBUG = True
+DEBUG = False
 TOO_OLD = 2*HOUR
 OLD_METADATA = MINUTE
 singlton = None
 TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
+
 
 class FromESMetadata(Schema):
     """
@@ -52,8 +56,8 @@ class FromESMetadata(Schema):
             singlton = object.__new__(cls)
             return singlton
 
-    @use_settings
-    def __init__(self, host, index, alias=None, name=None, port=9200, settings=None):
+    @override
+    def __init__(self, host, index, alias=None, name=None, port=9200, kwargs=None):
         global _elasticsearch
         if hasattr(self, "settings"):
             return
@@ -61,15 +65,15 @@ class FromESMetadata(Schema):
         from pyLibrary.queries.containers.list_usingPythonList import ListContainer
         from pyLibrary.env import elasticsearch as _elasticsearch
 
-        self.settings = settings
+        self.settings = kwargs
         self.default_name = coalesce(name, alias, index)
-        self.default_es = _elasticsearch.Cluster(settings=settings)
+        self.default_es = _elasticsearch.Cluster(kwargs=kwargs)
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
         self.es_metadata = Null
         self.last_es_metadata = Date.now()-OLD_METADATA
 
-        self.meta=Dict()
+        self.meta=Data()
         table_columns = metadata_tables()
         column_columns = metadata_columns()
         self.meta.tables = ListContainer("meta.tables", [], wrap({c.name: c for c in table_columns}))
@@ -103,7 +107,8 @@ class FromESMetadata(Schema):
             self.todo.add(c)
 
             if ENABLE_META_SCAN:
-                Log.note("todo: {{table}}::{{column}}", table=c.table, column=c.es_column)
+                if DEBUG:
+                    Log.note("todo: {{table}}::{{column}}", table=c.table, column=c.es_column)
                 # MARK meta.columns AS DIRTY TOO
                 cols = self.meta.columns.find("meta.columns", None)
                 for cc in cols:
@@ -117,7 +122,8 @@ class FromESMetadata(Schema):
 
             for key in Column.__slots__:
                 canonical[key] = c[key]
-            Log.note("todo: {{table}}::{{column}}", table=canonical.table, column=canonical.es_column)
+            if DEBUG:
+                Log.note("todo: {{table}}::{{column}}", table=canonical.table, column=canonical.es_column)
             self.todo.add(canonical)
 
     def _get_columns(self, table=None):
@@ -126,7 +132,7 @@ class FromESMetadata(Schema):
         if not meta or self.last_es_metadata < Date.now() - OLD_METADATA:
             self.es_metadata = self.default_es.get_metadata(force=True)
             meta = self.es_metadata.indices[table]
-
+        self._parse_properties(meta.index, Data(properties={"_id": {"type": "string", "index": "not_analyzed"}}), meta)
         for _, properties in meta.mappings.items():
             self._parse_properties(meta.index, properties, meta)
 
@@ -210,7 +216,7 @@ class FromESMetadata(Schema):
                 "from": self.meta.columns,
                 "sort": ["table", "name"]
             },
-            _query.as_dict()
+            _query.__data__()
         )))
 
     def get_columns(self, table_name, column_name=None, force=False):
@@ -242,7 +248,8 @@ class FromESMetadata(Schema):
                 columns = jx.sort(columns, "name")
                 # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
                 while len(self.todo) and not all(columns.get("last_updated")):
-                    Log.note("waiting for columns to update {{columns|json}}", columns=[c.table+"."+c.es_column for c in columns if not c.last_updated])
+                    if DEBUG:
+                        Log.note("waiting for columns to update {{columns|json}}", columns=[c.table+"."+c.es_column for c in columns if not c.last_updated])
                     Till(seconds=1).wait()
                 return columns
         except Exception, e:
@@ -299,9 +306,10 @@ class FromESMetadata(Schema):
             if cardinality == None:
                 Log.error("logic error")
 
-            query = Dict(size=0)
+            query = Data(size=0)
             if cardinality > 1000 or (count >= 30 and cardinality == count) or (count >= 1000 and cardinality / count > 0.99):
-                Log.note("{{table}}.{{field}} has {{num}} parts", table=c.table, field=c.es_column, num=cardinality)
+                if DEBUG:
+                    Log.note("{{table}}.{{field}} has {{num}} parts", table=c.table, field=c.es_column, num=cardinality)
                 with self.meta.columns.locker:
                     self.meta.columns.update({
                         "set": {
@@ -314,7 +322,8 @@ class FromESMetadata(Schema):
                     })
                 return
             elif c.type in _elasticsearch.ES_NUMERIC_TYPES and cardinality > 30:
-                Log.note("{{field}} has {{num}} parts", field=c.name, num=cardinality)
+                if DEBUG:
+                    Log.note("{{field}} has {{num}} parts", field=c.name, num=cardinality)
                 with self.meta.columns.locker:
                     self.meta.columns.update({
                         "set": {
@@ -342,7 +351,8 @@ class FromESMetadata(Schema):
             else:
                 parts = jx.sort(aggs.buckets.key)
 
-            Log.note("{{field}} has {{parts}}", field=c.name, parts=parts)
+            if DEBUG:
+                Log.note("{{field}} has {{parts}}", field=c.name, parts=parts)
             with self.meta.columns.locker:
                 self.meta.columns.update({
                     "set": {
@@ -382,7 +392,7 @@ class FromESMetadata(Schema):
                 Log.warning("Could not get {{col.table}}.{{col.es_column}} info", col=c, cause=e)
 
     def monitor(self, please_stop):
-        please_stop.on_go(lambda: self.todo.add(Thread.STOP))
+        please_stop.on_go(lambda: self.todo.add(THREAD_STOP))
         while not please_stop:
             try:
                 if not self.todo:
@@ -393,18 +403,21 @@ class FromESMetadata(Schema):
                             if (c.last_updated == None or c.last_updated < Date.now()-TOO_OLD) and c.type not in STRUCT
                         ]
                         if old_columns:
-                            Log.note("Old columns wth dates {{dates|json}}", dates=wrap(old_columns).last_updated)
+                            if DEBUG:
+                                Log.note("Old columns wth dates {{dates|json}}", dates=wrap(old_columns).last_updated)
                             self.todo.extend(old_columns)
                             # TEST CONSISTENCY
                             for c, d in product(list(self.todo.queue), list(self.todo.queue)):
                                 if c.es_column == d.es_column and c.table == d.table and c != d:
                                     Log.error("")
                         else:
-                            Log.note("no more metatdata to update")
+                            if DEBUG:
+                                Log.note("no more metatdata to update")
 
-                column = self.todo.pop(Till(timeout=10*MINUTE))
+                column = self.todo.pop(Till(seconds=(10*MINUTE).seconds))
                 if column:
-                    Log.note("update {{table}}.{{column}}", table=column.table, column=column.es_column)
+                    if DEBUG:
+                        Log.note("update {{table}}.{{column}}", table=column.table, column=column.es_column)
                     if column.type in STRUCT:
                         with self.meta.columns.locker:
                             column.last_updated = Date.now()
@@ -422,10 +435,10 @@ class FromESMetadata(Schema):
 
     def not_monitor(self, please_stop):
         Log.alert("metadata scan has been disabled")
-        please_stop.on_go(lambda: self.todo.add(Thread.STOP))
+        please_stop.on_go(lambda: self.todo.add(THREAD_STOP))
         while not please_stop:
             c = self.todo.pop()
-            if c == Thread.STOP:
+            if c == THREAD_STOP:
                 break
 
             if not c.last_updated or c.last_updated >= Date.now()-TOO_OLD:
@@ -443,7 +456,8 @@ class FromESMetadata(Schema):
                     ],
                     "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                 })
-            Log.note("Could not get {{col.es_index}}.{{col.es_column}} info", col=c)
+            if DEBUG:
+                Log.note("Could not get {{col.es_index}}.{{col.es_column}} info", col=c)
 
 
 def _counting_query(c):
@@ -540,8 +554,7 @@ def metadata_tables():
             ]
         ]+[
             Column(
-                table="meta.tables",
-                name="timestamp",
+                names={"meta.tables": "timestamp"},
                 es_index=None,
                 es_column="timestamp",
                 type="integer",
@@ -549,9 +562,6 @@ def metadata_tables():
             )
         ]
     )
-
-
-
 
 
 class Table(DataClass("Table", [
@@ -568,22 +578,20 @@ class Table(DataClass("Table", [
 Column = DataClass(
     "Column",
     [
-        "name",
-        "table",
+        # "table",
+        "names",  # MAP FROM TABLE NAME TO COLUMN NAME (ONE COLUMN CAN HAVE MULTIPLE NAMES)
         "es_column",
         "es_index",
         # "es_type",
         "type",
         {"name": "useSource", "default": False},
         {"name": "nested_path", "nulls": True},  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
-        {"name": "relative", "nulls": True},
         {"name": "count", "nulls": True},
         {"name": "cardinality", "nulls": True},
         {"name": "partitions", "nulls": True},
         {"name": "last_updated", "nulls": True}
     ]
 )
-
 
 
 class ColumnList(Container):

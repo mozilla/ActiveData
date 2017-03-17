@@ -12,17 +12,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import itertools
 import math
 import sys
 
-from pyLibrary.collections.multiset import Multiset
-from pyLibrary.debugs.exceptions import Except
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, listwrap, Null, Dict
-from pyLibrary.dot.lists import DictList
+from mo_collections.multiset import Multiset
+from mo_logs.exceptions import Except
+from mo_logs import Log
+from mo_dots import listwrap, Null, Data
+from mo_dots.lists import FlatList
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.expressions import jx_expression_to_function, TupleOp, Expression, jx_expression
+from pyLibrary.queries.expressions import jx_expression_to_function, jx_expression, TupleOp
 
 
 def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous=False):
@@ -56,7 +55,7 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
             return Null
 
 
-        accessor = jx_expression_to_function(jx_expression({"tuple": keys}))  # CAN RETURN Null, WHICH DOES NOT PLAY WELL WITH __cmp__
+        accessor = jx_expression_to_function(TupleOp("tuple", keys))  # CAN RETURN Null, WHICH DOES NOT PLAY WELL WITH __cmp__
         def _output():
             start = 0
             prev = accessor(data[0])
@@ -66,13 +65,13 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
                     group = {}
                     for k, gg in zip(keys, prev):
                         group[k] = gg
-                    yield Dict(group), data[start:i:]
+                    yield Data(group), data[start:i:]
                     start = i
                     prev = curr
             group = {}
             for k, gg in zip(keys, prev):
                 group[k] = gg
-            yield Dict(group), data[start::]
+            yield Data(group), data[start::]
 
         return _output()
     except Exception, e:
@@ -87,9 +86,9 @@ def groupby_size(data, size):
     else:
         Log.error("do not know how to handle this type")
 
-    done = DictList()
+    done = FlatList()
     def more():
-        output = DictList()
+        output = FlatList()
         for i in range(size):
             try:
                 output.append(iterator.next())
@@ -153,14 +152,14 @@ def groupby_min_max_size(data, min_size=0, max_size=None, ):
     elif hasattr(data, "__iter__"):
         def _iter():
             g = 0
-            out = DictList()
+            out = FlatList()
             try:
                 for i, d in enumerate(data):
                     out.append(d)
                     if (i + 1) % max_size == 0:
                         yield g, out
                         g += 1
-                        out = DictList()
+                        out = FlatList()
                 if out:
                     yield g, out
             except Exception, e:

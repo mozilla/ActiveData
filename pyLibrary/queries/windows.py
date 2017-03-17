@@ -8,20 +8,21 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
-from copy import copy
+from __future__ import division
+from __future__ import unicode_literals
+
 import functools
+from copy import copy
 
-from pyLibrary.maths import stats
-from pyLibrary.collections import MIN, MAX
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot.lists import DictList
-from pyLibrary.maths import Math
-from pyLibrary.collections.multiset import Multiset
-from pyLibrary.maths.stats import ZeroMoment, ZeroMoment2Stats
-
+import mo_math
+from mo_collections.multiset import Multiset
+from mo_dots.lists import FlatList
+from mo_logs import Log
+from mo_math import MIN
+from mo_math import Math
+from mo_math import stats
+from mo_math.stats import ZeroMoment, ZeroMoment2Stats
 
 
 # A VARIETY OF SLIDING WINDOW FUNCTIONS
@@ -130,7 +131,7 @@ class _Stats(WindowFunction):
     def __init__(self, middle=None, *args, **kwargs):
         object.__init__(self)
         self.middle = middle
-        self.samples = DictList()
+        self.samples = FlatList()
 
     def add(self, value):
         if value == None:
@@ -228,7 +229,7 @@ class Max(WindowFunction):
 
 
     def add(self, value):
-        self.max = Math.max(self.max, value)
+        self.max = mo_math.MAX([self.max, value])
 
     def sub(self, value):
         Log.error("Not implemented")

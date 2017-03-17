@@ -39,7 +39,7 @@
 		"port": 9200,
 		"index": "saved_queries",
 		"type": "query",
-		"debug": false,
+		"debug": true,
 		"limit_replicas": true
 	},
 	"elasticsearch": {
@@ -47,7 +47,7 @@
 		"port": 9200,
 		"index": "testdata",
 		"type": "test_result",
-		"debug": true
+		"debug": false
 	},
 	"debug": {
 		"trace": true

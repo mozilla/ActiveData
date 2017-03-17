@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary.dot import wrap, split_field, join_field
+from mo_dots import wrap, split_field, join_field
 from pyLibrary.queries.expressions import Variable
 
 
@@ -65,7 +65,7 @@ def jx_sort_to_es_sort(sort):
             else:
                 output.append(s.value.var)
         else:
-            from pyLibrary.debugs.logs import Log
+            from mo_logs import Log
 
             Log.error("do not know how to handle")
     return output

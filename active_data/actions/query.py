@@ -15,26 +15,25 @@ from collections import Mapping
 import flask
 import moz_sql_parser
 from flask import Response
-from pyLibrary.testing.fuzzytestcase import FuzzyTestCase, assertAlmostEqual
 
+from mo_logs import Log, strings
+from mo_logs.exceptions import Except
+from mo_logs.profiles import CProfiler
+from mo_logs.strings import expand_template
 from active_data import record_request, cors_wrapper
 from active_data.actions import save_query
-from pyLibrary import convert, strings
-from pyLibrary.debugs.exceptions import Except
-from pyLibrary.debugs.logs import Log
-from pyLibrary.debugs.profiles import CProfiler
-from pyLibrary.dot import coalesce, join_field, split_field, wrap, listwrap
-from pyLibrary.env.files import File
-from pyLibrary.maths import Math
+from mo_dots import coalesce, join_field, split_field, wrap, listwrap
+from pyLibrary import convert
+from mo_files import File
+from mo_math import Math
 from pyLibrary.queries import jx, meta, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.meta import TOO_OLD
-from pyLibrary.strings import expand_template
-from pyLibrary.thread.threads import Thread
-from pyLibrary.thread.till import Till
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import MINUTE
-from pyLibrary.times.timer import Timer
+from mo_testing.fuzzytestcase import assertAlmostEqual
+from mo_threads import Till
+from mo_times.dates import Date
+from mo_times.durations import MINUTE
+from mo_times.timer import Timer
 
 BLANK = convert.unicode2utf8(File("active_data/public/error.html").read())
 QUERY_SIZE_LIMIT = 10*1024*1024
@@ -84,7 +83,6 @@ def query(path):
                             result.meta.saved_as = save_query.query_finder.save(data)
                         except Exception, e:
                             Log.warning("Unexpected save problem", cause=e)
-
 
                 result.meta.timing.preamble = Math.round(preamble_timer.duration.seconds, digits=4)
                 result.meta.timing.translate = Math.round(translate_timer.duration.seconds, digits=4)
@@ -168,7 +166,7 @@ def _test_mode_wait(query):
 def _send_error(active_data_timer, body, e):
     record_request(flask.request, None, body, e)
     Log.warning("Could not process\n{{body}}", body=body.decode("latin1"), cause=e)
-    e = e.as_dict()
+    e = e.__data__()
     e.meta.timing.total = active_data_timer.duration.seconds
 
     # REMOVE TRACES, BECAUSE NICER TO HUMANS

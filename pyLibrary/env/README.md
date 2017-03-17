@@ -6,18 +6,11 @@ This directory is for connecting to other systems. Generally, these
 classes are facades that assume content is UTF-8 encoded JSON.
 
 
-files
------
-
-The `File` class makes the default assumption all files have cr-delimited
-unicode content that is UTF-8 encoded. This is great for json files.
-It also provides better OO over some common file manipulations.
-
 
 emailer
 -------
 
-A simple emailer, the primary purpose is to accept a [Dict](../dot/README.md)
+A simple emailer, the primary purpose is to accept a [Data](../dot/README.md)
 of settings.
 
 
@@ -49,10 +42,6 @@ selecting only the properties it requires.
 		"limit_replicas" : true,
 		"schema_file" : "./resources/schema/test_schema.json"
 	},
-
-
-
-
 
 
 

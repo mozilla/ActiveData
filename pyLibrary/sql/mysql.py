@@ -8,31 +8,31 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
-from collections import Mapping
+from __future__ import division
+from __future__ import unicode_literals
 
-from datetime import datetime
 import json
 import subprocess
+from collections import Mapping
+from datetime import datetime
 
-from pymysql import connect, InterfaceError
+import mo_json
+from mo_dots import coalesce, wrap, listwrap, unwrap
+from mo_files import File
+from mo_kwargs import override
+from mo_logs import Log
+from mo_logs.exceptions import Except, suppress_exception
+from mo_logs.strings import expand_template
+from mo_logs.strings import indent
+from mo_logs.strings import outdent
+from mo_math import Math
+from mo_times import Date
+from pymysql import connect, InterfaceError, cursors
 
-from pyLibrary import jsons
-from pyLibrary.maths import Math
-from pyLibrary.meta import use_settings
-from pyLibrary.sql import SQL
-from pyLibrary.strings import expand_template
-from pyLibrary.dot import coalesce, wrap, listwrap, unwrap
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except, suppress_exception
-from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import jx
-from pyLibrary.strings import indent
-from pyLibrary.strings import outdent
-from pyLibrary.env.files import File
-
+from pyLibrary.sql import SQL
 
 DEBUG = False
 MAX_BATCH_SIZE = 100
@@ -45,18 +45,18 @@ class MySQL(object):
     Parameterize SQL by name rather than by position.  Return records as objects
     rather than tuples.
     """
-    @use_settings
+    @override
     def __init__(
         self,
         host,
-        port,
         username,
         password,
+        port=3306,
         debug=False,
         schema=None,
         preamble=None,
         readonly=False,
-        settings=None
+        kwargs=None
     ):
         """
         OVERRIDE THE settings.schema WITH THE schema PARAMETER
@@ -73,7 +73,7 @@ class MySQL(object):
         """
         all_db.append(self)
 
-        self.settings = settings
+        self.settings = kwargs
 
         if preamble == None:
             self.preamble = ""
@@ -96,7 +96,8 @@ class MySQL(object):
                 db=coalesce(self.settings.schema, self.settings.db),
                 charset=u"utf8",
                 use_unicode=True,
-                ssl=coalesce(self.settings.ssl, None)
+                ssl=coalesce(self.settings.ssl, None),
+                cursorclass=cursors.SSCursor
             )
         except Exception, e:
             if self.settings.host.find("://") == -1:
@@ -352,7 +353,7 @@ class MySQL(object):
         self.execute(content, param)
 
     @staticmethod
-    @use_settings
+    @override
     def execute_sql(
         host,
         username,
@@ -360,25 +361,25 @@ class MySQL(object):
         sql,
         schema=None,
         param=None,
-        settings=None
+        kwargs=None
     ):
         """EXECUTE MANY LINES OF SQL (FROM SQLDUMP FILE, MAYBE?"""
-        settings.schema = coalesce(settings.schema, settings.database)
+        kwargs.schema = coalesce(kwargs.schema, kwargs.database)
 
         if param:
-            with MySQL(settings) as temp:
+            with MySQL(kwargs) as temp:
                 sql = expand_template(sql, temp.quote_param(param))
 
         # MWe have no way to execute an entire SQL file in bulk, so we
         # have to shell out to the commandline client.
         args = [
             "mysql",
-            "-h{0}".format(settings.host),
-            "-u{0}".format(settings.username),
-            "-p{0}".format(settings.password)
+            "-h{0}".format(kwargs.host),
+            "-u{0}".format(kwargs.username),
+            "-p{0}".format(kwargs.password)
         ]
-        if settings.schema:
-            args.append("{0}".format(settings.schema))
+        if kwargs.schema:
+            args.append("{0}".format(kwargs.schema))
 
         try:
             proc = subprocess.Popen(
@@ -392,18 +393,19 @@ class MySQL(object):
                 sql = sql.encode("utf8")
             (output, _) = proc.communicate(sql)
         except Exception, e:
-            Log.error("Can not call \"mysql\"", e)
+            raise Log.error("Can not call \"mysql\"", e)
 
         if proc.returncode:
             if len(sql) > 10000:
                 sql = "<" + unicode(len(sql)) + " bytes of sql>"
             Log.error("Unable to execute sql: return code {{return_code}}, {{output}}:\n {{sql}}\n",
-                sql= indent(sql),
-                return_code= proc.returncode,
-                output= output
+                sql=indent(sql),
+                return_code=proc.returncode,
+                output=output
             )
 
     @staticmethod
+    @override
     def execute_file(
         filename,
         host,
@@ -412,16 +414,16 @@ class MySQL(object):
         schema=None,
         param=None,
         ignore_errors=False,
-        settings=None
+        kwargs=None
     ):
         # MySQLdb provides no way to execute an entire SQL file in bulk, so we
         # have to shell out to the commandline client.
         sql = File(filename).read()
         if ignore_errors:
             with suppress_exception:
-                MySQL.execute_sql(sql=sql, param=param, settings=settings)
+                MySQL.execute_sql(sql=sql, param=param, kwargs=kwargs)
         else:
-            MySQL.execute_sql(settings, sql, param)
+            MySQL.execute_sql(sql=sql, param=param, kwargs=kwargs)
 
     def _execute_backlog(self):
         if not self.backlog: return
@@ -514,7 +516,7 @@ class MySQL(object):
 
     def update(self, table_name, where_slice, new_values):
         """
-        where_slice - A Dict WHICH WILL BE USED TO MATCH ALL IN table
+        where_slice - A Data WHICH WILL BE USED TO MATCH ALL IN table
                       eg {"id": 42}
         new_values  - A dict WITH COLUMN NAME, COLUMN VALUE PAIRS TO SET
         """
@@ -552,14 +554,16 @@ class MySQL(object):
                 return SQL(expand_template(value.template, param))
             elif isinstance(value, basestring):
                 return SQL(self.db.literal(value))
-            elif isinstance(value, datetime):
-                return SQL("str_to_date('" + value.strftime("%Y%m%d%H%M%S") + "', '%Y%m%d%H%i%s')")
-            elif hasattr(value, '__iter__'):
-                return SQL(self.db.literal(json_encode(value)))
             elif isinstance(value, Mapping):
                 return SQL(self.db.literal(json_encode(value)))
             elif Math.is_number(value):
                 return SQL(unicode(value))
+            elif isinstance(value, datetime):
+                return SQL("str_to_date('" + value.strftime("%Y%m%d%H%M%S") + "', '%Y%m%d%H%i%s')")
+            elif isinstance(value, Date):
+                return SQL("str_to_date('"+value.format("%Y%m%d%H%M%S")+"', '%Y%m%d%H%i%s')")
+            elif hasattr(value, '__iter__'):
+                return SQL(self.db.literal(json_encode(value)))
             else:
                 return self.db.literal(value)
         except Exception, e:
@@ -733,7 +737,7 @@ def json_encode(value):
     FOR PUTTING JSON INTO DATABASE (sort_keys=True)
     dicts CAN BE USED AS KEYS
     """
-    return unicode(json_encoder.encode(jsons.scrub(value)))
+    return unicode(json_encoder.encode(mo_json.scrub(value)))
 
 
 mysql_type_to_json_type = {

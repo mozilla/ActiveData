@@ -10,8 +10,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap
+from mo_logs import Log
+from mo_dots import wrap
 from pyLibrary.env import http
 
 

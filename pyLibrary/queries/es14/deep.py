@@ -11,18 +11,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap
+from mo_logs import Log
+from mo_threads import Thread
+from mo_times.timer import Timer
 from pyLibrary import queries, convert
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import split_field, DictList, listwrap, literal_field, coalesce, Dict, unwrap
+from mo_collections.unique_index import UniqueIndex
 from pyLibrary.queries import es09, es14
 from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.es14.setop import format_dispatch
 from pyLibrary.queries.es14.util import jx_sort_to_es_sort
 from pyLibrary.queries.expressions import split_expression_by_depth, simplify_esfilter, AndOp, compile_expression, \
     Variable, LeavesOp
-from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.thread.threads import Thread
-from pyLibrary.times.timer import Timer
 
 EXPRESSION_PREFIX = "_expr."
 
@@ -62,7 +62,7 @@ def es_deepop(es, query):
     es_query, es_filters = es14.util.es_query_template(query.frum.name)
 
     # SPLIT WHERE CLAUSE BY DEPTH
-    wheres = split_expression_by_depth(query.where, query.frum, map_to_es_columns)
+    wheres = split_expression_by_depth(query.where, query.frum.schema, map_to_es_columns)
     for i, f in enumerate(es_filters):
         # PROBLEM IS {"match_all": {}} DOES NOT SURVIVE set_default()
         for k, v in unwrap(simplify_esfilter(AndOp("and", wheres[i]).to_esfilter())).items():
@@ -91,7 +91,7 @@ def es_deepop(es, query):
     es_query.fields = []
 
     is_list = isinstance(query.select, list)
-    new_select = DictList()
+    new_select = FlatList()
 
     def get_pull(column):
         if len(column.nested_path) != 1:
@@ -206,7 +206,7 @@ def es_deepop(es, query):
             new_select.append({
                 "name": s.name if is_list else ".",
                 "pull": pull,
-                "value": expr.to_dict(),
+                "value": expr.__data__(),
                 "put": {"name": s.name, "index": i, "child": "."}
             })
             i += 1
@@ -216,7 +216,7 @@ def es_deepop(es, query):
     def get_more(please_stop):
         more.append(es09.util.post(
             es,
-            Dict(
+            Data(
                 filter=more_filter,
                 fields=es_query.fields
             ),

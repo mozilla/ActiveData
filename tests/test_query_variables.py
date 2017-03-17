@@ -8,14 +8,14 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from active_data.actions.query import replace_vars
-from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import WEEK
+from mo_testing.fuzzytestcase import FuzzyTestCase
+from mo_times.dates import Date
+from mo_times.durations import WEEK
 
 
 class TestQueryVariables(FuzzyTestCase):

@@ -5,8 +5,7 @@
 	"constants":{
 		"pyLibrary.env.http.default_headers":{
 			"referer":"https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
-		},
-		""
+		}
 	},
 	"source": {
 		"host": "http://activedata.allizom.org",

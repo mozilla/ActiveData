@@ -29,7 +29,7 @@ def main():
         constants.set(config.constants)
         Log.start(config.debug)
 
-        sq = elasticsearch.Index(settings=config.saved_queries)
+        sq = elasticsearch.Index(kwargs=config.saved_queries)
         result = sq.search({
             "query": {
                 "match_all": {}

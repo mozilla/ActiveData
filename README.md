@@ -14,6 +14,21 @@ ActiveData is a service! You can certainly setup your own service, but it is eas
 * Elasticsearch **version 1.7.x**
 
 
+## Elasticsearch Configuration
+
+Elasticsearch has a configuration file at `config/elasticsearch.yml`. You must modify it to turn on scripting.  Add these two lines at the top of the file:
+
+    script.inline: on
+    script.indexed: on
+
+We enable compression for faster transfer speeds
+
+    http.compression: true
+
+And it is a good idea to give your cluster a unique name so it does not join others on your local network
+
+	cluster.name: lahnakoski_dev
+
 ## Installation
 
 It is still too early for PyPi install, so please clone *master* off of github:

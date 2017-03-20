@@ -17,7 +17,7 @@ from mo_testing.fuzzytestcase import FuzzyTestCase
 from pyLibrary.queries.expressions import NullOp
 
 TEST_TABLE = "testdata"
-NULL = NullOp
+NULL = NullOp()
 
 global_settings = None
 utils = None

@@ -4,12 +4,38 @@
 		"port": 5000,
 		"debug": false,
 		"threaded": true,
-		"processes": 1
+		"processes": 1,
+		"ssl_context":"adhoc",
+		"allow_exit": true
+//		"ssl_context": {
+//			"privatekey_file": "~/keys/activedata.allizom.org/activedata.allizom.org.key",
+//			"certificate_file": "~/keys/activedata.allizom.org/activedata_allizom_org.crt",
+//			"certificate_chain_file": "~/keys/activedata.allizom.org/DigiCertCA.crt"
+//		}
 	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {
 			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
+		},
+		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
+		"pyLibrary.queries.meta.ENABLE_META_SCAN": true,
+		"pyLibrary.queries.expressions.ALLOW_SCRIPTING": true
+	},
+	"request_logs": {
+		"host": "http://localhost",
+		"port": 9200,
+		"index": "active_data_requests",
+		"type": "request_log",
+		"schema": {
+			"$ref": "//../../resources/schema/request_log.schema.json"
 		}
+	},
+	"saved_queries": {
+		"host": "http://localhost",
+		"port": 9200,
+		"index": "saved_queries",
+		"type": "query",
+		"debug": true
 	},
 	"elasticsearch": {
 		"host": "http://localhost",
@@ -17,5 +43,13 @@
 		"index": "testdata",
 		"type": "test_result",
 		"debug": true
+	},
+	"debug": {
+		"trace": true,
+		"log": [
+			{
+				"log_type": "console"
+			}
+		]
 	}
 }

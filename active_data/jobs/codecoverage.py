@@ -96,6 +96,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             ]},
             "groupby": [
                 "test.suite",
+                "test.chunk",
                 "test.url",
                 "test.name",
                 "line"

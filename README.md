@@ -1,4 +1,4 @@
-# ActiveData [![Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=dev)](https://travis-ci.org/klahnakoski/ActiveData)
+# ActiveData [![Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=master)](https://travis-ci.org/klahnakoski/ActiveData)
 
 Provide high speed filtering and aggregation over data see [ActiveData Wiki Page](https://wiki.mozilla.org/Auto-tools/Projects/ActiveData) for project details
 
@@ -11,7 +11,7 @@ ActiveData is a service! You can certainly setup your own service, but it is eas
 ## Requirements
 
 * Python2.7 installed
-* Access to an Elasticsearch cluster, or installed one locally
+* Elasticsearch **version 1.7.x**
 
 
 ## Installation

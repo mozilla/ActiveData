@@ -46,10 +46,10 @@
 	},
 	"debug": {
 		"trace": true,
-		//		"cprofile": {
-		//			"enabled":true,
-		//			"filename":"./results/profile.tab"
-		//		},
+		"cprofile": {
+			"enabled": false,
+			"filename": "./results/profile.tab"
+		},
 		"log": [
 			{
 				"log_type": "console"

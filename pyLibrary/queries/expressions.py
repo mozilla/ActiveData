@@ -15,8 +15,9 @@ import itertools
 from collections import Mapping
 from decimal import Decimal
 
-from mo_dots import coalesce, wrap, set_default, literal_field, Null, split_field, startswith_field, Data, join_field, unwraplist, ROOT_PATH, relative_field
-from mo_json import quote, json2value
+from mo_dots import coalesce, wrap, set_default, literal_field, Null, split_field, startswith_field
+from mo_dots import Data, join_field, unwraplist, ROOT_PATH, relative_field, unwrap
+from mo_json import json2value
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_math import Math, OR, MAX
@@ -537,7 +538,7 @@ class Literal(Expression):
         return _convert(convert.json_decoder(self.json))
 
     def to_python(self, not_null=False, boolean=False):
-        return self.json
+        return repr(unwrap(json2value(self.json)))
 
     def to_sql(self, schema, not_null=False, boolean=False):
         value = json2value(self.json)
@@ -833,7 +834,7 @@ class LeavesOp(Expression):
         prefix_length = len(split_field(term))
         return wrap([
             {
-                "name": literal_field(join_field(split_field(schema.get_column_name(c))[prefix_length:])),
+                "name": join_field(split_field(schema.get_column_name(c))[prefix_length:]),
                 "sql": Variable(schema.get_column_name(c)).to_sql(schema)[0].sql
             }
             for n, cols in schema.columns.items()

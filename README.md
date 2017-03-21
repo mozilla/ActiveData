@@ -14,7 +14,7 @@ ActiveData is a service! You can certainly setup your own service, but it is eas
 * Elasticsearch **version 1.7.x**
 
 
-## Elasticsearch Configuration
+### Elasticsearch Configuration
 
 Elasticsearch has a configuration file at `config/elasticsearch.yml`. You must modify it to turn on scripting.  Add these two lines at the top of the file:
 
@@ -84,15 +84,19 @@ Jump to your git project directory, set your `PYTHONPATH` and run:
 
 ## Verify
 
+If you have no records in your Elasticsearch cluster, then you must add some before you can query them.
+
+Make a table in Elasticsearch, with one record: 
+
+    curl -XPUT "http://localhost:9200/movies/movie/1" -d "{\"name\":\"The Parent Trap\",\"released\":\"29 July` 1998\",\"imdb\":\"http://www.imdb.com/title/tt0120783/\",\"rating\":\"PG\",\"director\":{\"name\":\"Nancy Meyers\",\"dob\":\"December 8, 1949\"}}"
+
 Assuming you used the defaults, you can verify the service is up if you can
 access the Query Tool at [http://localhost:5000/tools/query.html](http://localhost:5000/tools/query.html).
 You may use it to send queries to your instance of the service. For example:
 
 ```javascript
-    {"from":"unittest"}
+    {"from":"movies"}
 ```
-
-**Queries only work if you have data in your Elasticsearch cluster** This query can be used on [Engineering Productivity's](https://wiki.mozilla.org/EngineeringProductivity) [public ActiveData instance](http://activedata.allizom.org/tools/query.html), and you can use a similar query to get a few sample lines from your cluster.
 
 ## Tests
 

@@ -1,25 +1,25 @@
 
 # Upgrade ActiveData to use ElasticSearch v5.0+
 
-##About ActiveData
+## About ActiveData
 
 ActiveData is a publicly accessible data warehouse holding many billions of records, for some dozen+ datasets concerning Mozilla's testing infrastructure: This includes test results, job results, code coverage, and extracts from other systems. The ActiveData code itself is really only a stateless query translation layer; leaving the hard work of high speed filtering and aggregation to Elasticsearch.
 
-##Background
+## Background
 
 Elasticsearch is designed for text search, but can also serve as an extremely fast data warehouse. The speed comes from using [inverted indices](https://www.elastic.co/guide/en/elasticsearch/guide/current/inverted-index.html) to provide high performance data filtering and aggregation. Elasticsearch can index almost any JSON document, perform schema merging, and index all its properties, with almost no human intervention. By letting the machine manage the schema, we can query the JSON without transforming it [2]
 
 Elasticsearch does have a drawback: Its query language is designed for text search and is painful to use in a data warehouse context. Hence the need for ActiveData.
 
-##Problem
+## Problem
 
 Elasticsearch 1.7.x was the last version that did a reasonable job of schema merging. Newer versions (2.0+) have disallowed schema merging, preventing ingestion of JSON documents that have a schema that conflicts with previous documents. We would like to use newer, faster, and more stable versions of Elasticsearch, but they can not handle varied data.
 
-##Solution
+## Solution
 
 Build a translator will convert a variety of JSON formats into a single, strictly-typed, schema. The translator will use schema merging and property-renaming to perform a translation on documents before they go Elasticsearch.  
 
-##Benefits
+## Benefits
 
 ElasticSearch's schema merging is great, but has always been incomplete:
  
@@ -28,7 +28,7 @@ ElasticSearch's schema merging is great, but has always been incomplete:
 
 This upgrade will make ActiveData more flexible, improve service stability, and provide a step towards promoting this project to production.
 
-##Required Skills
+## Required Skills
 
 Some particular experience will make this task easier (most important first):
 
@@ -38,7 +38,7 @@ Some particular experience will make this task easier (most important first):
 * Denormalization and data warehousing
 
 
-##References
+## References
 
 1. Similar project for smaller data: [Mapping JSON to strict DB schema](https://github.com/klahnakoski/JSONQueryExpressionTests/blob/master/docs/GSOC%20Proposal.md)
 2. [ELT](https://en.wikipedia.org/wiki/Extract,_transform,_load) Links: [A](http://hexanika.com/why-shift-from-etl-to-elt/), [B](https://www.ironsidegroup.com/2015/03/01/etl-vs-elt-whats-the-big-difference/)

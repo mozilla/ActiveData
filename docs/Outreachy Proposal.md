@@ -5,6 +5,10 @@
 
 ActiveData is a publicly accessible data warehouse holding many billions of records, for some dozen+ datasets concerning Mozilla's testing infrastructure: This includes test results, job results, code coverage, and extracts from other systems. The ActiveData code itself is really only a stateless query translation layer; leaving the hard work of high speed filtering and aggregation to Elasticsearch.
 
+* ActiveData accepts [JSON Query Expressions](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx.md)
+* [ActiveData Tutorial](https://github.com/klahnakoski/ActiveData/blob/dev/docs/GettingStarted.md) will help you understand how it is used.
+
+
 ## Background
 
 Elasticsearch is designed for text search, but can also serve as an extremely fast data warehouse. The speed comes from using [inverted indices](https://www.elastic.co/guide/en/elasticsearch/guide/current/inverted-index.html) to provide high performance data filtering and aggregation. Elasticsearch can index almost any JSON document, perform schema merging, and index all its properties, with almost no human intervention. By letting the machine manage the schema, we can query the JSON without transforming it [2]

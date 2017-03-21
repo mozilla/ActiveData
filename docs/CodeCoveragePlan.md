@@ -2,12 +2,12 @@
 
 #Project CodeCoverage
 
-##Summary 
+## Summary 
 
 Collect code coverage across may platforms and languages and present in a unified view.
 
 
-##Use cases / Motivation
+## Use cases / Motivation
 
 CodeCoverage data can provide the following benefits
 
@@ -23,12 +23,12 @@ CodeCoverage data can provide the following benefits
   * For a given changeset, what tests should be run?
 
 
-##Why!?
+## Why!?
 
 Codecoverge metrics, especially the differential measures, can provide hints about the direction of product quality. It can also point to severely under-tested source code, especially important when that source code is in flux.
 
 
-##Architecture
+## Architecture
 
 The current design uses ActiveData;
 
@@ -56,7 +56,7 @@ The fine detail of the ETL pipeline is aggregated by `codecoverage.py` to provid
 
 * incomplete
 
-###Consideration of Coveralls
+### Consideration of Coveralls
 
 A review (2015) showed a few shortcomings:  
 
@@ -64,16 +64,16 @@ A review (2015) showed a few shortcomings:
 * Could not perform minimum cover calculations, or platform deltas 
 * Prohibitive price for the many billions of coverage records we would send to Coveralls 
 
-###Consideration of #`lcov` HTML output
+### Consideration of #`lcov` HTML output
 
 Has all the same drawbacks of Coveralls, but with less monetary cost. There is nothing preventing us from turning this on, except maybe computational cost, as `lcov` is proving slow at our size. 
 
 
-##Time Frame
+## Time Frame
 
 This project has been running with various levels of low priority for years. The past year has had UCOSP students experiment with visualizations, building the ETL pipeline, and fixing tests to run with code coverage enabled.  
 
-##Tracking Progress
+## Tracking Progress
 
 * **UCOSP Progress** - [https://public.etherpad-mozilla.org/p/code_coverage_w17](https://public.etherpad-mozilla.org/p/code_coverage_w17)
 * **add some bug numbers here**

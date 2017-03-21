@@ -34,7 +34,7 @@ JSON expressions are slightly better in this regard; It is its own AST, and does
 
 	JSON Expressions -> JSON -> network -> JSON -> JSON Expressions -> Query 
 
-###Splitting credit and debit
+### Splitting credit and debit
 
 Sometimes we would like to clarify positive and negative numbers in separate
 columns, like in accounting:
@@ -503,7 +503,7 @@ using distinct to determine what the partitions are
     LEFT JOIN
         analysis.log_performance_backoffice b on b.resource=a.resource
 
-###Quazi-LogScale Tables
+### Quazi-LogScale Tables
 
 SQL demands I build a table that represents the irregular, but intuitive, data partitions. Tables seem heavy-weight compared to a domain definition; if only because the details are realized as records, and those records must be constructed explicitly.
 

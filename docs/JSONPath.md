@@ -2,6 +2,9 @@
 
 [JSONPath](http://goessner.net/articles/JsonPath/) is a mini query language inspired by the XPath line noise.
 
+Path expressions are related to graph query languages, with limitation
+
+
 
 | XPath  | JSONPath           | Description |
 |:------:|:------------------:|:-------------|
@@ -19,117 +22,223 @@
 |   n/a  | `()`               |script expression, using the underlying script engine. 
 
 
+# Property Limited JSON 
+
+
+
+
+
 ## Example
 
-We will use the example from 
+We will use the example from [goessner.net](http://goessner.net/articles/JsonPath/) which is data representing the inventory of a small store:  
 
-	{"store":{
-		"book":[
-			{
-				"category":"reference",
-				"author":"Nigel Rees",
-				"title":"Sayings of the Century",
-				"price":8.95
-			},
-			{
-				"category":"fiction",
-				"author":"Evelyn Waugh",
-				"title":"Sword of Honour",
-				"price":12.99
-			},
-			{
-				"category":"fiction",
-				"author":"Herman Melville",
-				"title":"Moby Dick",
-				"isbn":"0-553-21311-3",
-				"price":8.99
-			},
-			{
-				"category":"fiction",
-				"author":"J. R. R. Tolkien",
-				"title":"The Lord of the Rings",
-				"isbn":"0-395-19395-8",
-				"price":22.99
-			}
-		],
-		"bicycle":{"color":"red","price":19.95}
-	}}
+    {"store":{
+        "book":[
+            {
+                "category":"reference",
+                "author":"Nigel Rees",
+                "title":"Sayings of the Century",
+                "price":8.95
+            },
+            {
+                "category":"fiction",
+                "author":"Evelyn Waugh",
+                "title":"Sword of Honour",
+                "price":12.99
+            },
+            {
+                "category":"fiction",
+                "author":"Herman Melville",
+                "title":"Moby Dick",
+                "isbn":"0-553-21311-3",
+                "price":8.99
+            },
+            {
+                "category":"fiction",
+                "author":"J. R. R. Tolkien",
+                "title":"The Lord of the Rings",
+                "isbn":"0-395-19395-8",
+                "price":22.99
+            }
+        ],
+        "bicycle":{"color":"red","price":19.95}
+    }}
 
-This is badly designed data: There is no upper limit on the property names because they are being used to encode the inventory category (eg `book`, `bycycle`).  
+This is badly designed data: There is no upper limit on the property names because they are being used to encode the inventory category (eg `book`, `bycycle`).  Putting data values in property names is similar to positional arguments: The values are place at a numbered position, and the numbered position relates to an implicit named type. For example, the `book` type is positional encoded, but we can do the same for other properties:
+
+    {"store":{
+        "book": {
+			"reference": {
+				"Nigel Rees": {
+					"Sayings of the Century": { 
+						 "8.95": {}
+					}
+				}
+            },
+			"fiction": {
+				"Evelyn Waugh": {
+					"Sword of Honour": {
+		                "12.99": {}
+					}
+				},
+	            "Herman Melville": {
+					"Moby Dick": {
+						"8.99": {
+							"isbn":"0-553-21311-3"
+	                	}
+					}
+	            },
+				"J. R. R. Tolkien": {
+					"The Lord of the Rings": {
+		                "12.99":{
+							"isbn":"0-395-19395-8"
+						}
+					}
+				}
+            }
+        ],
+        "bicycle":{"red":{"19.95":{}}}
+    }}
+
+Definitely more compact, but context is lost about what the property names mean. A similar effect can be had by storing the data in tuples.
+
+    {"store":[
+        ["book", "reference", "Nigel Rees", "Sayings of the Century", 8.95],
+		["book", "fiction", "Evelyn Waugh", "Sword of Honour", 12.99],
+		["book", "fiction", "Herman Melville", "Moby Dick", 8.99, "0-553-21311-3"],
+	    ["book", "fiction", "J. R. R. Tolkien", "The Lord of the Rings", 12.99, "isbn":"0-395-19395-8"],
+        ["bicycle", "red", 19.95]
+    ]}
+
+In either case, and many others, we achieve data compression by removing context.  This is bad for JSON 
+
+
+JSON data should be in ***limited property form***, which means fixing the number of properties, as much as is reasonable for the given datasource. One option is to convert the {"property":value} form to    If the property names 
+
+
+    {"store":[
+        {
+            "item_type":"book",
+			"inventory": [
+			{
+	            "category":"reference",
+	            "author":"Nigel Rees",
+	            "title":"Sayings of the Century",
+	            "price":8.95
+	        },
+	        {
+	            "item_type":"book",
+	            "category":"fiction",
+	            "author":"Evelyn Waugh",
+	            "title":"Sword of Honour",
+	            "price":12.99
+	        },
+	        {
+	            "item_type":"book",
+	            "category":"fiction",
+	            "author":"Herman Melville",
+	            "title":"Moby Dick",
+	            "isbn":"0-553-21311-3",
+	            "price":8.99
+	        },
+	        {
+	            "item_type":"book",
+	            "category":"fiction",
+	            "author":"J. R. R. Tolkien",
+	            "title":"The Lord of the Rings",
+	            "isbn":"0-395-19395-8",
+	            "price":22.99
+	        }
+		},
+		{
+			"item_type":"bicycle",
+			"inventory": [
+				{
+		            "item_type":"bicycle",
+		            "color":"red",
+		            "price":19.95
+		        }
+			]
+		}
+    ]}
+
+
+If we are willing to annotate the inventory items with the `item_type`, we can flatten the structure further 
+
+    {"store":[
+        {
+            "item_type":"book",
+            "category":"reference",
+            "author":"Nigel Rees",
+            "title":"Sayings of the Century",
+            "price":8.95
+        },
+        {
+            "item_type":"book",
+            "category":"fiction",
+            "author":"Evelyn Waugh",
+            "title":"Sword of Honour",
+            "price":12.99
+        },
+        {
+            "item_type":"book",
+            "category":"fiction",
+            "author":"Herman Melville",
+            "title":"Moby Dick",
+            "isbn":"0-553-21311-3",
+            "price":8.99
+        },
+        {
+            "item_type":"book",
+            "category":"fiction",
+            "author":"J. R. R. Tolkien",
+            "title":"The Lord of the Rings",
+            "isbn":"0-395-19395-8",
+            "price":22.99
+        },
+        {
+            "item_type":"bicycle",
+            "color":"red",
+            "price":19.95
+        }
+    ]}
 
 
 A better format will encode the category explicitly:
 
 This transformation can be done with 
 
-	{
-		"from":{"items":"store"},
-		"select":{
-			"name":"store",
-			"aggregate":"union", 
-			"value":{
-				"from":"..value",
-				"select":[
-					{"name":"item_type", "value":"..name"}
-					"."
-				]
-			}
-		}
-	}
+    {
+        "from":{"items":"store"},
+        "select":{
+            "name":"store",
+            "aggregate":"union", 
+            "value":{
+                "from":"..value",
+                "select":[
+                    {"name":"item_type", "value":"..name"}
+                    "."
+                ]
+            }
+        }
+    }
 
 Which results in an explicit, and flatter structure:
 
-	{"store":[
-		{
-			"item_type":"book",
-			"category":"reference",
-			"author":"Nigel Rees",
-			"title":"Sayings of the Century",
-			"price":8.95
-		},
-		{
-			"item_type":"book",
-			"category":"fiction",
-			"author":"Evelyn Waugh",
-			"title":"Sword of Honour",
-			"price":12.99
-		},
-		{
-			"item_type":"book",
-			"category":"fiction",
-			"author":"Herman Melville",
-			"title":"Moby Dick",
-			"isbn":"0-553-21311-3",
-			"price":8.99
-		},
-		{
-			"item_type":"book",
-			"category":"fiction",
-			"author":"J. R. R. Tolkien",
-			"title":"The Lord of the Rings",
-			"isbn":"0-395-19395-8",
-			"price":22.99
-		}
-		{
-			"item_type":"bicycle",
-			"color":"red",
-			"price":19.95
-		}
-	]}
 
 
 **the authors of all books in the store**
 
 |           XPath           |   JSON Expression   |
 |---------------------------|---------------------|
-| `$.store.book[*].author`  | `store.author`      |
+| `$.store.book[*].author`  | `{"from":"store", "select":"author"}`      |
 
 
 **all authors**
 
 |           XPath           |   JSON Expression   |
 |---------------------------|---------------------|
-| `$..author`               | `store.author`      |
+| `$..author`               | `{"from":"store", "select":"author"}`      |
 
 
 **all things in store, which are some books and a red bicycle**
@@ -159,7 +268,7 @@ This type of query should never be needed: The store will sell books, or acquire
     "where": {"eq":{"order":2}}
 }</pre>       |
 
- 	
+     
 **the last book in order.**
 
 Getting the first or last elements in a list make sense.
@@ -208,5 +317,5 @@ Getting the first or last elements in a list make sense.
 |           XPath           |   JSON Expression   |
 |---------------------------|---------------------|
 | `$..*`                    | `{"from":"source"}` |
- 	
+     
 

@@ -21,8 +21,8 @@ http://www2.sqlite.org/cvstrac/wiki?p=UnsupportedSqlAnalyticalFunctions
 
 
 
-JSON vs SQL
-------------
+JSON Query Expressions vs SQL
+-----------------------------
 
 A deliberate feature of a JSON expressions is it's JSON. It can be easily declared in Python and Javascript, and easily manipulated by code.  
 

@@ -1,4 +1,4 @@
-# JSONPath vs Json Query Expressions
+# JSONPath vs JSON Query Expressions
 
 [JSONPath](http://goessner.net/articles/JsonPath/) is a mini query language inspired by the XPath line noise.
 

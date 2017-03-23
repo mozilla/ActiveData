@@ -419,7 +419,43 @@ class TestgroupBy1(BaseTestCase):
             }
         }
 
-
+    def test_groupby_object(self):
+        test = {
+            "data": [
+                {"g": {"a": "c", "v": 1}},
+                {"g": {"a": "b", "v": 1}},
+                {"g": {"a": "b", "v": 1}},
+                {"g": {"v": 2}},
+                {"g": {"a": "b"}},
+                {"g": {"a": "c", "v": 2}},
+                {"g": {"a": "c", "v": 2}}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": ["g"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data":[
+                    {"g": {"a": "b", "v": 1}, "count": 2},
+                    {"g": {"a": "b"}, "count": 1},
+                    {"g": {"a": "c", "v": 2}, "count": 2},
+                    {"g": {"a": "c", "v": 1}, "count": 1},
+                    {"g": {"v": 2}, "count": 1}
+                ]
+            },
+            "expecting_table": {
+                "header": ["g", "count"],
+                "data": [
+                    [{"a": "b", "v": 1}, 2],
+                    [{"a": "b"}, 1],
+                    [{"a": "c", "v": 2}, 2],
+                    [{"a": "c", "v": 1}, 1],
+                    [{"v": 2}, 1]
+                ]
+            }
+        }
+        self.utils.execute_es_tests(test)
 
 # TODO: AGG SHALLOW FIELD WITH DEEP GROUPBY
 # {

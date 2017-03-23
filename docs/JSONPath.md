@@ -4,6 +4,11 @@
 
 Path expressions are related to graph query languages, with limitation
 
+# XML NORMAL FORM
+http://www.cs.toronto.edu/tox/papers/xnf_pods02.pdf
+
+
+
 
 
 | XPath  | JSONPath           | Description |

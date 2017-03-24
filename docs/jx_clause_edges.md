@@ -359,7 +359,7 @@ including tuples:
 <insert example>
 
 
-###`range` Edges###
+### `range` Edges###
 
 The an `edge` can be given a `range`, instead of a `value`: This will allow
 one record to span multiple parts, or none, and be included in the count.

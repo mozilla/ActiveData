@@ -498,7 +498,7 @@ The literal is parsed according to a [date and time mini language](jx_time.md).
 
 Except for the right-hand-side of simple form operations, JSON expressions will interpret JSON as an expression. Sometimes you just want the literal JSON value. `literal` simply returns the property value, unchanged.
 
-		{"eq": {"name", "kyle"}}
+		{"eq": {"name": "kyle"}}
 
 Can be stated using the formal (array) form: 
 

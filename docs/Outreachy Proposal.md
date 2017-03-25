@@ -68,11 +68,11 @@ Some particular experience will make this task easier (most important first):
 
 >The biggest problem is to solve is how to get JSON into Elasticsearch despite the conflicting schemas. For example, consider these two JSON documents:
 >
-    {"a": 1}
-    {"a": [{"b":1}, {"b":2}]}
+>    {"a": 1}
+>    {"a": [{"b":1}, {"b":2}]}
 >
 > How can we make them fit into one schema? Can we somehow re-write the JSON to a new format so they will fit into ES.  How do we change the Elasticsearch queries to work with the new format? [I have added a test that ensure these schemas can be merged](https://github.com/klahnakoski/ActiveData/blob/dev/tests/test_jx/test_schema_merging.py#L22)
 
-**What branch do I work off of**
+**What branch do I work off of?**
 
-Work with the `master` branch; it is working and stable.  The `dev` branch (which you are reading right now) is unstable and has a long way to go before merging back into master. 
+>  Work with the `master` branch; it is working and stable.  The `dev` branch (which you are reading right now) is unstable and has a long way to go before merging back into master. 

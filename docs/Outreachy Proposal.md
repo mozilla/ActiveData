@@ -32,7 +32,7 @@ ElasticSearch's schema merging is great, but has always been incomplete:
 
 This upgrade will make ActiveData more flexible, improve service stability, and provide a step towards promoting this project to production.
 
-## Required Skills
+## Suggested Skills
 
 Some particular experience will make this task easier (most important first):
 
@@ -55,8 +55,24 @@ Some particular experience will make this task easier (most important first):
 **What is the first step?**
 
 >Clone the [master branch of ActiveData](https://github.com/klahnakoski/ActiveData/tree/master), follow the directions and ensure the tests pass. The tests take about 9 minutes on my machine. Feel free to ask questions if something goes wrong.
-
+>
 >Once the tests pass. Upgrade your local Elasticsearch from 1.7.x to version 5.x.  Run the tests again to see all the failures. 
-
+>
 > Your mission, if you choose to accept it, is to get those tests to pass with the new version of Elasticsearch.
 
+**How much database theory must I know?**
+
+> The skills listed will make the project easier for you, but none are required. This is primarily a Python project translating one query language to another.
+
+**What do you think the main problem will be when upgrading**
+
+>The biggest problem is to solve is how to get JSON into Elasticsearch despite the conflicting schemas. For example, consider these two JSON documents:
+>
+    {"a": 1}
+    {"a": [{"b":1}, {"b":2}]}
+>
+> How can we make them fit into one schema? Can we somehow re-write the JSON to a new format so they will fit into ES.  How do we change the Elasticsearch queries to work with the new format? [I have added a test that ensure these schemas can be merged](https://github.com/klahnakoski/ActiveData/blob/dev/tests/test_jx/test_schema_merging.py#L22)
+
+**What branch do I work off of**
+
+Work with the `master` branch; it is working and stable.  The `dev` branch (which you are reading right now) is unstable and has a long way to go before merging back into master. 

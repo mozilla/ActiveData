@@ -52,6 +52,14 @@ Some particular experience will make this task easier (most important first):
 
 ## Questions
 
+**Does this work on Windows?**
+
+> Yes! If you are a native Windows user you can install Python, install required libraries, run the server, and run the test suite. You do not need a VM, docker, or Linux emulator.
+
+**Does this work on Linux?**
+
+> Absolutely! Python was made to work on Linux! 
+
 **What is the first step?**
 
 >Clone the [master branch of ActiveData](https://github.com/klahnakoski/ActiveData/tree/master), follow the directions and ensure the tests pass. The tests take about 9 minutes on my machine. Feel free to ask questions if something goes wrong.

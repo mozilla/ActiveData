@@ -29,6 +29,32 @@ And it is a good idea to give your cluster a unique name so it does not join oth
 
 	cluster.name: lahnakoski_dev
 
+Then you can run Elasticsearch:
+ 
+    c:\elasticsearch>bin\elasticsearch
+
+Elasticsearch runs off port 9200. Test it is working 
+
+	curl http://localhost:9200
+
+you should expect something like 
+
+	{
+	  "status" : 200,
+	  "name" : "dev",
+	  "cluster_name" : "lahnakoski_dev",
+	  "version" : {
+	    "number" : "1.7.5",
+	    "build_hash" : "00f95f4ffca6de89d68b7ccaf80d148f1f70e4d4",
+	    "build_timestamp" : "2016-02-02T09:55:30Z",
+	    "build_snapshot" : false,
+	    "lucene_version" : "4.10.4"
+	  },
+	  "tagline" : "You Know, for Search"
+	}
+
+
+
 ## Installation
 
 It is still too early for PyPi install, so please clone *master* off of github:

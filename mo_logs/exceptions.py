@@ -17,7 +17,7 @@ import json
 import sys
 from collections import Mapping
 
-from mo_dots import Data, listwrap, unwraplist, set_default, Null
+from mo_dots import Data, listwrap, unwraplist, set_default, Null, DataObject, unwrap
 
 from mo_logs.strings import indent, expand_template
 

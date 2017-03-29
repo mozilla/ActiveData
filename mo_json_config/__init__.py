@@ -319,18 +319,18 @@ class URL(object):
         if self.host:
             url = self.host
         if self.scheme:
-            url = self.scheme + "://"+url
+            url = self.scheme + b"://"+url
         if self.port:
-            url = url + ":" + str(self.port)
+            url = url + b":" + str(self.port)
         if self.path:
             if self.path[0]=="/":
                 url += str(self.path)
             else:
                 url += b"/"+str(self.path)
         if self.query:
-            url = url + '?' + value2url(self.query)
+            url = url + b'?' + value2url(self.query)
         if self.fragment:
-            url = url + '#' + value2url(self.fragment)
+            url = url + b'#' + value2url(self.fragment)
         return url
 
 

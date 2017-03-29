@@ -15,8 +15,9 @@ from __future__ import unicode_literals
 import StringIO
 from collections import Mapping
 
-from mo_logs import Log
 from mo_dots import wrap
+from mo_logs import Log
+from mo_logs.convert import value2json
 
 
 def int2hex(value, size):
@@ -34,11 +35,13 @@ def latin12unicode(value):
     try:
         return unicode(value.decode('iso-8859-1'))
     except Exception as e:
-        Log.error("Can not convert {{value|quote}} to unicode", value=value)
+        Log.error("Can not convert {{value|quote}} to unicode", value=value, cause=e)
 
-_map2url = {chr(i): latin12unicode(chr(i)) for i in range(32, 256)}
-for c in " {}<>;/?:@&=+$,":
-    _map2url[c] = "%" + int2hex(ord(c), 2)
+_map2url = {chr(i): chr(i) for i in range(32, 128)}
+for c in b" {}<>;/?:@&=+$,":
+    _map2url[c] = b"%" + str(int2hex(ord(c), 2))
+for i in range(128, 256):
+    _map2url[chr(i)] = b"%" + str(int2hex(i, 2))
 
 
 
@@ -61,19 +64,23 @@ def ini2value(ini_content):
 
 
 def value2url(value):
+    """
+    :param value:
+    :return: ascii URL
+    """
     if value == None:
-        Log.error("")
+        Log.error("Can not encode None into a URL")
 
     if isinstance(value, Mapping):
-        output = "&".join([value2url(k) + "=" + (value2url(v) if isinstance(v, basestring) else value2url(value2json(v))) for k,v in value.items()])
+        output = b"&".join([value2url(k) + b"=" + (value2url(v) if isinstance(v, basestring) else value2url(value2json(v))) for k, v in value.items()])
     elif isinstance(value, unicode):
-        output = "".join([_map2url[c] for c in unicode2latin1(value)])
+        output = b"".join(_map2url[c] for c in value.encode('utf8'))
     elif isinstance(value, str):
-        output = "".join([_map2url[c] for c in value])
+        output = b"".join(_map2url[c] for c in value)
     elif hasattr(value, "__iter__"):
-        output = ",".join(value2url(v) for v in value)
+        output = b",".join(value2url(v) for v in value)
     else:
-        output = unicode(value)
+        output = str(value)
     return output
 
 

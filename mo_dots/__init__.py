@@ -13,7 +13,12 @@ from __future__ import unicode_literals
 
 from __builtin__ import zip as _builtin_zip
 from collections import Mapping
+from decimal import Decimal
 from types import GeneratorType, NoneType, ModuleType
+
+from datetime import datetime
+
+from datetime import date
 
 from mo_dots import utils
 from mo_dots.utils import get_logger, get_module
@@ -23,6 +28,7 @@ ROOT_PATH = [SELF_PATH]
 
 
 _get = object.__getattribute__
+_set = object.__setattr__
 
 
 def inverse(d):
@@ -273,9 +279,9 @@ def set_attr(obj, path, value):
     except Exception as e:
         Log = get_logger()
         if PATH_NOT_FOUND in e:
-            Log.warning(PATH_NOT_FOUND + ": {{path}}",  path= path)
+            Log.warning(PATH_NOT_FOUND + ": {{path}}", path=path, cause=e)
         else:
-            Log.error("Problem setting value", e)
+            Log.error("Problem setting value", cause=e)
 
 
 def get_attr(obj, path):
@@ -307,17 +313,19 @@ def _get_attr(obj, path):
         # TRY FILESYSTEM
         File = get_module("mo_files").File
         possible_error = None
-        if File.new_instance(File(obj.__file__).parent, attr_name).set_extension("py").exists:
+        python_file = File.new_instance(File(obj.__file__).parent, attr_name).set_extension("py")
+        python_module = File.new_instance(File(obj.__file__).parent, attr_name, "__init__.py")
+        if python_file.exists or python_module.exists:
             try:
                 # THIS CASE IS WHEN THE __init__.py DOES NOT IMPORT THE SUBDIR FILE
                 # WE CAN STILL PUT THE PATH TO THE FILE IN THE from CLAUSE
                 if len(path)==1:
                     # GET MODULE OBJECT
-                    output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[0]], 0)
+                    output = __import__(obj.__name__ + b"." + attr_name.decode('utf8'), globals(), locals(), [attr_name.decode('utf8')], 0)
                     return output
                 else:
                     # GET VARIABLE IN MODULE
-                    output = __import__(obj.__name__ + "." + attr_name, globals(), locals(), [path[1]], 0)
+                    output = __import__(obj.__name__ + b"." + attr_name.decode('utf8'), globals(), locals(), [path[1].decode('utf8')], 0)
                     return _get_attr(output, path[1:])
             except Exception as e:
                 Except = get_module("mo_logs.exceptions.Except")
@@ -351,10 +359,12 @@ def _get_attr(obj, path):
         return None
 
 
-def _set_attr(obj, path, value):
-    obj = _get_attr(obj, path[:-1])
-    if obj is None:  # DELIBERATE, WE DO NOT WHAT TO CATCH Null HERE (THEY CAN BE SET)
-        get_logger().error(PATH_NOT_FOUND)
+def _set_attr(obj_, path, value):
+    obj = _get_attr(obj_, path[:-1])
+    if obj is None:  # DELIBERATE USE OF `is`: WE DO NOT WHAT TO CATCH Null HERE (THEY CAN BE SET)
+        obj = _get_attr(obj_, path[:-1])
+        if obj is None:
+            get_logger().error(PATH_NOT_FOUND+" Tried to get attribute of None")
 
     attr_name = path[-1]
 
@@ -378,7 +388,7 @@ def _set_attr(obj, path, value):
             obj[attr_name] = new_value
             return old_value
         except Exception, f:
-            get_logger().error(PATH_NOT_FOUND)
+            get_logger().error(PATH_NOT_FOUND, cause=e)
 
 
 def lower_match(value, candidates):
@@ -389,12 +399,9 @@ def wrap(v):
     type_ = _get(v, "__class__")
 
     if type_ is dict:
-        m = Data(v)
+        m = object.__new__(Data)
+        _set(m, "_dict", v)
         return m
-        # m = object.__new__(Data)
-        # object.__setattr__(m, "_dict", v)
-        # return m
-
     elif type_ is NoneType:
         return Null
     elif type_ is list:
@@ -469,7 +476,10 @@ def unwrap(v):
         return None
     elif _type is DataObject:
         d = _get(v, "_obj")
-        return d
+        if isinstance(d, Mapping):
+            return d
+        else:
+            return v
     elif _type is GeneratorType:
         return (unwrap(vv) for vv in v)
     else:

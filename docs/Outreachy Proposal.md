@@ -68,6 +68,10 @@ Some particular experience will make this task easier (most important first):
 >
 > Your mission, if you choose to accept it, is to get those tests to pass with the new version of Elasticsearch.
 
+**What IDE should I use?**
+
+> An IDE you are comfortable with is best, but be sure it has an interactive debugger! Here is a video on [how easy debugging should be](https://www.youtube.com/watch?v=QJtWxm12Eo0). Your debugger should be as good, or better. More [PyCharm docs](https://www.jetbrains.com/pycharm/documentation/).
+
 **How much database theory must I know?**
 
 > The skills listed will make the project easier for you, but none are required. This is primarily a Python project translating one query language to another.

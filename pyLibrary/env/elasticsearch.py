@@ -306,7 +306,9 @@ class Index(Features):
                     headers={"Content-Type": "text"},
                     timeout=self.settings.timeout,
                     retry=self.settings.retry,
-                    params={"consistency": self.settings.consistency}
+                    params={
+                        #"consistency": self.settings.consistency
+                    }
                 )
                 items = response["items"]
 
@@ -315,7 +317,7 @@ class Index(Features):
                     for i, item in enumerate(items):
                         if not item.index.ok:
                             fails.append(i)
-                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
+                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5.2."])):
                     for i, item in enumerate(items):
                         if item.index.status not in [200, 201]:
                             fails.append(i)
@@ -376,7 +378,7 @@ class Index(Features):
                 Log.error("Can not set refresh interval ({{error}})", {
                     "error": utf82unicode(response.all_content)
                 })
-        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
+        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5.2."])):
             response = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
                 data=convert.unicode2utf8('{"index":{"refresh_interval":' + convert.value2json(interval) + '}}'),
@@ -629,7 +631,7 @@ class Cluster(object):
                 )
                 schema.settings.index.number_of_replicas = health.number_of_nodes - 1
 
-        self.post(
+        self.put(
             "/" + index,
             data=schema,
             headers={"Content-Type": "application/json"}
@@ -816,7 +818,7 @@ class Cluster(object):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
 
         if self.debug:
-            sample = kwargs["data"][:300]
+            sample = kwargs["data"]
             Log.note("PUT {{url}}:\n{{data|indent}}", url=url, data=sample)
         try:
             response = http.put(url, **kwargs)

@@ -18,7 +18,7 @@ Expressions are composed of
 Example: `eq` Operator
 ----------------------
 
-###`eq` Operator###
+### `eq` Operator ###
 
 The equality operator is most used, and has a range of parameters. We will use the `eq` operator to demonstrate the format for the rest of this document.  
 
@@ -59,7 +59,7 @@ which is logically equivalent to:
 Reference
 =========
 
-###`coalesce` Operator###
+### `coalesce` Operator ###
 
 Return the first not `null` value in the list of evaluated expressions. 
 
@@ -73,7 +73,7 @@ For the *simple* form; `null` is a legitimate `constant`. Generally, if all expr
 Boolean Operators
 -----------------
 
-###`and` Operator##
+### `and` Operator ##
 
 		{"and": [expr_1, expr_2, expr_2, ... , expr_N]}
 
@@ -85,7 +85,7 @@ an empty list evaluates to true
 
 		{"and": []} ⇒ true
 
-###`or` Operator###
+### `or` Operator ###
 
 		{"or": [expr_1, expr_2, expr_2, ... , expr_N]}
 
@@ -98,7 +98,7 @@ an empty list evaluates to `false`
 		{"or": []} ⇒ false
 
 
-###`not` Operator###
+### `not` Operator ###
 
 Negation of another expression. 
 
@@ -112,7 +112,7 @@ Note: negation of `null` is `null`
 Comparison Operators
 --------------------
 
-###`eq` Operator###
+### `eq` Operator ###
 
 As detailed above, `eq` has two main forms. The *simple* form:  
 
@@ -128,7 +128,7 @@ and the `formal` form
 		{"eq": [expr1, expr2, ... expr3]}
 
 
-###`ne` Operator###
+### `ne` Operator ###
 
 Returns `true` if two expressions are not null *and* not equal.
 
@@ -141,7 +141,7 @@ Returns `true` if two expressions are not null *and* not equal.
 		{"eq": [null, 1]} ⇒ false
 
 
-###`gt`, `gte`, `lte`, `lt` Operators###
+### `gt`, `gte`, `lte`, `lt` Operators ###
 
 Compare two expressions, and return a Boolean
 
@@ -160,7 +160,7 @@ All the math operators, except `count`, return `null` if *any* the operands are 
 		{"sum": [expr1, expr2, ... exprN], "default": 0}
 
 
-###`count` Operator (commutative)###
+### `count` Operator (commutative)###
 
 For counting the number of not-null values.
 
@@ -171,7 +171,7 @@ For counting the number of not-null values.
 		{"count": []} ⇒ 0
 
 
-###`sum` Operator (commutative)###
+### `sum` Operator (commutative)###
 
 For adding the result of many expressions. Also known as `add`.
 
@@ -187,7 +187,7 @@ The empty list always evaluates to the default value, or `null`.
 		{"sum": []} ⇒ null
 
 
-###`sub` Operator###
+### `sub` Operator ###
 
 Subtract two expressions. Also known as `subtract` and `minus`
 
@@ -195,7 +195,7 @@ Subtract two expressions. Also known as `subtract` and `minus`
 		{"sub": [expr_a, expr_b]}
 
 
-###`mult` Operator (commutative)###
+### `mult` Operator (commutative)###
 
 Multiply multiple values. Also known as `multiply` and `mul`
 
@@ -210,7 +210,7 @@ The empty list always evaluates to the default value, or `null`.
 
 		{"mult": []} ⇒ null
 
-###`div` Operator###
+### `div` Operator ###
 
 For division.
 
@@ -222,7 +222,7 @@ If either operand is `null`, or if the denominator is zero, the operator will re
 		{"div": [numerator, denominator], "default": 0}  // {"div": ["x", 0]} == 0 for all x
 
 
-###`exp` Operator###
+### `exp` Operator ###
 
 Raise the base to given exponent. Also known as `pow` and `power`
 
@@ -238,13 +238,13 @@ of course, the `default` clause allows you to provide the definition that suites
 		{"exp": [base, exponent], "default": base} // {"exp": [x, 1]} == x for all x
 
 
-###`mod` Operator###
+### `mod` Operator ###
 
 Calculate the modulo, always results in a non-negative number
 	
 		{"mod": [dividend, divisor]}  ⇒ dividend % divisor
 
-###`floor` Operator###
+### `floor` Operator ###
 
 Highest integer less than, or equal to, `dividend`
 	
@@ -254,14 +254,14 @@ Highest integer less than, or equal to, `dividend`
 Search Operators
 ----------------
 
-###`term` Operator###
+### `term` Operator ###
 
 Identical to the `eq` operator, but exists for Elasticsearch compatibility.
 
 		{"term": {variable, value}} 
 
 
-###`in` Operator###
+### `in` Operator ###
 
 The `in` operator tests if property can be found in a list of constants.  
 
@@ -277,32 +277,32 @@ and is logically the same as
 		]}
 
 
-###`missing` Operator###
+### `missing` Operator ###
 
 Test if a property is `null`, or missing from the record
 
 		{"missing": variable}
 
 
-###`exists` Operator###
+### `exists` Operator ###
 
 Test is a property is not `null`
 
 		{"exists": variable}
 
-###`prefix` Operator###
+### `prefix` Operator ###
 
 Test if a property has the given prefix. Only the *simple* form exists.
 
 		{"prefix": {variable: prefix}}
 
-###`regexp` Operator###
+### `regexp` Operator ###
 
 Return `true` if a property matches a given regular expression. The whole term must match the expression; use `.*` for both a prefix and suffix to ensure you match the rest of the term. Also be sure you escape special characters: This is a JSON string of a regular expression, not a regular expression itself. Only the *simple* form exists.
 
 		{"regexp": {variable: regular_expression}}
 
-###`match_all` Operator###
+### `match_all` Operator ###
 
 Dummy operator that always returns `true`. It is an artifact of ElasticSearch filter expressions. Use `true` instead.
 
@@ -312,13 +312,13 @@ Dummy operator that always returns `true`. It is an artifact of ElasticSearch fi
 String Operators
 ----------------
 
-###`length` Operator###
+### `length` Operator ###
 
 Return the length of a string.
 
 		{"length": expression}
 
-###`left` Operator###
+### `left` Operator ###
 
 Return the left-part of given string. `null` parameters result in `null`. `left` accepts a numeric `length`: negative length results in the empty string.  `left` also accepts a string `sentinel`: If found, will return everything to the left of the `sentinel`, otherwise will return the whole string.
 
@@ -326,14 +326,14 @@ Return the left-part of given string. `null` parameters result in `null`. `left`
 		{"left": {variable: sentinel}}
 		{"left": [expression, length]}
 
-###`right` Operator###
+### `right` Operator ###
 
 Return the right-part of given string. `null` parameters result in `null`; negative length results in the empty string.  
 
 		{"right": {variable: length}}
 		{"right": [expression, length]}
 
-###`between` Operator###
+### `between` Operator ###
 
 Return the leftmost substring between a given `prefix` and `suffix`
 
@@ -359,7 +359,7 @@ If the `prefix` is `null`, everything from the beginning of the string to the su
 
 
 
-###`find` Operator###
+### `find` Operator ###
 
 Test if property contains given substring, return the index of the first character if found.
 
@@ -382,7 +382,7 @@ JSON Expressions treat zero (`0`) as a truthy value; this implies `find` can be 
 		{"find": {variable, substring}, "default": -1}
 
 
-###`concat` Operator###
+### `concat` Operator ###
 
 Concatenate an array of strings. with the given `separator`
 
@@ -423,14 +423,14 @@ If any of the strings empty, or are `null`, they are ignored.
 
 
 
-###`not_left` Operator###
+### `not_left` Operator ###
 
 Removes the `length` left-most characters from the given string, returning the rest. `null` parameters result in `null`; negative `length` returns the whole string. Notice that concatenating `left` and `not_left` will return the original expression for all integer `length`.    
 
 		{"not_left": {variable: length}}
 		{"not_left": [expression, length]}
 
-###`not_right` Operator###
+### `not_right` Operator ###
 
 Removes the `length` right-most characters from the given string, returning the rest. `null` parameters result in `null`; negative `length` returns the whole string. Notice that concatenating `right` and `not_right` will return the original expression for all integer `length`.    
 
@@ -442,7 +442,7 @@ Conditional Operators
 
 Conditional operators expect a Boolean value to decide on. If the value provided is not Boolean, it is considered `true`; if the value is missing or `null`, it is considered `false`. This is different than many other languages: ***Numeric zero (`0`) is truthy***  
 
-###`when` Operator###
+### `when` Operator ###
 
 If the `when` clause evaluates to `true` then return the value found in the `then` clause, otherwise return the value of the `else` clause. 
 	
@@ -454,7 +454,7 @@ If the `when` clause evaluates to `true` then return the value found in the `the
 
 Both the `then` and `else` clause are optional, and default to returning `null`.
 
-###`case` Operator###
+### `case` Operator ###
 
 Evaluates a list of `when` sub-clauses in order, if one evaluates to `true` the `then` clause is evaluated for a return value, and the remaining sub-clauses are ignored.
 
@@ -473,19 +473,19 @@ The last item in the list can be a plain expression, called the `default_express
 Type Conversion
 ---------------
 
-###`number` Operator###
+### `number` Operator ###
 
 Convert a string to a numeric value.
 
 		{"number": expression}
 
-###`string` Operator###
+### `string` Operator ###
 
 Convert a number to a string value
 
 		{"string": expression}
 
-###`date` Operator###
+### `date` Operator ###
 
 Convert a literal value to an absolute, or relative, unix datestamp. Only literal values, and not JSON Expressions, are acceptable operands. 
 
@@ -494,11 +494,11 @@ Convert a literal value to an absolute, or relative, unix datestamp. Only litera
 The literal is parsed according to a [date and time mini language](jx_time.md).
 
 
-###`literal` Operator###
+### `literal` Operator ###
 
 Except for the right-hand-side of simple form operations, JSON expressions will interpret JSON as an expression. Sometimes you just want the literal JSON value. `literal` simply returns the property value, unchanged.
 
-		{"eq": {"name", "kyle"}}
+		{"eq": {"name": "kyle"}}
 
 Can be stated using the formal (array) form: 
 
@@ -509,7 +509,7 @@ The literal can be primitive, or whole objects
 		{"literal": "kyle"}
 		{"literal": {"name": "Kyle Lahnakoski", "age": 41}}
 
-###`tuple` Operator###
+### `tuple` Operator ###
 
 You can build a tuple from a JSON array of expressions. This is useful when building compound terms, or building lists with dynamic content. 
 
@@ -520,7 +520,7 @@ gives
 		[1459619303.633, 1459555200.0]
 
 
-###`leaves` Operator###
+### `leaves` Operator ###
 
 Flattens a (deep) JSON structure to leaf form - where each property name is a dot-delimited path to the values found. Shallow JSON objects are not changed. The `leaves` operator can be used in queries to act like the star (`*`) special form. 
 

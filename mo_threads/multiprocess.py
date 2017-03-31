@@ -23,17 +23,16 @@ from mo_threads.queues import Queue
 from mo_threads.signal import Signal
 from mo_threads.threads import Thread, THREAD_STOP
 
-string2quote = get_module("mo_json").quote
 DEBUG = False
 
 
 class Process(object):
     def __init__(self, name, params, cwd=None, env=None, debug=False, shell=False, bufsize=-1):
         self.name = name
-        self.service_stopped = Signal("stopped signal for " + string2quote(name))
-        self.stdin = Queue("stdin for process " + string2quote(name), silent=True)
-        self.stdout = Queue("stdout for process " + string2quote(name), silent=True)
-        self.stderr = Queue("stderr for process " + string2quote(name), silent=True)
+        self.service_stopped = Signal("stopped signal for " + strings.quote(name))
+        self.stdin = Queue("stdin for process " + strings.quote(name), silent=True)
+        self.stdout = Queue("stdout for process " + strings.quote(name), silent=True)
+        self.stderr = Queue("stderr for process " + strings.quote(name), silent=True)
 
         try:
             self.debug = debug or DEBUG

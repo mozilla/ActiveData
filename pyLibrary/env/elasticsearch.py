@@ -701,9 +701,9 @@ class Cluster(object):
         RETURN LIST OF {"alias":a, "index":i} PAIRS
         ALL INDEXES INCLUDED, EVEN IF NO ALIAS {"alias":Null}
         """
-        data = self.get("/_cluster/state", retry={"times": 5}, timeout=3)
+        data = self.get("/_aliases", retry={"times": 5}, timeout=3)
         output = []
-        for index, desc in data.metadata.indices.items():
+        for index, desc in data.items():
             if not desc["aliases"]:
                 output.append({"index": index, "alias": None})
             else:

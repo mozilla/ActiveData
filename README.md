@@ -14,6 +14,47 @@ ActiveData is a service! You can certainly setup your own service, but it is eas
 * Elasticsearch **version 1.7.x**
 
 
+### Elasticsearch Configuration
+
+Elasticsearch has a configuration file at `config/elasticsearch.yml`. You must modify it to turn on scripting.  Add these two lines at the top of the file:
+
+    script.inline: on
+    script.indexed: on
+
+We enable compression for faster transfer speeds
+
+    http.compression: true
+
+And it is a good idea to give your cluster a unique name so it does not join others on your local network
+
+	cluster.name: lahnakoski_dev
+
+Then you can run Elasticsearch:
+ 
+    c:\elasticsearch>bin\elasticsearch
+
+Elasticsearch runs off port 9200. Test it is working 
+
+	curl http://localhost:9200
+
+you should expect something like 
+
+	{
+	  "status" : 200,
+	  "name" : "dev",
+	  "cluster_name" : "lahnakoski_dev",
+	  "version" : {
+	    "number" : "1.7.5",
+	    "build_hash" : "00f95f4ffca6de89d68b7ccaf80d148f1f70e4d4",
+	    "build_timestamp" : "2016-02-02T09:55:30Z",
+	    "build_snapshot" : false,
+	    "lucene_version" : "4.10.4"
+	  },
+	  "tagline" : "You Know, for Search"
+	}
+
+
+
 ## Installation
 
 It is still too early for PyPi install, so please clone *master* off of github:
@@ -69,17 +110,19 @@ Jump to your git project directory, set your `PYTHONPATH` and run:
 
 ## Verify
 
+If you have no records in your Elasticsearch cluster, then you must add some before you can query them.
+
+Make a table in Elasticsearch, with one record: 
+
+    curl -XPUT "http://localhost:9200/movies/movie/1" -d "{\"name\":\"The Parent Trap\",\"released\":\"29 July` 1998\",\"imdb\":\"http://www.imdb.com/title/tt0120783/\",\"rating\":\"PG\",\"director\":{\"name\":\"Nancy Meyers\",\"dob\":\"December 8, 1949\"}}"
+
 Assuming you used the defaults, you can verify the service is up if you can
 access the Query Tool at [http://localhost:5000/tools/query.html](http://localhost:5000/tools/query.html).
 You may use it to send queries to your instance of the service. For example:
 
 ```javascript
-    {"from":"unittest"}
+    {"from":"movies"}
 ```
-
-This query can be used on [Engineering Productivity's](https://wiki.mozilla.org/EngineeringProductivity)
-[public ActiveData instance](http://activedata.allizom.org/tools/query.html),
-and you can use a similar query to get a few sample lines from your cluster.
 
 ## Tests
 

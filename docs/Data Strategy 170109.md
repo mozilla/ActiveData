@@ -58,9 +58,9 @@ The current scale is good, but should be increased for faster speeds and higher 
 | Up to 400 vCPUs for ETL pipeline                  | $1000/month |
 
 
-##Effort
+## Effort
 
-###Time Consuming Categories
+### Time Consuming Categories
 
 * ETL is a problem - Transformation, denormalization, scrubbing, multiple sources
 	* JSON solves the denormalization problem
@@ -81,7 +81,7 @@ The current scale is good, but should be increased for faster speeds and higher 
 	* distributed transactions
 	* streaming, memory/disk limits
 
-###Time Consuming Combinations
+### Time Consuming Combinations
 
 * Big ETL
 	* Data/Processing anomalies
@@ -114,7 +114,7 @@ Architectural Options
 
 There are three architectural classes that can solve this problem. I believe it is better we decide on the architectural class, rather than a specific solution. This will guide our choice of technology for at least a few years.
 
-###Current architecture - Big/Hot
+### Current architecture - Big/Hot
 
 A single warehouse with low latency access to raw data and aggregates. Young-company BI vendors offer this type of solution to trillions of records, or more.  
 
@@ -123,14 +123,14 @@ A single warehouse with low latency access to raw data and aggregates. Young-com
 * Are we getting value? Do we believe there is future potential value?
 * Costly:  We should properly fund this. 
 
-###Alternate Architecture - Big/Cold with Small/Hot extracts
+### Alternate Architecture - Big/Cold with Small/Hot extracts
 
 Central data warehouse with fast, focused, extracts to satellite datamarts. Similar to Telemetry's architecture, and the most common BI architecture that balances resources. 
 
 * Two extract stages: Inevitably one will require table schemas, transformation scripts, and schedule. 
 * Adds resistance to ad-hoc analysis
 
-###Alternate Architecture - Small/Hot
+### Alternate Architecture - Small/Hot
 
 Small focused apps: OrangeFactor, Perfherder, AreWeFastYet  
 
@@ -140,7 +140,7 @@ Small focused apps: OrangeFactor, Perfherder, AreWeFastYet
 * No Adhoc queries - turn around time will be days, at best. We can assume it will not be done.
 
 
-##Other Mozilla Datasets
+## Other Mozilla Datasets
 
 What else is out there? How big are they? How fast do they respond?
 
@@ -175,7 +175,7 @@ Generally, this is a story about scope creep.
 
 ActiveData is one part of an overall arc towards a queryable datastore that does not require ETL to load. 
 
-###BugzillaETL
+### BugzillaETL
 
 What was learnt
 
@@ -186,7 +186,7 @@ What was learnt
   * one2many (nested documents)
 * JSON solves the more common data migrations (add/remove columns)
 
-###DatazillaAlerts
+### DatazillaAlerts
 
 What was learnt
 
@@ -201,7 +201,7 @@ Dashboarding Problem
 
 
 
-##Past Work
+## Past Work
 
 A review of past work to help characterize where the time went.  Only includes the ETL, and does not include the ActiveData service, or the few other satellite applications required. 
 

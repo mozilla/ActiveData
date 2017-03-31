@@ -77,6 +77,10 @@ class DataObject(Mapping):
     def __iter__(self):
         return (k for k in self.keys())
 
+    def __unicode__(self):
+        obj = _get(self, "_obj")
+        return unicode(obj)
+
     def __str__(self):
         obj = _get(self, "_obj")
         return str(obj)

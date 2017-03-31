@@ -22,10 +22,12 @@ from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_math import Math, OR, MAX
 from mo_times.dates import Date
+
 from pyLibrary import convert
 from pyLibrary.queries.containers import STRUCT, OBJECT
 from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expression_compiler import compile_expression
+from pyLibrary.sql.sqlite import quote_column
 
 ALLOW_SCRIPTING = False
 TRUE_FILTER = True
@@ -267,7 +269,7 @@ class Variable(Expression):
         return agg+".get("+convert.value2quote(path[-1])+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        cols = [c for c in schema.columns if startswith_field(schema.get_column_name(c), self.var)]
+        cols = [c for cname, cs in schema.items() if startswith_field(cname, self.var) for c in cs]
         if not cols:
             # DOES NOT EXIST
             return wrap([{"name": ".", "sql": {"0": "NULL"}, "nested_path": ROOT_PATH}])
@@ -275,13 +277,13 @@ class Variable(Expression):
         for col in cols:
             if col.type == OBJECT:
                 prefix = self.var + "."
-                for cn, cs in schema.columns.items():
+                for cn, cs in schema.items():
                     if cn.startswith(prefix):
                         for child_col in cs:
-                            acc[literal_field(child_col.nested_path[0])][literal_field(schema.get_column_name(child_col))][json_type_to_sql_type[child_col.type]] = schema.quote_column(child_col.es_column).sql
+                            acc[literal_field(child_col.nested_path[0])][literal_field(schema.get_column_name(child_col))][json_type_to_sql_type[child_col.type]] = quote_column(child_col.es_column).sql
             else:
                 nested_path = col.nested_path[0]
-                acc[literal_field(nested_path)][literal_field(schema.get_column_name(col))][json_type_to_sql_type[col.type]] = schema.quote_column(col.es_column).sql
+                acc[literal_field(nested_path)][literal_field(schema.get_column_name(col))][json_type_to_sql_type[col.type]] = quote_column(col.es_column).sql
 
         return wrap([
             {"name": relative_field(cname, self.var), "sql": types, "nested_path": nested_path}
@@ -750,7 +752,7 @@ class DateOp(Literal):
         Literal.__init__(self, op, Date(term.date).unix)
 
     def to_python(self, not_null=False, boolean=False):
-        return "Date("+quote(self.value)+").unix"
+        return unicode(Date(self.value).unix)
 
     def to_sql(self, schema, not_null=False, boolean=False):
         return wrap([{"name": ".", "sql": {"n": sql_quote(json2value(self.json))}}])
@@ -837,7 +839,7 @@ class LeavesOp(Expression):
                 "name": join_field(split_field(schema.get_column_name(c))[prefix_length:]),
                 "sql": Variable(schema.get_column_name(c)).to_sql(schema)[0].sql
             }
-            for n, cols in schema.columns.items()
+            for n, cols in schema.items()
             if startswith_field(n, term)
             for c in cols
             if c.type not in STRUCT
@@ -1315,7 +1317,6 @@ class NeOp(Expression):
         return OrOp("or", [self.lhs.missing(), self.rhs.missing()])
 
 
-
 class NotOp(Expression):
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
@@ -1325,10 +1326,16 @@ class NotOp(Expression):
         return "!(" + self.term.to_ruby() + ")"
 
     def to_python(self, not_null=False, boolean=False):
-        return "not (" + self.term.to_python() + ")"
+        return "not (" + self.term.to_python() + " == None)"
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        return wrap([{"name": ".", "sql": {"b": "NOT (" + self.term.to_sql(schema).b + ")"}}])
+        sql = self.term.to_sql(schema)[0].sql
+        return wrap([{"name": ".", "sql": {
+            "0": "1",
+            "b": "NOT (" + sql.b + ")",
+            "n": "(" + sql.n + " IS NULL)",
+            "s": "(" + sql.s + " IS NULL)"
+        }}])
 
     def vars(self):
         return self.term.vars()
@@ -2265,6 +2272,7 @@ class RightOp(Expression):
         else:
             return OrOp(None, [self.value.missing(), self.length.missing()])
 
+
 class NotRightOp(Expression):
     has_simple_form = True
 
@@ -2287,7 +2295,7 @@ class NotRightOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         v = self.value.to_python()
         l = self.length.to_python()
-        return "None if " + v + " == None or " + l + " == None else " + v + "[0:max(0, len("+v+")-(" + l + "))]"
+        return "None if " + v + " == None or " + l + " == None else " + v + "[0:max(0, len(" + v + ")-(" + l + "))]"
 
     def to_sql(self, schema, not_null=False, boolean=False):
         v = self.value.to_sql(schema, not_null=True)[0].sql.s
@@ -2295,7 +2303,6 @@ class NotRightOp(Expression):
         l = "max(0, length("+v+")-max(0, "+r+"))"
         expr = "substr(" + v + ", 1, " + l + ")"
         return wrap([{"name": ".", "sql": {"s": expr}}])
-
 
     def __data__(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
@@ -2784,7 +2791,7 @@ def normalize_esfilter(esfilter):
 
 def _normalize(esfilter):
     """
-    TODO: DO NOT USE Dicts, WE ARE SPENDING TOO MUCH TIME WRAPPING/UNWRAPPING
+    TODO: DO NOT USE Data, WE ARE SPENDING TOO MUCH TIME WRAPPING/UNWRAPPING
     REALLY, WE JUST COLLAPSE CASCADING `and` AND `or` FILTERS
     """
     if esfilter is TRUE_FILTER or esfilter is FALSE_FILTER or esfilter.isNormal:

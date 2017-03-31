@@ -8,13 +8,13 @@ You probably got here from the [ActiveData Query Tool](http://activedata.allizom
 
 To understand ActiveData you have two paths forward:
 
-##Best Option: Please Ask a Question
+## Best Option: Please Ask a Question
 
 If you an occasional user, please [ask me, `:ekyle`](mailto://klahnakoski@mozilla.com), for a query that will pull the information you need; this is the most efficient use of your time. You probably came to ActiveData because you have a question that data may answer for you. If you only have a question every couple of months, you should not be wasting your time (re)learning the schema, and the query language. By asking a question, you will get the data you need faster, and I get to learn what people are interested in and make dashboards that present that information in a meaningful way.
 
 Asking just one question is not enough. The schemas are enormous and and growing; trying to find the needle in the haystack is not a good use of your time. After asking several questions, you will have a constellation of queries that are relevant to your role. These queries will serve as meaningful examples upon which you can learn the query language, and will give you hints about the topology of data you are most interested in.
    
-##Second Option: Explore the schemas yourself
+## Second Option: Explore the schemas yourself
 
 If you plan to interact with ActiveData over an extended period of time, then it will be worth your time to learn the query language and the relevant schema. If you have used raw SQL in the past to explore the contents of a database, then you will be familiar with the process of exploring ActiveData. In general, a database schema is only a superficial description of the data; you will need to know many more details before you can use it effectively. For example, you must be familiar with the domain-of-values for given columns, their cardinality, and which values are most common. There will be business-specific meaning given to the values, and there will be important correlations between columns that you can use to reduce apparent complexity.
 
@@ -47,7 +47,7 @@ As of this writing (September 2016) the following tables are available.
 * **test_failures** - A summary of test failures 
 * **treeherder** - A sample of Treeherder data 
 
-###2. Investigate the schema
+### 2. Investigate the schema
 
 Knowing the column names and types is not enough.  Knowing the set-of-values that columns take on is often more important. The first step is to show some records so you can get a feeling for both:
 
@@ -144,7 +144,7 @@ which will give you `data` without the obtuse "." property:
 > re-format the raw JSON response as a familiar database table; which often hides the true 
 > format. Use the Raw JSON view to see the effect of `format`.      
 
-###3. Inspect the domain of columns
+### 3. Inspect the domain of columns
 
 Examples, only give hints about the variety of records available. Most of your time will be spent understanding the domain of the columns, so you can filter out what is not relevant to your needs.
 
@@ -166,7 +166,7 @@ The `build.platform` property is used heavily when querying `jobs` because most 
 
 <div style="text-align:right;"><a href="http://activedata.allizom.org/tools/query.html#query_id=xNGik2of">http://activedata.allizom.org/tools/query.html#query_id=xNGik2of</a></div>
 
-###4. Restrict your queries by adding to the `where` clause
+### 4. Restrict your queries by adding to the `where` clause
 
 As you refine what you are looking for, you will build up a `where` clause to exclude the "junk" you are not interested in. In that light, let us restrict ourselves to Windows jobs, and let's pull some examples from the past week:
 
@@ -235,7 +235,7 @@ Both `test` and `talos` jobs have a `run.suite` property that is not used by bui
 		"limit":100
 	}
 
-###5. Rinse, and Repeat...
+### 5. Rinse, and Repeat...
 
 We continue to add to the `where` clause: Restricting ourselves to `mochitest`. We also notice jobs run off of multiple branches:
 
@@ -273,7 +273,7 @@ Let us restrict ourselves to `mozilla-inbound`, the principal branch for Firefox
 <div style="text-align:right;"><a href="http://activedata.allizom.org/tools/query.html#query_id=gXIycgdT">http://activedata.allizom.org/tools/query.html#query_id=gXIycgdT</a></div>
  
 
-###6. Request Aggregates
+### 6. Request Aggregates
 
 Individual records are useful for understanding the data and building a query. They are also useful to the people that are familiar with the events that produced those records. But, you will need aggregate statistics to get a better holistic understanding of trends.
 
@@ -307,7 +307,7 @@ In the following query we are going to use `edges`, which acts much like `groupb
 <div style="text-align:right;"><a href="http://activedata.allizom.org/tools/query.html#query_id=G92jrelZ">http://activedata.allizom.org/tools/query.html#query_id=G92jrelZ</a></div>
  
 
-###7. Further processing
+### 7. Further processing
 
 Whether you are pulling long streams of raw records, or pulling compact aggregates, your adventure with ActiveData is over, but your job is not complete. The most enlightening answers come from data that has undergone a complex series of transformations; required to properly correlate it to other data, and organize it for presentation. ActiveData does not do that, it is not an analysis tool, its responsibilities are to make a large amount of data searchable, provide basic aggregates, and allow data reshaping. Analysis and charting is better done by other tools.
 
@@ -337,6 +337,6 @@ You can pull information into your (Python) server:
 
 Similarly for other languages and tools.
 
-##Summary
+## Summary
 
 I hope I have given you a good sense for how to explore the ActiveData schema, and how to build a query that will give you the data you are interested in.  More specific documentation regarding the intricacies of JSON Query Expressions, and ActiveData, is all centrally linked on the [main documentation page](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx.md)

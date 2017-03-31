@@ -94,16 +94,16 @@ def zipall(*args):
 
 
 def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=None):
-    show_detail=True
+    show_detail = True
+    test = unwrap(test)
+    expected = unwrap(expected)
     try:
-        if test==None and expected==None:
+        if test is None and expected is None:
             return
         elif isinstance(test, UniqueIndex):
             if test ^ expected:
                 Log.error("Sets do not match")
         elif isinstance(expected, Mapping) and isinstance(test, Mapping):
-            test = unwrap(test)
-            expected = unwrap(expected)
             for k, v2 in unwrap(expected).items():
                 v1 = test.get(k)
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)

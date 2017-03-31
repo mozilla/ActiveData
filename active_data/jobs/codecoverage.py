@@ -45,7 +45,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             ],
             "where": {"and": [
                 {"missing": "source.method.name"},
-                {"neq":{"source.file.total_covered":0}},
+                {"neq": {"source.file.total_covered": 0}},
                 {"eq": {
                     "source.file.name": not_summarized.source.file.name,
                     "build.revision12": not_summarized.build.revision12
@@ -240,7 +240,11 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
                 "limit": 10
             })
             if todo.data:
-                Log.error("Failure to update")
+                Log.warning(
+                    "Failure to update {{revision}}, {{file}}",
+                    revision=not_summarized.build.revision12,
+                    file=not_summarized.source.file.name
+                )
 
 
 def loop(source, coverage_summary_index, settings, please_stop):
@@ -267,9 +271,11 @@ def loop(source, coverage_summary_index, settings, please_stop):
                         "from": "coverage",
                         "groupby": ["source.file.name", "build.revision12"],
                         "where": {"and": [
+                            # {"eq": {"source.language": "c/c++"}},
+                            # {"eq":{"source.file.name": "resource://gre/modules/osfile/osfile_unix_allthreads.jsm"}},
                             {"neq": {"source.file.total_covered": 0}},
                             {"missing": "source.method.name"},
-                            {"missing": "source.file.min_line_siblings"},
+                            {"missing": "source.file.min_line_siblings"},  #MARKER THAT WORK IS DONE
                             {"gte": {"repo.push.date": push_date_filter}}
                         ]},
                         "format": "list",

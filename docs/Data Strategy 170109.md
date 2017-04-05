@@ -37,7 +37,7 @@ The scope of the problem has gently expanded, without me noticing, to the point 
 
 ## Current Scale (Oct 2016)
 
-ActiveData is a data warehouse meant to provide aggregates fast. It is ingesting structured logs at a rate of [61 thousand files, 327 gigabytes, per day](http://activedata.allizom.org/tools/query.html#query_id=7kiXcEIe) and [800 requests per day (30K requests per day for codecoverage)](http://activedata.allizom.org/tools/query.html#query_id=07I3Z76e) (not including static assets, not include direct-to-cluster requests, most from its own peripheral services) 
+ActiveData is a data warehouse meant to provide aggregates fast. It is ingesting structured logs at a rate of [61 thousand files, 327 gigabytes, per day](https://activedata.allizom.org/tools/query.html#query_id=0C1HdSut) and [800 requests per day (30K requests per day for codecoverage)](https://activedata.allizom.org/tools/query.html#query_id=YQIp9BbU) (not including static assets, not include direct-to-cluster requests, most from its own peripheral services) 
 
 | Table         |  Record Count | Description                                                        |        
 | ------------- | -------------:|:------------------------------------------------------------------ |

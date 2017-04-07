@@ -111,7 +111,7 @@ class Schema(object):
 
     def __init__(self, table_name, columns):
         self.table = table_name  # USED AS AN EXPLICIT STATEMENT OF PERSPECTIVE IN THE DATABASE
-        self.lookup = Index(keys=[join_field(["names", self.table])], data=columns)
+        self.lookup = Index(keys=[join_field(["names", "\."])], data=columns)
 
     def __getitem__(self, column_name):
         return self.lookup[column_name]

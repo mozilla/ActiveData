@@ -82,11 +82,11 @@ class FromES(Container):
         self.worker = None
 
         columns = self.get_columns(table_name=name)
-        self._schema = Schema(columns)
+        self._schema = Schema(alias, columns)
 
         if typed == None:
             # SWITCH ON TYPED MODE
-            self.typed = any(c.name in ("$value", "$object") for c in columns)
+            self.typed = any(c.names["."] in ("$value", "$object") for c in columns)
         else:
             self.typed = typed
 

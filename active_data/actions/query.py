@@ -131,7 +131,7 @@ def _test_mode_wait(query):
                 "cardinality",
                 "last_updated"
             ],
-            "where": {"eq": {"table": join_field(split_field(query["from"])[0:1])}}
+            "where": {"eq": {"es_index": join_field(split_field(query["from"])[0:1])}}
         })
 
         # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION

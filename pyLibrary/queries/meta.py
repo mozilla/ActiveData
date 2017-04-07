@@ -23,7 +23,7 @@ from mo_threads import Till
 from mo_times.dates import Date
 from mo_times.durations import HOUR, MINUTE
 from mo_times.timer import Timer
-from mo_dots import Data
+from mo_dots import Data, relative_field, concat_field
 from mo_dots import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
 from mo_dots import wrap
 from mo_kwargs import override
@@ -76,7 +76,7 @@ class FromESMetadata(Schema):
         self.meta=Data()
         table_columns = metadata_tables()
         column_columns = metadata_columns()
-        self.meta.tables = ListContainer("meta.tables", [], wrap({c.names["meta.tables"]: c for c in table_columns}))
+        self.meta.tables = ListContainer("meta.tables", [], wrap({c.names["."]: c for c in table_columns}))
         self.meta.columns = ColumnList()
         self.meta.columns.insert(column_columns)
         self.meta.columns.insert(table_columns)
@@ -101,14 +101,14 @@ class FromESMetadata(Schema):
 
     def _upsert_column(self, c):
         # ASSUMING THE  self.meta.columns.locker IS HAD
-        existing_columns = self.meta.columns.find(c.table, c.name)
+        existing_columns = self.meta.columns.find(c.es_index, c.names["."])
         if not existing_columns:
             self.meta.columns.add(c)
             self.todo.add(c)
 
             if ENABLE_META_SCAN:
                 if DEBUG:
-                    Log.note("todo: {{table}}::{{column}}", table=c.table, column=c.es_column)
+                    Log.note("todo: {{table}}::{{column}}", table=c.es_index, column=c.es_column)
                 # MARK meta.columns AS DIRTY TOO
                 cols = self.meta.columns.find("meta.columns", None)
                 for cc in cols:
@@ -117,13 +117,12 @@ class FromESMetadata(Schema):
                 self.todo.extend(cols)
         else:
             canonical = existing_columns[0]
-            if canonical.relative and not c.relative:
-                return  # RELATIVE COLUMNS WILL SHADOW ABSOLUTE COLUMNS
-
-            for key in Column.__slots__:
-                canonical[key] = c[key]
+            if canonical is not c:
+                set_default(c.names, canonical.names)
+                for key in Column.__slots__:
+                    canonical[key] = c[key]
             if DEBUG:
-                Log.note("todo: {{table}}::{{column}}", table=canonical.table, column=canonical.es_column)
+                Log.note("todo: {{table}}::{{column}}", table=canonical.es_index, column=canonical.es_column)
             self.todo.add(canonical)
 
     def _get_columns(self, table=None):
@@ -142,19 +141,20 @@ class FromESMetadata(Schema):
             lambda r: not r.es_column.startswith("other.") and
                       not r.es_column.startswith("previous_values.cf_") and
                       not r.es_index.startswith("debug") and
-                      r.es_column.find("=")==-1 and
-                      r.es_column.find(" ")==-1
+                      r.es_column.find("=") == -1 and
+                      r.es_column.find(" ") == -1
         )
         with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
             def add_column(c, query_path):
                 c.last_updated = Date.now()
-                c.table = join_field([c.es_index]+split_field(query_path[0]))
+                if query_path[0] != ".":
+                    c.names[literal_field(query_path[0])] = relative_field(c.names["."], query_path[0])
 
                 with self.meta.columns.locker:
                     self._upsert_column(c)
                     for alias in meta.aliases:
                         c = copy(c)
-                        c.table = join_field([alias]+split_field(query_path[0]))
+                        c.es_index = alias
                         self._upsert_column(c)
 
             # LIST OF EVERY NESTED PATH
@@ -176,39 +176,30 @@ class FromESMetadata(Schema):
 
             # ADD RELATIVE COLUMNS
             for abs_column in abs_columns:
-                full_path = abs_column.nested_path
-                abs_depth = len(full_path)-1
-                abs_parent = full_path[1] if abs_depth else ""
-
                 for query_path in query_paths:
-                    rel_depth = len(query_path)-1
-                    rel_parent = query_path[0]
-                    rel_column = copy(abs_column)
-                    rel_column.relative = True
+                    add_column(abs_column, query_path)
 
-                    add_column(copy(abs_column), query_path)
-
-                    if rel_parent == ".":
-                        add_column(rel_column, query_path)
-                    elif abs_column.es_column.startswith(rel_parent+"."):
-                        rel_column.name = abs_column.es_column[len(rel_parent)+1:]
-                        add_column(rel_column, query_path)
-                    elif abs_column.es_column == rel_parent:
-                        rel_column.name = "."
-                        add_column(rel_column, query_path)
-                    elif not abs_parent:
-                        # THIS RELATIVE NAME (..o) ALSO NEEDS A RELATIVE NAME (o)
-                        # AND THEN REMOVE THE SHADOWED
-                        rel_column.name = "." + ("." * (rel_depth - abs_depth)) + abs_column.es_column
-                        add_column(rel_column, query_path)
-                    elif rel_parent.startswith(abs_parent+"."):
-                        rel_column.name = "." + ("." * (rel_depth - abs_depth)) + abs_column.es_column
-                        add_column(rel_column, query_path)
-                    elif rel_parent != abs_parent:
-                        # SIBLING NESTED PATHS ARE INVISIBLE
-                        pass
-                    else:
-                        Log.error("logic error")
+                    # if rel_parent == ".":
+                    #     add_column(rel_column, query_path)
+                    # elif abs_column.es_column.startswith(rel_parent+"."):
+                    #     rel_column.name = abs_column.es_column[len(rel_parent)+1:]
+                    #     add_column(rel_column, query_path)
+                    # elif abs_column.es_column == rel_parent:
+                    #     rel_column.name = "."
+                    #     add_column(rel_column, query_path)
+                    # elif not abs_parent:
+                    #     # THIS RELATIVE NAME (..o) ALSO NEEDS A RELATIVE NAME (o)
+                    #     # AND THEN REMOVE THE SHADOWED
+                    #     rel_column.name = "." + ("." * (rel_depth - abs_depth)) + abs_column.es_column
+                    #     add_column(rel_column, query_path)
+                    # elif rel_parent.startswith(abs_parent+"."):
+                    #     rel_column.name = "." + ("." * (rel_depth - abs_depth)) + abs_column.es_column
+                    #     add_column(rel_column, query_path)
+                    # elif rel_parent != abs_parent:
+                    #     # SIBLING NESTED PATHS ARE INVISIBLE
+                    #     pass
+                    # else:
+                    #     Log.error("logic error")
 
     def query(self, _query):
         return self.meta.columns.query(QueryOp(set_default(
@@ -225,31 +216,34 @@ class FromESMetadata(Schema):
         """
         try:
             # LAST TIME WE GOT INFO FOR THIS TABLE
-            short_name = join_field(split_field(table_name)[0:1])
-            table = self.get_table(short_name)[0]
+            table_path = split_field(table_name)
+            es_index_name = table_path[0]
+            query_path = join_field(table_path[1:])
+            table = self.get_table(es_index_name)[0]
+            abs_column_name = concat_field(query_path, column_name)
 
             if not table:
                 table = Table(
-                    name=short_name,
+                    name=es_index_name,
                     url=None,
                     query_path=None,
                     timestamp=Date.now()
                 )
                 with self.meta.tables.locker:
                     self.meta.tables.add(table)
-                self._get_columns(table=short_name)
+                self._get_columns(table=es_index_name)
             elif force or table.timestamp == None or table.timestamp < Date.now() - MAX_COLUMN_METADATA_AGE:
                 table.timestamp = Date.now()
-                self._get_columns(table=short_name)
+                self._get_columns(table=es_index_name)
 
             with self.meta.columns.locker:
                 columns = self.meta.columns.find(table_name, column_name)
             if columns:
-                columns = jx.sort(columns, "name")
+                columns = jx.sort(columns, "names.\.")
                 # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
                 while len(self.todo) and not all(columns.get("last_updated")):
                     if DEBUG:
-                        Log.note("waiting for columns to update {{columns|json}}", columns=[c.table+"."+c.es_column for c in columns if not c.last_updated])
+                        Log.note("waiting for columns to update {{columns|json}}", columns=[c.es_index+"."+c.es_column for c in columns if not c.last_updated])
                     Till(seconds=1).wait()
                 return columns
         except Exception as e:
@@ -268,7 +262,7 @@ class FromESMetadata(Schema):
         if c.type in STRUCT:
             Log.error("not supported")
         try:
-            if c.table == "meta.columns":
+            if c.es_index == "meta.columns":
                 with self.meta.columns.locker:
                     partitions = jx.sort([g[c.es_column] for g, _ in jx.groupby(self.meta.columns, c.es_column) if g[c.es_column] != None])
                     self.meta.columns.update({
@@ -278,10 +272,10 @@ class FromESMetadata(Schema):
                             "cardinality": len(partitions),
                             "last_updated": Date.now()
                         },
-                        "where": {"eq": {"table": c.table, "es_column": c.es_column}}
+                        "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                     })
                 return
-            if c.table == "meta.tables":
+            if c.es_index == "meta.tables":
                 with self.meta.columns.locker:
                     partitions = jx.sort([g[c.es_column] for g, _ in jx.groupby(self.meta.tables, c.es_column) if g[c.es_column] != None])
                     self.meta.columns.update({
@@ -291,11 +285,11 @@ class FromESMetadata(Schema):
                             "cardinality": len(partitions),
                             "last_updated": Date.now()
                         },
-                        "where": {"eq": {"table": c.table, "name": c.name}}
+                        "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                     })
                 return
 
-            es_index = c.table.split(".")[0]
+            es_index = c.es_index.split(".")[0]
             result = self.default_es.post("/" + es_index + "/_search", data={
                 "aggs": {c.name: _counting_query(c)},
                 "size": 0
@@ -309,7 +303,7 @@ class FromESMetadata(Schema):
             query = Data(size=0)
             if cardinality > 1000 or (count >= 30 and cardinality == count) or (count >= 1000 and cardinality / count > 0.99):
                 if DEBUG:
-                    Log.note("{{table}}.{{field}} has {{num}} parts", table=c.table, field=c.es_column, num=cardinality)
+                    Log.note("{{table}}.{{field}} has {{num}} parts", table=c.es_index, field=c.es_column, num=cardinality)
                 with self.meta.columns.locker:
                     self.meta.columns.update({
                         "set": {
@@ -364,7 +358,7 @@ class FromESMetadata(Schema):
                     "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                 })
         except Exception as e:
-            if "IndexMissingException" in e and c.table.startswith(TEST_TABLE_PREFIX):
+            if "IndexMissingException" in e and c.es_index.startswith(TEST_TABLE_PREFIX):
                 with self.meta.columns.locker:
                     self.meta.columns.update({
                         "set": {
@@ -387,9 +381,9 @@ class FromESMetadata(Schema):
                         "cardinality",
                         "partitions",
                     ],
-                    "where": {"eq": {"names.meta\.columns": c.table, "es_column": c.es_column}}
+                    "where": {"eq": {"names.\\.": ".", "es_index": c.es_index, "es_column": c.es_column}}
                 })
-                Log.warning("Could not get {{col.table}}.{{col.es_column}} info", col=c, cause=e)
+                Log.warning("Could not get {{col.es_index}}.{{col.es_column}} info", col=c, cause=e)
 
     def monitor(self, please_stop):
         please_stop.on_go(lambda: self.todo.add(THREAD_STOP))
@@ -408,7 +402,7 @@ class FromESMetadata(Schema):
                             self.todo.extend(old_columns)
                             # TEST CONSISTENCY
                             for c, d in product(list(self.todo.queue), list(self.todo.queue)):
-                                if c.es_column == d.es_column and c.table == d.table and c != d:
+                                if c.es_column == d.es_column and c.es_index == d.es_index and c != d:
                                     Log.error("")
                         else:
                             if DEBUG:
@@ -417,7 +411,7 @@ class FromESMetadata(Schema):
                 column = self.todo.pop(Till(seconds=(10*MINUTE).seconds))
                 if column:
                     if DEBUG:
-                        Log.note("update {{table}}.{{column}}", table=column.table, column=column.es_column)
+                        Log.note("update {{table}}.{{column}}", table=column.es_index, column=column.es_column)
                     if column.type in STRUCT:
                         with self.meta.columns.locker:
                             column.last_updated = Date.now()
@@ -426,7 +420,7 @@ class FromESMetadata(Schema):
                         continue
                     try:
                         self._update_cardinality(column)
-                        if DEBUG and not column.table.startswith(TEST_TABLE_PREFIX):
+                        if DEBUG and not column.es_index.startswith(TEST_TABLE_PREFIX):
                             Log.note("updated {{column.name}}", column=column)
                     except Exception as e:
                         Log.warning("problem getting cardinality for {{column.name}}", column=column, cause=e)
@@ -483,36 +477,35 @@ def metadata_columns():
     return wrap(
         [
             Column(
-                names={"meta.columns":c},
-                es_index=None,
+                names={".":c},
+                es_index="meta.columns",
                 es_column=c,
                 type="string",
                 nested_path=ROOT_PATH
             )
             for c in [
-                "name",
                 "type",
                 "nested_path",
-                "relative",
                 "es_column",
-                "table"
+                "es_index"
             ]
         ] + [
             Column(
-                es_index=None,
-                names={"meta.columns":c},
+                es_index="meta.columns",
+                names={".":c},
                 es_column=c,
                 type="object",
                 nested_path=ROOT_PATH
             )
             for c in [
+                "names",
                 "domain",
                 "partitions"
             ]
         ] + [
             Column(
-                names={"meta.columns": c},
-                es_index=None,
+                names={".": c},
+                es_index="meta.columns",
                 es_column=c,
                 type="long",
                 nested_path=ROOT_PATH
@@ -523,8 +516,8 @@ def metadata_columns():
             ]
         ] + [
             Column(
-                names={"meta.columns": "last_updated"},
-                es_index=None,
+                names={".": "last_updated"},
+                es_index="meta.columns",
                 es_column="last_updated",
                 type="time",
                 nested_path=ROOT_PATH
@@ -532,12 +525,13 @@ def metadata_columns():
         ]
     )
 
+
 def metadata_tables():
     return wrap(
         [
             Column(
-                names={"meta.tables": c},
-                es_index=None,
+                names={".": c},
+                es_index="meta.tables",
                 es_column=c,
                 type="string",
                 nested_path=ROOT_PATH
@@ -549,8 +543,8 @@ def metadata_tables():
             ]
         ]+[
             Column(
-                names={"meta.tables": "timestamp"},
-                es_index=None,
+                names={".": "timestamp"},
+                es_index="meta.tables",
                 es_column="timestamp",
                 type="integer",
                 nested_path=ROOT_PATH
@@ -595,26 +589,27 @@ class ColumnList(Container):
     """
 
     def __init__(self):
-        self.data = {}  # MAP FROM TABLE NAME TO COLUMNS
+        self.data = {}  # MAP FROM ES_INDEX TO (abs_column_name to COLUMNS)
         self.locker = Lock()
         self.count=0
 
-    def find(self, table, column):
-        if not column:
-            return [c for cs in self.data.get(table, {}).values() for c in cs]
+    def find(self, es_index, abs_column_name):
+        if not abs_column_name:
+            return [c for cs in self.data.get(es_index, {}).values() for c in cs]
         else:
-            return self.data.get(table, {}).get(column, [])
+            return self.data.get(es_index, {}).get(abs_column_name, [])
 
     def insert(self, columns):
         for column in columns:
             self.add(column)
 
     def add(self, column):
-        if len(column.names)!=1:
+        if len(column.names) != 1:
             Log.error("not expected")
-        table, cname = column.names.items()[0]
+        es_index_name = column.es_index
+        cname = column.names["."]
 
-        columns_for_table = self.data.setdefault(table, {})
+        columns_for_table = self.data.setdefault(es_index_name, {})
         _columns = columns_for_table.setdefault(cname, [])
         _columns.append(column)
         self.count += 1
@@ -632,8 +627,8 @@ class ColumnList(Container):
         try:
             command = wrap(command)
             eq = command.where.eq
-            if eq.table:
-                columns = self.find(eq.table, eq.name)
+            if eq.es_index:
+                columns = self.find(eq.es_index, eq.name)
                 columns = [c for c in columns if all(c[k] == v for k, v in eq.items())]
             else:
                 columns = list(self)

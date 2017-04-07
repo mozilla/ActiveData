@@ -165,7 +165,7 @@ class ESUtils(object):
             _settings.schema = mo_json_config.get(url)
 
             # MAKE CONTAINER
-            container = self._es_cluster.get_or_create_index(tjson=tjson, settings=_settings)
+            container = self._es_cluster.get_or_create_index(tjson=tjson, kwargs=_settings)
             container.add_alias(_settings.index)
 
             # INSERT DATA

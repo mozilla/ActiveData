@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap
+from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, relative_field
 from mo_logs import Log
 from mo_threads import Thread
 from mo_times.timer import Timer
@@ -48,10 +48,11 @@ def is_deepop(es, query):
 def es_deepop(es, query):
     columns = query.frum.get_columns(query.frum.name)
     query_path = query.frum.query_path
-    columns = UniqueIndex(keys=["name"], data=sorted(columns, lambda a, b: cmp(len(b.nested_path), len(a.nested_path))), fail_on_dup=False)
-    map_to_es_columns = {c.name: c.es_column for c in columns}
+    index_field = concat_field("names", literal_field(query_path))
+    columns = UniqueIndex(keys=[index_field], data=sorted(columns, lambda a, b: cmp(len(b.nested_path), len(a.nested_path))), fail_on_dup=False)
+    map_to_es_columns = {relative_field(c.names["."], query_path): c.es_column for c in columns}
     map_to_local = {
-        c.name: "_inner" + c.es_column[len(c.nested_path[0]):] if len(c.nested_path) != 1 else "fields." + literal_field(c.es_column)
+        c.name: concat_field("_inner", c.nested_path[0]) if c.nested_path[0] != "." else "fields." + literal_field(c.es_column)
         for c in columns
     }
     # TODO: FIX THE GREAT SADNESS CAUSED BY EXECUTING post_expressions
@@ -103,7 +104,7 @@ def es_deepop(es, query):
     for s in listwrap(query.select):
         if isinstance(s.value, LeavesOp):
             if isinstance(s.value.term, Variable):
-                if s.value.term.var==".":
+                if s.value.term.var == ".":
                     # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
                     for c in columns:
                         if c.relative and c.type not in STRUCT:
@@ -118,7 +119,7 @@ def es_deepop(es, query):
                             i += 1
 
                     # REMOVE DOTS IN PREFIX IF NAME NOT AMBIGUOUS
-                    col_names = [c.name for c in columns if c.relative]
+                    col_names = [c.names["."] for c in columns if c.relative]
                     for n in new_select:
                         if n.name.startswith("..") and n.name.lstrip(".") not in col_names:
                             n.name = n.put.name = n.name.lstrip(".")

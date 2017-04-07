@@ -114,7 +114,7 @@ def get_decoders_by_depth(query):
 
 def es_aggsop(es, frum, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
-    es_column_map = {c.name: unwraplist(c.es_column) for c in frum.schema.columns}
+    es_column_map = {c.names["."]: unwraplist(c.es_column) for c in frum.schema.columns}
 
     es_query = Data()
     new_select = Data()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING

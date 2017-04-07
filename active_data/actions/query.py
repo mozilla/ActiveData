@@ -137,7 +137,7 @@ def _test_mode_wait(query):
         # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
         cols = [c for c in m.get_columns(table_name=query["from"], force=True) if c.type not in STRUCT]
         for c in cols:
-            Log.note("Mark {{column}} dirty at {{time}}", column=c.name, time=now)
+            Log.note("Mark {{column}} dirty at {{time}}", column=c.names["."], time=now)
             c.last_updated = now - TOO_OLD
             m.todo.push(c)
 

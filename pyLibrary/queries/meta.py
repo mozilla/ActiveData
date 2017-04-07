@@ -23,7 +23,7 @@ from mo_threads import Till
 from mo_times.dates import Date
 from mo_times.durations import HOUR, MINUTE
 from mo_times.timer import Timer
-from mo_dots import Data, relative_field, concat_field
+from mo_dots import Data, relative_field, concat_field, get_attr
 from mo_dots import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
 from mo_dots import wrap
 from mo_kwargs import override
@@ -127,10 +127,13 @@ class FromESMetadata(Schema):
 
     def _get_columns(self, table=None):
         # TODO: HANDLE MORE THEN ONE ES, MAP TABLE SHORT_NAME TO ES INSTANCE
-        meta = self.es_metadata.indices[table]
+        table_path = split_field(table)
+        es_index = table_path[0]
+        query_path = join_field(table_path[1:])
+        meta = self.es_metadata.indices[es_index]
         if not meta or self.last_es_metadata < Date.now() - OLD_METADATA:
             self.es_metadata = self.default_es.get_metadata(force=True)
-            meta = self.es_metadata.indices[table]
+            meta = self.es_metadata.indices[es_index]
         self._parse_properties(meta.index, Data(properties={"_id": {"type": "string", "index": "not_analyzed"}}), meta)
         for _, properties in meta.mappings.items():
             self._parse_properties(meta.index, properties, meta)
@@ -148,7 +151,7 @@ class FromESMetadata(Schema):
             def add_column(c, query_path):
                 c.last_updated = Date.now()
                 if query_path[0] != ".":
-                    c.names[literal_field(query_path[0])] = relative_field(c.names["."], query_path[0])
+                    c.names[query_path[0]] = relative_field(c.names["."], query_path[0])
 
                 with self.meta.columns.locker:
                     self._upsert_column(c)
@@ -214,14 +217,14 @@ class FromESMetadata(Schema):
         """
         RETURN METADATA COLUMNS
         """
+        table_path = split_field(table_name)
+        es_index_name = table_path[0]
+        query_path = join_field(table_path[1:])
+        table = self.get_table(es_index_name)[0]
+        abs_column_name = None if column_name == None else concat_field(query_path, column_name)
+
         try:
             # LAST TIME WE GOT INFO FOR THIS TABLE
-            table_path = split_field(table_name)
-            es_index_name = table_path[0]
-            query_path = join_field(table_path[1:])
-            table = self.get_table(es_index_name)[0]
-            abs_column_name = concat_field(query_path, column_name)
-
             if not table:
                 table = Table(
                     name=es_index_name,
@@ -237,7 +240,7 @@ class FromESMetadata(Schema):
                 self._get_columns(table=es_index_name)
 
             with self.meta.columns.locker:
-                columns = self.meta.columns.find(table_name, column_name)
+                columns = self.meta.columns.find(es_index_name, column_name)
             if columns:
                 columns = jx.sort(columns, "names.\.")
                 # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
@@ -249,10 +252,10 @@ class FromESMetadata(Schema):
         except Exception as e:
             Log.error("Not expected", cause=e)
 
-        if column_name:
-            Log.error("no columns matching {{table}}.{{column}}", table=table_name, column=column_name)
+        if abs_column_name:
+            Log.error("no columns matching {{table}}.{{column}}", table=table_name, column=abs_column_name)
         else:
-            self._get_columns(table=table_name)
+            self._get_columns(table=table_name)  # TO TEST WHAT HAPPENED
             Log.error("no columns for {{table}}?!", table=table_name)
 
     def _update_cardinality(self, c):
@@ -291,7 +294,7 @@ class FromESMetadata(Schema):
 
             es_index = c.es_index.split(".")[0]
             result = self.default_es.post("/" + es_index + "/_search", data={
-                "aggs": {c.name: _counting_query(c)},
+                "aggs": {c.names["."]: _counting_query(c)},
                 "size": 0
             })
             r = result.aggregations.values()[0]
@@ -330,12 +333,12 @@ class FromESMetadata(Schema):
                     })
                 return
             elif len(c.nested_path) != 1:
-                query.aggs[literal_field(c.name)] = {
+                query.aggs[literal_field(c.names["."])] = {
                     "nested": {"path": c.nested_path[0]},
                     "aggs": {"_nested": {"terms": {"field": c.es_column, "size": 0}}}
                 }
             else:
-                query.aggs[literal_field(c.name)] = {"terms": {"field": c.es_column, "size": 0}}
+                query.aggs[literal_field(c.names["."])] = {"terms": {"field": c.es_column, "size": 0}}
 
             result = self.default_es.post("/" + es_index + "/_search", data=query)
 
@@ -594,6 +597,8 @@ class ColumnList(Container):
         self.count=0
 
     def find(self, es_index, abs_column_name):
+        if "." in es_index and not es_index.startswith("meta."):
+            Log.error("unlikely index name")
         if not abs_column_name:
             return [c for cs in self.data.get(es_index, {}).values() for c in cs]
         else:
@@ -604,13 +609,8 @@ class ColumnList(Container):
             self.add(column)
 
     def add(self, column):
-        if len(column.names) != 1:
-            Log.error("not expected")
-        es_index_name = column.es_index
-        cname = column.names["."]
-
-        columns_for_table = self.data.setdefault(es_index_name, {})
-        _columns = columns_for_table.setdefault(cname, [])
+        columns_for_table = self.data.setdefault(column.es_index, {})
+        _columns = columns_for_table.setdefault(column.names["."], [])
         _columns.append(column)
         self.count += 1
 
@@ -629,7 +629,7 @@ class ColumnList(Container):
             eq = command.where.eq
             if eq.es_index:
                 columns = self.find(eq.es_index, eq.name)
-                columns = [c for c in columns if all(c[k] == v for k, v in eq.items())]
+                columns = [c for c in columns if all(get_attr(c, k) == v for k, v in eq.items())]
             else:
                 columns = list(self)
                 columns = jx.filter(columns, command.where)

@@ -66,7 +66,7 @@ def extract_rows(es, es_query, query):
     is_list = isinstance(query.select, list)
     selects = wrap([s.copy() for s in listwrap(query.select)])
     new_select = FlatList()
-    columns = query.frum.get_columns()
+    columns = query.frum.schema.columns
     leaf_columns = set(c.names["."] for c in columns if c.type not in STRUCT and (c.nested_path[0] == "." or c.es_column == c.nested_path[0]))
     nested_columns = set(c.names["."] for c in columns if c.nested_path[0] != ".")
 

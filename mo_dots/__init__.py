@@ -96,7 +96,7 @@ def split_field(field):
     if field == "." or field==None:
         return []
     elif isinstance(field, unicode) and field.find(".") >= 0:
-        field = field.replace("\.", "\a")
+        field = field.replace("\\\\.", "\a").replace("\\.", "\a")
         return [k.replace("\a", ".") for k in field.split(".")]
     else:
         return [field]

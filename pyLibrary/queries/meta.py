@@ -134,11 +134,14 @@ class FromESMetadata(Schema):
         if not meta or self.last_es_metadata < Date.now() - OLD_METADATA:
             self.es_metadata = self.default_es.get_metadata(force=True)
             meta = self.es_metadata.indices[es_index]
-        self._parse_properties(meta.index, Data(properties={"_id": {"type": "string", "index": "not_analyzed"}}), meta)
+
         for _, properties in meta.mappings.items():
+            properties.properties["_id"] = {"type": "string", "index": "not_analyzed"}
             self._parse_properties(meta.index, properties, meta)
 
     def _parse_properties(self, abs_index, properties, meta):
+        # IT IS IMPORTANT THAT NESTED PROPERTIES NAME ALL COLUMNS, AND
+        # ALL COLUMNS ARE GIVEN NAMES FOR ALL NESTED PROPERTIES
         abs_columns = _elasticsearch.parse_properties(abs_index, None, properties.properties)
         abs_columns = abs_columns.filter(  # TODO: REMOVE WHEN jobs PROPERTY EXPLOSION IS CONTAINED
             lambda r: not r.es_column.startswith("other.") and
@@ -147,19 +150,20 @@ class FromESMetadata(Schema):
                       r.es_column.find("=") == -1 and
                       r.es_column.find(" ") == -1
         )
-        with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
-            def add_column(c, query_path):
-                c.last_updated = Date.now()
-                if query_path[0] != ".":
-                    c.names[query_path[0]] = relative_field(c.names["."], query_path[0])
 
-                with self.meta.columns.locker:
+        def add_column(c, query_path):
+            c.last_updated = Date.now()
+            if query_path[0] != ".":
+                c.names[query_path[0]] = relative_field(c.names["."], query_path[0])
+
+            with self.meta.columns.locker:
+                self._upsert_column(c)
+                for alias in meta.aliases:
+                    c = copy(c)
+                    c.es_index = alias
                     self._upsert_column(c)
-                    for alias in meta.aliases:
-                        c = copy(c)
-                        c.es_index = alias
-                        self._upsert_column(c)
 
+        with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
             # LIST OF EVERY NESTED PATH
             query_paths = [[c.es_column] for c in abs_columns if c.type == "nested"]
             for a, b in itertools.product(query_paths, query_paths):
@@ -181,28 +185,6 @@ class FromESMetadata(Schema):
             for abs_column in abs_columns:
                 for query_path in query_paths:
                     add_column(abs_column, query_path)
-
-                    # if rel_parent == ".":
-                    #     add_column(rel_column, query_path)
-                    # elif abs_column.es_column.startswith(rel_parent+"."):
-                    #     rel_column.name = abs_column.es_column[len(rel_parent)+1:]
-                    #     add_column(rel_column, query_path)
-                    # elif abs_column.es_column == rel_parent:
-                    #     rel_column.name = "."
-                    #     add_column(rel_column, query_path)
-                    # elif not abs_parent:
-                    #     # THIS RELATIVE NAME (..o) ALSO NEEDS A RELATIVE NAME (o)
-                    #     # AND THEN REMOVE THE SHADOWED
-                    #     rel_column.name = "." + ("." * (rel_depth - abs_depth)) + abs_column.es_column
-                    #     add_column(rel_column, query_path)
-                    # elif rel_parent.startswith(abs_parent+"."):
-                    #     rel_column.name = "." + ("." * (rel_depth - abs_depth)) + abs_column.es_column
-                    #     add_column(rel_column, query_path)
-                    # elif rel_parent != abs_parent:
-                    #     # SIBLING NESTED PATHS ARE INVISIBLE
-                    #     pass
-                    # else:
-                    #     Log.error("logic error")
 
     def query(self, _query):
         return self.meta.columns.query(QueryOp(set_default(

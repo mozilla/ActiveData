@@ -24,7 +24,7 @@ from mo_dots.lists import FlatList
 from pyLibrary.queries import Schema, wrap_from
 from pyLibrary.queries.containers import Container, STRUCT
 from pyLibrary.queries.dimensions import Dimension
-from pyLibrary.queries.domains import Domain, is_keyword, SetDomain
+from pyLibrary.queries.domains import Domain, is_variable_name, SetDomain
 from pyLibrary.queries.expressions import jx_expression, TrueOp, Expression, FalseOp, Variable, LeavesOp, ScriptOp, OffsetOp
 
 DEFAULT_LIMIT = 10
@@ -105,10 +105,10 @@ class QueryOp(Expression):
             if e.domain.key:
                 output.add(e.domain.key)
             if e.domain.where:
-                output |= jx_expression(e.domain.where).vars()
+                output |= e.domain.where.vars()
             if e.range:
-                output |= jx_expression(e.range.min).vars()
-                output |= jx_expression(e.range.max).vars()
+                output |= e.range.min.vars()
+                output |= e.range.max.vars()
             if e.domain.partitions:
                 for p in e.domain.partitions:
                     if p.where:
@@ -605,7 +605,7 @@ def _map_term_using_schema(master, path, term, schema_edges):
                             output.append({"term": {es_field: local_value}})
                     continue
 
-                if len(dimension.fields) == 1 and is_keyword(dimension.fields[0]):
+                if len(dimension.fields) == 1 and is_variable_name(dimension.fields[0]):
                     # SIMPLE SINGLE-VALUED FIELD
                     if domain.getPartByKey(v) is domain.NULL:
                         output.append({"missing": {"field": dimension.fields[0]}})
@@ -613,7 +613,7 @@ def _map_term_using_schema(master, path, term, schema_edges):
                         output.append({"term": {dimension.fields[0]: v}})
                     continue
 
-                if AND(is_keyword(f) for f in dimension.fields):
+                if AND(is_variable_name(f) for f in dimension.fields):
                     # EXPECTING A TUPLE
                     if not isinstance(v, tuple):
                         Log.error("expecing {{name}}={{value}} to be a tuple",  name= k,  value= v)
@@ -624,7 +624,7 @@ def _map_term_using_schema(master, path, term, schema_edges):
                         else:
                             output.append({"term": {f: vv}})
                     continue
-            if len(dimension.fields) == 1 and is_keyword(dimension.fields[0]):
+            if len(dimension.fields) == 1 and is_variable_name(dimension.fields[0]):
                 if domain.getPartByKey(v) is domain.NULL:
                     output.append({"missing": {"field": dimension.fields[0]}})
                 else:
@@ -688,7 +688,7 @@ def _where_terms(master, where, schema):
                                     and_agg.append({"term": {es_field: vvv}})
                             or_agg.append({"and": and_agg})
                         output.append({"or": or_agg})
-                    elif isinstance(fields, list) and len(fields) == 1 and is_keyword(fields[0]):
+                    elif isinstance(fields, list) and len(fields) == 1 and is_variable_name(fields[0]):
                         output.append({"terms": {fields[0]: v}})
                     elif domain.partitions:
                         output.append({"or": [domain.getPartByKey(vv).esfilter for vv in v]})

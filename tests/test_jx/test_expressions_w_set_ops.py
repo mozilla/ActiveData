@@ -699,6 +699,7 @@ class TestSetOps(BaseTestCase):
             "data": [
                 {"url": NULL},
                 {"url": "/"},
+                #        012345678901234567890123456789
                 {"url": "https://hg.mozilla.org/"},
                 {"url": "https://hg.mozilla.org/a/"},
                 {"url": "https://hg.mozilla.org/b/"},

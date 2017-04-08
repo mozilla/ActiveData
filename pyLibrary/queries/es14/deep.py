@@ -199,10 +199,11 @@ def es_deepop(es, query):
         else:
             expr = s.value
             for v in expr.vars():
-                for n in columns:
-                    if n.name == v:
-                        if len(n.nested_path) == 1:
-                            es_query.fields += [n.es_column]
+                for c in schema[v]:
+                    if c.nested_path[0] == ".":
+                        es_query.fields += [c.es_column]
+                    # else:
+                    #     Log.error("deep field not expected")
 
             pull = EXPRESSION_PREFIX + s.name
             post_expressions[pull] = compile_expression(expr.map(map_to_local).to_python())

@@ -25,7 +25,7 @@ from mo_kwargs import override
 from pyLibrary.queries import jx, containers, Schema
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.dimensions import Dimension
-from pyLibrary.queries.domains import is_keyword
+from pyLibrary.queries.domains import is_variable_name
 from pyLibrary.queries.es09 import aggop as es09_aggop
 from pyLibrary.queries.es09 import setop as es09_setop
 from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
@@ -217,7 +217,7 @@ class FromES(Container):
         # SCRIPT IS SAME FOR ALL (CAN ONLY HANDLE ASSIGNMENT TO CONSTANT)
         scripts = FlatList()
         for k, v in command.set.items():
-            if not is_keyword(k):
+            if not is_variable_name(k):
                 Log.error("Only support simple paths for now")
             if isinstance(v, Mapping) and v.doc:
                 scripts.append({"doc": v.doc})

@@ -169,20 +169,6 @@ class FromES(Container):
                 Log.error("Problem (Tried to clear Elasticsearch cache)", e)
             Log.error("problem", e)
 
-    # def get_columns(self, table_name=None, column_name=None):
-    #     # CONFIRM WE CAN USE NAME OF index
-    #     if table_name == None or table_name == self.settings.index or table_name == self.settings.alias:
-    #         table_name = self.settings.index
-    #     elif table_name.startswith(self.settings.index + ".") or table_name.startswith(self.settings.alias):
-    #         pass
-    #     else:
-    #         Log.error("expecting `table` to be same as, or deeper, than index name")
-    #
-    #     try:
-    #         return self.meta.get_columns(table_name=table_name, column_name=column_name)
-    #     except Exception:
-    #         return FlatList.EMPTY
-
     def addDimension(self, dim):
         if isinstance(dim, list):
             Log.error("Expecting dimension to be a object, not a list:\n{{dim}}",  dim= dim)

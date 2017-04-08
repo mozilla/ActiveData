@@ -434,6 +434,7 @@ class Index(Features):
             )
 
     def threaded_queue(self, batch_size=None, max_size=None, period=None, silent=False):
+
         def errors(e, _buffer):  # HANDLE ERRORS FROM extend()
             if e.cause.cause:
                 not_possible = [f for f in listwrap(e.cause.cause) if any(h in f for h in HOPELESS)]

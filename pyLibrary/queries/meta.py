@@ -136,7 +136,7 @@ class FromESMetadata(Schema):
             meta = self.es_metadata.indices[es_index]
 
         for _, properties in meta.mappings.items():
-            properties.properties["_id"] = {"type": "string", "index": "not_analyzed"}
+            properties.properties[".._id"] = {"type": "string", "index": "not_analyzed"}
             self._parse_properties(meta.index, properties, meta)
 
     def _parse_properties(self, abs_index, properties, meta):

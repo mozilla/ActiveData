@@ -48,8 +48,8 @@ class AggsDecoder(object):
                 )
                 return object.__new__(DimFieldListDecoder, e)
             elif isinstance(e.value, Variable):
-                cols = query.frum.get_columns()
-                col = cols.filter(lambda c: c.name == e.value.var)[0]
+                schema = query.frum.schema
+                col = schema[e.value.var][0]
                 if not col:
                     return object.__new__(DefaultDecoder, e)
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)

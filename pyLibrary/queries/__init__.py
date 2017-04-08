@@ -10,6 +10,7 @@
 from __future__ import unicode_literals
 
 from collections import Mapping
+from copy import copy
 
 from mo_collections import UniqueIndex
 from mo_dots import Data, literal_field, Null
@@ -119,6 +120,7 @@ class Schema(object):
         table_path = split_field(table_name)
         self.table = table_path[0]  # USED AS AN EXPLICIT STATEMENT OF PERSPECTIVE IN THE DATABASE
         self.query_path = join_field(table_path[1:])
+        self._columns = copy(columns)
 
         lookup = self.lookup = _index(columns, self.query_path)
         if self.query_path != ".":
@@ -138,11 +140,11 @@ class Schema(object):
         :param column:
         :return: NAME OF column
         """
-        return column.names[self.table]
+        return column.names[self.query_path]
 
     @property
     def columns(self):
-        return [c for cs in self.lookup.values() for c in cs]
+        return copy(self._columns)
 
     def keys(self):
         return set(k[0] for k in self.lookup._data.keys())
@@ -151,7 +153,10 @@ class Schema(object):
 def _index(columns, query_path):
     lookup = {}
     for c in columns:
-        cname = c.names[query_path]
-        cs = lookup.setdefault(cname, [])
-        cs.append(c)
+        try:
+            cname = c.names[query_path]
+            cs = lookup.setdefault(cname, [])
+            cs.append(c)
+        except Exception as e:
+            Log.error("Sould not happen", cause=e)
     return lookup

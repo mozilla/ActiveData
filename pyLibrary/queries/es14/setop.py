@@ -12,7 +12,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from mo_collections.matrix import Matrix
-from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, join_field, unwrap, wrap
+from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, join_field, unwrap, wrap, \
+    concat_field
 from mo_dots import listwrap
 from mo_dots.lists import FlatList
 from mo_logs import Log
@@ -171,7 +172,7 @@ def extract_rows(es, es_query, query):
         if n.pull:
             continue
         if source == "_source":
-            n.pull = join_field(["_source"] + split_field(n.value.var))
+            n.pull = concat_field("_source", n.value.var)
         elif isinstance(n.value, Variable):
             n.pull = "fields." + literal_field(n.value.var)
         else:

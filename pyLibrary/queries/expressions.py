@@ -17,7 +17,7 @@ from decimal import Decimal
 
 from mo_dots import coalesce, wrap, set_default, literal_field, Null, split_field, startswith_field
 from mo_dots import Data, join_field, unwraplist, ROOT_PATH, relative_field, unwrap
-from mo_json import json2value
+from mo_json import json2value, quote
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_math import Math, OR, MAX
@@ -2943,7 +2943,7 @@ def split_expression_by_depth(where, schema, map_=None, output=None, var_to_dept
     """
     vars_ = where.vars()
     if not map_:
-        map_ = {v: [c.es_column for c in schema[v]] for v in vars_}
+        map_ = {v: schema[v][0].es_column for v in vars_}
 
     if var_to_depth is None:
         if not vars_:

@@ -22,8 +22,6 @@ from datetime import datetime
 from time import time
 
 from mo_dots import coalesce, Null
-# from mo_times.durations import SECOND
-
 from mo_threads.lock import Lock
 from mo_threads.signal import Signal
 from mo_threads.threads import Thread, THREAD_STOP, THREAD_TIMEOUT
@@ -291,6 +289,11 @@ class ThreadedQueue(Queue):
     ):
         if not _Log:
             _late_import()
+
+        if period !=None and not isinstance(period, (int, float, long)):
+            if not _Log:
+                _late_import()
+            _Log.error("Expecting a float for the period")
 
         batch_size = coalesce(batch_size, int(max_size / 2) if max_size else None, 900)
         max_size = coalesce(max_size, batch_size * 2)  # REASONABLE DEFAULT

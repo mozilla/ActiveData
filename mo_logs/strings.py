@@ -125,10 +125,10 @@ def replace(value, find, replace):
     return value.replace(find, replace)
 
 
-def json(value):
+def json(value, pretty=True):
     if not _Duration:
         _late_import()
-    return _json_encoder(value, pretty=True)
+    return _json_encoder(value, pretty=pretty)
 
 
 def tab(value):

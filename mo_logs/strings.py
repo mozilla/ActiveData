@@ -25,8 +25,8 @@ from datetime import datetime as builtin_datetime
 from datetime import timedelta, date
 
 from mo_dots import coalesce, wrap, get_module
-from mo_logs.convert import datetime2unix, datetime2string, value2url, value2json
-from mo_logs.convert import milli2datetime, unix2datetime
+from mo_logs.convert import datetime2unix, datetime2string, value2json,  milli2datetime, unix2datetime
+from mo_logs.url import value2url_param
 
 _json_encoder = None
 _Log = None
@@ -96,7 +96,7 @@ def url(value):
     """
     convert FROM dict OR string TO URL PARAMETERS
     """
-    return value2url(value)
+    return value2url_param(value)
 
 
 def html(value):

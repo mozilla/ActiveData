@@ -2,8 +2,24 @@ from collections import Mapping
 from urlparse import urlparse
 
 from mo_dots import wrap, Data
-from mo_json import value2json, json2value
-from mo_logs import Log
+
+_value2json = None
+_json2value = None
+_Log = None
+
+
+def _late_import():
+    global _value2json
+    global _json2value
+    global _Log
+
+    from mo_json import value2json as _value2json
+    from mo_json import json2value as _json2value
+    from mo_logs import Log as _Log
+
+    _ = _value2json
+    _ = _json2value
+    _ = _Log
 
 
 class URL(object):
@@ -40,7 +56,10 @@ class URL(object):
                 self.query = wrap(url_param2value(output.query))
                 self.fragment = output.fragment
         except Exception as e:
-            Log.error("problem parsing {{value}} to URL", value=value, cause=e)
+            if not _Log:
+                _late_import()
+
+            _Log.error("problem parsing {{value}} to URL", value=value, cause=e)
 
     def __nonzero__(self):
         if self.scheme or self.host or self.port or self.path or self.query or self.fragment:
@@ -125,7 +144,9 @@ def url_param2value(param):
 
         output = (b"".join(output)).decode("latin1")
         try:
-            return json2value(output)
+            if not _Log:
+                _late_import()
+            return _json2value(output)
         except Exception:
             pass
         return output
@@ -157,13 +178,16 @@ def value2url_param(value):
     :param value:
     :return: ascii URL
     """
+    if not _Log:
+        _late_import()
+
     if value == None:
-        Log.error("Can not encode None into a URL")
+        _Log.error("Can not encode None into a URL")
 
     if isinstance(value, Mapping):
         value_ = wrap(value)
         output = b"&".join([
-            value2url_param(k) + b"=" + (value2url_param(v) if isinstance(v, basestring) else value2url_param(value2json(v)))
+            value2url_param(k) + b"=" + (value2url_param(v) if isinstance(v, basestring) else value2url_param(_value2json(v)))
             for k, v in value_.leaves()
             ])
     elif isinstance(value, unicode):

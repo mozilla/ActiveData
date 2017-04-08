@@ -82,24 +82,6 @@ for c in " {}<>;/?:@&=+$,":
     _map2url[c] = "%" + int2hex(ord(c), 2)
 
 
-def value2url(value):
-    if value == None:
-        from mo_logs import Log
-        Log.error("")
-
-    if isinstance(value, Mapping):
-        output = "&".join([value2url(k) + "=" + (value2url(v) if isinstance(v, basestring) else value2url(value2json(v))) for k,v in value.items()])
-    elif isinstance(value, unicode):
-        output = "".join([_map2url[c] for c in unicode2latin1(value)])
-    elif isinstance(value, str):
-        output = "".join([_map2url[c] for c in value])
-    elif hasattr(value, "__iter__"):
-        output = ",".join(value2url(v) for v in value)
-    else:
-        output = unicode(value)
-    return output
-
-
 def value2json(value):
     return _json.dumps(value)
 

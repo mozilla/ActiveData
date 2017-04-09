@@ -9,7 +9,7 @@
 
 # MIMICS THE requests API (http://docs.python-requests.org/en/latest/)
 # DEMANDS data IS A JSON-SERIALIZABLE STRUCTURE
-# WITH ADDED default_headers THAT CAN BE SET USING pyLibrary.debugs.settings
+# WITH ADDED default_headers THAT CAN BE SET USING mo_logs.settings
 # EG
 # {"debug.constants":{
 #     "pyLibrary.env.http.default_headers":{"From":"klahnakoski@mozilla.com"}
@@ -27,21 +27,23 @@ from tempfile import TemporaryFile
 
 from requests import sessions, Response
 
+import mo_json
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, coalesce, wrap, set_default, unwrap
+from mo_logs.exceptions import Except
+from mo_logs import Log
+from mo_dots import Data, coalesce, wrap, set_default, unwrap
 from pyLibrary.env.big_data import safe_size, ibytes2ilines, icompressed2ibytes
-from pyLibrary.maths import Math
+from mo_math import Math
 from pyLibrary.queries import jx
-from pyLibrary.thread.threads import Thread, Lock
-from pyLibrary.times.durations import Duration
+from mo_threads import Thread, Lock
+from mo_threads import Till
+from mo_times.durations import Duration
 
 DEBUG = False
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
 MIN_READ_SIZE = 8 * 1024
 ZIP_REQUEST = False
-default_headers = Dict()  # TODO: MAKE THIS VARIABLE A SPECIAL TYPE OF EXPECTED MODULE PARAMETER SO IT COMPLAINS IF NOT SET
+default_headers = Data()  # TODO: MAKE THIS VARIABLE A SPECIAL TYPE OF EXPECTED MODULE PARAMETER SO IT COMPLAINS IF NOT SET
 default_timeout = 600
 
 _warning_sent = False
@@ -84,7 +86,7 @@ def request(method, url, zip=None, retry=None, **kwargs):
                     return response
                 if not remaining:
                     return response
-            except Exception, e:
+            except Exception as e:
                 e = Except.wrap(e)
                 failures.append(e)
         Log.error("Tried {{num}} urls", num=len(url), cause=failures)
@@ -107,9 +109,9 @@ def request(method, url, zip=None, retry=None, **kwargs):
     timeout = kwargs[b'timeout'] = coalesce(kwargs.get(b'timeout'), default_timeout)
 
     if retry == None:
-        retry = Dict(times=1, sleep=0)
+        retry = Data(times=1, sleep=0)
     elif isinstance(retry, Number):
-        retry = Dict(times=retry, sleep=1)
+        retry = Data(times=retry, sleep=1)
     else:
         retry = wrap(retry)
         if isinstance(retry.sleep, Duration):
@@ -132,19 +134,19 @@ def request(method, url, zip=None, retry=None, **kwargs):
             _to_ascii_dict(headers)
         else:
             _to_ascii_dict(headers)
-    except Exception, e:
+    except Exception as e:
         Log.error("Request setup failure on {{url}}", url=url, cause=e)
 
     errors = []
     for r in range(retry.times):
         if r:
-            Thread.sleep(retry.sleep)
+            Till(seconds=retry.sleep).wait()
 
         try:
             if DEBUG:
                 Log.note("http {{method}} to {{url}}", method=method, url=url)
             return session.request(method=method, url=url, **kwargs)
-        except Exception, e:
+        except Exception as e:
             errors.append(Except.wrap(e))
 
     if " Read timed out." in errors[0]:
@@ -179,7 +181,7 @@ def get_json(url, **kwargs):
     """
     response = get(url, **kwargs)
     c = response.all_content
-    return convert.json2value(convert.utf82unicode(c))
+    return mo_json.json2value(convert.utf82unicode(c))
 
 def options(url, **kwargs):
     kwargs.setdefault(b'allow_redirects', True)
@@ -208,7 +210,7 @@ def post_json(url, **kwargs):
     """
     if b"json" in kwargs:
         kwargs[b"data"] = convert.unicode2utf8(convert.value2json(kwargs[b"json"]))
-    elif b'data':
+    elif b'data' in kwargs:
         kwargs[b"data"] = convert.unicode2utf8(convert.value2json(kwargs[b"data"]))
     else:
         Log.error("Expecting `json` parameter")
@@ -216,8 +218,8 @@ def post_json(url, **kwargs):
     response = post(url, **kwargs)
     c = response.content
     try:
-        details = convert.json2value(convert.utf82unicode(c))
-    except Exception, e:
+        details = mo_json.json2value(convert.utf82unicode(c))
+    except Exception as e:
         Log.error("Unexpected return value {{content}}", content=c, cause=e)
 
     if response.status_code not in [200, 201]:
@@ -263,7 +265,7 @@ class HttpResponse(Response):
                     self.close()
                     return None
 
-            self._cached_content = safe_size(Dict(read=read))
+            self._cached_content = safe_size(Data(read=read))
 
         if hasattr(self._cached_content, "read"):
             self._cached_content.seek(0)
@@ -286,7 +288,7 @@ class HttpResponse(Response):
                 return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding, flexible=flexible)
             else:
                 return ibytes2ilines(iterator, encoding=encoding, flexible=flexible, closer=self.close)
-        except Exception, e:
+        except Exception as e:
             Log.error("Can not read content", cause=e)
 
 
@@ -305,7 +307,7 @@ class Generator_usingStream(object):
         self.position = 0
         file_ = TemporaryFile()
         if not _shared:
-            self.shared = Dict(
+            self.shared = Data(
                 length=length,
                 locker=Lock(),
                 stream=stream,

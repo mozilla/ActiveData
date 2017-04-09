@@ -6,29 +6,30 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from pyLibrary.debugs import constants, startup
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce
-from pyLibrary.env.files import File
+from mo_dots import coalesce
+from mo_logs import constants, startup
+from mo_logs import Log
+from mo_files import File
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.multiprocess import Process
-from pyLibrary.thread.threads import Signal, Thread
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import DAY
+from mo_threads import Signal, Thread
+from mo_threads import Till
+from mo_times.dates import Date
+from mo_times.durations import DAY
 
 
 class Scheduler(object):
 
-    @use_settings
-    def __init__(self, please_stop, settings=None):
+    @override
+    def __init__(self, please_stop, kwargs=None):
         self.please_stop = please_stop
-        self.jobs = settings.jobs
+        self.jobs = kwargs.jobs
 
-        for j in settings.jobs:
+        for j in kwargs.jobs:
             j.next_run_time = next_run(j)
             j.logger = Log.start_process(j.name)
 
@@ -46,7 +47,7 @@ class Scheduler(object):
 
                 next = Date.min(next, j.next_run_time)
 
-            Thread.sleep(till=next, please_stop=self.please_stop)
+            (Till(till=next) | self.please_stop).wait()
 
     def run_job(self, job):
         process = Process(

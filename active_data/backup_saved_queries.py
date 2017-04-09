@@ -6,15 +6,15 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from pyLibrary import convert
-from pyLibrary.debugs import constants, startup
-from pyLibrary.debugs.logs import Log
+from mo_logs import constants, startup
+from mo_logs import Log
 from pyLibrary.env import elasticsearch
-from pyLibrary.env.files import File
+from mo_files import File
 
 
 def main():
@@ -29,7 +29,7 @@ def main():
         constants.set(config.constants)
         Log.start(config.debug)
 
-        sq = elasticsearch.Index(settings=config.saved_queries)
+        sq = elasticsearch.Index(kwargs=config.saved_queries)
         result = sq.search({
             "query": {
                 "match_all": {}

@@ -13,15 +13,15 @@ from __future__ import unicode_literals
 
 import itertools
 
-from pyLibrary.collections import UNION
-from pyLibrary.collections.matrix import Matrix
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import listwrap, wrap, coalesce
+from mo_logs import Log
+from mo_math import UNION
+from mo_times.dates import Date
+from mo_dots import listwrap, wrap, coalesce
+from mo_collections.matrix import Matrix
 from pyLibrary.queries import windows
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain
 from pyLibrary.queries.expression_compiler import compile_expression
-from pyLibrary.queries.expressions import jx_expression_to_function, jx_expression
-from pyLibrary.times.dates import Date
+from pyLibrary.queries.expressions import jx_expression_to_function
 
 _ = Date
 

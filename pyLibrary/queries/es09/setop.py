@@ -12,16 +12,16 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import Mapping
 
-from pyLibrary.collections.matrix import Matrix
-from pyLibrary.collections import AND, SUM, OR
-from pyLibrary.dot import coalesce, split_field, Dict, wrap
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import listwrap, unwrap
-from pyLibrary.queries.domains import is_keyword
+from mo_collections.matrix import Matrix
+from mo_math import AND, SUM, OR
+from mo_dots import coalesce, split_field, Data, wrap
+from mo_dots.lists import FlatList
+from mo_dots import listwrap, unwrap
+from pyLibrary.queries.domains import is_variable_name
 from pyLibrary.queries.es09.expressions import unpack_terms
 from pyLibrary.queries.es09.util import aggregates
 from pyLibrary.queries import domains, es09
-from pyLibrary.debugs.logs import Log
+from mo_logs import Log
 from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.expressions import simplify_esfilter, TRUE_FILTER, jx_expression, Variable
 
@@ -32,7 +32,7 @@ def is_fieldop(query):
     select = listwrap(query.select)
     if not query.edges:
         isDeep = len(split_field(query.frum.name)) > 1  # LOOKING INTO NESTED WILL REQUIRE A SCRIPT
-        isSimple = AND(s.value != None and (s.value == "*" or is_keyword(s.value)) for s in select)
+        isSimple = AND(s.value != None and (s.value == "*" or is_variable_name(s.value)) for s in select)
         noAgg = AND(s.aggregate == "none" for s in select)
 
         if not isDeep and isSimple and noAgg:
@@ -57,7 +57,7 @@ def es_fieldop(es, query):
         }
     }
     FromES.size = coalesce(query.limit, 200000)
-    FromES.fields = DictList()
+    FromES.fields = FlatList()
     for s in select.value:
         if s == "*":
             FromES.fields = None
@@ -87,7 +87,7 @@ def es_fieldop(es, query):
         else:
             try:
                 matricies[s.name] = Matrix.wrap([unwrap(t.fields).get(s.value, None) for t in T])
-            except Exception, e:
+            except Exception as e:
                 Log.error("", e)
 
     cube = Cube(query.select, query.edges, matricies, frum=query)
@@ -175,7 +175,7 @@ def es_setop(es, mvel, query):
             output = zip(*data_list)
             cube = Cube(select, [], {s.name: Matrix(list=output[i]) for i, s in enumerate(select)})
 
-    return Dict(
+    return Data(
         meta={"esquery": FromES},
         data=cube
     )
@@ -206,7 +206,7 @@ def es_deepop(es, mvel, query):
 
     temp_query = query.copy()
     temp_query.select = select
-    temp_query.edges = DictList()
+    temp_query.edges = FlatList()
     FromES.facets.mvel = {
         "terms": {
             "script_field": mvel.code(temp_query),

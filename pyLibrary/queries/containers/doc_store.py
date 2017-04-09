@@ -11,17 +11,14 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from copy import copy
-
 from datetime import datetime
 
+from mo_dots import wrap, Data, FlatList, literal_field
+from mo_logs import Log
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, Dict, DictList, literal_field
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container
-from pyLibrary.queries.domains import is_keyword
 from pyLibrary.queries.expressions import Variable, Literal
-from pyLibrary.queries.jx import value_compare
 from pyLibrary.queries.query import QueryOp
 
 INDEX = "__index__"
@@ -128,7 +125,7 @@ class DocStore(Container):
                 indexed_values[i]=index
                 continue
 
-            function_name = convert.value2json(s.value.to_dict(), sort_keys=True)
+            function_name = convert.value2json(s.value.__data__(), sort_keys=True)
             index = self._index.get(function_name, None)
             indexed_values[i]=index
             if index is not None:
@@ -247,7 +244,7 @@ _type_map = {
     float: "real",
     datetime: "real",
     list: "nested",
-    DictList: "nested",
+    FlatList: "nested",
     dict: "object",
-    Dict: "object"
+    Data: "object"
 }

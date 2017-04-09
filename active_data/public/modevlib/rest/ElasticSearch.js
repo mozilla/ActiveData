@@ -7,7 +7,7 @@ importScript("Rest.js");
 
 ElasticSearch={};
 
-//ElasticSearch.pushURL="http://esfrontline-private-vip.bugs.scl3.mozilla.com:9200";
+//ElasticSearch.pushURL="https://esfrontline-private-vip.bugs.scl3.mozilla.com:9200";
 //ElasticSearch.pushURL="http://elasticsearch7.metrics.scl3.mozilla.com:9200";
 ElasticSearch.pushURL="http://klahnakoski-es.corp.tor1.mozilla.com:9200";
 

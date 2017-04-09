@@ -9,7 +9,7 @@ Introduction
 JSON Query Expressions have an optional `edges` clause for grouping and
 Cartesian (product) joins over multiple domains. 
 
-###Specific Domain example###
+### Specific Domain example ###
 
 For the first example, we have a fully explicit query, which is best for
 understanding the general structure of an `edge`.
@@ -112,7 +112,7 @@ pre-defined based on the business logic, and simplify queries greatly.
 Our example query did not cover all platforms; there appears to be
 21,860,140 tests that have been run on some other platform. What are they?
 
-###The `default` Domain###
+### The `default` Domain ###
 
 We can use the `default` domain type to help discover these other platforms: 
 
@@ -208,7 +208,7 @@ summarize:
 You will find yourself using this form of query often while exploring the
 cardinality and quantity of the various properties in ActiveData.  
 
-###The `time` Domain###
+### The `time` Domain ###
 
 ### Time, Duration and Relative Values
 
@@ -345,7 +345,7 @@ It looks nicer charted
 
 ![](jx_clause_edges_pic1.png)
 
-###Tuple Edges###
+### Tuple Edges ###
 
 Counting the number of tests by platform over time is a good example of dense
 cube: Most coordinates have records that occupy it. Some property
@@ -359,7 +359,7 @@ including tuples:
 <insert example>
 
 
-###`range` Edges###
+### `range` Edges ###
 
 The an `edge` can be given a `range`, instead of a `value`: This will allow
 one record to span multiple parts, or none, and be included in the count.
@@ -379,7 +379,7 @@ basis for calculating a (?more accurate?) pro-rated aggregate.
 
 **THIS DOC IS INCOMPLETE**
 
-###Domain Ranges###
+### Domain Ranges ###
 
 A domain has a partition. Usually this partition is defined with a regular
 interval, but this may not be what you want in all cases.   You are free to

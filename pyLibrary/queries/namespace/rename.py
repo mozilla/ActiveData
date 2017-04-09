@@ -14,14 +14,14 @@ from __future__ import absolute_import
 from collections import Mapping
 from copy import copy
 
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import set_default, wrap, coalesce, Dict, listwrap, unwraplist
-from pyLibrary.maths import Math
+from mo_logs import Log
+from mo_dots import set_default, wrap, coalesce, Data, listwrap, unwraplist
+from mo_math import Math
 from pyLibrary.queries.dimensions import Dimension
-from pyLibrary.queries.domains import is_keyword
+from pyLibrary.queries.domains import is_variable_name
 from pyLibrary.queries.namespace import Namespace, convert_list
 from pyLibrary.queries.query import QueryOp
-from pyLibrary.times.dates import Date
+from mo_times.dates import Date
 
 
 class Rename(Namespace):
@@ -47,7 +47,7 @@ class Rename(Namespace):
             return expr
         elif expr == ".":
             return "."
-        elif is_keyword(expr):
+        elif is_variable_name(expr):
             return coalesce(self.dimensions[expr], expr)
         elif isinstance(expr, basestring):
             Log.error("{{name|quote}} is not a valid variable name", name=expr)
@@ -97,7 +97,7 @@ class Rename(Namespace):
 
     def _convert_from(self, frum):
         if isinstance(frum, Mapping):
-            return Dict(name=self.convert(frum.name))
+            return Data(name=self.convert(frum.name))
         else:
             return self.convert(frum)
 

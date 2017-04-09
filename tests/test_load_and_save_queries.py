@@ -13,15 +13,17 @@ from __future__ import unicode_literals
 
 import hashlib
 
-from base_test_class import ActiveDataBaseTest, TEST_TABLE
+from mo_dots import wrap
+from mo_json import value2json
+from mo_json_config import URL
+from mo_threads import Till
 from pyLibrary import convert
-from pyLibrary.dot import wrap
+from pyLibrary.convert import unicode2utf8
 from pyLibrary.env import elasticsearch
-from pyLibrary.parsers import URL
-from pyLibrary.thread.threads import Thread
+from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
-class TestLoadAndSaveQueries(ActiveDataBaseTest):
+class TestLoadAndSaveQueries(BaseTestCase):
 
     def test_save_then_load(self):
 
@@ -44,7 +46,7 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
 
         settings = self.utils.fill_container(test)
 
-        bytes = convert.unicode2utf8(convert.value2json({
+        bytes = unicode2utf8(value2json({
             "from": settings.index,
             "select": "a",
             "format": "list"
@@ -54,10 +56,10 @@ class TestLoadAndSaveQueries(ActiveDataBaseTest):
 
         self.utils.send_queries(test)
 
-        #ENSURE THE QUERY HAS BEEN INDEXED
-        container = elasticsearch.Index(index="saved_queries", settings=settings)
+        # ENSURE THE QUERY HAS BEEN INDEXED
+        container = elasticsearch.Index(index="saved_queries", kwargs=settings)
         container.flush()
-        Thread.sleep(seconds=5)
+        Till(seconds=5).wait()
 
         url = URL(self.utils.service_url)
 

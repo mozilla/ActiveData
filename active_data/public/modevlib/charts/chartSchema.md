@@ -1,7 +1,7 @@
 #A Standard Chart Schema
 chart definition
 
-##`area` Property
+## ``area` Property
 details regarding the plot area, but nothing about the series
 
   * `area.style` - *object*
@@ -26,7 +26,7 @@ details regarding the plot area, but nothing about the series
       * `area.style.line.border` - *string* css border
     * `area.style.font` - *string* css font
     * `area.style.border` - *string* css border
-##`axis` Property
+## `axis` Property
 list of axis, property names not limited to 'x' and 'y', 
 
   * `axis.y` - *object* details on a visual axis
@@ -53,10 +53,10 @@ list of axis, property names not limited to 'x' and 'y',
     * `axis.x.normalized` - *boolean* Convert to % of total
     * `axis.x.position` - *string* where to place the axis, relative to plot area (top/right/bottom/left)
     * `axis.x.unit` - *string* the measurement unit, using multiply (`*`) and divide (`/`) operators
-##`data` Property
+## `data` Property
 an array of objects
 
-##`legend` Property
+## `legend` Property
 more configuration for legend
 
   * `legend.position` - *string* position of legend relative to plot area (top/left/bottom/right)
@@ -83,7 +83,7 @@ more configuration for legend
     * `legend.style.font` - *string* css font
     * `legend.style.border` - *string* css border
   * `legend.label` - *string* name the legend
-##`series` Property
+## `series` Property
 what is ploted 
 
   * `series.hoverStyle` - *object* for when hovering over datapoint
@@ -140,9 +140,9 @@ what is ploted
     * `series.marker.size` - *number* size of the datapoint
   * `series.type` - *string* the chart type to show as (bar/line/dot)
   * `series.axis` - *string* name of the axis to apply against: can be any #chart.axis property name. Use tuple if plotting more than one dimension.
-##`target` (string)
+## `target` (string)
 name of dom elements to insert chart
-##`title` Property
+## `title` Property
 details regarding the title. Can also be a simple string.
 
   * `title.position` - *string* location of title relative to area (default=top)

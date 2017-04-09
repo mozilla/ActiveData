@@ -23,7 +23,7 @@ from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, PARTITION
 from pyLibrary.queries.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, \
-    InequalityOp, TupleOp
+    InequalityOp, TupleOp, LeavesOp
 from pyLibrary.queries.query import MAX_LIMIT, DEFAULT_LIMIT
 
 
@@ -38,7 +38,9 @@ class AggsDecoder(object):
             if isinstance(e.value, basestring):
                 Log.error("Expecting Variable or Expression, not plain string")
 
-            if isinstance(e.value, TupleOp):
+            if isinstance(e.value, LeavesOp):
+                return object.__new__(ObjectDecoder, e)
+            elif isinstance(e.value, TupleOp):
                 # THIS domain IS FROM A dimension THAT IS A SIMPLE LIST OF fields
                 # JUST PULL THE FIELDS
                 if not all(isinstance(t, Variable) for t in e.value.terms):
@@ -609,14 +611,20 @@ class DimFieldListDecoder(SetDecoder):
 class ObjectDecoder(SetDecoder):
     def __init__(self, edge, query, limit):
         AggsDecoder.__init__(self, edge, query, limit)
+        if isinstance(edge.value, LeavesOp):
+            flatter = literal_field
+            prefix = edge.value.term.var+"."
+        else:
+            prefix = edge.value.var + "."
+            prefix_length = len(prefix)
+            flatter = (lambda k: k[prefix_length:])
 
-        prefix = edge.value.var+"."
-        prefix_length=len(prefix)
         self.put, self.fields = zip(*[
-            (k[prefix_length:], c.es_column)
+            (flatter(k), c.es_column)
             for k, cs in query.frum.schema.lookup.items()
             if k.startswith(prefix)
             for c in cs
+            if c.type not in STRUCT
         ])
 
         self.domain = self.edge.domain = wrap({"dimension": {"fields": self.fields}})

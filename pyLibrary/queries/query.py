@@ -425,7 +425,7 @@ def _normalize_select_no_context(select, schema=None):
 
 
 def _normalize_edges(edges, schema=None):
-    return wrap([_normalize_edge(e, schema=schema) for e in listwrap(edges)])
+    return wrap([n for e in listwrap(edges) for n in _normalize_edge(e, schema=schema)])
 
 
 def _normalize_edge(edge, schema=None):
@@ -443,31 +443,31 @@ def _normalize_edge(edge, schema=None):
             e = unwraplist(e)
             if e and not isinstance(e, (_Column, set, list)):
                 if isinstance(e, _Column):
-                    return Data(
+                    return [Data(
                         name=edge,
                         value=jx_expression(edge),
                         allowNulls=True,
                         domain=_normalize_domain(domain=e, schema=schema)
-                    )
+                    )]
                 elif isinstance(e.fields, list) and len(e.fields) == 1:
-                    return Data(
+                    return [Data(
                         name=e.name,
                         value=jx_expression(e.fields[0]),
                         allowNulls=True,
                         domain=e.getDomain()
-                    )
+                    )]
                 else:
-                    return Data(
+                    return [Data(
                         name=e.name,
                         allowNulls=True,
                         domain=e.getDomain()
-                    )
-        return Data(
+                    )]
+        return [Data(
             name=edge,
             value=jx_expression(edge),
             allowNulls=True,
             domain=_normalize_domain(schema=schema)
-        )
+        )]
     else:
         edge = wrap(edge)
         if not edge.name and not isinstance(edge.value, basestring):
@@ -478,28 +478,28 @@ def _normalize_edge(edge, schema=None):
             domain = _normalize_domain(schema=schema)
             domain.dimension = Data(fields=edge.value)
 
-            return Data(
+            return [Data(
                 name=edge.name,
                 value=jx_expression(edge.value),
                 allowNulls=bool(coalesce(edge.allowNulls, True)),
                 domain=domain
-            )
+            )]
 
         domain = _normalize_domain(edge.domain, schema=schema)
 
-        return Data(
+        return [Data(
             name=coalesce(edge.name, edge.value),
             value=jx_expression(edge.value),
             range=_normalize_range(edge.range),
             allowNulls=bool(coalesce(edge.allowNulls, True)),
             domain=domain
-        )
+        )]
 
 
 def _normalize_groupby(groupby, schema=None):
     if groupby == None:
         return None
-    output = wrap([_normalize_group(e, schema=schema) for e in listwrap(groupby)])
+    output = wrap([n for e in listwrap(groupby) for n in _normalize_group(e, schema=schema) ])
     if any(o==None for o in output):
         Log.error("not expected")
     return output
@@ -507,12 +507,28 @@ def _normalize_groupby(groupby, schema=None):
 
 def _normalize_group(edge, schema=None):
     if isinstance(edge, basestring):
-        return wrap({
+        if edge.endswith(".*"):
+            prefix = edge[:-1]
+            output = wrap([
+                {
+                    "name": literal_field(k),
+                    "value": jx_expression(c.es_column),
+                    "allowNulls": True,
+                    "domain": {"type": "default"}
+                }
+                for k, cs in schema.lookup.items()
+                if k.startswith(prefix)
+                for c in cs
+                if c.type not in STRUCT
+            ])
+            return output
+
+        return wrap([{
             "name": edge,
             "value": jx_expression(edge),
             "allowNulls": True,
             "domain": {"type": "default"}
-        })
+        }])
     else:
         edge = wrap(edge)
         if (edge.domain and edge.domain.type != "default") or edge.allowNulls != None:
@@ -521,12 +537,12 @@ def _normalize_group(edge, schema=None):
         if not edge.name and not isinstance(edge.value, basestring):
             Log.error("You must name compound edges: {{edge}}",  edge= edge)
 
-        return wrap({
+        return wrap([{
             "name": coalesce(edge.name, edge.value),
             "value": jx_expression(edge.value),
             "allowNulls": True,
             "domain": {"type": "default"}
-        })
+        }])
 
 
 def _normalize_domain(domain=None, schema=None):
@@ -560,7 +576,7 @@ def _normalize_window(window, schema=None):
     return Data(
         name=coalesce(window.name, window.value),
         value=expr,
-        edges=[_normalize_edge(e, schema) for e in listwrap(window.edges)],
+        edges=[n for e in listwrap(window.edges) for n in _normalize_edge(e, schema)],
         sort=_normalize_sort(window.sort),
         aggregate=window.aggregate,
         range=_normalize_range(window.range),

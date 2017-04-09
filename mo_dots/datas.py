@@ -190,7 +190,6 @@ class Data(MutableMapping):
         if not isinstance(other, Mapping):
             return False
         e = unwrap(other)
-        d = _get(self, "_dict")
         for k, v in d.items():
             if e.get(k) != v:
                 return False

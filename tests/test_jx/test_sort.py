@@ -162,6 +162,7 @@ class TestSorting(BaseTestCase):
         subtest.name = extract_stack()[0]['method']
         self.utils.fill_container(test)
 
+        test = wrap(test)
         self.utils.send_queries({"query": test.query, "expecting_list": test.expecting_list})
         self.utils.send_queries({"query": test.query, "expecting_table": test.expecting_table})
         try:

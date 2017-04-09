@@ -733,9 +733,9 @@ class TestSetOps(BaseTestCase):
                     {"f": NULL, "count": 1},
                     {"f": "/", "count": 1},
                     {"f": "https://hg.mozilla.org/", "count": 1},
-                    {"f": "https://hg.mozilla.org/a/", "count": 1},
-                    {"f": "https://hg.mozilla.org/b/", "count": 4},
-                    {"f": "https://hg.mozilla.org/c/", "count": 1},
+                    {"f": "https://hg.mozilla.org/a", "count": 1},
+                    {"f": "https://hg.mozilla.org/b", "count": 4},
+                    {"f": "https://hg.mozilla.org/c", "count": 1},
                     {"f": "https://hg.mozilla.org/d", "count": 1},
                     {"f": "https://hg.mozilla.org/e", "count": 1}
                 ]

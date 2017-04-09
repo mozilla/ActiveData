@@ -91,7 +91,6 @@ def es_deepop(es, query):
     is_list = isinstance(query.select, list)
     new_select = FlatList()
 
-
     i = 0
     for s in listwrap(query.select):
         if isinstance(s.value, LeavesOp):
@@ -99,7 +98,7 @@ def es_deepop(es, query):
                 if s.value.term.var == ".":
                     # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
                     for c in columns:
-                        if c.type not in STRUCT:
+                        if c.type not in STRUCT and c.es_column != "_id":
                             if c.nested_path[0] == ".":
                                 es_query.fields += [c.es_column]
                             new_select.append({
@@ -141,7 +140,7 @@ def es_deepop(es, query):
         elif isinstance(s.value, Variable):
             if s.value.var == ".":
                 for c in columns:
-                    if c.relative and c.type not in STRUCT:
+                    if c.type not in STRUCT and c.es_column != "_id":
                         if len(c.nested_path) == 1:
                             es_query.fields += [c.es_column]
                         new_select.append({

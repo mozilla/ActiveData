@@ -12,11 +12,9 @@ from __future__ import unicode_literals
 from collections import Mapping
 from copy import copy
 
-from mo_collections import UniqueIndex
-from mo_dots import Data, literal_field, Null
+from mo_dots import Data, Null
 from mo_dots import wrap, set_default, split_field, join_field
 from mo_logs import Log
-from mo_collections.index import Index
 
 config = Data()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
 _ListContainer = None
@@ -73,7 +71,7 @@ def wrap_from(frum, schema=None):
         index = frum
         if frum.startswith("meta."):
             if frum == "meta.columns":
-                return _meta.singlton.meta.columns
+                return _meta.singlton.meta.columns.denormalized()
             elif frum == "meta.tables":
                 return _meta.singlton.meta.tables
             else:
@@ -145,9 +143,6 @@ class Schema(object):
     @property
     def columns(self):
         return copy(self._columns)
-
-    def keys(self):
-        return set(k[0] for k in self.lookup._data.keys())
 
 
 def _index(columns, query_path):

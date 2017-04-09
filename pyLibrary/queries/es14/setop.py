@@ -86,7 +86,7 @@ def extract_rows(es, es_query, query):
                     source = "_source"
                     for cname, cs in schema.lookup.items():
                         for c in cs:
-                            if c.type not in STRUCT:
+                            if c.type not in STRUCT and c.es_column != "_id":
                                 new_name = new_name_prefix + literal_field(cname)
                                 new_select.append({
                                     "name": new_name,

@@ -317,12 +317,12 @@ class TestSorting(BaseTestCase):
                 "meta": {"format": "cube"},
                 "edges": [
                     {"name": "b", "domain": {"type": "set", "partitions": [
-                        {"value": 0},
-                        {"value": 1}
+                        {"value": 1},
+                        {"value": 0}
                     ]}},
                     {"name": "a", "domain": {"type": "set", "partitions": [
-                        {"value": "a"},
-                        {"value": "c"}
+                        {"value": "c"},
+                        {"value": "a"}
                     ]}}
                 ],
                 "data": {

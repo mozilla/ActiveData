@@ -130,6 +130,17 @@ class SetDecoder(AggsDecoder):
         AggsDecoder.__init__(self, edge, query, limit)
         self.domain = edge.domain
 
+        # WE ASSUME IF THE VARIABLES MATCH, THEN THE SORT TERM AND EDGE TERM MATCH, AND WE SORT BY TERM
+        self.sorted = None
+        edge_var = edge.value.vars()
+        for s in query.sort:
+            if not edge_var - s.value.vars():
+                self.sorted = {1: "asc", -1: "desc"}[s.sort]
+                domain = self.domain
+                key = self.domain.key
+                domain.partitions = parts = jx.sort(domain.partitions, {"value": key, "sort": s.sort})
+                domain.map = {i: p for i, p in enumerate(parts)}
+
     def append_query(self, es_query, start):
         self.start = start
         domain = self.domain
@@ -140,13 +151,15 @@ class SetDecoder(AggsDecoder):
             if isinstance(key, (tuple, list)) and len(key)==1:
                 key = key[0]
             include = [p[key] for p in domain.partitions]
+
             if self.edge.allowNulls:
 
                 return wrap({"aggs": {
                     "_match": set_default({"terms": {
                         "field": field.var,
                         "size": self.limit,
-                        "include": include
+                        "include": include,
+                        "order": {"_term": self.sorted} if self.sorted else None
                     }}, es_query),
                     "_missing": set_default(
                         {"filter": {"or": [
@@ -161,7 +174,8 @@ class SetDecoder(AggsDecoder):
                     "_match": set_default({"terms": {
                         "field": field.var,
                         "size": self.limit,
-                        "include": include
+                        "include": include,
+                        "order": {"_term": self.sorted} if self.sorted else None
                     }}, es_query)
                 }})
         else:
@@ -666,7 +680,6 @@ class ObjectDecoder(SetDecoder):
         for k, v in zip(self.put, row[self.start:self.start + self.num_columns:]):
             output[k] = v["key"]
         return output
-
 
     @property
     def num_columns(self):

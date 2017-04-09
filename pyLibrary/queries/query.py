@@ -510,7 +510,7 @@ def _normalize_group(edge, schema=None):
         return wrap({
             "name": edge,
             "value": jx_expression(edge),
-            "allowNulls": False,
+            "allowNulls": True,
             "domain": {"type": "default"}
         })
     else:

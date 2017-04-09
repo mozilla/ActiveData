@@ -11,8 +11,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from copy import copy
-
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
     unwraplist
 from mo_logs import Log
@@ -42,7 +40,7 @@ def get_decoders_by_depth(query):
 
     if query.sort:
         # REORDER EDGES/GROUPBY TO MATCH THE SORT
-        if query.edges and query.format == "cube":
+        if len(query.edges)>1 and query.format == "cube":
             Log.error("can not use sort clause with edges: add sort clause to each edge")
         ordered_edges = []
         remaining_edges = query.edges+query.groupby

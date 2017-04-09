@@ -1,10 +1,10 @@
 # ActiveData 
 
-`master`: [![Master Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=master)](https://travis-ci.org/klahnakoski/ActiveData)
-`dev`:[![Dev Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=dev)](https://travis-ci.org/klahnakoski/ActiveData)
-
-
 Provide high speed filtering and aggregation over data see [ActiveData Wiki Page](https://wiki.mozilla.org/Auto-tools/Projects/ActiveData) for project details
+
+## Build Status
+**master:** <span style="vertical-align:text-top">[![Master Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=master)](https://travis-ci.org/klahnakoski/ActiveData)</span>
+&nbsp;&nbsp;&nbsp;&nbsp;**dev:** <span style="vertical-align:text-top">[![Dev Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=dev)](https://travis-ci.org/klahnakoski/ActiveData)</span>
 
 ## Use it now!
 

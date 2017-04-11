@@ -15,12 +15,12 @@ ActiveData is a service! You can certainly setup your own service, but it is eas
 ## Requirements
 
 * Python2.7 installed
-* Elasticsearch **version 1.7.x**
+[* Elasticsearch **version 1.7.x**](https://www.elastic.co/downloads/past-releases/elasticsearch-1-7-6)
 
 
 ### Elasticsearch Configuration
 
-Elasticsearch has a configuration file at `config/elasticsearch.yml`. You must modify it to turn on scripting.  Add these two lines at the top of the file:
+Elasticsearch has a configuration file at `config/elasticsearch.yml` (Linux: `/etc/elasticsearch/elasticsearch.yml`). You must modify it to turn on scripting.  Add these two lines at the top of the file:
 
     script.inline: on
     script.indexed: on
@@ -64,6 +64,7 @@ you should expect something like
 It is still too early for PyPi install, so please clone *master* off of github:
 
     git clone https://github.com/klahnakoski/ActiveData.git
+    cd ActiveData
     git checkout master
 
 and install your requirements:
@@ -118,7 +119,7 @@ If you have no records in your Elasticsearch cluster, then you must add some bef
 
 Make a table in Elasticsearch, with one record: 
 
-    curl -XPUT "http://localhost:9200/movies/movie/1" -d "{\"name\":\"The Parent Trap\",\"released\":\"29 July` 1998\",\"imdb\":\"http://www.imdb.com/title/tt0120783/\",\"rating\":\"PG\",\"director\":{\"name\":\"Nancy Meyers\",\"dob\":\"December 8, 1949\"}}"
+    curl -XPUT "http://localhost:9200/movies/movie/1" -d "{\"name\":\"The Parent Trap\",\"released\":\"29 July, 1998\",\"imdb\":\"http://www.imdb.com/title/tt0120783/\",\"rating\":\"PG\",\"director\":{\"name\":\"Nancy Meyers\",\"dob\":\"December 8, 1949\"}}"
 
 Assuming you used the defaults, you can verify the service is up if you can
 access the Query Tool at [http://localhost:5000/tools/query.html](http://localhost:5000/tools/query.html).

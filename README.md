@@ -96,6 +96,7 @@ default Elasticsearch index. You can find a few sample config files in
             "type":"test_result",
             "debug":true
         }
+        ...<snip>...
     }
 ```
 

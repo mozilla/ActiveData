@@ -11,10 +11,15 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+import mo_json_config
+
 from active_data.app import OVERVIEW
 from mo_json_config import URL
 from pyLibrary import convert
-from tests.test_jx import BaseTestCase
+
+from mo_logs.strings import expand_template
+from pyLibrary.env import http
+from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
 class TestBasicRequests(BaseTestCase):
@@ -77,6 +82,24 @@ class TestBasicRequests(BaseTestCase):
         except Exception:
             self.assertEqual(response.all_content, expected2)
 
+    def test_index_wo_name(self):
+        """
+        RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
+        """
+        data = {
+            "name": "The Parent Trap",
+            "released": "29 July` 1998",
+            "imdb": "http://www.imdb.com/title/tt0120783/",
+            "rating": "PG",
+            "director": {"name": "Nancy Meyers", "dob": "December 8, 1949"}
+        }
+        try:
+            self.utils._es_cluster.delete_index(TEST_TABLE)
+        except Exception:
+            pass
+        container = self.utils._es_cluster.get_or_create_index(index=TEST_TABLE, kwargs=self.utils._es_test_settings)
+        container.add({"value": data})
 
-
+        result = http.post_json(url=self.utils.service_url, json={"from": container.settings.index})
+        self.assertEquals(result.data["\."][0], data)
 

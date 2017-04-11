@@ -11,13 +11,10 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-import mo_json_config
-
-from active_data.app import OVERVIEW
 from mo_json_config import URL
 from pyLibrary import convert
 
-from mo_logs.strings import expand_template
+from active_data.app import OVERVIEW
 from pyLibrary.env import http
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
@@ -100,6 +97,6 @@ class TestBasicRequests(BaseTestCase):
         container = self.utils._es_cluster.get_or_create_index(index=TEST_TABLE, kwargs=self.utils._es_test_settings)
         container.add({"value": data})
 
-        result = http.post_json(url=self.utils.service_url, json={"from": container.settings.index})
-        self.assertEquals(result.data["\."][0], data)
+        result = http.post_json(url=self.utils.service_url, json={"format":"list", ""from": container.settings.index})
+        self.assertEquals(result.data, [data])
 

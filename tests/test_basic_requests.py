@@ -81,9 +81,6 @@ class TestBasicRequests(BaseTestCase):
             self.assertEqual(response.all_content, expected2)
 
     def test_index_wo_name(self):
-        """
-        RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
-        """
         data = {
             "name": "The Parent Trap",
             "released": "29 July` 1998",

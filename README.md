@@ -15,7 +15,7 @@ ActiveData is a service! You can certainly setup your own service, but it is eas
 ## Requirements
 
 * Python2.7 installed
-[* Elasticsearch **version 1.7.x**](https://www.elastic.co/downloads/past-releases/elasticsearch-1-7-6)
+* [Elasticsearch **version 1.7.x**](https://www.elastic.co/downloads/past-releases/elasticsearch-1-7-6)
 
 
 ### Elasticsearch Configuration

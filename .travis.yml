@@ -5,7 +5,7 @@ python:
 branches:
   only:
   - master
-  - merge
+  - dev
 
 install:
   - "sudo service elasticsearch stop"

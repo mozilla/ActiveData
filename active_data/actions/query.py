@@ -147,7 +147,7 @@ def _test_mode_wait(query):
             for c in cols:
                 if not c.last_updated or c.cardinality == None :
                     Log.note(
-                        "wait for column (table={{col.table}}, name={{col.name}}) metadata to arrive",
+                        "wait for column (table={{col.es_index}}, name={{col.es_column}}) metadata to arrive",
                         col=c
                     )
                     break

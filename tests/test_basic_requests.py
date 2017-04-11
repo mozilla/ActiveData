@@ -76,7 +76,7 @@ class TestBasicRequests(ActiveDataBaseTest):
             self.assertEqual(response.all_content, expected1)
         except Exception:
             self.assertEqual(response.all_content, expected2)
-    
+
 
 
 

@@ -14,14 +14,12 @@ from __future__ import absolute_import
 from collections import Mapping
 
 import functools
-from pyLibrary.collections import MIN
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import split_field, coalesce, Dict
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import wrap
+from mo_math import MIN
+from mo_logs import Log
+from mo_dots import split_field, coalesce, Data, FlatList, wrap
 
 
-class FlatList(list):
+class PartFlatList(list):
     """
     FlatList IS A RESULT OF FILTERING SETS OF TREES
     WE SAVED OURSELVES FROM COPYING ALL OBJECTS IN ALL PATHS OF ALL TREES,
@@ -69,12 +67,12 @@ class FlatList(list):
                 depth = coalesce(MIN([i for i, (k, p) in enumerate(zip(keys, self.path)) if k != p]), len(self.path))  # LENGTH OF COMMON PREFIX
                 short_key = keys[depth:]
 
-                output = DictList()
+                output = FlatList()
                 _select1((wrap(d[depth]) for d in self.data), short_key, 0, output)
                 return output
 
         if isinstance(fields, list):
-            output = DictList()
+            output = FlatList()
 
             meta = []
             for f in fields:
@@ -84,7 +82,7 @@ class FlatList(list):
                     meta.append((f.name, functools.partial(lambda v, d: d[v], f.value)))
 
             for row in self._values():
-                agg = Dict()
+                agg = Data()
                 for name, f in meta:
                     agg[name] = f(row)
 
@@ -101,7 +99,7 @@ class FlatList(list):
             #     meta.append((f.name, depth, short_key))
             #
             # for row in self._data:
-            #     agg = Dict()
+            #     agg = Data()
             #     for name, depth, short_key in meta:
             #         if short_key:
             #             agg[name] = row[depth][short_key]

@@ -1,0 +1,41 @@
+{
+	"store": [
+		[
+			"book",
+			"reference",
+			"Nigel Rees",
+			"Sayings of the Century",
+			8.95
+		],
+		[
+			"book",
+			"fiction",
+			"Evelyn Waugh",
+			"Sword of Honour",
+			12.99
+		],
+		[
+			"book",
+			"fiction",
+			"Herman Melville",
+			"Moby Dick",
+			8.99,
+			"0-553-21311-3"
+		],
+		[
+			"book",
+			"fiction",
+			"J. R. R. Tolkien",
+			"The Lord of the Rings",
+			12.99,
+			"isbn"
+			:
+			"0-395-19395-8"
+		]
+		[
+			"bicycle",
+			"red",
+			19.95
+		]
+	]
+}

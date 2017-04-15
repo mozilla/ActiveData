@@ -7,24 +7,23 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
+import itertools
+import re
 from collections import Mapping
 from numbers import Number
-import re
-import itertools
 
-from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
-from pyLibrary.maths import Math
-from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.dot import coalesce, Dict, set_default, Null, listwrap
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import wrap
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import Duration
-
+from mo_collections.unique_index import UniqueIndex
+from mo_dots import coalesce, Data, set_default, Null, listwrap
+from mo_dots import wrap
+from mo_dots.lists import FlatList
+from mo_logs import Log
+from mo_math import Math, MAX, MIN
+from mo_times.dates import Date
+from mo_times.durations import Duration
 
 ALGEBRAIC = {"time", "duration", "numeric", "count", "datetime"}  # DOMAINS THAT HAVE ALGEBRAIC OPERATIONS DEFINED
 KNOWN = {"set", "boolean", "duration", "time", "numeric"}  # DOMAINS THAT HAVE A KNOWN NUMBER FOR PARTS AT QUERY TIME
@@ -34,13 +33,13 @@ PARTITION = {"uid", "set", "boolean"}  # DIMENSIONS WITH CLEAR PARTS
 
 
 class Domain(object):
-    __slots__ = ["name", "type", "value", "key", "label", "end", "isFacet", "where", "dimension", "primitive"]
+    __slots__ = ["name", "type", "value", "key", "label", "end", "isFacet", "where", "dimension", "primitive", "limit"]
 
     def __new__(cls, **desc):
         if cls == Domain:
             try:
                 return name_to_type[desc.get("type")](**desc)
-            except Exception, e:
+            except Exception as e:
                 Log.error("Do not know domain of type {{type}}", type=desc.get("type"), cause=e)
         else:
             return object.__new__(cls)
@@ -52,6 +51,7 @@ class Domain(object):
         self.name = coalesce(desc.name, desc.type)
         self.isFacet = coalesce(desc.isFacet, False)
         self.dimension = Null
+        self.limit = desc.limit
 
     def _set_slots_to_null(self, cls):
         """
@@ -65,12 +65,12 @@ class Domain(object):
 
 
     def __copy__(self):
-        return self.__class__(**self.as_dict())
+        return self.__class__(**self.__data__())
 
     def copy(self):
-        return self.__class__(**self.as_dict())
+        return self.__class__(**self.__data__())
 
-    def as_dict(self):
+    def __data__(self):
         return wrap({
             "name": self.name,
             "type": self.type,
@@ -80,9 +80,6 @@ class Domain(object):
             "where": self.where,
             "dimension": self.dimension
         })
-
-    def __json__(self):
-        return convert.value2json(self.as_dict())
 
     @property
     def __all_slots__(self):
@@ -132,7 +129,7 @@ class DefaultDomain(Domain):
         Domain.__init__(self, **desc)
 
         self.NULL = Null
-        self.partitions = DictList()
+        self.partitions = FlatList()
         self.map = dict()
         self.map[None] = self.NULL
         self.limit = desc.get('limit')
@@ -148,7 +145,7 @@ class DefaultDomain(Domain):
         if canonical:
             return canonical
 
-        canonical = Dict(name=key, value=key)
+        canonical = Data(name=key, value=key)
 
         self.partitions.append(canonical)
         self.map[key] = canonical
@@ -166,8 +163,8 @@ class DefaultDomain(Domain):
     def getLabel(self, part):
         return part.value
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
         output.partitions = self.partitions
         output.limit = self.limit
         return output
@@ -187,7 +184,7 @@ class SimpleSetDomain(Domain):
         self.type = "set"
         self.order = {}
         self.NULL = Null
-        self.partitions = DictList()
+        self.partitions = FlatList()
         self.primitive = True  # True IF DOMAIN IS A PRIMITIVE VALUE SET
 
         if isinstance(self.key, set):
@@ -288,7 +285,7 @@ class SimpleSetDomain(Domain):
             if output is None:
                 return len(self.partitions)
             return output
-        except Exception, e:
+        except Exception as e:
             Log.error("problem", e)
 
 
@@ -298,7 +295,7 @@ class SimpleSetDomain(Domain):
             if not canonical:
                 return self.NULL
             return canonical
-        except Exception, e:
+        except Exception as e:
             Log.error("problem", e)
 
     def getPartByIndex(self, index):
@@ -321,8 +318,8 @@ class SimpleSetDomain(Domain):
     def getLabel(self, part):
         return part[self.label]
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
         output.partitions = self.partitions
         return output
 
@@ -337,7 +334,7 @@ class SetDomain(Domain):
         self.type = "set"
         self.order = {}
         self.NULL = Null
-        self.partitions = DictList()
+        self.partitions = FlatList()
 
         if isinstance(self.key, set):
             Log.error("problem")
@@ -395,7 +392,7 @@ class SetDomain(Domain):
             if output is None:
                 return len(self.partitions)
             return output
-        except Exception, e:
+        except Exception as e:
             Log.error("problem", e)
 
 
@@ -405,7 +402,7 @@ class SetDomain(Domain):
             if not canonical:
                 return self.NULL
             return canonical
-        except Exception, e:
+        except Exception as e:
             Log.error("problem", e)
 
     def getKey(self, part):
@@ -423,8 +420,8 @@ class SetDomain(Domain):
     def getLabel(self, part):
         return part[self.label]
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
         output.partitions = self.partitions
         return output
 
@@ -484,8 +481,8 @@ class TimeDomain(Domain):
     def getKeyByIndex(self, index):
         return self.partitions[index][self.key]
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
 
         output.partitions = self.partitions
         output.min = self.min
@@ -544,8 +541,8 @@ class DurationDomain(Domain):
     def getKeyByIndex(self, index):
         return self.partitions[index][self.key]
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
 
         output.partitions = self.partitions
         output.min = self.min
@@ -591,8 +588,8 @@ class NumericDomain(Domain):
     def getKeyByIndex(self, index):
         return index
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
 
         output.min = self.min
         output.max = self.max
@@ -633,8 +630,8 @@ class RangeDomain(Domain):
 
             parts = listwrap(self.partitions)
             for i, p in enumerate(parts):
-                self.min = Math.min(self.min, p.min)
-                self.max = Math.max(self.max, p.max)
+                self.min = MIN([self.min, p.min])
+                self.max = MAX([self.max, p.max])
                 if p.dataIndex != None and p.dataIndex != i:
                     Log.error("Expecting `dataIndex` to agree with the order of the parts")
                 if p[self.key] == None:
@@ -678,8 +675,8 @@ class RangeDomain(Domain):
     def getKeyByIndex(self, index):
         return self.partitions[index][self.key]
 
-    def as_dict(self):
-        output = Domain.as_dict(self)
+    def __data__(self):
+        output = Domain.__data__(self)
 
         output.partitions = self.partitions
         output.min = self.min
@@ -710,24 +707,6 @@ def value_compare(a, b):
         return -1
     else:
         return 0
-
-
-keyword_pattern = re.compile(r"(\$|\w|\\\.)+(?:\.(\$|\w|\\\.)+)*")
-
-
-def is_keyword(value):
-    if value.__class__.__name__ == "Variable":
-        Log.warning("not expected")
-        return True
-
-    if not value or not isinstance(value, basestring):
-        return False  # _a._b
-    if value == ".":
-        return True
-    match = keyword_pattern.match(value)
-    if not match:
-        return False
-    return match.group(0) == value
 
 
 name_to_type = {

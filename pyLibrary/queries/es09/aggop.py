@@ -11,10 +11,10 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary.collections.matrix import Matrix
-from pyLibrary.collections import AND
-from pyLibrary.dot import listwrap, unwrap, literal_field
-from pyLibrary.queries.domains import is_keyword
+from mo_collections.matrix import Matrix
+from mo_math import AND
+from mo_dots import listwrap, unwrap, literal_field
+from jx_base.queries import is_variable_name
 from pyLibrary.queries.es09.util import aggregates, fix_es_stats, build_es_query
 from pyLibrary.queries import es09
 from pyLibrary.queries.containers.cube import Cube
@@ -75,7 +75,7 @@ def es_countop(es, mvel, query):
     FromES = build_es_query(query)
     for s in select:
 
-        if is_keyword(s.value):
+        if is_variable_name(s.value):
             FromES.facets[s.name] = {
                 "terms": {
                     "field": s.value,

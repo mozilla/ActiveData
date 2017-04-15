@@ -14,12 +14,12 @@ from __future__ import unicode_literals
 from collections import Mapping
 from copy import copy
 
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, Null
-from pyLibrary.dot import wrap, listwrap
-from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot.lists import DictList
-from pyLibrary.maths import Math
+from mo_logs import Log
+from mo_dots import coalesce, Null
+from mo_dots import wrap, listwrap
+from mo_dots import Data
+from mo_dots import FlatList
+from mo_math import Math
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain
@@ -94,7 +94,7 @@ class Normal(Namespace):
 
     def _convert_from(self, frum):
         if isinstance(frum, basestring):
-            return Dict(name=frum)
+            return Data(name=frum)
         elif isinstance(frum, (Container, QueryOp)):
             return frum
         else:
@@ -102,7 +102,7 @@ class Normal(Namespace):
 
     def _convert_select(self, select):
         if isinstance(select, basestring):
-            return Dict(
+            return Data(
                 name=select.rstrip("."),  # TRAILING DOT INDICATES THE VALUE, BUT IS INVALID FOR THE NAME
                 value=select,
                 aggregate="none"
@@ -126,7 +126,7 @@ class Normal(Namespace):
 
     def _convert_edge(self, edge):
         if isinstance(edge, basestring):
-            return Dict(
+            return Data(
                 name=edge,
                 value=edge,
                 domain=self._convert_domain()
@@ -139,16 +139,16 @@ class Normal(Namespace):
             if isinstance(edge.value, (Mapping, list)) and not edge.domain:
                 # COMPLEX EDGE IS SHORT HAND
                 domain =self._convert_domain()
-                domain.dimension = Dict(fields=edge.value)
+                domain.dimension = Data(fields=edge.value)
 
-                return Dict(
+                return Data(
                     name=edge.name,
                     allowNulls=False if edge.allowNulls is False else True,
                     domain=domain
                 )
 
             domain = self._convert_domain(edge.domain)
-            return Dict(
+            return Data(
                 name=coalesce(edge.name, edge.value),
                 value=edge.value,
                 range=edge.range,
@@ -199,7 +199,7 @@ class Normal(Namespace):
         if range == None:
             return None
 
-        return Dict(
+        return Data(
             min=range.min,
             max=range.max
         )
@@ -211,7 +211,7 @@ class Normal(Namespace):
 
 
     def _convert_window(self, window):
-        return Dict(
+        return Data(
             name=coalesce(window.name, window.value),
             value=window.value,
             edges=[self._convert_edge(e) for e in listwrap(window.edges)],
@@ -232,9 +232,9 @@ def normalize_sort(sort=None):
     """
 
     if not sort:
-        return DictList.EMPTY
+        return Null
 
-    output = DictList()
+    output = FlatList()
     for s in listwrap(sort):
         if isinstance(s, basestring) or Math.is_integer(s):
             output.append({"value": s, "sort": 1})

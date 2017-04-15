@@ -38,7 +38,7 @@ The ActiveData Query Tool hides the formatting feature of the ActiveData service
 	}
 ```
 
-###Inspecting Individual Records
+### Inspecting Individual Records
 
 The `"format":"list"` clause is great for extracting specific records from ActiveData. Individual records will give you an idea of what is available, and allow you to drill down while exploring possible anomalies.
 
@@ -183,7 +183,7 @@ outside the domain.
 }
 ```
 
-###Complex `edges`
+### Complex `edges`
 
 Edges can be more than strings, they can be clauses that include an additional
 description of the domain.

@@ -11,10 +11,8 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary.dot import wrap
-
-from tests import NULL
-from tests.base_test_class import ActiveDataBaseTest, TEST_TABLE
+from mo_dots import wrap
+from tests.test_jx import BaseTestCase, TEST_TABLE, NULL
 
 simple_test_data = [
     {"a": "c", "v": 13},
@@ -26,7 +24,7 @@ simple_test_data = [
 ]
 
 
-class TestSQL(ActiveDataBaseTest):
+class TestSQL(BaseTestCase):
 
     def test_count(self):
         test = {

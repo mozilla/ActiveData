@@ -11,18 +11,18 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from pyLibrary.collections.matrix import Matrix
-from pyLibrary.collections import COUNT, PRODUCT
+from mo_collections.matrix import Matrix
+from mo_math import COUNT, PRODUCT
 from pyLibrary.queries import domains
 from pyLibrary.queries.containers.cube import Cube
-from pyLibrary.queries.domains import is_keyword
+from jx_base.queries import is_variable_name
 from pyLibrary.queries.es09.util import aggregates, build_es_query, compileEdges2Term
-from pyLibrary.debugs.logs import Log
+from mo_logs import Log
 from pyLibrary.queries.es09.expressions import UID
 from pyLibrary.queries import es09
-from pyLibrary.dot import literal_field, coalesce
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import wrap, listwrap
+from mo_dots import literal_field, coalesce
+from mo_dots.lists import FlatList
+from mo_dots import wrap, listwrap
 from pyLibrary.queries.expressions import simplify_esfilter
 
 
@@ -41,7 +41,7 @@ def is_terms_stats(query):
 def es_terms_stats(esq, mvel, query):
     select = listwrap(query.select)
     facetEdges = []    # EDGES THAT WILL REQUIRE A FACET FOR EACH PART
-    termsEdges = DictList()
+    termsEdges = FlatList()
     specialEdge = None
     special_index = -1
 
@@ -73,7 +73,7 @@ def es_terms_stats(esq, mvel, query):
         special_index = -1
         for i, e in enumerate(facetEdges):
             l = len(e.domain.partitions)
-            if ((e.value and is_keyword(e.value)) or len(e.domain.dimension.fields) == 1) and l > num_parts:
+            if ((e.value and is_variable_name(e.value)) or len(e.domain.dimension.fields) == 1) and l > num_parts:
                 num_parts = l
                 specialEdge = e
                 special_index = i
@@ -116,7 +116,7 @@ def es_terms_stats(esq, mvel, query):
         # GENERATE ALL COMBOS
         esFacets = getAllEdges(facetEdges)
 
-    calcTerm = compileEdges2Term(mvel, termsEdges, DictList())
+    calcTerm = compileEdges2Term(mvel, termsEdges, FlatList())
     term2parts = calcTerm.term2parts
 
     if len(esFacets) * len(select) > 1000:
@@ -127,8 +127,8 @@ def es_terms_stats(esq, mvel, query):
 
     for s in select:
         for parts in esFacets:
-            condition = DictList()
-            constants = DictList()
+            condition = FlatList()
+            constants = FlatList()
             name = [literal_field(s.name)]
             for f, fedge in enumerate(facetEdges):
                 name.append(str(parts[f].dataIndex))
@@ -140,8 +140,8 @@ def es_terms_stats(esq, mvel, query):
             FromES.facets[name] = {
                 "terms_stats": {
                     "key_field": calcTerm.field,
-                    "value_field": s.value if is_keyword(s.value) else None,
-                    "value_script": mvel.compile_expression(s.value) if not is_keyword(s.value) else None,
+                    "value_field": s.value if is_variable_name(s.value) else None,
+                    "value_script": mvel.compile_expression(s.value) if not is_variable_name(s.value) else None,
                     "size": coalesce(query.limit, 200000)
                 }
             }
@@ -152,7 +152,7 @@ def es_terms_stats(esq, mvel, query):
 
     if specialEdge.domain.type not in domains.KNOWN:
         # WE BUILD THE PARTS BASED ON THE RESULTS WE RECEIVED
-        partitions = DictList()
+        partitions = FlatList()
         map = {}
         for facetName, parts in data.facets.items():
             for stats in parts.terms:
@@ -225,7 +225,7 @@ def _getAllEdges(facetEdges, edgeDepth):
 
     deeper = _getAllEdges(facetEdges, edgeDepth + 1)
 
-    output = DictList()
+    output = FlatList()
     partitions = edge.domain.partitions
     for part in partitions:
         for deep in deeper:
@@ -243,7 +243,7 @@ def buildCondition(mvel, edge, partition):
         # MUST USE THIS' esFacet
         condition = wrap(coalesce(partition.where, {"and": []}))
 
-        if partition.min and partition.max and is_keyword(edge.value):
+        if partition.min and partition.max and is_variable_name(edge.value):
             condition["and"].append({
                 "range": {edge.value: {"gte": partition.min, "lt": partition.max}}
             })
@@ -258,7 +258,7 @@ def buildCondition(mvel, edge, partition):
 
             if edge.range.mode and edge.range.mode == "inclusive":
                 # IF THE range AND THE partition OVERLAP, THEN MATCH IS MADE
-                if is_keyword(edge.range.min):
+                if is_variable_name(edge.range.min):
                     output["and"].append({"range": {edge.range.min: {"lt": es09.expressions.value2value(partition.max)}}})
                 else:
                     # WHOA!! SUPER SLOW!!
@@ -266,7 +266,7 @@ def buildCondition(mvel, edge, partition):
                         edge.range.min + " < " + es09.expressions.value2MVEL(partition.max)
                     )}})
 
-                if is_keyword(edge.range.max):
+                if is_variable_name(edge.range.max):
                     output["and"].append({"or": [
                         {"missing": {"field": edge.range.max}},
                         {"range": {edge.range.max, {"gt": es09.expressions.value2value(partition.min)}}}
@@ -278,7 +278,7 @@ def buildCondition(mvel, edge, partition):
 
             else:
                 # SNAPSHOT - IF range INCLUDES partition.min, THEN MATCH IS MADE
-                if is_keyword(edge.range.min):
+                if is_variable_name(edge.range.min):
                     output["and"].append({"range": {edge.range.min: {"lte": es09.expressions.value2value(partition.min)}}})
                 else:
                     # WHOA!! SUPER SLOW!!
@@ -286,7 +286,7 @@ def buildCondition(mvel, edge, partition):
                         edge.range.min + "<=" + es09.expressions.value2MVEL(partition.min)
                     )}})
 
-                if is_keyword(edge.range.max):
+                if is_variable_name(edge.range.max):
                     output["and"].append({"or": [
                         {"missing": {"field": edge.range.max}},
                         {"range": {edge.range.max, {"gte": es09.expressions.value2value(partition.min)}}}
@@ -303,7 +303,7 @@ def buildCondition(mvel, edge, partition):
     elif not edge.value:
         # MUST USE THIS' esFacet, AND NOT(ALL THOSE ABOVE)
         return partition.esfilter
-    elif is_keyword(edge.value):
+    elif is_variable_name(edge.value):
         # USE FAST ES SYNTAX
         if edge.domain.type in domains.ALGEBRAIC:
             output.range = {}

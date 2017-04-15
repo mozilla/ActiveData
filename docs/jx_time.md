@@ -43,7 +43,7 @@ Durations can be added (`+`) and subtracted (`-`) from each other. They can also
 Time Expressions
 ----------------
 
-###Floor
+### Floor
 
 Time expressions are simplified with the floor function, denoted by pipe (`|`).   Floor only works on time points, and rounds down to closest time that is a multiple of the given duration since epoch GMT:
 

@@ -14,20 +14,23 @@ from __future__ import unicode_literals
 import StringIO
 import gzip
 import zipfile
-from io import BytesIO
 from tempfile import TemporaryFile
 
 import boto
+from BeautifulSoup import BeautifulSoup
 from boto.s3.connection import Location
 
+from mo_dots import wrap, Null, coalesce, unwrap, Data
+from mo_kwargs import override
+from mo_logs import Log, Except
+from mo_logs.url import value2url_param
+from mo_times.dates import Date
+from mo_times.timer import Timer
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import wrap, Null, coalesce, unwrap
-from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, GzipLines, LazyLines, ibytes2ilines, scompressed2ibytes
-from pyLibrary.meta import use_settings
-from pyLibrary.times.dates import Date
-from pyLibrary.times.timer import Timer
+from pyLibrary.env import http
+from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, LazyLines, ibytes2ilines, scompressed2ibytes
 
+TOO_MANY_KEYS = 1000 * 1000 * 1000
 READ_ERROR = "S3 read error"
 MAX_FILE_SIZE = 100 * 1024 * 1024
 VALID_KEY = r"\d+([.:]\d+)*"
@@ -47,6 +50,9 @@ class File(object):
     def write(self, value):
         self.bucket.write(self.key, value)
 
+    def write_lines(self, lines):
+        self.bucket.write_lines(self.key, lines)
+
     @property
     def meta(self):
         return self.bucket.meta(self.key)
@@ -56,18 +62,18 @@ class File(object):
 
 
 class Connection(object):
-    @use_settings
+    @override
     def __init__(
         self,
         aws_access_key_id=None,  # CREDENTIAL
         aws_secret_access_key=None,  # CREDENTIAL
         region=None,  # NAME OF AWS REGION, REQUIRED FOR SOME BUCKETS
-        settings=None
+        kwargs=None
     ):
-        self.settings = settings
+        self.settings = kwargs
 
         try:
-            if not settings.region:
+            if not kwargs.region:
                 self.connection = boto.connect_s3(
                     aws_access_key_id=unwrap(self.settings.aws_access_key_id),
                     aws_secret_access_key=unwrap(self.settings.aws_secret_access_key)
@@ -78,7 +84,7 @@ class Connection(object):
                     aws_access_key_id=unwrap(self.settings.aws_access_key_id),
                     aws_secret_access_key=unwrap(self.settings.aws_secret_access_key)
                 )
-        except Exception, e:
+        except Exception as e:
             Log.error("Problem connecting to S3", e)
 
     def __enter__(self):
@@ -106,7 +112,7 @@ class Bucket(object):
     ALL KEYS ARE DIGITS, SEPARATED BY DOT (.) COLON (:)
     """
 
-    @use_settings
+    @override
     def __init__(
         self,
         bucket,  # NAME OF THE BUCKET
@@ -115,17 +121,17 @@ class Bucket(object):
         region=None,  # NAME OF AWS REGION, REQUIRED FOR SOME BUCKETS
         public=False,
         debug=False,
-        settings=None
+        kwargs=None
     ):
-        self.settings = settings
+        self.settings = kwargs
         self.connection = None
         self.bucket = None
-        self.key_format = _scrub_key(settings.key_format)
+        self.key_format = _scrub_key(kwargs.key_format)
 
         try:
-            self.connection = Connection(settings).connection
+            self.connection = Connection(kwargs).connection
             self.bucket = self.connection.get_bucket(self.settings.bucket, validate=False)
-        except Exception, e:
+        except Exception as e:
             Log.error("Problem connecting to {{bucket}}", bucket=self.settings.bucket, cause=e)
 
 
@@ -154,7 +160,7 @@ class Bucket(object):
             if full_key == None:
                 return
             self.bucket.delete_key(full_key)
-        except Exception, e:
+        except Exception as e:
             self.get_meta(key, conforming=False)
             raise e
 
@@ -162,6 +168,12 @@ class Bucket(object):
         self.bucket.delete_keys(keys)
 
     def get_meta(self, key, conforming=True):
+        """
+        RETURN METADATA ON FILE IN BUCKET
+        :param key:  KEY, OR PREFIX OF KEY
+        :param conforming: TEST IF THE KEY CONFORMS TO REQUIRED PATTERN
+        :return: METADATA, IF UNIQUE, ELSE ERROR
+        """
         try:
             metas = list(self.bucket.list(prefix=key))
             metas = wrap([m for m in metas if m.name.find(".json") != -1])
@@ -182,7 +194,7 @@ class Bucket(object):
                         if favorite and not perfect:
                             too_many = True
                         favorite = m
-                except Exception, e:
+                except Exception as e:
                     error = e
 
             if too_many:
@@ -195,7 +207,7 @@ class Bucket(object):
             if not perfect and error:
                 Log.error("Problem with key request", error)
             return coalesce(perfect, favorite)
-        except Exception, e:
+        except Exception as e:
             Log.error(READ_ERROR+" can not read {{key}} from {{bucket}}", key=key, bucket=self.bucket.name, cause=e)
 
     def keys(self, prefix=None, delimiter=None):
@@ -220,39 +232,27 @@ class Bucket(object):
         """
         RETURN THE METADATA DESCRIPTORS FOR EACH KEY
         """
-
+        limit = coalesce(limit, TOO_MANY_KEYS)
         keys = self.bucket.list(prefix=prefix, delimiter=delimiter)
-        if limit:
-            output = []
-            for i, k in enumerate(keys):
-                output.append({
-                    "key": strip_extension(k.key),
-                    "etag": convert.quote2string(k.etag),
-                    "expiry_date": Date(k.expiry_date),
-                    "last_modified": Date(k.last_modified)
-                })
-                if i >= limit:
-                    break
-            return wrap(output)
-
-        output = [
-            {
+        prefix_len = len(prefix)
+        output = []
+        for i, k in enumerate(k for k in keys if len(k.key) == prefix_len or k.key[prefix_len] in [".", ":"]):
+            output.append({
                 "key": strip_extension(k.key),
                 "etag": convert.quote2string(k.etag),
                 "expiry_date": Date(k.expiry_date),
                 "last_modified": Date(k.last_modified)
-            }
-            for k in keys
-        ]
+            })
+            if i >= limit:
+                break
         return wrap(output)
-
 
     def read(self, key):
         source = self.get_meta(key)
 
         try:
             json = safe_size(source)
-        except Exception, e:
+        except Exception as e:
             Log.error(READ_ERROR, e)
 
         if json == None:
@@ -328,7 +328,7 @@ class Bucket(object):
 
             if self.settings.public:
                 storage.set_acl('public-read')
-        except Exception, e:
+        except Exception as e:
             Log.error(
                 "Problem writing {{bytes}} bytes to {{key}} in {{bucket}}",
                 key=key,
@@ -354,6 +354,7 @@ class Bucket(object):
                 archive.write(l.encode("utf8"))
                 archive.write(b"\n")
                 count += 1
+
         archive.close()
         file_length = buff.tell()
 
@@ -364,8 +365,11 @@ class Bucket(object):
                     buff.seek(0)
                     storage.set_contents_from_file(buff)
                 break
-            except Exception, e:
+            except Exception as e:
+                e = Except.wrap(e)
                 Log.warning("could not push data to s3", cause=e)
+                if 'Access Denied' in e:
+                    break
                 retry -= 1
 
         if self.settings.public:
@@ -399,12 +403,69 @@ class SkeletonBucket(Bucket):
         self.key_format = None
 
 
+content_keys={
+    "key": unicode,
+    "lastmodified": Date,
+    "etag": unicode,
+    "size": int,
+    "storageclass": unicode
+}
+
+
+class PublicBucket(object):
+    """
+    USE THE https PUBLIC API TO INTERACT WITH A BUCKET
+    MAYBE boto CAN DO THIS, BUT NO DOCS FOUND
+    """
+
+    @override
+    def __init__(self, url, kwargs=None):
+        self.url = url
+
+    def list(self, prefix=None, marker=None, delimiter=None):
+        # https://s3.amazonaws.com/net-mozaws-stage-fx-test-activedata?marker=jenkins-go-bouncer.prod-3019/py27.log
+        # <ListBucketResult>
+        #     <Name>net-mozaws-stage-fx-test-activedata</Name>
+        #     <Prefix/>
+        #     <Marker>jenkins-go-bouncer.prod-3019/py27.log</Marker>
+        #     <MaxKeys>1000</MaxKeys>
+        #     <IsTruncated>true</IsTruncated>
+        #     <Contents>
+        #         <Key>jenkins-go-bouncer.prod-3020/py27.log</Key>
+        #         <LastModified>2017-03-05T07:02:20.000Z</LastModified>
+        #         <ETag>"69dcb19e91eb3eec51e1b659801523d6"</ETag>
+        #         <Size>10037</Size>
+        #         <StorageClass>STANDARD</StorageClass>
+        state = Data()
+        state.prefix =prefix
+        state.delimiter = delimiter
+        state.marker = marker
+        state.get_more = True
+
+        def more():
+            xml = http.get(self.url + "?" + value2url_param(state)).content
+            data = BeautifulSoup(xml)
+
+            state.get_more = data.find("istruncated").contents[0] == "true"
+            contents = data.findAll("contents")
+            state.marker = contents[-1].find("key").contents[0]
+            return [{k: t(d.find(k).contents[0]) for k, t in content_keys.items()} for d in contents]
+
+        while state.get_more:
+            content = more()
+            for c in content:
+                yield wrap(c)
+
+    def read_lines(self, key):
+        url = self.url + "/" + key
+        return http.get(url).all_lines
+
+
 def strip_extension(key):
     e = key.find(".json")
     if e == -1:
         return key
     return key[:e]
-
 
 
 def _unzip(compressed):
@@ -425,6 +486,7 @@ def _scrub_key(key):
         if c in [":", "."]:
             output.append(c)
     return "".join(output)
+
 
 def key_prefix(key):
     return int(key.split(":")[0].split(".")[0])

@@ -49,7 +49,7 @@ The select clause is used for both selecting particular values, and for creating
 The path separator is the dot (`.`), with literal dots escaped using backslash. Paths need not point to primitive values, and can refer to objects.
 
 
-###Example Transformation
+### Example Transformation
 
 **Source Data**
 
@@ -99,7 +99,7 @@ All other select clause variations are shortcuts for the standard clause.
 
 ### Simple String
 
-If the name of the name, or path, of the value is not changed, a string will do just fine:
+If the name, or path, of the value is not changed, a string will do just fine:
 
 <table><tr><td>
 <b>Use String Names</b><br>
@@ -252,7 +252,7 @@ Sometimes the whole object is desired; in this case, use a single dot (`"."`). S
 </pre>
 </td></tr></table>
 
-###Selecting Leaves (`*`)
+### Selecting Leaves (`*`)
 
 The star (`*`) can be used to refer to all leaves of a path. This behaviour is different from dot (`.`): Dot does not change structure, the star will flatten it. Star is useful when converting data to table form.
 

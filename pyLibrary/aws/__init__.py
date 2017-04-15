@@ -16,19 +16,21 @@ from boto import sqs
 from boto import utils as boto_utils
 from boto.sqs.message import Message
 
+import mo_json
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except, suppress_exception
-from pyLibrary.debugs.logs import Log, machine_metadata
-from pyLibrary.dot import wrap, unwrap, coalesce
-from pyLibrary.maths import Math
-from pyLibrary.meta import use_settings
-from pyLibrary.thread.signal import Signal
-from pyLibrary.thread.threads import Thread
-from pyLibrary.times.durations import SECOND, Duration
+from mo_logs.exceptions import Except, suppress_exception
+from mo_logs import Log, machine_metadata
+from mo_dots import wrap, unwrap, coalesce
+from mo_math import Math
+from mo_kwargs import override
+from mo_threads.signal import Signal
+from mo_threads import Thread
+from mo_threads.till import Till
+from mo_times.durations import SECOND, Duration
 
 
 class Queue(object):
-    @use_settings
+    @override
     def __init__(
         self,
         name,
@@ -36,22 +38,22 @@ class Queue(object):
         aws_access_key_id=None,
         aws_secret_access_key=None,
         debug=False,
-        settings=None
+        kwargs=None
     ):
-        self.settings = settings
+        self.settings = kwargs
         self.pending = []
 
-        if settings.region not in [r.name for r in sqs.regions()]:
-            Log.error("Can not find region {{region}} in {{regions}}", region=settings.region, regions=[r.name for r in sqs.regions()])
+        if kwargs.region not in [r.name for r in sqs.regions()]:
+            Log.error("Can not find region {{region}} in {{regions}}", region=kwargs.region, regions=[r.name for r in sqs.regions()])
 
         conn = sqs.connect_to_region(
-            region_name=unwrap(settings.region),
-            aws_access_key_id=unwrap(settings.aws_access_key_id),
-            aws_secret_access_key=unwrap(settings.aws_secret_access_key),
+            region_name=unwrap(kwargs.region),
+            aws_access_key_id=unwrap(kwargs.aws_access_key_id),
+            aws_secret_access_key=unwrap(kwargs.aws_secret_access_key),
         )
-        self.queue = conn.get_queue(settings.name)
+        self.queue = conn.get_queue(kwargs.name)
         if self.queue == None:
-            Log.error("Can not find queue with name {{queue}} in region {{region}}", queue=settings.name, region=settings.region)
+            Log.error("Can not find queue with name {{queue}} in region {{region}}", queue=kwargs.name, region=kwargs.region)
 
     def __enter__(self):
         return self
@@ -86,7 +88,7 @@ class Queue(object):
             return None
 
         self.pending.append(m)
-        output = convert.json2value(m.get_body())
+        output = mo_json.json2value(m.get_body())
         return output
 
     def pop_message(self, wait=SECOND, till=None):
@@ -101,7 +103,7 @@ class Queue(object):
             return None
         message.delete = lambda: self.queue.delete_message(message)
 
-        payload = convert.json2value(message.get_body())
+        payload = mo_json.json2value(message.get_body())
         return message, payload
 
     def commit(self):
@@ -139,18 +141,17 @@ def capture_termination_signal(please_stop):
             try:
                 response = requests.get("http://169.254.169.254/latest/meta-data/spot/termination-time")
                 if response.status_code not in [400, 404]:
-                    Log.warning("Shutdown AWS Spot Node {{name}} {{type}}", name=machine_metadata.name, type=machine_metadata.aws_instance_type)
+                    Log.alert("Shutdown AWS Spot Node {{name}} {{type}}", name=machine_metadata.name, type=machine_metadata.aws_instance_type)
                     please_stop.go()
-                    return
-            except Exception, e:
+            except Exception as e:
                 e = Except.wrap(e)
-                if "Failed to establish a new connection: [Errno 10060]" in e:
-                    Log.warning("AWS Spot Detection has shutdown, probably not a spot node, (http://169.254.169.254 is unreachable)")
+                if "Failed to establish a new connection: [Errno 10060]" in e or "A socket operation was attempted to an unreachable network" in e:
+                    Log.note("AWS Spot Detection has shutdown, probably not a spot node, (http://169.254.169.254 is unreachable)")
                     return
                 else:
                     Log.warning("AWS shutdown detection has problems", cause=e)
-                Thread.sleep(seconds=61, please_stop=please_stop)
-            Thread.sleep(seconds=11, please_stop=please_stop)
+                (Till(seconds=61) | please_stop).wait()
+            (Till(seconds=11) | please_stop).wait()
 
     Thread.run("listen for termination", worker, please_stop=please_stop)
 
@@ -168,7 +169,7 @@ def aws_retry(func):
         while True:
             try:
                 return func(*args, **kwargs)
-            except Exception, e:
+            except Exception as e:
                 e = Except.wrap(e)
                 if "Request limit exceeded" in e:
                     Log.warning("AWS Problem", cause=e)

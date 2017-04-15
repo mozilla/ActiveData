@@ -1,0 +1,5 @@
+cluster.name: lahnakoski_es5
+script.engine.painless.inline: true
+http.compression: true
+
+http.port: 9400

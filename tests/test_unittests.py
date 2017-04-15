@@ -8,37 +8,38 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
 from __future__ import division
+from __future__ import unicode_literals
 
-import os
 from unittest import skip
 
-from pyLibrary import convert, jsons
-from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.dot import wrap
+import mo_json_config
+from mo_dots import wrap
+from mo_logs import Log, Except
+from mo_times.dates import Date, Duration
+from mo_times.durations import DAY
+from mo_times.timer import Timer
+from pyLibrary import convert
 from pyLibrary.env import http
-from pyLibrary.thread.multiprocess import Process
-from pyLibrary.times.dates import Date, Duration
-from pyLibrary.times.durations import DAY
-from pyLibrary.times.timer import Timer
-from tests.base_test_class import ActiveDataBaseTest, error, global_settings
+from tests import error
+from tests.test_jx import BaseTestCase, global_settings
 
 APP_CONFIG_FILE = "tests/config/app_staging_settings.json"
 ES_CLUSTER_LOCATION = None
 
+
 @skip("not usually run")
-class TestUnittests(ActiveDataBaseTest):
+class TestUnittests(BaseTestCase):
     process = None
 
     @classmethod
     def setUpClass(cls):
-        ActiveDataBaseTest.setUpClass(assume_server_started=False)
+        BaseTestCase.setUpClass(assume_server_started=False)
 
         # START DIRECT-TO-ACTIVEDATA-ES SERVICE
         global ES_CLUSTER_LOCATION
 
-        app_config = jsons.ref.get("file://"+APP_CONFIG_FILE)
+        app_config = mo_json_config.get("file://"+APP_CONFIG_FILE)
         global_settings.service_url = "http://localhost:"+unicode(app_config.flask.port)+"/query"
         ES_CLUSTER_LOCATION = app_config.elasticsearch.host
 

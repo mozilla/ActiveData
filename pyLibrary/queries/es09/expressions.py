@@ -16,12 +16,12 @@ from datetime import datetime
 import re
 
 from pyLibrary import convert
-from pyLibrary.collections import reverse
-from pyLibrary.debugs.logs import Log
-from pyLibrary.maths import Math
-from pyLibrary.dot import split_field, Dict, Null, join_field, coalesce
-from pyLibrary.dot import listwrap
-from pyLibrary.times.durations import Duration
+from mo_collections import reverse
+from mo_logs import Log
+from mo_logs.strings import quote
+from mo_math import Math
+from mo_dots import split_field, Data, Null, join_field, coalesce, listwrap
+from mo_times.durations import Duration
 
 
 class _MVEL(object):
@@ -150,7 +150,7 @@ class _MVEL(object):
         else:
             output = varName + ' = ' + '+"|"+'.join(["Value2Pipe("+v+")\n" for v in list]) + ';\n'
 
-        return Dict(
+        return Data(
             head="".join(heads),
             body=output
         )
@@ -179,9 +179,9 @@ class _MVEL(object):
                 def fromTerm(term):
                     return domain.getPartByKey(term)
 
-                return Dict(
+                return Data(
                     head="",
-                    body='getDocValue('+convert.string2quote(domain.dimension.fields[0])+')'
+                    body='getDocValue('+quote(domain.dimension.fields[0])+')'
                 ), fromTerm
             else:
                 def fromTerm(term):
@@ -202,9 +202,9 @@ class _MVEL(object):
                         return Null
 
                 for f in es_fields:
-                    term.append('Value2Pipe(getDocValue('+convert.string2quote(f)+'))')
+                    term.append('Value2Pipe(getDocValue('+quote(f)+'))')
 
-                return Dict(
+                return Data(
                     head="",
                     body='Value2Pipe('+('+"|"+'.join(term))+')'
                 ), fromTerm
@@ -302,7 +302,7 @@ class _MVEL(object):
             n = "_temp" + UID()
             self.functions[n] = code
 
-        return Dict(
+        return Data(
             head='var ' + n + ' = function(){\n' + code + '\n};\n',
             body=n + '()\n'
         )
@@ -315,8 +315,8 @@ class Compiled(object):
     def __str__(self):
         return self.code
 
-    def __json__(self):
-        return convert.string2quote(self.code)
+    def __data__(self):
+        return self.code
 
 
 
@@ -479,7 +479,7 @@ def _where(esFilter, _translate):
     elif op == "prefix":
         pair = esFilter[op]
         variableName, value = pair.items()[0]
-        return _translate(variableName) + ".startsWith(" + convert.string2quote(value) + ")"
+        return _translate(variableName) + ".startsWith(" + quote(value) + ")"
     elif op == "match_all":
         return "true"
     else:
@@ -515,7 +515,7 @@ def value2MVEL(value):
 
     if Math.is_number(value):
         return str(value)
-    return convert.string2quote(value)
+    return quote(value)
 
 # FROM PYTHON VALUE TO ES QUERY EQUIVALENT
 def value2query(value):
@@ -526,7 +526,7 @@ def value2query(value):
 
     if Math.is_number(value):
         return value
-    return convert.string2quote(value)
+    return quote(value)
 
 
 def value2value(value):
@@ -549,7 +549,7 @@ def addFunctions(mvel):
     """
     PREPEND THE REQUIRED MVEL FUNCTIONS TO THE CODE
     """
-    isAdded = Dict()            # SOME FUNCTIONS DEPEND ON OTHERS
+    isAdded = Data()            # SOME FUNCTIONS DEPEND ON OTHERS
 
     head=[]
     body=mvel
@@ -566,7 +566,7 @@ def addFunctions(mvel):
             isAdded[func_name] = func_code
             head.append(func_code)
             mvel = func_code + mvel
-    return Dict(
+    return Data(
         head="".join(head),
         body=body
     )
@@ -734,5 +734,5 @@ def replacePrefix(value, prefix, new_prefix):
         if value.startswith(prefix):
             return new_prefix+value[len(prefix)::]
         return value
-    except Exception, e:
+    except Exception as e:
         Log.error("can not replace prefix", e)

@@ -2,6 +2,11 @@ language: python
 python:
   - "2.7"
 
+branches:
+  only:
+  - master
+  - dev
+
 install:
   - "sudo service elasticsearch stop"
   - "sudo cp -f tests/travis/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml"

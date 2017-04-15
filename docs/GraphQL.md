@@ -4,7 +4,7 @@ GraphQL vs JSON Query Expressions
 
 GraphQL, as of October 2016, is a relatively new language.  It is an explicitly typed, data retrieval language.
 
-###The good parts
+### The good parts
 
 **Select by Shape**
 
@@ -29,7 +29,7 @@ GraphQL is not capable of aggregation, nor table joins; you only get back what y
 Compared to SQL, where joins can have O(e^N) performance, GraphQL can serve a niche.  
 
 
-###The bad parts 
+### The bad parts 
 
 **"Query Language"**
 
@@ -57,9 +57,11 @@ Of course, you can also see these pre-proccessing operators as language features
 
 I realize many people enjoy "$#:%@" in their languages, and maybe you can defend it on the basis of "internationalization", but I personally despise punctuation when words can be used: Bits are cheap, please use words instead of symbols. They are easier to Google too.
 
-##Detailed Comparison
+## Detailed Comparison
 
-The rest of this document goes into detail. My objective is to demonstrate that the simple semantics of JSON allow the host language to compose JSON queries, negating the need for pre-processing operators, and making for a simpler query language to reason about. 
+The rest of this document goes into detail. My argument depends on the use of a "host language"; which is the turning-complete language you are using to send JSON Expressions. The host language is most likely Javascript, or Python because they make composing JSON easy, but other languages can host JSON Expressions too. What's important to point out is GraphQL is also used in the context of a host language; its extra "features" result in two ways of doing the same thing.
+
+My objective is to demonstrate that the simple semantics of JSON Expressions allow the host language to compose JSON queries, negating the need for pre-processing operators, and making for a simpler query language to reason about. 
 
 The GraphQL examples were snagged from [http://graphql.org/learn/queries/](http://graphql.org/learn/queries/), which turns out to a be reasonable overview of GraphQL features.
 
@@ -119,7 +121,7 @@ JSON Queries can do the same, using dot-separated path names:
 		"where": {"eq":{"user.id": 1}}
 	}
 
-###Aliases
+### Aliases
 
 GraphQL can accept multiple relational queries to build a single object. 
 
@@ -157,7 +159,7 @@ For JSON Expressions, the `select` expression can build an object using an array
         ]
     }
 
-###Fragments
+### Fragments
 
 GraphQL allows the definition of query fragments; meant for reuse in a query:
 
@@ -209,7 +211,7 @@ There is no equivalent in JSON Expressions; it is expected that JSON Expressions
 definitely more verbose, but easier to compose.
 
 
-###Variables
+### Variables
 
 GraphQL - use `$` as a prefix to declare variables, and their type:
 
@@ -238,7 +240,7 @@ JSON Queries do not have variables, again resting on the host language. In this 
 		HeroNameAndFriends
 	)
 
-###Directives
+### Directives
 
 GraphQL allows you to define conditional composition (`@`):
 
@@ -288,7 +290,7 @@ this assumes you want all the logic in one query. Alternately, the host language
 		query.select.append("friends.name")
 
 
-###Inline fragments
+### Inline fragments
 
 GraphQL has an `... on` operator to distinguish query parameters by type.  
 
@@ -338,6 +340,6 @@ Usually, the simpler option is to leverage the dynamic-typed nature of JSON Quer
 		]
 	}
  
-##Summary
+## Summary
 
 GraphQL is a complex language with a limited niche.  I have not touched upon the explicit typing declaration required to make GraphQL queries workk. JSON Queries are more expressive, but any noSQL document query language would make a better choice.  

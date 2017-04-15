@@ -11,22 +11,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from collections import Mapping
-from types import NoneType
-
 import itertools
+from collections import Mapping
 
+from mo_dots import Data, wrap, listwrap, unwraplist, unwrap, Null
+from mo_logs import Log
+from mo_threads import Lock
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Dict, wrap, listwrap, unwraplist, DictList, unwrap, join_field, split_field, NullType, Null
-from pyLibrary.queries import jx, Schema
+from pyLibrary.queries import jx
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.queries.expressions import TRUE_FILTER, jx_expression, Expression, TrueOp, jx_expression_to_function, Variable
 from pyLibrary.queries.lists.aggs import is_aggs, list_aggs
-from pyLibrary.queries.meta import Column, ROOT_PATH
-from pyLibrary.thread.threads import Lock
-from pyLibrary.times.dates import Date
+from pyLibrary.queries.meta import get_schema_from_list
 
 _get = object.__getattribute__
 
@@ -37,7 +34,7 @@ class ListContainer(Container):
         data = list(unwrap(data))
         Container.__init__(self, data, schema)
         if schema == None:
-            self._schema = get_schema_from_list(data)
+            self._schema = get_schema_from_list(name, data)
         else:
             self._schema = schema
         self.name = name
@@ -147,7 +144,7 @@ class ListContainer(Container):
         if isinstance(select, list):
             push_and_pull = [(s.name, jx_expression_to_function(s.value)) for s in selects]
             def selector(d):
-                output = Dict()
+                output = Data()
                 for n, p in push_and_pull:
                     output[n] = p(wrap(d))
                 return unwrap(output)
@@ -170,11 +167,11 @@ class ListContainer(Container):
 
     def format(self, format):
         if format == "table":
-            frum = convert.list2table(self.data, self.schema.keys())
+            frum = convert.list2table(self.data, self._schema.lookup.keys())
         elif format == "cube":
-            frum = convert.list2cube(self.data, self.schema.keys())
+            frum = convert.list2cube(self.data, self.schema.lookup.keys())
         else:
-            frum = self.to_dict()
+            frum = self.__data__()
 
         return frum
 
@@ -187,13 +184,13 @@ class ListContainer(Container):
 
             def _output():
                 for g, v in itertools.groupby(data, get_key):
-                    group = Dict()
+                    group = Data()
                     for k, gg in zip(keys, g):
                         group[k] = gg
                     yield (group, wrap(list(v)))
 
             return _output()
-        except Exception, e:
+        except Exception as e:
             Log.error("Problem grouping", e)
 
     def insert(self, documents):
@@ -202,7 +199,7 @@ class ListContainer(Container):
     def extend(self, documents):
         self.data.extend(documents)
 
-    def to_dict(self):
+    def __data__(self):
         return wrap({
             "meta": {"format": "list"},
             "data": [{k: unwraplist(v) for k, v in row.items()} for row in self.data]
@@ -225,195 +222,11 @@ class ListContainer(Container):
     def __len__(self):
         return len(self.data)
 
-def get_schema_from_list(frum):
-    """
-    SCAN THE LIST FOR COLUMN TYPES
-    """
-    columns = {}
-    _get_schema_from_list(frum, columns, prefix=[], nested_path=ROOT_PATH, name_to_column=columns)
-    return Schema(columns.values())
-
-def _get_schema_from_list(frum, columns, prefix, nested_path, name_to_column):
-    """
-    SCAN THE LIST FOR COLUMN TYPES
-    """
-    for d in frum:
-        row_type = _type_to_name[d.__class__]
-        if row_type != "object":
-            full_name = join_field(prefix)
-            column = name_to_column.get(full_name)
-            if not column:
-                column = Column(
-                    name=full_name,
-                    table=".",
-                    es_column=full_name,
-                    es_index=".",
-                    type="undefined",
-                    nested_path=nested_path
-                )
-                columns[full_name] = column
-            column.type = _merge_type[column.type][row_type]
-        else:
-            for name, value in d.items():
-                full_name = join_field(prefix + [name])
-                column = name_to_column.get(full_name)
-                if not column:
-                    column = Column(
-                        name=full_name,
-                        table=".",
-                        es_column=full_name,
-                        es_index=".",
-                        type="undefined",
-                        nested_path=nested_path
-                    )
-                columns[full_name] = column
-                if isinstance(value, list):
-                    if len(value)==0:
-                        this_type = "undefined"
-                    elif len(value)==1:
-                        this_type = _type_to_name[value[0].__class__]
-                    else:
-                        this_type = _type_to_name[value[0].__class__]
-                        if this_type == "object":
-                            this_type = "nested"
-                else:
-                    this_type = _type_to_name[value.__class__]
-                new_type = _merge_type[column.type][this_type]
-                column.type = new_type
-
-                if this_type == "object":
-                    _get_schema_from_list([value], columns, prefix + [name], nested_path, name_to_column)
-                elif this_type == "nested":
-                    np = listwrap(nested_path)
-                    newpath = unwraplist([join_field(split_field(np[0])+[name])]+np)
-                    _get_schema_from_list(value, columns, prefix + [name], newpath, name_to_column)
-
-
-_type_to_name = {
-    NoneType: "undefined",
-    NullType: "undefined",
-    bool: "boolean",
-    str: "string",
-    unicode: "string",
-    int: "integer",
-    long: "long",
-    float: "double",
-    Dict: "object",
-    dict: "object",
-    set: "nested",
-    list: "nested",
-    DictList: "nested",
-    Date: "double"
-}
-
-_merge_type = {
-    "undefined": {
-        "undefined": "undefined",
-        "boolean": "boolean",
-        "integer": "integer",
-        "long": "long",
-        "float": "float",
-        "double": "double",
-        "string": "string",
-        "object": "object",
-        "nested": "nested"
-    },
-    "boolean": {
-        "undefined": "boolean",
-        "boolean": "boolean",
-        "integer": "integer",
-        "long": "long",
-        "float": "float",
-        "double": "double",
-        "string": "string",
-        "object": None,
-        "nested": None
-    },
-    "integer": {
-        "undefined": "integer",
-        "boolean": "integer",
-        "integer": "integer",
-        "long": "long",
-        "float": "float",
-        "double": "double",
-        "string": "string",
-        "object": None,
-        "nested": None
-    },
-    "long": {
-        "undefined": "long",
-        "boolean": "long",
-        "integer": "long",
-        "long": "long",
-        "float": "double",
-        "double": "double",
-        "string": "string",
-        "object": None,
-        "nested": None
-    },
-    "float": {
-        "undefined": "float",
-        "boolean": "float",
-        "integer": "float",
-        "long": "double",
-        "float": "float",
-        "double": "double",
-        "string": "string",
-        "object": None,
-        "nested": None
-    },
-    "double": {
-        "undefined": "double",
-        "boolean": "double",
-        "integer": "double",
-        "long": "double",
-        "float": "double",
-        "double": "double",
-        "string": "string",
-        "object": None,
-        "nested": None
-    },
-    "string": {
-        "undefined": "string",
-        "boolean": "string",
-        "integer": "string",
-        "long": "string",
-        "float": "string",
-        "double": "string",
-        "string": "string",
-        "object": None,
-        "nested": None
-    },
-    "object": {
-        "undefined": "object",
-        "boolean": None,
-        "integer": None,
-        "long": None,
-        "float": None,
-        "double": None,
-        "string": None,
-        "object": "object",
-        "nested": "nested"
-    },
-    "nested": {
-        "undefined": "nested",
-        "boolean": None,
-        "integer": None,
-        "long": None,
-        "float": None,
-        "double": None,
-        "string": None,
-        "object": "nested",
-        "nested": "nested"
-    }
-}
-
-
 
 def _exec(code):
     try:
         temp = None
         exec "temp = " + code
         return temp
-    except Exception, e:
+    except Exception as e:
         Log.error("Could not execute {{code|quote}}", code=code, cause=e)

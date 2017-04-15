@@ -13,14 +13,11 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from pyLibrary import convert
-from pyLibrary import dot
-from pyLibrary.collections import MAX, OR
-from pyLibrary.collections.matrix import Matrix
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import Null, Dict
-from pyLibrary.dot import wrap, wrap_leaves, listwrap
-from pyLibrary.dot.lists import DictList
+import mo_dots as dot
+from mo_dots import Null, Data, FlatList, wrap, wrap_leaves, listwrap
+from mo_logs import Log
+from mo_math import MAX, OR
+from mo_collections.matrix import Matrix
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.cubes.aggs import cube_aggs
 from pyLibrary.queries.lists.aggs import is_aggs
@@ -41,7 +38,7 @@ class Cube(Container):
 
         self.is_value = False if isinstance(select, list) else True
         self.select = select
-        self.meta = Dict(format="cube")       # PUT EXTRA MARKUP HERE
+        self.meta = Data(format="cube")       # PUT EXTRA MARKUP HERE
         self.is_none = False
 
         if not all(data.values()):
@@ -58,14 +55,14 @@ class Cube(Container):
                     Log.error("not expecting a list of records")
 
                 data = {select.name: Matrix.ZERO}
-                self.edges = DictList.EMPTY
+                self.edges = FlatList.EMPTY
             elif isinstance(data, Mapping):
                 # EXPECTING NO MORE THAN ONE rownum EDGE IN THE DATA
                 length = MAX([len(v) for v in data.values()])
                 if length >= 1:
                     self.edges = wrap([{"name": "rownum", "domain": {"type": "rownum"}}])
                 else:
-                    self.edges = DictList.EMPTY
+                    self.edges = FlatList.EMPTY
             elif isinstance(data, list):
                 if isinstance(select, list):
                     Log.error("not expecting a list of records")
@@ -82,7 +79,7 @@ class Cube(Container):
                     Log.error("not expecting a list of records")
 
                 data = {select.name: Matrix(value=data)}
-                self.edges = DictList.EMPTY
+                self.edges = FlatList.EMPTY
         else:
             self.edges = wrap(edges)
 
@@ -130,11 +127,16 @@ class Cube(Container):
         TRY NOT TO USE THIS, IT IS SLOW
         """
         matrix = self.data.values()[0]  # CANONICAL REPRESENTATIVE
+        if matrix.num == 0:
+            return
         e_names = self.edges.name
         s_names = self.select.name
         parts = [e.domain.partitions.value if e.domain.primitive else e.domain.partitions for e in self.edges]
         for c in matrix._all_combos():
-            output = {n: parts[i][c[i]] for i, n in enumerate(e_names)}
+            try:
+                output = {n: parts[i][c[i]] for i, n in enumerate(e_names)}
+            except Exception, e:
+                Log.error("problem", cause=e)
             for s in s_names:
                 output[s] = self.data[s][c]
             yield wrap(output)
@@ -304,7 +306,7 @@ class Cube(Container):
             values ALL VALUES THAT BELONG TO THE SLICE
 
         """
-        edges = DictList([_normalize_edge(e) for e in edges])
+        edges = FlatList([n for e in edges for n in _normalize_edge(e)])
 
         stacked = [e for e in self.edges if e.name in edges.name]
         remainder = [e for e in self.edges if e.name not in edges.name]
@@ -355,7 +357,7 @@ class Cube(Container):
         SLICE THIS CUBE IN TO ONES WITH LESS DIMENSIONALITY
         simple==True WILL HAVE GROUPS BASED ON PARTITION VALUE, NOT PARTITION OBJECTS
         """
-        edges = DictList([_normalize_edge(e) for e in edges])
+        edges = FlatList([n for e in edges for n in _normalize_edge(e) ])
 
         stacked = [e for e in self.edges if e.name in edges.name]
         remainder = [e for e in self.edges if e.name not in edges.name]
@@ -418,7 +420,7 @@ class Cube(Container):
         # ANNOTATE EXISTING CUBE WITH NEW COLUMN
         m = self.data[window.name] = Matrix(dims=canonical.dims)
         for coord in canonical._all_combos():
-            row = Dict()  # IT IS SAD WE MUST HAVE A Dict(), THERE ARE {"script": expression} USING THE DOT NOTATION
+            row = Data()  # IT IS SAD WE MUST HAVE A Data(), THERE ARE {"script": expression} USING THE DOT NOTATION
             for k in cnames:
                 row[k] = self.data[k][coord]
             for c, e in zip(coord, self.edges):
@@ -456,13 +458,10 @@ class Cube(Container):
         else:
             return float(self.data)
 
-    def as_dict(self):
-        return Dict(
+    def __data__(self):
+        return Data(
             select=self.select,
             edges=self.edges,
             data={k: v.cube for k, v in self.data.items()},
             meta=self.meta
         )
-
-    def __json__(self):
-        return convert.value2json(self.as_dict())

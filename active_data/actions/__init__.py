@@ -10,31 +10,21 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from collections import Mapping
-
 import flask
-import moz_sql_parser
+from active_data import record_request
 from flask import Response
-
+from mo_dots import coalesce, join_field, split_field
 from mo_logs import Log, strings
-from mo_logs.exceptions import Except
-from mo_logs.profiles import CProfiler
-from mo_logs.strings import expand_template
-from active_data import record_request, cors_wrapper
-from active_data.actions import save_query
-from mo_dots import coalesce, join_field, split_field, wrap, listwrap
-from pyLibrary import convert
-from mo_files import File
-from mo_math import Math
-from pyLibrary.queries import jx, meta, wrap_from
-from pyLibrary.queries.containers import Container, STRUCT
-from pyLibrary.queries.meta import TOO_OLD
-from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_threads import Till
+from pyLibrary import convert
+
+from active_data.actions import save_query
+from mo_logs.strings import expand_template
 from mo_times.dates import Date
 from mo_times.durations import MINUTE
-from mo_times.timer import Timer
-
+from pyLibrary.queries import meta
+from pyLibrary.queries.containers import STRUCT
+from pyLibrary.queries.meta import TOO_OLD
 
 
 def send_error(active_data_timer, body, e):
@@ -81,6 +71,7 @@ def replace_vars(text, params=None):
     text = expand_template(text, coalesce(params, {}))
     return text
 
+
 def test_mode_wait(query):
     """
     WAIT FOR METADATA TO ARRIVE ON INDEX
@@ -118,7 +109,7 @@ def test_mode_wait(query):
             # GET FRESH VERSIONS
             cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in STRUCT]
             for c in cols:
-                if not c.last_updated or c.cardinality == None :
+                if not c.last_updated or c.cardinality == None:
                     Log.note(
                         "wait for column (table={{col.es_index}}, name={{col.es_column}}) metadata to arrive",
                         col=c

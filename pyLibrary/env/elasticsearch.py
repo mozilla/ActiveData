@@ -649,7 +649,7 @@ class Cluster(object):
                 )
                 schema.settings.index.number_of_replicas = health.number_of_nodes - 1
 
-        self.post(
+        self.put(
             "/" + index,
             data=schema,
             headers={"Content-Type": "application/json"}
@@ -752,7 +752,7 @@ class Cluster(object):
                 Log.note("{{url}}:\n{{data|indent}}", url=url, data=sample)
 
             if self.debug:
-                Log.note("POST {{url}}", url=url)
+                Log.note("PUT {{url}}", url=url)
             response = http.post(url, **kwargs)
             if response.status_code not in [200, 201]:
                 Log.error(response.reason.decode("latin1") + ": " + strings.limit(response.content.decode("latin1"), 100 if self.debug else 10000))
@@ -835,6 +835,17 @@ class Cluster(object):
     def put(self, path, **kwargs):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
 
+        data = kwargs.get(b'data')
+        if data == None:
+            pass
+        elif isinstance(data, Mapping):
+            kwargs[b'data'] = data = convert.unicode2utf8(convert.value2json(data))
+        elif not isinstance(kwargs["data"], str):
+            Log.error("data must be utf8 encoded string")
+
+        if self.debug:
+            sample = kwargs.get(b'data', "")[:300]
+            Log.note("{{url}}:\n{{data|indent}}", url=url, data=sample)
         if self.debug:
             sample = kwargs["data"][:300]
             Log.note("PUT {{url}}:\n{{data|indent}}", url=url, data=sample)
@@ -844,9 +855,24 @@ class Cluster(object):
                 Log.error(response.reason+": "+response.all_content)
             if self.debug:
                 Log.note("response: {{response}}",  response= utf82unicode(response.all_content)[0:300:])
-            return response
+
+            details = mo_json.json2value(utf82unicode(response.content))
+            if details.error:
+                Log.error(convert.quote2string(details.error))
+            if details._shards.failed > 0:
+                Log.error("Shard failures {{failures|indent}}",
+                          failures="---\n".join(r.replace(";", ";\n") for r in details._shards.failures.reason)
+                          )
+            return details
+
+            # return response
+
+
+
         except Exception as e:
             Log.error("Problem with call to {{url}}",  url= url, cause=e)
+
+
 
 
 def proto_name(prefix, timestamp=None):

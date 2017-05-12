@@ -252,8 +252,7 @@ class Index(Features):
         result = self.cluster.delete(
             self.path + "/_query",
             data=convert.value2json(query),
-            timeout=600,
-            params={"consistency": self.settings.consistency}
+            timeout=600
         )
 
         for name, status in result._indices.items():
@@ -309,8 +308,7 @@ class Index(Features):
                     data=data_bytes,
                     headers={"Content-Type": "text"},
                     timeout=self.settings.timeout,
-                    retry=self.settings.retry,
-                    params={"consistency": self.settings.consistency}
+                    retry=self.settings.retry
                 )
                 items = response["items"]
 

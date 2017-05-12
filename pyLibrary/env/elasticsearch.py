@@ -846,9 +846,6 @@ class Cluster(object):
         if self.debug:
             sample = kwargs.get(b'data', "")[:300]
             Log.note("{{url}}:\n{{data|indent}}", url=url, data=sample)
-        # if self.debug:
-        #   sample = kwargs["data"][:300]
-        #   Log.note("PUT {{url}}:\n{{data|indent}}", url=url, data=sample)
         # try:
             response = http.put(url, **kwargs)
             if response.status_code not in [200]:

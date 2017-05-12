@@ -7,6 +7,9 @@
 	},
 	"mappings": {
 		{{type|quote}}: {
+			"_source": {
+				"compress": true
+			},
 			"dynamic_templates": [
 				{
 					"default_numbers": {

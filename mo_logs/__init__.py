@@ -378,8 +378,8 @@ class Log(object):
         if add_to_trace:
             cause[0].trace.extend(trace[1:])
 
-        e = Except(exceptions.ERROR, template, params, cause, trace)
-        raise e
+    #   e = Except(exceptions.ERROR, template, params, cause, trace)
+    #    raise e
 
     @classmethod
     def fatal(

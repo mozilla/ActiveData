@@ -320,7 +320,7 @@ class Index(Features):
                     for i, item in enumerate(items):
                         if not item.index.ok:
                             fails.append(i)
-                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
+                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5.2."])):
                     for i, item in enumerate(items):
                         if item.index.status not in [200, 201]:
                             fails.append(i)
@@ -394,7 +394,7 @@ class Index(Features):
                 Log.error("Can not set refresh interval ({{error}})", {
                     "error": utf82unicode(response.all_content)
                 })
-        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
+        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5.2."])):
             response = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
                 data=convert.unicode2utf8('{"index":{"refresh_interval":' + convert.value2json(interval) + '}}'),

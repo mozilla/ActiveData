@@ -41,7 +41,9 @@ class File(object):
             return
         elif isinstance(filename, basestring):
             self.key = None
-            if filename.startswith("~"):
+            if filename==".":
+                self._filename = ""
+            elif filename.startswith("~"):
                 home_path = os.path.expanduser("~")
                 if os.sep == "\\":
                     home_path = home_path.replace(os.sep, "/")
@@ -123,7 +125,7 @@ class File(object):
 
     @property
     def name(self):
-        parts = self._filename.split("/")[-1].split(".")
+        parts = self.abspath.split("/")[-1].split(".")
         if len(parts) == 1:
             return parts[0]
         else:
@@ -327,7 +329,12 @@ class File(object):
 
     @property
     def parent(self):
-        return File("/".join(self._filename.split("/")[:-1]))
+        if not self._filename:
+            return File("..")
+        elif self._filename.endswith(".."):
+            return File(self._filename+"/..")
+        else:
+            return File("/".join(self._filename.split("/")[:-1]))
 
     @property
     def exists(self):

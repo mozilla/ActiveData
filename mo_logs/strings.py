@@ -40,7 +40,10 @@ def _late_import():
     global _Except
     global _Duration
 
-    _json_encoder = get_module("mo_json.encoder").json_encoder
+    try:
+        _json_encoder = get_module("mo_json.encoder").json_encoder
+    except Exception:
+        _json_encoder = _json.dumps
     from mo_logs import Log as _Log
     from mo_logs.exceptions import Except as _Except
     from mo_times.durations import Duration as _Duration

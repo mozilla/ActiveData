@@ -1,0 +1,69 @@
+{
+	"flask": {
+		"host": "0.0.0.0",
+		"port": 5000,
+		"debug": false,
+		"threaded": true,
+		"processes": 1,
+		"ssl_context":"adhoc",
+		"allow_exit": true
+	},
+	"constants": {
+		"pyLibrary.env.http.default_headers": {
+			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
+		},
+		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
+		"pyLibrary.queries.meta.ENABLE_META_SCAN": true,
+		"pyLibrary.queries.expressions.ALLOW_SCRIPTING": true
+	},
+	"request_logs": {
+		"host": "http://localhost",
+		"port": 9400,
+		"index": "active_data_requests",
+		"type": "request_log",
+		"schema": {
+			"$ref": "//../../resources/schema/request_log.schema.json"
+		}
+	},
+	"saved_queries": {
+		"host": "http://localhost",
+		"port": 9400,
+		"index": "saved_queries",
+		"type": "query",
+		"debug": true
+	},
+	"elasticsearch": {
+		"host": "http://localhost",
+		"port": 9400,
+		"index": "testdata",
+		"type": "test_result",
+		"debug": true
+	},
+	"debug": {
+		"trace": true,
+		"cprofile": {
+			"enabled": false,
+			"filename": "./results/profile.tab"
+		},
+		"log": [
+			{
+				"log_type": "console"
+			},
+			{
+				"log_type": "email",
+				"from_address": "klahnakoski@mozilla.com",
+				"to_address": "klahnakoski@mozilla.com",
+				"subject": "[ALERT][DEV]Problem with ActiveData Server",
+				"$ref": "file://~/private.json#email"
+			},
+			{
+				"log_type": "elasticsearch",
+				"host": "http://localhost",
+				"port": 9400,
+				"index": "debug_active_data",
+				"type": "active_data"
+			}
+		]
+	}
+
+}

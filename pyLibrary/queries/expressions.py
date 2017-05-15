@@ -17,7 +17,7 @@ from decimal import Decimal
 
 from mo_dots import coalesce, wrap, set_default, literal_field, Null, split_field, startswith_field
 from mo_dots import Data, join_field, unwraplist, ROOT_PATH, relative_field, unwrap
-from mo_json import json2value
+from mo_json import json2value, quote
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_math import Math, OR, MAX
@@ -25,7 +25,7 @@ from mo_times.dates import Date
 
 from pyLibrary import convert
 from pyLibrary.queries.containers import STRUCT, OBJECT
-from pyLibrary.queries.domains import is_keyword
+from jx_base.queries import is_variable_name
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.sql.sqlite import quote_column
 
@@ -55,7 +55,7 @@ def jx_expression(expr):
     if expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal, Date)):
         return Literal(None, expr)
     elif isinstance(expr, unicode):
-        if is_keyword(expr):
+        if is_variable_name(expr):
             return Variable(expr)
         elif not expr.strip():
             Log.error("expression is empty")
@@ -219,8 +219,8 @@ class Variable(Expression):
 
     def __init__(self, var):
         Expression.__init__(self, "", None)
-        if not is_keyword(var):
-            Log.error("Expecting a variable")
+        if not is_variable_name(var):
+            Log.error("Expecting a variable name")
         self.var = var
 
     def to_ruby(self, not_null=False, boolean=False):
@@ -2927,19 +2927,29 @@ def _normalize(esfilter):
     return esfilter
 
 
-def split_expression_by_depth(where, schema, map_, output=None, var_to_depth=None):
+def split_expression_by_depth(where, schema, map_=None, output=None, var_to_depth=None):
+    """
+    :param where: EXPRESSION TO INSPECT
+    :param schema: THE SCHEMA
+    :param map_: THE VARIABLE NAME MAPPING TO PERFORM ON where
+    :param output:
+    :param var_to_depth: MAP FROM EACH VARIABLE NAME TO THE DEPTH
+    :return:
+    """
     """
     It is unfortunate that ES can not handle expressions that
     span nested indexes.  This will split your where clause
     returning {"and": [filter_depth0, filter_depth1, ...]}
     """
     vars_ = where.vars()
+    if not map_:
+        map_ = {v: schema[v][0].es_column for v in vars_}
 
     if var_to_depth is None:
         if not vars_:
             return Null
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
-        var_to_depth = {v: len(c.nested_path)-1 for v in vars_ for c in schema.lookup[v]}
+        var_to_depth = {v: len(c.nested_path)-1 for v in vars_ for c in schema[v]}
         all_depths = set(var_to_depth.values())
         if -1 in all_depths:
             Log.error(

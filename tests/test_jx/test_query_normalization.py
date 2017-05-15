@@ -11,10 +11,10 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_testing.fuzzytestcase import FuzzyTestCase
+from mo_json import value2json, json2value
 
+from mo_testing.fuzzytestcase import FuzzyTestCase
 from pyLibrary.queries.query import _normalize_edge, _normalize_select
-from tests.test_jx import NULL
 
 
 class TestQueryNormalization(FuzzyTestCase):
@@ -25,10 +25,13 @@ class TestQueryNormalization(FuzzyTestCase):
     def test_complex_edge_value(self):
         edge = {"name": "n", "value": ["a", "c"]}
 
-        result = _normalize_edge(edge)
-        expected = {"name": "n", "domain": {"dimension": {"fields": ["a", "c"]}}}
+        result = json2value(value2json(_normalize_edge(edge)[0]))
+        expected = {
+            "name": "n",
+            "value": {"tuple": ["a", "c"]},
+            "domain": {"dimension": {"fields": ["a", "c"]}}
+        }
         self.assertEqual(result, expected)
-        self.assertEqual(result.value, NULL)
 
     def test_naming_select(self):
         select = {"value": "result.duration", "aggregate": "avg"}

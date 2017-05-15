@@ -134,8 +134,11 @@ class NullType(object):
     def __iter__(self):
         return _zero_list.__iter__()
 
+    def __copy__(self):
+        return Null
+
     def __deepcopy__(self, memo):
-        return None
+        return Null
 
     def last(self):
         """
@@ -147,7 +150,6 @@ class NullType(object):
         return Null
 
     def __getitem__(self, key):
-        assert not isinstance(key, str)
         if isinstance(key, slice):
             return Null
         elif isinstance(key, str):

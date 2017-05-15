@@ -18,7 +18,7 @@ import subprocess
 from string import ascii_lowercase
 
 import mo_json_config
-from active_data.actions.query import replace_vars
+from active_data.actions.jx import replace_vars
 from mo_dots import wrap, coalesce, unwrap, listwrap, Data
 from mo_kwargs import override
 from mo_logs import Log, Except, constants
@@ -59,9 +59,10 @@ class ESUtils(object):
     @override
     def __init__(
         self,
-        service_url,  # location of the ActiveData server we are testing
-        backend_es,  # the ElasticSearch settings for filling the backend
-        fastTesting=False,
+        service_url,    # location of the ActiveData server we are testing
+        backend_es,     # the ElasticSearch settings for filling the backend
+        sql_url=None,   # location of the SQL service
+        fast_testing=False,
         kwargs=None
     ):
         if backend_es.schema==None:
@@ -70,6 +71,7 @@ class ESUtils(object):
         letters = unicode(ascii_lowercase)
         self.random_letter = letters[int(Date.now().unix / 30) % 26]
         self.service_url = service_url
+        self.sql_url = sql_url
         self.backend_es = backend_es
         self.settings = kwargs
         self._es_test_settings = None
@@ -82,7 +84,7 @@ class ESUtils(object):
                 "settings": backend_es
             }
 
-        if not fastTesting:
+        if not fast_testing:
             self.server = http
         else:
             Log.alert("TESTS WILL RUN FAST, BUT NOT ALL TESTS ARE RUN!\nEnsure the `file://tests/config/elasticsearch.json#fastTesting=true` to turn on the network response tests.")
@@ -165,7 +167,7 @@ class ESUtils(object):
             _settings.schema = mo_json_config.get(url)
 
             # MAKE CONTAINER
-            container = self._es_cluster.get_or_create_index(tjson=tjson, settings=_settings)
+            container = self._es_cluster.get_or_create_index(tjson=tjson, kwargs=_settings)
             container.add_alias(_settings.index)
 
             # INSERT DATA
@@ -175,7 +177,9 @@ class ESUtils(object):
             container.flush()
             # ENSURE query POINTS TO CONTAINER
             frum = subtest.query["from"]
-            if isinstance(frum, basestring):
+            if frum == None:
+                subtest.query["from"] = _settings.index
+            elif isinstance(frum, basestring):
                 subtest.query["from"] = frum.replace(TEST_TABLE, _settings.index)
             else:
                 Log.error("Do not know how to handle")
@@ -241,6 +245,18 @@ class ESUtils(object):
         while True:
             try:
                 response = self.server.get(*args, **kwargs)
+                return response
+            except Exception, e:
+                e = Except.wrap(e)
+                if "No connection could be made because the target machine actively refused it" in e:
+                    Log.alert("Problem connecting")
+                else:
+                    Log.error("Server raised exception", e)
+
+    def post_till_response(self, *args, **kwargs):
+        while True:
+            try:
+                response = self.server.post(*args, **kwargs)
                 return response
             except Exception, e:
                 e = Except.wrap(e)

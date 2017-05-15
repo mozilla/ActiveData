@@ -16,7 +16,7 @@ from flask import Response
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from active_data import cors_wrapper
-from active_data.actions.query import _send_error
+from active_data.actions.jx import send_error
 from mo_dots import Data, wrap
 from pyLibrary import convert
 from pyLibrary.queries import jx, wrap_from
@@ -54,5 +54,5 @@ def get_raw_json(path):
         )
     except Exception, e:
         e = Except.wrap(e)
-        return _send_error(active_data_timer, body, e)
+        return send_error(active_data_timer, body, e)
 

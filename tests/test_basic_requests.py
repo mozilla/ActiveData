@@ -11,10 +11,13 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from active_data.app import OVERVIEW
 from mo_json_config import URL
 from pyLibrary import convert
-from tests.test_jx import BaseTestCase
+
+from active_data.app import OVERVIEW
+from mo_threads import Till
+from pyLibrary.env import http
+from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
 class TestBasicRequests(BaseTestCase):
@@ -77,6 +80,23 @@ class TestBasicRequests(BaseTestCase):
         except Exception:
             self.assertEqual(response.all_content, expected2)
 
+    def test_index_wo_name(self):
+        data = {
+            "name": "The Parent Trap",
+            "released": "29 July` 1998",
+            "imdb": "http://www.imdb.com/title/tt0120783/",
+            "rating": "PG",
+            "director": {"name": "Nancy Meyers", "dob": "December 8, 1949"}
+        }
+        container = self.utils._es_cluster.get_or_create_index(index=TEST_TABLE, kwargs=self.utils._es_test_settings)
+        try:
+            self.utils._es_cluster.delete_index(container.settings.index)
+        except Exception:
+            pass
+        container = self.utils._es_cluster.get_or_create_index(index=TEST_TABLE, kwargs=self.utils._es_test_settings)
+        container.add({"value": data})
+        container.refresh()
 
-
+        result = http.post_json(url=self.utils.service_url, json={"format":"list", "from": container.settings.index})
+        self.assertEqual(result.data, [data])
 

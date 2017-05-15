@@ -14,8 +14,10 @@ import shutil
 from datetime import datetime
 
 import re
+from tempfile import mkdtemp
+
 from mo_dots import get_module, coalesce
-from mo_logs import Log
+from mo_logs import Log, Except
 
 
 class File(object):
@@ -39,7 +41,9 @@ class File(object):
             return
         elif isinstance(filename, basestring):
             self.key = None
-            if filename.startswith("~"):
+            if filename==".":
+                self._filename = ""
+            elif filename.startswith("~"):
                 home_path = os.path.expanduser("~")
                 if os.sep == "\\":
                     home_path = home_path.replace(os.sep, "/")
@@ -121,7 +125,7 @@ class File(object):
 
     @property
     def name(self):
-        parts = self._filename.split("/")[-1].split(".")
+        parts = self.abspath.split("/")[-1].split(".")
         if len(parts) == 1:
             return parts[0]
         else:
@@ -188,9 +192,9 @@ class File(object):
             for line in f:
                 yield line.decode(encoding).rstrip()
 
-    def read_json(self, encoding="utf8"):
+    def read_json(self, encoding="utf8", flexible=True, leaves=True):
         content = self.read(encoding=encoding)
-        value = get_module("mo_json").json2value(content, flexible=True, leaves=True)
+        value = get_module("mo_json").json2value(content, flexible=flexible, leaves=leaves)
         abspath = self.abspath
         if os.sep == "\\":
             abspath = "/" + abspath.replace(os.sep, "/")
@@ -295,7 +299,8 @@ class File(object):
                 os.remove(self._filename)
             return self
         except Exception as e:
-            if e.strerror == "The system cannot find the path specified":
+            e = Except.wrap(e)
+            if "The system cannot find the path specified" in e:
                 return
             Log.error("Could not remove file", e)
 
@@ -324,7 +329,12 @@ class File(object):
 
     @property
     def parent(self):
-        return File("/".join(self._filename.split("/")[:-1]))
+        if not self._filename:
+            return File("..")
+        elif self._filename.endswith(".."):
+            return File(self._filename+"/..")
+        else:
+            return File("/".join(self._filename.split("/")[:-1]))
 
     @property
     def exists(self):
@@ -355,6 +365,21 @@ class File(object):
 
     def __unicode__(self):
         return self.abspath
+
+
+class TempDirectory(File):
+    def __new__(cls, *args, **kwargs):
+        return object.__new__(cls)
+
+    def __init__(self):
+        File.__init__(self, mkdtemp())
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.delete()
+
 
 def _copy(from_, to_):
     if from_.is_directory():

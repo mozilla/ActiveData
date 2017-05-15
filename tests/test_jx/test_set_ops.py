@@ -884,10 +884,10 @@ class TestSetOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a": {"b": "x", "v": 2,}},
-                    {"a": {"b": "x", "v": 5}},
-                    {"a": {"b": "x", "v": 7}},
-                    NULL
+                    {"a.b": "x", "a.v": 2},
+                    {"a.b": "x", "a.v": 5},
+                    {"a.b": "x", "a.v": 7},
+                    {}
                 ]
             },
             "expecting_table": {
@@ -939,7 +939,7 @@ class TestSetOps(BaseTestCase):
                     {"b": "x", "v": 2},
                     {"b": "x", "v": 5},
                     {"b": "x", "v": 7},
-                    NULL
+                    {}
                 ]
             },
             "expecting_table": {
@@ -949,7 +949,7 @@ class TestSetOps(BaseTestCase):
                     [{"b": "x", "v": 2}],
                     [{"b": "x", "v": 5}],
                     [{"b": "x", "v": 7}],
-                    [NULL]
+                    [{}]
                 ]
             },
             "expecting_cube": {
@@ -1029,6 +1029,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_es_tests(test)
 
+
     def test_select3_object(self):
         """
         ES DOES NOT ALLOW YOU TO SELECT AN OBJECT, ONLY THE LEAVES
@@ -1081,6 +1082,7 @@ class TestSetOps(BaseTestCase):
             }
         }
         self.utils.execute_es_tests(test)
+
 
     @skipIf(global_settings.is_travis, "not expected to pass yet")
     def test_select_nested_column(self):

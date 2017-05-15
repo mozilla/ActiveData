@@ -25,8 +25,8 @@ from datetime import datetime as builtin_datetime
 from datetime import timedelta, date
 
 from mo_dots import coalesce, wrap, get_module
-from mo_logs.convert import datetime2unix, datetime2string, value2url, value2json
-from mo_logs.convert import milli2datetime, unix2datetime
+from mo_logs.convert import datetime2unix, datetime2string, value2json,  milli2datetime, unix2datetime
+from mo_logs.url import value2url_param
 
 _json_encoder = None
 _Log = None
@@ -40,7 +40,10 @@ def _late_import():
     global _Except
     global _Duration
 
-    _json_encoder = get_module("mo_json.encoder").json_encoder
+    try:
+        _json_encoder = get_module("mo_json.encoder").json_encoder
+    except Exception:
+        _json_encoder = _json.dumps
     from mo_logs import Log as _Log
     from mo_logs.exceptions import Except as _Except
     from mo_times.durations import Duration as _Duration
@@ -96,7 +99,7 @@ def url(value):
     """
     convert FROM dict OR string TO URL PARAMETERS
     """
-    return value2url(value)
+    return value2url_param(value)
 
 
 def html(value):
@@ -125,10 +128,10 @@ def replace(value, find, replace):
     return value.replace(find, replace)
 
 
-def json(value):
+def json(value, pretty=True):
     if not _Duration:
         _late_import()
-    return _json_encoder(value, pretty=True)
+    return _json_encoder(value, pretty=pretty)
 
 
 def tab(value):

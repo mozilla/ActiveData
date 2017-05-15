@@ -11,23 +11,23 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary.queries.domains import is_keyword
-from pyLibrary.queries.expressions import simplify_esfilter, jx_expression, USE_BOOL_MUST
+from jx_base.queries import is_variable_name
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times.dates import Date
+from pyLibrary.queries.expressions import simplify_esfilter, jx_expression, USE_BOOL_MUST
 
 
 class TestExpressions(FuzzyTestCase):
 
     def test_error_on_bad_var(self):
         self.assertFalse(
-            is_keyword(u'coalesce(rows[rownum+1].timestamp, Date.eod())'),
+            is_variable_name(u'coalesce(rows[rownum+1].timestamp, Date.eod())'),
             "That's not a valid variable name!!"
         )
 
     def test_good_var(self):
         self.assertTrue(
-            is_keyword(u'_a._b'),
+            is_variable_name(u'_a._b'),
             "That's a good variable name!"
         )
 

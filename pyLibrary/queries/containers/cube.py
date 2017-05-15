@@ -127,11 +127,16 @@ class Cube(Container):
         TRY NOT TO USE THIS, IT IS SLOW
         """
         matrix = self.data.values()[0]  # CANONICAL REPRESENTATIVE
+        if matrix.num == 0:
+            return
         e_names = self.edges.name
         s_names = self.select.name
         parts = [e.domain.partitions.value if e.domain.primitive else e.domain.partitions for e in self.edges]
         for c in matrix._all_combos():
-            output = {n: parts[i][c[i]] for i, n in enumerate(e_names)}
+            try:
+                output = {n: parts[i][c[i]] for i, n in enumerate(e_names)}
+            except Exception, e:
+                Log.error("problem", cause=e)
             for s in s_names:
                 output[s] = self.data[s][c]
             yield wrap(output)
@@ -301,7 +306,7 @@ class Cube(Container):
             values ALL VALUES THAT BELONG TO THE SLICE
 
         """
-        edges = FlatList([_normalize_edge(e) for e in edges])
+        edges = FlatList([n for e in edges for n in _normalize_edge(e)])
 
         stacked = [e for e in self.edges if e.name in edges.name]
         remainder = [e for e in self.edges if e.name not in edges.name]
@@ -352,7 +357,7 @@ class Cube(Container):
         SLICE THIS CUBE IN TO ONES WITH LESS DIMENSIONALITY
         simple==True WILL HAVE GROUPS BASED ON PARTITION VALUE, NOT PARTITION OBJECTS
         """
-        edges = FlatList([_normalize_edge(e) for e in edges])
+        edges = FlatList([n for e in edges for n in _normalize_edge(e) ])
 
         stacked = [e for e in self.edges if e.name in edges.name]
         remainder = [e for e in self.edges if e.name not in edges.name]

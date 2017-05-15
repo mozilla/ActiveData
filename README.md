@@ -1,6 +1,14 @@
-# ActiveData [![Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=master)](https://travis-ci.org/klahnakoski/ActiveData)
+# ActiveData 
 
 Provide high speed filtering and aggregation over data see [ActiveData Wiki Page](https://wiki.mozilla.org/Auto-tools/Projects/ActiveData) for project details
+
+
+|Branch      |Status   |
+|------------|---------|
+|master      | [![Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=master)](https://travis-ci.org/klahnakoski/ActiveData) |
+|dev         | [![Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=dev)](https://travis-ci.org/klahnakoski/ActiveData)    |
+
+
 
 ## Use it now!
 
@@ -92,6 +100,7 @@ default Elasticsearch index. You can find a few sample config files in
             "type":"test_result",
             "debug":true
         }
+        ...<snip>...
     }
 ```
 
@@ -100,7 +109,7 @@ index and type. It is used as a default, and to find other indexes by name.
 
 ## Run
 
-Jump to your git project directory, set your `PYTHONPATH` and run:
+Jump to your git project directory, set your `PYTHONPATH` and run `app.py`:
 
 ```bash
     cd ~/ActiveData

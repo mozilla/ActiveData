@@ -109,7 +109,7 @@ index and type. It is used as a default, and to find other indexes by name.
 
 ## Run
 
-Jump to your git project directory, set your `PYTHONPATH` and run:
+Jump to your git project directory, set your `PYTHONPATH` and run `app.py`:
 
 ```bash
     cd ~/ActiveData

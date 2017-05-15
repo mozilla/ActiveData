@@ -10,21 +10,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_dots.datas import leaves
-
-from mo_math import MIN
-
-from mo_math import UNION
-
 from mo_dots import coalesce, wrap, unwrap
+from mo_logs import Log
 from mo_logs import constants
 from mo_logs import startup
-from mo_logs import Log
-from pyLibrary.env import http, elasticsearch
-from pyLibrary.queries import jx
+from mo_math import MIN
+from mo_math import UNION
 from mo_threads import Thread, Signal, Queue, THREAD_STOP
+
+from mo_dots.datas import leaves
 from mo_times.dates import Date, unicode2Date
 from mo_times.timer import Timer
+from pyLibrary.env import http, elasticsearch
+from pyLibrary.queries import jx
 
 DEBUG = True
 NUM_THREAD = 4
@@ -40,6 +38,8 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
         dups = http.post_json(settings.url, json={
             "from": "coverage",
             "select": [
+                # THIS IS FAR FROM GOOD, WE WANT THE LATEST ETL ID, BUT etl.source.id IS ONLY A SUB-ID
+                # WE SHOULD BE ABLE TO GET THE max OF A TUPLE
                 {"name": "max_id", "value": "etl.source.id", "aggregate": "max"},
                 {"name": "min_id", "value": "etl.source.id", "aggregate": "min"}
             ],
@@ -53,7 +53,9 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             ]},
             "groupby": [
                 "test.suite",
-                "test.url"
+                "test.chunk",
+                "test.url",
+                "test.name"
             ],
             "limit": 100000,
             "format": "list"
@@ -68,7 +70,9 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
                     "removing dups {{details|json}}",
                     details={"and": [
                         {"not": {"term": {"etl.source.id": int(d.max_id)}}},
-                        {"term": {"test.url": d.test.url}},
+                        {"and":[
+                            {"term": {k: v}} for k, v in leaves({"test": d.test})
+                        ]},
                         {"term": {"source.file.name": not_summarized.source.file.name}},
                         {"term": {"build.revision12": not_summarized.build.revision12}}
                     ]}
@@ -76,6 +80,9 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
 
                 coverage_index.delete_record({"and": [
                     {"not": {"term": {"etl.source.id": int(d.max_id)}}},
+                    {"and": [
+                        {"term": {k: v}} for k, v in leaves({"test": d.test})
+                    ]},
                     {"term": {"test.url": d.test.url}},
                     {"term": {"source.file.name": not_summarized.source.file.name}},
                     {"term": {"build.revision12": not_summarized.build.revision12}}

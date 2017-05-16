@@ -843,7 +843,7 @@ class Cluster(object):
         if self.debug:
             sample = kwargs.get(b'data', "")[:300]
             Log.note("{{url}}:\n{{data|indent}}", url=url, data=sample)
-        # try:
+        try:
             response = http.put(url, **kwargs)
             if response.status_code not in [200]:
                 Log.error(response.reason+": "+response.all_content)
@@ -863,8 +863,8 @@ class Cluster(object):
 
 
 
-        # except Exception as e:
-        #   Log.error("Problem with call to {{url}}",  url= url, cause=e)
+        except Exception as e:
+            Log.error("Problem with call to {{url}}", url=url, cause=e)
 
 
 

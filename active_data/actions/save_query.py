@@ -199,23 +199,23 @@ SCHEMA = {
                 "create_time": {
                     "type": "double",
                     "index": "not_analyzed",
-                    "store": "yes"
+                    "store": True
                 },
                 "last_used": {
                     "type": "double",
                     "index": "not_analyzed",
-                    "store": "yes"
+                    "store": True
                 },
                 "hash": {
                     "type": "string",
                     "index": "not_analyzed",
-                    "store": "yes"
+                    "store": True
                 },
                 "query": {
                     "type": "object",
                     "enabled": False,
-                    "index": "no",
-                    "store": "yes"
+                    "index": False,
+                    "store": True
                 }
             }
         }

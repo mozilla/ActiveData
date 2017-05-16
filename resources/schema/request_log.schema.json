@@ -38,8 +38,8 @@
 				"query": {
 					"type": "object",
 					"enabled": false,
-					"index": "no",
-					"store": "yes"
+					"index": false,
+					"store": true
 				},
 				"data": {
 					"index": "not_analyzed",
@@ -49,8 +49,8 @@
 				"error": {
 					"type": "object",
 					"enabled": false,
-					"index": "no",
-					"store": "yes"
+					"index": false,
+					"store": true
 
 				},
 				"from": {

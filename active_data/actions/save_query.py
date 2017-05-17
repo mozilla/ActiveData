@@ -172,8 +172,6 @@ SCHEMA = {
         "index.number_of_shards": 3,
         "index.number_of_replicas": 2,
         "index.store.throttle.type": "merge"
-        # "index.cache.filter.expire": "1m"
-        # "index.cache.field.type": "soft",
     },
     "mappings": {
         "_default_": {
@@ -184,7 +182,7 @@ SCHEMA = {
                         "match_mapping_type": "string",
                         "mapping": {
                             "type": "string",
-                            "index": "no"
+                            "index": "not_analyzed"
                         }
                     }
                 }
@@ -199,23 +197,18 @@ SCHEMA = {
                 "create_time": {
                     "type": "double",
                     "index": "not_analyzed"
-                    # "store": True
                 },
                 "last_used": {
                     "type": "double",
                     "index": "not_analyzed"
-                    # "store": True
                 },
                 "hash": {
                     "type": "string",
                     "index": "not_analyzed"
-                    # "store": True
                 },
                 "query": {
-                    "type": "string",
-                    # "enabled": False,
-                    "index": "no"
-                    # "store": True
+                    "type": "object",
+                    "enabled": False
                 }
             }
         }

@@ -252,6 +252,8 @@ class FromESMetadata(Schema):
         """
         if c.type in STRUCT:
             Log.error("not supported")
+        # if c.es_column == "_id":
+        #     Log.error("_id is not supported in cardinality")
         try:
             if c.es_index == "meta.columns":
                 with self.meta.columns.locker:
@@ -281,13 +283,25 @@ class FromESMetadata(Schema):
                 return
 
             es_index = c.es_index.split(".")[0]
-            result = self.default_es.post("/" + es_index + "/_search", data={
-                "aggs": {c.names["."]: _counting_query(c)},
-                "size": 0
-            })
-            r = result.aggregations.values()[0]
+            if c.es_column == "_id":
+                result = self.default_es.post("/" + es_index + "/_search", data={
+                    "query": {
+                        "match_all": {}
+                    },
+                    "size": 0
+                })
+            else:
+                result = self.default_es.post("/" + es_index + "/_search", data={
+                    "aggs": {c.names["."]: _counting_query(c)},
+                    "size": 0
+                })
+
             count = result.hits.total
-            cardinality = coalesce(r.value, r._nested.value, 0 if r.doc_count==0 else None)
+            if c.es_column == "_id":
+                cardinality = count
+            else:
+                r = result.aggregations.values()[0]
+                cardinality = coalesce(r.value, r._nested.value, 0 if r.doc_count==0 else None)
             if cardinality == None:
                 Log.error("logic error")
 
@@ -323,10 +337,10 @@ class FromESMetadata(Schema):
             elif len(c.nested_path) != 1:
                 query.aggs[literal_field(c.names["."])] = {
                     "nested": {"path": c.nested_path[0]},
-                    "aggs": {"_nested": {"terms": {"field": c.es_column, "size": 0}}}
+                    "aggs": {"_nested": {"terms": {"field": c.es_column, "size": 1}}}
                 }
             else:
-                query.aggs[literal_field(c.names["."])] = {"terms": {"field": c.es_column, "size": 0}}
+                query.aggs[literal_field(c.names["."])] = {"terms": {"field": c.es_column, "size": 1}}
 
             result = self.default_es.post("/" + es_index + "/_search", data=query)
 

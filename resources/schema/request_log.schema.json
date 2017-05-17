@@ -7,9 +7,9 @@
 	},
 	"mappings": {
 		"request_log": {
-			"_source": {
-				"compress": true
-			},
+//			"_source": {
+//				"compress": true
+//			},
 			"dynamic_templates": [
 				{
 					"default_strings": {
@@ -36,10 +36,10 @@
 					"type": "string"
 				},
 				"query": {
-					"type": "object",
-					"enabled": false,
-					"index": false,
-					"store": true
+					"type": "string",
+//					"enabled": false,
+					"index": "no"
+//					"store": true
 				},
 				"data": {
 					"index": "not_analyzed",
@@ -47,10 +47,10 @@
 
 				},
 				"error": {
-					"type": "object",
-					"enabled": false,
-					"index": false,
-					"store": true
+					"type": "string",
+//					"enabled": false,
+					"index": "no"
+//					"store": true
 
 				},
 				"from": {

@@ -283,29 +283,29 @@ class FromESMetadata(Schema):
                 return
 
             es_index = c.es_index.split(".")[0]
-            if c.es_column == "_id":
-                result = self.default_es.post("/" + es_index + "/_search", data={
-                    "query": {
-                        "match_all": {}
-                    },
-                    "size": 0
-                })
-            else:
-                result = self.default_es.post("/" + es_index + "/_search", data={
-                    "aggs": {c.names["."]: _counting_query(c)},
-                    "size": 0
-                })
+            # if c.es_column == "_id":
+            #    result = self.default_es.post("/" + es_index + "/_search", data={
+            #        "query": {
+            #            "match_all": {}
+            #        },
+            #        "size": 0
+            #    })
+            # else:
+            result = self.default_es.post("/" + es_index + "/_search", data={
+                "aggs": {c.names["."]: _counting_query(c)},
+                "size": 0
+            })
 
             count = result.hits.total
-            if c.es_column == "_id":
-                cardinality = count
-            else:
-                r = result.aggregations.values()[0]
-                cardinality = coalesce(r.value, r._nested.value, 0 if r.doc_count==0 else None)
+            # if c.es_column == "_id":
+            #     cardinality = count
+            # else:
+            r = result.aggregations.values()[0]
+            cardinality = coalesce(r.value, r._nested.value, 0 if r.doc_count==0 else None)
             if cardinality == None:
                 Log.error("logic error")
 
-            query = Data(size=1)
+            query = Data(size=0)
             if cardinality > 1000 or (count >= 30 and cardinality == count) or (count >= 1000 and cardinality / count > 0.99):
                 if DEBUG:
                     Log.note("{{table}}.{{field}} has {{num}} parts", table=c.es_index, field=c.es_column, num=cardinality)
@@ -342,15 +342,17 @@ class FromESMetadata(Schema):
             else:
                 query.aggs[literal_field(c.names["."])] = {"terms": {"field": c.es_column, "size": 0}}
 
-            if c.es_column != "_id":
-                result = self.default_es.post("/" + es_index + "/_search", data=query)
-            else:
-                result = self.default_es.post("/" + es_index + "/_search", data={
-                    "query": {
-                        "match_all": {}
-                    },
-                    "size": 0
-                })
+            result = self.default_es.post("/" + es_index + "/_search", data=query)
+
+            # if c.es_column != "_id":
+            #     result = self.default_es.post("/" + es_index + "/_search", data=query)
+            # else:
+            #     result = self.default_es.post("/" + es_index + "/_search", data={
+            #         "query": {
+            #             "match_all": {}
+            #         },
+            #         "size": 0
+            #     })
 
             aggs = result.aggregations.values()[0]
             if aggs._nested:

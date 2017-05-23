@@ -413,6 +413,9 @@ def _normalize_select_no_context(select, schema=None):
             else:
                 output.name = coalesce(select.name, select.value, select.aggregate)
                 output.value = jx_expression(select.value)
+    elif isinstance(select.value, (int, float)):
+        output.name = unicode(select.value)
+        output.value = jx_expression(select.value)
     else:
         output.value = jx_expression(select.value)
 

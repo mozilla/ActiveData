@@ -29,8 +29,9 @@ from werkzeug.wrappers import Response
 
 import active_data
 from active_data.actions import save_query
+from active_data.actions.jx import jx_query
+from active_data.actions.sql import sql_query
 from active_data.actions.json import get_raw_json
-from active_data.actions.query import query
 from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.static import download
 from pyLibrary.env import elasticsearch
@@ -51,9 +52,11 @@ def _head(path):
 
 app.add_url_rule('/tools/<path:filename>', None, download)
 app.add_url_rule('/find/<path:hash>', None, find_query)
-app.add_url_rule('/query', None, query, defaults={'path': ''}, methods=['GET', 'POST'])
-app.add_url_rule('/query/', None, query, defaults={'path': ''}, methods=['GET', 'POST'])
-app.add_url_rule('/query/<path:path>', None, query, defaults={'path': ''}, methods=['GET', 'POST'])
+app.add_url_rule('/query', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
+app.add_url_rule('/query/', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
+app.add_url_rule('/sql', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
+app.add_url_rule('/sql/', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
+app.add_url_rule('/query/<path:path>', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
 app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
 
 

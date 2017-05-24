@@ -16,15 +16,15 @@ import pstats
 from datetime import datetime
 from time import clock
 
-from mo_math import MAX
 from mo_dots import Data
 from mo_dots import wrap
+
 
 ON = False
 profiles = {}
 
-
 _Log = None
+
 
 def _late_import():
     global _Log
@@ -80,8 +80,10 @@ class Profiler(object):
 
 
 def write(profile_settings):
-    from pyLibrary import convert
     from mo_files import File
+    from mo_logs.convert import datetime2string
+    from mo_math import MAX
+    from pyLibrary.convert import list2tab
 
     profs = list(profiles.values())
     for p in profs:
@@ -95,13 +97,13 @@ def write(profile_settings):
     }
         for p in profs if p.stats.count > 0
     ]
-    stats_file = File(profile_settings.filename, suffix=convert.datetime2string(datetime.now(), "_%Y%m%d_%H%M%S"))
+    stats_file = File(profile_settings.filename, suffix=datetime2string(datetime.now(), "_%Y%m%d_%H%M%S"))
     if stats:
-        stats_file.write(convert.list2tab(stats))
+        stats_file.write(list2tab(stats))
     else:
         stats_file.write("<no profiles>")
 
-    stats_file2 = File(profile_settings.filename, suffix=convert.datetime2string(datetime.now(), "_series_%Y%m%d_%H%M%S"))
+    stats_file2 = File(profile_settings.filename, suffix=datetime2string(datetime.now(), "_series_%Y%m%d_%H%M%S"))
     if not profs:
         return
 
@@ -116,7 +118,7 @@ def write(profile_settings):
         for i in r
     ]
     if stats:
-        stats_file2.write(convert.list2tab(stats))
+        stats_file2.write(list2tab(stats))
 
 
 class CProfiler(object):

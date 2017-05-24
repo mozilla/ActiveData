@@ -367,7 +367,7 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
                   "esfilter": { "nested": {
                     "path": "flags",
                     "query": {
-                      "filtered": {
+                      "bool": {
                         "query": {
                           "match_all": {}
                         },

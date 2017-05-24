@@ -33,7 +33,7 @@ format_dispatch = {}
 
 
 def is_setop(es, query):
-    if not any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
+    if not any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5.2."])):
         return False
 
     select = listwrap(query.select)
@@ -189,6 +189,7 @@ def extract_rows(es, es_query, query):
             Log.error("Do not know what to do")
 
     with Timer("call to ES") as call_timer:
+        Log.error(es_query)
         data = es09.util.post(es, es_query, query.limit)
 
     T = data.hits.hits

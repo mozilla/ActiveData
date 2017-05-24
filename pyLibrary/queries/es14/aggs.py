@@ -26,7 +26,7 @@ from pyLibrary.queries.query import MAX_LIMIT
 
 def is_aggsop(es, query):
     es.cluster.get_metadata()
-    if any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])) and (query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate)):
+    if any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5.2."])) and (query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate)):
         return True
     return False
 

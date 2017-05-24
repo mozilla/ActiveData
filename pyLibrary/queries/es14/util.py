@@ -43,7 +43,7 @@ def es_query_template(path):
     else:
         f0 = {}
         output = wrap({
-            "query": {"filtered": {
+            "query": {"bool": {
                 "filter": f0
             }},
             "from": 0,

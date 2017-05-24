@@ -125,7 +125,7 @@ class RolloverIndex(object):
         result = self.es.search({
             "fields": ["_id"],
             "query": {
-                "filtered": {
+                "bool": {
                     "query": {"match_all": {}},
                     "filter": {"and": [{"term": {"etl" + (".source" * i) + ".id": v}} for i, v in enumerate(path)]}
                 }

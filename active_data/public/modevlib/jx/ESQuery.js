@@ -824,7 +824,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 
     var output = {
       "query": {
-        "filtered": {
+        "bool": {
           "query": {
             "match_all": {}
           },

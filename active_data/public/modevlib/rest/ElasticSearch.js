@@ -140,7 +140,7 @@ ElasticSearch.getOpenMinMax=function*(esfilter, timeDomain, selects){
 ElasticSearch.makeBasicQuery=function(esfilter){
   return {
     "query":{
-      "filtered":{
+      "bool":{
         "query":{"match_all":{}},
         "filter":{"and": [esfilter]}
       }

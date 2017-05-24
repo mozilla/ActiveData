@@ -385,7 +385,7 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
                   "columnName": "review",
                   "esfilter": {"nested": {
                     "path": "attachments.flags",
-                    "query": {"filtered": {
+                    "query": {"bool": {
                       "query": {"match_all": {}},
                       "filter": {"and": [
                         {"term": {"attachments.flags.request_status": "?"}},

@@ -49,7 +49,7 @@ def es_fieldop(es, query):
     FromES = es09.util.build_es_query(query)
     select = listwrap(query.select)
     FromES.query = {
-        "filtered": {
+        "bool": {
             "query": {
                 "match_all": {}
             },
@@ -123,7 +123,7 @@ def es_setop(es, mvel, query):
     if not isDeep and not isComplex:
         if len(select) == 1 and not select[0].value or select[0].value == "*":
             FromES = wrap({
-                "query": {"filtered": {
+                "query": {"bool": {
                     "query": {"match_all": {}},
                     "filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
                 }},
@@ -132,7 +132,7 @@ def es_setop(es, mvel, query):
             })
         elif all(isinstance(v, Variable) for v in select.value):
             FromES = wrap({
-                "query": {"filtered": {
+                "query": {"bool": {
                     "query": {"match_all": {}},
                     "filter": simplify_esfilter(query.where.to_esfilter())
                 }},

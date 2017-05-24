@@ -234,12 +234,12 @@ class Index(Features):
         self.cluster.get_metadata()
 
         if self.cluster.cluster_state.version.number.startswith("0.90"):
-            query = {"filtered": {
+            query = {"bool": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}
         elif self.cluster.cluster_state.version.number.startswith("1."):
-            query = {"query": {"filtered": {
+            query = {"query": {"bool": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}}
@@ -1032,12 +1032,12 @@ class Alias(Features):
         self.cluster.get_metadata()
 
         if self.cluster.cluster_state.version.number.startswith("0.90"):
-            query = {"filtered": {
+            query = {"bool": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}
         elif self.cluster.cluster_state.version.number.startswith("1."):
-            query = {"query": {"filtered": {
+            query = {"query": {"bool": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}}

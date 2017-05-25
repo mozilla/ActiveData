@@ -337,10 +337,10 @@ class FromESMetadata(Schema):
             elif len(c.nested_path) != 1:
                 query.aggs[literal_field(c.names["."])] = {
                     "nested": {"path": c.nested_path[0]},
-                    "aggs": {"_nested": {"terms": {"field": c.es_column, "size": 0}}}
+                    "aggs": {"_nested": {"terms": {"field": c.es_column, "size": 1}}}
                 }
             else:
-                query.aggs[literal_field(c.names["."])] = {"terms": {"field": c.es_column, "size": 0}}
+                query.aggs[literal_field(c.names["."])] = {"terms": {"field": c.es_column, "size": 1}}
 
             if c.es_column != "_id":
                 result = self.default_es.post("/" + es_index + "/_search", data=query)

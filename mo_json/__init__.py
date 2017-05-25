@@ -153,6 +153,8 @@ def _scrub(value, is_done):
             return False
         else:
             return True
+    elif not isinstance(value, Except) and isinstance(value, Exception):
+        return _scrub(Except.wrap(value), is_done)
     elif hasattr(value, '__data__'):
         try:
             return _scrub(value.__data__(), is_done)
@@ -184,7 +186,7 @@ def value2json(obj, pretty=False, sort_keys=False):
         try:
             json = pypy_json_encode(obj)
             return json
-        except Exception, _:
+        except Exception:
             pass
         Log.error("Can not encode into JSON: {{value}}", value=repr(obj), cause=e)
 

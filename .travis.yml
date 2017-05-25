@@ -6,6 +6,7 @@ branches:
   only:
   - master
   - dev
+  - merge
 
 install:
   - "sudo service elasticsearch stop"

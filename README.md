@@ -2,9 +2,13 @@
 
 Provide high speed filtering and aggregation over data see [ActiveData Wiki Page](https://wiki.mozilla.org/Auto-tools/Projects/ActiveData) for project details
 
-## Build Status
-**master:** [![Master Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=master)](https://travis-ci.org/klahnakoski/ActiveData)
-&nbsp;&nbsp;&nbsp;&nbsp;**dev:** [![Dev Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=dev)](https://travis-ci.org/klahnakoski/ActiveData)
+
+|Branch      |Status   |
+|------------|---------|
+|master      | [![Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=master)](https://travis-ci.org/klahnakoski/ActiveData) |
+|dev         | [![Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=dev)](https://travis-ci.org/klahnakoski/ActiveData)    |
+
+
 
 ## Use it now!
 
@@ -105,7 +109,7 @@ index and type. It is used as a default, and to find other indexes by name.
 
 ## Run
 
-Jump to your git project directory, set your `PYTHONPATH` and run:
+Jump to your git project directory, set your `PYTHONPATH` and run `app.py`:
 
 ```bash
     cd ~/ActiveData

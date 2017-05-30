@@ -132,7 +132,7 @@ def extract_rows(es, es_query, query):
                 })
                 i += 1
             elif select.value.var in nested_columns or [c for c in nested_columns if c.startswith(select.value.var+".")]:
-                es_query.stored_fields = FlatList()
+                # es_query.stored_fields = FlatList()
                 es_query.stored_fields = None
                 source = "_source"
 

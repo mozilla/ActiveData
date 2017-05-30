@@ -81,7 +81,7 @@ def extract_rows(es, es_query, query):
             if isinstance(term, Variable):
 
                 if term.var == ".":
-                    es_query.fields = None
+                    es_query.stored_fields = None
                     source = "_source"
                     for cname, cs in schema.lookup.items():
                         for c in cs:
@@ -101,8 +101,8 @@ def extract_rows(es, es_query, query):
                             suffix = cname[prefix_length:]
                             for c in cs:
                                 if c.type not in STRUCT:
-                                    if es_query.fields is not None:
-                                        es_query.fields.append(c.es_column)
+                                    if es_query.stored_fields is not None:
+                                        es_query.stored_fields.append(c.es_column)
                                     new_name = new_name_prefix + literal_field(suffix)
                                     new_select.append({
                                         "name": new_name,
@@ -113,7 +113,7 @@ def extract_rows(es, es_query, query):
 
         elif isinstance(select.value, Variable):
             if select.value.var == ".":
-                es_query.fields = None
+                es_query.stored_fields = None
                 source = "_source"
 
                 new_select.append({

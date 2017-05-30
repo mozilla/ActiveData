@@ -1185,11 +1185,11 @@ class EqOp(Expression):
                 return EqOp("eq", items[0])
         else:
             acc = []
-            for a, b in items:
-                if b.json.startswith("["):
-                    acc.append(InOp("in", [Variable(a), b]))
+            for lhs, rhs in items:
+                if rhs.json.startswith("["):
+                    acc.append(InOp("in", [Variable(lhs), rhs]))
                 else:
-                    acc.append(EqOp("eq", [Variable(a), b]))
+                    acc.append(EqOp("eq", [Variable(lhs), rhs]))
             return AndOp("and", acc)
 
     def __init__(self, op, terms):
@@ -1198,7 +1198,7 @@ class EqOp(Expression):
         self.lhs, self.rhs = terms
 
     def to_ruby(self, not_null=False, boolean=False):
-        return "(" + self.lhs.to_ruby() + ") == (" + self.rhs.to_ruby()+")"
+        return ruby_listwrap(self.lhs.to_ruby()) + ".contains(" + self.rhs.to_ruby() + ")"
 
     def to_python(self, not_null=False, boolean=False):
         return "(" + self.lhs.to_python() + ") == (" + self.rhs.to_python()+")"
@@ -3065,4 +3065,7 @@ sql_type_to_json_type = {
     "j": "object"
 }
 
+
+def ruby_listwrap(expr):
+    return "("+expr + " == null) ? [] : ((" + expr + ") instanceof java.util.Collection ? (" + expr + ") : [" + expr + "])"
 

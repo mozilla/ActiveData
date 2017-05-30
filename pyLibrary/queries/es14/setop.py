@@ -58,6 +58,7 @@ def es_setop(es, query):
     set_default(filters[0], simplify_esfilter(query.where.to_esfilter()))
     es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort)
+    # es_query.stored_fields = FlatList()
 
     return extract_rows(es, es_query, query)
 
@@ -72,7 +73,7 @@ def extract_rows(es, es_query, query):
     nested_columns = set(c.names["."] for c in columns if c.nested_path[0] != ".")
 
     i = 0
-    source = "fields"
+    source = "stored_fields"
     for select in selects:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if isinstance(select.value, LeavesOp):

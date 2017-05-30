@@ -126,7 +126,7 @@ class RolloverIndex(object):
         path = jx.reverse(etl2path(key2etl(prefix)))
 
         result = self.es.search({
-            "fields": ["_id"],
+            "stored_fields": ["_id"],
             "query": {
                 "bool": {
                     "query": {"match_all": {}},

@@ -91,7 +91,7 @@ class StructuredLogger_usingEmail(StructuredLogger):
                         content = expand_template(template, params)
                         emails[literal_field(self.settings.to_address)] += [content]
                         for c in self.cc:
-                            if any(c in params.params.error for c in c.contains):
+                            if any(d in params.params.error for d in c.contains):
                                 emails[literal_field(c.to_address)] += [content]
 
                     # SEND TO EACH

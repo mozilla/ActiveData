@@ -1258,7 +1258,7 @@ class EqOp(Expression):
             else:
                 return {"term": {self.lhs.var: rhs}}
         else:
-            return {"script": {"script": self.to_ruby()}}
+            return {"script": {"script": self.to_ruby(boolean=True)}}
 
     def __data__(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
@@ -1344,7 +1344,7 @@ class NotOp(Expression):
         self.term = term
 
     def to_ruby(self, not_null=False, boolean=False, many=False):
-        return "!(" + self.term.to_ruby() + ")"
+        return "!(" + self.term.to_ruby(boolean=True) + ")"
 
     def to_python(self, not_null=False, boolean=False):
         return "not (" + self.term.to_python() + " == None)"

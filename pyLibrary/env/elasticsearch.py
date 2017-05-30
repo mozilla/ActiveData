@@ -243,6 +243,11 @@ class Index(Features):
                 "query": {"match_all": {}},
                 "filter": filter
             }}}
+        elif self.cluster.cluster_state.version.number.startswith("5."):
+            query = {"query": {"bool": {
+                "query": {"match_all": {}},
+                "filter": filter
+            }}}
         else:
             raise NotImplementedError
 
@@ -1039,6 +1044,11 @@ class Alias(Features):
                 "filter": filter
             }}
         elif self.cluster.cluster_state.version.number.startswith("1."):
+            query = {"query": {"bool": {
+                "query": {"match_all": {}},
+                "filter": filter
+            }}}
+        elif self.cluster.cluster_state.version.number.startswith("5."):
             query = {"query": {"bool": {
                 "query": {"match_all": {}},
                 "filter": filter

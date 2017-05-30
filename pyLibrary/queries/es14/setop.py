@@ -58,7 +58,6 @@ def es_setop(es, query):
     set_default(filters[0], simplify_esfilter(query.where.to_esfilter()))
     es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort)
-    es_query.stored_fields = FlatList()
 
     return extract_rows(es, es_query, query)
 
@@ -132,6 +131,7 @@ def extract_rows(es, es_query, query):
                 })
                 i += 1
             elif select.value.var in nested_columns or [c for c in nested_columns if c.startswith(select.value.var+".")]:
+                es_query.stored_fields = FlatList()
                 es_query.stored_fields = None
                 source = "_source"
 

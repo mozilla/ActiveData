@@ -2620,37 +2620,37 @@ class InOp(Expression):
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
-        self.field, self.values = term
+        self.value, self.superset = term
 
     def to_ruby(self, not_null=False, boolean=False, many=False):
-        return self.values.to_ruby() + ".contains(" + self.field.to_ruby() + ")"
+        return self.superset.to_ruby(many=True) + ".contains(" + self.value.to_ruby() + ")"
 
     def to_python(self, not_null=False, boolean=False):
-        return self.field.to_python() + " in " + self.values.to_python()
+        return self.value.to_python() + " in " + self.superset.to_python()
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        if not isinstance(self.values, Literal):
+        if not isinstance(self.superset, Literal):
             Log.error("Not supported")
-        var = self.field.to_sql(schema)
-        return " OR ".join("(" + var + "==" + sql_quote(v) + ")" for v in json2value(self.values))
+        var = self.value.to_sql(schema)
+        return " OR ".join("(" + var + "==" + sql_quote(v) + ")" for v in json2value(self.superset))
 
     def to_esfilter(self):
-        if isinstance(self.field, Variable):
-            return {"terms": {self.field.var: json2value(self.values.json)}}
+        if isinstance(self.value, Variable):
+            return {"terms": {self.value.var: json2value(self.superset.json)}}
         else:
             return {"script": self.to_ruby()}
 
     def __data__(self):
-        if isinstance(self.field, Variable) and isinstance(self.values, Literal):
-            return {"in": {self.field.var: json2value(self.values.json)}}
+        if isinstance(self.value, Variable) and isinstance(self.superset, Literal):
+            return {"in": {self.value.var: json2value(self.superset.json)}}
         else:
-            return {"in": [self.field.__data__(), self.values.__data__()]}
+            return {"in": [self.value.__data__(), self.superset.__data__()]}
 
     def vars(self):
-        return self.field.vars()
+        return self.value.vars()
 
     def map(self, map_):
-        return InOp("in", [self.field.map(map_), self.values])
+        return InOp("in", [self.value.map(map_), self.superset])
 
 
 class RangeOp(Expression):

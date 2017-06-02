@@ -24,7 +24,7 @@ lots_of_data = wrap([{"a": i} for i in range(30)])
 class TestSetOps(BaseTestCase):
 
     def test_star(self):
-       test = {
+        test = {
            "data": [{"a": 1}],
            "query": {
                "select": "*",
@@ -34,7 +34,7 @@ class TestSetOps(BaseTestCase):
                "meta": {"format": "list"}, "data": [{"a": 1}]
            }
        }
-       self.utils.execute_es_tests(test)
+        self.utils.execute_es_tests(test)
 
     def test_simplest(self):
         test = {
@@ -831,7 +831,7 @@ class TestSetOps(BaseTestCase):
                     {"a": {"b": "x", "v": 2}},
                     {"a": {"b": "x", "v": 5}},
                     {"a": {"b": "x", "v": 7}},
-                    NULL
+                    {}
                 ]
             },
             "expecting_table": {
@@ -841,7 +841,7 @@ class TestSetOps(BaseTestCase):
                     [{"b": "x", "v": 2}],
                     [{"b": "x", "v": 5}],
                     [{"b": "x", "v": 7}],
-                    [NULL]
+                    [{}]
                 ]
             },
             "expecting_cube": {
@@ -857,7 +857,7 @@ class TestSetOps(BaseTestCase):
                         {"b": "x", "v": 2},
                         {"b": "x", "v": 5},
                         {"b": "x", "v": 7},
-                        NULL
+                        {}
                     ]
                 }
             }
@@ -965,7 +965,7 @@ class TestSetOps(BaseTestCase):
                         {"b": "x", "v": 2},
                         {"b": "x", "v": 5},
                         {"b": "x", "v": 7},
-                        NULL
+                        {}
                     ]
                 }
             }
@@ -1005,7 +1005,7 @@ class TestSetOps(BaseTestCase):
                     [3, {"b": "x", "v": 2}],
                     [1, {"b": "x", "v": 5}],
                     [2, {"b": "x", "v": 7}],
-                    [4, NULL]
+                    [4, {}]
                 ]
             },
             "expecting_cube": {
@@ -1021,7 +1021,7 @@ class TestSetOps(BaseTestCase):
                         {"b": "x", "v": 2},
                         {"b": "x", "v": 5},
                         {"b": "x", "v": 7},
-                        NULL
+                        {}
                     ],
                     "o": [3, 1, 2, 4]
                 }

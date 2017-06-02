@@ -145,7 +145,7 @@ class ListContainer(Container):
             def selector(d):
                 output = Data()
                 for n, p in push_and_pull:
-                    output[n] = p(wrap(d))
+                    output[n] = unwraplist(p(wrap(d)))
                 return unwrap(output)
 
             new_data = map(selector, self.data)

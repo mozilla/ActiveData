@@ -104,6 +104,7 @@ def extract_rows(es, es_query, query):
                                 if c.type not in STRUCT:
                                     if source == "fields":
                                         es_query.stored_fields += [c.es_column]
+                                        es_query._source += [c.es_column]
                                     new_name = new_name_prefix + literal_field(suffix)
                                     new_select.append({
                                         "name": new_name,
@@ -149,6 +150,7 @@ def extract_rows(es, es_query, query):
                     # LEAF
                     if source == "fields":
                         es_query.stored_fields += [select.value.var]
+                        es_query._source += [select.value.var]
                     new_select.append({
                         "name": select.name,
                         "value": select.value,

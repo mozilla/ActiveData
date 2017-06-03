@@ -941,33 +941,6 @@ class TestSetOps(BaseTestCase):
                     {"b": "x", "v": 7},
                     {}
                 ]
-            },
-            "expecting_table": {
-                "meta": {"format": "table"},
-                "header": ["a"],
-                "data": [
-                    [{"b": "x", "v": 2}],
-                    [{"b": "x", "v": 5}],
-                    [{"b": "x", "v": 7}],
-                    [{}]
-                ]
-            },
-            "expecting_cube": {
-                "meta": {"format": "cube"},
-                "edges": [
-                    {
-                        "name": "rownum",
-                        "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
-                    }
-                ],
-                "data": {
-                    "a": [
-                        {"b": "x", "v": 2},
-                        {"b": "x", "v": 5},
-                        {"b": "x", "v": 7},
-                        NULL
-                    ]
-                }
             }
         }
         self.utils.execute_es_tests(test)

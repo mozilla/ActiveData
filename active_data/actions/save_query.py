@@ -196,19 +196,23 @@ SCHEMA = {
             "properties": {
                 "create_time": {
                     "type": "double",
-                    "index": "not_analyzed"
+                    "index": "not_analyzed",
+                    "store": True
                 },
                 "last_used": {
                     "type": "double",
-                    "index": "not_analyzed"
+                    "index": "not_analyzed",
+                    "store": True
                 },
                 "hash": {
                     "type": "string",
-                    "index": "not_analyzed"
+                    "index": "not_analyzed",
+                    "store": True
                 },
                 "query": {
                     "type": "object",
-                    "enabled": False
+                    "enabled": False,
+                    "store": True
                 }
             }
         }

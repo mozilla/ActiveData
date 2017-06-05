@@ -171,9 +171,23 @@ class ESUtils(object):
             container.add_alias(_settings.index)
 
             # INSERT DATA
-            container.extend([
-                {"value": v} for v in subtest.data
-            ])
+
+            for v in subtest.data:
+                currDataType = type(v.v) # just for debugging
+                if v != None:
+                    if isinstance(v.v,long):
+                        vType="long"
+                        container.extend([{"value": v, "type": "\"" + vType + "\""}])
+                    if isinstance(v.v,str) or isinstance(v.v,unicode):
+                        vType="string"
+                        container.extend([{"value": v, "type": "\"" + vType + "\""}])
+                    if isinstance(v.v,int):
+                        vType="double"
+                        container.extend([{"value": v, "type": "\"" + vType + "\""}])
+                else:
+                    vType == "string"
+                    container.extend([{"value": v, "type": "\"" + vType + "\""}])
+
             container.flush()
             # ENSURE query POINTS TO CONTAINER
             frum = subtest.query["from"]

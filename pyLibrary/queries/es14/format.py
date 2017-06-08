@@ -41,7 +41,6 @@ def format_cube(decoders, aggs, start, query, select):
     dims = tuple(dims)
     matricies = [(s, Matrix(dims=dims, zeros=s.default)) for s in select]
     for row, coord, agg in aggs_iterator(aggs, decoders):
-        pass
         for s, m in matricies:
             try:
                 v = _pull(s, agg)

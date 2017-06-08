@@ -134,9 +134,7 @@ class TestSchemaMerging(BaseTestCase):
                 "meta": {"format": "table"},
                 "header": ["a.html"],
                 "data": [
-                    [
                         ["hello world"]
-                    ]
                 ]
             },
             "expecting_cube": {
@@ -148,9 +146,7 @@ class TestSchemaMerging(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a.html": [
-                        ["hello world"]
-                    ]
+                    "a.html": ["hello world"]
                 }
             }
         }

@@ -146,7 +146,7 @@ ElasticSearch.makeBasicQuery=function(esfilter){
       }
     },
     "from": 0,
-    "size": 0,
+    "size": 1,
     "sort": [],
     "facets":{}
   };

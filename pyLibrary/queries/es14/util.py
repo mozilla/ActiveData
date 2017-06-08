@@ -36,7 +36,7 @@ def es_query_template(path):
                 }}
             ]},
             "from": 0,
-            "size": 0,
+            "size": 1,
             "sort": []
         })
         return output, wrap([f0, f1])
@@ -47,7 +47,7 @@ def es_query_template(path):
                 "filter": f0
             }},
             "from": 0,
-            "size": 0,
+            "size": 1,
             "sort": []
         })
         return output, wrap([f0])

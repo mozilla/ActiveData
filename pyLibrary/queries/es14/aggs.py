@@ -106,7 +106,7 @@ def get_decoders_by_depth(query):
             max_depth = 0
             output.append([])
 
-        limit = 0
+        limit = 1
         output[max_depth].append(AggsDecoder(edge, query, limit))
     return output
 
@@ -331,7 +331,7 @@ def es_aggsop(es, frum, query):
     if not es_query:
         es_query = wrap({"query": {"match_all": {}}})
 
-    es_query.size = 0
+    es_query.size = 1
 
     with Timer("ES query time") as es_duration:
         result = es09.util.post(es, es_query, query.limit)

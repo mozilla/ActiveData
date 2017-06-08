@@ -289,12 +289,12 @@ class FromESMetadata(Schema):
                    "query": {
                        "match_all": {}
                    },
-                   "size": 0
+                   "size": 1
                })
             else:
                 result = self.default_es.post("/" + es_index + "/_search", data={
                     "aggs": {c.names["."]: _counting_query(c)},
-                    "size": 0
+                    "size": 1
                 })
 
             count = result.hits.total
@@ -350,7 +350,7 @@ class FromESMetadata(Schema):
                     "query": {
                         "match_all": {}
                     },
-                    "size": 0
+                    "size": 1
                 })
 
             aggs = result.aggregations.values()[0]

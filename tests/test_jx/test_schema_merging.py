@@ -74,7 +74,8 @@ class TestSchemaMerging(BaseTestCase):
         test = {
             "data": [
                 {"a": "b"},
-                {"a": 3}
+                {"a": 3},
+                {"a": "c"}
             ],
             "query": {
                 "from": TEST_TABLE,
@@ -84,7 +85,8 @@ class TestSchemaMerging(BaseTestCase):
                 "meta": {"format": "list"},
                 "data": [
                     "b",
-                    3
+                    3,
+                    "c"
                 ]
             },
             "expecting_table": {
@@ -93,7 +95,8 @@ class TestSchemaMerging(BaseTestCase):
                 "data": [
                     [
                         ["b"],
-                        [3]
+                        [3],
+                        ["c"]
                     ]
                 ]
             },
@@ -108,7 +111,8 @@ class TestSchemaMerging(BaseTestCase):
                 "data": {
                     "a": [
                         ["b"],
-                        [3]
+                        [3],
+                        ["c"]
                     ]
                 }
             }

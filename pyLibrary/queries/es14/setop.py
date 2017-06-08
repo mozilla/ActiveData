@@ -186,7 +186,7 @@ def extract_rows(es, es_query, query):
         if source == "_source":
             n.pull = concat_field("_source", n.value.var)
         elif isinstance(n.value, Variable):
-            n.pull = concat_field("fields", n.value.var)
+            n.pull = concat_field("fields", literal_field(encode_property(n.value.var)))
         else:
             Log.error("Do not know what to do")
 

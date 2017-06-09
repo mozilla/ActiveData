@@ -331,7 +331,7 @@ def es_aggsop(es, frum, query):
     if not es_query:
         es_query = wrap({"query": {"match_all": {}}})
 
-    es_query.size = 1
+    es_query.size = 0
 
     with Timer("ES query time") as es_duration:
         result = es09.util.post(es, es_query, query.limit)

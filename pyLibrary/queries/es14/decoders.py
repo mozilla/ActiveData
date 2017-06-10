@@ -135,7 +135,7 @@ class SetDecoder(AggsDecoder):
 
     def __init__(self, edge, query, limit):
         AggsDecoder.__init__(self, edge, query, limit)
-        self.domain = edge.domain
+        domain = self.domain = edge.domain
 
         # WE ASSUME IF THE VARIABLES MATCH, THEN THE SORT TERM AND EDGE TERM MATCH, AND WE SORT BY TERM
         # self.sorted = {1: "asc", -1: "desc", None: None}[getattr(edge.domain, 'sort', None)]
@@ -144,9 +144,7 @@ class SetDecoder(AggsDecoder):
             for s in query.sort:
                 if not edge_var - s.value.vars():
                     self.sorted = {1: "asc", -1: "desc"}[s.sort]
-                    domain = self.domain
-                    key = self.domain.key
-                    domain.partitions = parts = jx.sort(domain.partitions, {"value": key, "sort": s.sort})
+                    domain.partitions = parts = jx.sort(domain.partitions, {"value": domain.key, "sort": s.sort})
                     domain.map = {i: p for i, p in enumerate(parts)}
         else:
             self.sorted = None

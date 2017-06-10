@@ -93,11 +93,9 @@ class TestSchemaMerging(BaseTestCase):
                 "meta": {"format": "table"},
                 "header": ["a"],
                 "data": [
-                    [
-                        ["b"],
-                        [3],
-                        ["c"]
-                    ]
+                    ["b"],
+                    [3],
+                    ["c"]
                 ]
             },
             "expecting_cube": {
@@ -105,15 +103,11 @@ class TestSchemaMerging(BaseTestCase):
                 "edges": [
                     {
                         "name": "rownum",
-                        "domain": {"type": "rownum", "min": 0, "max": 2, "interval": 1}
+                        "domain": {"type": "rownum", "min": 0, "max": 3, "interval": 1}
                     }
                 ],
                 "data": {
-                    "a": [
-                        ["b"],
-                        [3],
-                        ["c"]
-                    ]
+                    "a": ["b", 3, "c"]
                 }
             }
         }

@@ -68,7 +68,7 @@ class TestSchemaMerging(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
     def test_mixed_primitives(self):
         test = {
@@ -111,7 +111,7 @@ class TestSchemaMerging(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
     def test_dots_in_property_names(self):
         test = {
@@ -148,7 +148,7 @@ class TestSchemaMerging(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
 
 

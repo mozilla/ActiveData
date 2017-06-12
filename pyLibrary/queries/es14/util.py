@@ -36,18 +36,18 @@ def es_query_template(path):
                 }}
             ]},
             "from": 0,
-            "size": 0,
+            "size": 1,
             "sort": []
         })
         return output, wrap([f0, f1])
     else:
         f0 = {}
         output = wrap({
-            "query": {"filtered": {
+            "query": {"bool": {
                 "filter": f0
             }},
             "from": 0,
-            "size": 0,
+            "size": 1,
             "sort": []
         })
         return output, wrap([f0])

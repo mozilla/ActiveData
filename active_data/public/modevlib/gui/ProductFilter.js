@@ -30,7 +30,7 @@ ProductFilter.prototype.makeFilter = function () {
 ProductFilter.prototype.makeQuery = function(filters){
   var output = {
     "query":{
-      "filtered":{
+      "bool":{
         "query":{
           "match_all":{}
         },
@@ -44,7 +44,7 @@ ProductFilter.prototype.makeQuery = function(filters){
       }
     },
     "from": 0,
-    "size": 0,
+    "size": 1,
     "sort": [],
     "facets":{
       "Products":{

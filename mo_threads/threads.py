@@ -21,15 +21,12 @@ from copy import copy
 from datetime import datetime, timedelta
 from time import sleep
 
-from mo_logs.profiles import CProfiler
-
-from mo_logs import Log, Except
-
 from mo_dots import Data, unwraplist, Null
+from mo_logs import Log, Except
+from mo_logs.profiles import CProfiler
+from mo_threads import Till, Lock, Signal, till
 
-from mo_threads.lock import Lock
-from mo_threads.signal import AndSignals, Signal
-from mo_threads.till import Till
+from mo_threads.signal import AndSignals
 
 DEBUG = False
 
@@ -424,5 +421,5 @@ ALL_LOCK = Lock("threads ALL_LOCK")
 ALL = dict()
 ALL[thread.get_ident()] = MAIN_THREAD
 
-MAIN_THREAD.timers = Thread.run("timers", Till.daemon)
+MAIN_THREAD.timers = Thread.run("timers", till.daemon)
 MAIN_THREAD.children.remove(MAIN_THREAD.timers)

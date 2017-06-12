@@ -25,7 +25,6 @@ discovery.zen.minimum_master_nodes: 1
 
 index.number_of_shards: 1
 index.number_of_replicas: 1
-index.cache.field.type: soft
 index.translog.interval: 60s
 index.translog.flush_threshold_size: 1gb
 

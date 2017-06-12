@@ -71,7 +71,6 @@ class Index(Features):
         read_only=True,
         tjson=False,  # STORED AS TYPED JSON
         timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
-        consistency="one",  # ES WRITE CONSISTENCY (https://www.elastic.co/guide/en/elasticsearch/reference/1.7/docs-index_.html#index-consistency)
         debug=False,  # DO NOT SHOW THE DEBUG STATEMENTS
         cluster=None,
         kwargs=None
@@ -235,12 +234,17 @@ class Index(Features):
         self.cluster.get_metadata()
 
         if self.cluster.cluster_state.version.number.startswith("0.90"):
-            query = {"filtered": {
+            query = {"bool": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}
         elif self.cluster.cluster_state.version.number.startswith("1."):
-            query = {"query": {"filtered": {
+            query = {"query": {"bool": {
+                "query": {"match_all": {}},
+                "filter": filter
+            }}}
+        elif self.cluster.cluster_state.version.number.startswith("5."):
+            query = {"query": {"bool": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}}
@@ -253,8 +257,7 @@ class Index(Features):
         result = self.cluster.delete(
             self.path + "/_query",
             data=convert.value2json(query),
-            timeout=600,
-            params={"consistency": self.settings.consistency}
+            timeout=600
         )
 
         for name, status in result._indices.items():
@@ -310,8 +313,7 @@ class Index(Features):
                     data=data_bytes,
                     headers={"Content-Type": "text"},
                     timeout=self.settings.timeout,
-                    retry=self.settings.retry,
-                    params={"consistency": self.settings.consistency}
+                    retry=self.settings.retry
                 )
                 items = response["items"]
 
@@ -320,7 +322,7 @@ class Index(Features):
                     for i, item in enumerate(items):
                         if not item.index.ok:
                             fails.append(i)
-                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
+                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5.2."])):
                     for i, item in enumerate(items):
                         if item.index.status not in [200, 201]:
                             fails.append(i)
@@ -394,7 +396,7 @@ class Index(Features):
                 Log.error("Can not set refresh interval ({{error}})", {
                     "error": utf82unicode(response.all_content)
                 })
-        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
+        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5.2."])):
             response = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
                 data=convert.unicode2utf8('{"index":{"refresh_interval":' + convert.value2json(interval) + '}}'),
@@ -649,7 +651,7 @@ class Cluster(object):
                 )
                 schema.settings.index.number_of_replicas = health.number_of_nodes - 1
 
-        self.post(
+        self.put(
             "/" + index,
             data=schema,
             headers={"Content-Type": "application/json"}
@@ -752,7 +754,7 @@ class Cluster(object):
                 Log.note("{{url}}:\n{{data|indent}}", url=url, data=sample)
 
             if self.debug:
-                Log.note("POST {{url}}", url=url)
+                Log.note("PUT {{url}}", url=url)
             response = http.post(url, **kwargs)
             if response.status_code not in [200, 201]:
                 Log.error(response.reason.decode("latin1") + ": " + strings.limit(response.content.decode("latin1"), 100 if self.debug else 10000))
@@ -835,18 +837,41 @@ class Cluster(object):
     def put(self, path, **kwargs):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
 
+        data = kwargs.get(b'data')
+        if data == None:
+            pass
+        elif isinstance(data, Mapping):
+            kwargs[b'data'] = data = convert.unicode2utf8(convert.value2json(data))
+        elif not isinstance(kwargs["data"], str):
+            Log.error("data must be utf8 encoded string")
+
         if self.debug:
-            sample = kwargs["data"][:300]
-            Log.note("PUT {{url}}:\n{{data|indent}}", url=url, data=sample)
+            sample = kwargs.get(b'data', "")[:300]
+            Log.note("{{url}}:\n{{data|indent}}", url=url, data=sample)
         try:
             response = http.put(url, **kwargs)
             if response.status_code not in [200]:
                 Log.error(response.reason+": "+response.all_content)
             if self.debug:
                 Log.note("response: {{response}}",  response= utf82unicode(response.all_content)[0:300:])
-            return response
+
+            details = mo_json.json2value(utf82unicode(response.content))
+            if details.error:
+                Log.error(convert.quote2string(details.error))
+            if details._shards.failed > 0:
+                Log.error("Shard failures {{failures|indent}}",
+                          failures="---\n".join(r.replace(";", ";\n") for r in details._shards.failures.reason)
+                          )
+            return details
+
+            # return response
+
+
+
         except Exception as e:
-            Log.error("Problem with call to {{url}}",  url= url, cause=e)
+            Log.error("Problem with call to {{url}}", url=url, cause=e)
+
+
 
 
 def proto_name(prefix, timestamp=None):
@@ -942,6 +967,8 @@ class Alias(Features):
                     [(name, Null) for name, i in alias_list.items() if self.settings.index==name]
                 )
                 full_name = jx.sort(candidates, 0).last()[0]
+                if not full_name:
+                    Log.error("No index by name of {{name}}", name=self.settings.index)
                 mappings = self.cluster.get("/" + full_name + "/_mapping")[full_name]
             else:
                 mappings = self.cluster.get("/"+self.settings.index+"/_mapping")[self.settings.index]
@@ -1012,12 +1039,17 @@ class Alias(Features):
         self.cluster.get_metadata()
 
         if self.cluster.cluster_state.version.number.startswith("0.90"):
-            query = {"filtered": {
+            query = {"bool": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}
         elif self.cluster.cluster_state.version.number.startswith("1."):
-            query = {"query": {"filtered": {
+            query = {"query": {"bool": {
+                "query": {"match_all": {}},
+                "filter": filter
+            }}}
+        elif self.cluster.cluster_state.version.number.startswith("5."):
+            query = {"query": {"bool": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}}
@@ -1143,7 +1175,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                     ))
             continue
 
-        if property.type in ["string", "boolean", "integer", "date", "long", "double"]:
+        if property.type in ["string", "boolean", "integer", "date", "long", "double", "keyword"]:
             columns.append(Column(
                 es_index=index_name,
                 names={".": column_name},

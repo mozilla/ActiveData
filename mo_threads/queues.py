@@ -22,10 +22,7 @@ from datetime import datetime
 from time import time
 
 from mo_dots import coalesce, Null
-from mo_threads.lock import Lock
-from mo_threads.signal import Signal
-from mo_threads.threads import Thread, THREAD_STOP, THREAD_TIMEOUT
-from mo_threads.till import Till
+from mo_threads import Lock, Signal, Thread, THREAD_STOP, THREAD_TIMEOUT, Till
 
 _convert = None
 _Except = None
@@ -184,7 +181,7 @@ class Queue(object):
                 self.lock.wait(Till(till=time_to_stop_waiting))
             else:
                 self.lock.wait(Till(timeout=wait_time))
-                if len(self.queue) > self.max:
+                if len(self.queue) >= self.max:
                     now = time()
                     if self.next_warning < now:
                         self.next_warning = now + wait_time

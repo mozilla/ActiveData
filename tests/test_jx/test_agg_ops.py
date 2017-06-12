@@ -267,13 +267,12 @@ class TestAggOps(BaseTestCase):
         }
         self.utils.execute_es_tests(test, tjson=True)
 
-
     def test_max_object_on_value(self):
         test = {
             "data": [{"a": i*2} for i in range(30)],
             "query": {
                 "from": TEST_TABLE,
-                "select": [{"value": ".", "aggregate": "max"}]
+                "select": [ {"name":"max", "value": "a", "aggregate": "max"} ]
             },
             "expecting_list": {
                 "meta": {"format": "value"}, "data": {"max": 58}
@@ -291,7 +290,7 @@ class TestAggOps(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_es_tests(test, tjson=True)
+        self.utils.execute_es_tests(test, tjson=False)
 
     @skipIf(global_settings.use in ["sqlite", "elasticsearch"], "not expected to pass yet")
     def test_median_on_value(self):
@@ -355,7 +354,7 @@ class TestAggOps(BaseTestCase):
                 {"a": 2, "d": "x"},
                 {"a": 3, "d": "x"},
                 {"a": 3, "d": "x"},
-                {"a": 3, "d": "x"},
+                {"a": 3, "d": "x"}
             ],
             "query": {
                 "from": TEST_TABLE,
@@ -369,6 +368,32 @@ class TestAggOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "value"},
                 "data": {"a": 3, "b": 1, "c": 0, "d": 1}
+            }
+        }
+        self.utils.execute_es_tests(test, tjson=False)
+
+    @skipIf(global_settings.use == "elasticsearch", "requires scripted metric aggregations")  # https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-scripted-metric-aggregation.html
+    def test_max_on_tuple(self):
+        test = {
+            "data": [
+                {"a": 1, "b": 1},
+                {"a": 1, "b": 2},
+                {"a": 2, "b": 1},
+                {"a": 2, "b": 2},
+                {"a": 3, "b": 1},
+                {"a": 3, "b": 2},
+                {"a": 3, "b": 3}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": [
+                    {"name": "max", "value": ["a", "b"], "aggregate": "max"},
+                    {"name": "min", "value": ["a", "b"], "aggregate": "min"}
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "value"},
+                "data": {"max": [3, 3], "min": [1, 1]}
             }
         }
         self.utils.execute_es_tests(test, tjson=False)

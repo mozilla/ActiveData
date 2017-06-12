@@ -11,7 +11,13 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_dots import wrap
+from mo_dots import wrap, Data
+
+from mo_json import json2value, utf82unicode
+
+from mo_logs import Log
+from mo_logs.url import URL
+from tests import compare_to_expected
 from tests.test_jx import BaseTestCase, TEST_TABLE, NULL
 
 simple_test_data = [
@@ -27,46 +33,63 @@ simple_test_data = [
 class TestSQL(BaseTestCase):
 
     def test_count(self):
-        test = {
-            "data": simple_test_data,
-            "query": {
-                "from": TEST_TABLE,  # NEEDED TO FILL THE TABLE
-                "sql": 'select a as "a", count(1) as "count" from '+TEST_TABLE+' group by a'
-            },
-            "expecting_table": {
-                "meta": {"format": "table"},
-                "header": ["a", "count"],
-                "data": [
-                    ["b", 2],
-                    ["c", 3],
-                    [NULL, 1]
-                ]
-            }
+        sql = 'select a as "a", count(1) as "count" from '+TEST_TABLE+' group by a'
+        expected = {
+            "meta": {"format": "table"},
+            "header": ["a", "count"],
+            "data": [
+                ["b", 2],
+                ["c", 3],
+                [NULL, 1]
+            ]
         }
-        self.execute(test)
+        result = self._run_sql_query(sql)
+        compare_to_expected(result.meta.jx_query, result, expected)
 
     def test_filter(self):
-        test = {
-            "data": simple_test_data,
-            "query": {
-                "from": TEST_TABLE,  # NEEDED TO FILL THE TABLE
-                "sql": 'select * from '+TEST_TABLE+' where v>=3'
-            },
-            "expecting_table": {
-                "meta": {"format": "table"},
-                "header": ["a", "v"],
-                "data": [
-                    ["c", 13],
-                    [NULL, 3],
-                    ["c", 7],
-                    ["c", 11]
-                ]
-            }
+        sql = 'select * from '+TEST_TABLE+' where v>=3'
+        expected = {
+            "meta": {"format": "table"},
+            "header": ["a", "v"],
+            "data": [
+                ["c", 13],
+                [NULL, 3],
+                ["c", 7],
+                ["c", 11]
+            ]
         }
-        self.execute(test)
+        result = self._run_sql_query(sql)
+        compare_to_expected(result.meta.jx_query, result, expected)
+
+    def test_select_from_dual(self):
+        sql = "SELECT 1"
+        expected = {
+            "meta": {"format": "table"},
+            "header": ["1"],
+            "data": [
+                [1]
+            ]
+        }
+        result = self._run_sql_query(sql)
+        compare_to_expected(result.meta.jx_query, result, expected)
+
 
     def execute(self, test):
         test = wrap(test)
         self.utils.fill_container(test, tjson=False)
         test.query.sql = test.query.sql.replace(TEST_TABLE, test.query['from'])
         self.utils.send_queries(test)
+
+    def _run_sql_query(self, sql):
+        if not self.utils.sql_url:
+            Log.error("This test requires a `sql_url` parameter in the settings file")
+
+        test = Data(data=simple_test_data)
+        self.utils.fill_container(test)
+        sql = sql.replace(TEST_TABLE, test.query['from'])
+
+        url = URL(self.utils.sql_url)
+        response = self.utils.post_till_response(str(url), json={"meta": {"testing": True}, "sql": sql})
+        self.assertEqual(response.status_code, 200)
+        return json2value(utf82unicode(response.all_content))
+

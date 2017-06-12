@@ -57,7 +57,7 @@ def build_es_query(query):
     output = wrap({
         "query": {"match_all": {}},
         "from": 0,
-        "size": 100 if DEBUG else 0,
+        "size": 100 if DEBUG else 1,
         "sort": [],
         "facets": {
         }
@@ -66,7 +66,7 @@ def build_es_query(query):
     if DEBUG:
         # TO LIMIT RECORDS TO WHAT'S IN FACETS
         output.query = {
-            "filtered": {
+            "bool": {
                 "query": {
                     "match_all": {}
                 },

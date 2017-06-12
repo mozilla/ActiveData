@@ -7,14 +7,12 @@
 	},
 	"mappings": {
 		{{type|quote}}: {
-			"_source": {
-				"compress": true
-			},
 			"dynamic_templates": [
 				{
 					"default_numbers": {
 						"mapping": {
-							"type": "double"
+							"type": "double",
+							"store": true
 						},
 						"match_mapping_type": "long",
 						"match": "*"
@@ -24,7 +22,8 @@
 					"default_strings": {
 						"mapping": {
 							"index": "not_analyzed",
-							"type": "string"
+							"type": "string",
+							"store": true
 						},
 						"match_mapping_type": "string",
 						"match": "*"

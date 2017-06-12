@@ -62,7 +62,7 @@ class FromES(Container):
         port=9200,
         read_only=True,
         timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
-        consistency="one",  # ES WRITE CONSISTENCY (https://www.elastic.co/guide/en/elasticsearch/reference/1.7/docs-index_.html#index-consistency)
+        wait_for_active_shards=1,  # ES WRITE CONSISTENCY (https://www.elastic.co/guide/en/elasticsearch/reference/1.7/docs-index_.html#index-consistency)
         typed=None,
         kwargs=None
     ):
@@ -206,12 +206,11 @@ class FromES(Container):
 
         # GET IDS OF DOCUMENTS
         results = self._es.search({
-            "fields": listwrap(schema._routing.path),
-            "query": {"filtered": {
-                "query": {"match_all": {}},
+            "stored_fields": listwrap(schema._routing.path),
+            "query": {"bool": {
                 "filter": jx_expression(command.where).to_esfilter()
             }},
-            "size": 200000
+            "size": 10000
         })
 
         # SCRIPT IS SAME FOR ALL (CAN ONLY HANDLE ASSIGNMENT TO CONSTANT)
@@ -236,7 +235,7 @@ class FromES(Container):
                 data=content,
                 headers={"Content-Type": "application/json"},
                 timeout=self.settings.timeout,
-                params={"consistency": self.settings.consistency}
+                params={"wait_for_active_shards": self.settings.wait_for_active_shards}
             )
             if response.errors:
                 Log.error("could not update: {{error}}", error=[e.error for i in response["items"] for e in i.values() if e.status not in (200, 201)])

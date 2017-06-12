@@ -150,7 +150,6 @@ class NullType(object):
         return Null
 
     def __getitem__(self, key):
-        assert not isinstance(key, str)
         if isinstance(key, slice):
             return Null
         elif isinstance(key, str):

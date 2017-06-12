@@ -369,7 +369,7 @@ def pretty_json(value):
                     if i > 0:
                         output.append(",\n")
                     output.append(indent(p))
-                except Exception as e:
+                except Exception:
                     from mo_logs import Log
 
                     Log.warning("problem concatenating string of length {{len1}} and {{len2}}",
@@ -377,7 +377,12 @@ def pretty_json(value):
                         len2=len(p)
                     )
             output.append("\n]")
-            return "".join(output)
+            try:
+                return "".join(output)
+            except Exception as e:
+                from mo_logs import Log
+
+                Log.error("not expected", cause=e)
         elif hasattr(value, '__data__'):
             d = value.__data__()
             return pretty_json(d)

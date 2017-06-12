@@ -3,12 +3,11 @@
 
 	"fastTesting": false,  //IMPORTANT VARIABLE!  true WILL RUN TESTS FASTER, false INCLUDES NETWORK RESPONSE TESTS
 	"service_url": "http://127.0.0.1:5000/query",
-	"sql_url": "http://127.0.0.1:5000/sql",
 	"backend_es": {
 		"index": "testdata",
 		"type": "test_result",
 		"host": "http://localhost",
-		"port": 9200,
+		"port": 9400,
 		"schema":{"$ref":"//.../resources/schema/basic_schema.json.template?type=test_result"},
 		"debug":true
 	},
@@ -27,7 +26,7 @@
 	},
 	"elasticsearch": {
 		"host": "http://localhost",
-		"port": 9200,
+		"port": 9400,
 		"index": "testdata",
 		"type": "test_result",
 		"debug": true

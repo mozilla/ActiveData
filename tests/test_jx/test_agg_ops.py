@@ -242,9 +242,10 @@ class TestAggOps(BaseTestCase):
         }
         self.utils.execute_es_tests(test, tjson=True)
 
+    @skipIf(global_settings.use in ["sqlite", "elasticsearch"], "not expected to pass yet")
     def test_max_on_value(self):
         test = {
-            "data": [{"a": i*2} for i in range(30)],
+            "data": [i*2 for i in range(30)],
             "query": {
                 "from": TEST_TABLE,
                 "select": {"value": ".", "aggregate": "max"}

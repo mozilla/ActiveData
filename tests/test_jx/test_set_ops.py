@@ -603,7 +603,7 @@ class TestSetOps(BaseTestCase):
             "query": {
                 "from": TEST_TABLE,
                 "select": {"name": "value", "value": "a"},
-                "limit": 1000000000
+                "limit": 50000
             }
         })
 

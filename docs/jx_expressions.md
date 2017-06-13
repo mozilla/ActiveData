@@ -160,7 +160,7 @@ All the math operators, except `count`, return `null` if *any* the operands are 
 		{"sum": [expr1, expr2, ... exprN], "default": 0}
 
 
-### `count` Operator (commutative)###
+### `count` Operator (commutative)
 
 For counting the number of not-null values.
 
@@ -171,7 +171,7 @@ For counting the number of not-null values.
 		{"count": []} ⇒ 0
 
 
-### `sum` Operator (commutative)###
+### `sum` Operator (commutative)
 
 For adding the result of many expressions. Also known as `add`.
 
@@ -195,7 +195,7 @@ Subtract two expressions. Also known as `subtract` and `minus`
 		{"sub": [expr_a, expr_b]}
 
 
-### `mult` Operator (commutative)###
+### `mult` Operator (commutative)
 
 Multiply multiple values. Also known as `multiply` and `mul`
 
@@ -377,7 +377,7 @@ JSON Expressions treat zero (`0`) as a truthy value; this implies `find` can be 
 		}
 
 
-`find` will return a default value if the substring is not found, that default value is usually `null`, but can be set with the `default` clause.   
+`find` will return `null` *(default)* if the substring is not found; this can be changed with the `default` clause.   
 
 		{"find": {variable, substring}, "default": -1}
 

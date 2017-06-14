@@ -210,7 +210,7 @@ class FromES(Container):
             "query": {"bool": {
                 "filter": jx_expression(command.where).to_esfilter()
             }},
-            "size": 50000
+            "size": 10000
         })
 
         # SCRIPT IS SAME FOR ALL (CAN ONLY HANDLE ASSIGNMENT TO CONSTANT)

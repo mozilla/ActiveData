@@ -3,7 +3,8 @@
 		"index.store.throttle.type": "merge",
 		"index.number_of_replicas": 0,
 		"index.store.throttle.max_bytes_per_sec": "2mb",
-		"index.number_of_shards": 3
+		"index.number_of_shards": 3,
+	    "index.max_result_window": 50000
 	},
 	"mappings": {
 		{{type|quote}}: {

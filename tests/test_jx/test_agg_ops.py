@@ -242,12 +242,13 @@ class TestAggOps(BaseTestCase):
         }
         self.utils.execute_es_tests(test, tjson=True)
 
+    @skipIf(global_settings.use in ["sqlite", "elasticsearch"], "not expected to pass yet")
     def test_max_on_value(self):
         test = {
-            "data": [{"a": i*2} for i in range(30)],
+            "data": [i*2 for i in range(30)],
             "query": {
                 "from": TEST_TABLE,
-                "select": {"value": ".", "aggregate": "max"}
+                "select": {"name": "max", "value": "a", "aggregate": "max"}
             },
             "expecting_list": {
                 "meta": {"format": "value"}, "data": 58
@@ -272,7 +273,7 @@ class TestAggOps(BaseTestCase):
             "data": [{"a": i*2} for i in range(30)],
             "query": {
                 "from": TEST_TABLE,
-                "select": [{"value": ".", "aggregate": "max"}]
+                "select": [ {"name":"max", "value": "a", "aggregate": "max"} ]
             },
             "expecting_list": {
                 "meta": {"format": "value"}, "data": {"max": 58}
@@ -290,7 +291,7 @@ class TestAggOps(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_es_tests(test, tjson=True)
+        self.utils.execute_es_tests(test, tjson=False)
 
     @skipIf(global_settings.use in ["sqlite", "elasticsearch"], "not expected to pass yet")
     def test_median_on_value(self):

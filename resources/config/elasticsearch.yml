@@ -27,6 +27,7 @@ index.number_of_shards: 1
 index.number_of_replicas: 1
 index.translog.interval: 60s
 index.translog.flush_threshold_size: 1gb
+index.max_result_window=50000
 
 indices.memory.index_buffer_size: 20%
 indices.recovery.concurrent_streams: 1

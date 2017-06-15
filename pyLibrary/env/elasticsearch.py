@@ -71,6 +71,7 @@ class Index(Features):
         read_only=True,
         tjson=False,  # STORED AS TYPED JSON
         timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
+        wait_for_active_shards=1,  # ES WRITE CONSISTENCY (https://www.elastic.co/guide/en/elasticsearch/reference/1.7/docs-index_.html#index-consistency)
         debug=False,  # DO NOT SHOW THE DEBUG STATEMENTS
         cluster=None,
         kwargs=None
@@ -175,6 +176,7 @@ class Index(Features):
                     {"add": {"index": self.settings.index, "alias": alias}}
                 ]
             },
+            params={"wait_for_active_shards": self.settings.wait_for_active_shards},
             timeout=coalesce(self.settings.timeout, 30)
         )
 
@@ -218,7 +220,7 @@ class Index(Features):
 
     def flush(self):
         try:
-            self.cluster.post("/" + self.settings.index + "/_flush", data={"wait_if_ongoing": True, "forced": False})
+            self.cluster.post("/" + self.settings.index + "/_flush", data={"wait_if_ongoing": True, "forced": False}, params={"wait_for_active_shards": self.settings.wait_for_active_shards} )
         except Exception as e:
             if "FlushNotAllowedEngineException" in e:
                 Log.note("Flush is ignored")
@@ -226,7 +228,8 @@ class Index(Features):
                 Log.error("Problem flushing", cause=e)
 
     def refresh(self):
-        self.cluster.post("/" + self.settings.index + "/_refresh")
+        self.cluster.post("/" + self.settings.index + "/_refresh",
+                params={"wait_for_active_shards": self.settings.wait_for_active_shards})
 
     def delete_record(self, filter):
         if self.settings.read_only:
@@ -313,7 +316,8 @@ class Index(Features):
                     data=data_bytes,
                     headers={"Content-Type": "text"},
                     timeout=self.settings.timeout,
-                    retry=self.settings.retry
+                    retry=self.settings.retry,
+                    params={"wait_for_active_shards": self.settings.wait_for_active_shards}
                 )
                 items = response["items"]
 
@@ -371,7 +375,7 @@ class Index(Features):
         self.extend([record])
 
     def refresh(self):
-        self.cluster.post("/" + self.settings.index + "/_refresh")
+        self.cluster.post("/" + self.settings.index + "/_refresh" , params={"wait_for_active_shards": self.settings.wait_for_active_shards})
 
     def set_refresh_interval(self, seconds, **kwargs):
         """
@@ -425,6 +429,7 @@ class Index(Features):
                 self.path + "/_search",
                 data=query,
                 timeout=coalesce(timeout, self.settings.timeout),
+                params={"wait_for_active_shards": self.settings.wait_for_active_shards},
                 retry=retry
             )
         except Exception as e:
@@ -1097,6 +1102,7 @@ class Alias(Features):
             return self.cluster.post(
                 self.path + "/_search",
                 data=query,
+                params={"wait_for_active_shards": self.settings.wait_for_active_shards},
                 timeout=coalesce(timeout, self.settings.timeout)
             )
         except Exception as e:

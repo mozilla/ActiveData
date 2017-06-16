@@ -427,7 +427,6 @@ class Index(Features):
                 self.path + "/_search",
                 data=query,
                 timeout=coalesce(timeout, self.settings.timeout),
-                params={"wait_for_active_shards": self.settings.wait_for_active_shards},
                 retry=retry
             )
         except Exception as e:

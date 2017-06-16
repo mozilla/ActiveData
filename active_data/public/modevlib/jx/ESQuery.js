@@ -836,7 +836,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
         }
       },
       "from": 0,
-      "size": ESQuery.DEBUG ? 100 : 1,
+      "size": ESQuery.DEBUG ? 100 : 0,
       "sort": [],
       "facets": {
       }

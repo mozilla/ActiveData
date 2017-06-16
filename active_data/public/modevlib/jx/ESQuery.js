@@ -584,7 +584,7 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
           q.value = {
             "terms": {
               "field": this.select[0].value, //PICK WHATEVER VALUE WE CAN
-              "size": 1  //DO NOT COUNT, THE SUMMARY WILL DO FINE
+              "size": 0  //DO NOT COUNT, THE SUMMARY WILL DO FINE
             }
           };
         } else if (value.type == "field") {

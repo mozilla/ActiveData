@@ -44,7 +44,7 @@ ProductFilter.prototype.makeQuery = function(filters){
       }
     },
     "from": 0,
-    "size": 1,
+    "size": 0,
     "sort": [],
     "facets":{
       "Products":{

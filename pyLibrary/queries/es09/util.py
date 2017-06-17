@@ -57,7 +57,7 @@ def build_es_query(query):
     output = wrap({
         "query": {"match_all": {}},
         "from": 0,
-        "size": 100 if DEBUG else 1,
+        "size": 100 if DEBUG else 0,
         "sort": [],
         "facets": {
         }

@@ -289,12 +289,11 @@ class FromESMetadata(Schema):
                    "query": {
                        "match_all": {}
                    },
-                   "size": 1
+                   "size": 0
                })
             else:
                 result = self.default_es.post("/" + es_index + "/_search", data={
-                    "aggs": {c.names["."]: _counting_query(c)},
-                    "size": 1
+                    "aggs": {c.names["."]: _counting_query(c)}
                 })
 
             count = result.hits.total
@@ -338,10 +337,10 @@ class FromESMetadata(Schema):
             elif len(c.nested_path) != 1:
                 query.aggs[literal_field(c.names["."])] = {
                     "nested": {"path": c.nested_path[0]},
-                    "aggs": {"_nested": {"terms": {"field": c.es_column, "size": 1}}}
+                    "aggs": {"_nested": {"terms": {"field": c.es_column}}}
                 }
             else:
-                query.aggs[literal_field(c.names["."])] = {"terms": {"field": c.es_column, "size": 1}}
+                query.aggs[literal_field(c.names["."])] = {"terms": {"field": c.es_column}}
 
             if c.es_column != "_id":
                 result = self.default_es.post("/" + es_index + "/_search", data=query)
@@ -349,8 +348,7 @@ class FromESMetadata(Schema):
                 result = self.default_es.post("/" + es_index + "/_search", data={
                     "query": {
                         "match_all": {}
-                    },
-                    "size": 1
+                    }
                 })
 
             aggs = result.aggregations.values()[0]

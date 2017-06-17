@@ -128,7 +128,7 @@ def es_setop(es, mvel, query):
                     "filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
                 }},
                 "sort": query.sort,
-                "size": 1
+                "size": 0
             })
         elif all(isinstance(v, Variable) for v in select.value):
             FromES = wrap({

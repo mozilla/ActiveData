@@ -268,10 +268,11 @@ def _range_composer(edge, domain, es_query, to_float):
 
     if edge.allowNulls:    # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
         missing_filter = set_default(
-            {"filter": { "bool": { "should": {
-                     InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
-                               InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
-                               {"bool": {"must_not": edge.value.exists().to_esfilter()}}}}
+            {"filter": { "bool": { "should": [
+                                        InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
+                                        InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
+                                        {"bool": {"must_not": edge.value.exists().to_esfilter()}}]
+                                 }
                         }
             },
              es_query)

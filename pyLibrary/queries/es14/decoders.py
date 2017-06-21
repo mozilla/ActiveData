@@ -218,7 +218,7 @@ class SetDecoder(AggsDecoder):
                     }}, es_query),
                     "_missing": set_default(
                         {"filter": {"bool": {"should": [
-                            field.missing().to_esfilter(),
+                            {"bool": {"must_not": field.exists().to_esfilter()}},
                             NotOp("not", InOp("in", [field, Literal("literal", include)])).to_esfilter()
                         ]}}},
                         es_query
@@ -268,23 +268,20 @@ def _range_composer(edge, domain, es_query, to_float):
 
     if edge.allowNulls:    # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
         missing_filter = set_default(
-            {"filter": { "bool": { "should": [
-                                    {"range": { "t": {
-                                        "lt": to_float(_min),
-                                        "gte":  to_float(_max)}}},
-                                        {"bool": {"must_not": edge.value.exists().to_esfilter()}}]
-                                 }
-                        }
+            {"filter":
+                 {OrOp("or",
+                        [
+                        OrOp("or",
+                            [
+                            InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
+                            InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
+                            ]).to_esfilter(),
+                        {"bool": {"must_not": edge.value.exists().to_esfilter()}}
+                        ]).to_esfilter()
+                 }
             },
-             es_query)
-            # {"filter":
-            #      {"bool": {"should": [
-            #          {"range": {InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
-            #          InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
-            #               {"bool": {"must_not": edge.value.exists().to_esfilter()}}}}
-            #               ]}}
-            # }, es_query )
-
+            es_query
+        )
     else:
         missing_filter = None
 
@@ -536,7 +533,7 @@ class DefaultDecoder(SetDecoder):
                     }},
                     es_query
                 ),
-                "_missing": set_default({"missing": {"field": self.edge.value}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+                "_missing": set_default( {"bool": {"must_not": self.edge.value.exists().to_esfilter()}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             }})
             return output
         else:
@@ -548,7 +545,7 @@ class DefaultDecoder(SetDecoder):
                     }},
                     es_query
                 ),
-                "_missing": set_default({"missing": {"field": self.edge.value}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+                "_missing": set_default( {"bool": {"must_not": self.edge.value.exists().to_esfilter()}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             }})
             return output
 
@@ -613,7 +610,7 @@ class DimFieldListDecoder(SetDecoder):
                 }}, es_query)
             }})
             if self.edge.allowNulls:
-                nest.aggs._missing = set_default({"missing": {"field": v}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+                nest.aggs._missing = set_default( {"bool": {"must_not": field.exists().to_esfilter()}} , es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             es_query = nest
 
         if self.domain.where:

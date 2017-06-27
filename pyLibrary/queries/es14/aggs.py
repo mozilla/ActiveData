@@ -112,6 +112,11 @@ def get_decoders_by_depth(query):
 
 
 def es_aggsop(es, frum, query):
+    Log.note("aggs.py - params - here are the param values to es_aggsop")
+    Log.note("es {{data}}", data=es)
+    Log.note("frum {{data}}", data=frum)
+    Log.note("query {{data}}", data=query)
+
     select = wrap([s.copy() for s in listwrap(query.select)])
     # [0] is a cheat; each es_column should be a dict of columns keyed on type, like in sqlite
     es_column_map = {v: frum.schema[v][0].es_column for v in query.vars()}
@@ -159,6 +164,9 @@ def es_aggsop(es, frum, query):
             if s.aggregate == "count":
                 es_query.aggs[literal_field(canonical_name)].value_count.field = field_name
                 s.pull = literal_field(canonical_name) + ".value"
+            if s.aggregate == "sum":
+                es_query.aggs[literal_field(canonical_name)].sum.field = field_name
+                s.pull = literal_field(canonical_name) + ".sum"
             elif s.aggregate == "median":
                 # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
@@ -317,7 +325,11 @@ def es_aggsop(es, frum, query):
             Log.error("Where clause is too deep")
 
     for d in decoders[0]:
+        Log.note("aggs.py - before - here is the es_query")
+        Log.note("{{data}}", data=es_query)
         es_query = d.append_query(es_query, start)
+        Log.note("aggs.py - after - here is the es_query")
+        Log.note("{{data}}", data=es_query)
         start += d.num_columns
 
     if split_where[0]:

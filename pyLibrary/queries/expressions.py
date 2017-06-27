@@ -1445,7 +1445,7 @@ class OrOp(Expression):
         return wrap([{"name":".", "sql":{"b": " OR ".join("(" + t.to_sql(schema, boolean=True)[0].sql.b + ")" for t in self.terms)}}])
 
     def to_esfilter(self):
-        return {"or": [t.to_esfilter() for t in self.terms]}
+        return {"bool": {"should": [t.to_esfilter() for t in self.terms]}}
 
     def __data__(self):
         return {"or": [t.__data__() for t in self.terms]}
@@ -1467,6 +1467,7 @@ class OrOp(Expression):
 
 
 class LengthOp(Expression):
+
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
         self.term = term

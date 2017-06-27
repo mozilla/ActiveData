@@ -155,31 +155,57 @@ class SetDecoder(AggsDecoder):
             include = [p[key] for p in domain.partitions]
 
             if self.edge.allowNulls:
+                Log.note("decoders.py - before - here is the query")
+                Log.note("{{data}}", data=es_query)
+                if self.limit == 0:
+                    resp = wrap({"aggs": {
+                        "_match": set_default({"filter": {"match_all": {}}}, es_query),
+                        "_missing": set_default(
+                            {"filter":
+                                {"bool": {"should": [
+                                    {"bool": {"must_not": field.exists().to_esfilter()}},
+                                    {"bool": {"must_not": {"terms": {field.var: include}}}}
+                                ]}}
+                            }, es_query
+                        ),
+                    }})
+                    Log.note("decoders.py - after - here is the resp")
+                    Log.note("{{data}}", data=resp)
 
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
-                        "field": field.var,
-                        "size": self.limit,
-                        "include": include,
-                        "order": {"_term": self.sorted} if self.sorted else None
-                    }}, es_query),
-                    "_missing": set_default(
-                        {"filter": {"or": [
-                            field.missing().to_esfilter(),
-                            {"not": {"terms": {field.var: include}}}
-                        ]}},
-                        es_query
-                    ),
-                }})
+                    Log.note("decoders.py - after - here is the es_query")
+                    Log.note("{{data}}", data=es_query)
+                    return resp
+                else:
+                    return wrap({"aggs": {
+                        "_match": set_default({"terms": {
+                            "field": field.var,
+                            "size": self.limit,
+                            "include": include,
+                            "order": {"_term": self.sorted} if self.sorted else None
+                        }}, es_query),
+                        "_missing": set_default(
+                            {"filter":
+                                {"bool": {"should": [
+                                    {"bool": {"must_not": field.exists().to_esfilter()}},
+                                    {"bool": {"must_not": {"terms": {field.var: include}}}}
+                                ]}}
+                            }, es_query
+                        ),
+                    }})
             else:
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
-                        "field": field.var,
-                        "size": self.limit,
-                        "include": include,
-                        "order": {"_term": self.sorted} if self.sorted else None
-                    }}, es_query)
-                }})
+                if self.limit == 0:
+                    return wrap({"aggs": {
+                        "_match": es_query
+                        }})
+                else:
+                    return wrap({"aggs": {
+                        "_match": set_default({"terms": {
+                            "field": field.var,
+                            "size": self.limit,
+                            "include": include,
+                            "order": {"_term": self.sorted} if self.sorted else None
+                        }}, es_query)
+                        }})
         else:
             include = [p[domain.key] for p in domain.partitions]
             if self.edge.allowNulls:
@@ -191,21 +217,26 @@ class SetDecoder(AggsDecoder):
                         "include": include
                     }}, es_query),
                     "_missing": set_default(
-                        {"filter": {"or": [
-                            field.missing().to_esfilter(),
+                        {"filter": {"bool": {"should": [
+                            {"bool": {"must_not": field.exists().to_esfilter()}},
                             NotOp("not", InOp("in", [field, Literal("literal", include)])).to_esfilter()
-                        ]}},
+                        ]}}},
                         es_query
                     ),
                 }})
             else:
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
-                        "script_field": field.to_ruby(),
-                        "size": self.limit,
-                        "include": include
-                    }}, es_query)
-                }})
+                if self.limit == 0:
+                    return wrap({"aggs": {
+                        "_match": es_query
+                        }})
+                else:
+                    return wrap({"aggs": {
+                        "_match": set_default({"terms": {
+                            "script_field": field.to_ruby(),
+                            "size": self.limit,
+                            "include": include
+                        }}, es_query)
+                        }})
 
     def get_value(self, index):
         return self.domain.getKeyByIndex(index)
@@ -237,13 +268,18 @@ def _range_composer(edge, domain, es_query, to_float):
 
     if edge.allowNulls:    # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
         missing_filter = set_default(
-            {"filter": {"or": [
-                OrOp("or", [
-                    InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
-                    InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
-                ]).to_esfilter(),
-                edge.value.missing().to_esfilter()
-            ]}},
+            {"filter":
+                 {OrOp("or",
+                        [
+                        OrOp("or",
+                            [
+                            InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
+                            InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
+                            ]).to_esfilter(),
+                        {"bool": {"must_not": edge.value.exists().to_esfilter()}}
+                        ]).to_esfilter()
+                 }
+            },
             es_query
         )
     else:
@@ -497,7 +533,7 @@ class DefaultDecoder(SetDecoder):
                     }},
                     es_query
                 ),
-                "_missing": set_default({"missing": {"field": self.edge.value}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+                "_missing": set_default( {"bool": {"must_not": self.edge.value.exists().to_esfilter()}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             }})
             return output
         else:
@@ -509,7 +545,7 @@ class DefaultDecoder(SetDecoder):
                     }},
                     es_query
                 ),
-                "_missing": set_default({"missing": {"field": self.edge.value}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+                "_missing": set_default( {"bool": {"must_not": self.edge.value.exists().to_esfilter()}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             }})
             return output
 
@@ -574,7 +610,7 @@ class DimFieldListDecoder(SetDecoder):
                 }}, es_query)
             }})
             if self.edge.allowNulls:
-                nest.aggs._missing = set_default({"missing": {"field": v}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+                nest.aggs._missing = set_default( {"bool": {"must_not": field.exists().to_esfilter()}} , es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             es_query = nest
 
         if self.domain.where:

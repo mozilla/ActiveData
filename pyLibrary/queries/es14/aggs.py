@@ -164,9 +164,6 @@ def es_aggsop(es, frum, query):
             if s.aggregate == "count":
                 es_query.aggs[literal_field(canonical_name)].value_count.field = field_name
                 s.pull = literal_field(canonical_name) + ".value"
-            if s.aggregate == "sum":
-                es_query.aggs[literal_field(canonical_name)].sum.field = field_name
-                s.pull = literal_field(canonical_name) + ".sum"
             elif s.aggregate == "median":
                 # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")

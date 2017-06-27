@@ -47,7 +47,7 @@ class AggsDecoder(object):
                     Log.error("Can only handle variables in tuples")
 
                 e.domain = Data(
-                    dimension={"fields":e.value.terms}
+                    dimension={"fields": e.value.terms}
                 )
                 return object.__new__(DimFieldListDecoder, e)
             elif isinstance(e.value, Variable):
@@ -95,7 +95,6 @@ class AggsDecoder(object):
         else:
             Log.error("domain type of {{type}} is not supported yet", type=e.domain.type)
 
-
     def __init__(self, edge, query, limit):
         self.start = None
         self.edge = edge
@@ -127,7 +126,6 @@ class AggsDecoder(object):
 
 
 class SetDecoder(AggsDecoder):
-
     def __init__(self, edge, query, limit):
         AggsDecoder.__init__(self, edge, query, limit)
         self.domain = edge.domain
@@ -150,62 +148,38 @@ class SetDecoder(AggsDecoder):
 
         if isinstance(field, Variable):
             key = domain.key
-            if isinstance(key, (tuple, list)) and len(key)==1:
+            if isinstance(key, (tuple, list)) and len(key) == 1:
                 key = key[0]
             include = [p[key] for p in domain.partitions]
 
             if self.edge.allowNulls:
                 Log.note("decoders.py - before - here is the query")
                 Log.note("{{data}}", data=es_query)
-                if self.limit == 0:
-                    resp = wrap({"aggs": {
-                        "_match": set_default({"filter": {"match_all": {}}}, es_query),
-                        "_missing": set_default(
-                            {"filter":
-                                {"bool": {"should": [
-                                    {"bool": {"must_not": field.exists().to_esfilter()}},
-                                    {"bool": {"must_not": {"terms": {field.var: include}}}}
-                                ]}}
-                            }, es_query
-                        ),
-                    }})
-                    Log.note("decoders.py - after - here is the resp")
-                    Log.note("{{data}}", data=resp)
-
-                    Log.note("decoders.py - after - here is the es_query")
-                    Log.note("{{data}}", data=es_query)
-                    return resp
-                else:
-                    return wrap({"aggs": {
-                        "_match": set_default({"terms": {
-                            "field": field.var,
-                            "size": self.limit,
-                            "include": include,
-                            "order": {"_term": self.sorted} if self.sorted else None
-                        }}, es_query),
-                        "_missing": set_default(
-                            {"filter":
-                                {"bool": {"should": [
-                                    {"bool": {"must_not": field.exists().to_esfilter()}},
-                                    {"bool": {"must_not": {"terms": {field.var: include}}}}
-                                ]}}
-                            }, es_query
-                        ),
-                    }})
+                return wrap({"aggs": {
+                    "_match": set_default({"terms": {
+                        "field": field.var,
+                        "size": self.limit,
+                        "include": include,
+                        "order": {"_term": self.sorted} if self.sorted else None
+                    }}, es_query),
+                    "_missing": set_default(
+                        {"filter":
+                             OrOp("or", [
+                                 self.edge.field.missing().to_esfilter(),
+                                 {"bool": {"must_not": {"terms": {field.var: include}}}}
+                             ]).to_esfilter()
+                         }, es_query
+                    ),
+                }})
             else:
-                if self.limit == 0:
-                    return wrap({"aggs": {
-                        "_match": es_query
-                        }})
-                else:
-                    return wrap({"aggs": {
-                        "_match": set_default({"terms": {
-                            "field": field.var,
-                            "size": self.limit,
-                            "include": include,
-                            "order": {"_term": self.sorted} if self.sorted else None
-                        }}, es_query)
-                        }})
+                return wrap({"aggs": {
+                    "_match": set_default({"terms": {
+                        "field": field.var,
+                        "size": self.limit,
+                        "include": include,
+                        "order": {"_term": self.sorted} if self.sorted else None
+                    }}, es_query)
+                }})
         else:
             include = [p[domain.key] for p in domain.partitions]
             if self.edge.allowNulls:
@@ -217,26 +191,21 @@ class SetDecoder(AggsDecoder):
                         "include": include
                     }}, es_query),
                     "_missing": set_default(
-                        {"filter": {"bool": {"should": [
-                            {"bool": {"must_not": field.exists().to_esfilter()}},
+                        {"filter": OrOp("or", [
+                            self.edge.field.missing().to_esfilter(),
                             NotOp("not", InOp("in", [field, Literal("literal", include)])).to_esfilter()
-                        ]}}},
+                        ]).to_esfilter()},
                         es_query
                     ),
                 }})
             else:
-                if self.limit == 0:
-                    return wrap({"aggs": {
-                        "_match": es_query
-                        }})
-                else:
-                    return wrap({"aggs": {
-                        "_match": set_default({"terms": {
-                            "script_field": field.to_ruby(),
-                            "size": self.limit,
-                            "include": include
-                        }}, es_query)
-                        }})
+                return wrap({"aggs": {
+                    "_match": set_default({"terms": {
+                        "script_field": field.to_ruby(),
+                        "size": self.limit,
+                        "include": include
+                    }}, es_query)
+                }})
 
     def get_value(self, index):
         return self.domain.getKeyByIndex(index)
@@ -266,20 +235,20 @@ def _range_composer(edge, domain, es_query, to_float):
     else:
         calc = {"script_field": edge.value.to_ruby()}
 
-    if edge.allowNulls:    # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+    if edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
         missing_filter = set_default(
             {"filter":
                  {OrOp("or",
-                        [
-                        OrOp("or",
-                            [
-                            InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
-                            InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
-                            ]).to_esfilter(),
-                        {"bool": {"must_not": edge.value.exists().to_esfilter()}}
-                        ]).to_esfilter()
-                 }
-            },
+                       [
+                           OrOp("or",
+                                [
+                                    InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
+                                    InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
+                                ]).to_esfilter(),
+                           edge.value.missing().to_esfilter()
+                       ]).to_esfilter()
+                  }
+             },
             es_query
         )
     else:
@@ -315,11 +284,11 @@ class TimeDecoder(AggsDecoder):
             return len(domain.partitions)
         else:
             for p in domain.partitions:
-                if p.min.unix <= f <p.max.unix:
+                if p.min.unix <= f < p.max.unix:
                     return p.dataIndex
         sample = part.copy
         sample.buckets = None
-        Log.error("Expecting to find {{part}}",  part=sample)
+        Log.error("Expecting to find {{part}}", part=sample)
 
     @property
     def num_columns(self):
@@ -335,9 +304,9 @@ class GeneralRangeDecoder(AggsDecoder):
 
     def __init__(self, edge, query, limit):
         AggsDecoder.__init__(self, edge, query, limit)
-        if edge.domain.type=="time":
+        if edge.domain.type == "time":
             self.to_float = lambda x: x.unix
-        elif edge.domain.type=="range":
+        elif edge.domain.type == "range":
             self.to_float = lambda x: x
         else:
             Log.error("Unknown domain of type {{type}} for range edge", type=edge.domain.type)
@@ -390,11 +359,11 @@ class GeneralSetDecoder(AggsDecoder):
         notty = []
 
         for p in parts:
-            filters.append(AndOp("and", [p.where]+notty).to_esfilter())
+            filters.append(AndOp("and", [p.where] + notty).to_esfilter())
             notty.append(NotOp("not", p.where))
 
         missing_filter = None
-        if self.edge.allowNulls:    # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+        if self.edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             missing_filter = set_default(
                 {"filter": AndOp("and", notty).to_esfilter()},
                 es_query
@@ -447,7 +416,7 @@ class DurationDecoder(AggsDecoder):
                     return p.dataIndex
         sample = part.copy
         sample.buckets = None
-        Log.error("Expecting to find {{part}}",  part=sample)
+        Log.error("Expecting to find {{part}}", part=sample)
 
     @property
     def num_columns(self):
@@ -474,11 +443,11 @@ class RangeDecoder(AggsDecoder):
             return len(domain.partitions)
         else:
             for p in domain.partitions:
-                if p.min <= f <p.max:
+                if p.min <= f < p.max:
                     return p.dataIndex
         sample = part.copy
         sample.buckets = None
-        Log.error("Expecting to find {{part}}",  part=sample)
+        Log.error("Expecting to find {{part}}", part=sample)
 
     @property
     def num_columns(self):
@@ -491,7 +460,7 @@ class DefaultDecoder(SetDecoder):
     def __init__(self, edge, query, limit):
         AggsDecoder.__init__(self, edge, query, limit)
         self.domain = edge.domain
-        self.domain.limit =Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
+        self.domain.limit = Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
         self.parts = list()
         self.key2index = {}
         self.computed_domain = False
@@ -508,7 +477,7 @@ class DefaultDecoder(SetDecoder):
 
         if not isinstance(self.edge.value, Variable):
             script_field = self.edge.value.to_ruby()
-            missing = self.edge.value.missing()
+            missing = self.edge.value.missing().to_esfilter()
 
             output = wrap({"aggs": {
                 "_match": set_default(
@@ -523,7 +492,7 @@ class DefaultDecoder(SetDecoder):
             }})
             return output
         elif self.edge.value.var in [s.value.var for s in self.query.sort]:
-            sort_dir = [s.sort for s in self.query.sort if s.value.var==self.edge.value.var][0]
+            sort_dir = [s.sort for s in self.query.sort if s.value.var == self.edge.value.var][0]
             output = wrap({"aggs": {
                 "_match": set_default(
                     {"terms": {
@@ -533,7 +502,8 @@ class DefaultDecoder(SetDecoder):
                     }},
                     es_query
                 ),
-                "_missing": set_default( {"bool": {"must_not": self.edge.value.exists().to_esfilter()}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+                "_missing": set_default(self.edge.value.missing().to_esfilter(), es_query)
+                # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             }})
             return output
         else:
@@ -545,7 +515,8 @@ class DefaultDecoder(SetDecoder):
                     }},
                     es_query
                 ),
-                "_missing": set_default( {"bool": {"must_not": self.edge.value.exists().to_esfilter()}}, es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+                "_missing": set_default(self.edge.value.missing().to_esfilter(), es_query)
+                # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             }})
             return output
 
@@ -594,12 +565,11 @@ class DimFieldListDecoder(SetDecoder):
         AggsDecoder.__init__(self, edge, query, limit)
         self.fields = edge.domain.dimension.fields
         self.domain = self.edge.domain
-        self.domain.limit =Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
+        self.domain.limit = Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
         self.parts = list()
 
-
     def append_query(self, es_query, start):
-        #TODO: USE "reverse_nested" QUERY TO PULL THESE
+        # TODO: USE "reverse_nested" QUERY TO PULL THESE
 
         self.start = start
         for i, v in enumerate(self.fields):
@@ -610,7 +580,8 @@ class DimFieldListDecoder(SetDecoder):
                 }}, es_query)
             }})
             if self.edge.allowNulls:
-                nest.aggs._missing = set_default( {"bool": {"must_not": field.exists().to_esfilter()}} , es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+                nest.aggs._missing = set_default(self.edge.field.missing().to_esfilter(),
+                                                 es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             es_query = nest
 
         if self.domain.where:
@@ -649,7 +620,7 @@ class ObjectDecoder(SetDecoder):
         AggsDecoder.__init__(self, edge, query, limit)
         if isinstance(edge.value, LeavesOp):
             flatter = literal_field
-            prefix = edge.value.term.var+"."
+            prefix = edge.value.term.var + "."
         else:
             prefix = edge.value.var + "."
             prefix_length = len(prefix)
@@ -664,7 +635,7 @@ class ObjectDecoder(SetDecoder):
         ])
 
         self.domain = self.edge.domain = wrap({"dimension": {"fields": self.fields}})
-        self.domain.limit =Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
+        self.domain.limit = Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
         self.parts = list()
         self.key2index = {}
         self.computed_domain = False
@@ -709,7 +680,7 @@ class ObjectDecoder(SetDecoder):
         )
 
     def get_index(self, row):
-        value=self.get_value_from_row(row)
+        value = self.get_value_from_row(row)
         if self.computed_domain:
             return self.domain.getIndexByKey(value)
 

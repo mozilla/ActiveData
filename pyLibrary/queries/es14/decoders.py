@@ -165,8 +165,8 @@ class SetDecoder(AggsDecoder):
                     "_missing": set_default(
                         {"filter":
                              OrOp("or", [
-                                 self.edge.field.missing().to_esfilter(),
-                                 {"bool": {"must_not": {"terms": {field.var: include}}}}
+                                 self.edge.field.missing(),
+                                 NotOp("not", InOp("in", [Variable(field.var),Literal(include)]))
                              ]).to_esfilter()
                          }, es_query
                     ),
@@ -192,8 +192,8 @@ class SetDecoder(AggsDecoder):
                     }}, es_query),
                     "_missing": set_default(
                         {"filter": OrOp("or", [
-                            self.edge.field.missing().to_esfilter(),
-                            NotOp("not", InOp("in", [field, Literal("literal", include)])).to_esfilter()
+                            self.edge.field.missing(),
+                            NotOp("not", InOp("in", [field, Literal("literal", include)]))
                         ]).to_esfilter()},
                         es_query
                     ),
@@ -244,8 +244,8 @@ def _range_composer(edge, domain, es_query, to_float):
                                 [
                                     InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
                                     InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
-                                ]).to_esfilter(),
-                           edge.value.missing().to_esfilter()
+                                ]),
+                           edge.value.missing()
                        ]).to_esfilter()
                   }
              },

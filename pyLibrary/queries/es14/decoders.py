@@ -238,7 +238,7 @@ def _range_composer(edge, domain, es_query, to_float):
     if edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
         missing_filter = set_default(
             {"filter":
-                 {OrOp("or",
+                 OrOp("or",
                        [
                            OrOp("or",
                                 [
@@ -247,7 +247,6 @@ def _range_composer(edge, domain, es_query, to_float):
                                 ]),
                            edge.value.missing()
                        ]).to_esfilter()
-                  }
              },
             es_query
         )
@@ -477,7 +476,7 @@ class DefaultDecoder(SetDecoder):
 
         if not isinstance(self.edge.value, Variable):
             script_field = self.edge.value.to_ruby()
-            missing = self.edge.value.missing().to_esfilter()
+            missing = self.edge.value.missing()
 
             output = wrap({"aggs": {
                 "_match": set_default(
@@ -580,7 +579,7 @@ class DimFieldListDecoder(SetDecoder):
                 }}, es_query)
             }})
             if self.edge.allowNulls:
-                nest.aggs._missing = set_default(self.edge.field.missing().to_esfilter(),
+                nest.aggs._missing = set_default(Variable(v).missing().to_esfilter(),
                                                  es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             es_query = nest
 

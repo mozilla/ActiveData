@@ -480,8 +480,12 @@ class Literal(Expression):
     """
     A literal JSON document
     """
-
     def __new__(cls, op, term):
+        """
+        :param op: valid param values are: "literal"
+        :param term: valid param value: any value that could be converted to JSON
+        :return: an operator that returns a literal which returns the "term"
+        """
         if term == None:
             return NullOp()
         if term is True:
@@ -1366,7 +1370,7 @@ class NotOp(Expression):
         if operand.get("script"):
             return {"script": {"script": "!(" + operand.get("script", {}).get("script") + ")"}}
         else:
-            return {"not": operand}
+            return {"bool": {"must_not": operand}}
 
     def __data__(self):
         return {"not": self.term.__data__()}
@@ -1892,7 +1896,7 @@ class MissingOp(Expression):
 
     def to_esfilter(self):
         if isinstance(self.expr, Variable):
-            return {"missing": {"field": self.expr.var}}
+            return {"bool": {"must_not": {"exists": {"field": self.expr.var}}}}
         else:
             return {"script": {"script": self.to_ruby()}}
 

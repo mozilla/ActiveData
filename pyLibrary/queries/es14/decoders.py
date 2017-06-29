@@ -155,56 +155,68 @@ class SetDecoder(AggsDecoder):
             if self.edge.allowNulls:
                 Log.note("decoders.py - before - here is the query")
                 Log.note("{{data}}", data=es_query)
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
-                        "field": field.var,
-                        "size": self.limit,
-                        "include": include,
-                        "order": {"_term": self.sorted} if self.sorted else None
-                    }}, es_query),
-                    "_missing": set_default(
+                paramLitVar = Literal("literal", include)
+                paramVarVar = Variable(field.var)
+                paramInOp = InOp("in", [paramVarVar, paramLitVar])
+                paramNotOp = NotOp("not", paramInOp)
+                matchVal = set_default({"terms": {
+                    "field": field.var,
+                    "size": self.limit,
+                    "include": include,
+                    "order": {"_term": self.sorted} if self.sorted else None
+                }}, es_query)
+                missingVal = set_default(
                         {"filter":
                              OrOp("or", [
-                                 self.edge.field.missing(),
-                                 NotOp("not", InOp("in", [Variable(field.var),Literal(include)]))
+                                 field.missing(),
+                                 paramNotOp
+                                 # NotOp("not", InOp("in", [Variable(field.var),Literal("literal", include)]))
                              ]).to_esfilter()
                          }, es_query
-                    ),
+                    )
+
+                return wrap({"aggs": {
+                    "_match": matchVal,
+                    "_missing": missingVal,
                 }})
             else:
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
+                matchVal = set_default({"terms": {
                         "field": field.var,
                         "size": self.limit,
                         "include": include,
                         "order": {"_term": self.sorted} if self.sorted else None
                     }}, es_query)
+                return wrap({"aggs": {
+                    "_match": matchVal
                 }})
         else:
             include = [p[domain.key] for p in domain.partitions]
             if self.edge.allowNulls:
-
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
+                matchVal = set_default({"terms": {
                         "script_field": field.to_ruby(),
                         "size": self.limit,
                         "include": include
-                    }}, es_query),
-                    "_missing": set_default(
+                    }}, es_query)
+                missingVal = set_default(
                         {"filter": OrOp("or", [
                             self.edge.field.missing(),
                             NotOp("not", InOp("in", [field, Literal("literal", include)]))
                         ]).to_esfilter()},
                         es_query
-                    ),
+                    )
+
+                return wrap({"aggs": {
+                    "_match": matchVal,
+                    "_missing": missingVal,
                 }})
             else:
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
+                matchVal = set_default({"terms": {
                         "script_field": field.to_ruby(),
                         "size": self.limit,
                         "include": include
                     }}, es_query)
+                return wrap({"aggs": {
+                    "_match": matchVal
                 }})
 
     def get_value(self, index):

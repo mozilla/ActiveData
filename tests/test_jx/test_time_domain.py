@@ -165,6 +165,42 @@ class TestTime(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [r for r in expected2]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a", "t", "v"],
+                "data": [[r.a, r.t, r.v] for r in expected2]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "a",
+                        "domain": {
+                            "type": "set",
+                            "key": "value",
+                            "partitions": [
+                                {"name": "x", "value": "x", "dataIndex": 0},
+                                {"name": "y", "value": "y", "dataIndex": 1}
+                            ]
+                        }
+                    }, {
+                        "name": "t",
+                        "domain": {
+                            "type": "time",
+                            "key": "min",
+                            "min": Date("today-week").unix,
+                            "max": TODAY.unix,
+                            "interval": DAY.seconds,
+                            "partitions": [{"min": r.t, "max": (Date(r.t) + DAY).unix} for r in expected2 if r.t != None and r.a == "x"]
+                        }
+                    }
+                ],
+                "data": {"v": [
+                    [r.v for r in expected2 if r.a == "x"],
+                    [r.v for r in expected2 if r.a == "y"],
+                    [NULL for r in expected2 if r.a == "x"]
+                ]}
             }
         }
         self.utils.execute_es_tests(test)

@@ -162,8 +162,7 @@ class SetDecoder(AggsDecoder):
                         "order": {"_term": self.sorted} if self.sorted else None
                     }}, es_query),
                     "_missing": set_default(
-                        {"filter":
-                             OrOp("or", [
+                        {"filter": OrOp("or", [
                                  field.missing(),
                                  NotOp("not", InOp("in", [Variable(field.var),Literal("literal", include)]))
                              ]).to_esfilter()
@@ -236,12 +235,9 @@ def _range_composer(edge, domain, es_query, to_float):
 
     if edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
         missing_filter = set_default(
-            {"filter":
-                 OrOp("or", [
-                    OrOp("or", [
+            {"filter": OrOp("or", [
                         InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
                         InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
-                    ]),
                     edge.value.missing()
                 ]).to_esfilter()}, es_query)
     else:
@@ -496,7 +492,6 @@ class DefaultDecoder(SetDecoder):
                     es_query
                 ),
                 "_missing": set_default(self.edge.value.missing().to_esfilter(), es_query)
-                # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             }})
             return output
         else:
@@ -509,7 +504,6 @@ class DefaultDecoder(SetDecoder):
                     es_query
                 ),
                 "_missing": set_default(self.edge.value.missing().to_esfilter(), es_query)
-                # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             }})
             return output
 
@@ -574,7 +568,7 @@ class DimFieldListDecoder(SetDecoder):
             }})
             if self.edge.allowNulls:
                 nest.aggs._missing = set_default(Variable(v).missing().to_esfilter(),
-                                                 es_query)  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+                                                 es_query)
             es_query = nest
 
         if self.domain.where:

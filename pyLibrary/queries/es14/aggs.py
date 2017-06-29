@@ -322,8 +322,7 @@ def es_aggsop(es, frum, query):
             Log.error("Where clause is too deep")
 
     for d in decoders[0]:
-        Log.note("aggs.py - before - here is the es_query")
-        Log.note("{{data}}", data=es_query)
+        Log.note("aggs.py - before - here is the es_query\n{{data}}", data=es_query)
         es_query = d.append_query(es_query, start)
         Log.note("aggs.py - after - here is the es_query")
         Log.note("{{data}}", data=es_query)

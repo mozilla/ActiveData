@@ -153,70 +153,57 @@ class SetDecoder(AggsDecoder):
             include = [p[key] for p in domain.partitions]
 
             if self.edge.allowNulls:
-                Log.note("decoders.py - before - here is the query")
-                Log.note("{{data}}", data=es_query)
-                paramLitVar = Literal("literal", include)
-                paramVarVar = Variable(field.var)
-                paramInOp = InOp("in", [paramVarVar, paramLitVar])
-                paramNotOp = NotOp("not", paramInOp)
-                matchVal = set_default({"terms": {
-                    "field": field.var,
-                    "size": self.limit,
-                    "include": include,
-                    "order": {"_term": self.sorted} if self.sorted else None
-                }}, es_query)
-                missingVal = set_default(
+
+                return wrap({"aggs": {
+                    "_match": set_default({"terms": {
+                        "field": field.var,
+                        "size": self.limit,
+                        "include": include,
+                        "order": {"_term": self.sorted} if self.sorted else None
+                    }}, es_query),
+                    "_missing": set_default(
                         {"filter":
                              OrOp("or", [
                                  field.missing(),
-                                 paramNotOp
-                                 # NotOp("not", InOp("in", [Variable(field.var),Literal("literal", include)]))
+                                 NotOp("not", InOp("in", [Variable(field.var),Literal("literal", include)]))
                              ]).to_esfilter()
                          }, es_query
-                    )
-
-                return wrap({"aggs": {
-                    "_match": matchVal,
-                    "_missing": missingVal,
+                    ),
                 }})
             else:
-                matchVal = set_default({"terms": {
+                return wrap({"aggs": {
+                    "_match": set_default({"terms": {
                         "field": field.var,
                         "size": self.limit,
                         "include": include,
                         "order": {"_term": self.sorted} if self.sorted else None
                     }}, es_query)
-                return wrap({"aggs": {
-                    "_match": matchVal
                 }})
         else:
             include = [p[domain.key] for p in domain.partitions]
             if self.edge.allowNulls:
-                matchVal = set_default({"terms": {
+
+                return wrap({"aggs": {
+                    "_match": set_default({"terms": {
                         "script_field": field.to_ruby(),
                         "size": self.limit,
                         "include": include
-                    }}, es_query)
-                missingVal = set_default(
+                    }}, es_query),
+                    "_missing": set_default(
                         {"filter": OrOp("or", [
-                            self.edge.field.missing(),
+                            field.missing(),
                             NotOp("not", InOp("in", [field, Literal("literal", include)]))
                         ]).to_esfilter()},
                         es_query
-                    )
-
-                return wrap({"aggs": {
-                    "_match": matchVal,
-                    "_missing": missingVal,
+                    ),
                 }})
             else:
-                matchVal = set_default({"terms": {
+                return wrap({"aggs": {
+                    "_match": set_default({"terms": {
                         "script_field": field.to_ruby(),
                         "size": self.limit,
                         "include": include
                     }}, es_query)
-                return wrap({"aggs": {
-                    "_match": matchVal
                 }})
 
     def get_value(self, index):
@@ -250,18 +237,13 @@ def _range_composer(edge, domain, es_query, to_float):
     if edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
         missing_filter = set_default(
             {"filter":
-                 OrOp("or",
-                       [
-                           OrOp("or",
-                                [
-                                    InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
-                                    InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
-                                ]),
-                           edge.value.missing()
-                       ]).to_esfilter()
-             },
-            es_query
-        )
+                 OrOp("or", [
+                    OrOp("or", [
+                        InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
+                        InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
+                    ]),
+                    edge.value.missing()
+                ]).to_esfilter()}, es_query)
     else:
         missing_filter = None
 

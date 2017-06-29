@@ -106,12 +106,17 @@ def get_decoders_by_depth(query):
             max_depth = 0
             output.append([])
 
-        limit = 0
+        limit = None
         output[max_depth].append(AggsDecoder(edge, query, limit))
     return output
 
 
 def es_aggsop(es, frum, query):
+    Log.note("aggs.py - params - here are the param values to es_aggsop")
+    Log.note("es {{data}}", data=es)
+    Log.note("frum {{data}}", data=frum)
+    Log.note("query {{data}}", data=query)
+
     select = wrap([s.copy() for s in listwrap(query.select)])
     # [0] is a cheat; each es_column should be a dict of columns keyed on type, like in sqlite
     es_column_map = {v: frum.schema[v][0].es_column for v in query.vars()}
@@ -317,7 +322,10 @@ def es_aggsop(es, frum, query):
             Log.error("Where clause is too deep")
 
     for d in decoders[0]:
+        Log.note("aggs.py - before - here is the es_query\n{{data}}", data=es_query)
         es_query = d.append_query(es_query, start)
+        Log.note("aggs.py - after - here is the es_query")
+        Log.note("{{data}}", data=es_query)
         start += d.num_columns
 
     if split_where[0]:

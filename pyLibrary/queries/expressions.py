@@ -1111,6 +1111,9 @@ class InequalityOp(Expression):
         rhs = self.rhs.to_painless(not_null=True)
         script = "(" + lhs + ") " + InequalityOp.operators[self.op] + " (" + rhs + ")"
         missing = OrOp("or", [self.lhs.missing(), self.rhs.missing()])
+        default = self.default
+        if boolean:
+                default = FalseOp()
 
         output = WhenOp(
             "when",
@@ -1165,7 +1168,7 @@ class InequalityOp(Expression):
         else:
             return {"script": {"script": {
                 "lang": "painless",
-                "inline": self.to_painless()
+                "inline": self.to_painless(boolean=True)
             }}}
 
     def __data__(self):

@@ -234,23 +234,6 @@ class TestTime(BaseTestCase):
                 "meta": {"format": "table"},
                 "header": ["since", "v"],
                 "data": [[r.since, r.v] for r in expected3]
-            },
-            "expecting_cube": {
-                "meta": {"format": "cube"},
-                "edges": [
-                    {
-                        "name": "since",
-                        "domain": {
-                            "type": "duration",
-                            "key": "min",
-                            "partitions": [
-                                {"min": e.since, "max": expected3[i + 1].since}
-                                for i, e in enumerate(expected3[0:8:])
-                            ]
-                        }
-                    }
-                ],
-                "data": {"v": [e.v for e in expected3]}
             }
         }
         self.utils.execute_es_tests(test)

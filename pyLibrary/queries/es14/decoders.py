@@ -184,7 +184,8 @@ class SetDecoder(AggsDecoder):
 
                 return wrap({"aggs": {
                     "_match": set_default({"terms": {
-                        "script_field": field.to_ruby(),
+                        "script": {"lang": "painless",
+                                    "inline":field.to_painless() },
                         "size": self.limit,
                         "include": include
                     }}, es_query),
@@ -199,7 +200,8 @@ class SetDecoder(AggsDecoder):
             else:
                 return wrap({"aggs": {
                     "_match": set_default({"terms": {
-                        "script_field": field.to_ruby(),
+                        "script": {"lang": "painless",
+                                    "inline":field.to_painless() },
                         "size": self.limit,
                         "include": include
                     }}, es_query)
@@ -231,9 +233,9 @@ def _range_composer(edge, domain, es_query, to_float):
     if isinstance(edge.value, Variable):
         calc = {"field": edge.value.var}
     else:
-        calc = {"script_field": edge.value.to_ruby()}
+        calc = { "script": {"lang": "painless", "inline": edge.value.to_painless() }}
 
-    if edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+    if edge.allowNulls:
         missing_filter = set_default(
             {"filter": OrOp("or", [
                         InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
@@ -465,13 +467,14 @@ class DefaultDecoder(SetDecoder):
         self.start = start
 
         if not isinstance(self.edge.value, Variable):
-            script_field = self.edge.value.to_ruby()
+            script_field = self.edge.value.to_painless()
             missing = self.edge.value.missing()
 
             output = wrap({"aggs": {
                 "_match": set_default(
                     {"terms": {
-                        "script_field": script_field,
+                        "script": {"lang": "painless",
+                                    "inline":script_field },
                         "size": self.domain.limit,
                         "order": {"_term": self.sorted} if self.sorted else None
                     }},

@@ -1119,7 +1119,7 @@ class InequalityOp(Expression):
             "when",
             missing,
             **{
-                "then": self.default,
+                "then": default,
                 "else":
                     ScriptOp("script", script)
             }

@@ -153,14 +153,6 @@ class Expression(object):
     def preprocess(cls, op, clauses):
         return clauses[op], {k: jx_expression(v) for k, v in clauses.items() if k != op}
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        """
-        :param not_null:  (Optimization) SET TO True IF YOU KNOW THIS EXPRESSION CAN NOT RETURN null
-        :param boolean:   (Optimization) SET TO True IF YOU WANT A BOOLEAN RESULT
-        :return: jRuby/ES code (unicode)
-        """
-        raise NotImplementedError
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         """
         :param not_null:  (Optimization) SET TO True IF YOU KNOW THIS EXPRESSION CAN NOT RETURN null
@@ -230,26 +222,6 @@ class Variable(Expression):
         if not is_variable_name(var):
             Log.error("Expecting a variable name")
         self.var = var
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        if self.var == ".":
-            return "_source"
-        else:
-            if self.var == "_id":
-                return 'doc["_uid"].value.substring(doc["_uid"].value.indexOf(\'#\')+1)'
-            q = quote(self.var)
-            if many:
-                return "doc[" + q + "].values"
-            if not_null:
-                if boolean:
-                    return "doc[" + q + "].value==\"T\""
-                else:
-                    return "doc[" + q + "].value"
-            else:
-                if boolean:
-                    return "doc[" + q + "].isEmpty() ? null : (doc[" + q + "].value==\"T\")"
-                else:
-                    return "doc[" + q + "].isEmpty() ? null : doc[" + q + "].value"
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         if self.var == ".":
@@ -486,9 +458,6 @@ class ScriptOp(Expression):
         Expression.__init__(self, op, None)
         self.script = script
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        return self.script
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         return self.script
 
@@ -561,31 +530,6 @@ class Literal(Expression):
             return True
         except Exception:
             return False
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        def _convert(v):
-            if v is None:
-                return "null"
-            if v is True:
-                return "true"
-            if v is False:
-                return "false"
-            if isinstance(v, basestring):
-                return quote(v)
-            if isinstance(v, (int, long, float)):
-                return unicode(v)
-            if isinstance(v, dict):
-                return "[" + ", ".join(quote(k) + ": " + _convert(vv) for k, vv in v.items()) + "]"
-            if isinstance(v, list):
-                return "[" + ", ".join(_convert(vv) for vv in v) + "]"
-
-        value = convert.json_decoder(self.json)
-        if many:
-            if value is None:
-                return "[]"
-            return "[" + _convert(value) + "]"
-        else:
-            return _convert(value)
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         def _convert(v):
@@ -675,11 +619,6 @@ class NullOp(Literal):
     def __eq__(self, other):
         return other == None
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        if many:
-            return "[]"
-        return "null"
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         if many:
             return "[]"
@@ -735,9 +674,6 @@ class TrueOp(Literal):
     def __eq__(self, other):
         return other == True
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        return "true"
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         return "true"
 
@@ -790,9 +726,6 @@ class FalseOp(Literal):
 
     def __eq__(self, other):
         return other == False
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        return "false"
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         return "false"
@@ -871,9 +804,6 @@ class TupleOp(Expression):
         else:
             self.terms = [terms]
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        Log.error("not supported")
-
     def to_python(self, not_null=False, boolean=False):
         if len(self.terms) == 0:
             return "tuple()"
@@ -908,9 +838,6 @@ class LeavesOp(Expression):
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
         self.term = term
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        Log.error("not supported")
 
     def to_python(self, not_null=False, boolean=False):
         return "Data(" + self.term.to_python() + ").leaves()"
@@ -974,32 +901,6 @@ class BinaryOp(Expression):
     @property
     def name(self):
         return self.op;
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        lhs = self.lhs.to_ruby(not_null=True)
-        rhs = self.rhs.to_ruby(not_null=True)
-        script = "(" + lhs + ") " + BinaryOp.operators[self.op] + " (" + rhs + ")"
-        missing = OrOp("or", [self.lhs.missing(), self.rhs.missing()])
-
-        if self.op in BinaryOp.operators:
-            script = "(" + script + ").doubleValue()"  # RETURN A NUMBER, NOT A STRING
-            default = self.default
-        if many:
-            script = "[" + script + "]"
-            default = ScriptOp("script", self.default.to_ruby(many=many))
-
-        output = WhenOp(
-            "when",
-            missing,
-            **{
-                "then": default,
-                "else":
-                    ScriptOp("script", script)
-            }
-        ).to_ruby()
-        return output
-
-
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         lhs = self.lhs.to_painless(not_null=True)
@@ -1088,23 +989,6 @@ class InequalityOp(Expression):
     @property
     def name(self):
         return self.op;
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        lhs = self.lhs.to_ruby(not_null=True)
-        rhs = self.rhs.to_ruby(not_null=True)
-        script = "(" + lhs + ") " + InequalityOp.operators[self.op] + " (" + rhs + ")"
-        missing = OrOp("or", [self.lhs.missing(), self.rhs.missing()])
-
-        output = WhenOp(
-            "when",
-            missing,
-            **{
-                "then": self.default,
-                "else":
-                    ScriptOp("script", script)
-            }
-        ).to_ruby()
-        return output
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         lhs = self.lhs.to_painless(not_null=True)
@@ -1198,22 +1082,6 @@ class DivOp(Expression):
         self.lhs, self.rhs = terms
         self.default = default
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        lhs = self.lhs.to_ruby(not_null=True)
-        rhs = self.rhs.to_ruby(not_null=True)
-        script = "((double)(" + lhs + ") / (double)(" + rhs + ")).doubleValue()"
-
-        output = WhenOp(
-            "when",
-            OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, Literal("literal", 0)])]),
-            **{
-                "then": self.default,
-                "else":
-                    ScriptOp("script", script)
-            }
-        ).to_ruby()
-        return output
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         lhs = self.lhs.to_painless(not_null=True)
         rhs = self.rhs.to_painless(not_null=True)
@@ -1286,22 +1154,6 @@ class FloorOp(Expression):
         self.lhs, self.rhs = terms
         self.default = default
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        lhs = self.lhs.to_ruby(not_null=True)
-        rhs = self.rhs.to_ruby(not_null=True)
-        script = "Math.floor(((double)(" + lhs + ") / (double)(" + rhs + ")).doubleValue())*(" + rhs + ")"
-
-        output = WhenOp(
-            "when",
-            OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, Literal("literal", 0)])]),
-            **{
-                "then": self.default,
-                "else":
-                    ScriptOp("script", script)
-            }
-        ).to_ruby()
-        return output
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         lhs = self.lhs.to_ruby(not_null=True)
         rhs = self.rhs.to_ruby(not_null=True)
@@ -1369,16 +1221,6 @@ class EqOp(Expression):
         Expression.__init__(self, op, terms)
         self.op = op
         self.lhs, self.rhs = terms
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        lhs_list = self.lhs.to_ruby(many=True)
-        rhs_missing = self.rhs.missing().to_ruby()
-        rhs = self.rhs.to_ruby(not_null=True)
-
-        if boolean:
-            return "(" + rhs_missing + ")?(" + lhs_list + ".size()==0):((" + lhs_list + ").contains(" + rhs + "))"
-        else:
-            return "((" + rhs_missing + ")|(" + lhs_list + ".size()==0))?null:((" + lhs_list + ").contains(" + rhs + "))"
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         lhs_list = self.lhs.to_painless(many=True)
@@ -1462,11 +1304,6 @@ class NeOp(Expression):
         else:
             Log.error("logic error")
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        lhs = self.lhs.to_ruby()
-        rhs = self.rhs.to_ruby()
-        return "((" + lhs + ")!=null) && ((" + rhs + ")!=null) && ((" + lhs + ")!=(" + rhs + "))"
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         lhs = self.lhs.to_painless()
         rhs = self.rhs.to_painless()
@@ -1519,9 +1356,6 @@ class NotOp(Expression):
         Expression.__init__(self, op, term)
         self.term = term
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        return "!(" + self.term.to_ruby(boolean=True) + ")"
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         return "!(" + self.term.to_painless(boolean=True) + ")"
 
@@ -1566,12 +1400,6 @@ class AndOp(Expression):
             self.terms = terms
         else:
             self.terms = [terms]
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        if not self.terms:
-            return "true"
-        else:
-            return " && ".join("(" + t.to_ruby() + ")" for t in self.terms)
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         if not self.terms:
@@ -1621,9 +1449,6 @@ class OrOp(Expression):
         Expression.__init__(self, op, terms)
         self.terms = terms
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        return " || ".join("(" + t.to_ruby(boolean=True) + ")" for t in self.terms if t)
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         return " || ".join("(" + t.to_painless(boolean=True) + ")" for t in self.terms if t)
 
@@ -1660,17 +1485,6 @@ class LengthOp(Expression):
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
         self.term = term
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        value = self.term.to_ruby(not_null=True)
-        if not_null:
-            return "(" + value + ").length()"
-
-        missing = self.missing().to_ruby()
-        if many:
-            return "(" + missing + " ) ? [] : [(" + value + ").length()]"
-        else:
-            return "(" + missing + " ) ? null : (" + value + ").length()"
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         value = self.term.to_painless(not_null=True)
@@ -1717,11 +1531,6 @@ class NumberOp(Expression):
         Expression.__init__(self, op, [term])
         self.term = term
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        test = self.term.missing().to_ruby(boolean=True)
-        value = self.term.to_ruby(not_null=True)
-        return "(" + test + ") ? null : (((" + value + ") instanceof String) ? Double.parseDouble(" + value + ") : (" + value + "))"
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         test = self.term.missing().to_painless(boolean=True)
         value = self.term.to_painless(not_null=True)
@@ -1764,11 +1573,6 @@ class StringOp(Expression):
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
         self.term = term
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        value = self.term.to_ruby(not_null=True)
-        missing = self.term.missing().to_ruby()
-        return "(" + missing + ") ? null : (((" + value + ") instanceof java.lang.Double) ? String.valueOf(" + value + ").replaceAll('\\\\.0$', '') : String.valueOf(" + value + "))"  # "\\.0$"
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         value = self.term.to_painless(not_null=True)
@@ -1818,9 +1622,6 @@ class CountOp(Expression):
     def __init__(self, op, terms, **clauses):
         Expression.__init__(self, op, terms)
         self.terms = terms
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        return "+".join("((" + t.missing().to_ruby(boolean=True) + ") ? 0 : 1)" for t in self.terms)
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         return "+".join("((" + t.missing().to_painless(boolean=True) + ") ? 0 : 1)" for t in self.terms)
@@ -1882,25 +1683,6 @@ class MultiOp(Expression):
         self.terms = terms
         self.default = coalesce(clauses.get("default"), NullOp())
         self.nulls = coalesce(clauses.get("nulls"), FalseOp())
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        if self.nulls:
-            op, unit = MultiOp.operators[self.op]
-            null_test = CoalesceOp("coalesce", self.terms).missing().to_ruby(boolean=True)
-            acc = op.join(
-                "((" + t.missing().to_ruby(boolean=True) + ") ? " + unit + " : (" + t.to_ruby(not_null=True) + "))" for
-                t in self.terms
-            )
-            if many:
-                acc = "[" + acc + "]"
-            return "((" + null_test + ") ? (" + self.default.to_ruby(many=many) + ") : (" + acc + "))"
-        else:
-            op, unit = MultiOp.operators[self.op]
-            null_test = OrOp("or", [t.missing() for t in self.terms]).to_ruby()
-            acc = op.join("(" + t.to_ruby(not_null=True) + ")" for t in self.terms)
-            if many:
-                acc = "[" + acc + "]"
-            return "((" + null_test + ") ? (" + self.default.to_ruby(many=many) + ") : (" + acc + "))"
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         if self.nulls:
@@ -2031,15 +1813,6 @@ class CoalesceOp(Expression):
         Expression.__init__(self, op, terms)
         self.terms = terms
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        if not self.terms:
-            return "null"
-        acc = self.terms[-1].to_ruby()
-        for v in reversed(self.terms[:-1]):
-            r = v.to_ruby()
-            acc = "(((" + r + ") != null) ? (" + r + ") : (" + acc + "))"
-        return acc
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         if not self.terms:
             return "null"
@@ -2098,17 +1871,6 @@ class MissingOp(Expression):
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
         self.expr = term
-
-    def to_ruby(self, not_null=False, boolean=True, many=False):
-        if isinstance(self.expr, Variable):
-            if self.expr.var == "_id":
-                return "false"
-            else:
-                return "doc[" + quote(self.expr.var) + "].isEmpty()"
-        elif isinstance(self.expr, Literal):
-            return self.expr.missing().to_ruby()
-        else:
-            return self.expr.missing().to_ruby()
 
     def to_painless(self, not_null=False, boolean=True, many=False):
         if isinstance(self.expr, Variable):
@@ -2172,14 +1934,6 @@ class ExistsOp(Expression):
         Expression.__init__(self, op, [term])
         self.field = term
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        if isinstance(self.field, Variable):
-            return "!doc[" + quote(self.field.var) + "].isEmpty()"
-        elif isinstance(self.field, Literal):
-            return self.field.exists().to_ruby()
-        else:
-            return self.field.to_ruby() + " != null"
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         if isinstance(self.field, Variable):
             return "!doc[" + quote(self.field.var) + "].empty"
@@ -2235,9 +1989,6 @@ class PrefixOp(Expression):
         else:
             self.field, self.prefix = term
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        return "(" + self.field.to_ruby() + ").startsWith(" + self.prefix.to_ruby() + ")"
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         return "(" + self.field.to_painless() + ").startsWith(" + self.prefix.to_painless() + ")"
 
@@ -2283,19 +2034,6 @@ class ConcatOp(Expression):
     @classmethod
     def preprocess(cls, op, clauses):
         return clauses[op], {k: Literal(None, v) for k, v in clauses.items() if k in ["default", "separator"]}
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        if len(self.terms) == 0:
-            return self.default.to_ruby()
-
-        acc = []
-        for t in self.terms:
-            acc.append(
-                "((" + t.missing().to_ruby(boolean=True) + ") ? \"\" : (" + self.separator.json + "+" + t.to_ruby(
-                    not_null=True) + "))")
-        expr_ = "(" + "+".join(acc) + ").substring(" + unicode(len(json2value(self.separator.json))) + ")"
-
-        return "(" + self.missing().to_ruby() + ") ? (" + self.default.to_ruby() + ") : (" + expr_ + ")"
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         if len(self.terms) == 0:
@@ -2441,19 +2179,6 @@ class LeftOp(Expression):
         else:
             self.value, self.length = term
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        test_v = self.value.missing()
-        test_l = self.length.missing()
-        v = self.value.to_ruby(not_null=True)
-        l = self.length.to_ruby(not_null=True)
-
-        if (not test_v or test_v.to_ruby(boolean=True) == "false") and not test_l:
-            expr = v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue())"
-        else:
-            expr = "((" + test_v.to_ruby(boolean=True) + ") || (" + test_l.to_ruby(
-                boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
-        return expr
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         test_v = self.value.missing()
         test_l = self.length.missing()
@@ -2509,15 +2234,6 @@ class NotLeftOp(Expression):
         else:
             self.value, self.length = term
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        test_v = self.value.missing().to_ruby(boolean=True)
-        test_l = self.length.missing().to_ruby(boolean=True)
-        v = self.value.to_ruby(not_null=True)
-        l = self.length.to_ruby(not_null=True)
-
-        expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(max(0, min(" + v + ".length(), " + l + ")).intValue()))"
-        return expr
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         test_v = self.value.missing().to_painless(boolean=True)
         test_l = self.length.missing().to_painless(boolean=True)
@@ -2570,15 +2286,6 @@ class RightOp(Expression):
         else:
             self.value, self.length = term
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        test_v = self.value.missing().to_ruby(boolean=True)
-        test_l = self.length.missing().to_ruby(boolean=True)
-        v = self.value.to_ruby(not_null=True)
-        l = self.length.to_ruby(not_null=True)
-
-        expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(min(" + v + ".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
-        return expr
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         test_v = self.value.missing().to_painless(boolean=True)
         test_l = self.length.missing().to_painless(boolean=True)
@@ -2628,15 +2335,6 @@ class NotRightOp(Expression):
             self.value, self.length = term.items()[0]
         else:
             self.value, self.length = term
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        test_v = self.value.missing().to_ruby(boolean=True)
-        test_l = self.length.missing().to_ruby(boolean=True)
-        v = self.value.to_ruby(not_null=True)
-        l = self.length.to_ruby(not_null=True)
-
-        expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, min(" + v + ".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
-        return expr
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         test_v = self.value.missing().to_painless(boolean=True)
@@ -2693,21 +2391,6 @@ class FindOp(Expression):
     def to_python(self, not_null=False, boolean=False):
         return "((" + quote(
             self.substring) + " in " + self.var.to_python() + ") if " + self.var.to_python() + "!=None else False)"
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        missing = self.missing()
-        v = self.value.to_ruby(not_null=True)
-        find = self.find.to_ruby(not_null=True)
-        start = self.start.to_ruby(not_null=True)
-        index = v + ".indexOf(" + find + ", " + start + ")"
-
-        if not_null:
-            no_index = index + "==-1"
-        else:
-            no_index = missing.to_ruby(boolean=True)
-
-        expr = "(" + no_index + ") ? " + self.default.to_ruby() + " : " + index
-        return expr
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         missing = self.missing()
@@ -2816,47 +2499,6 @@ class BetweenOp(Expression):
             "default": clauses["default"],
             "start": clauses["start"]
         }
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        if isinstance(self.prefix, Literal) and isinstance(json2value(self.prefix.json), int):
-            value_is_missing = self.value.missing().to_ruby()
-            value = self.value.to_ruby(not_null=True)
-            start = "max(" + self.prefix.json + ", 0)"
-
-            if isinstance(self.suffix, Literal) and isinstance(json2value(self.suffix.json), int):
-                check = "(" + value_is_missing + ")"
-                end = "min(" + self.suffix.to_ruby() + ", " + value + ".length())"
-            else:
-                end = value + ".indexOf(" + self.suffix.to_ruby() + ", " + start + ")"
-                check = "((" + value_is_missing + ") || (" + end + "==-1))"
-
-            expr = check + " ? " + self.default.to_ruby() + " : ((" + value + ").substring(" + start + ", " + end + "))"
-            return expr
-
-        else:
-            # ((Runnable)(() -> {int a=2; int b=3; System.out.println(a+b);})).run();
-            value_is_missing = self.value.missing().to_ruby()
-            value = self.value.to_ruby(not_null=True)
-            prefix = self.prefix.to_ruby()
-            len_prefix = unicode(len(json2value(self.prefix.json))) if isinstance(self.prefix,
-                                                                                  Literal) else "(" + prefix + ").length()"
-            suffix = self.suffix.to_ruby()
-            start_index = self.start.to_ruby()
-            if start_index == "null":
-                if prefix == "null":
-                    start = "0"
-                else:
-                    start = value + ".indexOf(" + prefix + ")"
-            else:
-                start = value + ".indexOf(" + prefix + ", " + start_index + ")"
-
-            if suffix == "null":
-                expr = "((" + value_is_missing + ") || (" + start + "==-1)) ? " + self.default.to_ruby() + " : ((" + value + ").substring(" + start + "+" + len_prefix + "))"
-            else:
-                end = value + ".indexOf(" + suffix + ", " + start + "+" + len_prefix + ")"
-                expr = "((" + value_is_missing + ") || (" + start + "==-1) || (" + end + "==-1)) ? " + self.default.to_ruby() + " : ((" + value + ").substring(" + start + "+" + len_prefix + ", " + end + "))"
-
-            return expr
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         if isinstance(self.prefix, Literal) and isinstance(json2value(self.prefix.json), int):
@@ -3001,9 +2643,6 @@ class InOp(Expression):
         Expression.__init__(self, op, term)
         self.field, self.values = term
 
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        return self.values.to_ruby() + ".contains(" + self.field.to_ruby() + ")"
-
     def to_painless(self, not_null=False, boolean=False, many=False):
         return self.values.to_painless() + ".contains(" + self.field.to_painless() + ")"
 
@@ -3055,10 +2694,6 @@ class WhenOp(Expression):
         self.when = term
         self.then = coalesce(clauses.get("then"), NullOp())
         self.els_ = coalesce(clauses.get("else"), NullOp())
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        return "(" + self.when.to_ruby(boolean=True) + ") ? (" + self.then.to_ruby(
-            not_null=not_null) + ") : (" + self.els_.to_ruby(not_null=not_null) + ")"
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         return "(" + self.when.to_painless(boolean=True) + ") ? (" + self.then.to_painless(
@@ -3131,12 +2766,6 @@ class CaseOp(Expression):
                 if not isinstance(w, WhenOp) or w.els_:
                     Log.error("case expression does not allow `else` clause in `when` sub-clause")
             self.whens = term
-
-    def to_ruby(self, not_null=False, boolean=False, many=False):
-        acc = self.whens[-1].to_ruby()
-        for w in reversed(self.whens[0:-1]):
-            acc = "(" + w.when.to_ruby(boolean=True) + ") ? (" + w.then.to_ruby() + ") : (" + acc + ")"
-        return acc
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         acc = self.whens[-1].to_painless()

@@ -282,9 +282,7 @@ class Variable(Expression):
                 for cn, cs in schema.items():
                     if cn.startswith(prefix):
                         for child_col in cs:
-                            acc[literal_field(child_col.nested_path[0])][
-                                literal_field(schema.get_column_name(child_col))][
-                                json_type_to_sql_type[child_col.type]] = quote_column(child_col.es_column).sql
+                            acc[literal_field(child_col.nested_path[0])][literal_field(schema.get_column_name(child_col))][json_type_to_sql_type[child_col.type]] = quote_column(child_col.es_column).sql
             else:
                 nested_path = col.nested_path[0]
                 acc[literal_field(nested_path)][literal_field(schema.get_column_name(col))][
@@ -390,8 +388,7 @@ class RowsOp(Expression):
         Expression.__init__(self, op, term)
         self.var, self.offset = term
         if isinstance(self.var, Variable):
-            if isinstance(self.var, Variable) and not any(
-                self.var.var.startswith(p) for p in ["row.", "rows.", "rownum"]):  # VARIABLES ARE INTERPRETED LITERALLY
+            if isinstance(self.var, Variable) and not any(self.var.var.startswith(p) for p in ["row.", "rows.", "rownum"]):  # VARIABLES ARE INTERPRETED LITERALLY
                 self.var = Literal("literal", self.var.var)
             else:
                 Log.error("can not handle")

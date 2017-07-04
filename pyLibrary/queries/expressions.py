@@ -88,8 +88,7 @@ def jx_expression(expr):
         return class_(op, term)
     elif class_ is ScriptOp:
         if ALLOW_SCRIPTING:
-            Log.warning("Scripting has been activated:  This has known security holes!!\nscript = {{script|quote}}",
-                        script=term)
+            Log.warning("Scripting has been activated:  This has known security holes!!\nscript = {{script|quote}}", script=term)
             return class_(op, term)
         else:
             Log.error("scripting is disabled")

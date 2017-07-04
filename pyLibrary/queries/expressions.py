@@ -1155,8 +1155,8 @@ class FloorOp(Expression):
         self.default = default
 
     def to_painless(self, not_null=False, boolean=False, many=False):
-        lhs = self.lhs.to_ruby(not_null=True)
-        rhs = self.rhs.to_ruby(not_null=True)
+        lhs = self.lhs.to_painless(not_null=True)
+        rhs = self.rhs.to_painless(not_null=True)
         script = "Math.floor(((double)(" + lhs + ") / (double)(" + rhs + ")).doubleValue())*(" + rhs + ")"
 
         output = WhenOp(
@@ -1689,7 +1689,7 @@ class MultiOp(Expression):
             op, unit = MultiOp.operators[self.op]
             null_test = CoalesceOp("coalesce", self.terms).missing().to_painless(boolean=True)
             acc = op.join(
-                "((" + t.missing().to_ruby(boolean=True) + ") ? " + unit + " : (" + t.to_painless(not_null=True) + "))" for
+                "((" + t.missing().to_painless(boolean=True) + ") ? " + unit + " : (" + t.to_painless(not_null=True) + "))" for
                 t in self.terms
             )
             if many:
@@ -2002,7 +2002,7 @@ class PrefixOp(Expression):
         if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
             return {"prefix": {self.field.var: json2value(self.prefix.json)}}
         else:
-            return {"script": {"script": self.to_ruby()}}
+            return {"script": {"script": self.to_painless()}}
 
     def __data__(self):
         if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
@@ -2188,7 +2188,7 @@ class LeftOp(Expression):
         if (not test_v or test_v.to_painless(boolean=True) == "false") and not test_l:
             expr = v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue())"
         else:
-            expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_ruby(
+            expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(
                 boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
         return expr
 
@@ -2453,9 +2453,9 @@ class FindOp(Expression):
         )
 
     def missing(self):
-        v = self.value.to_ruby(not_null=True)
-        find = self.find.to_ruby(not_null=True)
-        index = v + ".indexOf(" + find + ", " + self.start.to_ruby() + ")"
+        v = self.value.to_painless(not_null=True)
+        find = self.find.to_painless(not_null=True)
+        index = v + ".indexOf(" + find + ", " + self.start.to_painless() + ")"
 
         return AndOp("and", [
             self.default.missing(),
@@ -2537,7 +2537,7 @@ class BetweenOp(Expression):
                 expr = "((" + value_is_missing + ") || (" + start + "==-1)) ? " + self.default.to_painless() + " : ((" + value + ").substring(" + start + "+" + len_prefix + "))"
             else:
                 end = value + ".indexOf(" + suffix + ", " + start + "+" + len_prefix + ")"
-                expr = "((" + value_is_missing + ") || (" + start + "==-1) || (" + end + "==-1)) ? " + self.default.to_ruby() + " : ((" + value + ").substring(" + start + "+" + len_prefix + ", " + end + "))"
+                expr = "((" + value_is_missing + ") || (" + start + "==-1) || (" + end + "==-1)) ? " + self.default.to_painless() + " : ((" + value + ").substring(" + start + "+" + len_prefix + ", " + end + "))"
 
             return expr
 
@@ -2621,10 +2621,10 @@ class BetweenOp(Expression):
         )
 
     def missing(self):
-        value = self.value.to_ruby(not_null=True)
-        prefix = self.prefix.to_ruby()
+        value = self.value.to_painless(not_null=True)
+        prefix = self.prefix.to_painless()
         len_prefix = "(" + prefix + ").length()"
-        suffix = self.suffix.to_ruby()
+        suffix = self.suffix.to_painless()
         start = value + ".indexOf(" + prefix + ")"
         end = value + ".indexOf(" + suffix + ", " + start + "+" + len_prefix + ")"
 
@@ -2735,7 +2735,7 @@ class WhenOp(Expression):
                 self.els_.to_esfilter()
             ]}
         ]}
-        # return {"script": {"script": self.to_ruby()}}
+        # return {"script": {"script": self.to_painless()}}
 
     def __data__(self):
         return {"when": self.when.__data__(), "then": self.then.__data__() if self.then else None,
@@ -2789,7 +2789,7 @@ class CaseOp(Expression):
         return output
 
     def to_esfilter(self):
-        return {"script": {"script": self.to_ruby()}}
+        return {"script": {"script": self.to_painless()}}
 
     def __data__(self):
         return {"case": [w.__data__() for w in self.whens]}

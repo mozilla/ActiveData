@@ -473,8 +473,10 @@ class DefaultDecoder(SetDecoder):
             output = wrap({"aggs": {
                 "_match": set_default(
                     {"terms": {
-                        "script": {"lang": "painless",
-                                    "inline":script_field },
+                        "script": {
+                                    "lang": "painless",
+                                    "inline":script_field
+                                  },
                         "size": self.domain.limit,
                         "order": {"_term": self.sorted} if self.sorted else None
                     }},

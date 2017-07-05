@@ -1100,11 +1100,7 @@ class DivOp(Expression):
         return output
 
     def to_python(self, not_null=False, boolean=False):
-        return (
-            "None if (" +  self.missing().to_python() +
-            ") else (" + self.lhs.to_python(not_null=True) +
-            ") / (" + self.rhs.to_python(not_null=True) + ")"
-        )
+        return "None if ("+self.missing().to_python()+") else (" + self.lhs.to_python(not_null=True) + ") / (" + self.rhs.to_python(not_null=True)+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
         lhs = self.lhs.to_sql(schema)[0].sql.n
@@ -2386,11 +2382,10 @@ class FindOp(Expression):
         self.start = kwargs.get("start", Literal(None, 0))
 
     def to_python(self, not_null=False, boolean=False):
-        return (
-            "((" + quote(self.substring) +
-            " in " + self.var.to_python() +
-            ") if " + self.var.to_python() + "!=None else False)"
-        )
+        return ( "(" +
+                 "(" + quote(self.substring) + " in " + self.var.to_python() +") " +
+                 "if " + self.var.to_python() + "!=None else False" +
+        ")")
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         missing = self.missing()
@@ -2751,9 +2746,11 @@ class WhenOp(Expression):
         # return {"script": {"script": self.to_painless()}}
 
     def __data__(self):
-        return {"when": self.when.__data__(),
+        return {
+                "when": self.when.__data__(),
                 "then": self.then.__data__() if self.then else None,
-                "else": self.els_.__data__() if self.els_ else None}
+                "else": self.els_.__data__() if self.els_ else None
+        }
 
     def vars(self):
         return self.when.vars() | self.then.vars() | self.els_.vars()

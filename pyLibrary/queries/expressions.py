@@ -2676,8 +2676,10 @@ class RangeOp(Expression):
     def __new__(cls, op, term, *args):
         Expression.__new__(cls, *args)
         field, comparisons = term  # comparisons IS A Literal()
-        return AndOp("and", [operators[op](op, [field, Literal(None, value)]) for op, value in
-                             json2value(comparisons.json).items()])
+        return AndOp("and",[
+            operators[op](op, [field, Literal(None, value)])
+            for op, value in json2value(comparisons.json).items()
+            ])
 
     def __init__(self, op, term):
         Log.error("Should never happen!")
@@ -2696,8 +2698,11 @@ class WhenOp(Expression):
             not_null=not_null) + ") : (" + self.els_.to_painless(not_null=not_null) + ")"
 
     def to_python(self, not_null=False, boolean=False):
-        return "(" + self.when.to_python(boolean=True) + ") ? (" + self.then.to_python(
-            not_null=not_null) + ") : (" + self.els_.to_python(not_null=not_null) + ")"
+        return (
+            "(" + self.when.to_python(boolean=True) + ")" +
+            " ? (" + self.then.to_python(not_null=not_null) + ")" +
+            " : (" + self.els_.to_python(not_null=not_null) + ")"
+        )
 
     def to_sql(self, schema, not_null=False, boolean=False):
         when = self.when.to_sql(schema, boolean=True)[0].sql

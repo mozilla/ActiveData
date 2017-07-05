@@ -800,6 +800,9 @@ class TupleOp(Expression):
         else:
             self.terms = [terms]
 
+    def to_painless(self, not_null=False, boolean=False, many=False):
+        Log.error("not supported")
+
     def to_python(self, not_null=False, boolean=False):
         if len(self.terms) == 0:
             return "tuple()"
@@ -834,6 +837,9 @@ class LeavesOp(Expression):
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
         self.term = term
+
+    def to_painless(self, not_null=False, boolean=False, many=False):
+        Log.error("not supported")
 
     def to_python(self, not_null=False, boolean=False):
         return "Data(" + self.term.to_python() + ").leaves()"

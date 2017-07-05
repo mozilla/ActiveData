@@ -284,8 +284,7 @@ class Variable(Expression):
                             acc[literal_field(child_col.nested_path[0])][literal_field(schema.get_column_name(child_col))][json_type_to_sql_type[child_col.type]] = quote_column(child_col.es_column).sql
             else:
                 nested_path = col.nested_path[0]
-                acc[literal_field(nested_path)][literal_field(schema.get_column_name(col))][
-                    json_type_to_sql_type[col.type]] = quote_column(col.es_column).sql
+                acc[literal_field(nested_path)][literal_field(schema.get_column_name(col))][json_type_to_sql_type[col.type]] = quote_column(col.es_column).sql
 
         return wrap([
             {"name": relative_field(cname, self.var), "sql": types, "nested_path": nested_path}
@@ -1254,9 +1253,7 @@ class EqOp(Expression):
                     if r.sql[t] == None:
                         acc.append("(" + l.sql[t] + ") IS NULL")
                     else:
-                        acc.append(
-                            "((" + l.sql[t] + ") = (" + r.sql[t] + ") OR ((" + l.sql[t] + ") IS NULL AND (" + r.sql[
-                                t] + ") IS NULL))")
+                        acc.append("((" + l.sql[t] + ") = (" + r.sql[t] + ") OR ((" + l.sql[t] + ") IS NULL AND (" + r.sql[t] + ") IS NULL))")
         if not acc:
             return FalseOp().to_sql(schema)
         else:
@@ -1419,8 +1416,7 @@ class AndOp(Expression):
         if not self.terms:
             return wrap([{"name": ".", "sql": {"b": "1"}}])
         elif all(self.terms):
-            return wrap([{"name": ".", "sql": {
-                "b": " AND ".join("(" + t.to_sql(schema, boolean=True)[0].sql.b + ")" for t in self.terms)}}])
+            return wrap([{"name": ".", "sql": {"b": " AND ".join("(" + t.to_sql(schema, boolean=True)[0].sql.b + ")" for t in self.terms)}}])
         else:
             return wrap([{"name": ".", "sql": {"b": "0"}}])
 
@@ -1458,8 +1454,7 @@ class OrOp(Expression):
         return " or ".join("(" + t.to_python() + ")" for t in self.terms)
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        return wrap([{"name": ".", "sql": {
-            "b": " OR ".join("(" + t.to_sql(schema, boolean=True)[0].sql.b + ")" for t in self.terms)}}])
+        return wrap([{"name": ".", "sql": {"b": " OR ".join("(" + t.to_sql(schema, boolean=True)[0].sql.b + ")" for t in self.terms)}}])
 
     def to_esfilter(self):
         return {"bool": {"should": [t.to_esfilter() for t in self.terms]}}
@@ -1596,8 +1591,7 @@ class StringOp(Expression):
             elif t == "s":
                 acc.append(v)
             else:
-                acc.append(
-                    "CASE WHEN (" + test + ") THEN NULL ELSE RTRIM(RTRIM(CAST(" + v + " as TEXT), '0'), '.') END")
+                acc.append("CASE WHEN (" + test + ") THEN NULL ELSE RTRIM(RTRIM(CAST(" + v + " as TEXT), '0'), '.') END")
         if not acc:
             return wrap([{}])
         elif len(acc) == 1:
@@ -1690,10 +1684,7 @@ class MultiOp(Expression):
         if self.nulls:
             op, unit = MultiOp.operators[self.op]
             null_test = CoalesceOp("coalesce", self.terms).missing().to_painless(boolean=True)
-            acc = op.join(
-                "((" + t.missing().to_painless(boolean=True) + ") ? " + unit + " : (" + t.to_painless(not_null=True) + "))" for
-                t in self.terms
-            )
+            acc = op.join( "((" + t.missing().to_painless(boolean=True) + ") ? " + unit + " : (" + t.to_painless(not_null=True) + "))"  for t in self.terms )
             if many:
                 acc = "[" + acc + "]"
             return "((" + null_test + ") ? (" + self.default.to_painless(many=many) + ") : (" + acc + "))"
@@ -2043,13 +2034,14 @@ class ConcatOp(Expression):
 
         acc = []
         for t in self.terms:
-            acc.append(
-                "((" + t.missing().to_painless(boolean=True) + ") ? \"\" : (" + self.separator.json + "+" + t.to_painless(
-                    not_null=True) + "))")
+            acc.append( "((" +
+                t.missing().to_painless(boolean=True) +
+                ") ? \"\" + "
+                " : (" + self.separator.json + "+" + t.to_painless(not_null=True) +
+            "))")
         expr_ = "(" + "+".join(acc) + ").substring(" + unicode(len(json2value(self.separator.json))) + ")"
 
-        return "(" + self.missing().to_painless() + ") ? (" + self.default.to_painless() + ") : (" + expr_ + ")"
-
+        return "(" + self.missing().to_painless(boolean=True) + ") ? (" + self.default.to_painless() + ") : (" + expr_ + ")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
         defult = self.default.to_sql(schema)
@@ -2072,8 +2064,7 @@ class ConcatOp(Expression):
             if isinstance(missing, TrueOp):
                 acc.append("''")
             elif missing:
-                acc.append("CASE WHEN (" + missing.to_sql(schema, boolean=True)[
-                    0].sql.b + ") THEN '' ELSE  ((" + sep + ") || (" + term_sql + ")) END")
+                acc.append("CASE WHEN (" + missing.to_sql(schema, boolean=True)[0].sql.b + ") THEN '' ELSE  ((" + sep + ") || (" + term_sql + ")) END")
             else:
                 acc.append("(" + sep + ") || (" + term_sql + ")")
 
@@ -2523,8 +2514,10 @@ class BetweenOp(Expression):
             value_is_missing = self.value.missing().to_painless()
             value = self.value.to_painless(not_null=True)
             prefix = self.prefix.to_painless()
-            len_prefix = unicode(len(json2value(self.prefix.json))) if isinstance(self.prefix,
-                                                                                  Literal) else "(" + prefix + ").length()"
+            if isinstance(self.prefix, Literal):
+                len_prefix = unicode(len(json2value(self.prefix.json)))
+            else:
+                len_prefix = "(" + prefix + ").length()"
             suffix = self.suffix.to_painless()
             start_index = self.start.to_painless()
             if start_index == "null":
@@ -2576,8 +2569,10 @@ class BetweenOp(Expression):
             value_is_missing = self.value.missing().to_sql(schema, boolean=True)[0].sql.b
             value = self.value.to_sql(schema, not_null=True)[0].sql.s
             prefix = self.prefix.to_sql(schema)[0].sql.s
-            len_prefix = unicode(len(convert.json2value(self.prefix.json))) if isinstance(self.prefix,
-                                                                                          Literal) else "length(" + prefix + ")"
+            if isinstance(self.prefix, Literal):
+                len_prefix = unicode(len(convert.json2value(self.prefix.json)))
+            else:
+                len_prefix = "length(" + prefix + ")"
             suffix = self.suffix.to_sql(schema)[0].sql.s
             start_index = self.start.to_sql(schema)[0].sql.n
             default = self.default.to_sql(schema, not_null=True).sql.s if self.default else "NULL"
@@ -2685,7 +2680,7 @@ class RangeOp(Expression):
         return AndOp("and",[
             operators[op](op, [field, Literal(None, value)])
             for op, value in json2value(comparisons.json).items()
-            ])
+        ])
 
     def __init__(self, op, term):
         Log.error("Should never happen!")
@@ -2700,8 +2695,11 @@ class WhenOp(Expression):
         self.els_ = coalesce(clauses.get("else"), NullOp())
 
     def to_painless(self, not_null=False, boolean=False, many=False):
-        return "(" + self.when.to_painless(boolean=True) + ") ? (" + self.then.to_painless(
-            not_null=not_null) + ") : (" + self.els_.to_painless(not_null=not_null) + ")"
+        return (
+            "(" + self.when.to_painless(boolean=True) +
+            ") ? (" + self.then.to_painless(not_null=not_null) +
+            ") : (" + self.els_.to_painless(not_null=not_null) + ")"
+        )
 
     def to_python(self, not_null=False, boolean=False):
         return (

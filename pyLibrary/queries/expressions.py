@@ -1821,7 +1821,6 @@ class CoalesceOp(Expression):
             acc = "(((" + r + ") != null) ? (" + r + ") : (" + acc + "))"
         return acc
 
-
     def to_python(self, not_null=False, boolean=False):
         return "coalesce(" + (",".join(t.to_python() for t in self.terms)) + ")"
 
@@ -2187,8 +2186,7 @@ class LeftOp(Expression):
         if (not test_v or test_v.to_painless(boolean=True) == "false") and not test_l:
             expr = v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue())"
         else:
-            expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(
-                boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
+            expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
         return expr
 
     def to_python(self, not_null=False, boolean=False):
@@ -2388,8 +2386,11 @@ class FindOp(Expression):
         self.start = kwargs.get("start", Literal(None, 0))
 
     def to_python(self, not_null=False, boolean=False):
-        return "((" + quote(
-            self.substring) + " in " + self.var.to_python() + ") if " + self.var.to_python() + "!=None else False)"
+        return (
+            "((" + quote(self.substring) +
+            " in " + self.var.to_python() +
+            ") if " + self.var.to_python() + "!=None else False)"
+        )
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         missing = self.missing()
@@ -2470,6 +2471,7 @@ class FindOp(Expression):
 
 
 class BetweenOp(Expression):
+
     def __init__(self, op, term, **clauses):
         Expression.__init__(self, op, term)
         self.value, self.prefix, self.suffix = term
@@ -2749,7 +2751,8 @@ class WhenOp(Expression):
         # return {"script": {"script": self.to_painless()}}
 
     def __data__(self):
-        return {"when": self.when.__data__(), "then": self.then.__data__() if self.then else None,
+        return {"when": self.when.__data__(),
+                "then": self.then.__data__() if self.then else None,
                 "else": self.els_.__data__() if self.els_ else None}
 
     def vars(self):

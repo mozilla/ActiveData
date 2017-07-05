@@ -551,7 +551,6 @@ class Literal(Expression):
         else:
             return _convert(value)
 
-
     def to_python(self, not_null=False, boolean=False):
         return repr(unwrap(json2value(self.json)))
 
@@ -790,6 +789,7 @@ class DateOp(Literal):
 
 
 class TupleOp(Expression):
+
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
         if terms == None:
@@ -833,6 +833,7 @@ class TupleOp(Expression):
 
 
 class LeavesOp(Expression):
+
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
         self.term = term
@@ -926,7 +927,6 @@ class BinaryOp(Expression):
             }
         ).to_painless()
         return output
-
 
     def to_python(self, not_null=False, boolean=False):
         return "(" + self.lhs.to_python() + ") " + BinaryOp.operators[self.op] + " (" + self.rhs.to_python() + ")"
@@ -1100,8 +1100,11 @@ class DivOp(Expression):
         return output
 
     def to_python(self, not_null=False, boolean=False):
-        return "None if (" + self.missing().to_python() + ") else (" + self.lhs.to_python(
-            not_null=True) + ") / (" + self.rhs.to_python(not_null=True) + ")"
+        return (
+            "None if (" +  self.missing().to_python() +
+            ") else (" + self.lhs.to_python(not_null=True) +
+            ") / (" + self.rhs.to_python(not_null=True) + ")"
+        )
 
     def to_sql(self, schema, not_null=False, boolean=False):
         lhs = self.lhs.to_sql(schema)[0].sql.n
@@ -1684,7 +1687,10 @@ class MultiOp(Expression):
         if self.nulls:
             op, unit = MultiOp.operators[self.op]
             null_test = CoalesceOp("coalesce", self.terms).missing().to_painless(boolean=True)
-            acc = op.join( "((" + t.missing().to_painless(boolean=True) + ") ? " + unit + " : (" + t.to_painless(not_null=True) + "))"  for t in self.terms )
+            acc = op.join(
+                "((" + t.missing().to_painless(boolean=True) + ") ? " + unit + " : (" + t.to_painless(not_null=True) + "))"
+                for t in self.terms
+            )
             if many:
                 acc = "[" + acc + "]"
             return "((" + null_test + ") ? (" + self.default.to_painless(many=many) + ") : (" + acc + "))"

@@ -264,10 +264,10 @@ class Variable(Expression):
 
         for p in path[:-1]:
             if not_null:
-                agg = agg + ".get(" + convert.value2quote(p) + ")"
+                agg = agg+".get("+convert.value2quote(p)+")"
             else:
-                agg = agg + ".get(" + convert.value2quote(p) + ", EMPTY_DICT)"
-        return agg + ".get(" + convert.value2quote(path[-1]) + ")"
+                agg = agg+".get("+convert.value2quote(p)+", EMPTY_DICT)"
+        return agg+".get("+convert.value2quote(path[-1])+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
         cols = [c for cname, cs in schema.items() if startswith_field(cname, self.var) for c in cs]
@@ -400,8 +400,8 @@ class RowsOp(Expression):
             return agg
 
         for p in path[:-1]:
-            agg = agg + ".get(" + convert.value2quote(p) + ", EMPTY_DICT)"
-        return agg + ".get(" + convert.value2quote(path[-1]) + ")"
+            agg = agg+".get("+convert.value2quote(p)+", EMPTY_DICT)"
+        return agg+".get("+convert.value2quote(path[-1])+")"
 
     def __data__(self):
         if isinstance(self.var, Literal) and isinstance(self.offset, Literal):
@@ -929,7 +929,7 @@ class BinaryOp(Expression):
         return output
 
     def to_python(self, not_null=False, boolean=False):
-        return "(" + self.lhs.to_python() + ") " + BinaryOp.operators[self.op] + " (" + self.rhs.to_python() + ")"
+        return "(" + self.lhs.to_python() + ") " + BinaryOp.operators[self.op] + " (" + self.rhs.to_python()+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
         lhs = self.lhs.to_sql(schema)[0].sql.n
@@ -1012,7 +1012,7 @@ class InequalityOp(Expression):
         return output
 
     def to_python(self, not_null=False, boolean=False):
-        return "(" + self.lhs.to_python() + ") " + InequalityOp.operators[self.op] + " (" + self.rhs.to_python() + ")"
+        return "(" + self.lhs.to_python() + ") " + InequalityOp.operators[self.op] + " (" + self.rhs.to_python()+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
         lhs = self.lhs.to_sql(schema, not_null=True)[0].sql
@@ -1021,7 +1021,7 @@ class InequalityOp(Expression):
         rhs_exists = self.rhs.exists().to_sql(schema)[0].sql
 
         if len(lhs) == 1 and len(rhs) == 1:
-            return wrap([{"name": ".", "sql": {
+            return wrap([{"name":".", "sql": {
                 "b": "(" + lhs.values()[0] + ") " + InequalityOp.operators[self.op] + " (" + rhs.values()[0] + ")"
             }}])
 
@@ -1233,7 +1233,7 @@ class EqOp(Expression):
             return "((" + rhs_missing + ")|(" + lhs_list + ".size()==0))?null:((" + lhs_list + ").contains(" + rhs + "))"
 
     def to_python(self, not_null=False, boolean=False):
-        return "(" + self.lhs.to_python() + ") == (" + self.rhs.to_python() + ")"
+        return "(" + self.lhs.to_python() + ") == (" + self.rhs.to_python()+")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
         lhs = self.lhs.to_sql(schema)
@@ -1413,11 +1413,11 @@ class AndOp(Expression):
 
     def to_sql(self, schema, not_null=False, boolean=False):
         if not self.terms:
-            return wrap([{"name": ".", "sql": {"b": "1"}}])
+            return wrap([{"name":".", "sql": {"b": "1"}}])
         elif all(self.terms):
-            return wrap([{"name": ".", "sql": {"b": " AND ".join("(" + t.to_sql(schema, boolean=True)[0].sql.b + ")" for t in self.terms)}}])
+            return wrap([{"name":".", "sql": {"b": " AND ".join("(" + t.to_sql(schema, boolean=True)[0].sql.b + ")" for t in self.terms)}}])
         else:
-            return wrap([{"name": ".", "sql": {"b": "0"}}])
+            return wrap([{"name":".", "sql": {"b": "0"}}])
 
     def to_esfilter(self):
         if not len(self.terms):
@@ -1453,7 +1453,7 @@ class OrOp(Expression):
         return " or ".join("(" + t.to_python() + ")" for t in self.terms)
 
     def to_sql(self, schema, not_null=False, boolean=False):
-        return wrap([{"name": ".", "sql": {"b": " OR ".join("(" + t.to_sql(schema, boolean=True)[0].sql.b + ")" for t in self.terms)}}])
+        return wrap([{"name":".", "sql":{"b": " OR ".join("(" + t.to_sql(schema, boolean=True)[0].sql.b + ")" for t in self.terms)}}])
 
     def to_esfilter(self):
         return {"bool": {"should": [t.to_esfilter() for t in self.terms]}}
@@ -1501,13 +1501,13 @@ class LengthOp(Expression):
         if isinstance(self.term, Literal):
             val = json2value(self.term)
             if isinstance(val, unicode):
-                return wrap([{"name": ".", "sql": {"n": convert.value2json(len(val))}}])
+                return wrap([{"name":".", "sql": {"n": convert.value2json(len(val))}}])
             elif isinstance(val, (float, int)):
-                return wrap([{"name": ".", "sql": {"n": convert.value2json(len(convert.value2json(val)))}}])
+                return wrap([{"name":".", "sql": {"n": convert.value2json(len(convert.value2json(val)))}}])
             else:
                 return Null
         value = self.term.to_sql(schema)[0].sql.s
-        return wrap([{"name": ".", "sql": {"n": "LENGTH(" + value + ")"}}])
+        return wrap([{"name":".", "sql": {"n": "LENGTH(" + value + ")"}}])
 
     def __data__(self):
         return {"length": self.term.__data__()}
@@ -1628,7 +1628,7 @@ class CountOp(Expression):
         acc = []
         for term in self.terms:
             sqls = term.to_sql(schema)
-            if len(sqls) > 1:
+            if len(sqls)>1:
                 acc.append("1")
             else:
                 for t, v in sqls[0].sql.items():
@@ -1640,7 +1640,7 @@ class CountOp(Expression):
         if not acc:
             return wrap([{}])
         else:
-            return wrap([{"nanme": ".", "sql": {"n": "+".join(acc)}}])
+            return wrap([{"nanme":".", "sql":{"n": "+".join(acc)}}])
 
     def __data__(self):
         return {"count": [t.__data__() for t in self.terms]}
@@ -1715,7 +1715,7 @@ class MultiOp(Expression):
                 return wrap([{"name": ".", "sql": {"0": "NULL"}}])
             sql_terms.append(sql)
 
-        if self.nulls.json == "true":
+        if self.nulls.json=="true":
             sql = (
                 " CASE " +
                 " WHEN " + " AND ".join("(" + s + " IS NULL)" for s in sql_terms) +
@@ -1949,7 +1949,7 @@ class ExistsOp(Expression):
         if not acc:
             return wrap([{"name": ".", "sql": {"b": "0"}}])
         else:
-            return wrap([{"name": ".", "sql": {"b": " OR ".join(acc)}}])
+            return wrap([{"name": ".", "sql": {"b":" OR ".join(acc)}}])
 
     def to_esfilter(self):
         if isinstance(self.field, Variable):
@@ -2035,12 +2035,8 @@ class ConcatOp(Expression):
 
         acc = []
         for t in self.terms:
-            acc.append( "((" +
-                t.missing().to_painless(boolean=True) +
-                ") ? \"\" + "
-                " : (" + self.separator.json + "+" + t.to_painless(not_null=True) +
-            "))")
-        expr_ = "(" + "+".join(acc) + ").substring(" + unicode(len(json2value(self.separator.json))) + ")"
+            acc.append("((" + t.missing().to_painless(boolean=True) + ") ? \"\" : (" + self.separator.json+"+"+t.to_painless(not_null=True) + "))")
+        expr_ = "("+"+".join(acc)+").substring("+unicode(len(json2value(self.separator.json)))+")"
 
         return "(" + self.missing().to_painless(boolean=True) + ") ? (" + self.default.to_painless() + ") : (" + expr_ + ")"
 
@@ -2065,7 +2061,7 @@ class ConcatOp(Expression):
             if isinstance(missing, TrueOp):
                 acc.append("''")
             elif missing:
-                acc.append("CASE WHEN (" + missing.to_sql(schema, boolean=True)[0].sql.b + ") THEN '' ELSE  ((" + sep + ") || (" + term_sql + ")) END")
+                acc.append("CASE WHEN (" + missing.to_sql(schema, boolean=True)[0].sql.b + ") THEN '' ELSE  ((" + sep +") || ("+term_sql + ")) END")
             else:
                 acc.append("(" + sep + ") || (" + term_sql + ")")
 
@@ -2124,7 +2120,7 @@ class UnixOp(Expression):
         v = self.value.to_sql(schema)[0].sql
         return wrap([{
             "name": ".",
-            "sql": {"n": "UNIX_TIMESTAMP(" + v.n + ")"}
+            "sql": {"n": "UNIX_TIMESTAMP("+v.n+")"}
         }])
 
     def vars(self):
@@ -2150,7 +2146,7 @@ class FromUnixOp(Expression):
         v = self.value.to_sql(schema)[0].sql
         return wrap([{
             "name": ".",
-            "sql": {"n": "FROM_UNIXTIME(" + v.n + ")"}
+            "sql": {"n": "FROM_UNIXTIME("+v.n+")"}
         }])
 
     def vars(self):
@@ -2245,7 +2241,7 @@ class NotLeftOp(Expression):
         # test_v = self.value.missing().to_sql(boolean=True)[0].sql.b
         # test_l = self.length.missing().to_sql(boolean=True)[0].sql.b
         v = self.value.to_sql(schema, not_null=True)[0].sql.s
-        l = "max(0, " + self.length.to_sql(schema, not_null=True)[0].sql.n + ")"
+        l = "max(0, "+self.length.to_sql(schema, not_null=True)[0].sql.n+")"
 
         expr = "substr(" + v + ", " + l + "+1)"
         return wrap([{"name": ".", "sql": {"s": expr}}])
@@ -2296,7 +2292,7 @@ class RightOp(Expression):
     def to_sql(self, schema, not_null=False, boolean=False):
         v = self.value.to_sql(schema, not_null=True)[0].sql.s
         r = self.length.to_sql(schema, not_null=True)[0].sql.n
-        l = "max(0, length(" + v + ")-max(0, " + r + "))"
+        l = "max(0, length("+v+")-max(0, "+r+"))"
         expr = "substr(" + v + ", " + l + "+1)"
         return wrap([{"name": ".", "sql": {"s": expr}}])
 
@@ -2346,7 +2342,7 @@ class NotRightOp(Expression):
     def to_sql(self, schema, not_null=False, boolean=False):
         v = self.value.to_sql(schema, not_null=True)[0].sql.s
         r = self.length.to_sql(schema, not_null=True)[0].sql.n
-        l = "max(0, length(" + v + ")-max(0, " + r + "))"
+        l = "max(0, length("+v+")-max(0, "+r+"))"
         expr = "substr(" + v + ", 1, " + l + ")"
         return wrap([{"name": ".", "sql": {"s": expr}}])
 
@@ -2382,10 +2378,7 @@ class FindOp(Expression):
         self.start = kwargs.get("start", Literal(None, 0))
 
     def to_python(self, not_null=False, boolean=False):
-        return ( "(" +
-                 "(" + quote(self.substring) + " in " + self.var.to_python() +") " +
-                 "if " + self.var.to_python() + "!=None else False" +
-        ")")
+        return "((" + quote(self.substring) + " in " + self.var.to_python() + ") if " + self.var.to_python() + "!=None else False)"
 
     def to_painless(self, not_null=False, boolean=False, many=False):
         missing = self.missing()
@@ -2484,8 +2477,8 @@ class BetweenOp(Expression):
             param = param
         elif isinstance(param, Mapping):
             var, vals = param.items()[0]
-            if isinstance(vals, list) and len(vals) == 2:
-                param = [var, {"literal": vals[0]}, {"literal": vals[1]}]
+            if isinstance(vals, list) and len(vals)==2:
+                param = [var, {"literal":vals[0]}, {"literal":vals[1]}]
             else:
                 Log.error("`between` parameters are expected to be in {var: [prefix, suffix]} form")
         else:
@@ -2557,7 +2550,7 @@ class BetweenOp(Expression):
                     start = "1"
 
             if suffix:
-                length = "," + suffix + "-" + prefix
+                length = ","+suffix + "-" + prefix
             else:
                 length = ""
 
@@ -2572,10 +2565,7 @@ class BetweenOp(Expression):
             value_is_missing = self.value.missing().to_sql(schema, boolean=True)[0].sql.b
             value = self.value.to_sql(schema, not_null=True)[0].sql.s
             prefix = self.prefix.to_sql(schema)[0].sql.s
-            if isinstance(self.prefix, Literal):
-                len_prefix = unicode(len(convert.json2value(self.prefix.json)))
-            else:
-                len_prefix = "length(" + prefix + ")"
+            len_prefix = unicode(len(convert.json2value(self.prefix.json))) if isinstance(self.prefix, Literal) else "length(" + prefix + ")"
             suffix = self.suffix.to_sql(schema)[0].sql.s
             start_index = self.start.to_sql(schema)[0].sql.n
             default = self.default.to_sql(schema, not_null=True).sql.s if self.default else "NULL"
@@ -2603,7 +2593,7 @@ class BetweenOp(Expression):
                 expr = (
                     "CASE WHEN (" + value_is_missing + ") OR NOT (" + start + ")" +
                     " THEN " + default +
-                    " ELSE substr(" + value + ", " + start + ")" +
+                    " ELSE substr(" + value + ", " + start  + ")" +
                     " END"
                 )
 
@@ -2680,10 +2670,7 @@ class RangeOp(Expression):
     def __new__(cls, op, term, *args):
         Expression.__new__(cls, *args)
         field, comparisons = term  # comparisons IS A Literal()
-        return AndOp("and",[
-            operators[op](op, [field, Literal(None, value)])
-            for op, value in json2value(comparisons.json).items()
-        ])
+        return AndOp("and", [operators[op](op, [field, Literal(None, value)]) for op, value in json2value(comparisons.json).items()])
 
     def __init__(self, op, term):
         Log.error("Should never happen!")
@@ -2698,18 +2685,10 @@ class WhenOp(Expression):
         self.els_ = coalesce(clauses.get("else"), NullOp())
 
     def to_painless(self, not_null=False, boolean=False, many=False):
-        return (
-            "(" + self.when.to_painless(boolean=True) +
-            ") ? (" + self.then.to_painless(not_null=not_null) +
-            ") : (" + self.els_.to_painless(not_null=not_null) + ")"
-        )
+        return "(" + self.when.to_ruby(boolean=True) + ") ? (" + self.then.to_painless(not_null=not_null) + ") : (" + self.els_.to_painless(not_null=not_null) + ")"
 
     def to_python(self, not_null=False, boolean=False):
-        return (
-            "(" + self.when.to_python(boolean=True) + ")" +
-            " ? (" + self.then.to_python(not_null=not_null) + ")" +
-            " : (" + self.els_.to_python(not_null=not_null) + ")"
-        )
+        return "(" + self.when.to_python(boolean=True) + ") ? (" + self.then.to_python(not_null=not_null) + ") : (" + self.els_.to_python(not_null=not_null) + ")"
 
     def to_sql(self, schema, not_null=False, boolean=False):
         when = self.when.to_sql(schema, boolean=True)[0].sql
@@ -2746,11 +2725,7 @@ class WhenOp(Expression):
         # return {"script": {"script": self.to_painless()}}
 
     def __data__(self):
-        return {
-                "when": self.when.__data__(),
-                "then": self.then.__data__() if self.then else None,
-                "else": self.els_.__data__() if self.els_ else None
-        }
+        return {"when": self.when.__data__(), "then": self.then.__data__() if self.then else None, "else": self.els_.__data__() if self.els_ else None}
 
     def vars(self):
         return self.when.vars() | self.then.vars() | self.els_.vars()
@@ -2796,7 +2771,7 @@ class CaseOp(Expression):
             acc = " ELSE " + self.whens[-1].to_sql(schema)[t] + " END"
             for w in reversed(self.whens[0:-1]):
                 acc = " WHEN " + w.when.to_sql(boolean=True).b + " THEN " + w.then.to_sql(schema)[t] + acc
-            output[t] = "CASE" + acc
+            output[t]="CASE" + acc
         return output
 
     def to_esfilter(self):
@@ -3017,14 +2992,14 @@ def split_expression_by_depth(where, schema, map_=None, output=None, var_to_dept
         if not vars_:
             return Null
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
-        var_to_depth = {v: len(c.nested_path) - 1 for v in vars_ for c in schema[v]}
+        var_to_depth = {v: len(c.nested_path)-1 for v in vars_ for c in schema[v]}
         all_depths = set(var_to_depth.values())
         if -1 in all_depths:
             Log.error(
                 "Can not find column with name {{column|quote}}",
                 column=unwraplist([k for k, v in var_to_depth.items() if v == -1])
             )
-        if len(all_depths) == 0:
+        if len(all_depths)==0:
             all_depths = {0}
         output = wrap([[] for _ in range(MAX(all_depths) + 1)])
     else:

@@ -2657,7 +2657,7 @@ class InOp(Expression):
         self.value, self.superset = term
 
     def to_painless(self, not_null=False, boolean=False, many=False):
-        return self.superset.to_ruby(many=True) + ".contains(" + self.value.to_ruby() + ")"
+        return self.superset.to_painless(many=True) + ".contains(" + self.value.to_painless() + ")"
 
     def to_python(self, not_null=False, boolean=False, many=False):
         return self.value.to_python() + " in " + self.superset.to_python(many=True)
@@ -2712,7 +2712,7 @@ class WhenOp(Expression):
         self.els_ = coalesce(clauses.get("else"), NullOp())
 
     def to_painless(self, not_null=False, boolean=False, many=False):
-        return "(" + self.when.to_ruby(boolean=True) + ") ? (" + self.then.to_painless(not_null=not_null) + ") : (" + self.els_.to_painless(not_null=not_null) + ")"
+        return "(" + self.when.to_painless(boolean=True) + ") ? (" + self.then.to_painless(not_null=not_null) + ") : (" + self.els_.to_painless(not_null=not_null) + ")"
 
     def to_python(self, not_null=False, boolean=False, many=False):
         return "(" + self.then.to_python(not_null=not_null) + ") if (" + self.when.to_python(boolean=True) + ") else (" + self.els_.to_python(not_null=not_null) + ")"

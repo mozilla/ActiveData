@@ -148,13 +148,8 @@ def extract_rows(es, es_query, query):
                 net_columns = [c for c in leaf_columns if c.startswith(prefix)]
                 if not net_columns:
                     # LEAF
-<<<<<<< HEAD:pyLibrary/queries/es14/setop.py
                     if source == "fields":
                         es_query.stored_fields += [select.value.var]
-=======
-                    if es_query.fields is not None:
-                        es_query.fields.append(encode_property(select.value.var))
->>>>>>> move:jx_elasticsearch/es14/setop.py
                     new_select.append({
                         "name": select.name,
                         "value": select.value,

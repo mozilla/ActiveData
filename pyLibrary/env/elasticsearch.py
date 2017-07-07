@@ -71,6 +71,7 @@ class Index(Features):
         read_only=True,
         tjson=False,  # STORED AS TYPED JSON
         timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
+        wait_for_active_shards=1,  # ES WRITE CONSISTENCY (https://www.elastic.co/guide/en/elasticsearch/reference/1.7/docs-index_.html#index-consistency)
         debug=False,  # DO NOT SHOW THE DEBUG STATEMENTS
         cluster=None,
         kwargs=None
@@ -313,7 +314,8 @@ class Index(Features):
                     data=data_bytes,
                     headers={"Content-Type": "text"},
                     timeout=self.settings.timeout,
-                    retry=self.settings.retry
+                    retry=self.settings.retry,
+                    params={"wait_for_active_shards": self.settings.wait_for_active_shards}
                 )
                 items = response["items"]
 

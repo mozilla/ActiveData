@@ -22,20 +22,20 @@ from mo_dots import Data
 from mo_dots.lists import FlatList
 from pyLibrary.env import elasticsearch, http
 from mo_kwargs import override
-from pyLibrary.queries import jx, containers, Schema
-from pyLibrary.queries.containers import Container
-from pyLibrary.queries.dimensions import Dimension
+from jx_python import jx, containers, Schema
+from jx_python.containers import Container
+from jx_python.dimensions import Dimension
 from jx_base.queries import is_variable_name
-from pyLibrary.queries.es09 import aggop as es09_aggop
-from pyLibrary.queries.es09 import setop as es09_setop
-from pyLibrary.queries.es14.aggs import es_aggsop, is_aggsop
-from pyLibrary.queries.es14.deep import is_deepop, es_deepop
-from pyLibrary.queries.es14.setop import is_setop, es_setop
-from pyLibrary.queries.es14.util import aggregates1_4
-from pyLibrary.queries.expressions import jx_expression
-from pyLibrary.queries.meta import FromESMetadata
-from pyLibrary.queries.namespace.typed import Typed
-from pyLibrary.queries.query import QueryOp
+from jx_elasticsearch.es09 import aggop as es09_aggop
+from jx_elasticsearch.es09 import setop as es09_setop
+from jx_elasticsearch.es14.aggs import es_aggsop, is_aggsop
+from jx_elasticsearch.es14.deep import is_deepop, es_deepop
+from jx_elasticsearch.es14.setop import is_setop, es_setop
+from jx_elasticsearch.es14.util import aggregates1_4
+from jx_python.expressions import jx_expression
+from jx_python.meta import FromESMetadata
+from jx_python.namespace.typed import Typed
+from jx_python.query import QueryOp
 
 
 class FromES(Container):
@@ -241,5 +241,5 @@ class FromES(Container):
             if response.errors:
                 Log.error("could not update: {{error}}", error=[e.error for i in response["items"] for e in i.values() if e.status not in (200, 201)])
 
-from pyLibrary.queries.containers import type2container
+from jx_python.containers import type2container
 type2container["elasticsearch"]=FromES

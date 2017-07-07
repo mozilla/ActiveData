@@ -11,25 +11,24 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_collections.matrix import Matrix
-from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, join_field, unwrap, wrap, \
+from jx_elasticsearch import es14, es09
+from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, \
     concat_field
 from mo_dots import listwrap
-from mo_dots.lists import FlatList
 from mo_logs import Log
 from mo_math import AND
 from mo_math import MAX
 
+from jx_elasticsearch.es14.util import jx_sort_to_es_sort
+from jx_python.containers import STRUCT
+from jx_python.containers.cube import Cube
+from jx_python.domains import ALGEBRAIC
+from jx_python.expressions import simplify_esfilter, Variable, LeavesOp
+from jx_python.query import DEFAULT_LIMIT
+from mo_collections.matrix import Matrix
+from mo_dots.lists import FlatList
 from mo_json.typed_encoder import encode_property
 from mo_times.timer import Timer
-from pyLibrary import queries
-from pyLibrary.queries import es14, es09
-from pyLibrary.queries.containers import STRUCT
-from pyLibrary.queries.containers.cube import Cube
-from pyLibrary.queries.domains import ALGEBRAIC
-from pyLibrary.queries.es14.util import jx_sort_to_es_sort
-from pyLibrary.queries.expressions import simplify_esfilter, Variable, LeavesOp
-from pyLibrary.queries.query import DEFAULT_LIMIT
 
 format_dispatch = {}
 
@@ -58,7 +57,7 @@ def is_setop(es, query):
 def es_setop(es, query):
     es_query, filters = es14.util.es_query_template(query.frum.name)
     set_default(filters[0], simplify_esfilter(query.where.to_esfilter()))
-    es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
+    es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort)
     es_query.fields = FlatList()
 

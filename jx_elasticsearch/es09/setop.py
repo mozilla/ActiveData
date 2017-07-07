@@ -7,23 +7,26 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 from collections import Mapping
 
-from mo_collections.matrix import Matrix
-from mo_math import AND, SUM, OR
+from jx_elasticsearch import es09
+from jx_python import domains
 from mo_dots import coalesce, split_field, Data, wrap
-from mo_dots.lists import FlatList
 from mo_dots import listwrap, unwrap
-from jx_base.queries import is_variable_name
-from pyLibrary.queries.es09.expressions import unpack_terms
-from pyLibrary.queries.es09.util import aggregates
-from pyLibrary.queries import domains, es09
 from mo_logs import Log
-from pyLibrary.queries.containers.cube import Cube
-from pyLibrary.queries.expressions import simplify_esfilter, TRUE_FILTER, jx_expression, Variable
+from mo_math import AND, SUM, OR
+
+from jx_base.queries import is_variable_name
+from jx_elasticsearch.es09.expressions import unpack_terms
+from jx_elasticsearch.es09.util import aggregates
+from jx_python.containers.cube import Cube
+from jx_python.expressions import simplify_esfilter, TRUE_FILTER, jx_expression, Variable
+from mo_collections.matrix import Matrix
+from mo_dots.lists import FlatList
 
 
 def is_fieldop(query):

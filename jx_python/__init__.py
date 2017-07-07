@@ -28,21 +28,21 @@ def _delayed_imports():
     global _containers
 
 
-    from pyLibrary.queries import meta as _meta
-    from pyLibrary.queries.containers.list_usingPythonList import ListContainer as _ListContainer
-    from pyLibrary.queries import containers as _containers
+    from jx_python import meta as _meta
+    from jx_python.containers.list_usingPythonList import ListContainer as _ListContainer
+    from jx_python import containers as _containers
 
     _ = _ListContainer
     _ = _meta
     _ = _containers
 
     try:
-        from pyLibrary.queries.jx_usingMySQL import MySQL
+        from jx_python.jx_usingMySQL import MySQL
     except Exception:
         MySQL = None
 
-    from pyLibrary.queries.jx_usingES import FromES
-    from pyLibrary.queries.meta import FromESMetadata
+    from jx_python.jx_usingES import FromES
+    from jx_python.meta import FromESMetadata
 
     set_default(_containers.type2container, {
         "elasticsearch": FromES,
@@ -65,7 +65,7 @@ def wrap_from(frum, schema=None):
 
     if isinstance(frum, basestring):
         if not _containers.config.default.settings:
-            Log.error("expecting pyLibrary.queries.query.config.default.settings to contain default elasticsearch connection info")
+            Log.error("expecting jx_python.query.config.default.settings to contain default elasticsearch connection info")
 
         type_ = None
         index = frum
@@ -96,7 +96,7 @@ def wrap_from(frum, schema=None):
             Log.error("Expecting from clause to have a 'type' property")
         return _containers.type2container[frum.type](frum.settings)
     elif isinstance(frum, Mapping) and (frum["from"] or isinstance(frum["from"], (list, set))):
-        from pyLibrary.queries.query import QueryOp
+        from jx_python.query import QueryOp
         return QueryOp.wrap(frum, schema=schema)
     elif isinstance(frum, (list, set)):
         return _ListContainer("test_list", frum)

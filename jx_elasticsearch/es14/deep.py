@@ -11,19 +11,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, relative_field, \
-    unliteral_field, join_field
+from jx_elasticsearch import es09, es14
+from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field
 from mo_logs import Log
 from mo_threads import Thread
-from mo_times.timer import Timer
 from pyLibrary import queries, convert
-from mo_collections.unique_index import UniqueIndex
-from pyLibrary.queries import es09, es14
-from pyLibrary.queries.containers import STRUCT
-from pyLibrary.queries.es14.setop import format_dispatch
-from pyLibrary.queries.es14.util import jx_sort_to_es_sort
-from pyLibrary.queries.expressions import split_expression_by_depth, simplify_esfilter, AndOp, compile_expression, \
+
+from jx_elasticsearch.es14.setop import format_dispatch
+from jx_elasticsearch.es14.util import jx_sort_to_es_sort
+from jx_python.containers import STRUCT
+from jx_python.expressions import split_expression_by_depth, simplify_esfilter, AndOp, compile_expression, \
     Variable, LeavesOp
+from jx_python.query import DEFAULT_LIMIT
+from mo_times.timer import Timer
 
 EXPRESSION_PREFIX = "_expr."
 
@@ -84,7 +84,7 @@ def es_deepop(es, query):
     else:
         more_filter = None
 
-    es_query.size = coalesce(query.limit, queries.query.DEFAULT_LIMIT)
+    es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort)
     es_query.fields = []
 

@@ -22,9 +22,9 @@ from active_data.actions import save_query
 from mo_logs.strings import expand_template
 from mo_times.dates import Date
 from mo_times.durations import MINUTE
-from pyLibrary.queries import meta
-from pyLibrary.queries.containers import STRUCT
-from pyLibrary.queries.meta import TOO_OLD
+from jx_python import meta
+from jx_python.containers import STRUCT
+from jx_python.meta import TOO_OLD
 
 
 def send_error(active_data_timer, body, e):

@@ -35,8 +35,8 @@ from active_data.actions.json import get_raw_json
 from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.static import download
 from pyLibrary.env import elasticsearch
-from pyLibrary.queries import containers
-from pyLibrary.queries.meta import FromESMetadata
+from jx_python import containers
+from jx_python.meta import FromESMetadata
 
 OVERVIEW = File("active_data/public/index.html").read()
 

@@ -15,10 +15,10 @@ from mo_collections.matrix import Matrix
 from mo_math import AND
 from mo_dots import listwrap, unwrap, literal_field
 from jx_base.queries import is_variable_name
-from pyLibrary.queries.es09.util import aggregates, fix_es_stats, build_es_query
-from pyLibrary.queries import es09
-from pyLibrary.queries.containers.cube import Cube
-from pyLibrary.queries.expressions import simplify_esfilter, Variable, jx_expression_to_function
+from jx_elasticsearch.es09.util import aggregates, fix_es_stats, build_es_query
+from jx_elasticsearch import es09
+from jx_python.containers.cube import Cube
+from jx_python.expressions import simplify_esfilter, Variable, jx_expression_to_function
 
 
 def is_aggop(query):

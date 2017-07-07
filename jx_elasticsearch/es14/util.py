@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import absolute_import
 
 from mo_dots import wrap, split_field, join_field
-from pyLibrary.queries.expressions import Variable
+from jx_python.expressions import Variable
 
 
 def es_query_template(path):

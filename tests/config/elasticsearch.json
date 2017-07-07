@@ -16,7 +16,7 @@
 		"pyLibrary.env.http.default_headers": {
 			"Referer": "ActiveDataTests"
 		},
-		"pyLibrary.queries.expressions.ALLOW_SCRIPTING": true
+		"jx_python.expressions.ALLOW_SCRIPTING": true
 	},
 	"flask": {
 		"host": "0.0.0.0",

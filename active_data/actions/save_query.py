@@ -21,8 +21,8 @@ from active_data import cors_wrapper
 from mo_dots import wrap
 from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Cluster
-from pyLibrary.queries.containers.cube import Cube
-from pyLibrary.queries.jx_usingES import FromES
+from jx_python.containers.cube import Cube
+from jx_python.jx_usingES import FromES
 from mo_threads import Thread
 from mo_times.dates import Date
 from mo_times.durations import SECOND

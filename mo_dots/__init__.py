@@ -11,16 +11,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from __builtin__ import zip as _builtin_zip
 from collections import Mapping
-from decimal import Decimal
+
+from __builtin__ import zip as _builtin_zip
 from types import GeneratorType, NoneType, ModuleType
 
-from datetime import datetime
-
-from datetime import date
-
-from mo_dots import utils
 from mo_dots.utils import get_logger, get_module
 
 SELF_PATH = "."
@@ -95,9 +90,8 @@ def split_field(field):
     """
     if field == "." or field==None:
         return []
-    elif isinstance(field, unicode) and field.find(".") >= 0:
-        field = field.replace("\\\\.", "\a").replace("\\.", "\a")
-        return [k.replace("\a", ".") for k in field.split(".")]
+    elif isinstance(field, unicode) and "." in field:
+        return [k.replace("\a", ".") for k in field.replace("\\.", "\a").split(".")]
     else:
         return [field]
 
@@ -545,7 +539,6 @@ def tuplewrap(value):
     if isinstance(value, (list, set, tuple, GeneratorType)):
         return tuple(tuplewrap(v) if isinstance(v, (list, tuple, GeneratorType)) else v for v in value)
     return unwrap(value),
-
 
 
 from mo_dots.nones import Null, NullType

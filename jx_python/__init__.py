@@ -37,11 +37,11 @@ def _delayed_imports():
     _ = _containers
 
     try:
-        from jx_python.jx_usingMySQL import MySQL
+        from pyLibrary.queries.jx_usingMySQL import MySQL
     except Exception:
         MySQL = None
 
-    from jx_python.jx_usingES import FromES
+    from jx_elasticsearch.jx_usingES import FromES
     from jx_python.meta import FromESMetadata
 
     set_default(_containers.type2container, {

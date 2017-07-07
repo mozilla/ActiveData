@@ -13,7 +13,6 @@ from __future__ import unicode_literals
 
 from unittest import skip
 
-from jx_python.jx_usingES import FromES
 from jx_python.namespace.rename import Rename
 from jx_python.namespace.typed import Typed
 from tests.test_jx import BaseTestCase, TEST_TABLE, NULL
@@ -115,6 +114,8 @@ class Namespace(BaseTestCase):
         }
 
         self.utils.fill_container({"query":query, "data": deep_test_data})
+        from jx_elasticsearch.jx_usingES import FromES
+
         db = FromES(kwargs=base_test_case.settings.backend_es)
         db.namespaces += [Rename(dimensions={"name": "w", "fields": {"a": "a.v", "b": "a.b"}}), Typed()]
         result = db.query(query)

@@ -12,20 +12,19 @@ from __future__ import unicode_literals
 
 import hashlib
 
-from flask import Response
-from mo_kwargs import override
-
-from mo_logs import Log
-from mo_logs.exceptions import Except
 from active_data import cors_wrapper
+from flask import Response
 from mo_dots import wrap
-from pyLibrary import convert
-from pyLibrary.env.elasticsearch import Cluster
-from jx_python.containers.cube import Cube
-from jx_python.jx_usingES import FromES
+from mo_kwargs import override
+from mo_logs import Log
 from mo_threads import Thread
+from pyLibrary import convert
+
+from jx_elasticsearch.jx_usingES import FromES
+from jx_python.containers.cube import Cube
+from mo_logs.exceptions import Except
 from mo_times.dates import Date
-from mo_times.durations import SECOND
+from pyLibrary.env.elasticsearch import Cluster
 
 HASH_BLOCK_SIZE = 100
 

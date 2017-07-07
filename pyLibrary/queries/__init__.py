@@ -129,6 +129,9 @@ class Schema(object):
     def __getitem__(self, column_name):
         return self.lookup.get(column_name, Null)
 
+    def items(self):
+        return self.lookup.items()
+
     def get_column(self, name, table=None):
         return self.lookup[name]
 

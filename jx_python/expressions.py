@@ -86,8 +86,6 @@ def to_python(self, not_null=False, boolean=False, many=False):
     return self.script
 
 
-
-
 @extend(Literal)
 def to_python(self, not_null=False, boolean=False, many=False):
     return repr(unwrap(json2value(self.json)))

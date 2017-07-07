@@ -11,8 +11,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import itertools
+
+from mo_dots import coalesce, wrap, Null, unwraplist, literal_field, set_default
 from mo_json import json2value, quote
-from mo_logs import Log
+from mo_logs import Log, suppress_exception
+from mo_math import OR, MAX
 from pyLibrary import convert
 
 from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, OrOp, ScriptOp, \
@@ -20,9 +24,6 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, UnixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, InOp, RangeOp, CaseOp, AndOp, \
     ConcatOp, TRUE_FILTER, FALSE_FILTER
-from mo_dots import coalesce, wrap, Null, unwraplist
-
-from mo_math import OR, MAX
 
 
 @extend(Variable)
@@ -418,6 +419,17 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
 
 
 @extend(CoalesceOp)
+def to_ruby(self, not_null=False, boolean=False, many=False):
+    if not self.terms:
+        return "null"
+    acc = self.terms[-1].to_ruby()
+    for v in reversed(self.terms[:-1]):
+        r = v.to_ruby()
+        acc = "(((" + r + ") != null) ? (" + r + ") : (" + acc + "))"
+    return acc
+
+
+@extend(CoalesceOp)
 def to_esfilter(self):
     return {"or": [{"exists": {"field": v}} for v in self.terms]}
 
@@ -649,6 +661,39 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
 @extend(CaseOp)
 def to_esfilter(self):
     return {"script": {"script": self.to_ruby()}}
+
+
+@extend(ScriptOp)
+def to_ruby(self, not_null=False, boolean=False, many=False):
+    return self.script
+
+
+@extend(ScriptOp)
+def to_esfilter(self):
+    return {"script": {"script": self.script}}
+
+
+@extend(WhenOp)
+def to_ruby(self, not_null=False, boolean=False, many=False):
+    return "(" + self.when.to_ruby(boolean=True) + ") ? (" + self.then.to_ruby(not_null=not_null) + ") : (" + self.els_.to_ruby(not_null=not_null) + ")"
+
+
+@extend(WhenOp)
+def to_esfilter(self):
+    return {"or": [
+        {"and": [
+            self.when.to_esfilter(),
+            self.then.to_esfilter()
+        ]},
+        {"and": [
+            {"not": self.when.to_esfilter()},
+            self.els_.to_esfilter()
+        ]}
+    ]}
+
+
+
+
 
 
 USE_BOOL_MUST = True

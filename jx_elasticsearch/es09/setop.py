@@ -24,7 +24,7 @@ from jx_base.queries import is_variable_name
 from jx_elasticsearch.es09.expressions import unpack_terms
 from jx_elasticsearch.es09.util import aggregates
 from jx_python.containers.cube import Cube
-from jx_python.expressions import simplify_esfilter, TRUE_FILTER, jx_expression, Variable
+from jx_base.expressions import simplify_esfilter, TRUE_FILTER, jx_expression, Variable
 from mo_collections.matrix import Matrix
 from mo_dots.lists import FlatList
 

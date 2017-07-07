@@ -3,3 +3,6 @@ script.engine.painless.inline: true
 http.compression: true
 
 http.port: 9400
+
+http.cors.enabled: true
+http.cors.allow-origin: "*"

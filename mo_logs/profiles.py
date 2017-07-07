@@ -52,7 +52,7 @@ class Profiler(object):
         return output
 
     def __init__(self, description):
-        from pyLibrary.queries.windows import Stats
+        from jx_python.windows import Stats
 
         if ON and not hasattr(self, "description"):
             self.description = description
@@ -70,7 +70,7 @@ class Profiler(object):
             self.end = clock()
             duration = self.end - self.start
 
-            from pyLibrary.queries.windows import Stats
+            from jx_python.windows import Stats
 
             self.stats.add(duration)
             if self.samples is not None:

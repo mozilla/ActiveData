@@ -7,7 +7,7 @@
 		"index": "testdata",
 		"type": "test_result",
 		"host": "http://localhost",
-		"port": 9400,
+		"port": 9200,
 		"schema":{"$ref":"//.../resources/schema/basic_schema.json.template?type=test_result"},
 		"debug":true
 	},
@@ -15,7 +15,7 @@
 		"pyLibrary.env.http.default_headers": {
 			"Referer": "ActiveDataTests"
 		},
-		"pyLibrary.queries.expressions.ALLOW_SCRIPTING": true
+		"jx_python.expressions.ALLOW_SCRIPTING": true
 	},
 	"flask": {
 		"host": "0.0.0.0",
@@ -26,7 +26,7 @@
 	},
 	"elasticsearch": {
 		"host": "http://localhost",
-		"port": 9400,
+		"port": 9200,
 		"index": "testdata",
 		"type": "test_result",
 		"debug": true

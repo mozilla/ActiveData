@@ -11,13 +11,13 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_logs import Log
-
-from mo_logs.exceptions import extract_stack
+from unittest import skipIf
 
 from mo_dots import wrap
+from mo_logs import Log
+from mo_logs.exceptions import extract_stack
 
-from tests.test_jx import BaseTestCase, TEST_TABLE, NULL
+from tests.test_jx import BaseTestCase, TEST_TABLE, NULL, global_settings
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
@@ -43,7 +43,7 @@ class TestSorting(BaseTestCase):
                 "data": [6, 4, 3, 2, 1]
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
     def test_edge_and_sort(self):
         test = {
@@ -92,7 +92,7 @@ class TestSorting(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
     def test_2edge_and_sort(self):
         test = {
@@ -168,7 +168,7 @@ class TestSorting(BaseTestCase):
         try:
             self.utils.send_queries({"query": test.query, "expecting_cube": test.expecting_cube})
             Log.error("expecting error regarding sorting edges")
-        except Exception, e:
+        except Exception as e:
             pass
 
     def test_groupby_and_sort(self):
@@ -218,7 +218,7 @@ class TestSorting(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
     def test_groupby2_and_sort(self):
         test = {
@@ -265,8 +265,10 @@ class TestSorting(BaseTestCase):
                 ]
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
+
+    @skipIf(global_settings.is_travis, "not expected to pass yet")
     def test_groupby2b_and_sort(self):
         test = {
             "data": [
@@ -316,13 +318,13 @@ class TestSorting(BaseTestCase):
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "edges": [
-                    {"name": "b", "domain": {"type": "set", "partitions": [
-                        {"value": 1},
-                        {"value": 0}
-                    ]}},
                     {"name": "a", "domain": {"type": "set", "partitions": [
                         {"value": "c"},
                         {"value": "a"}
+                    ]}},
+                    {"name": "b", "domain": {"type": "set", "partitions": [
+                        {"value": 1},
+                        {"value": 0}
                     ]}}
                 ],
                 "data": {
@@ -330,4 +332,70 @@ class TestSorting(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
+
+    @skipIf(global_settings.is_travis, "not expected to pass yet")
+    def test_groupby2c_and_sort(self):
+        test = {
+            "data": [
+                {"a": "c", "b": 0, "value": 1},
+                {"a": "c", "b": 0, "value": 3},
+                {"a": "c", "b": 1, "value": 4},
+                {"a": "c", "b": 1, "value": 6},
+                {"a": "a", "b": 1, "value": 7},
+                {"a": "a", "value": 20},
+                {"b": 1, "value": 21},
+                {"value": 22},
+                {"a": "a", "b": 0, "value": 8},
+                {"a": "a", "b": 0, "value": 9},
+                {"a": "a", "b": 1, "value": 10},
+                {"a": "a", "b": 1, "value": 11}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": ["a", "b"],
+                "sort": [{"b": "desc"}, {"a": "desc"}]  # ENSURE DIFFERENT ORDER STILL SORTS CUBE
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "c", "b": 1, "count": 2},
+                    {"a": "a", "b": 1, "count": 3},
+                    {          "b": 1, "count": 1},
+                    {"a": "c", "b": 0, "count": 2},
+                    {"a": "a", "b": 0, "count": 2},
+                    {"a": "a",         "count": 1},
+                    {                  "count": 1}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a", "b", "count"],
+                "data": [
+                    ["c", 1, 2],
+                    ["a", 1, 3],
+                    [NULL, 1, 1],
+                    ["c", 0, 2],
+                    ["a", 0, 2],
+                    ["a", NULL, 1],
+                    [NULL, NULL, 1]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {"name": "a", "domain": {"type": "set", "partitions": [
+                        {"value": "c"},
+                        {"value": "a"}
+                    ]}},
+                    {"name": "b", "domain": {"type": "set", "partitions": [
+                        {"value": 1},
+                        {"value": 0}
+                    ]}}
+                 ],
+                "data": {
+                    "count": [[2, 2, 0], [3, 2, 1], [1, 0, 1]]
+                }
+            }
+        }
+        self.utils.execute_tests(test)

@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from mo_json import value2json, json2value
 
 from mo_testing.fuzzytestcase import FuzzyTestCase
-from pyLibrary.queries.query import _normalize_edge, _normalize_select
+from jx_python.query import _normalize_edge, _normalize_select
 
 
 class TestQueryNormalization(FuzzyTestCase):
@@ -25,7 +25,7 @@ class TestQueryNormalization(FuzzyTestCase):
     def test_complex_edge_value(self):
         edge = {"name": "n", "value": ["a", "c"]}
 
-        result = json2value(value2json(_normalize_edge(edge)[0]))
+        result = json2value(value2json(_normalize_edge(edge, 0)[0]))
         expected = {
             "name": "n",
             "value": {"tuple": ["a", "c"]},

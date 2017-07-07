@@ -158,6 +158,8 @@ class Namespace(BaseTestCase):
 
     def _run_test(self, data, query, expect, dimensions):
         new_settings = self.utils.fill_container({"query": query, "data": data}, tjson=True)
+        from jx_elasticsearch.jx_usingES import FromES
+
         db = FromES(kwargs=new_settings)
         db.namespaces += [Rename(dimensions=dimensions, source=db)]
         result = db.query(query)

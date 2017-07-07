@@ -11,13 +11,11 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from unittest import skipIf
-
 from mo_dots import wrap
 from mo_math import Math
-from jx_python import query
+from unittest import skipIf
 
-from jx_python.query import DEFAULT_LIMIT
+from jx_python.query import DEFAULT_LIMIT, MAX_LIMIT
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings, NULL
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
@@ -612,7 +610,7 @@ class TestSetOps(BaseTestCase):
 
         self.utils.fill_container(test)
         result = self.utils.execute_query(test.query)
-        self.assertEqual(result.meta.es_query.size, query.MAX_LIMIT)
+        self.assertEqual(result.meta.es_query.size, MAX_LIMIT)
 
     def test_default_limit(self):
         test = wrap({

@@ -397,7 +397,7 @@ class ThreadedQueue(Queue):
             #     sizes = wrap([{"id":i["id"], "size":len(convert.value2json(i))} for i in self.queue if isinstance(i, Mapping)])
             #     size=sum(sizes.size)
             #     if size>50000000:
-            #         from pyLibrary.queries import jx
+            #         from jx_python import jx
             #
             #         biggest = jx.sort(sizes, "size").last().id
             #         _Log.note("Big record {{id}}", id=biggest)

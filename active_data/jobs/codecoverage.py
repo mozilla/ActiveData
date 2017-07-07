@@ -22,7 +22,7 @@ from mo_dots.datas import leaves
 from mo_times.dates import Date, unicode2Date
 from mo_times.timer import Timer
 from pyLibrary.env import http, elasticsearch
-from pyLibrary.queries import jx
+from jx_python import jx
 
 DEBUG = True
 NUM_THREAD = 4

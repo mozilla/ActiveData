@@ -29,8 +29,8 @@ from mo_times.dates import Date
 from mo_times.durations import MINUTE
 from pyLibrary import convert
 from pyLibrary.env import http
-from pyLibrary.queries import jx, containers
-from pyLibrary.queries.query import QueryOp
+from jx_python import jx, containers
+from jx_python.query import QueryOp
 from pyLibrary.testing import elasticsearch
 from test_jx import TEST_TABLE
 
@@ -142,7 +142,7 @@ class ESUtils(object):
     def not_real_service(self):
         return self.settings.fastTesting
 
-    def execute_es_tests(self, subtest, tjson=False):
+    def execute_tests(self, subtest, tjson=False):
         subtest = wrap(subtest)
         subtest.name = extract_stack()[1]['method']
 

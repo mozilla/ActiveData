@@ -20,7 +20,7 @@ from mo_kwargs import override
 from mo_threads import Thread, Queue, Till, THREAD_STOP
 from mo_times import MINUTE, Duration
 from pyLibrary.env.elasticsearch import Cluster
-from pyLibrary.queries import jx
+from jx_python import jx
 
 from mo_logs import Log, strings
 from mo_logs.exceptions import suppress_exception

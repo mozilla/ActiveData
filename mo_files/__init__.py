@@ -9,16 +9,17 @@
 #
 import base64
 import io
-import os
+import re
 import shutil
 from datetime import datetime
-
-import re
+from mimetypes import MimeTypes
 from tempfile import mkdtemp
 
+import os
 from mo_dots import get_module, coalesce
 from mo_logs import Log, Except
 
+mime = MimeTypes()
 
 class File(object):
     """
@@ -31,33 +32,34 @@ class File(object):
         else:
             return object.__new__(cls)
 
-    def __init__(self, filename, buffering=2 ** 14, suffix=None):
+    def __init__(self, filename, buffering=2 ** 14, suffix=None, mime_type=None):
         """
         YOU MAY SET filename TO {"path":p, "key":k} FOR CRYPTO FILES
         """
+        self._mime_type = mime_type
         if filename == None:
-            Log.error("File must be given a filename")
+            Log.error(u"File must be given a filename")
         elif isinstance(filename, File):
             return
         elif isinstance(filename, basestring):
             self.key = None
-            if filename==".":
-                self._filename = ""
-            elif filename.startswith("~"):
-                home_path = os.path.expanduser("~")
-                if os.sep == "\\":
-                    home_path = home_path.replace(os.sep, "/")
-                if home_path.endswith("/"):
+            if filename==b".":
+                self._filename = b""
+            elif filename.startswith(b"~"):
+                home_path = os.path.expanduser(b"~")
+                if os.sep == b"\\":
+                    home_path = home_path.replace(os.sep, b"/")
+                if home_path.endswith(b"/"):
                     home_path = home_path[:-1]
                 filename = home_path + filename[1::]
-            self._filename = filename.replace(os.sep, "/")  # USE UNIX STANDARD
+            self._filename = filename.replace(os.sep, b"/")  # USE UNIX STANDARD
         else:
             self.key = base642bytearray(filename.key)
-            self._filename = "/".join(filename.path.split(os.sep))  # USE UNIX STANDARD
+            self._filename = b"/".join(filename.path.split(os.sep))  # USE UNIX STANDARD
 
-        while self._filename.find(".../") >= 0:
+        while self._filename.find(b".../") >= 0:
             # LET ... REFER TO GRANDPARENT, .... REFER TO GREAT-GRAND-PARENT, etc...
-            self._filename = self._filename.replace(".../", "../../")
+            self._filename = self._filename.replace(b".../", b"../../")
         self.buffering = buffering
 
 
@@ -66,17 +68,7 @@ class File(object):
 
     @classmethod
     def new_instance(cls, *path):
-        def scrub(i, p):
-            if isinstance(p, File):
-                p = p.abspath
-            p = p.replace(os.sep, "/")
-            if p[-1] == '/':
-                p = p[:-1]
-            if i > 0 and p[0] == '/':
-                p = p[1:]
-            return p
-
-        return File('/'.join(scrub(i, p) for i, p in enumerate(path)))
+        return File(join_path(*path))
 
     @property
     def timestamp(self):
@@ -85,21 +77,21 @@ class File(object):
 
     @property
     def filename(self):
-        return self._filename.replace("/", os.sep)
+        return self._filename.replace(b"/", os.sep)
 
     @property
     def abspath(self):
-        if self._filename.startswith("~"):
-            home_path = os.path.expanduser("~")
-            if os.sep == "\\":
-                home_path = home_path.replace(os.sep, "/")
-            if home_path.endswith("/"):
+        if self._filename.startswith(b"~"):
+            home_path = os.path.expanduser(b"~")
+            if os.sep == b"\\":
+                home_path = home_path.replace(os.sep, b"/")
+            if home_path.endswith(b"/"):
                 home_path = home_path[:-1]
 
             return home_path + self._filename[1::]
         else:
-            if os.sep == "\\":
-                return os.path.abspath(self._filename).replace(os.sep, "/")
+            if os.sep == b"\\":
+                return os.path.abspath(self._filename).replace(os.sep, b"/")
             else:
                 return os.path.abspath(self._filename)
 
@@ -108,28 +100,39 @@ class File(object):
         """
         ADD suffix TO THE filename (NOT INCLUDING THE FILE EXTENSION)
         """
-        path = filename.split("/")
-        parts = path[-1].split(".")
+        path = filename.split(b"/")
+        parts = path[-1].split(b".")
         i = max(len(parts) - 2, 0)
         parts[i] = parts[i] + suffix
-        path[-1] = ".".join(parts)
-        return "/".join(path)
+        path[-1] = b".".join(parts)
+        return b"/".join(path)
 
     @property
     def extension(self):
-        parts = self._filename.split("/")[-1].split(".")
+        parts = self._filename.split(b"/")[-1].split(b".")
         if len(parts) == 1:
-            return ""
+            return b""
         else:
             return parts[-1]
 
     @property
     def name(self):
-        parts = self.abspath.split("/")[-1].split(".")
+        parts = self.abspath.split(b"/")[-1].split(b".")
         if len(parts) == 1:
             return parts[0]
         else:
-            return ".".join(parts[0:-1])
+            return b".".join(parts[0:-1])
+
+    @property
+    def mime_type(self):
+        if not self._mime_type:
+            if self.abspath.endswith(".json"):
+                self._mime_type = "application/json"
+            else:
+                self._mime_type, _ = mime.guess_type(self.abspath)
+                if not self._mime_type:
+                    self._mime_type = "application/binary"
+        return self._mime_type
 
     def find(self, pattern):
         """
@@ -138,7 +141,7 @@ class File(object):
         """
         output = []
         def _find(dir):
-            if re.match(pattern, dir._filename.split("/")[-1]):
+            if re.match(pattern, dir._filename.split(b"/")[-1]):
                 output.append(dir)
             if dir.is_directory():
                 for c in dir.children:
@@ -150,27 +153,27 @@ class File(object):
         """
         RETURN NEW FILE WITH GIVEN EXTENSION
         """
-        path = self._filename.split("/")
-        parts = path[-1].split(".")
+        path = self._filename.split(b"/")
+        parts = path[-1].split(b".")
         if len(parts) == 1:
             parts.append(ext)
         else:
             parts[-1] = ext
 
-        path[-1] = ".".join(parts)
-        return File("/".join(path))
+        path[-1] = b".".join(parts)
+        return File(b"/".join(path))
 
     def set_name(self, name):
         """
         RETURN NEW FILE WITH GIVEN EXTENSION
         """
-        path = self._filename.split("/")
-        parts = path[-1].split(".")
+        path = self._filename.split(b"/")
+        parts = path[-1].split(b".")
         if len(parts) == 1:
             path[-1] = name
         else:
-            path[-1] = name + "." + parts[-1]
-        return File("/".join(path))
+            path[-1] = name + b"." + parts[-1]
+        return File(b"/".join(path))
 
     def backup_name(self, timestamp=None):
         """
@@ -179,26 +182,26 @@ class File(object):
         suffix = datetime2string(coalesce(timestamp, datetime.now()), "%Y%m%d_%H%M%S")
         return File.add_suffix(self._filename, suffix)
 
-    def read(self, encoding="utf8"):
-        with open(self._filename, "rb") as f:
+    def read(self, encoding=b"utf8"):
+        with open(self._filename, b"rb") as f:
             content = f.read().decode(encoding)
             if self.key:
-                return get_module("mo_math.crypto").decrypt(content, self.key)
+                return get_module(u"mo_math.crypto").decrypt(content, self.key)
             else:
                 return content
 
-    def read_lines(self, encoding="utf8"):
-        with open(self._filename, "rb") as f:
+    def read_lines(self, encoding=b"utf8"):
+        with open(self._filename, b"rb") as f:
             for line in f:
                 yield line.decode(encoding).rstrip()
 
-    def read_json(self, encoding="utf8", flexible=True, leaves=True):
+    def read_json(self, encoding=b"utf8", flexible=True, leaves=True):
         content = self.read(encoding=encoding)
-        value = get_module("mo_json").json2value(content, flexible=flexible, leaves=leaves)
+        value = get_module(u"mo_json").json2value(content, flexible=flexible, leaves=leaves)
         abspath = self.abspath
-        if os.sep == "\\":
-            abspath = "/" + abspath.replace(os.sep, "/")
-        return get_module("mo_json_config").expand(value, "file://" + abspath)
+        if os.sep == b"\\":
+            abspath = b"/" + abspath.replace(os.sep, b"/")
+        return get_module(b"mo_json_config").expand(value, b"file://" + abspath)
 
     def is_directory(self):
         return os.path.isdir(self._filename)
@@ -207,38 +210,38 @@ class File(object):
         try:
             if not self.parent.exists:
                 self.parent.create()
-            with open(self._filename, "rb") as f:
+            with open(self._filename, b"rb") as f:
                 return f.read()
         except Exception as e:
-            Log.error("Problem reading file {{filename}}", filename=self.abspath, cause=e)
+            Log.error(u"Problem reading file {{filename}}", filename=self.abspath, cause=e)
 
     def write_bytes(self, content):
         if not self.parent.exists:
             self.parent.create()
-        with open(self._filename, "wb") as f:
+        with open(self._filename, b"wb") as f:
             f.write(content)
 
     def write(self, data):
         if not self.parent.exists:
             self.parent.create()
-        with open(self._filename, "wb") as f:
+        with open(self._filename, b"wb") as f:
             if isinstance(data, list) and self.key:
-                Log.error("list of data and keys are not supported, encrypt before sending to file")
+                Log.error(u"list of data and keys are not supported, encrypt before sending to file")
 
             if isinstance(data, list):
                 pass
             elif isinstance(data, basestring):
                 data=[data]
-            elif hasattr(data, "__iter__"):
+            elif hasattr(data, b"__iter__"):
                 pass
 
             for d in data:
                 if not isinstance(d, unicode):
-                    Log.error("Expecting unicode data only")
+                    Log.error(u"Expecting unicode data only")
                 if self.key:
-                    f.write(get_module("crypto").encrypt(d, self.key).encode("utf8"))
+                    f.write(get_module(u"crypto").encrypt(d, self.key).encode(b"utf8"))
                 else:
-                    f.write(d.encode("utf8"))
+                    f.write(d.encode(b"utf8"))
 
     def __iter__(self):
         # NOT SURE HOW TO MAXIMIZE FILE READ SPEED
@@ -247,15 +250,15 @@ class File(object):
         def output():
             try:
                 path = self._filename
-                if path.startswith("~"):
-                    home_path = os.path.expanduser("~")
+                if path.startswith(b"~"):
+                    home_path = os.path.expanduser(b"~")
                     path = home_path + path[1::]
 
-                with io.open(path, "rb") as f:
+                with io.open(path, b"rb") as f:
                     for line in f:
                         yield line.decode('utf8').rstrip()
             except Exception as e:
-                Log.error("Can not read line from {{filename}}", filename=self._filename, cause=e)
+                Log.error(u"Can not read line from {{filename}}", filename=self._filename, cause=e)
 
         return output()
 
@@ -265,10 +268,10 @@ class File(object):
         """
         if not self.parent.exists:
             self.parent.create()
-        with open(self._filename, "ab") as output_file:
+        with open(self._filename, b"ab") as output_file:
             if isinstance(content, str):
-                Log.error("expecting to write unicode only")
-            output_file.write(content.encode("utf-8"))
+                Log.error(u"expecting to write unicode only")
+            output_file.write(content.encode(b"utf8"))
             output_file.write(b"\n")
 
     def __len__(self):
@@ -281,15 +284,15 @@ class File(object):
         try:
             if not self.parent.exists:
                 self.parent.create()
-            with open(self._filename, "ab") as output_file:
+            with open(self._filename, b"ab") as output_file:
                 for c in content:
                     if isinstance(c, str):
-                        Log.error("expecting to write unicode only")
+                        Log.error(u"expecting to write unicode only")
 
-                    output_file.write(c.encode("utf-8"))
+                    output_file.write(c.encode(b"utf8"))
                     output_file.write(b"\n")
         except Exception as e:
-            Log.error("Could not write to file", e)
+            Log.error(u"Could not write to file", e)
 
     def delete(self):
         try:
@@ -300,19 +303,19 @@ class File(object):
             return self
         except Exception as e:
             e = Except.wrap(e)
-            if "The system cannot find the path specified" in e:
+            if u"The system cannot find the path specified" in e:
                 return
-            Log.error("Could not remove file", e)
+            Log.error(u"Could not remove file", e)
 
     def backup(self):
-        path = self._filename.split("/")
-        names = path[-1].split(".")
+        path = self._filename.split(b"/")
+        names = path[-1].split(b".")
         if len(names) == 1 or names[0] == '':
-            backup = File(self._filename + ".backup " + datetime.utcnow().strftime("%Y%m%d %H%M%S"))
+            backup = File(self._filename + b".backup " + datetime.utcnow().strftime(b"%Y%m%d %H%M%S"))
         else:
             backup = File.new_instance(
-                "/".join(path[:-1]),
-                ".".join(names[:-1]) + ".backup " + datetime.now().strftime("%Y%m%d %H%M%S") + "." + names[-1]
+                b"/".join(path[:-1]),
+                b".".join(names[:-1]) + b".backup " + datetime.now().strftime("%Y%m%d %H%M%S") + "." + names[-1]
             )
         File.copy(self, backup)
         return backup
@@ -321,24 +324,34 @@ class File(object):
         try:
             os.makedirs(self._filename)
         except Exception as e:
-            Log.error("Could not make directory {{dir_name}}",  dir_name= self._filename, cause=e)
+            Log.error(u"Could not make directory {{dir_name}}",  dir_name= self._filename, cause=e)
 
     @property
     def children(self):
-        return [File(self._filename + "/" + c) for c in os.listdir(self.filename)]
+        return [File(self._filename + b"/" + c) for c in os.listdir(self.filename)]
+
+    @property
+    def leaves(self):
+        for c in os.listdir(self.abspath):
+            child = File(self._filename + b"/" + c)
+            if child.is_directory():
+                for l in child.leaves:
+                    yield l
+            else:
+                yield child
 
     @property
     def parent(self):
         if not self._filename:
-            return File("..")
-        elif self._filename.endswith(".."):
-            return File(self._filename+"/..")
+            return File(b"..")
+        elif self._filename.endswith(b".."):
+            return File(self._filename+b"/..")
         else:
-            return File("/".join(self._filename.split("/")[:-1]))
+            return File(b"/".join(self._filename.split(b"/")[:-1]))
 
     @property
     def exists(self):
-        if self._filename in ["", "."]:
+        if self._filename in [b"", b"."]:
             return True
         try:
             return os.path.exists(self._filename)
@@ -352,7 +365,7 @@ class File(object):
         """
         USED FOR FILE EXISTENCE TESTING
         """
-        if self._filename in ["", "."]:
+        if self._filename in [b"", b"."]:
             return True
         try:
             return os.path.exists(self._filename)
@@ -400,4 +413,39 @@ def datetime2string(value, format="%Y-%m-%d %H:%M:%S"):
     try:
         return value.strftime(format)
     except Exception as e:
-        Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
+        Log.error(u"Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
+
+
+def join_path(*path):
+    def scrub(i, p):
+        if isinstance(p, File):
+            p = p.abspath
+        if p == b"/":
+            return b"."
+        p = p.replace(os.sep, b"/")
+        if p[-1] == b'/':
+            p = p[:-1]
+        if i > 0 and p[0] == b'/':
+            p = p[1:]
+        return p
+
+    scrubbed = []
+    for i, p in enumerate(path):
+        scrubbed.extend(scrub(i, p).split(b"/"))
+    simpler = []
+    for s in scrubbed:
+        if s == ".":
+            pass
+        elif s == "..":
+            if simpler:
+                simpler.pop()
+            else:
+                simpler.append(s)
+        else:
+            simpler.append(s)
+    if not simpler:
+        joined = "."
+    else:
+        joined = b'/'.join(simpler)
+    return joined
+

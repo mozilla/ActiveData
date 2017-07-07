@@ -1902,11 +1902,9 @@ sql_type_to_json_type = {
 }
 
 
-class extend(object):
-    def __init__(self, cls):
-        self.cls=cls
-
-    def __call__(self, func):
-        setattr(self.cls, func.name, func)
+def extend(cls):
+    def extender(func):
+        setattr(cls, func.func_name, func)
         return func
+    return extender
 

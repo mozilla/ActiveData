@@ -20,7 +20,7 @@ from pyLibrary import queries, convert
 from jx_elasticsearch.es14.setop import format_dispatch
 from jx_elasticsearch.es14.util import jx_sort_to_es_sort
 from jx_python.containers import STRUCT
-from jx_python.expressions import split_expression_by_depth, simplify_esfilter, AndOp, compile_expression, \
+from jx_elasticsearch.es14.expressions import split_expression_by_depth, simplify_esfilter, AndOp, compile_expression, \
     Variable, LeavesOp
 from jx_python.query import DEFAULT_LIMIT
 from mo_times.timer import Timer

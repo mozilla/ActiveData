@@ -23,7 +23,7 @@ from jx_elasticsearch.es14.util import jx_sort_to_es_sort
 from jx_python.containers import STRUCT
 from jx_python.containers.cube import Cube
 from jx_python.domains import ALGEBRAIC
-from jx_python.expressions import simplify_esfilter, Variable, LeavesOp
+from jx_elasticsearch.es14.expressions import simplify_esfilter, Variable, LeavesOp
 from jx_python.query import DEFAULT_LIMIT
 from mo_collections.matrix import Matrix
 from mo_dots.lists import FlatList

@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import absolute_import
 
 from mo_dots import wrap, split_field, join_field
-from jx_python.expressions import Variable
+from jx_elasticsearch.es14.expressions import Variable
 
 
 def es_query_template(path):

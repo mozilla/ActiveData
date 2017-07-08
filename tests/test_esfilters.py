@@ -39,7 +39,7 @@ class TestESFilters(FuzzyTestCase):
         result = simplify_esfilter(jx_expression(where).to_esfilter())
         self.assertEqual(result, {"range": {"build.date": {"gte": Date("23 APR 2015").unix, "lt": Date("25 APR 2015").unix}}})
 
-        def test_eq1(self):
+    def test_eq1(self):
         where = {"eq": {"a": 20}}
         result = simplify_esfilter(jx_expression(where).to_esfilter())
         self.assertEqual(result, {"term": {"a": 20}})

@@ -536,14 +536,8 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
 
 
 @extend(RegExpOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    if not self.terms:
-        return "null"
-    acc = self.terms[-1].to_ruby()
-    for v in reversed(self.terms[:-1]):
-        r = v.to_ruby()
-        acc = "(((" + r + ") != null) ? (" + r + ") : (" + acc + "))"
-    return acc
+def to_esfilter(self):
+    return {"regexp": {self.var.var: json2value(self.pattern.json)}}
 
 
 @extend(StringOp)

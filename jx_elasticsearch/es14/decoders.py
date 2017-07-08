@@ -22,7 +22,7 @@ from jx_python import jx
 from jx_python.containers import STRUCT
 from jx_python.dimensions import Dimension
 from jx_python.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_python.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, \
+from jx_elasticsearch.es14.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, \
     InequalityOp, TupleOp, LeavesOp
 from jx_python.query import MAX_LIMIT, DEFAULT_LIMIT
 

@@ -31,7 +31,7 @@ from jx_elasticsearch.es14.setop import is_setop, es_setop
 from jx_elasticsearch.es14.util import aggregates1_4
 from jx_python.containers import Container
 from jx_python.dimensions import Dimension
-from jx_python.meta import FromESMetadata
+from jx_elasticsearch.meta import FromESMetadata
 from jx_python.namespace.typed import Typed
 from jx_python.query import QueryOp
 from mo_dots.lists import FlatList

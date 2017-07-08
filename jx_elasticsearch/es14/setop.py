@@ -264,7 +264,7 @@ def format_table(T, select, query=None):
     for s in select:
         if header[s.put.index]:
             continue
-        header[s.put.index] = s.name.replace("\\.", ".")
+        header[s.put.index] = s.name
 
     return Data(
         meta={"format": "table"},

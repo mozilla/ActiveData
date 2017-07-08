@@ -283,12 +283,25 @@ class FromESMetadata(Schema):
             })
             r = result.aggregations.values()[0]
             count = result.hits.total
-            cardinality = coalesce(r.value, r._nested.value, 0 if r.doc_count==0 else None)
+            cardinality = coalesce(r.value, r._nested.value, r.doc_count)
             if cardinality == None:
                 Log.error("logic error")
 
             query = Data(size=0)
-            if cardinality > 1000 or (count >= 30 and cardinality == count) or (count >= 1000 and cardinality / count > 0.99):
+
+            if c.es_column == "_id":
+                with self.meta.columns.locker:
+                    self.meta.columns.update({
+                        "set": {
+                            "count": cardinality,
+                            "cardinality": cardinality,
+                            "last_updated": Date.now()
+                        },
+                        "clear": ["partitions"],
+                        "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
+                    })
+                return
+            elif cardinality > 1000 or (count >= 30 and cardinality == count) or (count >= 1000 and cardinality / count > 0.99):
                 if DEBUG:
                     Log.note("{{table}}.{{field}} has {{num}} parts", table=c.es_index, field=c.es_column, num=cardinality)
                 with self.meta.columns.locker:
@@ -319,10 +332,10 @@ class FromESMetadata(Schema):
             elif len(c.nested_path) != 1:
                 query.aggs[literal_field(c.names["."])] = {
                     "nested": {"path": c.nested_path[0]},
-                    "aggs": {"_nested": {"terms": {"field": c.es_column, "size": 0}}}
+                    "aggs": {"_nested": {"terms": {"field": c.es_column}}}
                 }
             else:
-                query.aggs[literal_field(c.names["."])] = {"terms": {"field": c.es_column, "size": 0}}
+                query.aggs[literal_field(c.names["."])] = {"terms": {"field": c.es_column}}
 
             result = self.default_es.post("/" + es_index + "/_search", data=query)
 
@@ -441,7 +454,9 @@ class FromESMetadata(Schema):
                 Log.note("Could not get {{col.es_index}}.{{col.es_column}} info", col=c)
 
 def _counting_query(c):
-    if len(c.nested_path) != 1:
+    if c.es_column == "_id":
+        return {"filter": {"match_all": {}}}
+    elif len(c.nested_path) != 1:
         return {
             "nested": {
                 "path": c.nested_path[0]  # FIRST ONE IS LONGEST

@@ -27,31 +27,31 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
 
 
 @extend(BetweenOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     if isinstance(self.prefix, Literal) and isinstance(json2value(self.prefix.json), int):
-        value_is_missing = self.value.missing().to_ruby()
-        value = self.value.to_ruby(not_null=True)
+        value_is_missing = self.value.missing().to_painless()
+        value = self.value.to_painless(not_null=True)
         start = "max(" + self.prefix.json + ", 0)"
 
         if isinstance(self.suffix, Literal) and isinstance(json2value(self.suffix.json), int):
             check = "(" + value_is_missing + ")"
-            end = "min(" + self.suffix.to_ruby() + ", " + value + ".length())"
+            end = "min(" + self.suffix.to_painless() + ", " + value + ".length())"
         else:
-            end = value + ".indexOf(" + self.suffix.to_ruby() + ", " + start + ")"
+            end = value + ".indexOf(" + self.suffix.to_painless() + ", " + start + ")"
             check = "((" + value_is_missing + ") || (" + end + "==-1))"
 
-        expr = check + " ? " + self.default.to_ruby() + " : ((" + value + ").substring(" + start + ", " + end + "))"
+        expr = check + " ? " + self.default.to_painless() + " : ((" + value + ").substring(" + start + ", " + end + "))"
         return expr
 
     else:
         # ((Runnable)(() -> {int a=2; int b=3; System.out.println(a+b);})).run();
-        value_is_missing = self.value.missing().to_ruby()
-        value = self.value.to_ruby(not_null=True)
-        prefix = self.prefix.to_ruby()
+        value_is_missing = self.value.missing().to_painless()
+        value = self.value.to_painless(not_null=True)
+        prefix = self.prefix.to_painless()
         len_prefix = unicode(len(json2value(self.prefix.json))) if isinstance(self.prefix,
                                                                               Literal) else "(" + prefix + ").length()"
-        suffix = self.suffix.to_ruby()
-        start_index = self.start.to_ruby()
+        suffix = self.suffix.to_painless()
+        start_index = self.start.to_painless()
         if start_index == "null":
             if prefix == "null":
                 start = "0"
@@ -61,10 +61,10 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
             start = value + ".indexOf(" + prefix + ", " + start_index + ")"
 
         if suffix == "null":
-            expr = "((" + value_is_missing + ") || (" + start + "==-1)) ? " + self.default.to_ruby() + " : ((" + value + ").substring(" + start + "+" + len_prefix + "))"
+            expr = "((" + value_is_missing + ") || (" + start + "==-1)) ? " + self.default.to_painless() + " : ((" + value + ").substring(" + start + "+" + len_prefix + "))"
         else:
             end = value + ".indexOf(" + suffix + ", " + start + "+" + len_prefix + ")"
-            expr = "((" + value_is_missing + ") || (" + start + "==-1) || (" + end + "==-1)) ? " + self.default.to_ruby() + " : ((" + value + ").substring(" + start + "+" + len_prefix + ", " + end + "))"
+            expr = "((" + value_is_missing + ") || (" + start + "==-1) || (" + end + "==-1)) ? " + self.default.to_painless() + " : ((" + value + ").substring(" + start + "+" + len_prefix + ", " + end + "))"
 
         return expr
 
@@ -74,13 +74,13 @@ def to_esfilter(self):
     if isinstance(self.value, Variable):
         return {"terms": {self.value.var: json2value(self.superset.json)}}
     else:
-        return {"script": self.to_ruby()}
+        return {"script": self.to_painless()}
 
 
 @extend(BinaryOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    lhs = self.lhs.to_ruby(not_null=True)
-    rhs = self.rhs.to_ruby(not_null=True)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    lhs = self.lhs.to_painless(not_null=True)
+    rhs = self.rhs.to_painless(not_null=True)
     script = "(" + lhs + ") " + BinaryOp.operators[self.op] + " (" + rhs + ")"
     missing = OrOp("or", [self.lhs.missing(), self.rhs.missing()])
 
@@ -89,7 +89,7 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
         default = self.default
     if many:
         script = "[" + script + "]"
-        default = ScriptOp("script", self.default.to_ruby(many=many))
+        default = ScriptOp("script", self.default.to_painless(many=many))
 
     output = WhenOp(
         "when",
@@ -99,14 +99,14 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
             "else":
                 ScriptOp("script", script)
         }
-    ).to_ruby()
+    ).to_painless()
     return output
 
 
 @extend(BinaryOp)
 def to_esfilter(self):
     if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal) or self.op in BinaryOp.algebra_ops:
-        return {"script": {"script": self.to_ruby()}}
+        return {"script": {"script": self.to_painless()}}
 
     if self.op in ["eq", "term"]:
         return {"term": {self.lhs.var: self.rhs.to_esfilter()}}
@@ -119,16 +119,16 @@ def to_esfilter(self):
 
 
 @extend(CaseOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    acc = self.whens[-1].to_ruby()
+def to_painless(self, not_null=False, boolean=False, many=False):
+    acc = self.whens[-1].to_painless()
     for w in reversed(self.whens[0:-1]):
-        acc = "(" + w.when.to_ruby(boolean=True) + ") ? (" + w.then.to_ruby() + ") : (" + acc + ")"
+        acc = "(" + w.when.to_painless(boolean=True) + ") ? (" + w.then.to_painless() + ") : (" + acc + ")"
     return acc
 
 
 @extend(CaseOp)
 def to_esfilter(self):
-    return {"script": {"script": self.to_ruby()}}
+    return {"script": {"script": self.to_painless()}}
 
 
 @extend(ConcatOp)
@@ -136,25 +136,25 @@ def to_esfilter(self):
     if isinstance(self.value, Variable) and isinstance(self.find, Literal):
         return {"regexp": {self.value.var: ".*" + convert.string2regexp(json2value(self.find.json)) + ".*"}}
     else:
-        return {"script": {"script": self.to_ruby()}}
+        return {"script": {"script": self.to_painless()}}
 
 
 @extend(ConcatOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     if len(self.terms) == 0:
-        return self.default.to_ruby()
+        return self.default.to_painless()
 
     acc = []
     for t in self.terms:
-        acc.append("((" + t.missing().to_ruby(boolean=True) + ") ? \"\" : (" + self.separator.json + "+" + t.to_ruby(
+        acc.append("((" + t.missing().to_painless(boolean=True) + ") ? \"\" : (" + self.separator.json + "+" + t.to_painless(
             not_null=True) + "))")
     expr_ = "(" + "+".join(acc) + ").substring(" + unicode(len(json2value(self.separator.json))) + ")"
 
-    return "(" + self.missing().to_ruby() + ") ? (" + self.default.to_ruby() + ") : (" + expr_ + ")"
+    return "(" + self.missing().to_painless() + ") ? (" + self.default.to_painless() + ") : (" + expr_ + ")"
 
 
 @extend(Literal)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     def _convert(v):
         if v is None:
             return "null"
@@ -181,12 +181,12 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
 
 
 @extend(CoalesceOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     if not self.terms:
         return "null"
-    acc = self.terms[-1].to_ruby()
+    acc = self.terms[-1].to_painless()
     for v in reversed(self.terms[:-1]):
-        r = v.to_ruby()
+        r = v.to_painless()
         acc = "(((" + r + ") != null) ? (" + r + ") : (" + acc + "))"
     return acc
 
@@ -197,13 +197,13 @@ def to_esfilter(self):
 
 
 @extend(ExistsOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     if isinstance(self.field, Variable):
-        return "!doc[" + quote(self.field.var) + "].isEmpty()"
+        return "!doc[" + quote(self.field.var) + "].empty"
     elif isinstance(self.field, Literal):
-        return self.field.exists().to_ruby()
+        return self.field.exists().to_painless()
     else:
-        return self.field.to_ruby() + " != null"
+        return self.field.to_painless() + " != null"
 
 
 @extend(ExistsOp)
@@ -211,23 +211,23 @@ def to_esfilter(self):
     if isinstance(self.field, Variable):
         return {"exists": {"field": self.field.var}}
     else:
-        return {"script": {"script": self.to_ruby()}}
+        return {"script": {"script": self.to_painless()}}
 
 
 @extend(FindOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     missing = self.missing()
-    v = self.value.to_ruby(not_null=True)
-    find = self.find.to_ruby(not_null=True)
-    start = self.start.to_ruby(not_null=True)
+    v = self.value.to_painless(not_null=True)
+    find = self.find.to_painless(not_null=True)
+    start = self.start.to_painless(not_null=True)
     index = v + ".indexOf(" + find + ", " + start + ")"
 
     if not_null:
         no_index = index + "==-1"
     else:
-        no_index = missing.to_ruby(boolean=True)
+        no_index = missing.to_painless(boolean=True)
 
-    expr = "(" + no_index + ") ? " + self.default.to_ruby() + " : " + index
+    expr = "(" + no_index + ") ? " + self.default.to_painless() + " : " + index
     return expr
 
 
@@ -236,7 +236,7 @@ def to_esfilter(self):
     if isinstance(self.value, Variable) and isinstance(self.find, Literal):
         return {"regexp": {self.value.var: ".*" + convert.string2regexp(json2value(self.find.json)) + ".*"}}
     else:
-        return {"script": {"script": self.to_ruby()}}
+        return {"script": {"script": self.to_painless()}}
 
 
 @extend(Literal)
@@ -245,7 +245,7 @@ def to_esfilter(self):
 
 
 @extend(NullOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     if many:
         return "[]"
     return "null"
@@ -257,7 +257,7 @@ def to_esfilter(self):
 
 
 @extend(FalseOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     return "false"
 
 
@@ -272,7 +272,7 @@ def to_esfilter(self):
 
 
 @extend(DateOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     Log.error("not supported")
 
 
@@ -282,7 +282,7 @@ def to_esfilter(self):
 
 
 @extend(LeavesOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     Log.error("not supported")
 
 
@@ -292,21 +292,24 @@ def to_esfilter(self):
 
 
 @extend(InequalityOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    lhs = self.lhs.to_ruby(not_null=True)
-    rhs = self.rhs.to_ruby(not_null=True)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    lhs = self.lhs.to_painless(not_null=True)
+    rhs = self.rhs.to_painless(not_null=True)
     script = "(" + lhs + ") " + InequalityOp.operators[self.op] + " (" + rhs + ")"
     missing = OrOp("or", [self.lhs.missing(), self.rhs.missing()])
+    default = self.default
+    if boolean:
+        default = FalseOp()
 
     output = WhenOp(
         "when",
         missing,
         **{
-            "then": self.default,
+            "then": default,
             "else":
                 ScriptOp("script", script)
         }
-    ).to_ruby()
+    ).to_painless()
     return output
 
 
@@ -315,13 +318,13 @@ def to_esfilter(self):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
         return {"range": {self.lhs.var: {self.op: json2value(self.rhs.json)}}}
     else:
-        return {"script": {"script": self.to_ruby()}}
+        return {"script": {"script": self.to_painless()}}
 
 
 @extend(DivOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    lhs = self.lhs.to_ruby(not_null=True)
-    rhs = self.rhs.to_ruby(not_null=True)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    lhs = self.lhs.to_painless(not_null=True)
+    rhs = self.rhs.to_painless(not_null=True)
     script = "((double)(" + lhs + ") / (double)(" + rhs + ")).doubleValue()"
 
     output = WhenOp(
@@ -332,22 +335,22 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
             "else":
                 ScriptOp("script", script)
         }
-    ).to_ruby()
+    ).to_painless()
     return output
 
 
 @extend(DivOp)
 def to_esfilter(self):
     if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal):
-        return {"script": {"script": self.to_ruby()}}
+        return {"script": {"script": self.to_painless()}}
     else:
         Log.error("Logic error")
 
 
 @extend(FloorOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    lhs = self.lhs.to_ruby(not_null=True)
-    rhs = self.rhs.to_ruby(not_null=True)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    lhs = self.lhs.to_painless(not_null=True)
+    rhs = self.rhs.to_painless(not_null=True)
     script = "Math.floor(((double)(" + lhs + ") / (double)(" + rhs + ")).doubleValue())*(" + rhs + ")"
 
     output = WhenOp(
@@ -358,7 +361,7 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
             "else":
                 ScriptOp("script", script)
         }
-    ).to_ruby()
+    ).to_painless()
     return output
 
 
@@ -368,10 +371,10 @@ def to_esfilter(self):
 
 
 @extend(EqOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    lhs_list = self.lhs.to_ruby(many=True)
-    rhs_missing = self.rhs.missing().to_ruby()
-    rhs = self.rhs.to_ruby(not_null=True)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    lhs_list = self.lhs.to_painless(many=True)
+    rhs_missing = self.rhs.missing().to_painless()
+    rhs = self.rhs.to_painless(not_null=True)
 
     if boolean:
         return "(" + rhs_missing + ")?(" + lhs_list + ".size()==0):((" + lhs_list + ").contains(" + rhs + "))"
@@ -391,20 +394,20 @@ def to_esfilter(self):
         else:
             return {"term": {self.lhs.var: rhs}}
     else:
-        return {"script": {"script": self.to_ruby(boolean=True)}}
+        return {"script": {"script": self.to_painless(boolean=True)}}
 
 
 @extend(MissingOp)
-def to_ruby(self, not_null=False, boolean=True, many=False):
+def to_painless(self, not_null=False, boolean=True, many=False):
     if isinstance(self.expr, Variable):
         if self.expr.var == "_id":
             return "false"
         else:
-            return "doc[" + quote(self.expr.var) + "].isEmpty()"
+            return "doc[" + quote(self.expr.var) + "].empty"
     elif isinstance(self.expr, Literal):
-        return self.expr.missing().to_ruby()
+        return self.expr.missing().to_painless()
     else:
-        return self.expr.missing().to_ruby()
+        return self.expr.missing().to_painless()
 
 
 @extend(MissingOp)
@@ -412,24 +415,24 @@ def to_esfilter(self):
     if isinstance(self.expr, Variable):
         return {"missing": {"field": self.expr.var}}
     else:
-        return {"script": {"script": self.to_ruby()}}
+        return {"script": {"script": self.to_painless()}}
 
 
 @extend(NotLeftOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    test_v = self.value.missing().to_ruby(boolean=True)
-    test_l = self.length.missing().to_ruby(boolean=True)
-    v = self.value.to_ruby(not_null=True)
-    l = self.length.to_ruby(not_null=True)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    test_v = self.value.missing().to_painless(boolean=True)
+    test_l = self.length.missing().to_painless(boolean=True)
+    v = self.value.to_painless(not_null=True)
+    l = self.length.to_painless(not_null=True)
 
     expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(max(0, min(" + v + ".length(), " + l + ")).intValue()))"
     return expr
 
 
 @extend(NeOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    lhs = self.lhs.to_ruby()
-    rhs = self.rhs.to_ruby()
+def to_painless(self, not_null=False, boolean=False, many=False):
+    lhs = self.lhs.to_painless()
+    rhs = self.rhs.to_painless()
     return "((" + lhs + ")!=null) && ((" + rhs + ")!=null) && ((" + lhs + ")!=(" + rhs + "))"
 
 
@@ -440,13 +443,13 @@ def to_esfilter(self):
     else:
         return {"and": [
             {"and": [{"exists": {"field": v}} for v in self.vars()]},
-            {"script": {"script": self.to_ruby()}}
+            {"script": {"script": self.to_painless()}}
         ]}
 
 
 @extend(NotOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    return "!(" + self.term.to_ruby(boolean=True) + ")"
+def to_painless(self, not_null=False, boolean=False, many=False):
+    return "!(" + self.term.to_painless(boolean=True) + ")"
 
 
 @extend(NotOp)
@@ -459,11 +462,11 @@ def to_esfilter(self):
 
 
 @extend(AndOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     if not self.terms:
         return "true"
     else:
-        return " && ".join("(" + t.to_ruby() + ")" for t in self.terms)
+        return " && ".join("(" + t.to_painless() + ")" for t in self.terms)
 
 
 @extend(AndOp)
@@ -475,8 +478,8 @@ def to_esfilter(self):
 
 
 @extend(OrOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    return " || ".join("(" + t.to_ruby(boolean=True) + ")" for t in self.terms if t)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    return " || ".join("(" + t.to_painless(boolean=True) + ")" for t in self.terms if t)
 
 
 @extend(OrOp)
@@ -485,12 +488,12 @@ def to_esfilter(self):
 
 
 @extend(LengthOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    value = self.term.to_ruby(not_null=True)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    value = self.term.to_painless(not_null=True)
     if not_null:
         return "(" + value + ").length()"
 
-    missing = self.missing().to_ruby()
+    missing = self.missing().to_painless()
     if many:
         return "(" + missing + " ) ? [] : [(" + value + ").length()]"
     else:
@@ -498,15 +501,15 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
 
 
 @extend(NumberOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    test = self.term.missing().to_ruby(boolean=True)
-    value = self.term.to_ruby(not_null=True)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    test = self.term.missing().to_painless(boolean=True)
+    value = self.term.to_painless(not_null=True)
     return "(" + test + ") ? null : (((" + value + ") instanceof String) ? Double.parseDouble(" + value + ") : (" + value + "))"
 
 
 @extend(CountOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    return "+".join("((" + t.missing().to_ruby(boolean=True) + ") ? 0 : 1)" for t in self.terms)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    return "+".join("((" + t.missing().to_painless(boolean=True) + ") ? 0 : 1)" for t in self.terms)
 
 
 @extend(LengthOp)
@@ -515,24 +518,24 @@ def to_esfilter(self):
 
 
 @extend(MultiOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     if self.nulls:
         op, unit = MultiOp.operators[self.op]
-        null_test = CoalesceOp("coalesce", self.terms).missing().to_ruby(boolean=True)
+        null_test = CoalesceOp("coalesce", self.terms).missing().to_painless(boolean=True)
         acc = op.join(
-            "((" + t.missing().to_ruby(boolean=True) + ") ? " + unit + " : (" + t.to_ruby(not_null=True) + "))" for
+            "((" + t.missing().to_painless(boolean=True) + ") ? " + unit + " : (" + t.to_painless(not_null=True) + "))" for
             t in self.terms
         )
         if many:
             acc = "[" + acc + "]"
-        return "((" + null_test + ") ? (" + self.default.to_ruby(many=many) + ") : (" + acc + "))"
+        return "((" + null_test + ") ? (" + self.default.to_painless(many=many) + ") : (" + acc + "))"
     else:
         op, unit = MultiOp.operators[self.op]
-        null_test = OrOp("or", [t.missing() for t in self.terms]).to_ruby()
-        acc = op.join("(" + t.to_ruby(not_null=True) + ")" for t in self.terms)
+        null_test = OrOp("or", [t.missing() for t in self.terms]).to_painless()
+        acc = op.join("(" + t.to_painless(not_null=True) + ")" for t in self.terms)
         if many:
             acc = "[" + acc + "]"
-        return "((" + null_test + ") ? (" + self.default.to_ruby(many=many) + ") : (" + acc + "))"
+        return "((" + null_test + ") ? (" + self.default.to_painless(many=many) + ") : (" + acc + "))"
 
 
 @extend(RegExpOp)
@@ -541,14 +544,14 @@ def to_esfilter(self):
 
 
 @extend(StringOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    value = self.term.to_ruby(not_null=True)
-    missing = self.term.missing().to_ruby()
+def to_painless(self, not_null=False, boolean=False, many=False):
+    value = self.term.to_painless(not_null=True)
+    missing = self.term.missing().to_painless()
     return "(" + missing + ") ? null : (((" + value + ") instanceof java.lang.Double) ? String.valueOf(" + value + ").replaceAll('\\\\.0$', '') : String.valueOf(" + value + "))"  # "\\.0$"
 
 
 @extend(TrueOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     return "true"
 
 
@@ -558,8 +561,8 @@ def to_esfilter(self):
 
 
 @extend(PrefixOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    return "(" + self.field.to_ruby() + ").startsWith(" + self.prefix.to_ruby() + ")"
+def to_painless(self, not_null=False, boolean=False, many=False):
+    return "(" + self.field.to_painless() + ").startsWith(" + self.prefix.to_painless() + ")"
 
 
 @extend(PrefixOp)
@@ -567,49 +570,49 @@ def to_esfilter(self):
     if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
         return {"prefix": {self.field.var: json2value(self.prefix.json)}}
     else:
-        return {"script": {"script": self.to_ruby()}}
+        return {"script": {"script": self.to_painless()}}
 
 
 @extend(UnixOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     test_v = self.value.missing()
     test_l = self.length.missing()
-    v = self.value.to_ruby(not_null=True)
-    l = self.length.to_ruby(not_null=True)
+    v = self.value.to_painless(not_null=True)
+    l = self.length.to_painless(not_null=True)
 
-    if (not test_v or test_v.to_ruby(boolean=True) == "false") and not test_l:
+    if (not test_v or test_v.to_painless(boolean=True) == "false") and not test_l:
         expr = v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue())"
     else:
-        expr = "((" + test_v.to_ruby(boolean=True) + ") || (" + test_l.to_ruby(
+        expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(
             boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
     return expr
 
 
 @extend(RightOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    test_v = self.value.missing().to_ruby(boolean=True)
-    test_l = self.length.missing().to_ruby(boolean=True)
-    v = self.value.to_ruby(not_null=True)
-    l = self.length.to_ruby(not_null=True)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    test_v = self.value.missing().to_painless(boolean=True)
+    test_l = self.length.missing().to_painless(boolean=True)
+    v = self.value.to_painless(not_null=True)
+    l = self.length.to_painless(not_null=True)
 
     expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(min(" + v + ".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
     return expr
 
 
 @extend(NotRightOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    test_v = self.value.missing().to_ruby(boolean=True)
-    test_l = self.length.missing().to_ruby(boolean=True)
-    v = self.value.to_ruby(not_null=True)
-    l = self.length.to_ruby(not_null=True)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    test_v = self.value.missing().to_painless(boolean=True)
+    test_l = self.length.missing().to_painless(boolean=True)
+    v = self.value.to_painless(not_null=True)
+    l = self.length.to_painless(not_null=True)
 
     expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, min(" + v + ".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
     return expr
 
 
 @extend(InOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    return self.superset.to_ruby(many=True) + ".contains(" + self.value.to_ruby() + ")"
+def to_painless(self, not_null=False, boolean=False, many=False):
+    return self.superset.to_painless(many=True) + ".contains(" + self.value.to_painless() + ")"
 
 
 @extend(InOp)
@@ -617,14 +620,14 @@ def to_esfilter(self):
     if isinstance(self.value, Variable):
         return {"terms": {self.value.var: json2value(self.superset.json)}}
     else:
-        return {"script": self.to_ruby()}
+        return {"script": self.to_painless()}
 
 
 
 @extend(RangeOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    return "(" + self.when.to_ruby(boolean=True) + ") ? (" + self.then.to_ruby(
-        not_null=not_null) + ") : (" + self.els_.to_ruby(not_null=not_null) + ")"
+def to_painless(self, not_null=False, boolean=False, many=False):
+    return "(" + self.when.to_painless(boolean=True) + ") ? (" + self.then.to_painless(
+        not_null=not_null) + ") : (" + self.els_.to_painless(not_null=not_null) + ")"
 
 
 @extend(RangeOp)
@@ -639,45 +642,35 @@ def to_esfilter(self):
             self.els_.to_esfilter()
         ]}
     ]}
-    # return {"script": {"script": self.to_ruby()}}
+    # return {"script": {"script": self.to_painless()}}
 
 
 @extend(LeftOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     test_v = self.value.missing()
     test_l = self.length.missing()
-    v = self.value.to_ruby(not_null=True)
-    l = self.length.to_ruby(not_null=True)
+    v = self.value.to_painless(not_null=True)
+    l = self.length.to_painless(not_null=True)
 
-    if (not test_v or test_v.to_ruby(boolean=True) == "false") and not test_l:
+    if (not test_v or test_v.to_painless(boolean=True) == "false") and not test_l:
         expr = v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue())"
     else:
-        expr = "((" + test_v.to_ruby(boolean=True) + ") || (" + test_l.to_ruby(boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
+        expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
     return expr
 
 
-@extend(RowsOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    return self.script
-
-
-@extend(RowsOp)
-def to_esfilter(self):
-    return {"script": {"script": self.script}}
-
-
 @extend(ScriptOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     return self.script
 
 
 @extend(ScriptOp)
 def to_esfilter(self):
-    return {"script": {"script": self.script}}
+    return { "script": {"lang": "painless", "inline": self.script}}
 
 
 @extend(Variable)
-def to_ruby(self, not_null=False, boolean=False, many=False):
+def to_painless(self, not_null=False, boolean=False, many=False):
     if self.var == ".":
         return "_source"
     else:
@@ -693,14 +686,14 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
                 return "doc[" + q + "].value"
         else:
             if boolean:
-                return "doc[" + q + "].isEmpty() ? null : (doc[" + q + "].value==\"T\")"
+                return "doc[" + q + "].empty ? null : (doc[" + q + "].value==\"T\")"
             else:
-                return "doc[" + q + "].isEmpty() ? null : doc[" + q + "].value"
+                return "doc[" + q + "].empty ? null : doc[" + q + "].value"
 
 
 @extend(WhenOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    return "(" + self.when.to_ruby(boolean=True) + ") ? (" + self.then.to_ruby(not_null=not_null) + ") : (" + self.els_.to_ruby(not_null=not_null) + ")"
+def to_painless(self, not_null=False, boolean=False, many=False):
+    return "(" + self.when.to_painless(boolean=True) + ") ? (" + self.then.to_painless(not_null=not_null) + ") : (" + self.els_.to_painless(not_null=not_null) + ")"
 
 
 @extend(WhenOp)

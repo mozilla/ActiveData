@@ -23,7 +23,7 @@ from mo_logs.strings import quote
 from pyLibrary import convert
 from jx_python.containers.cube import Cube
 from jx_elasticsearch.es14.aggs import count_dim, aggs_iterator, format_dispatch, drill
-from jx_python.expressions import TupleOp
+from jx_elasticsearch.es14.expressions import TupleOp
 
 
 def format_cube(decoders, aggs, start, query, select):

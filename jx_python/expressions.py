@@ -21,7 +21,7 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
     InequalityOp, extend, RowsOp, OffsetOp, GetOp, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, RangeOp, CaseOp, AndOp, \
-    ConcatOp
+    ConcatOp, InOp
 from mo_times.dates import Date
 
 
@@ -134,6 +134,11 @@ def to_python(self, not_null=False, boolean=False, many=False):
 @extend(InequalityOp)
 def to_python(self, not_null=False, boolean=False, many=False):
     return "(" + self.lhs.to_python() + ") " + InequalityOp.operators[self.op] + " (" + self.rhs.to_python() + ")"
+
+
+@extend(InOp)
+def to_python(self, not_null=False, boolean=False, many=False):
+    return self.value.to_python() + " in " + self.superset.to_python(many=True)
 
 
 @extend(DivOp)
@@ -282,5 +287,3 @@ def to_python(self, not_null=False, boolean=False, many=False):
     for w in reversed(self.whens[0:-1]):
         acc = "(" + w.when.to_python(boolean=True) + ") ? (" + w.then.to_python() + ") : (" + acc + ")"
     return acc
-
-

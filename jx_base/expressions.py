@@ -1884,23 +1884,6 @@ def sql_quote(value):
         return unicode(value)
 
 
-json_type_to_sql_type = {
-    "null": "0",
-    "boolean": "b",
-    "number": "n",
-    "string": "s",
-    "object": "j",
-    "nested": "j"
-}
-
-sql_type_to_json_type = {
-    "0": "null",
-    "b": "boolean",
-    "n": "number",
-    "s": "string",
-    "j": "object"
-}
-
 
 def extend(cls):
     def extender(func):

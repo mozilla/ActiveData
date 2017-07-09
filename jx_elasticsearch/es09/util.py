@@ -70,8 +70,9 @@ def build_es_query(query):
                 "query": {
                     "match_all": {}
                 },
-                "filter": simplify_esfilter(query.where)
-            }
+                "query": {"bool": {"filter": simplify_esfilter(query.where)
+            } }
+           }
         }
 
     return output

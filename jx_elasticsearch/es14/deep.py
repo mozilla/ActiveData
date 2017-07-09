@@ -74,9 +74,9 @@ def es_deepop(es, query):
                 {"not": {
                     "nested": {
                         "path": query_path,
-                        "filter": {
+                        "query": {"bool": {"filter": {
                             "match_all": {}
-                        }
+                        } } }
                     }
                 }}
             ]

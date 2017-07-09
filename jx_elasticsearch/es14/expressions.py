@@ -106,7 +106,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 @extend(BinaryOp)
 def to_esfilter(self):
     if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal) or self.op in BinaryOp.algebra_ops:
-        return {"script": {"script": self.to_painless()}}
+        return ScriptOp("script",  self.to_painless()).to_esfilter()
 
     if self.op in ["eq", "term"]:
         return {"term": {self.lhs.var: self.rhs.to_esfilter()}}
@@ -128,7 +128,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 
 @extend(CaseOp)
 def to_esfilter(self):
-    return {"script": {"script": self.to_painless()}}
+    return ScriptOp("script",  self.to_painless()).to_esfilter()
 
 
 @extend(ConcatOp)
@@ -136,7 +136,7 @@ def to_esfilter(self):
     if isinstance(self.value, Variable) and isinstance(self.find, Literal):
         return {"regexp": {self.value.var: ".*" + convert.string2regexp(json2value(self.find.json)) + ".*"}}
     else:
-        return {"script": {"script": self.to_painless()}}
+        return ScriptOp("script",  self.to_painless()).to_esfilter()
 
 
 @extend(ConcatOp)
@@ -211,7 +211,7 @@ def to_esfilter(self):
     if isinstance(self.field, Variable):
         return {"exists": {"field": self.field.var}}
     else:
-        return {"script": {"script": self.to_painless()}}
+        return ScriptOp("script",  self.to_painless()).to_esfilter()
 
 
 @extend(FindOp)
@@ -236,7 +236,7 @@ def to_esfilter(self):
     if isinstance(self.value, Variable) and isinstance(self.find, Literal):
         return {"regexp": {self.value.var: ".*" + convert.string2regexp(json2value(self.find.json)) + ".*"}}
     else:
-        return {"script": {"script": self.to_painless()}}
+        return ScriptOp("script",  self.to_painless()).to_esfilter()
 
 
 @extend(Literal)
@@ -318,7 +318,7 @@ def to_esfilter(self):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
         return {"range": {self.lhs.var: {self.op: json2value(self.rhs.json)}}}
     else:
-        return {"script": {"script": self.to_painless()}}
+        return ScriptOp("script", self.to_painless(boolean=True)).to_esfilter()
 
 
 @extend(DivOp)
@@ -342,7 +342,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 @extend(DivOp)
 def to_esfilter(self):
     if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal):
-        return {"script": {"script": self.to_painless()}}
+        return ScriptOp("script", self.to_painless()).to_esfilter()
     else:
         Log.error("Logic error")
 
@@ -394,7 +394,7 @@ def to_esfilter(self):
         else:
             return {"term": {self.lhs.var: rhs}}
     else:
-        return {"script": {"script": self.to_painless(boolean=True)}}
+        return ScriptOp("script", self.to_painless(boolean=True)).to_esfilter()
 
 
 @extend(MissingOp)
@@ -413,9 +413,9 @@ def to_painless(self, not_null=False, boolean=True, many=False):
 @extend(MissingOp)
 def to_esfilter(self):
     if isinstance(self.expr, Variable):
-        return {"missing": {"field": self.expr.var}}
+        return {"bool": {"must_not": {"exists": {"field": self.expr.var}}}}
     else:
-        return {"script": {"script": self.to_painless()}}
+        return ScriptOp("script", self.to_painless()).to_esfilter()
 
 
 @extend(NotLeftOp)
@@ -439,11 +439,12 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 @extend(NeOp)
 def to_esfilter(self):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-        return {"not": {"term": {self.lhs.var: self.rhs.to_esfilter()}}}
+        return {"bool": {"must_not": {"term": {self.lhs.var: self.rhs.to_esfilter()}}}}
     else:
         return {"and": [
+            # TODO: MAKE TESTS TO SEE IF THIS LOGIC IS CORRECT
             {"and": [{"exists": {"field": v}} for v in self.vars()]},
-            {"script": {"script": self.to_painless()}}
+            ScriptOp("script", self.to_painless()).to_esfilter()
         ]}
 
 
@@ -455,10 +456,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 @extend(NotOp)
 def to_esfilter(self):
     operand = self.term.to_esfilter()
-    if operand.get("script"):
-        return {"script": {"script": "!(" + operand.get("script", {}).get("script") + ")"}}
-    else:
-        return {"not": operand}
+    return {"bool": {"must_not": operand}}
 
 
 @extend(AndOp)
@@ -484,7 +482,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 
 @extend(OrOp)
 def to_esfilter(self):
-    return {"or": [t.to_esfilter() for t in self.terms]}
+    return {"bool": {"should": [t.to_esfilter() for t in self.terms]}}
 
 
 @extend(LengthOp)
@@ -570,7 +568,7 @@ def to_esfilter(self):
     if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
         return {"prefix": {self.field.var: json2value(self.prefix.json)}}
     else:
-        return {"script": {"script": self.to_painless()}}
+        return ScriptOp("script",  self.to_painless()).to_esfilter()
 
 
 @extend(UnixOp)
@@ -642,7 +640,6 @@ def to_esfilter(self):
             self.els_.to_esfilter()
         ]}
     ]}
-    # return {"script": {"script": self.to_painless()}}
 
 
 @extend(LeftOp)
@@ -666,7 +663,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 
 @extend(ScriptOp)
 def to_esfilter(self):
-    return { "script": {"lang": "painless", "inline": self.script}}
+    return {"script": {"script": {"lang": "painless", "inline": self.script}}}
 
 
 @extend(Variable)
@@ -855,14 +852,14 @@ def _normalize(esfilter):
                         if len(rest) > 0:
                             return {
                                 "or": [
-                                    {"missing": {"field": k}},
+                                    {"bool": {"must_not": {"exists": {"field": k}}}},
                                     {"terms": {k: rest}}
                                 ],
                                 "isNormal": True
                             }
                         else:
                             return {
-                                "missing": {"field": k},
+                                "bool": {"must_not": {"exists": {"field": k}}},
                                 "isNormal": True
                             }
                     else:

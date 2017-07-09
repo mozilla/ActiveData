@@ -150,7 +150,7 @@ class TestDeepOps(BaseTestCase):
                            "query": {"nested": {
                                "path": "_a",
                                "inner_hits": {"size": 100000},
-                               "filter": {"term": {"_a.b": "x"}}
+                               "query": {"bool": {"filter": {"term": {"_a.b": "x"}}}}
                            }},
                            "fields": ["o"]
             },

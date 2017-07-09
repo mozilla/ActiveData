@@ -130,8 +130,8 @@ class RolloverIndex(object):
             "query": {
                 "bool": {
                     "query": {"match_all": {}},
-                    "filter": {"and": [{"term": {"etl" + (".source" * i) + ".id": v}} for i, v in enumerate(path)]}
-                }
+                    "query": {"bool": {"filter": {"and": [{"term": {"etl" + (".source" * i) + ".id": v}} for i, v in enumerate(path)]}
+                }}}
             }
         })
 

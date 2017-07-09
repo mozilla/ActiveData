@@ -362,7 +362,7 @@ class GeneralSetDecoder(AggsDecoder):
         missing_filter = None
         if self.edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             missing_filter = set_default(
-                {"filter": AndOp("and", notty).to_esfilter()},
+                {"query":{"bool": {"filter": AndOp("and", notty).to_esfilter()}}},
                 es_query
             )
 

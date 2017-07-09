@@ -27,14 +27,15 @@ def es_query_template(path):
         f0 = {}
         f1 = {}
         output = wrap({
-            "filter": {"and": [
+            "query": {"bool": {"must": [
                 f0,
                 {"nested": {
                     "path": join_field(sub_path),
-                    "filter": f1,
+                    "query": {"bool": {"filter": f1}},
                     "inner_hits": {"size": 100000}
-                }}
-            ]},
+                    }
+                }
+            ]}},
             "from": 0,
             "size": 0,
             "sort": []

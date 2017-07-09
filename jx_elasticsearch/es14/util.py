@@ -43,7 +43,7 @@ def es_query_template(path):
     else:
         f0 = {}
         output = wrap({
-            "query": {"filtered": {
+            "query": {"bool": {
                 "filter": f0
             }},
             "from": 0,
@@ -73,6 +73,7 @@ def jx_sort_to_es_sort(sort):
 
 es_type_to_json_type = {
     "string": "string",
+    "keyword": "number",
     "double": "number",
     "integer": "number",
     "object": "object",

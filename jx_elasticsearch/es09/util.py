@@ -66,7 +66,7 @@ def build_es_query(query):
     if DEBUG:
         # TO LIMIT RECORDS TO WHAT'S IN FACETS
         output.query = {
-            "filtered": {
+            "bool": {
                 "query": {
                     "match_all": {}
                 },

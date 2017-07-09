@@ -170,9 +170,7 @@ SCHEMA = {
     "settings": {
         "index.number_of_shards": 3,
         "index.number_of_replicas": 2,
-        "index.store.throttle.type": "merge",
-        "index.cache.filter.expire": "1m",
-        "index.cache.field.type": "soft",
+        "index.store.throttle.type": "merge"
     },
     "mappings": {
         "_default_": {
@@ -198,23 +196,22 @@ SCHEMA = {
                 "create_time": {
                     "type": "double",
                     "index": "not_analyzed",
-                    "store": "yes"
+                    "store": True
                 },
                 "last_used": {
                     "type": "double",
                     "index": "not_analyzed",
-                    "store": "yes"
+                    "store": True
                 },
                 "hash": {
                     "type": "string",
                     "index": "not_analyzed",
-                    "store": "yes"
+                    "store": True
                 },
                 "query": {
                     "type": "object",
                     "enabled": False,
-                    "index": "no",
-                    "store": "yes"
+                    "store": True
                 }
             }
         }

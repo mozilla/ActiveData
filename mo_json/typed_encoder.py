@@ -53,13 +53,13 @@ def typed_encode(value):
 def _typed_encode(value, _buffer):
     try:
         if value is None:
-            append(_buffer, u'{"$value": null}')
+            append(_buffer, u'{}')
             return
         elif value is True:
-            append(_buffer, u'{"$value": true}')
+            append(_buffer, u'{"$boolean": true}')
             return
         elif value is False:
-            append(_buffer, u'{"$value": false}')
+            append(_buffer, u'{"$boolean": false}')
             return
 
         _type = value.__class__
@@ -69,7 +69,7 @@ def _typed_encode(value, _buffer):
             else:
                 append(_buffer, u'{"$object": "."}')
         elif _type is str:
-            append(_buffer, u'{"$value": "')
+            append(_buffer, u'{"$string": "')
             try:
                 v = utf82unicode(value)
             except Exception as e:
@@ -79,38 +79,38 @@ def _typed_encode(value, _buffer):
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
         elif _type is unicode:
-            append(_buffer, u'{"$value": "')
+            append(_buffer, u'{"$string": "')
             for c in value:
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
         elif _type in (int, long, Decimal):
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$number": ')
             append(_buffer, float2json(value))
             append(_buffer, u'}')
         elif _type is float:
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$number": ')
             append(_buffer, float2json(value))
             append(_buffer, u'}')
         elif _type in (set, list, tuple, FlatList):
             _list2json(value, _buffer)
         elif _type is date:
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$number": ')
             append(_buffer, float2json(time.mktime(value.timetuple())))
             append(_buffer, u'}')
         elif _type is datetime:
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$number": ')
             append(_buffer, float2json(time.mktime(value.timetuple())))
             append(_buffer, u'}')
         elif _type is Date:
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$number": ')
             append(_buffer, float2json(time.mktime(value.value.timetuple())))
             append(_buffer, u'}')
         elif _type is timedelta:
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$number": ')
             append(_buffer, float2json(value.total_seconds()))
             append(_buffer, u'}')
         elif _type is Duration:
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$number": ')
             append(_buffer, float2json(value.seconds))
             append(_buffer, u'}')
         elif _type is NullType:

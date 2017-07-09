@@ -111,7 +111,7 @@ def time_delta_pusher(please_stop, appender, queue, interval):
         try:
             appender(u"\n".join(lines) + u"\n")
         except Exception as e:
-            sys.stderr.write(b"Trouble with appender: " + str(e.message) + b"\n")
-            # SWALLOW ERROR, GOT TO KEEP RUNNNIG
+            sys.stderr.write(b"Trouble with appender: " + str(e.__class__.__name__) + b"\n")
+            # SWALLOW ERROR, MUST KEEP RUNNING
 
 

@@ -13,17 +13,15 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from jx_python import jx
-
-from mo_collections.matrix import Matrix
 from mo_dots import Data, set_default, wrap, split_field
 from mo_logs import Log
-from mo_logs.strings import quote
-
 from pyLibrary import convert
-from jx_python.containers.cube import Cube
+
+from jx_base.expressions import TupleOp
 from jx_elasticsearch.es14.aggs import count_dim, aggs_iterator, format_dispatch, drill
-from jx_python.expressions import TupleOp
+from jx_python.containers.cube import Cube
+from mo_collections.matrix import Matrix
+from mo_logs.strings import quote
 
 
 def format_cube(decoders, aggs, start, query, select):

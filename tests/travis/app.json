@@ -16,8 +16,8 @@
 			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
 		},
  		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
-		"jx_python.meta.ENABLE_META_SCAN": true,
-		"jx_python.expressions.ALLOW_SCRIPTING": true
+		"jx_elasticsearch.meta.ENABLE_META_SCAN": true,
+		"jx_base.expressions.ALLOW_SCRIPTING": true
 	},
 	"flask": {
 		"host": "0.0.0.0",

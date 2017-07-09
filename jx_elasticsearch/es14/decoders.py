@@ -13,17 +13,19 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from mo_logs import Log
-from mo_dots import set_default, coalesce, literal_field, Data, unwraplist
-from mo_dots import wrap
-from mo_math import MAX, UNION
-from mo_math import Math
 from jx_python import jx
+from mo_dots import set_default, coalesce, literal_field, Data
+from mo_dots import wrap
+from mo_logs import Log
+from mo_math import MAX, MIN
+from mo_math import Math
+
+from jx_base.expressions import TupleOp, ScriptOp
+from jx_elasticsearch.es14.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, \
+    InequalityOp, LeavesOp
 from jx_python.containers import STRUCT
 from jx_python.dimensions import Dimension
 from jx_python.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_python.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, \
-    InequalityOp, TupleOp, LeavesOp
 from jx_python.query import MAX_LIMIT, DEFAULT_LIMIT
 
 
@@ -169,10 +171,10 @@ class SetDecoder(AggsDecoder):
                     }}, es_query),
                     "_missing": set_default(
                         {"filter": OrOp("or", [
-                                 field.missing(),
-                                 NotOp("not", InOp("in", [Variable(field.var),Literal("literal", include)]))
-                             ]).to_esfilter()
-                         }, es_query
+                            field.missing(),
+                            NotOp("not", InOp("in", [Variable(field.var), Literal("literal", include)]))
+                        ]).to_esfilter()},
+                        es_query
                     ),
                 }})
             else:
@@ -233,23 +235,24 @@ class SetDecoder(AggsDecoder):
 
 def _range_composer(edge, domain, es_query, to_float):
     # USE RANGES
-    _min = coalesce(domain.min, MAX(domain.partitions.min))
+    _min = coalesce(domain.min, MIN(domain.partitions.min))
     _max = coalesce(domain.max, MAX(domain.partitions.max))
-
-    if isinstance(edge.value, Variable):
-        calc = {"field": edge.value.var}
-    else:
-        calc = { "script": {"lang": "painless", "inline": edge.value.to_painless() }}
 
     if edge.allowNulls:
         missing_filter = set_default(
-            {"filter": OrOp("or", [
-                        InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
-                        InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
+            {
+                "filter": OrOp("or", [
+                    InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
+                    InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
                     edge.value.missing()
-                ]).to_esfilter()}, es_query)
+                ]).to_esfilter()
+            },
+            es_query
+        )
     else:
         missing_filter = None
+
+    calc = edge.value.to_painless()
 
     return wrap({"aggs": {
         "_match": set_default(
@@ -488,7 +491,10 @@ class DefaultDecoder(SetDecoder):
                     }},
                     es_query
                 ),
-                "_missing": set_default({"filter": missing.to_esfilter()}, es_query) if missing else None
+                "_missing": set_default(
+                    {"filter": missing.to_esfilter()},
+                    es_query
+                ) if missing else None
             }})
             return output
         elif self.edge.value.var in [s.value.var for s in self.query.sort]:
@@ -502,7 +508,10 @@ class DefaultDecoder(SetDecoder):
                     }},
                     es_query
                 ),
-                "_missing": set_default(self.edge.value.missing().to_esfilter(), es_query)
+                "_missing": set_default(
+                    {"filter": self.edge.value.missing().to_esfilter()},
+                    es_query
+                )
             }})
             return output
         else:
@@ -514,7 +523,10 @@ class DefaultDecoder(SetDecoder):
                     }},
                     es_query
                 ),
-                "_missing": set_default(self.edge.value.missing().to_esfilter(), es_query)
+                "_missing": set_default(
+                    {"filter": self.edge.value.missing().to_esfilter()},
+                    es_query
+                )
             }})
             return output
 
@@ -658,7 +670,10 @@ class ObjectDecoder(SetDecoder):
                     "field": v,
                     "size": self.domain.limit
                 }}, es_query),
-                "_missing": set_default({"missing": {"field": v}}, es_query)
+                "_missing": set_default(
+                    {"filter": {"bool": {"must_not": {"field": v}}}},
+                    es_query
+                )
             }})
             es_query = nest
         return es_query

@@ -122,7 +122,7 @@ def sort_edges(query, prop):
 
 def es_aggsop(es, frum, query):
     Log.note("aggs.py - params - here are the param values to es_aggsop")
-    Log.note("es {{data}}", data=es)
+    # Log.note("es {{data}}", data=es)  # ERROR: BUSTS LOGGING
     Log.note("frum {{data}}", data=frum)
     Log.note("query {{data}}", data=query)
 

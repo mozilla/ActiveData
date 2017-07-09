@@ -171,9 +171,15 @@ class ESUtils(object):
             container.add_alias(_settings.index)
 
             # INSERT DATA
-            container.extend([
-                {"value": v} for v in subtest.data
-            ])
+            inserts = []
+            for v in subtest.data:
+                _id = v._id
+                v._id = None
+                inserts.append({
+                    "id": _id,
+                    "value": v
+                })
+            container.extend(inserts)
             container.flush()
             # ENSURE query POINTS TO CONTAINER
             frum = subtest.query["from"]

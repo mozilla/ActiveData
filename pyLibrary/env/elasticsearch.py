@@ -15,26 +15,27 @@ import re
 from collections import Mapping
 from copy import deepcopy
 
-import mo_json
-from mo_logs import Log, strings
-from mo_logs.exceptions import Except
-from mo_logs.strings import utf82unicode
-from mo_threads import Lock
-from mo_dots import coalesce, Null, Data, set_default, join_field, split_field, listwrap, literal_field, \
+from jx_python import jx
+from mo_dots import coalesce, Null, Data, set_default, listwrap, literal_field, \
     ROOT_PATH, concat_field
 from mo_dots import wrap
-from mo_dots.lists import FlatList
-from pyLibrary import convert
-from pyLibrary.env import http
-from mo_json.typed_encoder import json2typed
-from mo_math import Math
-from mo_math.randoms import Random
 from mo_kwargs import override
-from jx_python import jx
+from mo_logs import Log, strings
+from mo_math import Math
+from mo_threads import Lock
 from mo_threads import ThreadedQueue
 from mo_threads import Till
+from pyLibrary import convert
+
+import mo_json
+from mo_dots.lists import FlatList
+from mo_json.typed_encoder import typed_encode
+from mo_logs.exceptions import Except
+from mo_logs.strings import utf82unicode
+from mo_math.randoms import Random
 from mo_times.dates import Date
 from mo_times.timer import Timer
+from pyLibrary.env import http
 
 ES_STRUCT = ["object", "nested"]
 ES_NUMERIC_TYPES = ["long", "integer", "double", "float"]
@@ -284,18 +285,26 @@ class Index(Features):
                 if id == None:
                     id = random_id()
 
-                if "json" in r:
-                    json_bytes = r["json"].encode("utf8")
-                elif r_value or isinstance(r_value, (dict, Data)):
-                    json_bytes = convert.value2json(r_value).encode("utf8")
-                else:
-                    json_bytes = None
-                    Log.error("Expecting every record given to have \"value\" or \"json\" property")
-
-                lines.append(b'{"index":{"_id": ' + convert.value2json(id).encode("utf8") + b'}}')
                 if self.settings.tjson:
-                    lines.append(json2typed(json_bytes.decode('utf8')).encode('utf8'))
+                    if "json" in r:
+                        r_value = convert.json2value(r["json"])
+                    elif r_value or isinstance(r_value, (dict, Data)):
+                        pass
+                    else:
+                        Log.error("Expecting every record given to have \"value\" or \"json\" property")
+
+                    lines.append(b'{"index":{"_id": ' + convert.value2json(id).encode("utf8") + b'}}')
+                    json_bytes = typed_encode(r_value).encode('utf8')
+                    lines.append(json_bytes)
                 else:
+                    if "json" in r:
+                        json_bytes = r["json"].encode("utf8")
+                    elif r_value or isinstance(r_value, (dict, Data)):
+                        json_bytes = convert.value2json(r_value).encode("utf8")
+                    else:
+                        Log.error("Expecting every record given to have \"value\" or \"json\" property")
+
+                    lines.append(b'{"index":{"_id": ' + convert.value2json(id).encode("utf8") + b'}}')
                     lines.append(json_bytes)
             del records
 

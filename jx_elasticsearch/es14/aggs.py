@@ -312,7 +312,7 @@ def es_aggsop(es, frum, query):
             #TODO: INCLUDE FILTERS ON EDGES
             filter_ = simplify_esfilter(AndOp("and", split_where[1]).to_esfilter())
             es_query = Data(
-                aggs={"_filter": set_default({"filter": filter_}, es_query)}
+                aggs={"_filter": set_default({"query": {"bool": {"filter": filter_}}}, es_query)}
             )
 
         es_query = wrap({
@@ -338,7 +338,7 @@ def es_aggsop(es, frum, query):
         #TODO: INCLUDE FILTERS ON EDGES
         filter = simplify_esfilter(AndOp("and", split_where[0]).to_esfilter())
         es_query = Data(
-            aggs={"_filter": set_default({"filter": filter}, es_query)}
+            aggs={"_filter": set_default({"query": {"bool": {"filter": filter}}}, es_query)}
         )
     # </TERRIBLE SECTION>
 

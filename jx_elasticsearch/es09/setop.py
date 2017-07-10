@@ -56,8 +56,8 @@ def es_fieldop(es, query):
             "query": {
                 "match_all": {}
             },
-            "filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
-        }
+            "query": {"bool": {"filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
+        }}}
     }
     FromES.size = coalesce(query.limit, 200000)
     FromES.fields = FlatList()

@@ -247,10 +247,10 @@ class Index(Features):
              }}}
         elif self.cluster.cluster_state.version.number.startswith("5."):
             query = {"query": {"bool": {
-                "query": {"match_all": {}},
-                "query": {"bool": {"filter": filter
+                "must": {"match_all": {}},
+                "filter": filter
                 }}
-             }}}
+             }
         else:
             raise NotImplementedError
 
@@ -1055,10 +1055,10 @@ class Alias(Features):
             }}}
         elif self.cluster.cluster_state.version.number.startswith("5."):
             query = {"query": {"bool": {
-                "query": {"match_all": {}},
-                "query": {"bool": {"filter": filter
-                 }}
-            }}}
+                "must": {"match_all": {}},
+                "filter": filter
+                 }
+            }}
         else:
             raise NotImplementedError
 

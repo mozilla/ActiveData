@@ -129,8 +129,8 @@ class RolloverIndex(object):
             "stored_fields": ["_id"],
             "query": {
                 "bool": {
-                    "query": {"match_all": {}},
-                    "filter": {"and": [{"term": {"etl" + (".source" * i) + ".id": v}} for i, v in enumerate(path)]}
+                    "must": {"match_all": {}},
+                    "filter": {"must": [{"term": {"etl" + (".source" * i) + ".id": v}} for i, v in enumerate(path)]}
                 }
             }
         })

@@ -427,9 +427,7 @@ constants.set(test_jx.global_settings.constants)
 Log.alert("Resetting test count")
 NEXT = 0
 
-container_types = Data(
-    elasticsearch=ESUtils,
-)
+container_types = Data(elasticsearch=ESUtils,)
 
 
 try:

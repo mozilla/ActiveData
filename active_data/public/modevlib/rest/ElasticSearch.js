@@ -141,7 +141,7 @@ ElasticSearch.makeBasicQuery=function(esfilter){
   return {
     "query":{
       "bool":{
-        "query":{"match_all":{}},
+        "must":{"match_all":{}},
         "filter":{"and": [esfilter]}
       }
     },

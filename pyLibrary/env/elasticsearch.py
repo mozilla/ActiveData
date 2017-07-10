@@ -236,18 +236,21 @@ class Index(Features):
         if self.cluster.cluster_state.version.number.startswith("0.90"):
             query = {"bool": {
                 "query": {"match_all": {}},
-                "filter": filter
+                "query": {"bool": {"filter": filter
+              }}
             }}
         elif self.cluster.cluster_state.version.number.startswith("1."):
             query = {"query": {"bool": {
                 "query": {"match_all": {}},
-                "filter": filter
-            }}}
+                "query": {"bool": {"filter": filter
+                }}
+             }}}
         elif self.cluster.cluster_state.version.number.startswith("5."):
             query = {"query": {"bool": {
-                "query": {"match_all": {}},
+                "must": {"match_all": {}},
                 "filter": filter
-            }}}
+                }}
+             }
         else:
             raise NotImplementedError
 
@@ -1041,18 +1044,21 @@ class Alias(Features):
         if self.cluster.cluster_state.version.number.startswith("0.90"):
             query = {"bool": {
                 "query": {"match_all": {}},
-                "filter": filter
+                "query": {"bool": {"filter": filter
+              }}
             }}
         elif self.cluster.cluster_state.version.number.startswith("1."):
             query = {"query": {"bool": {
                 "query": {"match_all": {}},
-                "filter": filter
+                "query": {"bool": {"filter": filter
+                }}
             }}}
         elif self.cluster.cluster_state.version.number.startswith("5."):
             query = {"query": {"bool": {
-                "query": {"match_all": {}},
+                "must": {"match_all": {}},
                 "filter": filter
-            }}}
+                 }
+            }}
         else:
             raise NotImplementedError
 

@@ -170,11 +170,11 @@ class SetDecoder(AggsDecoder):
                         "order": {"_term": self.sorted} if self.sorted else None
                     }}, es_query),
                     "_missing": set_default(
-                        {"filter": OrOp("or", [
-                            field.missing(),
-                            NotOp("not", InOp("in", [Variable(field.var), Literal("literal", include)]))
-                        ]).to_esfilter()},
-                        es_query
+                        {"query": {"bool": {"filter": OrOp("or", [
+                                 field.missing(),
+                                 NotOp("not", InOp("in", [Variable(field.var),Literal("literal", include)]))
+                             ]).to_esfilter()
+                         }}}, es_query
                     ),
                 }})
             else:
@@ -325,7 +325,7 @@ class GeneralRangeDecoder(AggsDecoder):
                 InequalityOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
             ])
             aggs["_join_" + unicode(i)] = set_default(
-                {"filter": filter_.to_esfilter()},
+                {"query": {"bool": {"filter": filter_.to_esfilter()}}},
                 es_query
             )
 
@@ -365,7 +365,7 @@ class GeneralSetDecoder(AggsDecoder):
         missing_filter = None
         if self.edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             missing_filter = set_default(
-                {"filter": AndOp("and", notty).to_esfilter()},
+                {"query":{"bool": {"filter": AndOp("and", notty).to_esfilter()}}},
                 es_query
             )
 
@@ -524,7 +524,7 @@ class DefaultDecoder(SetDecoder):
                     es_query
                 ),
                 "_missing": set_default(
-                    {"filter": self.edge.value.missing().to_esfilter()},
+                    {"query": {"bool": {"filter": self.edge.value.missing().to_esfilter()}}},
                     es_query
                 )
             }})
@@ -596,7 +596,7 @@ class DimFieldListDecoder(SetDecoder):
 
         if self.domain.where:
             filter = simplify_esfilter(self.domain.where)
-            es_query = {"aggs": {"_filter": set_default({"filter": filter}, es_query)}}
+            es_query = {"aggs": {"_filter": set_default({"query": {"bool": {"filter": filter}}}, es_query)}}
 
         return es_query
 

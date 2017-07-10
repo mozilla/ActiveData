@@ -74,14 +74,14 @@ ProgramFilter.makeQuery = function(filters){
   var output = {
     "query":{
       "bool":{
-        "query":{
+        "must":{
           "match_all":{}
         },
         "filter":{
-          "and":[
+          "must":[
             {"exists":{"field":"expires_on"}},
             { "range":{ "expires_on":{ "gt" : Date.now().getMilli() } } },
-            {"not":{"terms":{ "bug_status":["resolved", "verified", "closed"] }}}
+            {"must_not":{"terms":{ "bug_status":["resolved", "verified", "closed"] }}}
           ]
         }
       }

@@ -209,7 +209,7 @@ class FromES(Container):
         results = self._es.search({
             "stored_fields": listwrap(schema._routing.path),
             "query": {"bool": {
-                "filter": jx_expression(command.where).to_esfilter()
+            "filter": jx_expression(command.where).to_esfilter()
             }},
             "size": 10000
         })

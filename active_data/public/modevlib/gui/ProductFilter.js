@@ -31,11 +31,11 @@ ProductFilter.prototype.makeQuery = function(filters){
   var output = {
     "query":{
       "bool":{
-        "query":{
+        "must":{
           "match_all":{}
         },
         "filter":{
-          "and":[
+          "must":[
             Mozilla.CurrentRecords.esfilter,
             Mozilla.BugStatus.Open.esfilter,
             ProductFilter.esfilter

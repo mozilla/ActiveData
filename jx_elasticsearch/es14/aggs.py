@@ -21,7 +21,8 @@ from mo_math import Math, MAX
 from jx_elasticsearch.es14.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
 from jx_elasticsearch.es14.decoders import DimFieldListDecoder
 from jx_elasticsearch.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from jx_python.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp, TupleOp
+from jx_elasticsearch.es14.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp
+from jx_base.expressions import TupleOp
 from jx_python.query import MAX_LIMIT
 from mo_times.timer import Timer
 
@@ -121,7 +122,7 @@ def sort_edges(query, prop):
 
 def es_aggsop(es, frum, query):
     Log.note("aggs.py - params - here are the param values to es_aggsop")
-    Log.note("es {{data}}", data=es)
+    # Log.note("es {{data}}", data=es)  # ERROR: BUSTS LOGGING
     Log.note("frum {{data}}", data=frum)
     Log.note("query {{data}}", data=query)
 

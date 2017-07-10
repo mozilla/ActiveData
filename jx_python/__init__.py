@@ -41,8 +41,12 @@ def _delayed_imports():
     except Exception:
         MySQL = None
 
-    from jx_elasticsearch.jx_usingES import FromES
-    from jx_python.meta import FromESMetadata
+    try:
+        from jx_elasticsearch.jx_usingES import FromES
+        from jx_elasticsearch.meta import FromESMetadata
+    except Exception:
+        FromES = None
+        FromESMetadata = None
 
     set_default(_containers.type2container, {
         "elasticsearch": FromES,

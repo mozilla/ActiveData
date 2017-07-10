@@ -52,12 +52,12 @@ def es_fieldop(es, query):
     FromES = es09.util.build_es_query(query)
     select = listwrap(query.select)
     FromES.query = {
-        "bool": {
-            "query": {
+        "query": {
+            "bool": { "must": {
                 "match_all": {}
-            },
-            "query": {"bool": {"filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
-        }}}
+            }},
+            "filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
+        }
     }
     FromES.size = coalesce(query.limit, 200000)
     FromES.fields = FlatList()
@@ -127,8 +127,8 @@ def es_setop(es, mvel, query):
         if len(select) == 1 and not select[0].value or select[0].value == "*":
             FromES = wrap({
                 "query": {"bool": {
-                    "query": {"match_all": {}},
-                    "filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
+                    "must": {"match_all": {}},
+                     "filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
                 }},
                 "sort": query.sort,
                 "size": 0
@@ -136,9 +136,9 @@ def es_setop(es, mvel, query):
         elif all(isinstance(v, Variable) for v in select.value):
             FromES = wrap({
                 "query": {"bool": {
-                    "query": {"match_all": {}},
+                    "must": {"match_all": {}},
                     "filter": simplify_esfilter(query.where.to_esfilter())
-                }},
+                         }},
                 "fields": select.value,
                 "sort": query.sort,
                 "size": coalesce(query.limit, 200000)

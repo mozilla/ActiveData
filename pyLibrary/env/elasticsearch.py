@@ -1043,11 +1043,6 @@ class Alias(Features):
                 "query": {"match_all": {}},
                 "filter": filter
             }}}
-        elif self.cluster.cluster_state.version.number.startswith("5."):
-            query = {"query": {"bool": {
-                "query": {"match_all": {}},
-                "filter": filter
-            }}}
         else:
             raise NotImplementedError
 

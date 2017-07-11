@@ -69,7 +69,7 @@ class TestESFilters(FuzzyTestCase):
     def test_ne1(self):
         where = {"ne": {"a": 1}}
         result = simplify_esfilter(jx_expression(where).to_esfilter())
-        self.assertEqual(result, {"not": {"term": {"a": 1}}})
+        self.assertEqual(result, {"bool": {"must_not": {"term": {"a": 1}}}})
 
     def test_ne2(self):
         where = {"neq": {"a": 1}}

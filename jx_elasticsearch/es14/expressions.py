@@ -253,7 +253,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 
 @extend(NullOp)
 def to_esfilter(self):
-    return {"not": {"match_all": {}}}
+    return {"bool": {"must_not": {"match_all": {}}}}
 
 
 @extend(FalseOp)
@@ -263,7 +263,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 
 @extend(FalseOp)
 def to_esfilter(self):
-    return {"not": {"match_all": {}}}
+    return {"bool": {"must_not": {"match_all": {}}}}
 
 
 @extend(DateOp)

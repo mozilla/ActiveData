@@ -221,7 +221,7 @@ def es_deepop(es, query):
         more.append(es09.util.post(
             es,
             Data(
-                filter=more_filter,
+                query=more_filter,
                 fields=es_query.stored_fields
             ),
             query.limit

@@ -716,7 +716,7 @@ def simplify_esfilter(esfilter):
         if output is TRUE_FILTER:
             return {"match_all": {}}
         elif output is FALSE_FILTER:
-            return {"must_not": {"match_all": {}}}
+            return {"bool": {"must_not": {"match_all": {}}}}
 
         output.isNormal = None
         return output

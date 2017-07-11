@@ -222,7 +222,7 @@ def es_deepop(es, query):
             es,
             Data(
                 query=more_filter,
-                fields=es_query.stored_fields
+                stored_fields=es_query.stored_fields
             ),
             query.limit
         ))

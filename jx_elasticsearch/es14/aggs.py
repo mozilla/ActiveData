@@ -121,11 +121,6 @@ def sort_edges(query, prop):
 
 
 def es_aggsop(es, frum, query):
-    Log.note("aggs.py - params - here are the param values to es_aggsop")
-    # Log.note("es {{data}}", data=es)  # ERROR: BUSTS LOGGING
-    Log.note("frum {{data}}", data=frum)
-    Log.note("query {{data}}", data=query)
-
     select = wrap([s.copy() for s in listwrap(query.select)])
     # [0] is a cheat; each es_column should be a dict of columns keyed on type, like in sqlite
     es_column_map = {v: frum.schema[v][0].es_column for v in query.vars()}

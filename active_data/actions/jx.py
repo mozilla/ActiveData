@@ -22,8 +22,8 @@ from active_data.actions import save_query, replace_vars, send_error, test_mode_
 from mo_logs.exceptions import Except
 from mo_logs.profiles import CProfiler
 from mo_times.timer import Timer
-from pyLibrary.queries import jx, wrap_from
-from pyLibrary.queries.containers import Container
+from jx_python import jx, wrap_from
+from jx_python.containers import Container
 
 BLANK = convert.unicode2utf8(File("active_data/public/error.html").read())
 QUERY_SIZE_LIMIT = 10*1024*1024

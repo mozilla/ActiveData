@@ -280,3 +280,10 @@ def json2typed(json):
         append(output, "}")
     return output.build()
 
+
+def encode_property(name):
+    return name.replace("\\.", ".")
+
+
+def decode_property(encoded):
+    return encoded

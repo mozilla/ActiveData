@@ -1,5 +1,5 @@
 JSON Query Expressions Reference
-==============================
+================================
 
 Intended Audience
 -----------------
@@ -42,7 +42,7 @@ Order of Operations
 -------------------
 
 Each of the clauses are executed in a particular order, irrespective of their
-order in the JSON structure.   This is most limiting in the case of the
+order in the JSON structure. This is most limiting in the case of the
 where clause. Use sub queries to get around this limitation for now.
 
   - **from** – the array, or list, to operate on. Can also be the results of 

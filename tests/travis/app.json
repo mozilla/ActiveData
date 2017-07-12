@@ -2,6 +2,7 @@
 	"is_travis": true,
 	"use": "elasticsearch",
 	"service_url": "http://127.0.0.1:5000/query",
+	"sql_url": "http://127.0.0.1:5000/sql",
 	"backend_es": {
 		"index": "testdata",
 		"type": "test_result",
@@ -15,8 +16,8 @@
 			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
 		},
  		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
-		"pyLibrary.queries.meta.ENABLE_META_SCAN": true,
-		"pyLibrary.queries.expressions.ALLOW_SCRIPTING": true
+		"jx_elasticsearch.meta.ENABLE_META_SCAN": true,
+		"jx_base.expressions.ALLOW_SCRIPTING": true
 	},
 	"flask": {
 		"host": "0.0.0.0",

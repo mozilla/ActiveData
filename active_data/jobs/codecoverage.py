@@ -126,8 +126,8 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             for k, v in jx.groupby(test_count.data, keys="line")
         )
 
-        test_urls = set(wrap(list(all_tests_covering_file)).url) - set([None])
-        test_suites = set(wrap(list(all_tests_covering_file)).suite) - set([None])
+        test_urls = set(wrap(list(all_tests_covering_file)).url) - {None}
+        test_suites = set(wrap(list(all_tests_covering_file)).suite) - {None}
 
         if test_urls:
             if test_suites:
@@ -137,7 +137,6 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             test_filter = {"in": {"test.suite": test_suites}}
         else:
             Log.error("expecting some tests")
-
 
         # PULL THE RAW RECORD FOR MODIFICATION
         file_level_coverage_records = http.post_json(settings.url, json={
@@ -160,17 +159,10 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             min_siblings = MIN(siblings)
             coverage_candidates = wrap([row for row in file_level_coverage_records.data if row.test == test_name])
             if coverage_candidates:
-
-                if len(coverage_candidates) > 1 and any(coverage_candidates[0]._id != c._id for c in coverage_candidates):
-                    Log.warning(
-                        "Duplicate coverage\n{{cov|json|indent}}",
-                        cov=[{"_id": c._id, "run": c.run, "test": c.test} for c in coverage_candidates]
-                    )
-
                 # MORE THAN ONE COVERAGE CANDIDATE CAN HAPPEN WHEN THE SAME TEST IS IN TWO DIFFERENT CHUNKS OF THE SAME SUITE
                 for coverage_record in coverage_candidates:
                     coverage_record.source.file.max_test_siblings = max_siblings
-                    coverage_record.source.file.min_line_siblings = min_siblings
+                    coverage_record.source.file.min_line_siblings = min_siblings  # PLACEHOLDER TO INDICATE DONE
                     coverage_record.source.file.score = (max_siblings - min_siblings) / (max_siblings + min_siblings + 1)
             else:
                 example = http.post_json(settings.url, json={
@@ -198,8 +190,8 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
         if bad_example:
             Log.warning("expecting all records to have summary. Example:\n{{example}}", example=bad_example[0])
 
+        # NOW THAT source.file.min_line_siblings IS SET, WE CAN RE-SAVE THESE TO coverage
         rows = [{"id": d._id, "value": d} for d in file_level_coverage_records.data]
-        coverage_summary_index.extend(rows)
         coverage_index.extend(rows)
 
         all_test_summary = []
@@ -229,8 +221,8 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             }
             all_test_summary.append(coverage)
 
-        sum_rows = [{"id": d["_id"], "value": d} for d in all_test_summary]
-        coverage_summary_index.extend(sum_rows)
+        summary_rows = [{"id": d["_id"], "value": d} for d in all_test_summary]
+        coverage_summary_index.extend(summary_rows)
 
         if DEBUG:
             coverage_index.refresh()
@@ -239,7 +231,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
                 "where": {"and": [
                     {"neq": {"source.file.total_covered": 0}},
                     {"missing": "source.method.name"},
-                    {"missing": "source.file.min_line_siblings"},
+                    {"missing": "source.file.min_line_siblings"},  # MISSING PLACEHOLDER TO INDICATE DONE
                     {"eq": {"source.file.name": not_summarized.source.file.name}},
                     {"eq": {"build.revision12": not_summarized.build.revision12}}
                 ]},
@@ -278,11 +270,9 @@ def loop(source, coverage_summary_index, settings, please_stop):
                         "from": "coverage",
                         "groupby": ["source.file.name", "build.revision12"],
                         "where": {"and": [
-                            # {"eq": {"source.language": "c/c++"}},
-                            # {"eq":{"source.file.name": "resource://gre/modules/osfile/osfile_unix_allthreads.jsm"}},
                             {"neq": {"source.file.total_covered": 0}},
                             {"missing": "source.method.name"},
-                            {"missing": "source.file.min_line_siblings"},  #MARKER THAT WORK IS DONE
+                            {"missing": "source.file.min_line_siblings"},  # MISSING MEAN WORK IS NOT DONE
                             {"gte": {"repo.push.date": push_date_filter}}
                         ]},
                         "format": "list",

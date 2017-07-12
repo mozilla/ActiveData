@@ -1,7 +1,7 @@
 {
 	"threads": 1,
 	"url": "http://activedata.allizom.org/query",
-	"batch_size": 1,
+	"batch_size": 20,
 	"constants":{
 		"pyLibrary.env.http.default_headers":{
 			"referer":"https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"

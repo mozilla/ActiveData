@@ -34,68 +34,68 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             return True
 
         # IS THERE MORE THAN ONE COVERAGE FILE FOR THIS REVISION?
-        Log.note("Find dups for file {{file}}", file=not_summarized.source.file.name)
-        dups = http.post_json(settings.url, json={
-            "from": "coverage",
-            "select": [
-                # THIS IS FAR FROM GOOD, WE WANT THE LATEST ETL ID, BUT etl.source.id IS ONLY A SUB-ID
-                # WE SHOULD BE ABLE TO GET THE max OF A TUPLE
-                {"name": "max_id", "value": "etl.source.id", "aggregate": "max"},
-                {"name": "min_id", "value": "etl.source.id", "aggregate": "min"}
-            ],
-            "where": {"and": [
-                {"missing": "source.method.name"},
-                {"neq": {"source.file.total_covered": 0}},
-                {"eq": {
-                    "source.file.name": not_summarized.source.file.name,
-                    "build.revision12": not_summarized.build.revision12
-                }},
-            ]},
-            "groupby": [
-                "test.suite",
-                "test.chunk",
-                "test.url",
-                "test.name"
-            ],
-            "limit": 100000,
-            "format": "list"
-        })
+        # Log.note("Find dups for file {{file}}", file=not_summarized.source.file.name)
+        # dups = http.post_json(settings.url, json={
+        #     "from": "coverage",
+        #     "select": [
+        #         # THIS IS FAR FROM GOOD, WE WANT THE LATEST ETL ID, BUT etl.source.id IS ONLY A SUB-ID
+        #         # WE SHOULD BE ABLE TO GET THE max OF A TUPLE
+        #         {"name": "max_id", "value": "etl.source.id", "aggregate": "max"},
+        #         {"name": "min_id", "value": "etl.source.id", "aggregate": "min"}
+        #     ],
+        #     "where": {"and": [
+        #         {"missing": "source.method.name"},
+        #         {"neq": {"source.file.total_covered": 0}},
+        #         {"eq": {
+        #             "source.file.name": not_summarized.source.file.name,
+        #             "build.revision12": not_summarized.build.revision12
+        #         }},
+        #     ]},
+        #     "groupby": [
+        #         "test.suite",
+        #         "test.chunk",
+        #         "test.url",
+        #         "test.name"
+        #     ],
+        #     "limit": 100000,
+        #     "format": "list"
+        # })
 
-        dups_found = False
-        for d in dups.data:
-            if d.max_id != d.min_id:
-                # FIND ALL INDEXES
-                dups_found = True
-                Log.note(
-                    "removing dups {{details|json}}",
-                    details={"and": [
-                        {"not": {"term": {"etl.source.id": int(d.max_id)}}},
-                        {"and":[
-                            {"term": {k: v}} for k, v in leaves({"test": d.test})
-                        ]},
-                        {"term": {"source.file.name": not_summarized.source.file.name}},
-                        {"term": {"build.revision12": not_summarized.build.revision12}}
-                    ]}
-                )
-
-                coverage_index.delete_record({"and": [
-                    {"not": {"term": {"etl.source.id": int(d.max_id)}}},
-                    {"and": [
-                        {"term": {k: v}} for k, v in leaves({"test": d.test})
-                    ]},
-                    {"term": {"test.url": d.test.url}},
-                    {"term": {"source.file.name": not_summarized.source.file.name}},
-                    {"term": {"build.revision12": not_summarized.build.revision12}}
-                ]})
-        if dups_found:
-            continue
+        # dups_found = False
+        # for d in dups.data:
+        #     if d.max_id != d.min_id:
+        #         # FIND ALL INDEXES
+        #         dups_found = True
+        #         Log.note(
+        #             "removing dups {{details|json}}",
+        #             details={"and": [
+        #                 {"not": {"term": {"etl.source.id": int(d.max_id)}}},
+        #                 {"and":[
+        #                     {"term": {k: v}} for k, v in leaves({"test": d.test})
+        #                 ]},
+        #                 {"term": {"source.file.name": not_summarized.source.file.name}},
+        #                 {"term": {"build.revision12": not_summarized.build.revision12}}
+        #             ]}
+        #         )
+        #
+        #         coverage_index.delete_record({"and": [
+        #             {"not": {"term": {"etl.source.id": int(d.max_id)}}},
+        #             {"and": [
+        #                 {"term": {k: v}} for k, v in leaves({"test": d.test})
+        #             ]},
+        #             {"term": {"test.url": d.test.url}},
+        #             {"term": {"source.file.name": not_summarized.source.file.name}},
+        #             {"term": {"build.revision12": not_summarized.build.revision12}}
+        #         ]})
+        # if dups_found:
+        #     continue
 
         # LIST ALL TESTS THAT COVER THIS FILE, AND THE LINES COVERED
         test_count = http.post_json(settings.url, json={
             "from": "coverage.source.file.covered",
             "where": {"and": [
                 {"missing": "source.method.name"},
-                {"neq":{"source.file.total_covered":0}},
+                {"neq": {"source.file.total_covered": 0}},
                 {"eq": {
                     "source.file.name": not_summarized.source.file.name,
                     "build.revision12": not_summarized.build.revision12

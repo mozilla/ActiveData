@@ -671,7 +671,7 @@ class ObjectDecoder(SetDecoder):
                     "size": self.domain.limit
                 }}, es_query),
                 "_missing": set_default(
-                    {"filter": {"bool": {"must_not": {"field": v}}}},
+                     {"filter": {"bool": {"must_not": {"exists": {"field": v}}}}},
                     es_query
                 )
             }})

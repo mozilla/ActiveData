@@ -19,8 +19,8 @@
 		"port": 9200,
 		"index": "coverage-summary",
 		"type": "code_coverage",
-		"schema": "../schema/coverage.json",
-		"debug": false
+		"schema": {"$ref": "../schema/coverage.json"},
+		"debug": true
 	},
 	"debug": {
 		"trace": true,

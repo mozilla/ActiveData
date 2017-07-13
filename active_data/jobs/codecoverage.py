@@ -323,8 +323,6 @@ def main():
             Log.start(config.debug)
 
             please_stop = Signal("main stop signal")
-            coverage_index = elasticsearch.Cluster(config.source).get_index(kwargs=config.source)
-            config.destination.schema = coverage_index.get_schema()
             coverage_summary_index = elasticsearch.Cluster(config.destination).get_or_create_index(read_only=False, kwargs=config.destination)
             coverage_summary_index.add_alias(config.destination.index)
             Log.note("start processing")

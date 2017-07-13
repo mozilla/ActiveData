@@ -31,11 +31,11 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     if isinstance(self.prefix, Literal) and isinstance(json2value(self.prefix.json), int):
         value_is_missing = self.value.missing().to_painless()
         value = self.value.to_painless(not_null=True)
-        start = "max(" + self.prefix.json + ", 0)"
+        start = "(int) Math.max(" + self.prefix.json + ", 0)"
 
         if isinstance(self.suffix, Literal) and isinstance(json2value(self.suffix.json), int):
             check = "(" + value_is_missing + ")"
-            end = "min(" + self.suffix.to_painless() + ", " + value + ".length())"
+            end = "(int) Math.min(" + self.suffix.to_painless() + ", " + value + ".length())"
         else:
             end = value + ".indexOf(" + self.suffix.to_painless() + ", " + start + ")"
             check = "((" + value_is_missing + ") || (" + end + "==-1))"
@@ -425,7 +425,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     v = self.value.to_painless(not_null=True)
     l = self.length.to_painless(not_null=True)
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(max(0, min(" + v + ".length(), " + l + ")).intValue()))"
+    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring( (int) Math.max(0, Math.min(" + v + ".length(), " + l + ")) ))"
     return expr
 
 
@@ -579,10 +579,10 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     l = self.length.to_painless(not_null=True)
 
     if (not test_v or test_v.to_painless(boolean=True) == "false") and not test_l:
-        expr = v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue())"
+        expr = v + ".substring(0, (int) Math.max(0, Math.min(" + v + ".length(), " + l + ")) )"
     else:
         expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(
-            boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
+            boolean=True) + ")) ? null : (" + v + ".substring(0, (int) Math.max(0, Math.min(" + v + ".length(), " + l + ")) ))"
     return expr
 
 
@@ -593,7 +593,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     v = self.value.to_painless(not_null=True)
     l = self.length.to_painless(not_null=True)
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(min(" + v + ".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
+    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring( (int) Math.min(" + v + ".length(),  Math.max(0, (" + v + ").length() - (" + l + "))) ))"
     return expr
 
 
@@ -604,7 +604,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     v = self.value.to_painless(not_null=True)
     l = self.length.to_painless(not_null=True)
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, min(" + v + ".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
+    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, (int) Math.min(" + v + ".length(),  Math.max(0, (" + v + ").length() - (" + l + "))) ))"
     return expr
 
 
@@ -650,9 +650,9 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     l = self.length.to_painless(not_null=True)
 
     if (not test_v or test_v.to_painless(boolean=True) == "false") and not test_l:
-        expr = v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue())"
+        expr = v + ".substring(0, (int) Math.max(0, Math.min(" + v + ".length(), " + l + ")) )"
     else:
-        expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
+        expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(boolean=True) + ")) ? null : (" + v + ".substring(0, (int) Math.max(0,  Math.min(" + v + ".length(), " + l + ")) ))"
     return expr
 
 

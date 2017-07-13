@@ -35,7 +35,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 
         if isinstance(self.suffix, Literal) and isinstance(json2value(self.suffix.json), int):
             check = "(" + value_is_missing + ")"
-            end = "min(" + self.suffix.to_painless() + ", " + value + ".length)"
+            end = "min(" + self.suffix.to_painless() + ", " + value + ".length())"
         else:
             end = value + ".indexOf(" + self.suffix.to_painless() + ", " + start + ")"
             check = "((" + value_is_missing + ") || (" + end + "==-1))"
@@ -49,7 +49,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
         value = self.value.to_painless(not_null=True)
         prefix = self.prefix.to_painless()
         len_prefix = unicode(len(json2value(self.prefix.json))) if isinstance(self.prefix,
-                                                                              Literal) else "(" + prefix + ").length"
+                                                                              Literal) else "(" + prefix + ").length()"
         suffix = self.suffix.to_painless()
         start_index = self.start.to_painless()
         if start_index == "null":
@@ -425,7 +425,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     v = self.value.to_painless(not_null=True)
     l = self.length.to_painless(not_null=True)
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(max(0, min(" + v + ".length, " + l + ")).intValue()))"
+    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(max(0, min(" + v + ".length(), " + l + ")).intValue()))"
     return expr
 
 
@@ -489,13 +489,13 @@ def to_esfilter(self):
 def to_painless(self, not_null=False, boolean=False, many=False):
     value = self.term.to_painless(not_null=True)
     if not_null:
-        return "(" + value + ").length"
+        return "(" + value + ").length()"
 
     missing = self.missing().to_painless()
     if many:
-        return "(" + missing + " ) ? [] : [(" + value + ").length]"
+        return "(" + missing + " ) ? [] : [(" + value + ").length()]"
     else:
-        return "(" + missing + " ) ? null : (" + value + ").length"
+        return "(" + missing + " ) ? null : (" + value + ").length()"
 
 
 @extend(NumberOp)
@@ -579,10 +579,10 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     l = self.length.to_painless(not_null=True)
 
     if (not test_v or test_v.to_painless(boolean=True) == "false") and not test_l:
-        expr = v + ".substring(0, max(0, min(" + v + ".length, " + l + ")).intValue())"
+        expr = v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue())"
     else:
         expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(
-            boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length, " + l + ")).intValue()))"
+            boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
     return expr
 
 
@@ -593,7 +593,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     v = self.value.to_painless(not_null=True)
     l = self.length.to_painless(not_null=True)
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(min(" + v + ".length, max(0, (" + v + ").length - (" + l + "))).intValue()))"
+    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(min(" + v + ".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
     return expr
 
 
@@ -604,7 +604,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     v = self.value.to_painless(not_null=True)
     l = self.length.to_painless(not_null=True)
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, min(" + v + ".length, max(0, (" + v + ").length - (" + l + "))).intValue()))"
+    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, min(" + v + ".length(), max(0, (" + v + ").length() - (" + l + "))).intValue()))"
     return expr
 
 
@@ -650,9 +650,9 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     l = self.length.to_painless(not_null=True)
 
     if (not test_v or test_v.to_painless(boolean=True) == "false") and not test_l:
-        expr = v + ".substring(0, max(0, min(" + v + ".length, " + l + ")).intValue())"
+        expr = v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue())"
     else:
-        expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length, " + l + ")).intValue()))"
+        expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(boolean=True) + ")) ? null : (" + v + ".substring(0, (int) Math.max(0,  Math.min(" + v + ".length(), " + l + ")) ))"
     return expr
 
 

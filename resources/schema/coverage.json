@@ -1,6 +1,6 @@
 {
 	"settings": {
-		"index.number_of_replicas": 1,
+		"index.number_of_replicas": 4,
 		"index.number_of_shards": 5
 	},
 	"mappings": {

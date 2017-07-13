@@ -593,7 +593,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     v = self.value.to_painless(not_null=True)
     l = self.length.to_painless(not_null=True)
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(Math.min(" + v + ".length(), (int) Math.max(0, (" + v + ").length() - (" + l + "))) ))"
+    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring( (int) Math.min(" + v + ".length(),  Math.max(0, (" + v + ").length() - (" + l + "))) ))"
     return expr
 
 
@@ -604,7 +604,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     v = self.value.to_painless(not_null=True)
     l = self.length.to_painless(not_null=True)
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, Math.min(" + v + ".length(), (int) Math.max(0, (" + v + ").length() - (" + l + "))) ))"
+    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, (int) Math.min(" + v + ".length(),  Math.max(0, (" + v + ").length() - (" + l + "))) ))"
     return expr
 
 

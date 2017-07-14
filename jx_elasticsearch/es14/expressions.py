@@ -159,9 +159,9 @@ def to_painless(self, not_null=False, boolean=False, many=False):
         if v is None:
             return "null"
         if v is True:
-            return "true"
+            return "(System.currentTimeMillis() > 0)"
         if v is False:
-            return "false"
+            return " (System.currentTimeMillis() < 0)"
         if isinstance(v, basestring):
             return quote(v)
         if isinstance(v, (int, long, float)):
@@ -258,7 +258,7 @@ def to_esfilter(self):
 
 @extend(FalseOp)
 def to_painless(self, not_null=False, boolean=False, many=False):
-    return "false"
+    return " (System.currentTimeMillis() < 0)"
 
 
 @extend(FalseOp)
@@ -401,7 +401,7 @@ def to_esfilter(self):
 def to_painless(self, not_null=False, boolean=True, many=False):
     if isinstance(self.expr, Variable):
         if self.expr.var == "_id":
-            return "false"
+            return " (System.currentTimeMillis() < 0)"
         else:
             return "doc[" + quote(self.expr.var) + "].empty"
     elif isinstance(self.expr, Literal):
@@ -462,7 +462,7 @@ def to_esfilter(self):
 @extend(AndOp)
 def to_painless(self, not_null=False, boolean=False, many=False):
     if not self.terms:
-        return "true"
+        return "(System.currentTimeMillis() > 0)"
     else:
         return " && ".join("(" + t.to_painless() + ")" for t in self.terms)
 
@@ -550,7 +550,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 
 @extend(TrueOp)
 def to_painless(self, not_null=False, boolean=False, many=False):
-    return "true"
+    return "(System.currentTimeMillis() > 0)"
 
 
 @extend(TrueOp)
@@ -578,7 +578,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     v = self.value.to_painless(not_null=True)
     l = self.length.to_painless(not_null=True)
 
-    if (not test_v or test_v.to_painless(boolean=True) == "false") and not test_l:
+    if (not test_v or test_v.to_painless(boolean=True) == " (System.currentTimeMillis() < 0)") and not test_l:
         expr = v + ".substring(0, (int) Math.max(0, Math.min(" + v + ".length(), " + l + ")) )"
     else:
         expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(
@@ -649,7 +649,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     v = self.value.to_painless(not_null=True)
     l = self.length.to_painless(not_null=True)
 
-    if (not test_v or test_v.to_painless(boolean=True) == "false") and not test_l:
+    if (not test_v or test_v.to_painless(boolean=True) == " (System.currentTimeMillis() < 0)") and not test_l:
         expr = v + ".substring(0, (int) Math.max(0, Math.min(" + v + ".length(), " + l + ")) )"
     else:
         expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(boolean=True) + ")) ? null : (" + v + ".substring(0, (int) Math.max(0,  Math.min(" + v + ".length(), " + l + ")) ))"

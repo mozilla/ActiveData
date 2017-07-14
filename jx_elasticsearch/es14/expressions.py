@@ -570,21 +570,6 @@ def to_esfilter(self):
         return {"script": {"script": self.to_ruby()}}
 
 
-@extend(UnixOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    test_v = self.value.missing()
-    test_l = self.length.missing()
-    v = self.value.to_ruby(not_null=True)
-    l = self.length.to_ruby(not_null=True)
-
-    if (not test_v or test_v.to_ruby(boolean=True) == "false") and not test_l:
-        expr = v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue())"
-    else:
-        expr = "((" + test_v.to_ruby(boolean=True) + ") || (" + test_l.to_ruby(
-            boolean=True) + ")) ? null : (" + v + ".substring(0, max(0, min(" + v + ".length(), " + l + ")).intValue()))"
-    return expr
-
-
 @extend(RightOp)
 def to_ruby(self, not_null=False, boolean=False, many=False):
     test_v = self.value.missing().to_ruby(boolean=True)

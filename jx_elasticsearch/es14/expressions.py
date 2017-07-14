@@ -376,6 +376,13 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     rhs_missing = self.rhs.missing().to_painless()
     rhs = self.rhs.to_painless(not_null=True)
 
+    if rhs_missing == "false":
+        rhs_missing = "(System.currentTimeMillis() < 0)"
+    elif rhs_missing == "true":
+        rhs_missing = "(System.currentTimeMillis() > 0)"
+    else:
+        pass
+
     if boolean:
         return "(" + rhs_missing + ")?(" + lhs_list + ".size()==0):((" + lhs_list + ").contains(" + rhs + "))"
     else:

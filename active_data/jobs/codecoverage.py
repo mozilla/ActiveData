@@ -24,7 +24,7 @@ from mo_times.timer import Timer
 from pyLibrary.env import http, elasticsearch
 from jx_python import jx
 
-DEBUG = True
+DEBUG = False
 NUM_THREAD = 4
 
 

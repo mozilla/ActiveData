@@ -377,10 +377,11 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     rhs = self.rhs.to_painless(not_null=True)
 
     if boolean:
-        return "(" + rhs_missing + ")?(" + lhs_list + ".size()==0):((" + lhs_list + ").contains(" + rhs + "))"
+        retval =  lhs_list + ".size()==0 ? ( (" + lhs_list + ").contains(" + rhs + " )  "
+        return retval
     else:
-        return "((" + rhs_missing + ")|(" + lhs_list + ".size()==0))?null:((" + lhs_list + ").contains(" + rhs + "))"
-
+        retval =  "((" + rhs_missing + ")|(" + lhs_list + ".size()==0))?null:((" + lhs_list + ").contains(" + rhs + "))"
+        return retval
 
 @extend(EqOp)
 def to_esfilter(self):
@@ -690,8 +691,11 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 
 @extend(WhenOp)
 def to_painless(self, not_null=False, boolean=False, many=False):
-    return "(" + self.when.to_painless(boolean=True) + ") ? (" + self.then.to_painless(not_null=not_null) + ") : (" + self.els_.to_painless(not_null=not_null) + ")"
-
+    when_val = self.when.to_painless(boolean=True)
+    then_val = self.then.to_painless(not_null=not_null)
+    else_val = self.els_.to_painless(not_null=not_null)
+    retval = "(" + when_val + " ?  (" + then_val + ") : (" + else_val + " ) ):0)"
+    return retval
 
 @extend(WhenOp)
 def to_esfilter(self):

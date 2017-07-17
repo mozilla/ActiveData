@@ -202,6 +202,7 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
             coverage = {
                 "_id": "|".join([records[0].build.revision12, g["source.file.name"]]),  # SOMETHING UNIQUE, IN CASE WE RECALCULATE
                 "source": {
+                    "language": records[0].source.langauge,
                     "file": {
                         "name": g["source.file.name"],
                         "is_file": True,

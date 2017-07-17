@@ -215,9 +215,6 @@ def process_batch(todo, coverage_index, coverage_summary_index, settings, please
                 },
                 "build": records[0].build,
                 "repo": records[0].repo,
-                "run": records[0].run,
-                "task": records[0].task,
-                "treeherder": records[0].treeherder,
                 "etl": {"timestamp": Date.now()}
             }
             all_test_summary.append(coverage)

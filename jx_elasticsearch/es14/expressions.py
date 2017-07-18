@@ -481,7 +481,7 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
 
 @extend(OrOp)
 def to_esfilter(self):
-    return {"or": [t.to_esfilter() for t in self.terms]}
+    return {"bool": {"should": [t.to_esfilter() for t in self.terms]}}
 
 
 @extend(LengthOp)
@@ -629,16 +629,16 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
 
 @extend(RangeOp)
 def to_esfilter(self):
-    return {"or": [
-        {"and": [
+    return {"bool": {"should": [
+        {"bool": {"must": [
             self.when.to_esfilter(),
             self.then.to_esfilter()
-        ]},
-        {"and": [
-            {"not": self.when.to_esfilter()},
+        ]}},
+        {"bool": {"must": [
+            {"bool": {"must_not": self.when.to_esfilter()}},
             self.els_.to_esfilter()
-        ]}
-    ]}
+        ]}}
+    ]}}
     # return {"script": {"script": self.to_ruby()}}
 
 
@@ -705,16 +705,16 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
 
 @extend(WhenOp)
 def to_esfilter(self):
-    return {"or": [
-        {"and": [
+    return {"bool": {"should": [
+        {"bool": {"must":[
             self.when.to_esfilter(),
             self.then.to_esfilter()
-        ]},
-        {"and": [
-            {"not": self.when.to_esfilter()},
+        ]}},
+        {"bool": {"must": [
+            {"bool": {"must_not": self.when.to_esfilter()}},
             self.els_.to_esfilter()
-        ]}
-    ]}
+        ]}}
+    ]}}
 
 
 USE_BOOL_MUST = True
@@ -844,7 +844,7 @@ def _normalize(esfilter):
                 esfilter = output[0]
                 break
             elif isDiff:
-                esfilter = wrap({"or": output})
+                esfilter = wrap({"bool": {"should": output}})
             continue
 
         if esfilter.term != None:
@@ -861,10 +861,10 @@ def _normalize(esfilter):
                         rest = [vv for vv in v if vv != None]
                         if len(rest) > 0:
                             return {
-                                "or": [
+                                "bool": {"should": [
                                     {"missing": {"field": k}},
                                     {"terms": {k: rest}}
-                                ],
+                                ]},
                                 "isNormal": True
                             }
                         else:
@@ -886,7 +886,7 @@ def _normalize(esfilter):
                 return FALSE_FILTER
             elif sub is not _sub:
                 sub.isNormal = None
-                return wrap({"not": sub, "isNormal": True})
+                return wrap({"bool": {"must_not": sub, "isNormal": True}})
             else:
                 sub.isNormal = None
 

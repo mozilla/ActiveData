@@ -899,7 +899,7 @@ class AndOp(Expression):
             self.terms = [terms]
 
     def __data__(self):
-        return {"and": [t.__data__() for t in self.terms]}
+        return {"bool": {"must": [t.__data__() for t in self.terms]}}
 
     def vars(self):
         output = set()
@@ -920,7 +920,7 @@ class OrOp(Expression):
         self.terms = terms
 
     def __data__(self):
-        return {"or": [t.__data__() for t in self.terms]}
+        return {"bool": {"should": [t.__data__() for t in self.terms]}}
 
     def vars(self):
         output = set()

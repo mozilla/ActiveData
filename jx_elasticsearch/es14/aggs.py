@@ -99,7 +99,7 @@ def get_decoders_by_depth(query):
             max_depth = 0
             output.append([])
 
-        limit = None
+        limit = 100
         output[max_depth].append(AggsDecoder(edge, query, limit))
     return output
 

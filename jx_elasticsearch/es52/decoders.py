@@ -21,7 +21,7 @@ from mo_math import MAX, MIN
 from mo_math import Math
 
 from jx_base.expressions import TupleOp, ScriptOp
-from jx_elasticsearch.es14.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, \
+from jx_elasticsearch.es52.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, \
     InequalityOp, LeavesOp
 from jx_python.containers import STRUCT
 from jx_python.dimensions import Dimension

@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_elasticsearch import es14, es09
+from jx_elasticsearch import es52, es09
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, \
     concat_field
 from mo_dots import listwrap
@@ -19,8 +19,8 @@ from mo_logs import Log
 from mo_math import AND
 from mo_math import MAX
 
-from jx_elasticsearch.es14.expressions import simplify_esfilter, Variable, LeavesOp
-from jx_elasticsearch.es14.util import jx_sort_to_es_sort
+from jx_elasticsearch.es52.expressions import simplify_esfilter, Variable, LeavesOp
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort
 from jx_python.containers import STRUCT
 from jx_python.containers.cube import Cube
 from jx_python.domains import ALGEBRAIC
@@ -55,7 +55,7 @@ def is_setop(es, query):
 
 
 def es_setop(es, query):
-    es_query, filters = es14.util.es_query_template(query.frum.name)
+    es_query, filters = es52.util.es_query_template(query.frum.name)
     set_default(filters[0], simplify_esfilter(query.where.to_esfilter()))
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort)

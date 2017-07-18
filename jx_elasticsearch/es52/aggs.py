@@ -18,10 +18,10 @@ from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, 
 from mo_logs import Log
 from mo_math import Math, MAX
 
-from jx_elasticsearch.es14.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
-from jx_elasticsearch.es14.decoders import DimFieldListDecoder
-from jx_elasticsearch.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from jx_elasticsearch.es14.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp
+from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
+from jx_elasticsearch.es52.decoders import DimFieldListDecoder
+from jx_elasticsearch.es52.util import aggregates1_4, NON_STATISTICAL_AGGS
+from jx_elasticsearch.es52.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp
 from jx_base.expressions import TupleOp
 from jx_python.query import MAX_LIMIT
 from mo_times.timer import Timer
@@ -470,7 +470,7 @@ def count_dim(aggs, decoders):
 
 
 format_dispatch = {}
-from jx_elasticsearch.es14.format import format_cube
+from jx_elasticsearch.es52.format import format_cube
 
 _ = format_cube
 

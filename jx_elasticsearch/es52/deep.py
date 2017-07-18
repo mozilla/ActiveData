@@ -11,16 +11,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_elasticsearch import es09, es14
+from jx_elasticsearch import es09, es52
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field
 from mo_logs import Log
 from mo_threads import Thread
 from pyLibrary import convert
 
 from jx_base.expressions import compile_expression
-from jx_elasticsearch.es14.expressions import split_expression_by_depth, simplify_esfilter, AndOp, Variable, LeavesOp
-from jx_elasticsearch.es14.setop import format_dispatch
-from jx_elasticsearch.es14.util import jx_sort_to_es_sort
+from jx_elasticsearch.es52.expressions import split_expression_by_depth, simplify_esfilter, AndOp, Variable, LeavesOp
+from jx_elasticsearch.es52.setop import format_dispatch
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort
 from jx_python.containers import STRUCT
 from jx_python.query import DEFAULT_LIMIT
 from mo_times.timer import Timer
@@ -58,7 +58,7 @@ def es_deepop(es, query):
     # {"inner_hit":{"script_fields":[{"script":""}...]}}, BUT THEN YOU
     # LOOSE "_source" BUT GAIN "fields", FORCING ALL FIELDS TO BE EXPLICIT
     post_expressions = {}
-    es_query, es_filters = es14.util.es_query_template(query.frum.name)
+    es_query, es_filters = es52.util.es_query_template(query.frum.name)
 
     # SPLIT WHERE CLAUSE BY DEPTH
     wheres = split_expression_by_depth(query.where, schema)

@@ -373,10 +373,12 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
     rhs_missing = self.rhs.missing().to_ruby()
     rhs = self.rhs.to_ruby(not_null=True)
 
-    if boolean:
-        return "(" + rhs_missing + ")?(" + lhs_list + ".size()==0):((" + lhs_list + ").contains(" + rhs + "))"
+    if rhs_missing == "false":
+        return "(" + lhs_list + ").contains(" + rhs + ")"
+    elif rhs_missing == "true":
+        return "(" + lhs_list + ").size()==0"
     else:
-        return "((" + rhs_missing + ")|(" + lhs_list + ".size()==0))?null:((" + lhs_list + ").contains(" + rhs + "))"
+        return "(" + rhs_missing + ")?(" + lhs_list + ".size()==0):((" + lhs_list + ").contains(" + rhs + "))"
 
 
 @extend(EqOp)

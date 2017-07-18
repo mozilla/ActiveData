@@ -1405,7 +1405,7 @@ class FindOp(Expression):
     def missing(self):
         v = self.value.to_painless(not_null=True)
         find = self.find.to_painless(not_null=True)
-        index = v + ".indexOf(" + find + ", " + self.start.to_painless() + ")"
+        index = v + ".indexOf(" + find + ", " + self.start.to_painless(boolean=True) + ")"
 
         return AndOp("and", [
             self.default.missing(),
@@ -1464,9 +1464,9 @@ class BetweenOp(Expression):
 
     def missing(self):
         value = self.value.to_painless(not_null=True)
-        prefix = self.prefix.to_painless()
+        prefix = self.prefix.to_painless(boolean=True)
         len_prefix = "("+prefix+").length()"
-        suffix = self.suffix.to_painless()
+        suffix = self.suffix.to_painless(boolean=True)
         start = value+".indexOf("+prefix+")"
         end = value+".indexOf("+suffix+", "+start+"+"+len_prefix+")"
 

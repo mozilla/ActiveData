@@ -428,6 +428,9 @@ class Literal(Expression):
             return TrueOp()
         return FalseOp()
 
+    def __call__(self, row=None, rownum=None, rows=None):
+        return json2value(self.json)
+
     def __unicode__(self):
         return self._json
 
@@ -467,6 +470,9 @@ class NullOp(Literal):
 
     def exists(self):
         return FalseOp()
+
+    def __call__(self, row=None, rownum=None, rows=None):
+        return Null
 
     def __unicode__(self):
         return "null"
@@ -509,6 +515,9 @@ class TrueOp(Literal):
     def is_false(self):
         return FalseOp()
 
+    def __call__(self, row=None, rownum=None, rows=None):
+        return True
+
     def __unicode__(self):
         return "true"
 
@@ -547,6 +556,9 @@ class FalseOp(Literal):
     def is_false(self):
         return TrueOp()
 
+    def __call__(self, row=None, rownum=None, rows=None):
+        return False
+
     def __unicode__(self):
         return "false"
 
@@ -561,6 +573,9 @@ class DateOp(Literal):
 
     def __data__(self):
         return {"date": self.value}
+
+    def __call__(self, row=None, rownum=None, rows=None):
+        return Date(self.value)
 
     def __unicode__(self):
         return self._json

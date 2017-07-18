@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import absolute_import
 
 from mo_dots import wrap, split_field, join_field
-from jx_elasticsearch.es14.expressions import Variable
+from jx_elasticsearch.es52.expressions import Variable
 
 
 def es_query_template(path):
@@ -27,14 +27,14 @@ def es_query_template(path):
         f0 = {}
         f1 = {}
         output = wrap({
-            "filter": {"and": [
+            "query": {"bool": {"must": [
                 f0,
                 {"nested": {
                     "path": join_field(sub_path),
-                    "filter": f1,
+                    "query": f1,
                     "inner_hits": {"size": 100000}
                 }}
-            ]},
+            ]}},
             "from": 0,
             "size": 0,
             "sort": []
@@ -43,7 +43,7 @@ def es_query_template(path):
     else:
         f0 = {}
         output = wrap({
-            "query": {"filtered": {
+            "query": {"bool": {
                 "filter": f0
             }},
             "from": 0,
@@ -73,6 +73,7 @@ def jx_sort_to_es_sort(sort):
 
 es_type_to_json_type = {
     "string": "string",
+    "keyword": "number",
     "double": "number",
     "integer": "number",
     "object": "object",

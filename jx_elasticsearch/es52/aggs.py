@@ -18,17 +18,18 @@ from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, 
 from mo_logs import Log
 from mo_math import Math, MAX
 
-from jx_elasticsearch.es14.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
-from jx_elasticsearch.es14.decoders import DimFieldListDecoder
-from jx_elasticsearch.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
-from jx_elasticsearch.es14.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp, TupleOp
+from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
+from jx_elasticsearch.es52.decoders import DimFieldListDecoder
+from jx_elasticsearch.es52.util import aggregates1_4, NON_STATISTICAL_AGGS
+from jx_elasticsearch.es52.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp
+from jx_base.expressions import TupleOp
 from jx_python.query import MAX_LIMIT
 from mo_times.timer import Timer
 
 
 def is_aggsop(es, query):
     es.cluster.get_metadata()
-    if any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])) and (query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate)):
+    if any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5.2."])) and (query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate)):
         return True
     return False
 
@@ -98,7 +99,7 @@ def get_decoders_by_depth(query):
             max_depth = 0
             output.append([])
 
-        limit = 0
+        limit = None
         output[max_depth].append(AggsDecoder(edge, query, limit))
     return output
 
@@ -233,13 +234,13 @@ def es_aggsop(es, frum, query):
             else:
                 Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
-            es_query.aggs[literal_field(canonical_name)].value_count.script = abs_value.to_ruby()
+            es_query.aggs[literal_field(canonical_name)].value_count.script = abs_value.to_painless()
             s.pull = literal_field(canonical_name) + ".value"
         elif s.aggregate == "median":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")
 
-            es_query.aggs[key].percentiles.script = abs_value.to_ruby()
+            es_query.aggs[key].percentiles.script = abs_value.to_painless()
             es_query.aggs[key].percentiles.percents += [50]
             s.pull = key + ".values.50\.0"
         elif s.aggregate == "percentile":
@@ -247,23 +248,23 @@ def es_aggsop(es, frum, query):
             key = literal_field(canonical_name + " percentile")
             percent = Math.round(s.percentile * 100, decimal=6)
 
-            es_query.aggs[key].percentiles.script = abs_value.to_ruby()
+            es_query.aggs[key].percentiles.script = abs_value.to_painless()
             es_query.aggs[key].percentiles.percents += [percent]
             s.pull = key + ".values." + literal_field(unicode(percent))
         elif s.aggregate == "cardinality":
             # ES USES DIFFERENT METHOD FOR CARDINALITY
             key = canonical_name + " cardinality"
 
-            es_query.aggs[key].cardinality.script = abs_value.to_ruby()
+            es_query.aggs[key].cardinality.script = abs_value.to_painless()
             s.pull = key + ".value"
         elif s.aggregate == "stats":
             # REGULAR STATS
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].extended_stats.script = abs_value.to_ruby()
+            es_query.aggs[stats_name].extended_stats.script = abs_value.to_painless()
 
             # GET MEDIAN TOO!
             median_name = literal_field(canonical_name + " percentile")
-            es_query.aggs[median_name].percentiles.script = abs_value.to_ruby()
+            es_query.aggs[median_name].percentiles.script = abs_value.to_painless()
             es_query.aggs[median_name].percentiles.percents += [50]
 
             s.pull = {
@@ -280,12 +281,12 @@ def es_aggsop(es, frum, query):
         elif s.aggregate=="union":
             # USE TERMS AGGREGATE TO SIMULATE union
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].terms.script_field = abs_value.to_ruby()
+            es_query.aggs[stats_name].terms.script_field = abs_value.to_painless()
             s.pull = stats_name + ".buckets.key"
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
-            es_query.aggs[canonical_name].extended_stats.script = abs_value.to_ruby()
+            es_query.aggs[canonical_name].extended_stats.script = abs_value.to_painless()
 
     decoders = get_decoders_by_depth(query)
     start = 0
@@ -469,7 +470,7 @@ def count_dim(aggs, decoders):
 
 
 format_dispatch = {}
-from jx_elasticsearch.es14.format import format_cube
+from jx_elasticsearch.es52.format import format_cube
 
 _ = format_cube
 

@@ -900,76 +900,26 @@ class TestEdge1(BaseTestCase):
             "query": {
                 "from": TEST_TABLE,
                 "select": {"value": "v", "aggregate": "max"},
-                "edges": [{"value": "k", "domain": {"type": "default", "limit": 100}}],
+                "edges": [{"value": "edg", "domain": {"type": "default", "limit": 100}}],
                 "limit": 100
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"k": "a", "v": 1},
-                    {"k": "b", "v": 2},
-                    {"k": "c", "v": 3},
-                    {"k": "d", "v": 4},
-                    {"k": "e", "v": 5},
-                    {"k": "f", "v": 6},
-                    {"k": "g", "v": 7},
-                    {"k": "h", "v": 8},
-                    {"k": "i", "v": 9},
-                    {"k": "j", "v": 10},
-                    {"k": "k", "v": 11},
-                    {"k": "l", "v": 12},
-                    {"k": "m", "v": 13}
+                    {"edg": "a", "v": 1},
+                    {"edg": "b", "v": 2},
+                    {"edg": "c", "v": 3},
+                    {"edg": "d", "v": 4},
+                    {"edg": "e", "v": 5},
+                    {"edg": "f", "v": 6},
+                    {"edg": "g", "v": 7},
+                    {"edg": "h", "v": 8},
+                    {"edg": "i", "v": 9},
+                    {"edg": "j", "v": 10},
+                    {"edg": "k", "v": 11},
+                    {"edg": "l", "v": 12},
+                    {"edg": "m", "v": 13}
                 ]
-            },
-            "expecting_table": {
-                "meta": {"format": "table"},
-                "header": ["k", "v"],
-                "data": [
-                    ["a", 1],
-                    ["b", 2],
-                    ["c", 3],
-                    ["d", 4],
-                    ["e", 5],
-                    ["f", 6],
-                    ["g", 7],
-                    ["h", 8],
-                    ["i", 9],
-                    ["j", 10],
-                    ["k", 11],
-                    ["l", 12],
-                    ["m", 13]
-                ]
-            },
-            "expecting_cube": {
-                "meta": {"format": "cube"},
-                "edges": [
-                    {
-                        "name": "k",
-                        "allowNulls": True,
-                        "domain": {
-                            "type": "set",
-                            "key": "value",
-                            "partitions": [
-                                {"value": "a"},
-                                {"value": "b"},
-                                {"value": "c"},
-                                {"value": "d"},
-                                {"value": "e"},
-                                {"value": "f"},
-                                {"value": "g"},
-                                {"value": "h"},
-                                {"value": "i"},
-                                {"value": "j"},
-                                {"value": "k"},
-                                {"value": "l"},
-                                {"value": "m"}
-                            ]
-                        }
-                    }
-                ],
-                "data": {
-                    "v": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-                }
             }
         }
         self.utils.execute_tests(test)
@@ -1727,19 +1677,19 @@ simple_test_data = [
 ]
 
 long_test_data = [
-    {"k": "a", "v": 1},
-    {"k": "b", "v": 2},
-    {"k": "c", "v": 3},
-    {"k": "d", "v": 4},
-    {"k": "e", "v": 5},
-    {"k": "f", "v": 6},
-    {"k": "g", "v": 7},
-    {"k": "h", "v": 8},
-    {"k": "i", "v": 9},
-    {"k": "j", "v": 10},
-    {"k": "k", "v": 11},
-    {"k": "l", "v": 12},
-    {"k": "m", "v": 13}
+    {"edg": "a", "v": 1},
+    {"edg": "b", "v": 2},
+    {"edg": "c", "v": 3},
+    {"edg": "d", "v": 4},
+    {"edg": "e", "v": 5},
+    {"edg": "f", "v": 6},
+    {"edg": "g", "v": 7},
+    {"edg": "h", "v": 8},
+    {"edg": "i", "v": 9},
+    {"edg": "j", "v": 10},
+    {"edg": "k", "v": 11},
+    {"edg": "l", "v": 12},
+    {"edg": "m", "v": 13}
 ]
 
 

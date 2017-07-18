@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_elasticsearch import es14, es09
+from jx_elasticsearch import es52, es09
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, \
     concat_field
 from mo_dots import listwrap
@@ -19,8 +19,8 @@ from mo_logs import Log
 from mo_math import AND
 from mo_math import MAX
 
-from jx_elasticsearch.es14.expressions import simplify_esfilter, Variable, LeavesOp
-from jx_elasticsearch.es14.util import jx_sort_to_es_sort
+from jx_elasticsearch.es52.expressions import simplify_esfilter, Variable, LeavesOp
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort
 from jx_python.containers import STRUCT
 from jx_python.containers.cube import Cube
 from jx_python.domains import ALGEBRAIC
@@ -34,7 +34,7 @@ format_dispatch = {}
 
 
 def is_setop(es, query):
-    if not any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])):
+    if not any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5.2."])):
         return False
 
     select = listwrap(query.select)
@@ -55,11 +55,11 @@ def is_setop(es, query):
 
 
 def es_setop(es, query):
-    es_query, filters = es14.util.es_query_template(query.frum.name)
+    es_query, filters = es52.util.es_query_template(query.frum.name)
     set_default(filters[0], simplify_esfilter(query.where.to_esfilter()))
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort)
-    es_query.fields = FlatList()
+    es_query.stored_fields = FlatList()
 
     return extract_rows(es, es_query, query)
 
@@ -83,7 +83,7 @@ def extract_rows(es, es_query, query):
             if isinstance(term, Variable):
 
                 if term.var == ".":
-                    es_query.fields = None
+                    es_query.stored_fields = None
                     source = "_source"
                     for cname, cs in schema.lookup.items():
                         for c in cs:
@@ -103,8 +103,8 @@ def extract_rows(es, es_query, query):
                             suffix = cname[prefix_length:]
                             for c in cs:
                                 if c.type not in STRUCT:
-                                    if es_query.fields is not None:
-                                        es_query.fields.append(c.es_column)
+                                    if source == "fields":
+                                        es_query.stored_fields += [c.es_column]
                                     new_name = new_name_prefix + literal_field(suffix)
                                     new_select.append({
                                         "name": new_name,
@@ -115,7 +115,7 @@ def extract_rows(es, es_query, query):
 
         elif isinstance(select.value, Variable):
             if select.value.var == ".":
-                es_query.fields = None
+                es_query.stored_fields = None
                 source = "_source"
 
                 new_select.append({
@@ -133,7 +133,7 @@ def extract_rows(es, es_query, query):
                 })
                 i += 1
             elif select.value.var in nested_columns or [c for c in nested_columns if c.startswith(select.value.var+".")]:
-                es_query.fields = None
+                es_query.stored_fields = None
                 source = "_source"
 
                 new_select.append({
@@ -148,8 +148,8 @@ def extract_rows(es, es_query, query):
                 net_columns = [c for c in leaf_columns if c.startswith(prefix)]
                 if not net_columns:
                     # LEAF
-                    if es_query.fields is not None:
-                        es_query.fields.append(encode_property(select.value.var))
+                    if source == "fields":
+                        es_query.stored_fields += [select.value.var]
                     new_select.append({
                         "name": select.name,
                         "value": select.value,
@@ -162,8 +162,8 @@ def extract_rows(es, es_query, query):
                         if cname.startswith(prefix):
                             for c in cs:
                                 if c.type not in STRUCT:
-                                    if es_query.fields is not None:
-                                        es_query.fields.append(c.es_column)
+                                    if source == "fields":
+                                        es_query.stored_fields += [c.es_column]
                                     new_select.append({
                                         "name": select.name,
                                         "value": Variable(c.es_column),
@@ -171,7 +171,7 @@ def extract_rows(es, es_query, query):
                                     })
                     i += 1
         else:
-            es_query.script_fields[literal_field(select.name)] = {"script": select.value.to_ruby()}
+            es_query.script_fields[literal_field(select.name)] = {"script": select.value.to_painless()}
             new_select.append({
                 "name": select.name,
                 "pull": "fields." + literal_field(select.name),
@@ -190,6 +190,7 @@ def extract_rows(es, es_query, query):
             Log.error("Do not know what to do")
 
     with Timer("call to ES") as call_timer:
+        Log.note("{{data}}", data=es_query)
         data = es09.util.post(es, es_query, query.limit)
 
     T = data.hits.hits

@@ -193,7 +193,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 
 @extend(CoalesceOp)
 def to_esfilter(self):
-    return {"or": [{"exists": {"field": v}} for v in self.terms]}
+    return {"bool": {"should":  [{"exists": {"field": v}} for v in self.terms]}}
 
 
 @extend(ExistsOp)
@@ -449,11 +449,11 @@ def to_esfilter(self):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
         return {"bool": {"must_not": {"term": {self.lhs.var: self.rhs.to_esfilter()}}}}
     else:
-        return {"and": [
+        return {"bool": {"must": [
             # TODO: MAKE TESTS TO SEE IF THIS LOGIC IS CORRECT
-            {"and": [{"exists": {"field": v}} for v in self.vars()]},
+            {"bool": {"must": [{"exists": {"field": v}} for v in self.vars()]}},
             ScriptOp("script", self.to_painless()).to_esfilter()
-        ]}
+        ]}}
 
 
 @extend(NotOp)
@@ -623,16 +623,16 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 
 @extend(RangeOp)
 def to_esfilter(self):
-    return {"or": [
-        {"and": [
+    return {"bool": {"should": [
+        {"bool": {"must": [
             self.when.to_esfilter(),
             self.then.to_esfilter()
-        ]},
-        {"and": [
-            {"not": self.when.to_esfilter()},
+        ]}},
+        {"bool": {"must": [
+            {"bool": {"must_not": self.when.to_esfilter()}},
             self.els_.to_esfilter()
-        ]}
-    ]}
+        ]}}
+    ]}}
 
 
 @extend(LeftOp)
@@ -691,16 +691,16 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 
 @extend(WhenOp)
 def to_esfilter(self):
-    return {"or": [
-        {"and": [
+    return {"bool": {"should": [
+        {"bool": {"must": [
             self.when.to_esfilter(),
             self.then.to_esfilter()
-        ]},
-        {"and": [
-            {"not": self.when.to_esfilter()},
+        ]}},
+        {"bool": {"must": [
+            {"bool": {"must_not": self.when.to_esfilter()}},
             self.els_.to_esfilter()
-        ]}
-    ]}
+        ]}}
+    ]}}
 
 
 USE_BOOL_MUST = True
@@ -830,7 +830,7 @@ def _normalize(esfilter):
                 esfilter = output[0]
                 break
             elif isDiff:
-                esfilter = wrap({"or": output})
+                esfilter = wrap({"bool": {"should": output}})
             continue
 
         if esfilter.term != None:
@@ -847,10 +847,10 @@ def _normalize(esfilter):
                         rest = [vv for vv in v if vv != None]
                         if len(rest) > 0:
                             return {
-                                "or": [
+                                "bool": {"should": [
                                     {"bool": {"must_not": {"exists": {"field": k}}}},
                                     {"terms": {k: rest}}
-                                ],
+                                ]},
                                 "isNormal": True
                             }
                         else:
@@ -872,7 +872,7 @@ def _normalize(esfilter):
                 return FALSE_FILTER
             elif sub is not _sub:
                 sub.isNormal = None
-                return wrap({"not": sub, "isNormal": True})
+                return wrap({"bool": {"must_not": sub, "isNormal": True}})
             else:
                 sub.isNormal = None
 

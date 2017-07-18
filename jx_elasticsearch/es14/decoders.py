@@ -170,10 +170,10 @@ class SetDecoder(AggsDecoder):
                         "order": {"_term": self.sorted} if self.sorted else None
                     }}, es_query),
                     "_missing": set_default(
-                        {"filter": {"or": [
+                        {"filter": {"bool": {"should": [
                             field.missing().to_esfilter(),
                             {"not": {"terms": {field.var: include}}}
-                        ]}},
+                        ]}}},
                         es_query
                     ),
                 }})
@@ -197,10 +197,10 @@ class SetDecoder(AggsDecoder):
                         "include": include
                     }}, es_query),
                     "_missing": set_default(
-                        {"filter": {"or": [
+                        {"filter": {"bool": {"should": [
                             field.missing().to_esfilter(),
                             NotOp("not", InOp("in", [field, Literal("literal", include)])).to_esfilter()
-                        ]}},
+                        ]}}},
                         es_query
                     ),
                 }})
@@ -243,13 +243,13 @@ def _range_composer(edge, domain, es_query, to_float):
 
     if edge.allowNulls:    # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
         missing_filter = set_default(
-            {"filter": {"or": [
+            {"filter": {"bool": {"should": [
                 OrOp("or", [
                     InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
                     InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
                 ]).to_esfilter(),
                 edge.value.missing().to_esfilter()
-            ]}},
+            ]}}},
             es_query
         )
     else:

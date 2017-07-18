@@ -244,9 +244,6 @@ class Variable(Expression):
     def __str__(self):
         return str(self.var)
 
-    def pe(self):
-        ""
-
 
 class OffsetOp(Expression):
     """

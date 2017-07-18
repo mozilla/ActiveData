@@ -27,7 +27,7 @@ from mo_threads import Thread
 from mo_threads import Till
 
 from jx_python import meta as jx_base_meta
-from jx_elasticsearch.es14.util import es_type_to_json_type
+from jx_elasticsearch.es52.util import es_type_to_json_type
 from jx_python.containers import STRUCT
 from jx_python.meta import ColumnList, metadata_columns, metadata_tables, Column, Table
 from jx_python.query import QueryOp

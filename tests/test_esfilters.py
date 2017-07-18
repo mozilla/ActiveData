@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from jx_base.queries import is_variable_name
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times.dates import Date
-from jx_elasticsearch.es14.expressions import simplify_esfilter, USE_BOOL_MUST
+from jx_elasticsearch.es52.expressions import simplify_esfilter, USE_BOOL_MUST
 from jx_base.expressions import jx_expression
 
 
@@ -69,12 +69,12 @@ class TestESFilters(FuzzyTestCase):
     def test_ne1(self):
         where = {"ne": {"a": 1}}
         result = simplify_esfilter(jx_expression(where).to_esfilter())
-        self.assertEqual(result, {"not": {"term": {"a": 1}}})
+        self.assertEqual(result, {"bool": {"must_not": {"term": {"a": 1}}}})
 
     def test_ne2(self):
         where = {"neq": {"a": 1}}
         result = simplify_esfilter(jx_expression(where).to_esfilter())
-        self.assertEqual(result, {"not": {"term": {"a": 1}}})
+        self.assertEqual(result, {"bool": {"must_not": {"term": {"a": 1}}}})
 
     def test_in(self):
         where = {"in": {"a": [1, 2]}}

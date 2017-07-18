@@ -244,11 +244,6 @@ class Index(Features):
                 "query": {"match_all": {}},
                 "filter": filter
             }}}
-        elif self.cluster.cluster_state.version.number.startswith("5."):
-            query = {"query": {"bool": {
-                "query": {"match_all": {}},
-                "filter": filter
-            }}}
         else:
             raise NotImplementedError
 
@@ -774,7 +769,7 @@ class Cluster(object):
                 Log.error(convert.quote2string(details.error))
             if details._shards.failed > 0:
                 Log.error("Shard failures {{failures|indent}}",
-                    failures="---\n".join(r.replace(";", ";\n") for r in details._shards.failures.reason)
+                    failures=details._shards.failures.reason
                 )
             return details
         except Exception as e:
@@ -1053,11 +1048,6 @@ class Alias(Features):
                 "filter": filter
             }}
         elif self.cluster.cluster_state.version.number.startswith("1."):
-            query = {"query": {"bool": {
-                "query": {"match_all": {}},
-                "filter": filter
-            }}}
-        elif self.cluster.cluster_state.version.number.startswith("5."):
             query = {"query": {"bool": {
                 "query": {"match_all": {}},
                 "filter": filter

@@ -106,7 +106,8 @@ def time_delta_pusher(please_stop, appender, queue, interval):
                     expanded = expand_template(log.get("template"), log.get("params"))
                     lines.append(expanded)
             except Exception as e:
-                Log.warning("Trouble formatting logs", cause=e)
+                location = log.get('params', {}).get('location', {})
+                Log.warning("Trouble formatting log from {{location}}", location=location, cause=e)
                 # SWALLOW ERROR, GOT TO KEEP RUNNING
         try:
             appender(u"\n".join(lines) + u"\n")

@@ -11,16 +11,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_elasticsearch import es09, es14
+from jx_elasticsearch import es09, es52
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field
 from mo_logs import Log
 from mo_threads import Thread
 from pyLibrary import convert
 
 from jx_base.expressions import compile_expression
-from jx_elasticsearch.es14.expressions import split_expression_by_depth, simplify_esfilter, AndOp, Variable, LeavesOp
-from jx_elasticsearch.es14.setop import format_dispatch
-from jx_elasticsearch.es14.util import jx_sort_to_es_sort
+from jx_elasticsearch.es52.expressions import split_expression_by_depth, simplify_esfilter, AndOp, Variable, LeavesOp
+from jx_elasticsearch.es52.setop import format_dispatch
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort
 from jx_python.containers import STRUCT
 from jx_python.query import DEFAULT_LIMIT
 from mo_times.timer import Timer
@@ -58,7 +58,7 @@ def es_deepop(es, query):
     # {"inner_hit":{"script_fields":[{"script":""}...]}}, BUT THEN YOU
     # LOOSE "_source" BUT GAIN "fields", FORCING ALL FIELDS TO BE EXPLICIT
     post_expressions = {}
-    es_query, es_filters = es14.util.es_query_template(query.frum.name)
+    es_query, es_filters = es52.util.es_query_template(query.frum.name)
 
     # SPLIT WHERE CLAUSE BY DEPTH
     wheres = split_expression_by_depth(query.where, schema)
@@ -69,24 +69,24 @@ def es_deepop(es, query):
 
     if not wheres[1]:
         more_filter = {
-            "and": [
-                simplify_esfilter(AndOp("and", wheres[0]).to_esfilter()),
-                {"not": {
+            "bool": {
+                "must": [ simplify_esfilter(AndOp("and", wheres[0]).to_esfilter()) ],
+                "must_not": {
                     "nested": {
                         "path": query_path,
-                        "filter": {
+                        "query": {
                             "match_all": {}
                         }
                     }
-                }}
-            ]
+                }
+            }
         }
     else:
         more_filter = None
 
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort)
-    es_query.fields = []
+    es_query.stored_fields = []
 
     is_list = isinstance(query.select, list)
     new_select = FlatList()
@@ -100,7 +100,7 @@ def es_deepop(es, query):
                     for c in columns:
                         if c.type not in STRUCT and c.es_column != "_id":
                             if c.nested_path[0] == ".":
-                                es_query.fields += [c.es_column]
+                                es_query.stored_fields += [c.es_column]
                             new_select.append({
                                 "name": c.names[query_path],
                                 "pull": get_pull(c),
@@ -124,7 +124,7 @@ def es_deepop(es, query):
                         if cname.startswith(prefix) and c.type not in STRUCT:
                             pull = get_pull(c)
                             if c.nested_path[0] == ".":
-                                es_query.fields += [c.es_column]
+                                es_query.stored_fields += [c.es_column]
 
                             new_select.append({
                                 "name": s.name + "." + cname[prefix_length:],
@@ -142,7 +142,7 @@ def es_deepop(es, query):
                 for c in columns:
                     if c.type not in STRUCT and c.es_column != "_id":
                         if len(c.nested_path) == 1:
-                            es_query.fields += [c.es_column]
+                            es_query.stored_fields += [c.es_column]
                         new_select.append({
                             "name": c.name,
                             "pull": get_pull(c),
@@ -170,7 +170,7 @@ def es_deepop(es, query):
                 if not net_columns:
                     pull = get_pull(prefix)
                     if len(prefix.nested_path) == 1:
-                        es_query.fields += [prefix.es_column]
+                        es_query.stored_fields += [prefix.es_column]
                     new_select.append({
                         "name": s.name,
                         "pull": pull,
@@ -187,7 +187,7 @@ def es_deepop(es, query):
 
                         pull = get_pull(n)
                         if len(n.nested_path) == 1:
-                            es_query.fields += [n.es_column]
+                            es_query.stored_fields += [n.es_column]
                         new_select.append({
                             "name": s.name,
                             "pull": pull,
@@ -200,7 +200,7 @@ def es_deepop(es, query):
             for v in expr.vars():
                 for c in schema[v]:
                     if c.nested_path[0] == ".":
-                        es_query.fields += [c.es_column]
+                        es_query.stored_fields += [c.es_column]
                     # else:
                     #     Log.error("deep field not expected")
 
@@ -221,8 +221,8 @@ def es_deepop(es, query):
         more.append(es09.util.post(
             es,
             Data(
-                filter=more_filter,
-                fields=es_query.fields
+                query=more_filter,
+                stored_fields=es_query.stored_fields
             ),
             query.limit
         ))

@@ -39,6 +39,7 @@ def get_decoders_by_depth(query):
     """
     schema = query.frum.schema
     output = FlatList()
+    cardinality = schema.columns[0].cardinality
 
     if query.edges:
         if query.sort and query.format != "cube":
@@ -98,7 +99,7 @@ def get_decoders_by_depth(query):
             max_depth = 0
             output.append([])
 
-        limit = 0
+        limit = cardinality
         output[max_depth].append(AggsDecoder(edge, query, limit))
     return output
 

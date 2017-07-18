@@ -377,9 +377,17 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     rhs = self.rhs.to_painless(not_null=True)
 
     if boolean:
-        return "(" + rhs_missing + ")?(" + lhs_list + ".size()==0):((" + lhs_list + ").contains(" + rhs + "))"
+        return WhenOp(
+            "when",
+            self.rhs.missing(),
+            **{"then": self.lhs.missing(), "else": InOp("in", [self.rhs, self.lhs])}
+        ).partial_eval().to_painless(boolean=True)
     else:
-        return "((" + rhs_missing + ")|(" + lhs_list + ".size()==0))?null:((" + lhs_list + ").contains(" + rhs + "))"
+        return WhenOp(
+            "when",
+            OrOp("or", [self.rhs.missing(), self.lhs.missing()]),
+            **{"then": NullOp(), "else": InOp("in", [self.rhs, self.lhs])}
+        ).partial_eval().to_painless(boolean=True)
 
 
 @extend(EqOp)
@@ -675,7 +683,10 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 
 @extend(WhenOp)
 def to_painless(self, not_null=False, boolean=False, many=False):
-    return "(" + self.when.to_painless(boolean=True) + ") ? (" + self.then.to_painless(not_null=not_null) + ") : (" + self.els_.to_painless(not_null=not_null) + ")"
+    if self.simplified:
+        return "(" + self.when.to_painless(boolean=True) + ") ? (" + self.then.to_painless(not_null=not_null) + ") : (" + self.els_.to_painless(not_null=not_null) + ")"
+    else:
+        return self.partial_eval().to_painless()
 
 
 @extend(WhenOp)

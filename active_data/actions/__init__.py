@@ -101,7 +101,7 @@ def test_mode_wait(query):
         # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
         cols = [c for c in m.get_columns(table_name=query["from"], force=True) if c.type not in STRUCT]
         for c in cols:
-            Log.note("Mark {{column}} dirty at {{time}}", column=c.names["."], time=now)
+            Log.note("Mark {{column.names}} dirty at {{time}}", column=c, time=now)
             c.last_updated = now - TOO_OLD
             m.todo.push(c)
 
@@ -120,7 +120,7 @@ def test_mode_wait(query):
             Till(seconds=1).wait()
         for c in cols:
             Log.note(
-                "fresh column name={{column.name}} updated={{column.last_updated|date}} parts={{column.partitions}}",
+                "fresh column name={{column.names}} updated={{column.last_updated|date}} parts={{column.partitions}}",
                 column=c
             )
     except Exception, e:

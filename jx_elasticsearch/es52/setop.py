@@ -19,7 +19,7 @@ from mo_logs import Log
 from mo_math import AND
 from mo_math import MAX
 
-from jx_elasticsearch.es52.expressions import simplify_esfilter, Variable, LeavesOp
+from jx_elasticsearch.es52.expressions import Variable, LeavesOp
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
 from jx_python.containers import STRUCT
 from jx_python.containers.cube import Cube
@@ -27,7 +27,6 @@ from jx_python.domains import ALGEBRAIC
 from jx_python.query import DEFAULT_LIMIT
 from mo_collections.matrix import Matrix
 from mo_dots.lists import FlatList
-from mo_json.typed_encoder import encode_property
 from mo_times.timer import Timer
 
 format_dispatch = {}
@@ -210,12 +209,15 @@ def format_list(T, select, query=None):
         for row in T:
             r = None
             for s in select:
+                v = unwraplist(row[s.pull])
+                if v is None:
+                    continue
                 if s.put.child == ".":
-                    r = unwraplist(row[s.pull])
+                    r = v
                 else:
                     if r is None:
                         r = Data()
-                    r[s.put.child] = unwraplist(row[s.pull])
+                    r[s.put.child] = v
 
             data.append(r)
 

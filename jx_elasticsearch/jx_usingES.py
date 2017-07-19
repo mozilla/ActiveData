@@ -29,10 +29,9 @@ from jx_elasticsearch.es52.aggs import es_aggsop, is_aggsop
 from jx_elasticsearch.es52.deep import is_deepop, es_deepop
 from jx_elasticsearch.es52.setop import is_setop, es_setop
 from jx_elasticsearch.es52.util import aggregates1_4
+from jx_elasticsearch.meta import FromESMetadata
 from jx_python.containers import Container
 from jx_python.dimensions import Dimension
-from jx_elasticsearch.meta import FromESMetadata
-from jx_python.namespace.typed import Typed
 from jx_python.query import QueryOp
 from mo_dots.lists import FlatList
 from mo_logs.exceptions import Except
@@ -87,7 +86,7 @@ class FromES(Container):
 
         if typed == None:
             # SWITCH ON TYPED MODE
-            self.typed = any(c.names["."] in ("$value", "$object") for c in columns)
+            self.typed = any(c.es_column.find(".$") != -1 for c in columns)
         else:
             self.typed = typed
 
@@ -134,8 +133,6 @@ class FromES(Container):
 
             for n in self.namespaces:
                 query = n.convert(query)
-            if self.typed:
-                query = Typed().convert(query)
 
             for s in listwrap(query.select):
                 if not aggregates1_4.get(s.aggregate):

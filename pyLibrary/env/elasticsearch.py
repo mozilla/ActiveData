@@ -17,7 +17,7 @@ from copy import deepcopy
 
 from jx_python import jx
 from mo_dots import coalesce, Null, Data, set_default, listwrap, literal_field, \
-    ROOT_PATH, concat_field
+    ROOT_PATH, concat_field, join_field, split_field
 from mo_dots import wrap
 from mo_kwargs import override
 from mo_logs import Log, strings
@@ -28,8 +28,9 @@ from mo_threads import Till
 from pyLibrary import convert
 
 import mo_json
+from jx_python.meta import Column
 from mo_dots.lists import FlatList
-from mo_json.typed_encoder import typed_encode
+from mo_json.typed_encoder import typed_encode, decode_property
 from mo_logs.exceptions import Except
 from mo_logs.strings import utf82unicode
 from mo_math.randoms import Random
@@ -545,7 +546,7 @@ class Cluster(object):
         meta = self.get_metadata()
         columns = parse_properties(index, ".", meta.indices[index].mappings.values()[0].properties)
         if len(columns) != 0:
-            kwargs.tjson = tjson or any(c.names["."].endswith("$value") for c in columns)
+            kwargs.tjson = tjson or any(c.names["."].find(".$") != -1 for c in columns)
 
         return Index(kwargs)
 
@@ -1106,17 +1107,17 @@ class Alias(Features):
                 cause=e
             )
 
-
 def parse_properties(parent_index_name, parent_name, esProperties):
     """
     RETURN THE COLUMN DEFINITIONS IN THE GIVEN esProperties OBJECT
     """
-    from jx_python.meta import Column
-
     columns = FlatList()
     for name, property in esProperties.items():
         index_name = parent_index_name
         column_name = concat_field(parent_name, name)
+        jx_name = join_field(decode_property(n) for n in split_field(column_name) if not n.startswith("$"))
+        if split_field(column_name)[-1] == "$exists":
+            property.type = "exists"
 
         if property.type == "nested" and property.properties:
             # NESTED TYPE IS A NEW TYPE DEFINITION
@@ -1128,7 +1129,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
             columns.append(Column(
                 es_index=index_name,
                 es_column=column_name,
-                names={".": column_name},
+                names={".": jx_name},
                 type="nested",
                 nested_path=ROOT_PATH
             ))
@@ -1139,7 +1140,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
             child_columns = parse_properties(index_name, column_name, property.properties)
             columns.extend(child_columns)
             columns.append(Column(
-                names={".": column_name},
+                names={".": jx_name},
                 es_index=index_name,
                 es_column=column_name,
                 nested_path=ROOT_PATH,
@@ -1159,7 +1160,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                         table=index_name,
                         es_index=index_name,
                         es_column=column_name,
-                        name=column_name,
+                        names={".": jx_name},
                         nested_path=ROOT_PATH,
                         type=p.type
                     ))
@@ -1168,17 +1169,17 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                         table=index_name,
                         es_index=index_name,
                         es_column=column_name + "\\." + n,
-                        name=column_name + "\\." + n,
+                        names={".": jx_name + "\\." + n},
                         nested_path=ROOT_PATH,
                         type=p.type
                     ))
             continue
 
-        if property.type in ["string", "boolean", "integer", "date", "long", "double", "keyword"]:
+        if property.type in ["string", "boolean", "integer", "date", "long", "double", "keyword", "exists"]:
             columns.append(Column(
                 es_index=index_name,
-                names={".": column_name},
                 es_column=column_name,
+                names={".": jx_name},
                 nested_path=ROOT_PATH,
                 type=property.type
             ))
@@ -1186,17 +1187,17 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                 columns.append(Column(
                     es_index=index_name,
                     es_column=column_name,
-                    names={".":column_name},
+                    names={".": jx_name},
                     nested_path=ROOT_PATH,
                     type=property.type
                 ))
         elif property.enabled == None or property.enabled == False:
             columns.append(Column(
                 es_index=index_name,
-                names={".": column_name},
                 es_column=column_name,
+                names={".": jx_name},
                 nested_path=ROOT_PATH,
-                type="source" if property.enabled==False else "object"
+                type="source" if property.enabled == False else "object"
             ))
         else:
             Log.warning("unknown type {{type}} for property {{path}}", type=property.type, path=query_path)

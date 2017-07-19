@@ -197,9 +197,13 @@ class Expression(object):
 
 class Variable(Expression):
 
-    def __init__(self, var):
+    def __init__(self, var, verify=True):
+        """
+        :param var:  DOT DELIMITED PATH INTO A DOCUMENT 
+        :param verify: True - VERIFY THIS IS A VALID NAME (use False for trusted code only)
+        """
         Expression.__init__(self, "", None)
-        if not is_variable_name(var):
+        if verify and not is_variable_name(var):
             Log.error("Expecting a variable name")
         self.var = var
 

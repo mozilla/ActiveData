@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import json
+import re
 import time
 from collections import deque
 from datetime import datetime, date, timedelta
@@ -67,7 +68,7 @@ def _typed_encode(value, _buffer):
             if value:
                 _dict2json(value, _buffer)
             else:
-                append(_buffer, u'{"$object": "."}')
+                append(_buffer, u'{"$exists": "."}')
         elif _type is str:
             append(_buffer, u'{"$string": "')
             try:
@@ -154,17 +155,16 @@ def _iter2json(value, _buffer):
 
 
 def _dict2json(value, _buffer):
-    prefix = u'{"$object": ".", "'
+    prefix = u'{"$exists": ".", '
     for k, v in value.iteritems():
         append(_buffer, prefix)
-        prefix = u", \""
+        prefix = u", "
         if isinstance(k, str):
             k = utf82unicode(k)
         if not isinstance(k, unicode):
             Log.error("Expecting property name to be a string")
-        for c in k:
-            append(_buffer, ESCAPE_DCT.get(c, c))
-        append(_buffer, u"\": ")
+        append(_buffer, json.dumps(encode_property(k)))
+        append(_buffer, u": ")
         _typed_encode(v, _buffer)
     append(_buffer, u"}")
 
@@ -178,9 +178,10 @@ STRING = 6
 ESCAPE = 5
 
 
+
 def json2typed(json):
     """
-    every ': {' gets converted to ': {"$object": ".", '
+    every ': {' gets converted to ': {"$exists": ".", '
     every ': <value>' gets converted to '{"$value": <value>}'
     """
     # MODE VALUES
@@ -196,7 +197,7 @@ def json2typed(json):
             if c == "{":
                 context.append(mode)
                 mode = BEGIN_OBJECT
-                append(output, '{"$object": "."')
+                append(output, '{"$exists": "."')
                 continue
             elif c == '[':
                 context.append(mode)
@@ -214,10 +215,10 @@ def json2typed(json):
             elif c == '"':
                 context.append(mode)
                 mode = STRING
-                append(output, '{"$value": ')
+                append(output, '{"$string": ')
             else:
                 mode = PRIMITIVE
-                append(output, '{"$value": ')
+                append(output, '{"$number": ')
             append(output, c)
         elif mode == PRIMITIVE:
             if c == ",":
@@ -282,8 +283,8 @@ def json2typed(json):
 
 
 def encode_property(name):
-    return name.replace("\\.", ".")
+    return name.replace(",", "\\,").replace(".", ",")
 
 
 def decode_property(encoded):
-    return encoded
+    return encoded.replace("\\,", "\a").replace(",", ".").replace("\a", ",")

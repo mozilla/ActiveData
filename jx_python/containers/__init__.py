@@ -21,7 +21,8 @@ from mo_logs import Log
 
 OBJECT = "object"
 NESTED = "nested"
-STRUCT = [OBJECT, NESTED]
+EXISTS = "exists"
+STRUCT = [OBJECT, NESTED, EXISTS]
 
 type2container = Data()
 config = Data()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE

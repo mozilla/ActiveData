@@ -79,7 +79,8 @@ es_type_to_json_type = {
     "object": "object",
     "nested": "nested",
     "source": "json",
-    "boolean": "boolean"
+    "boolean": "boolean",
+    "exists": "exists"
 }
 
 

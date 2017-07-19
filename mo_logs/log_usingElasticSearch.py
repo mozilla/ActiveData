@@ -140,39 +140,39 @@ SCHEMA = {
                 "type": "object",
                 "dynamic": False,
                 "properties": {
-                    "$value": {"type": "string"}
+                    "$string": {"type": "string"}
                 }
             },
-            "$object": {"type": "string"},
+            "$exists": {"type": "string"},
             "machine": {
                 "dynamic": True,
                 "properties": {
                     "python": {
-                        "properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "$object": {"type": "string"},
-                    "os": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "name": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}}
+                        "properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
+                    "$exists": {"type": "string"},
+                    "os": {"properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
+                    "name": {"properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}}
                 }
             },
             "location": {
                 "dynamic": True,
                 "properties": {
-                    "$object": {"type": "string"},
-                    "file": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
+                    "$exists": {"type": "string"},
+                    "file": {"properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
                     "method": {
-                        "properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "line": {"properties": {"$value": {"index": "not_analyzed", "type": "long", "doc_values": True}}}
+                        "properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
+                    "line": {"properties": {"$integer": {"index": "not_analyzed", "type": "long", "doc_values": True}}}
                 }
             },
             "thread": {
                 "dynamic": True,
                 "properties": {
-                    "$object": {"type": "string"},
-                    "name": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "id": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}}
+                    "$exists": {"type": "string"},
+                    "name": {"properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
+                    "id": {"properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}}
                 }
             },
-            "timestamp": {"properties": {"$value": {"index": "not_analyzed", "type": "string"}}}
+            "timestamp": {"properties": {"$string": {"index": "not_analyzed", "type": "string"}}}
         }
     }}
 }

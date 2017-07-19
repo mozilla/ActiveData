@@ -383,6 +383,7 @@ class Literal(Expression):
 
     def __init__(self, op, term):
         Expression.__init__(self, "", None)
+        self.simplified = True
         if term == "":
             self._json = '""'
         else:
@@ -1620,7 +1621,7 @@ class WhenOp(Expression):
         else:
             output = WhenOp("when", when, **{"then": self.then.partial_eval(), "else": self.els_.partial_eval()})
             output.simplified = True
-            return self
+            return output
 
 
 class CaseOp(Expression):

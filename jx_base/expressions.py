@@ -232,7 +232,7 @@ class Variable(Expression):
         if not isinstance(map_, Mapping):
             Log.error("Expecting Mapping")
 
-        return Variable(coalesce(map_.get(self.var), self.var))
+        return Variable(coalesce(map_.get(self.var), self.var), verify=False)
 
     def __hash__(self):
         return self.var.__hash__()

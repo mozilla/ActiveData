@@ -12,9 +12,11 @@ from __future__ import unicode_literals
 from collections import Mapping
 from copy import copy
 
-from mo_dots import Data, Null
+from mo_dots import Data, Null, startswith_field
 from mo_dots import wrap, set_default, split_field, join_field
 from mo_logs import Log
+
+from jx_python.containers import STRUCT
 
 config = Data()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
 _ListContainer = None
@@ -146,6 +148,14 @@ class Schema(object):
         :return: NAME OF column
         """
         return column.names[self.query_path]
+
+    def leaves(self, name):
+        """
+        RETURN LEAVES OF GIVEN PATH NAME
+        :param name: 
+        :return: 
+        """
+        return [c for k, cs in self.lookup.items() if startswith_field(k, name) for c in cs if c.type not in STRUCT]
 
     @property
     def columns(self):

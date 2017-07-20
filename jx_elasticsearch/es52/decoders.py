@@ -14,16 +14,14 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from jx_python import jx
-from mo_dots import set_default, coalesce, literal_field, Data, startswith_field, relative_field
+from mo_dots import set_default, coalesce, literal_field, Data, relative_field
 from mo_dots import wrap
 from mo_logs import Log
 from mo_math import MAX, MIN
 from mo_math import Math
 
-from jx_base.expressions import TupleOp, ScriptOp
-from jx_elasticsearch.es52.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, \
-    InequalityOp, LeavesOp
-from jx_python.containers import STRUCT
+from jx_base.expressions import TupleOp
+from jx_elasticsearch.es52.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, InequalityOp, LeavesOp
 from jx_python.dimensions import Dimension
 from jx_python.domains import SimpleSetDomain, DefaultDomain, PARTITION
 from jx_python.query import MAX_LIMIT, DEFAULT_LIMIT
@@ -54,10 +52,10 @@ class AggsDecoder(object):
                 return object.__new__(DimFieldListDecoder, e)
             elif isinstance(e.value, Variable):
                 schema = query.frum.schema
-                cols = [c for c in schema[e.value.var] if c.type not in STRUCT]
+                cols = schema.leaves(e.value.var)
                 if not cols:
                     return object.__new__(DefaultDecoder, e)
-                if len(cols)!=1:
+                if len(cols) != 1:
                     return object.__new__(ObjectDecoder, e)
                 col = cols[0]
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
@@ -152,9 +150,9 @@ class SetDecoder(AggsDecoder):
     def append_query(self, es_query, start):
         self.start = start
         domain = self.domain
-        es_field = self.query.frum.schema[self.edge.value][0]  # WE ALREADY CHECKED THERE IS JUST ONE PRIMITIVE PROPERTY
+        es_field = self.edge.value.map({c.names["."]: c.es_column for c in self.query.frum.schema.leaves(".")})  # ALREADY CHECKED THERE IS ONLY ONE
 
-        if isinstance(es_field, Variable):
+        if isinstance(self.edge.value, Variable):
             key = domain.key
             if isinstance(key, (tuple, list)) and len(key) == 1:
                 key = key[0]
@@ -465,11 +463,8 @@ class ObjectDecoder(AggsDecoder):
             flatter = lambda k: relative_field(k, prefix)
 
         self.put, self.fields = zip(*[
-            (flatter(k), c.es_column)
-            for k, cs in query.frum.schema.lookup.items()
-            if startswith_field(k, prefix)
-            for c in cs
-            if c.type not in STRUCT
+            (flatter(c.names["."]), c.es_column)
+            for c in query.frum.schema.leaves(prefix)
         ])
 
         self.domain = self.edge.domain = wrap({"dimension": {"fields": self.fields}})
@@ -550,25 +545,25 @@ class DefaultDecoder(SetDecoder):
 
     def append_query(self, es_query, start):
         self.start = start
+        es_mapping = {c.names["."]: c.es_column for c in self.query.frum.schema.leaves(".")}
 
         if not isinstance(self.edge.value, Variable):
-            script_field = self.edge.value.to_painless()
             missing = self.edge.value.missing()
 
             output = wrap({"aggs": {
                 "_match": set_default(
                     {"terms": {
                         "script": {
-                                    "lang": "painless",
-                                    "inline":script_field
-                                  },
+                            "lang": "painless",
+                            "inline": self.edge.value.map(es_mapping).to_painless()
+                        },
                         "size": self.domain.limit,
                         "order": {"_term": self.sorted} if self.sorted else None
                     }},
                     es_query
                 ),
                 "_missing": set_default(
-                    {"filter": missing.to_esfilter()},
+                    {"filter": missing.map(es_mapping).to_esfilter()},
                     es_query
                 ) if missing else None
             }})
@@ -578,14 +573,14 @@ class DefaultDecoder(SetDecoder):
             output = wrap({"aggs": {
                 "_match": set_default(
                     {"terms": {
-                        "field": self.edge.value.var,
+                        "field": self.edge.value.map(es_mapping).var,
                         "size": self.domain.limit,
                         "order": {"_term": "asc" if sort_dir == 1 else "desc"}
                     }},
                     es_query
                 ),
                 "_missing": set_default(
-                    {"filter": self.edge.value.missing().to_esfilter()},
+                    {"filter": self.edge.value.missing().map(es_mapping).to_esfilter()},
                     es_query
                 )
             }})
@@ -594,13 +589,13 @@ class DefaultDecoder(SetDecoder):
             output = wrap({"aggs": {
                 "_match": set_default(
                     {"terms": {
-                        "field": self.edge.value.var,
+                        "field": self.edge.value.map(es_mapping).var,
                         "size": self.domain.limit
                     }},
                     es_query
                 ),
                 "_missing": set_default(
-                    {"filter": self.edge.value.missing().to_esfilter()},
+                    {"filter": self.edge.value.missing().map(es_mapping).to_esfilter()},
                     es_query
                 )
             }})

@@ -336,7 +336,7 @@ class FromESMetadata(Schema):
                     "aggs": {"_nested": {"terms": {"field": c.es_column}}}
                 }
             else:
-                query.aggs["_"] = {"terms": {"field": c.es_column}}
+                query.aggs["_"] = {"terms": {"field": c.es_column, "size": cardinality}}
 
             result = self.default_es.post("/" + es_index + "/_search", data=query)
 

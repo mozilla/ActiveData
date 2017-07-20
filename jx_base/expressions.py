@@ -164,15 +164,20 @@ class Expression(object):
         raise Log.error("{{type}} has no `map` method", type=self.__class__.__name__)
 
     def missing(self):
-        # RETURN FILTER THAT INDICATE THIS EXPRESSIOn RETURNS null
-        raise Log.error("{{type}} has no `missing` method", type=self.__class__.__name__)
+        """
+        THERE IS PLENTY OF OPPORTUNITY TO SIMPLIFY missing EXPRESSIONS
+        OVERRIDE THIS METHOD TO SIMPLIFY
+        :return: 
+        """
+        return MissingOp("missing", self)
 
     def exists(self):
-        missing = self.missing()
-        if not missing:
-            return TrueOp()
-        else:
-            return NotOp("not", missing)
+        """
+        THERE IS PLENTY OF OPPORTUNITY TO SIMPLIFY exists EXPRESSIONS
+        OVERRIDE THIS METHOD TO SIMPLIFY
+        :return: 
+        """
+        return ExistsOp("exists", self)
 
     def is_true(self):
         """
@@ -229,13 +234,6 @@ class Variable(Expression):
 
         return Variable(coalesce(map_.get(self.var), self.var))
 
-    def missing(self):
-        # RETURN FILTER THAT INDICATE THIS EXPRESSION RETURNS null
-        return MissingOp("missing", self)
-
-    def exists(self):
-        return ExistsOp("exists", self)
-
     def __hash__(self):
         return self.var.__hash__()
 
@@ -271,13 +269,6 @@ class OffsetOp(Expression):
 
     def vars(self):
         return {}
-
-    def missing(self):
-        # RETURN FILTER THAT INDICATE THIS EXPRESSION RETURNS null
-        return MissingOp("missing", self)
-
-    def exists(self):
-        return ExistsOp("exists", self)
 
     def __hash__(self):
         return self.var.__hash__()
@@ -317,9 +308,6 @@ class RowsOp(Expression):
 
     def map(self, map_):
         return BinaryOp("rows", [self.var.map(map_), self.offset.map(map_)])
-
-    def missing(self):
-        return MissingOp("missing", self)
 
 
 class GetOp(Expression):
@@ -429,7 +417,7 @@ class Literal(Expression):
         return self
 
     def missing(self):
-        if self._json == '""':
+        if self._json in ['""', 'null']:
             return TrueOp()
         return FalseOp()
 
@@ -553,7 +541,7 @@ class FalseOp(Literal):
         return self
 
     def missing(self):
-        return self
+        return FalseOp()
 
     def is_true(self):
         return FalseOp()
@@ -934,7 +922,7 @@ class AndOp(Expression):
         return AndOp("and", [t.map(map_) for t in self.terms])
 
     def missing(self):
-        return False
+        return FalseOp()
 
     def partial_eval(self):
         if self.simplified:
@@ -974,7 +962,7 @@ class OrOp(Expression):
         return OrOp("or", [t.map(map_) for t in self.terms])
 
     def missing(self):
-        return False
+        return FalseOp()
 
     def __call__(self, row=None, rownum=None, rows=None):
         return any(t(row, rownum, rows) for t in self.terms)
@@ -1073,7 +1061,7 @@ class CountOp(Expression):
         return CountOp("count", [t.map(map_) for t in self.terms])
 
     def missing(self):
-        return FalseOp
+        return FalseOp()
 
     def exists(self):
         return TrueOp
@@ -1111,15 +1099,15 @@ class MultiOp(Expression):
 
     def missing(self):
         if self.nulls:
-            if self.default == None:
+            if isinstance(self.default, NullOp):
                 return AndOp("and", [t.missing() for t in self.terms])
             else:
-                return FalseOp
+                return FalseOp()
         else:
-            if self.default == None:
+            if isinstance(self.default, NullOp):
                 return OrOp("or", [t.missing() for t in self.terms])
             else:
-                return FalseOp
+                return FalseOp()
 
     def exists(self):
         if self.nulls:
@@ -1345,7 +1333,7 @@ class LeftOp(Expression):
 
     def missing(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return MissingOp(None, self.value)
+            return self.value.missing()
         else:
             return OrOp(None, [self.value.missing(), self.length.missing()])
 
@@ -1374,7 +1362,7 @@ class NotLeftOp(Expression):
 
     def missing(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return MissingOp(None, self.value)
+            return self.value.missing()
         else:
             return OrOp(None, [self.value.missing(), self.length.missing()])
 
@@ -1403,7 +1391,7 @@ class RightOp(Expression):
 
     def missing(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return MissingOp(None, self.value)
+            return self.value.missing()
         else:
             return OrOp(None, [self.value.missing(), self.length.missing()])
 
@@ -1432,7 +1420,7 @@ class NotRightOp(Expression):
 
     def missing(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return MissingOp(None, self.value)
+            return self.value.missing()
         else:
             return OrOp(None, [self.value.missing(), self.length.missing()])
 
@@ -1648,9 +1636,6 @@ class CaseOp(Expression):
 
     def map(self, map_):
         return CaseOp("case", [w.map(map_) for w in self.whens])
-
-    def missing(self):
-        return MissingOp("missing", self)
 
 
 operators = {

@@ -5,13 +5,15 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 import re
 
 from mo_logs import Log
 
 keyword_pattern = re.compile(r"(\$|\w|\\\.)+(?:\.(\$|\w|\\\.)+)*")
-
 
 
 def is_variable_name(value):

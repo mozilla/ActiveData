@@ -661,8 +661,10 @@ class DimFieldListDecoder(SetDecoder):
                 }}, es_query)
             }})
             if self.edge.allowNulls:
-                nest.aggs._missing = set_default(Variable(v).missing().to_esfilter(),
-                                                 es_query)
+                nest.aggs._missing = set_default(
+                    Variable(v).missing().to_esfilter(),
+                    es_query
+                )
             es_query = nest
 
         if self.domain.where:

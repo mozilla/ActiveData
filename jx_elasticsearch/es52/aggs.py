@@ -121,8 +121,6 @@ def sort_edges(query, prop):
 
 def es_aggsop(es, frum, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
-    # [0] is a cheat; each es_column should be a dict of columns keyed on type, like in sqlite
-    # es_column_map = {v: frum.schema[v][0].es_column for v in query.vars()}
 
     es_query = Data()
     new_select = Data()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
@@ -206,9 +204,10 @@ def es_aggsop(es, frum, query):
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
+        es_column_map = {c.names["."]: c.es_column for c in frum.schema.leaves(".")}
         abs_value = s.value.map(es_column_map)
 
-        if isinstance(abs_value, TupleOp):
+        if isinstance(s.value, TupleOp):
             if s.aggregate == "count":
                 # TUPLES ALWAYS EXIST, SO COUNTING THEM IS EASY
                 s.pull = "doc_count"

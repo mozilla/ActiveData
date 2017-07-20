@@ -23,6 +23,7 @@ from jx_elasticsearch.es52.decoders import DimFieldListDecoder
 from jx_elasticsearch.es52.util import aggregates1_4, NON_STATISTICAL_AGGS
 from jx_elasticsearch.es52.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp
 from jx_base.expressions import TupleOp
+from jx_python.containers import OBJECT, NESTED
 from jx_python.query import MAX_LIMIT
 from mo_times.timer import Timer
 
@@ -121,7 +122,7 @@ def sort_edges(query, prop):
 def es_aggsop(es, frum, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
     # [0] is a cheat; each es_column should be a dict of columns keyed on type, like in sqlite
-    es_column_map = {v: frum.schema[v][0].es_column for v in query.vars()}
+    # es_column_map = {v: frum.schema[v][0].es_column for v in query.vars()}
 
     es_query = Data()
     new_select = Data()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
@@ -130,47 +131,29 @@ def es_aggsop(es, frum, query):
         if s.aggregate == "count" and isinstance(s.value, Variable) and s.value.var == ".":
             s.pull = "doc_count"
         elif isinstance(s.value, Variable):
-            if s.value.var == ".":
-                if frum.typed:
-                    # STATISITCAL AGGS IMPLY $value, WHILE OTHERS CAN BE ANYTHING
-                    if s.aggregate in NON_STATISTICAL_AGGS:
-                        #TODO: HANDLE BOTH $value AND $objects TO COUNT
-                        Log.error("do not know how to handle")
-                    else:
-                        s.value.var = "$value"
-                        new_select["$value"] += [s]
-                else:
-                    if s.aggregate in NON_STATISTICAL_AGGS:
-                        #TODO:  WE SHOULD BE ABLE TO COUNT, BUT WE MUST *OR* ALL LEAF VALUES TO DO IT
-                        Log.error("do not know how to handle")
-                    else:
-                        Log.error('Not expecting ES to have a value at "." which {{agg}} can be applied', agg=s.aggregate)
-            elif s.aggregate == "count":
-                s.value = s.value.map(es_column_map)
+            if s.aggregate == "count":
                 new_select["count_"+literal_field(s.value.var)] += [s]
             else:
-                s.value = s.value.map(es_column_map)
                 new_select[literal_field(s.value.var)] += [s]
         else:
             formula.append(s)
 
     for canonical_name, many in new_select.items():
-        representative = many[0]
-        if representative.value.var == ".":
-            Log.error("do not know how to handle")
-        else:
-            field_name = representative.value.var
+        es_cols = [c for c in frum.schema[s.value.var] if c.type not in [OBJECT, NESTED]]
+        if len(es_cols) != 1:
+            Log.error("Do not know how to count columns with more than one type (script probably)")
+        es_field_name = es_cols[0].es_column
 
         # canonical_name=literal_field(many[0].name)
         for s in many:
             if s.aggregate == "count":
-                es_query.aggs[literal_field(canonical_name)].value_count.field = field_name
+                es_query.aggs[literal_field(canonical_name)].value_count.field = es_field_name
                 s.pull = literal_field(canonical_name) + ".value"
             elif s.aggregate == "median":
                 # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
 
-                es_query.aggs[key].percentiles.field = field_name
+                es_query.aggs[key].percentiles.field = es_field_name
                 es_query.aggs[key].percentiles.percents += [50]
                 s.pull = key + ".values.50\.0"
             elif s.aggregate == "percentile":
@@ -180,23 +163,23 @@ def es_aggsop(es, frum, query):
                     Log.error("Expecting percentile to be a float from 0.0 to 1.0")
                 percent = Math.round(s.percentile * 100, decimal=6)
 
-                es_query.aggs[key].percentiles.field = field_name
+                es_query.aggs[key].percentiles.field = es_field_name
                 es_query.aggs[key].percentiles.percents += [percent]
                 s.pull = key + ".values." + literal_field(unicode(percent))
             elif s.aggregate == "cardinality":
                 # ES USES DIFFERENT METHOD FOR CARDINALITY
                 key = literal_field(canonical_name + " cardinality")
 
-                es_query.aggs[key].cardinality.field = field_name
+                es_query.aggs[key].cardinality.field = es_field_name
                 s.pull = key + ".value"
             elif s.aggregate == "stats":
                 # REGULAR STATS
                 stats_name = literal_field(canonical_name)
-                es_query.aggs[stats_name].extended_stats.field = field_name
+                es_query.aggs[stats_name].extended_stats.field = es_field_name
 
                 # GET MEDIAN TOO!
                 median_name = literal_field(canonical_name + " percentile")
-                es_query.aggs[median_name].percentiles.field = field_name
+                es_query.aggs[median_name].percentiles.field = es_field_name
                 es_query.aggs[median_name].percentiles.percents += [50]
 
                 s.pull = {
@@ -213,12 +196,12 @@ def es_aggsop(es, frum, query):
             elif s.aggregate == "union":
                 # USE TERMS AGGREGATE TO SIMULATE union
                 stats_name = literal_field(canonical_name)
-                es_query.aggs[stats_name].terms.field = field_name
+                es_query.aggs[stats_name].terms.field = es_field_name
                 es_query.aggs[stats_name].terms.size = Math.min(s.limit, MAX_LIMIT)
                 s.pull = stats_name + ".buckets.key"
             else:
                 # PULL VALUE OUT OF THE stats AGGREGATE
-                es_query.aggs[literal_field(canonical_name)].extended_stats.field = field_name
+                es_query.aggs[literal_field(canonical_name)].extended_stats.field = es_field_name
                 s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
 
     for i, s in enumerate(formula):

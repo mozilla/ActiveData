@@ -482,18 +482,6 @@ class ObjectDecoder(AggsDecoder):
     def append_query(self, es_query, start):
         self.start = start
         for i, v in enumerate(self.fields):
-            # output = wrap({"aggs": {
-            #     "_match": set_default(
-            #         {"terms": {
-            #             "script_field": script_field,
-            #             "size": self.domain.limit,
-            #             "order": {"_term": self.sorted} if self.sorted else None
-            #         }},
-            #         es_query
-            #     ),
-            #     "_missing": set_default({"filter": missing.to_esfilter()}, es_query) if missing else None
-            # }})
-
             nest = wrap({"aggs": {
                 "_match": set_default({"terms": {
                     "field": v,

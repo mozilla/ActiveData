@@ -18,7 +18,7 @@
 	},
 	"request_logs": {
 		"host": "http://localhost",
-		"port": 9400,
+		"port": 9200,
 		"index": "active_data_requests",
 		"type": "request_log",
 		"schema": {

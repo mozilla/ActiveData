@@ -691,16 +691,16 @@ def to_painless(self, not_null=False, boolean=False, many=False):
 
 @extend(WhenOp)
 def to_esfilter(self):
-    return {"or": [
-        {"and": [
+    return {"bool": {"should": [
+        {"bool": {"must": [
             self.when.to_esfilter(),
             self.then.to_esfilter()
-        ]},
-        {"and": [
-            {"not": self.when.to_esfilter()},
+        ]}},
+        {"bool": {"must": [
+            {"bool": {"must_not": self.when.to_esfilter()}},
             self.els_.to_esfilter()
-        ]}
-    ]}
+        ]}}
+    ]}}
 
 
 USE_BOOL_MUST = True

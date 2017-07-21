@@ -830,7 +830,7 @@ def _normalize(esfilter):
                 esfilter = output[0]
                 break
             elif isDiff:
-                esfilter = wrap({"bool": {"should": output}})
+                esfilter = wrap({"or": output})
             continue
 
         if esfilter.term != None:
@@ -872,7 +872,7 @@ def _normalize(esfilter):
                 return FALSE_FILTER
             elif sub is not _sub:
                 sub.isNormal = None
-                return wrap({"bool": {"must_not": sub, "isNormal": True}})
+                return wrap({"or":  sub, "isNormal": True})
             else:
                 sub.isNormal = None
 

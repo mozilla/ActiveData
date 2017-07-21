@@ -271,21 +271,21 @@ class TestAggOps(BaseTestCase):
             "data": [{"a": i*2} for i in range(30)],
             "query": {
                 "from": TEST_TABLE,
-                "select": [ {"name":"max", "value": "a", "aggregate": "max"} ]
+                "select": [{"value": "a", "aggregate": "max"}]
             },
             "expecting_list": {
-                "meta": {"format": "value"}, "data": {"max": 58}
+                "meta": {"format": "value"}, "data": {"a": 58}
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["max"],
+                "header": ["a"],
                 "data": [[58]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "edges": [],
                 "data": {
-                    "max": 58
+                    "a": 58
                 }
             }
         }

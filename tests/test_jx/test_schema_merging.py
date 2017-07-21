@@ -111,7 +111,7 @@ class TestSchemaMerging(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_tests(test)
+        self.utils.execute_tests(test, tjson=True)
 
     @skipIf(global_settings.is_travis, "not expected to pass yet")
     def test_dots_in_property_names(self):
@@ -236,3 +236,33 @@ class TestSchemaMerging(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
+
+    def test_count(self):
+        test = {
+            "data": [
+                {"a": "b"},
+                {"a": [{"b": 1}, {"b": 2}]},
+                {"a": 3}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": {"value": "a", "aggregate": "count"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [3]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a"],
+                "data": [[3]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "data": {
+                    "a": 3
+                }
+            }
+        }
+        self.utils.execute_tests(test)
+

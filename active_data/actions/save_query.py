@@ -210,8 +210,7 @@ SCHEMA = {
                 },
                 "query": {
                     "type": "object",
-                    "enabled": False,
-                    "store": True
+                    "enabled": False
                 }
             }
         }

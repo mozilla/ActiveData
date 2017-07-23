@@ -246,10 +246,11 @@ class TestAggOps(BaseTestCase):
             "data": [i*2 for i in range(30)],
             "query": {
                 "from": TEST_TABLE,
-                "select": {"name": "max", "value": "a", "aggregate": "max"}
+                "select": {"name": "max", "value": ".", "aggregate": "max"}
             },
             "expecting_list": {
-                "meta": {"format": "value"}, "data": 58
+                "meta": {"format": "value"},
+                "data": 58
             },
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -367,7 +368,7 @@ class TestAggOps(BaseTestCase):
                 "data": {"a": 3, "b": 1, "c": 0, "d": 1}
             }
         }
-        self.utils.execute_tests(test, tjson=False)
+        self.utils.execute_tests(test)
 
     @skipIf(global_settings.use == "elasticsearch", "requires scripted metric aggregations")  # https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-scripted-metric-aggregation.html
     def test_max_on_tuple(self):
@@ -393,7 +394,7 @@ class TestAggOps(BaseTestCase):
                 "data": {"max": [3, 3], "min": [1, 1]}
             }
         }
-        self.utils.execute_tests(test, tjson=False)
+        self.utils.execute_tests(test)
 
     def test_union(self):
         test = {
@@ -427,4 +428,4 @@ class TestAggOps(BaseTestCase):
                 "data": {"b": {"x", "y", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "z"}}
             }
         }
-        self.utils.execute_tests(test, tjson=False)
+        self.utils.execute_tests(test)

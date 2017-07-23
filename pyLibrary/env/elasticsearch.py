@@ -276,7 +276,7 @@ class Index(Features):
             for r in records:
                 id = r.get("id")
                 r_value = r.get('value')
-                if id == None and r_value:
+                if id == None and isinstance(r_value, Mapping):
                     id = r_value.get('_id')
                 if id == None:
                     id = random_id()
@@ -284,7 +284,7 @@ class Index(Features):
                 if self.settings.tjson:
                     if "json" in r:
                         r_value = convert.json2value(r["json"])
-                    elif r_value or isinstance(r_value, (dict, Data)):
+                    elif r_value != None:
                         pass
                     else:
                         Log.error("Expecting every record given to have \"value\" or \"json\" property")

@@ -12,6 +12,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import itertools
+from collections import Mapping
+
 import os
 import signal
 import subprocess
@@ -149,7 +151,7 @@ class ESUtils(object):
         self.fill_container(subtest, tjson=tjson)
         self.send_queries(subtest)
 
-    def fill_container(self, subtest, tjson=False):
+    def fill_container(self, subtest, tjson=True):
         """
         RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
         """
@@ -173,8 +175,11 @@ class ESUtils(object):
             # INSERT DATA
             inserts = []
             for v in subtest.data:
-                _id = v._id
-                v._id = None
+                if isinstance(v, Mapping):
+                    _id = v._id
+                    v._id = None
+                else:
+                    _id = None
                 inserts.append({
                     "id": _id,
                     "value": v
@@ -190,7 +195,7 @@ class ESUtils(object):
             else:
                 Log.error("Do not know how to handle")
         except Exception, e:
-            Log.error("can not load {{data}} into container", {"data":subtest.data}, e)
+            Log.error("can not load {{data}} into container", data=subtest.data, cause=e)
 
         return _settings
 

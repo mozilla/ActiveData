@@ -137,13 +137,15 @@ def es_aggsop(es, frum, query):
             formula.append(s)
 
     for canonical_name, many in new_select.items():
-        es_cols = [c for c in frum.schema[s.value.var] if c.type not in [OBJECT, NESTED]]
-        if len(es_cols) != 1:
-            Log.error("Do not know how to count columns with more than one type (script probably)")
-        es_field_name = es_cols[0].es_column
-
-        # canonical_name=literal_field(many[0].name)
         for s in many:
+            es_cols = [c for c in frum.schema[s.value.var] if c.type not in [OBJECT, NESTED]]
+            if len(es_cols) > 1:
+                Log.error("Do not know how to count columns with more than one type (script probably)")
+            if es_cols:
+                es_field_name = es_cols[0].es_column
+            else:
+                es_field_name = "$dummy"  # SOME PROPERTY THAT DOES NOT EXIST
+
             if s.aggregate == "count":
                 es_query.aggs[literal_field(canonical_name)].value_count.field = es_field_name
                 s.pull = literal_field(canonical_name) + ".value"

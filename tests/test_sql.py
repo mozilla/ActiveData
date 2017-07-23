@@ -76,7 +76,7 @@ class TestSQL(BaseTestCase):
 
     def execute(self, test):
         test = wrap(test)
-        self.utils.fill_container(test, tjson=False)
+        self.utils.fill_container(test)
         test.query.sql = test.query.sql.replace(TEST_TABLE, test.query['from'])
         self.utils.send_queries(test)
 

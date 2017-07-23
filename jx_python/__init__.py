@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 from collections import Mapping
 from copy import copy
 
-from mo_dots import Data, Null, startswith_field
+from mo_dots import Data, Null, startswith_field, concat_field
 from mo_dots import wrap, set_default, split_field, join_field
 from mo_logs import Log
 
@@ -123,7 +123,7 @@ class Schema(object):
         """
         table_path = split_field(table_name)
         self.table = table_path[0]  # USED AS AN EXPLICIT STATEMENT OF PERSPECTIVE IN THE DATABASE
-        self.query_path = join_field(table_path[1:])
+        self.query_path = join_field(table_path[1:])  # TODO: REPLACE WITH THE nested_path ARRAY
         self._columns = copy(columns)
 
         lookup = self.lookup = _index(columns, self.query_path)
@@ -155,7 +155,28 @@ class Schema(object):
         :param name: 
         :return: 
         """
-        return [c for k, cs in self.lookup.items() if startswith_field(k, name) for c in cs if c.type not in STRUCT]
+        full_name = concat_field(self.query_path, name)
+        return [c for k, cs in self.lookup.items() if startswith_field(k, full_name) for c in cs if c.type not in STRUCT]
+
+    def map_to_es(self):
+        """
+        RETURN A MAP FROM THE NAME SPACE TO THE  
+        """
+        full_name = self.query_path
+        return set_default(
+            {
+                c.names[full_name]: c.es_column
+                for k, cs in self.lookup.items()
+                if startswith_field(k, full_name)
+                for c in cs if c.type not in STRUCT
+            },
+            {
+                c.names["."]: c.es_column
+                for k, cs in self.lookup.items()
+                if startswith_field(k, full_name)
+                for c in cs if c.type not in STRUCT
+            }
+        )
 
     @property
     def columns(self):

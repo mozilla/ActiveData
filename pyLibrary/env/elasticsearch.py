@@ -284,7 +284,7 @@ class Index(Features):
                 if self.settings.tjson:
                     if "json" in r:
                         r_value = convert.json2value(r["json"])
-                    elif r_value != None:
+                    elif isinstance(r_value, Mapping) or r_value != None:
                         pass
                     else:
                         Log.error("Expecting every record given to have \"value\" or \"json\" property")

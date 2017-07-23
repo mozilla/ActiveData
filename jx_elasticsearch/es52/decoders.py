@@ -20,7 +20,7 @@ from mo_logs import Log
 from mo_math import MAX, MIN
 from mo_math import Math
 
-from jx_base.expressions import TupleOp
+from jx_base.expressions import TupleOp, FalseOp
 from jx_elasticsearch.es52.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, InequalityOp, LeavesOp
 from jx_python.dimensions import Dimension
 from jx_python.domains import SimpleSetDomain, DefaultDomain, PARTITION
@@ -150,7 +150,7 @@ class SetDecoder(AggsDecoder):
     def append_query(self, es_query, start):
         self.start = start
         domain = self.domain
-        es_field = self.edge.value.map({c.names["."]: c.es_column for c in self.query.frum.schema.leaves(".")})  # ALREADY CHECKED THERE IS ONLY ONE
+        es_field = self.edge.value.map({c.names[self.query.frum.query_path]: c.es_column for c in self.query.frum.schema.leaves(".")})  # ALREADY CHECKED THERE IS ONLY ONE
 
         if isinstance(self.edge.value, Variable):
             key = domain.key
@@ -545,10 +545,10 @@ class DefaultDecoder(SetDecoder):
 
     def append_query(self, es_query, start):
         self.start = start
-        es_mapping = {c.names["."]: c.es_column for c in self.query.frum.schema.leaves(".")}
+        es_mapping = self.query.frum.schema.map_to_es()
 
         if not isinstance(self.edge.value, Variable):
-            missing = self.edge.value.missing()
+            missing = self.edge.value.missing().partial_eval()
 
             output = wrap({"aggs": {
                 "_match": set_default(

@@ -56,19 +56,22 @@ def is_setop(es, query):
 def es_setop(es, query):
     es_query, filters = es52.util.es_query_template(query.frum.name)
     set_default(filters[0], query.where.partial_eval().to_esfilter())
-    es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
-    es_query.sort = jx_sort_to_es_sort(query.sort)
-    es_query.stored_fields = FlatList()
-
     return extract_rows(es, es_query, query)
 
 
 def extract_rows(es, es_query, query):
+    es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
+    es_query.stored_fields = FlatList()
+
     selects = wrap([s.copy() for s in listwrap(query.select)])
     new_select = FlatList()
     schema = query.frum.schema
     columns = schema.columns
     nested_columns = set(c.names["."] for c in columns if c.nested_path[0] != ".")
+    map_to_es_columns = {c.names["."]: c.es_column for c in schema.leaves(".")}
+
+    query_for_es = query.map(map_to_es_columns)
+    es_query.sort = jx_sort_to_es_sort(query_for_es.sort)
 
     put_index = 0
     source = "fields"
@@ -155,7 +158,7 @@ def extract_rows(es, es_query, query):
                                 })
                 put_index += 1
         else:
-            es_query.script_fields[literal_field(select.name)] = {"script": select.value.to_painless()}
+            es_query.script_fields[literal_field(select.name)] = {"script": select.value.map(map_to_es_columns).to_painless()}
             new_select.append({
                 "name": select.name,
                 "pull": "fields." + literal_field(select.name),

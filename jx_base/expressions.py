@@ -337,6 +337,7 @@ class ScriptOp(Expression):
 
     def __init__(self, op, script):
         Expression.__init__(self, op, None)
+        self.simplified = True
         self.script = script
 
     def vars(self):

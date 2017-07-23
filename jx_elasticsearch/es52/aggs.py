@@ -35,7 +35,7 @@ def is_aggsop(es, query):
     return False
 
 
-def get_decoders_by_depth(query):
+def get_decoders_by_depth(query, es_column_map):
     """
     RETURN A LIST OF DECODER ARRAYS, ONE ARRAY FOR EACH NESTED DEPTH
     """
@@ -121,6 +121,7 @@ def sort_edges(query, prop):
 
 def es_aggsop(es, frum, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
+    es_column_map = {c.names[frum.query_path]: c.es_column for c in frum.schema.leaves(".")}
 
     es_query = Data()
     new_select = Data()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
@@ -206,8 +207,7 @@ def es_aggsop(es, frum, query):
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
-        es_column_map = {c.names["."]: c.es_column for c in frum.schema.leaves(".")}
-        abs_value = s.value.map(es_column_map)
+        es_script = s.value.map(es_column_map)
 
         if isinstance(s.value, TupleOp):
             if s.aggregate == "count":
@@ -216,13 +216,13 @@ def es_aggsop(es, frum, query):
             else:
                 Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
-            es_query.aggs[literal_field(canonical_name)].value_count.script = abs_value.to_painless()
+            es_query.aggs[literal_field(canonical_name)].value_count.script = es_script.to_painless()
             s.pull = literal_field(canonical_name) + ".value"
         elif s.aggregate == "median":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")
 
-            es_query.aggs[key].percentiles.script = abs_value.to_painless()
+            es_query.aggs[key].percentiles.script = es_script.to_painless()
             es_query.aggs[key].percentiles.percents += [50]
             s.pull = key + ".values.50\.0"
         elif s.aggregate == "percentile":
@@ -230,23 +230,23 @@ def es_aggsop(es, frum, query):
             key = literal_field(canonical_name + " percentile")
             percent = Math.round(s.percentile * 100, decimal=6)
 
-            es_query.aggs[key].percentiles.script = abs_value.to_painless()
+            es_query.aggs[key].percentiles.script = es_script.to_painless()
             es_query.aggs[key].percentiles.percents += [percent]
             s.pull = key + ".values." + literal_field(unicode(percent))
         elif s.aggregate == "cardinality":
             # ES USES DIFFERENT METHOD FOR CARDINALITY
             key = canonical_name + " cardinality"
 
-            es_query.aggs[key].cardinality.script = abs_value.to_painless()
+            es_query.aggs[key].cardinality.script = es_script.to_painless()
             s.pull = key + ".value"
         elif s.aggregate == "stats":
             # REGULAR STATS
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].extended_stats.script = abs_value.to_painless()
+            es_query.aggs[stats_name].extended_stats.script = es_script.to_painless()
 
             # GET MEDIAN TOO!
             median_name = literal_field(canonical_name + " percentile")
-            es_query.aggs[median_name].percentiles.script = abs_value.to_painless()
+            es_query.aggs[median_name].percentiles.script = es_script.to_painless()
             es_query.aggs[median_name].percentiles.percents += [50]
 
             s.pull = {
@@ -263,20 +263,18 @@ def es_aggsop(es, frum, query):
         elif s.aggregate=="union":
             # USE TERMS AGGREGATE TO SIMULATE union
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].terms.script_field = abs_value.to_painless()
+            es_query.aggs[stats_name].terms.script_field = es_script.to_painless()
             s.pull = stats_name + ".buckets.key"
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
-            es_query.aggs[canonical_name].extended_stats.script = abs_value.to_painless()
+            es_query.aggs[canonical_name].extended_stats.script = es_script.to_painless()
 
-    decoders = get_decoders_by_depth(query)
+    decoders = get_decoders_by_depth(query, es_column_map)
     start = 0
 
-    vars_ = query.where.vars()
-
     #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
-    split_where = split_expression_by_depth(query.where, schema=frum.schema)
+    split_where = split_expression_by_depth(query.where, schema=frum.schema, map_=es_column_map)
 
     if len(split_field(frum.name)) > 1:
         if any(split_where[2::]):

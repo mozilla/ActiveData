@@ -74,57 +74,29 @@ def extract_rows(es, es_query, query):
     es_query.sort = jx_sort_to_es_sort(query_for_es.sort)
 
     put_index = 0
-    source = "fields"
     for select in selects:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if isinstance(select.value, LeavesOp):
-            new_name_prefix = select.name + "\\." if select.name != "." else ""
             term = select.value.term
             if isinstance(term, Variable):
-
-                if term.var == ".":
-                    es_query.stored_fields = None
-                    source = "_source"
-                    for cname, cs in schema.lookup.items():
+                for cname, cs in schema.lookup.items():
+                    if startswith_field(cname, term.var) and cname != "_id":
                         for c in cs:
-                            if c.type not in STRUCT and c.es_column != "_id":
-                                new_name = new_name_prefix + literal_field(cname)
+                            if c.type not in STRUCT:
+                                es_query.stored_fields += [c.es_column]
+                                if select.name==".":
+                                    new_name = literal_field(relative_field(cname, term.var))
+                                else:
+                                    new_name = select.name + "\\." + literal_field(relative_field(cname, term.var))
                                 new_select.append({
                                     "name": new_name,
                                     "value": Variable(c.es_column, verify=False),
                                     "put": {"name": new_name, "index": put_index, "child": "."}
                                 })
                                 put_index += 1
-                else:
-                    prefix = term.var + "."
-                    prefix_length = len(prefix)
-                    for cname, cs in schema.lookup.items():
-                        if cname.startswith(prefix):
-                            suffix = cname[prefix_length:]
-                            for c in cs:
-                                if c.type not in STRUCT:
-                                    if source == "fields":
-                                        es_query.stored_fields += [c.es_column]
-                                    new_name = new_name_prefix + literal_field(suffix)
-                                    new_select.append({
-                                        "name": new_name,
-                                        "value": Variable(c.es_column, verify=False),
-                                        "put": {"name": new_name, "index": put_index, "child": "."}
-                                    })
-                                    put_index += 1
 
         elif isinstance(select.value, Variable):
-            if select.value.var == ".":
-                es_query.stored_fields = None
-                source = "_source"
-
-                new_select.append({
-                    "name": select.name,
-                    "value": select.value,
-                    "put": {"name": select.name, "index": put_index, "child": "."}
-                })
-                put_index += 1
-            elif select.value.var == "_id":
+            if select.value.var == "_id":
                 new_select.append({
                     "name": select.name,
                     "value": select.value,
@@ -149,12 +121,11 @@ def extract_rows(es, es_query, query):
                     if startswith_field(cname, s_column):
                         for c in cs:
                             if c.type not in STRUCT:
-                                if source == "fields":
-                                    es_query.stored_fields += [c.es_column]
+                                es_query.stored_fields += [c.es_column]
                                 new_select.append({
                                     "name": select.name,
                                     "value": Variable(c.es_column, verify=False),
-                                    "put": {"name": select.name, "index": put_index, "child": relative_field(s_column, cname)}
+                                    "put": {"name": select.name, "index": put_index, "child": relative_field(cname, s_column)}
                                 })
                 put_index += 1
         else:
@@ -169,10 +140,8 @@ def extract_rows(es, es_query, query):
     for n in new_select:
         if n.pull:
             continue
-        if source == "_source":
-            n.pull = concat_field("_source", n.value.var)
         elif isinstance(n.value, Variable):
-            n.pull = concat_field("fields", literal_field(n.value.var))
+            n.pull = concat_field("fields", literal_field(n.value.map(map_to_es_columns).var))
         else:
             Log.error("Do not know what to do")
 

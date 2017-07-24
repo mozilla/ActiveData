@@ -288,3 +288,4 @@ def encode_property(name):
 
 def decode_property(encoded):
     return encoded.replace("\\,", "\a").replace(",", ".").replace("\a", ",")
+

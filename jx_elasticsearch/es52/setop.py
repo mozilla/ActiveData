@@ -55,11 +55,9 @@ def is_setop(es, query):
 
 def es_setop(es, query):
     es_query, filters = es52.util.es_query_template(query.frum.name)
-    set_default(filters[0], query.where.partial_eval().to_esfilter())
-    return extract_rows(es, es_query, query)
-
-
-def extract_rows(es, es_query, query):
+    schema = query.frum.schema
+    map_to_es_columns = {c.names["."]: c.es_column for c in schema.leaves(".")}
+    set_default(filters[0], query.where.partial_eval().map(map_to_es_columns).to_esfilter())
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.stored_fields = FlatList()
 
@@ -68,7 +66,6 @@ def extract_rows(es, es_query, query):
     schema = query.frum.schema
     columns = schema.columns
     nested_columns = set(c.names["."] for c in columns if c.nested_path[0] != ".")
-    map_to_es_columns = {c.names["."]: c.es_column for c in schema.leaves(".")}
 
     query_for_es = query.map(map_to_es_columns)
     es_query.sort = jx_sort_to_es_sort(query_for_es.sort)

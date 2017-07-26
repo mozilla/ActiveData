@@ -426,7 +426,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     v = self.value.to_painless(not_null=True)
     l = self.length.to_painless(not_null=True)
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring((int)Math.max(0, (int)Math.min(" + v + ".length(), " + l + ")).intValue()))"
+    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring((int)Math.max(0, (int)Math.min(" + v + ".length(), " + l + "))))"
     return expr
 
 
@@ -579,7 +579,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     v = self.value.to_painless(not_null=True)
     l = self.length.to_painless(not_null=True)
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring((int)Math.min(" + v + ".length(), (int)Math.max(0, (" + v + ").length() - (" + l + "))).intValue()))"
+    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring((int)Math.min(" + v + ".length(), (int)Math.max(0, (" + v + ").length() - (" + l + ")))))"
     return expr
 
 
@@ -590,7 +590,7 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     v = self.value.to_painless(not_null=True)
     l = self.length.to_painless(not_null=True)
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, (int)Math.min(" + v + ".length(), (int)Math.max(0, (" + v + ").length() - (" + l + "))).intValue()))"
+    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, (int)Math.min(" + v + ".length(), (int)Math.max(0, (" + v + ").length() - (" + l + ")))))"
     return expr
 
 
@@ -636,9 +636,9 @@ def to_painless(self, not_null=False, boolean=False, many=False):
     l = self.length.to_painless(not_null=True)
 
     if (not test_v or test_v.to_painless(boolean=True) == "false") and not test_l:
-        expr = v + ".substring(0, (int)Math.max(0, (int)Math.min(" + v + ".length(), " + l + ")).intValue())"
+        expr = v + ".substring(0, (int)Math.max(0, (int)Math.min(" + v + ".length(), " + l + ")))"
     else:
-        expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(boolean=True) + ")) ? null : (" + v + ".substring(0, (int)Math.max(0, (int)Math.min(" + v + ".length(), " + l + ")).intValue()))"
+        expr = "((" + test_v.to_painless(boolean=True) + ") || (" + test_l.to_painless(boolean=True) + ")) ? null : (" + v + ".substring(0, (int)Math.max(0, (int)Math.min(" + v + ".length(), " + l + "))))"
     return expr
 
 

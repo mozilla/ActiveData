@@ -89,7 +89,8 @@ def es_deepop(es, query):
     # just trying if this would work for adding $datatype to sort field.
     # es_query.sort = jx_sort_to_es_sort(query.sort)
     map_to_es_columns = {c.names["."]: c.es_column for c in schema.leaves(".")}
-    query_for_es = query.map(map_to_es_columns)
+   # query_for_es = query.map(map_to_es_columns)
+    query_for_es = query.map(map_to_local)
     es_query.sort = jx_sort_to_es_sort(query_for_es.sort)
 
     es_query.stored_fields = []

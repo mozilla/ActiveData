@@ -70,6 +70,7 @@ def jx_sort_to_es_sort(sort):
 
 
 es_type_to_json_type = {
+    "text": "string",
     "string": "string",
     "keyword": "string",
     "double": "number",

@@ -1175,7 +1175,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                     ))
             continue
 
-        if property.type in ["string", "boolean", "integer", "date", "long", "double", "keyword", "exists"]:
+        if property.type in ["string", "boolean", "integer", "date", "long", "double", "keyword", "exists", "text"]:
             columns.append(Column(
                 es_index=index_name,
                 es_column=column_name,

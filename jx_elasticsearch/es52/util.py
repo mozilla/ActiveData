@@ -43,9 +43,7 @@ def es_query_template(path):
     else:
         f0 = {}
         output = wrap({
-            "query": {"bool": {
-                "filter": f0
-            }},
+            "query": {"bool": {"must": [f0]}},
             "from": 0,
             "size": 0,
             "sort": []

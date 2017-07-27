@@ -555,7 +555,7 @@ class DefaultDecoder(SetDecoder):
                     {"terms": {
                         "script": {
                             "lang": "painless",
-                            "inline": self.edge.value.map(es_mapping).to_painless()
+                            "inline": self.edge.value.map(es_mapping).partial_eval().to_painless()
                         },
                         "size": self.domain.limit,
                         "order": {"_term": self.sorted} if self.sorted else None

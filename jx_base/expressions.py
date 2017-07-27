@@ -11,24 +11,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import itertools
+import operator
 from collections import Mapping
 from decimal import Decimal
 
-import operator
-from mo_dots import coalesce, wrap, set_default, literal_field, Null, split_field, startswith_field
-from mo_dots import Data, join_field, unwraplist, ROOT_PATH, relative_field, unwrap
-from mo_json import json2value, quote
+from mo_dots import coalesce, wrap, Null, split_field
+from mo_json import json2value
 from mo_logs import Log
-from mo_logs.exceptions import suppress_exception
-from mo_math import Math, OR, MAX
-from mo_times.dates import Date
-
+from mo_math import Math
 from pyLibrary import convert
-from jx_python.containers import STRUCT, OBJECT
+
 from jx_base.queries import is_variable_name
 from jx_python.expression_compiler import compile_expression
-from pyLibrary.sql.sqlite import quote_column, quote_value
+from mo_times.dates import Date
 
 ALLOW_SCRIPTING = False
 TRUE_FILTER = True
@@ -44,6 +39,13 @@ def _late_import():
     from jx_python.query import QueryOp as _Query
 
     _ = _Query
+
+
+def extend(cls):
+    def extender(func):
+        setattr(cls, func.func_name, func)
+        return func
+    return extender
 
 
 def jx_expression(expr):
@@ -940,6 +942,8 @@ class AndOp(Expression):
                 terms.append(simple)
         if len(terms) == 0:
             return TrueOp()
+        if len(terms) == 1:
+            return terms[0]
         output = AndOp("and", terms)
         output.simplified = True
         return output
@@ -983,6 +987,8 @@ class OrOp(Expression):
                 terms.append(simple)
         if len(terms) == 0:
             return FalseOp()
+        if len(terms) == 1:
+            return terms[0]
         output = OrOp("or", terms)
         output.simplified = True
         return output
@@ -1453,21 +1459,53 @@ class FindOp(Expression):
         )
 
     def missing(self):
-        v = self.value.to_painless(not_null=True)
-        find = self.find.to_painless(not_null=True)
-        index = v + ".indexOf(" + find + ", " + self.start.to_painless() + ")"
-
         return AndOp("and", [
             self.default.missing(),
             OrOp("or", [
                 self.value.missing(),
                 self.find.missing(),
-                EqOp("eq", [ScriptOp("script", index), Literal(None, -1)])
+                EqOp("eq", [JavaIndexOfOp("", [self.value, self.find, self.start]), Literal(None, -1)])
             ])
         ])
 
     def exists(self):
         return TrueOp()
+
+
+class JavaIndexOfOp(Expression):
+    """
+    PLACEHOLDER FOR Java's (Painless) String.indexOf() METHOD
+    """
+
+    def __init__(self, op, params):
+        """
+        :param op: 
+        :param params: (value, find, start) tuple 
+        """
+        self.value, self.find, self.start = params
+
+    def map(self, mapping):
+        return JavaIndexOfOp("", [self.value.map(mapping), self.find.map(mapping), self.start.map(mapping)])
+
+    def missing(self):
+        return FalseOp()
+
+
+
+@extend(JavaIndexOfOp)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    v = self.value.to_painless(not_null=True)
+    find = self.find.to_painless(not_null=True)
+    if many:
+        return "Collections.singletonList((" + v + ").indexOf(" + find + ", " + self.start.to_painless() + "))"
+    else:
+        return "(" + v + ").indexOf(" + find + ", " + self.start.to_painless() + ")"
+
+
+@extend(JavaIndexOfOp)
+def to_esFilter(self):
+    return ScriptOp("", self.to_painless()).to_esfilter()
+
 
 
 class BetweenOp(Expression):
@@ -1513,17 +1551,10 @@ class BetweenOp(Expression):
         )
 
     def missing(self):
-        value = self.value.to_painless(not_null=True)
-        prefix = self.prefix.to_painless()
-        len_prefix = "("+prefix+").length()"
-        suffix = self.suffix.to_painless()
-        start = value+".indexOf("+prefix+")"
-        end = value+".indexOf("+suffix+", "+start+"+"+len_prefix+")"
-
+        prefix = FindOp("find", [self.value, self.prefix])
         expr = OrOp("or", [
-            self.value.missing(),
-            ScriptOp("script", start + "==-1"),
-            ScriptOp("script", end + "==-1")
+            prefix.missing(),
+            FindOp("find", [self.value, self.suffix], start=prefix).missing(),
         ])
         return expr
 
@@ -1699,13 +1730,6 @@ operators = {
     "unix": UnixOp,
     "when": WhenOp,
 }
-
-
-def extend(cls):
-    def extender(func):
-        setattr(cls, func.func_name, func)
-        return func
-    return extender
 
 
 ops={

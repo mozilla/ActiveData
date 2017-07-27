@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import json
 import re
 import time
-from collections import deque
+from collections import deque, Mapping
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 
@@ -288,4 +288,26 @@ def encode_property(name):
 
 def decode_property(encoded):
     return encoded.replace("\\,", "\a").replace(",", ".").replace("\a", ",")
+
+
+def untyped(value):
+    return _untype(value)
+
+
+def _untype(value):
+    if isinstance(value, Mapping):
+        output = {}
+
+        for k,v in value.items():
+            if k=="$exists":
+                continue
+            elif k.startswith("$'"):
+                return v
+            else:
+                output[k]=_untype(v)
+        return output
+    elif isinstance(value, list):
+        return [_untype(v) for v in value]
+    else:
+        Log.error("expected full typing")
 

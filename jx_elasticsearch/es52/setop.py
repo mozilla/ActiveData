@@ -177,15 +177,19 @@ def es_setop(es, query):
 
 
 def accumulate_nested_doc(nested_path):
+    """
+    :param nested_path: THE PATH USED TO EXTRACT THE NESTED RECORDS 
+    :return: THE DE_TYPED NESTED OBJECT ARRAY
+    """
     def output(doc):
         acc = []
-        hits = doc.inner_hits[nested_path[0]].hits.hits
-        for h in hits:
+        for h in doc.inner_hits[nested_path[0]].hits.hits:
             i = h._nested.offset
             obj = Data()
             for f, v in h.fields.items():
                 local_path = join_field(split_field(relative_field(decode_property(f), nested_path[0]))[:-1])
                 obj[local_path] = unwraplist(v)
+            # EXTEND THE LIST TO THE LENGTH WE REQUIRE
             for _ in range(len(acc), i+1):
                 acc.append(None)
             acc[i] = obj

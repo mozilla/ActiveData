@@ -122,11 +122,12 @@ def sort_edges(query, prop):
 def es_aggsop(es, frum, query):
     select = wrap([s.copy() for s in listwrap(query.select)])
     es_column_map = {c.names[frum.query_path]: c.es_column for c in frum.schema.leaves(".")}
+    query_for_es = query.map(es_column_map)
 
     es_query = Data()
     new_select = Data()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
     formula = []
-    for s in select:
+    for s, es_s in zip(select, listwrap(query_for_es.select)):
         if s.aggregate == "count" and isinstance(s.value, Variable) and s.value.var == ".":
             s.pull = "doc_count"
         elif isinstance(s.value, Variable):
@@ -135,7 +136,7 @@ def es_aggsop(es, frum, query):
             else:
                 new_select[literal_field(s.value.var)] += [s]
         else:
-            formula.append(s)
+            formula.append(es_s)
 
     for canonical_name, many in new_select.items():
         for s in many:
@@ -207,7 +208,7 @@ def es_aggsop(es, frum, query):
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
-        es_script = s.value.map(es_column_map)
+        es_script = s.value
 
         if isinstance(s.value, TupleOp):
             if s.aggregate == "count":

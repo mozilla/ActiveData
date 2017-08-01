@@ -18,7 +18,7 @@
 	},
 	"request_logs": {
 		"host": "http://localhost",
-		"port": 9400,
+		"port": 9200,
 		"index": "active_data_requests",
 		"type": "request_log",
 		"schema": {
@@ -27,14 +27,14 @@
 	},
 	"saved_queries": {
 		"host": "http://localhost",
-		"port": 9400,
+		"port": 9200,
 		"index": "saved_queries",
 		"type": "query",
 		"debug": true
 	},
 	"elasticsearch": {
 		"host": "http://localhost",
-		"port": 9400,
+		"port": 9200,
 		"index": "testdata",
 		"type": "test_result",
 		"debug": true
@@ -59,7 +59,7 @@
 			{
 				"log_type": "elasticsearch",
 				"host": "http://localhost",
-				"port": 9400,
+				"port": 9200,
 				"index": "debug_active_data",
 				"type": "active_data"
 			}

@@ -171,9 +171,15 @@ class ESUtils(object):
             container.add_alias(_settings.index)
 
             # INSERT DATA
-            container.extend([
-                {"value": v} for v in subtest.data
-            ])
+            inserts = []
+            for v in subtest.data:
+                _id = v._id
+                v._id = None
+                inserts.append({
+                    "id": _id,
+                    "value": v
+                })
+            container.extend(inserts)
             container.flush()
             # ENSURE query POINTS TO CONTAINER
             frum = subtest.query["from"]
@@ -217,12 +223,13 @@ class ESUtils(object):
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
                 compare_to_expected(subtest.query, result, expected)
-                Log.note("Test result compares well")
+                Log.note("PASS {{name|quote}} (format={{format}})", name=subtest.name, format=format)
             if num_expectations == 0:
-                Log.error("Expecting test {{name|quote}} to have property named 'expecting_*' for testing the various format clauses", {
-                    "name": subtest.name
-                })
-        except Exception, e:
+                Log.error(
+                    "Expecting test {{name|quote}} to have property named 'expecting_*' for testing the various format clauses",
+                    name=subtest.name
+                )
+        except Exception as e:
             Log.error("Failed test {{name|quote}}", {"name": subtest.name}, e)
 
     def execute_query(self, query):

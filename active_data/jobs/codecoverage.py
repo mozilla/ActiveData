@@ -40,9 +40,7 @@ def process_batch(todo_queue, revision, coverage_index, coverage_summary_index, 
         if please_stop:
             return
 
-        # WHAT HAVE WE SUMMARIED ALREADY?
-        Log.note("Coverage for revision {{revision}}:\n{{files}}", revision=revision, files=todo.source.file.name)
-
+        # WHAT HAVE WE SUMMARIZED ALREADY?
         coverage_summary_records = http.post_json(settings.url, json={
             "from": "coverage-summary",
             "select": [{"name": "count", "value": "etl.num_source_records", "aggregate": "sum"}],
@@ -61,6 +59,8 @@ def process_batch(todo_queue, revision, coverage_index, coverage_summary_index, 
             for rec in todo
             if rec.source.file.name and existing_count_summary.get(rec.source.file.name) != rec.count
         ]
+
+        Log.note("More coverage for revision {{revision}}:\n{{files}}", revision=revision, files=refresh_required)
 
         # PULL AN EXAMPLE
         coverage_example = http.post_json(settings.url, json={

@@ -100,7 +100,6 @@ class AggsDecoder(object):
         else:
             Log.error("domain type of {{type}} is not supported yet", type=e.domain.type)
 
-
     def __init__(self, edge, query, limit):
         self.start = None
         self.edge = edge

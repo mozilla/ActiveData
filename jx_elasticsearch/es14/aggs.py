@@ -161,18 +161,18 @@ def es_aggsop(es, frum, query):
         if representative.value.var == ".":
             Log.error("do not know how to handle")
         else:
-            field_name = representative.value.var
+            es_field_name = representative.value.var
 
         # canonical_name=literal_field(many[0].name)
         for s in many:
             if s.aggregate == "count":
-                es_query.aggs[literal_field(canonical_name)].value_count.field = field_name
+                es_query.aggs[literal_field(canonical_name)].value_count.field = es_field_name
                 s.pull = literal_field(canonical_name) + ".value"
             elif s.aggregate == "median":
                 # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
 
-                es_query.aggs[key].percentiles.field = field_name
+                es_query.aggs[key].percentiles.field = es_field_name
                 es_query.aggs[key].percentiles.percents += [50]
                 s.pull = key + ".values.50\.0"
             elif s.aggregate == "percentile":
@@ -182,23 +182,23 @@ def es_aggsop(es, frum, query):
                     Log.error("Expecting percentile to be a float from 0.0 to 1.0")
                 percent = Math.round(s.percentile * 100, decimal=6)
 
-                es_query.aggs[key].percentiles.field = field_name
+                es_query.aggs[key].percentiles.field = es_field_name
                 es_query.aggs[key].percentiles.percents += [percent]
                 s.pull = key + ".values." + literal_field(unicode(percent))
             elif s.aggregate == "cardinality":
                 # ES USES DIFFERENT METHOD FOR CARDINALITY
                 key = literal_field(canonical_name + " cardinality")
 
-                es_query.aggs[key].cardinality.field = field_name
+                es_query.aggs[key].cardinality.field = es_field_name
                 s.pull = key + ".value"
             elif s.aggregate == "stats":
                 # REGULAR STATS
                 stats_name = literal_field(canonical_name)
-                es_query.aggs[stats_name].extended_stats.field = field_name
+                es_query.aggs[stats_name].extended_stats.field = es_field_name
 
                 # GET MEDIAN TOO!
                 median_name = literal_field(canonical_name + " percentile")
-                es_query.aggs[median_name].percentiles.field = field_name
+                es_query.aggs[median_name].percentiles.field = es_field_name
                 es_query.aggs[median_name].percentiles.percents += [50]
 
                 s.pull = {
@@ -215,12 +215,12 @@ def es_aggsop(es, frum, query):
             elif s.aggregate == "union":
                 # USE TERMS AGGREGATE TO SIMULATE union
                 stats_name = literal_field(canonical_name)
-                es_query.aggs[stats_name].terms.field = field_name
+                es_query.aggs[stats_name].terms.field = es_field_name
                 es_query.aggs[stats_name].terms.size = Math.min(s.limit, MAX_LIMIT)
                 s.pull = stats_name + ".buckets.key"
             else:
                 # PULL VALUE OUT OF THE stats AGGREGATE
-                es_query.aggs[literal_field(canonical_name)].extended_stats.field = field_name
+                es_query.aggs[literal_field(canonical_name)].extended_stats.field = es_field_name
                 s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
 
     for i, s in enumerate(formula):

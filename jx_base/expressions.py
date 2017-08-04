@@ -21,7 +21,7 @@ from mo_logs import Log
 from mo_math import Math
 from pyLibrary import convert
 
-from jx_base.queries import is_variable_name
+from jx_base.queries import is_variable_name, get_property_name
 from jx_python.expression_compiler import compile_expression
 from mo_times.dates import Date
 
@@ -212,7 +212,7 @@ class Variable(Expression):
         Expression.__init__(self, "", None)
         if verify and not is_variable_name(var):
             Log.error("Expecting a variable name")
-        self.var = var
+        self.var = get_property_name(var)
 
     def __call__(self, row, rownum=None, rows=None):
         path = split_field(self.var)

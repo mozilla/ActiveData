@@ -188,8 +188,8 @@ def es_aggsop(es, frum, query):
             elif s.aggregate == "cardinality":
                 # ES USES DIFFERENT METHOD FOR CARDINALITY
                 key = literal_field(canonical_name + " cardinality")
-
                 es_query.aggs[key].cardinality.field = es_field_name
+                es_query.aggs[key].cardinality.precision_threshold = 1000
                 s.pull = key + ".value"
             elif s.aggregate == "stats":
                 # REGULAR STATS
@@ -256,6 +256,7 @@ def es_aggsop(es, frum, query):
             key = canonical_name + " cardinality"
 
             es_query.aggs[key].cardinality.script = abs_value.to_ruby()
+            es_query.aggs[key].cardinality.precision_threshold = 1000
             s.pull = key + ".value"
         elif s.aggregate == "stats":
             # REGULAR STATS

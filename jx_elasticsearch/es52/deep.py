@@ -156,7 +156,7 @@ def es_deepop(es, query):
                 new_select.append({
                     "name": s.name,
                     "value": s.value.var,
-                    "pull": get_pull("_id"),
+                    "pull": jx_expression_to_function("_id"),
                     "put": {"name": s.name, "index": i, "child": "."}
                 })
                 i += 1

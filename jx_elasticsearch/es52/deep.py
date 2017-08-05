@@ -87,7 +87,13 @@ def es_deepop(es, query):
         more_filter = None
 
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
-    es_query.sort = jx_sort_to_es_sort(query.sort)
+
+    # es_query.sort = jx_sort_to_es_sort(query.sort)
+    map_to_es_columns = schema.map_to_es()
+    # {c.names["."]: c.es_column for c in schema.leaves(".")}
+    query_for_es = query.map(map_to_es_columns)
+    es_query.sort = jx_sort_to_es_sort(query_for_es.sort)
+
     es_query.stored_fields = []
 
     is_list = isinstance(query.select, list)

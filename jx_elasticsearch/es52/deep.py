@@ -170,7 +170,7 @@ def es_deepop(es, query):
                     net_columns = [c for c in columns if c.es_column.startswith(parent) and c.type not in STRUCT]
 
                 if not net_columns:
-                    pull = jx_expression_to_function(get_pull(prefix))
+                    pull = get_pull(prefix)
                     if len(prefix.nested_path) == 1:
                         es_query.stored_fields += [prefix.es_column]
                     new_select.append({

@@ -11,12 +11,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+
 from jx_elasticsearch import es09, es52
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field
 from mo_logs import Log
 from mo_threads import Thread
 from pyLibrary import convert
 
+from jx_base.expressions import jx_expression_to_function
 from jx_base.expressions import compile_expression
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, simplify_esfilter, AndOp, Variable, LeavesOp
 from jx_elasticsearch.es52.setop import format_dispatch
@@ -204,7 +206,7 @@ def es_deepop(es, query):
                     # else:
                     #     Log.error("deep field not expected")
 
-            pull = get_pull(EXPRESSION_PREFIX + s.name)
+            pull = jx_expression_to_function(EXPRESSION_PREFIX + s.name)
             post_expressions[pull] = compile_expression(expr.map(map_to_local).to_python())
 
             new_select.append({

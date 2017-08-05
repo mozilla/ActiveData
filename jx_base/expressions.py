@@ -11,24 +11,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import itertools
+import operator
 from collections import Mapping
 from decimal import Decimal
 
-import operator
-from mo_dots import coalesce, wrap, set_default, literal_field, Null, split_field, startswith_field
-from mo_dots import Data, join_field, unwraplist, ROOT_PATH, relative_field, unwrap
-from mo_json import json2value, quote
+from mo_dots import coalesce, wrap, Null, split_field
+from mo_json import json2value
 from mo_logs import Log
-from mo_logs.exceptions import suppress_exception
-from mo_math import Math, OR, MAX
-from mo_times.dates import Date
-
+from mo_math import Math
 from pyLibrary import convert
-from jx_python.containers import STRUCT, OBJECT
+
 from jx_base.queries import is_variable_name
 from jx_python.expression_compiler import compile_expression
-from pyLibrary.sql.sqlite import quote_column, quote_value
+from mo_times.dates import Date
 
 ALLOW_SCRIPTING = False
 TRUE_FILTER = True
@@ -44,6 +39,13 @@ def _late_import():
     from jx_python.query import QueryOp as _Query
 
     _ = _Query
+
+
+def extend(cls):
+    def extender(func):
+        setattr(cls, func.func_name, func)
+        return func
+    return extender
 
 
 def jx_expression(expr):
@@ -164,15 +166,20 @@ class Expression(object):
         raise Log.error("{{type}} has no `map` method", type=self.__class__.__name__)
 
     def missing(self):
-        # RETURN FILTER THAT INDICATE THIS EXPRESSIOn RETURNS null
-        raise Log.error("{{type}} has no `missing` method", type=self.__class__.__name__)
+        """
+        THERE IS PLENTY OF OPPORTUNITY TO SIMPLIFY missing EXPRESSIONS
+        OVERRIDE THIS METHOD TO SIMPLIFY
+        :return: 
+        """
+        return MissingOp("missing", self)
 
     def exists(self):
-        missing = self.missing()
-        if not missing:
-            return TrueOp()
-        else:
-            return NotOp("not", missing)
+        """
+        THERE IS PLENTY OF OPPORTUNITY TO SIMPLIFY exists EXPRESSIONS
+        OVERRIDE THIS METHOD TO SIMPLIFY
+        :return: 
+        """
+        return ExistsOp("exists", self)
 
     def is_true(self):
         """
@@ -197,9 +204,13 @@ class Expression(object):
 
 class Variable(Expression):
 
-    def __init__(self, var):
+    def __init__(self, var, verify=True):
+        """
+        :param var:  DOT DELIMITED PATH INTO A DOCUMENT 
+        :param verify: True - VERIFY THIS IS A VALID NAME (use False for trusted code only)
+        """
         Expression.__init__(self, "", None)
-        if not is_variable_name(var):
+        if verify and not is_variable_name(var):
             Log.error("Expecting a variable name")
         self.var = var
 
@@ -223,14 +234,7 @@ class Variable(Expression):
         if not isinstance(map_, Mapping):
             Log.error("Expecting Mapping")
 
-        return Variable(coalesce(map_.get(self.var), self.var))
-
-    def missing(self):
-        # RETURN FILTER THAT INDICATE THIS EXPRESSION RETURNS null
-        return MissingOp("missing", self)
-
-    def exists(self):
-        return ExistsOp("exists", self)
+        return Variable(coalesce(map_.get(self.var), self.var), verify=False)
 
     def __hash__(self):
         return self.var.__hash__()
@@ -267,13 +271,6 @@ class OffsetOp(Expression):
 
     def vars(self):
         return {}
-
-    def missing(self):
-        # RETURN FILTER THAT INDICATE THIS EXPRESSION RETURNS null
-        return MissingOp("missing", self)
-
-    def exists(self):
-        return ExistsOp("exists", self)
 
     def __hash__(self):
         return self.var.__hash__()
@@ -314,9 +311,6 @@ class RowsOp(Expression):
     def map(self, map_):
         return BinaryOp("rows", [self.var.map(map_), self.offset.map(map_)])
 
-    def missing(self):
-        return MissingOp("missing", self)
-
 
 class GetOp(Expression):
     has_simple_form = True
@@ -345,6 +339,7 @@ class ScriptOp(Expression):
 
     def __init__(self, op, script):
         Expression.__init__(self, op, None)
+        self.simplified = True
         self.script = script
 
     def vars(self):
@@ -379,6 +374,7 @@ class Literal(Expression):
 
     def __init__(self, op, term):
         Expression.__init__(self, "", None)
+        self.simplified = True
         if term == "":
             self._json = '""'
         else:
@@ -424,7 +420,7 @@ class Literal(Expression):
         return self
 
     def missing(self):
-        if self._json == '""':
+        if self._json in ['""', 'null']:
             return TrueOp()
         return FalseOp()
 
@@ -548,7 +544,7 @@ class FalseOp(Literal):
         return self
 
     def missing(self):
-        return self
+        return FalseOp()
 
     def is_true(self):
         return FalseOp()
@@ -929,7 +925,7 @@ class AndOp(Expression):
         return AndOp("and", [t.map(map_) for t in self.terms])
 
     def missing(self):
-        return False
+        return FalseOp()
 
     def partial_eval(self):
         if self.simplified:
@@ -946,6 +942,8 @@ class AndOp(Expression):
                 terms.append(simple)
         if len(terms) == 0:
             return TrueOp()
+        if len(terms) == 1:
+            return terms[0]
         output = AndOp("and", terms)
         output.simplified = True
         return output
@@ -969,7 +967,7 @@ class OrOp(Expression):
         return OrOp("or", [t.map(map_) for t in self.terms])
 
     def missing(self):
-        return False
+        return FalseOp()
 
     def __call__(self, row=None, rownum=None, rows=None):
         return any(t(row, rownum, rows) for t in self.terms)
@@ -989,6 +987,8 @@ class OrOp(Expression):
                 terms.append(simple)
         if len(terms) == 0:
             return FalseOp()
+        if len(terms) == 1:
+            return terms[0]
         output = OrOp("or", terms)
         output.simplified = True
         return output
@@ -1068,7 +1068,7 @@ class CountOp(Expression):
         return CountOp("count", [t.map(map_) for t in self.terms])
 
     def missing(self):
-        return FalseOp
+        return FalseOp()
 
     def exists(self):
         return TrueOp
@@ -1106,15 +1106,15 @@ class MultiOp(Expression):
 
     def missing(self):
         if self.nulls:
-            if self.default == None:
+            if isinstance(self.default, NullOp):
                 return AndOp("and", [t.missing() for t in self.terms])
             else:
-                return FalseOp
+                return FalseOp()
         else:
-            if self.default == None:
+            if isinstance(self.default, NullOp):
                 return OrOp("or", [t.missing() for t in self.terms])
             else:
-                return FalseOp
+                return FalseOp()
 
     def exists(self):
         if self.nulls:
@@ -1340,7 +1340,7 @@ class LeftOp(Expression):
 
     def missing(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return MissingOp(None, self.value)
+            return self.value.missing()
         else:
             return OrOp(None, [self.value.missing(), self.length.missing()])
 
@@ -1369,7 +1369,7 @@ class NotLeftOp(Expression):
 
     def missing(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return MissingOp(None, self.value)
+            return self.value.missing()
         else:
             return OrOp(None, [self.value.missing(), self.length.missing()])
 
@@ -1398,7 +1398,7 @@ class RightOp(Expression):
 
     def missing(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return MissingOp(None, self.value)
+            return self.value.missing()
         else:
             return OrOp(None, [self.value.missing(), self.length.missing()])
 
@@ -1427,7 +1427,7 @@ class NotRightOp(Expression):
 
     def missing(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return MissingOp(None, self.value)
+            return self.value.missing()
         else:
             return OrOp(None, [self.value.missing(), self.length.missing()])
 
@@ -1459,21 +1459,53 @@ class FindOp(Expression):
         )
 
     def missing(self):
-        v = self.value.to_painless(not_null=True)
-        find = self.find.to_painless(not_null=True)
-        index = v + ".indexOf(" + find + ", " + self.start.to_painless() + ")"
-
         return AndOp("and", [
             self.default.missing(),
             OrOp("or", [
                 self.value.missing(),
                 self.find.missing(),
-                EqOp("eq", [ScriptOp("script", index), Literal(None, -1)])
+                EqOp("eq", [JavaIndexOfOp("", [self.value, self.find, self.start]), Literal(None, -1)])
             ])
         ])
 
     def exists(self):
         return TrueOp()
+
+
+class JavaIndexOfOp(Expression):
+    """
+    PLACEHOLDER FOR Java's (Painless) String.indexOf() METHOD
+    """
+
+    def __init__(self, op, params):
+        """
+        :param op: 
+        :param params: (value, find, start) tuple 
+        """
+        self.value, self.find, self.start = params
+
+    def map(self, mapping):
+        return JavaIndexOfOp("", [self.value.map(mapping), self.find.map(mapping), self.start.map(mapping)])
+
+    def missing(self):
+        return FalseOp()
+
+
+
+@extend(JavaIndexOfOp)
+def to_painless(self, not_null=False, boolean=False, many=False):
+    v = self.value.to_painless(not_null=True)
+    find = self.find.to_painless(not_null=True)
+    if many:
+        return "Collections.singletonList((" + v + ").indexOf(" + find + ", " + self.start.to_painless() + "))"
+    else:
+        return "(" + v + ").indexOf(" + find + ", " + self.start.to_painless() + ")"
+
+
+@extend(JavaIndexOfOp)
+def to_esFilter(self):
+    return ScriptOp("", self.to_painless()).to_esfilter()
+
 
 
 class BetweenOp(Expression):
@@ -1519,17 +1551,10 @@ class BetweenOp(Expression):
         )
 
     def missing(self):
-        value = self.value.to_painless(not_null=True)
-        prefix = self.prefix.to_painless()
-        len_prefix = "("+prefix+").length()"
-        suffix = self.suffix.to_painless()
-        start = value+".indexOf("+prefix+")"
-        end = value+".indexOf("+suffix+", "+start+"+"+len_prefix+")"
-
+        prefix = FindOp("find", [self.value, self.prefix])
         expr = OrOp("or", [
-            self.value.missing(),
-            ScriptOp("script", start + "==-1"),
-            ScriptOp("script", end + "==-1")
+            prefix.missing(),
+            FindOp("find", [self.value, self.suffix], start=prefix).missing(),
         ])
         return expr
 
@@ -1644,9 +1669,6 @@ class CaseOp(Expression):
     def map(self, map_):
         return CaseOp("case", [w.map(map_) for w in self.whens])
 
-    def missing(self):
-        return MissingOp("missing", self)
-
 
 operators = {
     "add": MultiOp,
@@ -1708,13 +1730,6 @@ operators = {
     "unix": UnixOp,
     "when": WhenOp,
 }
-
-
-def extend(cls):
-    def extender(func):
-        setattr(cls, func.func_name, func)
-        return func
-    return extender
 
 
 ops={

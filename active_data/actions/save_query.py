@@ -22,6 +22,7 @@ from pyLibrary import convert
 
 from jx_elasticsearch.jx_usingES import FromES
 from jx_python.containers.cube import Cube
+from mo_json import json2value
 from mo_logs.exceptions import Except
 from mo_times.dates import Date
 from pyLibrary.env.elasticsearch import Cluster
@@ -70,15 +71,16 @@ class SaveQueries(object):
         es = Cluster(kwargs).get_or_create_index(
             schema=convert.json2value(convert.value2json(SCHEMA), leaves=True),
             limit_replicas=True,
+            typed=False,
             kwargs=kwargs
         )
-        #ENSURE THE TYPE EXISTS FOR PROBING
+        # ENSURE THE TYPE EXISTS FOR PROBING
         try:
             es.add({"id": "dummy", "value": {
                 "hash": "dummy",
                 "create_time": Date.now(),
                 "last_used": Date.now(),
-                "query": {}
+                "query": "{}"
             }})
         except Exception, e:
             Log.warning("Problem saving query", cause=e)
@@ -89,17 +91,18 @@ class SaveQueries(object):
 
     def find(self, hash):
         result = self.es.query({
-            "select": "*",
+            "select": ["hash", "query"],
             "from": {"type": "elasticsearch", "settings": self.es.settings},
             "where": {"prefix": {"hash": hash}},
             "format": "list"
         })
 
         try:
-            query = wrap(result.data).query
+            hash = result.data[0].hash
+            query = wrap(result.data[0]).query
             if len(query) == 0:
                 return None
-        except Exception, e:
+        except Exception:
             return None
 
         self.es.update({
@@ -108,7 +111,7 @@ class SaveQueries(object):
             "where": {"eq": {"hash": hash}}
         })
 
-        return query[0]
+        return query
 
     def save(self, query):
         query.meta = None
@@ -209,8 +212,8 @@ SCHEMA = {
                     "store": True
                 },
                 "query": {
-                    "type": "object",
-                    "enabled": False
+                    "type": "text",
+                    "store": True
                 }
             }
         }

@@ -424,8 +424,6 @@ class SetDomain(Domain):
         return output
 
 
-
-
 class TimeDomain(Domain):
     __slots__ = ["max", "min", "interval", "partitions", "NULL"]
 

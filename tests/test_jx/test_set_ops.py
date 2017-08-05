@@ -411,7 +411,6 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use == "elasticsearch", "ES only accepts objects, not values")
     def test_list_of_values(self):
         test = {
             "data": ["a", "b"],
@@ -740,7 +739,7 @@ class TestSetOps(BaseTestCase):
             ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a.b", "a.c"],
+                "header": ["a\\.b", "a\\.c"],
                 "data": [
                     [0, 0],
                     [0, 1],
@@ -757,8 +756,8 @@ class TestSetOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a.b": [0, 0, 1, 1],
-                    "a.c": [0, 1, 0, 1]
+                    "a\\.b": [0, 0, 1, 1],
+                    "a\\.c": [0, 1, 0, 1]
                 }
             }
         }
@@ -892,7 +891,7 @@ class TestSetOps(BaseTestCase):
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a.b", "a.v"],
+                "header": ["a\\.b", "a\\.v"],
                 "data": [
                     ["x", 2],
                     ["x", 5],
@@ -909,8 +908,8 @@ class TestSetOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a.b": ["x", "x", "x", NULL],
-                    "a.v": [2, 5, 7, NULL]
+                    "a\\.b": ["x", "x", "x", NULL],
+                    "a\\.v": [2, 5, 7, NULL]
                 }
             }
         }
@@ -1058,7 +1057,7 @@ class TestSetOps(BaseTestCase):
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["o", "a.b", "a.v"],
+                "header": ["o", "a\\.b", "a\\.v"],
                 "data": [
                     [3, "x", 2],
                     [1, "x", 5],
@@ -1075,8 +1074,8 @@ class TestSetOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a.b": ["x", "x", "x", NULL],
-                    "a.v": [2, 5, 7, NULL],
+                    "a\\.b": ["x", "x", "x", NULL],
+                    "a\\.v": [2, 5, 7, NULL],
                     "o": [3, 1, 2, 4]
                 }
             }

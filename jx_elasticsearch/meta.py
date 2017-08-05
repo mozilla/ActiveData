@@ -103,7 +103,16 @@ class FromESMetadata(Schema):
     def _upsert_column(self, c):
         # ASSUMING THE  self.meta.columns.locker IS HAD
         existing_columns = self.meta.columns.find(c.es_index, c.names["."])
-        if not existing_columns:
+        for canonical in existing_columns:
+            if canonical.type == c.type and canonical is not c:
+                set_default(c.names, canonical.names)
+                for key in Column.__slots__:
+                    canonical[key] = c[key]
+                if DEBUG:
+                    Log.note("todo: {{table}}::{{column}}", table=canonical.es_index, column=canonical.es_column)
+                self.todo.add(canonical)
+                break
+        else:
             self.meta.columns.add(c)
             self.todo.add(c)
 
@@ -116,15 +125,7 @@ class FromESMetadata(Schema):
                     cc.partitions = cc.cardinality = None
                     cc.last_updated = Date.now()
                 self.todo.extend(cols)
-        else:
-            canonical = existing_columns[0]
-            if canonical is not c:
-                set_default(c.names, canonical.names)
-                for key in Column.__slots__:
-                    canonical[key] = c[key]
-            if DEBUG:
-                Log.note("todo: {{table}}::{{column}}", table=canonical.es_index, column=canonical.es_column)
-            self.todo.add(canonical)
+
 
     def _get_columns(self, table=None):
         # TODO: HANDLE MORE THEN ONE ES, MAP TABLE SHORT_NAME TO ES INSTANCE
@@ -158,12 +159,11 @@ class FromESMetadata(Schema):
                 c.names[query_path[0]] = relative_field(c.names["."], query_path[0])
 
             with self.meta.columns.locker:
-                self._upsert_column(c)
                 for alias in meta.aliases:
-                    c = copy(c)
-                    c.es_index = alias
-                    c.type = es_type_to_json_type[c.type]
-                    self._upsert_column(c)
+                    c_ = copy(c)
+                    c_.es_index = alias
+                    self._upsert_column(c_)
+                self._upsert_column(c)
 
         with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
             # LIST OF EVERY NESTED PATH
@@ -185,6 +185,7 @@ class FromESMetadata(Schema):
 
             # ADD RELATIVE COLUMNS
             for abs_column in abs_columns:
+                abs_column.type = es_type_to_json_type[abs_column.type]
                 for query_path in query_paths:
                     add_column(abs_column, query_path)
 
@@ -278,10 +279,10 @@ class FromESMetadata(Schema):
 
             es_index = c.es_index.split(".")[0]
             result = self.default_es.post("/" + es_index + "/_search", data={
-                "aggs": {c.names["."]: _counting_query(c)},
+                "aggs": {"_": _counting_query(c)},
                 "size": 0
             })
-            r = result.aggregations.values()[0]
+            r = result.aggregations._
             count = result.hits.total
             cardinality = coalesce(r.value, r._nested.value, r.doc_count)
             if cardinality == None:
@@ -317,7 +318,7 @@ class FromESMetadata(Schema):
                 return
             elif c.type in _elasticsearch.ES_NUMERIC_TYPES and cardinality > 30:
                 if DEBUG:
-                    Log.note("{{field}} has {{num}} parts", field=c.name, num=cardinality)
+                    Log.note("{{field}} has {{num}} parts", field=c.es_index, num=cardinality)
                 with self.meta.columns.locker:
                     self.meta.columns.update({
                         "set": {
@@ -335,18 +336,18 @@ class FromESMetadata(Schema):
                     "aggs": {"_nested": {"terms": {"field": c.es_column}}}
                 }
             else:
-                query.aggs[literal_field(c.names["."])] = {"terms": {"field": c.es_column, "size": cardinality}}
+                query.aggs["_"] = {"terms": {"field": c.es_column, "size": cardinality}}
 
             result = self.default_es.post("/" + es_index + "/_search", data=query)
 
-            aggs = result.aggregations.values()[0]
+            aggs = result.aggregations._
             if aggs._nested:
                 parts = jx.sort(aggs._nested.buckets.key)
             else:
                 parts = jx.sort(aggs.buckets.key)
 
             if DEBUG:
-                Log.note("{{field}} has {{parts}}", field=c.name, parts=parts)
+                Log.note("{{field}} has {{parts}}", field=c.es_index, parts=parts)
             with self.meta.columns.locker:
                 self.meta.columns.update({
                     "set": {

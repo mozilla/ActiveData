@@ -21,7 +21,6 @@ class TestSchemaMerging(BaseTestCase):
     TESTS THAT DEMONSTRATE DIFFERENT SCHEMAS
     """
 
-    @skipIf(global_settings.use == "elasticsearch", "require dynamic typing before overloading objects and primitives")
     def test_select(self):
         test = {
             "data": [

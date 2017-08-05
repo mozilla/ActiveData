@@ -15,26 +15,28 @@ import re
 from collections import Mapping
 from copy import deepcopy
 
-import mo_json
-from mo_logs import Log, strings
-from mo_logs.exceptions import Except
-from mo_logs.strings import utf82unicode
-from mo_threads import Lock
-from mo_dots import coalesce, Null, Data, set_default, join_field, split_field, listwrap, literal_field, \
-    ROOT_PATH, concat_field
-from mo_dots import wrap
-from mo_dots.lists import FlatList
-from pyLibrary import convert
-from pyLibrary.env import http
-from mo_json.typed_encoder import json2typed
-from mo_math import Math
-from mo_math.randoms import Random
-from mo_kwargs import override
 from jx_python import jx
+from mo_dots import coalesce, Null, Data, set_default, listwrap, literal_field, \
+    ROOT_PATH, concat_field, join_field, split_field
+from mo_dots import wrap
+from mo_kwargs import override
+from mo_logs import Log, strings
+from mo_math import Math
+from mo_threads import Lock
 from mo_threads import ThreadedQueue
 from mo_threads import Till
+from pyLibrary import convert
+
+import mo_json
+from jx_python.meta import Column
+from mo_dots.lists import FlatList
+from mo_json.typed_encoder import typed_encode, decode_property
+from mo_logs.exceptions import Except
+from mo_logs.strings import utf82unicode
+from mo_math.randoms import Random
 from mo_times.dates import Date
 from mo_times.timer import Timer
+from pyLibrary.env import http
 
 ES_STRUCT = ["object", "nested"]
 ES_NUMERIC_TYPES = ["long", "integer", "double", "float"]
@@ -274,23 +276,31 @@ class Index(Features):
             for r in records:
                 id = r.get("id")
                 r_value = r.get('value')
-                if id == None and r_value:
+                if id == None and isinstance(r_value, Mapping):
                     id = r_value.get('_id')
                 if id == None:
                     id = random_id()
 
-                if "json" in r:
-                    json_bytes = r["json"].encode("utf8")
-                elif r_value or isinstance(r_value, (dict, Data)):
-                    json_bytes = convert.value2json(r_value).encode("utf8")
-                else:
-                    json_bytes = None
-                    Log.error("Expecting every record given to have \"value\" or \"json\" property")
-
-                lines.append(b'{"index":{"_id": ' + convert.value2json(id).encode("utf8") + b'}}')
                 if self.settings.tjson:
-                    lines.append(json2typed(json_bytes.decode('utf8')).encode('utf8'))
+                    if "json" in r:
+                        r_value = convert.json2value(r["json"])
+                    elif isinstance(r_value, Mapping) or r_value != None:
+                        pass
+                    else:
+                        Log.error("Expecting every record given to have \"value\" or \"json\" property")
+
+                    lines.append(b'{"index":{"_id": ' + convert.value2json(id).encode("utf8") + b'}}')
+                    json_bytes = typed_encode(r_value).encode('utf8')
+                    lines.append(json_bytes)
                 else:
+                    if "json" in r:
+                        json_bytes = r["json"].encode("utf8")
+                    elif r_value or isinstance(r_value, (dict, Data)):
+                        json_bytes = convert.value2json(r_value).encode("utf8")
+                    else:
+                        Log.error("Expecting every record given to have \"value\" or \"json\" property")
+
+                    lines.append(b'{"index":{"_id": ' + convert.value2json(id).encode("utf8") + b'}}')
                     lines.append(json_bytes)
             del records
 
@@ -1097,17 +1107,17 @@ class Alias(Features):
                 cause=e
             )
 
-
 def parse_properties(parent_index_name, parent_name, esProperties):
     """
     RETURN THE COLUMN DEFINITIONS IN THE GIVEN esProperties OBJECT
     """
-    from jx_python.meta import Column
-
     columns = FlatList()
     for name, property in esProperties.items():
         index_name = parent_index_name
         column_name = concat_field(parent_name, name)
+        jx_name = join_field(decode_property(n) for n in split_field(column_name) if not n.startswith("$"))
+        if split_field(column_name)[-1] == "$exists":
+            property.type = "exists"
 
         if property.type == "nested" and property.properties:
             # NESTED TYPE IS A NEW TYPE DEFINITION
@@ -1119,7 +1129,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
             columns.append(Column(
                 es_index=index_name,
                 es_column=column_name,
-                names={".": column_name},
+                names={".": jx_name},
                 type="nested",
                 nested_path=ROOT_PATH
             ))
@@ -1130,7 +1140,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
             child_columns = parse_properties(index_name, column_name, property.properties)
             columns.extend(child_columns)
             columns.append(Column(
-                names={".": column_name},
+                names={".": jx_name},
                 es_index=index_name,
                 es_column=column_name,
                 nested_path=ROOT_PATH,
@@ -1150,7 +1160,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                         table=index_name,
                         es_index=index_name,
                         es_column=column_name,
-                        name=column_name,
+                        names={".": jx_name},
                         nested_path=ROOT_PATH,
                         type=p.type
                     ))
@@ -1159,17 +1169,17 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                         table=index_name,
                         es_index=index_name,
                         es_column=column_name + "\\." + n,
-                        name=column_name + "\\." + n,
+                        names={".": jx_name + "\\." + n},
                         nested_path=ROOT_PATH,
                         type=p.type
                     ))
             continue
 
-        if property.type in ["string", "boolean", "integer", "date", "long", "double", "keyword"]:
+        if property.type in ["string", "boolean", "integer", "date", "long", "double", "keyword", "exists", "text"]:
             columns.append(Column(
                 es_index=index_name,
-                names={".": column_name},
                 es_column=column_name,
+                names={".": jx_name},
                 nested_path=ROOT_PATH,
                 type=property.type
             ))
@@ -1177,17 +1187,17 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                 columns.append(Column(
                     es_index=index_name,
                     es_column=column_name,
-                    names={".":column_name},
+                    names={".": jx_name},
                     nested_path=ROOT_PATH,
                     type=property.type
                 ))
         elif property.enabled == None or property.enabled == False:
             columns.append(Column(
                 es_index=index_name,
-                names={".": column_name},
                 es_column=column_name,
+                names={".": jx_name},
                 nested_path=ROOT_PATH,
-                type="source" if property.enabled==False else "object"
+                type="source" if property.enabled == False else "object"
             ))
         else:
             Log.warning("unknown type {{type}} for property {{path}}", type=property.type, path=query_path)

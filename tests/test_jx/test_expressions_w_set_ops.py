@@ -179,7 +179,7 @@ class TestSetOps(BaseTestCase):
     def test_concat(self):
         test = {
             "data": [
-                {"v": "hello", "w": NULL},
+                {"v": "hello", "w": None},
                 {"v": "hello", "w": ""},
                 {"v": "hello", "w": "world"}
             ],

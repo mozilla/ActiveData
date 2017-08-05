@@ -626,11 +626,8 @@ class ObjectDecoder(SetDecoder):
             flatter = (lambda k: k[prefix_length:])
 
         self.put, self.fields = zip(*[
-            (flatter(k), c.es_column)
-            for k, cs in query.frum.schema.lookup.items()
-            if k.startswith(prefix)
-            for c in cs
-            if c.type not in STRUCT
+            (flatter(c.names["."), c.es_column)
+            for c in query.frum.schema.leaves(prefix)
         ])
 
         self.domain = self.edge.domain = wrap({"dimension": {"fields": self.fields}})

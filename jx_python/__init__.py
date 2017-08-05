@@ -156,7 +156,13 @@ class Schema(object):
         :return: 
         """
         full_name = concat_field(self.query_path, name)
-        return [c for k, cs in self.lookup.items() if startswith_field(k, full_name) for c in cs if c.type not in STRUCT]
+        return [
+            c
+            for k, cs in self.lookup.items()
+            # if startswith_field(k, full_name)
+            for c in cs
+            if c.type not in STRUCT
+        ]
 
     def map_to_es(self):
         """
@@ -167,13 +173,13 @@ class Schema(object):
             {
                 c.names[full_name]: c.es_column
                 for k, cs in self.lookup.items()
-                if startswith_field(k, full_name)
+                # if startswith_field(k, full_name)
                 for c in cs if c.type not in STRUCT
             },
             {
                 c.names["."]: c.es_column
                 for k, cs in self.lookup.items()
-                if startswith_field(k, full_name)
+                # if startswith_field(k, full_name)
                 for c in cs if c.type not in STRUCT
             }
         )

@@ -13,6 +13,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from future.utils import text_type
+
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_logs.strings import expand_template
 
@@ -24,7 +26,7 @@ class StructuredLogger_usingStream(StructuredLogger):
 
     def write(self, template, params):
         value = expand_template(template, params)
-        if isinstance(value, unicode):
+        if isinstance(value, text_type):
             value = value.encode('utf8')
         self.stream.write(value + b"\n")
 

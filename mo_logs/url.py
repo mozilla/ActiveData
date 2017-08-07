@@ -1,6 +1,20 @@
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 from collections import Mapping
 from urlparse import urlparse
 
+from future.utils import text_type
 from mo_dots import wrap, Data
 
 _value2json = None
@@ -126,7 +140,7 @@ def url_param2value(param):
     """
     CONVERT URL QUERY PARAMETERS INTO DICT
     """
-    if isinstance(param, unicode):
+    if isinstance(param, text_type):
         param = param.encode("ascii")
 
     def _decode(v):
@@ -190,7 +204,7 @@ def value2url_param(value):
             value2url_param(k) + b"=" + (value2url_param(v) if isinstance(v, basestring) else value2url_param(_value2json(v)))
             for k, v in value_.leaves()
             ])
-    elif isinstance(value, unicode):
+    elif isinstance(value, text_type):
         output = b"".join(_map2url[c] for c in value.encode('utf8'))
     elif isinstance(value, str):
         output = b"".join(_map2url[c] for c in value)

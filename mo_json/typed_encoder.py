@@ -78,7 +78,7 @@ def _typed_encode(value, _buffer):
             for c in v:
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
-        elif _type is unicode:
+        elif _type is text_type:
             append(_buffer, u'{"$value": "')
             for c in value:
                 append(_buffer, ESCAPE_DCT.get(c, c))
@@ -160,7 +160,7 @@ def _dict2json(value, _buffer):
         prefix = u", \""
         if isinstance(k, str):
             k = utf82unicode(k)
-        if not isinstance(k, unicode):
+        if not isinstance(k, text_type):
             Log.error("Expecting property name to be a string")
         for c in k:
             append(_buffer, ESCAPE_DCT.get(c, c))

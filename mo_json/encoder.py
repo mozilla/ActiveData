@@ -21,6 +21,7 @@ from decimal import Decimal
 from math import floor
 from repr import Repr
 
+from future.utils import text_type
 from mo_logs import Except
 from mo_logs.strings import utf82unicode
 from mo_times.dates import Date
@@ -127,7 +128,7 @@ class cPythonJSONEncoder(object):
 
         try:
             scrubbed = scrub(value)
-            return unicode(self.encoder.encode(scrubbed))
+            return text_type(self.encoder.encode(scrubbed))
         except Exception as e:
             from mo_logs.exceptions import Except
             from mo_logs import Log
@@ -161,7 +162,7 @@ def _value2json(value, _buffer):
             for c in v:
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u"\"")
-        elif type is unicode:
+        elif type is text_type:
             append(_buffer, u"\"")
             for c in value:
                 append(_buffer, ESCAPE_DCT.get(c, c))
@@ -319,7 +320,7 @@ def pretty_json(value):
                                 c2 = ESCAPE_DCT[c]
                             except Exception:
                                 c2 = c
-                            c3 = unicode(c2)
+                            c3 = text_type(c2)
                             acc.append(c3)
                         except BaseException:
                             pass
@@ -492,7 +493,7 @@ def unicode_key(key):
     if not isinstance(key, basestring):
         from mo_logs import Log
         Log.error("{{key|quote}} is not a valid key", key=key)
-    return quote(unicode(key))
+    return quote(text_type(key))
 
 
 _repr_ = Repr()

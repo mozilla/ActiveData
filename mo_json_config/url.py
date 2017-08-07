@@ -107,7 +107,7 @@ def url_param2value(param):
     """
     CONVERT URL QUERY PARAMETERS INTO DICT
     """
-    if isinstance(param, unicode):
+    if isinstance(param, text_type):
         param = param.encode("ascii")
 
     def _decode(v):
@@ -166,7 +166,7 @@ def value2url_param(value):
             value2url_param(k) + b"=" + (value2url_param(v) if isinstance(v, basestring) else value2url_param(value2json(v)))
             for k, v in value_.leaves()
             ])
-    elif isinstance(value, unicode):
+    elif isinstance(value, text_type):
         output = b"".join(_map2url[c] for c in value.encode('utf8'))
     elif isinstance(value, str):
         output = b"".join(_map2url[c] for c in value)

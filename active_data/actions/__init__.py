@@ -60,7 +60,7 @@ def replace_vars(text, params=None):
         end = index + len(replace)
 
         try:
-            replacement = unicode(Date(var).unix)
+            replacement = text_type(Date(var).unix)
             text = text[:index] + replacement + text[end:]
             start = index + len(replacement)
         except Exception, _:

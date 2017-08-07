@@ -63,7 +63,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
 
         url = URL(self.utils.service_url)
 
-        response = self.utils.try_till_response(url.scheme+"://"+url.host+":"+unicode(url.port)+"/find/"+expected_hash, data=b'')
+        response = self.utils.try_till_response(url.scheme+"://"+url.host+":"+text_type(url.port)+"/find/"+expected_hash, data=b'')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, bytes)

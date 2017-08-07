@@ -16,7 +16,7 @@ from pyLibrary.env import http
 
 
 def move_shards(settings):
-    path = settings.elasticsearch.host+":"+unicode(settings.elasticsearch.port)
+    path = settings.elasticsearch.host+":"+text_type(settings.elasticsearch.port)
 
     command = [
         {"move":

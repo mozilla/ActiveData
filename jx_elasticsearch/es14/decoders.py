@@ -324,7 +324,7 @@ class GeneralRangeDecoder(AggsDecoder):
                 InequalityOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
                 InequalityOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
             ])
-            aggs["_join_" + unicode(i)] = set_default(
+            aggs["_join_" + text_type(i)] = set_default(
                 {"filter": filter_.to_esfilter()},
                 es_query
             )
@@ -594,8 +594,8 @@ class DimFieldListDecoder(SetDecoder):
         self.parts.append(value)
 
     def done_count(self):
-        columns = map(unicode, range(len(self.fields)))
-        parts = wrap([{unicode(i): p for i, p in enumerate(part)} for part in set(self.parts)])
+        columns = map(text_type, range(len(self.fields)))
+        parts = wrap([{text_type(i): p for i, p in enumerate(part)} for part in set(self.parts)])
         self.parts = None
         sorted_parts = jx.sort(parts, columns)
 

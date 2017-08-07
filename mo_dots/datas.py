@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 from collections import MutableMapping, Mapping
 from copy import deepcopy
 
+from future.utils import text_type
 from mo_dots import _getdefault, hash_value, literal_field, coalesce, listwrap, get_logger
 
 _get = object.__getattribute__
@@ -85,7 +86,7 @@ class Data(MutableMapping):
 
         if isinstance(key, str):
             key = key.decode("utf8")
-        elif not isinstance(key, unicode):
+        elif not isinstance(key, text_type):
             get_logger().error("only string keys are supported")
 
         d = _get(self, "_dict")

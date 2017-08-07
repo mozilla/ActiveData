@@ -17,6 +17,7 @@ import sys
 from collections import Mapping
 from datetime import datetime
 
+from future.utils import text_type
 from mo_dots import coalesce, listwrap, wrap, unwrap, unwraplist, set_default
 
 from mo_logs import constants
@@ -185,7 +186,7 @@ class Log(object):
         :param more_params: *any more parameters (which will overwrite default_params)
         :return:
         """
-        if not isinstance(template, unicode):
+        if not isinstance(template, text_type):
             Log.error("Log.note was expecting a unicode template")
 
         if len(template) > 10000:
@@ -244,7 +245,7 @@ class Log(object):
         params = dict(unwrap(default_params), **more_params)
 
         if cause and not isinstance(cause, Except):
-            cause = Except(exceptions.UNEXPECTED, unicode(cause), trace=exceptions._extract_traceback(0))
+            cause = Except(exceptions.UNEXPECTED, text_type(cause), trace=exceptions._extract_traceback(0))
 
         trace = exceptions.extract_stack(1)
         e = Except(exceptions.UNEXPECTED, template, params, cause, trace)
@@ -327,7 +328,7 @@ class Log(object):
         :param more_params: *any more parameters (which will overwrite default_params)
         :return:
         """
-        if not isinstance(template, unicode):
+        if not isinstance(template, text_type):
             Log.error("Log.note was expecting a unicode template")
 
         if isinstance(default_params, BaseException):
@@ -369,8 +370,8 @@ class Log(object):
         :param more_params: *any more parameters (which will overwrite default_params)
         :return:
         """
-        if not isinstance(template, unicode):
-            sys.stderr.write("Log.error was expecting a unicode template")
+        if not isinstance(template, text_type):
+            sys.stderr.write(b"Log.error was expecting a unicode template")
             Log.error("Log.error was expecting a unicode template")
 
         if default_params and isinstance(listwrap(default_params)[0], BaseException):
@@ -420,7 +421,7 @@ class Log(object):
         trace = exceptions.extract_stack(stack_depth + 1)
 
         e = Except(exceptions.ERROR, template, params, cause, trace)
-        str_e = unicode(e)
+        str_e = text_type(e)
 
         error_mode = cls.error_mode
         with suppress_exception:

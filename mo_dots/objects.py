@@ -79,7 +79,7 @@ class DataObject(Mapping):
 
     def __unicode__(self):
         obj = _get(self, "_obj")
-        return unicode(obj)
+        return text_type(obj)
 
     def __str__(self):
         obj = _get(self, "_obj")
@@ -151,7 +151,7 @@ def params_pack(params, *args):
     settings = {}
     for a in args:
         for k, v in a.items():
-            k = unicode(k)
+            k = text_type(k)
             if k in settings:
                 continue
             settings[k] = v

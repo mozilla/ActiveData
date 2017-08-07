@@ -223,10 +223,10 @@ class Math(object):
 
 
 
-    # RETURN A VALUE CLOSE TO value, BUT WITH SHORTER len(unicode(value))<len(unicode(value)):
+    # RETURN A VALUE CLOSE TO value, BUT WITH SHORTER len(text_type(value))<len(text_type(value)):
     @staticmethod
     def approx_str(value):
-        v = unicode(value)
+        v = text_type(value)
         d = v.find(".")
         if d == -1:
             return value

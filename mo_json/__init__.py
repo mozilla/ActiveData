@@ -18,6 +18,8 @@ from collections import Mapping
 
 from datetime import date, timedelta, datetime
 from decimal import Decimal
+
+from future.utils import text_type
 from types import NoneType
 
 from mo_dots import FlatList, NullType, Data, wrap_leaves, wrap, Null
@@ -75,7 +77,7 @@ def float2json(value):
             digits = ("0"*(-exp))+u"".join(mantissa.split("."))
             return sign+(digits[:1]+u"."+digits[1:].rstrip('0')).rstrip(".")
         else:
-            return sign+mantissa.rstrip("0")+u"e"+unicode(exp)
+            return sign+mantissa.rstrip("0")+u"e"+text_type(exp)
     except Exception as e:
         from mo_logs import Log
         Log.error("not expected", e)
@@ -93,7 +95,7 @@ def _scrub(value, is_done):
 
     if type_ in (NoneType, NullType):
         return None
-    elif type_ is unicode:
+    elif type_ is text_type:
         value_ = value.strip()
         if value_:
             return value_
@@ -131,7 +133,7 @@ def _scrub(value, is_done):
             if isinstance(k, basestring):
                 pass
             elif hasattr(k, "__unicode__"):
-                k = unicode(k)
+                k = text_type(k)
             else:
                 Log.error("keys must be strings")
             v = _scrub(v, is_done)
@@ -244,7 +246,7 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
             json_string = expand_template(json_string, params)
 
         try:
-            value = wrap(json_decoder(unicode(json_string)))
+            value = wrap(json_decoder(text_type(json_string)))
         except Exception as e:
             Log.error("can not decode\n{{content}}", content=json_string, cause=e)
 

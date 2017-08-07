@@ -12,20 +12,20 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import json
-import re
 import time
 from collections import deque, Mapping
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 
+from future.utils import text_type
+from mo_dots import Data, FlatList, NullType
+from mo_json import ESCAPE_DCT, float2json
 from mo_logs import Log
+
+from mo_json.encoder import pretty_json, problem_serializing, _repr, UnicodeBuilder
 from mo_logs.strings import utf82unicode
 from mo_times.dates import Date
 from mo_times.durations import Duration
-from mo_dots import Data, FlatList, NullType
-
-from mo_json import ESCAPE_DCT, float2json
-from mo_json.encoder import pretty_json, problem_serializing, _repr, UnicodeBuilder
 
 json_decoder = json.JSONDecoder().decode
 append = UnicodeBuilder.append
@@ -79,7 +79,7 @@ def _typed_encode(value, _buffer):
             for c in v:
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
-        elif _type is unicode:
+        elif _type is text_type:
             append(_buffer, u'{"$string": "')
             for c in value:
                 append(_buffer, ESCAPE_DCT.get(c, c))
@@ -161,7 +161,7 @@ def _dict2json(value, _buffer):
         prefix = u", "
         if isinstance(k, str):
             k = utf82unicode(k)
-        if not isinstance(k, unicode):
+        if not isinstance(k, text_type):
             Log.error("Expecting property name to be a string")
         append(_buffer, json.dumps(encode_property(k)))
         append(_buffer, u": ")

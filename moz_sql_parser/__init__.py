@@ -13,6 +13,8 @@ from __future__ import unicode_literals
 
 import json
 
+from future.utils import text_type
+
 from moz_sql_parser.sql_parser import SQLParser
 
 
@@ -22,7 +24,7 @@ def parse(sql):
 
 
 def _scrub(result):
-    if isinstance(result, (str, unicode, int, float)):
+    if isinstance(result, (str, text_type, int, float)):
         return result
     elif not result:
         return {}

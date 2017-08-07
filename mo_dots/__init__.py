@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from __builtin__ import zip as _builtin_zip
+from future.utils import text_type
 from types import GeneratorType, NoneType, ModuleType
 
 from mo_dots.utils import get_logger, get_module
@@ -90,7 +91,7 @@ def split_field(field):
     """
     if field == "." or field==None:
         return []
-    elif isinstance(field, unicode) and "." in field:
+    elif isinstance(field, text_type) and "." in field:
         return [k.replace("\a", ".") for k in field.replace("\\.", "\a").split(".")]
     else:
         return [field]
@@ -253,7 +254,7 @@ def _getdefault(obj, key):
 
     # TODO: FIGURE OUT WHY THIS WAS EVER HERE (AND MAKE A TEST)
     # try:
-    #     return eval("obj."+unicode(key))
+    #     return eval("obj."+text_type(key))
     # except Exception, f:
     #     pass
     return NullType(obj, key)

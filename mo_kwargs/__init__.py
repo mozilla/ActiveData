@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
+from future.utils import text_type
 from mo_dots import zip as dict_zip, get_logger, wrap
 
 from mo_logs import Except
@@ -110,7 +111,7 @@ def params_pack(params, *args):
         if a == None:
             continue
         for k, v in a.items():
-            k = unicode(k)
+            k = text_type(k)
             if k in settings:
                 continue
             settings[k] = v

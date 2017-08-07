@@ -18,6 +18,8 @@ from __future__ import unicode_literals
 from thread import allocate_lock as _allocate_lock
 from time import sleep, time
 
+from future.utils import text_type
+
 from mo_threads.signal import Signal
 
 DEBUG = False
@@ -60,7 +62,7 @@ class Till(Signal):
 
             timeout = now + timeout
 
-        Signal.__init__(self, name=unicode(timeout))
+        Signal.__init__(self, name=text_type(timeout))
 
         with Till.locker:
             if timeout != None:

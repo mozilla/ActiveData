@@ -40,7 +40,7 @@ class TestUnittests(BaseTestCase):
         global ES_CLUSTER_LOCATION
 
         app_config = mo_json_config.get("file://"+APP_CONFIG_FILE)
-        global_settings.service_url = "http://localhost:"+unicode(app_config.flask.port)+"/query"
+        global_settings.service_url = "http://localhost:"+text_type(app_config.flask.port)+"/query"
         ES_CLUSTER_LOCATION = app_config.elasticsearch.host
 
     @classmethod

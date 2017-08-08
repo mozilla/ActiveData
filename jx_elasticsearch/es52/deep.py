@@ -11,7 +11,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-
 from jx_elasticsearch import es09, es52
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field, startswith_field
 from mo_logs import Log
@@ -53,7 +52,7 @@ def es_deepop(es, query):
     columns = schema.columns
     query_path = schema.query_path
 
-    map_to_local = {k: (c[0]) for k, c in schema.lookup.items()}
+    map_to_local = {k: c[0] for k, c in schema.lookup.items()}
 
     # TODO: FIX THE GREAT SADNESS CAUSED BY EXECUTING post_expressions
     # THE EXPRESSIONS SHOULD BE PUSHED TO THE CONTAINER:  ES ALLOWS
@@ -171,14 +170,16 @@ def es_deepop(es, query):
                 if not prefix:
                     net_columns = []
                 else:
-                    # parent = prefix.es_column+"."
-                    # prefix_length = len(parent)
+                    parent = prefix.es_column+"."
+                    # prefix_length = len(prefix)
+                    prefix_length = len(parent)
                     # net_columns = [c for c in columns if c.es_column.startswith(parent) and c.type not in STRUCT]
                     net_columns = []
                     for k,v in map_to_local.items():
                         abs_col = startswith_field(k,prefix.names["."])
                         if abs_col :
-                            if not v.endswith("$exists"):
+                            # if not v.endswith("$exists"):
+                            if v.type not in STRUCT:
                                 net_columns.append(v)
                 if not net_columns:
                     pull = jx_expression_to_function(get_pull(prefix))

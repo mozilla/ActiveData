@@ -203,7 +203,8 @@ def format_list(T, select, query=None):
         for row in T:
             r = Data()
             for s in select:
-                r[s.put.name][s.put.child] = unwraplist(s.pull(row))
+                temp = unwraplist(s.pull(row))
+                r[s.put.name][s.put.child] = temp
             data.append(r if r else None)
     elif isinstance(query.select.value, LeavesOp):
         for row in T:

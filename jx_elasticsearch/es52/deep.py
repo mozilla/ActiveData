@@ -219,7 +219,7 @@ def es_deepop(es, query):
                     #     Log.error("deep field not expected")
 
             pull = jx_expression_to_function(EXPRESSION_PREFIX + s.name)
-            post_expressions[pull] = compile_expression(expr.map(map_to_local).to_python())
+            post_expressions[pull] = compile_expression(expr.map(get_pull(map_to_local)).to_python())
 
             new_select.append({
                 "name": s.name if is_list else ".",

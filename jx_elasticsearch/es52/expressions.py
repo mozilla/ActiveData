@@ -377,19 +377,19 @@ def to_esfilter(self):
 
 @extend(DivOp)
 def to_painless(self, not_null=False, boolean=False):
-    lhs = self.lhs.to_painless(not_null=True)
-    rhs = self.rhs.to_painless(not_null=True)
-    script = "((double)(" + lhs + ") / (double)(" + rhs + ")).doubleValue()"
+    lhs = self.lhs.partial_eval()
+    rhs = self.rhs.partial_eval()
+    script = "((double)(" + lhs.to_painless(not_null=True).n + ") / (double)(" + rhs.to_painless(not_null=True).n + "))"
 
     output = WhenOp(
         "when",
-        OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, Literal("literal", 0)])]),
+        OrOp("or", [lhs.missing(), rhs.missing(), EqOp("eq", [rhs, Literal("literal", 0)])]),
         **{
             "then": self.default,
-            "else":
-                ScriptOp("script", script)
+            "else": Painless(n=script)
         }
-    ).to_painless()
+    ).partial_eval().to_painless()
+
     return output
 
 
@@ -744,7 +744,7 @@ def to_painless(self, not_null=False, boolean=False):
 
 @extend(ScriptOp)
 def to_painless(self, not_null=False, boolean=False):
-    return Painless(j=self.expression)
+    return Painless(j=self.script)
 
 
 @extend(ScriptOp)
@@ -820,7 +820,7 @@ def to_painless(self, not_null=False, boolean=False):
                 j="(" + when.b + ") ? (" + then.expression + ") : (" + els_.expression + ")"
             )
         if not not_null:
-            output._missing=Painless(b=self.missing().partial_eval().to_painless(boolean=True)),
+            output._missing = self.missing().partial_eval()
         return output
     else:
         return self.partial_eval().to_painless()

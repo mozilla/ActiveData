@@ -748,10 +748,11 @@ class DivOp(Expression):
         return DivOp("div", [self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_))
 
     def missing(self):
-        if self.default.exists():
+        missing = self.default.missing()
+        if isinstance(missing, FalseOp):
             return FalseOp()
         else:
-            return OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, Literal("literal", 0)])])
+            return OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, Literal("literal", 0)]), missing])
 
 
 class FloorOp(Expression):
@@ -831,7 +832,7 @@ class EqOp(Expression):
         rhs = self.rhs.partial_eval()
 
         if isinstance(lhs, Literal) and isinstance(rhs, Literal):
-            output = EqOp("eq", ops["eq"](lhs, rhs))
+            output = TrueOp() if ops["eq"](lhs.value, rhs.value) else FalseOp()
         else:
             output = EqOp(self.op, [lhs, rhs])
 

@@ -1275,7 +1275,7 @@ class ConcatOp(Expression):
         return ConcatOp("concat", [t.map(map_) for t in self.terms], separator=self.separator)
 
     def missing(self):
-        terms = [t.missing() for t in self.terms]
+        terms = [t.missing() for t in self.terms] + [self.default.missing()]
         if all(terms):
             return AndOp("and", terms)
         else:

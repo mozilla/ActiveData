@@ -142,7 +142,10 @@ def es_setop(es, query):
                                 })
                 put_index += 1
         else:
-            es_query.script_fields[literal_field(select.name)] = {"script": select.value.map(map_to_es_columns).to_painless()}
+            es_query.script_fields[literal_field(select.name)] = {"script": {
+                "lang": "painless",
+                "inline": select.value.map(map_to_es_columns).to_painless().script
+            }}
             new_select.append({
                 "name": select.name,
                 "pull": jx_expression_to_function("fields." + literal_field(select.name)),

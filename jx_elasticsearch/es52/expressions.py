@@ -39,12 +39,16 @@ class Painless(Expression):
 
     @property
     def script(self):
-        if isinstance(self._missing, FalseOp):
-            return self.expression
-        elif isinstance(self._missing, TrueOp):
+        if isinstance(self.missing, FalseOp):
+            return self.partial_eval().to_painless(not_null=True).expression
+        elif isinstance(self.missing, TrueOp):
             return "null"
-        else:
-            return "(" + self.missing().to_painless().script + ") ? null : (" + self.expression + ")"
+
+        return WhenOp(
+            "when",
+            self.missing(),
+            **{"then":NullOp(), "else":self}
+        ).partial_eval().to_painless(not_null=True).expression
 
     @property
     def expression(self):
@@ -177,7 +181,7 @@ def to_esfilter(self):
 @extend(ConcatOp)
 def to_esfilter(self):
     if isinstance(self.value, Variable) and isinstance(self.find, Literal):
-        return {"regexp": {self.value.var: ".*" + convert.string2regexp(json2value(self.find.json)) + ".*"}}
+        return {"regexp": {self.value.var: ".*" + string2regexp(json2value(self.find.json)) + ".*"}}
     else:
         return ScriptOp("script",  self.to_painless()).to_esfilter()
 
@@ -188,12 +192,30 @@ def to_painless(self, not_null=False, boolean=False):
         return self.default.to_painless()
 
     acc = []
+    separator = StringOp("string", self.separator)
+    sep = separator.to_painless().s
     for t in self.terms:
-        acc.append("((" + t.missing().to_painless(boolean=True) + ") ? \"\" : (" + self.separator.json + "+" + t.to_painless(
-            not_null=True) + "))")
-    expr_ = "(" + "+".join(acc) + ").substring(" + unicode(len(json2value(self.separator.json))) + ")"
+        val = WhenOp(
+            "when",
+            t.missing(),
+            **{
+                "then": Literal("literal", ""),
+                "else": Painless(s=sep + "+" + StringOp(None, t).to_painless(not_null=True).s)
+            }
+        )
+        acc.append("(" + val.partial_eval().to_painless().s + ")")
+    expr_ = "(" + "+".join(acc) + ").substring(" + LengthOp("length", separator).to_painless().n + ")"
 
-    return "(" + self.missing().to_painless() + ") ? (" + self.default.to_painless() + ") : (" + expr_ + ")"
+    if isinstance(self.default, NullOp):
+        return Painless(
+            missing=self.missing(),
+            s=expr_
+        )
+    else:
+        return Painless(
+            missing=self.missing(),
+            s="((" + expr_ + ").length==0) ? (" + self.default.to_painless().expression + ") : (" + expr_ + ")"
+        )
 
 
 @extend(Literal)
@@ -624,7 +646,7 @@ def to_painless(self, not_null=False, boolean=False):
                 s="((" + value.j + ") instanceof java.lang.Double) ? String.valueOf(" + value.j + ").replaceAll('\\\\.0$', '') : String.valueOf(" + value.j + ")"
             )
     else:
-        output = StringOp.to_painless(not_null=True)
+        output = StringOp.to_painless(self, not_null=True)
         output._missing=self.term.missing().partial_eval()
         return output
 

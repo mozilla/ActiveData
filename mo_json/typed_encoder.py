@@ -157,6 +157,8 @@ def _iter2json(value, _buffer):
 def _dict2json(value, _buffer):
     prefix = u'{"$exists": ".", '
     for k, v in value.iteritems():
+        if v == None or v == "":
+            continue
         append(_buffer, prefix)
         prefix = u", "
         if isinstance(k, str):

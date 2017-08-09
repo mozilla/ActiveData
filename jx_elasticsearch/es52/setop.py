@@ -204,9 +204,9 @@ def format_list(T, select, query=None):
             r = Data()
             for s in select:
                 # just splitting a bunch of variables for ease in debugging.... will revert it .
-                curr_col = s
+                curr_row = s
                 # the prob appears to be in the below line. it returns  None.  pull is a function.
-                temp_s_pull = s.pull(curr_col) # this line returns None.  Why? How to fix this to return a value other than None?
+                temp_s_pull = s.pull(curr_row) # this line returns None.  Why? How to fix this to return a value other than None?
                 temp_unwrap = unwraplist(temp_s_pull)
                 # temp = unwraplist(s.pull(row))
                 temp = temp_unwrap

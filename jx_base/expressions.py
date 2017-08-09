@@ -939,6 +939,8 @@ class AndOp(Expression):
                 pass
             elif isinstance(simple, FalseOp):
                 return FalseOp()
+            elif isinstance(simple, AndOp):
+                terms.extend(simple.terms)
             else:
                 terms.append(simple)
         if len(terms) == 0:
@@ -984,6 +986,8 @@ class OrOp(Expression):
                 return TrueOp()
             elif isinstance(simple, (FalseOp, NullOp)):
                 pass
+            elif isinstance(simple, OrOp):
+                terms.extend(simple.terms)
             else:
                 terms.append(simple)
         if len(terms) == 0:
@@ -1490,23 +1494,6 @@ class JavaIndexOfOp(Expression):
 
     def missing(self):
         return FalseOp()
-
-
-
-@extend(JavaIndexOfOp)
-def to_painless(self, not_null=False, boolean=False, many=False):
-    v = self.value.to_painless(not_null=True)
-    find = self.find.to_painless(not_null=True)
-    if many:
-        return "Collections.singletonList((" + v + ").indexOf(" + find + ", " + self.start.to_painless() + "))"
-    else:
-        return "(" + v + ").indexOf(" + find + ", " + self.start.to_painless() + ")"
-
-
-@extend(JavaIndexOfOp)
-def to_esFilter(self):
-    return ScriptOp("", self.to_painless()).to_esfilter()
-
 
 
 class BetweenOp(Expression):

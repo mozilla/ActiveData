@@ -217,13 +217,13 @@ def es_aggsop(es, frum, query):
             else:
                 Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
-            es_query.aggs[literal_field(canonical_name)].value_count.script = es_script.to_painless()
+            es_query.aggs[literal_field(canonical_name)].value_count.script = es_script.to_painless().script
             s.pull = literal_field(canonical_name) + ".value"
         elif s.aggregate == "median":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")
 
-            es_query.aggs[key].percentiles.script = es_script.to_painless()
+            es_query.aggs[key].percentiles.script = es_script.to_painless().script
             es_query.aggs[key].percentiles.percents += [50]
             s.pull = key + ".values.50\.0"
         elif s.aggregate == "percentile":
@@ -231,23 +231,23 @@ def es_aggsop(es, frum, query):
             key = literal_field(canonical_name + " percentile")
             percent = Math.round(s.percentile * 100, decimal=6)
 
-            es_query.aggs[key].percentiles.script = es_script.to_painless()
+            es_query.aggs[key].percentiles.script = es_script.to_painless().script
             es_query.aggs[key].percentiles.percents += [percent]
             s.pull = key + ".values." + literal_field(unicode(percent))
         elif s.aggregate == "cardinality":
             # ES USES DIFFERENT METHOD FOR CARDINALITY
             key = canonical_name + " cardinality"
 
-            es_query.aggs[key].cardinality.script = es_script.to_painless()
+            es_query.aggs[key].cardinality.script = es_script.to_painless().script
             s.pull = key + ".value"
         elif s.aggregate == "stats":
             # REGULAR STATS
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].extended_stats.script = es_script.to_painless()
+            es_query.aggs[stats_name].extended_stats.script = es_script.to_painless().script
 
             # GET MEDIAN TOO!
             median_name = literal_field(canonical_name + " percentile")
-            es_query.aggs[median_name].percentiles.script = es_script.to_painless()
+            es_query.aggs[median_name].percentiles.script = es_script.to_painless().script
             es_query.aggs[median_name].percentiles.percents += [50]
 
             s.pull = {
@@ -264,12 +264,12 @@ def es_aggsop(es, frum, query):
         elif s.aggregate=="union":
             # USE TERMS AGGREGATE TO SIMULATE union
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].terms.script_field = es_script.to_painless()
+            es_query.aggs[stats_name].terms.script_field = es_script.to_painless().script
             s.pull = stats_name + ".buckets.key"
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
-            es_query.aggs[canonical_name].extended_stats.script = es_script.to_painless()
+            es_query.aggs[canonical_name].extended_stats.script = es_script.to_painless().script
 
     decoders = get_decoders_by_depth(query, es_column_map)
     start = 0

@@ -191,8 +191,10 @@ class SetDecoder(AggsDecoder):
 
                 return wrap({"aggs": {
                     "_match": set_default({"terms": {
-                        "script": {"lang": "painless",
-                                    "inline":es_field.to_painless() },
+                        "script": {
+                            "lang": "painless",
+                            "inline": es_field.to_painless().script
+                        },
                         "size": self.limit,
                         "include": include
                     }}, es_query),
@@ -207,8 +209,10 @@ class SetDecoder(AggsDecoder):
             else:
                 return wrap({"aggs": {
                     "_match": set_default({"terms": {
-                        "script": {"lang": "painless",
-                                    "inline":es_field.to_painless() },
+                        "script": {
+                            "lang": "painless",
+                            "inline": es_field.to_painless().script
+                        },
                         "size": self.limit,
                         "include": include
                     }}, es_query)
@@ -251,7 +255,7 @@ def _range_composer(edge, domain, es_query, to_float):
     else:
         missing_filter = None
 
-    calc = edge.value.to_painless()
+    calc = edge.value.to_painless().script
 
     return wrap({"aggs": {
         "_match": set_default(
@@ -557,7 +561,7 @@ class DefaultDecoder(SetDecoder):
                     {"terms": {
                         "script": {
                             "lang": "painless",
-                            "inline": self.edge.value.map(es_mapping).partial_eval().to_painless()
+                            "inline": self.edge.value.map(es_mapping).partial_eval().to_painless().script
                         },
                         "size": self.domain.limit,
                         "order": {"_term": self.sorted} if self.sorted else None

@@ -771,7 +771,7 @@ class TestSetOps(BaseTestCase):
     def test_param_left(self):
         test = {
             "data": [
-                {"url": NULL},
+                {},
                 {"url": "/"},
                 #        012345678901234567890123456789
                 {"url": "https://hg.mozilla.org/"},

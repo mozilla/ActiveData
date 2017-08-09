@@ -139,7 +139,7 @@ class ESUtils(object):
             try:
                 cluster.delete_index(i.settings.index)
                 Log.note("remove index {{index}}", index=i)
-            except Exception, e:
+            except Exception as e:
                 pass
         Log.stop()
 

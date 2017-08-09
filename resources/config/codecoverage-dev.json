@@ -1,7 +1,6 @@
 {
 	"threads": 1,
 	"url": "http://activedata.allizom.org/query",
-	"batch_size": 20,
 	"constants":{
 		"pyLibrary.env.http.default_headers":{
 			"referer":"https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
@@ -20,7 +19,7 @@
 		"index": "coverage-summary",
 		"type": "code_coverage",
 		"schema": {"$ref": "../schema/coverage.json"},
-		"debug": true
+		"debug": false
 	},
 	"debug": {
 		"trace": true,

@@ -2,7 +2,6 @@ cluster.name: lahnakoski_es5
 script.engine.painless.inline: true
 http.compression: true
 
-http.port: 9400
-
+http.port: 9200
 http.cors.enabled: true
 http.cors.allow-origin: "*"

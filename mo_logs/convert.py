@@ -13,8 +13,9 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import json as _json
-from collections import Mapping
 from datetime import datetime, date
+
+from future.utils import text_type
 
 
 def unix2datetime(u):
@@ -67,11 +68,11 @@ def int2hex(value, size):
 
 
 def latin12unicode(value):
-    if isinstance(value, unicode):
+    if isinstance(value, text_type):
         from mo_logs import Log
         Log.error("can not convert unicode from latin1")
     try:
-        return unicode(value.decode('iso-8859-1'))
+        return text_type(value.decode('iso-8859-1'))
     except Exception as e:
         from mo_logs import Log
         Log.error("Can not convert {{value|quote}} to unicode", value=value, cause=e)

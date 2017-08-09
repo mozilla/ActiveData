@@ -15,13 +15,14 @@ import operator
 from collections import Mapping
 from decimal import Decimal
 
+from future.utils import text_type
 from mo_dots import coalesce, wrap, Null, split_field
 from mo_json import json2value
 from mo_logs import Log
 from mo_math import Math
 from pyLibrary import convert
 
-from jx_base.queries import is_variable_name
+from jx_base.queries import is_variable_name, get_property_name
 from jx_python.expression_compiler import compile_expression
 from mo_times.dates import Date
 
@@ -57,7 +58,7 @@ def jx_expression(expr):
 
     if expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal, Date)):
         return Literal(None, expr)
-    elif isinstance(expr, unicode):
+    elif isinstance(expr, text_type):
         if is_variable_name(expr):
             return Variable(expr)
         elif not expr.strip():
@@ -122,7 +123,7 @@ def jx_expression_to_function(expr):
     RETURN FUNCTION THAT REQUIRES PARAMETERS (row, rownum=None, rows=None):
     """
     if isinstance(expr, Expression):
-        if isinstance(expr, ScriptOp) and not isinstance(expr.script, unicode):
+        if isinstance(expr, ScriptOp) and not isinstance(expr.script, text_type):
             return expr.script
         else:
             return compile_expression(expr.to_python())
@@ -212,7 +213,7 @@ class Variable(Expression):
         Expression.__init__(self, "", None)
         if verify and not is_variable_name(var):
             Log.error("Expecting a variable name")
-        self.var = var
+        self.var = get_property_name(var)
 
     def __call__(self, row, rownum=None, rows=None):
         path = split_field(self.var)
@@ -279,7 +280,7 @@ class OffsetOp(Expression):
         return self.var == other
 
     def __unicode__(self):
-        return unicode(self.var)
+        return text_type(self.var)
 
     def __str__(self):
         return str(self.var)

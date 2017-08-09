@@ -24,20 +24,20 @@ class TestQueryVariables(FuzzyTestCase):
         today = Date.today()
 
         result = replace_vars('"{{today|week}}" "{{var}}"', {"var": 20})
-        expect = '"'+unicode(today.floor(WEEK).unix)+'" "20"'
+        expect = '"'+text_type(today.floor(WEEK).unix)+'" "20"'
         self.assertEqual(result, expect)
 
     def test_two_simple(self):
         today = Date.today()
 
         result = replace_vars('"{{today|week}}" "{{today}}d"')
-        expect = '"'+unicode(today.floor(WEEK).unix)+'" "'+unicode(today.unix)+'d"'
+        expect = '"'+text_type(today.floor(WEEK).unix)+'" "'+text_type(today.unix)+'d"'
         self.assertEqual(result, expect)
 
     def test_overload(self):
         today = Date.today()
 
         result = replace_vars('"{{today|week}}" "{{var}}"', {"today": 1000, "var": 20})
-        expect = '"'+unicode(today.floor(WEEK).unix)+'" "20"'
+        expect = '"'+text_type(today.floor(WEEK).unix)+'" "20"'
         self.assertEqual(result, expect)
 

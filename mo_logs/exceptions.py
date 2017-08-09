@@ -17,6 +17,7 @@ import json
 import sys
 from collections import Mapping
 
+from future.utils import text_type
 from mo_dots import Data, listwrap, unwraplist, set_default, Null, DataObject, unwrap
 
 from mo_logs.strings import indent, expand_template
@@ -77,9 +78,9 @@ class Except(Exception):
             return Except(**e)
         else:
             if hasattr(e, "message") and e.message:
-                cause = Except(ERROR, unicode(e.message), trace=_extract_traceback(0))
+                cause = Except(ERROR, text_type(e.message), trace=_extract_traceback(0))
             else:
-                cause = Except(ERROR, unicode(e), trace=_extract_traceback(0))
+                cause = Except(ERROR, text_type(e), trace=_extract_traceback(0))
 
             trace = extract_stack(stack_depth + 2)  # +2 = to remove the caller, and it's call to this' Except.wrap()
             cause.trace.extend(trace)
@@ -113,7 +114,7 @@ class Except(Exception):
             cause_strings = []
             for c in listwrap(self.cause):
                 with suppress_exception:
-                    cause_strings.append(unicode(c))
+                    cause_strings.append(text_type(c))
 
 
             output += "caused by\n\t" + "and caused by\n\t".join(cause_strings)

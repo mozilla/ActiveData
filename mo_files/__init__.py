@@ -236,7 +236,7 @@ class File(object):
                 pass
 
             for d in data:
-                if not isinstance(d, unicode):
+                if not isinstance(d, text_type):
                     Log.error(u"Expecting unicode data only")
                 if self.key:
                     f.write(get_module(u"crypto").encrypt(d, self.key).encode(b"utf8"))

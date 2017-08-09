@@ -131,6 +131,7 @@ class AggsDecoder(object):
 
 
 class SetDecoder(AggsDecoder):
+
     def __init__(self, edge, query, limit):
         AggsDecoder.__init__(self, edge, query, limit)
         domain = self.domain = edge.domain

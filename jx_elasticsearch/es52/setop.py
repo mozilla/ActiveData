@@ -203,13 +203,23 @@ def format_list(T, select, query=None):
         for row in T:
             r = Data()
             for s in select:
-                temp = unwraplist(s.pull(row))
+                # just splitting a bunch of variables for ease in debugging.... will revert it .
+                curr_row = s
+                # the prob appears to be in the below line. it returns  None.  pull is a function.
+                temp_s_pull = s.pull(curr_row) # this line returns None.  Why? How to fix this to return a value other than None?
+                temp_unwrap = unwraplist(temp_s_pull)
+                # temp = unwraplist(s.pull(row))
+                temp = temp_unwrap
                 r[s.put.name][s.put.child] = temp
             data.append(r if r else None)
     elif isinstance(query.select.value, LeavesOp):
         for row in T:
             r = Data()
             for s in select:
+                # curr_row = row
+                # temp_s_pull = s.pull(curr_row)
+                # temp_unwrap = unwraplist(temp_s_pull)
+                # r[s.put.name][s.put.child] = temp_unwrap
                 r[s.put.name][s.put.child] = unwraplist(s.pull(row))
             data.append(r if r else None)
     else:

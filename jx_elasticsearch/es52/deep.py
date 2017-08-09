@@ -175,12 +175,12 @@ def es_deepop(es, query):
                     prefix_length = len(parent)
                     # net_columns = [c for c in columns if c.es_column.startswith(parent) and c.type not in STRUCT]
                     net_columns = []
-                    for k,v in map_to_local.items():
+                    for k, v in map_to_local.items():
                         abs_col = startswith_field(k,prefix.names["."])
                         if abs_col :
                             # if not v.endswith("$exists"):
                             if v.type not in STRUCT:
-                                net_columns.append(v)
+                                net_columns.append(k)
                 if not net_columns:
                     pull = jx_expression_to_function(get_pull(prefix))
                     if len(prefix.nested_path) == 1:
@@ -195,18 +195,25 @@ def es_deepop(es, query):
                     done = set()
                     for n in net_columns:
                         # THE COLUMNS CAN HAVE DUPLICATE REFERNCES TO THE SAME ES_COLUMN
-                        if n.es_column in done:
+                        if n in done:
                             continue
-                        done.add(n.es_column)
+                        done.add(n)
 
-                        pull = jx_expression_to_function(get_pull(n))
-                        if len(n.nested_path) == 1:
-                            es_query.stored_fields += [n.es_column]
+                        # temp_pull_n = get_pull(n)
+                        # temp_fn_get_pull_n = jx_expression_to_function(temp_pull_n)
+                        pull = jx_expression_to_function(n)
+                        nested_pc = n.rsplit('.', 1)
+                        nested_path = nested_pc[0]
+                        nested_child = nested_pc[1]
+                        # n[n.rindex('.') + 1:]
+                        # n.rsplit('.')[1]
+                        if len(n) == 1:
+                            es_query.stored_fields += [n]
                         new_select.append({
                             "name": s.name,
                             "pull": pull,
-                            "nested_path": n.nested_path[0],
-                            "put": {"name": s.name, "index": i, "child": n.es_column[prefix_length:]}
+                            "nested_path": nested_path,
+                            "put": {"name": s.name, "index": i, "child": nested_child}
                         })
                 i += 1
         else:

@@ -12,11 +12,12 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from jx_elasticsearch import es09, es52
-from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field
+from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field, startswith_field
 from mo_logs import Log
 from mo_threads import Thread
 from pyLibrary import convert
 
+from jx_base.expressions import jx_expression_to_function
 from jx_base.expressions import compile_expression
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, simplify_esfilter, AndOp, Variable, LeavesOp
 from jx_elasticsearch.es52.setop import format_dispatch
@@ -51,7 +52,7 @@ def es_deepop(es, query):
     columns = schema.columns
     query_path = schema.query_path
 
-    map_to_local = {k: get_pull(c[0]) for k, c in schema.lookup.items()}
+    map_to_local = {k: c[0] for k, c in schema.lookup.items()}
 
     # TODO: FIX THE GREAT SADNESS CAUSED BY EXECUTING post_expressions
     # THE EXPRESSIONS SHOULD BE PUSHED TO THE CONTAINER:  ES ALLOWS
@@ -109,7 +110,7 @@ def es_deepop(es, query):
                                 es_query.stored_fields += [c.es_column]
                             new_select.append({
                                 "name": c.names[query_path],
-                                "pull": get_pull(c),
+                                "pull": jx_expression_to_function(get_pull(c)),
                                 "nested_path": c.nested_path[0],
                                 "put": {"name": literal_field(c.names[query_path]), "index": i, "child": "."}
                             })
@@ -128,7 +129,7 @@ def es_deepop(es, query):
                     for c in columns:
                         cname = c.names["."]
                         if cname.startswith(prefix) and c.type not in STRUCT:
-                            pull = get_pull(c)
+                            pull = jx_expression_to_function(get_pull(c))
                             if c.nested_path[0] == ".":
                                 es_query.stored_fields += [c.es_column]
 
@@ -151,7 +152,7 @@ def es_deepop(es, query):
                             es_query.stored_fields += [c.es_column]
                         new_select.append({
                             "name": c.name,
-                            "pull": get_pull(c),
+                            "pull": jx_expression_to_function(get_pull(c)),
                             "nested_path": c.nested_path[0],
                             "put": {"name": ".", "index": i, "child": c.es_column}
                         })
@@ -160,7 +161,7 @@ def es_deepop(es, query):
                 new_select.append({
                     "name": s.name,
                     "value": s.value.var,
-                    "pull": "_id",
+                    "pull": jx_expression_to_function("_id"),
                     "put": {"name": s.name, "index": i, "child": "."}
                 })
                 i += 1
@@ -170,11 +171,18 @@ def es_deepop(es, query):
                     net_columns = []
                 else:
                     parent = prefix.es_column+"."
+                    # prefix_length = len(prefix)
                     prefix_length = len(parent)
-                    net_columns = [c for c in columns if c.es_column.startswith(parent) and c.type not in STRUCT]
-
+                    # net_columns = [c for c in columns if c.es_column.startswith(parent) and c.type not in STRUCT]
+                    net_columns = []
+                    for k, v in map_to_local.items():
+                        abs_col = startswith_field(k,prefix.names["."])
+                        if abs_col :
+                            # if not v.endswith("$exists"):
+                            if v.type not in STRUCT:
+                                net_columns.append(k)
                 if not net_columns:
-                    pull = get_pull(prefix)
+                    pull = jx_expression_to_function(get_pull(prefix))
                     if len(prefix.nested_path) == 1:
                         es_query.stored_fields += [prefix.es_column]
                     new_select.append({
@@ -187,18 +195,25 @@ def es_deepop(es, query):
                     done = set()
                     for n in net_columns:
                         # THE COLUMNS CAN HAVE DUPLICATE REFERNCES TO THE SAME ES_COLUMN
-                        if n.es_column in done:
+                        if n in done:
                             continue
-                        done.add(n.es_column)
+                        done.add(n)
 
-                        pull = get_pull(n)
-                        if len(n.nested_path) == 1:
-                            es_query.stored_fields += [n.es_column]
+                        # temp_pull_n = get_pull(n)
+                        # temp_fn_get_pull_n = jx_expression_to_function(temp_pull_n)
+                        pull = jx_expression_to_function(n)
+                        nested_pc = n.rsplit('.', 1)
+                        nested_path = nested_pc[0]
+                        nested_child = nested_pc[1]
+                        # n[n.rindex('.') + 1:]
+                        # n.rsplit('.')[1]
+                        if len(n) == 1:
+                            es_query.stored_fields += [n]
                         new_select.append({
                             "name": s.name,
                             "pull": pull,
-                            "nested_path": n.nested_path[0],
-                            "put": {"name": s.name, "index": i, "child": n.es_column[prefix_length:]}
+                            "nested_path": nested_path,
+                            "put": {"name": s.name, "index": i, "child": nested_child}
                         })
                 i += 1
         else:
@@ -210,8 +225,8 @@ def es_deepop(es, query):
                     # else:
                     #     Log.error("deep field not expected")
 
-            pull = EXPRESSION_PREFIX + s.name
-            post_expressions[pull] = compile_expression(expr.map(map_to_local).to_python())
+            pull = jx_expression_to_function(EXPRESSION_PREFIX + s.name)
+            post_expressions[pull] = compile_expression(expr.map(get_pull(map_to_local)).to_python())
 
             new_select.append({
                 "name": s.name if is_list else ".",

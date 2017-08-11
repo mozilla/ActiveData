@@ -11,6 +11,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from copy import copy
+
 from jx_elasticsearch import es09
 from jx_python import jx
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
@@ -120,12 +122,13 @@ def sort_edges(query, prop):
 
 
 def es_aggsop(es, frum, query):
-    select = wrap([s.copy() for s in listwrap(query.select)])
+    query = query.copy()  # WE WILL MARK UP THIS QUERY
+    select = listwrap(query.select)# .copy()select = wrap([s.copy() for s in listwrap(query.select)])
     es_column_map = {c.names[frum.query_path]: c.es_column for c in frum.schema.leaves(".")}
     query_for_es = query.map(es_column_map)
 
     es_query = Data()
-    new_select = Data()  #MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
+    new_select = Data()  # MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
     formula = []
     for s, es_s in zip(select, listwrap(query_for_es.select)):
         if s.aggregate == "count" and isinstance(s.value, Variable) and s.value.var == ".":
@@ -136,7 +139,7 @@ def es_aggsop(es, frum, query):
             else:
                 new_select[literal_field(s.value.var)] += [s]
         else:
-            formula.append(es_s)
+            formula.append((s, es_s))
 
     for canonical_name, many in new_select.items():
         for s in many:
@@ -206,9 +209,9 @@ def es_aggsop(es, frum, query):
                 es_query.aggs[literal_field(canonical_name)].extended_stats.field = es_field_name
                 s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
 
-    for i, s in enumerate(formula):
+    for i, (s, es_s) in enumerate(formula):
         canonical_name = literal_field(s.name)
-        es_script = s.value
+        es_script = es_s.value
 
         if isinstance(s.value, TupleOp):
             if s.aggregate == "count":
@@ -349,7 +352,7 @@ def es_aggsop(es, frum, query):
     except Exception as e:
         if query.format not in format_dispatch:
             Log.error("Format {{format|quote}} not supported yet", format=query.format, cause=e)
-        Log.error("Some problem", e)
+        Log.error("Some problem", cause=e)
 
 
 

@@ -159,14 +159,14 @@ class Schema(object):
         return [
             c
             for k, cs in self.lookup.items()
-            # if startswith_field(k, full_name)
+            if startswith_field(k, full_name)
             for c in cs
             if c.type not in STRUCT
         ]
 
     def map_to_es(self):
         """
-        RETURN A MAP FROM THE NAME SPACE TO THE  
+        RETURN A MAP FROM THE NAME SPACE TO THE es_column NAME
         """
         full_name = self.query_path
         return set_default(

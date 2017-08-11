@@ -242,12 +242,18 @@ def to_painless(self, not_null=False, boolean=False):
 @extend(CoalesceOp)
 def to_painless(self, not_null=False, boolean=False):
     if not self.terms:
-        return "null"
-    acc = self.terms[-1].to_painless()
+        return Painless(missing=TrueOp())
+    acc = self.terms[-1].to_painless().expression
     for v in reversed(self.terms[:-1]):
         r = v.to_painless()
-        acc = "(((" + r + ") != null) ? (" + r + ") : (" + acc + "))"
-    return acc
+        if r.many:
+            acc = "(" + r.expression + ").size()>0 ? (" + r.expression + ") : (" + acc + ")"
+        else:
+            acc = "((" + r.expression + ") != null) ? (" + r.expression + ") : (" + acc + ")"
+    return Painless(
+        missing=AndOp("and", [t.missing() for t in self.terms]),
+        j=acc
+    )
 
 
 @extend(CoalesceOp)
@@ -519,7 +525,7 @@ def to_esfilter(self):
 
 @extend(NotOp)
 def to_painless(self, not_null=False, boolean=False):
-    return "!(" + self.term.to_painless(boolean=True) + ")"
+    return Painless(b="!(" + self.term.to_painless(boolean=True).b + ")")
 
 
 @extend(NotOp)

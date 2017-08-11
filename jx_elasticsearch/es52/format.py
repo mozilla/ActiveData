@@ -265,7 +265,7 @@ def _pull(s, agg):
     """
     p = s.pull
     if not p:
-        Log.error("programmer error")
+        Log.error("programmer error using {{select}}", select=s)
     elif isinstance(p, Mapping):
         return {k: _get(agg, v, None) for k, v in p.items()}
     else:

@@ -51,11 +51,11 @@ def _late_import():
 class QueryOp(Expression):
     __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "having", "format", "isLean"]
 
-    def __new__(cls, op, frum, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None):
-        output = object.__new__(cls)
-        for s in QueryOp.__slots__:
-            setattr(output, s, None)
-        return output
+    # def __new__(cls, op=None, frum=None, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None):
+    #     output = object.__new__(cls)
+    #     for s in QueryOp.__slots__:
+    #         setattr(output, s, None)
+    #     return output
 
     def __init__(self, op, frum, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None):
         if isinstance(frum, Container):
@@ -71,9 +71,6 @@ class QueryOp(Expression):
         self.sort = sort
         self.limit = limit
         self.format = format
-
-    def to_sql(self, not_null=False, boolean=False):
-        raise Log.error("{{type}} has no `to_sql` method", type=self.__class__.__name__)
 
     def __data__(self):
         def select___data__():
@@ -92,6 +89,19 @@ class QueryOp(Expression):
             "sort": self.sort.__data__(),
             "limit": self.limit.__data__()
         }
+
+    def copy(self):
+        return QueryOp(
+            frum=copy(self.frum),
+            select=copy(self.select),
+            edges=copy(self.edges),
+            groupby=copy(self.groupby),
+            window=copy(self.window),
+            where=copy(self.where),
+            sort=copy(self.sort),
+            limit=copy(self.limit),
+            format=copy(self.format)
+        )
 
 
     def vars(self, exclude_where=False, exclude_select=False):

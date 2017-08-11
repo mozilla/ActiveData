@@ -44,7 +44,7 @@ class StructuredLogger_usingThreadedStream(StructuredLogger):
 
         if use_UTF8:
             def utf8_appender(value):
-                if isinstance(value, unicode):
+                if isinstance(value, text_type):
                     value = value.encode('utf8')
                 self.stream.write(value)
 

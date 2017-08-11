@@ -27,7 +27,7 @@ def encrypt(text, _key, salt=None):
     """
     RETURN JSON OF ENCRYPTED DATA   {"salt":s, "length":l, "data":d}
     """
-    if not isinstance(text, unicode):
+    if not isinstance(text, text_type):
         Log.error("only unicode is encrypted")
     if _key is None:
         Log.error("Expecting a key")

@@ -183,12 +183,13 @@ def es_aggsop(es, frum, query):
 
                 es_query.aggs[key].percentiles.field = field_name
                 es_query.aggs[key].percentiles.percents += [percent]
-                s.pull = key + ".values." + literal_field(unicode(percent))
+                s.pull = key + ".values." + literal_field(text_type(percent))
             elif s.aggregate == "cardinality":
                 # ES USES DIFFERENT METHOD FOR CARDINALITY
                 key = literal_field(canonical_name + " cardinality")
 
                 es_query.aggs[key].cardinality.field = field_name
+                es_query.aggs[key].cardinality.precision_threshold = 1000
                 s.pull = key + ".value"
             elif s.aggregate == "stats":
                 # REGULAR STATS
@@ -249,12 +250,13 @@ def es_aggsop(es, frum, query):
 
             es_query.aggs[key].percentiles.script = abs_value.to_ruby()
             es_query.aggs[key].percentiles.percents += [percent]
-            s.pull = key + ".values." + literal_field(unicode(percent))
+            s.pull = key + ".values." + literal_field(text_type(percent))
         elif s.aggregate == "cardinality":
             # ES USES DIFFERENT METHOD FOR CARDINALITY
             key = canonical_name + " cardinality"
 
             es_query.aggs[key].cardinality.script = abs_value.to_ruby()
+            es_query.aggs[key].cardinality.precision_threshold = 1000
             s.pull = key + ".value"
         elif s.aggregate == "stats":
             # REGULAR STATS

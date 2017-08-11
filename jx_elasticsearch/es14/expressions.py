@@ -24,6 +24,7 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, UnixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, InOp, RangeOp, CaseOp, AndOp, \
     ConcatOp, TRUE_FILTER, FALSE_FILTER, LeftOp
+from mo_logs.strings import text_type
 
 
 @extend(BetweenOp)
@@ -48,7 +49,7 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
         value_is_missing = self.value.missing().to_ruby()
         value = self.value.to_ruby(not_null=True)
         prefix = self.prefix.to_ruby()
-        len_prefix = unicode(len(json2value(self.prefix.json))) if isinstance(self.prefix,
+        len_prefix = text_type(len(json2value(self.prefix.json))) if isinstance(self.prefix,
                                                                               Literal) else "(" + prefix + ").length()"
         suffix = self.suffix.to_ruby()
         start_index = self.start.to_ruby()
@@ -148,7 +149,7 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
     for t in self.terms:
         acc.append("((" + t.missing().to_ruby(boolean=True) + ") ? \"\" : (" + self.separator.json + "+" + t.to_ruby(
             not_null=True) + "))")
-    expr_ = "(" + "+".join(acc) + ").substring(" + unicode(len(json2value(self.separator.json))) + ")"
+    expr_ = "(" + "+".join(acc) + ").substring(" + text_type(len(json2value(self.separator.json))) + ")"
 
     return "(" + self.missing().to_ruby() + ") ? (" + self.default.to_ruby() + ") : (" + expr_ + ")"
 
@@ -165,7 +166,7 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
         if isinstance(v, basestring):
             return quote(v)
         if isinstance(v, (int, long, float)):
-            return unicode(v)
+            return text_type(v)
         if isinstance(v, dict):
             return "[" + ", ".join(quote(k) + ": " + _convert(vv) for k, vv in v.items()) + "]"
         if isinstance(v, list):

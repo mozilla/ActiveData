@@ -17,6 +17,8 @@ import signal
 import subprocess
 from string import ascii_lowercase
 
+from future.utils import text_type
+
 import mo_json_config
 from active_data.actions.jx import replace_vars
 from mo_dots import wrap, coalesce, unwrap, listwrap, Data
@@ -68,7 +70,7 @@ class ESUtils(object):
         if backend_es.schema==None:
             Log.error("Expecting backed_es to have a schema defined")
 
-        letters = unicode(ascii_lowercase)
+        letters = text_type(ascii_lowercase)
         self.random_letter = letters[int(Date.now().unix / 30) % 26]
         self.service_url = service_url
         self.sql_url = sql_url
@@ -100,7 +102,7 @@ class ESUtils(object):
     def setUp(self):
         global NEXT
 
-        index_name = "testing_" + ("000"+unicode(NEXT))[-3:] + "_" + self.random_letter
+        index_name = "testing_" + ("000"+text_type(NEXT))[-3:] + "_" + self.random_letter
         NEXT += 1
 
         self._es_test_settings = self.backend_es.copy()
@@ -366,10 +368,10 @@ def sort_table(result):
     """
     SORT ROWS IN TABLE, EVEN IF ELEMENTS ARE JSON
     """
-    data = wrap([{unicode(i): v for i, v in enumerate(row)} for row in result.data])
+    data = wrap([{text_type(i): v for i, v in enumerate(row)} for row in result.data])
     sort_columns = jx.sort(set(jx.get_columns(data, leaves=True).name))
     data = jx.sort(data, sort_columns)
-    result.data = [tuple(row[unicode(i)] for i in range(len(result.header))) for row in data]
+    result.data = [tuple(row[text_type(i)] for i in range(len(result.header))) for row in data]
 
 
 def error(response):

@@ -174,7 +174,7 @@ def loop(source, coverage_summary_index, settings, please_stop):
                     Log.note("Launch {{num}} threads", num=num_threads)
                     threads = [
                         Thread.run(
-                            "processor" + unicode(i),
+                            "processor" + text_type(i),
                             process_batch,
                             queue,
                             rev,

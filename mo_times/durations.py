@@ -243,25 +243,25 @@ class Duration(object):
         # MILLI
         rem = rest % 1000
         if rem != 0:
-            output = "+" + unicode(rem) + "milli" + output
+            output = "+" + text_type(rem) + "milli" + output
         rest = Math.floor(rest / 1000)
 
         # SECOND
         rem = rest % 60
         if rem != 0:
-            output = "+" + unicode(rem) + "second" + output
+            output = "+" + text_type(rem) + "second" + output
         rest = Math.floor(rest / 60)
 
         # MINUTE
         rem = rest % 60
         if rem != 0:
-            output = "+" + unicode(rem) + "minute" + output
+            output = "+" + text_type(rem) + "minute" + output
         rest = Math.floor(rest / 60)
 
         # HOUR
         rem = rest % 24
         if rem != 0:
-            output = "+" + unicode(rem) + "hour" + output
+            output = "+" + text_type(rem) + "hour" + output
         rest = Math.floor(rest / 24)
 
         # DAY
@@ -273,11 +273,11 @@ class Duration(object):
             rest = Math.floor(rest / 7)
 
         if rem != 0:
-            output = "+" + unicode(rem) + "day" + output
+            output = "+" + text_type(rem) + "day" + output
 
         # WEEK
         if rest != 0:
-            output = "+" + unicode(rest) + "week" + output
+            output = "+" + text_type(rest) + "week" + output
 
         if isNegative:
             output = output.replace("+", "-")
@@ -288,13 +288,13 @@ class Duration(object):
             month = Math.abs(self.month)
 
             if month <= 18 and month != 12:
-                output = sign + unicode(month) + "month" + output
+                output = sign + text_type(month) + "month" + output
             else:
                 m = month % 12
                 if m != 0:
-                    output = sign + unicode(m) + "month" + output
+                    output = sign + text_type(m) + "month" + output
                 y = Math.floor(month / 12)
-                output = sign + unicode(y) + "year" + output
+                output = sign + text_type(y) + "year" + output
 
         if output[0] == "+":
             output = output[1::]

@@ -146,7 +146,7 @@ class Signal(object):
             return self._name
 
     def __str__(self):
-        return self.name.decode(unicode)
+        return self.name.decode(text_type)
 
     def __repr__(self):
         return repr(self._go)

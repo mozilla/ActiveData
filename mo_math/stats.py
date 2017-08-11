@@ -258,7 +258,7 @@ class ZeroMoment(object):
     @property
     def dict(self):
     # RETURN HASH OF SUMS
-        return {u"s" + unicode(i): m for i, m in enumerate(self.S)}
+        return {u"s" + text_type(i): m for i, m in enumerate(self.S)}
 
 
     @staticmethod
@@ -290,7 +290,7 @@ def sub(a, b):
 
 def ZeroMoment2dict(z):
     # RETURN HASH OF SUMS
-    return {u"s" + unicode(i): m for i, m in enumerate(z.S)}
+    return {u"s" + text_type(i): m for i, m in enumerate(z.S)}
 
 
 def median(values, simple=True, mean_weight=0.0):

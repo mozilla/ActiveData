@@ -225,9 +225,9 @@ class TestDeepOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"o": 1, "a": {"b": "x", "v": 5}},
-                    {"o": 2, "a": {"b": "x", "v": 7}},
-                    {"o": 3, "a": [
+                    {"o": 1, "_a": {"b": "x", "v": 5}},
+                    {"o": 2, "_a": {"b": "x", "v": 7}},
+                    {"o": 3, "_a": [
                         {"b": "x", "v": 2},
                         {"b": "y", "v": 3}
                     ]},
@@ -235,7 +235,7 @@ class TestDeepOps(BaseTestCase):
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["o", "a", "c"],
+                "header": ["o", "_a", "c"],
                 "data": [
                     [1, {"b": "x", "v": 5}, NULL],
                     [2, {"b": "x", "v": 7}, NULL],
@@ -258,7 +258,7 @@ class TestDeepOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a": [
+                    "_a": [
                         {"b": "x", "v": 5},
                         {"b": "x", "v": 7},
                         [
@@ -272,6 +272,8 @@ class TestDeepOps(BaseTestCase):
                 }
             }
         }
+        self.utils.execute_tests(test)
+
 
     def test_select_whole_nested_document(self):
         test = {
@@ -932,6 +934,113 @@ class TestDeepOps(BaseTestCase):
                 ],
                 "data": {
                     "count": [1, 1, 1, 2, 2, 1, 1, 1]
+                }
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_deep_agg_w_deeper_select_relative_name_neop(self):
+        data = [{"a": {"_b": [
+            {"r": {"s": "a"}, "v": {"u": 1}},
+            {"r": {"s": "a"}, "v": {"u": 2}},
+            {"r": {"s": "b"}, "v": {"u": 3}},
+            {"r": {"s": "b"}, "v": {"u": 4}},
+            {"r": {"s": "c"}, "v": {"u": 5}},
+            {"v": {"u": 6}}
+        ]}}]
+
+        test = {
+            "data": data,
+            "query": {
+                "select": {"value": "v.u", "aggregate": "sum"},  # TEST RELATIVE NAME IN select
+                "from": TEST_TABLE + ".a._b",
+                "edges": ["r.s"],  # TEST RELATIVE NAME IN edges
+                "where": {"ne": {"r.s": "b"}} # TEST RELATIVE NAME IN where
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"r": {"s": "a"}, "v": {"u": 3}},
+                    {"r": {"s": "b"}, "v": NULL},
+                    {"r": {"s": "c"}, "v": {"u": 5}},
+                    {"r": NULL, "v": {"u": 6}}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["r.s", "v.u"],
+                "data": [
+                    ["a", 3],
+                    ["b", NULL],
+                    ["c", 5],
+                    [NULL, 6]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {"name": "r.s", "domain": {"type": "set", "partitions": [
+                        {"value": "a"},
+                        {"value": "b"},
+                        {"value": "c"}
+                    ]}}
+                ],
+                "data": {
+                    "v.u": [3, NULL, 5, 6]
+                }
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_setop_w_deep_select_value_neop(self):
+        data = [{"a": {"_b": [
+            {"r": {"s": "a"}, "v": {"u": 1}},
+            {"r": {"s": "a"}, "v": {"u": 2}},
+            {"r": {"s": "b"}, "v": {"u": 3}},
+            {"r": {"s": "b"}, "v": {"u": 4}},
+            {"r": {"s": "c"}, "v": {"u": 5}},
+            {"v": {"u": 6}}
+        ]}}]
+
+        test = {
+            "data": data,
+            "query": {
+                "select": ["r.s", "v.u"],
+                "from": TEST_TABLE + ".a._b",
+                "where": {"ne": {"r.s": "b"}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"r": {"s": "a"}, "v": {"u": 1}},
+                    {"r": {"s": "a"}, "v": {"u": 2}},
+                    {"r": {"s": "c"}, "v": {"u": 5}},
+                    {"v": {"u": 6}}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["r.s", "v.u"],
+                "data": [
+                    ["a", 1],
+                    ["a", 2],
+                    ["c", 5],
+                    [NULL, 6]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {"name": "rownum", "domain": {
+                        "type": "rownum",
+                        "min": 0,
+                        "max": 4,
+                        "interval": 1
+                    }}
+                ],
+                "data": {
+                    "v.u": [1, 2, 5, 6],
+                    "r.s": ["a", "a", "c", NULL]
                 }
             }
         }

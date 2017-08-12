@@ -13,7 +13,7 @@ import re
 import shutil
 from datetime import datetime
 from mimetypes import MimeTypes
-from tempfile import mkdtemp
+from tempfile import mkdtemp, NamedTemporaryFile
 
 import os
 from mo_dots import get_module, coalesce
@@ -386,6 +386,21 @@ class TempDirectory(File):
 
     def __init__(self):
         File.__init__(self, mkdtemp())
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.delete()
+
+class TempFile(File):
+    def __new__(cls, *args, **kwargs):
+        return object.__new__(cls)
+
+    def __init__(self):
+        self.temp = NamedTemporaryFile(delete=False)
+        self.temp.close()
+        File.__init__(self, self.temp.name)
 
     def __enter__(self):
         return self

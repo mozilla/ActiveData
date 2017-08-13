@@ -24,6 +24,8 @@ from time import time
 from mo_dots import coalesce, Null
 from mo_threads import Lock, Signal, Thread, THREAD_STOP, THREAD_TIMEOUT, Till
 
+from mo_logs import Log
+
 _convert = None
 _Except = None
 _CProfiler = None
@@ -161,6 +163,9 @@ class Queue(object):
         EXPECT THE self.lock TO BE HAD, WAITS FOR self.queue TO HAVE A LITTLE SPACE
         """
         wait_time = 5
+
+        if DEBUG and len(self.queue) > 1 * 1000 * 1000:
+            Log.warning("Queue {{name}} has over a million items")
 
         now = time()
         if timeout != None:
@@ -343,7 +348,7 @@ class ThreadedQueue(Queue):
                     if error_target:
                         try:
                             error_target(e, _buffer)
-                        except Exception, f:
+                        except Exception as f:
                             _Log.warning(
                                 "`error_target` should not throw, just deal",
                                 name=name,
@@ -368,7 +373,7 @@ class ThreadedQueue(Queue):
                     if error_target:
                         try:
                             error_target(e, _buffer)
-                        except Exception, f:
+                        except Exception as f:
                             _Log.warning(
                                 "`error_target` should not throw, just deal",
                                 name=name,

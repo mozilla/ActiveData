@@ -19,7 +19,7 @@ from tempfile import NamedTemporaryFile
 import flask
 from active_data import record_request, cors_wrapper
 from flask import Flask
-from jx_python import containers
+from jx_base import container
 from mo_files import File
 from mo_logs import Log
 from mo_logs import constants, startup
@@ -101,7 +101,7 @@ def setup(settings=None):
             active_data.request_log_queue = request_logger.threaded_queue(max_size=2000)
 
         # SETUP DEFAULT CONTAINER, SO THERE IS SOMETHING TO QUERY
-        containers.config.default = {
+        container.config.default = {
             "type": "elasticsearch",
             "settings": config.elasticsearch.copy()
         }

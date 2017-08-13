@@ -339,7 +339,7 @@ class Thread(object):
                 _wait_for_exit(please_stop)
             else:
                 _wait_for_interrupt(please_stop)
-        except (KeyboardInterrupt, SystemExit), _:
+        except (KeyboardInterrupt, SystemExit) as _:
             Log.alert("SIGINT Detected!  Stopping...")
         finally:
             please_stop.go()

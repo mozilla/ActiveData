@@ -15,11 +15,11 @@ from jx_elasticsearch import es09
 from mo_dots import listwrap, unwrap, literal_field
 from mo_math import AND
 
-from jx_base.expressions import jx_expression_to_function
 from jx_base.queries import is_variable_name
 from jx_elasticsearch.es09.util import aggregates, fix_es_stats, build_es_query
 from jx_elasticsearch.es52.expressions import simplify_esfilter, Variable
 from jx_python.containers.cube import Cube
+from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
 
 

@@ -15,7 +15,9 @@ import itertools
 from copy import copy
 from itertools import product
 
-from jx_python import jx, Schema
+from jx_base import STRUCT
+from jx_python import jx
+from jx_python import meta as jx_base_meta
 from mo_dots import Data, relative_field, concat_field
 from mo_dots import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
 from mo_dots import wrap
@@ -26,11 +28,10 @@ from mo_threads import THREAD_STOP
 from mo_threads import Thread
 from mo_threads import Till
 
-from jx_python import meta as jx_base_meta
-from jx_elasticsearch.es52.util import es_type_to_json_type
-from jx_python.containers import STRUCT
+from jx_base.query import QueryOp
+from jx_base.schema import Schema
+from jx_elasticsearch.es14.util import es_type_to_json_type
 from jx_python.meta import ColumnList, metadata_columns, metadata_tables, Column, Table
-from jx_python.query import QueryOp
 from mo_times.dates import Date
 from mo_times.durations import HOUR, MINUTE
 from mo_times.timer import Timer

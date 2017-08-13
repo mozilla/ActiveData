@@ -15,7 +15,7 @@ import itertools
 from collections import Mapping
 from numbers import Number
 
-from mo_dots import coalesce, Data, set_default, Null, listwrap
+from mo_dots import coalesce, Data, set_default, Null, listwrap, unwrap
 from mo_dots import wrap
 from mo_logs import Log
 from mo_math import MAX, MIN
@@ -624,7 +624,7 @@ class RangeDomain(Domain):
             if not self.key:
                 Log.error("Must have a key value")
 
-            parts = listwrap(self.partitions)
+            parts = list(listwrap(self.partitions))
             for i, p in enumerate(parts):
                 self.min = MIN([self.min, p.min])
                 self.max = MAX([self.max, p.max])
@@ -636,7 +636,7 @@ class RangeDomain(Domain):
 
             # VERIFY PARTITIONS DO NOT OVERLAP, HOLES ARE FINE
             for p, q in itertools.product(parts, parts):
-                if p.min <= q.min and q.min < p.max:
+                if p is not q and p.min <= q.min and q.min < p.max:
                     Log.error("partitions overlap!")
 
             self.partitions = parts

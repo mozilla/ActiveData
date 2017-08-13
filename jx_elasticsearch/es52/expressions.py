@@ -609,23 +609,27 @@ def to_esfilter(self):
 
 @extend(MultiOp)
 def to_painless(self, not_null=False, boolean=False):
+    op, unit = MultiOp.operators[self.op]
     if self.nulls:
-        op, unit = MultiOp.operators[self.op]
-        null_test = CoalesceOp("coalesce", self.terms).missing().to_painless(boolean=True)
-        acc = op.join(
-            "((" + t.missing().to_painless(boolean=True) + ") ? " + unit + " : (" + t.to_painless(not_null=True) + "))" for
+        calc = op.join(
+            "((" + t.missing().to_painless(boolean=True).b + ") ? " + unit + " : (" + NumberOp("number", t).to_painless(not_null=True).n + "))" for
             t in self.terms
         )
-        if many:
-            acc = "[" + acc + "]"
-        return "((" + null_test + ") ? (" + self.default.to_painless(many=many) + ") : (" + acc + "))"
+        return WhenOp(
+            "when",
+            AndOp("and", [t.missing() for t in self.terms]),
+            **{"then": self.default, "else": ScriptOp(None, calc)}
+        ).partial_eval().to_painless()
     else:
-        op, unit = MultiOp.operators[self.op]
-        null_test = OrOp("or", [t.missing() for t in self.terms]).to_painless()
-        acc = op.join("(" + t.to_painless(not_null=True) + ")" for t in self.terms)
-        if many:
-            acc = "[" + acc + "]"
-        return "((" + null_test + ") ? (" + self.default.to_painless(many=many) + ") : (" + acc + "))"
+        calc = op.join(
+            "(" + NumberOp("number", t).to_painless(not_null=True).n + ")"
+            for t in self.terms
+        )
+        return WhenOp(
+            "when",
+            OrOp("or", [t.missing() for t in self.terms]),
+            **{"then": self.default, "else": ScriptOp(None, calc)}
+        ).partial_eval().to_painless(not_null=True)
 
 
 @extend(RegExpOp)
@@ -756,6 +760,11 @@ def to_painless(self, not_null=False, boolean=False):
 @extend(ScriptOp)
 def to_esfilter(self):
     return {"script": {"script": {"lang": "painless", "inline": self.script}}}
+
+
+@extend(ScriptOp)
+def missing(self):
+    return Painless(b="(" + self.script.to_painless().expression + ")==null")
 
 
 @extend(Variable)

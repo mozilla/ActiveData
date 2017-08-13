@@ -169,7 +169,10 @@ class ColumnList(Container):
 
     def add(self, column):
         columns_for_table = self.data.setdefault(column.es_index, {})
-        _columns = columns_for_table.setdefault(column.names["."], [])
+        abs_cname = column.names["."]
+        _columns = columns_for_table.get(abs_cname)
+        if not _columns:
+            _columns = columns_for_table[abs_cname] = []
         _columns.append(column)
         self.count += 1
 

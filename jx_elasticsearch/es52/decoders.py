@@ -100,12 +100,13 @@ class AggsDecoder(object):
         else:
             Log.error("domain type of {{type}} is not supported yet", type=e.domain.type)
 
-    def __init__(self, edge, query, limit):
+    def __init__(self, edge, query, limit, es_column_map):
         self.start = None
         self.edge = edge
         self.name = literal_field(self.edge.name)
         self.query = query
         self.limit = limit
+        self.es_column_map = es_column_map
 
     def append_query(self, es_query, start):
         Log.error("Not supported")
@@ -236,18 +237,19 @@ class SetDecoder(AggsDecoder):
         return 1
 
 
-def _range_composer(edge, domain, es_query, to_float):
+def _range_composer(edge, domain, es_query, es_column_map, to_float):
     # USE RANGES
     _min = coalesce(domain.min, MIN(domain.partitions.min))
     _max = coalesce(domain.max, MAX(domain.partitions.max))
+    es_value = edge.value.map(es_column_map)
 
     if edge.allowNulls:
         missing_filter = set_default(
             {
                 "filter": OrOp("or", [
-                    InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
-                    InequalityOp("gte", [edge.value, Literal(None, to_float(_max))]),
-                    edge.value.missing()
+                    es_value.missing(),
+                    InequalityOp("lt", [es_value, Literal(None, to_float(_min))]),
+                    InequalityOp("gte", [es_value, Literal(None, to_float(_max))])
                 ]).to_esfilter()
             },
             es_query
@@ -255,7 +257,10 @@ def _range_composer(edge, domain, es_query, to_float):
     else:
         missing_filter = None
 
-    calc = edge.value.to_painless().script
+    if isinstance(es_value, Variable):
+        calc = {"field": es_value.var}
+    else:
+        calc = {"script": es_value.to_painless(not_null=True).script}
 
     return wrap({"aggs": {
         "_match": set_default(
@@ -271,7 +276,7 @@ class TimeDecoder(AggsDecoder):
     def append_query(self, es_query, start):
         self.start = start
         mapper = self.query.schema.leaves(".")
-        return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x.unix)
+        return _range_composer(self.edge, self.edge.domain, es_query, self.es_column_map, lambda x: x.unix)
 
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
@@ -399,7 +404,7 @@ class GeneralSetDecoder(AggsDecoder):
 class DurationDecoder(AggsDecoder):
     def append_query(self, es_query, start):
         self.start = start
-        return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x.seconds)
+        return _range_composer(self.edge, self.edge.domain, es_query, self.es_column_map, lambda x: x.seconds)
 
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
@@ -430,7 +435,7 @@ class DurationDecoder(AggsDecoder):
 class RangeDecoder(AggsDecoder):
     def append_query(self, es_query, start):
         self.start = start
-        return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x)
+        return _range_composer(self.edge, self.edge.domain, es_query, self.es_column_map, lambda x: x)
 
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)

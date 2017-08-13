@@ -69,20 +69,6 @@ def jx_sort_to_es_sort(sort):
     return output
 
 
-es_type_to_json_type = {
-    "text": "string",
-    "string": "string",
-    "keyword": "string",
-    "double": "number",
-    "integer": "number",
-    "object": "object",
-    "nested": "nested",
-    "source": "json",
-    "boolean": "boolean",
-    "exists": "exists"
-}
-
-
 # FOR ELASTICSEARCH aggs
 aggregates1_4 = {
     "none": "none",

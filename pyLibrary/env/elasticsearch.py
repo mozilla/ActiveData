@@ -1171,7 +1171,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                     ))
             continue
 
-        if property.type in ["string", "boolean", "integer", "date", "long", "double", "keyword", "exists", "text"]:
+        if property.type in es_type_to_json_type.keys():
             columns.append(Column(
                 es_index=index_name,
                 es_column=column_name,
@@ -1224,6 +1224,22 @@ def _merge_mapping(a, b):
             a[literal_field(name)] = deepcopy(b_details)
 
     return a
+
+
+es_type_to_json_type = {
+    "text": "string",
+    "string": "string",
+    "keyword": "string",
+    "float": "number",
+    "double": "number",
+    "integer": "number",
+    "object": "object",
+    "nested": "nested",
+    "source": "json",
+    "boolean": "boolean",
+    "exists": "exists"
+}
+
 
 _merge_type = {
     "boolean": {

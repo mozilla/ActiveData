@@ -101,7 +101,7 @@ def get_decoders_by_depth(query, es_column_map):
             output.append([])
 
         limit = None
-        output[max_depth].append(AggsDecoder(edge, query, limit))
+        output[max_depth].append(AggsDecoder(edge, query, limit, es_column_map))
     return output
 
 

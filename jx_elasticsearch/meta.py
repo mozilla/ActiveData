@@ -30,13 +30,13 @@ from mo_threads import Till
 
 from jx_base.query import QueryOp
 from jx_base.schema import Schema
-from jx_elasticsearch.es52.util import es_type_to_json_type
+from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, metadata_columns, metadata_tables, Column, Table
 from mo_times.dates import Date
 from mo_times.durations import HOUR, MINUTE
 from mo_times.timer import Timer
-
-_elasticsearch = None
+from pyLibrary.env import elasticsearch
+from pyLibrary.env.elasticsearch import es_type_to_json_type
 
 MAX_COLUMN_METADATA_AGE = 12 * HOUR
 ENABLE_META_SCAN = False
@@ -60,16 +60,12 @@ class FromESMetadata(Schema):
 
     @override
     def __init__(self, host, index, alias=None, name=None, port=9200, kwargs=None):
-        global _elasticsearch
         if hasattr(self, "settings"):
             return
 
-        from jx_python.containers.list_usingPythonList import ListContainer
-        from pyLibrary.env import elasticsearch as _elasticsearch
-
         self.settings = kwargs
         self.default_name = coalesce(name, alias, index)
-        self.default_es = _elasticsearch.Cluster(kwargs=kwargs)
+        self.default_es = elasticsearch.Cluster(kwargs=kwargs)
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
         self.es_metadata = Null
@@ -145,7 +141,7 @@ class FromESMetadata(Schema):
     def _parse_properties(self, abs_index, properties, meta):
         # IT IS IMPORTANT THAT NESTED PROPERTIES NAME ALL COLUMNS, AND
         # ALL COLUMNS ARE GIVEN NAMES FOR ALL NESTED PROPERTIES
-        abs_columns = _elasticsearch.parse_properties(abs_index, None, properties.properties)
+        abs_columns = elasticsearch.parse_properties(abs_index, None, properties.properties)
         abs_columns = abs_columns.filter(  # TODO: REMOVE WHEN jobs PROPERTY EXPLOSION IS CONTAINED
             lambda r: not r.es_column.startswith("other.") and
                       not r.es_column.startswith("previous_values.cf_") and
@@ -189,6 +185,7 @@ class FromESMetadata(Schema):
                 abs_column.type = es_type_to_json_type[abs_column.type]
                 for query_path in query_paths:
                     add_column(abs_column, query_path)
+        pass
 
     def query(self, _query):
         return self.meta.columns.query(QueryOp(set_default(
@@ -317,7 +314,7 @@ class FromESMetadata(Schema):
                         "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                     })
                 return
-            elif c.type in _elasticsearch.ES_NUMERIC_TYPES and cardinality > 30:
+            elif c.type in elasticsearch.ES_NUMERIC_TYPES and cardinality > 30:
                 if DEBUG:
                     Log.note("{{field}} has {{num}} parts", field=c.es_index, num=cardinality)
                 with self.meta.columns.locker:
@@ -466,7 +463,7 @@ def _counting_query(c):
             "aggs": {
                 "_nested": {"cardinality": {
                     "field": c.es_column,
-                    "precision_threshold": 10 if c.type in _elasticsearch.ES_NUMERIC_TYPES else 100
+                    "precision_threshold": 10 if c.type in elasticsearch.ES_NUMERIC_TYPES else 100
                 }}
             }
         }

@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from jx_elasticsearch import es09
-from jx_python import domains
+from jx_base import domains
 from mo_dots import coalesce, split_field, Data, wrap
 from mo_dots import listwrap, unwrap
 from mo_logs import Log

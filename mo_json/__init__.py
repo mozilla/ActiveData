@@ -164,7 +164,7 @@ def _scrub(value, is_done, stack):
         else:
             return True
     elif not isinstance(value, Except) and isinstance(value, Exception):
-        return _scrub(Except.wrap(value), is_done)
+        return _scrub(Except.wrap(value), is_done, stack)
     elif hasattr(value, '__data__'):
         try:
             return _scrub(value.__data__(), is_done, stack)

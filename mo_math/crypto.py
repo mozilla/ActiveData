@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 
 import base64
 
+from future.utils import text_type
 from mo_dots import Data, get_module
 from mo_logs import Log
 

@@ -22,7 +22,7 @@ from jx_elasticsearch.es14.decoders import DefaultDecoder, AggsDecoder, ObjectDe
 from jx_elasticsearch.es14.decoders import DimFieldListDecoder
 from jx_elasticsearch.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
 from jx_elasticsearch.es14.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp, TupleOp
-from jx_python.query import MAX_LIMIT
+from jx_base.query import MAX_LIMIT
 from mo_times.timer import Timer
 
 

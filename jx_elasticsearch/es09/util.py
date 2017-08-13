@@ -22,7 +22,7 @@ from pyLibrary import convert
 from mo_math import COUNT
 from mo_math import Math
 from mo_math import stats
-from jx_python import domains
+from jx_base import domains
 from jx_elasticsearch.es09.expressions import value2MVEL, isKeyword
 from jx_elasticsearch.es14.expressions import simplify_esfilter
 from mo_times import durations

@@ -130,16 +130,16 @@ def es_setop(es, query):
             else:
                 s_column = select.value.var
                 # LEAVES OF OBJECT
-                for cname, cs in schema.lookup.items():
-                    if startswith_field(cname, s_column):
-                        for c in cs:
-                            if c.type not in STRUCT:
-                                es_query.stored_fields += [c.es_column]
-                                new_select.append({
-                                    "name": select.name,
-                                    "value": Variable(c.es_column, verify=False),
-                                    "put": {"name": select.name, "index": put_index, "child": relative_field(cname, s_column)}
-                                })
+                for c in schema.leaves(s_column):
+                    if c.es_column == "_id" or c.es_column.endswith("$exists"):
+                        continue
+                    cname = c.names["."]
+                    es_query.stored_fields += [c.es_column]
+                    new_select.append({
+                        "name": select.name,
+                        "value": Variable(c.es_column, verify=False),
+                        "put": {"name": select.name, "index": put_index, "child": relative_field(cname, s_column)}
+                    })
                 put_index += 1
         else:
             es_query.script_fields[literal_field(select.name)] = {"script": {

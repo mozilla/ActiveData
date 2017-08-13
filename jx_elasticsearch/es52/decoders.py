@@ -133,8 +133,8 @@ class AggsDecoder(object):
 
 class SetDecoder(AggsDecoder):
 
-    def __init__(self, edge, query, limit):
-        AggsDecoder.__init__(self, edge, query, limit)
+    def __init__(self, edge, query, limit, es_column_map):
+        AggsDecoder.__init__(self, edge, query, limit, es_column_map)
         domain = self.domain = edge.domain
 
         # WE ASSUME IF THE VARIABLES MATCH, THEN THE SORT TERM AND EDGE TERM MATCH, AND WE SORT BY TERM
@@ -539,8 +539,8 @@ class ObjectDecoder(AggsDecoder):
 class DefaultDecoder(SetDecoder):
     # FOR DECODING THE default DOMAIN TYPE (UNKNOWN-AT-QUERY-TIME SET OF VALUES)
 
-    def __init__(self, edge, query, limit):
-        AggsDecoder.__init__(self, edge, query, limit)
+    def __init__(self, edge, query, limit, es_column_map):
+        AggsDecoder.__init__(self, edge, query, limit, es_column_map)
         self.domain = edge.domain
         self.domain.limit = Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
         self.parts = list()
@@ -653,8 +653,8 @@ class DefaultDecoder(SetDecoder):
 
 
 class DimFieldListDecoder(SetDecoder):
-    def __init__(self, edge, query, limit):
-        AggsDecoder.__init__(self, edge, query, limit)
+    def __init__(self, edge, query, limit, es_column_map):
+        AggsDecoder.__init__(self, edge, query, limit, es_column_map)
         self.fields = edge.domain.dimension.fields
         self.domain = self.edge.domain
         self.domain.limit = Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)

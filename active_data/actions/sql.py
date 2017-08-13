@@ -65,7 +65,7 @@ def sql_query(path):
                 jx_query = parse_sql(data.sql)
                 frum = wrap_from(jx_query['from'])
                 result = jx.run(jx_query, frum=frum)
-                if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
+                if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                     result = result.format(jx_query.format)
                 result.meta.jx_query = jx_query
 

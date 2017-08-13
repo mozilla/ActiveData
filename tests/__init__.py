@@ -12,29 +12,29 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import itertools
-from collections import Mapping
-
-import os
 import signal
 import subprocess
+from collections import Mapping
 from string import ascii_lowercase
 
+import os
 from future.utils import text_type
-
-import mo_json_config
-from active_data.actions.jx import replace_vars
+from jx_base import container
+from jx_python import jx
 from mo_dots import wrap, coalesce, unwrap, listwrap, Data
 from mo_kwargs import override
 from mo_logs import Log, Except, constants
+from pyLibrary import convert
+
+import mo_json_config
+from active_data.actions.jx import replace_vars
+from jx_base.query import QueryOp
 from mo_logs.exceptions import extract_stack
 from mo_logs.strings import expand_template
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_times.dates import Date
 from mo_times.durations import MINUTE
-from pyLibrary import convert
 from pyLibrary.env import http
-from jx_python import jx, containers
-from jx_python.query import QueryOp
 from pyLibrary.testing import elasticsearch
 from test_jx import TEST_TABLE
 
@@ -82,8 +82,8 @@ class ESUtils(object):
         self._es_cluster = None
         self._index = None
 
-        if not containers.config.default:
-            containers.config.default = {
+        if not container.config.default:
+            container.config.default = {
                 "type": "elasticsearch",
                 "settings": backend_es
             }
@@ -96,7 +96,7 @@ class ESUtils(object):
             # THIS MAKES FOR SLIGHTLY FASTER TEST TIMES BECAUSE THE PROXY IS
             # MISSING
             self.server = FakeHttp()
-            containers.config.default = {
+            container.config.default = {
                 "type": "elasticsearch",
                 "settings": kwargs.backend_es.copy()
             }

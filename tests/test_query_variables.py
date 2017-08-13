@@ -12,6 +12,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from future.utils import text_type
+
 from active_data.actions.jx import replace_vars
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times.dates import Date

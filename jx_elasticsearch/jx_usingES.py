@@ -13,7 +13,8 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from jx_python import jx, containers
+from jx_base import container
+from jx_python import jx
 from mo_dots import Data
 from mo_dots import coalesce, split_field, literal_field, unwraplist, join_field
 from mo_dots import wrap, listwrap

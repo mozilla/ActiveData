@@ -20,7 +20,7 @@ from active_data.actions.jx import send_error
 from mo_dots import Data, wrap
 from pyLibrary import convert
 from jx_python import jx, wrap_from
-from jx_python.containers import Container
+from jx_base.container import Container
 from mo_times.timer import Timer
 
 

@@ -21,7 +21,7 @@ from pyLibrary import convert
 
 from active_data.actions import save_query
 from jx_elasticsearch.meta import TOO_OLD
-from jx_python.containers import STRUCT
+from jx_base import STRUCT
 from mo_logs.strings import expand_template
 from mo_times.dates import Date
 from mo_times.durations import MINUTE

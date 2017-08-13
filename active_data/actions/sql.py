@@ -28,7 +28,7 @@ from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_times.timer import Timer
 from pyLibrary.convert import unicode2utf8
 from jx_python import jx, wrap_from
-from jx_python.containers import Container
+from jx_base.container import Container
 
 
 @cors_wrapper

@@ -72,7 +72,7 @@ class Container(object):
         elif isinstance(frum, basestring):
             # USE DEFAULT STORAGE TO FIND Container
             if not config.default.settings:
-                Log.error("expecting jx_python.query.config.default.settings to contain default elasticsearch connection info")
+                Log.error("expecting jx_base.query.config.default.settings to contain default elasticsearch connection info")
 
             settings = set_default(
                 {

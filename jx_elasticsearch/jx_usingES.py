@@ -13,8 +13,8 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from jx_python import jx, containers
-from jx_base.query import QueryOp
+from jx_base import container
+from jx_python import jx
 from mo_dots import Data
 from mo_dots import coalesce, split_field, literal_field, unwraplist, join_field
 from mo_dots import wrap, listwrap
@@ -26,6 +26,7 @@ from jx_base.container import Container
 from jx_base.dimensions import Dimension
 from jx_base.expressions import jx_expression
 from jx_base.queries import is_variable_name
+from jx_base.query import QueryOp
 from jx_base.schema import Schema
 from jx_elasticsearch.es09 import aggop as es09_aggop
 from jx_elasticsearch.es09 import setop as es09_setop
@@ -69,8 +70,8 @@ class FromES(Container):
         kwargs=None
     ):
         Container.__init__(self, None)
-        if not containers.config.default:
-            containers.config.default.settings = kwargs
+        if not container.config.default:
+            container.config.default.settings = kwargs
         self.settings = kwargs
         self.name = coalesce(name, alias, index)
         if read_only:

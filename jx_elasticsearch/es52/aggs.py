@@ -25,8 +25,8 @@ from jx_elasticsearch.es52.decoders import DimFieldListDecoder
 from jx_elasticsearch.es52.util import aggregates1_4, NON_STATISTICAL_AGGS
 from jx_elasticsearch.es52.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp
 from jx_base.expressions import TupleOp
-from jx_python.containers import OBJECT, NESTED
-from jx_python.query import MAX_LIMIT
+from jx_base import OBJECT, NESTED
+from jx_base.query import MAX_LIMIT
 from mo_times.timer import Timer
 
 

@@ -30,7 +30,7 @@ from mo_threads import Till
 
 from jx_base.query import QueryOp
 from jx_base.schema import Schema
-from jx_elasticsearch.es14.util import es_type_to_json_type
+from jx_elasticsearch.es52.util import es_type_to_json_type
 from jx_python.meta import ColumnList, metadata_columns, metadata_tables, Column, Table
 from mo_times.dates import Date
 from mo_times.durations import HOUR, MINUTE

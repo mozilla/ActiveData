@@ -11,18 +11,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_base import STRUCT
 from jx_elasticsearch import es09, es52
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field
 from mo_logs import Log
 from mo_threads import Thread
 from pyLibrary import convert
 
-from jx_base.expressions import compile_expression
+from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, simplify_esfilter, AndOp, Variable, LeavesOp
 from jx_elasticsearch.es52.setop import format_dispatch
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
-from jx_python.containers import STRUCT
-from jx_python.query import DEFAULT_LIMIT
+from jx_python.expressions import compile_expression
 from mo_times.timer import Timer
 
 EXPRESSION_PREFIX = "_expr."

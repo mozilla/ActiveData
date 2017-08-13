@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_base import STRUCT
 from jx_elasticsearch import es52, es09
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, \
     concat_field, startswith_field, relative_field, join_field
@@ -19,13 +20,12 @@ from mo_logs import Log
 from mo_math import AND
 from mo_math import MAX
 
-from jx_base.expressions import jx_expression_to_function
+from jx_base.domains import ALGEBRAIC
+from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import Variable, LeavesOp
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
-from jx_python.containers import STRUCT
 from jx_python.containers.cube import Cube
-from jx_python.domains import ALGEBRAIC
-from jx_python.query import DEFAULT_LIMIT
+from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
 from mo_dots.lists import FlatList
 from mo_json.typed_encoder import decode_property

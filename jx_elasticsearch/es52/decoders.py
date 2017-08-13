@@ -22,9 +22,9 @@ from mo_math import Math
 
 from jx_base.expressions import TupleOp, FalseOp
 from jx_elasticsearch.es52.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, InequalityOp, LeavesOp
-from jx_python.dimensions import Dimension
-from jx_python.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_python.query import MAX_LIMIT, DEFAULT_LIMIT
+from jx_base.dimensions import Dimension
+from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
+from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 
 
 class AggsDecoder(object):

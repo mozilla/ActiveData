@@ -222,6 +222,7 @@ class File(object):
             f.write(content)
 
     def write(self, data):
+        # type: (object) -> object
         if not self.parent.exists:
             self.parent.create()
         with open(self._filename, b"wb") as f:

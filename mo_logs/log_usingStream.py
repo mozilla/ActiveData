@@ -25,6 +25,7 @@ class StructuredLogger_usingStream(StructuredLogger):
         self.stream = stream
 
     def write(self, template, params):
+        # type: (object, object) -> object
         value = expand_template(template, params)
         if isinstance(value, text_type):
             value = value.encode('utf8')

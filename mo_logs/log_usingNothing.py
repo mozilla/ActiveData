@@ -19,6 +19,7 @@ class StructuredLogger(object):
     ABSTRACT BASE CLASS FOR JSON LOGGING
     """
     def write(self, template, params):
+        # type: (object, object) -> object
         pass
 
     def stop(self):

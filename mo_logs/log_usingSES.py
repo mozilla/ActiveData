@@ -50,6 +50,7 @@ class StructuredLogger_usingSES(StructuredLogger):
         self.settings.max_interval = Duration(kwargs.max_interval)
 
     def write(self, template, params):
+        # type: (object, object) -> object
         with self.locker:
             if params.context not in [NOTE, ALARM]:  # SEND ONLY THE NOT BORING STUFF
                 self.accumulation.append((template, params))

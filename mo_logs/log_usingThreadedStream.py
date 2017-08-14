@@ -16,10 +16,13 @@ from __future__ import unicode_literals
 import sys
 from time import time
 
+from future.utils import text_type
 from mo_logs import Log
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_logs.strings import expand_template
 from mo_threads import Thread, THREAD_STOP, Till
+
+DEBUG_LOGGING = False
 
 
 class StructuredLogger_usingThreadedStream(StructuredLogger):
@@ -58,6 +61,7 @@ class StructuredLogger_usingThreadedStream(StructuredLogger):
         self.thread.start()
 
     def write(self, template, params):
+        # type: (object, object) -> object
         try:
             self.queue.add({"template": template, "params": params})
             return self
@@ -112,6 +116,7 @@ def time_delta_pusher(please_stop, appender, queue, interval):
         try:
             appender(u"\n".join(lines) + u"\n")
         except Exception as e:
+
             sys.stderr.write(b"Trouble with appender: " + str(e.__class__.__name__) + b"\n")
             # SWALLOW ERROR, MUST KEEP RUNNING
 

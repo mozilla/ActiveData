@@ -63,6 +63,7 @@ class StructuredLogger_usingLogger(StructuredLogger):
         self.thread.start()
 
     def write(self, template, params):
+        # type: (object, object) -> object
         # http://docs.python.org/2/library/logging.html# logging.LogRecord
         self.queue.add({"template": template, "params": params})
 

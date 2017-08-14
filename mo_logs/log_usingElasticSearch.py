@@ -50,6 +50,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         Thread.run("add debug logs to es", self._insert_loop)
 
     def write(self, template, params):
+        # type: (object, object) -> object
         if params.get("template"):
             # DETECTED INNER TEMPLATE, ASSUME TRACE IS ON, SO DO NOT NEED THE OUTER TEMPLATE
             self.queue.add({"value": params})

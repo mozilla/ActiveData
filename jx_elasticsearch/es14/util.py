@@ -74,6 +74,7 @@ def jx_sort_to_es_sort(sort):
 es_type_to_json_type = {
     "string": "string",
     "double": "number",
+    "long": "number",
     "integer": "number",
     "object": "object",
     "nested": "nested",

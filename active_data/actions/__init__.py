@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 import flask
 from active_data import record_request
 from flask import Response
+from future.utils import text_type
 from jx_base import STRUCT
 from jx_python import meta
 from mo_dots import coalesce, join_field, split_field

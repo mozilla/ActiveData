@@ -196,7 +196,7 @@ class ESUtils(object):
                 subtest.query["from"] = frum.replace(TEST_TABLE, _settings.index)
             else:
                 Log.error("Do not know how to handle")
-        except Exception, e:
+        except Exception as e:
             Log.error("can not load {{data}} into container", data=subtest.data, cause=e)
 
         return _settings

@@ -183,8 +183,7 @@ SCHEMA = {
                         "match": "*",
                         "match_mapping_type": "string",
                         "mapping": {
-                            "type": "string",
-                            "index": "not_analyzed"
+                            "type": "keyword"
                         }
                     }
                 }
@@ -207,13 +206,13 @@ SCHEMA = {
                     "store": True
                 },
                 "hash": {
-                    "type": "string",
-                    "index": "not_analyzed",
+                    "type": "keyword",
                     "store": True
                 },
                 "query": {
                     "type": "text",
-                    "store": True
+                    "store": True,
+                    "fielddata": True
                 }
             }
         }

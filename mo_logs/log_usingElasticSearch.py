@@ -132,47 +132,45 @@ SCHEMA = {
             }}
         ],
         "_all": {"enabled": False},
-        "_source": {"compress": True, "enabled": True},
+        "_source": {"enabled": True},
         "properties": {
-            "params": {"type": "object", "dynamic": False, "index": False},
-            "template": {"type": "object", "dynamic": False, "index": False},
+            "params": {"type": "object", "dynamic": False, "enabled": False},  # DO WE NEED enabled?  dynamic==false seems good enough
+            "template": {"type": "object", "dynamic": True},
             "context": {
                 "type": "object",
                 "dynamic": False,
                 "properties": {
-                    "$string": {"type": "string"}
+                    "$string": {"type": "keyword"}
                 }
             },
-            "$exists": {"type": "string"},
+            "$exists": {"type": "keyword"},
             "machine": {
                 "dynamic": True,
                 "properties": {
-                    "python": {
-                        "properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "$exists": {"type": "string"},
-                    "os": {"properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "name": {"properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}}
+                    "$exists": {"type": "keyword"},
+                    "python": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
+                    "os": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
+                    "name": {"properties": {"$string": {"type": "keyword", "doc_values": True}}}
                 }
             },
             "location": {
                 "dynamic": True,
                 "properties": {
-                    "$exists": {"type": "string"},
-                    "file": {"properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "method": {
-                        "properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "line": {"properties": {"$integer": {"index": "not_analyzed", "type": "long", "doc_values": True}}}
+                    "$exists": {"type": "keyword"},
+                    "file": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
+                    "method": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
+                    "line": {"properties": {"$integer": {"type": "long", "doc_values": True}}}
                 }
             },
             "thread": {
                 "dynamic": True,
                 "properties": {
-                    "$exists": {"type": "string"},
-                    "name": {"properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "id": {"properties": {"$string": {"index": "not_analyzed", "type": "string", "doc_values": True}}}
+                    "$exists": {"type": "keyword"},
+                    "name": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
+                    "id": {"properties": {"$string": {"type": "keyword", "doc_values": True}}}
                 }
             },
-            "timestamp": {"properties": {"$string": {"index": "not_analyzed", "type": "string"}}}
+            "timestamp": {"properties": {"$string": {"type": "keyword"}}}
         }
     }}
 }

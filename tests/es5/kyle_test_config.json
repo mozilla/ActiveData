@@ -8,8 +8,11 @@
 		"type": "test_result",
 		"host": "http://localhost",
 		"port": 9200,
-		"schema":{"$ref":"//.../resources/schema/basic_schema.json.template?type=test_result"},
-		"debug":true
+		"schema": {
+			"settings": {"index": {"number_of_shards": 1}},
+			"$ref": "//.../resources/schema/basic_schema.json.template?type=test_result"
+		},
+		"debug": true
 	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {
@@ -30,5 +33,8 @@
 		"index": "testdata",
 		"type": "test_result",
 		"debug": true
+	},
+	"debug": {
+		"trace": true
 	}
 }

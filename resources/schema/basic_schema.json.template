@@ -1,16 +1,12 @@
 {
 	"settings": {
-		"index.store.throttle.type": "merge",
-		"index.number_of_replicas": 0,
-		"index.store.throttle.max_bytes_per_sec": "2mb",
-		"index.number_of_shards": 3,
-	    "index.max_result_window": 50000
+		"index.number_of_replicas": 0
 	},
 	"mappings": {
 		{{type|quote}}: {
 			"dynamic_templates": [
 				{
-					"default_numbers": {
+					"default_long": {
 						"mapping": {
 							"type": "double",
 							"store": true
@@ -22,8 +18,7 @@
 				{
 					"default_strings": {
 						"mapping": {
-							"index": "not_analyzed",
-							"type": "string",
+							"type": "keyword",
 							"store": true
 						},
 						"match_mapping_type": "string",

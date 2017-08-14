@@ -312,7 +312,7 @@ class Index(Features):
                 response = self.cluster.post(
                     self.path + "/_bulk",
                     data=data_bytes,
-                    headers={"Content-Type": "text"},
+                    headers={"Content-Type": "application/x-ndjson"},
                     timeout=self.settings.timeout,
                     retry=self.settings.retry
                 )
@@ -323,7 +323,7 @@ class Index(Features):
                     for i, item in enumerate(items):
                         if not item.index.ok:
                             fails.append(i)
-                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5.2."])):
+                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5."])):
                     for i, item in enumerate(items):
                         if item.index.status not in [200, 201]:
                             fails.append(i)
@@ -397,7 +397,7 @@ class Index(Features):
                 Log.error("Can not set refresh interval ({{error}})", {
                     "error": utf82unicode(response.all_content)
                 })
-        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5.2."])):
+        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5."])):
             response = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
                 data=convert.unicode2utf8('{"index":{"refresh_interval":' + convert.value2json(interval) + '}}'),
@@ -740,14 +740,19 @@ class Cluster(object):
         url = self.settings.host + ":" + text_type(self.settings.port) + path
 
         try:
-            wrap(kwargs).headers["Accept-Encoding"] = "gzip,deflate"
+            if b'headers' not in kwargs:
+                headers = kwargs[b'headers'] = {}
+            else:
+                headers = kwargs[b'headers']
+            headers.setdefault(b"Accept-Encoding", b"gzip,deflate")
+            headers.setdefault(b"Content-Type", b"application/json")
 
             data = kwargs.get(b'data')
             if data == None:
                 pass
             elif isinstance(data, Mapping):
                 kwargs[b'data'] = data =convert.unicode2utf8(convert.value2json(data))
-            elif not isinstance(kwargs["data"], str):
+            elif not isinstance(kwargs[b"data"], str):
                 Log.error("data must be utf8 encoded string")
 
             if self.debug:
@@ -765,7 +770,8 @@ class Cluster(object):
             if details.error:
                 Log.error(convert.quote2string(details.error))
             if details._shards.failed > 0:
-                Log.error("Shard failures {{failures|indent}}",
+                Log.error(
+                    "Shard failures {{failures|indent}}",
                     failures=details._shards.failures.reason
                 )
             return details
@@ -847,7 +853,7 @@ class Cluster(object):
             Log.error("data must be utf8 encoded string")
 
         if self.debug:
-            sample = kwargs.get(b'data', "")[:300]
+            sample = kwargs.get(b'data', "")[:1000]
             Log.note("{{url}}:\n{{data|indent}}", url=url, data=sample)
         try:
             response = http.put(url, **kwargs)

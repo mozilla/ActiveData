@@ -84,6 +84,7 @@ def get_decoders_by_depth(query, es_column_map):
                 vars_ |= p.where.vars()
 
         try:
+            vars_ = edge.value.vars()
             depths = set(len(c.nested_path)-1 for v in vars_ for c in schema[v])
             if -1 in depths:
                 Log.error(

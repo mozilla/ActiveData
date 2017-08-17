@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
+from future.utils import text_type
 from jx_python import jx
 from mo_dots import set_default, coalesce, literal_field, Data, relative_field
 from mo_dots import wrap
@@ -154,19 +155,24 @@ class SetDecoder(AggsDecoder):
         domain = self.domain
         es_field = self.edge.value.map({c.names[self.query.frum.query_path]: c.es_column for c in self.query.frum.schema.leaves(".")})  # ALREADY CHECKED THERE IS ONLY ONE
 
+        domain_key=domain.key
+        include, text_include = zip(*(
+            (
+                float(v) if isinstance(v, (int, float)) else v,
+                text_type(float(v)) if isinstance(v, (int, float)) else v
+            )
+            for v in (p[domain_key] for p in domain.partitions)
+        ))
         if isinstance(self.edge.value, Variable):
             key = domain.key
             if isinstance(key, (tuple, list)) and len(key) == 1:
                 key = key[0]
-            include = [p[key] for p in domain.partitions]
-
             if self.edge.allowNulls:
-
                 return wrap({"aggs": {
                     "_match": set_default({"terms": {
                         "field": es_field.var,
                         "size": self.limit,
-                        "include": include,
+                        "include": text_include,
                         "order": {"_term": self.sorted} if self.sorted else None
                     }}, es_query),
                     "_missing": set_default(
@@ -182,12 +188,11 @@ class SetDecoder(AggsDecoder):
                     "_match": set_default({"terms": {
                         "field": es_field.var,
                         "size": self.limit,
-                        "include": include,
+                        "include": text_include,
                         "order": {"_term": self.sorted} if self.sorted else None
                     }}, es_query)
                 }})
         else:
-            include = [p[domain.key] for p in domain.partitions]
             if self.edge.allowNulls:
 
                 return wrap({"aggs": {
@@ -197,7 +202,7 @@ class SetDecoder(AggsDecoder):
                             "inline": es_field.to_painless().script
                         },
                         "size": self.limit,
-                        "include": include
+                        "include": text_include
                     }}, es_query),
                     "_missing": set_default(
                         {"filter": OrOp("or", [
@@ -215,7 +220,7 @@ class SetDecoder(AggsDecoder):
                             "inline": es_field.to_painless().script
                         },
                         "size": self.limit,
-                        "include": include
+                        "include": text_include
                     }}, es_query)
                 }})
 

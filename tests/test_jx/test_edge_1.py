@@ -1833,6 +1833,60 @@ class TestEdge1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_edge_w_expr_and_domain(self):
+        test = {
+            "data": structured_test_data,
+            "query": {
+                "from": TEST_TABLE,
+                "select": {"aggregate": "count"},
+                "edges": [
+                    {
+                        "name": "diff",
+                        "value": {"sub": ["v", "b.d"]},
+                        "domain": {
+                            "type": "set",
+                            "partitions": [0, 3, 6]
+                        }
+                    }
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"diff": 0, "count": 3},
+                    {"diff": 3, "count": 3},
+                    {"diff": 6, "count": 3},
+                    {"diff": NULL, "count": 4}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header":["diff", "count"],
+                "data": [
+                    [0, 3],
+                    [3, 3],
+                    [6, 3],
+                    [NULL, 4]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [{
+                    "name": "diff",
+                    "domain": {"partitions": [
+                        {"name": 0},
+                        {"name": 3},
+                        {"name": 6}
+                    ]}
+                }],
+                "data": {
+                    "count": [3, 3, 3, 4]
+                }
+            }
+        }
+        self.utils.execute_tests(test)
+
+
 # TODO: ALLOW USE OF EDGE VARIABLES IN QUERY
 # IN THIS CASE "timestamp.min" REFERS TO A PART OF THE EDGE
 # {

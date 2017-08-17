@@ -15,6 +15,7 @@ import itertools
 from collections import Mapping
 from numbers import Number
 
+from future.utils import text_type
 from mo_dots import coalesce, Data, set_default, Null, listwrap, unwrap
 from mo_dots import wrap
 from mo_logs import Log
@@ -200,6 +201,10 @@ class SimpleSetDomain(Domain):
                 self.partitions.append(part)
                 self.map[p] = part
                 self.order[p] = i
+                if isinstance(p, (int, float)):
+                    text_part = text_type(float(p))  # ES CAN NOT HANDLE NUMERIC PARTS
+                    self.map[text_part] = part
+                    self.order[text_part] = i
             self.label = coalesce(self.label, "name")
             self.primitive = True
             return

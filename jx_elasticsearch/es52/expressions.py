@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 import itertools
 
+from future.utils import binary_type, text_type
 from mo_dots import coalesce, wrap, Null, unwraplist, literal_field, set_default, Data, listwrap
 from mo_json import json2value, quote
 from mo_logs import Log, suppress_exception
@@ -126,27 +127,20 @@ def to_esfilter(self):
 
 @extend(BinaryOp)
 def to_painless(self, not_null=False, boolean=False):
-    lhs = self.lhs.to_painless(not_null=True)
-    rhs = self.rhs.to_painless(not_null=True)
+    lhs = NumberOp("number", self.lhs).to_painless(not_null=True).n
+    rhs = NumberOp("number", self.rhs).to_painless(not_null=True).n
     script = "(" + lhs + ") " + BinaryOp.operators[self.op] + " (" + rhs + ")"
     missing = OrOp("or", [self.lhs.missing(), self.rhs.missing()])
-
-    if self.op in BinaryOp.operators:
-        script = "(" + script + ").doubleValue()"  # RETURN A NUMBER, NOT A STRING
-        default = self.default
-    if many:
-        script = "[" + script + "]"
-        default = ScriptOp("script", self.default.to_painless(many=many))
 
     output = WhenOp(
         "when",
         missing,
         **{
-            "then": default,
+            "then": self.default,
             "else":
-                ScriptOp("script", script)
+                Painless(n=script)
         }
-    ).to_painless()
+    ).partial_eval().to_painless()
     return output
 
 
@@ -227,16 +221,16 @@ def to_painless(self, not_null=False, boolean=False):
             return Painless(b="true")
         if v is False:
             return Painless(b="false")
-        if isinstance(v, basestring):
+        if isinstance(v, (text_type, binary_type)):
             return Painless(s=quote(v))
         if isinstance(v, (int, long, float)):
             return Painless(n=unicode(v))
         if isinstance(v, dict):
             return Painless(j="[" + ", ".join(quote(k) + ": " + _convert(vv) for k, vv in v.items()) + "]")
         if isinstance(v, list):
-            return Painless(j="[" + ", ".join(_convert(vv) for vv in v) + "]", many=True)
+            return Painless(j="[" + ", ".join(_convert(vv).expression for vv in v) + "]")
 
-    return _convert(json_decoder(self.json))
+    return _convert(self.value)
 
 
 @extend(CoalesceOp)
@@ -707,7 +701,7 @@ def to_painless(self, not_null=False, boolean=False):
 
 @extend(InOp)
 def to_painless(self, not_null=False, boolean=False):
-    return self.superset.to_painless(many=True) + ".contains(" + self.value.to_painless() + ")"
+    return Painless(b="(" + self.superset.to_painless().expression + ").contains(" + self.value.to_painless(not_null=True).expression + ")")
 
 
 @extend(InOp)
@@ -715,7 +709,7 @@ def to_esfilter(self):
     if isinstance(self.value, Variable):
         return {"terms": {self.value.var: json2value(self.superset.json)}}
     else:
-        return {"script": self.to_painless()}
+        return {"script": {"script": {"lang": "painless", "inline": self.to_painless().script}}}
 
 
 

@@ -18,7 +18,8 @@
 				{
 					"default_strings": {
 						"mapping": {
-							"type": "keyword",
+							"index": "not_analyzed",
+							"type": "string",
 							"store": true
 						},
 						"match_mapping_type": "string",
@@ -46,6 +47,6 @@
 				}
 			],
 			"$ref":"param://metadata"
-        }
-    }
+		}
+	}
 }

@@ -671,22 +671,23 @@ class DimFieldListDecoder(SetDecoder):
 
         self.start = start
         for i, v in enumerate(self.fields):
+            es_v = v.map(self.es_column_map)
             nest = wrap({"aggs": {
                 "_match": set_default({"terms": {
-                    "field": v,
+                    "field": es_v,
                     "size": self.domain.limit
                 }}, es_query)
             }})
             if self.edge.allowNulls:
                 nest.aggs._missing = set_default(
-                    Variable(v).missing().to_esfilter(),
+                    {"filter": es_v.missing().to_esfilter()},
                     es_query
                 )
             es_query = nest
 
         if self.domain.where:
-            filter = simplify_esfilter(self.domain.where)
-            es_query = {"aggs": {"_filter": set_default({"filter": filter}, es_query)}}
+            filter_ = self.domain.where.map(self.es_column_map).partial_eval().to_esfilter()
+            es_query = {"aggs": {"_filter": set_default({"filter": filter_}, es_query)}}
 
         return es_query
 

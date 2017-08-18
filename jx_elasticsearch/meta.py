@@ -123,7 +123,6 @@ class FromESMetadata(Schema):
                     cc.last_updated = Date.now()
                 self.todo.extend(cols)
 
-
     def _get_columns(self, table=None):
         # TODO: HANDLE MORE THEN ONE ES, MAP TABLE SHORT_NAME TO ES INSTANCE
         table_path = split_field(table)
@@ -451,6 +450,7 @@ class FromESMetadata(Schema):
                 })
             if DEBUG:
                 Log.note("Could not get {{col.es_index}}.{{col.es_column}} info", col=c)
+
 
 def _counting_query(c):
     if c.es_column == "_id":

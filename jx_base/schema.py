@@ -82,7 +82,7 @@ class Schema(object):
             for k, cs in self.lookup.items()
             if startswith_field(k, full_name)
             for c in cs
-            if c.type not in STRUCT
+            if c.type not in STRUCT and c.es_column != "_id"
         ]
 
     def map_to_es(self):

@@ -85,7 +85,8 @@ def es_setop(es, query):
                     new_select.append({
                         "name": new_name,
                         "value": Variable(c.es_column, verify=False),
-                        "put": {"name": new_name, "index": put_index, "child": "."}
+                        "put": {"name": new_name, "index": put_index, "child": "."},
+                        "pull": jx_expression_to_function(concat_field("fields", literal_field(c.es_column)))
                     })
                     put_index += 1
             else:

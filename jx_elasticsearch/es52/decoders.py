@@ -373,8 +373,9 @@ class GeneralSetDecoder(AggsDecoder):
         notty = []
 
         for p in parts:
-            filters.append(AndOp("and", [p.where] + notty).to_esfilter())
-            notty.append(NotOp("not", p.where))
+            w = p.where.map(self.es_column_map)
+            filters.append(AndOp("and", [w] + notty).to_esfilter())
+            notty.append(NotOp("not", w))
 
         missing_filter = None
         if self.edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER

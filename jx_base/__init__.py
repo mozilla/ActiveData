@@ -16,7 +16,8 @@ from uuid import uuid4
 
 OBJECT = "object"
 NESTED = "nested"
-STRUCT = [OBJECT, NESTED]
+EXISTS = "exists"
+STRUCT = [OBJECT, NESTED, EXISTS]
 
 
 def generateGuid():

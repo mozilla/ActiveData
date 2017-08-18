@@ -79,22 +79,17 @@ def es_setop(es, query):
         if isinstance(select.value, LeavesOp):
             term = select.value.term
             if isinstance(term, Variable):
-                for cname, cs in schema.lookup.items():
-                    if startswith_field(cname, term.var) and cname != "_id":
-                        for c in cs:
-                            if c.type not in STRUCT:
-                                es_query.stored_fields += [c.es_column]
-                                if select.name == ".":
-                                    new_name = literal_field(relative_field(cname, term.var))
-                                else:
-                                    new_name = select.name + "\\." + literal_field(relative_field(cname, term.var))
-                                new_select.append({
-                                    "name": new_name,
-                                    "value": Variable(c.es_column, verify=False),
-                                    "put": {"name": new_name, "index": put_index, "child": "."}
-                                })
-                                put_index += 1
-
+                for c in schema.leaves(term.var):
+                    es_query.stored_fields += [c.es_column]
+                    new_name = literal_field(concat_field(select.name, relative_field(c.names["."], term.var)))
+                    new_select.append({
+                        "name": new_name,
+                        "value": Variable(c.es_column, verify=False),
+                        "put": {"name": new_name, "index": put_index, "child": "."}
+                    })
+                    put_index += 1
+            else:
+                Log.error("not supported")
         elif isinstance(select.value, Variable):
             if select.value.var == "_id":
                 new_select.append({

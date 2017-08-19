@@ -168,7 +168,10 @@ def _dict2json(value, _buffer):
         append(_buffer, json.dumps(encode_property(k)))
         append(_buffer, u": ")
         _typed_encode(v, _buffer)
-    append(_buffer, u"}")
+    if prefix == u", ":
+        append(_buffer, u'}')
+    else:
+        append(_buffer, u'{"$exists": "."}')
 
 
 VALUE = 0

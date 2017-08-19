@@ -751,7 +751,7 @@ class Cluster(object):
             if data == None:
                 pass
             elif isinstance(data, Mapping):
-                kwargs[b'data'] = data =convert.unicode2utf8(convert.value2json(data))
+                kwargs[b'data'] = data = convert.unicode2utf8(convert.value2json(data))
             elif not isinstance(kwargs[b"data"], str):
                 Log.error("data must be utf8 encoded string")
 

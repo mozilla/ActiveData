@@ -992,6 +992,15 @@ class LengthOp(Expression):
     def missing(self):
         return self.term.missing()
 
+    def partial_eval(self):
+        term = self.term.partial_eval()
+        if isinstance(term, Literal):
+            return Literal(None, len(term.value))
+        else:
+            output = LengthOp("length", term)
+            output.simplified = True
+            return output
+
 
 class NumberOp(Expression):
     def __init__(self, op, term):
@@ -1011,6 +1020,24 @@ class NumberOp(Expression):
         return self.term.missing()
 
 
+class IsNumberOp(Expression):
+    def __init__(self, op, term):
+        Expression.__init__(self, op, [term])
+        self.term = term
+
+    def __data__(self):
+        return {"is_number": self.term.__data__()}
+
+    def vars(self):
+        return self.term.vars()
+
+    def map(self, map_):
+        return IsNumberOp("is_number", self.term.map(map_))
+
+    def missing(self):
+        return FalseOp()
+
+
 class StringOp(Expression):
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
@@ -1027,6 +1054,25 @@ class StringOp(Expression):
 
     def missing(self):
         return self.term.missing()
+
+
+class IsStringOp(Expression):
+    def __init__(self, op, term):
+        Expression.__init__(self, op, [term])
+        self.term = term
+
+    def __data__(self):
+        return {"is_string": self.term.__data__()}
+
+    def vars(self):
+        return self.term.vars()
+
+    def map(self, map_):
+        return IsStringOp("is_number", self.term.map(map_))
+
+    def missing(self):
+        return FalseOp()
+
 
 
 class CountOp(Expression):
@@ -1107,9 +1153,9 @@ class MultiOp(Expression):
 class RegExpOp(Expression):
     has_simple_form = True
 
-    def __init__(self, op, term):
-        Expression.__init__(self, op, term)
-        self.var, self.pattern = term
+    def __init__(self, op, terms):
+        Expression.__init__(self, op, terms)
+        self.var, self.pattern = terms
 
     def __data__(self):
         return {"regexp": {self.var.var: self.pattern}}
@@ -1440,14 +1486,25 @@ class FindOp(Expression):
         )
 
     def missing(self):
-        return AndOp("and", [
-            self.default.missing(),
-            OrOp("or", [
-                self.value.missing(),
-                self.find.missing(),
-                EqOp("eq", [JavaIndexOfOp("", [self.value, self.find, self.start]), Literal(None, -1)])
-            ])
-        ])
+        if isinstance(self.start, Literal) and self.start.value == 0 and isinstance(self.find, Literal):
+            # THIS MIGHT BE SLOWER!!
+            return AndOp("and", [
+                self.default.missing(),
+                OrOp("or", [
+                    self.value.missing(),
+                    self.find.missing(),
+                    NotOp("not", RegExpOp("regex", [self.value, Literal(None, ".*" + convert.string2regexp(self.find.value) + ".*")]))
+                ])
+            ]).partial_eval()
+        else:
+            return AndOp("and", [
+                self.default.missing(),
+                OrOp("or", [
+                    self.value.missing(),
+                    self.find.missing(),
+                    EqOp("eq", [JavaIndexOfOp("", [self.value, self.find, self.start]), Literal(None, -1)])
+                ])
+            ]).partial_eval()
 
     def exists(self):
         return TrueOp()
@@ -1515,12 +1572,25 @@ class BetweenOp(Expression):
         )
 
     def missing(self):
-        prefix = FindOp("find", [self.value, self.prefix])
-        expr = OrOp("or", [
-            prefix.missing(),
-            FindOp("find", [self.value, self.suffix], start=prefix).missing(),
-        ])
-        return expr
+        if isinstance(self.prefix, NullOp):
+            prefix = Literal(None, 0)
+        else:
+            prefix = FindOp("find", [self.value, self.prefix])
+
+        if isinstance(self.prefix, NullOp):
+            expr = AndOp("and", [
+                self.default.missing(),
+                prefix.missing()
+            ])
+        else:
+            expr = AndOp("and", [
+                self.default.missing(),
+                OrOp("or", [
+                    prefix.missing(),
+                    FindOp("find", [self.value, self.suffix], start=prefix).missing(),
+                ])
+            ])
+        return expr.partial_eval()
 
 
 class InOp(Expression):
@@ -1656,6 +1726,8 @@ operators = {
     "gte": InequalityOp,
     "in": InOp,
     "instr": FindOp,
+    "is_number": IsNumberOp,
+    "is_string": IsStringOp,
     "left": LeftOp,
     "length": LengthOp,
     "literal": Literal,

@@ -335,11 +335,11 @@ Return the right-part of given string. `null` parameters result in `null`; negat
 
 ### `between` Operator ###
 
-Return the leftmost substring between a given `prefix` and `suffix`
+Return the leftmost substring between a given `prefix` and `suffix`. The prefix and suffix are interpreted as literals when using the object form. 
 
 		{"between": {variable: [literal_prefix, literal_suffix]}}
 
-The prefix and suffix are interpreted as literals when using the object form. The array form will accept JSON expressions:
+The array form will accept JSON expressions:
 
 		{"between": [value, prefix, suffix]}
 
@@ -347,6 +347,10 @@ For example, the following two expressions are identical:
 
 		{"between": {"a": ["http://", "/"]}}
 		{"between": ["a", {"literal": "http://"}, {"literal": "/"}]}
+
+The `prefix` and `suffix` can be numeric, indicating the start index and the end index resprectively.  
+
+		{"between": [value, start, end]}
 
 If the `prefix` is `null`, everything from the beginning of the string to the suffix will be returned. If `suffix` is `null`, everything from the `prefix` to the end of the string will be returned.
 

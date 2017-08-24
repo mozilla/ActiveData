@@ -24,7 +24,7 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
     WhenOp, InequalityOp, extend, RowsOp, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, UnixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, InOp, RangeOp, CaseOp, AndOp, \
-    ConcatOp, TRUE_FILTER, FALSE_FILTER, LeftOp, Expression, JavaIndexOfOp
+    ConcatOp, IsNumberOp, TRUE_FILTER, FALSE_FILTER, LeftOp, Expression, JavaIndexOfOp
 
 
 class Painless(Expression):
@@ -76,45 +76,86 @@ class Painless(Expression):
 
 @extend(BetweenOp)
 def to_painless(self, not_null=False, boolean=False):
+    # TODO: WRITE THIS IN JX, OR SIMPLIFY IN SOME WAY
+
     if isinstance(self.prefix, Literal) and isinstance(json2value(self.prefix.json), int):
-        value_is_missing = self.value.missing().to_painless()
-        value = self.value.to_painless(not_null=True)
+        value_is_missing = self.value.missing().to_painless().expression
+        value = self.value.to_painless(not_null=True).expression
         start = "(int)Math.max(" + self.prefix.json + ", 0)"
 
-        if isinstance(self.suffix, Literal) and isinstance(json2value(self.suffix.json), int):
+        if isinstance(self.suffix, Literal) and isinstance(self.value, int):
             check = "(" + value_is_missing + ")"
-            end = "(int)Math.min(" + self.suffix.to_painless() + ", " + value + ".length())"
+            end = "(int)Math.min(" + self.suffix.to_painless().expression + ", " + value + ".length())"
         else:
             end = value + ".indexOf(" + self.suffix.to_painless() + ", " + start + ")"
             check = "((" + value_is_missing + ") || (" + end + "==-1))"
 
-        expr = check + " ? " + self.default.to_painless() + " : ((" + value + ").substring(" + start + ", " + end + "))"
-        return expr
+        expr = check + " ? " + self.default.to_painless().expression + " : ((" + value + ").substring(" + start + ", " + end + "))"
+        return Painless(s=expr)
 
     else:
         # ((Runnable)(() -> {int a=2; int b=3; System.out.println(a+b);})).run();
-        value_is_missing = self.value.missing().to_painless()
-        value = self.value.to_painless(not_null=True)
-        prefix = self.prefix.to_painless()
-        len_prefix = unicode(len(json2value(self.prefix.json))) if isinstance(self.prefix,
-                                                                              Literal) else "(" + prefix + ").length()"
-        suffix = self.suffix.to_painless()
-        start_index = self.start.to_painless()
-        if start_index == "null":
-            if prefix == "null":
-                start = "0"
-            else:
-                start = value + ".indexOf(" + prefix + ")"
-        else:
-            start = value + ".indexOf(" + prefix + ", " + start_index + ")"
+        start_index = CaseOp(
+            "case",
+            [
+                WhenOp("when", [self.prefix.missing(), {"then": Literal(None, 0)}]),
+                WhenOp("when", [IsNumberOp("is_number", self.prefix), {"then": self.prefix}]),
+                FindOp("find", [self.value, self.prefix], start=self.start)
+            ]
+        )
+        end_index = CaseOp(
+            "case",
+            [
+                WhenOp("when", [start_index.missing(), {"then": NullOp()}]),
+                WhenOp("when", [self.suffix.missing(), {"then": LengthOp("length", self.value)}]),
+                WhenOp("when", [IsNumberOp("is_number", self.suffix), {"then": self.suffix}]),
+                FindOp("find", [self.value, self.suffix], start=MultiOp("add", [start_index, len_prefix]))
+            ]
+        )
 
-        if suffix == "null":
-            expr = "((" + value_is_missing + ") || (" + start + "==-1)) ? " + self.default.to_painless() + " : ((" + value + ").substring(" + start + "+" + len_prefix + "))"
-        else:
-            end = value + ".indexOf(" + suffix + ", " + start + "+" + len_prefix + ")"
-            expr = "((" + value_is_missing + ") || (" + start + "==-1) || (" + end + "==-1)) ? " + self.default.to_painless() + " : ((" + value + ").substring(" + start + "+" + len_prefix + ", " + end + "))"
+        len_prefix = CaseOp(
+            "case",
+            [
+                WhenOp("when", [self.prefix.missing(), {"then": Literal(None, 0)}]),
+                WhenOp("when", [IsNumberOp("is_number", self.prefix), {"then": Literal(None, 0)}]),
+                LengthOp("length", self.prefix)
+            ]
+        )
 
-        return expr
+        value = StringOp("string", self.value).partial_eval(not_null=True).to_painless().s
+        start = MultiOp("add", [start_index, len_prefix]).partial_eval().to_painless(not_null=True).n
+        end = end_index.partial_eval().to_painless(not_null=True).n
+
+        between = WhenOp(
+            "when",
+            end_index.missing(),
+            {"then": self.default, "else": ScriptOp("script", "(" + value + ").substring(" + start + ", " + end + "))")}
+        )
+
+        return between.to_painless()
+
+    def missing(self):
+        if isinstance(self.prefix, NullOp):
+            prefix = Literal(None, 0)
+        else:
+            prefix = FindOp("find", [self.value, self.prefix])
+
+        if isinstance(self.prefix, NullOp):
+            expr = AndOp("and", [
+                self.default.missing(),
+                prefix.missing()
+            ])
+        else:
+            expr = AndOp("and", [
+                self.default.missing(),
+                OrOp("or", [
+                    prefix.missing(),
+                    FindOp("find", [self.value, self.suffix], start=prefix).missing(),
+                ])
+            ])
+        return expr.partial_eval()
+
+
 
 
 @extend(BetweenOp)
@@ -589,6 +630,26 @@ def to_painless(self, not_null=False, boolean=False):
         output = NumberOp.to_painless(not_null=True)
         output._missing = self.term.missing().partial_eval()
         return output
+
+@extend(IsNumberOp)
+def to_painless(self, not_null=False, boolean=False):
+    value = self.term.to_painless(not_null=True)
+    if value.n:
+        return TrueOp().to_painless()
+    else:
+        return Painless(
+            b="(" + value.j + ") instanceof java.lang.Double"
+        )
+
+@extend(IsNumberOp)
+def partial_eval(self):
+    value = self.term.to_painless(not_null=True)
+    if value.n:
+        return TrueOp()
+    else:
+        return Painless(
+            b="(" + value.j + ") instanceof java.lang.Double"
+        )
 
 
 @extend(CountOp)

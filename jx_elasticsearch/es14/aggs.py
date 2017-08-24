@@ -409,12 +409,10 @@ def aggs_iterator(aggs, decoders, coord=True):
                         for a in _aggs_iterator(b, d - 1):
                             yield a
                 elif k == "_other":
-                    parts[d] = Null
                     for b in v.get("buckets", EMPTY_LIST):
                         for a in _aggs_iterator(b, d - 1):
                             yield a
                 elif k == "_missing":
-                    parts[d] = Null
                     b = drill(v)
                     if b.get("doc_count"):
                         for a in _aggs_iterator(b, d - 1):
@@ -434,13 +432,11 @@ def aggs_iterator(aggs, decoders, coord=True):
                             b["_index"] = i
                             yield b
                 elif k == "_other":
-                    parts[d] = Null
                     for b in v.get("buckets", EMPTY_LIST):
                         b = drill(b)
                         if b.get("doc_count"):
                             yield b
                 elif k == "_missing":
-                    parts[d] = Null
                     b = drill(v)
                     if b.get("doc_count"):
                         yield b
@@ -453,9 +449,11 @@ def aggs_iterator(aggs, decoders, coord=True):
         for a in _aggs_iterator(unwrap(aggs), depth - 1):
             coord = tuple(d.get_index(parts) for d in decoders)
             yield parts, coord, a
+            parts = [None] * depth
     else:
         for a in _aggs_iterator(unwrap(aggs), depth - 1):
             yield parts, None, a
+            parts = [Null] * depth
 
 
 def count_dim(aggs, decoders):

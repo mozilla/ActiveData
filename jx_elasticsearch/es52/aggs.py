@@ -13,6 +13,8 @@ from __future__ import unicode_literals
 
 from copy import copy
 
+from future.utils import text_type
+
 from jx_elasticsearch import es09
 from jx_python import jx
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
@@ -171,7 +173,7 @@ def es_aggsop(es, frum, query):
 
                 es_query.aggs[key].percentiles.field = es_field_name
                 es_query.aggs[key].percentiles.percents += [percent]
-                s.pull = key + ".values." + literal_field(unicode(percent))
+                s.pull = key + ".values." + literal_field(text_type(percent))
             elif s.aggregate == "cardinality":
                 # ES USES DIFFERENT METHOD FOR CARDINALITY
                 key = literal_field(canonical_name + " cardinality")
@@ -237,7 +239,7 @@ def es_aggsop(es, frum, query):
 
             es_query.aggs[key].percentiles.script = es_script.to_painless().script
             es_query.aggs[key].percentiles.percents += [percent]
-            s.pull = key + ".values." + literal_field(unicode(percent))
+            s.pull = key + ".values." + literal_field(text_type(percent))
         elif s.aggregate == "cardinality":
             # ES USES DIFFERENT METHOD FOR CARDINALITY
             key = canonical_name + " cardinality"

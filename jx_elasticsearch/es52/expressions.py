@@ -265,7 +265,7 @@ def to_painless(self, not_null=False, boolean=False):
         if isinstance(v, (text_type, binary_type)):
             return Painless(s=quote(v))
         if isinstance(v, (int, long, float)):
-            return Painless(n=unicode(v))
+            return Painless(n=text_type(v))
         if isinstance(v, dict):
             return Painless(j="[" + ", ".join(quote(k) + ": " + _convert(vv) for k, vv in v.items()) + "]")
         if isinstance(v, list):

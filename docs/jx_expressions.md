@@ -533,10 +533,18 @@ Flattens a (deep) JSON structure to leaf form - where each property name is a do
 			"select": {"leaves":"."}
 		}
 
+`leaves` has two optional parameters:
+
+* `separator` - the string used to separate the path steps (default dot (`"."`))
+* `prefix` - prefix given to each property (default empty string (`""`))
 
 The `leaves` operator action on a literal
 
-		{"leaves": {"literal": {"a": {"index.html": "Hello"}, "b": "World"}}}
+		{
+			"leaves": {"literal": {"a": {"index.html": "Hello"}, "b": "World"}},
+			"separator": ".",
+			"prefix": ""
+		}
 
 results in  
 

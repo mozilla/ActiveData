@@ -41,7 +41,7 @@ class Date(object):
     MAX = None
 
     def __new__(cls, *args, **kwargs):
-        if len(args) == 1 and args[0] == None:
+        if not args or (len(args) == 1 and args[0] == None):
             return Null
         return parse(*args)
 

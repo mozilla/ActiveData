@@ -29,7 +29,8 @@ from mo_logs.strings import expand_template
 from mo_times import Date, Duration
 
 
-FIND_LOOPS = True
+FIND_LOOPS = False
+CAN_NOT_DECODE_JSON = "Can not decode JSON"
 
 _get = object.__getattribute__
 
@@ -86,14 +87,14 @@ def float2json(value):
         Log.error("not expected", e)
 
 
-def scrub(value):
+def scrub(value, keep_whitespace=True):
     """
     REMOVE/REPLACE VALUES THAT CAN NOT BE JSON-IZED
     """
-    return _scrub(value, set(), [])
+    return _scrub(value, set(), [], keep_whitespace=keep_whitespace)
 
 
-def _scrub(value, is_done, stack):
+def _scrub(value, is_done, stack, keep_whitespace):
     if FIND_LOOPS:
         _id = id(value)
         if _id in stack:
@@ -106,29 +107,32 @@ def _scrub(value, is_done, stack):
     elif type_ is text_type:
         value_ = value.strip()
         if value_:
-            return value_
+            if keep_whitespace:
+                return value
+            else:
+                return value_
         else:
             return None
     elif type_ is float:
         if math.isnan(value) or math.isinf(value):
             return None
-        return value
+        return _scrub_float(value)
     elif type_ in (int, long, bool):
         return value
     elif type_ in (date, datetime):
-        return float(datetime2unix(value))
+        return _scrub_float(datetime2unix(value))
     elif type_ is timedelta:
         return value.total_seconds()
     elif type_ is Date:
-        return float(value.unix)
+        return _scrub_float(value.unix)
     elif type_ is Duration:
-        return float(value.seconds)
+        return _scrub_float(value.seconds)
     elif type_ is str:
         return utf82unicode(value)
     elif type_ is Decimal:
-        return float(value)
+        return _scrub_float(value)
     elif type_ is Data:
-        return _scrub(_get(value, '_dict'), is_done, stack)
+        return _scrub(_get(value, '_dict'), is_done, stack, keep_whitespace=keep_whitespace)
     elif isinstance(value, Mapping):
         _id = id(value)
         if _id in is_done:
@@ -144,7 +148,7 @@ def _scrub(value, is_done, stack):
                 k = text_type(k)
             else:
                 Log.error("keys must be strings")
-            v = _scrub(v, is_done, stack)
+            v = _scrub(v, is_done, stack, keep_whitespace=keep_whitespace)
             if v != None or isinstance(v, Mapping):
                 output[k] = v
 
@@ -153,7 +157,7 @@ def _scrub(value, is_done, stack):
     elif type_ in (tuple, list, FlatList):
         output = []
         for v in value:
-            v = _scrub(v, is_done, stack)
+            v = _scrub(v, is_done, stack, keep_whitespace=keep_whitespace)
             output.append(v)
         return output
     elif type_ is type:
@@ -164,10 +168,10 @@ def _scrub(value, is_done, stack):
         else:
             return True
     elif not isinstance(value, Except) and isinstance(value, Exception):
-        return _scrub(Except.wrap(value), is_done, stack)
+        return _scrub(Except.wrap(value), is_done, stack, keep_whitespace=keep_whitespace)
     elif hasattr(value, '__data__'):
         try:
-            return _scrub(value.__data__(), is_done, stack)
+            return _scrub(value.__data__(), is_done, stack, keep_whitespace=keep_whitespace)
         except Exception as e:
             Log.error("problem with calling __json__()", e)
     elif hasattr(value, 'co_code') or hasattr(value, "f_locals"):
@@ -175,18 +179,35 @@ def _scrub(value, is_done, stack):
     elif hasattr(value, '__iter__'):
         output = []
         for v in value:
-            v = _scrub(v, is_done, stack)
+            v = _scrub(v, is_done, stack, keep_whitespace=keep_whitespace)
             output.append(v)
         return output
     elif hasattr(value, '__call__'):
         return repr(value)
     else:
-        return _scrub(DataObject(value), is_done, stack)
+        return _scrub(DataObject(value), is_done, stack, keep_whitespace=keep_whitespace)
 
 
-def value2json(obj, pretty=False, sort_keys=False):
+def _scrub_float(value):
+    d = float(value)
+    i_d = int(d)
+    if float(i_d) == d:
+        return i_d
+    else:
+        return d
+
+
+
+def value2json(obj, pretty=False, sort_keys=False, keep_whitespace=True):
+    """
+    :param obj:  THE VALUE TO TURN INTO JSON 
+    :param pretty: True TO MAKE A MULTI-LINE PRETTY VERSION
+    :param sort_keys: True TO SORT KEYS
+    :param keep_whitespace: False TO strip() THE WHITESPACE IN THE VALUES
+    :return: 
+    """
     if FIND_LOOPS:
-        obj = scrub(obj)
+        obj = scrub(obj, keep_whitespace=keep_whitespace)
     try:
         json = json_encoder(obj, pretty=pretty)
         if json == None:
@@ -289,7 +310,7 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
             if len(sample) > 43:
                 sample = sample[:43] + "..."
 
-            Log.error("Can not decode JSON at:\n\t" + sample + "\n\t" + pointer + "\n")
+            Log.error(CAN_NOT_DECODE_JSON + " at:\n\t{{sample}}\n\t{{pointer}}\n", sample=sample, pointer=pointer)
 
         base_str = strings.limit(json_string, 1000).encode('utf8')
         hexx_str = bytes2hex(base_str, " ")
@@ -297,7 +318,7 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
             char_str = " " + "  ".join((c.decode("latin1") if ord(c) >= 32 else ".") for c in base_str)
         except Exception as e:
             char_str = " "
-        Log.error("Can not decode JSON:\n" + char_str + "\n" + hexx_str + "\n", e)
+        Log.error(CAN_NOT_DECODE_JSON + ":\n{{char_str}}\n{{hexx_str}}\n", char_str=char_str, hexx_str=hexx_str, cause=e)
 
 
 def bytes2hex(value, separator=" "):

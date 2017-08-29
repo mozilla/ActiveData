@@ -23,7 +23,6 @@ class StructuredLogger_usingMulti(StructuredLogger):
         self.many = []
 
     def write(self, template, params):
-        # type: (object, object) -> object
         bad = []
         for m in self.many:
             try:

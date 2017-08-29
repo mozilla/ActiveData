@@ -34,7 +34,6 @@ class StructuredLogger_usingFile(StructuredLogger):
         self.file_lock = allocate_lock()
 
     def write(self, template, params):
-        # type: (object, object) -> object
         try:
             with self.file_lock:
                 self.file.append(expand_template(template, params))

@@ -439,7 +439,6 @@ class Log(object):
 
 
     def write(self):
-        # type: () -> object
         raise NotImplementedError
 
 

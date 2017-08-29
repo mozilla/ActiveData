@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from future.utils import text_type
 from mo_dots import Null, Data, coalesce, get_module
 from mo_kwargs import override
 from mo_logs import Log
@@ -346,8 +347,8 @@ def _getitem(c, i):
                 return _getitem(c[select], i[1::])
 
 
-def _identity(value):
-    return value
+def _zero_dim(value):
+    return tuple()
 
 
 def index_to_coordinate(dims):
@@ -359,10 +360,10 @@ def index_to_coordinate(dims):
     """
     _ = divmod  # SO WE KEEP THE IMPORT
 
-    if len(dims) == 1:
-        return _identity
-
     num_dims = len(dims)
+    if num_dims == 0:
+        return _zero_dim
+
     prod = [1] * num_dims
     acc = 1
     domain = range(0, num_dims)
@@ -379,9 +380,19 @@ def index_to_coordinate(dims):
             commands.append("\tc" + text_type(i) + ", index = divmod(index, " + text_type(prod[i]) + ")")
         coords.append("c" + text_type(i))
     output = None
-    code = "def output(index):\n" + \
-         "\n".join(commands) + "\n" + \
-         "\treturn " + ", ".join(coords)
+    if num_dims == 1:
+        code = (
+            "def output(index):\n" +
+            "\n".join(commands) + "\n" +
+            "\treturn " + coords[0] + ","
+        )
+    else:
+        code = (
+            "def output(index):\n" +
+            "\n".join(commands) + "\n" +
+            "\treturn " + ", ".join(coords)
+        )
+
     exec code
     return output
 

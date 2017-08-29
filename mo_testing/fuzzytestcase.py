@@ -102,6 +102,8 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
     try:
         if test is None and expected is None:
             return
+        elif test is expected:
+            return
         elif isinstance(test, UniqueIndex):
             if test ^ expected:
                 Log.error("Sets do not match")

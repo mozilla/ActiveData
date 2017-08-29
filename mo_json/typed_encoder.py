@@ -22,7 +22,7 @@ from mo_dots import Data, FlatList, NullType
 from mo_json import ESCAPE_DCT, float2json
 from mo_logs import Log
 
-from mo_json.encoder import pretty_json, problem_serializing, _repr, UnicodeBuilder
+from mo_json.encoder import pretty_json, problem_serializing, _repr, UnicodeBuilder, COMMA, QUOTE_COLON, COMMA_QUOTE
 from mo_logs.strings import utf82unicode
 from mo_times.dates import Date
 from mo_times.durations import Duration
@@ -47,20 +47,20 @@ def typed_encode(value):
         Log.warning("Serialization of JSON problems", e)
         try:
             return pretty_json(value)
-        except Exception, f:
+        except Exception as f:
             Log.error("problem serializing object", f)
 
 
 def _typed_encode(value, _buffer):
     try:
         if value is None:
-            append(_buffer, u'{"$value": null}')
+            append(_buffer, u'{"$value":null}')
             return
         elif value is True:
-            append(_buffer, u'{"$value": true}')
+            append(_buffer, u'{"$value":true}')
             return
         elif value is False:
-            append(_buffer, u'{"$value": false}')
+            append(_buffer, u'{"$value":false}')
             return
 
         _type = value.__class__
@@ -68,9 +68,9 @@ def _typed_encode(value, _buffer):
             if value:
                 _dict2json(value, _buffer)
             else:
-                append(_buffer, u'{"$object": "."}')
+                append(_buffer, u'{"$object":"."}')
         elif _type is str:
-            append(_buffer, u'{"$value": "')
+            append(_buffer, u'{"$value":"')
             try:
                 v = utf82unicode(value)
             except Exception as e:
@@ -80,38 +80,38 @@ def _typed_encode(value, _buffer):
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
         elif _type is text_type:
-            append(_buffer, u'{"$value": "')
+            append(_buffer, u'{"$value":"')
             for c in value:
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
         elif _type in (int, long, Decimal):
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$value":')
             append(_buffer, float2json(value))
             append(_buffer, u'}')
         elif _type is float:
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$value":')
             append(_buffer, float2json(value))
             append(_buffer, u'}')
         elif _type in (set, list, tuple, FlatList):
             _list2json(value, _buffer)
         elif _type is date:
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$value":')
             append(_buffer, float2json(time.mktime(value.timetuple())))
             append(_buffer, u'}')
         elif _type is datetime:
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$value":')
             append(_buffer, float2json(time.mktime(value.timetuple())))
             append(_buffer, u'}')
         elif _type is Date:
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$value":')
             append(_buffer, float2json(time.mktime(value.value.timetuple())))
             append(_buffer, u'}')
         elif _type is timedelta:
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$value":')
             append(_buffer, float2json(value.total_seconds()))
             append(_buffer, u'}')
         elif _type is Duration:
-            append(_buffer, u'{"$value": ')
+            append(_buffer, u'{"$value":')
             append(_buffer, float2json(value.seconds))
             append(_buffer, u'}')
         elif _type is NullType:
@@ -139,7 +139,7 @@ def _list2json(value, _buffer):
         sep = u"["
         for v in value:
             append(_buffer, sep)
-            sep = u", "
+            sep = COMMA
             _typed_encode(v, _buffer)
         append(_buffer, u"]")
 
@@ -149,23 +149,23 @@ def _iter2json(value, _buffer):
     sep = u""
     for v in value:
         append(_buffer, sep)
-        sep = u", "
+        sep = COMMA
         _typed_encode(v, _buffer)
     append(_buffer, u"]")
 
 
 def _dict2json(value, _buffer):
-    prefix = u'{"$object": ".", "'
+    prefix = u'{"$object":".","'
     for k, v in value.iteritems():
         append(_buffer, prefix)
-        prefix = u", \""
+        prefix = COMMA_QUOTE
         if isinstance(k, str):
             k = utf82unicode(k)
         if not isinstance(k, text_type):
             Log.error("Expecting property name to be a string")
         for c in k:
             append(_buffer, ESCAPE_DCT.get(c, c))
-        append(_buffer, u"\": ")
+        append(_buffer, QUOTE_COLON)
         _typed_encode(v, _buffer)
     append(_buffer, u"}")
 
@@ -197,7 +197,7 @@ def json2typed(json):
             if c == "{":
                 context.append(mode)
                 mode = BEGIN_OBJECT
-                append(output, '{"$object": "."')
+                append(output, '{"$object":"."')
                 continue
             elif c == '[':
                 context.append(mode)
@@ -215,10 +215,10 @@ def json2typed(json):
             elif c == '"':
                 context.append(mode)
                 mode = STRING
-                append(output, '{"$value": ')
+                append(output, '{"$value":')
             else:
                 mode = PRIMITIVE
-                append(output, '{"$value": ')
+                append(output, '{"$value":')
             append(output, c)
         elif mode == PRIMITIVE:
             if c == ",":
@@ -239,7 +239,7 @@ def json2typed(json):
                 context.append(OBJECT)
                 context.append(KEYWORD)
                 mode = STRING
-                append(output, ', ')
+                append(output, ',')
             elif c == "}":
                 mode = context.pop()
             else:

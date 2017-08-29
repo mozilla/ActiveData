@@ -27,7 +27,6 @@ class StructuredLogger_usingQueue(StructuredLogger):
         self.queue = Queue(queue_name)
 
     def write(self, template, params):
-        # type: (object, object) -> object
         self.queue.add(expand_template(template, params))
 
     def stop(self):

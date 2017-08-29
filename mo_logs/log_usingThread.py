@@ -46,7 +46,6 @@ class StructuredLogger_usingThread(StructuredLogger):
         self.thread.start()
 
     def write(self, template, params):
-        # type: (object, object) -> object
         try:
             self.queue.add({"template": template, "params": params})
             return self

@@ -434,17 +434,17 @@ class TestEdge1(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a": "x", "c": [2, 3]},
-                    {"a": "y", "c": [4, 5, 6]},
-                    {"a": NULL, "c": [7, 8]}
+                    {"a": "x", "c": {2, 3}},
+                    {"a": "y", "c": {4, 5, 6}},
+                    {"a": NULL, "c": {7, 8}}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "c"],
                 "data": [
-                    ["x", [2, 3]],
-                    ["y", [4, 5, 6]],
-                    [NULL, [7, 8]]
+                    ["x", {2, 3}],
+                    ["y", {4, 5, 6}],
+                    [NULL, {7, 8}]
                 ]
             },
             "expecting_cube": {
@@ -461,7 +461,7 @@ class TestEdge1(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "c": [[2, 3], [4, 5, 6], [7, 8]]
+                    "c": [{2, 3}, {4, 5, 6}, {7, 8}]
                 }
             }
         }
@@ -490,17 +490,17 @@ class TestEdge1(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a": "x", "c": [2, 3]},
-                    {"a": "y", "c": [4, 5, 6]},
-                    {"a": NULL, "c": [7, 8]}
+                    {"a": "x", "c": {2, 3}},
+                    {"a": "y", "c": {4, 5, 6}},
+                    {"a": NULL, "c": {7, 8}}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "c"],
                 "data": [
-                    ["x", [2, 3]],
-                    ["y", [4, 5, 6]],
-                    [NULL, [7, 8]]
+                    ["x", {2, 3}],
+                    ["y", {4, 5, 6}],
+                    [NULL, {7, 8}]
                 ]
             },
             "expecting_cube": {
@@ -517,7 +517,7 @@ class TestEdge1(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "c": [[2, 3], [4, 5, 6], [7, 8]]
+                    "c": [{2, 3}, {4, 5, 6}, {7, 8}]
                 }
             }
         }
@@ -546,22 +546,68 @@ class TestEdge1(BaseTestCase):
                 ]
             },
             "expecting_list": {
-                "meta": {"format": "list"},
-                "data": [
-                    {"a": ["x", "y"], "c": [2, 3, 4, 5, 6, 7, 8]},
-                ]},
+                "meta": {"format": "value"},
+                "data": {
+                    "a": {"x", "y"}, "c": {2, 3, 4, 5, 6, 7, 8}
+                }
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "c"],
                 "data": [
-                    [["x", "y"], [2, 3, 4, 5, 6, 7, 8]]
+                    [{"x", "y"}, {2, 3, 4, 5, 6, 7, 8}]
                 ]
             },
             "expecting_cube": {
+                "meta": {"format": "cube"},
+                "data": {
+                    "c": {2, 3, 4, 5, 6, 7, 8},
+                    "a": {"x", "y"}
+                }
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_multiple_union2(self):
+        data = [
+            {"a": ["x", "z"]},
+            {"a": "x", "_c": {"v": 2}},
+            {"a": "x", "_c": [{"v": 2}, {"v": 3}]},
+            {"a": "y"},
+            {"a": "y", "_c": {"v": 4}},
+            {"a": "y", "_c": [{"v": 5}, {"v": 6}]},
+            {},
+            {"_c": {"v": 7}},
+            {"_c": [{"v": 8}, {"v": 8}]}
+        ]
+
+        test = {
+            "data": data,
+            "query": {
+                "from": TEST_TABLE,
+                "select": [
+                    {"name": "c", "value": "_c.v", "aggregate": "union"},
+                    {"name": "a", "value": "a", "aggregate": "union"}
+                ]
+            },
+            "expecting_list": {
                 "meta": {"format": "value"},
                 "data": {
-                    "c": [2, 3, 4, 5, 6, 7, 8],
-                    "a": ["x", "y"]
+                    "a": {"x", "y", "z"}, "c": {2, 3, 4, 5, 6, 7, 8},
+                }
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a", "c"],
+                "data": [
+                    [{"x", "y", "z"}, {2, 3, 4, 5, 6, 7, 8}]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "data": {
+                    "c": {2, 3, 4, 5, 6, 7, 8},
+                    "a": {"x", "y", "z"}
                 }
             }
         }

@@ -163,9 +163,7 @@ class NullType(object):
             output = NullType(output, p)
         return output
 
-    def __getattribute__(self, key):
-        if key == b"__class__":
-            return NullType
+    def __getattr__(self, key):
         key = key.decode('utf8')
 
         d = _get(self, "__dict__")
@@ -236,6 +234,8 @@ def _assign_to_null(obj, path, value, force=True):
     force=False IF YOU PREFER TO use setDefault()
     """
     try:
+        if obj is Null:
+            return
         if isinstance(obj, NullType):
             d = _get(obj, "__dict__")
             o = d["_obj"]

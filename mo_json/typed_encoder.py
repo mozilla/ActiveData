@@ -18,11 +18,11 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 
 from future.utils import text_type
+
 from mo_dots import Data, FlatList, NullType
 from mo_json import ESCAPE_DCT, float2json
+from mo_json.encoder import pretty_json, problem_serializing, _repr, UnicodeBuilder, COMMA
 from mo_logs import Log
-
-from mo_json.encoder import pretty_json, problem_serializing, _repr, UnicodeBuilder
 from mo_logs.strings import utf82unicode
 from mo_times.dates import Date
 from mo_times.durations import Duration
@@ -47,7 +47,7 @@ def typed_encode(value):
         Log.warning("Serialization of JSON problems", e)
         try:
             return pretty_json(value)
-        except Exception, f:
+        except Exception as f:
             Log.error("problem serializing object", f)
 
 
@@ -139,7 +139,7 @@ def _list2json(value, _buffer):
         sep = u"["
         for v in value:
             append(_buffer, sep)
-            sep = u", "
+            sep = COMMA
             _typed_encode(v, _buffer)
         append(_buffer, u"]")
 
@@ -149,7 +149,7 @@ def _iter2json(value, _buffer):
     sep = u""
     for v in value:
         append(_buffer, sep)
-        sep = u", "
+        sep = COMMA
         _typed_encode(v, _buffer)
     append(_buffer, u"]")
 
@@ -244,7 +244,7 @@ def json2typed(json):
                 context.append(OBJECT)
                 context.append(KEYWORD)
                 mode = STRING
-                append(output, ', ')
+                append(output, ',')
             elif c == "}":
                 mode = context.pop()
             else:

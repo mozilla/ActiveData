@@ -16,22 +16,26 @@ from collections import Mapping
 from copy import deepcopy
 
 from future.utils import text_type
-from jx_python import jx
-from mo_dots import coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, join_field, split_field, wrap, FlatList
-from mo_kwargs import override
-from mo_logs import Log, strings
-from mo_math import Math
-from mo_threads import Lock, ThreadedQueue, Till
-from pyLibrary import convert
 
 import mo_json
+from jx_python import jx
 from jx_python.meta import Column
-from mo_json.typed_encoder import typed_encode, decode_property
+from mo_dots import coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field
+from mo_dots import wrap
+from mo_dots.lists import FlatList
+from mo_json import value2json
+from mo_kwargs import override
+from mo_logs import Log, strings
 from mo_logs.exceptions import Except
 from mo_logs.strings import utf82unicode
+from mo_math import Math
 from mo_math.randoms import Random
+from mo_threads import Lock
+from mo_threads import ThreadedQueue
+from mo_threads import Till
 from mo_times.dates import Date
 from mo_times.timer import Timer
+from pyLibrary import convert
 from pyLibrary.env import http
 
 ES_STRUCT = ["object", "nested"]
@@ -249,7 +253,7 @@ class Index(Features):
 
         result = self.cluster.delete(
             self.path + "/_query",
-            data=convert.value2json(query),
+            data=value2json(query),
             timeout=600
         )
 
@@ -388,7 +392,7 @@ class Index(Features):
         if self.cluster.version.startswith("0.90."):
             response = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
-                data='{"index":{"refresh_interval":' + convert.value2json(interval) + '}}',
+                data='{"index":{"refresh_interval":' + value2json(interval) + '}}',
                 **kwargs
             )
 
@@ -400,7 +404,7 @@ class Index(Features):
         elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5."])):
             response = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
-                data=convert.unicode2utf8('{"index":{"refresh_interval":' + convert.value2json(interval) + '}}'),
+                data=convert.unicode2utf8('{"index":{"refresh_interval":' + value2json(interval) + '}}'),
                 **kwargs
             )
 
@@ -640,7 +644,7 @@ class Cluster(object):
         elif isinstance(schema, basestring):
             schema = mo_json.json2value(schema, leaves=True)
         else:
-            schema = mo_json.json2value(convert.value2json(schema), leaves=True)
+            schema = mo_json.json2value(value2json(schema), leaves=True)
 
         if limit_replicas:
             # DO NOT ASK FOR TOO MANY REPLICAS
@@ -751,7 +755,7 @@ class Cluster(object):
             if data == None:
                 pass
             elif isinstance(data, Mapping):
-                kwargs[b'data'] = data = convert.unicode2utf8(convert.value2json(data))
+                kwargs[b'data'] = data = convert.unicode2utf8(value2json(data))
             elif not isinstance(kwargs[b"data"], str):
                 Log.error("data must be utf8 encoded string")
 
@@ -1065,7 +1069,7 @@ class Alias(Features):
         while keep_trying:
             result = self.cluster.delete(
                 self.path + "/_query",
-                data=convert.value2json(query),
+                data=value2json(query),
                 timeout=60
             )
             keep_trying = False
@@ -1159,7 +1163,6 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                 if n == name:
                     # DEFAULT
                     columns.append(Column(
-                        table=index_name,
                         es_index=index_name,
                         es_column=column_name,
                         names={".": jx_name},
@@ -1168,7 +1171,6 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                     ))
                 else:
                     columns.append(Column(
-                        table=index_name,
                         es_index=index_name,
                         es_column=column_name + "\\." + n,
                         names={".": jx_name + "\\." + n},

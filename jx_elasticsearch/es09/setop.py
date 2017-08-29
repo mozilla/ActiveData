@@ -13,14 +13,14 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from jx_elasticsearch import es09
 from jx_base import domains
+from jx_elasticsearch import es09
 from mo_dots import coalesce, split_field, Data, wrap
 from mo_dots import listwrap, unwrap
 from mo_logs import Log
 from mo_math import AND, SUM, OR
 
-from jx_base.expressions import TRUE_FILTER, jx_expression, Variable
+from jx_base.expressions import TRUE_FILTER, jx_expression, Variable, LeavesOp
 from jx_base.queries import is_variable_name
 from jx_elasticsearch.es09.expressions import unpack_terms
 from jx_elasticsearch.es09.util import aggregates
@@ -125,11 +125,11 @@ def es_setop(es, mvel, query):
     isComplex = OR([s.value == None and s.aggregate not in ("count", "none") for s in select])   # CONVERTING esfilter DEFINED PARTS WILL REQUIRE SCRIPT
 
     if not isDeep and not isComplex:
-        if len(select) == 1 and not select[0].value or select[0].value == "*":
+        if len(select) == 1 and isinstance(select[0].value, LeavesOp):
             FromES = wrap({
                 "query": {"bool": {
                     "query": {"match_all": {}},
-                    "filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
+                    "filter": simplify_esfilter(query.where.to_esfilter())
                 }},
                 "sort": query.sort,
                 "size": 0
@@ -165,7 +165,7 @@ def es_setop(es, mvel, query):
 
     data = es09.util.post(es, FromES, query.limit)
 
-    if len(select) == 1 and  not select[0].value or select[0].value == "*":
+    if len(select) == 1 and isinstance(select[0].value, LeavesOp):
         # SPECIAL CASE FOR SINGLE COUNT
         cube = wrap(data).hits.hits._source
     elif isinstance(select[0].value, Variable):

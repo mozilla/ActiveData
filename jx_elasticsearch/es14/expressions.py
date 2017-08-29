@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 import itertools
 
+from future.utils import text_type
 from mo_dots import coalesce, wrap, Null, unwraplist, literal_field, set_default
 from mo_json import json2value, quote
 from mo_logs import Log, suppress_exception
@@ -24,7 +25,6 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, UnixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, InOp, RangeOp, CaseOp, AndOp, \
     ConcatOp, TRUE_FILTER, FALSE_FILTER, LeftOp
-from mo_logs.strings import text_type
 
 
 @extend(BetweenOp)

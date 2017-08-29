@@ -508,7 +508,7 @@ def toString(val):
     elif isinstance(val, str):
         try:
             return val.decode('utf8')
-        except Exception, _:
+        except Exception as _:
             pass
 
         try:

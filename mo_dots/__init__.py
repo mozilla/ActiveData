@@ -382,7 +382,7 @@ def _set_attr(obj_, path, value):
         try:
             obj[attr_name] = new_value
             return old_value
-        except Exception, f:
+        except Exception as f:
             get_logger().error(PATH_NOT_FOUND, cause=e)
 
 
@@ -391,11 +391,11 @@ def lower_match(value, candidates):
 
 
 def wrap(v):
-    type_ = _get(v, "__class__")
+    type_ = _get(v, b"__class__")
 
     if type_ is dict:
         m = object.__new__(Data)
-        _set(m, "_dict", v)
+        _set(m, b"_dict", v)
         return m
     elif type_ is NoneType:
         return Null
@@ -461,16 +461,16 @@ def _wrap_leaves(value):
 
 
 def unwrap(v):
-    _type = _get(v, "__class__")
+    _type = _get(v, b"__class__")
     if _type is Data:
-        d = _get(v, "_dict")
+        d = _get(v, b"_dict")
         return d
     elif _type is FlatList:
         return v.list
     elif _type is NullType:
         return None
     elif _type is DataObject:
-        d = _get(v, "_obj")
+        d = _get(v, b"_obj")
         if isinstance(d, Mapping):
             return d
         else:

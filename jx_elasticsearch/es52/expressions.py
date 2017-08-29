@@ -472,7 +472,13 @@ def to_painless(self, not_null=False, boolean=False):
 
     if lhs.many:
         if rhs.many:
-            Log.error("can not handle many-to-many comparision")
+            return Painless(
+                b=WhenOp(
+                    "when",
+                    self.lhs.missing(),
+                    **{"then": self.rhs.missing(), "else": Painless(b="("+lhs.expression+").containsAll("+rhs.expression+")")}
+                ).partial_eval().to_painless(boolean=True).expression
+            )
         return Painless(
             b=WhenOp(
                 "when",
@@ -495,7 +501,7 @@ def to_painless(self, not_null=False, boolean=False):
 @extend(EqOp)
 def to_esfilter(self):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-        rhs = json2value(self.rhs.json)
+        rhs = self.rhs.value
         if isinstance(rhs, list):
             if len(rhs) == 1:
                 return {"term": {self.lhs.var: rhs[0]}}

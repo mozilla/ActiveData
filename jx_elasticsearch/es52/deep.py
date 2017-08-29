@@ -22,7 +22,7 @@ from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, simplify_esfilter, AndOp, Variable, LeavesOp
 from jx_elasticsearch.es52.setop import format_dispatch
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
-from jx_python.expressions import compile_expression
+from jx_python.expressions import compile_expression, jx_expression_to_function
 from mo_times.timer import Timer
 
 EXPRESSION_PREFIX = "_expr."
@@ -109,7 +109,7 @@ def es_deepop(es, query):
                                 es_query.stored_fields += [c.es_column]
                             new_select.append({
                                 "name": c.names[query_path],
-                                "pull": get_pull(c),
+                                "pull": get_pull_function(c),
                                 "nested_path": c.nested_path[0],
                                 "put": {"name": literal_field(c.names[query_path]), "index": i, "child": "."}
                             })
@@ -128,7 +128,7 @@ def es_deepop(es, query):
                     for c in columns:
                         cname = c.names["."]
                         if cname.startswith(prefix) and c.type not in STRUCT:
-                            pull = get_pull(c)
+                            pull = get_pull_function(c)
                             if c.nested_path[0] == ".":
                                 es_query.stored_fields += [c.es_column]
 
@@ -151,7 +151,7 @@ def es_deepop(es, query):
                             es_query.stored_fields += [c.es_column]
                         new_select.append({
                             "name": c.name,
-                            "pull": get_pull(c),
+                            "pull": get_pull_function(c),
                             "nested_path": c.nested_path[0],
                             "put": {"name": ".", "index": i, "child": c.es_column}
                         })
@@ -174,7 +174,7 @@ def es_deepop(es, query):
                     net_columns = [c for c in columns if c.es_column.startswith(parent) and c.type not in STRUCT]
 
                 if not net_columns:
-                    pull = get_pull(prefix)
+                    pull = get_pull_function(prefix)
                     if len(prefix.nested_path) == 1:
                         es_query.stored_fields += [prefix.es_column]
                     new_select.append({
@@ -191,7 +191,7 @@ def es_deepop(es, query):
                             continue
                         done.add(n.es_column)
 
-                        pull = get_pull(n)
+                        pull = get_pull_function(n)
                         if len(n.nested_path) == 1:
                             es_query.stored_fields += [n.es_column]
                         new_select.append({
@@ -271,3 +271,7 @@ def get_pull(column):
         depth = len(split_field(column.nested_path[0]))
         rel_name = split_field(column.es_column)[depth:]
         return join_field(["_inner"] + rel_name)
+
+
+def get_pull_function(column):
+    return jx_expression_to_function(get_pull(column))

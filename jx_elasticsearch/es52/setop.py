@@ -81,11 +81,13 @@ def es_setop(es, query):
             if isinstance(term, Variable):
                 for c in schema.leaves(term.var):
                     es_query.stored_fields += [c.es_column]
-                    new_name = literal_field(concat_field(select.name, relative_field(c.names["."], term.var)))
+                    path = split_field(concat_field(select.name, literal_field(relative_field(c.names["."], term.var))))
+                    new_name = literal_field(path[0])
+                    remainder = join_field(path[1:])
                     new_select.append({
                         "name": new_name,
                         "value": Variable(c.es_column, verify=False),
-                        "put": {"name": new_name, "index": put_index, "child": "."},
+                        "put": {"name": new_name, "index": put_index, "child": remainder},
                         "pull": jx_expression_to_function(concat_field("fields", literal_field(c.es_column)))
                     })
                     put_index += 1
@@ -177,7 +179,7 @@ def es_setop(es, query):
 
 def accumulate_nested_doc(nested_path):
     """
-    :param nested_path: THE PATH USED TO EXTRACT THE NESTED RECORDS 
+    :param nested_path: THE PATH USED TO EXTRACT THE NESTED RECORDS
     :return: THE DE_TYPED NESTED OBJECT ARRAY
     """
     def output(doc):
@@ -257,7 +259,7 @@ def format_table(T, select, query=None):
     for s in select:
         if header[s.put.index]:
             continue
-        header[s.put.index] = s.name
+        header[s.put.index] = split_field(s.name)[0]
 
     return Data(
         meta={"format": "table"},

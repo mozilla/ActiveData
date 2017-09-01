@@ -236,19 +236,19 @@ def _getdefault(obj, key):
     """
     try:
         return obj[key]
-    except Exception, f:
+    except Exception as f:
         pass
 
     try:
         return getattr(obj, key)
-    except Exception, f:
+    except Exception as f:
         pass
 
 
     try:
         if float(key) == round(float(key), 0):
             return obj[int(key)]
-    except Exception, f:
+    except Exception as f:
         pass
 
 

@@ -11,6 +11,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import ujson
+import json
 
-json_decoder = ujson.loads
+json_decoder = json.loads

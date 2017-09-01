@@ -658,13 +658,12 @@ class InequalityOp(Expression):
         "lt": "<"
     }
 
-    def __init__(self, op, terms, default=NullOp()):
+    def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
         if op not in InequalityOp.operators:
             Log.error("{{op|quote}} not a recognized operator", op=op)
         self.op = op
         self.lhs, self.rhs = terms
-        self.default = default
 
     @property
     def name(self):
@@ -677,16 +676,13 @@ class InequalityOp(Expression):
             return {self.op: [self.lhs.__data__(), self.rhs.__data__()], "default": self.default}
 
     def vars(self):
-        return self.lhs.vars() | self.rhs.vars() | self.default.vars()
+        return self.lhs.vars() | self.rhs.vars()
 
     def map(self, map_):
-        return InequalityOp(self.op, [self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_))
+        return InequalityOp(self.op, [self.lhs.map(map_), self.rhs.map(map_)])
 
     def missing(self):
-        if self.default.exists():
-            return FalseOp()
-        else:
-            return OrOp("or", [self.lhs.missing(), self.rhs.missing()])
+        return FalseOp()
 
     def partial_eval(self):
         lhs = self.lhs.partial_eval()

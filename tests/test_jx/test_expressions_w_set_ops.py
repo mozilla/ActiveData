@@ -13,6 +13,8 @@ from __future__ import unicode_literals
 
 from unittest import skipIf
 
+from jx_base.expressions import TrueOp
+
 from mo_dots import wrap
 
 from tests.test_jx import BaseTestCase, TEST_TABLE, NULL, global_settings

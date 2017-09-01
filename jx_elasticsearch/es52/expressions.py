@@ -98,17 +98,17 @@ def to_painless(self, not_null=False, boolean=False):
         start_index = CaseOp(
             "case",
             [
-                WhenOp("when", [self.prefix.missing(), {"then": Literal(None, 0)}]),
-                WhenOp("when", [IsNumberOp("is_number", self.prefix), {"then": self.prefix}]),
+                WhenOp("when", [self.prefix.missing()], **{"then": Literal(None, 0)}),
+                WhenOp("when", [IsNumberOp("is_number", self.prefix)], **{"then": self.prefix}),
                 FindOp("find", [self.value, self.prefix], start=self.start)
             ]
         )
         end_index = CaseOp(
             "case",
             [
-                WhenOp("when", [start_index.missing(), {"then": NullOp()}]),
-                WhenOp("when", [self.suffix.missing(), {"then": LengthOp("length", self.value)}]),
-                WhenOp("when", [IsNumberOp("is_number", self.suffix), {"then": self.suffix}]),
+                WhenOp("when", [start_index.missing()], **{"then": NullOp()}),
+                WhenOp("when", [self.suffix.missing()], **{"then": LengthOp("length", self.value)}),
+                WhenOp("when", [IsNumberOp("is_number", self.suffix)], **{"then": self.suffix}),
                 FindOp("find", [self.value, self.suffix], start=MultiOp("add", [start_index, len_prefix]))
             ]
         )
@@ -168,20 +168,34 @@ def to_esfilter(self):
 
 @extend(BinaryOp)
 def to_painless(self, not_null=False, boolean=False):
-    lhs = NumberOp("number", self.lhs).to_painless(not_null=True).n
-    rhs = NumberOp("number", self.rhs).to_painless(not_null=True).n
+    lhs = NumberOp("number", self.lhs).partial_eval().to_painless(not_null=True).n
+    rhs = NumberOp("number", self.rhs).partial_eval().to_painless(not_null=True).n
     script = "(" + lhs + ") " + BinaryOp.operators[self.op] + " (" + rhs + ")"
     missing = OrOp("or", [self.lhs.missing(), self.rhs.missing()])
 
-    output = WhenOp(
-        "when",
-        missing,
-        **{
-            "then": self.default,
-            "else":
-                Painless(n=script)
-        }
-    ).partial_eval().to_painless()
+    if not_null:
+        if self.default.missing():
+            output = Painless(n=script)
+        else:
+            output = WhenOp(
+                "when",
+                missing,
+                **{
+                    "then": self.default,
+                    "else":
+                        Painless(n=script)
+                }
+            ).partial_eval().to_painless()
+    else:
+        output = WhenOp(
+            "when",
+            missing,
+            **{
+                "then": self.default,
+                "else":
+                    Painless(n=script)
+            }
+        ).partial_eval().to_painless()
     return output
 
 
@@ -388,23 +402,19 @@ def to_esfilter(self):
 
 @extend(InequalityOp)
 def to_painless(self, not_null=False, boolean=False):
-    lhs = self.lhs.to_painless(not_null=True)
-    rhs = self.rhs.to_painless(not_null=True)
+    lhs = NumberOp("number", self.lhs).partial_eval().to_painless(not_null=True).n
+    rhs = NumberOp("number", self.rhs).partial_eval().to_painless(not_null=True).n
     script = "(" + lhs + ") " + InequalityOp.operators[self.op] + " (" + rhs + ")"
-    missing = OrOp("or", [self.lhs.missing(), self.rhs.missing()])
-    default = self.default
-    if boolean:
-        default = FalseOp()
 
     output = WhenOp(
         "when",
-        missing,
+        OrOp("or", [self.lhs.missing(), self.rhs.missing()]),
         **{
-            "then": default,
+            "then": FalseOp(),
             "else":
-                ScriptOp("script", script)
+                Painless(n=script)
         }
-    ).to_painless()
+    ).partial_eval().to_painless()
     return output
 
 
@@ -413,7 +423,7 @@ def to_esfilter(self):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
         return {"range": {self.lhs.var: {self.op: json2value(self.rhs.json)}}}
     else:
-        return ScriptOp("script", self.to_painless(boolean=True)).to_esfilter()
+        return ScriptOp("script", self.to_painless(boolean=True).script).to_esfilter()
 
 
 @extend(DivOp)
@@ -536,20 +546,21 @@ def to_esfilter(self):
 
 @extend(NotLeftOp)
 def to_painless(self, not_null=False, boolean=False):
-    test_v = self.value.missing().to_painless(boolean=True)
-    test_l = self.length.missing().to_painless(boolean=True)
-    v = self.value.to_painless(not_null=True)
-    l = self.length.to_painless(not_null=True)
+    v = StringOp("string", self.value).partial_eval().to_painless(not_null=True).s
+    l = NumberOp("number", self.length).partial_eval().to_painless(not_null=True).n
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring((int)Math.max(0, (int)Math.min(" + v + ".length(), " + l + "))))"
-    return expr
+    expr = "(" + v + ").substring((int)Math.max(0, (int)Math.min(" + v + ".length(), " + l + ")))"
+    return Painless(
+        missing=OrOp("or", [self.value.missing(), self.length.missing()]),
+        s=expr
+    )
 
 
 @extend(NeOp)
 def to_painless(self, not_null=False, boolean=False):
     lhs = self.lhs.to_painless()
     rhs = self.rhs.to_painless()
-    return "((" + lhs + ")!=null) && ((" + rhs + ")!=null) && ((" + lhs + ")!=(" + rhs + "))"
+    return Painless(b="((" + lhs + ")!=null) && ((" + rhs + ")!=null) && ((" + lhs + ")!=(" + rhs + "))")
 
 
 @extend(NeOp)
@@ -633,7 +644,7 @@ def to_painless(self, not_null=False, boolean=False):
                 n="((" + value.j + ") instanceof String) ? Double.parseDouble(" + value.j + ") : (" + value.j + ")"
             )
     else:
-        output = NumberOp.to_painless(not_null=True)
+        output = self.to_painless(not_null=True)
         output._missing = self.term.missing().partial_eval()
         return output
 
@@ -660,7 +671,7 @@ def partial_eval(self):
 
 @extend(CountOp)
 def to_painless(self, not_null=False, boolean=False):
-    return "+".join("((" + t.missing().to_painless(boolean=True) + ") ? 0 : 1)" for t in self.terms)
+    return Painless(n="+".join("((" + t.missing().partial_eval().to_painless(boolean=True).b + ") ? 0 : 1)" for t in self.terms))
 
 
 @extend(LengthOp)
@@ -746,24 +757,26 @@ def to_esfilter(self):
 
 @extend(RightOp)
 def to_painless(self, not_null=False, boolean=False):
-    test_v = self.value.missing().to_painless(boolean=True)
-    test_l = self.length.missing().to_painless(boolean=True)
-    v = self.value.to_painless(not_null=True)
-    l = self.length.to_painless(not_null=True)
+    v = StringOp("string", self.value).partial_eval().to_painless(not_null=True).s
+    l = NumberOp("number", self.length).partial_eval().to_painless(not_null=True).n
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring((int)Math.min(" + v + ".length(), (int)Math.max(0, (" + v + ").length() - (" + l + ")))))"
-    return expr
+    expr = "(" + v + ").substring((int)Math.min(" + v + ".length(), (int)Math.max(0, (" + v + ").length() - (" + l + "))))"
+    return Painless(
+        missing=OrOp("or", [self.value.missing(), self.length.missing()]),
+        s=expr
+    )
 
 
 @extend(NotRightOp)
 def to_painless(self, not_null=False, boolean=False):
-    test_v = self.value.missing().to_painless(boolean=True)
-    test_l = self.length.missing().to_painless(boolean=True)
-    v = self.value.to_painless(not_null=True)
-    l = self.length.to_painless(not_null=True)
+    v = StringOp("string", self.value).partial_eval().to_painless(not_null=True).s
+    l = NumberOp("number", self.length).partial_eval().to_painless(not_null=True).n
 
-    expr = "((" + test_v + ") || (" + test_l + ")) ? null : (" + v + ".substring(0, (int)Math.min(" + v + ".length(), (int)Math.max(0, (" + v + ").length() - (" + l + ")))))"
-    return expr
+    expr = "(" + v + ").substring(0, (int)Math.min(" + v + ".length(), (int)Math.max(0, (" + v + ").length() - (" + l + "))))"
+    return Painless(
+        missing=OrOp("or", [self.value.missing(), self.length.missing()]),
+        s=expr
+    )
 
 
 @extend(InOp)
@@ -802,15 +815,14 @@ def to_esfilter(self):
 
 @extend(LeftOp)
 def to_painless(self, not_null=False, boolean=False):
-    v = StringOp("string", self.value).partial_eval().to_painless(not_null=True)
-    l = NumberOp("number", self.length).partial_eval().to_painless(not_null=True)
+    v = StringOp("string", self.value).partial_eval().to_painless(not_null=True).s
+    l = NumberOp("number", self.length).partial_eval().to_painless(not_null=True).n
 
-    expr = Painless(
-        s="(" + v.s + ").substring(0, (int)Math.max(0, (int)Math.min((" + v.s + ").length(), " + l.n + ")))"
+    expr = "(" + v + ").substring(0, (int)Math.max(0, (int)Math.min((" + v + ").length(), " + l + ")))"
+    return Painless(
+        missing=OrOp("or", [self.value.missing(), self.length.missing()]),
+        s=expr
     )
-    if not not_null:
-        expr._missing = OrOp("or", [self.value.missing(), self.length.missing()]).partial_eval()
-    return expr
 
 
 @extend(ScriptOp)

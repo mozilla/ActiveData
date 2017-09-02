@@ -342,7 +342,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    def test_select_mult_w_when(self):
+    def test_select_agg_mult_w_when(self):
         test = {
             "data": [
                 {"a": 0, "b": False},                  # 0*1
@@ -377,6 +377,55 @@ class TestSetOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "value"},
                 "data": 17
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_select_mult_w_when(self):
+        test = {
+            "data": [
+                {"a": 0, "b": False},                  # 0*1
+                {"a": 1, "b": False},                  # 1*1 = 1
+                {"a": 2, "b": True},                   # 2*0
+                {"a": 3, "b": False},                  # 3*1 = 3
+                {"a": 4, "b": True},                   # 4*0
+                {"a": 5, "b": False},                  # 5*1 = 5
+                {"a": 6, "b": True},                   # 6*0
+                {"a": 7, "b": True},                   # 7*0
+                {"a": 8},  # COUNTED, "b" IS NOT true  # 8*1 = 8
+                {"b": True},  # NOT COUNTED              null * 0 = null
+                {"b": False}   # NOT COUNTED             null * 1 = null
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": [
+                    {"name": "b", "value": {"when": "b", "then": 0, "else": 1}},
+                    {
+                        "name": "ab",
+                        "value": {
+                            "mult": [
+                                "a",
+                                {"when": "b", "then": 0, "else": 1}
+                            ]
+                        }
+                    }
+                ],
+                "limit": 100
+            },
+            "expecting_list": {
+                "data": [
+                    {"ab": 0, "b": 1},
+                    {"ab": 1, "b": 1},
+                    {"ab": 0, "b": 0},
+                    {"ab": 3, "b": 1},
+                    {"ab": 0, "b": 0},
+                    {"ab": 5, "b": 1},
+                    {"ab": 0, "b": 0},
+                    {"ab": 0, "b": 0},
+                    {"ab": 8, "b": 1},
+                    {"ab": NULL, "b": 1},
+                    {"ab": NULL, "b": 0}
+                ]
             }
         }
         self.utils.execute_tests(test)

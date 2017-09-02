@@ -24,7 +24,7 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
     WhenOp, InequalityOp, extend, RowsOp, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, UnixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, InOp, RangeOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, TRUE_FILTER, FALSE_FILTER, LeftOp, Expression, JavaIndexOfOp
+    ConcatOp, IsNumberOp, TRUE_FILTER, FALSE_FILTER, LeftOp, Expression, JavaIndexOfOp, MaxOp, MinOp, JavaEqOp
 
 
 class Painless(Expression):
@@ -40,16 +40,13 @@ class Painless(Expression):
 
     @property
     def script(self):
-        if isinstance(self.missing, FalseOp):
+        missing = self._missing.partial_eval()
+        if isinstance(missing, FalseOp):
             return self.partial_eval().to_painless(not_null=True).expression
-        elif isinstance(self.missing, TrueOp):
+        elif isinstance(missing, TrueOp):
             return "null"
 
-        return WhenOp(
-            "when",
-            self.missing(),
-            **{"then":NullOp(), "else":self}
-        ).partial_eval().to_painless(not_null=True).expression
+        return "(" + missing.to_painless(not_null=True, boolean=True).b + ")?null:(" + self.expression + ")"
 
     @property
     def expression(self):
@@ -76,86 +73,70 @@ class Painless(Expression):
 
 @extend(BetweenOp)
 def to_painless(self, not_null=False, boolean=False):
-    # TODO: WRITE THIS IN JX, OR SIMPLIFY IN SOME WAY
+    start_index = CaseOp(
+        "case",
+        [
+            WhenOp("when", self.prefix.missing(), **{"then": Literal(None, 0)}),
+            WhenOp("when", IsNumberOp("is_number", self.prefix), **{"then": MaxOp("max", [Literal(None, 0), self.prefix])}),
+            FindOp("find", [self.value, self.prefix], start=self.start)
+        ]
+    )
+    len_prefix = CaseOp(
+        "case",
+        [
+            WhenOp("when", self.prefix.missing(), **{"then": Literal(None, 0)}),
+            WhenOp("when", IsNumberOp("is_number", self.prefix), **{"then": Literal(None, 0)}),
+            LengthOp("length", self.prefix)
+        ]
+    )
 
-    if isinstance(self.prefix, Literal) and isinstance(json2value(self.prefix.json), int):
-        value_is_missing = self.value.missing().to_painless().expression
-        value = self.value.to_painless(not_null=True).expression
-        start = "(int)Math.max(" + self.prefix.json + ", 0)"
+    end_index = CaseOp(
+        "case",
+        [
+            WhenOp("when", start_index.missing(), **{"then": NullOp()}),
+            WhenOp("when", self.suffix.missing(), **{"then": LengthOp("length", self.value)}),
+            WhenOp("when", IsNumberOp("is_number", self.suffix), **{"then": MinOp("min", [self.suffix, LengthOp("length", self.value)])}),
+            FindOp("find", [self.value, self.suffix], start=MultiOp("add", [start_index, len_prefix]))
+        ]
+    )
 
-        if isinstance(self.suffix, Literal) and isinstance(self.value, int):
-            check = "(" + value_is_missing + ")"
-            end = "(int)Math.min(" + self.suffix.to_painless().expression + ", " + value + ".length())"
-        else:
-            end = value + ".indexOf(" + self.suffix.to_painless() + ", " + start + ")"
-            check = "((" + value_is_missing + ") || (" + end + "==-1))"
+    value = StringOp("string", self.value).partial_eval().to_painless(not_null=True).s
+    start = MultiOp("add", [start_index, len_prefix]).partial_eval().to_painless(not_null=True).n
+    end = end_index.partial_eval().to_painless(not_null=True).n
 
-        expr = check + " ? " + self.default.to_painless().expression + " : ((" + value + ").substring(" + start + ", " + end + "))"
-        return Painless(s=expr)
+    between = WhenOp(
+        "when",
+        end_index.missing(),
+        **{
+            "then": self.default,
+            "else": Painless(s="(" + value + ").substring((" + start + ").intValue(), (" + end + ").intValue())")
+        }
+    )
 
+    return between.partial_eval().to_painless()
+
+
+@extend(BetweenOp)
+def missing(self):
+    if isinstance(self.prefix, NullOp):
+        prefix = Literal(None, 0)
     else:
-        # ((Runnable)(() -> {int a=2; int b=3; System.out.println(a+b);})).run();
-        start_index = CaseOp(
-            "case",
-            [
-                WhenOp("when", [self.prefix.missing()], **{"then": Literal(None, 0)}),
-                WhenOp("when", [IsNumberOp("is_number", self.prefix)], **{"then": self.prefix}),
-                FindOp("find", [self.value, self.prefix], start=self.start)
-            ]
-        )
-        end_index = CaseOp(
-            "case",
-            [
-                WhenOp("when", [start_index.missing()], **{"then": NullOp()}),
-                WhenOp("when", [self.suffix.missing()], **{"then": LengthOp("length", self.value)}),
-                WhenOp("when", [IsNumberOp("is_number", self.suffix)], **{"then": self.suffix}),
-                FindOp("find", [self.value, self.suffix], start=MultiOp("add", [start_index, len_prefix]))
-            ]
-        )
+        prefix = FindOp("find", [self.value, self.prefix])
 
-        len_prefix = CaseOp(
-            "case",
-            [
-                WhenOp("when", [self.prefix.missing(), {"then": Literal(None, 0)}]),
-                WhenOp("when", [IsNumberOp("is_number", self.prefix), {"then": Literal(None, 0)}]),
-                LengthOp("length", self.prefix)
-            ]
-        )
-
-        value = StringOp("string", self.value).partial_eval(not_null=True).to_painless().s
-        start = MultiOp("add", [start_index, len_prefix]).partial_eval().to_painless(not_null=True).n
-        end = end_index.partial_eval().to_painless(not_null=True).n
-
-        between = WhenOp(
-            "when",
-            end_index.missing(),
-            {"then": self.default, "else": ScriptOp("script", "(" + value + ").substring(" + start + ", " + end + "))")}
-        )
-
-        return between.to_painless()
-
-    def missing(self):
-        if isinstance(self.prefix, NullOp):
-            prefix = Literal(None, 0)
-        else:
-            prefix = FindOp("find", [self.value, self.prefix])
-
-        if isinstance(self.prefix, NullOp):
-            expr = AndOp("and", [
-                self.default.missing(),
-                prefix.missing()
+    if isinstance(self.suffix, NullOp):
+        expr = AndOp("and", [
+            self.default.missing(),
+            prefix.missing()
+        ])
+    else:
+        expr = AndOp("and", [
+            self.default.missing(),
+            OrOp("or", [
+                prefix.missing(),
+                FindOp("find", [self.value, self.suffix], start=prefix).missing(),
             ])
-        else:
-            expr = AndOp("and", [
-                self.default.missing(),
-                OrOp("or", [
-                    prefix.missing(),
-                    FindOp("find", [self.value, self.suffix], start=prefix).missing(),
-                ])
-            ])
-        return expr.partial_eval()
-
-
+        ])
+    return expr.partial_eval()
 
 
 @extend(BetweenOp)
@@ -216,15 +197,33 @@ def to_esfilter(self):
 
 @extend(CaseOp)
 def to_painless(self, not_null=False, boolean=False):
-    acc = self.whens[-1].to_painless()
+    acc = self.whens[-1].partial_eval().to_painless()
     for w in reversed(self.whens[0:-1]):
-        acc = "(" + w.when.to_painless(boolean=True) + ") ? (" + w.then.to_painless() + ") : (" + acc + ")"
+        acc = WhenOp(
+            "when",
+            w.when,
+            **{"then": w.then, "else": acc}
+        ).partial_eval().to_painless()
     return acc
 
 
 @extend(CaseOp)
 def to_esfilter(self):
     return ScriptOp("script",  self.to_painless()).to_esfilter()
+
+
+@extend(CaseOp)
+def missing(self):
+    m = self.whens[-1].partial_eval().to_painless()._missing
+    for w in reversed(self.whens[0:-1]):
+        when = w.when.partial_eval()
+        if isinstance(when, FalseOp):
+            pass
+        elif isinstance(when, TrueOp):
+            m = w.then.partial_eval().to_painless()._missing
+        else:
+            m = OrOp("or", [AndOp("and", [when, w.then.missing()]), m])
+    return m
 
 
 @extend(ConcatOp)
@@ -271,7 +270,7 @@ def to_painless(self, not_null=False, boolean=False):
 def to_painless(self, not_null=False, boolean=False):
     def _convert(v):
         if v is None:
-            return Painless(missing=TrueOp(), j="null")
+            return NullOp().to_painless()
         if v is True:
             return Painless(b="true")
         if v is False:
@@ -330,10 +329,10 @@ def to_esfilter(self):
 
 @extend(FindOp)
 def to_painless(self, not_null=False, boolean=False):
-    v = StringOp("string", self.value).to_painless(not_null=True)
-    find = StringOp("string", self.find).to_painless(not_null=True)
-    start = NumberOp("number", self.start).to_painless(not_null=True)
-    index = v.s + ".indexOf(" + find.s + ", " + start.n + ")"
+    v = StringOp("string", self.value).partial_eval().to_painless(not_null=True)
+    find = StringOp("string", self.find).partial_eval().to_painless(not_null=True)
+    start = MaxOp("max", [Literal(None, 0), self.start]).partial_eval().to_painless(not_null=True)
+    index = v.s + ".indexOf(" + find.s + ", (" + start.n + ").intValue())"
 
     return WhenOp(
         "when",
@@ -357,8 +356,13 @@ def to_esfilter(self):
 
 @extend(NullOp)
 def to_painless(self, not_null=False, boolean=False):
-    return Painless(missing=TrueOp(), j="null")
-
+    return Painless(
+        missing=TrueOp(),
+        b="null",
+        s="null",
+        n="null",
+        j="null"
+    )
 
 @extend(NullOp)
 def to_esfilter(self):
@@ -412,7 +416,7 @@ def to_painless(self, not_null=False, boolean=False):
         **{
             "then": FalseOp(),
             "else":
-                Painless(n=script)
+                Painless(b=script)
         }
     ).partial_eval().to_painless()
     return output
@@ -430,7 +434,7 @@ def to_esfilter(self):
 def to_painless(self, not_null=False, boolean=False):
     lhs = self.lhs.partial_eval()
     rhs = self.rhs.partial_eval()
-    script = "((double)(" + lhs.to_painless(not_null=True).n + ") / (double)(" + rhs.to_painless(not_null=True).n + "))"
+    script = "Double.valueOf((double)(" + lhs.to_painless(not_null=True).n + ") / (double)(" + rhs.to_painless(not_null=True).n + "))"
 
     output = WhenOp(
         "when",
@@ -474,11 +478,10 @@ def to_painless(self, not_null=False, boolean=False):
 def to_esfilter(self):
     Log.error("Logic error")
 
-
 @extend(EqOp)
 def to_painless(self, not_null=False, boolean=False):
-    lhs = self.lhs.to_painless()
-    rhs = self.rhs.to_painless()
+    lhs = self.lhs.partial_eval().to_painless()
+    rhs = self.rhs.partial_eval().to_painless()
 
     if lhs.many:
         if rhs.many:
@@ -486,14 +489,23 @@ def to_painless(self, not_null=False, boolean=False):
                 b=WhenOp(
                     "when",
                     self.lhs.missing(),
-                    **{"then": self.rhs.missing(), "else": Painless(b="("+lhs.expression+").containsAll("+rhs.expression+")")}
-                ).partial_eval().to_painless(boolean=True).expression
+                    **{
+                        "then": self.rhs.missing(),
+                        "else": AndOp("and", [
+                            Painless(b="("+lhs.expression+").size()==("+rhs.expression+").size()"),
+                            Painless(b="("+rhs.expression+").containsAll("+lhs.expression+")")
+                        ])
+                    }
+                ).partial_eval().to_painless(boolean=True).b
             )
         return Painless(
             b=WhenOp(
                 "when",
                 self.lhs.missing(),
-                **{"then": self.rhs.missing(), "else": Painless(b="("+lhs.expression+").contains("+rhs.expression+")")}
+                **{
+                    "then": self.rhs.missing(),
+                    "else": Painless(b="("+lhs.expression+").contains("+rhs.expression+")")
+                }
             ).partial_eval().to_painless(boolean=True).expression
         )
     elif rhs.many:
@@ -501,7 +513,10 @@ def to_painless(self, not_null=False, boolean=False):
             b=WhenOp(
                 "when",
                 self.lhs.missing(),
-                **{"then": self.rhs.missing(), "else": Painless(b="("+rhs.expression+").contains("+lhs.expression+")")}
+                **{
+                    "then": self.rhs.missing(),
+                    "else": Painless(b="("+rhs.expression+").contains("+lhs.expression+")")
+                }
             ).partial_eval().to_painless(boolean=True).expression
         )
     else:
@@ -521,6 +536,41 @@ def to_esfilter(self):
             return {"term": {self.lhs.var: rhs}}
     else:
         return self.to_painless().to_esfilter()
+
+
+@extend(JavaEqOp)
+def to_painless(self, not_null=False, boolean=False):
+    lhs = self.lhs.partial_eval().to_painless()
+    rhs = self.rhs.partial_eval().to_painless()
+
+    if lhs.many:
+        if rhs.many:
+            return AndOp("and", [
+                Painless(b="(" + lhs.expression + ").size()==(" + rhs.expression + ").size()"),
+                Painless(b="(" + rhs.expression + ").containsAll(" + lhs.expression + ")")
+            ]).to_painless(boolean=True)
+        else:
+            return Painless(b="("+lhs.expression+").contains("+rhs.expression+")")
+    elif rhs.many:
+        return Painless(b="("+rhs.expression+").contains("+lhs.expression+")")
+    else:
+        return Painless(b="(" + lhs.expression + "==" + rhs.expression + ")")
+
+
+@extend(JavaEqOp)
+def to_esfilter(self, not_null=False, boolean=False):
+    if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
+        rhs = self.rhs.value
+        if isinstance(rhs, list):
+            if len(rhs) == 1:
+                return {"term": {self.lhs.var: rhs[0]}}
+            else:
+                return {"terms": {self.lhs.var: rhs}}
+        else:
+            return {"term": {self.lhs.var: rhs}}
+    else:
+        return self.to_painless().to_esfilter()
+
 
 
 @extend(MissingOp)
@@ -558,9 +608,7 @@ def to_painless(self, not_null=False, boolean=False):
 
 @extend(NeOp)
 def to_painless(self, not_null=False, boolean=False):
-    lhs = self.lhs.to_painless()
-    rhs = self.rhs.to_painless()
-    return Painless(b="((" + lhs + ")!=null) && ((" + rhs + ")!=null) && ((" + lhs + ")!=(" + rhs + "))")
+    return NotOp("not", EqOp("eq", [self.lhs, self.rhs])).partial_eval().to_painless()
 
 
 @extend(NeOp)
@@ -568,6 +616,9 @@ def to_esfilter(self):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
         return {"bool": {"must_not": {"term": {self.lhs.var: self.rhs.to_esfilter()}}}}
     else:
+
+        calc = self.to_painless()
+
         return {"bool": {"must": [
             # TODO: MAKE TESTS TO SEE IF THIS LOGIC IS CORRECT
             {"bool": {"must": [{"exists": {"field": v}} for v in self.vars()]}},
@@ -660,13 +711,21 @@ def to_painless(self, not_null=False, boolean=False):
 
 @extend(IsNumberOp)
 def partial_eval(self):
-    value = self.term.to_painless(not_null=True)
-    if value.n:
-        return TrueOp()
+    if isinstance(self.term, Literal):
+        if isinstance(self.term.value, (int, float)):
+            return TrueOp()
+        else:
+            return FalseOp()
     else:
-        return Painless(
-            b="(" + value.j + ") instanceof java.lang.Double"
-        )
+        value = self.term.to_painless(not_null=True)
+        if value.n:
+            return TrueOp()
+        elif value.s or value.b:
+            return FalseOp()
+        else:
+            return Painless(
+                b="(" + value.j + ") instanceof java.lang.Double"
+            )
 
 
 @extend(CountOp)
@@ -679,18 +738,40 @@ def to_esfilter(self):
     return {"regexp": {self.var.var: json2value(self.pattern.json)}}
 
 
+@extend(MaxOp)
+def to_painless(self, not_null=False, boolean=False):
+    acc = NumberOp("number", self.terms[-1]).partial_eval().to_painless(not_null=True).n
+    for t in reversed(self.terms[0:-1]):
+        acc = "Math.max(" + NumberOp("number", t).partial_eval().to_painless(not_null=True).n + " , " + acc + ")"
+    return Painless(
+        missing=AndOp("or", [t.missing() for t in self.terms]),
+        n=acc
+    )
+
+
+@extend(MinOp)
+def to_painless(self, not_null=False, boolean=False):
+    acc = NumberOp("number", self.terms[-1]).partial_eval().to_painless(not_null=True).n
+    for t in reversed(self.terms[0:-1]):
+        acc = "Math.min(" + NumberOp("number", t).partial_eval().to_painless(not_null=True).n + " , " + acc + ")"
+    return Painless(
+        missing=AndOp("or", [t.missing() for t in self.terms]),
+        n=acc
+    )
+
+
 @extend(MultiOp)
 def to_painless(self, not_null=False, boolean=False):
     op, unit = MultiOp.operators[self.op]
     if self.nulls:
         calc = op.join(
-            "((" + t.missing().to_painless(boolean=True).b + ") ? " + unit + " : (" + NumberOp("number", t).to_painless(not_null=True).n + "))" for
+            "((" + t.missing().to_painless(boolean=True).b + ") ? " + unit + " : (" + NumberOp("number", t).partial_eval().to_painless(not_null=True).n + "))" for
             t in self.terms
         )
         return WhenOp(
             "when",
             AndOp("and", [t.missing() for t in self.terms]),
-            **{"then": self.default, "else": ScriptOp(None, calc)}
+            **{"then": self.default, "else": Painless(n=calc)}
         ).partial_eval().to_painless()
     else:
         calc = op.join(
@@ -700,8 +781,8 @@ def to_painless(self, not_null=False, boolean=False):
         return WhenOp(
             "when",
             OrOp("or", [t.missing() for t in self.terms]),
-            **{"then": self.default, "else": ScriptOp(None, calc)}
-        ).partial_eval().to_painless(not_null=True)
+            **{"then": self.default, "else": Painless(n=calc)}
+        ).partial_eval().to_painless(not_null=not_null)
 
 
 @extend(RegExpOp)
@@ -858,7 +939,7 @@ def to_painless(self, not_null=False, boolean=False):
         if not_null:
             if boolean:
                 if variable_type=="b":
-                    return Painless(b="doc[" + q + "].value==\"T\"")
+                    return Painless(b="doc[" + q + "].value")
                 else:
                     return Painless(b="!doc[" + q + "].empty")
             else:
@@ -870,7 +951,7 @@ def to_painless(self, not_null=False, boolean=False):
                 if variable_type=="b":
                     return Painless(
                         missing=Painless(b="doc[" + q + "].empty"),
-                        b="doc[" + q + "].value==\"T\""
+                        b="doc[" + q + "].value"
                     )
                 else:
                     return Painless(
@@ -881,7 +962,7 @@ def to_painless(self, not_null=False, boolean=False):
                 return Painless(
                     missing=Painless(b="doc[" + q + "].empty"),
                     many=True,
-                    **{variable_type:"doc[" + q + "].values"}
+                    **{variable_type: "doc[" + q + "].values"}
                 )
 
 
@@ -891,22 +972,20 @@ def to_painless(self, not_null=False, boolean=False):
         when = self.when.to_painless(boolean=True)
         then = self.then.to_painless(not_null=True)
         els_ = self.els_.to_painless(not_null=True)
-        if then.b and els_.b:
-            output = Painless(
-                b="(" + when.b + ") ? (" + then.b + ") : (" + els_.b + ")"
-            )
-        elif then.n and els_.n:
-            output = Painless(
-                n="(" + when.b + ") ? (" + then.n + ") : (" + els_.n + ")"
-            )
-        elif then.s and els_.s:
-            output = Painless(
-                s="(" + when.b + ") ? (" + then.s + ") : (" + els_.s + ")"
-            )
+
+        if isinstance(then._missing, TrueOp):
+            output = els_
+        elif isinstance(els_._missing, TrueOp):
+            output = then
         else:
-            output = Painless(
-                j="(" + when.b + ") ? (" + then.expression + ") : (" + els_.expression + ")"
-            )
+            for t in "bnsj":
+                if getattr(then, t) and getattr(els_, t):
+                    output = Painless(
+                        **{t: "(" + when.b + ") ? (" + getattr(then, t) + ") : (" + getattr(els_, t) + ")"}
+                    )
+                    break
+            else:
+                Log.error("do not know how to handle")
         if not not_null:
             output._missing = self.missing().partial_eval()
         return output
@@ -916,17 +995,10 @@ def to_painless(self, not_null=False, boolean=False):
 
 @extend(WhenOp)
 def to_esfilter(self):
-    return {"bool": {"should": [
-        {"bool": {"must": [
-            self.when.to_esfilter(),
-            self.then.to_esfilter()
-        ]}},
-        {"bool": {"must": [
-            {"bool": {"must_not": self.when.to_esfilter()}},
-            self.els_.to_esfilter()
-        ]}}
-    ]}}
-
+    return OrOp("or", [
+        AndOp("and", [self.when, self.then]),
+        AndOp("and", [NotOp("not", self.when), self.els_])
+    ]).partial_eval().to_esfilter()
 
 
 @extend(JavaIndexOfOp)

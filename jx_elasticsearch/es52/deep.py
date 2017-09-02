@@ -160,7 +160,7 @@ def es_deepop(es, query):
                 new_select.append({
                     "name": s.name,
                     "value": s.value.var,
-                    "pull": "_id",
+                    "pull": jx_expression_to_function("_id"),
                     "put": {"name": s.name, "index": i, "child": "."}
                 })
                 i += 1
@@ -210,8 +210,9 @@ def es_deepop(es, query):
                     # else:
                     #     Log.error("deep field not expected")
 
-            pull = EXPRESSION_PREFIX + s.name
-            post_expressions[pull] = compile_expression(expr.map(map_to_local).to_python())
+            pull_name = EXPRESSION_PREFIX + s.name
+            pull = jx_expression_to_function(pull_name)
+            post_expressions[pull_name] = compile_expression(expr.map(map_to_local).to_python())
 
             new_select.append({
                 "name": s.name if is_list else ".",

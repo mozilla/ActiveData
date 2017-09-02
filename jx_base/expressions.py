@@ -19,7 +19,7 @@ from future.utils import text_type
 from mo_dots import coalesce, wrap, Null, split_field
 from mo_json import json2value, value2json
 from mo_logs import Log
-from mo_math import Math, MAX
+from mo_math import Math, MAX, MIN
 
 from jx_base.queries import is_variable_name, get_property_name
 from mo_times.dates import Date
@@ -689,10 +689,9 @@ class InequalityOp(Expression):
         rhs = self.rhs.partial_eval()
 
         if isinstance(lhs, Literal) and isinstance(rhs, Literal):
-            output = Literal(None, ops[self.op](lhs, rhs))
-        else:
-            output = InequalityOp(self.op, [lhs, rhs], default=self.default)
+            return Literal(None, builtin_ops[self.op](lhs, rhs))
 
+        output = InequalityOp(self.op, [lhs, rhs])
         output.simplified = True
         return output
 
@@ -802,12 +801,16 @@ class EqOp(Expression):
         rhs = self.rhs.partial_eval()
 
         if isinstance(lhs, Literal) and isinstance(rhs, Literal):
-            output = TrueOp() if ops["eq"](lhs.value, rhs.value) else FalseOp()
+            return TrueOp() if builtin_ops["eq"](lhs.value, rhs.value) else FalseOp()
         else:
-            output = EqOp(self.op, [lhs, rhs])
-
-        output.simplified = True
-        return output
+            return WhenOp(
+                "when",
+                self.lhs.missing(),
+                **{
+                    "then": self.rhs.missing(),
+                    "else": JavaEqOp(None, [lhs, rhs])
+                }
+            ).partial_eval()
 
 
 class NeOp(Expression):
@@ -842,11 +845,9 @@ class NeOp(Expression):
         rhs = self.rhs.partial_eval()
 
         if isinstance(lhs, Literal) and isinstance(rhs, Literal):
-            output = Literal(None, ops["ne"](lhs, rhs))
-        else:
-            output = NeOp("ne", [lhs, rhs])
+            return Literal(None, builtin_ops["ne"](lhs, rhs))
 
-        output.simplified = True
+        output = NotOp("not", EqOp("eq", [lhs, rhs])).partial_eval()
         return output
 
 
@@ -871,19 +872,37 @@ class NotOp(Expression):
         if self.simplified:
             return self
 
-        term = self.term.partial_eval()
-        if isinstance(term, TrueOp):
-            return FalseOp()
-        elif isinstance(term, FalseOp):
-            return TrueOp()
-        elif isinstance(term, NullOp):
-            return term
-        elif isinstance(term, Literal):
-            Log.error("`not` operator expects a Boolean term")
-        else:
-            output = NotOp("not", term)
-            output.simplified = True
+        def inverse(term):
+            if isinstance(term, TrueOp):
+                return FalseOp()
+            elif isinstance(term, FalseOp):
+                return TrueOp()
+            elif isinstance(term, NullOp):
+                return FalseOp()
+            elif isinstance(term, Literal):
+                Log.error("`not` operator expects a Boolean term")
+            elif isinstance(term, WhenOp):
+                output = WhenOp(
+                    "when",
+                    term.when,
+                    **{"then": inverse(term.then), "else": inverse(term.els_)}
+                ).partial_eval()
+            elif isinstance(term, AndOp):
+                output = OrOp("or", [inverse(t) for t in term.terms]).partial_eval()
+            elif isinstance(term, OrOp):
+                output = AndOp("and", [inverse(t) for t in term.terms]).partial_eval()
+            elif isinstance(term, MissingOp):
+                output = ExistsOp("exists", term.expr).partial_eval()
+            elif isinstance(term, NotOp):
+                output = term.term.partial_eval()
+            else:
+                output = NotOp("not", term)
+                output.simplified = True
+
             return output
+
+        output = inverse(self.term.partial_eval())
+        return output
 
 
 class AndOp(Expression):
@@ -1002,7 +1021,10 @@ class LengthOp(Expression):
     def partial_eval(self):
         term = self.term.partial_eval()
         if isinstance(term, Literal):
-            return Literal(None, len(term.value))
+            if isinstance(term.value, text_type):
+                return Literal(None, len(term.value))
+            else:
+                return NullOp()
         else:
             output = LengthOp("length", term)
             output.simplified = True
@@ -1144,7 +1166,7 @@ class MaxOp(Expression):
             if isinstance(simple, NullOp):
                 pass
             elif isinstance(simple, Literal):
-                maximum = MAX(maximum, simple.value)
+                maximum = MAX([maximum, simple.value])
             else:
                 terms.append(simple)
         if len(terms) == 0:
@@ -1157,6 +1179,59 @@ class MaxOp(Expression):
                 output = MaxOp("max", terms)
             else:
                 output = MaxOp("max", [Literal(None, maximum)] + terms)
+
+        output.simplified = True
+        return output
+
+class MinOp(Expression):
+    def __init__(self, op, terms):
+        Expression.__init__(self, op, terms)
+        if terms == None:
+            self.terms = []
+        elif isinstance(terms, list):
+            self.terms = terms
+        else:
+            self.terms = [terms]
+
+    def __data__(self):
+        return {"min": [t.__data__() for t in self.terms]}
+
+    def vars(self):
+        output = set()
+        for t in self.terms:
+            output |= t.vars()
+        return output
+
+    def map(self, map_):
+        return MinOp("min", [t.map(map_) for t in self.terms])
+
+    def missing(self):
+        return False
+
+    def partial_eval(self):
+        if self.simplified:
+            return self
+
+        minimum = None
+        terms = []
+        for t in self.terms:
+            simple = t.partial_eval()
+            if isinstance(simple, NullOp):
+                pass
+            elif isinstance(simple, Literal):
+                minimum = MIN([minimum, simple.value])
+            else:
+                terms.append(simple)
+        if len(terms) == 0:
+            if minimum == None:
+                return NullOp()
+            else:
+                return Literal(None, minimum)
+        else:
+            if minimum == None:
+                output = MinOp("min", terms)
+            else:
+                output = MinOp("min", [Literal(None, minimum)] + terms)
 
         output.simplified = True
         return output
@@ -1209,6 +1284,35 @@ class MultiOp(Expression):
             return OrOp("or", [t.exists() for t in self.terms])
         else:
             return AndOp("and", [t.exists() for t in self.terms])
+
+    def partial_eval(self):
+        if self.simplified:
+            return self
+
+        acc = MultiOp.operators[self.op][1]
+        terms = []
+        for t in self.terms:
+            simple = t.partial_eval()
+            if isinstance(simple, NullOp):
+                pass
+            elif isinstance(simple, Literal):
+                acc = builtin_ops[self.op](acc, simple.value)
+            else:
+                terms.append(simple)
+        if len(terms) == 0:
+            if acc == None:
+                return NullOp()
+            else:
+                return Literal(None, acc)
+        else:
+            if acc == MultiOp.operators[self.op][1]:
+                output = MultiOp(self.op, terms)
+            else:
+                output = MultiOp(self.op, [Literal(None, acc)] + terms)
+
+        output.simplified = True
+        return output
+
 
 
 class RegExpOp(Expression):
@@ -1530,7 +1634,9 @@ class FindOp(Expression):
         Expression.__init__(self, op, term)
         self.value, self.find = term
         self.default = kwargs.get("default", NullOp())
-        self.start = kwargs.get("start", Literal(None, 0))
+        self.start = kwargs.get("start", Literal(None, 0)).partial_eval()
+        if isinstance(self.start, NullOp):
+            self.start = Literal(None, 0)
 
     def __data__(self):
         if isinstance(self.value, Variable) and isinstance(self.find, Literal):
@@ -1597,6 +1703,25 @@ class JavaIndexOfOp(Expression):
 
     def map(self, mapping):
         return JavaIndexOfOp("", [self.value.map(mapping), self.find.map(mapping), self.start.map(mapping)])
+
+    def missing(self):
+        return FalseOp()
+
+
+class JavaEqOp(Expression):
+    """
+    PLACEHOLDER FOR Java's (Painless) `==` OPERATOR (CAN NOT DEAL WITH NULLS)
+    """
+
+    def __init__(self, op, terms):
+        """
+        :param op:
+        :param params: (value, find, start) tuple
+        """
+        self.lhs, self.rhs = terms
+
+    def map(self, mapping):
+        return JavaEqOp("", [self.lhs.map(mapping), self.rhs.map(mapping)])
 
     def missing(self):
         return FalseOp()
@@ -1728,7 +1853,7 @@ class InOp(Expression):
         return self.value.vars()
 
     def map(self, map_):
-        return InOp("in", [self.value.map(map_), self.superset])
+        return InOp("in", [self.value.map(map_), self.superset.map(map_)])
 
     def partial_eval(self):
         if self.simplified:
@@ -1776,10 +1901,10 @@ class WhenOp(Expression):
         return WhenOp("when", self.when.map(map_), **{"then": self.then.map(map_), "else": self.els_.map(map_)})
 
     def missing(self):
-        if self.then.missing() or self.els_.missing():
-            return WhenOp("when", self.when, **{"then": self.then.missing(), "else": self.els_.missing()})
-        else:
-            return FalseOp()
+        return OrOp("or", [
+            AndOp("and", [self.when, self.then.missing()]),
+            AndOp("and", [NotOp("not", self.when), self.els_.missing()])
+        ])
 
     def partial_eval(self):
         when = self.when.partial_eval()
@@ -1888,11 +2013,17 @@ operators = {
 }
 
 
-ops={
+builtin_ops = {
     "ne": operator.ne,
     "eq": operator.eq,
     "gte": operator.ge,
     "gt": operator.gt,
     "lte": operator.le,
-    "lt": operator.lt
+    "lt": operator.lt,
+    "add": operator.add,
+    "sum": operator.add,
+    "mul": operator.mul,
+    "mult": operator.mul,
+    "multiply": operator.mul
+
 }

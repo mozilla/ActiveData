@@ -16,6 +16,8 @@ from collections import Mapping
 from decimal import Decimal
 
 from future.utils import text_type
+from pyLibrary import convert
+
 from mo_dots import coalesce, wrap, Null, split_field
 from mo_json import json2value, value2json
 from mo_logs import Log
@@ -107,6 +109,7 @@ def jx_expression(expr):
 
 
 class Expression(object):
+    data_type = OBJECT
     has_simple_form = False
 
     def __init__(self, op, terms):
@@ -726,6 +729,7 @@ class DivOp(Expression):
 
 class FloorOp(Expression):
     has_simple_form = True
+    data_type = NUMBER
 
     def __init__(self, op, terms, default=NullOp()):
         Expression.__init__(self, op, terms)
@@ -753,6 +757,7 @@ class FloorOp(Expression):
 
 class EqOp(Expression):
     has_simple_form = True
+    data_type = BOOLEAN
 
     def __new__(cls, op, terms):
         if isinstance(terms, list):
@@ -808,13 +813,14 @@ class EqOp(Expression):
                 self.lhs.missing(),
                 **{
                     "then": self.rhs.missing(),
-                    "else": JavaEqOp(None, [lhs, rhs])
+                    "else": BasicEqOp(None, [lhs, rhs])
                 }
             ).partial_eval()
 
 
 class NeOp(Expression):
     has_simple_form = True
+    data_type = BOOLEAN
 
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
@@ -852,6 +858,8 @@ class NeOp(Expression):
 
 
 class NotOp(Expression):
+    data_type = BOOLEAN
+
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
         self.term = term
@@ -906,6 +914,8 @@ class NotOp(Expression):
 
 
 class AndOp(Expression):
+    data_type = BOOLEAN
+
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
         if terms == None:
@@ -955,6 +965,8 @@ class AndOp(Expression):
 
 
 class OrOp(Expression):
+    data_type = BOOLEAN
+
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
         self.terms = terms
@@ -1002,6 +1014,8 @@ class OrOp(Expression):
 
 
 class LengthOp(Expression):
+    data_type = INTEGER
+
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
         self.term = term
@@ -1031,7 +1045,89 @@ class LengthOp(Expression):
             return output
 
 
+class BooleanOp(Expression):
+    data_type = BOOLEAN
+
+    def __init__(self, op, term):
+        Expression.__init__(self, op, [term])
+        self.term = term
+
+    def __data__(self):
+        return {"boolean": self.term.__data__()}
+
+    def vars(self):
+        return self.term.vars()
+
+    def map(self, map_):
+        return BooleanOp("boolean", self.term.map(map_))
+
+    def missing(self):
+        return self.term.missing()
+
+
+class IsBooleanOp(Expression):
+    data_type = BOOLEAN
+
+    def __init__(self, op, term):
+        Expression.__init__(self, op, [term])
+        self.term = term
+
+    def __data__(self):
+        return {"is_boolean": self.term.__data__()}
+
+    def vars(self):
+        return self.term.vars()
+
+    def map(self, map_):
+        return IsBooleanOp("is_boolean", self.term.map(map_))
+
+    def missing(self):
+        return FalseOp()
+
+
+class IntegerOp(Expression):
+    data_type = INTEGER
+
+    def __init__(self, op, term):
+        Expression.__init__(self, op, [term])
+        self.term = term
+
+    def __data__(self):
+        return {"integer": self.term.__data__()}
+
+    def vars(self):
+        return self.term.vars()
+
+    def map(self, map_):
+        return IntegerOp("integer", self.term.map(map_))
+
+    def missing(self):
+        return self.term.missing()
+
+
+class IsIntegerOp(Expression):
+    data_type = BOOLEAN
+
+    def __init__(self, op, term):
+        Expression.__init__(self, op, [term])
+        self.term = term
+
+    def __data__(self):
+        return {"is_integer": self.term.__data__()}
+
+    def vars(self):
+        return self.term.vars()
+
+    def map(self, map_):
+        return IsIntegerOp("is_integer", self.term.map(map_))
+
+    def missing(self):
+        return FalseOp()
+
+
 class NumberOp(Expression):
+    data_type = NUMBER
+
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
         self.term = term
@@ -1050,6 +1146,8 @@ class NumberOp(Expression):
 
 
 class IsNumberOp(Expression):
+    data_type = BOOLEAN
+
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
         self.term = term
@@ -1068,6 +1166,8 @@ class IsNumberOp(Expression):
 
 
 class StringOp(Expression):
+    data_type = STRING
+
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
         self.term = term
@@ -1086,6 +1186,8 @@ class StringOp(Expression):
 
 
 class IsStringOp(Expression):
+    data_type = BOOLEAN
+
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
         self.term = term
@@ -1103,9 +1205,9 @@ class IsStringOp(Expression):
         return FalseOp()
 
 
-
 class CountOp(Expression):
     has_simple_form = False
+    data_type = INTEGER
 
     def __init__(self, op, terms, **clauses):
         Expression.__init__(self, op, terms)
@@ -1131,6 +1233,8 @@ class CountOp(Expression):
 
 
 class MaxOp(Expression):
+    data_type = INTEGER
+
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
         if terms == None:
@@ -1183,7 +1287,10 @@ class MaxOp(Expression):
         output.simplified = True
         return output
 
+
 class MinOp(Expression):
+    data_type = INTEGER
+
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
         if terms == None:
@@ -1239,6 +1346,7 @@ class MinOp(Expression):
 
 class MultiOp(Expression):
     has_simple_form = True
+    data_type = INTEGER
 
     operators = {
         "add": (" + ", "0"),  # (operator, zero-array default value) PAIR
@@ -1317,6 +1425,7 @@ class MultiOp(Expression):
 
 class RegExpOp(Expression):
     has_simple_form = True
+    data_type = BOOLEAN
 
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
@@ -1336,6 +1445,7 @@ class RegExpOp(Expression):
 
     def exists(self):
         return TrueOp()
+
 
 class CoalesceOp(Expression):
     has_simple_form = True
@@ -1362,6 +1472,8 @@ class CoalesceOp(Expression):
 
 
 class MissingOp(Expression):
+    data_type = BOOLEAN
+
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
         self.expr = term
@@ -1383,6 +1495,8 @@ class MissingOp(Expression):
 
 
 class ExistsOp(Expression):
+    data_type = BOOLEAN
+
     def __init__(self, op, term):
         Expression.__init__(self, op, [term])
         self.field = term
@@ -1405,6 +1519,7 @@ class ExistsOp(Expression):
 
 class PrefixOp(Expression):
     has_simple_form = True
+    data_type = BOOLEAN
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
@@ -1428,6 +1543,7 @@ class PrefixOp(Expression):
 
 class ConcatOp(Expression):
     has_simple_form = True
+    data_type = STRING
 
     def __init__(self, op, term, **clauses):
         Expression.__init__(self, op, term)
@@ -1474,6 +1590,7 @@ class UnixOp(Expression):
     FOR USING ON DATABASES WHICH HAVE A DATE COLUMNS: CONVERT TO UNIX
     """
     has_simple_form = True
+    data_type = NUMBER
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
@@ -1493,6 +1610,8 @@ class FromUnixOp(Expression):
     """
     FOR USING ON DATABASES WHICH HAVE A DATE COLUMNS: CONVERT TO UNIX
     """
+    data_type = NUMBER
+
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
@@ -1510,6 +1629,7 @@ class FromUnixOp(Expression):
 
 class LeftOp(Expression):
     has_simple_form = True
+    data_type = STRING
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
@@ -1539,6 +1659,7 @@ class LeftOp(Expression):
 
 class NotLeftOp(Expression):
     has_simple_form = True
+    data_type = STRING
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
@@ -1568,6 +1689,7 @@ class NotLeftOp(Expression):
 
 class RightOp(Expression):
     has_simple_form = True
+    data_type = STRING
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
@@ -1597,6 +1719,7 @@ class RightOp(Expression):
 
 class NotRightOp(Expression):
     has_simple_form = True
+    data_type = STRING
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
@@ -1629,6 +1752,7 @@ class FindOp(Expression):
     RETURN true IF substring CAN BE FOUND IN var, ELSE RETURN false
     """
     has_simple_form = True
+    data_type = BOOLEAN
 
     def __init__(self, op, term, **kwargs):
         Expression.__init__(self, op, term)
@@ -1681,7 +1805,7 @@ class FindOp(Expression):
                 OrOp("or", [
                     self.value.missing(),
                     self.find.missing(),
-                    EqOp("eq", [JavaIndexOfOp("", [self.value, self.find, self.start]), Literal(None, -1)])
+                    EqOp("eq", [BasicIndexOfOp("", [self.value, self.find, self.start]), Literal(None, -1)])
                 ])
             ]).partial_eval()
 
@@ -1689,48 +1813,7 @@ class FindOp(Expression):
         return TrueOp()
 
 
-class JavaIndexOfOp(Expression):
-    """
-    PLACEHOLDER FOR Java's (Painless) String.indexOf() METHOD
-    """
-
-    def __init__(self, op, params):
-        """
-        :param op:
-        :param params: (value, find, start) tuple
-        """
-        self.value, self.find, self.start = params
-
-    def map(self, mapping):
-        return JavaIndexOfOp("", [self.value.map(mapping), self.find.map(mapping), self.start.map(mapping)])
-
-    def missing(self):
-        return FalseOp()
-
-
-class JavaEqOp(Expression):
-    """
-    PLACEHOLDER FOR Java's (Painless) `==` OPERATOR (CAN NOT DEAL WITH NULLS)
-    """
-
-    def __init__(self, op, terms):
-        """
-        :param op:
-        :param params: (value, find, start) tuple
-        """
-        self.lhs, self.rhs = terms
-
-    def map(self, mapping):
-        return JavaEqOp("", [self.lhs.map(mapping), self.rhs.map(mapping)])
-
-    def missing(self):
-        return FalseOp()
-
-
 class SplitOp(Expression):
-    """
-    RETURN true IF substring CAN BE FOUND IN var, ELSE RETURN false
-    """
     has_simple_form = True
 
     def __init__(self, op, term, **kwargs):
@@ -1773,6 +1856,7 @@ class SplitOp(Expression):
 
 
 class BetweenOp(Expression):
+    data_type = STRING
 
     def __init__(self, op, term, **clauses):
         Expression.__init__(self, op, term)
@@ -1838,6 +1922,7 @@ class BetweenOp(Expression):
 
 class InOp(Expression):
     has_simple_form = True
+    data_type = BOOLEAN
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
@@ -1873,6 +1958,7 @@ class InOp(Expression):
 
 class RangeOp(Expression):
     has_simple_form = True
+    data_type = BOOLEAN
 
     def __new__(cls, op, term, *args):
         Expression.__new__(cls, *args)
@@ -1945,6 +2031,52 @@ class CaseOp(Expression):
 
     def map(self, map_):
         return CaseOp("case", [w.map(map_) for w in self.whens])
+
+
+class BasicIndexOfOp(Expression):
+    """
+    PLACEHOLDER FOR BASIC value.indexOf(find, start) (CAN NOT DEAL WITH NULLS)
+    """
+    data_type = INTEGER
+
+    def __init__(self, op, params):
+        self.value, self.find, self.start = params
+
+    def missing(self):
+        return FalseOp()
+
+
+class BasicEqOp(Expression):
+    """
+    PLACEHOLDER FOR BASIC `==` OPERATOR (CAN NOT DEAL WITH NULLS)
+    """
+    data_type = BOOLEAN
+
+    def __init__(self, op, terms):
+        self.lhs, self.rhs = terms
+
+    def missing(self):
+        return FalseOp()
+
+
+class BasicSubstringOp(Expression):
+    """
+    PLACEHOLDER FOR BASIC value.substring(start, end) (CAN NOT DEAL WITH NULLS)
+    """
+    data_type = STRING
+
+    def __init__(self, op, terms):
+        self.value, self.start, self.end = terms
+
+    def missing(self):
+        return FalseOp()
+
+
+BOOLEAN = 'b'
+INTEGER = 'i'
+NUMBER = 'n'
+STRING = 's'
+OBJECT = 'j'
 
 
 operators = {

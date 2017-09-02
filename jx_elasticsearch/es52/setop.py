@@ -22,7 +22,7 @@ from mo_math import MAX
 
 from jx_base.domains import ALGEBRAIC
 from jx_base.query import DEFAULT_LIMIT
-from jx_elasticsearch.es52.expressions import Variable, LeavesOp
+from jx_elasticsearch.es52.expressions import Variable, LeavesOp, json_type_to_painless_type
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
@@ -57,7 +57,11 @@ def is_setop(es, query):
 
 def es_setop(es, query):
     schema = query.frum.schema
-    map_to_es_columns = {c.names["."]: c.es_column for c in schema.leaves(".")}
+    map_to_es_columns = {}
+    for c in schema.leaves("."):
+        n = c.names["."]
+        cs = map_to_es_columns.setdefault(n, {})
+        cs[json_type_to_painless_type[c.type]] = c.es_column
     query_for_es = query.map(map_to_es_columns)
 
     es_query, filters = es52.util.es_query_template(query.frum.name)

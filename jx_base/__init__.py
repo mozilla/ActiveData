@@ -13,20 +13,37 @@ from __future__ import unicode_literals
 
 from uuid import uuid4
 
+from future.utils import text_type
 
-OBJECT = "object"
+IS_NULL = '0'
+BOOLEAN = 'boolean'
+INTEGER = 'integer'
+NUMBER = 'number'
+STRING = 'string'
+OBJECT = 'object'
 NESTED = "nested"
 EXISTS = "exists"
+
+JSON_TYPES = [BOOLEAN, INTEGER, NUMBER, STRING, OBJECT]
 STRUCT = [OBJECT, NESTED, EXISTS]
+
+
+python_type_to_json_type = {
+    int: NUMBER,
+    text_type: STRING,
+    float: NUMBER,
+    None: OBJECT,
+    bool: BOOLEAN
+}
 
 
 def generateGuid():
     """Gets a random GUID.
-    Note: python's UUID generation library is used here. 
+    Note: python's UUID generation library is used here.
     Basically UUID is the same as GUID when represented as a string.
     :Returns:
         str, the generated random GUID.
-        
+
     a=GenerateGuid()
     import uuid
     print a

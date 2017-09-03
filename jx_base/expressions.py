@@ -15,7 +15,9 @@ import operator
 from collections import Mapping
 from decimal import Decimal
 
-from future.utils import text_type
+from future.utils import text_type, binary_type
+
+from jx_base import OBJECT, python_type_to_json_type, BOOLEAN, NUMBER, INTEGER, STRING
 from pyLibrary import convert
 
 from mo_dots import coalesce, wrap, Null, split_field
@@ -178,6 +180,10 @@ class Expression(object):
         """
         self.simplified = True
         return self
+
+    @property
+    def type(self):
+        return self.data_type
 
 
 class Variable(Expression):
@@ -411,12 +417,17 @@ class Literal(Expression):
     def __str__(self):
         return str(self._json)
 
+    @property
+    def type(self):
+        return python_type_to_json_type(self.value.__class__)
+
 
 class NullOp(Literal):
     """
     FOR USE WHEN EVERYTHING IS EXPECTED TO BE AN Expression
     USE IT TO EXPECT A NULL VALUE IN assertAlmostEqual
     """
+    data_type = OBJECT
 
     def __new__(cls, *args, **kwargs):
         return object.__new__(cls, *args, **kwargs)
@@ -459,6 +470,8 @@ class NullOp(Literal):
 
 
 class TrueOp(Literal):
+    data_type = BOOLEAN
+
     def __new__(cls, *args, **kwargs):
         return object.__new__(cls, *args, **kwargs)
 
@@ -500,6 +513,8 @@ class TrueOp(Literal):
 
 
 class FalseOp(Literal):
+    data_type = BOOLEAN
+
     def __new__(cls, *args, **kwargs):
         return object.__new__(cls, *args, **kwargs)
 
@@ -541,6 +556,8 @@ class FalseOp(Literal):
 
 
 class DateOp(Literal):
+    date_type = NUMBER
+
     def __init__(self, op, term):
         self.value = term.date
         Literal.__init__(self, op, Date(term.date).unix)
@@ -559,6 +576,7 @@ class DateOp(Literal):
 
 
 class TupleOp(Expression):
+    date_type = OBJECT
 
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
@@ -586,6 +604,7 @@ class TupleOp(Expression):
 
 
 class LeavesOp(Expression):
+    date_type = OBJECT
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
@@ -606,6 +625,7 @@ class LeavesOp(Expression):
 
 class BinaryOp(Expression):
     has_simple_form = True
+    data_type = NUMBER
 
     operators = {
         "sub": "-",
@@ -653,6 +673,7 @@ class BinaryOp(Expression):
 
 class InequalityOp(Expression):
     has_simple_form = True
+    data_type = BOOLEAN
 
     operators = {
         "gt": ">",
@@ -701,6 +722,7 @@ class InequalityOp(Expression):
 
 class DivOp(Expression):
     has_simple_form = True
+    data_type = NUMBER
 
     def __init__(self, op, terms, default=NullOp()):
         Expression.__init__(self, op, terms)
@@ -1164,6 +1186,18 @@ class IsNumberOp(Expression):
     def missing(self):
         return FalseOp()
 
+    def partial_eval(self):
+        term = self.term.partial_eval()
+
+        if term.type == OBJECT:
+            self.simplified = True
+            return self
+
+        if term.type in (INTEGER, NUMBER):
+            return TrueOp()
+        else:
+            return FalseOp()
+
 
 class StringOp(Expression):
     data_type = STRING
@@ -1183,6 +1217,13 @@ class StringOp(Expression):
 
     def missing(self):
         return self.term.missing()
+
+    def partial_eval(self):
+        term = self.term
+        if isinstance(term, CoalesceOp):
+            return CoalesceOp("coalesce", [StringOp("string", t)for t in term.terms])
+        self.simplified = True
+        return self
 
 
 class IsStringOp(Expression):
@@ -1233,7 +1274,7 @@ class CountOp(Expression):
 
 
 class MaxOp(Expression):
-    data_type = INTEGER
+    data_type = NUMBER
 
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
@@ -1289,7 +1330,7 @@ class MaxOp(Expression):
 
 
 class MinOp(Expression):
-    data_type = INTEGER
+    data_type = NUMBER
 
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
@@ -1346,15 +1387,15 @@ class MinOp(Expression):
 
 class MultiOp(Expression):
     has_simple_form = True
-    data_type = INTEGER
+    data_type = NUMBER
 
-    operators = {
-        "add": (" + ", "0"),  # (operator, zero-array default value) PAIR
-        "sum": (" + ", "0"),
-        "mul": (" * ", "1"),
-        "mult": (" * ", "1"),
-        "multiply": (" * ", "1")
-    }
+    # operators = {
+    #     "add": (" + ", "0"),  # (operator, zero-array default value) PAIR
+    #     "sum": (" + ", "0"),
+    #     "mul": (" * ", "1"),
+    #     "mult": (" * ", "1"),
+    #     "multiply": (" * ", "1")
+    # }
 
     def __init__(self, op, terms, **clauses):
         Expression.__init__(self, op, terms)
@@ -1397,14 +1438,17 @@ class MultiOp(Expression):
         if self.simplified:
             return self
 
-        acc = MultiOp.operators[self.op][1]
+        acc = None
         terms = []
         for t in self.terms:
             simple = t.partial_eval()
             if isinstance(simple, NullOp):
                 pass
             elif isinstance(simple, Literal):
-                acc = builtin_ops[self.op](acc, simple.value)
+                if acc is None:
+                    acc = simple.value
+                else:
+                    acc = builtin_ops[self.op](acc, simple.value)
             else:
                 terms.append(simple)
         if len(terms) == 0:
@@ -1413,7 +1457,7 @@ class MultiOp(Expression):
             else:
                 return Literal(None, acc)
         else:
-            if acc == MultiOp.operators[self.op][1]:
+            if acc is None:
                 output = MultiOp(self.op, terms)
             else:
                 output = MultiOp(self.op, [Literal(None, acc)] + terms)
@@ -1421,6 +1465,21 @@ class MultiOp(Expression):
         output.simplified = True
         return output
 
+
+def AddOp(op, terms, **clauses):
+    return MultiOp("add", terms, **clauses)
+
+
+def MultOp(op, terms, **clauses):
+    return MultiOp("mult", terms, **clauses)
+
+
+# def MaxOp(op, terms, **clauses):
+#     return MaxOp("max", terms, **clauses)
+#
+#
+# def MinOp(op, terms, **clauses):
+#     return MinOp("min", terms, **clauses)
 
 
 class RegExpOp(Expression):
@@ -1469,6 +1528,9 @@ class CoalesceOp(Expression):
 
     def map(self, map_):
         return CoalesceOp("coalesce", [v.map(map_) for v in self.terms])
+
+    def partial_eval(self):
+        Log.error("partial eval on coalesce is invalid: Be sure to distribute the eval over the terms of this coalesce first, then make a new coalesce")
 
 
 class MissingOp(Expression):
@@ -2032,6 +2094,18 @@ class CaseOp(Expression):
     def map(self, map_):
         return CaseOp("case", [w.map(map_) for w in self.whens])
 
+    def missing(self):
+        m = self.whens[-1].partial_eval().missing()
+        for w in reversed(self.whens[0:-1]):
+            when = w.when.partial_eval()
+            if isinstance(when, FalseOp):
+                pass
+            elif isinstance(when, TrueOp):
+                m = w.then.partial_eval().missing()
+            else:
+                m = OrOp("or", [AndOp("and", [when, w.then.partial_eval().missing()]), m])
+        return m
+
 
 class BasicIndexOfOp(Expression):
     """
@@ -2072,11 +2146,6 @@ class BasicSubstringOp(Expression):
         return FalseOp()
 
 
-BOOLEAN = 'b'
-INTEGER = 'i'
-NUMBER = 'n'
-STRING = 's'
-OBJECT = 'j'
 
 
 operators = {
@@ -2156,6 +2225,7 @@ builtin_ops = {
     "sum": operator.add,
     "mul": operator.mul,
     "mult": operator.mul,
-    "multiply": operator.mul
-
+    "multiply": operator.mul,
+    "max": lambda *v: max(v),
+    "min": lambda *v: min(v)
 }

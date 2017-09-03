@@ -11,24 +11,21 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import STRUCT
-from jx_elasticsearch import es52, es09
-from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, \
-    concat_field, startswith_field, relative_field, join_field
-from mo_dots import listwrap
-from mo_logs import Log
-from mo_math import AND
-from mo_math import MAX
-
 from jx_base.domains import ALGEBRAIC
 from jx_base.query import DEFAULT_LIMIT
-from jx_elasticsearch.es52.expressions import Variable, LeavesOp, json_type_to_painless_type
+from jx_elasticsearch import es52, es09
+from jx_elasticsearch.es52.expressions import Variable, LeavesOp
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
+from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field
+from mo_dots import listwrap
 from mo_dots.lists import FlatList
 from mo_json.typed_encoder import decode_property
+from mo_logs import Log
+from mo_math import AND
+from mo_math import MAX
 from mo_times.timer import Timer
 
 format_dispatch = {}
@@ -57,15 +54,9 @@ def is_setop(es, query):
 
 def es_setop(es, query):
     schema = query.frum.schema
-    map_to_es_columns = {}
-    for c in schema.leaves("."):
-        n = c.names["."]
-        cs = map_to_es_columns.setdefault(n, {})
-        cs[json_type_to_painless_type[c.type]] = c.es_column
-    query_for_es = query.map(map_to_es_columns)
 
     es_query, filters = es52.util.es_query_template(query.frum.name)
-    set_default(filters[0], query_for_es.where.partial_eval().to_esfilter())
+    set_default(filters[0], query.where.partial_eval().to_esfilter(schema))
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.stored_fields = FlatList()
 
@@ -75,10 +66,10 @@ def es_setop(es, query):
     columns = schema.columns
     nested_columns = set(c.names["."] for c in columns if c.nested_path[0] != ".")
 
-    es_query.sort = jx_sort_to_es_sort(query_for_es.sort)
+    es_query.sort = jx_sort_to_es_sort(query.sort)
 
     put_index = 0
-    for select, es_select in zip(selects, listwrap(query_for_es.select)):
+    for select in selects:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if isinstance(select.value, LeavesOp):
             term = select.value.term
@@ -124,7 +115,7 @@ def es_setop(es, query):
                 pull = accumulate_nested_doc(nested_path)
                 new_select.append({
                     "name": select.name,
-                    "value": es_select.value,
+                    "value": select.value,
                     "put": {"name": select.name, "index": put_index, "child": "."},
                     "pull": pull
                 })
@@ -146,7 +137,7 @@ def es_setop(es, query):
         else:
             es_query.script_fields[literal_field(select.name)] = {"script": {
                 "lang": "painless",
-                "inline": select.value.map(map_to_es_columns).to_painless().script
+                "inline": select.value.to_painless(schema).script(schema)
             }}
             new_select.append({
                 "name": select.name,

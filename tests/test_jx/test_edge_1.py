@@ -13,7 +13,8 @@ from __future__ import unicode_literals
 
 from unittest import skipIf
 
-from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings, NULL
+from jx_base.expressions import NULL
+from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 
 class TestEdge1(BaseTestCase):

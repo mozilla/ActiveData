@@ -11,12 +11,13 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_base.expressions import NULL
 from mo_dots import wrap
 from mo_math import Math
 from unittest import skipIf
 
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
-from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings, NULL
+from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 

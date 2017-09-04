@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from jx_base.domains import ALGEBRAIC
+from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import es52, es09
 from jx_elasticsearch.es52.expressions import Variable, LeavesOp
@@ -150,7 +151,7 @@ def es_setop(es, query):
         if n.pull:
             continue
         elif isinstance(n.value, Variable):
-            n.pull = jx_expression_to_function(concat_field("fields", literal_field(n.value.map(map_to_es_columns).var)))
+            n.pull = jx_expression_to_function(concat_field("fields", literal_field(n.value.var)))
         else:
             Log.error("Do not know what to do")
 

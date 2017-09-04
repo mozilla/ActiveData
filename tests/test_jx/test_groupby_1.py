@@ -12,9 +12,11 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from future.utils import text_type
+
+from jx_base.expressions import NULL
 from mo_dots import wrap, set_default
 
-from tests.test_jx import BaseTestCase, TEST_TABLE, NULL
+from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
 class TestgroupBy1(BaseTestCase):

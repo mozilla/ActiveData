@@ -221,7 +221,7 @@ class FromES(Container):
             if isinstance(v, Mapping) and v.doc:
                 scripts.append({"doc": v.doc})
             else:
-                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_painless().script})
+                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_painless(schema).script(schema)})
 
         if results.hits.hits:
             updates = []

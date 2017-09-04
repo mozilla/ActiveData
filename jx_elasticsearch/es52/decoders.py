@@ -199,7 +199,7 @@ class SetDecoder(AggsDecoder):
                     "_match": set_default({"terms": {
                         "script": {
                             "lang": "painless",
-                            "inline": es_field.to_painless().script
+                            "inline": es_field.to_painless(schema).script(schema)
                         },
                         "size": self.limit,
                         "include": text_include
@@ -217,7 +217,7 @@ class SetDecoder(AggsDecoder):
                     "_match": set_default({"terms": {
                         "script": {
                             "lang": "painless",
-                            "inline": es_field.to_painless().script
+                            "inline": es_field.to_painless(schema).script(schema)
                         },
                         "size": self.limit,
                         "include": text_include
@@ -572,7 +572,7 @@ class DefaultDecoder(SetDecoder):
                     {"terms": {
                         "script": {
                             "lang": "painless",
-                            "inline": self.edge.value.map(es_mapping).partial_eval().to_painless().script
+                            "inline": self.edge.value.map(es_mapping).partial_eval().to_painless(schema).script(schema)
                         },
                         "size": self.domain.limit,
                         "order": {"_term": self.sorted} if self.sorted else None

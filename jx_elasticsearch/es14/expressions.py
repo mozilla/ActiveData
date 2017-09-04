@@ -24,7 +24,7 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
     WhenOp, InequalityOp, extend, RowsOp, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, UnixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, InOp, RangeOp, CaseOp, AndOp, \
-    ConcatOp, TRUE_FILTER, FALSE_FILTER, LeftOp
+    ConcatOp, TRUE_FILTER, FALSE_FILTER, LeftOp, ZERO
 
 
 @extend(BetweenOp)
@@ -327,7 +327,7 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
 
     output = WhenOp(
         "when",
-        OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, Literal("literal", 0)])]),
+        OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, ZERO])]),
         **{
             "then": self.default,
             "else":
@@ -353,7 +353,7 @@ def to_ruby(self, not_null=False, boolean=False, many=False):
 
     output = WhenOp(
         "when",
-        OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, Literal("literal", 0)])]),
+        OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, ZERO])]),
         **{
             "then": self.default,
             "else":

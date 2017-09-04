@@ -11,10 +11,11 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_base.expressions import NULL
 from mo_dots import wrap
 from mo_times.dates import Date
 from mo_times.durations import WEEK, DAY
-from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings, NULL
+from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 TODAY = Date.today()
 

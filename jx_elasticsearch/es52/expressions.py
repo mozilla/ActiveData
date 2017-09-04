@@ -26,7 +26,7 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
     WhenOp, InequalityOp, extend, RowsOp, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, UnixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, InOp, RangeOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, TRUE_FILTER, FALSE_FILTER, LeftOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp
+    ConcatOp, IsNumberOp, TRUE_FILTER, FALSE_FILTER, LeftOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO
 
 
 class Painless(Expression):
@@ -58,7 +58,7 @@ class Painless(Expression):
         return "(" + missing.to_painless(schema).expr + ")?null:(" + self.expr + ")"
 
     def to_esfilter(self, schema):
-        return {"script": {"script": {"lang": "painless", "inline": self.script}}}
+        return {"script": {"script": {"lang": "painless", "inline": self.script(schema)}}}
 
     def to_painless(self, schema):
         return self
@@ -142,7 +142,7 @@ def to_painless(self, schema):
             t.missing(),
             **{
                 "then": Literal("literal", ""),
-                "else": Painless(type=STRING, expr=sep + "+" + StringOp(None, t).to_painless(schema).expr)
+                "else": Painless(type=STRING, expr=sep + "+" + StringOp(None, t).to_painless(schema).expr, frum=t)
             }
         )
         acc.append("(" + val.partial_eval().to_painless(schema).expr + ")")
@@ -151,12 +151,16 @@ def to_painless(self, schema):
     if isinstance(self.default, NullOp):
         return Painless(
             miss=self.missing(),
-            type=STRING, expr=expr_
+            type=STRING,
+            expr=expr_,
+            frum=self
         )
     else:
         return Painless(
             miss=self.missing(),
-            type=STRING, expr="((" + expr_ + ").length==0) ? (" + self.default.to_painless(schema).expr + ") : (" + expr_ + ")"
+            type=STRING,
+            expr="((" + expr_ + ").length==0) ? (" + self.default.to_painless(schema).expr + ") : (" + expr_ + ")",
+            frum=self
         )
 
 
@@ -257,7 +261,11 @@ def to_painless(self, schema):
 @extend(ExistsOp)
 def to_esfilter(self, schema):
     if isinstance(self.field, Variable):
-        return {"exists": {"field": self.field.var}}
+        cols = schema.leaves(self.field.var)
+        if len(cols) == 1:
+            return {"exists": {"field": cols[0].es_column}}
+        else:
+            return {"bool": {"should": [{"exists": {"field": c.es_column}} for c in cols]}}
     else:
         return ScriptOp("script",  self.to_painless(schema)).to_esfilter(schema)
 
@@ -344,16 +352,16 @@ def to_esfilter(self, schema):
 
 @extend(DivOp)
 def to_painless(self, schema):
-    lhs = self.lhs.partial_eval()
-    rhs = self.rhs.partial_eval()
-    script = "Double.valueOf((double)(" + lhs.to_painless(schema).expr + ") / (double)(" + rhs.to_painless(schema).expr + "))"
+    lhs = NumberOp("number", self.lhs).partial_eval()
+    rhs = NumberOp("number", self.rhs).partial_eval()
+    script = "(" + lhs.to_painless(schema).expr + ") / (" + rhs.to_painless(schema).expr + ")"
 
     output = WhenOp(
         "when",
-        OrOp("or", [lhs.missing(), rhs.missing(), EqOp("eq", [rhs, Literal("literal", 0)])]),
+        OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, ZERO])]),
         **{
             "then": self.default,
-            "else": Painless(type=NUMBER, expr=script)
+            "else": Painless(type=NUMBER, expr=script, frum=self)
         }
     ).partial_eval().to_painless(schema)
 
@@ -362,10 +370,7 @@ def to_painless(self, schema):
 
 @extend(DivOp)
 def to_esfilter(self, schema):
-    if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal):
-        return ScriptOp("script", self.to_painless(schema)).to_esfilter(schema)
-    else:
-        Log.error("Logic error")
+    return NotOp("not", self.missing()).partial_eval().to_esfilter(schema)
 
 
 @extend(FloorOp)
@@ -376,7 +381,7 @@ def to_painless(self, schema):
 
     output = WhenOp(
         "when",
-        OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, Literal("literal", 0)])]),
+        OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, ZERO])]),
         **{
             "then": self.default,
             "else":
@@ -460,7 +465,7 @@ def to_painless(self, schema):
             return AndOp("and", [
                 Painless(type=BOOLEAN, expr="(" + lhs.expr + ").size()==(" + rhs.expr + ").size()", frum=self),
                 Painless(type=BOOLEAN, expr="(" + rhs.expr + ").containsAll(" + lhs.expr + ")", frum=self)
-            ]).to_painless()
+            ]).to_painless(schema)
         else:
             return Painless(type=BOOLEAN, expr="(" + lhs.expr + ").contains(" + rhs.expr + ")",frum=self)
     elif rhs.many:
@@ -500,13 +505,17 @@ def to_painless(self, schema, not_null=False, boolean=True):
             return Painless(type=BOOLEAN, expr="false", frum=self)
         else:
             columns = schema.leaves(self.expr.var)
-            if len(columns)==1:
+            if len(columns) == 1:
                 return Painless(type=BOOLEAN, expr="doc[" + quote(columns[0].es_column) + "].empty", frum=self)
             else:
                 return AndOp("and", [
-                    Painless(type=BOOLEAN, expr="doc[" + quote(c.es_column) + "].empty", frum=self)
+                    Painless(
+                        type=BOOLEAN,
+                        expr="doc[" + quote(c.es_column) + "].empty",
+                        frum=self
+                    )
                     for c in columns
-                ]).partial_eval().to_painless()
+                ]).partial_eval().to_painless(schema)
     elif isinstance(self.expr, Literal):
         return self.expr.missing().to_painless(schema)
     else:
@@ -626,7 +635,14 @@ def to_painless(self, schema):
 @extend(IntegerOp)
 def to_painless(self, schema):
     value = self.term.to_painless(schema)
-    if value.type == BOOLEAN:
+    if value.many:
+        return IntegerOp("integer", Painless(
+            miss=value.missing,
+            type=value.type,
+            expr="(" + value.expr + ")[0]",
+            frum=value.frum
+        )).to_painless(schema)
+    elif value.type == BOOLEAN:
         return Painless(
             miss=value.missing,
             type=INTEGER,
@@ -649,13 +665,6 @@ def to_painless(self, schema):
             expr="Integer.parseInt(" + value.expr + ")",
             frum=self
         )
-    elif value.many:
-        return IntegerOp("integer", Painless(
-            miss=value.missing,
-            type=value.type,
-            expr="(" + value.expr + ")[0]",
-            frum=value.frum
-        )).to_painless(schema)
     else:
         return Painless(
             miss=value.missing,
@@ -666,43 +675,50 @@ def to_painless(self, schema):
 
 @extend(NumberOp)
 def to_painless(self, schema):
-
-    term=self.term.partial_eval()
-    if isinstance(term, CoalesceOp):
-        return CoalesceOp("coalesce", [NumberOp("number", t) for t in term.terms]).partial_eval().to_painless(schema)
-
+    term = self.term.partial_eval()
     value = term.to_painless(schema)
-    if value.type == BOOLEAN:
+
+    if isinstance(value.frum, CoalesceOp):
+        return CoalesceOp("coalesce", [NumberOp("number", t).partial_eval() for t in value.frum.terms]).to_painless(schema)
+
+    if value.many:
+        return NumberOp("number", Painless(
+            miss=value.missing().partial_eval(),
+            type=value.type,
+            expr="(" + value.expr + ")[0]",
+            frum=value.frum
+        )).to_painless(schema)
+    elif value.type == BOOLEAN:
         return Painless(
-            miss=term.missing(),
-            type=INTEGER,
+            miss=term.missing().partial_eval(),
+            type=NUMBER,
             expr=value.expr + " ? 1 : 0",
             frum=self
         )
     elif value.type == INTEGER:
         return Painless(
-            miss=term.missing(),
-            type=INTEGER,
-            expr=value.expr,
+            miss=term.missing().partial_eval(),
+            type=NUMBER,
+            expr="(double)("+value.expr+")",
             frum=self
         )
     elif value.type == NUMBER:
         return Painless(
-            miss=term.missing(),
+            miss=term.missing().partial_eval(),
             type=NUMBER,
             expr=value.expr,
             frum=self
         )
     elif value.type == STRING:
         return Painless(
-            miss=term.missing(),
+            miss=term.missing().partial_eval(),
             type=NUMBER,
             expr="Double.parseDouble(" + value.expr + ")",
             frum=self
         )
     elif value.type == OBJECT:
         return Painless(
-            miss=term.missing(),
+            miss=term.missing().partial_eval(),
             type=NUMBER,
             expr="((" + value.expr + ") instanceof String) ? Double.parseDouble(" + value.expr + ") : (" + value.expr + ")",
             frum=self
@@ -768,13 +784,13 @@ def to_painless(self, schema):
     op, unit = MultiOp.operators[self.op]
     if self.nulls:
         calc = op.join(
-            "((" + t.missing().to_painless(boolean=True).expr + ") ? " + unit + " : (" + NumberOp("number", t).partial_eval().to_painless(schema).expr + "))" for
+            "((" + t.missing().to_painless(schema).expr + ") ? " + unit + " : (" + NumberOp("number", t).partial_eval().to_painless(schema).expr + "))" for
             t in self.terms
         )
         return WhenOp(
             "when",
             AndOp("and", [t.missing() for t in self.terms]),
-            **{"then": self.default, "else": Painless(type=NUMBER, expr=calc)}
+            **{"then": self.default, "else": Painless(type=NUMBER, expr=calc, frum=self)}
         ).partial_eval().to_painless(schema)
     else:
         calc = op.join(
@@ -808,7 +824,7 @@ def to_painless(self, schema):
             frum=self
         )).to_painless(schema)
 
-    if value.type == BOOLEAN:
+    elif value.type == BOOLEAN:
         return Painless(
             miss=self.term.missing().partial_eval(),
             type=STRING,
@@ -862,32 +878,6 @@ def to_esfilter(self, schema):
         return ScriptOp("script",  self.to_painless(schema)).to_esfilter(schema)
 
 
-@extend(RightOp)
-def to_painless(self, schema):
-    v = StringOp("string", self.value).partial_eval().to_painless(schema).expr
-    l = NumberOp("number", self.length).partial_eval().to_painless(schema).expr
-
-    expr = "(" + v + ").substring((int)Math.min(" + v + ".length(), (int)Math.max(0, (" + v + ").length() - (" + l + "))))"
-    return Painless(
-        miss=OrOp("or", [self.value.missing(), self.length.missing()]),
-        type=STRING, expr=expr
-    )
-
-
-@extend(NotRightOp)
-def to_painless(self, schema):
-    v = StringOp("string", self.value).partial_eval().to_painless(schema).expr
-    l = NumberOp("number", self.length).partial_eval().to_painless(schema).expr
-
-    expr = "(" + v + ").substring(0, (int)Math.min(" + v + ".length(), (int)Math.max(0, (" + v + ").length() - (" + l + "))))"
-    return Painless(
-        miss=OrOp("or", [self.value.missing(), self.length.missing()]),
-        type=STRING,
-        expr=expr,
-        frum=self
-    )
-
-
 @extend(InOp)
 def to_painless(self, schema):
     return Painless(type=BOOLEAN, expr="(" + self.superset.to_painless(schema).expr + ").contains(" + self.value.to_painless(schema).expr + ")")
@@ -898,20 +888,7 @@ def to_esfilter(self, schema):
     if isinstance(self.value, Variable):
         return {"terms": {self.value.var: json2value(self.superset.json)}}
     else:
-        return {"script": {"script": {"lang": "painless", "inline": self.to_painless(schema).script}}}
-
-
-@extend(LeftOp)
-def to_painless(self, schema):
-    v = StringOp("string", self.value).partial_eval().to_painless(schema).expr
-    l = NumberOp("number", self.length).partial_eval().to_painless(schema).expr
-
-    expr = "(" + v + ").substring(0, (int)Math.max(0, (int)Math.min((" + v + ").length(), " + l + ")))"
-    return Painless(
-        miss=OrOp("or", [self.value.missing(), self.length.missing()]),
-        type=STRING,
-        expr=expr
-    )
+        return {"script": {"script": {"lang": "painless", "inline": self.to_painless(schema).script(schema)}}}
 
 
 @extend(ScriptOp)
@@ -983,6 +960,13 @@ def to_painless(self, schema):
             return Painless(
                 miss=self.missing(),
                 type=then.type,
+                expr="(" + when.expr + ") ? (" + then.expr + ") : (" + els_.expr + ")",
+                frum=self
+            )
+        elif then.type in (INTEGER, NUMBER) and els_.type in (INTEGER, NUMBER):
+            return Painless(
+                miss=self.missing(),
+                type=NUMBER,
                 expr="(" + when.expr + ") ? (" + then.expr + ") : (" + els_.expr + ")",
                 frum=self
             )

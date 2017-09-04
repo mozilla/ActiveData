@@ -126,14 +126,13 @@ def sort_edges(query, prop):
 
 def es_aggsop(es, frum, query):
     query = query.copy()  # WE WILL MARK UP THIS QUERY
-    select = listwrap(query.select)# .copy()select = wrap([s.copy() for s in listwrap(query.select)])
-    es_column_map = {c.names[frum.query_path]: c.es_column for c in frum.schema.leaves(".")}
-    query_for_es = query.map(es_column_map)
+    schema = frum.schema
+    select = listwrap(query.select)
 
     es_query = Data()
     new_select = Data()  # MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
     formula = []
-    for s, es_s in zip(select, listwrap(query_for_es.select)):
+    for s in select:
         if s.aggregate == "count" and isinstance(s.value, Variable) and s.value.var == ".":
             s.pull = "doc_count"
         elif isinstance(s.value, Variable):
@@ -142,7 +141,7 @@ def es_aggsop(es, frum, query):
             else:
                 new_select[literal_field(s.value.var)] += [s]
         else:
-            formula.append((s, es_s))
+            formula.append(s)
 
     for canonical_name, many in new_select.items():
         for s in many:
@@ -212,9 +211,8 @@ def es_aggsop(es, frum, query):
                 es_query.aggs[literal_field(canonical_name)].extended_stats.field = es_field_name
                 s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
 
-    for i, (s, es_s) in enumerate(formula):
+    for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
-        es_script = es_s.value
 
         if isinstance(s.value, TupleOp):
             if s.aggregate == "count":
@@ -223,13 +221,13 @@ def es_aggsop(es, frum, query):
             else:
                 Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
-            es_query.aggs[literal_field(canonical_name)].value_count.script = es_script.to_painless().script
+            es_query.aggs[literal_field(canonical_name)].value_count.script = s.value.to_painless(schema).script(schema)
             s.pull = literal_field(canonical_name) + ".value"
         elif s.aggregate == "median":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")
 
-            es_query.aggs[key].percentiles.script = es_script.to_painless().script
+            es_query.aggs[key].percentiles.script = s.value.to_painless(schema).script(schema)
             es_query.aggs[key].percentiles.percents += [50]
             s.pull = key + ".values.50\.0"
         elif s.aggregate == "percentile":
@@ -237,23 +235,23 @@ def es_aggsop(es, frum, query):
             key = literal_field(canonical_name + " percentile")
             percent = Math.round(s.percentile * 100, decimal=6)
 
-            es_query.aggs[key].percentiles.script = es_script.to_painless().script
+            es_query.aggs[key].percentiles.script = s.value.to_painless(schema).script(schema)
             es_query.aggs[key].percentiles.percents += [percent]
             s.pull = key + ".values." + literal_field(text_type(percent))
         elif s.aggregate == "cardinality":
             # ES USES DIFFERENT METHOD FOR CARDINALITY
             key = canonical_name + " cardinality"
 
-            es_query.aggs[key].cardinality.script = es_script.to_painless().script
+            es_query.aggs[key].cardinality.script = s.value.to_painless(schema).script(schema)
             s.pull = key + ".value"
         elif s.aggregate == "stats":
             # REGULAR STATS
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].extended_stats.script = es_script.to_painless().script
+            es_query.aggs[stats_name].extended_stats.script = s.value.to_painless(schema).script(schema)
 
             # GET MEDIAN TOO!
             median_name = literal_field(canonical_name + " percentile")
-            es_query.aggs[median_name].percentiles.script = es_script.to_painless().script
+            es_query.aggs[median_name].percentiles.script = s.value.to_painless(schema).script(schema)
             es_query.aggs[median_name].percentiles.percents += [50]
 
             s.pull = {
@@ -270,12 +268,12 @@ def es_aggsop(es, frum, query):
         elif s.aggregate=="union":
             # USE TERMS AGGREGATE TO SIMULATE union
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].terms.script_field = es_script.to_painless().script
+            es_query.aggs[stats_name].terms.script_field = s.value.to_painless(schema).script(schema)
             s.pull = stats_name + ".buckets.key"
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
-            es_query.aggs[canonical_name].extended_stats.script = es_script.to_painless().script
+            es_query.aggs[canonical_name].extended_stats.script = s.value.to_painless(schema).script(schema)
 
     decoders = get_decoders_by_depth(query, es_column_map)
     start = 0

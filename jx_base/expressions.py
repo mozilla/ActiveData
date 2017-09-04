@@ -742,11 +742,10 @@ class DivOp(Expression):
         return DivOp("div", [self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_))
 
     def missing(self):
-        missing = self.default.missing()
-        if isinstance(missing, FalseOp):
-            return FalseOp()
-        else:
-            return OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, Literal("literal", 0)]), missing])
+        AndOp("and", [
+            self.default.missing(),
+            OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, ZERO])])
+        ]).partial_eval()
 
 
 class FloorOp(Expression):
@@ -774,7 +773,7 @@ class FloorOp(Expression):
         if self.default.exists():
             return FalseOp()
         else:
-            return OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, Literal("literal", 0)])])
+            return OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, ZERO])])
 
 
 class EqOp(Expression):
@@ -1126,6 +1125,13 @@ class IntegerOp(Expression):
     def missing(self):
         return self.term.missing()
 
+    def partial_eval(self):
+        term = self.term
+        if isinstance(term, CoalesceOp):
+            return CoalesceOp("coalesce", [IntegerOp("integer", t) for t in term.terms])
+        self.simplified = True
+        return self
+
 
 class IsIntegerOp(Expression):
     data_type = BOOLEAN
@@ -1166,6 +1172,12 @@ class NumberOp(Expression):
     def missing(self):
         return self.term.missing()
 
+    def partial_eval(self):
+        term = self.term
+        if isinstance(term, CoalesceOp):
+            return CoalesceOp("coalesce", [NumberOp("number", t)for t in term.terms])
+        self.simplified = True
+        return self
 
 class IsNumberOp(Expression):
     data_type = BOOLEAN
@@ -1423,7 +1435,7 @@ class MultiOp(Expression):
             if isinstance(self.default, NullOp):
                 return AndOp("and", [t.missing() for t in self.terms])
             else:
-                return FalseOp()
+                return TrueOp()
         else:
             if isinstance(self.default, NullOp):
                 return OrOp("or", [t.missing() for t in self.terms])
@@ -1460,9 +1472,9 @@ class MultiOp(Expression):
                 return Literal(None, acc)
         else:
             if acc is None:
-                output = MultiOp(self.op, terms)
+                output = MultiOp(self.op, terms, default=self.default, nulls=self.nulls)
             else:
-                output = MultiOp(self.op, [Literal(None, acc)] + terms)
+                output = MultiOp(self.op, [Literal(None, acc)] + terms, default=self.default, nulls=self.nulls)
 
         output.simplified = True
         return output
@@ -1642,11 +1654,7 @@ class ConcatOp(Expression):
         return ConcatOp("concat", [t.map(map_) for t in self.terms], separator=self.separator)
 
     def missing(self):
-        terms = [t.missing() for t in self.terms] + [self.default.missing()]
-        if all(terms):
-            return AndOp("and", terms)
-        else:
-            return FalseOp()
+        return AndOp("and", [t.missing() for t in self.terms] + [self.default.missing()]).partial_eval()
 
 
 class UnixOp(Expression):
@@ -1715,10 +1723,24 @@ class LeftOp(Expression):
         return LeftOp("left", [self.value.map(map_), self.length.map(map_)])
 
     def missing(self):
-        if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return self.value.missing()
-        else:
-            return OrOp(None, [self.value.missing(), self.length.missing()])
+        return OrOp(None, [self.value.missing(), self.length.missing()])
+
+    def partial_eval(self):
+        value = self.value.partial_eval()
+        length = self.length.partial_eval()
+        max_length = LengthOp("length", value)
+
+        return WhenOp(
+            "when",
+            self.missing(),
+            **{
+                "else": BasicSubstringOp("substring", [
+                    value,
+                    ZERO,
+                    MaxOp("max", [ZERO, MinOp("min", [length, max_length])])
+                ])
+            }
+        ).partial_eval()
 
 
 class NotLeftOp(Expression):
@@ -1745,10 +1767,24 @@ class NotLeftOp(Expression):
         return NotLeftOp(None, [self.value.map(map_), self.length.map(map_)])
 
     def missing(self):
-        if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return self.value.missing()
-        else:
-            return OrOp(None, [self.value.missing(), self.length.missing()])
+        return OrOp(None, [self.value.missing(), self.length.missing()])
+
+    def partial_eval(self):
+        value = self.value.partial_eval()
+        length = self.length.partial_eval()
+        max_length = LengthOp("length", value)
+
+        return WhenOp(
+            "when",
+            self.missing(),
+            **{
+                "else": BasicSubstringOp("substring", [
+                    value,
+                    ZERO,
+                    MaxOp("max", [ZERO, MinOp("min", [max_length, BinaryOp("sub", [max_length, length])])])
+                ])
+            }
+        ).partial_eval()
 
 
 class RightOp(Expression):
@@ -1775,10 +1811,24 @@ class RightOp(Expression):
         return RightOp("right", [self.value.map(map_), self.length.map(map_)])
 
     def missing(self):
-        if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return self.value.missing()
-        else:
-            return OrOp(None, [self.value.missing(), self.length.missing()])
+        return OrOp(None, [self.value.missing(), self.length.missing()])
+
+    def partial_eval(self):
+        value = self.value.partial_eval()
+        length = self.length.partial_eval()
+        max_length = LengthOp("length", value)
+
+        return WhenOp(
+            "when",
+            self.missing(),
+            **{
+                "else": BasicSubstringOp("substring", [
+                    value,
+                    MaxOp("max", [ZERO, MinOp("min", [max_length, BinaryOp("sub", [max_length, length])])]),
+                    max_length
+                ])
+            }
+        ).partial_eval()
 
 
 class NotRightOp(Expression):
@@ -1805,10 +1855,24 @@ class NotRightOp(Expression):
         return NotRightOp(None, [self.value.map(map_), self.length.map(map_)])
 
     def missing(self):
-        if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return self.value.missing()
-        else:
-            return OrOp(None, [self.value.missing(), self.length.missing()])
+        return OrOp(None, [self.value.missing(), self.length.missing()])
+
+    def partial_eval(self):
+        value = self.value.partial_eval()
+        length = self.length.partial_eval()
+        max_length = LengthOp("length", value)
+
+        return WhenOp(
+            "when",
+            self.missing(),
+            **{
+                "else": BasicSubstringOp("substring", [
+                    value,
+                    MaxOp("max", [ZERO, MinOp("min", [length, max_length])]),
+                    max_length
+                ])
+            }
+        ).partial_eval()
 
 
 class FindOp(Expression):
@@ -1822,9 +1886,9 @@ class FindOp(Expression):
         Expression.__init__(self, op, term)
         self.value, self.find = term
         self.default = kwargs.get("default", NullOp())
-        self.start = kwargs.get("start", Literal(None, 0)).partial_eval()
+        self.start = kwargs.get("start", ZERO).partial_eval()
         if isinstance(self.start, NullOp):
-            self.start = Literal(None, 0)
+            self.start = ZERO
 
     def __data__(self):
         if isinstance(self.value, Variable) and isinstance(self.find, Literal):
@@ -1853,7 +1917,7 @@ class FindOp(Expression):
         )
 
     def missing(self):
-        start = MaxOp("max", [Literal(None, 0), self.start]).partial_eval()
+        start = MaxOp("max", [ZERO, self.start]).partial_eval()
         return AndOp("and", [
             self.default.missing(),
             OrOp("or", [
@@ -1871,7 +1935,7 @@ class FindOp(Expression):
         return TrueOp()
 
     def partial_eval(self):
-        start = MaxOp("max", [Literal(None, 0), self.start]).partial_eval()
+        start = MaxOp("max", [ZERO, self.start]).partial_eval()
         index = BasicIndexOfOp("indexOf", [
             self.value.partial_eval(),
             self.find.partial_eval(),
@@ -1979,8 +2043,8 @@ class BetweenOp(Expression):
         start_index = CaseOp(
             "case",
             [
-                WhenOp("when", self.prefix.missing(), **{"then": Literal(None, 0)}),
-                WhenOp("when", IsNumberOp("is_number", self.prefix), **{"then": MaxOp("max", [Literal(None, 0), self.prefix])}),
+                WhenOp("when", self.prefix.missing(), **{"then": ZERO}),
+                WhenOp("when", IsNumberOp("is_number", self.prefix), **{"then": MaxOp("max", [ZERO, self.prefix])}),
                 FindOp("find", [value, self.prefix], start=self.start)
             ]
         ).partial_eval()
@@ -1988,8 +2052,8 @@ class BetweenOp(Expression):
         len_prefix = CaseOp(
             "case",
             [
-                WhenOp("when", self.prefix.missing(), **{"then": Literal(None, 0)}),
-                WhenOp("when", IsNumberOp("is_number", self.prefix), **{"then": Literal(None, 0)}),
+                WhenOp("when", self.prefix.missing(), **{"then": ZERO}),
+                WhenOp("when", IsNumberOp("is_number", self.prefix), **{"then": ZERO}),
                 LengthOp("length", self.prefix)
             ]
         ).partial_eval()
@@ -2192,7 +2256,8 @@ class BasicSubstringOp(Expression):
         return FalseOp()
 
 
-
+ZERO = Literal("literal", 0)
+NULL = NullOp()
 
 operators = {
     "add": MultiOp,

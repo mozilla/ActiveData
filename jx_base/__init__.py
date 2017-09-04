@@ -11,9 +11,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from types import NoneType
 from uuid import uuid4
 
 from future.utils import text_type
+
+from mo_dots import NullType
 
 IS_NULL = '0'
 BOOLEAN = 'boolean'
@@ -33,7 +36,9 @@ python_type_to_json_type = {
     text_type: STRING,
     float: NUMBER,
     None: OBJECT,
-    bool: BOOLEAN
+    bool: BOOLEAN,
+    NullType: OBJECT,
+    NoneType: OBJECT
 }
 
 

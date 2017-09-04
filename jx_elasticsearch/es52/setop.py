@@ -137,7 +137,7 @@ def es_setop(es, query):
         else:
             es_query.script_fields[literal_field(select.name)] = {"script": {
                 "lang": "painless",
-                "inline": select.value.to_painless(schema).script(schema)
+                "inline": select.value.partial_eval().to_painless(schema).script(schema)
             }}
             new_select.append({
                 "name": select.name,

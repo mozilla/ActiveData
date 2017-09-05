@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
+from jx_base import STRING, JSON_TYPES, BOOLEAN, NUMBER, OBJECT
 from mo_dots import wrap, split_field, join_field
 from jx_elasticsearch.es52.expressions import Variable
 
@@ -51,17 +52,26 @@ def es_query_template(path):
         return output, wrap([f0])
 
 
-def jx_sort_to_es_sort(sort):
+def jx_sort_to_es_sort(sort, schema):
     if not sort:
         return []
 
     output = []
     for s in sort:
         if isinstance(s.value, Variable):
+            cols = schema.leaves(s.value.var)
             if s.sort == -1:
-                output.append({s.value.var: "desc"})
+                types = OBJECT, STRING, NUMBER, BOOLEAN
             else:
-                output.append(s.value.var)
+                types = BOOLEAN, NUMBER, STRING, OBJECT
+
+            for type in types:
+                for c in cols:
+                    if c.type == type:
+                        if s.sort == -1:
+                            output.append({c.es_column: "desc"})
+                        else:
+                            output.append(c.es_column)
         else:
             from mo_logs import Log
 

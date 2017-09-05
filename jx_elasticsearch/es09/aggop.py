@@ -17,7 +17,7 @@ from mo_math import AND
 
 from jx_base.queries import is_variable_name
 from jx_elasticsearch.es09.util import aggregates, fix_es_stats, build_es_query
-from jx_elasticsearch.es52.expressions import simplify_esfilter, Variable
+from jx_elasticsearch.es52.expressions import Variable
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
@@ -48,14 +48,14 @@ def es_aggop(es, mvel, query):
                     "statistical": {
                         "field": s.value.var
                     },
-                    "facet_filter": simplify_esfilter(query.where.to_esfilter())
+                    "facet_filter": query.where.to_esfilter()
                 }
             else:
                 unwrap(FromES.facets)[s.name] = {
                     "statistical": {
                         "script": jx_expression_to_function(s.value)
                     },
-                    "facet_filter": simplify_esfilter(query.where)
+                    "facet_filter": query.where.to_es_filter()
                 }
             value2facet[s.value] = s.name
         name2facet[s.name] = value2facet[s.value]

@@ -11,24 +11,21 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from copy import copy
-
 from future.utils import text_type
 
+from jx_base import OBJECT, NESTED
+from jx_base.expressions import TupleOp
+from jx_base.query import MAX_LIMIT
 from jx_elasticsearch import es09
+from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
+from jx_elasticsearch.es52.decoders import DimFieldListDecoder
+from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp
+from jx_elasticsearch.es52.util import aggregates1_4
 from jx_python import jx
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
     unwraplist
 from mo_logs import Log
 from mo_math import Math, MAX
-
-from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
-from jx_elasticsearch.es52.decoders import DimFieldListDecoder
-from jx_elasticsearch.es52.util import aggregates1_4, NON_STATISTICAL_AGGS
-from jx_elasticsearch.es52.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp
-from jx_base.expressions import TupleOp
-from jx_base import OBJECT, NESTED
-from jx_base.query import MAX_LIMIT
 from mo_times.timer import Timer
 
 
@@ -39,7 +36,7 @@ def is_aggsop(es, query):
     return False
 
 
-def get_decoders_by_depth(query, es_column_map):
+def get_decoders_by_depth(query):
     """
     RETURN A LIST OF DECODER ARRAYS, ONE ARRAY FOR EACH NESTED DEPTH
     """
@@ -104,7 +101,7 @@ def get_decoders_by_depth(query, es_column_map):
             output.append([])
 
         limit = None
-        output[max_depth].append(AggsDecoder(edge, query, limit, es_column_map))
+        output[max_depth].append(AggsDecoder(edge, query, limit))
     return output
 
 
@@ -166,7 +163,7 @@ def es_aggsop(es, frum, query):
             elif s.aggregate == "percentile":
                 # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
-                if isinstance(s.percentile, basestring) or s.percetile < 0 or 1 < s.percentile:
+                if isinstance(s.percentile, text_type) or s.percetile < 0 or 1 < s.percentile:
                     Log.error("Expecting percentile to be a float from 0.0 to 1.0")
                 percent = Math.round(s.percentile * 100, decimal=6)
 
@@ -275,11 +272,11 @@ def es_aggsop(es, frum, query):
             s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
             es_query.aggs[canonical_name].extended_stats.script = s.value.to_painless(schema).script(schema)
 
-    decoders = get_decoders_by_depth(query, es_column_map)
+    decoders = get_decoders_by_depth(query)
     start = 0
 
     #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
-    split_where = split_expression_by_depth(query.where, schema=frum.schema, map_=es_column_map)
+    split_where = split_expression_by_depth(query.where, schema=frum.schema)
 
     if len(split_field(frum.name)) > 1:
         if any(split_where[2::]):
@@ -291,7 +288,7 @@ def es_aggsop(es, frum, query):
 
         if split_where[1]:
             #TODO: INCLUDE FILTERS ON EDGES
-            filter_ = simplify_esfilter(AndOp("and", split_where[1]).to_esfilter())
+            filter_ = AndOp("and", split_where[1]).to_esfilter(schema)
             es_query = Data(
                 aggs={"_filter": set_default({"filter": filter_}, es_query)}
             )
@@ -317,7 +314,7 @@ def es_aggsop(es, frum, query):
 
     if split_where[0]:
         #TODO: INCLUDE FILTERS ON EDGES
-        filter = simplify_esfilter(AndOp("and", split_where[0]).to_esfilter())
+        filter = AndOp("and", split_where[0]).to_esfilter(schema)
         es_query = Data(
             aggs={"_filter": set_default({"filter": filter}, es_query)}
         )
@@ -379,7 +376,7 @@ def aggs_iterator(aggs, decoders, coord=True):
     :param coord: TURN ON LOCAL COORDINATE LOOKUP
     """
     depth = max(d.start + d.num_columns for d in decoders)
-    parts = [None] * depth
+    parts = [Null] * depth
 
     def _aggs_iterator(agg, d):
         agg = drill(agg)
@@ -393,12 +390,10 @@ def aggs_iterator(aggs, decoders, coord=True):
                         for a in _aggs_iterator(b, d - 1):
                             yield a
                 elif k == "_other":
-                    parts[d] = Null
                     for b in v.get("buckets", EMPTY_LIST):
                         for a in _aggs_iterator(b, d - 1):
                             yield a
                 elif k == "_missing":
-                    parts[d] = Null
                     b = drill(v)
                     if b.get("doc_count"):
                         for a in _aggs_iterator(b, d - 1):
@@ -418,13 +413,11 @@ def aggs_iterator(aggs, decoders, coord=True):
                             b["_index"] = i
                             yield b
                 elif k == "_other":
-                    parts[d] = Null
                     for b in v.get("buckets", EMPTY_LIST):
                         b = drill(b)
                         if b.get("doc_count"):
                             yield b
                 elif k == "_missing":
-                    parts[d] = Null
                     b = drill(v)
                     if b.get("doc_count"):
                         yield b
@@ -437,10 +430,11 @@ def aggs_iterator(aggs, decoders, coord=True):
         for a in _aggs_iterator(unwrap(aggs), depth - 1):
             coord = tuple(d.get_index(parts) for d in decoders)
             yield parts, coord, a
+            parts = [Null] * depth
     else:
         for a in _aggs_iterator(unwrap(aggs), depth - 1):
             yield parts, None, a
-
+            parts = [Null] * depth
 
 def count_dim(aggs, decoders):
     if any(isinstance(d, (DefaultDecoder, DimFieldListDecoder, ObjectDecoder)) for d in decoders):

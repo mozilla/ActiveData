@@ -253,7 +253,11 @@ class TestSetOps(BaseTestCase):
             ],
             "query": {
                 "from": TEST_TABLE,
-                "select": ["a", "b", {"name": "io", "value": {"when": {"eq": ["a", "b"]}, "then": 1, "else": 2}}]
+                "select": [
+                    "a",
+                    "b",
+                    {"name": "io", "value": {"when": {"eq": ["a", "b"]}, "then": 1, "else": 2}}
+                ]
             },
             "expecting_list": {
                 "meta": {"format": "list"},

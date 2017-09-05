@@ -26,7 +26,7 @@ from mo_math import Math
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import Domain, SetDomain
-from jx_base.expressions import jx_expression, TrueOp, Expression, FalseOp, Variable, LeavesOp, ScriptOp, OffsetOp
+from jx_base.expressions import jx_expression, TrueOp, Expression, FalseOp, Variable, LeavesOp, ScriptOp, OffsetOp, TRUE
 from jx_base.queries import is_variable_name
 from jx_base.schema import Schema
 from jx_base.container import Container
@@ -201,7 +201,7 @@ class QueryOp(Expression):
         )
 
     def missing(self):
-        return FalseOp()
+        return FALSE
 
     @staticmethod
     def wrap(query, schema=None):
@@ -451,7 +451,7 @@ def _normalize_edges(edges, schema=None):
 
 def _normalize_edge(edge, dim_index, schema=None):
     """
-    :param edge: Not normalized edge 
+    :param edge: Not normalized edge
     :param dim_index: Dimensions are ordered; this is this edge's index into that order
     :param schema: for context
     :return: a normalized edge
@@ -540,7 +540,7 @@ def _normalize_groupby(groupby, schema=None):
 
 def _normalize_group(edge, dim_index, schema=None):
     """
-    :param edge: Not normalized groupby 
+    :param edge: Not normalized groupby
     :param dim_index: Dimensions are ordered; this is this groupby's index into that order
     :param schema: for context
     :return: a normalized groupby
@@ -647,7 +647,7 @@ def _normalize_range(range):
 
 def _normalize_where(where, schema=None):
     if where == None:
-        return TrueOp()
+        return TRUE
     return jx_expression(where)
 
 

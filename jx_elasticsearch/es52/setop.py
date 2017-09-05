@@ -12,7 +12,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from jx_base.domains import ALGEBRAIC
-from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import es52, es09
 from jx_elasticsearch.es52.expressions import Variable, LeavesOp
@@ -67,7 +66,7 @@ def es_setop(es, query):
     columns = schema.columns
     nested_columns = set(c.names["."] for c in columns if c.nested_path[0] != ".")
 
-    es_query.sort = jx_sort_to_es_sort(query.sort)
+    es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
     put_index = 0
     for select in selects:

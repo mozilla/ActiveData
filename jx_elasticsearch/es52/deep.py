@@ -13,13 +13,13 @@ from __future__ import unicode_literals
 
 from jx_base import STRUCT
 from jx_elasticsearch import es09, es52
-from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field
+from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field, set_default
 from mo_logs import Log
 from mo_threads import Thread
 from pyLibrary import convert
 
 from jx_base.query import DEFAULT_LIMIT
-from jx_elasticsearch.es52.expressions import split_expression_by_depth, simplify_esfilter, AndOp, Variable, LeavesOp
+from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, LeavesOp
 from jx_elasticsearch.es52.setop import format_dispatch
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
 from jx_python.expressions import compile_expression, jx_expression_to_function
@@ -63,14 +63,15 @@ def es_deepop(es, query):
     # SPLIT WHERE CLAUSE BY DEPTH
     wheres = split_expression_by_depth(query.where, schema)
     for i, f in enumerate(es_filters):
+        # set_default(f, AndOp("and", wheres[i]).to_esfilter(schema))
         # PROBLEM IS {"match_all": {}} DOES NOT SURVIVE set_default()
-        for k, v in unwrap(simplify_esfilter(AndOp("and", wheres[i]).to_esfilter())).items():
+        for k, v in unwrap(AndOp("and", wheres[i]).to_esfilter(schema)).items():
             f[k] = v
 
     if not wheres[1]:
         more_filter = {
             "bool": {
-                "must": [ simplify_esfilter(AndOp("and", wheres[0]).to_esfilter()) ],
+                "must": [AndOp("and", wheres[0]).partial_eval().to_esfilter(schema)],
                 "must_not": {
                     "nested": {
                         "path": query_path,

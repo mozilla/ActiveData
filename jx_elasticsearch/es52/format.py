@@ -176,7 +176,8 @@ def format_list(decoders, aggs, start, query, select):
     def data():
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
         is_sent = Matrix(dims=dims, zeros=0)
-        for row, coord, agg in aggs_iterator(aggs, decoders):
+        temp = list(aggs_iterator(aggs, decoders))
+        for row, coord, agg in temp:
             is_sent[coord] = 1
 
             output = Data()

@@ -11,29 +11,26 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import itertools
-
 from future.utils import binary_type, text_type
 
-from jx_base import JSON_TYPES, NUMBER, STRING, BOOLEAN, OBJECT, INTEGER
-from mo_dots import coalesce, wrap, Null, unwraplist, literal_field, set_default, Data, listwrap
-from mo_json import json2value, quote
-from mo_logs import Log, suppress_exception
-from mo_math import OR, MAX
-from pyLibrary.convert import json_decoder, string2regexp
-
+from jx_base import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER
 from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, OrOp, ScriptOp, \
-    WhenOp, InequalityOp, extend, RowsOp, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
+    WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
-    PrefixOp, UnixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, InOp, RangeOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, TRUE_FILTER, FALSE_FILTER, LeftOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO
+    PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, FALSE, TRUE
+from mo_dots import coalesce, wrap, Null, unwraplist
+from mo_json import json2value, quote
+from mo_logs import Log
+from mo_math import MAX
+from pyLibrary.convert import string2regexp
 
 
 class Painless(Expression):
     __slots__ = ("miss", "type", "expr", "many")
 
     def __init__(self, type, expr, frum, miss=None, many=False):
-        self.miss = coalesce(miss, FalseOp())  # Expression that will return true/false to indicate missing result
+        self.miss = coalesce(miss, FALSE)  # Expression that will return true/false to indicate missing result
         self.data_type = type
         self.expr = expr
         self.many = many  # True if script returns multi-value
@@ -83,20 +80,20 @@ def to_painless(self, schema):
         **{
             "then": self.default,
             "else":
-                Painless(type=NUMBER, expr=script)
+                Painless(type=NUMBER, expr=script, frum=self)
         }
     ).partial_eval().to_painless(schema)
 
 
 @extend(BinaryOp)
 def to_esfilter(self, schema):
-    if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal) or self.op in BinaryOp.algebra_ops:
-        return ScriptOp("script",  self.to_painless(schema)).to_esfilter(schema)
+    if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal) or self.op in BinaryOp.operators:
+        return self.to_painless(schema).to_esfilter(schema)
 
     if self.op in ["eq", "term"]:
         return {"term": {self.lhs.var: self.rhs.to_esfilter(schema)}}
     elif self.op in ["ne", "neq"]:
-        return {"bool": {"must_not":{"term": {self.lhs.var: self.rhs.to_esfilter(schema)}}}}
+        return {"bool": {"must_not": {"term": {self.lhs.var: self.rhs.to_esfilter(schema)}}}}
     elif self.op in BinaryOp.ineq_ops:
         return {"range": {self.lhs.var: {self.op: json2value(self.rhs.json)}}}
     else:
@@ -278,7 +275,7 @@ def to_esfilter(self, schema):
 @extend(NullOp)
 def to_painless(self, schema):
     return Painless(
-        miss=TrueOp(),
+        miss=TRUE,
         type=OBJECT,
         expr="null",
         frum=self
@@ -291,7 +288,7 @@ def to_esfilter(self, schema):
 
 @extend(FalseOp)
 def to_painless(self, schema):
-    return Painless(type=BOOLEAN, expr="false")
+    return Painless(type=BOOLEAN, expr="false", frum=self)
 
 
 @extend(FalseOp)
@@ -334,7 +331,7 @@ def to_painless(self, schema):
         "when",
         OrOp("or", [self.lhs.missing(), self.rhs.missing()]),
         **{
-            "then": FalseOp(),
+            "then": FALSE,
             "else":
                 Painless(type=BOOLEAN, expr=script)
         }
@@ -402,42 +399,40 @@ def to_painless(self, schema):
 
     if lhs.many:
         if rhs.many:
-            return Painless(
-                boolean=WhenOp(
-                    "when",
-                    self.lhs.missing(),
-                    **{
-                        "then": self.rhs.missing(),
-                        "else": AndOp("and", [
-                            Painless(type=BOOLEAN, expr="(" + lhs.expr + ").size()==(" + rhs.expr + ").size()"),
-                            Painless(type=BOOLEAN, expr="(" + rhs.expr + ").containsAll(" + lhs.expr + ")")
-                        ])
-                    }
-                ).partial_eval().to_painless(boolean=True).expr
-            )
-        return Painless(
-            boolean=WhenOp(
+            return WhenOp(
                 "when",
                 self.lhs.missing(),
                 **{
                     "then": self.rhs.missing(),
-                    "else": Painless(type=BOOLEAN, expr="(" + lhs.expr + ").contains(" + rhs.expr + ")")
+                    "else": AndOp("and", [
+                        Painless(type=BOOLEAN, expr="(" + lhs.expr + ").size()==(" + rhs.expr + ").size()"),
+                        Painless(type=BOOLEAN, expr="(" + rhs.expr + ").containsAll(" + lhs.expr + ")")
+                    ])
                 }
-            ).partial_eval().to_painless(boolean=True).expr
-        )
+            ).partial_eval().to_painless(schema)
+        return WhenOp(
+            "when",
+            self.lhs.missing(),
+            **{
+                "then": self.rhs.missing(),
+                "else": Painless(type=BOOLEAN, expr="(" + lhs.expr + ").contains(" + rhs.expr + ")")
+            }
+        ).partial_eval().to_painless(schema)
     elif rhs.many:
-        return Painless(
-            boolean=WhenOp(
-                "when",
-                self.lhs.missing(),
-                **{
-                    "then": self.rhs.missing(),
-                    "else": Painless(type=BOOLEAN, expr="(" + rhs.expr + ").contains(" + lhs.expr + ")")
-                }
-            ).partial_eval().to_painless(boolean=True).expr
-        )
+        return WhenOp(
+            "when",
+            self.lhs.missing(),
+            **{
+                "then": self.rhs.missing(),
+                "else": Painless(type=BOOLEAN, expr="(" + rhs.expr + ").contains(" + lhs.expr + ")")
+            }
+        ).partial_eval().to_painless(schema)
     else:
-        return Painless(type=BOOLEAN, expr="(" + lhs.expr + "==" + rhs.expr + ")")
+        return Painless(
+            type=BOOLEAN,
+            expr="(" + lhs.expr + "==" + rhs.expr + ")",
+            frum=self
+        )
 
 
 @extend(EqOp)
@@ -566,7 +561,11 @@ def to_esfilter(self, schema):
 
 @extend(NotOp)
 def to_painless(self, schema):
-    return Painless(type=BOOLEAN, expr="!(" + self.term.to_painless(boolean=True).expr + ")")
+    return Painless(
+        type=BOOLEAN,
+        expr="!(" + self.term.to_painless(schema).expr + ")",
+        frum=self
+    )
 
 
 @extend(NotOp)
@@ -578,10 +577,10 @@ def to_esfilter(self, schema):
 @extend(AndOp)
 def to_painless(self, schema):
     if not self.terms:
-        return TrueOp().to_painless()
+        return TRUE.to_painless()
     else:
         return Painless(
-            miss=FalseOp(),
+            miss=FALSE,
             type=BOOLEAN,
             expr=" && ".join("(" + t.to_painless(schema).expr + ")" for t in self.terms),
             frum=self
@@ -599,7 +598,7 @@ def to_esfilter(self, schema):
 @extend(OrOp)
 def to_painless(self, schema):
     return Painless(
-        miss=FalseOp(),
+        miss=FALSE,
         type=BOOLEAN,
         expr=" || ".join("(" + t.to_painless(schema).expr + ")" for t in self.terms if t),
         frum=self
@@ -625,12 +624,24 @@ def to_painless(self, schema):
 @extend(BooleanOp)
 def to_painless(self, schema):
     value = self.term.to_painless(schema)
+    if value.many:
+        return BooleanOp("boolean", Painless(
+            miss=value.missing,
+            type=value.type,
+            expr="(" + value.expr + ")[0]",
+            frum=value.frum
+        )).to_painless(schema)
+    elif value.type == BOOLEAN:
+        return value
+    else:
+        return NotOp("not", value.missing()).partial_eval().to_painless(schema)
 
-    for t in "insj":
-        if getattr(value, t):
-            Log.error("Got {{type|quote}}, expecting a boolean from {{term}}", type=t, term=self.term.__data__())
-    return value
-
+@extend(BooleanOp)
+def to_esfilter(self, schema):
+    if isinstance(self.term, Variable):
+        return {"term": {self.term.var: True}}
+    else:
+        return self.to_painless(schema).to_esfilter(schema)
 
 @extend(IntegerOp)
 def to_painless(self, schema):
@@ -729,10 +740,10 @@ def to_painless(self, schema):
 def to_painless(self, schema):
     value = self.term.to_painless(schema)
     if value.expr or value.i:
-        return TrueOp().to_painless(schema)
+        return TRUE.to_painless(schema)
     else:
         return Painless(
-            miss=FalseOp(),
+            miss=FALSE,
             type=BOOLEAN,
             expr="(" + value.expr + ") instanceof java.lang.Double",
             frum=self
@@ -741,9 +752,9 @@ def to_painless(self, schema):
 @extend(CountOp)
 def to_painless(self, schema):
     return Painless(
-        miss=FalseOp(),
+        miss=FALSE,
         type=INTEGER,
-        expr="+".join("((" + t.missing().partial_eval().to_painless().expr + ") ? 0 : 1)" for t in self.terms),
+        expr="+".join("((" + t.missing().partial_eval().to_painless(schema).expr + ") ? 0 : 1)" for t in self.terms),
         frum=self
     )
 
@@ -880,7 +891,11 @@ def to_esfilter(self, schema):
 
 @extend(InOp)
 def to_painless(self, schema):
-    return Painless(type=BOOLEAN, expr="(" + self.superset.to_painless(schema).expr + ").contains(" + self.value.to_painless(schema).expr + ")")
+    return Painless(
+        type=BOOLEAN,
+        expr="(" + self.superset.to_painless(schema).expr + ").contains(" + self.value.to_painless(schema).expr + ")",
+        frum=self
+    )
 
 
 @extend(InOp)
@@ -978,10 +993,12 @@ def to_painless(self, schema):
 
 @extend(WhenOp)
 def to_esfilter(self, schema):
-    return OrOp("or", [
-        AndOp("and", [self.when, self.then]),
-        AndOp("and", [NotOp("not", self.when), self.els_])
-    ]).partial_eval().to_esfilter(schema)
+    output = OrOp("or", [
+        AndOp("and", [self.when, BooleanOp("boolean", self.then)]),
+        AndOp("and", [NotOp("not", self.when), BooleanOp("boolean", self.els_)])
+    ]).partial_eval()
+
+    return output.to_esfilter(schema)
 
 
 @extend(BasicIndexOfOp)
@@ -991,7 +1008,7 @@ def to_painless(self, schema):
     start = IntegerOp("integer", self.start).to_painless(schema).expr
 
     return Painless(
-        miss=FalseOp(),
+        miss=FALSE,
         type=INTEGER,
         expr="(" + v + ").indexOf(" + find + ", " + start + ")",
         frum=self
@@ -1010,192 +1027,11 @@ def to_painless(self, schema):
     end = IntegerOp("integer", self.end).partial_eval().to_painless(schema).expr
 
     return Painless(
-        miss=FalseOp(),
+        miss=FALSE,
         type=STRING,
         expr="(" + v + ").substring(" + start + ", " + end + ")",
         frum=self
     )
-
-
-
-
-
-
-USE_BOOL_MUST = True
-
-
-def simplify_esfilter(esfilter):
-    try:
-        output = normalize_esfilter(esfilter)
-        if output is TRUE_FILTER:
-            return {"match_all": {}}
-        elif output is FALSE_FILTER:
-            return {"bool": {"must_not": {"match_all": {}}}}
-
-        output.isNormal = None
-        return output
-    except Exception as e:
-        from mo_logs import Log
-
-        Log.unexpected("programmer error", cause=e)
-
-
-def removeOr(esfilter):
-    if esfilter["not"]:
-        return {"bool": {"must_not": removeOr(esfilter["not"])}}
-
-    if esfilter["and"]:
-        return {"bool": {"must": [removeOr(v) for v in esfilter["and"]]}}
-
-    if esfilter["or"]:  # CONVERT OR TO NOT.AND.NOT
-        return {"bool": {"must_not": {"bool": {"must": [{"bool": {"must_not": removeOr(v)} for v in esfilter["or"]}]}}}}
-
-    return esfilter
-
-
-def normalize_esfilter(esfilter):
-    """
-    SIMPLFY THE LOGIC EXPRESSION
-    """
-    return wrap(_normalize(wrap(esfilter)))
-
-
-def _normalize(esfilter):
-    """
-    TODO: DO NOT USE Data, WE ARE SPENDING TOO MUCH TIME WRAPPING/UNWRAPPING
-    REALLY, WE JUST COLLAPSE CASCADING `and` AND `or` FILTERS
-    """
-    if esfilter is TRUE_FILTER or esfilter is FALSE_FILTER or esfilter.isNormal:
-        return esfilter
-
-    # Log.note("from: " + convert.value2json(esfilter))
-    isDiff = True
-
-    while isDiff:
-        isDiff = False
-
-        if coalesce(esfilter["and"], esfilter.bool.must):
-            terms = coalesce(esfilter["and"], esfilter.bool.must)
-            # MERGE range FILTER WITH SAME FIELD
-            for (i0, t0), (i1, t1) in itertools.product(enumerate(terms), enumerate(terms)):
-                if i0 >= i1:
-                    continue  # SAME, IGNORE
-                with suppress_exception:
-                    f0, tt0 = t0.range.items()[0]
-                    f1, tt1 = t1.range.items()[0]
-                    if f0 == f1:
-                        set_default(terms[i0].range[literal_field(f1)], tt1)
-                        terms[i1] = True
-
-            output = []
-            for a in terms:
-                if isinstance(a, (list, set)):
-                    from mo_logs import Log
-
-                    Log.error("and clause is not allowed a list inside a list")
-                a_ = normalize_esfilter(a)
-                if a_ is not a:
-                    isDiff = True
-                a = a_
-                if a == TRUE_FILTER:
-                    isDiff = True
-                    continue
-                if a == FALSE_FILTER:
-                    return FALSE_FILTER
-                if coalesce(a.get("and"), a.bool.must):
-                    isDiff = True
-                    a.isNormal = None
-                    output.extend(coalesce(a.get("and"), a.bool.must))
-                else:
-                    a.isNormal = None
-                    output.append(a)
-            if not output:
-                return TRUE_FILTER
-            elif len(output) == 1:
-                # output[0].isNormal = True
-                esfilter = output[0]
-                break
-            elif isDiff:
-                if USE_BOOL_MUST:
-                    esfilter = wrap({"bool": {"must": output}})
-                else:
-                    esfilter = wrap({"and": output})
-            continue
-
-        if esfilter["or"] != None:
-            output = []
-            for a in esfilter["or"]:
-                a_ = _normalize(a)
-                if a_ is not a:
-                    isDiff = True
-                a = a_
-
-                if a == TRUE_FILTER:
-                    return TRUE_FILTER
-                if a == FALSE_FILTER:
-                    isDiff = True
-                    continue
-                if a.get("or"):
-                    a.isNormal = None
-                    isDiff = True
-                    output.extend(a["or"])
-                else:
-                    a.isNormal = None
-                    output.append(a)
-            if not output:
-                return FALSE_FILTER
-            elif len(output) == 1:
-                esfilter = output[0]
-                break
-            elif isDiff:
-                esfilter = wrap({"or": output})
-            continue
-
-        if esfilter.term != None:
-            if esfilter.term.keys():
-                esfilter.isNormal = True
-                return esfilter
-            else:
-                return TRUE_FILTER
-
-        if esfilter.terms != None:
-            for k, v in esfilter.terms.items():
-                if len(v) > 0:
-                    if OR(vv == None for vv in v):
-                        rest = [vv for vv in v if vv != None]
-                        if len(rest) > 0:
-                            return {
-                                "bool": {"should": [
-                                    {"bool": {"must_not": {"exists": {"field": k}}}},
-                                    {"terms": {k: rest}}
-                                ]},
-                                "isNormal": True
-                            }
-                        else:
-                            return {
-                                "bool": {"must_not": {"exists": {"field": k}}},
-                                "isNormal": True
-                            }
-                    else:
-                        esfilter.isNormal = True
-                        return esfilter
-            return FALSE_FILTER
-
-        if esfilter["not"] != None:
-            _sub = esfilter["not"]
-            sub = _normalize(_sub)
-            if sub is FALSE_FILTER:
-                return TRUE_FILTER
-            elif sub is TRUE_FILTER:
-                return FALSE_FILTER
-            elif sub is not _sub:
-                sub.isNormal = None
-                return wrap({"or":  sub, "isNormal": True})
-            else:
-                sub.isNormal = None
-
-    esfilter.isNormal = True
-    return esfilter
 
 
 def split_expression_by_depth(where, schema, map_=None, output=None, var_to_depth=None):

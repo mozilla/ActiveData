@@ -24,7 +24,6 @@ from jx_base.expressions import TRUE_FILTER, jx_expression, Variable, LeavesOp
 from jx_base.queries import is_variable_name
 from jx_elasticsearch.es09.expressions import unpack_terms
 from jx_elasticsearch.es09.util import aggregates
-from jx_elasticsearch.es52.expressions import simplify_esfilter
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
 from mo_dots.lists import FlatList
@@ -57,7 +56,7 @@ def es_fieldop(es, query):
             "query": {
                 "match_all": {}
             },
-            "filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
+            "filter": jx_expression(query.where).to_esfilter()
         }
     }
     FromES.size = coalesce(query.limit, 200000)
@@ -129,7 +128,7 @@ def es_setop(es, mvel, query):
             FromES = wrap({
                 "query": {"bool": {
                     "query": {"match_all": {}},
-                    "filter": simplify_esfilter(query.where.to_esfilter())
+                    "filter": query.where.to_esfilter()
                 }},
                 "sort": query.sort,
                 "size": 0
@@ -138,7 +137,7 @@ def es_setop(es, mvel, query):
             FromES = wrap({
                 "query": {"bool": {
                     "query": {"match_all": {}},
-                    "filter": simplify_esfilter(query.where.to_esfilter())
+                    "filter": query.where.to_esfilter()
                 }},
                 "fields": select.value,
                 "sort": query.sort,
@@ -152,7 +151,7 @@ def es_setop(es, mvel, query):
                 "script_field": mvel.code(simple_query),
                 "size": coalesce(simple_query.limit, 200000)
             },
-            "facet_filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
+            "facet_filter": jx_expression(query.where).to_esfilter()
         }
     else:
         FromES.facets.mvel = {
@@ -160,7 +159,7 @@ def es_setop(es, mvel, query):
                 "script_field": mvel.code(query),
                 "size": coalesce(query.limit, 200000)
             },
-            "facet_filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
+            "facet_filter": jx_expression(query.where).to_esfilter()
         }
 
     data = es09.util.post(es, FromES, query.limit)
@@ -216,7 +215,7 @@ def es_deepop(es, mvel, query):
             "script_field": mvel.code(temp_query),
             "size": query.limit
         },
-        "facet_filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
+        "facet_filter": jx_expression(query.where).to_esfilter()
     }
 
     data = es09.util.post(es, FromES, query.limit)

@@ -63,10 +63,8 @@ def es_deepop(es, query):
     # SPLIT WHERE CLAUSE BY DEPTH
     wheres = split_expression_by_depth(query.where, schema)
     for i, f in enumerate(es_filters):
-        # set_default(f, AndOp("and", wheres[i]).to_esfilter(schema))
-        # PROBLEM IS {"match_all": {}} DOES NOT SURVIVE set_default()
-        for k, v in unwrap(AndOp("and", wheres[i]).to_esfilter(schema)).items():
-            f[k] = v
+        script = AndOp("and", wheres[i]).partial_eval().to_esfilter(schema)
+        set_default(f, script)
 
     if not wheres[1]:
         more_filter = {
@@ -91,7 +89,7 @@ def es_deepop(es, query):
     map_to_es_columns = schema.map_to_es()
     # {c.names["."]: c.es_column for c in schema.leaves(".")}
     query_for_es = query.map(map_to_es_columns)
-    es_query.sort = jx_sort_to_es_sort(query_for_es.sort)
+    es_query.sort = jx_sort_to_es_sort(query_for_es.sort, schema)
 
     es_query.stored_fields = []
 

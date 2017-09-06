@@ -333,7 +333,7 @@ def to_painless(self, schema):
         **{
             "then": FALSE,
             "else":
-                Painless(type=BOOLEAN, expr=script)
+                Painless(type=BOOLEAN, expr=script, frum=self)
         }
     ).partial_eval().to_painless(schema)
     return output
@@ -344,7 +344,7 @@ def to_esfilter(self, schema):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
         return {"range": {self.lhs.var: {self.op: json2value(self.rhs.json)}}}
     else:
-        return ScriptOp("script", self.to_painless(boolean=True).script).to_esfilter(schema)
+        return {"script": {"script": {"lang": "painless", "inline": self.to_painless(schema).script(schema)}}}
 
 
 @extend(DivOp)
@@ -520,7 +520,13 @@ def to_painless(self, schema, not_null=False, boolean=True):
 @extend(MissingOp)
 def to_esfilter(self, schema):
     if isinstance(self.expr, Variable):
-        return {"bool": {"must_not": {"exists": {"field": self.expr.var}}}}
+        cols = schema.leaves(self.expr.var)
+        if len(cols) == 1:
+            return {"bool": {"must_not": {"exists": {"field": cols[0].es_column}}}}
+        else:
+            return {"bool": {"must": [
+                {"bool": {"must_not": {"exists": {"field": c.es_column}}}} for c in cols]
+            }}
     else:
         return ScriptOp("script", self.to_painless(schema)).to_esfilter(schema)
 
@@ -1034,11 +1040,10 @@ def to_painless(self, schema):
     )
 
 
-def split_expression_by_depth(where, schema, map_=None, output=None, var_to_depth=None):
+def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
     """
     :param where: EXPRESSION TO INSPECT
     :param schema: THE SCHEMA
-    :param map_: THE VARIABLE NAME MAPPING TO PERFORM ON where
     :param output:
     :param var_to_depth: MAP FROM EACH VARIABLE NAME TO THE DEPTH
     :return:
@@ -1049,8 +1054,6 @@ def split_expression_by_depth(where, schema, map_=None, output=None, var_to_dept
     returning {"and": [filter_depth0, filter_depth1, ...]}
     """
     vars_ = where.vars()
-    if not map_:
-        map_ = {v: schema[v][0].es_column for v in vars_}
 
     if var_to_depth is None:
         if not vars_:
@@ -1070,10 +1073,10 @@ def split_expression_by_depth(where, schema, map_=None, output=None, var_to_dept
         all_depths = set(var_to_depth[v] for v in vars_)
 
     if len(all_depths) == 1:
-        output[list(all_depths)[0]] += [where.map(map_)]
+        output[list(all_depths)[0]] += [where]
     elif isinstance(where, AndOp):
         for a in where.terms:
-            split_expression_by_depth(a, schema, map_, output, var_to_depth)
+            split_expression_by_depth(a, schema, output, var_to_depth)
     else:
         Log.error("Can not handle complex where clause")
 

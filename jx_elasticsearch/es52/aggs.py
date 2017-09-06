@@ -56,7 +56,7 @@ def get_decoders_by_depth(query):
             edge = edge.copy()
             vars_ = edge.value.vars()
             for v in vars_:
-                if not schema[v]:
+                if not schema.leaves(v):
                     Log.error("{{var}} does not exist in schema", var=v)
         elif edge.range:
             edge = edge.copy()
@@ -84,7 +84,7 @@ def get_decoders_by_depth(query):
 
         try:
             vars_ |= edge.value.vars()
-            depths = set(len(c.nested_path)-1 for v in vars_ for c in schema[v])
+            depths = set(len(c.nested_path)-1 for v in vars_ for c in schema.leaves(v))
             if -1 in depths:
                 Log.error(
                     "Do not know of column {{column}}",
@@ -376,7 +376,6 @@ def aggs_iterator(aggs, decoders, coord=True):
     :param coord: TURN ON LOCAL COORDINATE LOOKUP
     """
     depth = max(d.start + d.num_columns for d in decoders)
-    parts = [Null] * depth
 
     def _aggs_iterator(agg, d):
         agg = drill(agg)
@@ -385,56 +384,52 @@ def aggs_iterator(aggs, decoders, coord=True):
             for k, v in agg.items():
                 if k == "_match":
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
-                        parts[d] = b
                         b["_index"] = i
-                        for a in _aggs_iterator(b, d - 1):
-                            yield a
+                        for a, parts in _aggs_iterator(b, d - 1):
+                            yield a, (b,) + parts
                 elif k == "_other":
                     for b in v.get("buckets", EMPTY_LIST):
-                        for a in _aggs_iterator(b, d - 1):
-                            yield a
+                        for a, parts in _aggs_iterator(b, d - 1):
+                            yield a, (Null,) + parts
                 elif k == "_missing":
                     b = drill(v)
                     if b.get("doc_count"):
-                        for a in _aggs_iterator(b, d - 1):
-                            yield a
+                        for a, parts in _aggs_iterator(b, d - 1):
+                            yield a, (Null,) + parts
                 elif k.startswith("_join_"):
                     v["key"] = int(k[6:])
-                    parts[d] = v
-                    for a in _aggs_iterator(v, d - 1):
-                        yield a
+                    for a, parts in _aggs_iterator(v, d - 1):
+                        yield a, (v,) + parts
         else:
             for k, v in agg.items():
                 if k == "_match":
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
-                        parts[d] = b
                         if b.get("doc_count"):
                             b = drill(b)
                             b["_index"] = i
-                            yield b
+                            yield b, (b,)
                 elif k == "_other":
                     for b in v.get("buckets", EMPTY_LIST):
                         b = drill(b)
                         if b.get("doc_count"):
-                            yield b
+                            yield b, (Null,)
                 elif k == "_missing":
                     b = drill(v)
                     if b.get("doc_count"):
-                        yield b
+                        yield b, (Null,)
                 elif k.startswith("_join_"):
                     v["_index"] = int(k[6:])
-                    parts[d] = v
-                    yield v
+                    yield v, (v,)
 
     if coord:
-        for a in _aggs_iterator(unwrap(aggs), depth - 1):
+        for a, parts in _aggs_iterator(unwrap(aggs), depth - 1):
             coord = tuple(d.get_index(parts) for d in decoders)
             yield parts, coord, a
-            parts = [Null] * depth
     else:
-        for a in _aggs_iterator(unwrap(aggs), depth - 1):
+        for a, parts in _aggs_iterator(unwrap(aggs), depth - 1):
             yield parts, None, a
-            parts = [Null] * depth
+
+
 
 def count_dim(aggs, decoders):
     if any(isinstance(d, (DefaultDecoder, DimFieldListDecoder, ObjectDecoder)) for d in decoders):

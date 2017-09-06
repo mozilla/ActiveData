@@ -964,8 +964,8 @@ class AndOp(Expression):
 
         terms = []
         for t in self.terms:
-            simple = t.partial_eval()
-            if isinstance(simple, (TrueOp, NullOp)):
+            simple = BooleanOp("boolean", t).partial_eval()
+            if isinstance(simple, TrueOp):
                 pass
             elif isinstance(simple, FalseOp):
                 return FALSE

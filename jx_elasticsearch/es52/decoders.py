@@ -153,9 +153,8 @@ class SetDecoder(AggsDecoder):
     def append_query(self, es_query, start):
         self.start = start
         domain = self.domain
-        es_field = self.edge.value.map({c.names[self.query.frum.query_path]: c.es_column for c in self.query.frum.schema.leaves(".")})  # ALREADY CHECKED THERE IS ONLY ONE
 
-        domain_key=domain.key
+        domain_key = domain.key
         include, text_include = zip(*(
             (
                 float(v) if isinstance(v, (int, float)) else v,
@@ -163,66 +162,45 @@ class SetDecoder(AggsDecoder):
             )
             for v in (p[domain_key] for p in domain.partitions)
         ))
-        if isinstance(self.edge.value, Variable):
-            key = domain.key
-            if isinstance(key, (tuple, list)) and len(key) == 1:
-                key = key[0]
-            if self.edge.allowNulls:
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
-                        "field": es_field.var,
-                        "size": self.limit,
-                        "include": text_include,
-                        "order": {"_term": self.sorted} if self.sorted else None
-                    }}, es_query),
-                    "_missing": set_default(
-                        {"filter": OrOp("or", [
-                            es_field.missing(),
-                            NotOp("not", InOp("in", [Variable(es_field.var), Literal("literal", include)]))
-                        ]).to_esfilter(self.schema)},
-                        es_query
-                    ),
-                }})
-            else:
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
-                        "field": es_field.var,
-                        "size": self.limit,
-                        "include": text_include,
-                        "order": {"_term": self.sorted} if self.sorted else None
-                    }}, es_query)
-                }})
-        else:
-            if self.edge.allowNulls:
+        exists = AndOp("and", [
+            self.edge.value.exists(),
+            InOp("in", [self.edge.value, Literal("literal", include)])
+        ]).partial_eval()
 
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
-                        "script": {
-                            "lang": "painless",
-                            "inline": es_field.to_painless(self.schema).script(self.schema)
-                        },
-                        "size": self.limit,
-                        "include": text_include
-                    }}, es_query),
-                    "_missing": set_default(
-                        {"filter": OrOp("or", [
-                            es_field.missing(),
-                            NotOp("not", InOp("in", [es_field, Literal("literal", include)]))
-                        ]).to_esfilter(self.schema)},
-                        es_query
-                    ),
-                }})
-            else:
-                return wrap({"aggs": {
-                    "_match": set_default({"terms": {
-                        "script": {
-                            "lang": "painless",
-                            "inline": es_field.to_painless(self.schema).script(self.schema)
-                        },
-                        "size": self.limit,
-                        "include": text_include
-                    }}, es_query)
-                }})
+
+        if isinstance(self.edge.value, Variable):
+            es_field = self.edge.value.map({c.names[self.query.frum.query_path]: c.es_column for c in self.query.frum.schema.leaves(".")})  # ALREADY CHECKED THERE IS ONLY ONE
+            terms = set_default({"terms": {
+                "field": es_field.var,
+                "size": self.limit,
+                "order": {"_term": self.sorted} if self.sorted else None
+            }}, es_query)
+        else:
+            terms = set_default({"terms": {
+                "script": {
+                    "lang": "painless",
+                    "inline": self.edge.value.to_painless(self.schema).script(self.schema)
+                },
+                "size": self.limit
+            }}, es_query)
+
+        if self.edge.allowNulls:
+            missing = set_default(
+                {"filter": NotOp("not", exists).to_esfilter(self.schema)},
+                es_query
+            )
+        else:
+            missing = None
+
+        return wrap({"aggs": {
+            "_match": {
+                "filter": exists.to_esfilter(self.schema),
+                "aggs": {
+                    "_filter": terms
+                }
+            },
+            "_missing": missing
+        }})
 
     def get_value(self, index):
         return self.domain.getKeyByIndex(index)
@@ -562,25 +540,32 @@ class DefaultDecoder(SetDecoder):
     def append_query(self, es_query, start):
         self.start = start
 
+        value = self.edge.value.partial_eval()
+        script = value.to_painless(self.schema)
+        exists = NotOp("not", script.miss).partial_eval()
         if not isinstance(self.edge.value, Variable):
-            missing = self.edge.value.missing().partial_eval()
 
             output = wrap({"aggs": {
-                "_match": set_default(
-                    {"terms": {
-                        "script": {
-                            "lang": "painless",
-                            "inline": self.edge.value.partial_eval().to_painless(self.schema).script(self.schema)
-                        },
-                        "size": self.domain.limit,
-                        "order": {"_term": self.sorted} if self.sorted else None
-                    }},
-                    es_query
-                ),
+                "_match": {
+                    "filter": exists.to_esfilter(self.schema),
+                    "aggs": {
+                        "_filter": set_default(
+                            {"terms": {
+                                "script": {
+                                    "lang": "painless",
+                                    "inline": script.expr
+                                },
+                                "size": self.domain.limit,
+                                "order": {"_term": self.sorted} if self.sorted else None
+                            }},
+                            es_query
+                        )
+                    }
+                },
                 "_missing": set_default(
-                    {"filter": missing.to_esfilter(self.schema)},
+                    {"filter": NotOp("not", exists).to_esfilter(self.schema)},
                     es_query
-                ) if missing else None
+                )
             }})
             return output
         elif self.edge.value.var in [s.value.var for s in self.query.sort]:
@@ -595,7 +580,7 @@ class DefaultDecoder(SetDecoder):
                     es_query
                 ),
                 "_missing": set_default(
-                    {"filter": self.edge.value.missing().to_esfilter(self.schema)},
+                    {"filter": NotOp("not", exists).to_esfilter(self.schema)},
                     es_query
                 )
             }})
@@ -610,7 +595,7 @@ class DefaultDecoder(SetDecoder):
                     es_query
                 ),
                 "_missing": set_default(
-                    {"filter": self.edge.value.missing().to_esfilter(self.schema)},
+                    {"filter": NotOp("not", exists).to_esfilter(self.schema)},
                     es_query
                 )
             }})
@@ -666,18 +651,19 @@ class DimFieldListDecoder(SetDecoder):
 
     def append_query(self, es_query, start):
         # TODO: USE "reverse_nested" QUERY TO PULL THESE
-
         self.start = start
-        for i, v in enumerate(self.fields):
-            nest = wrap({"aggs": {
-                "_match": set_default({"terms": {
-                    "field": self.schema.leaves(v)[0].es_column,
+        for i, v in enumerate(jx.reverse(self.fields)):
+            exists = v.exists().partial_eval()
+            nest = wrap({"aggs": {"_match": {
+                "filter": exists.to_esfilter(self.schema),
+                "aggs": {"_filter": set_default({"terms": {
+                    "field": self.schema.leaves(v.var)[0].es_column,
                     "size": self.domain.limit
-                }}, es_query)
-            }})
+                }}, es_query)}
+            }}})
             if self.edge.allowNulls:
                 nest.aggs._missing = set_default(
-                    {"filter": v.missing().to_esfilter(self.schema)},
+                    {"filter": NotOp("not", exists).to_esfilter(self.schema)},
                     es_query
                 )
             es_query = nest

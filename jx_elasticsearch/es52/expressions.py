@@ -18,7 +18,7 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, FALSE, TRUE
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, FALSE, TRUE, NULL, FirstOp
 from mo_dots import coalesce, wrap, Null, unwraplist
 from mo_json import json2value, quote
 from mo_logs import Log
@@ -187,7 +187,7 @@ def to_painless(self, schema):
         if isinstance(v, (int, long)):
             return Painless(
                 type=INTEGER,
-                expr=text_type(v),
+                expr=text_type(float(v)),
                 frum=self
             )
         if isinstance(v, (float)):
@@ -215,12 +215,14 @@ def to_painless(self, schema):
 @extend(CoalesceOp)
 def to_painless(self, schema):
     if not self.terms:
-        return NullOp().to_painless(schema)
+        return NULL.to_painless(schema)
 
-    acc = self.terms[-1].to_painless(schema)
+    v = self.terms[-1]
+    acc = FirstOp("first", v).partial_eval().to_painless(schema)
     for v in reversed(self.terms[:-1]):
-        m = v.missing()
-        r = v.to_painless(schema)
+        m = v.missing().partial_eval()
+        r = FirstOp("first", v).partial_eval().to_painless(schema)
+        e = NotOp("not", m).partial_eval().to_painless(schema)
 
         if acc.type == r.type:
             new_type = r.type
@@ -232,9 +234,9 @@ def to_painless(self, schema):
             new_type = OBJECT
 
         acc = Painless(
-            miss=AndOp("and", [acc.miss, m]),
+            miss=AndOp("and", [acc.miss, m]).partial_eval(),
             type=new_type,
-            expr="(!(" + m.expr + ")) ? (" + r.expr + ") : (" + acc.expr + ")",
+            expr="(" + e.expr + ") ? (" + r.expr + ") : (" + acc.expr + ")",
             frum=self
         )
     return acc
@@ -247,24 +249,12 @@ def to_esfilter(self, schema):
 
 @extend(ExistsOp)
 def to_painless(self, schema):
-    if isinstance(self.field, Variable):
-        return "!doc[" + quote(self.field.var) + "].empty"
-    elif isinstance(self.field, Literal):
-        return self.field.exists().to_painless(schema)
-    else:
-        return self.field.to_painless(schema) + " != null"
+    return self.field.exists().partial_eval().to_painless(schema)
 
 
 @extend(ExistsOp)
 def to_esfilter(self, schema):
-    if isinstance(self.field, Variable):
-        cols = schema.leaves(self.field.var)
-        if len(cols) == 1:
-            return {"exists": {"field": cols[0].es_column}}
-        else:
-            return {"bool": {"should": [{"exists": {"field": c.es_column}} for c in cols]}}
-    else:
-        return ScriptOp("script",  self.to_painless(schema)).to_esfilter(schema)
+    self.field.exists().partial_eval().to_esfilter(schema)
 
 
 @extend(Literal)
@@ -576,8 +566,12 @@ def to_painless(self, schema):
 
 @extend(NotOp)
 def to_esfilter(self, schema):
-    operand = self.term.to_esfilter(schema)
-    return {"bool": {"must_not": operand}}
+    if isinstance(self.term, MissingOp) and isinstance(self.term.expr, Variable):
+        v = schema.leaves(self.term.expr.var)[0].es_column
+        return {"exists": {"field": v}}
+    else:
+        operand = self.term.to_esfilter(schema)
+        return {"bool": {"must_not": operand}}
 
 
 @extend(AndOp)
@@ -626,6 +620,22 @@ def to_painless(self, schema):
         expr="(" + value.expr + ").length()",
         frum=self
     )
+
+
+@extend(FirstOp)
+def to_painless(self, schema):
+    value = self.term.to_painless(schema)
+    if value.many:
+        return Painless(
+            miss=value.missing().partial_eval(),
+            type=value.type,
+            expr="(" + value.expr + ")[0]",
+            frum=value.frum
+        ).to_painless(schema)
+    else:
+        return value
+
+
 
 @extend(BooleanOp)
 def to_painless(self, schema):
@@ -890,9 +900,10 @@ def to_painless(self, schema):
 @extend(PrefixOp)
 def to_esfilter(self, schema):
     if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
-        return {"prefix": {self.field.var: json2value(self.prefix.json)}}
+        var = schema.leaves(self.field.var)[0].es_column
+        return {"prefix": {var: json2value(self.prefix.json)}}
     else:
-        return ScriptOp("script",  self.to_painless(schema)).to_esfilter(schema)
+        return ScriptOp("script",  self.to_painless(schema).script(schema)).to_esfilter(schema)
 
 
 @extend(InOp)
@@ -907,9 +918,10 @@ def to_painless(self, schema):
 @extend(InOp)
 def to_esfilter(self, schema):
     if isinstance(self.value, Variable):
-        return {"terms": {self.value.var: json2value(self.superset.json)}}
+        var = schema.leaves(self.value.var)[0].es_column
+        return {"terms": {var: json2value(self.superset.json)}}
     else:
-        return {"script": {"script": {"lang": "painless", "inline": self.to_painless(schema).script(schema)}}}
+        return ScriptOp("script",  self.to_painless(schema).script(schema)).to_esfilter(schema)
 
 
 @extend(ScriptOp)
@@ -936,7 +948,7 @@ def to_painless(self, schema):
             varname = c.es_column
             q = quote(varname)
             acc.append(Painless(
-                miss=Painless(expr="doc[" + q + "].empty", type=BOOLEAN, frum=self),
+                miss=self.missing(),
                 type=c.type,
                 expr="doc[" + q + "].values",
                 frum=self,

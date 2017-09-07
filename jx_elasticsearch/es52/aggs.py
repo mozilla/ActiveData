@@ -383,6 +383,7 @@ def aggs_iterator(aggs, decoders, coord=True):
         if d > 0:
             for k, v in agg.items():
                 if k == "_match":
+                    v = drill(v)
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
                         b["_index"] = i
                         for a, parts in _aggs_iterator(b, d - 1):
@@ -403,6 +404,7 @@ def aggs_iterator(aggs, decoders, coord=True):
         else:
             for k, v in agg.items():
                 if k == "_match":
+                    v = drill(v)
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
                         if b.get("doc_count"):
                             b = drill(b)

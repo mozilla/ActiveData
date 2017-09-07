@@ -608,6 +608,15 @@ returns
 Set Operators (and Variables)
 -----------------------------
 
+### `first` Operator ###
+
+Return the first element of a list, or tuple.
+
+		{"first": expression}
+
+If the `expression` value is not a list, then the expression value is returned. If list is empty, or if the expression is `null`, then `null` is returned.
+
+
 ### `last` Operator ###
 
 Return the last element of a list, or tuple.

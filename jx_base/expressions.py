@@ -38,6 +38,17 @@ def extend(cls):
     return extender
 
 
+def simplified(func):
+    def mark_as_simple(self):
+        if self.simplified:
+            return self
+
+        output = func(self)
+        output.simplified = True
+        return output
+    return mark_as_simple
+
+
 def jx_expression(expr):
     """
     WRAP A JSON EXPRESSION WITH OBJECT REPRESENTATION
@@ -156,7 +167,7 @@ class Expression(object):
         OVERRIDE THIS METHOD TO SIMPLIFY
         :return:
         """
-        return ExistsOp("exists", self)
+        return NotOp("not", self.missing())
 
     def is_true(self):
         """
@@ -705,6 +716,7 @@ class InequalityOp(Expression):
     def missing(self):
         return FALSE
 
+    @simplified
     def partial_eval(self):
         lhs = self.lhs.partial_eval()
         rhs = self.rhs.partial_eval()
@@ -712,9 +724,7 @@ class InequalityOp(Expression):
         if isinstance(lhs, Literal) and isinstance(rhs, Literal):
             return Literal(None, builtin_ops[self.op](lhs, rhs))
 
-        output = InequalityOp(self.op, [lhs, rhs])
-        output.simplified = True
-        return output
+        return InequalityOp(self.op, [lhs, rhs])
 
 
 class DivOp(Expression):
@@ -819,6 +829,7 @@ class EqOp(Expression):
     def exists(self):
         return TRUE
 
+    @simplified
     def partial_eval(self):
         lhs = self.lhs.partial_eval()
         rhs = self.rhs.partial_eval()
@@ -864,6 +875,7 @@ class NeOp(Expression):
     def missing(self):
         return OrOp("or", [self.lhs.missing(), self.rhs.missing()])
 
+    @simplified
     def partial_eval(self):
         lhs = self.lhs.partial_eval()
         rhs = self.rhs.partial_eval()
@@ -894,10 +906,8 @@ class NotOp(Expression):
     def missing(self):
         return self.term.missing()
 
+    @simplified
     def partial_eval(self):
-        if self.simplified:
-            return self
-
         def inverse(term):
             if isinstance(term, TrueOp):
                 return FALSE
@@ -918,12 +928,13 @@ class NotOp(Expression):
             elif isinstance(term, OrOp):
                 output = AndOp("and", [inverse(t) for t in term.terms]).partial_eval()
             elif isinstance(term, MissingOp):
-                output = ExistsOp("exists", term.expr).partial_eval()
+                output = NotOp("not", term.expr.missing())
+            elif isinstance(term, ExistsOp):
+                output = term.field.missing().partial_eval()
             elif isinstance(term, NotOp):
                 output = term.term.partial_eval()
             else:
                 output = NotOp("not", term)
-                output.simplified = True
 
             return output
 
@@ -958,10 +969,8 @@ class AndOp(Expression):
     def missing(self):
         return FALSE
 
+    @simplified
     def partial_eval(self):
-        if self.simplified:
-            return self
-
         terms = []
         for t in self.terms:
             simple = BooleanOp("boolean", t).partial_eval()
@@ -980,7 +989,6 @@ class AndOp(Expression):
         if len(terms) == 1:
             return terms[0]
         output = AndOp("and", terms)
-        output.simplified = True
         return output
 
 
@@ -1009,10 +1017,8 @@ class OrOp(Expression):
     def __call__(self, row=None, rownum=None, rows=None):
         return any(t(row, rownum, rows) for t in self.terms)
 
+    @simplified
     def partial_eval(self):
-        if self.simplified:
-            return self
-
         terms = []
         for t in self.terms:
             simple = t.partial_eval()
@@ -1030,9 +1036,7 @@ class OrOp(Expression):
             return FALSE
         if len(terms) == 1:
             return terms[0]
-        output = OrOp("or", terms)
-        output.simplified = True
-        return output
+        return OrOp("or", terms)
 
 
 class LengthOp(Expression):
@@ -1054,6 +1058,7 @@ class LengthOp(Expression):
     def missing(self):
         return self.term.missing()
 
+    @simplified
     def partial_eval(self):
         term = self.term.partial_eval()
         if isinstance(term, Literal):
@@ -1062,9 +1067,29 @@ class LengthOp(Expression):
             else:
                 return NullOp()
         else:
-            output = LengthOp("length", term)
-            output.simplified = True
-            return output
+            return LengthOp("length", term)
+
+class FirstOp(Expression):
+    def __init__(self, op, term):
+        Expression.__init__(self, op, [term])
+        self.term = term
+        self.data_type = self.term.type
+
+    def __data__(self):
+        return {"boolean": self.term.__data__()}
+
+    def vars(self):
+        return self.term.vars()
+
+    def map(self, map_):
+        return BooleanOp("boolean", self.term.map(map_))
+
+    def missing(self):
+        return self.term.missing()
+
+    @simplified
+    def partial_eval(self):
+        return FirstOp("first", self.term.partial_eval())
 
 
 class BooleanOp(Expression):
@@ -1086,10 +1111,8 @@ class BooleanOp(Expression):
     def missing(self):
         return self.term.missing()
 
+    @simplified
     def partial_eval(self):
-        if self.simplified:
-            return self
-
         term = self.term.partial_eval()
         if term.type == BOOLEAN:
             return term
@@ -1101,7 +1124,6 @@ class BooleanOp(Expression):
             return TRUE
         else:
             output = BooleanOp("boolean", term)
-            output.simplified = True
             return output
 
 
@@ -1144,11 +1166,11 @@ class IntegerOp(Expression):
     def missing(self):
         return self.term.missing()
 
+    @simplified
     def partial_eval(self):
         term = self.term
         if isinstance(term, CoalesceOp):
             return CoalesceOp("coalesce", [IntegerOp("integer", t) for t in term.terms])
-        self.simplified = True
         return self
 
 
@@ -1191,11 +1213,11 @@ class NumberOp(Expression):
     def missing(self):
         return self.term.missing()
 
+    @simplified
     def partial_eval(self):
         term = self.term
         if isinstance(term, CoalesceOp):
             return CoalesceOp("coalesce", [NumberOp("number", t)for t in term.terms])
-        self.simplified = True
         return self
 
 class IsNumberOp(Expression):
@@ -1217,6 +1239,7 @@ class IsNumberOp(Expression):
     def missing(self):
         return FALSE
 
+    @simplified
     def partial_eval(self):
         term = self.term.partial_eval()
 
@@ -1225,7 +1248,6 @@ class IsNumberOp(Expression):
         elif term.type in (INTEGER, NUMBER):
             return TRUE
         elif term.type == OBJECT:
-            self.simplified = True
             return self
         else:
             return FALSE
@@ -1251,11 +1273,11 @@ class StringOp(Expression):
     def missing(self):
         return self.term.missing()
 
+    @simplified
     def partial_eval(self):
         term = self.term
         if isinstance(term, CoalesceOp):
             return CoalesceOp("coalesce", [StringOp("string", t)for t in term.terms])
-        self.simplified = True
         return self
 
 
@@ -1333,10 +1355,8 @@ class MaxOp(Expression):
     def missing(self):
         return FALSE
 
+    @simplified
     def partial_eval(self):
-        if self.simplified:
-            return self
-
         maximum = None
         terms = []
         for t in self.terms:
@@ -1358,7 +1378,6 @@ class MaxOp(Expression):
             else:
                 output = MaxOp("max", [Literal(None, maximum)] + terms)
 
-        output.simplified = True
         return output
 
 
@@ -1389,10 +1408,8 @@ class MinOp(Expression):
     def missing(self):
         return FALSE
 
+    @simplified
     def partial_eval(self):
-        if self.simplified:
-            return self
-
         minimum = None
         terms = []
         for t in self.terms:
@@ -1414,7 +1431,6 @@ class MinOp(Expression):
             else:
                 output = MinOp("min", [Literal(None, minimum)] + terms)
 
-        output.simplified = True
         return output
 
 
@@ -1467,10 +1483,8 @@ class MultiOp(Expression):
         else:
             return AndOp("and", [t.exists() for t in self.terms])
 
+    @simplified
     def partial_eval(self):
-        if self.simplified:
-            return self
-
         acc = None
         terms = []
         for t in self.terms:
@@ -1495,7 +1509,6 @@ class MultiOp(Expression):
             else:
                 output = MultiOp(self.op, [Literal(None, acc)] + terms, default=self.default, nulls=self.nulls)
 
-        output.simplified = True
         return output
 
 
@@ -1562,8 +1575,25 @@ class CoalesceOp(Expression):
     def map(self, map_):
         return CoalesceOp("coalesce", [v.map(map_) for v in self.terms])
 
+    @simplified
     def partial_eval(self):
-        Log.error("partial eval on coalesce is invalid: Be sure to distribute the eval over the terms of this coalesce first, then make a new coalesce")
+        terms = []
+        for t in self.terms:
+            simple = FirstOp("first", t).partial_eval()
+            if isinstance(simple, NullOp):
+                pass
+            elif isinstance(simple, Literal):
+                terms.append(simple)
+                break
+            else:
+                terms.append(simple)
+
+        if len(terms) == 0:
+            return NULL
+        elif len(terms) == 1:
+            return terms[0]
+        else:
+            return CoalesceOp("coalesce", terms)
 
 
 class MissingOp(Expression):
@@ -1744,6 +1774,7 @@ class LeftOp(Expression):
     def missing(self):
         return OrOp(None, [self.value.missing(), self.length.missing()])
 
+    @simplified
     def partial_eval(self):
         value = self.value.partial_eval()
         length = self.length.partial_eval()
@@ -1788,6 +1819,7 @@ class NotLeftOp(Expression):
     def missing(self):
         return OrOp(None, [self.value.missing(), self.length.missing()])
 
+    @simplified
     def partial_eval(self):
         value = self.value.partial_eval()
         length = self.length.partial_eval()
@@ -1832,6 +1864,7 @@ class RightOp(Expression):
     def missing(self):
         return OrOp(None, [self.value.missing(), self.length.missing()])
 
+    @simplified
     def partial_eval(self):
         value = self.value.partial_eval()
         length = self.length.partial_eval()
@@ -1876,6 +1909,7 @@ class NotRightOp(Expression):
     def missing(self):
         return OrOp(None, [self.value.missing(), self.length.missing()])
 
+    @simplified
     def partial_eval(self):
         value = self.value.partial_eval()
         length = self.length.partial_eval()
@@ -1953,6 +1987,7 @@ class FindOp(Expression):
     def exists(self):
         return TRUE
 
+    @simplified
     def partial_eval(self):
         start = MaxOp("max", [ZERO, self.start]).partial_eval()
         index = BasicIndexOfOp("indexOf", [
@@ -2060,6 +2095,7 @@ class BetweenOp(Expression):
     def missing(self):
         return self.partial_eval().missing()
 
+    @simplified
     def partial_eval(self):
         value = self.value.partial_eval()
 
@@ -2126,16 +2162,13 @@ class InOp(Expression):
     def map(self, map_):
         return InOp("in", [self.value.map(map_), self.superset.map(map_)])
 
+    @simplified
     def partial_eval(self):
-        if self.simplified:
-            return self
-
         value = self.value.partial_eval()
         superset = self.superset.partial_eval()
         if isinstance(value, Literal) and isinstance(superset, Literal):
             return Literal(None, self())
         else:
-            self.simplified = True
             return self
 
     def __call__(self):
@@ -2185,6 +2218,7 @@ class WhenOp(Expression):
             AndOp("and", [NotOp("not", self.when), self.els_.missing()])
         ]).partial_eval()
 
+    @simplified
     def partial_eval(self):
         when = BooleanOp("boolean", self.when).partial_eval()
         if isinstance(when, Literal):
@@ -2196,7 +2230,6 @@ class WhenOp(Expression):
                 Log.error("Expecting `when` clause to return a Boolean, or `null`")
         else:
             output = WhenOp("when", when, **{"then": self.then.partial_eval(), "else": self.els_.partial_eval()})
-            output.simplified = True
             return output
 
 
@@ -2306,6 +2339,7 @@ operators = {
     "exists": ExistsOp,
     "exp": BinaryOp,
     "find": FindOp,
+    "first": FirstOp,
     "floor": FloorOp,
     "from_unix": FromUnixOp,
     "get": GetOp,

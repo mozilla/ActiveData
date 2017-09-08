@@ -75,8 +75,6 @@ class TestESFilters(FuzzyTestCase):
         result = jx_expression(where).partial_eval().to_esfilter(Null)
         self.assertEqual(result, {"terms": {"a": [1, 2]}})
 
-
-
     def test_painless(self):
         # THIS TEST IS USED TO FORCE-IMPORT OF elasticsearch EXTENSION METHODS
         a = Painless(type=OBJECT, expr=NULL, frum=NULL)

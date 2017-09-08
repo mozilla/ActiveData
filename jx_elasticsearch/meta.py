@@ -332,6 +332,8 @@ class FromESMetadata(Schema):
                     "nested": {"path": c.nested_path[0]},
                     "aggs": {"_nested": {"terms": {"field": c.es_column}}}
                 }
+            elif cardinality == 0:
+                query.aggs["_"] = {"terms": {"field": c.es_column}}
             else:
                 query.aggs["_"] = {"terms": {"field": c.es_column, "size": cardinality}}
 

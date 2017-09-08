@@ -15,7 +15,7 @@ from future.utils import text_type
 
 from jx_base import OBJECT, NESTED
 from jx_base.expressions import TupleOp
-from jx_base.query import MAX_LIMIT
+from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch import es09
 from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
 from jx_elasticsearch.es52.decoders import DimFieldListDecoder
@@ -23,7 +23,7 @@ from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, 
 from jx_elasticsearch.es52.util import aggregates1_4
 from jx_python import jx
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
-    unwraplist
+    unwraplist, join_field
 from mo_logs import Log
 from mo_math import Math, MAX
 from mo_times.timer import Timer
@@ -52,6 +52,7 @@ def get_decoders_by_depth(query):
             query.groupby = sort_edges(query, "groupby")
 
     for edge in wrap(coalesce(query.edges, query.groupby, [])):
+        limit = coalesce(edge.domain.limit, query.limit, DEFAULT_LIMIT)
         if edge.value != None and not isinstance(edge.value, NullOp):
             edge = edge.copy()
             vars_ = edge.value.vars()
@@ -59,20 +60,10 @@ def get_decoders_by_depth(query):
                 if not schema.leaves(v):
                     Log.error("{{var}} does not exist in schema", var=v)
         elif edge.range:
-            edge = edge.copy()
-            min_ = edge.range.min
-            max_ = edge.range.max
-            vars_ = min_.vars() | max_.vars()
-
+            vars_ = edge.range.min.vars() | edge.range.max.vars()
             for v in vars_:
                 if not schema[v]:
                     Log.error("{{var}} does not exist in schema", var=v)
-
-            map_ = {v: schema[v][0].es_column for v in vars_}
-            edge.range = {
-                "min": min_.map(map_),
-                "max": max_.map(map_)
-            }
         elif edge.domain.dimension:
             vars_ = edge.domain.dimension.fields
             edge.domain.dimension = edge.domain.dimension.copy()
@@ -100,7 +91,6 @@ def get_decoders_by_depth(query):
             max_depth = 0
             output.append([])
 
-        limit = None
         output[max_depth].append(AggsDecoder(edge, query, limit))
     return output
 
@@ -146,8 +136,10 @@ def es_aggsop(es, frum, query):
             if len(es_cols) > 1:
                 Log.error("Do not know how to count columns with more than one type (script probably)")
             if es_cols:
-                es_field_name = es_cols[0].es_column
+                es_col = es_cols[0]
+                es_field_name = es_col.es_column
             else:
+                es_col = Null
                 es_field_name = "$dummy"  # SOME PROPERTY THAT DOES NOT EXIST
 
             if s.aggregate == "count":
@@ -200,9 +192,20 @@ def es_aggsop(es, frum, query):
             elif s.aggregate == "union":
                 # USE TERMS AGGREGATE TO SIMULATE union
                 stats_name = literal_field(canonical_name)
-                es_query.aggs[stats_name].terms.field = es_field_name
-                es_query.aggs[stats_name].terms.size = Math.min(s.limit, MAX_LIMIT)
-                s.pull = stats_name + ".buckets.key"
+
+                if es_col.nested_path[0] == ".":
+                    es_query.aggs[stats_name].terms.field = es_field_name
+                    es_query.aggs[stats_name].terms.size = Math.min(s.limit, MAX_LIMIT)
+                    s.pull = stats_name + ".buckets.key"
+                else:
+                    es_query.aggs[stats_name] = {
+                        "nested": {"path": es_col.nested_path[0]},
+                        "aggs": {"_nested": {"terms": {
+                            "field": es_field_name,
+                            "size": Math.min(s.limit, MAX_LIMIT)
+                        }}}
+                    }
+                    s.pull = stats_name + "._nested.buckets.key"
             else:
                 # PULL VALUE OUT OF THE stats AGGREGATE
                 es_query.aggs[literal_field(canonical_name)].extended_stats.field = es_field_name

@@ -95,7 +95,7 @@ def to_esfilter(self, schema):
     elif self.op in ["ne", "neq"]:
         return {"bool": {"must_not": {"term": {self.lhs.var: self.rhs.to_esfilter(schema)}}}}
     elif self.op in BinaryOp.ineq_ops:
-        return {"range": {self.lhs.var: {self.op: json2value(self.rhs.json)}}}
+        return {"range": {self.lhs.var: {self.op: self.rhs.value}}}
     else:
         Log.error("Logic error")
 
@@ -120,7 +120,7 @@ def to_esfilter(self, schema):
 @extend(ConcatOp)
 def to_esfilter(self, schema):
     if isinstance(self.value, Variable) and isinstance(self.find, Literal):
-        return {"regexp": {self.value.var: ".*" + string2regexp(json2value(self.find.json)) + ".*"}}
+        return {"regexp": {self.value.var: ".*" + string2regexp(self.find.value) + ".*"}}
     else:
         return ScriptOp("script",  self.to_painless(schema)).to_esfilter(schema)
 
@@ -259,7 +259,7 @@ def to_esfilter(self, schema):
 
 @extend(Literal)
 def to_esfilter(self, schema):
-    return json2value(self.json)
+    return self.json
 
 
 @extend(NullOp)
@@ -284,11 +284,6 @@ def to_painless(self, schema):
 @extend(FalseOp)
 def to_esfilter(self, schema):
     return {"bool": {"must_not": {"match_all": {}}}}
-
-
-@extend(DateOp)
-def to_esfilter(self, schema):
-    return json2value(self.json)
 
 
 @extend(DateOp)
@@ -332,7 +327,14 @@ def to_painless(self, schema):
 @extend(InequalityOp)
 def to_esfilter(self, schema):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-        return {"range": {self.lhs.var: {self.op: json2value(self.rhs.json)}}}
+        cols = schema.leaves(self.lhs.var)
+        if not cols:
+            pass
+        elif len(cols)==1:
+            lhs = schema.leaves(self.lhs.var)[0].es_column
+        else:
+            Log.error("operator {{op|quote}} does not work on objects", op=self.op)
+        return {"range": {lhs: {self.op: self.rhs.value}}}
     else:
         return {"script": {"script": {"lang": "painless", "inline": self.to_painless(schema).script(schema)}}}
 
@@ -429,13 +431,19 @@ def to_painless(self, schema):
 def to_esfilter(self, schema):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
         rhs = self.rhs.value
-        if isinstance(rhs, list):
-            if len(rhs) == 1:
-                return {"term": {self.lhs.var: rhs[0]}}
+        lhs = schema.leaves(self.lhs.var)
+        if len(lhs) == 0:
+            return FALSE.to_esfilter(schema)
+        elif len(lhs) == 1:
+            if isinstance(rhs, list):
+                if len(rhs) == 1:
+                    return {"term": {lhs[0].es_column: rhs[0]}}
+                else:
+                    return {"terms": {lhs[0].es_column: rhs}}
             else:
-                return {"terms": {self.lhs.var: rhs}}
+                return {"term": {lhs[0].es_column: rhs}}
         else:
-            return {"term": {self.lhs.var: rhs}}
+            Log.error("not implemented yet")
     else:
         return self.to_painless(schema).to_esfilter(schema)
 
@@ -777,7 +785,7 @@ def to_painless(self, schema):
 
 @extend(LengthOp)
 def to_esfilter(self, schema):
-    return {"regexp": {self.var.var: json2value(self.pattern.json)}}
+    return {"regexp": {self.var.var: self.pattern.value}}
 
 
 @extend(MaxOp)
@@ -833,7 +841,7 @@ def to_painless(self, schema):
 
 @extend(RegExpOp)
 def to_esfilter(self, schema):
-    return {"regexp": {self.var.var: json2value(self.pattern.json)}}
+    return {"regexp": {self.var.var: self.pattern.value}}
 
 
 @extend(StringOp)
@@ -901,7 +909,7 @@ def to_painless(self, schema):
 def to_esfilter(self, schema):
     if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
         var = schema.leaves(self.field.var)[0].es_column
-        return {"prefix": {var: json2value(self.prefix.json)}}
+        return {"prefix": {var: self.prefix.value}}
     else:
         return ScriptOp("script",  self.to_painless(schema).script(schema)).to_esfilter(schema)
 
@@ -919,7 +927,7 @@ def to_painless(self, schema):
 def to_esfilter(self, schema):
     if isinstance(self.value, Variable):
         var = schema.leaves(self.value.var)[0].es_column
-        return {"terms": {var: json2value(self.superset.json)}}
+        return {"terms": {var: self.superset.value}}
     else:
         return ScriptOp("script",  self.to_painless(schema).script(schema)).to_esfilter(schema)
 

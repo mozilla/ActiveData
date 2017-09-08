@@ -1970,16 +1970,15 @@ class FindOp(Expression):
         )
 
     def missing(self):
-        start = MaxOp("max", [ZERO, self.start]).partial_eval()
         return AndOp("and", [
             self.default.missing(),
             OrOp("or", [
                 self.value.missing(),
                 self.find.missing(),
                 EqOp("eq", [BasicIndexOfOp("", [
-                    self.value.partial_eval(),
-                    self.find.partial_eval(),
-                    start
+                    self.value,
+                    self.find,
+                    self.start
                 ]), Literal(None, -1)])
             ])
         ]).partial_eval()
@@ -1989,12 +1988,11 @@ class FindOp(Expression):
 
     @simplified
     def partial_eval(self):
-        start = MaxOp("max", [ZERO, self.start]).partial_eval()
         index = BasicIndexOfOp("indexOf", [
-            self.value.partial_eval(),
-            self.find.partial_eval(),
-            start
-        ])
+            self.value,
+            self.find,
+            self.start
+        ]).partial_eval()
 
         return WhenOp(
             "when",
@@ -2278,6 +2276,7 @@ class BasicIndexOfOp(Expression):
     data_type = INTEGER
 
     def __init__(self, op, params):
+        Expression.__init__(self, op, params)
         self.value, self.find, self.start = params
 
     def __data__(self):
@@ -2285,6 +2284,15 @@ class BasicIndexOfOp(Expression):
 
     def missing(self):
         return FALSE
+
+    @simplified
+    def partial_eval(self):
+        start = IntegerOp("integer", MaxOp("max", [ZERO, self.start])).partial_eval()
+        return BasicIndexOfOp("indexOf", [
+            StringOp("string", self.value).partial_eval(),
+            StringOp("string", self.find).partial_eval(),
+            start
+        ])
 
 
 class BasicEqOp(Expression):

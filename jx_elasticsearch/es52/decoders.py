@@ -67,7 +67,7 @@ class AggsDecoder(object):
                         partitions = list(reversed(sorted(partitions)))
                     else:
                         partitions = sorted(partitions)
-                    e.domain = SimpleSetDomain(partitions=partitions)
+                    e.domain = SimpleSetDomain(partitions=partitions, limit=limit)
                 else:
                     e.domain = set_default(DefaultDomain(limit=limit), e.domain.__data__())
                     return object.__new__(DefaultDecoder, e)
@@ -167,12 +167,13 @@ class SetDecoder(AggsDecoder):
             InOp("in", [self.edge.value, Literal("literal", include)])
         ]).partial_eval()
 
+        limit = coalesce(self.limit, len(domain.partitions))
 
         if isinstance(self.edge.value, Variable):
             es_field = self.edge.value.map({c.names[self.query.frum.query_path]: c.es_column for c in self.query.frum.schema.leaves(".")})  # ALREADY CHECKED THERE IS ONLY ONE
             terms = set_default({"terms": {
                 "field": es_field.var,
-                "size": self.limit,
+                "size": limit,
                 "order": {"_term": self.sorted} if self.sorted else None
             }}, es_query)
         else:
@@ -181,7 +182,7 @@ class SetDecoder(AggsDecoder):
                     "lang": "painless",
                     "inline": self.edge.value.to_painless(self.schema).script(self.schema)
                 },
-                "size": self.limit
+                "size": limit
             }}, es_query)
 
         if self.edge.allowNulls:
@@ -228,11 +229,11 @@ def _range_composer(edge, domain, es_query, to_float, schema):
     if edge.allowNulls:
         missing_filter = set_default(
             {
-                "filter": OrOp("or", [
-                    edge.value.missing(),
-                    InequalityOp("lt", [edge.value, Literal(None, to_float(_min))]),
-                    InequalityOp("gte", [edge.value, Literal(None, to_float(_max))])
-                ]).to_esfilter(schema)
+                "filter": NotOp("not", AndOp("and", [
+                    edge.value.exists(),
+                    InequalityOp("gte", [edge.value, Literal(None, to_float(_min))]),
+                    InequalityOp("lt", [edge.value, Literal(None, to_float(_max))])
+                ]).partial_eval()).to_esfilter(schema)
             },
             es_query
         )
@@ -350,7 +351,7 @@ class GeneralSetDecoder(AggsDecoder):
         notty = []
 
         for p in parts:
-            w = p.where.map(self.es_column_map)
+            w = p.where
             filters.append(AndOp("and", [w] + notty).to_esfilter(self.schema))
             notty.append(NotOp("not", w))
 
@@ -418,7 +419,7 @@ class DurationDecoder(AggsDecoder):
 class RangeDecoder(AggsDecoder):
     def append_query(self, es_query, start):
         self.start = start
-        return _range_composer(self.edge, self.edge.domain, es_query, self.es_column_map, lambda x: x)
+        return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x, self.schema)
 
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)

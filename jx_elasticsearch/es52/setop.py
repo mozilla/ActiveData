@@ -254,7 +254,10 @@ def format_table(T, select, query=None):
     for s in select:
         if header[s.put.index]:
             continue
-        header[s.put.index] = split_field(s.name)[0]
+        if s.name == ".":
+            header[s.put.index] = "."
+        else:
+            header[s.put.index] = split_field(s.name)[0]
 
     return Data(
         meta={"format": "table"},

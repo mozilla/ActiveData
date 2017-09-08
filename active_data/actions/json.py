@@ -40,7 +40,7 @@ def get_raw_json(path):
                 "format": "list"
             }, frum)
 
-            if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
+            if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                 result = result.format("list")
 
         result.meta.active_data_response_time = active_data_timer.duration

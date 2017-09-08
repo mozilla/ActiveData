@@ -15,7 +15,7 @@ from collections import Mapping
 
 from jx_base import container
 from jx_python import jx
-from mo_dots import Data
+from mo_dots import Data, Null
 from mo_dots import coalesce, split_field, literal_field, unwraplist, join_field
 from mo_dots import wrap, listwrap
 from mo_kwargs import override
@@ -208,7 +208,7 @@ class FromES(Container):
         results = self._es.search({
             "stored_fields": listwrap(schema._routing.path),
             "query": {"bool": {
-                "filter": jx_expression(command.where).to_esfilter()
+                "filter": jx_expression(command.where).to_esfilter(Null)
             }},
             "size": 10000
         })

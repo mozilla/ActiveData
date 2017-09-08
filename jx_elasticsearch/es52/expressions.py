@@ -329,8 +329,8 @@ def to_esfilter(self, schema):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
         cols = schema.leaves(self.lhs.var)
         if not cols:
-            pass
-        elif len(cols)==1:
+            lhs = self.lhs.var  # HAPPENS DURING DEBUGGING, AND MAYBE IN REAL LIFE TOO
+        elif len(cols) == 1:
             lhs = schema.leaves(self.lhs.var)[0].es_column
         else:
             Log.error("operator {{op|quote}} does not work on objects", op=self.op)
@@ -431,19 +431,19 @@ def to_painless(self, schema):
 def to_esfilter(self, schema):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
         rhs = self.rhs.value
-        lhs = schema.leaves(self.lhs.var)
-        if len(lhs) == 0:
-            return FALSE.to_esfilter(schema)
-        elif len(lhs) == 1:
-            if isinstance(rhs, list):
-                if len(rhs) == 1:
-                    return {"term": {lhs[0].es_column: rhs[0]}}
-                else:
-                    return {"terms": {lhs[0].es_column: rhs}}
+        lhs = self.lhs.var
+        cols = schema.leaves(lhs)
+        if cols:
+            lhs = cols[0].es_column
+
+        if isinstance(rhs, list):
+            if len(rhs) == 1:
+                return {"term": {lhs: rhs[0]}}
             else:
-                return {"term": {lhs[0].es_column: rhs}}
+                return {"terms": {lhs: rhs}}
         else:
-            Log.error("not implemented yet")
+            return {"term": {lhs: rhs}}
+
     else:
         return self.to_painless(schema).to_esfilter(schema)
 
@@ -478,14 +478,18 @@ def to_painless(self, schema):
 @extend(BasicEqOp)
 def to_esfilter(self, schema):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
+        lhs = self.lhs.var
+        cols = schema.leaves(lhs)
+        if cols:
+            lhs = cols[0].es_column
         rhs = self.rhs.value
         if isinstance(rhs, list):
             if len(rhs) == 1:
-                return {"term": {self.lhs.var: rhs[0]}}
+                return {"term": {lhs: rhs[0]}}
             else:
-                return {"terms": {self.lhs.var: rhs}}
+                return {"terms": {lhs: rhs}}
         else:
-            return {"term": {self.lhs.var: rhs}}
+            return {"term": {lhs: rhs}}
     else:
         return self.to_painless(schema).to_esfilter(schema)
 
@@ -575,7 +579,10 @@ def to_painless(self, schema):
 @extend(NotOp)
 def to_esfilter(self, schema):
     if isinstance(self.term, MissingOp) and isinstance(self.term.expr, Variable):
-        v = schema.leaves(self.term.expr.var)[0].es_column
+        v = self.term.expr.var
+        cols = schema.leaves(v)
+        if cols:
+            v = cols[0].es_column
         return {"exists": {"field": v}}
     else:
         operand = self.term.to_esfilter(schema)
@@ -926,7 +933,10 @@ def to_painless(self, schema):
 @extend(InOp)
 def to_esfilter(self, schema):
     if isinstance(self.value, Variable):
-        var = schema.leaves(self.value.var)[0].es_column
+        var = self.value.var
+        cols = schema.leaves(var)
+        if cols:
+            var = cols[0].es_column
         return {"terms": {var: self.superset.value}}
     else:
         return ScriptOp("script",  self.to_painless(schema).script(schema)).to_esfilter(schema)

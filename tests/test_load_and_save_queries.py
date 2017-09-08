@@ -13,6 +13,8 @@ from __future__ import unicode_literals
 
 import hashlib
 
+from future.utils import text_type
+
 from mo_dots import wrap
 from mo_json import value2json
 from mo_json_config import URL
@@ -63,7 +65,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
 
         url = URL(self.utils.service_url)
 
-        response = self.utils.try_till_response(url.scheme+"://"+url.host+":"+text_type(url.port)+"/find/"+expected_hash, data=b'')
+        response = self.utils.try_till_response(url.scheme + "://" + url.host + ":" + text_type(url.port) + "/find/" + expected_hash, data=b'')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, bytes)

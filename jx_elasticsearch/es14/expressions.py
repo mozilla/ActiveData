@@ -24,7 +24,7 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
     WhenOp, InequalityOp, extend, RowsOp, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, UnixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, InOp, RangeOp, CaseOp, AndOp, \
-    ConcatOp, TRUE_FILTER, FALSE_FILTER, LeftOp, ZERO
+    ConcatOp, TRUE, FALSE, LeftOp, ZERO
 
 
 @extend(BetweenOp)
@@ -724,9 +724,9 @@ USE_BOOL_MUST = True
 def simplify_esfilter(esfilter):
     try:
         output = normalize_esfilter(esfilter)
-        if output is TRUE_FILTER:
+        if output is TRUE:
             return {"match_all": {}}
-        elif output is FALSE_FILTER:
+        elif output is FALSE:
             return {"not": {"match_all": {}}}
 
         output.isNormal = None
@@ -762,7 +762,7 @@ def _normalize(esfilter):
     TODO: DO NOT USE Data, WE ARE SPENDING TOO MUCH TIME WRAPPING/UNWRAPPING
     REALLY, WE JUST COLLAPSE CASCADING `and` AND `or` FILTERS
     """
-    if esfilter is TRUE_FILTER or esfilter is FALSE_FILTER or esfilter.isNormal:
+    if esfilter is TRUE or esfilter is FALSE or esfilter.isNormal:
         return esfilter
 
     # Log.note("from: " + convert.value2json(esfilter))
@@ -794,11 +794,11 @@ def _normalize(esfilter):
                 if a_ is not a:
                     isDiff = True
                 a = a_
-                if a == TRUE_FILTER:
+                if a == TRUE:
                     isDiff = True
                     continue
-                if a == FALSE_FILTER:
-                    return FALSE_FILTER
+                if a == FALSE:
+                    return FALSE
                 if coalesce(a.get("and"), a.bool.must):
                     isDiff = True
                     a.isNormal = None
@@ -807,7 +807,7 @@ def _normalize(esfilter):
                     a.isNormal = None
                     output.append(a)
             if not output:
-                return TRUE_FILTER
+                return TRUE
             elif len(output) == 1:
                 # output[0].isNormal = True
                 esfilter = output[0]
@@ -827,9 +827,9 @@ def _normalize(esfilter):
                     isDiff = True
                 a = a_
 
-                if a == TRUE_FILTER:
-                    return TRUE_FILTER
-                if a == FALSE_FILTER:
+                if a == TRUE:
+                    return TRUE
+                if a == FALSE:
                     isDiff = True
                     continue
                 if a.get("or"):
@@ -840,7 +840,7 @@ def _normalize(esfilter):
                     a.isNormal = None
                     output.append(a)
             if not output:
-                return FALSE_FILTER
+                return FALSE
             elif len(output) == 1:
                 esfilter = output[0]
                 break
@@ -853,7 +853,7 @@ def _normalize(esfilter):
                 esfilter.isNormal = True
                 return esfilter
             else:
-                return TRUE_FILTER
+                return TRUE
 
         if esfilter.terms != None:
             for k, v in esfilter.terms.items():
@@ -876,15 +876,15 @@ def _normalize(esfilter):
                     else:
                         esfilter.isNormal = True
                         return esfilter
-            return FALSE_FILTER
+            return FALSE
 
         if esfilter["not"] != None:
             _sub = esfilter["not"]
             sub = _normalize(_sub)
-            if sub is FALSE_FILTER:
-                return TRUE_FILTER
-            elif sub is TRUE_FILTER:
-                return FALSE_FILTER
+            if sub is FALSE:
+                return TRUE
+            elif sub is TRUE:
+                return FALSE
             elif sub is not _sub:
                 sub.isNormal = None
                 return wrap({"not": sub, "isNormal": True})

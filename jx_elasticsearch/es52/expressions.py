@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import itertools
 from future.utils import binary_type, text_type
 
 from jx_base import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER
@@ -18,11 +19,11 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, FALSE, TRUE, NULL, FirstOp
-from mo_dots import coalesce, wrap, Null, unwraplist
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, FALSE, TRUE, NULL, FirstOp, FALSE, TRUE
+from mo_dots import coalesce, wrap, Null, unwraplist, set_default, literal_field
 from mo_json import json2value, quote
-from mo_logs import Log
-from mo_math import MAX
+from mo_logs import Log, suppress_exception
+from mo_math import MAX, OR
 from pyLibrary.convert import string2regexp
 
 
@@ -523,7 +524,9 @@ def to_painless(self, schema, not_null=False, boolean=True):
 def to_esfilter(self, schema):
     if isinstance(self.expr, Variable):
         cols = schema.leaves(self.expr.var)
-        if len(cols) == 1:
+        if not cols:
+            return {"bool": {"must_not": {"exists": {"field": self.expr.var}}}}
+        elif len(cols) == 1:
             return {"bool": {"must_not": {"exists": {"field": cols[0].es_column}}}}
         else:
             return {"bool": {"must": [
@@ -555,7 +558,7 @@ def to_painless(self, schema):
 @extend(NeOp)
 def to_esfilter(self, schema):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-        return {"bool": {"must_not": {"term": {self.lhs.var: self.rhs.to_esfilter(schema)}}}}
+        return {"bool": {"must_not": {"term": {self.lhs.var: self.rhs.value}}}}
     else:
 
         calc = self.to_painless(schema)
@@ -1068,6 +1071,166 @@ def to_painless(self, schema):
         expr="(" + v + ").substring(" + start + ", " + end + ")",
         frum=self
     )
+
+
+
+MATCH_ALL = wrap({"match_all": {}})
+MATCH_NONE = wrap({"bool": {"must_not": {"match_all": {}}}})
+
+
+def simplify_esfilter(esfilter):
+    try:
+        output = wrap(_normalize(wrap(esfilter)))
+        output.isNormal = None
+        return output
+    except Exception as e:
+        from mo_logs import Log
+
+        Log.unexpected("programmer error", cause=e)
+
+
+def _normalize(esfilter):
+    """
+    TODO: DO NOT USE Data, WE ARE SPENDING TOO MUCH TIME WRAPPING/UNWRAPPING
+    REALLY, WE JUST COLLAPSE CASCADING `and` AND `or` FILTERS
+    """
+    if esfilter == MATCH_ALL or esfilter == MATCH_NONE or esfilter.isNormal:
+        return esfilter
+
+    # Log.note("from: " + convert.value2json(esfilter))
+    isDiff = True
+
+    while isDiff:
+        isDiff = False
+
+        if esfilter.bool.must:
+            terms = esfilter.bool.must
+            for (i0, t0), (i1, t1) in itertools.product(enumerate(terms), enumerate(terms)):
+                if i0 == i1:
+                    continue  # SAME, IGNORE
+                # TERM FILTER ALREADY ASSUMES EXISTENCE
+                with suppress_exception:
+                    if t0.exists.field != None and t0.exists.field == t1.term.items()[0][0]:
+                        terms[i0] = MATCH_ALL
+                        continue
+
+                # IDENTICAL CAN BE REMOVED
+                with suppress_exception:
+                    if t0 == t1:
+                        terms[i0] = MATCH_ALL
+                        continue
+
+                # MERGE range FILTER WITH SAME FIELD
+                if i0 > i1:
+                    continue  # SAME, IGNORE
+                with suppress_exception:
+                    f0, tt0 = t0.range.items()[0]
+                    f1, tt1 = t1.range.items()[0]
+                    if f0 == f1:
+                        set_default(terms[i0].range[literal_field(f1)], tt1)
+                        terms[i1] = MATCH_ALL
+
+            output = []
+            for a in terms:
+                if isinstance(a, (list, set)):
+                    from mo_logs import Log
+
+                    Log.error("and clause is not allowed a list inside a list")
+                a_ = _normalize(a)
+                if a_ is not a:
+                    isDiff = True
+                a = a_
+                if a == MATCH_ALL:
+                    isDiff = True
+                    continue
+                if a == MATCH_NONE:
+                    return MATCH_NONE
+                if a.bool.must:
+                    isDiff = True
+                    a.isNormal = None
+                    output.extend(a.bool.must)
+                else:
+                    a.isNormal = None
+                    output.append(a)
+            if not output:
+                return MATCH_ALL
+            elif len(output) == 1:
+                # output[0].isNormal = True
+                esfilter = output[0]
+                break
+            elif isDiff:
+                esfilter = wrap({"bool": {"must": output}})
+            continue
+
+        if esfilter.bool.should:
+            output = []
+            for a in esfilter.bool.should:
+                a_ = _normalize(a)
+                if a_ is not a:
+                    isDiff = True
+                a = a_
+
+                if a.bool.should:
+                    a.isNormal = None
+                    isDiff = True
+                    output.extend(a.bool.should)
+                else:
+                    a.isNormal = None
+                    output.append(a)
+            if not output:
+                return MATCH_NONE
+            elif len(output) == 1:
+                esfilter = output[0]
+                break
+            elif isDiff:
+                esfilter = wrap({"bool": {"should": output}})
+            continue
+
+        if esfilter.term != None:
+            if esfilter.term.keys():
+                esfilter.isNormal = True
+                return esfilter
+            else:
+                return MATCH_ALL
+
+        if esfilter.terms:
+            for k, v in esfilter.terms.items():
+                if len(v) > 0:
+                    if OR(vv == None for vv in v):
+                        rest = [vv for vv in v if vv != None]
+                        if len(rest) > 0:
+                            return {
+                                "bool": {"should": [
+                                    {"bool": {"must_not": {"exists": {"field": k}}}},
+                                    {"terms": {k: rest}}
+                                ]},
+                                "isNormal": True
+                            }
+                        else:
+                            return {
+                                "bool": {"must_not": {"exists": {"field": k}}},
+                                "isNormal": True
+                            }
+                    else:
+                        esfilter.isNormal = True
+                        return esfilter
+            return MATCH_NONE
+
+        if esfilter.bool.must_not:
+            _sub = esfilter.bool.must_not
+            sub = _normalize(_sub)
+            if sub == MATCH_NONE:
+                return MATCH_ALL
+            elif sub == MATCH_ALL:
+                return MATCH_NONE
+            elif sub is not _sub:
+                sub.isNormal = None
+                return wrap({"bool": {"must_not": sub, "isNormal": True}})
+            else:
+                sub.isNormal = None
+
+    esfilter.isNormal = True
+    return esfilter
 
 
 def split_expression_by_depth(where, schema, output=None, var_to_depth=None):

@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 from jx_base import OBJECT
 from jx_base.expressions import jx_expression, NULL
-from jx_elasticsearch.es52.expressions import Painless
+from jx_elasticsearch.es52.expressions import Painless, simplify_esfilter
 from mo_dots import Null
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times.dates import Date
@@ -27,7 +27,7 @@ class TestESFilters(FuzzyTestCase):
             {"lt": {"a": 40}}
         ]}
 
-        result = jx_expression(where).partial_eval().to_esfilter(Null)
+        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(Null))
         self.assertEqual(result, {"range": {"a": {"gt": 20, "lt": 40}}})
 
     def test_range_packing2(self):
@@ -36,12 +36,12 @@ class TestESFilters(FuzzyTestCase):
             {"lt": {"build.date": 1429920000}}
         ]}
 
-        result = jx_expression(where).partial_eval().to_esfilter(Null)
+        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(Null))
         self.assertEqual(result, {"range": {"build.date": {"gte": Date("23 APR 2015").unix, "lt": Date("25 APR 2015").unix}}})
 
     def test_eq1(self):
         where = {"eq": {"a": 20}}
-        result = jx_expression(where).partial_eval().to_esfilter(Null)
+        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(Null))
         self.assertEqual(result, {"term": {"a": 20}})
 
     def test_eq2(self):
@@ -49,7 +49,7 @@ class TestESFilters(FuzzyTestCase):
             "a": 1,
             "b": 2
         }}
-        result = jx_expression(where).partial_eval().to_esfilter(Null)
+        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(Null))
         self.assertEqual(result, {"bool": {"must": [{"term": {"a": 1}}, {"term": {"b": 2}}]}})
 
     def test_eq3(self):
@@ -57,17 +57,17 @@ class TestESFilters(FuzzyTestCase):
             "a": 1,
             "b": [2, 3]
         }}
-        result = jx_expression(where).partial_eval().to_esfilter(Null)
+        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(Null))
         self.assertEqual(result, {"bool": {"must": [{"term": {"a": 1}}, {"terms": {"b": [2, 3]}}]}})
 
     def test_ne1(self):
         where = {"ne": {"a": 1}}
-        result = jx_expression(where).partial_eval().to_esfilter(Null)
+        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(Null))
         self.assertEqual(result, {"bool": {"must_not": {"term": {"a": 1}}}})
 
     def test_ne2(self):
         where = {"neq": {"a": 1}}
-        result = jx_expression(where).partial_eval().to_esfilter(Null)
+        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(Null))
         self.assertEqual(result, {"bool": {"must_not": {"term": {"a": 1}}}})
 
     def test_in(self):

@@ -26,8 +26,6 @@ from mo_math import Math, MAX, MIN
 from mo_times.dates import Date
 
 ALLOW_SCRIPTING = False
-TRUE_FILTER = True
-FALSE_FILTER = False
 EMPTY_DICT = {}
 
 
@@ -836,15 +834,10 @@ class EqOp(Expression):
 
         if isinstance(lhs, Literal) and isinstance(rhs, Literal):
             return TRUE if builtin_ops["eq"](lhs.value, rhs.value) else FALSE
+        elif isinstance(lhs, Literal) and isinstance(rhs, Variable):
+            return EqOp("eq", [rhs, lhs])
         else:
-            return WhenOp(
-                "when",
-                self.lhs.missing(),
-                **{
-                    "then": self.rhs.missing(),
-                    "else": BasicEqOp(None, [lhs, rhs])
-                }
-            ).partial_eval()
+            return EqOp("eq", [lhs.partial_eval(), rhs.partial_eval()])
 
 
 class NeOp(Expression):
@@ -933,6 +926,10 @@ class NotOp(Expression):
                 output = term.field.missing().partial_eval()
             elif isinstance(term, NotOp):
                 output = term.term.partial_eval()
+            elif isinstance(term, NeOp):
+                output = EqOp("eq", [term.lhs.partial_eval(), term.rhs.partial_eval()])
+            elif isinstance(term, EqOp):
+                output = NeOp("ne", [term.lhs.partial_eval(), term.rhs.partial_eval()])
             else:
                 output = NotOp("not", term)
 

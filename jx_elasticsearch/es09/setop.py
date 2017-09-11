@@ -20,7 +20,7 @@ from mo_dots import listwrap, unwrap
 from mo_logs import Log
 from mo_math import AND, SUM, OR
 
-from jx_base.expressions import TRUE_FILTER, jx_expression, Variable, LeavesOp
+from jx_base.expressions import TRUE, jx_expression, Variable, LeavesOp
 from jx_base.queries import is_variable_name
 from jx_elasticsearch.es09.expressions import unpack_terms
 from jx_elasticsearch.es09.util import aggregates
@@ -145,7 +145,7 @@ def es_setop(es, mvel, query):
             })
     elif not isDeep:
         simple_query = query.copy()
-        simple_query.where = TRUE_FILTER  # THE FACET FILTER IS FASTER
+        simple_query.where = TRUE  # THE FACET FILTER IS FASTER
         FromES.facets.mvel = {
             "terms": {
                 "script_field": mvel.code(simple_query),

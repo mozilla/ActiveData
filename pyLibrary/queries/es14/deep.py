@@ -211,8 +211,6 @@ def es_deepop(es, query):
             n.name = n.name.lstrip(".")
             n.put.name = literal_field(n.name)
             n.put.child = "."
-            n.put.index = i
-            i += 1
             col_names.add(n.name)
 
     # <COMPLICATED> ES needs two calls to get all documents

@@ -58,7 +58,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
 
         # ENSURE THE QUERY HAS BEEN INDEXED
         container = elasticsearch.Index(index="saved_queries", kwargs=settings)
-        container.flush()
+        container.flush(forced=True)
         Till(seconds=5).wait()
 
         url = URL(self.utils.service_url)

@@ -15,8 +15,6 @@ import itertools
 from copy import copy
 from itertools import product
 
-from tests.test_jx import TEST_TABLE
-
 from jx_base import STRUCT
 from jx_python import jx
 from jx_python import meta as jx_base_meta
@@ -360,6 +358,8 @@ class FromESMetadata(Schema):
                     "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                 })
         except Exception as e:
+            from tests.test_jx import TEST_TABLE
+
             if "IndexMissingException" in e and (c.es_index.startswith(TEST_TABLE_PREFIX) or c.es_index.startswith(TEST_TABLE)):
                 with self.meta.columns.locker:
                     self.meta.columns.update({

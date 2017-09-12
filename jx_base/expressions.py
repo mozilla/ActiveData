@@ -324,11 +324,13 @@ class GetOp(Expression):
 
 class ScriptOp(Expression):
     """
-    ONLY FOR TESTING AND WHEN YOU TRUST THE SCRIPT SOURCE
+    ONLY FOR WHEN YOU TRUST THE SCRIPT SOURCE
     """
 
     def __init__(self, op, script):
         Expression.__init__(self, op, None)
+        if not isinstance(script, text_type):
+            Log.error("expecting text of a script")
         self.simplified = True
         self.script = script
 
@@ -876,7 +878,7 @@ class NeOp(Expression):
         if isinstance(lhs, Literal) and isinstance(rhs, Literal):
             return Literal(None, builtin_ops["ne"](lhs, rhs))
 
-        output = NotOp("not", EqOp("eq", [lhs, rhs])).partial_eval()
+        output = NeOp("ne", [lhs, rhs])
         return output
 
 
@@ -2278,6 +2280,9 @@ class BasicIndexOfOp(Expression):
 
     def __data__(self):
         return {"basic.indexOf": [self.value.__data__(), self.find.__data__(), self.start.__data__()]}
+
+    def vars(self):
+        return self.value.vars() | self.find.vars() | self.start.vars()
 
     def missing(self):
         return FALSE

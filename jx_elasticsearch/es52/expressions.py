@@ -222,8 +222,8 @@ def to_painless(self, schema):
     acc = FirstOp("first", v).partial_eval().to_painless(schema)
     for v in reversed(self.terms[:-1]):
         m = v.missing().partial_eval()
-        r = FirstOp("first", v).partial_eval().to_painless(schema)
         e = NotOp("not", m).partial_eval().to_painless(schema)
+        r = FirstOp("first", v).partial_eval().to_painless(schema)
 
         if acc.type == r.type:
             new_type = r.type
@@ -385,47 +385,14 @@ def to_painless(self, schema):
 def to_esfilter(self, schema):
     Log.error("Logic error")
 
+
 @extend(EqOp)
 def to_painless(self, schema):
-    lhs = self.lhs.partial_eval().to_painless(schema)
-    rhs = self.rhs.partial_eval().to_painless(schema)
-
-    if lhs.many:
-        if rhs.many:
-            return WhenOp(
-                "when",
-                self.lhs.missing(),
-                **{
-                    "then": self.rhs.missing(),
-                    "else": AndOp("and", [
-                        Painless(type=BOOLEAN, expr="(" + lhs.expr + ").size()==(" + rhs.expr + ").size()"),
-                        Painless(type=BOOLEAN, expr="(" + rhs.expr + ").containsAll(" + lhs.expr + ")")
-                    ])
-                }
-            ).partial_eval().to_painless(schema)
-        return WhenOp(
-            "when",
-            self.lhs.missing(),
-            **{
-                "then": self.rhs.missing(),
-                "else": Painless(type=BOOLEAN, expr="(" + lhs.expr + ").contains(" + rhs.expr + ")")
-            }
-        ).partial_eval().to_painless(schema)
-    elif rhs.many:
-        return WhenOp(
-            "when",
-            self.lhs.missing(),
-            **{
-                "then": self.rhs.missing(),
-                "else": Painless(type=BOOLEAN, expr="(" + rhs.expr + ").contains(" + lhs.expr + ")")
-            }
-        ).partial_eval().to_painless(schema)
-    else:
-        return Painless(
-            type=BOOLEAN,
-            expr="(" + lhs.expr + "==" + rhs.expr + ")",
-            frum=self
-        )
+    return CaseOp("case", [
+        WhenOp("when", self.lhs.missing(), **{"then": self.rhs.missing()}),
+        WhenOp("when", self.rhs.missing(), **{"then": self.lhs.missing()}),
+        NotOp("not", BasicEqOp("eq", [self.lhs, self.rhs]))
+    ]).partial_eval().to_painless(schema)
 
 
 @extend(EqOp)
@@ -446,7 +413,11 @@ def to_esfilter(self, schema):
             return {"term": {lhs: rhs}}
 
     else:
-        return self.to_painless(schema).to_esfilter(schema)
+        return CaseOp("case", [
+            WhenOp("when", self.lhs.missing(), **{"then": self.rhs.missing()}),
+            WhenOp("when", self.rhs.missing(), **{"then": self.lhs.missing()}),
+            NotOp("not", BasicEqOp("eq", [self.lhs, self.rhs]))
+        ]).partial_eval().to_esfilter(schema)
 
 
 @extend(BasicEqOp)
@@ -552,7 +523,11 @@ def to_painless(self, schema):
 
 @extend(NeOp)
 def to_painless(self, schema):
-    return NotOp("not", EqOp("eq", [self.lhs, self.rhs])).partial_eval().to_painless(schema)
+    return CaseOp("case", [
+        WhenOp("when", self.lhs.missing(), **{"then": NotOp("not", self.rhs.missing())}),
+        WhenOp("when", self.rhs.missing(), **{"then": NotOp("not", self.lhs.missing())}),
+        NotOp("not", BasicEqOp("eq", [self.lhs, self.rhs]))
+    ]).partial_eval().to_painless(schema)
 
 
 @extend(NeOp)
@@ -560,14 +535,17 @@ def to_esfilter(self, schema):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
         return {"bool": {"must_not": {"term": {self.lhs.var: self.rhs.value}}}}
     else:
-
-        calc = self.to_painless(schema)
-
-        return {"bool": {"must": [
-            # TODO: MAKE TESTS TO SEE IF THIS LOGIC IS CORRECT
-            {"bool": {"must": [{"exists": {"field": v}} for v in self.vars()]}},
-            ScriptOp("script", self.to_painless(schema)).to_esfilter(schema)
-        ]}}
+        lhs = self.lhs.partial_eval().to_painless(schema)
+        rhs = self.rhs.partial_eval().to_painless(schema)
+        return wrap({"bool": {"must_not":
+            ScriptOp(
+                "script",
+                (
+                    "(" + lhs.expr + ").size()==(" + rhs.expr + ").size() && " +
+                    "(" + rhs.expr + ").containsAll(" + lhs.expr + ")"
+                )
+            ).to_esfilter(schema)
+        }})
 
 
 @extend(NotOp)
@@ -642,16 +620,20 @@ def to_painless(self, schema):
 
 @extend(FirstOp)
 def to_painless(self, schema):
-    value = self.term.to_painless(schema)
-    if value.many:
+    term = self.term.to_painless(schema)
+
+    if isinstance(term.frum, CoalesceOp):
+        return CoalesceOp("coalesce", [FirstOp("first", t.partial_eval().to_painless(schema)) for t in term.frum.terms]).to_painless(schema)
+
+    if term.many:
         return Painless(
-            miss=value.missing().partial_eval(),
-            type=value.type,
-            expr="(" + value.expr + ")[0]",
-            frum=value.frum
+            miss=term.miss,
+            type=term.type,
+            expr="(" + term.expr + ")[0]",
+            frum=term.frum
         ).to_painless(schema)
     else:
-        return value
+        return term
 
 
 
@@ -720,11 +702,11 @@ def to_painless(self, schema):
 
 @extend(NumberOp)
 def to_painless(self, schema):
-    term = self.term.partial_eval()
+    term = FirstOp("first", self.term).partial_eval()
     value = term.to_painless(schema)
 
     if isinstance(value.frum, CoalesceOp):
-        return CoalesceOp("coalesce", [NumberOp("number", t).partial_eval() for t in value.frum.terms]).to_painless(schema)
+        return CoalesceOp("coalesce", [NumberOp("number", t).partial_eval().to_painless(schema) for t in value.frum.terms]).to_painless(schema)
 
     if value.many:
         return NumberOp("number", Painless(

@@ -26,8 +26,7 @@
 		},
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
 		"pyLibrary.queries.meta.ENABLE_META_SCAN": true,
-		"pyLibrary.queries.expressions.ALLOW_SCRIPTING": true,
-		"mo_threads.till.DEBUG": true
+		"pyLibrary.queries.expressions.ALLOW_SCRIPTING": true
 	},
 	"request_logs": {
 		"host": "http://localhost",
@@ -43,14 +42,14 @@
 		"port": 9200,
 		"index": "saved_queries",
 		"type": "query",
-		"debug": true
+		"debug": false
 	},
 	"elasticsearch": {
 		"host": "http://localhost",
 		"port": 9200,
 		"index": "testdata",
 		"type": "test_result",
-		"debug": true
+		"debug": false
 	},
 	"debug": {
 		"trace": true

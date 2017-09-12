@@ -153,5 +153,5 @@ def _index(columns, query_path):
             cs = lookup.setdefault(cname, [])
             cs.append(c)
         except Exception as e:
-            Log.error("Sould not happen", cause=e)
+            Log.error("Should not happen", cause=e)
     return lookup

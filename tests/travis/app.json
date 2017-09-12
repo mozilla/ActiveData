@@ -26,7 +26,8 @@
 		},
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
 		"pyLibrary.queries.meta.ENABLE_META_SCAN": true,
-		"pyLibrary.queries.expressions.ALLOW_SCRIPTING": true
+		"pyLibrary.queries.expressions.ALLOW_SCRIPTING": true,
+		"mo_threads.till.DEBUG": true
 	},
 	"request_logs": {
 		"host": "http://localhost",

@@ -11,7 +11,7 @@ branches:
 env:
   global:
       - PYTHONPATH=.
-      - ES_VERSION=1.7.4
+      - ES_VERSION=1.7.5
       - ES_DOWNLOAD_URL=https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-${ES_VERSION}.tar.gz
 
 install:

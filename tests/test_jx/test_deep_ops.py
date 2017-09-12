@@ -1245,6 +1245,72 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_es_tests(test)
 
+    def test_deep_select_dot(self):
+        test = {
+            "data": [
+                {"_a": [
+                    {"b": "x", "v": 2},
+                    {"b": "y", "v": 3}
+                ]},
+                {"_a": {"b": "x", "v": 5}},
+                {"_a": [
+                    {"b": "x", "v": 7},
+                ]},
+                {"c": "x"}
+            ],
+            "query": {
+                "from": TEST_TABLE + "._a",
+                "select": {"value": "."},
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"b": "x", "v": 2},
+                    {"b": "y", "v": 3},
+                    {"b": "x", "v": 5},
+                    {"b": "x", "v": 7},
+                    {}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["."],
+                "data": [
+                    [{"b": "x", "v": 2}],
+                    [{"b": "y", "v": 3}],
+                    [{"b": "x", "v": 5}],
+                    [{"b": "x", "v": 7}],
+                    [{}]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "domain": {
+                            "interval": 1,
+                            "max": 5,
+                            "min": 0,
+                            "type": "rownum"
+                        },
+                        "name": "rownum"
+                    }
+                ],
+                "data": {
+                    ".": [
+                        {"b": "x", "v": 2},
+                        {"b": "y", "v": 3},
+                        {"b": "x", "v": 5},
+                        {"b": "x", "v": 7},
+                        {}
+                    ]
+
+                }
+            }
+        }
+        self.utils.execute_es_tests(test)
+
+
     @skipIf(global_settings.is_travis, "not expected to pass yet")
     def test_from_shallow_select_deep_column(self):
         test = {

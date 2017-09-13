@@ -278,6 +278,8 @@ class TimeDecoder(AggsDecoder):
         if f == None or t == None:
             return len(domain.partitions)
         else:
+            # dataIndex = (int)((f-domain.min.unix)/domain.interval.seconds)
+
             for p in domain.partitions:
                 if p.min.unix <= f <p.max.unix:
                     return p.dataIndex

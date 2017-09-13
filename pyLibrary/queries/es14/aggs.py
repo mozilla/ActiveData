@@ -421,21 +421,18 @@ def aggs_iterator(aggs, decoders, coord=True):
                 if k == "_match":
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
                         parts[d] = b
-                        if b.get("doc_count"):
-                            b = drill(b)
-                            b["_index"] = i
-                            yield b
+                        b = drill(b)
+                        b["_index"] = i
+                        yield b
                 elif k == "_other":
                     parts[d] = Null
                     for b in v.get("buckets", EMPTY_LIST):
                         b = drill(b)
-                        if b.get("doc_count"):
-                            yield b
+                        yield b
                 elif k == "_missing":
                     parts[d] = Null
                     b = drill(v)
-                    if b.get("doc_count"):
-                        yield b
+                    yield b
                 elif k.startswith("_join_"):
                     v["_index"] = int(k[6:])
                     parts[d] = v

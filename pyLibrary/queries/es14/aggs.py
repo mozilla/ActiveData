@@ -389,7 +389,7 @@ def aggs_iterator(aggs, decoders, coord=True):
     depth = max(d.start + d.num_columns for d in decoders)
     parts = [None] * depth
 
-    def _aggs_iterator(agg, d):
+    def _aggs_iterator(agg, d, decoders):
         agg = drill(agg)
 
         if d > 0:
@@ -398,31 +398,34 @@ def aggs_iterator(aggs, decoders, coord=True):
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
                         parts[d] = b
                         b["_index"] = i
-                        for a in _aggs_iterator(b, d - 1):
+                        for a in _aggs_iterator(b, d - 1, decoders[1:]):
                             yield a
                 elif k == "_other":
                     parts[d] = Null
                     for b in v.get("buckets", EMPTY_LIST):
-                        for a in _aggs_iterator(b, d - 1):
+                        for a in _aggs_iterator(b, d - 1, decoders[1:]):
                             yield a
                 elif k == "_missing":
                     parts[d] = Null
                     b = drill(v)
                     if b.get("doc_count"):
-                        for a in _aggs_iterator(b, d - 1):
+                        for a in _aggs_iterator(b, d - 1, decoders[1:]):
                             yield a
                 elif k.startswith("_join_"):
                     v["key"] = int(k[6:])
                     parts[d] = v
-                    for a in _aggs_iterator(v, d - 1):
+                    for a in _aggs_iterator(v, d - 1, decoders[1:]):
                         yield a
         else:
             for k, v in agg.items():
                 if k == "_match":
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
                         parts[d] = b
+                        b = drill(b)
                         if b.get("doc_count"):
-                            b = drill(b)
+                            b["_index"] = i
+                            yield b
+                        elif decoders[0].sorted:
                             b["_index"] = i
                             yield b
                 elif k == "_other":
@@ -431,10 +434,14 @@ def aggs_iterator(aggs, decoders, coord=True):
                         b = drill(b)
                         if b.get("doc_count"):
                             yield b
+                        elif decoders[0].sorted:
+                            yield b
                 elif k == "_missing":
                     parts[d] = Null
                     b = drill(v)
                     if b.get("doc_count"):
+                        yield b
+                    elif decoders[0].sorted:
                         yield b
                 elif k.startswith("_join_"):
                     v["_index"] = int(k[6:])
@@ -442,11 +449,11 @@ def aggs_iterator(aggs, decoders, coord=True):
                     yield v
 
     if coord:
-        for a in _aggs_iterator(unwrap(aggs), depth - 1):
+        for a in _aggs_iterator(unwrap(aggs), depth - 1, decoders):
             coord = tuple(d.get_index(parts) for d in decoders)
             yield parts, coord, a
     else:
-        for a in _aggs_iterator(unwrap(aggs), depth - 1):
+        for a in _aggs_iterator(unwrap(aggs), depth - 1, decoders):
             yield parts, None, a
 
 

@@ -260,6 +260,8 @@ def _range_composer(edge, domain, es_query, to_float):
 
 
 class TimeDecoder(AggsDecoder):
+    sorted = "asc"
+
     def append_query(self, es_query, start):
         self.start = start
         return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x.unix)

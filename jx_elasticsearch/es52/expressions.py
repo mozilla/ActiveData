@@ -115,7 +115,7 @@ def to_painless(self, schema):
 
 @extend(CaseOp)
 def to_esfilter(self, schema):
-    return ScriptOp("script",  self.to_painless(schema)).to_esfilter(schema)
+    return ScriptOp("script",  self.to_painless(schema).script(schema)).to_esfilter(schema)
 
 
 @extend(ConcatOp)
@@ -123,7 +123,7 @@ def to_esfilter(self, schema):
     if isinstance(self.value, Variable) and isinstance(self.find, Literal):
         return {"regexp": {self.value.var: ".*" + string2regexp(self.find.value) + ".*"}}
     else:
-        return ScriptOp("script",  self.to_painless(schema)).to_esfilter(schema)
+        return ScriptOp("script",  self.to_painless(schema).script(schema)).to_esfilter(schema)
 
 
 @extend(ConcatOp)
@@ -415,8 +415,8 @@ def to_esfilter(self, schema):
     else:
         return CaseOp("case", [
             WhenOp("when", self.lhs.missing(), **{"then": self.rhs.missing()}),
-            WhenOp("when", self.rhs.missing(), **{"then": self.lhs.missing()}),
-            NotOp("not", BasicEqOp("eq", [self.lhs, self.rhs]))
+            WhenOp("when", self.rhs.missing(), **{"then": FALSE}),
+            BasicEqOp("eq", [self.lhs, self.rhs])
         ]).partial_eval().to_esfilter(schema)
 
 
@@ -504,7 +504,7 @@ def to_esfilter(self, schema):
                 {"bool": {"must_not": {"exists": {"field": c.es_column}}}} for c in cols]
             }}
     else:
-        return ScriptOp("script", self.to_painless(schema)).to_esfilter(schema)
+        return ScriptOp("script", self.to_painless(schema).script(schema)).to_esfilter(schema)
 
 
 @extend(NotLeftOp)
@@ -1038,7 +1038,7 @@ def to_painless(self, schema):
 
 @extend(BasicIndexOfOp)
 def to_esfilter(self, schema):
-    return ScriptOp("", self.to_painless(schema)).to_esfilter(schema)
+    return ScriptOp("", self.to_painless(schema).script(schema)).to_esfilter(schema)
 
 
 @extend(BasicSubstringOp)

@@ -19,7 +19,7 @@ from decimal import Decimal
 
 from future.utils import text_type
 
-from mo_dots import Data, FlatList, NullType
+from mo_dots import Data, FlatList, NullType, split_field, join_field
 from mo_json import ESCAPE_DCT, float2json
 from mo_json.encoder import pretty_json, problem_serializing, _repr, UnicodeBuilder, COMMA
 from mo_logs import Log
@@ -93,7 +93,9 @@ def _typed_encode(value, _buffer):
             append(_buffer, float2json(value))
             append(_buffer, u'}')
         elif _type in (set, list, tuple, FlatList):
+            append(_buffer, u'{"$nested": ')
             _list2json(value, _buffer)
+            append(_buffer, u'}')
         elif _type is date:
             append(_buffer, u'{"$number": ')
             append(_buffer, float2json(time.mktime(value.timetuple())))
@@ -121,7 +123,9 @@ def _typed_encode(value, _buffer):
             t = json2typed(j)
             append(_buffer, t)
         elif hasattr(value, '__iter__'):
+            append(_buffer, u'{"$nested": ')
             _iter2json(value, _buffer)
+            append(_buffer, u'}')
         else:
             from mo_logs import Log
 
@@ -295,6 +299,10 @@ def decode_property(encoded):
     return encoded.replace("\\,", "\a").replace(",", ".").replace("\a", ",")
 
 
+def decode_path(encoded):
+    return join_field(decode_property(c) for c in split_field(encoded) if not c.startswith("$"))
+
+
 def untyped(value):
     return _untype(value)
 
@@ -303,16 +311,15 @@ def _untype(value):
     if isinstance(value, Mapping):
         output = {}
 
-        for k,v in value.items():
-            if k=="$exists":
+        for k, v in value.items():
+            if k == "$exists":
                 continue
             elif k.startswith("$'"):
                 return v
             else:
-                output[k]=_untype(v)
+                output[k] = _untype(v)
         return output
     elif isinstance(value, list):
-        return [_untype(v) for v in value]
+        return [_untype(decode_property(v)) for v in value]
     else:
         Log.error("expected full typing")
-

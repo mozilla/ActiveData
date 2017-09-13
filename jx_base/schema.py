@@ -73,8 +73,8 @@ class Schema(object):
     def leaves(self, name):
         """
         RETURN LEAVES OF GIVEN PATH NAME
-        :param name: 
-        :return: 
+        :param name:
+        :return:
         """
         full_name = concat_field(self.query_path, name)
         return [

@@ -839,7 +839,7 @@ class EqOp(Expression):
         elif isinstance(lhs, Literal) and isinstance(rhs, Variable):
             return EqOp("eq", [rhs, lhs])
         else:
-            return EqOp("eq", [lhs.partial_eval(), rhs.partial_eval()])
+            return EqOp("eq", [lhs, rhs])
 
 
 class NeOp(Expression):
@@ -1929,7 +1929,7 @@ class NotRightOp(Expression):
 
 class FindOp(Expression):
     """
-    RETURN true IF substring CAN BE FOUND IN var, ELSE RETURN false
+    RETURN INDEX OF find IN value, ELSE RETURN null
     """
     has_simple_form = True
     data_type = INTEGER

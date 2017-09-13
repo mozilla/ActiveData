@@ -22,7 +22,7 @@ from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field
 from mo_dots import listwrap
 from mo_dots.lists import FlatList
-from mo_json.typed_encoder import decode_property
+from mo_json.typed_encoder import decode_property, untyped, decode_path
 from mo_logs import Log
 from mo_math import AND
 from mo_math import MAX
@@ -127,11 +127,12 @@ def es_setop(es, query):
                     if c.es_column == "_id" or c.es_column.endswith("$exists"):
                         continue
                     cname = c.names["."]
+                    jx_name = decode_path(cname)
                     es_query.stored_fields += [c.es_column]
                     new_select.append({
                         "name": select.name,
                         "value": Variable(c.es_column, verify=False),
-                        "put": {"name": select.name, "index": put_index, "child": relative_field(cname, s_column)}
+                        "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)}
                     })
                 put_index += 1
         else:

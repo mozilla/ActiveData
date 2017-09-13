@@ -15,7 +15,7 @@ import re
 from collections import Mapping
 from copy import deepcopy
 
-from future.utils import text_type
+from future.utils import text_type, binary_type
 
 import mo_json
 from jx_python import jx
@@ -884,8 +884,6 @@ class Cluster(object):
             Log.error("Problem with call to {{url}}", url=url, cause=e)
 
 
-
-
 def proto_name(prefix, timestamp=None):
     if not timestamp:
         timestamp = Date.now()
@@ -911,7 +909,7 @@ def _scrub(r):
     try:
         if r == None:
             return None
-        elif isinstance(r, basestring):
+        elif isinstance(r, (text_type, binary_type)):
             if r == "":
                 return None
             return r
@@ -946,7 +944,6 @@ def _scrub(r):
             return r
     except Exception as e:
         Log.warning("Can not scrub: {{json}}", json=r, cause=e)
-
 
 
 class Alias(Features):
@@ -1122,7 +1119,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
     for name, property in esProperties.items():
         index_name = parent_index_name
         column_name = concat_field(parent_name, name)
-        jx_name = join_field(decode_property(n) for n in split_field(column_name) if not n.startswith("$"))
+        jx_name = column_name
         if split_field(column_name)[-1] == "$exists":
             property.type = "exists"
 

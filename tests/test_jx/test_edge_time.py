@@ -11,10 +11,12 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from unittest import skipIf
+
 from mo_times.dates import Date
 from mo_times.durations import DAY
 
-from tests.test_jx import BaseTestCase, TEST_TABLE
+from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 FROM_DATE = Date.today()-7*DAY
 TO_DATE = Date.today()
@@ -114,6 +116,7 @@ class TestEdge1(BaseTestCase):
         }
         self.utils.execute_es_tests(test)
 
+    @skipIf(global_settings.use == "elasticsearch", "sorting is hard")
     def test_count_over_time_w_sort(self):
         test = {
             "data": simple_test_data,

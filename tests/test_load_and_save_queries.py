@@ -13,10 +13,13 @@ from __future__ import unicode_literals
 
 import hashlib
 
+from mo_logs import Log
+
 from mo_dots import wrap
 from mo_json import value2json
 from mo_json_config import URL
 from mo_threads import Till
+from mo_times import Timer
 from pyLibrary import convert
 from pyLibrary.convert import unicode2utf8
 from pyLibrary.env import elasticsearch
@@ -57,14 +60,14 @@ class TestLoadAndSaveQueries(BaseTestCase):
         self.utils.send_queries(test)
 
         # ENSURE THE QUERY HAS BEEN INDEXED
+        Log.note("Flush saved query")
         container = elasticsearch.Index(index="saved_queries", kwargs=settings)
-        container.flush()
-        Till(seconds=5).wait()
+        container.flush(forced=True)
+        with Timer("wait for 5 seconds"):
+            Till(seconds=5).wait()
 
         url = URL(self.utils.service_url)
-
         response = self.utils.try_till_response(url.scheme+"://"+url.host+":"+text_type(url.port)+"/find/"+expected_hash, data=b'')
-
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, bytes)
 

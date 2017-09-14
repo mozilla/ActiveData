@@ -108,14 +108,6 @@ def es_deepop(es, query):
                                 "put": {"name": literal_field(c.names[query_path]), "index": i, "child": "."}
                             })
                             i += 1
-
-                    # REMOVE DOTS IN PREFIX IF NAME NOT AMBIGUOUS
-                    col_names = set(c.names[query_path] for c in columns)
-                    for n in new_select:
-                        if n.name.startswith("..") and n.name.lstrip(".") not in col_names:
-                            n.name = n.name.lstrip(".")
-                            n.put.name = literal_field(n.name)
-                            col_names.add(n.name)
                 else:
                     prefix = schema[s.value.term.var][0].names["."] + "."
                     prefix_length = len(prefix)
@@ -141,14 +133,13 @@ def es_deepop(es, query):
             if s.value.var == ".":
                 for c in columns:
                     if c.type not in STRUCT and c.es_column != "_id":
-                        if len(c.nested_path) == 1:
-                            es_query.fields += [c.es_column]
-                        new_select.append({
-                            "name": c.name,
-                            "pull": get_pull(c),
-                            "nested_path": c.nested_path[0],
-                            "put": {"name": ".", "index": i, "child": c.es_column}
-                        })
+                        if len(c.nested_path) > 1:
+                            new_select.append({
+                                "name": ".",
+                                "pull": get_pull(c),
+                                "nested_path": c.nested_path[0],
+                                "put": {"name": ".", "index": i, "child": c.names[query_path]}
+                            })
                 i += 1
             elif s.value.var == "_id":
                 new_select.append({
@@ -214,6 +205,15 @@ def es_deepop(es, query):
                 "put": {"name": s.name, "index": i, "child": "."}
             })
             i += 1
+
+    # REMOVE DOTS IN PREFIX IF NAME NOT AMBIGUOUS
+    col_names = set(c.names[query_path] for c in columns)
+    for n in new_select:
+        if n.name.startswith("..") and n.name.lstrip(".") not in col_names:
+            n.name = n.name.lstrip(".")
+            n.put.name = literal_field(n.name)
+            n.put.child = "."
+            col_names.add(n.name)
 
     # <COMPLICATED> ES needs two calls to get all documents
     more = []

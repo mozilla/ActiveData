@@ -1,4 +1,6 @@
 {
+	"use":"elasticsearch",
+
 	"fastTesting": false,  //IMPORTANT VARIABLE!  true WILL RUN TESTS FASTER, false INCLUDES NETWORK RESPONSE TESTS
 	"service_url": "http://127.0.0.1:5000/query",
 	"backend_es": {

@@ -93,7 +93,7 @@ class TestSetOps(BaseTestCase):
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a"],
+                "header": ["a.b.d"],
                 "data": [[NULL], [NULL], [NULL], [NULL], [NULL]]
             },
             "expecting_cube": {
@@ -105,7 +105,7 @@ class TestSetOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a": [NULL, NULL, NULL, NULL, NULL]
+                    "a.b.d": [NULL, NULL, NULL, NULL, NULL]
                 }
             }
         }
@@ -1077,8 +1077,8 @@ class TestSetOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "ab": ["x", "x", "x", NULL],
-                    "a\\.v": [2, 5, 7, NULL],
+                    "b": ["x", "x", "x", NULL],
+                    "v": [2, 5, 7, NULL],
                     "o": [3, 1, 2, 4]
                 }
             }

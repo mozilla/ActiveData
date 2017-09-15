@@ -260,15 +260,18 @@ def format_table(T, select, query=None):
         data.append(r)
 
     header = [None] * num_columns
-    for s in select:
-        if header[s.put.index]:
-            continue
-        if s.name == ".":
-            header[s.put.index] = "."
-        elif isinstance(query.select, Mapping):
+
+    if isinstance(query.select, Mapping) and not isinstance(query.select.value, LeavesOp):
+        for s in select:
             header[s.put.index] = s.name
-        else:
-            header[s.put.index] = split_field(s.name)[0]
+    else:
+        for s in select:
+            if header[s.put.index]:
+                continue
+            if s.name == ".":
+                header[s.put.index] = "."
+            else:
+                header[s.put.index] = split_field(s.name)[0]
 
     return Data(
         meta={"format": "table"},

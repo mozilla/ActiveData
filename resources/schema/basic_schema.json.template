@@ -32,7 +32,7 @@
 							"type": "nested"
 						},
 						"match_mapping_type": "object",
-						"match": "_*"
+						"match": "$nested"
 					}
 				},
 				{

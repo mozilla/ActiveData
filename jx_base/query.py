@@ -15,7 +15,14 @@ from collections import Mapping
 from copy import copy
 
 from future.utils import text_type
+
 from jx_base import STRUCT
+from jx_base.container import Container
+from jx_base.dimensions import Dimension
+from jx_base.domains import Domain, SetDomain
+from jx_base.expressions import jx_expression, Expression, Variable, LeavesOp, ScriptOp, OffsetOp, TRUE
+from jx_base.queries import is_variable_name
+from jx_base.schema import Schema
 from mo_dots import Data
 from mo_dots import coalesce, Null, set_default, unwraplist, literal_field
 from mo_dots import wrap, unwrap, listwrap
@@ -24,15 +31,8 @@ from mo_logs import Log
 from mo_math import AND, UNION
 from mo_math import Math
 
-from jx_base.dimensions import Dimension
-from jx_base.domains import Domain, SetDomain
-from jx_base.expressions import jx_expression, TrueOp, Expression, FalseOp, Variable, LeavesOp, ScriptOp, OffsetOp, TRUE
-from jx_base.queries import is_variable_name
-from jx_base.schema import Schema
-from jx_base.container import Container
-
 DEFAULT_LIMIT = 10
-MAX_LIMIT = 50000
+MAX_LIMIT = 10000
 
 _jx = None
 _Column = None
@@ -355,16 +355,14 @@ def _normalize_select(select, frum, schema=None):
         ])
     elif isinstance(select.value, basestring):
         if select.value.endswith(".*"):
-            base_name = select.value[:-2]
-            canonical.name = coalesce(select.name, base_name, select.aggregate)
+            canonical.name = coalesce(select.name, ".")
             value = jx_expression(select[:-2])
             if not isinstance(value, Variable):
                 Log.error("`*` over general expression not supported yet")
                 output.append([
                     set_default(
                         {
-                            "name": base_name,
-                            "value": LeavesOp("leaves", value),
+                            "value": LeavesOp("leaves", value, prefix=select.prefix),
                             "format": "dict"  # MARKUP FOR DECODING
                         },
                         canonical
@@ -373,17 +371,7 @@ def _normalize_select(select, frum, schema=None):
                     if c.type not in STRUCT
                 ])
             else:
-                output.extend([
-                    set_default(
-                        {
-                            "name": base_name + "." + literal_field(c.name[len(base_name) + 1:]),
-                            "value": jx_expression(c.name)
-                        },
-                        canonical
-                    )
-                    for c in frum.get_leaves()
-                    if c.name.startswith(base_name+".")
-                ])
+                Log.error("do not know what to do")
         else:
             canonical.name = coalesce(select.name, select.value, select.aggregate)
             canonical.value = jx_expression(select.value)
@@ -416,8 +404,8 @@ def _normalize_select_no_context(select, schema=None):
             return output
     elif isinstance(select.value, basestring):
         if select.value.endswith(".*"):
-            output.name = coalesce(select.name, select.value[:-2], select.aggregate)
-            output.value = LeavesOp("leaves", Variable(select.value[:-2]))
+            output.name = coalesce(select.name, ".", select.aggregate)
+            output.value = LeavesOp("leaves", Variable(select.value[:-2]), prefix=select.prefix)
         else:
             if select.value == ".":
                 output.name = coalesce(select.name, select.aggregate, ".")

@@ -614,12 +614,16 @@ class TupleOp(Expression):
 class LeavesOp(Expression):
     date_type = OBJECT
 
-    def __init__(self, op, term):
+    def __init__(self, op, term, prefix=None):
         Expression.__init__(self, op, term)
         self.term = term
+        self.prefix = prefix
 
     def __data__(self):
-        return {"leaves": self.term.__data__()}
+        if self.prefix:
+            return {"leaves": self.term.__data__(), "prefix": self.prefix}
+        else:
+            return {"leaves": self.term.__data__()}
 
     def vars(self):
         return self.term.vars()

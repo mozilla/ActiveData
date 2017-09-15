@@ -11,6 +11,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from collections import Mapping
+
 from jx_base.domains import ALGEBRAIC
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import es52, es09
@@ -63,8 +65,8 @@ def es_setop(es, query):
     selects = wrap([s.copy() for s in listwrap(query.select)])
     new_select = FlatList()
     schema = query.frum.schema
-    columns = schema.columns
-    nested_columns = set(c.names["."] for c in columns if c.nested_path[0] != ".")
+    # columns = schema.columns
+    # nested_columns = set(c.names["."] for c in columns if c.nested_path[0] != ".")
 
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
@@ -76,7 +78,7 @@ def es_setop(es, query):
             if isinstance(term, Variable):
                 for c in schema.leaves(term.var):
                     es_query.stored_fields += [c.es_column]
-                    path = split_field(concat_field(select.name, literal_field(relative_field(c.names["."], term.var))))
+                    path = split_field(concat_field(select.name, literal_field(relative_field(decode_path(c.names["."]), term.var))))
                     new_name = literal_field(path[0])
                     remainder = join_field(path[1:])
                     new_select.append({
@@ -97,42 +99,47 @@ def es_setop(es, query):
                     "put": {"name": select.name, "index": put_index, "child": "."}
                 })
                 put_index += 1
-            elif select.value.var in nested_columns:
-                nested_path = None
-                wheres = es_query.query.bool.must
-                for c in schema.leaves(select.value.var):
-                    nested_path = coalesce(nested_path, c.nested_path)
-                    if len(wheres) == 1:
-                        where = Data()
-                        wheres.append(where)
-                    else:
-                        where = wheres[1]
-                    where.nested.path = c.nested_path[0]
-                    where.nested.query.match_all = {}
-                    where.nested.inner_hits._source = False
-                    where.nested.inner_hits.stored_fields += [c.es_column]
-
-                pull = accumulate_nested_doc(nested_path)
-                new_select.append({
-                    "name": select.name,
-                    "value": select.value,
-                    "put": {"name": select.name, "index": put_index, "child": "."},
-                    "pull": pull
-                })
-                put_index += 1
             else:
                 s_column = select.value.var
                 # LEAVES OF OBJECT
-                for c in schema.leaves(s_column):
-                    if c.es_column == "_id" or c.es_column.endswith("$exists"):
-                        continue
-                    cname = c.names["."]
-                    jx_name = decode_path(cname)
-                    es_query.stored_fields += [c.es_column]
+                cols = schema.leaves(s_column)
+                nested_selects = {}
+                if cols:
+                    for c in cols:
+                        if c.es_column == "_id" or c.es_column.endswith("$exists"):
+                            continue
+                        if len(c.nested_path) == 1:
+                            jx_name = decode_path(c.names["."])
+                            es_query.stored_fields += [c.es_column]
+                            new_select.append({
+                                "name": select.name,
+                                "value": Variable(c.es_column, verify=False),
+                                "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)}
+                            })
+                        else:
+                            nested_path = c.nested_path[0]
+                            if nested_path not in nested_selects:
+                                where = nested_selects[nested_path] = Data()
+                                es_query.query.bool.must += [where]
+                                where.nested.path = nested_path
+                                where.nested.query.match_all = {}
+                                where.nested.inner_hits._source = False
+                                where.nested.inner_hits.stored_fields += [c.es_column]
+
+                                pull = accumulate_nested_doc(nested_path)
+                                new_select.append({
+                                    "name": select.name,
+                                    "value": select.value,
+                                    "put": {"name": select.name, "index": put_index, "child": "."},
+                                    "pull": pull
+                                })
+                            else:
+                                nested_selects[nested_path].nested.inner_hits.stored_fields+=[c.es_column]
+                else:
                     new_select.append({
                         "name": select.name,
-                        "value": Variable(c.es_column, verify=False),
-                        "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)}
+                        "value": Variable("$dummy", verify=False),
+                        "put": {"name": select.name, "index": put_index, "child": "."}
                     })
                 put_index += 1
         else:
@@ -178,13 +185,14 @@ def accumulate_nested_doc(nested_path):
     :param nested_path: THE PATH USED TO EXTRACT THE NESTED RECORDS
     :return: THE DE_TYPED NESTED OBJECT ARRAY
     """
+    name = literal_field(nested_path)
     def output(doc):
         acc = []
-        for h in doc.inner_hits[nested_path[0]].hits.hits:
+        for h in doc.inner_hits[name].hits.hits:
             i = h._nested.offset
             obj = Data()
             for f, v in h.fields.items():
-                local_path = join_field(split_field(relative_field(decode_property(f), nested_path[0]))[:-1])
+                local_path = decode_path(relative_field(f, nested_path))
                 obj[local_path] = unwraplist(v)
             # EXTEND THE LIST TO THE LENGTH WE REQUIRE
             for _ in range(len(acc), i+1):
@@ -257,6 +265,8 @@ def format_table(T, select, query=None):
             continue
         if s.name == ".":
             header[s.put.index] = "."
+        elif isinstance(query.select, Mapping):
+            header[s.put.index] = s.name
         else:
             header[s.put.index] = split_field(s.name)[0]
 

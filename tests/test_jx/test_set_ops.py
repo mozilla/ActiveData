@@ -82,16 +82,18 @@ class TestSetOps(BaseTestCase):
                 "select": "a.b.d"
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                {},
-                {},
-                {},
-                {},
-                {}
-            ]},
+                "meta": {"format": "list"},
+                "data": [
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                ]
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a.b.d"],
+                "header": ["a"],
                 "data": [[NULL], [NULL], [NULL], [NULL], [NULL]]
             },
             "expecting_cube": {
@@ -103,7 +105,7 @@ class TestSetOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a.b.d": [NULL, NULL, NULL, NULL, NULL]
+                    "a": [NULL, NULL, NULL, NULL, NULL]
                 }
             }
         }
@@ -596,7 +598,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use=="sqlite", "no need for limit when using own resources")
+    @skipIf(global_settings.use == "sqlite", "no need for limit when using own resources")
     def test_max_limit(self):
         test = wrap({
             "data": lots_of_data,
@@ -733,14 +735,14 @@ class TestSetOps(BaseTestCase):
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
-                    {"a.b": 0, "a.c": 0},
-                    {"a.b": 0, "a.c": 1},
-                    {"a.b": 1, "a.c": 0},
-                    {"a.b": 1, "a.c": 1}
+                    {"b": 0, "c": 0},
+                    {"b": 0, "c": 1},
+                    {"b": 1, "c": 0},
+                    {"b": 1, "c": 1}
             ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a\\.b", "a\\.c"],
+                "header": ["b", "c"],
                 "data": [
                     [0, 0],
                     [0, 1],
@@ -757,8 +759,8 @@ class TestSetOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a\\.b": [0, 0, 1, 1],
-                    "a\\.c": [0, 1, 0, 1]
+                    "b": [0, 0, 1, 1],
+                    "c": [0, 1, 0, 1]
                 }
             }
         }
@@ -884,15 +886,15 @@ class TestSetOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a.b": "x", "a.v": 2},
-                    {"a.b": "x", "a.v": 5},
-                    {"a.b": "x", "a.v": 7},
+                    {"b": "x", "v": 2},
+                    {"b": "x", "v": 5},
+                    {"b": "x", "v": 7},
                     {}
                 ]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a\\.b", "a\\.v"],
+                "header": ["b", "v"],
                 "data": [
                     ["x", 2],
                     ["x", 5],
@@ -909,8 +911,8 @@ class TestSetOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a\\.b": ["x", "x", "x", NULL],
-                    "a\\.v": [2, 5, 7, NULL]
+                    "b": ["x", "x", "x", NULL],
+                    "v": [2, 5, 7, NULL]
                 }
             }
         }
@@ -1050,15 +1052,15 @@ class TestSetOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"o": 3, "a.b": "x", "a.v": 2},
-                    {"o": 1, "a.b": "x", "a.v": 5},
-                    {"o": 2, "a.b": "x", "a.v": 7},
+                    {"o": 3, "b": "x", "v": 2},
+                    {"o": 1, "b": "x", "v": 5},
+                    {"o": 2, "b": "x", "v": 7},
                     {"o": 4}
                 ]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["o", "a\\.b", "a\\.v"],
+                "header": ["o", "b", "v"],
                 "data": [
                     [3, "x", 2],
                     [1, "x", 5],
@@ -1075,7 +1077,7 @@ class TestSetOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a\\.b": ["x", "x", "x", NULL],
+                    "ab": ["x", "x", "x", NULL],
                     "a\\.v": [2, 5, 7, NULL],
                     "o": [3, 1, 2, 4]
                 }

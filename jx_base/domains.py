@@ -37,10 +37,11 @@ class Domain(object):
 
     def __new__(cls, **desc):
         if cls == Domain:
+            type_name = desc.get("type")
             try:
-                return name_to_type[desc.get("type")](**desc)
+                return name_to_type[type_name](**desc)
             except Exception as e:
-                Log.error("Do not know domain of type {{type}}", type=desc.get("type"), cause=e)
+                Log.error("Problem with {\"domain\":{\"type\":{{type|quote}}}}", type=type_name, cause=e)
         else:
             return object.__new__(cls)
 
@@ -93,6 +94,11 @@ class Domain(object):
 
     def getDomain(self):
         Log.error("Not implemented")
+
+    def verify_attributes_not_null(self, attribute_names):
+        for name in attribute_names:
+            if getattr(self, name) == None:
+                Log.error('{{type}} domain expects a {{name|quote}} parameter', type=self.type, name=name)
 
 
 class ValueDomain(Domain):
@@ -449,9 +455,8 @@ class TimeDomain(Domain):
 
             # VERIFY PARTITIONS DO NOT OVERLAP
             return
-        elif not all([self.min, self.max, self.interval]):
-            Log.error("Can not handle missing parameter")
 
+        self.verify_attributes_not_null(["min", "max", "interval"])
         self.key = "min"
         self.partitions = wrap([
             {"min": v, "max": v + self.interval, "dataIndex": i}

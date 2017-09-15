@@ -132,7 +132,7 @@ def es_aggsop(es, frum, query):
 
     for canonical_name, many in new_select.items():
         for s in many:
-            es_cols = [c for c in frum.schema[s.value.var] if c.type not in [OBJECT, NESTED]]
+            es_cols = frum.schema.leaves(s.value.var)
             if len(es_cols) > 1:
                 Log.error("Do not know how to count columns with more than one type (script probably)")
             if es_cols:

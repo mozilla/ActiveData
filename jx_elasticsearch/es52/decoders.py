@@ -162,17 +162,18 @@ class SetDecoder(AggsDecoder):
             )
             for v in (p[domain_key] for p in domain.partitions)
         ))
+        value = self.edge.value
         exists = AndOp("and", [
-            self.edge.value.exists(),
-            InOp("in", [self.edge.value, Literal("literal", include)])
+            value.exists(),
+            InOp("in", [value, Literal("literal", include)])
         ]).partial_eval()
 
         limit = coalesce(self.limit, len(domain.partitions))
 
-        if isinstance(self.edge.value, Variable):
-            es_field = self.edge.value.map({c.names[self.query.frum.query_path]: c.es_column for c in self.query.frum.schema.leaves(".")})  # ALREADY CHECKED THERE IS ONLY ONE
+        if isinstance(value, Variable):
+            es_field = self.query.frum.schema.leaves(value.var)[0].es_column  # ALREADY CHECKED THERE IS ONLY ONE
             terms = set_default({"terms": {
-                "field": es_field.var,
+                "field": es_field,
                 "size": limit,
                 "order": {"_term": self.sorted} if self.sorted else None
             }}, es_query)
@@ -180,7 +181,7 @@ class SetDecoder(AggsDecoder):
             terms = set_default({"terms": {
                 "script": {
                     "lang": "painless",
-                    "inline": self.edge.value.to_painless(self.schema).script(self.schema)
+                    "inline": value.to_painless(self.schema).script(self.schema)
                 },
                 "size": limit
             }}, es_query)

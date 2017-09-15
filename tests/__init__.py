@@ -373,7 +373,7 @@ def sort_table(result):
     """
     SORT ROWS IN TABLE, EVEN IF ELEMENTS ARE JSON
     """
-    data = wrap([{text_type(i): v for i, v in enumerate(row)} for row in result.data])
+    data = wrap([{unicode(i): v for i, v in enumerate(row) if v != None} for row in result.data])
     sort_columns = jx.sort(set(jx.get_columns(data, leaves=True).name))
     data = jx.sort(data, sort_columns)
     result.data = [tuple(row[text_type(i)] for i in range(len(result.header))) for row in data]

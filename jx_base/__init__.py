@@ -32,7 +32,7 @@ STRUCT = [OBJECT, NESTED, EXISTS]
 
 
 python_type_to_json_type = {
-    int: NUMBER,
+    int: INTEGER,
     text_type: STRING,
     float: NUMBER,
     None: OBJECT,

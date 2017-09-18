@@ -300,7 +300,7 @@ def es_aggsop(es, frum, query):
             "aggs": {"_nested": set_default(
                 {
                     "nested": {
-                        "path": frum.query_path
+                        "path": schema.query_path
                     }
                 },
                 es_query

@@ -19,19 +19,18 @@ from jx_elasticsearch.es52.expressions import Variable
 def es_query_template(path):
     """
     RETURN TEMPLATE AND PATH-TO-FILTER AS A 2-TUPLE
-    :param path:
+    :param path: THE NESTED PATH (NOT INCLUDING TABLE NAME)
     :return:
     """
-    sub_path = split_field(path)[1:]
 
-    if sub_path:
+    if path != ".":
         f0 = {}
         f1 = {}
         output = wrap({
             "query": {"bool": {"must": [
                 f0,
                 {"nested": {
-                    "path": join_field(sub_path),
+                    "path": path,
                     "query": f1,
                     "inner_hits": {"size": 100000}
                 }}

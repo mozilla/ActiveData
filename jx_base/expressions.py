@@ -15,6 +15,7 @@ import operator
 from collections import Mapping
 from decimal import Decimal
 
+import itertools
 from future.utils import text_type
 
 from jx_base import OBJECT, python_type_to_json_type, BOOLEAN, NUMBER, INTEGER, STRING
@@ -190,6 +191,12 @@ class Expression(object):
     @property
     def type(self):
         return self.data_type
+
+    def __eq__(self, other):
+        Log.note("this is slow on {{type}}", type=self.__class__.__name__)
+        if other is None:
+            return False
+        return self.__data__() == other.__data__()
 
 
 class Variable(Expression):
@@ -707,9 +714,9 @@ class InequalityOp(Expression):
 
     def __data__(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-            return {self.op: {self.lhs.var, json2value(self.rhs.json)}, "default": self.default}
+            return {self.op: {self.lhs.var, json2value(self.rhs.json)}}
         else:
-            return {self.op: [self.lhs.__data__(), self.rhs.__data__()], "default": self.default}
+            return {self.op: [self.lhs.__data__(), self.rhs.__data__()]}
 
     def vars(self):
         return self.lhs.vars() | self.rhs.vars()
@@ -975,6 +982,7 @@ class AndOp(Expression):
     @simplified
     def partial_eval(self):
         terms = []
+        ors = []
         for t in self.terms:
             simple = BooleanOp("boolean", t).partial_eval()
             if isinstance(simple, TrueOp):
@@ -982,17 +990,41 @@ class AndOp(Expression):
             elif isinstance(simple, FalseOp):
                 return FALSE
             elif isinstance(simple, AndOp):
-                terms.extend(simple.terms)
+                terms.extend([tt for tt in simple.terms if tt not in terms])
+            elif isinstance(simple, OrOp):
+                ors.append(simple.terms)
             elif simple.type != BOOLEAN:
                 Log.error("expecting boolean value")
-            else:
+            elif simple not in terms:
                 terms.append(simple)
-        if len(terms) == 0:
-            return TRUE
-        if len(terms) == 1:
-            return terms[0]
-        output = AndOp("and", terms)
-        return output
+        if len(ors) == 0:
+            if len(terms) == 0:
+                return TRUE
+            if len(terms) == 1:
+                return terms[0]
+            output = AndOp("and", terms)
+            return output
+        elif len(ors) == 1:  # SOME SIMPLE COMMON FACTORING
+            if len(terms) == 0:
+                return OrOp("or", ors[0])
+            elif len(terms) == 1 and terms[0] in ors[0]:
+                return terms[0]
+            else:
+                agg_terms = []
+                for combo in ors[0]:
+                    agg_terms.append(
+                        AndOp("and", [combo]+terms).partial_eval()
+                    )
+                return OrOp("or", agg_terms)
+        elif len(terms) == 0:
+            return OrOp("or", ors[0])
+
+        agg_terms = []
+        for combo in itertools.product(*ors):
+            agg_terms.append(
+                AndOp("and", list(combo)+terms).partial_eval()
+            )
+        return OrOp("or", agg_terms)
 
 
 class OrOp(Expression):
@@ -1030,10 +1062,10 @@ class OrOp(Expression):
             elif isinstance(simple, (FalseOp, NullOp)):
                 pass
             elif isinstance(simple, OrOp):
-                terms.extend(simple.terms)
+                terms.extend([tt for tt in simple.terms if tt not in terms])
             elif simple.type != BOOLEAN:
                 Log.error("expecting boolean value")
-            else:
+            elif simple not in terms:
                 terms.append(simple)
         if len(terms) == 0:
             return FALSE
@@ -1171,10 +1203,12 @@ class IntegerOp(Expression):
 
     @simplified
     def partial_eval(self):
-        term = self.term
+        term = self.term.partial_eval()
         if isinstance(term, CoalesceOp):
             return CoalesceOp("coalesce", [IntegerOp("integer", t) for t in term.terms])
-        return self
+        if term.type == INTEGER:
+            return term
+        return IntegerOp("integer", term)
 
 
 class IsIntegerOp(Expression):
@@ -1775,7 +1809,7 @@ class LeftOp(Expression):
         return LeftOp("left", [self.value.map(map_), self.length.map(map_)])
 
     def missing(self):
-        return OrOp(None, [self.value.missing(), self.length.missing()])
+        return OrOp("or", [self.value.missing(), self.length.missing()]).partial_eval()
 
     @simplified
     def partial_eval(self):

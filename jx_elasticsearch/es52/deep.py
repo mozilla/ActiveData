@@ -13,7 +13,8 @@ from __future__ import unicode_literals
 
 from jx_base import STRUCT
 from jx_elasticsearch import es09, es52
-from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field, set_default
+from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field, set_default, relative_field
+from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_threads import Thread
 from pyLibrary import convert
@@ -51,14 +52,12 @@ def es_deepop(es, query):
     columns = schema.columns
     query_path = schema.query_path
 
-    map_to_local = {k: get_pull(c[0]) for k, c in schema.lookup.items()}
-
     # TODO: FIX THE GREAT SADNESS CAUSED BY EXECUTING post_expressions
     # THE EXPRESSIONS SHOULD BE PUSHED TO THE CONTAINER:  ES ALLOWS
     # {"inner_hit":{"script_fields":[{"script":""}...]}}, BUT THEN YOU
     # LOOSE "_source" BUT GAIN "fields", FORCING ALL FIELDS TO BE EXPLICIT
     post_expressions = {}
-    es_query, es_filters = es52.util.es_query_template(query.frum.name)
+    es_query, es_filters = es52.util.es_query_template(query_path)
 
     # SPLIT WHERE CLAUSE BY DEPTH
     wheres = split_expression_by_depth(query.where, schema)
@@ -164,14 +163,7 @@ def es_deepop(es, query):
                 })
                 i += 1
             else:
-                prefix = schema[s.value.var][0]
-                if not prefix:
-                    net_columns = []
-                else:
-                    parent = prefix.es_column+"."
-                    prefix_length = len(parent)
-                    net_columns = [c for c in columns if c.es_column.startswith(parent) and c.type not in STRUCT]
-
+                net_columns = schema.leaves(s.value.var)
                 if not net_columns:
                     pull = get_pull_function(prefix)
                     if len(prefix.nested_path) == 1:
@@ -197,7 +189,7 @@ def es_deepop(es, query):
                             "name": s.name,
                             "pull": pull,
                             "nested_path": n.nested_path[0],
-                            "put": {"name": s.name, "index": i, "child": n.es_column[prefix_length:]}
+                            "put": {"name": s.name, "index": i, "child": relative_field(untype_path(n.names[n.nested_path[0]]), s.value.var)}
                         })
                 i += 1
         else:
@@ -210,6 +202,7 @@ def es_deepop(es, query):
                     #     Log.error("deep field not expected")
 
             pull_name = EXPRESSION_PREFIX + s.name
+            map_to_local = {untype_path(k): get_pull(cc) for k, c in schema.lookup.items() for cc in c if cc.type not in STRUCT}
             pull = jx_expression_to_function(pull_name)
             post_expressions[pull_name] = compile_expression(expr.map(map_to_local).to_python())
 

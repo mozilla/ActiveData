@@ -93,9 +93,13 @@ def _typed_encode(value, _buffer):
             append(_buffer, float2json(value))
             append(_buffer, u'}')
         elif _type in (set, list, tuple, FlatList):
-            append(_buffer, u'{"$nested": ')
-            _list2json(value, _buffer)
-            append(_buffer, u'}')
+            if any(isinstance(v, (Mapping, set, list, tuple, FlatList)) for v in value):
+                append(_buffer, u'{"$nested": ')
+                _list2json(value, _buffer)
+                append(_buffer, u'}')
+            else:
+                # ALLOW PRIMITIVE MULTIVALUES
+                _list2json(value, _buffer)
         elif _type is date:
             append(_buffer, u'{"$number": ')
             append(_buffer, float2json(time.mktime(value.timetuple())))
@@ -299,7 +303,7 @@ def decode_property(encoded):
     return encoded.replace("\\,", "\a").replace(",", ".").replace("\a", ",")
 
 
-def decode_path(encoded):
+def untype_path(encoded):
     return join_field(decode_property(c) for c in split_field(encoded) if not c.startswith("$"))
 
 

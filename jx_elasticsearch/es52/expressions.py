@@ -188,7 +188,7 @@ def to_painless(self, schema):
         if isinstance(v, (int, long)):
             return Painless(
                 type=INTEGER,
-                expr=text_type(float(v)),
+                expr=text_type(v),
                 frum=self
             )
         if isinstance(v, (float)):
@@ -390,8 +390,8 @@ def to_esfilter(self, schema):
 def to_painless(self, schema):
     return CaseOp("case", [
         WhenOp("when", self.lhs.missing(), **{"then": self.rhs.missing()}),
-        WhenOp("when", self.rhs.missing(), **{"then": self.lhs.missing()}),
-        NotOp("not", BasicEqOp("eq", [self.lhs, self.rhs]))
+        WhenOp("when", self.rhs.missing(), **{"then": FALSE}),
+        BasicEqOp("eq", [self.lhs, self.rhs])
     ]).partial_eval().to_painless(schema)
 
 
@@ -537,16 +537,31 @@ def to_esfilter(self, schema):
     else:
         lhs = self.lhs.partial_eval().to_painless(schema)
         rhs = self.rhs.partial_eval().to_painless(schema)
-        return wrap({"bool": {"must_not":
-            ScriptOp(
-                "script",
-                (
-                    "(" + lhs.expr + ").size()==(" + rhs.expr + ").size() && " +
-                    "(" + rhs.expr + ").containsAll(" + lhs.expr + ")"
-                )
-            ).to_esfilter(schema)
-        }})
 
+        if lhs.many:
+            if rhs.many:
+                return wrap({"bool": {"must_not":
+                    ScriptOp(
+                        "script",
+                        (
+                            "(" + lhs.expr + ").size()==(" + rhs.expr + ").size() && " +
+                            "(" + rhs.expr + ").containsAll(" + lhs.expr + ")"
+                        )
+                    ).to_esfilter(schema)
+                }})
+            else:
+                return wrap({"bool": {"must_not":
+                    ScriptOp("script", "(" + lhs.expr + ").contains(" + rhs.expr + ")").to_esfilter(schema)
+                }})
+        else:
+            if rhs.many:
+                return wrap({"bool": {"must_not":
+                    ScriptOp("script", "(" + rhs.expr + ").contains(" + lhs.expr + ")").to_esfilter(schema)
+                }})
+            else:
+                return wrap({"bool": {"must":
+                    ScriptOp("script", "(" + lhs.expr + ") != (" + rhs.expr + ")").to_esfilter(schema)
+                }})
 
 @extend(NotOp)
 def to_painless(self, schema):
@@ -708,14 +723,7 @@ def to_painless(self, schema):
     if isinstance(value.frum, CoalesceOp):
         return CoalesceOp("coalesce", [NumberOp("number", t).partial_eval().to_painless(schema) for t in value.frum.terms]).to_painless(schema)
 
-    if value.many:
-        return NumberOp("number", Painless(
-            miss=value.missing().partial_eval(),
-            type=value.type,
-            expr="(" + value.expr + ")[0]",
-            frum=value.frum
-        )).to_painless(schema)
-    elif value.type == BOOLEAN:
+    if value.type == BOOLEAN:
         return Painless(
             miss=term.missing().partial_eval(),
             type=NUMBER,
@@ -726,7 +734,7 @@ def to_painless(self, schema):
         return Painless(
             miss=term.missing().partial_eval(),
             type=NUMBER,
-            expr="(double)("+value.expr+")",
+            expr=value.expr,
             frum=self
         )
     elif value.type == NUMBER:
@@ -908,9 +916,11 @@ def to_esfilter(self, schema):
 
 @extend(InOp)
 def to_painless(self, schema):
+    superset = self.superset.to_painless(schema)
+    value = self.value.to_painless(schema)
     return Painless(
         type=BOOLEAN,
-        expr="(" + self.superset.to_painless(schema).expr + ").contains(" + self.value.to_painless(schema).expr + ")",
+        expr="(" + superset.expr + ").contains(" + value.expr + ")",
         frum=self
     )
 
@@ -949,12 +959,13 @@ def to_painless(self, schema):
         acc = []
         for c in columns:
             varname = c.es_column
+            frum = Variable(c.es_column, verify=False)
             q = quote(varname)
             acc.append(Painless(
-                miss=self.missing(),
+                miss=frum.missing(),
                 type=c.type,
                 expr="doc[" + q + "].values",
-                frum=self,
+                frum=frum,
                 many=True
             ))
 

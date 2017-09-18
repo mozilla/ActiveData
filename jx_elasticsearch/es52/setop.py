@@ -24,7 +24,7 @@ from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field
 from mo_dots import listwrap
 from mo_dots.lists import FlatList
-from mo_json.typed_encoder import decode_property, untyped, decode_path
+from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_math import AND
 from mo_math import MAX
@@ -57,7 +57,7 @@ def is_setop(es, query):
 def es_setop(es, query):
     schema = query.frum.schema
 
-    es_query, filters = es52.util.es_query_template(query.frum.name)
+    es_query, filters = es52.util.es_query_template(schema.query_path)
     set_default(filters[0], query.where.partial_eval().to_esfilter(schema))
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.stored_fields = FlatList()
@@ -78,7 +78,7 @@ def es_setop(es, query):
             if isinstance(term, Variable):
                 for c in schema.leaves(term.var):
                     es_query.stored_fields += [c.es_column]
-                    path = split_field(concat_field(select.name, literal_field(relative_field(decode_path(c.names["."]), term.var))))
+                    path = split_field(concat_field(select.name, literal_field(relative_field(untype_path(c.names["."]), term.var))))
                     new_name = literal_field(path[0])
                     remainder = join_field(path[1:])
                     new_select.append({
@@ -109,7 +109,7 @@ def es_setop(es, query):
                         if c.es_column == "_id" or c.es_column.endswith("$exists"):
                             continue
                         if len(c.nested_path) == 1:
-                            jx_name = decode_path(c.names["."])
+                            jx_name = untype_path(c.names["."])
                             es_query.stored_fields += [c.es_column]
                             new_select.append({
                                 "name": select.name,
@@ -143,9 +143,10 @@ def es_setop(es, query):
                     })
                 put_index += 1
         else:
+            painless = select.value.partial_eval().to_painless(schema)
             es_query.script_fields[literal_field(select.name)] = {"script": {
                 "lang": "painless",
-                "inline": select.value.partial_eval().to_painless(schema).script(schema)
+                "inline": painless.script(schema)
             }}
             new_select.append({
                 "name": select.name,
@@ -192,7 +193,7 @@ def accumulate_nested_doc(nested_path):
             i = h._nested.offset
             obj = Data()
             for f, v in h.fields.items():
-                local_path = decode_path(relative_field(f, nested_path))
+                local_path = untype_path(relative_field(f, nested_path))
                 obj[local_path] = unwraplist(v)
             # EXTEND THE LIST TO THE LENGTH WE REQUIRE
             for _ in range(len(acc), i+1):

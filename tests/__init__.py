@@ -24,6 +24,7 @@ import mo_json_config
 from active_data.actions.jx import replace_vars
 from jx_base import container
 from jx_base.query import QueryOp
+from jx_elasticsearch.es52.typed_inserter import TypedInserter
 from jx_python import jx
 from mo_dots import wrap, coalesce, unwrap, listwrap, Data
 from mo_kwargs import override
@@ -175,18 +176,7 @@ class ESUtils(object):
             container.add_alias(_settings.index)
 
             # INSERT DATA
-            inserts = []
-            for v in subtest.data:
-                if isinstance(v, Mapping):
-                    _id = v._id
-                    v._id = None
-                else:
-                    _id = None
-                inserts.append({
-                    "id": _id,
-                    "value": v
-                })
-            container.extend(inserts)
+            container.extend(subtest.data)
             container.flush()
             # ENSURE query POINTS TO CONTAINER
             frum = subtest.query["from"]

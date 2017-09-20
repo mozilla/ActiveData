@@ -202,7 +202,7 @@ class FromES(Container):
         THE where CLAUSE IS AN ES FILTER
         """
         command = wrap(command)
-        schema = self._es.get_schema()
+        schema = self._es.get_properties()
 
         # GET IDS OF DOCUMENTS
         results = self._es.search({

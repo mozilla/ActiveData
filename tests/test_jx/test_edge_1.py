@@ -527,8 +527,8 @@ class TestEdge1(BaseTestCase):
     def test_multiple_union(self):
         data = [
             {"a": "x"},
+            {"a": "x", "_c": [{"v": 2}, {"v": 3}]},  # MUST BE FIRST, OTHERWISE ES WILL NOT USE THE NOT-NESTED OBJECTS
             {"a": "x", "_c": {"v": 2}},
-            {"a": "x", "_c": [{"v": 2}, {"v": 3}]},
             {"a": "y"},
             {"a": "y", "_c": {"v": 4}},
             {"a": "y", "_c": [{"v": 5}, {"v": 6}]},

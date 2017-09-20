@@ -19,15 +19,16 @@ from decimal import Decimal
 
 from future.utils import text_type
 
-from jx_base import python_type_to_json_type, EXISTS
-from mo_dots import Data, FlatList, NullType, unwrap, join_field
-from mo_json import ESCAPE_DCT, float2json
+from jx_base import python_type_to_json_type
+from mo_dots import Data, FlatList, NullType, unwrap
+from mo_json import ESCAPE_DCT, float2json, json2value
 from mo_json.encoder import pretty_json, problem_serializing, UnicodeBuilder, COMMA, _repr
 from mo_json.typed_encoder import untype_path, encode_property
 from mo_logs import Log
 from mo_logs.strings import utf82unicode
 from mo_times.dates import Date
 from mo_times.durations import Duration
+from pyLibrary.env.elasticsearch import parse_properties
 
 append = UnicodeBuilder.append
 
@@ -40,7 +41,7 @@ _EXISTS = "$exists"
 
 class TypedInserter(object):
     def __init__(self, es, id_column="_id"):
-        columns = es.parse_properties(es.get_schema()).columns
+        columns = parse_properties(es.settings.alias, ".", es.get_properties()).columns
         _schema = Data()
         for c in columns:
             untyped_path = untype_path(c.names["."])
@@ -49,13 +50,28 @@ class TypedInserter(object):
         self.schema = unwrap(_schema)
         self.es = es
         self.id_column = id_column
+        self.remove_id = True if id_column == "_id" else False
 
-    def add(self, value):
+    def typed_encode(self, r):
+        """
+        :param record:  expecting id and value properties
+        :return:  dict with id and json properties
+        """
         try:
+            value = r['value']
+            if "json" in r:
+                value = json2value(r["json"])
+            elif isinstance(value, Mapping) or r_value != None:
+                pass
+            else:
+                raise Log.error("Expecting every record given to have \"value\" or \"json\" property")
+
             _buffer = UnicodeBuilder(1024)
             net_new_properties = []
             path = []
             id = value[self.id_column]
+            if self.remove_id:
+                del value[self.id_column]
             self._typed_encode(value, self.schema, path, net_new_properties, _buffer)
             json = _buffer.build()
 
@@ -63,7 +79,7 @@ class TypedInserter(object):
                 path, type = props[:-1], props[-1][1:]
                 # self.es.add_column(join_field(path), type)
 
-            return self.es.add({"id": id, "json": json})
+            return {"id": id, "json": json}
         except Exception as e:
             # THE PRETTY JSON WILL PROVIDE MORE DETAIL ABOUT THE SERIALIZATION CONCERNS
             from mo_logs import Log
@@ -80,9 +96,15 @@ class TypedInserter(object):
                 append(_buffer, u'{}')
                 return
             elif value is True:
+                if _BOOLEAN not in sub_schema:
+                    sub_schema[_BOOLEAN] = {}
+                    net_new_properties.append(path+[_BOOLEAN])
                 append(_buffer, u'{"$boolean": true}')
                 return
             elif value is False:
+                if _BOOLEAN not in sub_schema:
+                    sub_schema[_BOOLEAN] = {}
+                    net_new_properties.append(path+[_BOOLEAN])
                 append(_buffer, u'{"$boolean": false}')
                 return
 
@@ -98,9 +120,9 @@ class TypedInserter(object):
                         # SINGLETON LISTS OF null SHOULD NOT EXIST
                         pass
                 else:
-                    if EXISTS not in sub_schema:
-                        sub_schema[EXISTS] = {}
-                        net_new_properties.append(path+[EXISTS])
+                    if _EXISTS not in sub_schema:
+                        sub_schema[_EXISTS] = {}
+                        net_new_properties.append(path+[_EXISTS])
 
                     if value:
                         self._dict2json(value, sub_schema, path, net_new_properties, _buffer)
@@ -162,7 +184,7 @@ class TypedInserter(object):
                     else:
                         from mo_logs import Log
                         Log.error("Can not handle multi-typed multivalues")
-                    self._list2json(value, _buffer)
+                    self._list2json(value, sub_schema[_NESTED], path+[_NESTED], net_new_properties, _buffer)
             elif _type is date:
                 if _NUMBER not in sub_schema:
                     sub_schema[_NUMBER] = True
@@ -241,7 +263,7 @@ class TypedInserter(object):
         append(_buffer, u"]")
 
     def _dict2json(self, value, sub_schema, path, net_new_properties, _buffer):
-        prefix = u'{"' + EXISTS + '": ".", '
+        prefix = u'{"$exists": ".", '
         for k, v in value.iteritems():
             if v == None or v == "":
                 continue

@@ -18,6 +18,7 @@ from copy import deepcopy
 from future.utils import text_type, binary_type
 
 import mo_json
+from jx_elasticsearch.es52.typed_inserter import TypedInserter
 from jx_python import jx
 from jx_python.meta import Column
 from mo_dots import coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field, join_field
@@ -91,6 +92,11 @@ class Index(Features):
         else:
             self.cluster = Cluster(kwargs)
 
+        if kwargs.tjson:
+            self.encode = TypedInserter(self).typed_encode
+        else:
+            self.encode = default_encoder
+
         try:
             full_index = self.get_index(index)
             if full_index and alias==None:
@@ -126,7 +132,7 @@ class Index(Features):
     def url(self):
         return self.cluster.path.rstrip("/") + "/" + self.path.lstrip("/")
 
-    def get_schema(self, retry=True):
+    def get_properties(self, retry=True):
         if self.settings.explore_metadata:
             metadata = self.cluster.get_metadata()
             index = metadata.indices[self.settings.index]
@@ -134,7 +140,8 @@ class Index(Features):
             if index == None and retry:
                 #TRY AGAIN, JUST IN CASE
                 self.cluster.cluster_state = None
-                return self.get_schema(retry=False)
+                self.cluster.get_metadata(force=True)
+                return self.get_properties(retry=False)
 
             if not index.mappings[self.settings.type]:
                 Log.error(
@@ -143,7 +150,7 @@ class Index(Features):
                     type=self.settings.type,
                     metadata=metadata
                 )
-            return index.mappings[self.settings.type]
+            return index.mappings[self.settings.type].properties
         else:
             mapping = self.cluster.get(self.path + "/_mapping")
             if not mapping[self.settings.type]:
@@ -152,7 +159,7 @@ class Index(Features):
                     index=self.settings.index,
                     type=self.settings.type
                 )
-            return wrap({"mappings": mapping[self.settings.type]})
+            return wrap(mapping[self.settings.type].properties)
 
     def delete_all_but_self(self):
         """
@@ -275,34 +282,11 @@ class Index(Features):
         lines = []
         try:
             for r in records:
-                id = r.get("id")
-                r_value = r.get('value')
-                if id == None and isinstance(r_value, Mapping):
-                    id = r_value.get('_id')
-                if id == None:
-                    id = random_id()
+                rec = self.encode(r)
+                json_bytes = rec['json'].encode('utf8')
+                lines.append(b'{"index":{"_id": ' + convert.value2json(rec['id']).encode("utf8") + b'}}')
+                lines.append(json_bytes)
 
-                if self.settings.tjson:
-                    if "json" in r:
-                        r_value = convert.json2value(r["json"])
-                    elif isinstance(r_value, Mapping) or r_value != None:
-                        pass
-                    else:
-                        Log.error("Expecting every record given to have \"value\" or \"json\" property")
-
-                    lines.append(b'{"index":{"_id": ' + convert.value2json(id).encode("utf8") + b'}}')
-                    json_bytes = typed_encode(r_value).encode('utf8')
-                    lines.append(json_bytes)
-                else:
-                    if "json" in r:
-                        json_bytes = r["json"].encode("utf8")
-                    elif r_value or isinstance(r_value, (dict, Data)):
-                        json_bytes = convert.value2json(r_value).encode("utf8")
-                    else:
-                        Log.error("Expecting every record given to have \"value\" or \"json\" property")
-
-                    lines.append(b'{"index":{"_id": ' + convert.value2json(id).encode("utf8") + b'}}')
-                    lines.append(json_bytes)
             del records
 
             if not lines:
@@ -1205,6 +1189,23 @@ def parse_properties(parent_index_name, parent_name, esProperties):
             Log.warning("unknown type {{type}} for property {{path}}", type=property.type, path=query_path)
 
     return columns
+
+def default_encoder(r):
+    id = r.get("id")
+    r_value = r.get('value')
+    if id == None and isinstance(r_value, Mapping):
+        id = r_value.get('_id')
+    if id == None:
+        id = random_id()
+
+    if "json" in r:
+        json = r["json"]
+    elif r_value or isinstance(r_value, (dict, Data)):
+        json = convert.value2json(r_value)
+    else:
+        raise Log.error("Expecting every record given to have \"value\" or \"json\" property")
+
+    return {"id":id, "json":json}
 
 
 def random_id():

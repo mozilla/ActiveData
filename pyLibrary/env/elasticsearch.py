@@ -18,14 +18,12 @@ from copy import deepcopy
 from future.utils import text_type, binary_type
 
 import mo_json
-from jx_elasticsearch.es52.typed_inserter import TypedInserter
 from jx_python import jx
 from jx_python.meta import Column
-from mo_dots import coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field, join_field
+from mo_dots import coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field
 from mo_dots import wrap
 from mo_dots.lists import FlatList
 from mo_json import value2json
-from mo_json.typed_encoder import decode_property, typed_encode
 from mo_kwargs import override
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except
@@ -93,6 +91,8 @@ class Index(Features):
             self.cluster = Cluster(kwargs)
 
         if kwargs.tjson:
+            from pyLibrary.env.typed_inserter import TypedInserter
+
             self.encode = TypedInserter(self).typed_encode
         else:
             self.encode = default_encoder

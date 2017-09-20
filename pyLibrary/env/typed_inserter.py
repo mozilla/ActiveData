@@ -28,7 +28,7 @@ from mo_logs import Log
 from mo_logs.strings import utf82unicode
 from mo_times.dates import Date
 from mo_times.durations import Duration
-from pyLibrary.env.elasticsearch import parse_properties
+from pyLibrary.env.elasticsearch import parse_properties, random_id
 
 append = UnicodeBuilder.append
 
@@ -61,17 +61,37 @@ class TypedInserter(object):
             value = r['value']
             if "json" in r:
                 value = json2value(r["json"])
-            elif isinstance(value, Mapping) or r_value != None:
+            elif isinstance(value, Mapping) or value != None:
                 pass
             else:
+                from mo_logs import Log
                 raise Log.error("Expecting every record given to have \"value\" or \"json\" property")
 
             _buffer = UnicodeBuilder(1024)
             net_new_properties = []
             path = []
-            id = value[self.id_column]
+            given_id = value.get(self.id_column)
             if self.remove_id:
-                del value[self.id_column]
+                value[self.id_column] = None
+
+            if given_id:
+                record_id = r.get('id')
+                if record_id and record_id != given_id:
+                    from mo_logs import Log
+
+                    raise Log.error(
+                        "expecting {{property}} of record ({{record_id|quote}}) to match one given ({{given|quote}})",
+                        property=self.id_column,
+                        record_id=record_id,
+                        given=given_id
+                    )
+            else:
+                record_id = r.get('id')
+                if record_id:
+                    given_id = record_id
+                else:
+                    given_id = random_id()
+
             self._typed_encode(value, self.schema, path, net_new_properties, _buffer)
             json = _buffer.build()
 
@@ -79,14 +99,14 @@ class TypedInserter(object):
                 path, type = props[:-1], props[-1][1:]
                 # self.es.add_column(join_field(path), type)
 
-            return {"id": id, "json": json}
+            return {"id": given_id, "json": json}
         except Exception as e:
             # THE PRETTY JSON WILL PROVIDE MORE DETAIL ABOUT THE SERIALIZATION CONCERNS
             from mo_logs import Log
 
             Log.warning("Serialization of JSON problems", e)
             try:
-                return pretty_json(value)
+                return pretty_json(r)
             except Exception as f:
                 Log.error("problem serializing object", f)
 
@@ -113,9 +133,9 @@ class TypedInserter(object):
                 if _NESTED in sub_schema:
                     # PREFER NESTED, WHEN SEEN BEFORE
                     if value:
-                        append(_buffer, '[')
+                        append(_buffer, u'{"$nested": [')
                         self._dict2json(value, sub_schema[_NESTED], path + [_NESTED], net_new_properties, _buffer)
-                        append(_buffer, ']')
+                        append(_buffer, ']}')
                     else:
                         # SINGLETON LISTS OF null SHOULD NOT EXIST
                         pass
@@ -168,7 +188,7 @@ class TypedInserter(object):
             elif _type in (set, list, tuple, FlatList):
                 if any(isinstance(v, (Mapping, set, list, tuple, FlatList)) for v in value):
                     if _NESTED not in sub_schema:
-                        sub_schema[_NESTED] = True
+                        sub_schema[_NESTED] = {}
                         net_new_properties.append(path + [_NESTED])
                     append(_buffer, u'{"$nested": ')
                     self._list2json(value, sub_schema[_NESTED], path+[_NESTED], net_new_properties, _buffer)

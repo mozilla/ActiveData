@@ -298,7 +298,7 @@ class RowsOp(Expression):
 
     def __data__(self):
         if isinstance(self.var, Literal) and isinstance(self.offset, Literal):
-            return {"rows": {self.var.json, json2value(self.offset.json)}}
+            return {"rows": {self.var.json, self.offset.value}}
         else:
             return {"rows": [self.var.__data__(), self.offset.__data__()]}
 
@@ -318,7 +318,7 @@ class GetOp(Expression):
 
     def __data__(self):
         if isinstance(self.var, Literal) and isinstance(self.offset, Literal):
-            return {"get": {self.var.json, json2value(self.offset.json)}}
+            return {"get": {self.var.json, self.offset.value}}
         else:
             return {"get": [self.var.__data__(), self.offset.__data__()]}
 
@@ -377,7 +377,7 @@ class Literal(Expression):
         if term == "":
             self._json = '""'
         else:
-            self._json = value2json(term)
+            self._json = value2json(term, sort_keys=True)
 
     def __nonzero__(self):
         return True
@@ -396,13 +396,13 @@ class Literal(Expression):
         from mo_testing.fuzzytestcase import assertAlmostEqual
 
         try:
-            assertAlmostEqual(json2value(self._json), other)
+            assertAlmostEqual(self.value, other)
             return True
         except Exception:
             return False
 
     def __data__(self):
-        return {"literal": json2value(self._json)}
+        return {"literal": self.value}
 
     @property
     def value(self):
@@ -424,7 +424,7 @@ class Literal(Expression):
         return FALSE
 
     def __call__(self, row=None, rownum=None, rows=None):
-        return json2value(self.json)
+        return self.value
 
     def __unicode__(self):
         return self._json
@@ -673,7 +673,7 @@ class BinaryOp(Expression):
 
     def __data__(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-            return {self.op: {self.lhs.var, json2value(self.rhs.json)}, "default": self.default}
+            return {self.op: {self.lhs.var, self.rhs.value}, "default": self.default}
         else:
             return {self.op: [self.lhs.__data__(), self.rhs.__data__()], "default": self.default}
 
@@ -714,7 +714,7 @@ class InequalityOp(Expression):
 
     def __data__(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-            return {self.op: {self.lhs.var, json2value(self.rhs.json)}}
+            return {self.op: {self.lhs.var, self.rhs.value}}
         else:
             return {self.op: [self.lhs.__data__(), self.rhs.__data__()]}
 
@@ -749,7 +749,7 @@ class DivOp(Expression):
 
     def __data__(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-            return {"div": {self.lhs.var, json2value(self.rhs.json)}, "default": self.default}
+            return {"div": {self.lhs.var, self.rhs.value}, "default": self.default}
         else:
             return {"div": [self.lhs.__data__(), self.rhs.__data__()], "default": self.default}
 
@@ -777,7 +777,7 @@ class FloorOp(Expression):
 
     def __data__(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-            return {"floor": {self.lhs.var, json2value(self.rhs.json)}, "default": self.default}
+            return {"floor": {self.lhs.var, self.rhs.value}, "default": self.default}
         else:
             return {"floor": [self.lhs.__data__(), self.rhs.__data__()], "default": self.default}
 
@@ -824,7 +824,7 @@ class EqOp(Expression):
 
     def __data__(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-            return {"eq": {self.lhs.var, json2value(self.rhs.json)}}
+            return {"eq": {self.lhs.var, self.rhs.value}}
         else:
             return {"eq": [self.lhs.__data__(), self.rhs.__data__()]}
 
@@ -868,7 +868,7 @@ class NeOp(Expression):
 
     def __data__(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-            return {"ne": {self.lhs.var, json2value(self.rhs.json)}}
+            return {"ne": {self.lhs.var, self.rhs.value}}
         else:
             return {"ne": [self.lhs.__data__(), self.rhs.__data__()]}
 
@@ -1692,7 +1692,7 @@ class PrefixOp(Expression):
 
     def __data__(self):
         if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
-            return {"prefix": {self.field.var: json2value(self.prefix.json)}}
+            return {"prefix": {self.field.var: self.prefix.value}}
         else:
             return {"prefix": [self.field.__data__(), self.prefix.__data__()]}
 
@@ -1724,11 +1724,11 @@ class ConcatOp(Expression):
 
     def __data__(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            output = {"concat": {self.terms[0].var: json2value(self.terms[2].json)}}
+            output = {"concat": {self.terms[0].var: self.terms[2].value}}
         else:
             output = {"concat": [t.__data__() for t in self.terms]}
         if self.separator.json != '""':
-            output["separator"] = json2value(self.terms[2].json)
+            output["separator"] = self.terms[2].value
         return output
 
     def vars(self):
@@ -1798,7 +1798,7 @@ class LeftOp(Expression):
 
     def __data__(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return {"left": {self.value.var: json2value(self.length.json)}}
+            return {"left": {self.value.var: self.length.value}}
         else:
             return {"left": [self.value.__data__(), self.length.__data__()]}
 
@@ -1843,7 +1843,7 @@ class NotLeftOp(Expression):
 
     def __data__(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return {"not_left": {self.value.var: json2value(self.length.json)}}
+            return {"not_left": {self.value.var: self.length.value}}
         else:
             return {"not_left": [self.value.__data__(), self.length.__data__()]}
 
@@ -1888,7 +1888,7 @@ class RightOp(Expression):
 
     def __data__(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return {"right": {self.value.var: json2value(self.length.json)}}
+            return {"right": {self.value.var: self.length.value}}
         else:
             return {"right": [self.value.__data__(), self.length.__data__()]}
 
@@ -1933,7 +1933,7 @@ class NotRightOp(Expression):
 
     def __data__(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
-            return {"not_right": {self.value.var: json2value(self.length.json)}}
+            return {"not_right": {self.value.var: self.length.value}}
         else:
             return {"not_right": [self.value.__data__(), self.length.__data__()]}
 
@@ -2187,7 +2187,7 @@ class InOp(Expression):
 
     def __data__(self):
         if isinstance(self.value, Variable) and isinstance(self.superset, Literal):
-            return {"in": {self.value.var: json2value(self.superset.json)}}
+            return {"in": {self.value.var: self.superset.value}}
         else:
             return {"in": [self.value.__data__(), self.superset.__data__()]}
 
@@ -2217,7 +2217,7 @@ class RangeOp(Expression):
     def __new__(cls, op, term, *args):
         Expression.__new__(cls, *args)
         field, comparisons = term  # comparisons IS A Literal()
-        return AndOp("and", [operators[op](op, [field, Literal(None, value)]) for op, value in json2value(comparisons.json).items()])
+        return AndOp("and", [operators[op](op, [field, Literal(None, value)]) for op, value in comparisons.value.items()])
 
     def __init__(self, op, term):
         Log.error("Should never happen!")

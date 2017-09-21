@@ -18,7 +18,6 @@ import subprocess
 from string import ascii_lowercase
 
 import mo_json_config
-from active_data.actions.jx import replace_vars
 from mo_dots import wrap, coalesce, unwrap, listwrap, Data
 from mo_kwargs import override
 from mo_logs import Log, Except, constants
@@ -411,7 +410,6 @@ class FakeHttp(object):
             })
 
         text = convert.utf82unicode(body)
-        text = replace_vars(text)
         data = convert.json2value(text)
         result = jx.run(data)
         output_bytes = convert.unicode2utf8(convert.value2json(result))

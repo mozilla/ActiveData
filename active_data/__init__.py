@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 import flask
 
 from mo_dots import wrap
+from mo_json import value2json
 from mo_logs import Log
 from mo_times.dates import Date
 
@@ -34,7 +35,7 @@ def record_request(request, query_, data, error):
             "path": request.headers.environ["werkzeug.request"].full_path,
             "content_length": request.headers.get("content_length"),
             "remote_addr": request.remote_addr,
-            "query": query_,
+            "query_text": value2json(query_),
             "data": data,
             "error": error
         })

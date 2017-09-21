@@ -41,6 +41,10 @@
 					"index": "no",
 					"store": "yes"
 				},
+				"query_text": {
+					"type": "string",
+					"store": "yes"
+				},
 				"data": {
 					"index": "not_analyzed",
 					"type": "string"

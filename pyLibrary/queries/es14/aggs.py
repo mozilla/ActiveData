@@ -42,8 +42,10 @@ def get_decoders_by_depth(query):
         # REORDER EDGES/GROUPBY TO MATCH THE SORT
         if len(query.edges)>1 and query.format == "cube":
             Log.error("can not use sort clause with edges: add sort clause to each edge")
+
+        source = "edges" if query.edges else "groupby"
         ordered_edges = []
-        remaining_edges = query.edges+query.groupby
+        remaining_edges = getattr(query, source)
         for s in query.sort:
             if not isinstance(s.value, Variable):
                 Log.error("can only sort by terms")
@@ -53,8 +55,7 @@ def get_decoders_by_depth(query):
                     remaining_edges.remove(e)
                     break
         ordered_edges.extend(remaining_edges)
-        query.groupby = wrap(list(reversed(ordered_edges)))
-        query.edges = Null
+        setattr(query, source, wrap(list(reversed(ordered_edges))))
 
     for edge in wrap(coalesce(query.edges, query.groupby, [])):
         if edge.value != None and not isinstance(edge.value, NullOp):

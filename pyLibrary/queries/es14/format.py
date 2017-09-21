@@ -53,13 +53,6 @@ def format_cube(decoders, aggs, start, query, select):
     return cube
 
 
-
-
-
-
-
-
-
 def format_cube_from_aggop(decoders, aggs, start, query, select):
     agg = drill(aggs)
     matricies = [(s, Matrix(dims=[], zeros=s.default)) for s in select]

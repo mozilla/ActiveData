@@ -200,11 +200,11 @@ def _scrub_float(value):
 
 def value2json(obj, pretty=False, sort_keys=False, keep_whitespace=True):
     """
-    :param obj:  THE VALUE TO TURN INTO JSON 
+    :param obj:  THE VALUE TO TURN INTO JSON
     :param pretty: True TO MAKE A MULTI-LINE PRETTY VERSION
     :param sort_keys: True TO SORT KEYS
     :param keep_whitespace: False TO strip() THE WHITESPACE IN THE VALUES
-    :return: 
+    :return:
     """
     if FIND_LOOPS:
         obj = scrub(obj, keep_whitespace=keep_whitespace)

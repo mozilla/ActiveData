@@ -1972,7 +1972,6 @@ class TestEdge1(BaseTestCase):
 # }
 
 
-
 simple_test_data = [
     {"a": "c", "v": 13},
     {"a": "b", "v": 2},

@@ -20,7 +20,6 @@ from string import ascii_lowercase
 from future.utils import text_type
 
 import mo_json_config
-from active_data.actions.jx import replace_vars
 from jx_base import container
 from jx_base.query import QueryOp
 from jx_python import jx
@@ -413,7 +412,6 @@ class FakeHttp(object):
             })
 
         text = convert.utf82unicode(body)
-        text = replace_vars(text)
         data = convert.json2value(text)
         result = jx.run(data)
         output_bytes = convert.unicode2utf8(convert.value2json(result))

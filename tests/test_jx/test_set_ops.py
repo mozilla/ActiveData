@@ -1128,3 +1128,46 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_keep_whitespace(self):
+        test = {
+            "data": [
+                {"_a": [{"b": 1, "c": 1}, {"b": 2, "c": 1}]},
+                {"_a": [{"b": 1, "c": 2}, {"b": 2, "c": 2}]}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": "_a"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    [{"b": 1, "c": 1}, {"b": 2, "c": 1}],
+                    [{"b": 1, "c": 2}, {"b": 2, "c": 2}]
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["_a"],
+                "data": [
+                   [[{"b": 1, "c": 1}, {"b": 2, "c": 1}]],
+                   [[{"b": 1, "c": 2}, {"b": 2, "c": 2}]]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 2, "interval": 1}
+                    }
+                ],
+                "data": {
+                    "_a": [
+                        [{"b": 1, "c": 1}, {"b": 2, "c": 1}],
+                        [{"b": 1, "c": 2}, {"b": 2, "c": 2}]
+                    ]
+                }
+            }
+        }
+        self.utils.execute_tests(test)
+

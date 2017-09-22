@@ -11,19 +11,19 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import flask
-from active_data import record_request, cors_wrapper
 from flask import Response
+
+from active_data import record_request, cors_wrapper
+from active_data.actions import save_query, send_error, test_mode_wait
+from jx_base.container import Container
 from jx_python import jx, wrap_from
 from mo_files import File
 from mo_logs import Log
-from mo_math import Math
-from pyLibrary import convert
-
-from active_data.actions import save_query, replace_vars, send_error, test_mode_wait
-from jx_base.container import Container
 from mo_logs.exceptions import Except
 from mo_logs.profiles import CProfiler
+from mo_math import Math
 from mo_times.timer import Timer
+from pyLibrary import convert
 
 BLANK = convert.unicode2utf8(File("active_data/public/error.html").read())
 QUERY_SIZE_LIMIT = 10*1024*1024
@@ -50,7 +50,6 @@ def jx_query(path):
 
                     request_body = flask.request.get_data().strip()
                     text = convert.utf82unicode(request_body)
-                    text = replace_vars(text, flask.request.args)
                     data = convert.json2value(text)
                     record_request(flask.request, data, None, None)
                     if data.meta.testing:

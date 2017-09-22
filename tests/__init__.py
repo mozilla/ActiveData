@@ -12,27 +12,26 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import itertools
+import os
 import signal
 import subprocess
 from string import ascii_lowercase
 
-import os
 from future.utils import text_type
-from jx_python import jx, containers
+
+import mo_json_config
+from jx_base import container
+from jx_base.query import QueryOp
+from jx_python import jx
 from mo_dots import wrap, coalesce, unwrap, listwrap, Data
 from mo_kwargs import override
 from mo_logs import Log, Except, constants
-from pyLibrary import convert
-
-import mo_json_config
-from active_data.actions.jx import replace_vars
-from jx_base import container
-from jx_base.query import QueryOp
 from mo_logs.exceptions import extract_stack
 from mo_logs.strings import expand_template
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_times.dates import Date
 from mo_times.durations import MINUTE
+from pyLibrary import convert
 from pyLibrary.env import http
 from pyLibrary.testing import elasticsearch
 from test_jx import TEST_TABLE
@@ -421,7 +420,6 @@ class FakeHttp(object):
             })
 
         text = convert.utf82unicode(body)
-        text = replace_vars(text)
         data = convert.json2value(text)
         result = jx.run(data)
         output_bytes = convert.unicode2utf8(convert.value2json(result))

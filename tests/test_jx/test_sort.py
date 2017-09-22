@@ -16,7 +16,6 @@ from unittest import skipIf
 from mo_dots import wrap
 from mo_logs import Log
 from mo_logs.exceptions import extract_stack
-
 from tests.test_jx import BaseTestCase, TEST_TABLE, NULL, global_settings
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
@@ -94,6 +93,7 @@ class TestSorting(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    @skipIf(global_settings.use in ["travis", "elasticsearch"], "sorting is hard with elasticsearch")
     def test_2edge_and_sort(self):
         test = {
             "data": [

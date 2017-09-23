@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import json
 import operator
 from collections import Mapping
 from decimal import Decimal
@@ -21,8 +22,9 @@ from future.utils import text_type
 from jx_base import OBJECT, python_type_to_json_type, BOOLEAN, NUMBER, INTEGER, STRING
 from jx_base.queries import is_variable_name, get_property_name
 from mo_dots import coalesce, wrap, Null, split_field
-from mo_json import json2value, value2json
-from mo_logs import Log
+from mo_json import json2value, scrub
+from mo_json.encoder import COLON, COMMA
+from mo_logs import Log, Except
 from mo_math import Math, MAX, MIN
 from mo_times.dates import Date
 
@@ -354,6 +356,29 @@ class ScriptOp(Expression):
         return str(self.script)
 
 
+_json_encoder = json.JSONEncoder(
+    skipkeys=False,
+    ensure_ascii=False,  # DIFF FROM DEFAULTS
+    check_circular=True,
+    allow_nan=True,
+    indent=None,
+    separators=(COMMA, COLON),
+    encoding='utf8',
+    default=None,
+    sort_keys=True
+).encode
+
+
+def value2json(value):
+    try:
+        scrubbed = scrub(value, scrub_number=float)
+        return text_type(_json_encoder(scrubbed))
+    except Exception as e:
+        e = Except.wrap(e)
+        Log.warning("problem serializing {{type}}", type=repr(value), cause=e)
+        raise e
+
+
 class Literal(Expression):
     """
     A literal JSON document
@@ -377,7 +402,7 @@ class Literal(Expression):
         if term == "":
             self._json = '""'
         else:
-            self._json = value2json(term, sort_keys=True)
+            self._json = value2json(term)
 
     def __nonzero__(self):
         return True
@@ -435,6 +460,9 @@ class Literal(Expression):
     @property
     def type(self):
         return python_type_to_json_type[self.value.__class__]
+
+    def partial_eval(self):
+        return self
 
 
 class NullOp(Literal):

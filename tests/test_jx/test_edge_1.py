@@ -1892,7 +1892,7 @@ class TestEdge1(BaseTestCase):
                         "value": {"sub": ["v", "b.d"]},
                         "domain": {
                             "type": "set",
-                            "partitions": [0, 3, 6]
+                            "partitions": [0.0, 3.0, 6.0]
                         }
                     }
                 ]

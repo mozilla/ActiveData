@@ -6,24 +6,23 @@
 		{{type|quote}}: {
 			"dynamic_templates": [
 				{
-					"default_long": {
+					"default_double": {
 						"mapping": {
 							"type": "double",
 							"store": true
 						},
-						"match_mapping_type": "long",
-						"match": "*"
+						"match": "$number"
 					}
 				},
 				{
 					"default_strings": {
 						"mapping": {
 							"index": "not_analyzed",
-							"type": "string",
+							"type": "keyword",
 							"store": true
 						},
 						"match_mapping_type": "string",
-						"match": "*"
+						"match": "$string"
 					}
 				},
 				{

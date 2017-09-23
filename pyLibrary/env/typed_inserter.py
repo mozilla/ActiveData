@@ -22,7 +22,7 @@ from future.utils import text_type
 from jx_base import python_type_to_json_type
 from mo_dots import Data, FlatList, NullType, unwrap
 from mo_json import ESCAPE_DCT, float2json, json2value
-from mo_json.encoder import pretty_json, problem_serializing, UnicodeBuilder, COMMA, _repr
+from mo_json.encoder import pretty_json, problem_serializing, UnicodeBuilder, COMMA, COLON
 from mo_json.typed_encoder import untype_path, encode_property
 from mo_logs import Log
 from mo_logs.strings import utf82unicode
@@ -196,15 +196,16 @@ class TypedInserter(object):
                 else:
                     # ALLOW PRIMITIVE MULTIVALUES
                     types = list(set(python_type_to_json_type[v.__class__] for v in value))
-                    if len(types) == 1:
-                        type = "$"+types[0]
-                        if type not in sub_schema:
-                            sub_schema[type] = True
-                            net_new_properties.append(path + [type])
-                    else:
+                    if len(types) != 1:
                         from mo_logs import Log
                         Log.error("Can not handle multi-typed multivalues")
-                    self._list2json(value, sub_schema[_NESTED], path+[_NESTED], net_new_properties, _buffer)
+                    element_type = "$"+types[0]
+                    if element_type not in sub_schema:
+                        sub_schema[element_type] = True
+                        net_new_properties.append(path + [element_type])
+                    append(_buffer, u'{"'+element_type+u'": ')
+                    self._multivalue2json(value, sub_schema[element_type], path+[element_type], net_new_properties, _buffer)
+                    append(_buffer, u'}')
             elif _type is date:
                 if _NUMBER not in sub_schema:
                     sub_schema[_NUMBER] = True
@@ -256,11 +257,11 @@ class TypedInserter(object):
             else:
                 from mo_logs import Log
 
-                Log.error(_repr(value) + " is not JSON serializable")
+                Log.error(repr(value) + " is not JSON serializable")
         except Exception as e:
             from mo_logs import Log
 
-            Log.error(_repr(value) + " is not JSON serializable", e)
+            Log.error(repr(value) + " is not JSON serializable", e)
 
     def _list2json(self, value, sub_schema, path, net_new_properties, _buffer):
         if not value:
@@ -271,6 +272,17 @@ class TypedInserter(object):
                 append(_buffer, sep)
                 sep = COMMA
                 self._typed_encode(v, sub_schema, path, net_new_properties, _buffer)
+            append(_buffer, u"]")
+
+    def _multivalue2json(self, value, sub_schema, path, net_new_properties, _buffer):
+        if not value:
+            append(_buffer, u"[]")
+        else:
+            sep = u"["
+            for v in value:
+                append(_buffer, sep)
+                sep = COMMA
+                append(_buffer, json_encoder(v))
             append(_buffer, u"]")
 
     def _iter2json(self, value, sub_schema, path, net_new_properties, _buffer):
@@ -304,3 +316,15 @@ class TypedInserter(object):
         else:
             append(_buffer, u'{"$exists": "."}')
 
+
+json_encoder = json.JSONEncoder(
+    skipkeys=False,
+    ensure_ascii=False,  # DIFF FROM DEFAULTS
+    check_circular=True,
+    allow_nan=True,
+    indent=None,
+    separators=(COMMA, COLON),
+    encoding='utf8',
+    default=None,
+    sort_keys=True
+).encode

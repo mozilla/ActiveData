@@ -70,9 +70,12 @@ class TypedInserter(object):
             _buffer = UnicodeBuilder(1024)
             net_new_properties = []
             path = []
-            given_id = value.get(self.id_column)
-            if self.remove_id:
-                value[self.id_column] = None
+            if isinstance(value, Mapping):
+                given_id = value.get(self.id_column)
+                if self.remove_id:
+                    value[self.id_column] = None
+            else:
+                given_id = None
 
             if given_id:
                 record_id = r.get('id')

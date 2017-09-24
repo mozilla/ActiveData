@@ -415,8 +415,8 @@ class TestEdge1(BaseTestCase):
     def test_union_values(self):
         data = [
             {"a": "x"},
-            {"a": "x", "c": 2},
             {"a": "x", "c": [2, 3]},
+            {"a": "x", "c": 2},
             {"a": "y"},
             {"a": "y", "c": 4},
             {"a": "y", "c": [5, 6]},

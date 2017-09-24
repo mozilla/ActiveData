@@ -6,7 +6,7 @@
 		{{type|quote}}: {
 			"dynamic_templates": [
 				{
-					"default_double": {
+					"typed_number": {
 						"mapping": {
 							"type": "double",
 							"store": true
@@ -15,7 +15,7 @@
 					}
 				},
 				{
-					"default_strings": {
+					"typed_strings": {
 						"mapping": {
 							"index": "not_analyzed",
 							"type": "keyword",
@@ -26,12 +26,43 @@
 					}
 				},
 				{
-					"default_nested_objects": {
+					"typed_nested_objects": {
 						"mapping": {
 							"type": "nested"
 						},
 						"match_mapping_type": "object",
 						"match": "$nested"
+					}
+				},
+				{
+					"default_number": {
+						"mapping": {
+							"type": "double",
+							"store": true
+						},
+						"match_mapping_type": "double",
+						"match": "*"
+					}
+				},
+				{
+					"default_integer": {
+						"mapping": {
+							"type": "double",
+							"store": true
+						},
+						"match_mapping_type": "integer",
+						"match": "*"
+					}
+				},
+				{
+					"default_strings": {
+						"mapping": {
+							"index": "not_analyzed",
+							"type": "keyword",
+							"store": true
+						},
+						"match_mapping_type": "string",
+						"match": "*"
 					}
 				},
 				{

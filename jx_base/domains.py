@@ -436,7 +436,7 @@ class SetDomain(Domain):
 
 
 class TimeDomain(Domain):
-    __slots__ = ["max", "min", "interval", "partitions", "NULL"]
+    __slots__ = ["max", "min", "interval", "partitions", "NULL", "sort"]
 
     def __init__(self, **desc):
         Domain.__init__(self, **desc)
@@ -445,6 +445,7 @@ class TimeDomain(Domain):
         self.min = Date(self.min)
         self.max = Date(self.max)
         self.interval = Duration(self.interval)
+        self.sort = Null
 
         if self.partitions:
             # IGNORE THE min, max, interval

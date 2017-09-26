@@ -259,8 +259,8 @@ def _range_composer(edge, domain, es_query, to_float, schema):
 class TimeDecoder(AggsDecoder):
     def append_query(self, es_query, start):
         self.start = start
-        mapper = self.query.schema.leaves(".")
-        return _range_composer(self.edge, self.edge.domain, es_query, self.es_column_map, lambda x: x.unix)
+        schema = self.query.frum.schema
+        return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x.unix, schema)
 
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)

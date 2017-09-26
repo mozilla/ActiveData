@@ -13,7 +13,6 @@ from __future__ import unicode_literals
 
 from future.utils import text_type
 
-from jx_base import OBJECT, NESTED
 from jx_base.expressions import TupleOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch import es09
@@ -23,7 +22,7 @@ from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, 
 from jx_elasticsearch.es52.util import aggregates1_4
 from jx_python import jx
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
-    unwraplist, join_field
+    unwraplist
 from mo_logs import Log
 from mo_math import Math, MAX
 from mo_times.timer import Timer
@@ -397,9 +396,8 @@ def aggs_iterator(aggs, decoders, coord=True):
                             yield a, (Null,) + parts
                 elif k == "_missing":
                     b = drill(v)
-                    if b.get("doc_count"):
-                        for a, parts in _aggs_iterator(b, d - 1):
-                            yield a, (Null,) + parts
+                    for a, parts in _aggs_iterator(b, d - 1):
+                        yield a, (Null,) + parts
                 elif k.startswith("_join_"):
                     v["key"] = int(k[6:])
                     for a, parts in _aggs_iterator(v, d - 1):
@@ -409,19 +407,16 @@ def aggs_iterator(aggs, decoders, coord=True):
                 if k == "_match":
                     v = drill(v)
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
-                        if b.get("doc_count"):
-                            b = drill(b)
-                            b["_index"] = i
-                            yield b, (b,)
+                        b = drill(b)
+                        b["_index"] = i
+                        yield b, (b,)
                 elif k == "_other":
                     for b in v.get("buckets", EMPTY_LIST):
                         b = drill(b)
-                        if b.get("doc_count"):
-                            yield b, (Null,)
+                        yield b, (Null,)
                 elif k == "_missing":
                     b = drill(v)
-                    if b.get("doc_count"):
-                        yield b, (Null,)
+                    yield b, (Null,)
                 elif k.startswith("_join_"):
                     v["_index"] = int(k[6:])
                     yield v, (v,)

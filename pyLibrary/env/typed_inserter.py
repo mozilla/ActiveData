@@ -228,7 +228,7 @@ class TypedInserter(object):
                     sub_schema[_NUMBER] = True
                     net_new_properties.append(path + [_NUMBER])
                 append(_buffer, u'{"$number": ')
-                append(_buffer, float2json(time.mktime(value.value.timetuple())))
+                append(_buffer, float2json(value.unix))
                 append(_buffer, u'}')
             elif _type is timedelta:
                 if _NUMBER not in sub_schema:

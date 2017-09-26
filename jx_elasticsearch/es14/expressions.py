@@ -272,11 +272,6 @@ def to_esfilter(self):
     return json2value(self.json)
 
 
-@extend(DateOp)
-def to_ruby(self, not_null=False, boolean=False, many=False):
-    Log.error("not supported")
-
-
 @extend(TupleOp)
 def to_esfilter(self):
     Log.error("not supported")

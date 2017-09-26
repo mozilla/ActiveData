@@ -22,7 +22,7 @@ from mo_logs import Log
 from mo_math import Math, MAX
 
 from jx_base.queries import is_variable_name, get_property_name
-from mo_times.dates import Date
+from mo_times.dates import Date, parse_time_expression
 
 ALLOW_SCRIPTING = False
 TRUE_FILTER = True
@@ -51,7 +51,7 @@ def jx_expression(expr):
 
     expr = wrap(expr)
     if expr.date:
-        return DateOp("date", expr)
+        return DateOp("date", expr.date)
 
     try:
         items = expr.items()
@@ -538,20 +538,18 @@ class FalseOp(Literal):
 
 class DateOp(Literal):
     def __init__(self, op, term):
-        self.value = term.date
-        Literal.__init__(self, op, Date(term.date).unix)
+        self.date = term
+        v = parse_time_expression(self.date)
+        if isinstance(v, Date):
+            Literal.__init__(self, op, v.unix)
+        else:
+            Literal.__init__(self, op, v.seconds)
 
     def __data__(self):
-        return {"date": self.value}
+        return {"date": self.date}
 
     def __call__(self, row=None, rownum=None, rows=None):
-        return Date(self.value)
-
-    def __unicode__(self):
-        return self._json
-
-    def __str__(self):
-        return str(self._json)
+        return Date(self.date)
 
 
 class TupleOp(Expression):

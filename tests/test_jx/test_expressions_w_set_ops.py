@@ -871,6 +871,31 @@ class TestSetOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    def test_date_on_duration(self):
+        test = {
+            "data": [
+                {"data": 0},
+                {"data": 1}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": {
+                    "name": "test",
+                    "value": {"date": "day"}
+                }
+
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    86400,
+                    86400
+                ]
+            }
+        }
+
+        self.utils.execute_es_tests(test)
+
 
 
 # TODO: {"left": {variable: sentinel}}

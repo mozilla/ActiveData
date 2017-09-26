@@ -18,6 +18,8 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 from time import time as _time
 
+from future.utils import text_type
+
 from mo_dots import Null
 from mo_logs.strings import deformat
 
@@ -218,18 +220,18 @@ def parse(*args):
                     output = _unix2Date(a0 / 1000)
                 else:
                     output = _unix2Date(a0)
-            elif isinstance(a0, basestring) and len(a0) in [9, 10, 12, 13] and is_integer(a0):
+            elif isinstance(a0, text_type) and len(a0) in [9, 10, 12, 13] and is_integer(a0):
                 a0 = float(a0)
                 if a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
                     output = _unix2Date(a0 / 1000)
                 else:
                     output = _unix2Date(a0)
-            elif isinstance(a0, basestring):
+            elif isinstance(a0, text_type):
                 output = unicode2Date(a0)
             else:
                 output = _unix2Date(datetime2unix(datetime(*args)))
         else:
-            if isinstance(args[0], basestring):
+            if isinstance(args[0], text_type):
                 output = unicode2Date(*args)
             else:
                 output = _unix2Date(datetime2unix(datetime(*args)))

@@ -21,7 +21,7 @@ from mo_json import json2value, quote
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_math import Math, OR, MAX
-from mo_times.dates import Date
+from mo_times.dates import Date, parse_time_expression
 
 from pyLibrary import convert
 from pyLibrary.queries.containers import STRUCT, OBJECT
@@ -66,7 +66,7 @@ def jx_expression(expr):
 
     expr = wrap(expr)
     if expr.date:
-        return DateOp("date", expr)
+        return DateOp("date", expr.date)
 
     try:
         items = expr.items()
@@ -490,7 +490,7 @@ class Literal(Expression):
             return FalseOp()
         if isinstance(term, Mapping) and term.date:
             # SPECIAL CASE
-            return object.__new__(DateOp, None, term)
+            return object.__new__(DateOp, None, term.date)
         return object.__new__(cls, op, term)
 
     def __init__(self, op, term):
@@ -758,11 +758,15 @@ class FalseOp(Literal):
 
 class DateOp(Literal):
     def __init__(self, op, term):
-        self.value = term.date
-        Literal.__init__(self, op, Date(term.date).unix)
+        self.date = term
+        v = parse_time_expression(self.date)
+        if isinstance(v, Date):
+            Literal.__init__(self, op, v.unix)
+        else:
+            Literal.__init__(self, op, v.seconds)
 
     def to_python(self, not_null=False, boolean=False):
-        return unicode(Date(self.value).unix)
+        return self.json
 
     def to_sql(self, schema, not_null=False, boolean=False):
         return wrap([{"name": ".", "sql": {"n": sql_quote(json2value(self.json))}}])
@@ -771,16 +775,10 @@ class DateOp(Literal):
         return json2value(self.json)
 
     def __data__(self):
-        return {"date": self.value}
+        return {"date": self.date}
 
     def __call__(self, row=None, rownum=None, rows=None):
-        return Date(self.value)
-
-    def __unicode__(self):
-        return self.json
-
-    def __str__(self):
-        return str(self.json)
+        return Date(self.date)
 
 
 class TupleOp(Expression):

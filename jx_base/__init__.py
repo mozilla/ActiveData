@@ -16,7 +16,7 @@ from uuid import uuid4
 
 from future.utils import text_type
 
-from mo_dots import NullType
+from mo_dots import NullType, Data
 
 IS_NULL = '0'
 BOOLEAN = 'boolean'
@@ -38,7 +38,9 @@ python_type_to_json_type = {
     None: OBJECT,
     bool: BOOLEAN,
     NullType: OBJECT,
-    NoneType: OBJECT
+    NoneType: OBJECT,
+    Data: OBJECT,
+    list: NESTED
 }
 
 

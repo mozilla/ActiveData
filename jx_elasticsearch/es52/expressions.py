@@ -132,7 +132,7 @@ def to_painless(self, schema):
         return self.default.to_painless(schema)
 
     acc = []
-    separator = StringOp("string", self.separator)
+    separator = StringOp("string", self.separator).partial_eval()
     sep = separator.to_painless(schema).expr
     for t in self.terms:
         val = WhenOp(
@@ -140,7 +140,8 @@ def to_painless(self, schema):
             t.missing(),
             **{
                 "then": Literal("literal", ""),
-                "else": Painless(type=STRING, expr=sep + "+" + StringOp(None, t).to_painless(schema).expr, frum=t)
+                "else": Painless(type=STRING, expr=sep + "+" + StringOp(None, t).partial_eval().to_painless(schema).expr, frum=t)
+                # "else": ConcatOp("concat", [sep, t])
             }
         )
         acc.append("(" + val.partial_eval().to_painless(schema).expr + ")")
@@ -179,19 +180,19 @@ def to_painless(self, schema):
                 expr="false",
                 frum=self
             )
-        if isinstance(v, (text_type, binary_type)):
+        if isinstance(v, text_type):
             return Painless(
                 type=STRING,
                 expr=quote(v),
                 frum=self
             )
-        if isinstance(v, (int, long)):
+        if isinstance(v, int):
             return Painless(
                 type=INTEGER,
                 expr=text_type(v),
                 frum=self
             )
-        if isinstance(v, (float)):
+        if isinstance(v, float):
             return Painless(
                 type=NUMBER,
                 expr=text_type(v),
@@ -846,20 +847,13 @@ def to_esfilter(self, schema):
 
 @extend(StringOp)
 def to_painless(self, schema):
-    value = self.term.to_painless(schema)
+    term = FirstOp("first", self.term).partial_eval()
+    value = term.to_painless(schema)
 
     if isinstance(value.frum, CoalesceOp):
         return CoalesceOp("coalesce", [StringOp("string", t).partial_eval() for t in value.frum.terms]).to_painless(schema)
 
-    if value.many:
-        return StringOp("string", Painless(
-            miss=value.miss,
-            type=value.type,
-            expr="(" + value.expr + ")[0]",
-            frum=self
-        )).to_painless(schema)
-
-    elif value.type == BOOLEAN:
+    if value.type == BOOLEAN:
         return Painless(
             miss=self.term.missing().partial_eval(),
             type=STRING,
@@ -877,7 +871,7 @@ def to_painless(self, schema):
         return Painless(
             miss=self.term.missing().partial_eval(),
             type=STRING,
-            expr="(" + value.expr + "==(int)(" + value.expr + ")) ? String.valueOf((int)" + value.expr + "):String.valueOf(" + value.expr + ")",
+            expr="String.valueOf(" + value.expr + ").replaceAll('\\\\.0$', '')",
             frum=self
         )
     elif value.type == STRING:

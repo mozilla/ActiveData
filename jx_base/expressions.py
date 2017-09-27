@@ -19,6 +19,7 @@ from decimal import Decimal
 
 from future.utils import text_type
 
+import mo_json
 from jx_base import OBJECT, python_type_to_json_type, BOOLEAN, NUMBER, INTEGER, STRING
 from jx_base.queries import is_variable_name, get_property_name
 from mo_dots import coalesce, wrap, Null, split_field
@@ -399,21 +400,18 @@ class Literal(Expression):
     def __init__(self, op, term):
         Expression.__init__(self, "", None)
         self.simplified = True
-        if term == "":
-            self._json = '""'
-        else:
-            self._json = value2json(term)
+        self.term = term
 
     def __nonzero__(self):
         return True
 
     def __eq__(self, other):
         if other == None:
-            if self._json == "null":
+            if self.term == None:
                 return True
             else:
                 return False
-        elif self._json == "null":
+        elif self.term == None:
             return False
 
         Log.warning("expensive")
@@ -421,7 +419,7 @@ class Literal(Expression):
         from mo_testing.fuzzytestcase import assertAlmostEqual
 
         try:
-            assertAlmostEqual(self.value, other)
+            assertAlmostEqual(self.term, other)
             return True
         except Exception:
             return False
@@ -431,10 +429,15 @@ class Literal(Expression):
 
     @property
     def value(self):
-        return json2value(self._json)
+        return self.term
 
     @property
     def json(self):
+        if self.term == "":
+            self._json = '""'
+        else:
+            self._json = value2json(self.term)
+
         return self._json
 
     def vars(self):
@@ -444,7 +447,7 @@ class Literal(Expression):
         return self
 
     def missing(self):
-        if self._json in ['""', 'null']:
+        if self.term in [None, Null, ""]:
             return TRUE
         return FALSE
 
@@ -459,7 +462,7 @@ class Literal(Expression):
 
     @property
     def type(self):
-        return python_type_to_json_type[self.value.__class__]
+        return python_type_to_json_type[self.term.__class__]
 
     def partial_eval(self):
         return self
@@ -1340,7 +1343,12 @@ class StringOp(Expression):
     def partial_eval(self):
         term = self.term
         if isinstance(term, CoalesceOp):
-            return CoalesceOp("coalesce", [StringOp("string", t)for t in term.terms])
+            return CoalesceOp("coalesce", [StringOp("string", t).partial_eval() for t in term.terms])
+        elif isinstance(term, Literal):
+            if term.type == STRING:
+                return term
+            else:
+                return Literal("literal", mo_json.value2json(term.value))
         return self
 
 

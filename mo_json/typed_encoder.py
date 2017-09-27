@@ -306,6 +306,9 @@ def decode_property(encoded):
 def untype_path(encoded):
     return join_field(decode_property(c) for c in split_field(encoded) if not c.startswith("$"))
 
+def nest_free_path(encoded):
+    return join_field(decode_property(c) for c in split_field(encoded) if c != "$nested")
+
 
 def untyped(value):
     return _untype(value)

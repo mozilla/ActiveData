@@ -288,11 +288,6 @@ def to_esfilter(self, schema):
     return {"bool": {"must_not": {"match_all": {}}}}
 
 
-@extend(DateOp)
-def to_painless(self, schema):
-    Log.error("not supported")
-
-
 @extend(TupleOp)
 def to_esfilter(self, schema):
     Log.error("not supported")

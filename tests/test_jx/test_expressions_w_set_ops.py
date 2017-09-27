@@ -894,7 +894,7 @@ class TestSetOps(BaseTestCase):
             }
         }
 
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
 
 

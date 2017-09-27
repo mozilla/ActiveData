@@ -13,11 +13,10 @@ from __future__ import unicode_literals
 
 from copy import copy
 
-from mo_dots import join_field, split_field, Null, startswith_field, concat_field, set_default
-from mo_json.typed_encoder import untype_path
-from mo_logs import Log
-
 from jx_base import STRUCT, NESTED
+from mo_dots import join_field, split_field, Null, startswith_field, concat_field, set_default
+from mo_json.typed_encoder import nest_free_path
+from mo_logs import Log
 
 
 def _indexer(columns, query_path):
@@ -81,11 +80,11 @@ class Schema(object):
         :param name:
         :return:
         """
-        full_name = concat_field(untype_path(self.query_path), name)
+        full_name = concat_field(nest_free_path(self.query_path), name)
         return [
             c
             for k, cs in self.lookup.items()
-            if startswith_field(untype_path(k), full_name)
+            if startswith_field(nest_free_path(k), full_name)
             for c in cs
             if c.type not in STRUCT and c.es_column != "_id"
         ]

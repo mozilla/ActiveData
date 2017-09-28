@@ -389,7 +389,7 @@ class GeneralSetDecoder(AggsDecoder):
 class DurationDecoder(AggsDecoder):
     def append_query(self, es_query, start):
         self.start = start
-        return _range_composer(self.edge, self.edge.domain, es_query, self.es_column_map, lambda x: x.seconds)
+        return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x.seconds, self.schema)
 
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)

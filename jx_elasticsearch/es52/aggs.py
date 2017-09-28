@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from future.utils import text_type
+from jx_python import jx
 
 from jx_base.expressions import TupleOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
@@ -20,9 +21,7 @@ from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDe
 from jx_elasticsearch.es52.decoders import DimFieldListDecoder
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp
 from jx_elasticsearch.es52.util import aggregates1_4
-from jx_python import jx
-from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
-    unwraplist
+from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, unwraplist
 from mo_logs import Log
 from mo_math import Math, MAX
 from mo_times.timer import Timer
@@ -78,7 +77,7 @@ def get_decoders_by_depth(query):
             if -1 in depths:
                 Log.error(
                     "Do not know of column {{column}}",
-                    column=unwraplist([v for v in vars_ if schema[v]==None])
+                    column=unwraplist([v for v in vars_ if schema[v] == None])
                 )
             if len(depths) > 1:
                 Log.error("expression {{expr}} spans tables, can not handle", expr=edge.value)
@@ -310,7 +309,7 @@ def es_aggsop(es, frum, query):
             Log.error("Where clause is too deep")
 
     if decoders:
-        for d in jx.reverse(decoders[0]):
+        for d in decoders[0]:
             es_query = d.append_query(es_query, start)
             start += d.num_columns
 
@@ -389,19 +388,19 @@ def aggs_iterator(aggs, decoders, coord=True):
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
                         b["_index"] = i
                         for a, parts in _aggs_iterator(b, d - 1):
-                            yield a, (b,) + parts
+                            yield a, parts + (b,)
                 elif k == "_other":
                     for b in v.get("buckets", EMPTY_LIST):
                         for a, parts in _aggs_iterator(b, d - 1):
-                            yield a, (Null,) + parts
+                            yield a, parts + (Null,)
                 elif k == "_missing":
                     b = drill(v)
                     for a, parts in _aggs_iterator(b, d - 1):
-                        yield a, (Null,) + parts
+                        yield a, parts + (Null,)
                 elif k.startswith("_join_"):
                     v["key"] = int(k[6:])
                     for a, parts in _aggs_iterator(v, d - 1):
-                        yield a, (v,) + parts
+                        yield a, parts + (v,)
         else:
             for k, v in agg.items():
                 if k == "_match":

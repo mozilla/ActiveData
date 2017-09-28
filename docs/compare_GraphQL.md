@@ -78,7 +78,7 @@ GraphQL elements are a compound structure consisting of a name, a map inside the
 JSON Queries are explicit about the arguments, this makes them more verbose, but also makes them easy to compose in code.  Here is the same in JSON Query Expressions:
 
     {
-        "from" "user",
+        "from": "user",
         "select": "name"
         "where": {"eq":{"id":1}} 
     }
@@ -342,4 +342,4 @@ Usually, the simpler option is to leverage the dynamic-typed nature of JSON Quer
  
 ## Summary
 
-GraphQL is a complex language with a limited niche.  I have not touched upon the explicit typing declaration required to make GraphQL queries workk. JSON Queries are more expressive, but any noSQL document query language would make a better choice.  
+GraphQL is complex language limited to OLTP. GraphQL's pre-processing features are not required, and easily replaced by the host language responsible for constructing queries. JSON Query Expressions are more expressive and have a wider applicability because they are based on SQL.  

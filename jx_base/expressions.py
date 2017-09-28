@@ -1024,6 +1024,8 @@ class AndOp(Expression):
                 ors.append(simple.terms)
             elif simple.type != BOOLEAN:
                 Log.error("expecting boolean value")
+            elif NotOp("not", simple).partial_eval() in terms:
+                return FALSE
             elif simple not in terms:
                 terms.append(simple)
         if len(ors) == 0:
@@ -1044,7 +1046,7 @@ class AndOp(Expression):
                     agg_terms.append(
                         AndOp("and", [combo]+terms).partial_eval()
                     )
-                return OrOp("or", agg_terms)
+                return OrOp("or", agg_terms).partial_eval()
         elif len(terms) == 0:
             return OrOp("or", ors[0])
 
@@ -1084,6 +1086,7 @@ class OrOp(Expression):
     @simplified
     def partial_eval(self):
         terms = []
+        ands = []
         for t in self.terms:
             simple = t.partial_eval()
             if isinstance(simple, TrueOp):
@@ -1091,11 +1094,22 @@ class OrOp(Expression):
             elif isinstance(simple, (FalseOp, NullOp)):
                 pass
             elif isinstance(simple, OrOp):
-                terms.extend([tt for tt in simple.terms if tt not in terms])
+                terms.extend(tt for tt in simple.terms if tt not in terms)
+            elif isinstance(simple, AndOp):
+                ands.append(simple)
             elif simple.type != BOOLEAN:
                 Log.error("expecting boolean value")
             elif simple not in terms:
                 terms.append(simple)
+
+        if ands:  # REMOVE TERMS THAT ARE MORE RESTRICTIVE THAN OTHERS
+            for a in ands:
+                for tt in a.terms:
+                    if tt in terms:
+                        break
+                else:
+                    terms.append(a)
+
         if len(terms) == 0:
             return FALSE
         if len(terms) == 1:
@@ -1675,7 +1689,7 @@ class MissingOp(Expression):
         self.expr = term
 
     def __data__(self):
-        return {"missing": self.expr.var}
+        return {"missing": self.expr.__data__()}
 
     def vars(self):
         return self.expr.vars()
@@ -2163,6 +2177,17 @@ class BetweenOp(Expression):
 
     def missing(self):
         return self.partial_eval().missing()
+
+    def __data__(self):
+        if isinstance(self.value, Variable) and isinstance(self.prefix, Literal) and isinstance(self.suffix, Literal):
+            output = wrap({"between": {self.value.var: [self.prefix.value, self.suffix.value]}})
+        else:
+            output = wrap({"between": [self.value.__data__(), self.prefix.__data__(), self.suffix.__data__()]})
+        if self.start:
+            output.start = self.start.__data__()
+        if self.default:
+            output.default = self.default.__data__()
+        return output
 
     @simplified
     def partial_eval(self):

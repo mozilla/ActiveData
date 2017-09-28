@@ -74,7 +74,7 @@ class Schema(object):
         """
         return column.names[self.query_path]
 
-    def leaves(self, name):
+    def leaves(self, name, meta=False):
         """
         RETURN LEAVES OF GIVEN PATH NAME
         :param name:
@@ -86,7 +86,7 @@ class Schema(object):
             for k, cs in self.lookup.items()
             if startswith_field(nest_free_path(k), full_name)
             for c in cs
-            if c.type not in STRUCT and c.es_column != "_id"
+            if c.type not in STRUCT and (meta or c.es_column != "_id")
         ]
 
     def map_to_es(self):

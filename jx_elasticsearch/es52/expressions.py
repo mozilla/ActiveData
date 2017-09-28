@@ -204,14 +204,14 @@ def to_painless(self, schema):
                 expr="[" + ", ".join(quote(k) + ": " + _convert(vv) for k, vv in v.items()) + "]",
                 frum=self
             )
-        if isinstance(v, list):
+        if isinstance(v, (list, tuple)):
             return Painless(
                 type=OBJECT,
                 expr="[" + ", ".join(_convert(vv).expr for vv in v) + "]",
                 frum=self
             )
 
-    return _convert(self.value)
+    return _convert(self.term)
 
 
 @extend(CoalesceOp)

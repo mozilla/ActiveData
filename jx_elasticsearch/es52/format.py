@@ -44,7 +44,9 @@ def format_cube(decoders, aggs, start, query, select):
                 v = _pull(s, agg)
                 m[coord] = v
             except Exception as e:
-                Log.error("", e)
+                # THIS HAPPENS WHEN ES RETURNS MORE TUPLE COMBINATIONS THAN DOCUMENTS
+                if agg.get('doc_count') != 0:
+                    Log.error("Programmer error", cause=e)
 
     cube = Cube(
         query.select,

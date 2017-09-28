@@ -55,7 +55,7 @@ def get_decoders_by_depth(query):
             edge = edge.copy()
             vars_ = edge.value.vars()
             for v in vars_:
-                if not schema.leaves(v):
+                if not schema.leaves(v, meta=True):
                     Log.error("{{var}} does not exist in schema", var=v)
         elif edge.range:
             vars_ = edge.range.min.vars() | edge.range.max.vars()
@@ -73,7 +73,7 @@ def get_decoders_by_depth(query):
 
         try:
             vars_ |= edge.value.vars()
-            depths = set(len(c.nested_path)-1 for v in vars_ for c in schema.leaves(v))
+            depths = set(len(c.nested_path) - 1 for v in vars_ for c in schema.leaves(v, meta=True))
             if -1 in depths:
                 Log.error(
                     "Do not know of column {{column}}",
@@ -396,7 +396,7 @@ def aggs_iterator(aggs, decoders, coord=True):
                 elif k == "_missing":
                     b = drill(v)
                     for a, parts in _aggs_iterator(b, d - 1):
-                        yield a, parts + (Null,)
+                        yield a, parts + (b,)
                 elif k.startswith("_join_"):
                     v["key"] = int(k[6:])
                     for a, parts in _aggs_iterator(v, d - 1):
@@ -414,8 +414,8 @@ def aggs_iterator(aggs, decoders, coord=True):
                         b = drill(b)
                         yield b, (Null,)
                 elif k == "_missing":
-                    b = drill(v)
-                    yield b, (Null,)
+                    b = drill(v,)
+                    yield b, (v,)
                 elif k.startswith("_join_"):
                     v["_index"] = int(k[6:])
                     yield v, (v,)

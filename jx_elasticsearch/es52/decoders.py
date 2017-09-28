@@ -23,6 +23,7 @@ from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, Or
 from jx_python import jx
 from mo_dots import set_default, coalesce, literal_field, Data, relative_field
 from mo_dots import wrap
+from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_math import MAX, MIN
 from mo_math import Math
@@ -208,12 +209,12 @@ class SetDecoder(AggsDecoder):
         return self.domain.getKeyByIndex(index)
 
     def get_value_from_row(self, row):
-        return row[self.start]["key"]
+        return row[self.start].get('key')
 
     def get_index(self, row):
         try:
             part = row[self.start]
-            return self.domain.getIndexByKey(part["key"])
+            return self.domain.getIndexByKey(part.get('key'))
         except Exception as e:
             Log.error("problem", cause=e)
 
@@ -271,8 +272,8 @@ class TimeDecoder(AggsDecoder):
         if part == None:
             return len(domain.partitions)
 
-        f = coalesce(part["from"], part["key"])
-        t = coalesce(part["to"], part["key"])
+        f = coalesce(part["from"], part.get('key'))
+        t = coalesce(part["to"], part.get('key'))
         if f == None or t == None:
             return len(domain.partitions)
         else:
@@ -377,9 +378,9 @@ class GeneralSetDecoder(AggsDecoder):
     def get_index(self, row):
         domain = self.edge.domain
         part = row[self.start]
-        if part == None:
-            return len(domain.partitions)
-        return part["_index"]
+        # if part == None:
+        #     return len(domain.partitions)
+        return part.get("_index", len(domain.partitions))
 
     @property
     def num_columns(self):
@@ -400,8 +401,8 @@ class DurationDecoder(AggsDecoder):
         if part == None:
             return len(domain.partitions)
 
-        f = coalesce(part["from"], part["key"])
-        t = coalesce(part["to"], part["key"])
+        f = coalesce(part["from"], part.get('key'))
+        t = coalesce(part["to"], part.get('key'))
         if f == None or t == None:
             return len(domain.partitions)
         else:
@@ -431,8 +432,8 @@ class RangeDecoder(AggsDecoder):
         if part == None:
             return len(domain.partitions)
 
-        f = coalesce(part["from"], part["key"])
-        t = coalesce(part["to"], part["key"])
+        f = coalesce(part.get("from"), part.get('key'))
+        t = coalesce(part.get("to"), part.get('key'))
         if f == None or t == None:
             return len(domain.partitions)
         else:
@@ -459,7 +460,7 @@ class ObjectDecoder(AggsDecoder):
             flatter = lambda k: relative_field(k, prefix)
 
         self.put, self.fields = zip(*[
-            (flatter(c.names["."]), c.es_column)
+            (flatter(untype_path(c.names["."])), c.es_column)
             for c in query.frum.schema.leaves(prefix)
         ])
 
@@ -504,6 +505,8 @@ class ObjectDecoder(AggsDecoder):
         if self.computed_domain:
             return self.domain.getIndexByKey(value)
 
+        if value is None:
+            return -1
         i = self.key2index.get(value)
         if i is None:
             i = self.key2index[value] = len(self.parts)
@@ -511,9 +514,13 @@ class ObjectDecoder(AggsDecoder):
         return i
 
     def get_value_from_row(self, row):
+        part = row[self.start:self.start + self.num_columns:]
+        if not part[0]['doc_count']:
+            return None
+
         output = Data()
-        for k, v in zip(self.put, row[self.start:self.start + self.num_columns:]):
-            output[k] = v["key"]
+        for k, v in zip(self.put, part):
+            output[k] = v.get('key')
         return output
 
     @property
@@ -605,10 +612,11 @@ class DefaultDecoder(SetDecoder):
 
     def count(self, row):
         part = row[self.start]
-        if part == None:
-            self.edge.allowNulls = True  # OK! WE WILL ALLOW NULLS
-        else:
-            self.parts.append(part["key"])
+        if part['doc_count']:
+            if part.get('key'):
+                self.parts.append(part.get('key'))
+            else:
+                self.edge.allowNulls = True  # OK! WE WILL ALLOW NULLS
 
     def done_count(self):
         self.edge.domain = self.domain = SimpleSetDomain(
@@ -621,13 +629,13 @@ class DefaultDecoder(SetDecoder):
         if self.computed_domain:
             try:
                 part = row[self.start]
-                return self.domain.getIndexByKey(part["key"])
+                return self.domain.getIndexByKey(part.get('key'))
             except Exception as e:
                 Log.error("problem", cause=e)
         else:
             try:
                 part = row[self.start]
-                key = part['key']
+                key = part.get('key')
                 i = self.key2index.get(key)
                 if i is None:
                     i = len(self.parts)
@@ -654,7 +662,7 @@ class DimFieldListDecoder(SetDecoder):
     def append_query(self, es_query, start):
         # TODO: USE "reverse_nested" QUERY TO PULL THESE
         self.start = start
-        for i, v in enumerate(jx.reverse(self.fields)):
+        for i, v in enumerate(self.fields):
             exists = v.exists().partial_eval()
             nest = wrap({"aggs": {"_match": {
                 "filter": exists.to_esfilter(self.schema),
@@ -678,8 +686,9 @@ class DimFieldListDecoder(SetDecoder):
 
     def count(self, row):
         part = row[self.start:self.start + len(self.fields):]
-        value = tuple(p["key"] for p in part)
-        self.parts.append(value)
+        if part[0]['doc_count']:
+            value = tuple(p.get("key") for p in part)
+            self.parts.append(value)
 
     def done_count(self):
         columns = map(text_type, range(len(self.fields)))
@@ -693,7 +702,7 @@ class DimFieldListDecoder(SetDecoder):
         )
 
     def get_index(self, row):
-        find = tuple(p["key"] for p in row[self.start:self.start + self.num_columns:])
+        find = tuple(p.get("key") for p in row[self.start:self.start + self.num_columns:])
         return self.domain.getIndexByKey(find)
 
     @property

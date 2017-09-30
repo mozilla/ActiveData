@@ -1703,6 +1703,14 @@ class MissingOp(Expression):
     def exists(self):
         return TRUE
 
+    def partial_eval(self):
+        if isinstance(self.expr, Variable) and self.expr.var == "_id":
+            return FALSE
+        self.simplified = True
+        return self
+
+
+
 
 class ExistsOp(Expression):
     data_type = BOOLEAN

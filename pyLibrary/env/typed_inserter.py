@@ -136,7 +136,7 @@ class TypedInserter(object):
                 if _NESTED in sub_schema:
                     # PREFER NESTED, WHEN SEEN BEFORE
                     if value:
-                        append(_buffer, u'{"$nested": [')
+                        append(_buffer, u'{"$exists": 1, "$nested": [')
                         self._dict2json(value, sub_schema[_NESTED], path + [_NESTED], net_new_properties, _buffer)
                         append(_buffer, ']}')
                     else:
@@ -150,7 +150,7 @@ class TypedInserter(object):
                     if value:
                         self._dict2json(value, sub_schema, path, net_new_properties, _buffer)
                     else:
-                        append(_buffer, u'{"$exists": "."}')
+                        append(_buffer, u'{"$exists": 1}')
             elif _type is str:
                 if _STRING not in sub_schema:
                     sub_schema[_STRING] = True
@@ -275,7 +275,7 @@ class TypedInserter(object):
                 append(_buffer, sep)
                 sep = COMMA
                 self._typed_encode(v, sub_schema, path, net_new_properties, _buffer)
-            append(_buffer, u"]")
+            append(_buffer, u'], "$exists":'+text_type(len(value)))
 
     def _multivalue2json(self, value, sub_schema, path, net_new_properties, _buffer):
         if not value:
@@ -291,14 +291,16 @@ class TypedInserter(object):
     def _iter2json(self, value, sub_schema, path, net_new_properties, _buffer):
         append(_buffer, u"[")
         sep = u""
+        count = 0
         for v in value:
             append(_buffer, sep)
             sep = COMMA
             self._typed_encode(v, sub_schema, path, net_new_properties, _buffer)
-        append(_buffer, u"]")
+            count += 1
+        append(_buffer, u'], "$exists":' + text_type(count))
 
     def _dict2json(self, value, sub_schema, path, net_new_properties, _buffer):
-        prefix = u'{"$exists": ".", '
+        prefix = u'{"$exists": 1, '
         for k, v in value.iteritems():
             if v == None or v == "":
                 continue
@@ -317,7 +319,7 @@ class TypedInserter(object):
         if prefix == u", ":
             append(_buffer, u'}')
         else:
-            append(_buffer, u'{"$exists": "."}')
+            append(_buffer, u'{"$exists": 1}')
 
 
 json_encoder = json.JSONEncoder(

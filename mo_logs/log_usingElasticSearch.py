@@ -143,11 +143,11 @@ SCHEMA = {
                     "$string": {"type": "keyword"}
                 }
             },
-            "$exists": {"type": "keyword"},
+            "$exists": {"type": "long"},
             "machine": {
                 "dynamic": True,
                 "properties": {
-                    "$exists": {"type": "keyword"},
+                    "$exists": {"type": "long"},
                     "python": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
                     "os": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
                     "name": {"properties": {"$string": {"type": "keyword", "doc_values": True}}}
@@ -156,7 +156,7 @@ SCHEMA = {
             "location": {
                 "dynamic": True,
                 "properties": {
-                    "$exists": {"type": "keyword"},
+                    "$exists": {"type": "long"},
                     "file": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
                     "method": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
                     "line": {"properties": {"$integer": {"type": "long", "doc_values": True}}}
@@ -165,12 +165,12 @@ SCHEMA = {
             "thread": {
                 "dynamic": True,
                 "properties": {
-                    "$exists": {"type": "keyword"},
+                    "$exists": {"type": "long"},
                     "name": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
                     "id": {"properties": {"$string": {"type": "keyword", "doc_values": True}}}
                 }
             },
-            "timestamp": {"properties": {"$string": {"type": "keyword"}}}
+            "timestamp": {"properties": {"$number": {"type": "number"}}}
         }
     }}
 }

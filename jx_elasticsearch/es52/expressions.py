@@ -67,6 +67,14 @@ class Painless(Expression):
     def __data__(self):
         return {"script": self.script}
 
+    def __eq__(self, other):
+        if not isinstance(other, Painless):
+            return False
+        elif self.expr==other.expr:
+            return True
+        else:
+            return False
+
 
 @extend(BinaryOp)
 def to_painless(self, schema):
@@ -226,7 +234,12 @@ def to_painless(self, schema):
         e = NotOp("not", m).partial_eval().to_painless(schema)
         r = FirstOp("first", v).partial_eval().to_painless(schema)
 
-        if acc.type == r.type:
+        if r.miss is TRUE:
+            continue
+        elif r.miss is FALSE:
+            acc = r
+            continue
+        elif acc.type == r.type:
             new_type = r.type
         elif acc.type == NUMBER and r.type == INTEGER:
             new_type = NUMBER

@@ -14,13 +14,14 @@ from __future__ import unicode_literals
 from future.utils import text_type
 from jx_python import jx
 
-from jx_base.expressions import TupleOp
+from jx_base.expressions import TupleOp, jx_expression
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch import es09
 from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
 from jx_elasticsearch.es52.decoders import DimFieldListDecoder
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp
 from jx_elasticsearch.es52.util import aggregates1_4
+from jx_python.expressions import jx_expression_to_function
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, unwraplist
 from mo_logs import Log
 from mo_math import Math, MAX
@@ -121,7 +122,11 @@ def es_aggsop(es, frum, query):
         if s.aggregate == "count" and isinstance(s.value, Variable) and s.value.var == ".":
             s.pull = "doc_count"
         elif isinstance(s.value, Variable):
-            if s.aggregate == "count":
+            es_cols = frum.schema.values(s.value.var)
+            if len(es_cols) > 1:
+                s.value = jx_expression({"coalesce": [es_col.es_column for es_col in es_cols]})
+                formula.append(s)
+            elif s.aggregate == "count":
                 new_select["count_"+literal_field(s.value.var)] += [s]
             else:
                 new_select[literal_field(s.value.var)] += [s]
@@ -130,8 +135,9 @@ def es_aggsop(es, frum, query):
 
     for canonical_name, many in new_select.items():
         for s in many:
-            es_cols = frum.schema.leaves(s.value.var)
+            es_cols = frum.schema.values(s.value.var)
             if len(es_cols) > 1:
+                # THIS SHOULD HAVE BEEN SHUNTED TO AN EXPRESSION ABOVE
                 Log.error("Do not know how to count columns with more than one type (script probably)")
             if es_cols:
                 es_col = es_cols[0]
@@ -219,7 +225,7 @@ def es_aggsop(es, frum, query):
             else:
                 Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
-            es_query.aggs[literal_field(canonical_name)].value_count.script = s.value.to_painless(schema).script(schema)
+            es_query.aggs[literal_field(canonical_name)].value_count.script = s.value.partial_eval().to_painless(schema).script(schema)
             s.pull = literal_field(canonical_name) + ".value"
         elif s.aggregate == "median":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT

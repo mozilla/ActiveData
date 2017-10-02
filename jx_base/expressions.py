@@ -932,6 +932,11 @@ class NotOp(Expression):
     def __data__(self):
         return {"not": self.term.__data__()}
 
+    def __eq__(self, other):
+        if not isinstance(other, NotOp):
+            return False
+        return self.term == other.term
+
     def vars(self):
             return self.term.vars()
 
@@ -1167,7 +1172,11 @@ class FirstOp(Expression):
 
     @simplified
     def partial_eval(self):
-        return FirstOp("first", self.term.partial_eval())
+        term = self.term.partial_eval()
+        if isinstance(self.term, FirstOp):
+            return term
+        else:
+            return FirstOp("first", term)
 
 
 class BooleanOp(Expression):
@@ -1690,6 +1699,12 @@ class MissingOp(Expression):
 
     def __data__(self):
         return {"missing": self.expr.__data__()}
+
+    def __eq__(self, other):
+        if not isinstance(other, MissingOp):
+            return False
+        else:
+            return self.expr == other.expr
 
     def vars(self):
         return self.expr.vars()

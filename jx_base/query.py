@@ -27,6 +27,7 @@ from mo_dots import Data
 from mo_dots import coalesce, Null, set_default, unwraplist, literal_field
 from mo_dots import wrap, unwrap, listwrap
 from mo_dots.lists import FlatList
+from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_math import AND, UNION
 from mo_math import Math
@@ -535,25 +536,22 @@ def _normalize_group(edge, dim_index, schema=None):
     """
     if isinstance(edge, basestring):
         if edge.endswith(".*"):
-            prefix = edge[:-1]
+            prefix = edge[:-2]
             if schema:
                 output = wrap([
                     {
-                        "name": literal_field(k),
-                        "value": jx_expression(k),
+                        "name": untype_path(c.names["."]),
+                        "value": jx_expression(c.es_column),
                         "allowNulls": True,
                         "domain": {"type": "default"}
                     }
-                    for k, cs in schema.items()
-                    if k.startswith(prefix)
-                    for c in cs
-                    if c.type not in STRUCT
+                    for c in schema.leaves(prefix)
                 ])
                 return output
             else:
                 return wrap([{
-                    "name": edge[:-2],
-                    "value": jx_expression(edge[:-2]),
+                    "name": untype_path(prefix),
+                    "value": jx_expression(prefix),
                     "allowNulls": True,
                     "dim":dim_index,
                     "domain": {"type": "default"}

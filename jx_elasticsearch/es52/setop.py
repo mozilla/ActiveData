@@ -58,6 +58,7 @@ def es_setop(es, query):
     schema = query.frum.schema
 
     es_query, filters = es52.util.es_query_template(schema.query_path)
+    nested_filter = None
     set_default(filters[0], query.where.partial_eval().to_esfilter(schema))
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.stored_fields = FlatList()
@@ -117,10 +118,20 @@ def es_setop(es, query):
                                 "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)}
                             })
                         else:
+                            if not nested_filter:
+                                where = filters[0].copy()
+                                nested_filter = [where]
+                                for k in filters[0].keys():
+                                    filters[0][k] = None
+                                set_default(
+                                    filters[0],
+                                    {"bool": {"must": [where, {"bool": {"should": nested_filter}}]}}
+                                )
+
                             nested_path = c.nested_path[0]
                             if nested_path not in nested_selects:
                                 where = nested_selects[nested_path] = Data()
-                                es_query.query.bool.must += [where]
+                                nested_filter += [where]
                                 where.nested.path = nested_path
                                 where.nested.query.match_all = {}
                                 where.nested.inner_hits._source = False

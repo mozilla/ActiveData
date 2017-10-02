@@ -68,7 +68,7 @@ def _typed_encode(value, _buffer):
             if value:
                 _dict2json(value, _buffer)
             else:
-                append(_buffer, u'{"$exists": "."}')
+                append(_buffer, u'{"$exists": 1}')
         elif _type is str:
             append(_buffer, u'{"$string": "')
             try:
@@ -163,7 +163,7 @@ def _iter2json(value, _buffer):
 
 
 def _dict2json(value, _buffer):
-    prefix = u'{"$exists": ".", '
+    prefix = u'{"$exists": 1, '
     for k, v in value.iteritems():
         if v == None or v == "":
             continue
@@ -179,7 +179,7 @@ def _dict2json(value, _buffer):
     if prefix == u", ":
         append(_buffer, u'}')
     else:
-        append(_buffer, u'{"$exists": "."}')
+        append(_buffer, u'{"$exists": 1}')
 
 
 VALUE = 0
@@ -210,7 +210,7 @@ def json2typed(json):
             if c == "{":
                 context.append(mode)
                 mode = BEGIN_OBJECT
-                append(output, '{"$exists": "."')
+                append(output, '{"$exists": 1')
                 continue
             elif c == '[':
                 context.append(mode)

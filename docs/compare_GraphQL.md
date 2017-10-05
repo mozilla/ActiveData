@@ -12,7 +12,7 @@ GraphQL has the elegant feature where the inner-object path of the property acts
 
     {
         user {
-			name
+            name
             age
             friends {
                 name
@@ -39,7 +39,7 @@ Calling GraphQL a "query language" is good marketing, and like all good marketin
 
 XML got it wrong when it combined maps and lists into a single type: Every tag has a name, has attributes for describing the tag itself, and has children tags to hold content. I blame this fundamental triple as the source of all complexity built atop the XML landscape. GraphQL makes the same mistake; every element is triple: a name, a map, and a list.
 
-	{user (id: 1) {name}}
+    {user (id: 1) {name}}
 
 This may not seem complex for big-brained humans, but getting code to manipulate this structure is hard. So much so, that meta-programming operators must be introduced to help.
 
@@ -77,11 +77,11 @@ GraphQL elements are a compound structure consisting of a name, a map inside the
 
 JSON Queries are explicit about the arguments, this makes them more verbose, but also makes them easy to compose in code.  Here is the same in JSON Query Expressions:
 
-	{
-		"from" "user",
-		"select": "name"
-		"where": {"eq":{"id":1}} 
-	}
+    {
+        "from": "user",
+        "select": "name"
+        "where": {"eq":{"id":1}} 
+    }
 
 
 ### Selecting specific fields
@@ -100,26 +100,26 @@ GraphQL can traverse database relations, and return the particular fields your a
 
 JSON Queries can do the same, using dot-separated path names: 
 
-	{
-		"from": "user",
-		"select" [
-			"age"
-			"friends.name"
-		],
-		"where": {"eq":{"id":1}}
-	}
+    {
+        "from": "user",
+        "select" [
+            "age"
+            "friends.name"
+        ],
+        "where": {"eq":{"id":1}}
+    }
 
 
 .. furthermore JSON Queries can traverse relations in both directions. In this case, we return one row for each friend:
 
-	{
-		"from": "user.friends",
-		"select" [
-			"user.age"
-			"name"
-		],
-		"where": {"eq":{"user.id": 1}}
-	}
+    {
+        "from": "user.friends",
+        "select" [
+            "user.age"
+            "name"
+        ],
+        "where": {"eq":{"user.id": 1}}
+    }
 
 ### Aliases
 
@@ -163,51 +163,51 @@ For JSON Expressions, the `select` expression can build an object using an array
 
 GraphQL allows the definition of query fragments; meant for reuse in a query:
 
-	{
-		leftComparison: hero(episode: EMPIRE) {
-			...comparisonFields
-		}
-		rightComparison: hero(episode: JEDI) {
-			...comparisonFields
-		}
-	}
+    {
+        leftComparison: hero(episode: EMPIRE) {
+            ...comparisonFields
+        }
+        rightComparison: hero(episode: JEDI) {
+            ...comparisonFields
+        }
+    }
 
-	fragment comparisonFields on Character {
-		name
-		appearsIn
-		friends {
-			name
-		}
-	}
+    fragment comparisonFields on Character {
+        name
+        appearsIn
+        friends {
+            name
+        }
+    }
 
 There is no equivalent in JSON Expressions; it is expected that JSON Expressions are used in the context of a host language, like Javascript or Python, which is capable of managing fragments:
 
-	comparisonFields = [
-		"name",
-		"appearsIn",
-		"friends.name"
-	]
+    comparisonFields = [
+        "name",
+        "appearsIn",
+        "friends.name"
+    ]
 
 
-	query = {"select": [
-		{
-			"name": "leftComparision",
-			"value": {
-				"from": "hero",
-				"select": comparisonFields,
-				"where": {"eq":{"episode":"EMPIRE"}}
-			}
-		},
-		{
-			"name": "rightComparision",
-			"value": {
-				"from": "hero",
-				"select": comparisonFields,
-				"where": {"eq":{"episode":"JEDI"}}
-			}
-		}
-	]}
-		
+    query = {"select": [
+        {
+            "name": "leftComparision",
+            "value": {
+                "from": "hero",
+                "select": comparisonFields,
+                "where": {"eq":{"episode":"EMPIRE"}}
+            }
+        },
+        {
+            "name": "rightComparision",
+            "value": {
+                "from": "hero",
+                "select": comparisonFields,
+                "where": {"eq":{"episode":"JEDI"}}
+            }
+        }
+    ]}
+        
 definitely more verbose, but easier to compose.
 
 
@@ -227,67 +227,67 @@ GraphQL - use `$` as a prefix to declare variables, and their type:
 
 JSON Queries do not have variables, again resting on the host language. In this case, setting the `where` clause to the condition required using a `setdefault` function [(python example)](https://github.com/klahnakoski/pyLibrary/blob/5ba9998dee239ec74a0905123a823069581cd8f2/pyLibrary/dot/__init__.py#L144). The technique shown here is to use JSON as a template, and then add the required annotations to build the final result.
 
-	HeroNameAndFriends = {
-		"from": "hero"
-		"select": [
-			"name",
-			"friends.name"
-		],
-	}
+    HeroNameAndFriends = {
+        "from": "hero"
+        "select": [
+            "name",
+            "friends.name"
+        ],
+    }
 
-	query = setdefault(
-		{"where":{"eq":{"episode":"JEDI"}}}, 
-		HeroNameAndFriends
-	)
+    query = setdefault(
+        {"where":{"eq":{"episode":"JEDI"}}}, 
+        HeroNameAndFriends
+    )
 
 ### Directives
 
 GraphQL allows you to define conditional composition (`@`):
 
-	query Hero($episode: Episode, $withFriends: Boolean!) {
-	  hero(episode: $episode) {
-	    name
-	    friends @include(if: $withFriends) {
-	      name
-	    }
-	  }
-	}
+    query Hero($episode: Episode, $withFriends: Boolean!) {
+      hero(episode: $episode) {
+        name
+        friends @include(if: $withFriends) {
+          name
+        }
+      }
+    }
 
 with variables...
 
-	{
-	  "episode": "JEDI",
-	  "withFriends": false
-	}
+    {
+      "episode": "JEDI",
+      "withFriends": false
+    }
 
 JSON Queries do not have directives. Instead, use a standard expression, albeit with constants.  The [`when` expression](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_expressions.md#when-operator) can provide identical switching logic used by the `@include(if: .)` idiom:
 
-	vars = {
-	  "episode": "JEDI",
-	  "withFriends": false
-	}
+    vars = {
+      "episode": "JEDI",
+      "withFriends": false
+    }
 
-	query = {
-		"from": "hero",
-		"select": [
-			"name", 
-			{"name":"friends.name", "value":{"when": vars.withFriends, "then":"friends.name"}}
-		],
-		"where":{"eq":{"episode": vars.episode}}
-	}
+    query = {
+        "from": "hero",
+        "select": [
+            "name", 
+            {"name":"friends.name", "value":{"when": vars.withFriends, "then":"friends.name"}}
+        ],
+        "where":{"eq":{"episode": vars.episode}}
+    }
 
 this assumes you want all the logic in one query. Alternately, the host language can build the query from a template:
 
-	query = {
-		"from": "hero",
-		"select": [
-			"name" 
-		],
-		"where":{"eq":{"episode": vars.episode}}
-	}
+    query = {
+        "from": "hero",
+        "select": [
+            "name" 
+        ],
+        "where":{"eq":{"episode": vars.episode}}
+    }
 
-	if vars.withFriends:
-		query.select.append("friends.name")
+    if vars.withFriends:
+        query.select.append("friends.name")
 
 
 ### Inline fragments
@@ -308,38 +308,38 @@ GraphQL has an `... on` operator to distinguish query parameters by type.
 
 JSON Queries operate on dynamically typed data. But, let us assume you are tracking the type of the object in the `_type` property.  You are free to perform similar GraphQL coding acrobatics:  
 
-	{
-		"from": "hero"
-		"select":[
-			"name",
-			{
-				"name":"primaryFunction", 
-				"value":{
-					"when":{"eq":{"_type":"Droid"}}, 
-					"then":"primaryFunction"
-				}
-			},
-			{
-				"name":"height", 
-				"value":{
-					"when":{"eq":{"_type":"Human"}}, 
-					"then":"height"
-				}
-			}
-		]
-	}
+    {
+        "from": "hero"
+        "select":[
+            "name",
+            {
+                "name":"primaryFunction", 
+                "value":{
+                    "when":{"eq":{"_type":"Droid"}}, 
+                    "then":"primaryFunction"
+                }
+            },
+            {
+                "name":"height", 
+                "value":{
+                    "when":{"eq":{"_type":"Human"}}, 
+                    "then":"height"
+                }
+            }
+        ]
+    }
 
 Usually, the simpler option is to leverage the dynamic-typed nature of JSON Queries, and return the properties, if they exist:
 
-	{
-		"from": "hero"
-		"select":[
-			"name",
-			"primaryFunction",
-			"height"
-		]
-	}
+    {
+        "from": "hero"
+        "select":[
+            "name",
+            "primaryFunction",
+            "height"
+        ]
+    }
  
 ## Summary
 
-GraphQL is a complex language with a limited niche.  I have not touched upon the explicit typing declaration required to make GraphQL queries workk. JSON Queries are more expressive, but any noSQL document query language would make a better choice.  
+GraphQL is complex language limited to OLTP. GraphQL's pre-processing features are not required, and easily replaced by the host language responsible for constructing queries. JSON Query Expressions are more expressive and have a wider applicability because they are based on SQL.  

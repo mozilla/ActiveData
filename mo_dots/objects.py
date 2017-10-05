@@ -14,10 +14,12 @@ from __future__ import unicode_literals
 from collections import Mapping
 from datetime import date, datetime
 from decimal import Decimal
-from types import NoneType, GeneratorType
+from types import GeneratorType
 
 from mo_dots import wrap, unwrap, Data, FlatList, NullType, get_attr, set_attr
 
+
+NoneType = type(None)
 _get = object.__getattribute__
 _set = object.__setattr__
 WRAPPED_CLASSES = set()

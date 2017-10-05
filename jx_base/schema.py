@@ -15,7 +15,7 @@ from copy import copy
 
 from jx_base import STRUCT, NESTED, PRIMITIVE
 from mo_dots import join_field, split_field, Null, startswith_field, concat_field, set_default
-from mo_json.typed_encoder import nest_free_path
+from mo_json.typed_encoder import nest_free_path, untype_path
 from mo_logs import Log
 
 
@@ -81,11 +81,11 @@ class Schema(object):
         :param name:
         :return:
         """
-        full_name = nest_free_path(concat_field(self.query_path, name))
+        full_name = untype_path(concat_field(self.query_path, name))
         return [
             c
             for k, cs in self.lookup.items()
-            if startswith_field(nest_free_path(k), full_name)
+            if untype_path(k) == full_name
             for c in cs
             if c.type in PRIMITIVE and (c.es_column != "_id") and self.query_path == c.nested_path[0]
         ]

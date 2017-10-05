@@ -23,6 +23,7 @@ from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
 from mo_logs.strings import quote
 
+FunctionType = type(lambda: 1)
 
 def format_cube(decoders, aggs, start, query, select):
     # decoders = sorted(decoders, key=lambda d: -d.edge.dim)  # REVERSE DECODER ORDER, BECAUSE ES QUERY WAS BUILT IN REVERSE ORDER
@@ -272,6 +273,8 @@ def _pull(s, agg):
         Log.error("programmer error using {{select}}", select=s)
     elif isinstance(p, Mapping):
         return {k: _get(agg, v, None) for k, v in p.items()}
+    elif isinstance(p, FunctionType):
+        return p(agg)
     else:
         return _get(agg, p, s.default)
 

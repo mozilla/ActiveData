@@ -957,7 +957,7 @@ def to_painless(self, schema):
         if self.var == "_id":
             return Painless(type=STRING, expr='doc["_uid"].value.substring(doc["_uid"].value.indexOf(\'#\')+1)', frum=self)
 
-        columns = schema.leaves(self.var)
+        columns = schema.values(self.var)
         acc = []
         for c in columns:
             varname = c.es_column

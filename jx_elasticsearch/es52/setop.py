@@ -107,8 +107,6 @@ def es_setop(es, query):
                 nested_selects = {}
                 if cols:
                     for c in cols:
-                        if c.es_column == "_id" or c.es_column.endswith("$exists"):
-                            continue
                         if len(c.nested_path) == 1:
                             jx_name = untype_path(c.names["."])
                             es_query.stored_fields += [c.es_column]
@@ -220,7 +218,8 @@ def format_list(T, select, query=None):
         for row in T:
             r = Data()
             for s in select:
-                r[s.put.name][s.put.child] = unwraplist(s.pull(row))
+                v = s.pull(row)
+                r[s.put.name][s.put.child] = unwraplist(v)
             data.append(r if r else None)
     elif isinstance(query.select.value, LeavesOp):
         for row in T:
@@ -283,7 +282,7 @@ def format_table(T, select, query=None):
             if s.name == ".":
                 header[s.put.index] = "."
             else:
-                header[s.put.index] = split_field(s.name)[0]
+                header[s.put.index] = s.name
 
     return Data(
         meta={"format": "table"},

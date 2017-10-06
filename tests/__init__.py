@@ -336,11 +336,9 @@ def cube2list(cube):
     """
     header = list(unwrap(cube).keys())
     rows = []
-    for r in zip(*[[(k, v) for v in a] for k, a in cube.items()]):
-        row = Data()
-        for k, v in r:
-            row[k] = v
-        rows.append(unwrap(row))
+    for r in zip(*([(k, unwrap(v)) for v in a] for k, a in cube.items())):
+        row = dict(r)
+        rows.append(row)
     return rows, header
 
 
@@ -351,8 +349,7 @@ def list2cube(rows, header):
             if h == ".":
                 output[h].append(r)
             else:
-                r = wrap(r)
-                output[h].append(r[h])
+                output[h].append(r.get(h))
     return output
 
 

@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import itertools
+
 from future.utils import binary_type, text_type
 
 from jx_base import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER
@@ -23,8 +24,22 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
 from mo_dots import coalesce, wrap, Null, unwraplist, set_default, literal_field
 from mo_json import json2value, quote
 from mo_logs import Log, suppress_exception
+from mo_logs.strings import expand_template
 from mo_math import MAX, OR
 from pyLibrary.convert import string2regexp
+
+
+TO_STRING = """Optional.of({{expr}}).map(
+                        value -> {
+                            String output = String.valueOf(value);
+                            if (output.endsWith(".0")) {
+                                output = output.substring(0, output.length() - 2);
+                            }//endif
+                            return output;
+                        }
+                ).orElse(null)"""
+
+
 
 
 class Painless(Expression):
@@ -879,7 +894,7 @@ def to_painless(self, schema):
         return Painless(
             miss=self.term.missing().partial_eval(),
             type=STRING,
-            expr="String.valueOf(" + value.expr + ").replaceAll('\\\\.0$', '')",
+            expr=expand_template(TO_STRING, {"expr":value.expr}),
             frum=self
         )
     elif value.type == STRING:
@@ -888,9 +903,13 @@ def to_painless(self, schema):
         return Painless(
             miss=self.term.missing().partial_eval(),
             type=STRING,
-            expr="((" + value.expr + ") instanceof java.lang.Double) ? String.valueOf(" + value.expr + ").replaceAll('\\\\.0$', '') : String.valueOf(" + value.expr + ")",
+            expr=expand_template(TO_STRING, {"expr":value.expr}),
             frum=self
         )
+
+    # ((Runnable)(() -> {int a=2; int b=3; System.out.println(a+b);})).run();
+    # "((Runnable)((value) -> {String output=String.valueOf(value); if (output.endsWith('.0')) {return output.substring(0, output.length-2);} else return output;})).run(" + value.expr + ")"
+
 
 @extend(TrueOp)
 def to_painless(self, schema):

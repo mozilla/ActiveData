@@ -24,7 +24,7 @@ from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field
 from mo_dots import listwrap
 from mo_dots.lists import FlatList
-from mo_json.typed_encoder import untype_path
+from mo_json.typed_encoder import untype_path, nest_free_path
 from mo_logs import Log
 from mo_math import AND
 from mo_math import MAX
@@ -139,7 +139,11 @@ def es_setop(es, query):
                                 new_select.append({
                                     "name": select.name,
                                     "value": select.value,
-                                    "put": {"name": select.name, "index": put_index, "child": "."},
+                                    "put": {
+                                        "name": select.name,
+                                        "index": put_index,
+                                        "child": relative_field(nest_free_path(nested_path), select.name)
+                                    },
                                     "pull": pull
                                 })
                             else:

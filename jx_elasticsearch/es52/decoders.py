@@ -613,7 +613,7 @@ class DefaultDecoder(SetDecoder):
     def count(self, row):
         part = row[self.start]
         if part['doc_count']:
-            if part.get('key'):
+            if part.get('key') != None:
                 self.parts.append(part.get('key'))
             else:
                 self.edge.allowNulls = True  # OK! WE WILL ALLOW NULLS

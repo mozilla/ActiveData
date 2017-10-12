@@ -13,6 +13,8 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
+from mo_json import scrub
+
 from jx_base import container
 from jx_python import jx
 from mo_dots import Data, Null
@@ -221,6 +223,7 @@ class FromES(Container):
             if isinstance(v, Mapping) and v.doc:
                 scripts.append({"doc": v.doc})
             else:
+                v = scrub(v)
                 scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_painless(schema).script(schema)})
 
         if results.hits.hits:

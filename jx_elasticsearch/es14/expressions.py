@@ -540,7 +540,7 @@ def to_esfilter(self):
 def to_ruby(self, not_null=False, boolean=False, many=False):
     value = self.term.to_ruby(not_null=True)
     missing = self.term.missing().to_ruby()
-    return "(" + missing + ") ? null : (((" + value + ") instanceof java.lang.Double) ? String.valueOf(" + value + ").replaceAll('\\\\.0$', '') : String.valueOf(" + value + "))"  # "\\.0$"
+    return "(" + missing + ") ? null : (((" + value + ") instanceof java.lang.Double) ? String.valueOf(" + value + ").replaceAll(Pattern.compile('\\\\.0$'), '') : String.valueOf(" + value + "))"  # "\\.0$"
 
 
 @extend(TrueOp)

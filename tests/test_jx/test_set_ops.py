@@ -695,7 +695,7 @@ class TestSetOps(BaseTestCase):
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a.b", "a.c", "d"],
+                "header": ["a\\.b", "a\\.c", "d"],
                 "data": [
                     [0, 0, 7],
                     [0, 1, NULL],
@@ -712,8 +712,8 @@ class TestSetOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a.b": [0, 0, 1, 1],
-                    "a.c": [0, 1, 0, 1],
+                    "a\\.b": [0, 0, 1, 1],
+                    "a\\.c": [0, 1, 0, 1],
                     "d": [7, NULL, NULL, NULL]
                 }
             }

@@ -272,8 +272,8 @@ class TimeDecoder(AggsDecoder):
         if part == None:
             return len(domain.partitions)
 
-        f = coalesce(part["from"], part.get('key'))
-        t = coalesce(part["to"], part.get('key'))
+        f = coalesce(part.get('from'), part.get('key'))
+        t = coalesce(part.get('to'), part.get('key'))
         if f == None or t == None:
             return len(domain.partitions)
         else:
@@ -401,8 +401,8 @@ class DurationDecoder(AggsDecoder):
         if part == None:
             return len(domain.partitions)
 
-        f = coalesce(part["from"], part.get('key'))
-        t = coalesce(part["to"], part.get('key'))
+        f = coalesce(part.get('from'), part.get('key'))
+        t = coalesce(part.get('to'), part.get('key'))
         if f == None or t == None:
             return len(domain.partitions)
         else:
@@ -432,8 +432,8 @@ class RangeDecoder(AggsDecoder):
         if part == None:
             return len(domain.partitions)
 
-        f = coalesce(part.get("from"), part.get('key'))
-        t = coalesce(part.get("to"), part.get('key'))
+        f = coalesce(part.get('from'), part.get('key'))
+        t = coalesce(part.get('to'), part.get('key'))
         if f == None or t == None:
             return len(domain.partitions)
         else:

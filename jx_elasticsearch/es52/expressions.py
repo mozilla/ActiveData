@@ -32,14 +32,10 @@ from pyLibrary.convert import string2regexp
 TO_STRING = """Optional.of({{expr}}).map(
                         value -> {
                             String output = String.valueOf(value);
-                            if (output.endsWith(".0")) {
-                                output = output.substring(0, output.length() - 2);
-                            }//endif
+                            if (output.endsWith(".0")) output = output.substring(0, output.length() - 2);
                             return output;
                         }
                 ).orElse(null)"""
-
-
 
 
 class Painless(Expression):

@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from copy import copy
 from datetime import date
 from datetime import datetime
 
@@ -196,14 +197,17 @@ class ColumnList(Container):
                 columns = list(self)
                 columns = jx.filter(columns, command.where)
 
-            for col in columns:
+            for col in list(columns):
                 for k in command["clear"]:
-                    col[k] = None
+                    if k == ".":
+                        columns.remove(col)
+                    else:
+                        col[k] = None
 
                 for k, v in command.set.items():
                     col[k] = v
         except Exception as e:
-            Log.error("sould not happen", cause=e)
+            Log.error("should not happen", cause=e)
 
     def query(self, query):
         query.frum = self.__iter__()

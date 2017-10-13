@@ -146,8 +146,8 @@ class SetDecoder(AggsDecoder):
             for s in query.sort:
                 if not edge_var - s.value.vars():
                     self.sorted = {1: "asc", -1: "desc"}[s.sort]
-                    domain.partitions = parts = jx.sort(domain.partitions, {"value": domain.key, "sort": s.sort})
-                    domain.map = {i: p for i, p in enumerate(parts)}
+                    parts = jx.sort(domain.partitions, {"value": domain.key, "sort": s.sort})
+                    edge.domain = self.domain = SimpleSetDomain(key=domain.key, label=domain.label, partitions=parts)
         else:
             self.sorted = None
 

@@ -94,7 +94,7 @@ class TestSorting(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use in ["travis", "elasticsearch"], "sorting is hard with elasticsearch")
+    # @skipIf(global_settings.use in ["travis", "elasticsearch"], "sorting is hard with elasticsearch")
     def test_2edge_and_sort(self):
         test = {
             "data": [
@@ -225,7 +225,7 @@ class TestSorting(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    def test_groupby2_and_sort(self):
+    def test_groupby2a_and_sort(self):
         test = {
             "data": [
                 {"a": "c", "b": 1, "value": 1},

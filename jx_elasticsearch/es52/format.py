@@ -75,25 +75,45 @@ def format_table(decoders, aggs, start, query, select):
     def data():
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
         is_sent = Matrix(dims=dims, zeros=0)
-        for row, coord, agg in aggs_iterator(aggs, decoders):
-            is_sent[coord] = 1
 
-            output = [d.get_value(c) for c, d in zip(coord, decoders)]
-            for s in select:
-                output.append(_pull(s, agg))
-            yield output
-
-        # EMIT THE MISSING CELLS IN THE CUBE
-        if not query.groupby:
-            for c, v in is_sent:
-                if not v:
-                    record = [d.get_value(c[i]) for i, d in enumerate(decoders)]
+        if query.sort and not query.groupby:
+            all_coord = is_sent._all_combos()  # TRACK THE EXPECTED COMBINATIONS
+            for row, coord, agg in aggs_iterator(aggs, decoders):
+                missing_coord = all_coord.next()
+                while coord != missing_coord:
+                    record = [d.get_value(missing_coord[i]) for i, d in enumerate(decoders)]
                     for s in select:
                         if s.aggregate == "count":
                             record.append(0)
                         else:
                             record.append(None)
                     yield record
+                    missing_coord = all_coord.next()
+
+                output = [d.get_value(c) for c, d in zip(coord, decoders)]
+                for s in select:
+                    output.append(_pull(s, agg))
+                yield output
+        else:
+            for row, coord, agg in aggs_iterator(aggs, decoders):
+                is_sent[coord] = 1
+
+                output = [d.get_value(c) for c, d in zip(coord, decoders)]
+                for s in select:
+                    output.append(_pull(s, agg))
+                yield output
+
+            # EMIT THE MISSING CELLS IN THE CUBE
+            if not query.groupby:
+                for c, v in is_sent:
+                    if not v:
+                        record = [d.get_value(c[i]) for i, d in enumerate(decoders)]
+                        for s in select:
+                            if s.aggregate == "count":
+                                record.append(0)
+                            else:
+                                record.append(None)
+                        yield record
 
     return Data(
         meta={"format": "table"},
@@ -107,6 +127,8 @@ def format_table_from_groupby(decoders, aggs, start, query, select):
 
     def data():
         for row, coord, agg in aggs_iterator(aggs, decoders):
+            if agg.get('doc_count', 0) == 0:
+                continue
             output = [d.get_value_from_row(row) for d in decoders]
             for s in select:
                 output.append(_pull(s, agg))
@@ -157,8 +179,9 @@ def format_csv(decoders, aggs, start, query, select):
 
 def format_list_from_groupby(decoders, aggs, start, query, select):
     def data():
-        temp = list(aggs_iterator(aggs, decoders))
-        for row, coord, agg in temp:
+        for row, coord, agg in aggs_iterator(aggs, decoders):
+            if agg.get('doc_count', 0) == 0:
+                continue
             output = Data()
             for g, d in zip(query.groupby, decoders):
                 output[g.name] = d.get_value_from_row(row)
@@ -179,31 +202,57 @@ def format_list(decoders, aggs, start, query, select):
 
     def data():
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
+
         is_sent = Matrix(dims=dims, zeros=0)
-        temp = list(aggs_iterator(aggs, decoders))
-        for row, coord, agg in temp:
-            is_sent[coord] = 1
-
-            output = Data()
-            for e, c, d in zip(query.edges, coord, decoders):
-                output[e.name] = d.get_value(c)
-
-            for s in select:
-                output[s.name] = _pull(s, agg)
-            yield output
-
-        # EMIT THE MISSING CELLS IN THE CUBE
-        if not query.groupby:
-            for c, v in is_sent:
-                if not v:
+        if query.sort and not query.groupby:
+            # TODO: USE THE format_table() TO PRODUCE THE NEEDED VALUES INSTEAD OF DUPLICATING LOGIC HERE
+            all_coord = is_sent._all_combos()  # TRACK THE EXPECTED COMBINATIONS
+            for row, coord, agg in aggs_iterator(aggs, decoders):
+                missing_coord = all_coord.next()
+                while coord != missing_coord:
+                    # INSERT THE MISSING COORDINATE INTO THE GENERATION
                     output = Data()
                     for i, d in enumerate(decoders):
-                        output[query.edges[i].name] = d.get_value(c[i])
+                        output[query.edges[i].name] = d.get_value(missing_coord[i])
 
                     for s in select:
                         if s.aggregate == "count":
                             output[s.name] = 0
                     yield output
+                    missing_coord = all_coord.next()
+
+                output = Data()
+                for e, c, d in zip(query.edges, coord, decoders):
+                    output[e.name] = d.get_value(c)
+
+                for s in select:
+                    output[s.name] = _pull(s, agg)
+                yield output
+        else:
+            is_sent = Matrix(dims=dims, zeros=0)
+            for row, coord, agg in aggs_iterator(aggs, decoders):
+                is_sent[coord] = 1
+
+                output = Data()
+                for e, c, d in zip(query.edges, coord, decoders):
+                    output[e.name] = d.get_value(c)
+
+                for s in select:
+                    output[s.name] = _pull(s, agg)
+                yield output
+
+            # EMIT THE MISSING CELLS IN THE CUBE
+            if not query.groupby:
+                for c, v in is_sent:
+                    if not v:
+                        output = Data()
+                        for i, d in enumerate(decoders):
+                            output[query.edges[i].name] = d.get_value(c[i])
+
+                        for s in select:
+                            if s.aggregate == "count":
+                                output[s.name] = 0
+                        yield output
 
     output = Data(
         meta={"format": "list"},

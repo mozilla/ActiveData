@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from future.utils import text_type
 from jx_python import jx
 
-from jx_base.expressions import TupleOp, jx_expression
+from jx_base.expressions import TupleOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch import es09
 from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
@@ -322,7 +322,7 @@ def es_aggsop(es, frum, query):
             Log.error("Where clause is too deep")
 
     if decoders:
-        for d in decoders[0]:
+        for d in jx.reverse(decoders[0]):
             es_query = d.append_query(es_query, start)
             start += d.num_columns
 
@@ -365,7 +365,6 @@ def es_aggsop(es, frum, query):
         if query.format not in format_dispatch:
             Log.error("Format {{format|quote}} not supported yet", format=query.format, cause=e)
         Log.error("Some problem", cause=e)
-
 
 
 EMPTY = {}

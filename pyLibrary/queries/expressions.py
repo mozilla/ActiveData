@@ -2415,7 +2415,18 @@ class FindOp(Expression):
             return {"script": {"script": self.to_ruby()}}
 
     def __data__(self):
-        return {"contains": {self.var.var: self.substring}}
+        if isinstance(self.value, Variable) and isinstance(self.find, Literal):
+            return {
+                "find": {self.value.var: json2value(self.find.json)},
+                "start":self.start.__data__(),
+                "default":self.default.__data__()
+            }
+        else:
+            return {
+                "find": [self.value.__data__(), self.find.__data__()],
+                "start": self.start.__data__(),
+                "default": self.default.__data__()
+            }
 
     def vars(self):
         return self.value.vars() | self.find.vars() | self.default.vars() | self.start.vars()

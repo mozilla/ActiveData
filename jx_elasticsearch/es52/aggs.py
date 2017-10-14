@@ -173,7 +173,7 @@ def es_aggsop(es, frum, query):
                 if len(es_cols) == 1:
                     s.pull = jx_expression_to_function(canonical_names[0] + ".value")
                 else:
-                    s.pull = jx_expression_to_function({"add": [cn + ".value" for cn in canonical_names]})
+                    s.pull = jx_expression_to_function({"add": [cn + ".value" for cn in canonical_names], "default": 0})
             elif s.aggregate == "stats":
                 if len(es_cols) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")

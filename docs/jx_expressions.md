@@ -154,7 +154,7 @@ If either operand is `null` then the result is `null`; which is effectively `fal
 Math Operators
 --------------
 
-All the math operators, except `count`, return `null` if *any* the operands are `null`. You can change the return value by including a `default`.   This is different from the aggregates that go by the same name; which simply ignore the `null` values.
+All the math operators, except `count`, return `null` if *any* the operands are `null`. You can change the return value by including a `default`. This is different from the aggregates that go by the same name; which simply ignore the `null` values.
 
 		# if **any** expressions evaluate to `null` then return zero
 		{"sum": [expr1, expr2, ... exprN], "default": 0}
@@ -171,7 +171,7 @@ For counting the number of not-null values.
 		{"count": []} ⇒ 0
 
 
-### `sum` Operator (commutative)
+### `add` Operator (commutative)
 
 For adding the result of many expressions. Also known as `add`.
 
@@ -185,7 +185,6 @@ By default, if **any** expressions evaluate to `null`, then `null` is returned. 
 The empty list always evaluates to the default value, or `null`.
 
 		{"sum": []} ⇒ null
-
 
 ### `sub` Operator ###
 

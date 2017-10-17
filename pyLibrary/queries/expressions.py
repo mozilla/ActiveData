@@ -15,17 +15,16 @@ import itertools
 from collections import Mapping
 from decimal import Decimal
 
-from mo_dots import coalesce, wrap, set_default, literal_field, Null, split_field, startswith_field
+from jx_base.queries import is_variable_name
 from mo_dots import Data, join_field, unwraplist, ROOT_PATH, relative_field, unwrap
+from mo_dots import coalesce, wrap, set_default, literal_field, Null, split_field, startswith_field
 from mo_json import json2value, quote
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_math import Math, OR, MAX
 from mo_times.dates import Date, parse_time_expression
-
 from pyLibrary import convert
 from pyLibrary.queries.containers import STRUCT, OBJECT
-from jx_base.queries import is_variable_name
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.sql.sqlite import quote_column
 
@@ -102,6 +101,8 @@ def jx_expression(expr):
         if class_.has_simple_form:
             if len(items) == 1:
                 k, v = items[0]
+                # if isinstance(v, Mapping) and v.date:
+                #     Log.error('Be sure to use [], not {}, when passing expressions as arguments! {"date": d} is an expression.')
                 return class_(op, [Variable(k), Literal(None, v)], **clauses)
             else:
                 return class_(op, {k: Literal(None, v) for k, v in items}, **clauses)
@@ -490,8 +491,8 @@ class Literal(Expression):
             return FalseOp()
         if isinstance(term, Mapping) and term.date:
             # SPECIAL CASE
-            return object.__new__(DateOp, None, term.date)
-        return object.__new__(cls, op, term)
+            return DateOp(None, term.date)
+        return object.__new__(cls)
 
     def __init__(self, op, term):
         Expression.__init__(self, "", None)
@@ -758,6 +759,8 @@ class FalseOp(Literal):
 
 class DateOp(Literal):
     def __init__(self, op, term):
+        if hasattr(self, 'date'):
+            return
         self.date = term
         v = parse_time_expression(self.date)
         if isinstance(v, Date):

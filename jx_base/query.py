@@ -19,8 +19,8 @@ from future.utils import text_type
 from jx_base import STRUCT
 from jx_base.container import Container
 from jx_base.dimensions import Dimension
-from jx_base.domains import Domain, SetDomain
-from jx_base.expressions import jx_expression, Expression, Variable, LeavesOp, ScriptOp, OffsetOp, TRUE
+from jx_base.domains import Domain, SetDomain, DefaultDomain
+from jx_base.expressions import jx_expression, Expression, Variable, LeavesOp, ScriptOp, OffsetOp, TRUE, FALSE
 from jx_base.queries import is_variable_name
 from jx_base.schema import Schema
 from mo_dots import Data, relative_field, concat_field
@@ -452,42 +452,39 @@ def _normalize_edge(edge, dim_index, schema=None):
         Log.error("Edge has no value, or expression is empty")
     elif isinstance(edge, basestring):
         if schema:
-            try:
-                e = schema[edge]
-            except Exception:
-                e = None
-            e = unwraplist(e)
-            if e and not isinstance(e, (_Column, set, list)):
-                if isinstance(e, _Column):
-                    return [Data(
+            leaves = unwraplist(schema.leaves(edge))
+            if isinstance(leaves, (list, set)):
+                return [
+                    Data(
                         name=edge,
                         value=jx_expression(edge),
                         allowNulls=True,
-                        dim=dim_index,
-                        domain=_normalize_domain(domain=e, schema=schema)
-                    )]
-                elif isinstance(e.fields, list) and len(e.fields) == 1:
-                    return [Data(
-                        name=e.name,
-                        value=jx_expression(e.fields[0]),
-                        allowNulls=True,
-                        dim=dim_index,
-                        domain=e.getDomain()
-                    )]
-                else:
-                    return [Data(
-                        name=e.name,
-                        allowNulls=True,
-                        dim=dim_index,
-                        domain=e.getDomain()
-                    )]
-        return [Data(
-            name=edge,
-            value=jx_expression(edge),
-            allowNulls=True,
-            dim=dim_index,
-            domain=_normalize_domain(schema=schema)
-        )]
+                        dim=dim_index
+                    )
+                ]
+            elif isinstance(leaves, _Column):
+                return [Data(
+                    name=edge,
+                    value=jx_expression(edge),
+                    allowNulls=True,
+                    dim=dim_index,
+                    domain=_normalize_domain(domain=leaves, schema=schema)
+                )]
+            elif isinstance(leaves.fields, list) and len(leaves.fields) == 1:
+                return [Data(
+                    name=leaves.name,
+                    value=jx_expression(leaves.fields[0]),
+                    allowNulls=True,
+                    dim=dim_index,
+                    domain=leaves.getDomain()
+                )]
+            else:
+                return [Data(
+                    name=leaves.name,
+                    allowNulls=True,
+                    dim=dim_index,
+                    domain=leaves.getDomain()
+                )]
     else:
         edge = wrap(edge)
         if not edge.name and not isinstance(edge.value, basestring):
@@ -586,7 +583,9 @@ def _normalize_domain(domain=None, schema=None):
         return Domain(type="default")
     elif isinstance(domain, _Column):
         if domain.partitions:
-            return SetDomain(**domain)
+            return SetDomain(partitions=domain.partitions)
+        else:
+            return DefaultDomain()
     elif isinstance(domain, Dimension):
         return domain.getDomain()
     elif schema and isinstance(domain, basestring) and schema[domain]:

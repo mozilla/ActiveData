@@ -110,7 +110,7 @@ def test_mode_wait(query):
             # GET FRESH VERSIONS
             cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in STRUCT]
             for c in cols:
-                if not c.last_updated or c.cardinality == None:
+                if not c.last_updated or now >= c.last_updated or c.cardinality == None:
                     Log.note(
                         "wait for column (table={{col.es_index}}, name={{col.es_column}}) metadata to arrive",
                         col=c

@@ -42,7 +42,7 @@ def format_cube(decoders, aggs, start, query, select):
     for row, coord, agg in aggs_iterator(aggs, decoders):
         for s, m in matricies:
             try:
-                v = _pull(s, agg)
+                v = s.pull(agg)
                 m[coord] = v
             except Exception as e:
                 # THIS HAPPENS WHEN ES RETURNS MORE TUPLE COMBINATIONS THAN DOCUMENTS
@@ -62,7 +62,7 @@ def format_cube_from_aggop(decoders, aggs, start, query, select):
     agg = drill(aggs)
     matricies = [(s, Matrix(dims=[], zeros=s.default)) for s in select]
     for s, m in matricies:
-        m[tuple()] = _pull(s, agg)
+        m[tuple()] = s.pull(agg)
     cube = Cube(query.select, [], {s.name: m for s, m in matricies})
     cube.frum = query
     return cube
@@ -92,7 +92,7 @@ def format_table(decoders, aggs, start, query, select):
 
                 output = [d.get_value(c) for c, d in zip(coord, decoders)]
                 for s in select:
-                    output.append(_pull(s, agg))
+                    output.append(s.pull(agg))
                 yield output
         else:
             for row, coord, agg in aggs_iterator(aggs, decoders):
@@ -100,7 +100,7 @@ def format_table(decoders, aggs, start, query, select):
 
                 output = [d.get_value(c) for c, d in zip(coord, decoders)]
                 for s in select:
-                    output.append(_pull(s, agg))
+                    output.append(s.pull(agg))
                 yield output
 
             # EMIT THE MISSING CELLS IN THE CUBE
@@ -131,7 +131,7 @@ def format_table_from_groupby(decoders, aggs, start, query, select):
                 continue
             output = [d.get_value_from_row(row) for d in decoders]
             for s in select:
-                output.append(_pull(s, agg))
+                output.append(s.pull(agg))
             yield output
 
     return Data(
@@ -146,7 +146,7 @@ def format_table_from_aggop(decoders, aggs, start, query, select):
     agg = drill(aggs)
     row = []
     for s in select:
-        row.append(_pull(s, agg))
+        row.append(s.pull(agg))
 
     return Data(
         meta={"format": "table"},
@@ -187,7 +187,7 @@ def format_list_from_groupby(decoders, aggs, start, query, select):
                 output[g.name] = d.get_value_from_row(row)
 
             for s in select:
-                output[s.name] = _pull(s, agg)
+                output[s.name] = s.pull(agg)
             yield output
 
     output = Data(
@@ -226,7 +226,7 @@ def format_list(decoders, aggs, start, query, select):
                     output[e.name] = d.get_value(c)
 
                 for s in select:
-                    output[s.name] = _pull(s, agg)
+                    output[s.name] = s.pull(agg)
                 yield output
         else:
             is_sent = Matrix(dims=dims, zeros=0)
@@ -238,7 +238,7 @@ def format_list(decoders, aggs, start, query, select):
                     output[e.name] = d.get_value(c)
 
                 for s in select:
-                    output[s.name] = _pull(s, agg)
+                    output[s.name] = s.pull(agg)
                 yield output
 
             # EMIT THE MISSING CELLS IN THE CUBE
@@ -267,9 +267,9 @@ def format_list_from_aggop(decoders, aggs, start, query, select):
     if isinstance(query.select, list):
         item = Data()
         for s in select:
-            item[s.name] = _pull(s, agg)
+            item[s.name] = s.pull(agg)
     else:
-        item = _pull(select[0], agg)
+        item = select[0].pull(agg)
 
     if query.edges or query.groupby:
         return wrap({
@@ -308,24 +308,6 @@ set_default(format_dispatch, {
     # "tab": (format_tab, format_tab_from_groupby,  "text/tab-separated-values"),
     # "line": (format_line, format_line_from_groupby,  "application/json")
 })
-
-
-def _pull(s, agg):
-    """
-    USE s.pull TO GET VALUE OUT OF agg
-    :param s: THE JSON EXPRESSION SELECT CLAUSE
-    :param agg: THE ES AGGREGATE OBJECT
-    :return:
-    """
-    p = s.pull
-    if not p:
-        Log.error("programmer error using {{select}}", select=s)
-    elif isinstance(p, Mapping):
-        return {k: _get(agg, v, None) for k, v in p.items()}
-    elif isinstance(p, FunctionType):
-        return p(agg)
-    else:
-        return _get(agg, p, s.default)
 
 
 def _get(v, k, d):

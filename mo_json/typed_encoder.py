@@ -311,13 +311,16 @@ def untype_path(encoded):
     else:
         return join_field(decode_property(c) for c in split_field(encoded) if not c.startswith("$"))
 
+
 def nest_free_path(encoded):
     if encoded.startswith(".."):
-        remainder = encoded.lstrip(".")
-        back = len(encoded) - len(remainder) - 1
-        return ("." * back) + join_field(decode_property(c) for c in split_field(remainder) if c != "$nested")
-    else:
-        return join_field(decode_property(c) for c in split_field(encoded) if c != "$nested")
+        encoded = encoded.lstrip(".")
+
+    #     remainder = encoded.lstrip(".")
+    #     back = len(encoded) - len(remainder) - 1
+    #     return ("." * back) + join_field(decode_property(c) for c in split_field(remainder) if c != "$nested")
+    # else:
+    return join_field(decode_property(c) for c in split_field(encoded) if c != "$nested")
 
 
 def untyped(value):

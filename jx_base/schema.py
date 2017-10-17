@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from copy import copy
 
 from jx_base import STRUCT, NESTED, PRIMITIVE
-from mo_dots import join_field, split_field, Null, startswith_field, concat_field, set_default
+from mo_dots import join_field, split_field, Null, startswith_field, set_default
 from mo_json.typed_encoder import nest_free_path, untype_path
 from mo_logs import Log
 
@@ -24,12 +24,12 @@ def _indexer(columns, query_path):
     for c in columns:
         try:
             cname = c.names[query_path]
-            cs = lookup.setdefault(cname, [])
-            cs.append(c)
+            cs = lookup.setdefault(cname, set())
+            cs.add(c)
 
             ucname = untype_path(cname)
-            cs = lookup.setdefault(ucname, [])
-            cs.append(c)
+            cs = lookup.setdefault(ucname, set())
+            cs.add(c)
         except Exception as e:
             Log.error("Should not happen", cause=e)
     return lookup
@@ -95,6 +95,10 @@ class Schema(object):
     def leaves(self, name, meta=False):
         """
         RETURN LEAVES OF GIVEN PATH NAME
+        pull leaves, considering query_path and namespace
+        pull all first-level properties
+        pull leaves, including parent leaves
+        pull the head of any tree by name
         :param name:
         :return:
         """
@@ -104,7 +108,9 @@ class Schema(object):
             for k, cs in self.lookup.items()
             if startswith_field(nest_free_path(k), full_name)
             for c in cs
-            if (meta or (c.type not in STRUCT and c.es_column != "_id")) and startswith_field(self.query_path, c.nested_path[0])
+            if (meta or (c.type not in STRUCT and c.es_column != "_id")) and
+               startswith_field(self.query_path, c.nested_path[0]) and
+               startswith_field(nest_free_path(c.names[self.query_path]), full_name)
         ]))
 
     def map_to_es(self):

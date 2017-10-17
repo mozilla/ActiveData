@@ -40,7 +40,7 @@ from pyLibrary.env.elasticsearch import es_type_to_json_type
 
 MAX_COLUMN_METADATA_AGE = 12 * HOUR
 ENABLE_META_SCAN = False
-DEBUG = False
+DEBUG = True
 TOO_OLD = 2*HOUR
 OLD_METADATA = MINUTE
 TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
@@ -328,7 +328,7 @@ class FromESMetadata(Schema):
                     })
                 return
             elif len(c.nested_path) != 1:
-                query.aggs[literal_field(c.names["."])] = {
+                query.aggs["_"] = {
                     "nested": {"path": c.nested_path[0]},
                     "aggs": {"_nested": {"terms": {"field": c.es_column}}}
                 }

@@ -65,7 +65,7 @@ def jx_expression(expr):
 
     expr = wrap(expr)
     if expr.date:
-        return DateOp("date", expr)
+        return DateOp("date", expr.date)
 
     try:
         items = expr.items()
@@ -491,9 +491,8 @@ class Literal(Expression):
             return FalseOp()
         if isinstance(term, Mapping) and term.date:
             # SPECIAL CASE
-            output = DateOp(None, term.date)
-            return output
-        return object.__new__(cls, op, term)
+            return DateOp(None, term.date)
+        return object.__new__(cls)
 
     def __init__(self, op, term):
         Expression.__init__(self, "", None)
@@ -770,7 +769,7 @@ class DateOp(Literal):
             Literal.__init__(self, op, v.seconds)
 
     def to_python(self, not_null=False, boolean=False):
-        return unicode(Date(self.value).unix)
+        return self.json
 
     def to_sql(self, schema, not_null=False, boolean=False):
         return wrap([{"name": ".", "sql": {"n": sql_quote(json2value(self.json))}}])
@@ -779,16 +778,10 @@ class DateOp(Literal):
         return json2value(self.json)
 
     def __data__(self):
-        return {"date": self.value}
+        return {"date": self.date}
 
     def __call__(self, row=None, rownum=None, rows=None):
-        return Date(self.value)
-
-    def __unicode__(self):
-        return self.json
-
-    def __str__(self):
-        return str(self.json)
+        return Date(self.date)
 
 
 class TupleOp(Expression):
@@ -2425,7 +2418,18 @@ class FindOp(Expression):
             return {"script": {"script": self.to_ruby()}}
 
     def __data__(self):
-        return {"contains": {self.var.var: self.substring}}
+        if isinstance(self.value, Variable) and isinstance(self.find, Literal):
+            return {
+                "find": {self.value.var: json2value(self.find.json)},
+                "start":self.start.__data__(),
+                "default":self.default.__data__()
+            }
+        else:
+            return {
+                "find": [self.value.__data__(), self.find.__data__()],
+                "start": self.start.__data__(),
+                "default": self.default.__data__()
+            }
 
     def vars(self):
         return self.value.vars() | self.find.vars() | self.default.vars() | self.start.vars()

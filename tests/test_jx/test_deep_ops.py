@@ -387,7 +387,6 @@ class TestDeepOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
-
     def test_deep_names_select_value(self):
         test = {
             "data": [
@@ -435,7 +434,7 @@ class TestDeepOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a._t": [
+                     "a._t": [
                         {"b": {"s": 1}, "h": {"s": "a-a"}},
                         {"b": {"s": 2}, "h": {"s": "a-b"}},
                         {"b": {"s": 3}, "h": {"s": "a-c"}}
@@ -732,7 +731,6 @@ class TestDeepOps(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
-
 
     def test_aggs_on_parent(self):
         test = {
@@ -1417,7 +1415,7 @@ class TestDeepOps(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
     @skipIf(global_settings.is_travis, "not expected to pass yet")
     def test_from_shallow_select_deep_column(self):

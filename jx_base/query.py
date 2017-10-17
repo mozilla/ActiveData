@@ -23,7 +23,7 @@ from jx_base.domains import Domain, SetDomain
 from jx_base.expressions import jx_expression, Expression, Variable, LeavesOp, ScriptOp, OffsetOp, TRUE
 from jx_base.queries import is_variable_name
 from jx_base.schema import Schema
-from mo_dots import Data
+from mo_dots import Data, relative_field, concat_field
 from mo_dots import coalesce, Null, set_default, unwraplist, literal_field
 from mo_dots import wrap, unwrap, listwrap
 from mo_dots.lists import FlatList
@@ -540,7 +540,7 @@ def _normalize_group(edge, dim_index, schema=None):
             if schema:
                 output = wrap([
                     {
-                        "name": untype_path(c.names["."]),
+                        "name": concat_field(prefix, literal_field(relative_field(untype_path(c.names["."]), prefix))),
                         "value": jx_expression(c.es_column),
                         "allowNulls": True,
                         "domain": {"type": "default"}

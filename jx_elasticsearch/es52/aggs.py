@@ -12,6 +12,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from future.utils import text_type
+
+from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_python import jx
 
 from jx_base.expressions import TupleOp
@@ -120,7 +122,10 @@ def es_aggsop(es, frum, query):
     formula = []
     for s in select:
         if s.aggregate == "count" and isinstance(s.value, Variable) and s.value.var == ".":
-            s.pull = "doc_count"
+            if schema.query_path == ".":
+                s.pull = jx_expression_to_function("doc_count")
+            else:
+                s.pull = jx_expression_to_function("_nested.doc_count")
         elif isinstance(s.value, Variable):
             if s.aggregate == "count":
                 new_select["count_"+literal_field(s.value.var)] += [s]
@@ -151,7 +156,7 @@ def es_aggsop(es, frum, query):
 
                 es_query.aggs[key].percentiles.field = es_cols[0].es_column
                 es_query.aggs[key].percentiles.percents += [50]
-                s.pull = key + ".values.50\.0"
+                s.pull = jx_expression_to_function(key + ".values.50\.0")
             elif s.aggregate == "percentile":
                 if len(es_cols) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
@@ -163,7 +168,7 @@ def es_aggsop(es, frum, query):
 
                 es_query.aggs[key].percentiles.field = es_cols[0].es_column
                 es_query.aggs[key].percentiles.percents += [percent]
-                s.pull = key + ".values." + literal_field(text_type(percent))
+                s.pull = jx_expression_to_function(key + ".values." + literal_field(text_type(percent)))
             elif s.aggregate == "cardinality":
                 canonical_names = []
                 for es_col in es_cols:
@@ -265,25 +270,15 @@ def es_aggsop(es, frum, query):
             es_query.aggs[median_name].percentiles.script = s.value.to_painless(schema).script(schema)
             es_query.aggs[median_name].percentiles.percents += [50]
 
-            s.pull = {
-                "count": stats_name + ".count",
-                "sum": stats_name + ".sum",
-                "min": stats_name + ".min",
-                "max": stats_name + ".max",
-                "avg": stats_name + ".avg",
-                "sos": stats_name + ".sum_of_squares",
-                "std": stats_name + ".std_deviation",
-                "var": stats_name + ".variance",
-                "median": median_name + ".values.50\.0"
-            }
+            s.pull = get_pull_stats(stats_name, median_name)
         elif s.aggregate=="union":
             # USE TERMS AGGREGATE TO SIMULATE union
             stats_name = literal_field(canonical_name)
             es_query.aggs[stats_name].terms.script_field = s.value.to_painless(schema).script(schema)
-            s.pull = stats_name + ".buckets.key"
+            s.pull = jx_expression_to_function(stats_name + ".buckets.key")
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
-            s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
+            s.pull = jx_expression_to_function(canonical_name + "." + aggregates1_4[s.aggregate])
             es_query.aggs[canonical_name].extended_stats.script = s.value.to_painless(schema).script(schema)
 
     decoders = get_decoders_by_depth(query)
@@ -372,10 +367,16 @@ EMPTY_LIST = []
 
 
 def drill(agg):
-    deeper = agg.get("_filter", agg.get("_nested"))
+    # deeper = agg.get("_filter") | agg.get("_nested")
+    # while deeper:
+    #     agg = deeper
+    #     deeper = agg.get("_filter") | agg.get("_nested")
+    # return agg
+
+    deeper = agg.get("_filter")
     while deeper:
         agg = deeper
-        deeper = agg.get("_filter", agg.get("_nested"))
+        deeper = agg.get("_filter")
     return agg
 
 

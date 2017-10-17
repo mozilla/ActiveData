@@ -96,7 +96,12 @@ def split_field(field):
     if field == "." or field==None:
         return []
     elif isinstance(field, text_type) and "." in field:
-        return [k.replace("\a", ".") for k in field.replace("\\.", "\a").split(".")]
+        if field.startswith(".."):
+            remainder = field.lstrip(".")
+            back = len(field) - len(remainder) - 1
+            return [-1]*back + [k.replace("\a", ".") for k in remainder.replace("\\.", "\a").split(".")]
+        else:
+            return [k.replace("\a", ".") for k in field.replace("\\.", "\a").split(".")]
     else:
         return [field]
 
@@ -112,7 +117,16 @@ def join_field(field):
 
 
 def concat_field(prefix, suffix):
-    return join_field(split_field(prefix) + split_field(suffix))
+    if suffix.startswith(".."):
+        remainder = suffix.lstrip(".")
+        back = len(suffix) - len(remainder) - 1
+        prefix_path=split_field(prefix)
+        if len(prefix_path)>=back:
+            return join_field(split_field(prefix)[:-back]+split_field(remainder))
+        else:
+            return "." * (back - len(prefix_path)) + "." + remainder
+    else:
+        return join_field(split_field(prefix) + split_field(suffix))
 
 
 def startswith_field(field, prefix):

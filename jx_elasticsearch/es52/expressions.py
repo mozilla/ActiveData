@@ -280,7 +280,7 @@ def to_painless(self, schema):
 
 @extend(ExistsOp)
 def to_esfilter(self, schema):
-    self.field.exists().partial_eval().to_esfilter(schema)
+    return self.field.exists().partial_eval().to_esfilter(schema)
 
 
 @extend(Literal)
@@ -861,7 +861,16 @@ def to_painless(self, schema):
 
 @extend(RegExpOp)
 def to_esfilter(self, schema):
-    return {"regexp": {self.var.var: self.pattern.value}}
+    if isinstance(self.pattern, Literal) and isinstance(self.var, Variable):
+        cols = schema.leaves(self.var.var)
+        if len(cols) == 0:
+            return {"bool": {"must_not": {"match_all": {}}}}
+        elif len(cols) == 1:
+            return {"regexp": {cols[0].es_column: self.pattern.value}}
+        else:
+            Log.error("regex on not supported ")
+    else:
+        Log.error("regex only accepts a variable and literal pattern")
 
 
 @extend(StringOp)

@@ -23,10 +23,10 @@ import mo_json
 from jx_base import OBJECT, python_type_to_json_type, BOOLEAN, NUMBER, INTEGER, STRING
 from jx_base.queries import is_variable_name, get_property_name
 from mo_dots import coalesce, wrap, Null, split_field
-from mo_json import json2value, scrub
+from mo_json import scrub
 from mo_json.encoder import COLON, COMMA
 from mo_logs import Log, Except
-from mo_math import Math, MAX, MIN
+from mo_math import Math, MAX, MIN, UNION
 from mo_times.dates import Date, parse_time_expression
 
 ALLOW_SCRIPTING = False
@@ -330,6 +330,51 @@ class GetOp(Expression):
 
     def map(self, map_):
         return BinaryOp("get", [self.var.map(map_), self.offset.map(map_)])
+
+
+class SelectOp(Expression):
+    has_simple_form = True
+
+    def __init__(self, op, terms):
+        self.terms = []
+        if not isinstance(terms. list):
+            Log.error("Expecting a list")
+        for t in terms:
+            if isinstance(t, text_type):
+                if not is_variable_name(t):
+                    Log.error("expecting {{value}} a simple dot-delimited path name", value=t)
+                self.terms.append({"name": t, "value":jx_expression(t)})
+            elif t.name == None:
+                if t.value == None:
+                    Log.error("expecting select parameters to have name and value properties")
+                elif isinstance(t.value, text_type):
+                    if not is_variable_name(t):
+                        Log.error("expecting {{value}} a simple dot-delimited path name", value=t.value)
+                    else:
+                        self.terms.append({"name": t.value, "value":jx_expression(t.value)})
+                else:
+                    Log.error("expecting a name property")
+            else:
+                self.terms.append({"name": t.name, "value": jx_expression(t.value)})
+
+    def __data__(self):
+        return {"select": [
+            {
+                "name": t.name.__data__(),
+                "value": t.value.__data__()
+            }
+            for t in self.terms
+        ]}
+
+    def vars(self):
+        return UNION(t.value for t in self.terms)
+
+    def map(self, map_):
+        return SelectOp("select", [
+            {"name": t.name, "value": t.value.map(map_)}
+            for t in self.terms
+        ])
+
 
 
 class ScriptOp(Expression):

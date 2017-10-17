@@ -26,6 +26,10 @@ def _indexer(columns, query_path):
             cname = c.names[query_path]
             cs = lookup.setdefault(cname, [])
             cs.append(c)
+
+            ucname = untype_path(cname)
+            cs = lookup.setdefault(ucname, [])
+            cs.append(c)
         except Exception as e:
             Log.error("Should not happen", cause=e)
     return lookup
@@ -81,14 +85,12 @@ class Schema(object):
         :param name:
         :return:
         """
-        full_name = untype_path(concat_field(self.query_path, name))
-        return [
+        full_name = untype_path(name)
+        return list(set([
             c
-            for k, cs in self.lookup.items()
-            if untype_path(k) == full_name
-            for c in cs
+            for c in self.lookup[full_name]
             if c.type in PRIMITIVE and (c.es_column != "_id") and self.query_path == c.nested_path[0]
-        ]
+        ]))
 
     def leaves(self, name, meta=False):
         """
@@ -96,14 +98,14 @@ class Schema(object):
         :param name:
         :return:
         """
-        full_name = nest_free_path(concat_field(self.query_path, name))
-        return [
+        full_name = nest_free_path(name)
+        return list(set([
             c
             for k, cs in self.lookup.items()
             if startswith_field(nest_free_path(k), full_name)
             for c in cs
-            if c.type not in STRUCT and (meta or c.es_column != "_id")
-        ]
+            if (meta or (c.type not in STRUCT and c.es_column != "_id")) and startswith_field(self.query_path, c.nested_path[0])
+        ]))
 
     def map_to_es(self):
         """

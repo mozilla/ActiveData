@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
+from jx_base import OBJECT, EXISTS
 from jx_base.domains import ALGEBRAIC
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import es52, es09
@@ -24,7 +25,7 @@ from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field
 from mo_dots import listwrap
 from mo_dots.lists import FlatList
-from mo_json.typed_encoder import untype_path, nest_free_path
+from mo_json.typed_encoder import untype_path, nest_free_path, untyped
 from mo_logs import Log
 from mo_math import AND
 from mo_math import MAX
@@ -77,16 +78,18 @@ def es_setop(es, query):
         if isinstance(select.value, LeavesOp):
             term = select.value.term
             if isinstance(term, Variable):
-                for c in schema.leaves(term.var):
-                    es_query.stored_fields += [c.es_column]
-                    path = split_field(concat_field(select.name, literal_field(relative_field(untype_path(c.names["."]), term.var))))
-                    new_name = literal_field(path[0])
-                    remainder = join_field(path[1:])
+                leaves = schema.leaves(term.var, meta=True)
+                es_query.stored_fields += ["_source"]
+                for c in leaves:
+                    if c.type in (EXISTS, OBJECT) or c.names["."] == "_id":
+                        continue
+                    full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
+
                     new_select.append({
-                        "name": new_name,
+                        "name": full_name,
                         "value": Variable(c.es_column, verify=False),
-                        "put": {"name": new_name, "index": put_index, "child": remainder},
-                        "pull": jx_expression_to_function(concat_field("fields", literal_field(c.es_column)))
+                        "put": {"name": full_name, "index": put_index, "child": "."},
+                        "pull": get_pull_source(c.es_column)
                     })
                     put_index += 1
             else:
@@ -319,3 +322,36 @@ set_default(format_dispatch, {
     "table": (format_table, None, "application/json"),
     "list": (format_list, None, "application/json")
 })
+
+def get_pull(column):
+    if column.nested_path[0] == ".":
+        return concat_field("fields", literal_field(column.es_column))
+    else:
+        depth = len(split_field(column.nested_path[0]))
+        rel_name = split_field(column.es_column)[depth:]
+        return join_field(["_inner"] + rel_name)
+
+
+def get_pull_function(column):
+    return jx_expression_to_function(get_pull(column))
+
+
+def get_pull_source(es_column):
+    def output(row):
+        return untyped(row._source[es_column])
+    return output
+
+
+def get_pull_stats(stats_name, median_name):
+    return jx_expression_to_function({"select": [
+        {"name": "count", "value": stats_name + ".count"},
+        {"name": "sum", "value": stats_name + ".sum"},
+        {"name": "min", "value": stats_name + ".min"},
+        {"name": "max", "value": stats_name + ".max"},
+        {"name": "avg", "value": stats_name + ".avg"},
+        {"name": "sos", "value": stats_name + ".sum_of_squares"},
+        {"name": "std", "value": stats_name + ".std_deviation"},
+        {"name": "var", "value": stats_name + ".variance"},
+        {"name": "median", "value": median_name + ".values.50\.0"}
+    ]})
+

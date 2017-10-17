@@ -304,10 +304,20 @@ def decode_property(encoded):
 
 
 def untype_path(encoded):
-    return join_field(decode_property(c) for c in split_field(encoded) if not c.startswith("$"))
+    if encoded.startswith(".."):
+        remainder = encoded.lstrip(".")
+        back = len(encoded) - len(remainder) - 1
+        return ("." * back) + join_field(decode_property(c) for c in split_field(remainder) if not c.startswith("$"))
+    else:
+        return join_field(decode_property(c) for c in split_field(encoded) if not c.startswith("$"))
 
 def nest_free_path(encoded):
-    return join_field(decode_property(c) for c in split_field(encoded) if c != "$nested")
+    if encoded.startswith(".."):
+        remainder = encoded.lstrip(".")
+        back = len(encoded) - len(remainder) - 1
+        return ("." * back) + join_field(decode_property(c) for c in split_field(remainder) if c != "$nested")
+    else:
+        return join_field(decode_property(c) for c in split_field(encoded) if c != "$nested")
 
 
 def untyped(value):
@@ -321,12 +331,12 @@ def _untype(value):
         for k, v in value.items():
             if k == "$exists":
                 continue
-            elif k.startswith("$'"):
+            elif k.startswith('$'):
                 return v
             else:
-                output[k] = _untype(v)
+                output[decode_property(k)] = _untype(v)
         return output
     elif isinstance(value, list):
-        return [_untype(decode_property(v)) for v in value]
+        return [_untype(v) for v in value]
     else:
-        Log.error("expected full typing")
+        return value

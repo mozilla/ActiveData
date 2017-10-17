@@ -468,8 +468,8 @@ class TestgroupBy1(BaseTestCase):
                 {"g": {"a": "c", "v": 1}},
                 {"g": {"a": "b", "v": 1}},
                 {"g": {"a": "b", "v": 1}},
-                {"g": {"v": 2}},
-                {"g": {"a": "b"}},
+                {"g": {          "v": 2}},
+                {"g": {"a": "b"        }},
                 {"g": {"a": "c", "v": 2}},
                 {"g": {"a": "c", "v": 2}}
             ],
@@ -479,12 +479,12 @@ class TestgroupBy1(BaseTestCase):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data":[
-                    {"g.a": "b", "g.v": 1, "count": 2},
-                    {"g.a": "b", "count": 1},
-                    {"g.a": "c", "g.v": 2, "count": 2},
-                    {"g.a": "c", "g.v": 1, "count": 1},
-                    {"g.v": 2, "count": 1}
+                "data": [
+                    {"g": {"a": "b", "v": 1}, "count": 2},
+                    {"g": {"a": "b"},         "count": 1},
+                    {"g": {"a": "c", "v": 2}, "count": 2},
+                    {"g": {"a": "c", "v": 1}, "count": 1},
+                    {"g": {          "v": 2}, "count": 1}
                 ]
             },
             "expecting_table": {

@@ -31,7 +31,7 @@ def es_query_template(path):
                 f0,
                 {"nested": {
                     "path": path,
-                    "query": {"bool": {"must": [f0, f1]}},
+                    "query": f1,
                     "inner_hits": {"size": 100000}
                 }}
             ]}},

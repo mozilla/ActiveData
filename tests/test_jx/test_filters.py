@@ -214,4 +214,35 @@ class TestFilters(BaseTestCase):
         }
         self.utils.execute_es_tests(test)
 
+    def test_edges_and_empty_prefix(self):
+        test = {
+            "data": [{"v": "test"}],
+            "query": {
+                "from": TEST_TABLE,
+                "edges": "v",
+                "where": {"prefix": {"v": ""}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [{"v": "test", "count": 1}]
+            }
+        }
+        self.utils.execute_es_tests(test)
+
+    def test_edges_and_null_prefix(self):
+        test = {
+            "data": [{"v": "test"}],
+            "query": {
+                "from": TEST_TABLE,
+                "edges": "v",
+                "where": {"prefix": {"v": None}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [{"v": "test", "count": 1}]
+            }
+        }
+        self.utils.execute_es_tests(test)
+
+
+
+
 # TODO:  ADD TEST TO ENSURE BOOLEAN COLUMNS (WITH 'T' and 'F' VALUES) CAN BE USED WITH true AND false FILTERS

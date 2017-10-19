@@ -1974,6 +1974,9 @@ class PrefixOp(Expression):
             self.field, self.prefix = term.items()[0]
         else:
             self.field, self.prefix = term
+            if self.prefix.json=='""':
+                self.field = None
+                self.prefix = None
 
     def to_ruby(self, not_null=False, boolean=False, many=False):
         return "(" + self.field.to_ruby() + ").startsWith(" + self.prefix.to_ruby() + ")"
@@ -2001,7 +2004,10 @@ class PrefixOp(Expression):
             return {"prefix": [self.field.__data__(), self.prefix.__data__()]}
 
     def vars(self):
-        return {self.field.var}
+        if self.field:
+            return {self.field.var}
+        else:
+            return set()
 
     def map(self, map_):
         return PrefixOp("prefix", [self.field.map(map_), self.prefix.map(map_)])

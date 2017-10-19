@@ -286,4 +286,19 @@ class TestTime(BaseTestCase):
         }
         self.utils.execute_es_tests(test)
 
+    def test_abs_time_string(self):
+        test = {
+            "data": test_data_3,
+            "query": {
+                "from": TEST_TABLE,
+                "select": "v",
+                "where": {"gt": ["t", {"date": Date("today-3day").format("%Y-%m-%d")}]}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [2, 2, 3, 13, 17]
+            }
+        }
+        self.utils.execute_es_tests(test)
+
 

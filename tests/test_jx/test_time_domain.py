@@ -255,3 +255,50 @@ class TestTime(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
+
+    def test_special_case_where_clause(self):
+        # WE ALLOW {"date" d} WHERE LITERALS ARE EXPECTED
+        test = {
+            "data": test_data_3,
+            "query": {
+                "from": TEST_TABLE,
+                "select": "v",
+                "where": {"gt": {"t": {"date": "today-3day"}}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [2, 2, 3, 13, 17]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_where_clause(self):
+        test = {
+            "data": test_data_3,
+            "query": {
+                "from": TEST_TABLE,
+                "select": "v",
+                "where": {"gt": ["t", {"date": "today-3day"}]}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [2, 2, 3, 13, 17]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_abs_time_string(self):
+        test = {
+            "data": test_data_3,
+            "query": {
+                "from": TEST_TABLE,
+                "select": "v",
+                "where": {"gt": ["t", {"date": Date("today-3day").format("%Y-%m-%d")}]}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [2, 2, 3, 13, 17]
+            }
+        }
+        self.utils.execute_tests(test)
+

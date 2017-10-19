@@ -104,7 +104,7 @@ def to_python(self, not_null=False, boolean=False, many=False):
     return (
         "wrap_leaves({" +
         ",\n".join(
-            quote(t.name) + ":" + t.value.to_python() for t in self.terms
+            quote(t['name']) + ":" + t['value'].to_python() for t in self.terms
         ) +
         "})"
     )

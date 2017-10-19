@@ -61,19 +61,11 @@ def jx_expression(expr):
     if expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal, Date)):
         return Literal(None, expr)
     elif isinstance(expr, text_type):
-        if is_variable_name(expr):
-            return Variable(expr)
-        elif not expr.strip():
-            Log.error("expression is empty")
-        else:
-            Log.error("expression is not recognized: {{expr}}", expr=expr)
+        return Variable(expr)
     elif isinstance(expr, (list, tuple)):
         return TupleOp("tuple", map(jx_expression, expr))  # FORMALIZE
 
     expr = wrap(expr)
-    if expr.date:
-        return DateOp("date", expr.date)
-
     try:
         items = expr.items()
     except Exception as e:
@@ -83,41 +75,11 @@ def jx_expression(expr):
         op, term = item
         class_ = operators.get(op)
         if class_:
-            term, clauses = class_.preprocess(op, expr)
-            break
+            return class_.define(expr)
     else:
         if not items:
-            return NullOp()
+            return NULL
         raise Log.error("{{operator|quote}} is not a known operator", operator=op)
-
-    if class_ is Literal:
-        return class_(op, term)
-    elif class_ is ScriptOp:
-        if ALLOW_SCRIPTING:
-            Log.warning("Scripting has been activated:  This has known security holes!!\nscript = {{script|quote}}", script=term)
-            return class_(op, term)
-        else:
-            Log.error("scripting is disabled")
-    elif term == None:
-        return class_(op, [], **clauses)
-    elif isinstance(term, list):
-        terms = map(jx_expression, term)
-        return class_(op, terms, **clauses)
-    elif isinstance(term, Mapping):
-        items = term.items()
-        if class_.has_simple_form:
-            if len(items) == 1:
-                k, v = items[0]
-                return class_(op, [Variable(k), Literal(None, v)], **clauses)
-            else:
-                return class_(op, {k: Literal(None, v) for k, v in items}, **clauses)
-        else:
-            return class_(op, jx_expression(term), **clauses)
-    else:
-        if op in ["literal", "date", "offset"]:
-            return class_(op, term, **clauses)
-        else:
-            return class_(op, jx_expression(term), **clauses)
 
 
 class Expression(object):
@@ -138,13 +100,55 @@ class Expression(object):
             if not isinstance(terms, Expression):
                 Log.error("Expecting an expression")
 
+    @classmethod
+    def define(cls, expr):
+        """
+        GENERAL SUPPORT FOR BUILDING EXPRESSIONS FROM JSON EXPRESSIONS
+        OVERRIDE THIS IF AN OPERATOR EXPECTS COMPLICATED PARAMETERS
+        :param expr: Data representing a JSON Expression
+        :return: Python parse tree
+        """
+
+        try:
+            items = expr.items()
+        except Exception as e:
+            Log.error("programmer error expr = {{value|quote}}", value=expr, cause=e)
+
+        for item in items:
+            op, term = item
+            class_ = operators.get(op)
+            if class_:
+                clauses = {k: jx_expression(v) for k, v in expr.items() if k != op}
+                break
+        else:
+            if not items:
+                return NULL
+            raise Log.error("{{operator|quote}} is not a known operator", operator=op)
+
+        if term == None:
+            return class_(op, [], **clauses)
+        elif isinstance(term, list):
+            terms = map(jx_expression, term)
+            return class_(op, terms, **clauses)
+        elif isinstance(term, Mapping):
+            items = term.items()
+            if class_.has_simple_form:
+                if len(items) == 1:
+                    k, v = items[0]
+                    return class_(op, [Variable(k), Literal(None, v)], **clauses)
+                else:
+                    return class_(op, {k: Literal(None, v) for k, v in items}, **clauses)
+            else:
+                return class_(op, jx_expression(term), **clauses)
+        else:
+            if op in ["literal", "date", "offset"]:
+                return class_(op, term, **clauses)
+            else:
+                return class_(op, jx_expression(term), **clauses)
+
     @property
     def name(self):
-        return self.__class_.__name__
-
-    @classmethod
-    def preprocess(cls, op, clauses):
-        return clauses[op], {k: jx_expression(v) for k, v in clauses.items() if k != op}
+        return self.__class__.__name__
 
     def __data__(self):
         raise NotImplementedError
@@ -210,8 +214,6 @@ class Variable(Expression):
         :param verify: True - VERIFY THIS IS A VALID NAME (use False for trusted code only)
         """
         Expression.__init__(self, "", None)
-        if verify and not is_variable_name(var):
-            Log.error("Expecting a variable name")
         self.var = get_property_name(var)
 
     def __call__(self, row, rownum=None, rows=None):
@@ -336,14 +338,19 @@ class SelectOp(Expression):
     has_simple_form = True
 
     def __init__(self, op, terms):
-        self.terms = []
-        if not isinstance(terms. list):
-            Log.error("Expecting a list")
-        for t in terms:
+        self.terms = terms
+
+    @classmethod
+    def define(cls, expr):
+        term = expr.select
+        terms = []
+        if not isinstance(term, list):
+            raise Log.error("Expecting a list")
+        for t in term:
             if isinstance(t, text_type):
                 if not is_variable_name(t):
                     Log.error("expecting {{value}} a simple dot-delimited path name", value=t)
-                self.terms.append({"name": t, "value":jx_expression(t)})
+                terms.append({"name": t, "value": jx_expression(t)})
             elif t.name == None:
                 if t.value == None:
                     Log.error("expecting select parameters to have name and value properties")
@@ -351,11 +358,12 @@ class SelectOp(Expression):
                     if not is_variable_name(t):
                         Log.error("expecting {{value}} a simple dot-delimited path name", value=t.value)
                     else:
-                        self.terms.append({"name": t.value, "value":jx_expression(t.value)})
+                        terms.append({"name": t.value, "value": jx_expression(t.value)})
                 else:
                     Log.error("expecting a name property")
             else:
-                self.terms.append({"name": t.name, "value": jx_expression(t.value)})
+                terms.append({"name": t.name, "value": jx_expression(t.value)})
+        return SelectOp("select", terms)
 
     def __data__(self):
         return {"select": [
@@ -376,7 +384,6 @@ class SelectOp(Expression):
         ])
 
 
-
 class ScriptOp(Expression):
     """
     ONLY FOR WHEN YOU TRUST THE SCRIPT SOURCE
@@ -388,6 +395,14 @@ class ScriptOp(Expression):
             Log.error("expecting text of a script")
         self.simplified = True
         self.script = script
+
+    @classmethod
+    def define(cls, expr):
+        if ALLOW_SCRIPTING:
+            Log.warning("Scripting has been activated:  This has known security holes!!\nscript = {{script|quote}}", script=expr.script.term)
+            return ScriptOp("script", expr.script)
+        else:
+            Log.error("scripting is disabled")
 
     def vars(self):
         return set()
@@ -446,6 +461,10 @@ class Literal(Expression):
         Expression.__init__(self, "", None)
         self.simplified = True
         self.term = term
+
+    @classmethod
+    def define(cls, expr):
+        return Literal(None, expr.literal)
 
     def __nonzero__(self):
         return True
@@ -656,6 +675,10 @@ class DateOp(Literal):
             Literal.__init__(self, op, v.unix)
         else:
             Literal.__init__(self, op, v.seconds)
+
+    @classmethod
+    def define(cls, expr):
+        return DateOp("date", expr.date)
 
     def __data__(self):
         return {"date": self.date}
@@ -1835,8 +1858,19 @@ class ConcatOp(Expression):
             Log.error("Expecting a literal separator")
 
     @classmethod
-    def preprocess(cls, op, clauses):
-        return clauses[op], {k: Literal(None, v) for k, v in clauses.items() if k in ["default", "separator"]}
+    def define(cls, expr):
+        term = expr.concat
+        if isinstance(term, Mapping):
+            k, v = term.items()[0]
+            terms = [Variable(k), Literal(v)]
+        else:
+            terms = map(jx_expression, term)
+
+        return ConcatOp(
+            "concat",
+            terms,
+            **{k: Literal(None, v) for k, v in expr.items() if k in ["default", "separator"]}
+        )
 
     def __data__(self):
         if isinstance(self.value, Variable) and isinstance(self.length, Literal):
@@ -2211,26 +2245,30 @@ class BetweenOp(Expression):
         if isinstance(self.prefix, Literal) and isinstance(self.suffix, Literal):
             pass
         else:
-            Log.error("Exepcting literal prefix and sufix only")
+            Log.error("Expecting literal prefix and suffix only")
 
     @classmethod
-    def preprocess(cls, op, clauses):
-        param = clauses["between"]
-        if isinstance(param, list):
-            param = param
-        elif isinstance(param, Mapping):
-            var, vals = param.items()[0]
-            if isinstance(vals, list) and len(vals)==2:
-                param = [var, {"literal":vals[0]}, {"literal":vals[1]}]
+    def define(cls, expr):
+        term = expr.between
+        if isinstance(term, list):
+            params = map(jx_expression, term)
+        elif isinstance(term, Mapping):
+            var, vals = term.items()[0]
+            if isinstance(vals, list) and len(vals) == 2:
+                params = [var, {"literal": vals[0]}, {"literal": vals[1]}]
             else:
-                Log.error("`between` parameters are expected to be in {var: [prefix, suffix]} form")
+                raise Log.error("`between` parameters are expected to be in {var: [prefix, suffix]} form")
         else:
-            Log.error("`between` parameters are expected to be in {var: [prefix, suffix]} form")
+            raise Log.error("`between` parameters are expected to be in {var: [prefix, suffix]} form")
 
-        return param, {
-            "default": clauses["default"],
-            "start": clauses["start"]
-        }
+        return BetweenOp(
+            "between",
+            params,
+            **{
+                "default": jx_expression(expr.default),
+                "start": jx_expression(expr.start)
+            }
+        )
 
     def vars(self):
         return self.value.vars() | self.prefix.vars() | self.suffix.vars() | self.default.vars() | self.start.vars()
@@ -2553,6 +2591,7 @@ operators = {
     "right": RightOp,
     "rows": RowsOp,
     "script": ScriptOp,
+    "select": SelectOp,
     "split": SplitOp,
     "string": StringOp,
     "sub": BinaryOp,

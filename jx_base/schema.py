@@ -88,7 +88,7 @@ class Schema(object):
         full_name = untype_path(name)
         return list(set([
             c
-            for c in self.lookup[full_name]
+            for c in self.lookup.get(full_name, Null)
             if c.type in PRIMITIVE and (c.es_column != "_id") and self.query_path == c.nested_path[0]
         ]))
 

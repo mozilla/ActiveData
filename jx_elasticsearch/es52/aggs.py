@@ -26,6 +26,7 @@ from jx_elasticsearch.es52.util import aggregates1_4
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, unwraplist
 from mo_logs import Log
+from mo_logs.strings import quote
 from mo_math import Math, MAX
 from mo_times.timer import Timer
 
@@ -193,22 +194,33 @@ def es_aggsop(es, frum, query):
 
                 s.pull = get_pull_stats(stats_name, median_name)
             elif s.aggregate == "union":
-                # USE TERMS AGGREGATE TO SIMULATE union
                 stats_name = literal_field(canonical_name)
 
-                if es_col.nested_path[0] == ".":
-                    es_query.aggs[stats_name].terms.field = es_cols[0].es_column
-                    es_query.aggs[stats_name].terms.size = Math.min(s.limit, MAX_LIMIT)
-                    s.pull = jx_expression_to_function(stats_name + ".buckets.key")
+                if len(es_cols) > 1:
+                    Log.error("Do not know how to count columns with more than one type (script probably)")
+                # script = {"scripted_metric": {
+                #     'init_script': 'params._agg.terms = new HashSet()',
+                #     'map_script': 'params._agg.terms.add(doc[' + quote(es_cols[0].es_column) + '])',
+                #     'combine_script': 'return params._agg.terms.toArray()',
+                #     'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { for (v in a) {output.add(v)} } return output.toArray()'
+                # }}
+
+                script = {"scripted_metric": {
+                    'init_script': 'params._agg.terms = new HashSet()',
+                    'map_script': 'for (v in doc[' + quote(es_cols[0].es_column) + '].values) params._agg.terms.add(v)',
+                    'combine_script': 'return params._agg.terms.toArray()',
+                    'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { for (v in a) {output.add(v)} } return output.toArray()'
+                }}
+
+                if es_cols[0].nested_path[0] == ".":
+                    es_query.aggs[stats_name] = script
+                    s.pull = jx_expression_to_function(stats_name + ".value")
                 else:
                     es_query.aggs[stats_name] = {
                         "nested": {"path": es_col.nested_path[0]},
-                        "aggs": {"_nested": {"terms": {
-                            "field": es_cols[0].es_column,
-                            "size": Math.min(s.limit, MAX_LIMIT)
-                        }}}
+                        "aggs": {"_nested": script}
                     }
-                    s.pull = jx_expression_to_function(stats_name + "._nested.buckets.key")
+                    s.pull = jx_expression_to_function(stats_name + "._nested.value")
             else:
                 if len(es_cols) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")

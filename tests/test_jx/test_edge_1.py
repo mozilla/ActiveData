@@ -1045,7 +1045,7 @@ class TestEdge1(BaseTestCase):
                     {"k": "h", "v": 8},
                     {"k": "i", "v": 9},
                     {"k": "j", "v": 10},
-                    {"v":13}
+                    {"v": 13}
                 ]
             },
             "expecting_table": {

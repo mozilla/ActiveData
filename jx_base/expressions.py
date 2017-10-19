@@ -530,6 +530,7 @@ class Literal(Expression):
 
     def partial_eval(self):
         return self
+ZERO = Literal("literal", 0)
 
 
 class NullOp(Literal):
@@ -577,6 +578,7 @@ class NullOp(Literal):
 
     def __data__(self):
         return None
+NULL = NullOp()
 
 
 class TrueOp(Literal):
@@ -620,6 +622,7 @@ class TrueOp(Literal):
 
     def __str__(self):
         return b"true"
+TRUE = TrueOp()
 
 
 class FalseOp(Literal):
@@ -663,6 +666,7 @@ class FalseOp(Literal):
 
     def __str__(self):
         return b"false"
+FALSE = FalseOp()
 
 
 class DateOp(Literal):
@@ -2237,11 +2241,13 @@ class SplitOp(Expression):
 class BetweenOp(Expression):
     data_type = STRING
 
-    def __init__(self, op, term, **clauses):
-        Expression.__init__(self, op, term)
-        self.value, self.prefix, self.suffix = term
-        self.default = coalesce(clauses["default"], NullOp())
-        self.start = coalesce(clauses["start"], NullOp())
+    def __init__(self, op, value, prefix, suffix, default=NULL, start=NULL):
+        Expression.__init__(self, op, [])
+        self.value = value
+        self.prefix = prefix
+        self.suffix = suffix
+        self.default = default
+        self.start = start
         if isinstance(self.prefix, Literal) and isinstance(self.suffix, Literal):
             pass
         else:
@@ -2255,20 +2261,18 @@ class BetweenOp(Expression):
         elif isinstance(term, Mapping):
             var, vals = term.items()[0]
             if isinstance(vals, list) and len(vals) == 2:
-                params = [var, {"literal": vals[0]}, {"literal": vals[1]}]
+                return BetweenOp(
+                    "between",
+                    value=Variable(var),
+                    prefix=Literal(None, vals[0]),
+                    suffix=Literal(None, vals[1]),
+                    default=jx_expression(expr.default),
+                    start=jx_expression(expr.start)
+                )
             else:
-                raise Log.error("`between` parameters are expected to be in {var: [prefix, suffix]} form")
+                Log.error("`between` parameters are expected to be in {var: [prefix, suffix]} form")
         else:
-            raise Log.error("`between` parameters are expected to be in {var: [prefix, suffix]} form")
-
-        return BetweenOp(
-            "between",
-            params,
-            **{
-                "default": jx_expression(expr.default),
-                "start": jx_expression(expr.start)
-            }
-        )
+            Log.error("`between` parameters are expected to be in {var: [prefix, suffix]} form")
 
     def vars(self):
         return self.value.vars() | self.prefix.vars() | self.suffix.vars() | self.default.vars() | self.start.vars()
@@ -2532,10 +2536,6 @@ class BasicSubstringOp(Expression):
         return FALSE
 
 
-ZERO = Literal("literal", 0)
-NULL = NullOp()
-FALSE = FalseOp()
-TRUE = TrueOp()
 
 operators = {
     "add": MultiOp,

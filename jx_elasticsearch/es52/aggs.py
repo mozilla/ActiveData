@@ -13,22 +13,32 @@ from __future__ import unicode_literals
 
 from future.utils import text_type
 
-from jx_elasticsearch.es52.setop import get_pull_stats
-from jx_python import jx
-
-from jx_base.expressions import TupleOp
-from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
+from jx_base.expressions import TupleOp, NULL
+from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import es09
 from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
 from jx_elasticsearch.es52.decoders import DimFieldListDecoder
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp
+from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates1_4
+from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, unwraplist
+from mo_json.typed_encoder import encode_property
 from mo_logs import Log
-from mo_logs.strings import quote
-from mo_math import Math, MAX
+from mo_math import Math, MAX, UNION
 from mo_times.timer import Timer
+
+UNION_SCRIPT = {"scripted_metric": {
+    'init_script': 'params._agg.terms = new HashSet()',
+    'map_script': 'for (v in doc[params.field].values) params._agg.terms.add(v)',
+    'combine_script': 'return params._agg.terms.toArray()',
+    'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { if (a!=null) for (v in a) {output.add(v)} } return output.toArray()',
+    "params": {
+        "_agg": {}
+    }
+}}
+
 
 
 def is_aggsop(es, query):
@@ -194,33 +204,26 @@ def es_aggsop(es, frum, query):
 
                 s.pull = get_pull_stats(stats_name, median_name)
             elif s.aggregate == "union":
-                stats_name = literal_field(canonical_name)
+                pulls = []
+                for es_col in es_cols:
+                    script = set_default({"scripted_metric": {"params": {"field": es_col.es_column}}}, UNION_SCRIPT)
+                    stats_name = encode_property(es_col.es_column)
+                    if es_col.nested_path[0] == ".":
+                        es_query.aggs[stats_name] = script
+                        pulls.append(jx_expression_to_function(stats_name + ".value"))
+                    else:
+                        es_query.aggs[stats_name] = {
+                            "nested": {"path": es_col.nested_path[0]},
+                            "aggs": {"_nested": script}
+                        }
+                        pulls.append(jx_expression_to_function(stats_name + "._nested.value"))
 
-                if len(es_cols) > 1:
-                    Log.error("Do not know how to count columns with more than one type (script probably)")
-                # script = {"scripted_metric": {
-                #     'init_script': 'params._agg.terms = new HashSet()',
-                #     'map_script': 'params._agg.terms.add(doc[' + quote(es_cols[0].es_column) + '])',
-                #     'combine_script': 'return params._agg.terms.toArray()',
-                #     'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { for (v in a) {output.add(v)} } return output.toArray()'
-                # }}
-
-                script = {"scripted_metric": {
-                    'init_script': 'params._agg.terms = new HashSet()',
-                    'map_script': 'for (v in doc[' + quote(es_cols[0].es_column) + '].values) params._agg.terms.add(v)',
-                    'combine_script': 'return params._agg.terms.toArray()',
-                    'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { for (v in a) {output.add(v)} } return output.toArray()'
-                }}
-
-                if es_cols[0].nested_path[0] == ".":
-                    es_query.aggs[stats_name] = script
-                    s.pull = jx_expression_to_function(stats_name + ".value")
+                if len(pulls) == 0:
+                    s.pull = NULL
+                elif len(pulls) == 1:
+                    s.pull = pulls[0]
                 else:
-                    es_query.aggs[stats_name] = {
-                        "nested": {"path": es_col.nested_path[0]},
-                        "aggs": {"_nested": script}
-                    }
-                    s.pull = jx_expression_to_function(stats_name + "._nested.value")
+                    s.pull = lambda row: UNION(p(row) for p in pulls)
             else:
                 if len(es_cols) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")

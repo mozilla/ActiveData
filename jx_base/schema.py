@@ -89,7 +89,7 @@ class Schema(object):
         return list(set([
             c
             for c in self.lookup.get(full_name, Null)
-            if c.type in PRIMITIVE and (c.es_column != "_id") and self.query_path == c.nested_path[0]
+            if c.type in PRIMITIVE and (c.es_column != "_id")  # MULTIVALUES ARE LEGIT, SO NESTED IS FINE: and self.query_path == c.nested_path[0]
         ]))
 
     def leaves(self, name, meta=False):

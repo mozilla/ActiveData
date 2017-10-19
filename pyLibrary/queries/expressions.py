@@ -22,7 +22,7 @@ from mo_json import json2value, quote
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_math import Math, OR, MAX
-from mo_times.dates import Date, parse_time_expression
+from mo_times.dates import Date, parse_time_expression, unicode2Date
 from pyLibrary import convert
 from pyLibrary.queries.containers import STRUCT, OBJECT
 from pyLibrary.queries.expression_compiler import compile_expression
@@ -762,7 +762,7 @@ class DateOp(Literal):
         if hasattr(self, 'date'):
             return
         self.date = term
-        v = parse_time_expression(self.date)
+        v = unicode2Date(self.date)
         if isinstance(v, Date):
             Literal.__init__(self, op, v.unix)
         else:

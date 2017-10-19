@@ -2010,7 +2010,10 @@ class PrefixOp(Expression):
             return set()
 
     def map(self, map_):
-        return PrefixOp("prefix", [self.field.map(map_), self.prefix.map(map_)])
+        if not self.field:
+            return PrefixOp("prefix", {})
+        else:
+            return PrefixOp("prefix", [self.field.map(map_), self.prefix.map(map_)])
 
 
 class ConcatOp(Expression):

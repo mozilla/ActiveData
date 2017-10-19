@@ -158,7 +158,6 @@ class TestFilters(BaseTestCase):
         }
         self.utils.execute_es_tests(test)
 
-
     def test_empty_in(self):
         test = {
             "data": [{"a": 1}],
@@ -172,7 +171,6 @@ class TestFilters(BaseTestCase):
             }
         }
         self.utils.execute_es_tests(test)
-
 
     def test_empty_match_all(self):
         test = {
@@ -188,6 +186,32 @@ class TestFilters(BaseTestCase):
         }
         self.utils.execute_es_tests(test)
 
+    def test_empty_prefix(self):
+        test = {
+            "data": [{"v": "test"}],
+            "query": {
+                "from": TEST_TABLE,
+                "select": "*",
+                "where": {"prefix": {"v": ""}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [{"v": "test"}]
+            }
+        }
+        self.utils.execute_es_tests(test)
 
+    def test_null_prefix(self):
+        test = {
+            "data": [{"v": "test"}],
+            "query": {
+                "from": TEST_TABLE,
+                "select": "*",
+                "where": {"prefix": {"v": None}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [{"v": "test"}]
+            }
+        }
+        self.utils.execute_es_tests(test)
 
 # TODO:  ADD TEST TO ENSURE BOOLEAN COLUMNS (WITH 'T' and 'F' VALUES) CAN BE USED WITH true AND false FILTERS

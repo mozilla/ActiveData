@@ -1967,7 +1967,10 @@ class PrefixOp(Expression):
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
-        if isinstance(term, Mapping):
+        if not term:
+            self.field = None
+            self.prefix = None
+        elif isinstance(term, Mapping):
             self.field, self.prefix = term.items()[0]
         else:
             self.field, self.prefix = term
@@ -1982,7 +1985,9 @@ class PrefixOp(Expression):
         return {"b": "INSTR(" + self.field.to_sql(schema).s + ", " + self.prefix.to_sql().s + ")==1"}
 
     def to_esfilter(self):
-        if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
+        if not self.field:
+            return {"match_all": {}}
+        elif isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
             return {"prefix": {self.field.var: json2value(self.prefix.json)}}
         else:
             return {"script": {"script": self.to_ruby()}}
@@ -1990,6 +1995,8 @@ class PrefixOp(Expression):
     def __data__(self):
         if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
             return {"prefix": {self.field.var: json2value(self.prefix.json)}}
+        elif not self.field:
+            return {"prefix": {}}
         else:
             return {"prefix": [self.field.__data__(), self.prefix.__data__()]}
 

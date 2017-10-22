@@ -17,9 +17,9 @@ from collections import Mapping
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 
-from future.utils import text_type
+from future.utils import text_type, binary_type
 
-from jx_base import python_type_to_json_type
+from jx_base import python_type_to_json_type, INTEGER, NUMBER
 from mo_dots import Data, FlatList, NullType, unwrap
 from mo_json import ESCAPE_DCT, float2json, json2value
 from mo_json.encoder import pretty_json, problem_serializing, UnicodeBuilder, COMMA, COLON
@@ -151,7 +151,7 @@ class TypedInserter(object):
                         self._dict2json(value, sub_schema, path, net_new_properties, _buffer)
                     else:
                         append(_buffer, u'{"$exists": 1}')
-            elif _type is str:
+            elif _type is binary_type:
                 if _STRING not in sub_schema:
                     sub_schema[_STRING] = True
                     net_new_properties.append(path + [_STRING])
@@ -202,7 +202,11 @@ class TypedInserter(object):
                     if len(types) != 1:
                         from mo_logs import Log
                         Log.error("Can not handle multi-typed multivalues")
-                    element_type = "$"+types[0]
+                    if types[0] == INTEGER:
+                        # TODO: MAYBE ALLOW INTEGER TYPES?
+                        element_type = "$" + NUMBER
+                    else:
+                        element_type = "$" + types[0]
                     if element_type not in sub_schema:
                         sub_schema[element_type] = True
                         net_new_properties.append(path + [element_type])
@@ -306,7 +310,7 @@ class TypedInserter(object):
                 continue
             append(_buffer, prefix)
             prefix = u", "
-            if isinstance(k, str):
+            if isinstance(k, binary_type):
                 k = utf82unicode(k)
             if not isinstance(k, text_type):
                 Log.error("Expecting property name to be a string")

@@ -88,7 +88,7 @@ def es_setop(es, query):
                     new_select.append({
                         "name": full_name,
                         "value": Variable(c.es_column, verify=False),
-                        "put": {"name": full_name, "index": put_index, "child": "."},
+                        "put": {"name": literal_field(full_name), "index": put_index, "child": "."},
                         "pull": get_pull_source(c.es_column)
                     })
                     put_index += 1

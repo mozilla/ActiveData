@@ -39,7 +39,7 @@ class TestFilters(BaseTestCase):
             ]},
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a\\.b", "a\\.c"],
+                "header": ["a.b", "a.c"],
                 "data": [[0, 0], [1, 1]]
             },
             "expecting_cube": {
@@ -51,8 +51,8 @@ class TestFilters(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a\\.b": [0, 1],
-                    "a\\.c": [0, 1]
+                    "a.b": [0, 1],
+                    "a.c": [0, 1]
                 }
             }
         }
@@ -79,7 +79,7 @@ class TestFilters(BaseTestCase):
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a\\.b", "a\\.c"],
+                "header": ["a.b", "a.c"],
                 "data": [[0, 1]]
             },
             "expecting_cube": {
@@ -91,8 +91,8 @@ class TestFilters(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a\\.b": [0],
-                    "a\\.c": [1]
+                    "a.b": [0],
+                    "a.c": [1]
                 }
             }
         }

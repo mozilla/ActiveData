@@ -21,7 +21,7 @@ from pyLibrary import convert
 
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, LeavesOp
-from jx_elasticsearch.es52.setop import format_dispatch, get_pull_function
+from jx_elasticsearch.es52.setop import format_dispatch, get_pull_function, get_pull
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
 from jx_python.expressions import compile_expression, jx_expression_to_function
 from mo_times.timer import Timer

@@ -159,7 +159,7 @@ SCHEMA = {
                     "$exists": {"type": "long"},
                     "file": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
                     "method": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
-                    "line": {"properties": {"$integer": {"type": "long", "doc_values": True}}}
+                    "line": {"properties": {"$number": {"type": "long", "doc_values": True}}}
                 }
             },
             "thread": {

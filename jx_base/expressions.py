@@ -590,6 +590,10 @@ class TrueOp(Literal):
     def __init__(self, op=None, term=None):
         Literal.__init__(self, op, True)
 
+    @classmethod
+    def define(cls, expr):
+        return TRUE
+
     def __nonzero__(self):
         return True
 
@@ -633,6 +637,10 @@ class FalseOp(Literal):
 
     def __init__(self, op=None, term=None):
         Literal.__init__(self, op, False)
+
+    @classmethod
+    def define(cls, expr):
+        return FALSE
 
     def __nonzero__(self):
         return False
@@ -1866,7 +1874,7 @@ class ConcatOp(Expression):
         term = expr.concat
         if isinstance(term, Mapping):
             k, v = term.items()[0]
-            terms = [Variable(k), Literal(v)]
+            terms = [Variable(k), Literal("literal", v)]
         else:
             terms = map(jx_expression, term)
 
@@ -2257,7 +2265,14 @@ class BetweenOp(Expression):
     def define(cls, expr):
         term = expr.between
         if isinstance(term, list):
-            params = map(jx_expression, term)
+            return BetweenOp(
+                "between",
+                value=jx_expression(term[0]),
+                prefix=jx_expression(term[1]),
+                suffix=jx_expression(term[2]),
+                default=jx_expression(expr.default),
+                start=jx_expression(expr.start)
+            )
         elif isinstance(term, Mapping):
             var, vals = term.items()[0]
             if isinstance(vals, list) and len(vals) == 2:

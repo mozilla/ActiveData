@@ -108,7 +108,7 @@ class Schema(object):
             for k, cs in self.lookup.items()
             if startswith_field(nest_free_path(k), full_name)
             for c in cs
-            if (meta or (c.type not in STRUCT and c.es_column != "_id")) and
+            if (meta or (c.type not in STRUCT and (c.es_column != "_id" or k == "_id"))) and
                startswith_field(self.query_path, c.nested_path[0]) and
                startswith_field(nest_free_path(c.names[self.query_path]), full_name)
         ]))

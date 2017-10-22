@@ -26,18 +26,10 @@ from jx_python.expressions import jx_expression_to_function
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, unwraplist
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
+from mo_logs.strings import quote
 from mo_math import Math, MAX, UNION
 from mo_times.timer import Timer
 
-UNION_SCRIPT = {"scripted_metric": {
-    'init_script': 'params._agg.terms = new HashSet()',
-    'map_script': 'for (v in doc[params.field].values) params._agg.terms.add(v)',
-    'combine_script': 'return params._agg.terms.toArray()',
-    'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { if (a!=null) for (v in a) {output.add(v)} } return output.toArray()',
-    "params": {
-        "_agg": {}
-    }
-}}
 
 
 
@@ -136,7 +128,7 @@ def es_aggsop(es, frum, query):
             if schema.query_path == ".":
                 s.pull = jx_expression_to_function("doc_count")
             else:
-                s.pull = jx_expression_to_function({"coalesce": ["_nested.doc_count", 0]})
+                s.pull = jx_expression_to_function({"coalesce": ["_nested.doc_count", "doc_count", 0]})
         elif isinstance(s.value, Variable):
             if s.aggregate == "count":
                 new_select["count_"+literal_field(s.value.var)] += [s]
@@ -206,7 +198,12 @@ def es_aggsop(es, frum, query):
             elif s.aggregate == "union":
                 pulls = []
                 for es_col in es_cols:
-                    script = set_default({"scripted_metric": {"params": {"field": es_col.es_column}}}, UNION_SCRIPT)
+                    script = {"scripted_metric": {
+                        'init_script': 'params._agg.terms = new HashSet()',
+                        'map_script': 'for (v in doc['+quote(es_col.es_column)+'].values) params._agg.terms.add(v)',
+                        'combine_script': 'return params._agg.terms.toArray()',
+                        'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { if (a!=null) for (v in a) {output.add(v)} } return output.toArray()',
+                    }}
                     stats_name = encode_property(es_col.es_column)
                     if es_col.nested_path[0] == ".":
                         es_query.aggs[stats_name] = script
@@ -230,7 +227,7 @@ def es_aggsop(es, frum, query):
 
                 # PULL VALUE OUT OF THE stats AGGREGATE
                 es_query.aggs[literal_field(canonical_name)].extended_stats.field = es_cols[0].es_column
-                s.pull = jx_expression_to_function(literal_field(canonical_name) + "." + aggregates1_4[s.aggregate])
+                s.pull = jx_expression_to_function({"coalesce": [literal_field(canonical_name) + "." + aggregates1_4[s.aggregate], s.default]})
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)

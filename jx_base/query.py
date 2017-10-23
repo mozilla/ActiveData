@@ -453,7 +453,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
     elif isinstance(edge, text_type):
         if schema:
             leaves = unwraplist(schema.leaves(edge))
-            if isinstance(leaves, (list, set)):
+            if not leaves or isinstance(leaves, (list, set)):
                 return [
                     Data(
                         name=edge,

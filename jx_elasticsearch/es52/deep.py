@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import STRUCT
+from jx_base import STRUCT, NESTED
 from jx_elasticsearch import es09, es52
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field, set_default, relative_field, startswith_field
 from mo_json.typed_encoder import untype_path
@@ -105,6 +105,8 @@ def es_deepop(es, query):
                     col_names = set()
                     for c in leaves:
                         if c.nested_path[0] == ".":
+                            if c.type == NESTED:
+                                continue
                             es_query.stored_fields += [c.es_column]
                         c_name = untype_path(c.names[query_path])
                         col_names.add(c_name)

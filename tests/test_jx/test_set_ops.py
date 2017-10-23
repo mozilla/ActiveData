@@ -695,7 +695,7 @@ class TestSetOps(BaseTestCase):
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a\\.b", "a\\.c", "d"],
+                "header": ["a.b", "a.c", "d"],
                 "data": [
                     [0, 0, 7],
                     [0, 1, NULL],
@@ -712,8 +712,8 @@ class TestSetOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "a\\.b": [0, 0, 1, 1],
-                    "a\\.c": [0, 1, 0, 1],
+                    "a.b": [0, 0, 1, 1],
+                    "a.c": [0, 1, 0, 1],
                     "d": [7, NULL, NULL, NULL]
                 }
             }
@@ -1128,7 +1128,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    def test_keep_whitespace(self):
+    def test_select_array_as_value(self):
         test = {
             "data": [
                 {"_a": [{"b": 1, "c": 1}, {"b": 2, "c": 1}]},

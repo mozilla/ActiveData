@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from jx_base import OBJECT, EXISTS
+from jx_base import OBJECT, EXISTS, NESTED
 from jx_base.domains import ALGEBRAIC
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import es52, es09
@@ -78,19 +78,24 @@ def es_setop(es, query):
         if isinstance(select.value, LeavesOp):
             term = select.value.term
             if isinstance(term, Variable):
-                leaves = schema.leaves(term.var, meta=True)
-                es_query.stored_fields += ["_source"]
+                leaves = schema.leaves(term.var, meta=False)
                 for c in leaves:
-                    if c.type in (EXISTS, OBJECT) or c.names["."] == "_id":
-                        continue
                     full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
-
-                    new_select.append({
-                        "name": full_name,
-                        "value": Variable(c.es_column, verify=False),
-                        "put": {"name": literal_field(full_name), "index": put_index, "child": "."},
-                        "pull": get_pull_source(c.es_column)
-                    })
+                    if c.type == NESTED:
+                        es_query.stored_fields = ["_source"]
+                        new_select.append({
+                            "name": full_name,
+                            "value": Variable(c.es_column, verify=False),
+                            "put": {"name": literal_field(full_name), "index": put_index, "child": "."},
+                            "pull": get_pull_source(c.es_column)
+                        })
+                    else:
+                        es_query.stored_fields += [c.es_column]
+                        new_select.append({
+                            "name": full_name,
+                            "value": Variable(c.es_column, verify=False),
+                            "put": {"name": literal_field(full_name), "index": put_index, "child": "."}
+                        })
                     put_index += 1
             else:
                 Log.error("not supported")
@@ -112,12 +117,22 @@ def es_setop(es, query):
                     for c in cols:
                         if len(c.nested_path) == 1:
                             jx_name = untype_path(c.names["."])
-                            es_query.stored_fields += [c.es_column]
-                            new_select.append({
-                                "name": select.name,
-                                "value": Variable(c.es_column, verify=False),
-                                "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)}
-                            })
+                            if c.type == NESTED:
+                                es_query.stored_fields = ["_source"]
+                                new_select.append({
+                                    "name": select.name,
+                                    "value": Variable(c.es_column, verify=False),
+                                    "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)},
+                                    "pull": get_pull_source(c.es_column)
+                                })
+
+                            else:
+                                es_query.stored_fields += [c.es_column]
+                                new_select.append({
+                                    "name": select.name,
+                                    "value": Variable(c.es_column, verify=False),
+                                    "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)}
+                                })
                         else:
                             if not nested_filter:
                                 where = filters[0].copy()
@@ -175,7 +190,11 @@ def es_setop(es, query):
         if n.pull:
             continue
         elif isinstance(n.value, Variable):
-            n.pull = jx_expression_to_function(concat_field("fields", literal_field(n.value.var)))
+            if es_query.stored_fields[0] == "_source":
+                es_query.stored_fields = ["_source"]
+                n.pull = get_pull_source(n.value.var)
+            else:
+                n.pull = jx_expression_to_function(concat_field("fields", literal_field(n.value.var)))
         else:
             Log.error("Do not know what to do")
 

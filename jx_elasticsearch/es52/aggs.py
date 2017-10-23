@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 from future.utils import text_type
 
+from jx_base.domains import SetDomain
 from jx_base.expressions import TupleOp, NULL
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import es09
@@ -107,7 +108,10 @@ def sort_edges(query, prop):
             Log.error("can only sort by terms")
         for e in remaining_edges:
             if e.value.var == s.value.var:
-                e.domain.sort = s.sort
+                if isinstance(e.domain, SetDomain):
+                    pass  # ALREADY SORTED?
+                else:
+                    e.domain.sort = s.sort
                 ordered_edges.append(e)
                 remaining_edges.remove(e)
                 break

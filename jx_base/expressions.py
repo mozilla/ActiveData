@@ -27,7 +27,7 @@ from mo_json import scrub
 from mo_json.encoder import COLON, COMMA
 from mo_logs import Log, Except
 from mo_math import Math, MAX, MIN, UNION
-from mo_times.dates import Date, parse_time_expression
+from mo_times.dates import Date, parse_time_expression, unicode2Date
 
 ALLOW_SCRIPTING = False
 EMPTY_DICT = {}
@@ -454,7 +454,7 @@ class Literal(Expression):
             return FALSE
         if isinstance(term, Mapping) and term.date:
             # SPECIAL CASE
-            return object.__new__(DateOp, None, term)
+            return DateOp(None, term.date)
         return object.__new__(cls, op, term)
 
     def __init__(self, op, term):
@@ -681,8 +681,10 @@ class DateOp(Literal):
     date_type = NUMBER
 
     def __init__(self, op, term):
+        if hasattr(self, "date"):
+            return
         self.date = term
-        v = parse_time_expression(self.date)
+        v = unicode2Date(self.date)
         if isinstance(v, Date):
             Literal.__init__(self, op, v.unix)
         else:

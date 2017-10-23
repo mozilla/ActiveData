@@ -23,7 +23,7 @@ import mo_json_config
 from jx_base import container
 from jx_base.query import QueryOp
 from jx_python import jx
-from mo_dots import wrap, coalesce, unwrap, listwrap, Data
+from mo_dots import wrap, coalesce, unwrap, listwrap, Data, literal_field
 from mo_kwargs import override
 from mo_logs import Log, Except, constants
 from mo_logs.exceptions import extract_stack
@@ -317,10 +317,12 @@ def compare_to_expected(query, result, expect):
 
     elif result.meta.format == "cube" and len(result.edges) == 1 and result.edges[0].name == "rownum" and not query.sort:
         result_data, result_header = cube2list(result.data)
+        result_header = map(literal_field, result_header)
         result_data = unwrap(jx.sort(result_data, result_header))
         result.data = list2cube(result_data, result_header)
 
         expect_data, expect_header = cube2list(expect.data)
+        expect_header = map(literal_field, expect_header)
         expect_data = jx.sort(expect_data, expect_header)
         expect.data = list2cube(expect_data, expect_header)
 

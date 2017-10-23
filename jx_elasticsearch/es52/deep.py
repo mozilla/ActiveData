@@ -168,7 +168,9 @@ def es_deepop(es, query):
                 else:
                     for n in net_columns:
                         pull = get_pull_function(n)
-                        if len(n.nested_path) == 1:
+                        if n.nested_path[0] == ".":
+                            if n.type == NESTED:
+                                continue
                             es_query.stored_fields += [n.es_column]
 
                         # WE MUST FIGURE OUT WHICH NAMESSPACE s.value.var IS USING SO WE CAN EXTRACT THE child

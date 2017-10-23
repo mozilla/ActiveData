@@ -20,19 +20,47 @@ from mo_logs import Log
 
 
 def _indexer(columns, query_path):
-    lookup = {}
+    all_names = set(nest_free_path(n) for c in columns for n in c.names.values())
+
+    lookup_leaves = {}
+    for full_name in all_names:
+        for c in columns:
+            cname = c.names[query_path]
+            nfp = nest_free_path(cname)
+            if (
+                startswith_field(nfp, full_name) and
+                c.type not in [EXISTS, OBJECT] and
+                (c.es_column != "_id" or full_name == "_id") and
+                startswith_field(nfp, full_name)
+            ):
+                cs = lookup_leaves.setdefault(full_name, set())
+                cs.add(c)
+                cs = lookup_leaves.setdefault(untype_path(full_name), set())
+                cs.add(c)
+
+    relative_lookup = {}
     for c in columns:
         try:
             cname = c.names[query_path]
-            cs = lookup.setdefault(cname, set())
+            cs = relative_lookup.setdefault(cname, set())
             cs.add(c)
 
             ucname = untype_path(cname)
-            cs = lookup.setdefault(ucname, set())
+            cs = relative_lookup.setdefault(ucname, set())
             cs.add(c)
         except Exception as e:
             Log.error("Should not happen", cause=e)
-    return lookup
+
+    if query_path != ".":
+        absolute_lookup, more_leaves = _indexer(columns, ".")
+        for k, cs in absolute_lookup.items():
+            if k not in relative_lookup:
+                relative_lookup[k] = cs
+        for k, cs in more_leaves.items():
+            if k not in lookup_leaves:
+                lookup_leaves[k] = cs
+
+    return relative_lookup, lookup_leaves
 
 
 class Schema(object):
@@ -55,11 +83,8 @@ class Schema(object):
         else:
             query_path += ".$nested"
             self.query_path = [c for c in columns if c.type == NESTED and c.names["."] == query_path][0].es_column
-        lookup = self.lookup = _indexer(columns, self.query_path)
-        if self.query_path != ".":
-            alternate = _indexer(columns, ".")
-            for k,v in alternate.items():
-                lookup.setdefault(k, v)
+        self.lookup, self.lookup_leaves = _indexer(columns, self.query_path)
+
 
     def __getitem__(self, column_name):
         return self.lookup.get(column_name, Null)
@@ -102,16 +127,8 @@ class Schema(object):
         :param name:
         :return:
         """
-        full_name = nest_free_path(name)
-        return list(set([
-            c
-            for k, cs in self.lookup.items()
-            if startswith_field(nest_free_path(k), full_name)
-            for c in cs
-            if (meta or (c.type not in [EXISTS, OBJECT] and (c.es_column != "_id" or full_name == "_id"))) and
-               startswith_field(self.query_path, c.nested_path[0]) and
-               startswith_field(nest_free_path(c.names[self.query_path]), full_name)
-        ]))
+
+        return list(self.lookup_leaves.get(nest_free_path(name)))
 
     def map_to_es(self):
         """

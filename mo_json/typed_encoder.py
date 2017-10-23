@@ -315,6 +315,8 @@ def untype_path(encoded):
 def nest_free_path(encoded):
     if encoded.startswith(".."):
         encoded = encoded.lstrip(".")
+        if not encoded:
+            encoded = "."
 
     #     remainder = encoded.lstrip(".")
     #     back = len(encoded) - len(remainder) - 1

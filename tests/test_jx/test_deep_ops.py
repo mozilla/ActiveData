@@ -438,7 +438,7 @@ class TestDeepOps(BaseTestCase):
                         {"b": {"s": 1}, "h": {"s": "a-a"}},
                         {"b": {"s": 2}, "h": {"s": "a-b"}},
                         {"b": {"s": 3}, "h": {"s": "a-c"}}
-                    ],
+                    ]
                 }
             }
         }

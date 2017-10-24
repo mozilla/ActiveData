@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from jx_base import OBJECT
 from jx_base.expressions import jx_expression, NULL
 from jx_elasticsearch.es52.expressions import Painless, simplify_esfilter
-from mo_dots import Null
+from mo_dots import Null, wrap
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times.dates import Date
 
@@ -62,12 +62,13 @@ class TestESFilters(FuzzyTestCase):
 
     def test_ne1(self):
         where = {"ne": {"a": 1}}
-        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(Null))
+
+        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(schema))
         self.assertEqual(result, {"bool": {"must_not": {"term": {"a": 1}}}})
 
     def test_ne2(self):
         where = {"neq": {"a": 1}}
-        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(Null))
+        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(schema))
         self.assertEqual(result, {"bool": {"must_not": {"term": {"a": 1}}}})
 
     def test_in(self):
@@ -78,3 +79,10 @@ class TestESFilters(FuzzyTestCase):
     def test_painless(self):
         # THIS TEST IS USED TO FORCE-IMPORT OF elasticsearch EXTENSION METHODS
         a = Painless(type=OBJECT, expr=NULL, frum=NULL)
+
+
+class S(object):
+    def values(self, name):
+        return wrap([{"es_column": name}])
+
+schema = S()

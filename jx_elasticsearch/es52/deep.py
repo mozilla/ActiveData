@@ -123,51 +123,42 @@ def es_deepop(es, query):
                     n.put.name = n.name = n.name.lstrip(".")
                     col_names.add(n.name)
         elif isinstance(s.value, Variable):
-            if s.value.var == "_id":
+            net_columns = schema.leaves(s.value.var)
+            if not net_columns:
                 new_select.append({
                     "name": s.name,
-                    "value": s.value.var,
-                    "pull": jx_expression_to_function("_id"),
-                    "put": {"name": s.name, "index": i, "child": "."}
+                    "nested_path": ".",
+                    "put": {"name": s.name, "index": i, "child": "."},
+                    "pull": NULL
                 })
-                i += 1
             else:
-                net_columns = schema.leaves(s.value.var)
-                if not net_columns:
+                for n in net_columns:
+                    pull = get_pull_function(n)
+                    if n.nested_path[0] == ".":
+                        if n.type == NESTED:
+                            continue
+                        es_query.stored_fields += [n.es_column]
+
+                    # WE MUST FIGURE OUT WHICH NAMESSPACE s.value.var IS USING SO WE CAN EXTRACT THE child
+                    for np in n.nested_path:
+                        c_name = untype_path(n.names[np])
+                        if startswith_field(c_name, s.value.var):
+                            child = relative_field(c_name, s.value.var)
+                            break
+                    else:
+                        child = relative_field(untype_path(n.names[n.nested_path[0]]), s.value.var)
+
                     new_select.append({
                         "name": s.name,
-                        "nested_path": ".",
-                        "put": {"name": s.name, "index": i, "child": "."},
-                        "pull": NULL
-                    })
-                else:
-                    for n in net_columns:
-                        pull = get_pull_function(n)
-                        if n.nested_path[0] == ".":
-                            if n.type == NESTED:
-                                continue
-                            es_query.stored_fields += [n.es_column]
-
-                        # WE MUST FIGURE OUT WHICH NAMESSPACE s.value.var IS USING SO WE CAN EXTRACT THE child
-                        for np in n.nested_path:
-                            c_name = untype_path(n.names[np])
-                            if startswith_field(c_name, s.value.var):
-                                child = relative_field(c_name, s.value.var)
-                                break
-                        else:
-                            child = relative_field(untype_path(n.names[n.nested_path[0]]), s.value.var)
-
-                        new_select.append({
+                        "pull": pull,
+                        "nested_path": n.nested_path[0],
+                        "put": {
                             "name": s.name,
-                            "pull": pull,
-                            "nested_path": n.nested_path[0],
-                            "put": {
-                                "name": s.name,
-                                "index": i,
-                                "child": child
-                            }
-                        })
-                i += 1
+                            "index": i,
+                            "child": child
+                        }
+                    })
+            i += 1
         else:
             expr = s.value
             for v in expr.vars():

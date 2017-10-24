@@ -15,6 +15,7 @@ from collections import Mapping
 
 from jx_base import OBJECT, EXISTS, NESTED
 from jx_base.domains import ALGEBRAIC
+from jx_base.expressions import NULL, IDENTITY
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import es52, es09
 from jx_elasticsearch.es52.expressions import Variable, LeavesOp
@@ -75,104 +76,96 @@ def es_setop(es, query):
     put_index = 0
     for select in selects:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
-        if isinstance(select.value, LeavesOp):
+        if isinstance(select.value, LeavesOp) and isinstance(select.value.term, Variable):
             term = select.value.term
-            if isinstance(term, Variable):
-                leaves = schema.leaves(term.var, meta=False)
-                for c in leaves:
-                    full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
-                    if c.type == NESTED:
-                        es_query.stored_fields = ["_source"]
-                        new_select.append({
-                            "name": full_name,
-                            "value": Variable(c.es_column, verify=False),
-                            "put": {"name": literal_field(full_name), "index": put_index, "child": "."},
-                            "pull": get_pull_source(c.es_column)
-                        })
-                    else:
-                        es_query.stored_fields += [c.es_column]
-                        new_select.append({
-                            "name": full_name,
-                            "value": Variable(c.es_column, verify=False),
-                            "put": {"name": literal_field(full_name), "index": put_index, "child": "."}
-                        })
+            leaves = schema.leaves(term.var)
+            for c in leaves:
+                full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
+                if c.type == NESTED:
+                    es_query.stored_fields = ["_source"]
+                    new_select.append({
+                        "name": full_name,
+                        "value": Variable(c.es_column),
+                        "put": {"name": literal_field(full_name), "index": put_index, "child": "."},
+                        "pull": get_pull_source(c.es_column)
+                    })
                     put_index += 1
-            else:
-                Log.error("not supported")
+                elif c.nested_path[0] != ".":
+                    es_query.stored_fields = ["_source"]
+                else:
+                    es_query.stored_fields += [c.es_column]
+                    new_select.append({
+                        "name": full_name,
+                        "value": Variable(c.es_column),
+                        "put": {"name": literal_field(full_name), "index": put_index, "child": "."}
+                    })
+                    put_index += 1
         elif isinstance(select.value, Variable):
-            if select.value.var == "_id":
+            s_column = select.value.var
+            # LEAVES OF OBJECT
+            cols = schema.leaves(s_column)
+            nested_selects = {}
+            if cols:
+                for c in cols:
+                    if len(c.nested_path) == 1:
+                        jx_name = untype_path(c.names["."])
+                        if c.type == NESTED:
+                            es_query.stored_fields = ["_source"]
+                            new_select.append({
+                                "name": select.name,
+                                "value": Variable(c.es_column),
+                                "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)},
+                                "pull": get_pull_source(c.es_column)
+                            })
+
+                        else:
+                            es_query.stored_fields += [c.es_column]
+                            new_select.append({
+                                "name": select.name,
+                                "value": Variable(c.es_column),
+                                "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)}
+                            })
+                    else:
+                        if not nested_filter:
+                            where = filters[0].copy()
+                            nested_filter = [where]
+                            for k in filters[0].keys():
+                                filters[0][k] = None
+                            set_default(
+                                filters[0],
+                                {"bool": {"must": [where, {"bool": {"should": nested_filter}}]}}
+                            )
+
+                        nested_path = c.nested_path[0]
+                        if nested_path not in nested_selects:
+                            where = nested_selects[nested_path] = Data()
+                            nested_filter += [where]
+                            where.nested.path = nested_path
+                            where.nested.query.match_all = {}
+                            where.nested.inner_hits._source = False
+                            where.nested.inner_hits.stored_fields += [c.es_column]
+
+                            child = relative_field(untype_path(c.names[schema.query_path]), s_column)
+                            pull = accumulate_nested_doc(nested_path, Variable(relative_field(s_column, nest_free_path(nested_path))))
+                            new_select.append({
+                                "name": select.name,
+                                "value": select.value,
+                                "put": {
+                                    "name": select.name,
+                                    "index": put_index,
+                                    "child": child
+                                },
+                                "pull": pull
+                            })
+                        else:
+                            nested_selects[nested_path].nested.inner_hits.stored_fields+=[c.es_column]
+            else:
                 new_select.append({
                     "name": select.name,
-                    "value": select.value,
-                    "pull": jx_expression_to_function("_id"),
+                    "value": Variable("$dummy"),
                     "put": {"name": select.name, "index": put_index, "child": "."}
                 })
-                put_index += 1
-            else:
-                s_column = select.value.var
-                # LEAVES OF OBJECT
-                cols = schema.leaves(s_column)
-                nested_selects = {}
-                if cols:
-                    for c in cols:
-                        if len(c.nested_path) == 1:
-                            jx_name = untype_path(c.names["."])
-                            if c.type == NESTED:
-                                es_query.stored_fields = ["_source"]
-                                new_select.append({
-                                    "name": select.name,
-                                    "value": Variable(c.es_column, verify=False),
-                                    "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)},
-                                    "pull": get_pull_source(c.es_column)
-                                })
-
-                            else:
-                                es_query.stored_fields += [c.es_column]
-                                new_select.append({
-                                    "name": select.name,
-                                    "value": Variable(c.es_column, verify=False),
-                                    "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)}
-                                })
-                        else:
-                            if not nested_filter:
-                                where = filters[0].copy()
-                                nested_filter = [where]
-                                for k in filters[0].keys():
-                                    filters[0][k] = None
-                                set_default(
-                                    filters[0],
-                                    {"bool": {"must": [where, {"bool": {"should": nested_filter}}]}}
-                                )
-
-                            nested_path = c.nested_path[0]
-                            if nested_path not in nested_selects:
-                                where = nested_selects[nested_path] = Data()
-                                nested_filter += [where]
-                                where.nested.path = nested_path
-                                where.nested.query.match_all = {}
-                                where.nested.inner_hits._source = False
-                                where.nested.inner_hits.stored_fields += [c.es_column]
-
-                                pull = accumulate_nested_doc(nested_path)
-                                new_select.append({
-                                    "name": select.name,
-                                    "value": select.value,
-                                    "put": {
-                                        "name": select.name,
-                                        "index": put_index,
-                                        "child": relative_field(nest_free_path(nested_path), select.name)
-                                    },
-                                    "pull": pull
-                                })
-                            else:
-                                nested_selects[nested_path].nested.inner_hits.stored_fields+=[c.es_column]
-                else:
-                    new_select.append({
-                        "name": select.name,
-                        "value": Variable("$dummy", verify=False),
-                        "put": {"name": select.name, "index": put_index, "child": "."}
-                    })
-                put_index += 1
+            put_index += 1
         else:
             painless = select.value.partial_eval().to_painless(schema)
             es_query.script_fields[literal_field(select.name)] = {"script": {
@@ -216,9 +209,10 @@ def es_setop(es, query):
         Log.error("problem formatting", e)
 
 
-def accumulate_nested_doc(nested_path):
+def accumulate_nested_doc(nested_path, expr=IDENTITY):
     """
     :param nested_path: THE PATH USED TO EXTRACT THE NESTED RECORDS
+    :param expr: FUNCTION USED ON THE NESTED OBJECT TO GET SPECIFIC VALUE
     :return: THE DE_TYPED NESTED OBJECT ARRAY
     """
     name = literal_field(nested_path)
@@ -233,7 +227,7 @@ def accumulate_nested_doc(nested_path):
             # EXTEND THE LIST TO THE LENGTH WE REQUIRE
             for _ in range(len(acc), i+1):
                 acc.append(None)
-            acc[i] = obj
+            acc[i] = expr(obj)
         return acc
     return output
 

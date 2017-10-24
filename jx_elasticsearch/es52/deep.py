@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from jx_base import STRUCT, NESTED
+from jx_base.expressions import NULL
 from jx_elasticsearch import es09, es52
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field, set_default, relative_field, startswith_field
 from mo_json.typed_encoder import untype_path
@@ -97,53 +98,30 @@ def es_deepop(es, query):
 
     i = 0
     for s in listwrap(query.select):
-        if isinstance(s.value, LeavesOp):
-            if isinstance(s.value.term, Variable):
-                if s.value.term.var == ".":
-                    # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
-                    leaves = schema.leaves(".")
-                    col_names = set()
-                    for c in leaves:
-                        if c.nested_path[0] == ".":
-                            if c.type == NESTED:
-                                continue
-                            es_query.stored_fields += [c.es_column]
-                        c_name = untype_path(c.names[query_path])
-                        col_names.add(c_name)
-                        new_select.append({
-                            "name": concat_field(s.name, c_name),
-                            "pull": get_pull_function(c),
-                            "nested_path": c.nested_path[0],
-                            "put": {"name": concat_field(s.name, c_name), "index": i, "child": "."}
-                        })
-                        i += 1
+        if isinstance(s.value, LeavesOp) and isinstance(s.value.term, Variable):
+            # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
+            leaves = schema.leaves(s.value.term.var)
+            col_names = set()
+            for c in leaves:
+                if c.nested_path[0] == ".":
+                    if c.type == NESTED:
+                        continue
+                    es_query.stored_fields += [c.es_column]
+                c_name = untype_path(c.names[query_path])
+                col_names.add(c_name)
+                new_select.append({
+                    "name": concat_field(s.name, c_name),
+                    "nested_path": c.nested_path[0],
+                    "put": {"name": concat_field(s.name, literal_field(c_name)), "index": i, "child": "."},
+                    "pull": get_pull_function(c)
+                })
+                i += 1
 
-                    # REMOVE DOTS IN PREFIX IF NAME NOT AMBIGUOUS
-                    for n in new_select:
-                        if n.name.startswith("..") and n.name.lstrip(".") not in col_names:
-                            n.put.name = n.name = n.name.lstrip(".")
-                            col_names.add(n.name)
-                else:
-                    prefix = schema[s.value.term.var][0].names["."] + "."
-                    prefix_length = len(prefix)
-                    for c in columns:
-                        cname = c.names["."]
-                        if cname.startswith(prefix) and c.type not in STRUCT:
-                            pull = get_pull_function(c)
-                            if c.nested_path[0] == ".":
-                                es_query.stored_fields += [c.es_column]
-
-                            new_select.append({
-                                "name": s.name + "." + cname[prefix_length:],
-                                "pull": pull,
-                                "nested_path": c.nested_path[0],
-                                "put": {
-                                    "name": s.name + "." + literal_field(untype_path(cname[prefix_length:])),
-                                    "index": i,
-                                    "child": "."
-                                }
-                            })
-                            i += 1
+            # REMOVE DOTS IN PREFIX IF NAME NOT AMBIGUOUS
+            for n in new_select:
+                if n.name.startswith("..") and n.name.lstrip(".") not in col_names:
+                    n.put.name = n.name = n.name.lstrip(".")
+                    col_names.add(n.name)
         elif isinstance(s.value, Variable):
             if s.value.var == "_id":
                 new_select.append({
@@ -156,14 +134,11 @@ def es_deepop(es, query):
             else:
                 net_columns = schema.leaves(s.value.var)
                 if not net_columns:
-                    pull = get_pull_function(prefix)
-                    if len(prefix.nested_path) == 1:
-                        es_query.stored_fields += [prefix.es_column]
                     new_select.append({
                         "name": s.name,
-                        "pull": pull,
-                        "nested_path": prefix.nested_path[0],
-                        "put": {"name": s.name, "index": i, "child": "."}
+                        "nested_path": ".",
+                        "put": {"name": s.name, "index": i, "child": "."},
+                        "pull": NULL
                     })
                 else:
                     for n in net_columns:

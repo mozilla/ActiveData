@@ -516,7 +516,7 @@ def to_esfilter(self, schema):
     if isinstance(self.expr, Variable):
         cols = schema.leaves(self.expr.var)
         if not cols:
-            return {"bool": {"must_not": {"exists": {"field": self.expr.var}}}}
+            return {"match_all": {}}
         elif len(cols) == 1:
             return {"bool": {"must_not": {"exists": {"field": cols[0].es_column}}}}
         else:
@@ -553,7 +553,13 @@ def to_painless(self, schema):
 @extend(NeOp)
 def to_esfilter(self, schema):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-        return {"bool": {"must_not": {"term": {self.lhs.var: self.rhs.value}}}}
+        columns = schema.values(self.lhs.var)
+        if len(columns) == 0:
+            return {"match_all": {}}
+        elif len(columns) == 1:
+            return {"bool": {"must_not": {"term": {columns[0].es_column: self.rhs.value}}}}
+        else:
+            Log.error("column split to multiple, not handled")
     else:
         lhs = self.lhs.partial_eval().to_painless(schema)
         rhs = self.rhs.partial_eval().to_painless(schema)
@@ -985,7 +991,7 @@ def to_painless(self, schema):
         acc = []
         for c in columns:
             varname = c.es_column
-            frum = Variable(c.es_column, verify=False)
+            frum = Variable(c.es_column)
             q = quote(varname)
             acc.append(Painless(
                 miss=frum.missing(),

@@ -405,8 +405,9 @@ def _normalize_select_no_context(select, schema=None):
             return output
     elif isinstance(select.value, text_type):
         if select.value.endswith(".*"):
-            output.name = coalesce(select.name, ".", select.aggregate)
-            output.value = LeavesOp("leaves", Variable(select.value[:-2]), prefix=select.prefix)
+            name = select.value[:-2]
+            output.name = coalesce(select.name,  name)
+            output.value = LeavesOp("leaves", Variable(name), prefix=coalesce(select.prefix, name))
         else:
             if select.value == ".":
                 output.name = coalesce(select.name, select.aggregate, ".")

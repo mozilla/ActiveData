@@ -204,7 +204,6 @@ class TestDeepOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
-
     def test_select_whole_document(self):
         test = {
             "data": [
@@ -954,7 +953,7 @@ class TestDeepOps(BaseTestCase):
                 "select": {"value": "v.u", "aggregate": "sum"},  # TEST RELATIVE NAME IN select
                 "from": TEST_TABLE + ".a._b",
                 "edges": ["r.s"],  # TEST RELATIVE NAME IN edges
-                "where": {"ne": {"r.s": "b"}} # TEST RELATIVE NAME IN where
+                "where": {"ne": {"r.s": "b"}}  # TEST RELATIVE NAME IN where
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -1417,7 +1416,6 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.is_travis, "not expected to pass yet")
     def test_from_shallow_select_deep_column(self):
         test = {
             "data": [

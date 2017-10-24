@@ -34,6 +34,11 @@ EMPTY_DICT = {}
 
 
 def extend(cls):
+    """
+    DECORATOR TO ADD METHODS TO CLASSES
+    :param cls: THE CLASS TO ADD THE METHOD TO
+    :return:
+    """
     def extender(func):
         setattr(cls, func.func_name, func)
         return func
@@ -208,7 +213,7 @@ class Expression(object):
 
 class Variable(Expression):
 
-    def __init__(self, var, verify=True):
+    def __init__(self, var):
         """
         :param var:  DOT DELIMITED PATH INTO A DOCUMENT
         :param verify: True - VERIFY THIS IS A VALID NAME (use False for trusted code only)
@@ -236,7 +241,7 @@ class Variable(Expression):
         if not isinstance(map_, Mapping):
             Log.error("Expecting Mapping")
 
-        return Variable(coalesce(map_.get(self.var), self.var), verify=False)
+        return Variable(coalesce(map_.get(self.var), self.var))
 
     def __hash__(self):
         return self.var.__hash__()
@@ -249,6 +254,7 @@ class Variable(Expression):
 
     def __str__(self):
         return str(self.var)
+IDENTITY = Variable(".")
 
 
 class OffsetOp(Expression):

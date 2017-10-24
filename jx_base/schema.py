@@ -20,7 +20,7 @@ from mo_logs import Log
 
 
 def _indexer(columns, query_path):
-    all_names = set(nest_free_path(n) for c in columns for n in c.names.values())
+    all_names = set(nest_free_path(n) for c in columns for n in c.names.values()) | {"."}
 
     lookup_leaves = {}
     for full_name in all_names:
@@ -128,7 +128,7 @@ class Schema(object):
         :return:
         """
 
-        return list(self.lookup_leaves.get(nest_free_path(name)))
+        return list(self.lookup_leaves.get(nest_free_path(name), Null))
 
     def map_to_es(self):
         """

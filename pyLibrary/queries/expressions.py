@@ -1967,10 +1967,16 @@ class PrefixOp(Expression):
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
-        if isinstance(term, Mapping):
+        if not term:
+            self.field = None
+            self.prefix = None
+        elif isinstance(term, Mapping):
             self.field, self.prefix = term.items()[0]
         else:
             self.field, self.prefix = term
+            if self.prefix.json=='""':
+                self.field = None
+                self.prefix = None
 
     def to_ruby(self, not_null=False, boolean=False, many=False):
         return "(" + self.field.to_ruby() + ").startsWith(" + self.prefix.to_ruby() + ")"
@@ -1982,7 +1988,9 @@ class PrefixOp(Expression):
         return {"b": "INSTR(" + self.field.to_sql(schema).s + ", " + self.prefix.to_sql().s + ")==1"}
 
     def to_esfilter(self):
-        if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
+        if not self.field:
+            return {"match_all": {}}
+        elif isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
             return {"prefix": {self.field.var: json2value(self.prefix.json)}}
         else:
             return {"script": {"script": self.to_ruby()}}
@@ -1990,14 +1998,22 @@ class PrefixOp(Expression):
     def __data__(self):
         if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
             return {"prefix": {self.field.var: json2value(self.prefix.json)}}
+        elif not self.field:
+            return {"prefix": {}}
         else:
             return {"prefix": [self.field.__data__(), self.prefix.__data__()]}
 
     def vars(self):
-        return {self.field.var}
+        if self.field:
+            return {self.field.var}
+        else:
+            return set()
 
     def map(self, map_):
-        return PrefixOp("prefix", [self.field.map(map_), self.prefix.map(map_)])
+        if not self.field:
+            return PrefixOp("prefix", {})
+        else:
+            return PrefixOp("prefix", [self.field.map(map_), self.prefix.map(map_)])
 
 
 class ConcatOp(Expression):

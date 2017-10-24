@@ -416,7 +416,7 @@ class TestAggOps(BaseTestCase):
                 {"b": "y"},
                 {"b": "y"},
                 {"b": "y"},
-                {"b": "z"},
+                {"b": "z"}
             ],
             "query": {
                 "from": TEST_TABLE,

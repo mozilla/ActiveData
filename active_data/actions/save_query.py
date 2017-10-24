@@ -20,7 +20,6 @@ from mo_logs import Log
 from mo_threads import Thread
 from pyLibrary import convert
 
-from jx_elasticsearch.jx_usingES import FromES
 from jx_python.containers.cube import Cube
 from mo_json import json2value
 from mo_logs.exceptions import Except

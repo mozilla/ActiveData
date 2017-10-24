@@ -249,7 +249,8 @@ class TestAggOps(BaseTestCase):
                 "select": {"value": ".", "aggregate": "max"}
             },
             "expecting_list": {
-                "meta": {"format": "value"}, "data": 58
+                "meta": {"format": "value"},
+                "data": 58
             },
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -291,7 +292,7 @@ class TestAggOps(BaseTestCase):
         }
         self.utils.execute_tests(test, tjson=True)
 
-    @skipIf(global_settings.use in ["sqlite", "elasticsearch"], "not expected to pass yet")
+    @skipIf(global_settings.use in ["sqlite"], "not expected to pass yet")
     def test_median_on_value(self):
         test = {
             "data": [i**2 for i in range(30)],
@@ -317,7 +318,6 @@ class TestAggOps(BaseTestCase):
         }
         self.utils.execute_tests(test, tjson=True)
 
-    @skipIf(global_settings.use == "elasticsearch", "require dynamic typing before primitives are expected to pass")
     def test_many_aggs_on_value(self):
         # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
         test = {
@@ -369,7 +369,7 @@ class TestAggOps(BaseTestCase):
                 "data": {"a": 3, "b": 1, "c": 0, "d": 1}
             }
         }
-        self.utils.execute_tests(test, tjson=False)
+        self.utils.execute_tests(test)
 
     @skipIf(global_settings.use == "elasticsearch", "requires scripted metric aggregations")  # https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-scripted-metric-aggregation.html
     def test_max_on_tuple(self):
@@ -395,7 +395,7 @@ class TestAggOps(BaseTestCase):
                 "data": {"max": [3, 3], "min": [1, 1]}
             }
         }
-        self.utils.execute_tests(test, tjson=False)
+        self.utils.execute_tests(test)
 
     def test_union(self):
         test = {
@@ -429,4 +429,4 @@ class TestAggOps(BaseTestCase):
                 "data": {"b": {"x", "y", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "z"}}
             }
         }
-        self.utils.execute_tests(test, tjson=False)
+        self.utils.execute_tests(test)

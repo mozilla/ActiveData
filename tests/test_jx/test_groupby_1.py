@@ -15,7 +15,6 @@ from future.utils import text_type
 
 from jx_base.expressions import NULL
 from mo_dots import wrap, set_default
-
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
@@ -194,7 +193,6 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-
     def test_where(self):
         test = {
             "data": simple_test_data,
@@ -282,7 +280,6 @@ class TestgroupBy1(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
-
 
     def test_many_aggs_on_one_column(self):
         # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
@@ -495,6 +492,40 @@ class TestgroupBy1(BaseTestCase):
                     ["c", 2, 2],
                     ["c", 1, 1],
                     [NULL, 2, 1]
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_groupby_on_multivalue(self):
+        test = {
+            "data": [
+                {"run": {"type": ["a", "b"]}},
+                {"run": {"type": ["b", "a"]}},
+                {"run": {"type": ["a"]}},
+                {"run": {"type": ["b"]}},
+                {},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": ["run.type"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"run": {"type": ["a", "b"]}, "count": 2},
+                    {"run": {"type": "b"}, "count": 1},
+                    {"run": {"type": "a"}, "count": 1},
+                    {"run": {"type": NULL}, "count": 1},
+                ]
+            },
+            "expecting_table": {
+                "header": ["run.type", "count"],
+                "data": [
+                    [["a", "b"], 2],
+                    ["a", 1],
+                    ["b", 1],
+                    [NULL, 1]
                 ]
             }
         }

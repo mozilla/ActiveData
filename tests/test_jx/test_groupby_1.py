@@ -11,12 +11,8 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-
-from jx_base.expressions import NullOp
 from mo_dots import wrap, set_default
-
-from tests.test_jx import BaseTestCase, TEST_TABLE
-
+from tests.test_jx import BaseTestCase, TEST_TABLE, NULL
 
 
 class TestgroupBy1(BaseTestCase):
@@ -501,36 +497,36 @@ class TestgroupBy1(BaseTestCase):
     def test_groupby_on_multivalue(self):
         test = {
             "data": [
-                {"g": ["a", "b"]},
-                {"g": ["b", "a"]},
-                {"g": ["a"]},
-                {"g": ["b"]},
+                {"run": {"type": ["a", "b"]}},
+                {"run": {"type": ["b", "a"]}},
+                {"run": {"type": ["a"]}},
+                {"run": {"type": ["b"]}},
                 {},
             ],
             "query": {
                 "from": TEST_TABLE,
-                "groupby": ["g"]
+                "groupby": ["run.type"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"g": ["a", "b"], "count": 2},
-                    {"g": "b", "count": 1},
-                    {"g": "a", "count": 1},
-                    {"g": NULL, "count": 1},
+                    {"run": {"type": ["a", "b"]}, "count": 2},
+                    {"run": {"type": "b"}, "count": 1},
+                    {"run": {"type": "a"}, "count": 1},
+                    {"run": {"type": NULL}, "count": 1},
                 ]
             },
             "expecting_table": {
-                "header": ["g", "count"],
+                "header": ["run.type", "count"],
                 "data": [
-                    [["a","b"], 2],
+                    [["a", "b"], 2],
                     ["a", 1],
                     ["b", 1],
                     [NULL, 1]
                 ]
             }
         }
-        self.utils.execute_tests(test)
+        self.utils.execute_es_tests(test)
 
 # TODO: AGG SHALLOW FIELD WITH DEEP GROUPBY
 # {

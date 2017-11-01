@@ -13,7 +13,6 @@ from __future__ import unicode_literals
 
 from future.utils import text_type
 from mo_dots import wrap, set_default
-
 from tests.test_jx import BaseTestCase, TEST_TABLE, NULL
 
 
@@ -497,6 +496,40 @@ class TestgroupBy1(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
+
+    def test_groupby_on_multivalue(self):
+        test = {
+            "data": [
+                {"run": {"type": ["a", "b"]}},
+                {"run": {"type": ["b", "a"]}},
+                {"run": {"type": ["a"]}},
+                {"run": {"type": ["b"]}},
+                {},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": ["run.type"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"run": {"type": ["a", "b"]}, "count": 2},
+                    {"run": {"type": "b"}, "count": 1},
+                    {"run": {"type": "a"}, "count": 1},
+                    {"run": {"type": NULL}, "count": 1},
+                ]
+            },
+            "expecting_table": {
+                "header": ["run.type", "count"],
+                "data": [
+                    [["a", "b"], 2],
+                    ["a", 1],
+                    ["b", 1],
+                    [NULL, 1]
+                ]
+            }
+        }
+        self.utils.execute_es_tests(test)
 
 # TODO: AGG SHALLOW FIELD WITH DEEP GROUPBY
 # {

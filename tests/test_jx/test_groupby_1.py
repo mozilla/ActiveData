@@ -11,8 +11,10 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from unittest import skipIf
+
 from mo_dots import wrap, set_default
-from tests.test_jx import BaseTestCase, TEST_TABLE, NULL
+from tests.test_jx import BaseTestCase, TEST_TABLE, NULL, global_settings
 
 
 class TestgroupBy1(BaseTestCase):
@@ -494,6 +496,7 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_es_tests(test)
 
+    @skipIf(global_settings.use == "elasticsearch")
     def test_groupby_on_multivalue(self):
         test = {
             "data": [

@@ -13,18 +13,17 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from mo_logs import Log
 from mo_dots import set_default, coalesce, literal_field, Data, unwraplist
 from mo_dots import wrap
+from mo_logs import Log
 from mo_logs.strings import quote
-from mo_math import MAX, UNION
+from mo_math import MAX
 from mo_math import Math
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from pyLibrary.queries.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, \
-    InequalityOp, TupleOp, LeavesOp
+from pyLibrary.queries.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, InequalityOp, TupleOp, LeavesOp
 from pyLibrary.queries.query import MAX_LIMIT, DEFAULT_LIMIT
 
 
@@ -54,10 +53,6 @@ class AggsDecoder(object):
             elif isinstance(e.value, Variable):
                 schema = query.frum.schema
                 col = schema[e.value.var][0]
-                if col.partitions and len(col.partitions) <= 5:  # UP TO 32 COMBINATIONS
-                    # SPECIAL MULTIVALUE COLUMNS
-                    return object.__new__(MultivalueDecoder)
-
                 if col.type in STRUCT:
                     return object.__new__(ObjectDecoder)
                 if not col:

@@ -42,7 +42,6 @@ _elasticsearch = None
 
 MAX_COLUMN_METADATA_AGE = 12 * HOUR
 ENABLE_META_SCAN = False
-ENABLE_META_SCAN_COLUMNS = ["run.type", "build.type"]
 DEBUG = False
 TOO_OLD = 2*HOUR
 OLD_METADATA = MINUTE
@@ -278,20 +277,6 @@ class FromESMetadata(Schema):
                             "cardinality": len(partitions),
                             "last_updated": Date.now()
                         },
-                        "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
-                    })
-                return
-            if c.names["."] not in ENABLE_META_SCAN_COLUMNS:
-                with self.meta.columns.locker:
-                    self.meta.columns.update({
-                        "set": {
-                            "last_updated": Date.now()
-                        },
-                        "clear":[
-                            "count",
-                            "cardinality",
-                            "partitions",
-                        ],
                         "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                     })
                 return

@@ -13,17 +13,17 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from mo_logs import Log
 from mo_dots import set_default, coalesce, literal_field, Data, unwraplist
 from mo_dots import wrap
-from mo_math import MAX, UNION
+from mo_logs import Log
+from mo_logs.strings import quote
+from mo_math import MAX
 from mo_math import Math
 from pyLibrary.queries import jx
 from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from pyLibrary.queries.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, \
-    InequalityOp, TupleOp, LeavesOp
+from pyLibrary.queries.expressions import simplify_esfilter, Variable, NotOp, InOp, Literal, OrOp, AndOp, InequalityOp, TupleOp, LeavesOp
 from pyLibrary.queries.query import MAX_LIMIT, DEFAULT_LIMIT
 
 
@@ -33,13 +33,13 @@ class AggsDecoder(object):
 
         if e.value and e.domain.type == "default":
             # if query.groupby:
-            #     return object.__new__(DefaultDecoder, e)
+            #     return object.__new__(DefaultDecoder)
 
             if isinstance(e.value, basestring):
                 Log.error("Expecting Variable or Expression, not plain string")
 
             if isinstance(e.value, LeavesOp):
-                return object.__new__(ObjectDecoder, e)
+                return object.__new__(ObjectDecoder)
             elif isinstance(e.value, TupleOp):
                 # THIS domain IS FROM A dimension THAT IS A SIMPLE LIST OF fields
                 # JUST PULL THE FIELDS
@@ -49,39 +49,38 @@ class AggsDecoder(object):
                 e.domain = Data(
                     dimension={"fields":e.value.terms}
                 )
-                return object.__new__(DimFieldListDecoder, e)
+                return object.__new__(DimFieldListDecoder)
             elif isinstance(e.value, Variable):
                 schema = query.frum.schema
                 col = schema[e.value.var][0]
-
                 if col.type in STRUCT:
-                    return object.__new__(ObjectDecoder, e)
+                    return object.__new__(ObjectDecoder)
                 if not col:
-                    return object.__new__(DefaultDecoder, e)
+                    return object.__new__(DefaultDecoder)
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
 
                 if col.partitions != None:
                     e.domain = SimpleSetDomain(partitions=col.partitions[:limit:])
                 else:
                     e.domain = set_default(DefaultDomain(limit=limit), e.domain.__data__())
-                    return object.__new__(DefaultDecoder, e)
+                    return object.__new__(DefaultDecoder)
 
             else:
-                return object.__new__(DefaultDecoder, e)
+                return object.__new__(DefaultDecoder)
 
         if e.value and e.domain.type in PARTITION:
-            return object.__new__(SetDecoder, e)
+            return object.__new__(SetDecoder)
         if isinstance(e.domain.dimension, Dimension):
             e.domain = e.domain.dimension.getDomain()
-            return object.__new__(SetDecoder, e)
+            return object.__new__(SetDecoder)
         if e.value and e.domain.type == "time":
-            return object.__new__(TimeDecoder, e)
+            return object.__new__(TimeDecoder)
         if e.range:
-            return object.__new__(GeneralRangeDecoder, e)
+            return object.__new__(GeneralRangeDecoder)
         if e.value and e.domain.type == "duration":
-            return object.__new__(DurationDecoder, e)
+            return object.__new__(DurationDecoder)
         elif e.value and e.domain.type == "range":
-            return object.__new__(RangeDecoder, e)
+            return object.__new__(RangeDecoder)
         elif not e.value and e.domain.dimension.fields:
             # THIS domain IS FROM A dimension THAT IS A SIMPLE LIST OF fields
             # JUST PULL THE FIELDS
@@ -89,9 +88,9 @@ class AggsDecoder(object):
             if isinstance(fields, Mapping):
                 Log.error("No longer allowed: All objects are expressions")
             else:
-                return object.__new__(DimFieldListDecoder, e)
+                return object.__new__(DimFieldListDecoder)
         elif not e.value and all(e.domain.partitions.where):
-            return object.__new__(GeneralSetDecoder, e)
+            return object.__new__(GeneralSetDecoder)
         else:
             Log.error("domain type of {{type}} is not supported yet", type=e.domain.type)
 
@@ -565,7 +564,6 @@ class DimFieldListDecoder(SetDecoder):
         self.domain.limit =Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
         self.parts = list()
 
-
     def append_query(self, es_query, start):
         #TODO: USE "reverse_nested" QUERY TO PULL THESE
 
@@ -610,6 +608,42 @@ class DimFieldListDecoder(SetDecoder):
     @property
     def num_columns(self):
         return len(self.fields)
+
+
+class MultivalueDecoder(SetDecoder):
+    def __init__(self, edge, query, limit):
+        AggsDecoder.__init__(self, edge, query, limit)
+        self.var = edge.value.var
+        self.values = query.frum.schema[edge.value.var][0].partitions
+        self.parts = []
+
+    def append_query(self, es_query, start):
+        # TODO: USE "reverse_nested" QUERY TO PULL THESE
+
+        self.start = start
+        for i, v in enumerate(self.values):
+            es_query =  wrap({"aggs": {
+                "_match": set_default({"terms": {
+                    "script": 'doc['+quote(self.var)+'].values.contains(' + quote(v) + ') ? 1 : 0'
+                }}, es_query)
+            }})
+
+        return es_query
+
+    def get_value_from_row(self, row):
+        return unwraplist([v for v, p in zip(self.values, row[self.start:self.start + self.num_columns:]) if p["key"] == '1'])
+
+    def get_index(self, row):
+        find = self.get_value_from_row(row)
+        try:
+            return self.parts.index(find)
+        except Exception:
+            self.parts.append(find)
+            return len(self.parts)-1
+
+    @property
+    def num_columns(self):
+        return len(self.values)
 
 
 class ObjectDecoder(SetDecoder):

@@ -141,12 +141,12 @@ class ESUtils(object):
     def not_real_service(self):
         return self.settings.fastTesting
 
-    def execute_es_tests(self, subtest, tjson=False):
+    def execute_es_tests(self, subtest, tjson=False, places=6):
         subtest = wrap(subtest)
         subtest.name = extract_stack()[1]['method']
 
         self.fill_container(subtest, tjson=tjson)
-        self.send_queries(subtest)
+        self.send_queries(subtest, places=places)
 
     def fill_container(self, subtest, tjson=False):
         """
@@ -187,7 +187,7 @@ class ESUtils(object):
 
         return _settings
 
-    def send_queries(self, subtest):
+    def send_queries(self, subtest, places=6):
         subtest = wrap(subtest)
 
         try:
@@ -215,7 +215,7 @@ class ESUtils(object):
                 result = convert.json2value(convert.utf82unicode(response.all_content))
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
-                compare_to_expected(subtest.query, result, expected)
+                compare_to_expected(subtest.query, result, expected, places)
                 Log.note("Test result compares well")
             if num_expectations == 0:
                 Log.error("Expecting test {{name|quote}} to have property named 'expecting_*' for testing the various format clauses", {
@@ -265,7 +265,7 @@ class ESUtils(object):
                     Log.error("Server raised exception", e)
 
 
-def compare_to_expected(query, result, expect):
+def compare_to_expected(query, result, expect, places):
     query = wrap(query)
     expect = wrap(expect)
 
@@ -323,7 +323,7 @@ def compare_to_expected(query, result, expect):
         expect.data = list2cube(expect_data, expect_header)
 
     # CONFIRM MATCH
-    assertAlmostEqual(result, expect, places=6)
+    assertAlmostEqual(result, expect, places=places)
 
 
 def cube2list(cube):

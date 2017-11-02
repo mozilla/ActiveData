@@ -141,7 +141,7 @@ class ESUtils(object):
     def not_real_service(self):
         return self.settings.fastTesting
 
-    def execute_es_tests(self, subtest, tjson=False, places):
+    def execute_es_tests(self, subtest, tjson=False, places=6):
         subtest = wrap(subtest)
         subtest.name = extract_stack()[1]['method']
 

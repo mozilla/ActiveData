@@ -176,7 +176,7 @@ def es_aggsop(es, frum, query):
 
                 es_query.aggs[key].percentiles.field = field_name
                 es_query.aggs[key].percentiles.percents += [percent]
-                es_query.aggs[key].percentiles.compression = 10
+                es_query.aggs[key].percentiles.compression = 1
 
                 s.pull = key + ".values." + literal_field(unicode(percent))
             elif s.aggregate == "cardinality":

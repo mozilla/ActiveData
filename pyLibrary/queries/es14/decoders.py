@@ -51,12 +51,12 @@ class AggsDecoder(object):
                     dimension={"fields":e.value.terms}
                 )
                 return object.__new__(DimFieldListDecoder)
-            elif isinstance(e.value, Variable) and e.value.var in ["run.type", "build.type"]:
-                # SPECIAL MULTIVALUE COLUMNS
-                return object.__new__(MultivalueDecoder)
             elif isinstance(e.value, Variable):
                 schema = query.frum.schema
                 col = schema[e.value.var][0]
+                if col.partitions and len(col.partitions) <= 5:  # UP TO 32 COMBINATIONS
+                    # SPECIAL MULTIVALUE COLUMNS
+                    return object.__new__(MultivalueDecoder)
 
                 if col.type in STRUCT:
                     return object.__new__(ObjectDecoder)

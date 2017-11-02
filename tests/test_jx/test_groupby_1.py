@@ -496,7 +496,7 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_es_tests(test)
 
-    @skipIf(global_settings.use == "elasticsearch")
+    @skipIf(global_settings.use == "elasticsearch", "not implemented yet")
     def test_groupby_on_multivalue(self):
         test = {
             "data": [

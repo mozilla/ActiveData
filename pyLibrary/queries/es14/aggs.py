@@ -176,7 +176,7 @@ def es_aggsop(es, frum, query):
 
                 es_query.aggs[key].percentiles.field = field_name
                 es_query.aggs[key].percentiles.percents += [percent]
-                es_query.aggs[key].percentiles.compression = 1
+                es_query.aggs[key].percentiles.compression = 2
 
                 s.pull = key + ".values." + literal_field(unicode(percent))
             elif s.aggregate == "cardinality":
@@ -195,6 +195,7 @@ def es_aggsop(es, frum, query):
                 median_name = literal_field(canonical_name + " percentile")
                 es_query.aggs[median_name].percentiles.field = field_name
                 es_query.aggs[median_name].percentiles.percents += [50]
+                es_query.aggs[median_name].percentiles.compression = 2
 
                 s.pull = {
                     "count": stats_name + ".count",

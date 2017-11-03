@@ -174,7 +174,7 @@ class TestAggOps(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_es_tests(test, places=2)
 
     def test_bad_percentile(self):
         test = {
@@ -316,7 +316,7 @@ class TestAggOps(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_es_tests(test, tjson=True)
+        self.utils.execute_es_tests(test, tjson=True, places=2)
 
     @skipIf(global_settings.use == "elasticsearch", "require dynamic typing before primitives are expected to pass")
     def test_many_aggs_on_value(self):

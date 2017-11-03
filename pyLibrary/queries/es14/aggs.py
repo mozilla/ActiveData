@@ -195,6 +195,7 @@ def es_aggsop(es, frum, query):
                 median_name = literal_field(canonical_name + " percentile")
                 es_query.aggs[median_name].percentiles.field = field_name
                 es_query.aggs[median_name].percentiles.percents += [50]
+                es_query.aggs[median_name].percentiles.compression = 1
 
                 s.pull = {
                     "count": stats_name + ".count",

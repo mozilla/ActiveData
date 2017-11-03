@@ -53,6 +53,8 @@ class AggsDecoder(object):
             elif isinstance(e.value, Variable):
                 schema = query.frum.schema
                 col = schema[e.value.var][0]
+
+                # TODO: REMOVE THIS SPECIAL FIX
                 if col.names["."] == "run.type":
                     # SPECIAL MULTIVALUE COLUMNS
                     col.partitions = ["e10s", "chunked", "gfx", "stylo"]

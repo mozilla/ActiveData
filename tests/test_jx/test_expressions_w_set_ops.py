@@ -777,6 +777,44 @@ class TestSetOps(BaseTestCase):
 
         self.utils.execute_es_tests(test)
 
+    def test_not_left(self):
+        test = {
+            "data": [
+                {"url": NULL},
+                {"url": "/"},
+                #        012345678901234567890123456789
+                {"url": "https://hg.mozilla.org/"},
+                {"url": "https://hg.mozilla.org/a/"},
+                {"url": "https://hg.mozilla.org/b/"},
+                {"url": "https://hg.mozilla.org/b/1"},
+                {"url": "https://hg.mozilla.org/b/2"},
+                {"url": "https://hg.mozilla.org/b/3"},
+                {"url": "https://hg.mozilla.org/c/"},
+                {"url": "https://hg.mozilla.org/d"},
+                {"url": "https://hg.mozilla.org/e"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"and":[
+                    {"prefix":{"url": "https://hg.mozilla.org/"}},
+                    {"find": [{"not_left": {"url": 23}}, {"literal": "/"}]}
+                ]}
+            },
+            "expecting_list":{
+                "meta": {"format": "list"},
+                "data": [
+                    {"url": "https://hg.mozilla.org/"},
+                    {"url": "https://hg.mozilla.org/d"},
+                    {"url": "https://hg.mozilla.org/e"}
+                ]
+            }
+        }
+
+        self.utils.execute_es_tests(test)
+
+
+
+
     def test_date_on_duration(self):
         test = {
             "data": [

@@ -797,7 +797,7 @@ class TestSetOps(BaseTestCase):
                 "from": TEST_TABLE,
                 "where": {"and":[
                     {"prefix":{"url": "https://hg.mozilla.org/"}},
-                    {"find": [{"not_left": {"url": 22}}, {"literal": "/"}]}
+                    {"find": [{"not_left": {"url": 23}}, {"literal": "/"}]}
                 ]}
             },
             "expecting_list":{

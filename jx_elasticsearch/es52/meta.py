@@ -120,7 +120,7 @@ class FromESMetadata(Schema):
                 cols = self.meta.columns.find("meta.columns", None)
                 for cc in cols:
                     cc.partitions = cc.cardinality = None
-                    cc.last_updated = Date.now()
+                    cc.last_updated = Date.now() - TOO_OLD
                 self.todo.extend(cols)
 
     def _get_columns(self, table=None):
@@ -150,7 +150,7 @@ class FromESMetadata(Schema):
         )
 
         def add_column(c, query_path):
-            c.last_updated = Date.now()
+            c.last_updated = Date.now() - TOO_OLD
             if query_path[0] != ".":
                 c.names[query_path[0]] = relative_field(c.names["."], query_path[0])
 
@@ -281,7 +281,7 @@ class FromESMetadata(Schema):
             })
             r = result.aggregations._
             count = result.hits.total
-            cardinality = coalesce(r.value, r._nested.value, r.doc_count)
+            cardinality = coalesce(r.value, r._nested.value, 0 if r.doc_count == 0 else None)
             if cardinality == None:
                 Log.error("logic error")
 
@@ -346,7 +346,7 @@ class FromESMetadata(Schema):
                 parts = jx.sort(aggs.buckets.key)
 
             if DEBUG:
-                Log.note("{{field}} has {{parts}}", field=c.es_index, parts=parts)
+                Log.note("{{field}} has {{parts}}", field=c.names["."], parts=parts)
             with self.meta.columns.locker:
                 self.meta.columns.update({
                     "set": {

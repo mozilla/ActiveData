@@ -21,7 +21,7 @@ from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDe
 from jx_elasticsearch.es52.decoders import DimFieldListDecoder
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp
 from jx_elasticsearch.es52.setop import get_pull_stats
-from jx_elasticsearch.es52.util import aggregates1_4
+from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, unwraplist
@@ -34,7 +34,7 @@ from mo_times.timer import Timer
 
 def is_aggsop(es, query):
     es.cluster.get_metadata()
-    if any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5."])) and (query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate)):
+    if query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate):
         return True
     return False
 
@@ -229,7 +229,7 @@ def es_aggsop(es, frum, query):
 
                 # PULL VALUE OUT OF THE stats AGGREGATE
                 es_query.aggs[literal_field(canonical_name)].extended_stats.field = es_cols[0].es_column
-                s.pull = jx_expression_to_function({"coalesce": [literal_field(canonical_name) + "." + aggregates1_4[s.aggregate], s.default]})
+                s.pull = jx_expression_to_function({"coalesce": [literal_field(canonical_name) + "." + aggregates[s.aggregate], s.default]})
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
@@ -282,7 +282,7 @@ def es_aggsop(es, frum, query):
             s.pull = jx_expression_to_function(stats_name + ".buckets.key")
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
-            s.pull = jx_expression_to_function(canonical_name + "." + aggregates1_4[s.aggregate])
+            s.pull = jx_expression_to_function(canonical_name + "." + aggregates[s.aggregate])
             es_query.aggs[canonical_name].extended_stats.script = s.value.to_painless(schema).script(schema)
 
     decoders = get_decoders_by_depth(query)

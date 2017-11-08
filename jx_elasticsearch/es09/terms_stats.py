@@ -11,13 +11,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import domains
-
 from jx_base.queries import is_variable_name
 from jx_elasticsearch.es09.expressions import UID
 from jx_elasticsearch.es09.util import aggregates, build_es_query, compileEdges2Term
-from jx_elasticsearch.es09.util import post as es_post
+from jx_python import domains
+from jx_python import es09
 from jx_python.containers.cube import Cube
+from jx_python.expressions import simplify_esfilter
 from mo_collections.matrix import Matrix
 from mo_dots import literal_field, coalesce
 from mo_dots import wrap, listwrap

@@ -73,6 +73,7 @@ class Index(Features):
         read_only=True,
         tjson=False,  # STORED AS TYPED JSON
         timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
+        consistency="one",  # ES WRITE CONSISTENCY (https://www.elastic.co/guide/en/elasticsearch/reference/1.7/docs-index_.html#index-consistency)
         debug=False,  # DO NOT SHOW THE DEBUG STATEMENTS
         cluster=None,
         kwargs=None
@@ -89,13 +90,6 @@ class Index(Features):
             self.cluster = cluster
         else:
             self.cluster = Cluster(kwargs)
-
-        if kwargs.tjson:
-            from pyLibrary.env.typed_inserter import TypedInserter
-
-            self.encode = TypedInserter(self).typed_encode
-        else:
-            self.encode = default_encoder
 
         try:
             full_index = self.get_index(index)
@@ -128,6 +122,15 @@ class Index(Features):
         if self.debug:
             Log.alert("elasticsearch debugging for {{url}} is on", url=self.url)
 
+        if kwargs.tjson:
+            from pyLibrary.env.typed_inserter import TypedInserter
+
+            self.encode = TypedInserter(self).typed_encode
+        else:
+            self.encode = default_encoder
+
+
+
     @property
     def url(self):
         return self.cluster.path.rstrip("/") + "/" + self.path.lstrip("/")
@@ -140,7 +143,6 @@ class Index(Features):
             if index == None and retry:
                 #TRY AGAIN, JUST IN CASE
                 self.cluster.cluster_state = None
-                self.cluster.get_metadata(force=True)
                 return self.get_properties(retry=False)
 
             if not index.mappings[self.settings.type]:
@@ -148,7 +150,7 @@ class Index(Features):
                     "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{metadata|json}}",
                     index=self.settings.index,
                     type=self.settings.type,
-                    metadata=metadata
+                    metadata=jx.sort(metadata.indices.keys())
                 )
             return index.mappings[self.settings.type].properties
         else:
@@ -159,7 +161,7 @@ class Index(Features):
                     index=self.settings.index,
                     type=self.settings.type
                 )
-            return wrap(mapping[self.settings.type].properties)
+            return wrap({"mappings": mapping[self.settings.type]})
 
     def delete_all_but_self(self):
         """
@@ -244,12 +246,12 @@ class Index(Features):
         self.cluster.get_metadata()
 
         if self.cluster.cluster_state.version.number.startswith("0.90"):
-            query = {"bool": {
+            query = {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}
         elif self.cluster.cluster_state.version.number.startswith("1."):
-            query = {"query": {"bool": {
+            query = {"query": {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}}
@@ -262,7 +264,8 @@ class Index(Features):
         result = self.cluster.delete(
             self.path + "/_query",
             data=value2json(query),
-            timeout=600
+            timeout=600,
+            params={"consistency": self.settings.consistency}
         )
 
         for name, status in result._indices.items():
@@ -301,9 +304,10 @@ class Index(Features):
                 response = self.cluster.post(
                     self.path + "/_bulk",
                     data=data_bytes,
-                    headers={"Content-Type": "application/x-ndjson"},
+                    headers={"Content-Type": "text"},
                     timeout=self.settings.timeout,
-                    retry=self.settings.retry
+                    retry=self.settings.retry,
+                    params={"consistency": self.settings.consistency}
                 )
                 items = response["items"]
 
@@ -536,7 +540,6 @@ class Cluster(object):
         return Index(kwargs)
 
     def _get_best(self, settings):
-        from jx_python import jx
         aliases = self.get_aliases()
         indexes = jx.sort([
             a
@@ -652,6 +655,7 @@ class Cluster(object):
             try:
                 state = self.get("/_cluster/state", retry={"times": 5}, timeout=3)
                 if index in state.metadata.indices:
+                    self._metadata = None
                     break
                 Log.note("Waiting for index {{index}} to appear", index=index)
             except Exception as e:
@@ -1032,12 +1036,12 @@ class Alias(Features):
         self.cluster.get_metadata()
 
         if self.cluster.cluster_state.version.number.startswith("0.90"):
-            query = {"bool": {
+            query = {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}
         elif self.cluster.cluster_state.version.number.startswith("1."):
-            query = {"query": {"bool": {
+            query = {"query": {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}}

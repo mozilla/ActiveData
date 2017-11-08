@@ -333,7 +333,7 @@ def _get_attr(obj, path):
             try:
                 # THIS CASE IS WHEN THE __init__.py DOES NOT IMPORT THE SUBDIR FILE
                 # WE CAN STILL PUT THE PATH TO THE FILE IN THE from CLAUSE
-                if len(path)==1:
+                if len(path) == 1:
                     # GET MODULE OBJECT
                     output = __import__(obj.__name__ + b"." + attr_name.decode('utf8'), globals(), locals(), [attr_name.decode('utf8')], 0)
                     return output
@@ -378,7 +378,7 @@ def _set_attr(obj_, path, value):
     if obj is None:  # DELIBERATE USE OF `is`: WE DO NOT WHAT TO CATCH Null HERE (THEY CAN BE SET)
         obj = _get_attr(obj_, path[:-1])
         if obj is None:
-            get_logger().error(PATH_NOT_FOUND+" Tried to get attribute of None")
+            get_logger().error(PATH_NOT_FOUND+" tried to get attribute of None")
 
     attr_name = path[-1]
 

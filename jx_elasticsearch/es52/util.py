@@ -7,13 +7,13 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from jx_base import STRING, JSON_TYPES, BOOLEAN, NUMBER, OBJECT
-from mo_dots import wrap, split_field, join_field
+from jx_base import STRING, BOOLEAN, NUMBER, OBJECT
 from jx_elasticsearch.es52.expressions import Variable
+from mo_dots import wrap
 
 
 def es_query_template(path):
@@ -79,7 +79,7 @@ def jx_sort_to_es_sort(sort, schema):
 
 
 # FOR ELASTICSEARCH aggs
-aggregates1_4 = {
+aggregates = {
     "none": "none",
     "one": "count",
     "cardinality": "cardinality",

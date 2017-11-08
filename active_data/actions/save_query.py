@@ -12,10 +12,9 @@ from __future__ import unicode_literals
 
 import hashlib
 
+import jx_elasticsearch
 from active_data import cors_wrapper
 from flask import Response
-
-from jx_elasticsearch.es52 import FromES
 from mo_dots import wrap
 from mo_kwargs import override
 from mo_logs import Log
@@ -88,7 +87,7 @@ class SaveQueries(object):
         es.add_alias(es.settings.alias)
         es.flush()
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size, period=1)
-        self.es = FromES(es.settings)
+        self.es = jx_elasticsearch.new_instance(es.settings)
 
     def find(self, hash):
         result = self.es.query({

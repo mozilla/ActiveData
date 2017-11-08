@@ -14,19 +14,19 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from jx_base import domains
-from jx_elasticsearch import es09
-from mo_dots import coalesce, split_field, Data, wrap
-from mo_dots import listwrap, unwrap
-from mo_logs import Log
-from mo_math import AND, SUM, OR
-
 from jx_base.expressions import TRUE, jx_expression, Variable, LeavesOp
 from jx_base.queries import is_variable_name
+from jx_elasticsearch import es09
 from jx_elasticsearch.es09.expressions import unpack_terms
 from jx_elasticsearch.es09.util import aggregates
+from jx_elasticsearch.es09.util import post as es_post
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
+from mo_dots import coalesce, split_field, Data, wrap
+from mo_dots import listwrap, unwrap
 from mo_dots.lists import FlatList
+from mo_logs import Log
+from mo_math import AND, SUM, OR
 
 
 def is_fieldop(query):

@@ -934,12 +934,17 @@ def to_esfilter(self, schema):
 
 @extend(PrefixOp)
 def to_painless(self, schema):
-    return "(" + self.field.to_painless(schema) + ").startsWith(" + self.prefix.to_painless(schema) + ")"
+    if not self.field:
+        return "true"
+    else:
+        return "(" + self.field.to_painless(schema) + ").startsWith(" + self.prefix.to_painless(schema) + ")"
 
 
 @extend(PrefixOp)
 def to_esfilter(self, schema):
-    if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
+    if not self.field:
+        return {"match_all": {}}
+    elif isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
         var = schema.leaves(self.field.var)[0].es_column
         return {"prefix": {var: self.prefix.value}}
     else:

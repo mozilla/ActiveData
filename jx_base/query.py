@@ -486,6 +486,15 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
                     dim=dim_index,
                     domain=leaves.getDomain()
                 )]
+        else:
+            return [
+                Data(
+                    name=edge,
+                    value=jx_expression(edge),
+                    allowNulls=True,
+                    dim=dim_index
+                )
+            ]
     else:
         edge = wrap(edge)
         if not edge.name and not isinstance(edge.value, text_type):
@@ -586,7 +595,7 @@ def _normalize_domain(domain=None, limit=None, schema=None):
         if domain.partitions:
             return SetDomain(partitions=domain.partitions.left(limit))
         else:
-            return DefaultDomain()
+            return DefaultDomain(type="default", limit=limit)
     elif isinstance(domain, Dimension):
         return domain.getDomain()
     elif schema and isinstance(domain, text_type) and schema[domain]:

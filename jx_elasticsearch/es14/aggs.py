@@ -20,7 +20,7 @@ from mo_math import Math, MAX
 
 from jx_elasticsearch.es14.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
 from jx_elasticsearch.es14.decoders import DimFieldListDecoder
-from jx_elasticsearch.es14.util import aggregates1_4, NON_STATISTICAL_AGGS
+from jx_elasticsearch.es14.util import aggregates, NON_STATISTICAL_AGGS
 from jx_elasticsearch.es14.expressions import simplify_esfilter, split_expression_by_depth, AndOp, Variable, NullOp, TupleOp
 from jx_base.query import MAX_LIMIT
 from mo_times.timer import Timer
@@ -28,7 +28,7 @@ from mo_times.timer import Timer
 
 def is_aggsop(es, query):
     es.cluster.get_metadata()
-    if any(map(es.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7."])) and (query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate)):
+    if query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate):
         return True
     return False
 
@@ -224,7 +224,7 @@ def es_aggsop(es, frum, query):
             else:
                 # PULL VALUE OUT OF THE stats AGGREGATE
                 es_query.aggs[literal_field(canonical_name)].extended_stats.field = es_field_name
-                s.pull = literal_field(canonical_name) + "." + aggregates1_4[s.aggregate]
+                s.pull = literal_field(canonical_name) + "." + aggregates[s.aggregate]
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
@@ -289,7 +289,7 @@ def es_aggsop(es, frum, query):
             s.pull = stats_name + ".buckets.key"
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
-            s.pull = canonical_name + "." + aggregates1_4[s.aggregate]
+            s.pull = canonical_name + "." + aggregates[s.aggregate]
             es_query.aggs[canonical_name].extended_stats.script = abs_value.to_ruby()
 
     decoders = get_decoders_by_depth(query)

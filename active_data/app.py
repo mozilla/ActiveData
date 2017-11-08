@@ -30,7 +30,6 @@ from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.sql import sql_query
 from active_data.actions.static import download
 from jx_base import container
-from jx_elasticsearch.es52.meta import FromESMetadata
 from mo_files import File
 from mo_logs import Log
 from mo_logs import constants, startup
@@ -113,7 +112,6 @@ def setup(settings=None):
             app.add_url_rule('/exit', 'exit', _exit)
 
         # TRIGGER FIRST INSTANCE
-        FromESMetadata(config.elasticsearch)
         if config.saved_queries:
             setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])

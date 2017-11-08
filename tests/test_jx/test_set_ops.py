@@ -82,15 +82,13 @@ class TestSetOps(BaseTestCase):
                 "select": "a.b.d"
             },
             "expecting_list": {
-                "meta": {"format": "list"},
-                "data": [
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL
-                ]
-            },
+                "meta": {"format": "list"}, "data": [
+                {},
+                {},
+                {},
+                {},
+                {}
+            ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a.b.d"],

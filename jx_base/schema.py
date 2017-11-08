@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from copy import copy
 
 from jx_base import STRUCT, NESTED, PRIMITIVE, OBJECT, EXISTS
-from mo_dots import join_field, split_field, Null, startswith_field, set_default
+from mo_dots import join_field, split_field, Null, startswith_field, set_default, wrap
 from mo_json.typed_encoder import nest_free_path, untype_path
 from mo_logs import Log
 
@@ -85,9 +85,12 @@ class Schema(object):
             self.query_path = [c for c in columns if c.type == NESTED and c.names["."] == query_path][0].es_column
         self.lookup, self.lookup_leaves = _indexer(columns, self.query_path)
 
-
     def __getitem__(self, column_name):
-        return self.lookup.get(column_name, Null)
+        cs = self.lookup.get(column_name)
+        if cs:
+            return list(cs)
+        else:
+            return [wrap({"es_column": column_name})]
 
     def items(self):
         return self.lookup.items()
@@ -102,7 +105,6 @@ class Schema(object):
         :return: NAME OF column
         """
         return column.names[self.query_path]
-
 
     def values(self, name):
         """

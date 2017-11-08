@@ -17,7 +17,6 @@ from future.utils import text_type
 from active_data import record_request
 from active_data.actions import save_query
 from jx_base import STRUCT
-from jx_elasticsearch.es52.meta import TOO_OLD
 from jx_python import meta
 from mo_dots import coalesce, join_field, split_field
 from mo_logs import Log, strings
@@ -103,7 +102,7 @@ def test_mode_wait(query):
         cols = [c for c in m.get_columns(table_name=query["from"], force=True) if c.type not in STRUCT]
         for c in cols:
             Log.note("Mark {{column.names}} dirty at {{time}}", column=c, time=now)
-            c.last_updated = now - TOO_OLD
+            c.last_updated = now - m.too_old
             m.todo.push(c)
 
         while end_time > now:

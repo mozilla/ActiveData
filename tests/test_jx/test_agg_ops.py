@@ -246,7 +246,7 @@ class TestAggOps(BaseTestCase):
             "data": [i*2 for i in range(30)],
             "query": {
                 "from": TEST_TABLE,
-                "select": {"name": "max", "value": ".", "aggregate": "max"}
+                "select": {"value": ".", "aggregate": "max"}
             },
             "expecting_list": {
                 "meta": {"format": "value"},

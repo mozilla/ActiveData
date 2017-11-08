@@ -1844,22 +1844,33 @@ class PrefixOp(Expression):
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
-        if isinstance(term, Mapping):
+        if not term:
+            self.field = None
+            self.prefix=None
+        elif isinstance(term, Mapping):
             self.field, self.prefix = term.items()[0]
         else:
             self.field, self.prefix = term
 
     def __data__(self):
-        if isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
+        if not self.field:
+            return {"prefix": {}}
+        elif isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
             return {"prefix": {self.field.var: self.prefix.value}}
         else:
             return {"prefix": [self.field.__data__(), self.prefix.__data__()]}
 
     def vars(self):
-        return {self.field.var}
+        if not self.field:
+            return set()
+        else:
+            return {self.field.var}
 
     def map(self, map_):
-        return PrefixOp("prefix", [self.field.map(map_), self.prefix.map(map_)])
+        if not self.field:
+            return self
+        else:
+            return PrefixOp("prefix", [self.field.map(map_), self.prefix.map(map_)])
 
 
 class ConcatOp(Expression):

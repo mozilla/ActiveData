@@ -16,14 +16,14 @@ from collections import Mapping
 from numbers import Number
 
 from future.utils import text_type
-from mo_dots import coalesce, Data, set_default, Null, listwrap, unwrap
-from mo_dots import wrap
-from mo_logs import Log
-from mo_math import MAX, MIN
 
 from jx_base.expressions import jx_expression
 from mo_collections.unique_index import UniqueIndex
+from mo_dots import coalesce, Data, set_default, Null, listwrap
+from mo_dots import wrap
 from mo_dots.lists import FlatList
+from mo_logs import Log
+from mo_math import MAX, MIN
 from mo_times.dates import Date
 from mo_times.durations import Duration
 

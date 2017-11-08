@@ -50,12 +50,15 @@ class AggsDecoder(object):
                     dimension={"fields":e.value.terms}
                 )
                 return object.__new__(DimFieldListDecoder)
-            elif isinstance(e.value, Variable) and e.value.var in ["run.type", "build.type"]:
-                # SPECIAL MULTIVALUE COLUMNS
-                return object.__new__(MultivalueDecoder)
             elif isinstance(e.value, Variable):
                 schema = query.frum.schema
                 col = schema[e.value.var][0]
+
+                # TODO: REMOVE THIS SPECIAL FIX
+                if col.names["."] == "run.type":
+                    # SPECIAL MULTIVALUE COLUMNS
+                    col.partitions = ["e10s", "chunked", "gfx", "stylo"]
+                    return object.__new__(MultivalueDecoder)
 
                 if col.type in STRUCT:
                     return object.__new__(ObjectDecoder)
@@ -73,7 +76,6 @@ class AggsDecoder(object):
                 else:
                     e.domain = set_default(DefaultDomain(limit=limit), e.domain.__data__())
                     return object.__new__(DefaultDecoder)
-
             else:
                 return object.__new__(DefaultDecoder)
 

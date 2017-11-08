@@ -452,6 +452,7 @@ class NullOp(Literal):
 
     def __data__(self):
         return None
+NULL = NullOp()
 
 
 class TrueOp(Literal):

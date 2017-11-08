@@ -456,7 +456,10 @@ class ScriptOp(Expression):
         self.script = script
 
     def to_ruby(self, not_null=False, boolean=False, many=False):
-        return self.script
+        if many:
+            return "[" + self.script + "]"
+        else:
+            return self.script
 
     def to_python(self, not_null=False, boolean=False):
         return self.script

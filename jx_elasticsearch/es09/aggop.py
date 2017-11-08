@@ -60,7 +60,7 @@ def es_aggop(es, mvel, query):
             value2facet[s.value] = s.name
         name2facet[s.name] = value2facet[s.value]
 
-    data = es09.util.post(es, FromES, query.limit)
+    data = es_post(es, FromES, query.limit)
 
     matricies = {s.name: Matrix(value=fix_es_stats(data.facets[literal_field(s.name)])[aggregates[s.aggregate]]) for s in select}
     cube = Cube(query.select, [], matricies)
@@ -94,7 +94,7 @@ def es_countop(es, mvel, query):
                 }
             }
 
-    data = es09.util.post(es, FromES, query.limit)
+    data = es_post(es, FromES, query.limit)
 
     matricies = {}
     for s in select:

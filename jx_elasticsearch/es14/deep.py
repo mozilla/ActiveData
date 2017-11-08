@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from jx_base import STRUCT
-from jx_elasticsearch import es09, es14
+from jx_elasticsearch.es09.util import post as es_post, es14
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field
 from mo_logs import Log
 from mo_threads import Thread
@@ -218,7 +218,7 @@ def es_deepop(es, query):
     # <COMPLICATED> ES needs two calls to get all documents
     more = []
     def get_more(please_stop):
-        more.append(es09.util.post(
+        more.append(es_post(
             es,
             Data(
                 filter=more_filter,
@@ -230,7 +230,7 @@ def es_deepop(es, query):
         need_more = Thread.run("get more", target=get_more)
 
     with Timer("call to ES") as call_timer:
-        data = es09.util.post(es, es_query, query.limit)
+        data = es_post(es, es_query, query.limit)
 
     # EACH A HIT IS RETURNED MULTIPLE TIMES FOR EACH INNER HIT, WITH INNER HIT INCLUDED
     def inners():

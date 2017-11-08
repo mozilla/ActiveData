@@ -13,7 +13,6 @@ from __future__ import unicode_literals
 
 from jx_base import STRUCT, NESTED
 from jx_base.expressions import NULL
-from jx_elasticsearch import es09, es52
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field, set_default, relative_field, startswith_field
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
@@ -21,9 +20,10 @@ from mo_threads import Thread
 from pyLibrary import convert
 
 from jx_base.query import DEFAULT_LIMIT
+from jx_elasticsearch.es09.util import post as es_post
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, LeavesOp
 from jx_elasticsearch.es52.setop import format_dispatch, get_pull_function, get_pull
-from jx_elasticsearch.es52.util import jx_sort_to_es_sort
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template
 from jx_python.expressions import compile_expression, jx_expression_to_function
 from mo_times.timer import Timer
 
@@ -58,7 +58,7 @@ def es_deepop(es, query):
     # {"inner_hit":{"script_fields":[{"script":""}...]}}, BUT THEN YOU
     # LOOSE "_source" BUT GAIN "fields", FORCING ALL FIELDS TO BE EXPLICIT
     post_expressions = {}
-    es_query, es_filters = es52.util.es_query_template(query_path)
+    es_query, es_filters = es_query_template(query_path)
 
     # SPLIT WHERE CLAUSE BY DEPTH
     wheres = split_expression_by_depth(query.where, schema)
@@ -184,7 +184,7 @@ def es_deepop(es, query):
     # <COMPLICATED> ES needs two calls to get all documents
     more = []
     def get_more(please_stop):
-        more.append(es09.util.post(
+        more.append(es_post(
             es,
             Data(
                 query=more_filter,
@@ -196,7 +196,7 @@ def es_deepop(es, query):
         need_more = Thread.run("get more", target=get_more)
 
     with Timer("call to ES") as call_timer:
-        data = es09.util.post(es, es_query, query.limit)
+        data = es_post(es, es_query, query.limit)
 
     # EACH A HIT IS RETURNED MULTIPLE TIMES FOR EACH INNER HIT, WITH INNER HIT INCLUDED
     def inners():

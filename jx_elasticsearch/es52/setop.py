@@ -13,13 +13,13 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from jx_base import OBJECT, EXISTS, NESTED
+from jx_base import NESTED
 from jx_base.domains import ALGEBRAIC
-from jx_base.expressions import NULL, IDENTITY
+from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
-from jx_elasticsearch import es52, es09
+from jx_elasticsearch.es09.util import post as es_post
 from jx_elasticsearch.es52.expressions import Variable, LeavesOp
-from jx_elasticsearch.es52.util import jx_sort_to_es_sort
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
@@ -59,7 +59,7 @@ def is_setop(es, query):
 def es_setop(es, query):
     schema = query.frum.schema
 
-    es_query, filters = es52.util.es_query_template(schema.query_path)
+    es_query, filters = es_query_template(schema.query_path)
     nested_filter = None
     set_default(filters[0], query.where.partial_eval().to_esfilter(schema))
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
@@ -207,7 +207,7 @@ def es_setop(es, query):
 
     with Timer("call to ES") as call_timer:
         Log.note("{{data}}", data=es_query)
-        data = es09.util.post(es, es_query, query.limit)
+        data = es_post(es, es_query, query.limit)
 
     T = data.hits.hits
 

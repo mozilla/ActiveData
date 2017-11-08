@@ -14,6 +14,8 @@ import hashlib
 
 from active_data import cors_wrapper
 from flask import Response
+
+from jx_elasticsearch.es52 import FromES
 from mo_dots import wrap
 from mo_kwargs import override
 from mo_logs import Log

@@ -16,7 +16,7 @@ from future.utils import text_type
 from jx_base.domains import SetDomain
 from jx_base.expressions import TupleOp, NULL
 from jx_base.query import DEFAULT_LIMIT
-from jx_elasticsearch import es09
+from jx_elasticsearch.es09.util import post as es_post
 from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
 from jx_elasticsearch.es52.decoders import DimFieldListDecoder
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp
@@ -30,8 +30,6 @@ from mo_logs import Log
 from mo_logs.strings import quote
 from mo_math import Math, MAX, UNION
 from mo_times.timer import Timer
-
-
 
 
 def is_aggsop(es, query):
@@ -341,7 +339,7 @@ def es_aggsop(es, frum, query):
     es_query.size = 0
 
     with Timer("ES query time") as es_duration:
-        result = es09.util.post(es, es_query, query.limit)
+        result = es_post(es, es_query, query.limit)
 
     try:
         format_time = Timer("formatting")

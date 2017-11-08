@@ -72,7 +72,7 @@ def es_fieldop(es, query):
             FromES.fields.append(s)
     FromES.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
 
-    data = es09.util.post(es, FromES, query.limit)
+    data = es_post(es, FromES, query.limit)
 
     T = data.hits.hits
     matricies = {}
@@ -162,7 +162,7 @@ def es_setop(es, mvel, query):
             "facet_filter": jx_expression(query.where).to_esfilter()
         }
 
-    data = es09.util.post(es, FromES, query.limit)
+    data = es_post(es, FromES, query.limit)
 
     if len(select) == 1 and isinstance(select[0].value, LeavesOp):
         # SPECIAL CASE FOR SINGLE COUNT
@@ -218,7 +218,7 @@ def es_deepop(es, mvel, query):
         "facet_filter": jx_expression(query.where).to_esfilter()
     }
 
-    data = es09.util.post(es, FromES, query.limit)
+    data = es_post(es, FromES, query.limit)
 
     rows = unpack_terms(data.facets.mvel, query.edges)
     terms = zip(*rows)

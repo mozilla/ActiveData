@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_elasticsearch import es09
+from jx_elasticsearch.es09.util import post as es_post
 from jx_python import jx
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, \
     unwraplist
@@ -348,7 +348,7 @@ def es_aggsop(es, frum, query):
     es_query.size = 0
 
     with Timer("ES query time") as es_duration:
-        result = es09.util.post(es, es_query, query.limit)
+        result = es_post(es, es_query, query.limit)
 
     try:
         format_time = Timer("formatting")

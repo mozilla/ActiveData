@@ -56,7 +56,7 @@ def es_terms(es, mvel, query):
 
     term2Parts = packed_term.term2parts
 
-    data = es09.util.post(es, FromES, query.limit)
+    data = es_post(es, FromES, query.limit)
 
     # GETTING ALL PARTS WILL EXPAND THE EDGES' DOMAINS
     # BUT HOW TO UNPACK IT FROM THE term FASTER IS UNKNOWN
@@ -120,7 +120,7 @@ def _es_terms2(es, mvel, query):
                 ]})
             }
 
-    data = es09.util.post(es, FromES, query.limit)
+    data = es_post(es, FromES, query.limit)
 
     # UNION ALL TERMS FROM SECOND DIMENSION
     values2 = set()

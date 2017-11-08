@@ -190,7 +190,7 @@ def extract_rows(es, es_query, query):
             Log.error("Do not know what to do")
 
     with Timer("call to ES") as call_timer:
-        data = es09.util.post(es, es_query, query.limit)
+        data = es_post(es, es_query, query.limit)
 
     T = data.hits.hits
 

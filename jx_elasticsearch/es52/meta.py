@@ -281,7 +281,7 @@ class FromESMetadata(Schema):
             })
             r = result.aggregations._
             count = result.hits.total
-            cardinality = coalesce(r.value, r._nested.value, 0 if r.doc_count == 0 else None)
+            cardinality = coalesce(r.value, r._nested.value, r.doc_count)
             if cardinality == None:
                 Log.error("logic error")
 
@@ -358,13 +358,12 @@ class FromESMetadata(Schema):
                     "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                 })
         except Exception as e:
-            from tests.test_jx import TEST_TABLE
-
             if any(map(self.default_es.version.startswith, ["5."])):
                 is_missing = "index_not_found_exception"
             else:  # "1.4.", "1.5.", "1.6.", "1.7."
                 is_missing = "IndexMissingException"
 
+            from tests.test_jx import TEST_TABLE
             if is_missing in e and (c.es_index.startswith(TEST_TABLE_PREFIX) or c.es_index.startswith(TEST_TABLE)):
                 with self.meta.columns.locker:
                     self.meta.columns.update({

@@ -11,20 +11,25 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import STRUCT
+from collections import Mapping
+
+from jx_base import NESTED
 from jx_base.domains import ALGEBRAIC
+from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es09.util import post as es_post
-from jx_elasticsearch.es14.expressions import simplify_esfilter, Variable, LeavesOp
+from jx_elasticsearch.es14.expressions import Variable, LeavesOp
 from jx_elasticsearch.es14.util import jx_sort_to_es_sort, es_query_template
 from jx_python.containers.cube import Cube
+from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
-from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field
+from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field
 from mo_dots import listwrap
 from mo_dots.lists import FlatList
-from mo_json.typed_encoder import encode_property
+from mo_json.typed_encoder import untype_path, nest_free_path, untyped
 from mo_logs import Log
-from mo_math import AND, MAX
+from mo_math import AND
+from mo_math import MAX
 from mo_times.timer import Timer
 
 format_dispatch = {}
@@ -49,141 +54,154 @@ def is_setop(es, query):
 
 
 def es_setop(es, query):
-    es_query, filters = es_query_template(query.frum.name)
-    set_default(filters[0], simplify_esfilter(query.where.to_esfilter()))
+    schema = query.frum.schema
+
+    es_query, filters = es_query_template(schema.query_path)
+    nested_filter = None
+    set_default(filters[0], query.where.partial_eval().to_esfilter(schema))
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
-    es_query.sort = jx_sort_to_es_sort(query.sort)
-    es_query.fields = FlatList()
+    es_query.stored_fields = FlatList()
 
-    return extract_rows(es, es_query, query)
-
-
-def extract_rows(es, es_query, query):
-    is_list = isinstance(query.select, list)
     selects = wrap([s.copy() for s in listwrap(query.select)])
     new_select = FlatList()
     schema = query.frum.schema
-    columns = schema.columns
-    leaf_columns = set(c.names["."] for c in columns if c.type not in STRUCT and (c.nested_path[0] == "." or c.es_column == c.nested_path[0]))
-    nested_columns = set(c.names["."] for c in columns if c.nested_path[0] != ".")
+    # columns = schema.columns
+    # nested_columns = set(c.names["."] for c in columns if c.nested_path[0] != ".")
 
-    i = 0
-    source = "fields"
+    es_query.sort = jx_sort_to_es_sort(query.sort, schema)
+
+    put_index = 0
     for select in selects:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
-        if isinstance(select.value, LeavesOp):
-            new_name_prefix = select.name + "\\." if select.name != "." else ""
+        if isinstance(select.value, LeavesOp) and isinstance(select.value.term, Variable):
             term = select.value.term
-            if isinstance(term, Variable):
-
-                if term.var == ".":
-                    es_query.fields = None
-                    source = "_source"
-                    for cname, cs in schema.lookup.items():
-                        for c in cs:
-                            if c.type not in STRUCT and c.es_column != "_id":
-                                new_name = new_name_prefix + literal_field(cname)
-                                new_select.append({
-                                    "name": new_name,
-                                    "value": Variable(c.es_column),
-                                    "put": {"name": new_name, "index": i, "child": "."}
-                                })
-                                i += 1
-                else:
-                    prefix = term.var + "."
-                    prefix_length = len(prefix)
-                    for cname, cs in schema.lookup.items():
-                        if cname.startswith(prefix):
-                            suffix = cname[prefix_length:]
-                            for c in cs:
-                                if c.type not in STRUCT:
-                                    if es_query.fields is not None:
-                                        es_query.fields.append(c.es_column)
-                                    new_name = new_name_prefix + literal_field(suffix)
-                                    new_select.append({
-                                        "name": new_name,
-                                        "value": Variable(c.es_column),
-                                        "put": {"name": new_name, "index": i, "child": "."}
-                                    })
-                                    i += 1
-
-        elif isinstance(select.value, Variable):
-            if select.value.var == ".":
-                es_query.fields = None
-                source = "_source"
-
-                new_select.append({
-                    "name": select.name,
-                    "value": select.value,
-                    "put": {"name": select.name, "index": i, "child": "."}
-                })
-                i += 1
-            elif select.value.var == "_id":
-                new_select.append({
-                    "name": select.name,
-                    "value": select.value,
-                    "pull": "_id",
-                    "put": {"name": select.name, "index": i, "child": "."}
-                })
-                i += 1
-            elif select.value.var in nested_columns or [c for c in nested_columns if c.startswith(select.value.var+".")]:
-                es_query.fields = None
-                source = "_source"
-
-                new_select.append({
-                    "name": select.name,
-                    "value": select.value,
-                    "put": {"name": select.name, "index": i, "child": "."}
-                })
-                i += 1
-            else:
-                prefix = select.value.var + "."
-                prefix_length = len(prefix)
-                net_columns = [c for c in leaf_columns if c.startswith(prefix)]
-                if not net_columns:
-                    # LEAF
-                    if es_query.fields is not None:
-                        es_query.fields.append(encode_property(select.value.var))
+            leaves = schema.leaves(term.var)
+            for c in leaves:
+                full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
+                if c.type == NESTED:
+                    es_query.stored_fields = ["_source"]
                     new_select.append({
-                        "name": select.name,
-                        "value": select.value,
-                        "put": {"name": select.name, "index": i, "child": "."}
+                        "name": full_name,
+                        "value": Variable(c.es_column),
+                        "put": {"name": literal_field(full_name), "index": put_index, "child": "."},
+                        "pull": get_pull_source(c.es_column)
                     })
-                    i += 1
+                    put_index += 1
+                elif c.nested_path[0] != ".":
+                    es_query.stored_fields = ["_source"]
                 else:
-                    # LEAVES OF OBJECT
-                    for cname, cs in schema.lookup.items():
-                        if cname.startswith(prefix):
-                            for c in cs:
-                                if c.type not in STRUCT:
-                                    if es_query.fields is not None:
-                                        es_query.fields.append(c.es_column)
-                                    new_select.append({
+                    es_query.stored_fields += [c.es_column]
+                    new_select.append({
+                        "name": full_name,
+                        "value": Variable(c.es_column),
+                        "put": {"name": literal_field(full_name), "index": put_index, "child": "."}
+                    })
+                    put_index += 1
+        elif isinstance(select.value, Variable):
+            s_column = select.value.var
+            # LEAVES OF OBJECT
+            leaves = schema.leaves(s_column)
+            nested_selects = {}
+            if leaves:
+                if any(c.type == NESTED for c in leaves):
+                    # PULL WHOLE NESTED ARRAYS
+                    es_query.stored_fields = ["_source"]
+                    for c in leaves:
+                        if len(c.nested_path) == 1:
+                            jx_name = untype_path(c.names["."])
+                            new_select.append({
+                                "name": select.name,
+                                "value": Variable(c.es_column),
+                                "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)},
+                                "pull": get_pull_source(c.es_column)
+                            })
+                else:
+                    # PULL ONLY WHAT'S NEEDED
+                    for c in leaves:
+                        if len(c.nested_path) == 1:
+                            jx_name = untype_path(c.names["."])
+                            if c.type == NESTED:
+                                es_query.stored_fields = ["_source"]
+                                new_select.append({
+                                    "name": select.name,
+                                    "value": Variable(c.es_column),
+                                    "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)},
+                                    "pull": get_pull_source(c.es_column)
+                                })
+
+                            else:
+                                es_query.stored_fields += [c.es_column]
+                                new_select.append({
+                                    "name": select.name,
+                                    "value": Variable(c.es_column),
+                                    "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)}
+                                })
+                        else:
+                            if not nested_filter:
+                                where = filters[0].copy()
+                                nested_filter = [where]
+                                for k in filters[0].keys():
+                                    filters[0][k] = None
+                                set_default(
+                                    filters[0],
+                                    {"bool": {"must": [where, {"bool": {"should": nested_filter}}]}}
+                                )
+
+                            nested_path = c.nested_path[0]
+                            if nested_path not in nested_selects:
+                                where = nested_selects[nested_path] = Data()
+                                nested_filter += [where]
+                                where.nested.path = nested_path
+                                where.nested.query.match_all = {}
+                                where.nested.inner_hits._source = False
+                                where.nested.inner_hits.stored_fields += [c.es_column]
+
+                                child = relative_field(untype_path(c.names[schema.query_path]), s_column)
+                                pull = accumulate_nested_doc(nested_path, Variable(relative_field(s_column, nest_free_path(nested_path))))
+                                new_select.append({
+                                    "name": select.name,
+                                    "value": select.value,
+                                    "put": {
                                         "name": select.name,
-                                        "value": Variable(c.es_column),
-                                        "put": {"name": select.name, "index": i, "child": cname[prefix_length:]}
-                                    })
-                    i += 1
+                                        "index": put_index,
+                                        "child": child
+                                    },
+                                    "pull": pull
+                                })
+                            else:
+                                nested_selects[nested_path].nested.inner_hits.stored_fields+=[c.es_column]
+            else:
+                new_select.append({
+                    "name": select.name,
+                    "value": Variable("$dummy"),
+                    "put": {"name": select.name, "index": put_index, "child": "."}
+                })
+            put_index += 1
         else:
-            es_query.script_fields[literal_field(select.name)] = {"script": select.value.to_ruby()}
+            painless = select.value.partial_eval().to_ruby(schema)
+            es_query.script_fields[literal_field(select.name)] = {"script": painless.script(schema)}
+
             new_select.append({
                 "name": select.name,
-                "pull": "fields." + literal_field(select.name),
-                "put": {"name": select.name, "index": i, "child": "."}
+                "pull": jx_expression_to_function("fields." + literal_field(select.name)),
+                "put": {"name": select.name, "index": put_index, "child": "."}
             })
-            i += 1
+            put_index += 1
 
     for n in new_select:
         if n.pull:
             continue
-        if source == "_source":
-            n.pull = concat_field("_source", n.value.var)
         elif isinstance(n.value, Variable):
-            n.pull = concat_field("fields", literal_field(encode_property(n.value.var)))
+            if es_query.stored_fields[0] == "_source":
+                es_query.stored_fields = ["_source"]
+                n.pull = get_pull_source(n.value.var)
+            else:
+                n.pull = jx_expression_to_function(concat_field("fields", literal_field(n.value.var)))
         else:
             Log.error("Do not know what to do")
 
     with Timer("call to ES") as call_timer:
+        Log.note("{{data}}", data=es_query)
         data = es_post(es, es_query, query.limit)
 
     T = data.hits.hits
@@ -200,30 +218,57 @@ def extract_rows(es, es_query, query):
         Log.error("problem formatting", e)
 
 
+def accumulate_nested_doc(nested_path, expr=IDENTITY):
+    """
+    :param nested_path: THE PATH USED TO EXTRACT THE NESTED RECORDS
+    :param expr: FUNCTION USED ON THE NESTED OBJECT TO GET SPECIFIC VALUE
+    :return: THE DE_TYPED NESTED OBJECT ARRAY
+    """
+    name = literal_field(nested_path)
+    def output(doc):
+        acc = []
+        for h in doc.inner_hits[name].hits.hits:
+            i = h._nested.offset
+            obj = Data()
+            for f, v in h.fields.items():
+                local_path = untype_path(relative_field(f, nested_path))
+                obj[local_path] = unwraplist(v)
+            # EXTEND THE LIST TO THE LENGTH WE REQUIRE
+            for _ in range(len(acc), i+1):
+                acc.append(None)
+            acc[i] = expr(obj)
+        return acc
+    return output
+
+
 def format_list(T, select, query=None):
     data = []
     if isinstance(query.select, list):
         for row in T:
             r = Data()
             for s in select:
-                r[s.put.name][s.put.child] = unwraplist(row[s.pull])
+                v = s.pull(row)
+                r[s.put.name][s.put.child] = unwraplist(v)
             data.append(r if r else None)
     elif isinstance(query.select.value, LeavesOp):
         for row in T:
             r = Data()
             for s in select:
-                r[s.put.name][s.put.child] = unwraplist(row[s.pull])
+                r[s.put.name][s.put.child] = unwraplist(s.pull(row))
             data.append(r if r else None)
     else:
         for row in T:
             r = None
             for s in select:
+                v = unwraplist(s.pull(row))
+                if v is None:
+                    continue
                 if s.put.child == ".":
-                    r = unwraplist(row[s.pull])
+                    r = v
                 else:
                     if r is None:
                         r = Data()
-                    r[s.put.child] = unwraplist(row[s.pull])
+                    r[s.put.child] = v
 
             data.append(r)
 
@@ -239,7 +284,7 @@ def format_table(T, select, query=None):
     for row in T:
         r = [None] * num_columns
         for s in select:
-            value = unwraplist(row[s.pull])
+            value = unwraplist(s.pull(row))
 
             if value == None:
                 continue
@@ -255,10 +300,18 @@ def format_table(T, select, query=None):
         data.append(r)
 
     header = [None] * num_columns
-    for s in select:
-        if header[s.put.index]:
-            continue
-        header[s.put.index] = s.name.replace("\\.", ".")
+
+    if isinstance(query.select, Mapping) and not isinstance(query.select.value, LeavesOp):
+        for s in select:
+            header[s.put.index] = s.name
+    else:
+        for s in select:
+            if header[s.put.index]:
+                continue
+            if s.name == ".":
+                header[s.put.index] = "."
+            else:
+                header[s.put.index] = s.name
 
     return Data(
         meta={"format": "table"},
@@ -291,3 +344,36 @@ set_default(format_dispatch, {
     "table": (format_table, None, "application/json"),
     "list": (format_list, None, "application/json")
 })
+
+def get_pull(column):
+    if column.nested_path[0] == ".":
+        return concat_field("fields", literal_field(column.es_column))
+    else:
+        depth = len(split_field(column.nested_path[0]))
+        rel_name = split_field(column.es_column)[depth:]
+        return join_field(["_inner"] + rel_name)
+
+
+def get_pull_function(column):
+    return jx_expression_to_function(get_pull(column))
+
+
+def get_pull_source(es_column):
+    def output(row):
+        return untyped(row._source[es_column])
+    return output
+
+
+def get_pull_stats(stats_name, median_name):
+    return jx_expression_to_function({"select": [
+        {"name": "count", "value": stats_name + ".count"},
+        {"name": "sum", "value": stats_name + ".sum"},
+        {"name": "min", "value": stats_name + ".min"},
+        {"name": "max", "value": stats_name + ".max"},
+        {"name": "avg", "value": stats_name + ".avg"},
+        {"name": "sos", "value": stats_name + ".sum_of_squares"},
+        {"name": "std", "value": stats_name + ".std_deviation"},
+        {"name": "var", "value": stats_name + ".variance"},
+        {"name": "median", "value": median_name + ".values.50\.0"}
+    ]})
+

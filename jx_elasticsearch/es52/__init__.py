@@ -24,9 +24,9 @@ from jx_base.schema import Schema
 # from jx_elasticsearch.es09 import setop as es09_setop
 from jx_elasticsearch.es52.aggs import es_aggsop, is_aggsop
 from jx_elasticsearch.es52.deep import is_deepop, es_deepop
-from jx_elasticsearch.es52.meta import FromESMetadata
 from jx_elasticsearch.es52.setop import is_setop, es_setop
 from jx_elasticsearch.es52.util import aggregates
+from jx_elasticsearch.meta import FromESMetadata
 from jx_python import jx
 from mo_dots import Data, Null
 from mo_dots import coalesce, split_field, literal_field, unwraplist, join_field
@@ -151,10 +151,6 @@ class ES52(Container):
                 return es_aggsop(self._es, frum, query)
             if is_setop(self._es, query):
                 return es_setop(self._es, query)
-            # if es09_setop.is_setop(query):
-            #     return es09_setop.es_setop(self._es, None, query)
-            # if es09_aggop.is_aggop(query):
-            #     return es09_aggop.es_aggop(self._es, None, query)
             Log.error("Can not handle")
         except Exception as e:
             e = Except.wrap(e)

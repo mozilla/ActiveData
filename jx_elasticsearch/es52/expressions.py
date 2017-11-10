@@ -13,21 +13,20 @@ from __future__ import unicode_literals
 
 import itertools
 
-from future.utils import binary_type, text_type
+from future.utils import text_type
 
 from jx_base import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER
-from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, OrOp, ScriptOp, \
+from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, ScriptOp, \
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, FALSE, TRUE, NULL, FirstOp, FALSE, TRUE
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE
 from mo_dots import coalesce, wrap, Null, unwraplist, set_default, literal_field
-from mo_json import json2value, quote
+from mo_json import quote
 from mo_logs import Log, suppress_exception
 from mo_logs.strings import expand_template
 from mo_math import MAX, OR
 from pyLibrary.convert import string2regexp
-
 
 TO_STRING = """Optional.of({{expr}}).map(
                         value -> {

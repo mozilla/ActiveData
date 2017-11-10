@@ -11,14 +11,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import STRUCT
+from jx_base import STRUCT, NESTED
+from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es09.util import post as es_post
-from jx_elasticsearch.es14.expressions import split_expression_by_depth, simplify_esfilter, AndOp, Variable, LeavesOp
-from jx_elasticsearch.es14.setop import format_dispatch
+from jx_elasticsearch.es14.expressions import split_expression_by_depth, AndOp, Variable, LeavesOp
+from jx_elasticsearch.es14.setop import format_dispatch, get_pull_function, get_pull
 from jx_elasticsearch.es14.util import jx_sort_to_es_sort, es_query_template
-from jx_python.expressions import compile_expression
-from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, unwrap, concat_field, join_field
+from jx_python.expressions import compile_expression, jx_expression_to_function
+from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, concat_field, set_default, relative_field, startswith_field
+from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_threads import Thread
 from mo_times.timer import Timer
@@ -50,41 +52,44 @@ def es_deepop(es, query):
     columns = schema.columns
     query_path = schema.query_path
 
-    map_to_local = {k: get_pull(c[0]) for k, c in schema.lookup.items()}
-
     # TODO: FIX THE GREAT SADNESS CAUSED BY EXECUTING post_expressions
     # THE EXPRESSIONS SHOULD BE PUSHED TO THE CONTAINER:  ES ALLOWS
     # {"inner_hit":{"script_fields":[{"script":""}...]}}, BUT THEN YOU
     # LOOSE "_source" BUT GAIN "fields", FORCING ALL FIELDS TO BE EXPLICIT
     post_expressions = {}
-    es_query, es_filters = es_query_template(query.frum.name)
+    es_query, es_filters = es_query_template(query_path)
 
     # SPLIT WHERE CLAUSE BY DEPTH
     wheres = split_expression_by_depth(query.where, schema)
     for i, f in enumerate(es_filters):
-        # PROBLEM IS {"match_all": {}} DOES NOT SURVIVE set_default()
-        for k, v in unwrap(simplify_esfilter(AndOp("and", wheres[i]).to_esfilter())).items():
-            f[k] = v
+        script = AndOp("and", wheres[i]).partial_eval().to_esfilter(schema)
+        set_default(f, script)
 
     if not wheres[1]:
         more_filter = {
-            "and": [
-                simplify_esfilter(AndOp("and", wheres[0]).to_esfilter()),
-                {"not": {
+            "bool": {
+                "must": [AndOp("and", wheres[0]).partial_eval().to_esfilter(schema)],
+                "must_not": {
                     "nested": {
                         "path": query_path,
-                        "filter": {
+                        "query": {
                             "match_all": {}
                         }
                     }
-                }}
-            ]
+                }
+            }
         }
     else:
         more_filter = None
 
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
-    es_query.sort = jx_sort_to_es_sort(query.sort)
+
+    # es_query.sort = jx_sort_to_es_sort(query.sort)
+    map_to_es_columns = schema.map_to_es()
+    # {c.names["."]: c.es_column for c in schema.leaves(".")}
+    query_for_es = query.map(map_to_es_columns)
+    es_query.sort = jx_sort_to_es_sort(query_for_es.sort, schema)
+
     es_query.fields = []
 
     is_list = isinstance(query.select, list)
@@ -92,99 +97,67 @@ def es_deepop(es, query):
 
     i = 0
     for s in listwrap(query.select):
-        if isinstance(s.value, LeavesOp):
-            if isinstance(s.value.term, Variable):
-                if s.value.term.var == ".":
-                    # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
-                    for c in columns:
-                        if c.type not in STRUCT and c.es_column != "_id":
-                            if c.nested_path[0] == ".":
-                                es_query.fields += [c.es_column]
-                            new_select.append({
-                                "name": c.names[query_path],
-                                "pull": get_pull(c),
-                                "nested_path": c.nested_path[0],
-                                "put": {"name": literal_field(c.names[query_path]), "index": i, "child": "."}
-                            })
-                            i += 1
-                else:
-                    prefix = schema[s.value.term.var][0].names["."] + "."
-                    prefix_length = len(prefix)
-                    for c in columns:
-                        cname = c.names["."]
-                        if cname.startswith(prefix) and c.type not in STRUCT:
-                            pull = get_pull(c)
-                            if c.nested_path[0] == ".":
-                                es_query.fields += [c.es_column]
-
-                            new_select.append({
-                                "name": s.name + "." + cname[prefix_length:],
-                                "pull": pull,
-                                "nested_path": c.nested_path[0],
-                                "put": {
-                                    "name": s.name + "." + literal_field(cname[prefix_length:]),
-                                    "index": i,
-                                    "child": "."
-                                }
-                            })
-                            i += 1
-        elif isinstance(s.value, Variable):
-            if s.value.var == ".":
-                for c in columns:
-                    if c.type not in STRUCT and c.es_column != "_id":
-                        if len(c.nested_path) > 1:
-                            new_select.append({
-                                "name": ".",
-                                "pull": get_pull(c),
-                                "nested_path": c.nested_path[0],
-                                "put": {"name": ".", "index": i, "child": c.names[query_path]}
-                            })
-                i += 1
-            elif s.value.var == "_id":
+        if isinstance(s.value, LeavesOp) and isinstance(s.value.term, Variable):
+            # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
+            leaves = schema.leaves(s.value.term.var)
+            col_names = set()
+            for c in leaves:
+                if c.nested_path[0] == ".":
+                    if c.type == NESTED:
+                        continue
+                    es_query.fields += [c.es_column]
+                c_name = untype_path(c.names[query_path])
+                col_names.add(c_name)
                 new_select.append({
-                    "name": s.name,
-                    "value": s.value.var,
-                    "pull": "_id",
-                    "put": {"name": s.name, "index": i, "child": "."}
+                    "name": concat_field(s.name, c_name),
+                    "nested_path": c.nested_path[0],
+                    "put": {"name": concat_field(s.name, literal_field(c_name)), "index": i, "child": "."},
+                    "pull": get_pull_function(c)
                 })
                 i += 1
-            else:
-                prefix = schema[s.value.var][0]
-                if not prefix:
-                    net_columns = []
-                else:
-                    parent = prefix.es_column+"."
-                    prefix_length = len(parent)
-                    net_columns = [c for c in columns if c.es_column.startswith(parent) and c.type not in STRUCT]
 
-                if not net_columns:
-                    pull = get_pull(prefix)
-                    if len(prefix.nested_path) == 1:
-                        es_query.fields += [prefix.es_column]
+            # REMOVE DOTS IN PREFIX IF NAME NOT AMBIGUOUS
+            for n in new_select:
+                if n.name.startswith("..") and n.name.lstrip(".") not in col_names:
+                    n.put.name = n.name = n.name.lstrip(".")
+                    col_names.add(n.name)
+        elif isinstance(s.value, Variable):
+            net_columns = schema.leaves(s.value.var)
+            if not net_columns:
+                new_select.append({
+                    "name": s.name,
+                    "nested_path": ".",
+                    "put": {"name": s.name, "index": i, "child": "."},
+                    "pull": NULL
+                })
+            else:
+                for n in net_columns:
+                    pull = get_pull_function(n)
+                    if n.nested_path[0] == ".":
+                        if n.type == NESTED:
+                            continue
+                        es_query.fields += [n.es_column]
+
+                    # WE MUST FIGURE OUT WHICH NAMESSPACE s.value.var IS USING SO WE CAN EXTRACT THE child
+                    for np in n.nested_path:
+                        c_name = untype_path(n.names[np])
+                        if startswith_field(c_name, s.value.var):
+                            child = relative_field(c_name, s.value.var)
+                            break
+                    else:
+                        child = relative_field(untype_path(n.names[n.nested_path[0]]), s.value.var)
+
                     new_select.append({
                         "name": s.name,
                         "pull": pull,
-                        "nested_path": prefix.nested_path[0],
-                        "put": {"name": s.name, "index": i, "child": "."}
-                    })
-                else:
-                    done = set()
-                    for n in net_columns:
-                        # THE COLUMNS CAN HAVE DUPLICATE REFERNCES TO THE SAME ES_COLUMN
-                        if n.es_column in done:
-                            continue
-                        done.add(n.es_column)
-
-                        pull = get_pull(n)
-                        if len(n.nested_path) == 1:
-                            es_query.fields += [n.es_column]
-                        new_select.append({
+                        "nested_path": n.nested_path[0],
+                        "put": {
                             "name": s.name,
-                            "pull": pull,
-                            "nested_path": n.nested_path[0],
-                            "put": {"name": s.name, "index": i, "child": n.es_column[prefix_length:]}
-                        })
-                i += 1
+                            "index": i,
+                            "child": child
+                        }
+                    })
+            i += 1
         else:
             expr = s.value
             for v in expr.vars():
@@ -194,8 +167,10 @@ def es_deepop(es, query):
                     # else:
                     #     Log.error("deep field not expected")
 
-            pull = EXPRESSION_PREFIX + s.name
-            post_expressions[pull] = compile_expression(expr.map(map_to_local).to_python())
+            pull_name = EXPRESSION_PREFIX + s.name
+            map_to_local = {untype_path(k): get_pull(cc) for k, c in schema.lookup.items() for cc in c if cc.type not in STRUCT}
+            pull = jx_expression_to_function(pull_name)
+            post_expressions[pull_name] = compile_expression(expr.map(map_to_local).to_python())
 
             new_select.append({
                 "name": s.name if is_list else ".",
@@ -205,22 +180,13 @@ def es_deepop(es, query):
             })
             i += 1
 
-    # REMOVE DOTS IN PREFIX IF NAME NOT AMBIGUOUS
-    col_names = set(c.names[query_path] for c in columns)
-    for n in new_select:
-        if n.name.startswith("..") and n.name.lstrip(".") not in col_names:
-            n.name = n.name.lstrip(".")
-            n.put.name = literal_field(n.name)
-            n.put.child = "."
-            col_names.add(n.name)
-
     # <COMPLICATED> ES needs two calls to get all documents
     more = []
     def get_more(please_stop):
         more.append(es_post(
             es,
             Data(
-                filter=more_filter,
+                query=more_filter,
                 fields=es_query.fields
             ),
             query.limit
@@ -257,10 +223,3 @@ def es_deepop(es, query):
         Log.error("problem formatting", e)
 
 
-def get_pull(column):
-    if column.nested_path[0] == ".":
-        return concat_field("fields", literal_field(column.es_column))
-    else:
-        depth = len(split_field(column.nested_path[0]))
-        rel_name = split_field(column.es_column)[depth:]
-        return join_field(["_inner"] + rel_name)

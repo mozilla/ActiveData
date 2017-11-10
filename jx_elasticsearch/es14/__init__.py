@@ -20,19 +20,17 @@ from jx_base.expressions import jx_expression
 from jx_base.queries import is_variable_name
 from jx_base.query import QueryOp
 from jx_base.schema import Schema
-from jx_elasticsearch.es09 import aggop as es09_aggop
-from jx_elasticsearch.es09 import setop as es09_setop
 from jx_elasticsearch.es14.aggs import es_aggsop, is_aggsop
 from jx_elasticsearch.es14.deep import is_deepop, es_deepop
-from jx_elasticsearch.es14.meta import FromESMetadata
 from jx_elasticsearch.es14.setop import is_setop, es_setop
 from jx_elasticsearch.es14.util import aggregates
+from jx_elasticsearch.meta import FromESMetadata
 from jx_python import jx
-from jx_python.namespace.typed import Typed
-from mo_dots import Data
+from mo_dots import Data, Null
 from mo_dots import coalesce, split_field, literal_field, unwraplist, join_field
 from mo_dots import wrap, listwrap
 from mo_dots.lists import FlatList
+from mo_json import scrub
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -64,7 +62,7 @@ class ES14(Container):
         port=9200,
         read_only=True,
         timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
-        consistency="one",  # ES WRITE CONSISTENCY (https://www.elastic.co/guide/en/elasticsearch/reference/1.7/docs-index_.html#index-consistency)
+        wait_for_active_shards=1,  # ES WRITE CONSISTENCY (https://www.elastic.co/guide/en/elasticsearch/reference/1.7/docs-index_.html#index-consistency)
         typed=None,
         kwargs=None
     ):
@@ -88,19 +86,13 @@ class ES14(Container):
 
         if typed == None:
             # SWITCH ON TYPED MODE
-            self.typed = any(c.names["."] in ("$value", "$object") for c in columns)
+            self.typed = any(c.es_column.find(".$") != -1 for c in columns)
         else:
             self.typed = typed
 
     @property
     def schema(self):
         return self._schema
-
-    @staticmethod
-    def wrap(es):
-        output = FromES(es.settings)
-        output._es = es
-        return output
 
     def __data__(self):
         settings = self.settings.copy()
@@ -135,8 +127,6 @@ class ES14(Container):
 
             for n in self.namespaces:
                 query = n.convert(query)
-            if self.typed:
-                query = Typed().convert(query)
 
             for s in listwrap(query.select):
                 if not aggregates.get(s.aggregate):
@@ -159,10 +149,6 @@ class ES14(Container):
                 return es_aggsop(self._es, frum, query)
             if is_setop(self._es, query):
                 return es_setop(self._es, query)
-            if es09_setop.is_setop(query):
-                return es09_setop.es_setop(self._es, None, query)
-            if es09_aggop.is_aggop(query):
-                return es09_aggop.es_aggop(self._es, None, query)
             Log.error("Can not handle")
         except Exception as e:
             e = Except.wrap(e)
@@ -208,12 +194,11 @@ class ES14(Container):
 
         # GET IDS OF DOCUMENTS
         results = self._es.search({
-            "fields": listwrap(schema._routing.path),
-            "query": {"filtered": {
-                "query": {"match_all": {}},
-                "filter": jx_expression(command.where).to_esfilter()
+            "stored_fields": listwrap(schema._routing.path),
+            "query": {"bool": {
+                "filter": jx_expression(command.where).to_esfilter(Null)
             }},
-            "size": 200000
+            "size": 10000
         })
 
         # SCRIPT IS SAME FOR ALL (CAN ONLY HANDLE ASSIGNMENT TO CONSTANT)
@@ -224,7 +209,8 @@ class ES14(Container):
             if isinstance(v, Mapping) and v.doc:
                 scripts.append({"doc": v.doc})
             else:
-                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_ruby()})
+                v = scrub(v)
+                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_ruby(schema).script(schema)})
 
         if results.hits.hits:
             updates = []
@@ -238,7 +224,7 @@ class ES14(Container):
                 data=content,
                 headers={"Content-Type": "application/json"},
                 timeout=self.settings.timeout,
-                params={"consistency": self.settings.consistency}
+                params={"wait_for_active_shards": self.settings.wait_for_active_shards}
             )
             if response.errors:
                 Log.error("could not update: {{error}}", error=[e.error for i in response["items"] for e in i.values() if e.status not in (200, 201)])

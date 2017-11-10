@@ -11,30 +11,30 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_base import STRING, BOOLEAN, NUMBER, OBJECT
 from jx_elasticsearch.es14.expressions import Variable
-from mo_dots import wrap, split_field, join_field
+from mo_dots import wrap
 
 
 def es_query_template(path):
     """
     RETURN TEMPLATE AND PATH-TO-FILTER AS A 2-TUPLE
-    :param path:
+    :param path: THE NESTED PATH (NOT INCLUDING TABLE NAME)
     :return:
     """
-    sub_path = split_field(path)[1:]
 
-    if sub_path:
+    if path != ".":
         f0 = {}
         f1 = {}
         output = wrap({
-            "filter": {"and": [
+            "query": {"bool": {"must": [
                 f0,
                 {"nested": {
-                    "path": join_field(sub_path),
-                    "filter": f1,
+                    "path": path,
+                    "query": f1,
                     "inner_hits": {"size": 100000}
                 }}
-            ]},
+            ]}},
             "from": 0,
             "size": 0,
             "sort": []
@@ -43,9 +43,7 @@ def es_query_template(path):
     else:
         f0 = {}
         output = wrap({
-            "query": {"filtered": {
-                "filter": f0
-            }},
+            "query": {"bool": {"must": [f0]}},
             "from": 0,
             "size": 0,
             "sort": []
@@ -53,17 +51,26 @@ def es_query_template(path):
         return output, wrap([f0])
 
 
-def jx_sort_to_es_sort(sort):
+def jx_sort_to_es_sort(sort, schema):
     if not sort:
         return []
 
     output = []
     for s in sort:
         if isinstance(s.value, Variable):
+            cols = schema.leaves(s.value.var)
             if s.sort == -1:
-                output.append({s.value.var: "desc"})
+                types = OBJECT, STRING, NUMBER, BOOLEAN
             else:
-                output.append(s.value.var)
+                types = BOOLEAN, NUMBER, STRING, OBJECT
+
+            for type in types:
+                for c in cols:
+                    if c.type == type:
+                        if s.sort == -1:
+                            output.append({c.es_column: "desc"})
+                        else:
+                            output.append(c.es_column)
         else:
             from mo_logs import Log
 

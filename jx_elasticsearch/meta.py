@@ -63,6 +63,7 @@ class FromESMetadata(Schema):
         if hasattr(self, "settings"):
             return
 
+        self.too_old = TOO_OLD
         self.settings = kwargs
         self.default_name = coalesce(name, alias, index)
         self.default_es = elasticsearch.Cluster(kwargs=kwargs)
@@ -358,8 +359,11 @@ class FromESMetadata(Schema):
                     "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                 })
         except Exception as e:
-            from tests.test_jx import TEST_TABLE
+            # CAN NOT IMPORT: THE TEST MODULES SETS UP LOGGING
+            # from tests.test_jx import TEST_TABLE
+            TEST_TABLE = "testdata"
             if "index_not_found_exception" in e and (c.es_index.startswith(TEST_TABLE_PREFIX) or c.es_index.startswith(TEST_TABLE)):
+                # WE EXPECT TEST TABLES TO DISAPPEAR
                 with self.meta.columns.locker:
                     self.meta.columns.update({
                         "clear": ".",

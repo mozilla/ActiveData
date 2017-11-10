@@ -38,7 +38,7 @@ def _delayed_imports():
         MySQL = None
 
     try:
-        from jx_elasticsearch.es52.meta import FromESMetadata
+        from jx_elasticsearch.meta import FromESMetadata
     except Exception:
         FromESMetadata = None
 

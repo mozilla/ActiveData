@@ -23,7 +23,7 @@ from jx_python.meta import Column
 from mo_dots import coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field
 from mo_dots import wrap
 from mo_dots.lists import FlatList
-from mo_json import value2json
+from mo_json import value2json, json2value
 from mo_kwargs import override
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except
@@ -301,13 +301,18 @@ class Index(Features):
                 except Exception as e:
                     raise Log.error("can not make request body from\n{{lines|indent}}", lines=lines, cause=e)
 
+                wait_for_active_shards = coalesce(
+                    self.settings.wait_for_active_shards,
+                    {"one": 1, None: None}[self.settings.consistency]
+                )
+
                 response = self.cluster.post(
                     self.path + "/_bulk",
                     data=data_bytes,
                     headers={"Content-Type": "application/x-ndjson"},
                     timeout=self.settings.timeout,
-                    retry=self.settings.retry
-                    # params={"consistency": self.settings.consistency}
+                    retry=self.settings.retry,
+                    params={"wait_for_active_shards": wait_for_active_shards}
                 )
                 items = response["items"]
 
@@ -629,10 +634,12 @@ class Cluster(object):
 
         if schema == None:
             Log.error("Expecting a schema")
-        elif isinstance(schema, basestring):
-            schema = mo_json.json2value(schema, leaves=True)
-        else:
+        elif isinstance(schema, text_type):
+            Log.error("Expecting a schema")
+        elif self.version.startswith("5."):
             schema = mo_json.json2value(value2json(schema), leaves=True)
+        else:
+            schema = retro_schema(mo_json.json2value(value2json(schema), leaves=True))
 
         if limit_replicas:
             # DO NOT ASK FOR TOO MANY REPLICAS
@@ -1215,6 +1222,7 @@ def default_encoder(r):
 def random_id():
     return Random.hex(40)
 
+
 def _merge_mapping(a, b):
     """
     MERGE TWO MAPPINGS, a TAKES PRECEDENCE
@@ -1235,6 +1243,32 @@ def _merge_mapping(a, b):
             a[literal_field(name)] = deepcopy(b_details)
 
     return a
+
+
+def retro_schema(schema):
+    """
+    CONVERT SCHEMA FROM 5.x to 1.x
+    :param schema:
+    :return:
+    """
+    output = {
+        "mappings":{
+            typename: {
+                "dynamic_templates": [retro_dynamic_template(*(t.items()[0])) for t in details.dynamic_templates]
+            }
+            for typename, details in schema.mappings.items()
+        },
+        "settings": schema.settings
+    }
+    return output
+
+
+def retro_dynamic_template(name, template):
+    output = template
+    if output.mapping.type == "keyword":
+        output.mapping.type = "string"
+        output.mapping.index = "not_analyzed"
+    return {name: output}
 
 
 es_type_to_json_type = {

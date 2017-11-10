@@ -22,7 +22,7 @@
 							"store": true
 						},
 						"match_mapping_type": "string",
-						"match": "$string"
+						"match": "__type_string__"
 					}
 				},
 				{
@@ -31,7 +31,7 @@
 							"type": "nested"
 						},
 						"match_mapping_type": "object",
-						"match": "$nested"
+						"match": "__type_nested__"
 					}
 				},
 				{

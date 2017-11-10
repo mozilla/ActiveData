@@ -81,7 +81,7 @@ class Schema(object):
         if query_path == ".":
             self.query_path = query_path
         else:
-            query_path += ".$nested"
+            query_path += ".__type_nested__"
             self.query_path = [c for c in columns if c.type == NESTED and c.names["."] == query_path][0].es_column
         self.lookup, self.lookup_leaves = _indexer(columns, self.query_path)
 

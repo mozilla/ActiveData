@@ -70,7 +70,7 @@ def _typed_encode(value, _buffer):
             else:
                 append(_buffer, u'{"$exists": 1}')
         elif _type is str:
-            append(_buffer, u'{"$string": "')
+            append(_buffer, u'{"__type_string__": "')
             try:
                 v = utf82unicode(value)
             except Exception as e:
@@ -80,7 +80,7 @@ def _typed_encode(value, _buffer):
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
         elif _type is text_type:
-            append(_buffer, u'{"$string": "')
+            append(_buffer, u'{"__type_string__": "')
             for c in value:
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
@@ -94,7 +94,7 @@ def _typed_encode(value, _buffer):
             append(_buffer, u'}')
         elif _type in (set, list, tuple, FlatList):
             if any(isinstance(v, (Mapping, set, list, tuple, FlatList)) for v in value):
-                append(_buffer, u'{"$nested": ')
+                append(_buffer, u'{"__type_nested__": ')
                 _list2json(value, _buffer)
                 append(_buffer, u'}')
             else:
@@ -127,7 +127,7 @@ def _typed_encode(value, _buffer):
             t = json2typed(j)
             append(_buffer, t)
         elif hasattr(value, '__iter__'):
-            append(_buffer, u'{"$nested": ')
+            append(_buffer, u'{"__type_nested__": ')
             _iter2json(value, _buffer)
             append(_buffer, u'}')
         else:
@@ -228,7 +228,7 @@ def json2typed(json):
             elif c == '"':
                 context.append(mode)
                 mode = STRING
-                append(output, '{"$string": ')
+                append(output, '{"__type_string__": ')
             else:
                 mode = PRIMITIVE
                 append(output, '{"$number": ')
@@ -320,9 +320,9 @@ def nest_free_path(encoded):
 
     #     remainder = encoded.lstrip(".")
     #     back = len(encoded) - len(remainder) - 1
-    #     return ("." * back) + join_field(decode_property(c) for c in split_field(remainder) if c != "$nested")
+    #     return ("." * back) + join_field(decode_property(c) for c in split_field(remainder) if c != "__type_nested__")
     # else:
-    return join_field(decode_property(c) for c in split_field(encoded) if c != "$nested")
+    return join_field(decode_property(c) for c in split_field(encoded) if c != "__type_nested__")
 
 
 def untyped(value):

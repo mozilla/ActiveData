@@ -26,7 +26,7 @@ from mo_times.dates import Date
 class Typed(Namespace):
     """
      NOTE: USING THE ".$value" SUFFIX IS DEPRECIATED: CURRENT VERSIONS OF ES ARE STRONGLY TYPED, LEAVING NO
-     CASE WHERE A GENERAL "value" IS USEFUL.  WE WOULD LIKE TO MOVE TO ".$number", ".$string", ETC. FOR
+     CASE WHERE A GENERAL "value" IS USEFUL.  WE WOULD LIKE TO MOVE TO ".$number", ".__type_string__", ETC. FOR
      EACH TYPE, LIKE WE DO WITH DATABASES
     """
 

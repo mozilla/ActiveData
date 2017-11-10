@@ -140,7 +140,7 @@ SCHEMA = {
                 "type": "object",
                 "dynamic": False,
                 "properties": {
-                    "$string": {"type": "keyword"}
+                    "__type_string__": {"type": "keyword"}
                 }
             },
             "$exists": {"type": "long"},
@@ -148,17 +148,17 @@ SCHEMA = {
                 "dynamic": True,
                 "properties": {
                     "$exists": {"type": "long"},
-                    "python": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
-                    "os": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
-                    "name": {"properties": {"$string": {"type": "keyword", "doc_values": True}}}
+                    "python": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}},
+                    "os": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}},
+                    "name": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}}
                 }
             },
             "location": {
                 "dynamic": True,
                 "properties": {
                     "$exists": {"type": "long"},
-                    "file": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
-                    "method": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
+                    "file": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}},
+                    "method": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}},
                     "line": {"properties": {"$number": {"type": "long", "doc_values": True}}}
                 }
             },
@@ -166,8 +166,8 @@ SCHEMA = {
                 "dynamic": True,
                 "properties": {
                     "$exists": {"type": "long"},
-                    "name": {"properties": {"$string": {"type": "keyword", "doc_values": True}}},
-                    "id": {"properties": {"$string": {"type": "keyword", "doc_values": True}}}
+                    "name": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}},
+                    "id": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}}
                 }
             },
             "timestamp": {"properties": {"$number": {"type": "number"}}}

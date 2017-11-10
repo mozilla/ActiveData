@@ -72,7 +72,7 @@ def es_deepop(es, query):
                 "must_not": {
                     "nested": {
                         "path": query_path,
-                        "query": {
+                        "filter": {
                             "match_all": {}
                         }
                     }

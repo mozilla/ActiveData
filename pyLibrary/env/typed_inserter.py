@@ -34,8 +34,8 @@ append = UnicodeBuilder.append
 
 _BOOLEAN = "$boolean"
 _NUMBER = "$number"
-_STRING = "$string"
-_NESTED = "$nested"
+_STRING = "__type_string__"
+_NESTED = "__type_nested__"
 _EXISTS = "$exists"
 
 
@@ -136,7 +136,7 @@ class TypedInserter(object):
                 if _NESTED in sub_schema:
                     # PREFER NESTED, WHEN SEEN BEFORE
                     if value:
-                        append(_buffer, u'{"$exists": 1, "$nested": [')
+                        append(_buffer, u'{"$exists": 1, "__type_nested__": [')
                         self._dict2json(value, sub_schema[_NESTED], path + [_NESTED], net_new_properties, _buffer)
                         append(_buffer, ']}')
                     else:
@@ -155,7 +155,7 @@ class TypedInserter(object):
                 if _STRING not in sub_schema:
                     sub_schema[_STRING] = True
                     net_new_properties.append(path + [_STRING])
-                append(_buffer, u'{"$string": "')
+                append(_buffer, u'{"__type_string__": "')
                 try:
                     v = utf82unicode(value)
                 except Exception as e:
@@ -169,7 +169,7 @@ class TypedInserter(object):
                     sub_schema[_STRING] = True
                     net_new_properties.append(path + [_STRING])
 
-                append(_buffer, u'{"$string": "')
+                append(_buffer, u'{"__type_string__": "')
                 for c in value:
                     append(_buffer, ESCAPE_DCT.get(c, c))
                 append(_buffer, u'"}')
@@ -193,7 +193,7 @@ class TypedInserter(object):
                     if _NESTED not in sub_schema:
                         sub_schema[_NESTED] = {}
                         net_new_properties.append(path + [_NESTED])
-                    append(_buffer, u'{"$nested": ')
+                    append(_buffer, u'{"__type_nested__": ')
                     self._list2json(value, sub_schema[_NESTED], path+[_NESTED], net_new_properties, _buffer)
                     append(_buffer, u'}')
                 else:
@@ -258,7 +258,7 @@ class TypedInserter(object):
                     sub_schema[_NESTED] = {}
                     net_new_properties.append(path + [_NESTED])
 
-                append(_buffer, u'{"$nested": ')
+                append(_buffer, u'{"__type_nested__": ')
                 self._iter2json(value, sub_schema[_NESTED], path+[_NESTED], net_new_properties, _buffer)
                 append(_buffer, u'}')
             else:

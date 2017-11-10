@@ -28,13 +28,17 @@ from mo_logs.strings import expand_template
 from mo_math import MAX, OR
 from pyLibrary.convert import string2regexp
 
-TO_STRING = """Optional.of({{expr}}).map(
-                        value -> {
-                            String output = String.valueOf(value);
-                            if (output.endsWith(".0")) output = output.substring(0, output.length() - 2);
-                            return output;
-                        }
-                ).orElse(null)"""
+TO_STRING = """
+    ((Runnable)({value ->
+        if (value==null) return "";
+        output = String.valueOf(value);
+        if (output.endsWith(".0")) output = output.substring(0, output.length() - 2);
+        return output;
+    })).run({{expr}})
+"""
+
+# ((Runnable)(() -> {int a=2; int b=3; System.out.println(a+b);})).run();
+# "((Runnable)((value) -> {String output=String.valueOf(value); if (output.endsWith('.0')) {return output.substring(0, output.length-2);} else return output;})).run(" + value.expr + ")"
 
 
 class Ruby(Expression):

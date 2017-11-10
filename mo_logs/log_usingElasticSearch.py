@@ -13,9 +13,12 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
+from future.utils import text_type
+
 import mo_json
 from mo_dots import wrap, coalesce
 from mo_json import value2json
+from mo_json.typed_encoder import STRING_TYPE, EXISTS_TYPE, NUMBER_TYPE
 from mo_kwargs import override
 from mo_threads import Thread, Queue, Till, THREAD_STOP
 from mo_times import MINUTE, Duration
@@ -116,7 +119,7 @@ def _deep_json_to_string(value, depth):
         return strings.limit(value2json(value), LOG_STRING_LENGTH)
     elif isinstance(value, (float, int, long)):
         return value
-    elif isinstance(value, basestring):
+    elif isinstance(value, text_type):
         return strings.limit(value, LOG_STRING_LENGTH)
     else:
         return strings.limit(value2json(value), LOG_STRING_LENGTH)
@@ -140,37 +143,37 @@ SCHEMA = {
                 "type": "object",
                 "dynamic": False,
                 "properties": {
-                    "__type_string__": {"type": "keyword"}
+                    STRING_TYPE: {"type": "keyword"}
                 }
             },
-            "$exists": {"type": "long"},
+            EXISTS_TYPE: {"type": "long"},
             "machine": {
                 "dynamic": True,
                 "properties": {
-                    "$exists": {"type": "long"},
-                    "python": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}},
-                    "os": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}},
-                    "name": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}}
+                    EXISTS_TYPE: {"type": "long"},
+                    "python": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
+                    "os": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
+                    "name": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}}
                 }
             },
             "location": {
                 "dynamic": True,
                 "properties": {
-                    "$exists": {"type": "long"},
-                    "file": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}},
-                    "method": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}},
-                    "line": {"properties": {"$number": {"type": "long", "doc_values": True}}}
+                    EXISTS_TYPE: {"type": "long"},
+                    "file": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
+                    "method": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
+                    "line": {"properties": {NUMBER_TYPE: {"type": "long", "doc_values": True}}}
                 }
             },
             "thread": {
                 "dynamic": True,
                 "properties": {
-                    "$exists": {"type": "long"},
-                    "name": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}},
-                    "id": {"properties": {"__type_string__": {"type": "keyword", "doc_values": True}}}
+                    EXISTS_TYPE: {"type": "long"},
+                    "name": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
+                    "id": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}}
                 }
             },
-            "timestamp": {"properties": {"$number": {"type": "number"}}}
+            "timestamp": {"properties": {NUMBER_TYPE: {"type": "number"}}}
         }
     }}
 }

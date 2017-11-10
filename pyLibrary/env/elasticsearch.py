@@ -24,6 +24,7 @@ from mo_dots import coalesce, Null, Data, set_default, listwrap, literal_field, 
 from mo_dots import wrap
 from mo_dots.lists import FlatList
 from mo_json import value2json, json2value
+from mo_json.typed_encoder import EXISTS_TYPE
 from mo_kwargs import override
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except
@@ -1115,7 +1116,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
         index_name = parent_index_name
         column_name = concat_field(parent_name, name)
         jx_name = column_name
-        if split_field(column_name)[-1] == "$exists":
+        if split_field(column_name)[-1] == EXISTS_TYPE:
             property.type = "exists"
 
         if property.type == "nested" and property.properties:

@@ -11,7 +11,7 @@
 							"type": "double",
 							"store": true
 						},
-						"match": "$number"
+						"match": "__type__number"
 					}
 				},
 				{
@@ -22,7 +22,7 @@
 							"store": true
 						},
 						"match_mapping_type": "string",
-						"match": "__type_string__"
+						"match": "__type__string"
 					}
 				},
 				{
@@ -31,7 +31,7 @@
 							"type": "nested"
 						},
 						"match_mapping_type": "object",
-						"match": "__type_nested__"
+						"match": "__type__nested"
 					}
 				},
 				{

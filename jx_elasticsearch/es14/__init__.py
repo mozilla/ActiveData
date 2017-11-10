@@ -194,7 +194,7 @@ class ES14(Container):
 
         # GET IDS OF DOCUMENTS
         results = self._es.search({
-            "stored_fields": listwrap(schema._routing.path),
+            "fields": listwrap(schema._routing.path),
             "query": {"bool": {
                 "filter": jx_expression(command.where).to_esfilter(Null)
             }},

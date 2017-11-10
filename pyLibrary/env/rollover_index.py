@@ -127,8 +127,13 @@ class RolloverIndex(object):
     def keys(self, prefix=None):
         path = jx.reverse(etl2path(key2etl(prefix)))
 
+        if self.cluster.version.startswith("5."):
+            stored_fields = "stored_fields"
+        else:
+            stored_fields = "fields"
+
         result = self.es.search({
-            "stored_fields": ["_id"],
+            stored_fields: ["_id"],
             "query": {
                 "bool": {
                     "query": {"match_all": {}},

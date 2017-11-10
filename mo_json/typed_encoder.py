@@ -76,9 +76,9 @@ def _typed_encode(value, _buffer):
             if value:
                 _dict2json(value, _buffer)
             else:
-                append(_buffer, u'{'+EXISTS_TYPE+': 1}')
+                append(_buffer, u'{"'+EXISTS_TYPE+'": 1}')
         elif _type is str:
-            append(_buffer, u'{'+STRING_TYPE+': "')
+            append(_buffer, u'{"'+STRING_TYPE+'": "')
             try:
                 v = utf82unicode(value)
             except Exception as e:
@@ -88,44 +88,44 @@ def _typed_encode(value, _buffer):
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
         elif _type is text_type:
-            append(_buffer, u'{'+STRING_TYPE+': "')
+            append(_buffer, u'{"'+STRING_TYPE+'": "')
             for c in value:
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
-        elif _type in (int, long, Decimal):
-            append(_buffer, u'{'+NUMBER_TYPE+': ')
+        elif _type in (int,  long, Decimal):
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(value))
             append(_buffer, u'}')
         elif _type is float:
-            append(_buffer, u'{'+NUMBER_TYPE+': ')
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(value))
             append(_buffer, u'}')
         elif _type in (set, list, tuple, FlatList):
             if any(isinstance(v, (Mapping, set, list, tuple, FlatList)) for v in value):
-                append(_buffer, u'{'+NESTED_TYPE+': ')
+                append(_buffer, u'{"'+NESTED_TYPE+'": ')
                 _list2json(value, _buffer)
                 append(_buffer, u'}')
             else:
                 # ALLOW PRIMITIVE MULTIVALUES
                 _list2json(value, _buffer)
         elif _type is date:
-            append(_buffer, u'{'+NUMBER_TYPE+': ')
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(time.mktime(value.timetuple())))
             append(_buffer, u'}')
         elif _type is datetime:
-            append(_buffer, u'{'+NUMBER_TYPE+': ')
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(time.mktime(value.timetuple())))
             append(_buffer, u'}')
         elif _type is Date:
-            append(_buffer, u'{'+NUMBER_TYPE+': ')
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(time.mktime(value.value.timetuple())))
             append(_buffer, u'}')
         elif _type is timedelta:
-            append(_buffer, u'{'+NUMBER_TYPE+': ')
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(value.total_seconds()))
             append(_buffer, u'}')
         elif _type is Duration:
-            append(_buffer, u'{'+NUMBER_TYPE+': ')
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(value.seconds))
             append(_buffer, u'}')
         elif _type is NullType:
@@ -135,7 +135,7 @@ def _typed_encode(value, _buffer):
             t = json2typed(j)
             append(_buffer, t)
         elif hasattr(value, '__iter__'):
-            append(_buffer, u'{'+NESTED_TYPE+': ')
+            append(_buffer, u'{"'+NESTED_TYPE+'": ')
             _iter2json(value, _buffer)
             append(_buffer, u'}')
         else:
@@ -171,7 +171,7 @@ def _iter2json(value, _buffer):
 
 
 def _dict2json(value, _buffer):
-    prefix = u'{'+EXISTS_TYPE+': 1, '
+    prefix = u'{"'+EXISTS_TYPE+'": 1, '
     for k, v in value.iteritems():
         if v == None or v == "":
             continue
@@ -187,7 +187,7 @@ def _dict2json(value, _buffer):
     if prefix == u", ":
         append(_buffer, u'}')
     else:
-        append(_buffer, u'{'+EXISTS_TYPE+': 1}')
+        append(_buffer, u'{"'+EXISTS_TYPE+'": 1}')
 
 
 VALUE = 0
@@ -201,13 +201,6 @@ ESCAPE = 5
 
 
 def json2typed(json):
-    """
-    every ': {' gets converted to ': {'+EXISTS_TYPE+': ".", '
-    every ': <value>' gets converted to '{"$value": <value>}'
-    """
-    # MODE VALUES
-    #
-
     context = deque()
     output = UnicodeBuilder(1024)
     mode = VALUE
@@ -218,7 +211,7 @@ def json2typed(json):
             if c == "{":
                 context.append(mode)
                 mode = BEGIN_OBJECT
-                append(output, '{'+EXISTS_TYPE+': 1')
+                append(output, '{"'+EXISTS_TYPE+'": 1')
                 continue
             elif c == '[':
                 context.append(mode)
@@ -236,10 +229,10 @@ def json2typed(json):
             elif c == '"':
                 context.append(mode)
                 mode = STRING
-                append(output, '{'+STRING_TYPE+': ')
+                append(output, '{"'+STRING_TYPE+'": ')
             else:
                 mode = PRIMITIVE
-                append(output, '{'+NUMBER_TYPE+': ')
+                append(output, '{"'+NUMBER_TYPE+'": ')
             append(output, c)
         elif mode == PRIMITIVE:
             if c == ",":
@@ -344,7 +337,7 @@ def _untype(value):
         for k, v in value.items():
             if k == EXISTS_TYPE:
                 continue
-            elif k.startswith('$'):
+            elif k.startswith(TYPE_PREFIX):
                 return v
             else:
                 output[decode_property(k)] = _untype(v)

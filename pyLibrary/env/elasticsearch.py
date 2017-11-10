@@ -299,15 +299,15 @@ class Index(Features):
                 try:
                     data_bytes = b"\n".join(l for l in lines) + b"\n"
                 except Exception as e:
-                    Log.error("can not make request body from\n{{lines|indent}}", lines=lines, cause=e)
+                    raise Log.error("can not make request body from\n{{lines|indent}}", lines=lines, cause=e)
 
                 response = self.cluster.post(
                     self.path + "/_bulk",
                     data=data_bytes,
-                    headers={"Content-Type": "text"},
+                    headers={"Content-Type": "application/x-ndjson"},
                     timeout=self.settings.timeout,
-                    retry=self.settings.retry,
-                    params={"consistency": self.settings.consistency}
+                    retry=self.settings.retry
+                    # params={"consistency": self.settings.consistency}
                 )
                 items = response["items"]
 
@@ -753,7 +753,7 @@ class Cluster(object):
                 Log.note("{{url}}:\n{{data|indent}}", url=url, data=sample)
 
             if self.debug:
-                Log.note("PUT {{url}}", url=url)
+                Log.note("POST {{url}}", url=url)
             response = http.post(url, **kwargs)
             if response.status_code not in [200, 201]:
                 Log.error(response.reason.decode("latin1") + ": " + strings.limit(response.content.decode("latin1"), 100 if self.debug else 10000))

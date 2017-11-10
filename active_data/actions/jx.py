@@ -82,8 +82,10 @@ def jx_query(path):
             with Timer("post timer"):
                 # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
                 # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
-                timing_replacement = b'"total": ' + str(Math.round(query_timer.duration.seconds, digits=4)) +\
-                                     b', "jsonification": ' + str(Math.round(json_timer.duration.seconds, digits=4))
+                timing_replacement = (
+                    b'"total": ' + str(Math.round(query_timer.duration.seconds, digits=4)) +
+                    b', "jsonification": ' + str(Math.round(json_timer.duration.seconds, digits=4))
+                )
                 response_data = response_data.replace(b'"total": "{{TOTAL_TIME}}"', timing_replacement)
                 Log.note("Response is {{num}} bytes in {{duration}}", num=len(response_data), duration=query_timer.duration)
 

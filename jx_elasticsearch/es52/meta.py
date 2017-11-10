@@ -358,13 +358,8 @@ class FromESMetadata(Schema):
                     "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                 })
         except Exception as e:
-            if any(map(self.default_es.version.startswith, ["5."])):
-                is_missing = "index_not_found_exception"
-            else:  # "1.4.", "1.5.", "1.6.", "1.7."
-                is_missing = "IndexMissingException"
-
             from tests.test_jx import TEST_TABLE
-            if is_missing in e and (c.es_index.startswith(TEST_TABLE_PREFIX) or c.es_index.startswith(TEST_TABLE)):
+            if "index_not_found_exception" in e and (c.es_index.startswith(TEST_TABLE_PREFIX) or c.es_index.startswith(TEST_TABLE)):
                 with self.meta.columns.locker:
                     self.meta.columns.update({
                         "clear": ".",

@@ -1065,7 +1065,7 @@ class NotOp(Expression):
                 output = EqOp("eq", [term.lhs.partial_eval(), term.rhs.partial_eval()])
             elif isinstance(term, EqOp):
                 output = NeOp("ne", [term.lhs.partial_eval(), term.rhs.partial_eval()])
-            elif isinstance(term, (BasicIndexOfOp, BasicEqOp, BasicSubstringOp)):
+            elif isinstance(term, (BasicIndexOfOp, BasicSubstringOp)):
                 return FALSE
             else:
                 output = NotOp("not", term)
@@ -1294,8 +1294,10 @@ class BooleanOp(Expression):
         if term.type == BOOLEAN:
             return term
 
-        is_missing = term.exists().partial_eval()
-        return is_missing
+        return AndOp("and", [
+            ExistsOp("exists", term),
+            BasicEqOp("eq", [FirstOp("first", term), Literal(None, True)])
+        ]).partial_eval()
 
 
 class IsBooleanOp(Expression):

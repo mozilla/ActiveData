@@ -20,7 +20,7 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, simplified
 from mo_dots import coalesce, wrap, Null, unwraplist, set_default, literal_field
 from mo_json import quote
 from mo_logs import Log, suppress_exception
@@ -498,12 +498,12 @@ def to_ruby(self, schema, not_null=False, boolean=True):
         else:
             columns = schema.leaves(self.expr.var)
             if len(columns) == 1:
-                return Ruby(type=BOOLEAN, expr="doc[" + quote(columns[0].es_column) + "].empty", frum=self)
+                return Ruby(type=BOOLEAN, expr="doc[" + quote(columns[0].es_column) + "].isEmpty()", frum=self)
             else:
                 return AndOp("and", [
                     Ruby(
                         type=BOOLEAN,
-                        expr="doc[" + quote(c.es_column) + "].empty",
+                        expr="doc[" + quote(c.es_column) + "].isEmpty()",
                         frum=self
                     )
                     for c in columns
@@ -678,6 +678,19 @@ def to_ruby(self, schema):
         ).to_ruby(schema)
     else:
         return term
+
+
+@simplified
+@extend(BooleanOp)
+def partial_eval(self):
+    term = self.term.partial_eval()
+    if term.type == BOOLEAN:
+        return term
+
+    return AndOp("and", [
+        ExistsOp("exists", term),
+        BasicEqOp("eq", [FirstOp("first", term), Literal(None, 'T')])
+    ]).partial_eval()
 
 
 

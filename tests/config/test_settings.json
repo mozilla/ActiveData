@@ -25,6 +25,7 @@
 		"threaded": true,
 		"processes": 1
 	},
+	"es14": true,
 	"elasticsearch": {
 		"host": "http://localhost",
 		"port": 9200,

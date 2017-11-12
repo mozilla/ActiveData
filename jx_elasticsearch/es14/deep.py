@@ -67,17 +67,15 @@ def es_deepop(es, query):
 
     if not wheres[1]:
         more_filter = {
-            "bool": {
-                "must": [AndOp("and", wheres[0]).partial_eval().to_esfilter(schema)],
-                "must_not": {
-                    "nested": {
-                        "path": query_path,
-                        "filter": {
-                            "match_all": {}
-                        }
+            "and": [
+                AndOp("and", wheres[0]).partial_eval().to_esfilter(schema),
+                {"nested": {
+                    "path": query_path,
+                    "filter": {
+                        "match_all": {}
                     }
-                }
-            }
+                }}
+            ]
         }
     else:
         more_filter = None

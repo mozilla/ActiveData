@@ -904,10 +904,7 @@ class TestSetOps(BaseTestCase):
             }
         }
 
-        self.utils.execute_es_tests(test)
-
-
-
+        self.utils.execute_tests(test)
 
     def test_date_on_duration(self):
         test = {

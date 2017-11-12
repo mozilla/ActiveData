@@ -198,15 +198,35 @@ def es_aggsop(es, frum, query):
 
                 s.pull = get_pull_stats(stats_name, median_name)
             elif s.aggregate == "union":
-                if len(es_cols) > 1:
-                    Log.error("Do not know how to count columns with more than one type (script probably)")
+                pulls = []
+                for es_col in es_cols:
+                    stats_name = encode_property(es_col.es_column)
 
-                # USE TERMS AGGREGATE TO SIMULATE union
-                stats_name = literal_field(canonical_name)
-                es_query.aggs[stats_name].terms.field = es_cols[0].es_column
-                es_query.aggs[stats_name].terms.size = Math.min(s.limit, MAX_LIMIT)
-                buckets = jx_expression_to_function(stats_name + ".buckets")
-                s.pull = lambda row: [b['key'] for b in buckets(row)]
+                    if es_col.nested_path[0] == ".":
+                        es_query.aggs[stats_name] = {"terms": {
+                            "field": es_col.es_column,
+                            "size": Math.min(s.limit, MAX_LIMIT)
+                        }}
+                        pulls.append(get_bucket_keys(stats_name))
+
+                    else:
+                        es_query.aggs[stats_name] = {
+                            "nested": {"path": es_col.nested_path[0]},
+                            "aggs": {"_nested": {"terms": {
+                                "field": es_col.es_column,
+                                "size": Math.min(s.limit, MAX_LIMIT)
+                            }}}
+                        }
+                        pulls.append(get_bucket_keys(stats_name+"._nested"))
+                if len(pulls) == 0:
+                    s.pull = NULL
+                elif len(pulls) == 1:
+                    s.pull = pulls[0]
+                else:
+                    s.pull = lambda row: UNION(
+                        p(row)
+                        for p in pulls
+                    )
             else:
                 if len(es_cols) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
@@ -352,6 +372,13 @@ def es_aggsop(es, frum, query):
 
 EMPTY = {}
 EMPTY_LIST = []
+
+
+def get_bucket_keys(stats_name):
+    buckets = jx_expression_to_function(stats_name + ".buckets")
+    def output(row):
+        return [b['key'] for b in listwrap(buckets(row))]
+    return output
 
 
 def drill(agg):

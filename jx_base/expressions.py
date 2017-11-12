@@ -1042,7 +1042,7 @@ class NotOp(Expression):
             elif isinstance(term, FalseOp):
                 return TRUE
             elif isinstance(term, NullOp):
-                return FALSE
+                return TRUE
             elif isinstance(term, Literal):
                 Log.error("`not` operator expects a Boolean term")
             elif isinstance(term, WhenOp):
@@ -1065,6 +1065,8 @@ class NotOp(Expression):
                 output = EqOp("eq", [term.lhs.partial_eval(), term.rhs.partial_eval()])
             elif isinstance(term, EqOp):
                 output = NeOp("ne", [term.lhs.partial_eval(), term.rhs.partial_eval()])
+            elif isinstance(term, (BasicIndexOfOp, BasicEqOp, BasicSubstringOp)):
+                return FALSE
             else:
                 output = NotOp("not", term)
 
@@ -1292,14 +1294,8 @@ class BooleanOp(Expression):
         if term.type == BOOLEAN:
             return term
 
-        is_missing = term.missing().partial_eval()
-        if isinstance(is_missing, TrueOp):
-            return FALSE
-        elif isinstance(is_missing, FalseOp):
-            return TRUE
-        else:
-            output = BooleanOp("boolean", term)
-            return output
+        is_missing = term.exists().partial_eval()
+        return is_missing
 
 
 class IsBooleanOp(Expression):
@@ -2460,15 +2456,28 @@ class WhenOp(Expression):
     def partial_eval(self):
         when = BooleanOp("boolean", self.when).partial_eval()
         if isinstance(when, Literal):
-            if isinstance(when, TrueOp):
+            if when is TRUE:
                 return self.then.partial_eval()
-            elif isinstance(when, (FalseOp, NullOp)):
+            elif when in [FALSE, NULL]:
                 return self.els_.partial_eval()
             else:
                 Log.error("Expecting `when` clause to return a Boolean, or `null`")
-        else:
-            output = WhenOp("when", when, **{"then": self.then.partial_eval(), "else": self.els_.partial_eval()})
-            return output
+
+        then = self.then.partial_eval()
+        els_ = self.els_.partial_eval()
+
+        if then is TRUE:
+            if els_ is FALSE:
+                return when
+            elif els_ is TRUE:
+                return TRUE
+        elif then is FALSE:
+            if els_ is FALSE:
+                return FALSE
+            elif els_ is TRUE:
+                return NotOp("not", when).partial_eval()
+
+        return WhenOp("when", when, **{"then": then, "else": els_})
 
 
 class CaseOp(Expression):

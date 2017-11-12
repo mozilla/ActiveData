@@ -144,7 +144,7 @@ def es_setop(es, query):
                                     filters[0][k] = None
                                 set_default(
                                     filters[0],
-                                    {"bool": {"must": [where, {"bool": {"should": nested_filter}}]}}
+                                    {"and": [where, {"or": nested_filter}]}
                                 )
 
                             nested_path = c.nested_path[0]

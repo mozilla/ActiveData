@@ -521,11 +521,11 @@ def to_esfilter(self, schema):
         if not cols:
             return {"match_all": {}}
         elif len(cols) == 1:
-            return {"bool": {"must_not": {"exists": {"field": cols[0].es_column}}}}
+            return {"missing": {"field": cols[0].es_column}}
         else:
-            return {"bool": {"must": [
-                {"bool": {"must_not": {"exists": {"field": c.es_column}}}} for c in cols]
-            }}
+            return {"and": [
+                {"missing": {"field": c.es_column}} for c in cols
+            ]}
     else:
         return ScriptOp("script", self.to_ruby(schema).script(schema)).to_esfilter(schema)
 
@@ -584,13 +584,13 @@ def to_esfilter(self, schema):
                 }})
         else:
             if rhs.many:
-                return wrap({"bool": {"must_not":
+                return wrap({"not":
                     ScriptOp("script", "(" + rhs.expr + ").contains(" + lhs.expr + ")").to_esfilter(schema)
-                }})
+                })
             else:
-                return wrap({"bool": {"must":
+                return wrap(
                     ScriptOp("script", "(" + lhs.expr + ") != (" + rhs.expr + ")").to_esfilter(schema)
-                }})
+                )
 
 @extend(NotOp)
 def to_ruby(self, schema):
@@ -611,7 +611,7 @@ def to_esfilter(self, schema):
         return {"exists": {"field": v}}
     else:
         operand = self.term.to_esfilter(schema)
-        return {"bool": {"must_not": operand}}
+        return {"not": operand}
 
 
 @extend(AndOp)
@@ -632,7 +632,7 @@ def to_esfilter(self, schema):
     if not len(self.terms):
         return {"match_all": {}}
     else:
-        return {"bool": {"must": [t.to_esfilter(schema) for t in self.terms]}}
+        return {"and": [t.to_esfilter(schema) for t in self.terms]}
 
 
 @extend(OrOp)
@@ -647,7 +647,7 @@ def to_ruby(self, schema):
 
 @extend(OrOp)
 def to_esfilter(self, schema):
-    return {"bool": {"should": [t.to_esfilter(schema) for t in self.terms]}}
+    return {"or": [t.to_esfilter(schema) for t in self.terms]}
 
 
 @extend(LengthOp)
@@ -1192,7 +1192,7 @@ def _normalize(esfilter):
                 esfilter = output[0]
                 break
             elif isDiff:
-                esfilter = wrap({"bool": {"must": output}})
+                esfilter = wrap({"and": output})
             continue
 
         if esfilter.bool.should:
@@ -1285,7 +1285,7 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
         if not vars_:
             return Null
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
-        var_to_depth = {v: len(c.nested_path) - 1 for v in vars_ for c in schema[v]}
+        var_to_depth = {v: len(c.nested_path) - 1 for v in vars_ for c in schema.values(v)}
         all_depths = set(var_to_depth.values())
         if -1 in all_depths:
             Log.error(

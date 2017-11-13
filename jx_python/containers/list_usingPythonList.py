@@ -72,7 +72,7 @@ class ListContainer(Container):
             except AttributeError:
                 pass
 
-            if q.where is not TRUE and not isinstance(q.where, TrueOp):
+            if q.where is not TRUE and not q.where is TRUE:
                 frum = frum.filter(q.where)
 
             if q.sort:

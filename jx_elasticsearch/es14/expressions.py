@@ -28,13 +28,15 @@ from mo_logs.strings import expand_template
 from mo_math import MAX, OR
 from pyLibrary.convert import string2regexp
 
+
 TO_STRING = """
-    ((Runnable)({value ->
+    ({it ->
+        value = {{expr}};
         if (value==null) return "";
         output = String.valueOf(value);
         if (output.endsWith(".0")) output = output.substring(0, output.length() - 2);
         return output;
-    })).run({{expr}})
+    })()
 """
 
 # ((Runnable)(() -> {int a=2; int b=3; System.out.println(a+b);})).run();
@@ -62,9 +64,9 @@ class Ruby(Expression):
         :return:
         """
         missing = self.miss.partial_eval()
-        if isinstance(missing, FalseOp):
+        if missing is FALSE:
             return self.partial_eval().to_ruby(schema).expr
-        elif isinstance(missing, TrueOp):
+        elif missing is TRUE:
             return "null"
 
         return "(" + missing.to_ruby(schema).expr + ")?null:(" + self.expr + ")"
@@ -116,7 +118,7 @@ def to_esfilter(self, schema):
     if self.op in ["eq", "term"]:
         return {"term": {self.lhs.var: self.rhs.to_esfilter(schema)}}
     elif self.op in ["ne", "neq"]:
-        return {"bool": {"must_not": {"term": {self.lhs.var: self.rhs.to_esfilter(schema)}}}}
+        return {"not": {"term": {self.lhs.var: self.rhs.to_esfilter(schema)}}}
     elif self.op in BinaryOp.ineq_ops:
         return {"range": {self.lhs.var: {self.op: self.rhs.value}}}
     else:
@@ -189,7 +191,7 @@ def to_ruby(self, schema):
 def to_ruby(self, schema):
     def _convert(v):
         if v is None:
-            return NullOp().to_ruby(schema)
+            return NULL.to_ruby(schema)
         if v is True:
             return Ruby(
                 type=BOOLEAN,
@@ -302,7 +304,7 @@ def to_ruby(self, schema):
 
 @extend(NullOp)
 def to_esfilter(self, schema):
-    return {"bool": {"must_not": {"match_all": {}}}}
+    return {"not": {"match_all": {}}}
 
 
 @extend(FalseOp)
@@ -312,7 +314,7 @@ def to_ruby(self, schema):
 
 @extend(FalseOp)
 def to_esfilter(self, schema):
-    return {"bool": {"must_not": {"match_all": {}}}}
+    return {"not": {"match_all": {}}}
 
 
 @extend(TupleOp)
@@ -508,10 +510,8 @@ def to_ruby(self, schema, not_null=False, boolean=True):
                     )
                     for c in columns
                 ]).partial_eval().to_ruby(schema)
-    elif isinstance(self.expr, Literal):
-        return self.expr.missing().to_ruby(schema)
     else:
-        return self.expr.missing().to_ruby(schema)
+        return self.expr.missing().partial_eval().to_ruby(schema)
 
 
 @extend(MissingOp)
@@ -546,11 +546,12 @@ def to_ruby(self, schema):
 
 @extend(NeOp)
 def to_ruby(self, schema):
-    return CaseOp("case", [
+    output = CaseOp("case", [
         WhenOp("when", self.lhs.missing(), **{"then": NotOp("not", self.rhs.missing())}),
         WhenOp("when", self.rhs.missing(), **{"then": NotOp("not", self.lhs.missing())}),
         NotOp("not", BasicEqOp("eq", [self.lhs, self.rhs]))
     ]).partial_eval().to_ruby(schema)
+    return output
 
 
 @extend(NeOp)
@@ -560,7 +561,7 @@ def to_esfilter(self, schema):
         if len(columns) == 0:
             return {"match_all": {}}
         elif len(columns) == 1:
-            return {"bool": {"must_not": {"term": {columns[0].es_column: self.rhs.value}}}}
+            return {"not": {"term": {columns[0].es_column: self.rhs.value}}}
         else:
             Log.error("column split to multiple, not handled")
     else:
@@ -569,7 +570,7 @@ def to_esfilter(self, schema):
 
         if lhs.many:
             if rhs.many:
-                return wrap({"bool": {"must_not":
+                return wrap({"not":
                     ScriptOp(
                         "script",
                         (
@@ -577,11 +578,11 @@ def to_esfilter(self, schema):
                             "(" + rhs.expr + ").containsAll(" + lhs.expr + ")"
                         )
                     ).to_esfilter(schema)
-                }})
+                })
             else:
-                return wrap({"bool": {"must_not":
+                return wrap({"not":
                     ScriptOp("script", "(" + lhs.expr + ").contains(" + rhs.expr + ")").to_esfilter(schema)
-                }})
+                })
         else:
             if rhs.many:
                 return wrap({"not":
@@ -680,20 +681,6 @@ def to_ruby(self, schema):
         return term
 
 
-@simplified
-@extend(BooleanOp)
-def partial_eval(self):
-    term = self.term.partial_eval()
-    if term.type == BOOLEAN:
-        return term
-
-    return AndOp("and", [
-        ExistsOp("exists", term),
-        BasicEqOp("eq", [FirstOp("first", term), Literal(None, 'T')])
-    ]).partial_eval()
-
-
-
 @extend(BooleanOp)
 def to_ruby(self, schema):
     value = self.term.to_ruby(schema)
@@ -709,12 +696,14 @@ def to_ruby(self, schema):
     else:
         return NotOp("not", value.missing()).partial_eval().to_ruby(schema)
 
+
 @extend(BooleanOp)
 def to_esfilter(self, schema):
     if isinstance(self.term, Variable):
         return {"term": {self.term.var: True}}
     else:
         return self.to_ruby(schema).to_esfilter(schema)
+
 
 @extend(IntegerOp)
 def to_ruby(self, schema):
@@ -886,7 +875,7 @@ def to_esfilter(self, schema):
     if isinstance(self.pattern, Literal) and isinstance(self.var, Variable):
         cols = schema.leaves(self.var.var)
         if len(cols) == 0:
-            return {"bool": {"must_not": {"match_all": {}}}}
+            return {"not": {"match_all": {}}}
         elif len(cols) == 1:
             return {"regexp": {cols[0].es_column: self.pattern.value}}
         else:
@@ -1023,7 +1012,7 @@ def to_ruby(self, schema):
             ))
 
         if len(acc) == 0:
-            return NullOp().to_ruby(schema)
+            return NULL.to_ruby(schema)
         elif len(acc) == 1:
             return acc[0]
         else:
@@ -1037,18 +1026,18 @@ def to_ruby(self, schema):
         then = self.then.to_ruby(schema)
         els_ = self.els_.to_ruby(schema)
 
-        if isinstance(when, TrueOp):
+        if when is TRUE:
             return then
-        elif isinstance(when, FalseOp):
+        elif when is FALSE:
             return els_
-        elif isinstance(then.miss, TrueOp):
+        elif then.miss is TRUE:
             return Ruby(
                 miss=self.missing(),
                 type=els_.type,
                 expr=els_.expr,
                 frum=self
             )
-        elif isinstance(els_.miss, TrueOp):
+        elif els_.miss is TRUE:
             return Ruby(
                 miss=self.missing(),
                 type=then.type,
@@ -1121,7 +1110,7 @@ def to_ruby(self, schema):
 
 
 MATCH_ALL = wrap({"match_all": {}})
-MATCH_NONE = wrap({"bool": {"must_not": {"match_all": {}}}})
+MATCH_NONE = wrap({"not": {"match_all": {}}})
 
 
 def simplify_esfilter(esfilter):
@@ -1246,15 +1235,15 @@ def _normalize(esfilter):
                         rest = [vv for vv in v if vv != None]
                         if len(rest) > 0:
                             return {
-                                "bool": {"should": [
-                                    {"bool": {"must_not": {"exists": {"field": k}}}},
+                                "or": [
+                                    {"missing": {"field": k}},
                                     {"terms": {k: rest}}
-                                ]},
+                                ],
                                 "isNormal": True
                             }
                         else:
                             return {
-                                "bool": {"must_not": {"exists": {"field": k}}},
+                                "missing": {"field": k},
                                 "isNormal": True
                             }
                     else:
@@ -1262,8 +1251,8 @@ def _normalize(esfilter):
                         return esfilter
             return MATCH_NONE
 
-        if esfilter.bool.must_not:
-            _sub = esfilter.bool.must_not
+        if esfilter['not']:
+            _sub = esfilter['not']
             sub = _normalize(_sub)
             if sub == MATCH_NONE:
                 return MATCH_ALL
@@ -1271,7 +1260,7 @@ def _normalize(esfilter):
                 return MATCH_NONE
             elif sub is not _sub:
                 sub.isNormal = None
-                return wrap({"bool": {"must_not": sub, "isNormal": True}})
+                return wrap({"not": sub, "isNormal": True})
             else:
                 sub.isNormal = None
 

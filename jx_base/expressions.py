@@ -170,6 +170,8 @@ class Expression(object):
         OVERRIDE THIS METHOD TO SIMPLIFY
         :return:
         """
+        if self.type == BOOLEAN:
+            Log.error("programmer error")
         return MissingOp("missing", self)
 
     def exists(self):
@@ -453,7 +455,7 @@ class Literal(Expression):
 
     def __new__(cls, op, term):
         if term == None:
-            return NullOp()
+            return NULL
         if term is True:
             return TRUE
         if term is False:
@@ -604,7 +606,7 @@ class TrueOp(Literal):
         return True
 
     def __eq__(self, other):
-        return other == True
+        return (other is TRUE) or (other is True)
 
     def __data__(self):
         return True
@@ -652,7 +654,7 @@ class FalseOp(Literal):
         return False
 
     def __eq__(self, other):
-        return other == False
+        return (other is FALSE) or (other is False)
 
     def __data__(self):
         return False
@@ -776,7 +778,7 @@ class BinaryOp(Expression):
         "mod": "%"
     }
 
-    def __init__(self, op, terms, default=NullOp()):
+    def __init__(self, op, terms, default=NULL):
         Expression.__init__(self, op, terms)
         if op not in BinaryOp.operators:
             Log.error("{{op|quote}} not a recognized operator", op=op)
@@ -859,7 +861,7 @@ class DivOp(Expression):
     has_simple_form = True
     data_type = NUMBER
 
-    def __init__(self, op, terms, default=NullOp()):
+    def __init__(self, op, terms, default=NULL):
         Expression.__init__(self, op, terms)
         self.lhs, self.rhs = terms
         self.default = default
@@ -887,7 +889,7 @@ class FloorOp(Expression):
     has_simple_form = True
     data_type = NUMBER
 
-    def __init__(self, op, terms, default=NullOp()):
+    def __init__(self, op, terms, default=NULL):
         Expression.__init__(self, op, terms)
         self.lhs, self.rhs = terms
         self.default = default
@@ -996,7 +998,7 @@ class NeOp(Expression):
         return NeOp("ne", [self.lhs.map(map_), self.rhs.map(map_)])
 
     def missing(self):
-        return OrOp("or", [self.lhs.missing(), self.rhs.missing()])
+        return FALSE  # USING THE decisive EQUAILTY https://github.com/mozilla/jx-sqlite/blob/master/docs/Logical%20Equality.md#definitions
 
     @simplified
     def partial_eval(self):
@@ -1037,9 +1039,9 @@ class NotOp(Expression):
     @simplified
     def partial_eval(self):
         def inverse(term):
-            if isinstance(term, TrueOp):
+            if term is TRUE:
                 return FALSE
-            elif isinstance(term, FalseOp):
+            elif term is FALSE:
                 return TRUE
             elif isinstance(term, NullOp):
                 return TRUE
@@ -1062,9 +1064,9 @@ class NotOp(Expression):
             elif isinstance(term, NotOp):
                 output = term.term.partial_eval()
             elif isinstance(term, NeOp):
-                output = EqOp("eq", [term.lhs.partial_eval(), term.rhs.partial_eval()])
+                output = EqOp("eq", [term.lhs, term.rhs]).partial_eval()
             elif isinstance(term, EqOp):
-                output = NeOp("ne", [term.lhs.partial_eval(), term.rhs.partial_eval()])
+                output = NeOp("ne", [term.lhs, term.rhs]).partial_eval()
             elif isinstance(term, (BasicIndexOfOp, BasicSubstringOp)):
                 return FALSE
             else:
@@ -1109,9 +1111,9 @@ class AndOp(Expression):
         ors = []
         for t in self.terms:
             simple = BooleanOp("boolean", t).partial_eval()
-            if isinstance(simple, TrueOp):
+            if simple is TRUE:
                 pass
-            elif isinstance(simple, FalseOp):
+            elif simple is FALSE:
                 return FALSE
             elif isinstance(simple, AndOp):
                 terms.extend([tt for tt in simple.terms if tt not in terms])
@@ -1184,9 +1186,9 @@ class OrOp(Expression):
         ands = []
         for t in self.terms:
             simple = t.partial_eval()
-            if isinstance(simple, TrueOp):
+            if simple is TRUE:
                 return TRUE
-            elif isinstance(simple, (FalseOp, NullOp)):
+            elif simple in (FALSE, NULL):
                 pass
             elif isinstance(simple, OrOp):
                 terms.extend(tt for tt in simple.terms if tt not in terms)
@@ -1238,7 +1240,7 @@ class LengthOp(Expression):
             if isinstance(term.value, text_type):
                 return Literal(None, len(term.value))
             else:
-                return NullOp()
+                return NULL
         else:
             return LengthOp("length", term)
 
@@ -1264,6 +1266,8 @@ class FirstOp(Expression):
     def partial_eval(self):
         term = self.term.partial_eval()
         if isinstance(self.term, FirstOp):
+            return term
+        elif self.term.type != "OBJECT":
             return term
         else:
             return FirstOp("first", term)
@@ -1291,8 +1295,19 @@ class BooleanOp(Expression):
     @simplified
     def partial_eval(self):
         term = self.term.partial_eval()
-        if term.type == BOOLEAN:
-            return term
+        if term is TRUE:
+            return TRUE
+        elif term in (FALSE, NULL):
+            return FALSE
+
+        is_missing = term.missing().partial_eval()
+        if is_missing is TRUE:
+            return FALSE
+        elif is_missing is FALSE:
+            if term.type in [INTEGER, NUMBER, STRING]:
+                return TRUE
+            elif term.type == BOOLEAN:
+                return term
 
         return AndOp("and", [
             ExistsOp("exists", term),
@@ -1549,7 +1564,7 @@ class MaxOp(Expression):
                 terms.append(simple)
         if len(terms) == 0:
             if maximum == None:
-                return NullOp()
+                return NULL
             else:
                 return Literal(None, maximum)
         else:
@@ -1602,7 +1617,7 @@ class MinOp(Expression):
                 terms.append(simple)
         if len(terms) == 0:
             if minimum == None:
-                return NullOp()
+                return NULL
             else:
                 return Literal(None, minimum)
         else:
@@ -1630,7 +1645,7 @@ class MultiOp(Expression):
         Expression.__init__(self, op, terms)
         self.op = op
         self.terms = terms
-        self.default = coalesce(clauses.get("default"), NullOp())
+        self.default = coalesce(clauses.get("default"), NULL)
         self.nulls = coalesce(clauses.get("nulls"), FALSE)
 
     def __data__(self):
@@ -1680,7 +1695,7 @@ class MultiOp(Expression):
                 terms.append(simple)
         if len(terms) == 0:
             if acc == None:
-                return NullOp()
+                return NULL
             else:
                 return Literal(None, acc)
         else:
@@ -1760,7 +1775,7 @@ class CoalesceOp(Expression):
         terms = []
         for t in self.terms:
             simple = FirstOp("first", t).partial_eval()
-            if isinstance(simple, NullOp):
+            if simple is NULL:
                 pass
             elif isinstance(simple, Literal):
                 terms.append(simple)
@@ -1804,13 +1819,12 @@ class MissingOp(Expression):
     def exists(self):
         return TRUE
 
+    @simplified
     def partial_eval(self):
         if isinstance(self.expr, Variable) and self.expr.var == "_id":
             return FALSE
         self.simplified = True
         return self
-
-
 
 
 class ExistsOp(Expression):
@@ -1834,6 +1848,10 @@ class ExistsOp(Expression):
 
     def exists(self):
         return TRUE
+
+    @simplified
+    def partial_eval(self):
+        return NotOp("not", self.field.missing()).partial_eval()
 
 
 class PrefixOp(Expression):
@@ -1870,6 +1888,9 @@ class PrefixOp(Expression):
         else:
             return PrefixOp("prefix", [self.field.map(map_), self.prefix.map(map_)])
 
+    def missing(self):
+        return FALSE
+
 
 class ConcatOp(Expression):
     has_simple_form = True
@@ -1882,7 +1903,7 @@ class ConcatOp(Expression):
         else:
             self.terms = term
         self.separator = clauses.get("separator", Literal(None, ""))
-        self.default = clauses.get("default", NullOp())
+        self.default = clauses.get("default", NULL)
         if not isinstance(self.separator, Literal):
             Log.error("Expecting a literal separator")
 
@@ -2154,7 +2175,7 @@ class FindOp(Expression):
     def __init__(self, op, term, **kwargs):
         Expression.__init__(self, op, term)
         self.value, self.find = term
-        self.default = kwargs.get("default", NullOp())
+        self.default = kwargs.get("default", NULL)
         self.start = kwargs.get("start", ZERO).partial_eval()
         if isinstance(self.start, NullOp):
             self.start = ZERO
@@ -2210,7 +2231,7 @@ class FindOp(Expression):
             self.start
         ]).partial_eval()
 
-        return WhenOp(
+        output = WhenOp(
             "when",
             OrOp("or", [
                 self.value.missing(),
@@ -2219,6 +2240,7 @@ class FindOp(Expression):
             ]),
             **{"then": self.default, "else": index}
         ).partial_eval()
+        return output
 
 
 class SplitOp(Expression):
@@ -2356,7 +2378,7 @@ class BetweenOp(Expression):
         end_index = CaseOp(
             "case",
             [
-                WhenOp("when", start_index.missing(), **{"then": NullOp()}),
+                WhenOp("when", start_index.missing(), **{"then": NULL}),
                 WhenOp("when", self.suffix.missing(), **{"then": LengthOp("length", value)}),
                 WhenOp("when", IsNumberOp("is_number", self.suffix), **{"then": MinOp("min", [self.suffix, LengthOp("length", value)])}),
                 FindOp("find", [value, self.suffix], start=MultiOp("add", [start_index, len_prefix]))
@@ -2410,6 +2432,9 @@ class InOp(Expression):
     def __call__(self):
         return self.value() in self.superset()
 
+    def missing(self):
+        return FALSE
+
 
 class RangeOp(Expression):
     has_simple_form = True
@@ -2429,10 +2454,14 @@ class WhenOp(Expression):
         Expression.__init__(self, op, [term])
 
         self.when = term
-        self.then = coalesce(clauses.get("then"), NullOp())
-        self.els_ = coalesce(clauses.get("else"), NullOp())
+        self.then = coalesce(clauses.get("then"), NULL)
+        self.els_ = coalesce(clauses.get("else"), NULL)
 
-        if self.then.type == self.els_.type:
+        if self.then is NULL:
+            self.data_type = self.els_.type
+        elif self.els_ is NULL:
+            self.data_type = self.then.type
+        elif self.then.type == self.els_.type:
             self.data_type = self.then.type
         elif self.then.type in (INTEGER, NUMBER) and self.els_.type in (INTEGER, NUMBER):
             self.data_type = NUMBER
@@ -2488,7 +2517,7 @@ class CaseOp(Expression):
             Log.error("case expression requires a list of `when` sub-clauses")
         Expression.__init__(self, op, term)
         if len(term) == 0:
-            self.whens = [NullOp()]
+            self.whens = [NULL]
         else:
             for w in term[:-1]:
                 if not isinstance(w, WhenOp) or w.els_:
@@ -2511,13 +2540,16 @@ class CaseOp(Expression):
         m = self.whens[-1].missing()
         for w in reversed(self.whens[0:-1]):
             when = w.when.partial_eval()
-            if isinstance(when, FalseOp):
+            if when is FALSE:
                 pass
-            elif isinstance(when, TrueOp):
+            elif when is TRUE:
                 m = w.then.partial_eval().missing()
             else:
                 m = OrOp("or", [AndOp("and", [when, w.then.partial_eval().missing()]), m])
         return m.partial_eval()
+    @simplified
+    def partial_eval(self):
+        return CoalesceOp("coalesce", self.whens).partial_eval()
 
 
 class BasicIndexOfOp(Expression):

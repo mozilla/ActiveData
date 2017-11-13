@@ -198,9 +198,9 @@ class TypedInserter(object):
                         Log.error("Can not handle multi-typed multivalues")
                     if types[0] == INTEGER:
                         # TODO: MAYBE ALLOW INTEGER TYPES?
-                        element_type = "$" + NUMBER
+                        element_type = TYPE_PREFIX + NUMBER
                     else:
-                        element_type = "$" + types[0]
+                        element_type = TYPE_PREFIX + types[0]
                     if element_type not in sub_schema:
                         sub_schema[element_type] = True
                         net_new_properties.append(path + [element_type])

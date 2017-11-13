@@ -58,9 +58,9 @@ class Painless(Expression):
         :return:
         """
         missing = self.miss.partial_eval()
-        if isinstance(missing, FalseOp):
+        if missing is FALSE:
             return self.partial_eval().to_painless(schema).expr
-        elif isinstance(missing, TrueOp):
+        elif missing is TRUE:
             return "null"
 
         return "(" + missing.to_painless(schema).expr + ")?null:(" + self.expr + ")"
@@ -185,7 +185,7 @@ def to_painless(self, schema):
 def to_painless(self, schema):
     def _convert(v):
         if v is None:
-            return NullOp().to_painless(schema)
+            return NULL.to_painless(schema)
         if v is True:
             return Painless(
                 type=BOOLEAN,
@@ -1006,7 +1006,7 @@ def to_painless(self, schema):
             ))
 
         if len(acc) == 0:
-            return NullOp().to_painless(schema)
+            return NULL.to_painless(schema)
         elif len(acc) == 1:
             return acc[0]
         else:
@@ -1020,18 +1020,18 @@ def to_painless(self, schema):
         then = self.then.to_painless(schema)
         els_ = self.els_.to_painless(schema)
 
-        if isinstance(when, TrueOp):
+        if when is TRUE:
             return then
-        elif isinstance(when, FalseOp):
+        elif when is FALSE:
             return els_
-        elif isinstance(then.miss, TrueOp):
+        elif then.miss is TRUE:
             return Painless(
                 miss=self.missing(),
                 type=els_.type,
                 expr=els_.expr,
                 frum=self
             )
-        elif isinstance(els_.miss, TrueOp):
+        elif els_.miss is TRUE:
             return Painless(
                 miss=self.missing(),
                 type=then.type,

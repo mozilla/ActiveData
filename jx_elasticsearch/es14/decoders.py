@@ -476,7 +476,7 @@ class ObjectDecoder(AggsDecoder):
                     "size": self.domain.limit
                 }}, es_query),
                 "_missing": set_default(
-                    {"filter": {"bool": {"must_not": {"exists": {"field": v}}}}},
+                    {"filter": {"missing": {"field": v}}},
                     es_query
                 )
             }})

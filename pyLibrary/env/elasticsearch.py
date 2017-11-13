@@ -1252,15 +1252,16 @@ def retro_schema(schema):
     :param schema:
     :return:
     """
-    output = {
+    output = wrap({
         "mappings":{
             typename: {
-                "dynamic_templates": [retro_dynamic_template(*(t.items()[0])) for t in details.dynamic_templates]
+                "dynamic_templates": [retro_dynamic_template(*(t.items()[0])) for t in details.dynamic_templates],
+                "properties": retro_properties(details.properties)
             }
             for typename, details in schema.mappings.items()
         },
         "settings": schema.settings
-    }
+    })
     return output
 
 
@@ -1270,6 +1271,24 @@ def retro_dynamic_template(name, template):
         output.mapping.type = "string"
         output.mapping.index = "not_analyzed"
     return {name: output}
+
+def retro_properties(properties):
+    output = {}
+    for k, v in properties.items():
+        if v.type == "keyword":
+            v.type = "string"
+            v.index = "not_analyzed"
+        elif v.type == "text":
+            v.type = "string"
+            v.index = None
+
+        if v.properties:
+            v.properties = retro_properties(v.properties)
+
+        output[k]=v
+    return output
+
+
 
 
 es_type_to_json_type = {

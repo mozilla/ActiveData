@@ -379,7 +379,7 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    def test_groupby_value(self):
+    def test_groupby_multivalue_nested(self):
         test = {
             "data": [
                 {"a": 1, "b": [1, 2, 3]},
@@ -500,7 +500,7 @@ class TestgroupBy1(BaseTestCase):
         self.utils.execute_tests(test)
 
     @skipIf(global_settings.use == "elasticsearch", "not implemented yet")
-    def test_groupby_on_multivalue(self):
+    def test_groupby_multivalue_naive(self):
         test = {
             "data": [
                 {"r": {"t": ["a", "b"]}},

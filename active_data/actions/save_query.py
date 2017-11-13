@@ -166,9 +166,6 @@ class SaveQueries(object):
         except Exception, f:
             pass
 
-
-
-
 SCHEMA = {
     "settings": {
         "index.number_of_shards": 3,

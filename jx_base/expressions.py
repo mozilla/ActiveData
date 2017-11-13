@@ -808,6 +808,13 @@ class BinaryOp(Expression):
         else:
             return OrOp("or", [self.lhs.missing(), self.rhs.missing()])
 
+    # @simplified
+    # def partial_eval(self):
+    #     lhs = FirstOp("first", self.lhs).partial_eval()
+    #     rhs = FirstOp("first", self.rhs).partial_eval()
+    #     default_ = FirstOp("first", self.default).partial_eval()
+    #     return BinaryOp(self.op, [lhs, rhs], default=default_)
+
 
 class InequalityOp(Expression):
     has_simple_form = True
@@ -1267,8 +1274,10 @@ class FirstOp(Expression):
         term = self.term.partial_eval()
         if isinstance(self.term, FirstOp):
             return term
-        elif self.term.type != "OBJECT":
+        elif term is NULL or self.term.type != OBJECT:
             return term
+        elif isinstance(term, Literal):
+            Log.error("not handled yet")
         else:
             return FirstOp("first", term)
 
@@ -1356,7 +1365,7 @@ class IntegerOp(Expression):
 
     @simplified
     def partial_eval(self):
-        term = self.term.partial_eval()
+        term = FirstOp("first", self.term).partial_eval()
         if isinstance(term, CoalesceOp):
             return CoalesceOp("coalesce", [IntegerOp("integer", t) for t in term.terms])
         if term.type == INTEGER:
@@ -1405,9 +1414,9 @@ class NumberOp(Expression):
 
     @simplified
     def partial_eval(self):
-        term = self.term
+        term = FirstOp("first", self.term).partial_eval()
         if isinstance(term, CoalesceOp):
-            return CoalesceOp("coalesce", [NumberOp("number", t)for t in term.terms])
+            return CoalesceOp("coalesce", [NumberOp("number", t) for t in term.terms])
         return self
 
 class IsNumberOp(Expression):
@@ -1465,7 +1474,7 @@ class StringOp(Expression):
 
     @simplified
     def partial_eval(self):
-        term = self.term
+        term = FirstOp("first", self.term).partial_eval()
         if isinstance(term, CoalesceOp):
             return CoalesceOp("coalesce", [StringOp("string", t).partial_eval() for t in term.terms])
         elif isinstance(term, Literal):
@@ -2486,13 +2495,13 @@ class WhenOp(Expression):
     @simplified
     def partial_eval(self):
         when = BooleanOp("boolean", self.when).partial_eval()
-        if isinstance(when, Literal):
-            if when is TRUE:
-                return self.then.partial_eval()
-            elif when in [FALSE, NULL]:
-                return self.els_.partial_eval()
-            else:
-                Log.error("Expecting `when` clause to return a Boolean, or `null`")
+
+        if when is TRUE:
+            return self.then.partial_eval()
+        elif when in [FALSE, NULL]:
+            return self.els_.partial_eval()
+        elif isinstance(when, Literal):
+            Log.error("Expecting `when` clause to return a Boolean, or `null`")
 
         then = self.then.partial_eval()
         els_ = self.els_.partial_eval()
@@ -2547,9 +2556,25 @@ class CaseOp(Expression):
             else:
                 m = OrOp("or", [AndOp("and", [when, w.then.partial_eval().missing()]), m])
         return m.partial_eval()
+
     @simplified
     def partial_eval(self):
-        return CoalesceOp("coalesce", self.whens).partial_eval()
+        whens = []
+        for w in self.whens[:-1]:
+            when = w.when.partial_eval()
+            if when is TRUE:
+                whens.append(w.then.partial_eval())
+                return CaseOp("case", whens)
+            elif when is FALSE:
+                pass
+            else:
+                whens.append(WhenOp("when", when, **{"then": w.then.partial_eval()}))
+
+        if not whens:
+            return self.whens[-1].partial_eval()
+        else:
+            return CaseOp("case", whens+[self.whens[-1].partial_eval()])
+
 
 
 class BasicIndexOfOp(Expression):

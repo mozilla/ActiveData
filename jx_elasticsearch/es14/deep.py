@@ -184,7 +184,7 @@ def es_deepop(es, query):
         more.append(es_post(
             es,
             Data(
-                query=more_filter,
+                filtered={"filter": more_filter},
                 fields=es_query.fields
             ),
             query.limit

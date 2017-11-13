@@ -871,11 +871,6 @@ class Cluster(object):
                           failures="---\n".join(r.replace(";", ";\n") for r in details._shards.failures.reason)
                           )
             return details
-
-            # return response
-
-
-
         except Exception as e:
             Log.error("Problem with call to {{url}}", url=url, cause=e)
 
@@ -1266,26 +1261,33 @@ def retro_schema(schema):
 
 
 def retro_dynamic_template(name, template):
-    output = template
-    if output.mapping.type == "keyword":
-        output.mapping.type = "string"
-        output.mapping.index = "not_analyzed"
-    return {name: output}
+    template.mapping.doc_values = True
+    if template.mapping.type == "keyword":
+        template.mapping.type = "string"
+        template.mapping.index = "not_analyzed"
+    elif template.mapping.type == "text":
+        template.mapping.type = "string"
+        template.mapping.index = "analyzed"
+    return {name: template}
+
 
 def retro_properties(properties):
     output = {}
     for k, v in properties.items():
+        v.doc_values = True
+        v.fielddata = None  # TODO: what does fielddata do in es5??
         if v.type == "keyword":
             v.type = "string"
             v.index = "not_analyzed"
         elif v.type == "text":
             v.type = "string"
-            v.index = None
+            v.index = "analyzed"
+            v.doc_values = None
 
         if v.properties:
             v.properties = retro_properties(v.properties)
 
-        output[k]=v
+        output[k] = v
     return output
 
 

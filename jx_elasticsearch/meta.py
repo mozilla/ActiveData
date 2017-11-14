@@ -293,6 +293,7 @@ class FromESMetadata(Schema):
             r = result.aggregations._
             count = result.hits.total
             cardinality = coalesce(r.value, r._nested.value, r.doc_count)
+            multi = coalesce(r.multi.value, 1)
             if cardinality == None:
                 Log.error("logic error")
 
@@ -319,6 +320,7 @@ class FromESMetadata(Schema):
                         "set": {
                             "count": count,
                             "cardinality": cardinality,
+                            "multi": multi,
                             "last_updated": Date.now()
                         },
                         "clear": ["partitions"],
@@ -333,6 +335,7 @@ class FromESMetadata(Schema):
                         "set": {
                             "count": count,
                             "cardinality": cardinality,
+                            "multi": multi,
                             "last_updated": Date.now()
                         },
                         "clear": ["partitions"],
@@ -364,6 +367,7 @@ class FromESMetadata(Schema):
                     "set": {
                         "count": count,
                         "cardinality": cardinality,
+                        "multi": multi,
                         "partitions": parts,
                         "last_updated": Date.now()
                     },

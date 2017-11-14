@@ -367,7 +367,7 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
                   "esfilter": { "nested": {
                     "path": "flags",
                     "query": {
-                      "bool": {
+                      "filtered": {
                         "query": {
                           "match_all": {}
                         },
@@ -385,7 +385,7 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
                   "columnName": "review",
                   "esfilter": {"nested": {
                     "path": "attachments.flags",
-                    "query": {"bool": {
+                    "query": {"filtered": {
                       "query": {"match_all": {}},
                       "filter": {"and": [
                         {"term": {"attachments.flags.request_status": "?"}},

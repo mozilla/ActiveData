@@ -33,6 +33,7 @@ from mo_dots import coalesce, split_field, literal_field, unwraplist, join_field
 from mo_dots import wrap, listwrap
 from mo_dots.lists import FlatList
 from mo_json import scrub
+from mo_json.typed_encoder import TYPE_PREFIX
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -88,7 +89,7 @@ class ES52(Container):
 
         if typed == None:
             # SWITCH ON TYPED MODE
-            self.typed = any(c.es_column.find(".$") != -1 for c in columns)
+            self.typed = any(c.es_column.find("."+TYPE_PREFIX) != -1 for c in columns)
         else:
             self.typed = typed
 

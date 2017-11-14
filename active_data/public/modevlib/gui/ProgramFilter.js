@@ -73,7 +73,7 @@ ProgramFilter.makeQuery = function(filters){
 
   var output = {
     "query":{
-      "bool":{
+      "filtered":{
         "query":{
           "match_all":{}
         },

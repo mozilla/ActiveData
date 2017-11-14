@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import STRUCT, NESTED
+from jx_base import STRUCT, NESTED, EXISTS
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es09.util import post as es_post
@@ -20,7 +20,7 @@ from jx_elasticsearch.es14.setop import format_dispatch, get_pull_function, get_
 from jx_elasticsearch.es14.util import jx_sort_to_es_sort, es_query_template
 from jx_python.expressions import compile_expression, jx_expression_to_function
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, concat_field, set_default, relative_field, startswith_field
-from mo_json.typed_encoder import untype_path
+from mo_json.typed_encoder import untype_path, EXISTS_TYPE
 from mo_logs import Log
 from mo_threads import Thread
 from mo_times.timer import Timer
@@ -66,15 +66,11 @@ def es_deepop(es, query):
         set_default(f, script)
 
     if not wheres[1]:
+        # WITHOUT NESTED CONDITIONS, WE MUST ALSO RETURN DOCS WITH NO NESTED RECORDS
         more_filter = {
             "and": [
-                AndOp("and", wheres[0]).partial_eval().to_esfilter(schema),
-                {"nested": {
-                    "path": query_path,
-                    "filter": {
-                        "match_all": {}
-                    }
-                }}
+                es_filters[0],
+                {"missing": {"field": untype_path(query_path) + "." + EXISTS_TYPE}}
             ]
         }
     else:

@@ -1275,7 +1275,7 @@ def retro_properties(properties):
     output = {}
     for k, v in properties.items():
         v.doc_values = True
-        v.fielddata = None  # TODO: what does fielddata do in es5??
+        v.fielddata = None
         if v.type == "keyword":
             v.type = "string"
             v.index = "not_analyzed"

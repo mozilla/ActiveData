@@ -67,6 +67,7 @@ class FromESMetadata(Schema):
         self.settings = kwargs
         self.default_name = coalesce(name, alias, index)
         self.default_es = elasticsearch.Cluster(kwargs=kwargs)
+        self.lost_tables = set()
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
         self.es_metadata = Null
@@ -245,6 +246,9 @@ class FromESMetadata(Schema):
         """
         QUERY ES TO FIND CARDINALITY AND PARTITIONS FOR A SIMPLE COLUMN
         """
+        if c.es_index in self.lost_tables:
+            return
+
         if c.type in STRUCT:
             Log.error("not supported")
         try:
@@ -362,13 +366,16 @@ class FromESMetadata(Schema):
             # CAN NOT IMPORT: THE TEST MODULES SETS UP LOGGING
             # from tests.test_jx import TEST_TABLE
             TEST_TABLE = "testdata"
-            if "index_not_found_exception" in e and (c.es_index.startswith(TEST_TABLE_PREFIX) or c.es_index.startswith(TEST_TABLE)):
+            is_missing_index = any(w in e for w in ["IndexMissingException", "index_not_found_exception"])
+            is_test_table = any(c.es_index.startswith(t) for t in [TEST_TABLE_PREFIX, TEST_TABLE])
+            if is_missing_index and is_test_table:
                 # WE EXPECT TEST TABLES TO DISAPPEAR
                 with self.meta.columns.locker:
                     self.meta.columns.update({
                         "clear": ".",
                         "where": {"eq": {"es_index": c.es_index}}
                     })
+                self.lost_tables.add(c.es_index)
             else:
                 self.meta.columns.update({
                     "set": {
@@ -408,6 +415,8 @@ class FromESMetadata(Schema):
 
                 column = self.todo.pop(Till(seconds=(10*MINUTE).seconds))
                 if column:
+                    if column.es_index in self.lost_tables:
+                        continue
                     if DEBUG:
                         Log.note("update {{table}}.{{column}}", table=column.es_index, column=column.es_column)
                     if column.type in STRUCT:

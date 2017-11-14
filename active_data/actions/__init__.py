@@ -93,6 +93,7 @@ def test_mode_wait(query):
                 "partitions",
                 "count",
                 "cardinality",
+                "multi",
                 "last_updated"
             ],
             "where": {"eq": {"es_index": join_field(split_field(query["from"])[0:1])}}

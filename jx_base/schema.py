@@ -112,7 +112,7 @@ class Schema(object):
         :param name:
         :return:
         """
-        full_name = untype_path(name)
+        full_name = nest_free_path(name)
         return list(set([
             c
             for c in self.lookup.get(full_name, Null)

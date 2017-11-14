@@ -23,6 +23,7 @@ from mo_dots import coalesce, set_default, Null, literal_field, split_field, joi
 from mo_dots import wrap
 from mo_kwargs import override
 from mo_logs import Log
+from mo_logs.strings import quote
 from mo_threads import Queue
 from mo_threads import THREAD_STOP
 from mo_threads import Thread
@@ -67,7 +68,7 @@ class FromESMetadata(Schema):
         self.settings = kwargs
         self.default_name = coalesce(name, alias, index)
         self.default_es = elasticsearch.Cluster(kwargs=kwargs)
-        self.lost_tables = set()
+        self.index_does_not_exist = set()
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
         self.es_metadata = Null
@@ -246,7 +247,7 @@ class FromESMetadata(Schema):
         """
         QUERY ES TO FIND CARDINALITY AND PARTITIONS FOR A SIMPLE COLUMN
         """
-        if c.es_index in self.lost_tables:
+        if c.es_index in self.index_does_not_exist:
             return
 
         if c.type in STRUCT:
@@ -260,6 +261,7 @@ class FromESMetadata(Schema):
                             "partitions": partitions,
                             "count": len(self.meta.columns),
                             "cardinality": len(partitions),
+                            "multi": 1,
                             "last_updated": Date.now()
                         },
                         "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
@@ -273,6 +275,7 @@ class FromESMetadata(Schema):
                             "partitions": partitions,
                             "count": len(self.meta.tables),
                             "cardinality": len(partitions),
+                            "multi": 1,
                             "last_updated": Date.now()
                         },
                         "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
@@ -281,7 +284,10 @@ class FromESMetadata(Schema):
 
             es_index = c.es_index.split(".")[0]
             result = self.default_es.post("/" + es_index + "/_search", data={
-                "aggs": {"_": _counting_query(c)},
+                "aggs": {
+                    "_": _counting_query(c),
+                    "multi": {"max": {"script": "doc[" + quote(c.es_column) + "].values.size()"}}
+                },
                 "size": 0
             })
             r = result.aggregations._
@@ -298,6 +304,7 @@ class FromESMetadata(Schema):
                         "set": {
                             "count": cardinality,
                             "cardinality": cardinality,
+                            "multi": 1,
                             "last_updated": Date.now()
                         },
                         "clear": ["partitions"],
@@ -375,7 +382,7 @@ class FromESMetadata(Schema):
                         "clear": ".",
                         "where": {"eq": {"es_index": c.es_index}}
                     })
-                self.lost_tables.add(c.es_index)
+                self.index_does_not_exist.add(c.es_index)
             else:
                 self.meta.columns.update({
                     "set": {
@@ -384,6 +391,7 @@ class FromESMetadata(Schema):
                     "clear": [
                         "count",
                         "cardinality",
+                        "multi",
                         "partitions",
                     ],
                     "where": {"eq": {"names.\\.": ".", "es_index": c.es_index, "es_column": c.es_column}}
@@ -415,7 +423,7 @@ class FromESMetadata(Schema):
 
                 column = self.todo.pop(Till(seconds=(10*MINUTE).seconds))
                 if column:
-                    if column.es_index in self.lost_tables:
+                    if column.es_index in self.index_does_not_exist:
                         continue
                     if DEBUG:
                         Log.note("update {{table}}.{{column}}", table=column.es_index, column=column.es_column)
@@ -453,6 +461,7 @@ class FromESMetadata(Schema):
                     "clear":[
                         "count",
                         "cardinality",
+                        "multi",
                         "partitions",
                     ],
                     "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}

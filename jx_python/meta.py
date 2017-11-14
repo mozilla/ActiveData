@@ -139,6 +139,7 @@ Column = DataClass(
         {"name": "nested_path", "nulls": True},  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
         {"name": "count", "nulls": True},
         {"name": "cardinality", "nulls": True},
+        {"name": "multi", "nulls": True},
         {"name": "partitions", "nulls": True},
         {"name": "last_updated", "nulls": True}
     ]

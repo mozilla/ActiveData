@@ -668,7 +668,7 @@ def to_ruby(self, schema):
     term = self.term.to_ruby(schema)
 
     if isinstance(term.frum, CoalesceOp):
-        return CoalesceOp("coalesce", [FirstOp("first", t.partial_eval().to_ruby(schema)) for t in term.frum.terms]).to_ruby(schema)
+        return CoalesceOp("coalesce", [t.frum for t in term.frum.terms]).to_ruby(schema)
 
     if term.many:
         return Ruby(

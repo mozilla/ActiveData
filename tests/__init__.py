@@ -144,15 +144,14 @@ class ESUtils(object):
     def not_real_service(self):
         return self.settings.fastTesting
 
-    def execute_tests(self, subtest, tjson=False):
-    def execute_tests(self, subtest, tjson=False, places=6):
+    def execute_tests(self, subtest, tjson=True, places=6):
         subtest = wrap(subtest)
         subtest.name = extract_stack()[1]['method']
 
         self.fill_container(subtest, tjson=tjson)
         self.send_queries(subtest, places=places)
 
-    def fill_container(self, subtest, tjson=False):
+    def fill_container(self, subtest, tjson=True):
         """
         RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
         """
@@ -174,15 +173,7 @@ class ESUtils(object):
             container.add_alias(_settings.index)
 
             # INSERT DATA
-            inserts = []
-            for v in subtest.data:
-                _id = v._id
-                v._id = None
-                inserts.append({
-                    "id": _id,
-                    "value": v
-                })
-            container.extend(inserts)
+            container.extend({"value": d} for d in subtest.data)
             container.flush()
             # ENSURE query POINTS TO CONTAINER
             frum = subtest.query["from"]
@@ -326,10 +317,12 @@ def compare_to_expected(query, result, expect, places):
 
     elif result.meta.format == "cube" and len(result.edges) == 1 and result.edges[0].name == "rownum" and not query.sort:
         result_data, result_header = cube2list(result.data)
+        result_header = map(literal_field, result_header)
         result_data = unwrap(jx.sort(result_data, result_header))
         result.data = list2cube(result_data, result_header)
 
         expect_data, expect_header = cube2list(expect.data)
+        expect_header = map(literal_field, expect_header)
         expect_data = jx.sort(expect_data, expect_header)
         expect.data = list2cube(expect_data, expect_header)
 
@@ -345,11 +338,9 @@ def cube2list(cube):
     """
     header = list(unwrap(cube).keys())
     rows = []
-    for r in zip(*[[(k, v) for v in a] for k, a in cube.items()]):
-        row = Data()
-        for k, v in r:
-            row[k] = v
-        rows.append(unwrap(row))
+    for r in zip(*([(k, unwrap(v)) for v in a] for k, a in cube.items())):
+        row = dict(r)
+        rows.append(row)
     return rows, header
 
 
@@ -360,8 +351,7 @@ def list2cube(rows, header):
             if h == ".":
                 output[h].append(r)
             else:
-                r = wrap(r)
-                output[h].append(r[h])
+                output[h].append(r.get(h))
     return output
 
 

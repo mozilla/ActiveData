@@ -18,8 +18,8 @@ from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es09.util import post as es_post
-from jx_elasticsearch.es14.expressions import Variable, LeavesOp
-from jx_elasticsearch.es14.util import jx_sort_to_es_sort, es_query_template
+from jx_elasticsearch.es52.expressions import Variable, LeavesOp
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
@@ -60,7 +60,7 @@ def es_setop(es, query):
     nested_filter = None
     set_default(filters[0], query.where.partial_eval().to_esfilter(schema))
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
-    es_query.fields = FlatList()
+    es_query.stored_fields = FlatList()
 
     selects = wrap([s.copy() for s in listwrap(query.select)])
     new_select = FlatList()
@@ -79,7 +79,7 @@ def es_setop(es, query):
             for c in leaves:
                 full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
                 if c.type == NESTED:
-                    es_query.fields = ["_source"]
+                    es_query.stored_fields = ["_source"]
                     new_select.append({
                         "name": full_name,
                         "value": Variable(c.es_column),
@@ -88,9 +88,9 @@ def es_setop(es, query):
                     })
                     put_index += 1
                 elif c.nested_path[0] != ".":
-                    es_query.fields = ["_source"]
+                    es_query.stored_fields = ["_source"]
                 else:
-                    es_query.fields += [c.es_column]
+                    es_query.stored_fields += [c.es_column]
                     new_select.append({
                         "name": full_name,
                         "value": Variable(c.es_column),
@@ -105,7 +105,7 @@ def es_setop(es, query):
             if leaves:
                 if any(c.type == NESTED for c in leaves):
                     # PULL WHOLE NESTED ARRAYS
-                    es_query.fields = ["_source"]
+                    es_query.stored_fields = ["_source"]
                     for c in leaves:
                         if len(c.nested_path) == 1:
                             jx_name = untype_path(c.names["."])
@@ -121,7 +121,7 @@ def es_setop(es, query):
                         if len(c.nested_path) == 1:
                             jx_name = untype_path(c.names["."])
                             if c.type == NESTED:
-                                es_query.fields = ["_source"]
+                                es_query.stored_fields = ["_source"]
                                 new_select.append({
                                     "name": select.name,
                                     "value": Variable(c.es_column),
@@ -130,7 +130,7 @@ def es_setop(es, query):
                                 })
 
                             else:
-                                es_query.fields += [c.es_column]
+                                es_query.stored_fields += [c.es_column]
                                 new_select.append({
                                     "name": select.name,
                                     "value": Variable(c.es_column),
@@ -144,7 +144,7 @@ def es_setop(es, query):
                                     filters[0][k] = None
                                 set_default(
                                     filters[0],
-                                    {"and": [where, {"or": nested_filter}]}
+                                    {"bool": {"must": [where, {"bool": {"should": nested_filter}}]}}
                                 )
 
                             nested_path = c.nested_path[0]
@@ -154,7 +154,7 @@ def es_setop(es, query):
                                 where.nested.path = nested_path
                                 where.nested.query.match_all = {}
                                 where.nested.inner_hits._source = False
-                                where.nested.inner_hits.fields += [c.es_column]
+                                where.nested.inner_hits.stored_fields += [c.es_column]
 
                                 child = relative_field(untype_path(c.names[schema.query_path]), s_column)
                                 pull = accumulate_nested_doc(nested_path, Variable(relative_field(s_column, nest_free_path(nested_path))))
@@ -169,7 +169,7 @@ def es_setop(es, query):
                                     "pull": pull
                                 })
                             else:
-                                nested_selects[nested_path].nested.inner_hits.fields+=[c.es_column]
+                                nested_selects[nested_path].nested.inner_hits.stored_fields+=[c.es_column]
             else:
                 new_select.append({
                     "name": select.name,
@@ -178,9 +178,11 @@ def es_setop(es, query):
                 })
             put_index += 1
         else:
-            painless = select.value.partial_eval().to_ruby(schema)
-            es_query.script_fields[literal_field(select.name)] = {"script": painless.script(schema)}
-
+            painless = select.value.partial_eval().to_painless(schema)
+            es_query.script_fields[literal_field(select.name)] = {"script": {
+                "lang": "painless",
+                "inline": painless.script(schema)
+            }}
             new_select.append({
                 "name": select.name,
                 "pull": jx_expression_to_function("fields." + literal_field(select.name)),
@@ -192,8 +194,8 @@ def es_setop(es, query):
         if n.pull:
             continue
         elif isinstance(n.value, Variable):
-            if es_query.fields[0] == "_source":
-                es_query.fields = ["_source"]
+            if es_query.stored_fields[0] == "_source":
+                es_query.stored_fields = ["_source"]
                 n.pull = get_pull_source(n.value.var)
             else:
                 n.pull = jx_expression_to_function(concat_field("fields", literal_field(n.value.var)))

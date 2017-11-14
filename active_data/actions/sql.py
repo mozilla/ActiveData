@@ -13,22 +13,22 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 import flask
-import moz_sql_parser
 from active_data import record_request, cors_wrapper
 from flask import Response
+from jx_python import jx, wrap_from
 from mo_dots import wrap, listwrap
 from mo_json import utf82unicode, json2value, value2json
 from mo_logs import Log
 from mo_math import Math
 
+import moz_sql_parser
 from active_data.actions import save_query, send_error, test_mode_wait
 from active_data.actions.jx import BLANK, QUERY_SIZE_LIMIT
+from jx_base.container import Container
 from mo_logs.exceptions import Except
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_times.timer import Timer
 from pyLibrary.convert import unicode2utf8
-from jx_python import jx, wrap_from
-from jx_base.container import Container
 
 
 @cors_wrapper
@@ -65,7 +65,7 @@ def sql_query(path):
                 jx_query = parse_sql(data.sql)
                 frum = wrap_from(jx_query['from'])
                 result = jx.run(jx_query, frum=frum)
-                if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
+                if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                     result = result.format(jx_query.format)
                 result.meta.jx_query = jx_query
 

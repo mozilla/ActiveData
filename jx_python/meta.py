@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from copy import copy
 from datetime import date
 from datetime import datetime
 
@@ -138,6 +139,7 @@ Column = DataClass(
         {"name": "nested_path", "nulls": True},  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
         {"name": "count", "nulls": True},
         {"name": "cardinality", "nulls": True},
+        {"name": "multi", "nulls": True},
         {"name": "partitions", "nulls": True},
         {"name": "last_updated", "nulls": True}
     ]
@@ -169,7 +171,10 @@ class ColumnList(Container):
 
     def add(self, column):
         columns_for_table = self.data.setdefault(column.es_index, {})
-        _columns = columns_for_table.setdefault(column.names["."], [])
+        abs_cname = column.names["."]
+        _columns = columns_for_table.get(abs_cname)
+        if not _columns:
+            _columns = columns_for_table[abs_cname] = []
         _columns.append(column)
         self.count += 1
 
@@ -193,14 +198,17 @@ class ColumnList(Container):
                 columns = list(self)
                 columns = jx.filter(columns, command.where)
 
-            for col in columns:
+            for col in list(columns):
                 for k in command["clear"]:
-                    col[k] = None
+                    if k == ".":
+                        columns.remove(col)
+                    else:
+                        col[k] = None
 
                 for k, v in command.set.items():
                     col[k] = v
         except Exception as e:
-            Log.error("sould not happen", cause=e)
+            Log.error("should not happen", cause=e)
 
     def query(self, query):
         query.frum = self.__iter__()

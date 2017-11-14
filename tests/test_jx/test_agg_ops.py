@@ -292,7 +292,6 @@ class TestAggOps(BaseTestCase):
         }
         self.utils.execute_tests(test, tjson=True)
 
-    @skipIf(global_settings.use in ["sqlite"], "not expected to pass yet")
     def test_median_on_value(self):
         test = {
             "data": [i**2 for i in range(30)],

@@ -7,9 +7,6 @@
 	},
 	"mappings": {
 		"request_log": {
-			"_source": {
-				"compress": true
-			},
 			"dynamic_templates": [
 				{
 					"default_strings": {
@@ -37,9 +34,7 @@
 				},
 				"query": {
 					"type": "object",
-					"enabled": false,
-					"index": "no",
-					"store": "yes"
+					"enabled": false
 				},
 				"query_text": {
 					"type": "string",
@@ -48,14 +43,10 @@
 				"data": {
 					"index": "not_analyzed",
 					"type": "string"
-
 				},
 				"error": {
 					"type": "object",
-					"enabled": false,
-					"index": "no",
-					"store": "yes"
-
+					"enabled": false
 				},
 				"from": {
 					"index": "not_analyzed",

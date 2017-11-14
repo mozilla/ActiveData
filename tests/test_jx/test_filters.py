@@ -202,7 +202,7 @@ class TestFilters(BaseTestCase):
                 "meta": {"format": "list"}, "data": [{"v": "test"}]
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
     def test_null_prefix(self):
         test = {
@@ -216,7 +216,7 @@ class TestFilters(BaseTestCase):
                 "meta": {"format": "list"}, "data": [{"v": "test"}]
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
     def test_edges_and_empty_prefix(self):
         test = {
@@ -230,7 +230,7 @@ class TestFilters(BaseTestCase):
                 "meta": {"format": "list"}, "data": [{"v": "test", "count": 1}]
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
     def test_edges_and_null_prefix(self):
         test = {
@@ -244,7 +244,7 @@ class TestFilters(BaseTestCase):
                 "meta": {"format": "list"}, "data": [{"v": "test", "count": 1}]
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
 
 

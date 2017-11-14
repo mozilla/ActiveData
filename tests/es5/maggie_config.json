@@ -13,7 +13,7 @@
 			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
 		},
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
-		"jx_elasticsearch.meta.es52.ENABLE_META_SCAN": true,
+		"jx_elasticsearch.meta.ENABLE_META_SCAN": true,
 		"jx_base.expressions.ALLOW_SCRIPTING": true
 	},
 	"request_logs": {
@@ -48,20 +48,6 @@
 		"log": [
 			{
 				"log_type": "console"
-			},
-			{
-				"log_type": "email",
-				"from_address": "klahnakoski@mozilla.com",
-				"to_address": "klahnakoski@mozilla.com",
-				"subject": "[ALERT][DEV]Problem with ActiveData Server",
-				"$ref": "file://~/private.json#email"
-			},
-			{
-				"log_type": "elasticsearch",
-				"host": "http://localhost",
-				"port": 9200,
-				"index": "debug_active_data",
-				"type": "active_data"
 			}
 		]
 	}

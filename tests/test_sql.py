@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_base.expressions import NULL
 from mo_dots import wrap, Data
 
 from mo_json import json2value, utf82unicode
@@ -18,7 +19,7 @@ from mo_json import json2value, utf82unicode
 from mo_logs import Log
 from mo_logs.url import URL
 from tests import compare_to_expected
-from tests.test_jx import BaseTestCase, TEST_TABLE, NULL
+from tests.test_jx import BaseTestCase, TEST_TABLE
 
 simple_test_data = [
     {"a": "c", "v": 13},
@@ -76,7 +77,7 @@ class TestSQL(BaseTestCase):
 
     def execute(self, test):
         test = wrap(test)
-        self.utils.fill_container(test, tjson=False)
+        self.utils.fill_container(test)
         test.query.sql = test.query.sql.replace(TEST_TABLE, test.query['from'])
         self.utils.send_queries(test)
 

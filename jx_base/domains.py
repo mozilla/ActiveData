@@ -15,14 +15,15 @@ import itertools
 from collections import Mapping
 from numbers import Number
 
-from mo_dots import coalesce, Data, set_default, Null, listwrap
-from mo_dots import wrap
-from mo_logs import Log
-from mo_math import MAX, MIN
+from future.utils import text_type
 
 from jx_base.expressions import jx_expression
 from mo_collections.unique_index import UniqueIndex
+from mo_dots import coalesce, Data, set_default, Null, listwrap
+from mo_dots import wrap
 from mo_dots.lists import FlatList
+from mo_logs import Log
+from mo_math import MAX, MIN
 from mo_times.dates import Date
 from mo_times.durations import Duration
 
@@ -206,6 +207,10 @@ class SimpleSetDomain(Domain):
                 self.partitions.append(part)
                 self.map[p] = part
                 self.order[p] = i
+                if isinstance(p, (int, float)):
+                    text_part = text_type(float(p))  # ES CAN NOT HANDLE NUMERIC PARTS
+                    self.map[text_part] = part
+                    self.order[text_part] = i
             self.label = coalesce(self.label, "name")
             self.primitive = True
             return
@@ -431,7 +436,7 @@ class SetDomain(Domain):
 
 
 class TimeDomain(Domain):
-    __slots__ = ["max", "min", "interval", "partitions", "NULL"]
+    __slots__ = ["max", "min", "interval", "partitions", "NULL", "sort"]
 
     def __init__(self, **desc):
         Domain.__init__(self, **desc)
@@ -440,6 +445,7 @@ class TimeDomain(Domain):
         self.min = Date(self.min)
         self.max = Date(self.max)
         self.interval = Duration(self.interval)
+        self.sort = Null
 
         if self.partitions:
             # IGNORE THE min, max, interval
@@ -629,7 +635,7 @@ class RangeDomain(Domain):
             if not self.key:
                 Log.error("Must have a key value")
 
-            parts = listwrap(self.partitions)
+            parts = list(listwrap(self.partitions))
             for i, p in enumerate(parts):
                 self.min = MIN([self.min, p.min])
                 self.max = MAX([self.max, p.max])
@@ -641,7 +647,7 @@ class RangeDomain(Domain):
 
             # VERIFY PARTITIONS DO NOT OVERLAP, HOLES ARE FINE
             for p, q in itertools.product(parts, parts):
-                if p.min <= q.min and q.min < p.max:
+                if p is not q and p.min <= q.min and q.min < p.max:
                     Log.error("partitions overlap!")
 
             self.partitions = parts

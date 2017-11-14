@@ -13,19 +13,27 @@ from __future__ import unicode_literals
 
 import json
 import time
-from collections import deque
+from collections import deque, Mapping
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 
 from future.utils import text_type
-from mo_dots import Data, FlatList, NullType
-from mo_json import ESCAPE_DCT, float2json
-from mo_logs import Log
 
-from mo_json.encoder import pretty_json, problem_serializing, _repr, UnicodeBuilder, COMMA, QUOTE_COLON, COMMA_QUOTE
+from mo_dots import Data, FlatList, NullType, split_field, join_field
+from mo_json import ESCAPE_DCT, float2json
+from mo_json.encoder import pretty_json, problem_serializing, _repr, UnicodeBuilder, COMMA
+from mo_logs import Log
 from mo_logs.strings import utf82unicode
 from mo_times.dates import Date
 from mo_times.durations import Duration
+
+
+TYPE_PREFIX = "__type__"
+BOOLEAN_TYPE = TYPE_PREFIX+"boolean"
+NUMBER_TYPE = TYPE_PREFIX+"number"
+STRING_TYPE = TYPE_PREFIX+"string"
+NESTED_TYPE = TYPE_PREFIX+"nested"
+EXISTS_TYPE = TYPE_PREFIX+"exists"
 
 json_decoder = json.JSONDecoder().decode
 append = UnicodeBuilder.append
@@ -54,13 +62,13 @@ def typed_encode(value):
 def _typed_encode(value, _buffer):
     try:
         if value is None:
-            append(_buffer, u'{"$value":null}')
+            append(_buffer, u'{}')
             return
         elif value is True:
-            append(_buffer, u'{"$value":true}')
+            append(_buffer, u'{"'+BOOLEAN_TYPE+'": true}')
             return
         elif value is False:
-            append(_buffer, u'{"$value":false}')
+            append(_buffer, u'{"'+BOOLEAN_TYPE+'": false}')
             return
 
         _type = value.__class__
@@ -68,9 +76,9 @@ def _typed_encode(value, _buffer):
             if value:
                 _dict2json(value, _buffer)
             else:
-                append(_buffer, u'{"$object":"."}')
+                append(_buffer, u'{"'+EXISTS_TYPE+'": 1}')
         elif _type is str:
-            append(_buffer, u'{"$value":"')
+            append(_buffer, u'{"'+STRING_TYPE+'": "')
             try:
                 v = utf82unicode(value)
             except Exception as e:
@@ -80,38 +88,44 @@ def _typed_encode(value, _buffer):
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
         elif _type is text_type:
-            append(_buffer, u'{"$value":"')
+            append(_buffer, u'{"'+STRING_TYPE+'": "')
             for c in value:
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
-        elif _type in (int, long, Decimal):
-            append(_buffer, u'{"$value":')
+        elif _type in (int,  long, Decimal):
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(value))
             append(_buffer, u'}')
         elif _type is float:
-            append(_buffer, u'{"$value":')
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(value))
             append(_buffer, u'}')
         elif _type in (set, list, tuple, FlatList):
-            _list2json(value, _buffer)
+            if any(isinstance(v, (Mapping, set, list, tuple, FlatList)) for v in value):
+                append(_buffer, u'{"'+NESTED_TYPE+'": ')
+                _list2json(value, _buffer)
+                append(_buffer, u'}')
+            else:
+                # ALLOW PRIMITIVE MULTIVALUES
+                _list2json(value, _buffer)
         elif _type is date:
-            append(_buffer, u'{"$value":')
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(time.mktime(value.timetuple())))
             append(_buffer, u'}')
         elif _type is datetime:
-            append(_buffer, u'{"$value":')
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(time.mktime(value.timetuple())))
             append(_buffer, u'}')
         elif _type is Date:
-            append(_buffer, u'{"$value":')
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(time.mktime(value.value.timetuple())))
             append(_buffer, u'}')
         elif _type is timedelta:
-            append(_buffer, u'{"$value":')
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(value.total_seconds()))
             append(_buffer, u'}')
         elif _type is Duration:
-            append(_buffer, u'{"$value":')
+            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
             append(_buffer, float2json(value.seconds))
             append(_buffer, u'}')
         elif _type is NullType:
@@ -121,7 +135,9 @@ def _typed_encode(value, _buffer):
             t = json2typed(j)
             append(_buffer, t)
         elif hasattr(value, '__iter__'):
+            append(_buffer, u'{"'+NESTED_TYPE+'": ')
             _iter2json(value, _buffer)
+            append(_buffer, u'}')
         else:
             from mo_logs import Log
 
@@ -155,19 +171,23 @@ def _iter2json(value, _buffer):
 
 
 def _dict2json(value, _buffer):
-    prefix = u'{"$object":".","'
+    prefix = u'{"'+EXISTS_TYPE+'": 1, '
     for k, v in value.iteritems():
+        if v == None or v == "":
+            continue
         append(_buffer, prefix)
-        prefix = COMMA_QUOTE
+        prefix = u", "
         if isinstance(k, str):
             k = utf82unicode(k)
         if not isinstance(k, text_type):
             Log.error("Expecting property name to be a string")
-        for c in k:
-            append(_buffer, ESCAPE_DCT.get(c, c))
-        append(_buffer, QUOTE_COLON)
+        append(_buffer, json.dumps(encode_property(k)))
+        append(_buffer, u": ")
         _typed_encode(v, _buffer)
-    append(_buffer, u"}")
+    if prefix == u", ":
+        append(_buffer, u'}')
+    else:
+        append(_buffer, u'{"'+EXISTS_TYPE+'": 1}')
 
 
 VALUE = 0
@@ -179,14 +199,8 @@ STRING = 6
 ESCAPE = 5
 
 
-def json2typed(json):
-    """
-    every ': {' gets converted to ': {"$object": ".", '
-    every ': <value>' gets converted to '{"$value": <value>}'
-    """
-    # MODE VALUES
-    #
 
+def json2typed(json):
     context = deque()
     output = UnicodeBuilder(1024)
     mode = VALUE
@@ -197,7 +211,7 @@ def json2typed(json):
             if c == "{":
                 context.append(mode)
                 mode = BEGIN_OBJECT
-                append(output, '{"$object":"."')
+                append(output, '{"'+EXISTS_TYPE+'": 1')
                 continue
             elif c == '[':
                 context.append(mode)
@@ -215,10 +229,10 @@ def json2typed(json):
             elif c == '"':
                 context.append(mode)
                 mode = STRING
-                append(output, '{"$value":')
+                append(output, '{"'+STRING_TYPE+'": ')
             else:
                 mode = PRIMITIVE
-                append(output, '{"$value":')
+                append(output, '{"'+NUMBER_TYPE+'": ')
             append(output, c)
         elif mode == PRIMITIVE:
             if c == ",":
@@ -283,8 +297,52 @@ def json2typed(json):
 
 
 def encode_property(name):
-    return name.replace("\\.", ".")
+    return name.replace(",", "\\,").replace(".", ",")
 
 
 def decode_property(encoded):
-    return encoded
+    return encoded.replace("\\,", "\a").replace(",", ".").replace("\a", ",")
+
+
+def untype_path(encoded):
+    if encoded.startswith(".."):
+        remainder = encoded.lstrip(".")
+        back = len(encoded) - len(remainder) - 1
+        return ("." * back) + join_field(decode_property(c) for c in split_field(remainder) if not c.startswith(TYPE_PREFIX))
+    else:
+        return join_field(decode_property(c) for c in split_field(encoded) if not c.startswith(TYPE_PREFIX))
+
+
+def nest_free_path(encoded):
+    if encoded.startswith(".."):
+        encoded = encoded.lstrip(".")
+        if not encoded:
+            encoded = "."
+
+    #     remainder = encoded.lstrip(".")
+    #     back = len(encoded) - len(remainder) - 1
+    #     return ("." * back) + join_field(decode_property(c) for c in split_field(remainder) if c != NESTED_TYPE)
+    # else:
+    return join_field(decode_property(c) for c in split_field(encoded) if c != NESTED_TYPE)
+
+
+def untyped(value):
+    return _untype(value)
+
+
+def _untype(value):
+    if isinstance(value, Mapping):
+        output = {}
+
+        for k, v in value.items():
+            if k == EXISTS_TYPE:
+                continue
+            elif k.startswith(TYPE_PREFIX):
+                return v
+            else:
+                output[decode_property(k)] = _untype(v)
+        return output
+    elif isinstance(value, list):
+        return [_untype(v) for v in value]
+    else:
+        return value

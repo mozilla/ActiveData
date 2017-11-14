@@ -11,12 +11,13 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_base.expressions import NULL
 from mo_dots import wrap
 from mo_math import Math
 from unittest import skipIf
 
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
-from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings, NULL
+from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
@@ -411,7 +412,6 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use == "elasticsearch", "ES only accepts objects, not values")
     def test_list_of_values(self):
         test = {
             "data": ["a", "b"],
@@ -596,7 +596,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use=="sqlite", "no need for limit when using own resources")
+    @skipIf(global_settings.use == "sqlite", "no need for limit when using own resources")
     def test_max_limit(self):
         test = wrap({
             "data": lots_of_data,
@@ -1126,7 +1126,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    def test_keep_whitespace(self):
+    def test_select_array_as_value(self):
         test = {
             "data": [
                 {"_a": [{"b": 1, "c": 1}, {"b": 2, "c": 1}]},

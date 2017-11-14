@@ -1,22 +1,56 @@
 {
 	"settings": {
-		"index.store.throttle.type": "merge",
-		"index.number_of_replicas": 0,
-		"index.store.throttle.max_bytes_per_sec": "2mb",
-		"index.number_of_shards": 3
+		"index.number_of_replicas": 0
 	},
 	"mappings": {
 		{{type|quote}}: {
-			"_source": {
-				"compress": true
-			},
 			"dynamic_templates": [
 				{
-					"default_numbers": {
+					"typed_number": {
 						"mapping": {
-							"type": "double"
+							"type": "double",
+							"store": true
 						},
-						"match_mapping_type": "long",
+						"match": "__type__number"
+					}
+				},
+				{
+					"typed_strings": {
+						"mapping": {
+							"index": "not_analyzed",
+							"type": "keyword",
+							"store": true
+						},
+						"match_mapping_type": "string",
+						"match": "__type__string"
+					}
+				},
+				{
+					"typed_nested_objects": {
+						"mapping": {
+							"type": "nested"
+						},
+						"match_mapping_type": "object",
+						"match": "__type__nested"
+					}
+				},
+				{
+					"default_number": {
+						"mapping": {
+							"type": "double",
+							"store": true
+						},
+						"match_mapping_type": "double",
+						"match": "*"
+					}
+				},
+				{
+					"default_integer": {
+						"mapping": {
+							"type": "double",
+							"store": true
+						},
+						"match_mapping_type": "integer",
 						"match": "*"
 					}
 				},
@@ -24,19 +58,11 @@
 					"default_strings": {
 						"mapping": {
 							"index": "not_analyzed",
-							"type": "string"
+							"type": "keyword",
+							"store": true
 						},
 						"match_mapping_type": "string",
 						"match": "*"
-					}
-				},
-				{
-					"default_nested_objects": {
-						"mapping": {
-							"type": "nested"
-						},
-						"match_mapping_type": "object",
-						"match": "_*"
 					}
 				},
 				{
@@ -51,6 +77,6 @@
 				}
 			],
 			"$ref":"param://metadata"
-        }
-    }
+		}
+	}
 }

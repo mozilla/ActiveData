@@ -11,16 +11,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_elasticsearch import es09
-from mo_dots import listwrap, unwrap, literal_field
-from mo_math import AND
-
 from jx_base.queries import is_variable_name
+from jx_elasticsearch import es09
 from jx_elasticsearch.es09.util import aggregates, fix_es_stats, build_es_query
-from jx_elasticsearch.es14.expressions import simplify_esfilter, Variable
+from jx_elasticsearch.es09.util import post as es_post
+from jx_elasticsearch.es52.expressions import Variable
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
+from mo_dots import listwrap, unwrap, literal_field
+from mo_math import AND
 
 
 def is_aggop(query):
@@ -48,19 +48,19 @@ def es_aggop(es, mvel, query):
                     "statistical": {
                         "field": s.value.var
                     },
-                    "facet_filter": simplify_esfilter(query.where.to_esfilter())
+                    "facet_filter": query.where.to_esfilter()
                 }
             else:
                 unwrap(FromES.facets)[s.name] = {
                     "statistical": {
                         "script": jx_expression_to_function(s.value)
                     },
-                    "facet_filter": simplify_esfilter(query.where)
+                    "facet_filter": query.where.to_es_filter()
                 }
             value2facet[s.value] = s.name
         name2facet[s.name] = value2facet[s.value]
 
-    data = es09.util.post(es, FromES, query.limit)
+    data = es_post(es, FromES, query.limit)
 
     matricies = {s.name: Matrix(value=fix_es_stats(data.facets[literal_field(s.name)])[aggregates[s.aggregate]]) for s in select}
     cube = Cube(query.select, [], matricies)
@@ -94,7 +94,7 @@ def es_countop(es, mvel, query):
                 }
             }
 
-    data = es09.util.post(es, FromES, query.limit)
+    data = es_post(es, FromES, query.limit)
 
     matricies = {}
     for s in select:

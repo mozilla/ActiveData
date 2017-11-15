@@ -11,16 +11,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import STRUCT, NESTED, EXISTS
+from jx_base import STRUCT, NESTED
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es09.util import post as es_post
-from jx_elasticsearch.es14.expressions import split_expression_by_depth, AndOp, Variable, LeavesOp
-from jx_elasticsearch.es14.setop import format_dispatch, get_pull_function, get_pull
-from jx_elasticsearch.es14.util import jx_sort_to_es_sort, es_query_template
+from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, LeavesOp
+from jx_elasticsearch.es52.setop import format_dispatch, get_pull_function, get_pull
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template
 from jx_python.expressions import compile_expression, jx_expression_to_function
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, concat_field, set_default, relative_field, startswith_field
-from mo_json.typed_encoder import untype_path, EXISTS_TYPE
+from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_threads import Thread
 from mo_times.timer import Timer
@@ -66,12 +66,18 @@ def es_deepop(es, query):
         set_default(f, script)
 
     if not wheres[1]:
-        # WITHOUT NESTED CONDITIONS, WE MUST ALSO RETURN DOCS WITH NO NESTED RECORDS
         more_filter = {
-            "and": [
-                es_filters[0],
-                {"missing": {"field": untype_path(query_path) + "." + EXISTS_TYPE}}
-            ]
+            "bool": {
+                "must": [AndOp("and", wheres[0]).partial_eval().to_esfilter(schema)],
+                "must_not": {
+                    "nested": {
+                        "path": query_path,
+                        "query": {
+                            "match_all": {}
+                        }
+                    }
+                }
+            }
         }
     else:
         more_filter = None
@@ -84,7 +90,7 @@ def es_deepop(es, query):
     query_for_es = query.map(map_to_es_columns)
     es_query.sort = jx_sort_to_es_sort(query_for_es.sort, schema)
 
-    es_query.fields = []
+    es_query.stored_fields = []
 
     is_list = isinstance(query.select, list)
     new_select = FlatList()
@@ -99,7 +105,7 @@ def es_deepop(es, query):
                 if c.nested_path[0] == ".":
                     if c.type == NESTED:
                         continue
-                    es_query.fields += [c.es_column]
+                    es_query.stored_fields += [c.es_column]
                 c_name = untype_path(c.names[query_path])
                 col_names.add(c_name)
                 new_select.append({
@@ -130,7 +136,7 @@ def es_deepop(es, query):
                     if n.nested_path[0] == ".":
                         if n.type == NESTED:
                             continue
-                        es_query.fields += [n.es_column]
+                        es_query.stored_fields += [n.es_column]
 
                     # WE MUST FIGURE OUT WHICH NAMESSPACE s.value.var IS USING SO WE CAN EXTRACT THE child
                     for np in n.nested_path:
@@ -157,7 +163,7 @@ def es_deepop(es, query):
             for v in expr.vars():
                 for c in schema[v]:
                     if c.nested_path[0] == ".":
-                        es_query.fields += [c.es_column]
+                        es_query.stored_fields += [c.es_column]
                     # else:
                     #     Log.error("deep field not expected")
 
@@ -180,8 +186,8 @@ def es_deepop(es, query):
         more.append(es_post(
             es,
             Data(
-                query={"filtered": {"filter": more_filter}},
-                fields=es_query.fields
+                query=more_filter,
+                stored_fields=es_query.stored_fields
             ),
             query.limit
         ))

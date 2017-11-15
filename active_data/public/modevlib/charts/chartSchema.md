@@ -1,7 +1,7 @@
 #A Standard Chart Schema
 chart definition
 
-## ``area` Property
+## `area` Property
 details regarding the plot area, but nothing about the series
 
   * `area.style` - *object*
@@ -83,7 +83,9 @@ more configuration for legend
     * `legend.style.font` - *string* css font
     * `legend.style.border` - *string* css border
   * `legend.label` - *string* name the legend
+
 ## `series` Property
+
 what is ploted 
 
   * `series.hoverStyle` - *object* for when hovering over datapoint

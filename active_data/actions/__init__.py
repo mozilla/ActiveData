@@ -11,20 +11,20 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import flask
-from active_data import record_request
 from flask import Response
+from future.utils import text_type
+
+from active_data import record_request
+from active_data.actions import save_query
+from jx_base import STRUCT
 from jx_python import meta
 from mo_dots import coalesce, join_field, split_field
 from mo_logs import Log, strings
-from mo_threads import Till
-from pyLibrary import convert
-
-from active_data.actions import save_query
-from jx_elasticsearch.meta import TOO_OLD
-from jx_base import STRUCT
 from mo_logs.strings import expand_template
+from mo_threads import Till
 from mo_times.dates import Date
 from mo_times.durations import MINUTE
+from pyLibrary import convert
 
 
 def send_error(active_data_timer, body, e):
@@ -93,6 +93,7 @@ def test_mode_wait(query):
                 "partitions",
                 "count",
                 "cardinality",
+                "multi",
                 "last_updated"
             ],
             "where": {"eq": {"es_index": join_field(split_field(query["from"])[0:1])}}
@@ -101,15 +102,15 @@ def test_mode_wait(query):
         # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
         cols = [c for c in m.get_columns(table_name=query["from"], force=True) if c.type not in STRUCT]
         for c in cols:
-            Log.note("Mark {{column}} dirty at {{time}}", column=c.names["."], time=now)
-            c.last_updated = now - TOO_OLD
+            Log.note("Mark {{column.names}} dirty at {{time}}", column=c, time=now)
+            c.last_updated = now - m.too_old
             m.todo.push(c)
 
         while end_time > now:
             # GET FRESH VERSIONS
             cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in STRUCT]
             for c in cols:
-                if not c.last_updated or c.cardinality == None:
+                if not c.last_updated or now >= c.last_updated or c.cardinality == None:
                     Log.note(
                         "wait for column (table={{col.es_index}}, name={{col.es_column}}) metadata to arrive",
                         col=c
@@ -120,7 +121,7 @@ def test_mode_wait(query):
             Till(seconds=1).wait()
         for c in cols:
             Log.note(
-                "fresh column name={{column.name}} updated={{column.last_updated|date}} parts={{column.partitions}}",
+                "fresh column name={{column.names}} updated={{column.last_updated|date}} parts={{column.partitions}}",
                 column=c
             )
     except Exception, e:

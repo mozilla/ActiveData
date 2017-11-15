@@ -24,7 +24,6 @@ from mo_math import Math
 from mo_math import stats
 from jx_base import domains
 from jx_elasticsearch.es09.expressions import value2MVEL, isKeyword
-from jx_elasticsearch.es14.expressions import simplify_esfilter
 from mo_times import durations
 
 TrueFilter = {"match_all": {}}
@@ -66,11 +65,11 @@ def build_es_query(query):
     if DEBUG:
         # TO LIMIT RECORDS TO WHAT'S IN FACETS
         output.query = {
-            "filtered": {
+            "bool": {
                 "query": {
                     "match_all": {}
                 },
-                "filter": simplify_esfilter(query.where)
+                "filter": query.where.to_esfilter()
             }
         }
 

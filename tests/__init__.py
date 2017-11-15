@@ -23,7 +23,7 @@ import mo_json_config
 from jx_base import container
 from jx_base.query import QueryOp
 from jx_python import jx
-from mo_dots import wrap, coalesce, unwrap, listwrap, Data
+from mo_dots import wrap, coalesce, unwrap, listwrap, Data, literal_field
 from mo_kwargs import override
 from mo_logs import Log, Except, constants
 from mo_logs.exceptions import extract_stack
@@ -61,13 +61,13 @@ class ESUtils(object):
     @override
     def __init__(
         self,
-        service_url,    # location of the ActiveData server we are testing
-        backend_es,     # the ElasticSearch settings for filling the backend
-        sql_url=None,   # location of the SQL service
+        service_url,  # location of the ActiveData server we are testing
+        backend_es,  # the ElasticSearch settings for filling the backend
+        sql_url=None,  # location of the SQL service
         fast_testing=False,
         kwargs=None
     ):
-        if backend_es.schema==None:
+        if backend_es.schema == None:
             Log.error("Expecting backed_es to have a schema defined")
 
         letters = text_type(ascii_lowercase)
@@ -102,7 +102,7 @@ class ESUtils(object):
     def setUp(self):
         global NEXT
 
-        index_name = "testing_" + ("000"+text_type(NEXT))[-3:] + "_" + self.random_letter
+        index_name = "testing_" + ("000" + text_type(NEXT))[-3:] + "_" + self.random_letter
         NEXT += 1
 
         self._es_test_settings = self.backend_es.copy()
@@ -137,21 +137,21 @@ class ESUtils(object):
             try:
                 cluster.delete_index(i.settings.index)
                 Log.note("remove index {{index}}", index=i)
-            except Exception, e:
+            except Exception as e:
                 pass
         Log.stop()
 
     def not_real_service(self):
         return self.settings.fastTesting
 
-    def execute_tests(self, subtest, tjson=False):
+    def execute_tests(self, subtest, tjson=True, places=6):
         subtest = wrap(subtest)
         subtest.name = extract_stack()[1]['method']
 
         self.fill_container(subtest, tjson=tjson)
-        self.send_queries(subtest)
+        self.send_queries(subtest, places=places)
 
-    def fill_container(self, subtest, tjson=False):
+    def fill_container(self, subtest, tjson=True):
         """
         RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
         """
@@ -173,15 +173,7 @@ class ESUtils(object):
             container.add_alias(_settings.index)
 
             # INSERT DATA
-            inserts = []
-            for v in subtest.data:
-                _id = v._id
-                v._id = None
-                inserts.append({
-                    "id": _id,
-                    "value": v
-                })
-            container.extend(inserts)
+            container.extend({"value": d} for d in subtest.data)
             container.flush()
             # ENSURE query POINTS TO CONTAINER
             frum = subtest.query["from"]
@@ -191,12 +183,12 @@ class ESUtils(object):
                 subtest.query["from"] = frum.replace(TEST_TABLE, _settings.index)
             else:
                 Log.error("Do not know how to handle")
-        except Exception, e:
-            Log.error("can not load {{data}} into container", {"data":subtest.data}, e)
+        except Exception as e:
+            Log.error("can not load {{data}} into container", data=subtest.data, cause=e)
 
         return _settings
 
-    def send_queries(self, subtest):
+    def send_queries(self, subtest, places=6):
         subtest = wrap(subtest)
 
         try:
@@ -224,7 +216,7 @@ class ESUtils(object):
                 result = convert.json2value(convert.utf82unicode(response.all_content))
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
-                compare_to_expected(subtest.query, result, expected)
+                compare_to_expected(subtest.query, result, expected, places)
                 Log.note("PASS {{name|quote}} (format={{format}})", name=subtest.name, format=format)
             if num_expectations == 0:
                 Log.error(
@@ -275,7 +267,7 @@ class ESUtils(object):
                     Log.error("Server raised exception", e)
 
 
-def compare_to_expected(query, result, expect):
+def compare_to_expected(query, result, expect, places):
     query = wrap(query)
     expect = wrap(expect)
 
@@ -304,10 +296,10 @@ def compare_to_expected(query, result, expect):
 
         if not query.sort:
             try:
-                #result.data MAY BE A LIST OF VALUES, NOT OBJECTS
+                # result.data MAY BE A LIST OF VALUES, NOT OBJECTS
                 data_columns = jx.sort(set(jx.get_columns(result.data, leaves=True)) | set(jx.get_columns(expect.data, leaves=True)), "name")
             except Exception:
-                data_columns = [{"name":"."}]
+                data_columns = [{"name": "."}]
 
             sort_order = listwrap(coalesce(query.edges, query.groupby)) + data_columns
 
@@ -325,15 +317,17 @@ def compare_to_expected(query, result, expect):
 
     elif result.meta.format == "cube" and len(result.edges) == 1 and result.edges[0].name == "rownum" and not query.sort:
         result_data, result_header = cube2list(result.data)
+        result_header = map(literal_field, result_header)
         result_data = unwrap(jx.sort(result_data, result_header))
         result.data = list2cube(result_data, result_header)
 
         expect_data, expect_header = cube2list(expect.data)
+        expect_header = map(literal_field, expect_header)
         expect_data = jx.sort(expect_data, expect_header)
         expect.data = list2cube(expect_data, expect_header)
 
     # CONFIRM MATCH
-    assertAlmostEqual(result, expect, places=6)
+    assertAlmostEqual(result, expect, places=places)
 
 
 def cube2list(cube):
@@ -344,11 +338,9 @@ def cube2list(cube):
     """
     header = list(unwrap(cube).keys())
     rows = []
-    for r in zip(*[[(k, v) for v in a] for k, a in cube.items()]):
-        row = Data()
-        for k, v in r:
-           row[k]=v
-        rows.append(unwrap(row))
+    for r in zip(*([(k, unwrap(v)) for v in a] for k, a in cube.items())):
+        row = dict(r)
+        rows.append(row)
     return rows, header
 
 
@@ -356,11 +348,10 @@ def list2cube(rows, header):
     output = {h: [] for h in header}
     for r in rows:
         for h in header:
-            if h==".":
+            if h == ".":
                 output[h].append(r)
             else:
-                r = wrap(r)
-                output[h].append(r[h])
+                output[h].append(r.get(h))
     return output
 
 
@@ -395,7 +386,7 @@ def run_app(please_stop, server_is_ready):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         bufsize=-1
-        #creationflags=CREATE_NEW_PROCESS_GROUP
+        # creationflags=CREATE_NEW_PROCESS_GROUP
     )
 
     while not please_stop:
@@ -410,7 +401,6 @@ def run_app(please_stop, server_is_ready):
 
 
 class FakeHttp(object):
-
     def get(*args, **kwargs):
         body = kwargs.get("data")
 
@@ -439,12 +429,11 @@ container_types = Data(
     elasticsearch=ESUtils,
 )
 
-
 try:
     # read_alternate_settings
     filename = os.environ.get("TEST_CONFIG")
     if filename:
-        test_jx.global_settings = mo_json_config.get("file://"+filename)
+        test_jx.global_settings = mo_json_config.get("file://" + filename)
     else:
         Log.alert("No TEST_CONFIG environment variable to point to config file.  Using /tests/config/elasticsearch.json")
 
@@ -455,4 +444,3 @@ try:
     test_jx.utils = container_types[test_jx.global_settings.use](test_jx.global_settings)
 except Exception, e:
     Log.warning("problem", e)
-

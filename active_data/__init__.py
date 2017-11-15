@@ -39,7 +39,7 @@ def record_request(request, query_, data, error):
             "data": data,
             "error": error
         })
-        log["from"] = request.headers.get("from")
+        log["from"] = request.headers.get('from')
         request_log_queue.add({"value": log})
     except Exception, e:
         Log.warning("Can not record", cause=e)

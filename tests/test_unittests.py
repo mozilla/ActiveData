@@ -13,6 +13,8 @@ from __future__ import unicode_literals
 
 from unittest import skip
 
+from future.utils import text_type
+
 import mo_json_config
 from mo_dots import wrap
 from mo_logs import Log, Except

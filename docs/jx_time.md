@@ -3,7 +3,7 @@
 All points in time are referenced as seconds since epoch GMT. UTC is not used
 due to the irregular leap seconds. No one needs UTC unless you need accuracy
 over 7 digits (measuring duration of months with accuracy of seconds). The
-regularity of GMT allows us to define a vector space.
+regularity of GMT allows us to define a vector space and use algebra on time.
 
 ## Date, Time and Duration
 
@@ -19,6 +19,7 @@ Time can be
 **Example**
 
     {"date": "June 30, 2015 19:50:10"}
+	{"date": 1435693810}  # June 30, 2015 19:50:10
 
 ### Relative Time
 

@@ -19,7 +19,7 @@ from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
 from jx_base.expressions import TupleOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
-from jx_elasticsearch.es14.expressions import Variable, NotOp, InOp, Literal, OrOp, AndOp, InequalityOp, LeavesOp
+from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, OrOp, AndOp, InequalityOp, LeavesOp
 from jx_python import jx
 from mo_dots import set_default, coalesce, literal_field, Data, relative_field
 from mo_dots import wrap
@@ -180,7 +180,10 @@ class SetDecoder(AggsDecoder):
             }}, es_query)
         else:
             terms = set_default({"terms": {
-                "script": value.to_ruby(self.schema).script(self.schema),
+                "script": {
+                    "lang": "painless",
+                    "inline": value.to_painless(self.schema).script(self.schema)
+                },
                 "size": limit
             }}, es_query)
 
@@ -242,7 +245,7 @@ def _range_composer(edge, domain, es_query, to_float, schema):
     if isinstance(edge.value, Variable):
         calc = {"field": schema.leaves(edge.value.var)[0].es_column}
     else:
-        calc = {"script": edge.value.to_ruby(schema).script(schema)}
+        calc = {"script": edge.value.to_painless(schema).script(schema)}
 
     return wrap({"aggs": {
         "_match": set_default(
@@ -476,7 +479,7 @@ class ObjectDecoder(AggsDecoder):
                     "size": self.domain.limit
                 }}, es_query),
                 "_missing": set_default(
-                    {"filter": {"missing": {"field": v}}},
+                    {"filter": {"bool": {"must_not": {"exists": {"field": v}}}}},
                     es_query
                 )
             }})
@@ -547,7 +550,7 @@ class DefaultDecoder(SetDecoder):
         self.start = start
 
         value = self.edge.value.partial_eval()
-        script = value.to_ruby(self.schema)
+        script = value.to_painless(self.schema)
         exists = NotOp("not", script.miss).partial_eval()
         if not isinstance(self.edge.value, Variable):
 
@@ -557,7 +560,10 @@ class DefaultDecoder(SetDecoder):
                     "aggs": {
                         "_filter": set_default(
                             {"terms": {
-                                "script": script.expr,
+                                "script": {
+                                    "lang": "painless",
+                                    "inline": script.expr
+                                },
                                 "size": self.domain.limit,
                                 "order": {"_term": self.sorted} if self.sorted else None
                             }},

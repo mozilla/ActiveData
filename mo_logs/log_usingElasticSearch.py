@@ -13,9 +13,12 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
+from future.utils import text_type
+
 import mo_json
 from mo_dots import wrap, coalesce
 from mo_json import value2json
+from mo_json.typed_encoder import STRING_TYPE, EXISTS_TYPE, NUMBER_TYPE
 from mo_kwargs import override
 from mo_threads import Thread, Queue, Till, THREAD_STOP
 from mo_times import MINUTE, Duration
@@ -116,7 +119,7 @@ def _deep_json_to_string(value, depth):
         return strings.limit(value2json(value), LOG_STRING_LENGTH)
     elif isinstance(value, (float, int, long)):
         return value
-    elif isinstance(value, basestring):
+    elif isinstance(value, text_type):
         return strings.limit(value, LOG_STRING_LENGTH)
     else:
         return strings.limit(value2json(value), LOG_STRING_LENGTH)
@@ -128,51 +131,49 @@ SCHEMA = {
         "dynamic_templates": [
             {"everything_else": {
                 "match": "*",
-                "mapping": {"index": "no"}
+                "mapping": {"index": False}
             }}
         ],
         "_all": {"enabled": False},
-        "_source": {"compress": True, "enabled": True},
+        "_source": {"enabled": True},
         "properties": {
-            "params": {"type": "object", "dynamic": False, "index": "no"},
-            "template": {"type": "object", "dynamic": False, "index": "no"},
+            "params": {"type": "object", "dynamic": False, "enabled": False},  # DO WE NEED enabled?  dynamic==false seems good enough
+            "template": {"type": "object", "dynamic": True},
             "context": {
                 "type": "object",
                 "dynamic": False,
                 "properties": {
-                    "$value": {"type": "string"}
+                    STRING_TYPE: {"type": "keyword"}
                 }
             },
-            "$object": {"type": "string"},
+            EXISTS_TYPE: {"type": "long"},
             "machine": {
                 "dynamic": True,
                 "properties": {
-                    "python": {
-                        "properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "$object": {"type": "string"},
-                    "os": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "name": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}}
+                    EXISTS_TYPE: {"type": "long"},
+                    "python": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
+                    "os": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
+                    "name": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}}
                 }
             },
             "location": {
                 "dynamic": True,
                 "properties": {
-                    "$object": {"type": "string"},
-                    "file": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "method": {
-                        "properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "line": {"properties": {"$value": {"index": "not_analyzed", "type": "long", "doc_values": True}}}
+                    EXISTS_TYPE: {"type": "long"},
+                    "file": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
+                    "method": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
+                    "line": {"properties": {NUMBER_TYPE: {"type": "long", "doc_values": True}}}
                 }
             },
             "thread": {
                 "dynamic": True,
                 "properties": {
-                    "$object": {"type": "string"},
-                    "name": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}},
-                    "id": {"properties": {"$value": {"index": "not_analyzed", "type": "string", "doc_values": True}}}
+                    EXISTS_TYPE: {"type": "long"},
+                    "name": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
+                    "id": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}}
                 }
             },
-            "timestamp": {"properties": {"$value": {"index": "not_analyzed", "type": "string"}}}
+            "timestamp": {"properties": {NUMBER_TYPE: {"type": "number"}}}
         }
     }}
 }

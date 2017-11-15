@@ -116,7 +116,6 @@ class TestEdge1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use == "elasticsearch", "sorting is hard")
     def test_count_over_time_w_sort(self):
         test = {
             "data": simple_test_data,
@@ -180,5 +179,5 @@ class TestEdge1(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 

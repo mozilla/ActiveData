@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 
 import hashlib
 
+import jx_elasticsearch
 from active_data import cors_wrapper
 from flask import Response
 from mo_dots import wrap
@@ -20,8 +21,8 @@ from mo_logs import Log
 from mo_threads import Thread
 from pyLibrary import convert
 
-from jx_elasticsearch.jx_usingES import FromES
 from jx_python.containers.cube import Cube
+from mo_json import json2value
 from mo_logs.exceptions import Except
 from mo_times.dates import Date
 from pyLibrary.env.elasticsearch import Cluster
@@ -70,36 +71,38 @@ class SaveQueries(object):
         es = Cluster(kwargs).get_or_create_index(
             schema=convert.json2value(convert.value2json(SCHEMA), leaves=True),
             limit_replicas=True,
+            typed=False,
             kwargs=kwargs
         )
-        #ENSURE THE TYPE EXISTS FOR PROBING
+        # ENSURE THE TYPE EXISTS FOR PROBING
         try:
             es.add({"id": "dummy", "value": {
                 "hash": "dummy",
                 "create_time": Date.now(),
                 "last_used": Date.now(),
-                "query": {}
+                "query": "{}"
             }})
         except Exception, e:
             Log.warning("Problem saving query", cause=e)
         es.add_alias(es.settings.alias)
         es.flush()
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size, period=1)
-        self.es = FromES(es.settings)
+        self.es = jx_elasticsearch.new_instance(es.settings)
 
     def find(self, hash):
         result = self.es.query({
-            "select": "*",
+            "select": ["hash", "query"],
             "from": {"type": "elasticsearch", "settings": self.es.settings},
             "where": {"prefix": {"hash": hash}},
             "format": "list"
         })
 
         try:
-            query = wrap(result.data).query
+            hash = result.data[0].hash
+            query = wrap(result.data[0]).query
             if len(query) == 0:
                 return None
-        except Exception, e:
+        except Exception:
             return None
 
         self.es.update({
@@ -108,7 +111,7 @@ class SaveQueries(object):
             "where": {"eq": {"hash": hash}}
         })
 
-        return query[0]
+        return query
 
     def save(self, query):
         query.meta = None
@@ -163,16 +166,11 @@ class SaveQueries(object):
         except Exception, f:
             pass
 
-
-
-
 SCHEMA = {
     "settings": {
         "index.number_of_shards": 3,
         "index.number_of_replicas": 2,
-        "index.store.throttle.type": "merge",
-        "index.cache.filter.expire": "1m",
-        "index.cache.field.type": "soft",
+        "index.store.throttle.type": "merge"
     },
     "mappings": {
         "_default_": {
@@ -182,8 +180,7 @@ SCHEMA = {
                         "match": "*",
                         "match_mapping_type": "string",
                         "mapping": {
-                            "type": "string",
-                            "index": "not_analyzed"
+                            "type": "keyword"
                         }
                     }
                 }
@@ -198,23 +195,21 @@ SCHEMA = {
                 "create_time": {
                     "type": "double",
                     "index": "not_analyzed",
-                    "store": "yes"
+                    "store": True
                 },
                 "last_used": {
                     "type": "double",
                     "index": "not_analyzed",
-                    "store": "yes"
+                    "store": True
                 },
                 "hash": {
-                    "type": "string",
-                    "index": "not_analyzed",
-                    "store": "yes"
+                    "type": "keyword",
+                    "store": True
                 },
                 "query": {
-                    "type": "object",
-                    "enabled": False,
-                    "index": "no",
-                    "store": "yes"
+                    "type": "text",
+                    "store": True,
+                    "fielddata": True
                 }
             }
         }

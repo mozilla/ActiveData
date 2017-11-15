@@ -1,5 +1,7 @@
 cluster.name: lahnakoski_es5
 script.engine.painless.inline: true
+script.max_compilations_per_minute: 10000
+
 http.compression: true
 
 http.port: 9200

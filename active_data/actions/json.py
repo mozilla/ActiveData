@@ -11,15 +11,14 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import flask
-from flask import Response
-
-from mo_logs import Log
-from mo_logs.exceptions import Except
 from active_data import cors_wrapper
-from active_data.actions.jx import send_error
-from mo_dots import Data, wrap
-from pyLibrary import convert
+from flask import Response
 from jx_python import jx, wrap_from
+from mo_dots import Data, wrap
+from mo_logs import Log, Except
+from pyLibrary import convert
+
+from active_data.actions import send_error
 from jx_base.container import Container
 from mo_times.timer import Timer
 
@@ -41,7 +40,7 @@ def get_raw_json(path):
                 "format": "list"
             }, frum)
 
-            if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
+            if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                 result = result.format("list")
 
         result.meta.active_data_response_time = active_data_timer.duration

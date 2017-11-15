@@ -14,20 +14,19 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from jx_base import domains
-from jx_elasticsearch import es09
-from mo_dots import coalesce, split_field, Data, wrap
-from mo_dots import listwrap, unwrap
-from mo_logs import Log
-from mo_math import AND, SUM, OR
-
-from jx_base.expressions import TRUE_FILTER, jx_expression, Variable, LeavesOp
+from jx_base.expressions import TRUE, jx_expression, Variable, LeavesOp
 from jx_base.queries import is_variable_name
+from jx_elasticsearch import es09
 from jx_elasticsearch.es09.expressions import unpack_terms
 from jx_elasticsearch.es09.util import aggregates
-from jx_elasticsearch.es14.expressions import simplify_esfilter
+from jx_elasticsearch.es09.util import post as es_post
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
+from mo_dots import coalesce, split_field, Data, wrap
+from mo_dots import listwrap, unwrap
 from mo_dots.lists import FlatList
+from mo_logs import Log
+from mo_math import AND, SUM, OR
 
 
 def is_fieldop(query):
@@ -53,11 +52,11 @@ def es_fieldop(es, query):
     FromES = es09.util.build_es_query(query)
     select = listwrap(query.select)
     FromES.query = {
-        "filtered": {
+        "bool": {
             "query": {
                 "match_all": {}
             },
-            "filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
+            "filter": jx_expression(query.where).to_esfilter()
         }
     }
     FromES.size = coalesce(query.limit, 200000)
@@ -73,7 +72,7 @@ def es_fieldop(es, query):
             FromES.fields.append(s)
     FromES.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
 
-    data = es09.util.post(es, FromES, query.limit)
+    data = es_post(es, FromES, query.limit)
 
     T = data.hits.hits
     matricies = {}
@@ -127,18 +126,18 @@ def es_setop(es, mvel, query):
     if not isDeep and not isComplex:
         if len(select) == 1 and isinstance(select[0].value, LeavesOp):
             FromES = wrap({
-                "query": {"filtered": {
+                "query": {"bool": {
                     "query": {"match_all": {}},
-                    "filter": simplify_esfilter(query.where.to_esfilter())
+                    "filter": query.where.to_esfilter()
                 }},
                 "sort": query.sort,
-                "size": 1
+                "size": 0
             })
         elif all(isinstance(v, Variable) for v in select.value):
             FromES = wrap({
-                "query": {"filtered": {
+                "query": {"bool": {
                     "query": {"match_all": {}},
-                    "filter": simplify_esfilter(query.where.to_esfilter())
+                    "filter": query.where.to_esfilter()
                 }},
                 "fields": select.value,
                 "sort": query.sort,
@@ -146,13 +145,13 @@ def es_setop(es, mvel, query):
             })
     elif not isDeep:
         simple_query = query.copy()
-        simple_query.where = TRUE_FILTER  # THE FACET FILTER IS FASTER
+        simple_query.where = TRUE  # THE FACET FILTER IS FASTER
         FromES.facets.mvel = {
             "terms": {
                 "script_field": mvel.code(simple_query),
                 "size": coalesce(simple_query.limit, 200000)
             },
-            "facet_filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
+            "facet_filter": jx_expression(query.where).to_esfilter()
         }
     else:
         FromES.facets.mvel = {
@@ -160,10 +159,10 @@ def es_setop(es, mvel, query):
                 "script_field": mvel.code(query),
                 "size": coalesce(query.limit, 200000)
             },
-            "facet_filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
+            "facet_filter": jx_expression(query.where).to_esfilter()
         }
 
-    data = es09.util.post(es, FromES, query.limit)
+    data = es_post(es, FromES, query.limit)
 
     if len(select) == 1 and isinstance(select[0].value, LeavesOp):
         # SPECIAL CASE FOR SINGLE COUNT
@@ -216,10 +215,10 @@ def es_deepop(es, mvel, query):
             "script_field": mvel.code(temp_query),
             "size": query.limit
         },
-        "facet_filter": simplify_esfilter(jx_expression(query.where).to_esfilter())
+        "facet_filter": jx_expression(query.where).to_esfilter()
     }
 
-    data = es09.util.post(es, FromES, query.limit)
+    data = es_post(es, FromES, query.limit)
 
     rows = unpack_terms(data.facets.mvel, query.edges)
     terms = zip(*rows)

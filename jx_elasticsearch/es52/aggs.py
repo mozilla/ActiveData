@@ -15,13 +15,13 @@ from future.utils import text_type
 
 from jx_base.domains import SetDomain
 from jx_base.expressions import TupleOp, NULL
-from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
+from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es09.util import post as es_post
-from jx_elasticsearch.es14.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
-from jx_elasticsearch.es14.decoders import DimFieldListDecoder
-from jx_elasticsearch.es14.expressions import split_expression_by_depth, AndOp, Variable, NullOp
-from jx_elasticsearch.es14.setop import get_pull_stats
-from jx_elasticsearch.es14.util import aggregates
+from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
+from jx_elasticsearch.es52.decoders import DimFieldListDecoder
+from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp
+from jx_elasticsearch.es52.setop import get_pull_stats
+from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, unwraplist
@@ -200,33 +200,29 @@ def es_aggsop(es, frum, query):
             elif s.aggregate == "union":
                 pulls = []
                 for es_col in es_cols:
+                    script = {"scripted_metric": {
+                        'init_script': 'params._agg.terms = new HashSet()',
+                        'map_script': 'for (v in doc['+quote(es_col.es_column)+'].values) params._agg.terms.add(v)',
+                        'combine_script': 'return params._agg.terms.toArray()',
+                        'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { if (a!=null) for (v in a) {output.add(v)} } return output.toArray()',
+                    }}
                     stats_name = encode_property(es_col.es_column)
-
                     if es_col.nested_path[0] == ".":
-                        es_query.aggs[stats_name] = {"terms": {
-                            "field": es_col.es_column,
-                            "size": Math.min(s.limit, MAX_LIMIT)
-                        }}
-                        pulls.append(get_bucket_keys(stats_name))
-
+                        es_query.aggs[stats_name] = script
+                        pulls.append(jx_expression_to_function(stats_name + ".value"))
                     else:
                         es_query.aggs[stats_name] = {
                             "nested": {"path": es_col.nested_path[0]},
-                            "aggs": {"_nested": {"terms": {
-                                "field": es_col.es_column,
-                                "size": Math.min(s.limit, MAX_LIMIT)
-                            }}}
+                            "aggs": {"_nested": script}
                         }
-                        pulls.append(get_bucket_keys(stats_name+"._nested"))
+                        pulls.append(jx_expression_to_function(stats_name + "._nested.value"))
+
                 if len(pulls) == 0:
                     s.pull = NULL
                 elif len(pulls) == 1:
                     s.pull = pulls[0]
                 else:
-                    s.pull = lambda row: UNION(
-                        p(row)
-                        for p in pulls
-                    )
+                    s.pull = lambda row: UNION(p(row) for p in pulls)
             else:
                 if len(es_cols) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
@@ -245,13 +241,13 @@ def es_aggsop(es, frum, query):
             else:
                 Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
-            es_query.aggs[literal_field(canonical_name)].value_count.script = s.value.partial_eval().to_ruby(schema).script(schema)
+            es_query.aggs[literal_field(canonical_name)].value_count.script = s.value.partial_eval().to_painless(schema).script(schema)
             s.pull = jx_expression_to_function(literal_field(canonical_name) + ".value")
         elif s.aggregate == "median":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")
 
-            es_query.aggs[key].percentiles.script = s.value.to_ruby(schema).script(schema)
+            es_query.aggs[key].percentiles.script = s.value.to_painless(schema).script(schema)
             es_query.aggs[key].percentiles.percents += [50]
             s.pull = jx_expression_to_function(key + ".values.50\.0")
         elif s.aggregate == "percentile":
@@ -259,35 +255,35 @@ def es_aggsop(es, frum, query):
             key = literal_field(canonical_name + " percentile")
             percent = Math.round(s.percentile * 100, decimal=6)
 
-            es_query.aggs[key].percentiles.script = s.value.to_ruby(schema).script(schema)
+            es_query.aggs[key].percentiles.script = s.value.to_painless(schema).script(schema)
             es_query.aggs[key].percentiles.percents += [percent]
             s.pull = jx_expression_to_function(key + ".values." + literal_field(text_type(percent)))
         elif s.aggregate == "cardinality":
             # ES USES DIFFERENT METHOD FOR CARDINALITY
             key = canonical_name + " cardinality"
 
-            es_query.aggs[key].cardinality.script = s.value.to_ruby(schema).script(schema)
+            es_query.aggs[key].cardinality.script = s.value.to_painless(schema).script(schema)
             s.pull = jx_expression_to_function(key + ".value")
         elif s.aggregate == "stats":
             # REGULAR STATS
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].extended_stats.script = s.value.to_ruby(schema).script(schema)
+            es_query.aggs[stats_name].extended_stats.script = s.value.to_painless(schema).script(schema)
 
             # GET MEDIAN TOO!
             median_name = literal_field(canonical_name + " percentile")
-            es_query.aggs[median_name].percentiles.script = s.value.to_ruby(schema).script(schema)
+            es_query.aggs[median_name].percentiles.script = s.value.to_painless(schema).script(schema)
             es_query.aggs[median_name].percentiles.percents += [50]
 
             s.pull = get_pull_stats(stats_name, median_name)
         elif s.aggregate=="union":
             # USE TERMS AGGREGATE TO SIMULATE union
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].terms.script_field = s.value.to_ruby(schema).script(schema)
+            es_query.aggs[stats_name].terms.script_field = s.value.to_painless(schema).script(schema)
             s.pull = jx_expression_to_function(stats_name + ".buckets.key")
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = jx_expression_to_function(canonical_name + "." + aggregates[s.aggregate])
-            es_query.aggs[canonical_name].extended_stats.script = s.value.to_ruby(schema).script(schema)
+            es_query.aggs[canonical_name].extended_stats.script = s.value.to_painless(schema).script(schema)
 
     decoders = get_decoders_by_depth(query)
     start = 0
@@ -374,13 +370,6 @@ EMPTY = {}
 EMPTY_LIST = []
 
 
-def get_bucket_keys(stats_name):
-    buckets = jx_expression_to_function(stats_name + ".buckets")
-    def output(row):
-        return [b['key'] for b in listwrap(buckets(row))]
-    return output
-
-
 def drill(agg):
     deeper = agg.get("_filter") or agg.get("_nested")
     while deeper:
@@ -462,7 +451,7 @@ def count_dim(aggs, decoders):
 
 
 format_dispatch = {}
-from jx_elasticsearch.es14.format import format_cube
+from jx_elasticsearch.es52.format import format_cube
 
 _ = format_cube
 

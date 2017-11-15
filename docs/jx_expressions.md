@@ -154,7 +154,7 @@ If either operand is `null` then the result is `null`; which is effectively `fal
 Math Operators
 --------------
 
-All the math operators, except `count`, return `null` if *any* the operands are `null`. You can change the return value by including a `default`.   This is different from the aggregates that go by the same name; which simply ignore the `null` values.
+All the math operators, except `count`, return `null` if *any* the operands are `null`. You can change the return value by including a `default`. This is different from the aggregates that go by the same name; which simply ignore the `null` values.
 
 		# if **any** expressions evaluate to `null` then return zero
 		{"sum": [expr1, expr2, ... exprN], "default": 0}
@@ -171,7 +171,7 @@ For counting the number of not-null values.
 		{"count": []} ⇒ 0
 
 
-### `sum` Operator (commutative)
+### `add` Operator (commutative)
 
 For adding the result of many expressions. Also known as `add`.
 
@@ -185,7 +185,6 @@ By default, if **any** expressions evaluate to `null`, then `null` is returned. 
 The empty list always evaluates to the default value, or `null`.
 
 		{"sum": []} ⇒ null
-
 
 ### `sub` Operator ###
 
@@ -335,11 +334,11 @@ Return the right-part of given string. `null` parameters result in `null`; negat
 
 ### `between` Operator ###
 
-Return the leftmost substring between a given `prefix` and `suffix`
+Return the leftmost substring between a given `prefix` and `suffix`. The prefix and suffix are interpreted as literals when using the object form. 
 
 		{"between": {variable: [literal_prefix, literal_suffix]}}
 
-The prefix and suffix are interpreted as literals when using the object form. The array form will accept JSON expressions:
+The array form will accept JSON expressions:
 
 		{"between": [value, prefix, suffix]}
 
@@ -347,6 +346,10 @@ For example, the following two expressions are identical:
 
 		{"between": {"a": ["http://", "/"]}}
 		{"between": ["a", {"literal": "http://"}, {"literal": "/"}]}
+
+The `prefix` and `suffix` can be numeric, indicating the start index and the end index resprectively.  
+
+		{"between": [value, start, end]}
 
 If the `prefix` is `null`, everything from the beginning of the string to the suffix will be returned. If `suffix` is `null`, everything from the `prefix` to the end of the string will be returned.
 
@@ -529,10 +532,18 @@ Flattens a (deep) JSON structure to leaf form - where each property name is a do
 			"select": {"leaves":"."}
 		}
 
+`leaves` has two optional parameters:
+
+* `separator` - the string used to separate the path steps (default dot (`"."`))
+* `prefix` - prefix given to each property (default empty string (`""`))
 
 The `leaves` operator action on a literal
 
-		{"leaves": {"literal": {"a": {"index.html": "Hello"}, "b": "World"}}}
+		{
+			"leaves": {"literal": {"a": {"index.html": "Hello"}, "b": "World"}},
+			"separator": ".",
+			"prefix": ""
+		}
 
 results in  
 
@@ -595,6 +606,15 @@ returns
 
 Set Operators (and Variables)
 -----------------------------
+
+### `first` Operator ###
+
+Return the first element of a list, or tuple.
+
+		{"first": expression}
+
+If the `expression` value is not a list, then the expression value is returned. If list is empty, or if the expression is `null`, then `null` is returned.
+
 
 ### `last` Operator ###
 

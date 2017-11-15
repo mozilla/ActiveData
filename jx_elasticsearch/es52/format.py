@@ -13,12 +13,12 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from mo_dots import Data, set_default, wrap, split_field, coalesce
+from mo_dots import Data, set_default, wrap, split_field
 from mo_logs import Log
 from pyLibrary import convert
 
 from jx_base.expressions import TupleOp
-from jx_elasticsearch.es14.aggs import count_dim, aggs_iterator, format_dispatch, drill
+from jx_elasticsearch.es52.aggs import count_dim, aggs_iterator, format_dispatch, drill
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
 from mo_logs.strings import quote
@@ -184,14 +184,11 @@ def format_list_from_groupby(decoders, aggs, start, query, select):
                 continue
             output = Data()
             for g, d in zip(query.groupby, decoders):
-                output[g.put.name] = d.get_value_from_row(row)
+                output[g.name] = d.get_value_from_row(row)
 
             for s in select:
                 output[s.name] = s.pull(agg)
             yield output
-
-    for g in query.groupby:
-        g.put.name = coalesce(g.put.name, g.name)
 
     output = Data(
         meta={"format": "list"},

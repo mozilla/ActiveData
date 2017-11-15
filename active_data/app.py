@@ -17,25 +17,24 @@ from ssl import SSLContext
 from tempfile import NamedTemporaryFile
 
 import flask
-from active_data import record_request, cors_wrapper
 from flask import Flask
-from jx_base import container
-from mo_files import File
-from mo_logs import Log
-from mo_logs import constants, startup
-from mo_threads import Thread
-from pyLibrary import convert
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
 import active_data
+from active_data import record_request, cors_wrapper
 from active_data.actions import save_query
 from active_data.actions.json import get_raw_json
 from active_data.actions.jx import jx_query
 from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.sql import sql_query
 from active_data.actions.static import download
-from jx_elasticsearch.meta import FromESMetadata
+from jx_base import container
+from mo_files import File
+from mo_logs import Log
+from mo_logs import constants, startup
+from mo_threads import Thread
+from pyLibrary import convert
 from pyLibrary.env import elasticsearch
 
 OVERVIEW = File("active_data/public/index.html").read()
@@ -113,7 +112,6 @@ def setup(settings=None):
             app.add_url_rule('/exit', 'exit', _exit)
 
         # TRIGGER FIRST INSTANCE
-        FromESMetadata(config.elasticsearch)
         if config.saved_queries:
             setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])

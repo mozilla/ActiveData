@@ -7,23 +7,23 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from mo_collections.matrix import Matrix
-from mo_math import COUNT, PRODUCT
-from jx_python import domains
-from jx_python.containers.cube import Cube
 from jx_base.queries import is_variable_name
-from jx_elasticsearch.es09.util import aggregates, build_es_query, compileEdges2Term
-from mo_logs import Log
 from jx_elasticsearch.es09.expressions import UID
+from jx_elasticsearch.es09.util import aggregates, build_es_query, compileEdges2Term
+from jx_python import domains
 from jx_python import es09
-from mo_dots import literal_field, coalesce
-from mo_dots.lists import FlatList
-from mo_dots import wrap, listwrap
+from jx_python.containers.cube import Cube
 from jx_python.expressions import simplify_esfilter
+from mo_collections.matrix import Matrix
+from mo_dots import literal_field, coalesce
+from mo_dots import wrap, listwrap
+from mo_dots.lists import FlatList
+from mo_logs import Log
+from mo_math import COUNT, PRODUCT
 
 
 def is_terms_stats(query):
@@ -148,7 +148,7 @@ def es_terms_stats(esq, mvel, query):
             if condition:
                 FromES.facets[name].facet_filter = simplify_esfilter({"and": condition})
 
-    data = es09.util.post(esq.es, FromES, query.limit)
+    data = es_post(esq.es, FromES, query.limit)
 
     if specialEdge.domain.type not in domains.KNOWN:
         # WE BUILD THE PARTS BASED ON THE RESULTS WE RECEIVED

@@ -379,6 +379,7 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    @skipIf(global_settings.es14, "not implemented yet")
     def test_groupby_multivalue_nested(self):
         test = {
             "data": [
@@ -499,7 +500,7 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use == "elasticsearch", "not implemented yet")
+    @skipIf(global_settings.es14, "not implemented yet")
     def test_groupby_multivalue_naive(self):
         test = {
             "data": [

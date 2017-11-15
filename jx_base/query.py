@@ -548,6 +548,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
                 output = wrap([
                     {
                         "name": concat_field(prefix, literal_field(relative_field(untype_path(c.names["."]), prefix))),
+                        "put": {"name": literal_field(untype_path(c.names["."]))},
                         "value": jx_expression(c.es_column),
                         "allowNulls": True,
                         "domain": {"type": "default"}
@@ -558,6 +559,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
             else:
                 return wrap([{
                     "name": untype_path(prefix),
+                    "put": {"name": literal_field(untype_path(prefix))},
                     "value": jx_expression(prefix),
                     "allowNulls": True,
                     "dim":dim_index,

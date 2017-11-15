@@ -313,7 +313,7 @@ def untype_path(encoded):
         return join_field(decode_property(c) for c in split_field(encoded) if not c.startswith(TYPE_PREFIX))
 
 
-def nest_free_path(encoded):
+def unnest_path(encoded):
     if encoded.startswith(".."):
         encoded = encoded.lstrip(".")
         if not encoded:

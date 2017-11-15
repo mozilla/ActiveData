@@ -15,18 +15,18 @@ from copy import copy
 
 from jx_base import STRUCT, NESTED, PRIMITIVE, OBJECT, EXISTS
 from mo_dots import join_field, split_field, Null, startswith_field, set_default, wrap
-from mo_json.typed_encoder import nest_free_path, untype_path, NESTED_TYPE
+from mo_json.typed_encoder import unnest_path, untype_path, NESTED_TYPE
 from mo_logs import Log
 
 
 def _indexer(columns, query_path):
-    all_names = set(nest_free_path(n) for c in columns for n in c.names.values()) | {"."}
+    all_names = set(unnest_path(n) for c in columns for n in c.names.values()) | {"."}
 
     lookup_leaves = {}
     for full_name in all_names:
         for c in columns:
             cname = c.names[query_path]
-            nfp = nest_free_path(cname)
+            nfp = unnest_path(cname)
             if (
                 startswith_field(nfp, full_name) and
                 c.type not in [EXISTS, OBJECT] and
@@ -112,7 +112,7 @@ class Schema(object):
         :param name:
         :return:
         """
-        full_name = nest_free_path(name)
+        full_name = unnest_path(name)
         return list(set([
             c
             for c in self.lookup.get(full_name, Null)
@@ -130,7 +130,7 @@ class Schema(object):
         :return:
         """
 
-        return list(self.lookup_leaves.get(nest_free_path(name), Null))
+        return list(self.lookup_leaves.get(unnest_path(name), Null))
 
     def map_to_es(self):
         """

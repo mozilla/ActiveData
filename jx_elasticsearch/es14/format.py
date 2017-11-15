@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from mo_dots import Data, set_default, wrap, split_field
+from mo_dots import Data, set_default, wrap, split_field, coalesce
 from mo_logs import Log
 from pyLibrary import convert
 
@@ -184,11 +184,14 @@ def format_list_from_groupby(decoders, aggs, start, query, select):
                 continue
             output = Data()
             for g, d in zip(query.groupby, decoders):
-                output[g.name] = d.get_value_from_row(row)
+                output[g.put.name] = d.get_value_from_row(row)
 
             for s in select:
                 output[s.name] = s.pull(agg)
             yield output
+
+    for g in query.groupby:
+        g.put.name = coalesce(g.put.name, g.name)
 
     output = Data(
         meta={"format": "list"},

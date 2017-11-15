@@ -16,11 +16,14 @@ from datetime import date
 from datetime import datetime
 
 from future.utils import text_type
+from jx_base import STRUCT
+
 from jx_python import jx
 from mo_collections import UniqueIndex
 from mo_dots import Data, concat_field, get_attr, listwrap, unwraplist, NullType, FlatList
 from mo_dots import split_field, join_field, ROOT_PATH
 from mo_dots import wrap
+from mo_json.typed_encoder import untype_path, unnest_path
 from mo_logs import Log
 from mo_threads import Lock
 from types import NoneType
@@ -230,30 +233,22 @@ class ColumnList(Container):
         """
         output = [
             {
-                "table": concat_field(c.es_index, table),
-                "name": name,
+                "table": concat_field(c.es_index, untype_path(table)),
+                "name": untype_path(name),
                 "cardinality": c.cardinality,
                 "es_column": c.es_column,
                 "es_index": c.es_index,
                 "last_updated": c.last_updated,
                 "count": c.count,
-                "nested_path": c.nested_path,
+                "nested_path": [unnest_path(n) for n in c.nested_path],
                 "type": c.type
             }
             for tname, css in self.data.items()
             for cname, cs in css.items()
             for c in cs
+            if c.type not in STRUCT # and c.es_column != "_id"
             for table, name in c.names.items()
         ]
-        #+[
-        #     {
-        #         "table": tname,
-        #         "name": "_id",
-        #         "nested_path": ["."],
-        #         "type": "string"
-        #     }
-        #     for tname, _ in self.data.items()
-        # ]
         if not self.meta_schema:
             self.meta_schema = get_schema_from_list("meta\\.columns", output)
 

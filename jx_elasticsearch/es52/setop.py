@@ -26,7 +26,7 @@ from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field
 from mo_dots import listwrap
 from mo_dots.lists import FlatList
-from mo_json.typed_encoder import untype_path, nest_free_path, untyped
+from mo_json.typed_encoder import untype_path, unnest_path, untyped
 from mo_logs import Log
 from mo_math import AND
 from mo_math import MAX
@@ -157,7 +157,7 @@ def es_setop(es, query):
                                 where.nested.inner_hits.stored_fields += [c.es_column]
 
                                 child = relative_field(untype_path(c.names[schema.query_path]), s_column)
-                                pull = accumulate_nested_doc(nested_path, Variable(relative_field(s_column, nest_free_path(nested_path))))
+                                pull = accumulate_nested_doc(nested_path, Variable(relative_field(s_column, unnest_path(nested_path))))
                                 new_select.append({
                                     "name": select.name,
                                     "value": select.value,

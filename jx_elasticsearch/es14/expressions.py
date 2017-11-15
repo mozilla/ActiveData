@@ -684,17 +684,27 @@ def to_ruby(self, schema):
 @extend(BooleanOp)
 def to_ruby(self, schema):
     value = self.term.to_ruby(schema)
-    if value.many:
-        return BooleanOp("boolean", Ruby(
-            miss=value.missing,
-            type=value.type,
-            expr="(" + value.expr + ")[0]",
-            frum=value.frum
-        )).to_ruby(schema)
-    elif value.type == BOOLEAN:
-        return value
+
+    if isinstance(self.term, Variable):
+        if value.many:
+            expr = "!"+value.expr + ".isEmpty() && " + value.expr + "[0]==\"T\""
+        else:
+            expr = value.expr + "==\"T\""
+        return Ruby(
+            miss=FALSE,
+            type=BOOLEAN,
+            expr=expr,
+            frum=self
+        )
+
+    if value.type == BOOLEAN:
+        return AndOp("and", [
+            ExistsOp("exists", self.term),
+            FirstOp("first", self.term)
+        ]).partial_eval().to_ruby()
+
     else:
-        return NotOp("not", value.missing()).partial_eval().to_ruby(schema)
+        return ExistsOp("exists", self.term).partial_eval().to_ruby()
 
 
 @extend(BooleanOp)

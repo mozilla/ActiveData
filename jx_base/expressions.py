@@ -1318,10 +1318,7 @@ class BooleanOp(Expression):
             elif term.type == BOOLEAN:
                 return term
 
-        return AndOp("and", [
-            ExistsOp("exists", term),
-            BasicEqOp("eq", [FirstOp("first", term), Literal(None, True)])
-        ]).partial_eval()
+        return BooleanOp("boolean", term)
 
 
 class IsBooleanOp(Expression):

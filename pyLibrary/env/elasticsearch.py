@@ -1330,7 +1330,7 @@ def retro_properties(properties):
 DEFAULT_DYNAMIC_TEMPLATES = wrap([
     {
         "default_boolean": {
-            "mapping": {"type": "double", "store": True},
+            "mapping": {"type": "boolean", "store": True},
             "match": BOOLEAN_TYPE
         }
     },

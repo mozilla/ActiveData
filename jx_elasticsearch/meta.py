@@ -21,6 +21,7 @@ from jx_python import meta as jx_base_meta
 from mo_dots import Data, relative_field, concat_field
 from mo_dots import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
 from mo_dots import wrap
+from mo_json.typed_encoder import EXISTS_TYPE
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.strings import quote
@@ -453,7 +454,7 @@ class FromESMetadata(Schema):
                                 "where": {"eq": {"es_index": column.es_index}}
                             })
                         continue
-                    if column.type in STRUCT:
+                    if column.type in STRUCT or column.es_column.endswith("." + EXISTS_TYPE):
                         with self.meta.columns.locker:
                             column.last_updated = Date.now()
                         continue

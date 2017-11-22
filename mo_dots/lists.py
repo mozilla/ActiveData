@@ -162,6 +162,8 @@ class FlatList(list):
         return wrap(_get(self, "list").pop(index))
 
     def __add__(self, value):
+        if value == None:
+            return self
         output = list(_get(self, "list"))
         output.extend(value)
         return FlatList(vals=output)

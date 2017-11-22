@@ -1,80 +1,11 @@
 {
 	"settings": {
-		"index.number_of_replicas": 0
+		"index.number_of_replicas": 0,
+		"index.max_inner_result_window": 100000
 	},
 	"mappings": {
 		{{type|quote}}: {
 			"dynamic_templates": [
-				{
-					"typed_number": {
-						"mapping": {
-							"type": "double",
-							"store": true
-						},
-						"match": "__type__number"
-					}
-				},
-				{
-					"typed_strings": {
-						"mapping": {
-							"index": "not_analyzed",
-							"type": "keyword",
-							"store": true
-						},
-						"match_mapping_type": "string",
-						"match": "__type__string"
-					}
-				},
-				{
-					"typed_nested_objects": {
-						"mapping": {
-							"type": "nested"
-						},
-						"match_mapping_type": "object",
-						"match": "__type__nested"
-					}
-				},
-				{
-					"default_number": {
-						"mapping": {
-							"type": "double",
-							"store": true
-						},
-						"match_mapping_type": "double",
-						"match": "*"
-					}
-				},
-				{
-					"default_integer": {
-						"mapping": {
-							"type": "double",
-							"store": true
-						},
-						"match_mapping_type": "integer",
-						"match": "*"
-					}
-				},
-				{
-					"default_strings": {
-						"mapping": {
-							"index": "not_analyzed",
-							"type": "keyword",
-							"store": true
-						},
-						"match_mapping_type": "string",
-						"match": "*"
-					}
-				},
-				{
-					"default_simple_objects": {
-						"mapping": {
-							"type": "object",
-							"dynamic": true
-						},
-						"match_mapping_type": "object",
-						"match": "*"
-					}
-				}
 			],
 			"$ref":"param://metadata"
 		}

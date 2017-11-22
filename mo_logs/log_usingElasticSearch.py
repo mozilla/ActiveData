@@ -16,18 +16,16 @@ from collections import Mapping
 from future.utils import text_type
 
 import mo_json
-from mo_dots import wrap, coalesce
-from mo_json import value2json
-from mo_json.typed_encoder import STRING_TYPE, EXISTS_TYPE, NUMBER_TYPE
-from mo_kwargs import override
-from mo_threads import Thread, Queue, Till, THREAD_STOP
-from mo_times import MINUTE, Duration
-from pyLibrary.env.elasticsearch import Cluster
 from jx_python import jx
-
+from mo_dots import wrap, coalesce, FlatList
+from mo_json import value2json
+from mo_kwargs import override
 from mo_logs import Log, strings
 from mo_logs.exceptions import suppress_exception
 from mo_logs.log_usingNothing import StructuredLogger
+from mo_threads import Thread, Queue, Till, THREAD_STOP
+from mo_times import MINUTE, Duration
+from pyLibrary.env.elasticsearch import Cluster
 
 MAX_BAD_COUNT = 5
 LOG_STRING_LENGTH = 2000
@@ -115,7 +113,7 @@ def _deep_json_to_string(value, depth):
             return strings.limit(value2json(value), LOG_STRING_LENGTH)
 
         return {k: _deep_json_to_string(v, depth - 1) for k, v in value.items()}
-    elif isinstance(value, list):
+    elif isinstance(value, (list, FlatList)):
         return strings.limit(value2json(value), LOG_STRING_LENGTH)
     elif isinstance(value, (float, int, long)):
         return value
@@ -133,47 +131,6 @@ SCHEMA = {
                 "match": "*",
                 "mapping": {"index": False}
             }}
-        ],
-        "_all": {"enabled": False},
-        "_source": {"enabled": True},
-        "properties": {
-            "params": {"type": "object", "dynamic": False, "enabled": False},  # DO WE NEED enabled?  dynamic==false seems good enough
-            "template": {"type": "object", "dynamic": True},
-            "context": {
-                "type": "object",
-                "dynamic": False,
-                "properties": {
-                    STRING_TYPE: {"type": "keyword"}
-                }
-            },
-            EXISTS_TYPE: {"type": "long"},
-            "machine": {
-                "dynamic": True,
-                "properties": {
-                    EXISTS_TYPE: {"type": "long"},
-                    "python": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
-                    "os": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
-                    "name": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}}
-                }
-            },
-            "location": {
-                "dynamic": True,
-                "properties": {
-                    EXISTS_TYPE: {"type": "long"},
-                    "file": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
-                    "method": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
-                    "line": {"properties": {NUMBER_TYPE: {"type": "long", "doc_values": True}}}
-                }
-            },
-            "thread": {
-                "dynamic": True,
-                "properties": {
-                    EXISTS_TYPE: {"type": "long"},
-                    "name": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}},
-                    "id": {"properties": {STRING_TYPE: {"type": "keyword", "doc_values": True}}}
-                }
-            },
-            "timestamp": {"properties": {NUMBER_TYPE: {"type": "number"}}}
-        }
+        ]
     }}
 }

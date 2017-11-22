@@ -169,8 +169,7 @@ class SaveQueries(object):
 SCHEMA = {
     "settings": {
         "index.number_of_shards": 3,
-        "index.number_of_replicas": 2,
-        "index.store.throttle.type": "merge"
+        "index.number_of_replicas": 2
     },
     "mappings": {
         "_default_": {
@@ -193,23 +192,16 @@ SCHEMA = {
             },
             "properties": {
                 "create_time": {
-                    "type": "double",
-                    "index": "not_analyzed",
-                    "store": True
+                    "type": "double"
                 },
                 "last_used": {
-                    "type": "double",
-                    "index": "not_analyzed",
-                    "store": True
+                    "type": "double"
                 },
                 "hash": {
-                    "type": "keyword",
-                    "store": True
+                    "type": "keyword"
                 },
                 "query": {
-                    "type": "text",
-                    "store": True,
-                    "fielddata": True
+                    "type": "text"
                 }
             }
         }

@@ -25,7 +25,7 @@ from mo_dots import coalesce, Null, Data, set_default, listwrap, literal_field, 
 from mo_dots import wrap
 from mo_dots.lists import FlatList
 from mo_json import value2json, json2value
-from mo_json.typed_encoder import EXISTS_TYPE
+from mo_json.typed_encoder import EXISTS_TYPE, BOOLEAN_TYPE, STRING_TYPE, NUMBER_TYPE, NESTED_TYPE, TYPE_PREFIX
 from mo_kwargs import override
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except
@@ -149,12 +149,13 @@ class Index(Features):
                 return self.get_properties(retry=False)
 
             if not index.mappings[self.settings.type]:
-                Log.error(
+                Log.warning(
                     "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{metadata|json}}",
                     index=self.settings.index,
                     type=self.settings.type,
                     metadata=jx.sort(metadata.indices.keys())
                 )
+                return Null
             return index.mappings[self.settings.type].properties
         else:
             mapping = self.cluster.get(self.path + "/_mapping")
@@ -543,7 +544,7 @@ class Cluster(object):
         meta = self.get_metadata()
         columns = parse_properties(index, ".", meta.indices[index].mappings.values()[0].properties)
         if len(columns) != 0:
-            kwargs.tjson = tjson or any(c.names["."].find(".$") != -1 for c in columns)
+            kwargs.tjson = tjson or any(c.names["."].find("." + TYPE_PREFIX) != -1 for c in columns)
 
         return Index(kwargs)
 
@@ -622,7 +623,7 @@ class Cluster(object):
         schema=None,
         limit_replicas=None,
         read_only=False,
-        tjson=False,
+        tjson=True,
         kwargs=None
     ):
         if not alias:
@@ -643,6 +644,9 @@ class Cluster(object):
             schema = mo_json.json2value(value2json(schema), leaves=True)
         else:
             schema = retro_schema(mo_json.json2value(value2json(schema), leaves=True))
+
+        for n, m in schema.mappings.items():
+            m.dynamic_templates = DEFAULT_DYNAMIC_TEMPLATES + m.dynamic_templates
 
         if limit_replicas:
             # DO NOT ASK FOR TOO MANY REPLICAS
@@ -1208,11 +1212,11 @@ def get_encoder(id_expression="_id"):
         r_value = r.get('value')
         if isinstance(r_value, Mapping):
             r_id = get_id(r_value)
-            del r_value['_id']
+            r_value.pop('_id', None)
             if id == None:
                 id = r_id
-            elif id != r_id:
-                Log.error("Expecting id and _id in the record to match")
+            elif id != r_id and r_id != None:
+                Log.error("Expecting id ({{id}}) and _id ({{_id}}) in the record to match", id=id, _id=r._id)
         if id == None:
             id = random_id()
 
@@ -1266,7 +1270,23 @@ def retro_schema(schema):
     output = wrap({
         "mappings":{
             typename: {
-                "dynamic_templates": [retro_dynamic_template(*(t.items()[0])) for t in details.dynamic_templates],
+                "dynamic_templates": (
+                    [
+                        retro_dynamic_template(*(t.items()[0])) for t in details.dynamic_templates
+                    ] + [
+                        {
+                            "default_strings": {
+                                "mapping": {
+                                    "index": "not_analyzed",
+                                    "type": "keyword",
+                                    "store": True
+                                },
+                                "match_mapping_type": "string",
+                                "match": "*"
+                            }
+                        }
+                    ]
+                ),
                 "properties": retro_properties(details.properties)
             }
             for typename, details in schema.mappings.items()
@@ -1307,6 +1327,38 @@ def retro_properties(properties):
     return output
 
 
+DEFAULT_DYNAMIC_TEMPLATES = wrap([
+    {
+        "default_boolean": {
+            "mapping": {"type": "double", "store": True},
+            "match": BOOLEAN_TYPE
+        }
+    },
+    {
+        "default_number": {
+            "mapping": {"type": "double", "store": True},
+            "match": NUMBER_TYPE
+        }
+    },
+    {
+        "default_string": {
+            "mapping": {"type": "keyword", "store": True},
+            "match": STRING_TYPE
+        }
+    },
+    {
+        "default_exist": {
+            "mapping": {"type": "long", "store": True},
+            "match": EXISTS_TYPE
+        }
+    },
+    {
+        "default_nested": {
+            "mapping": {"type": "nested", "store": True},
+            "match": NESTED_TYPE
+        }
+    }
+])
 
 
 es_type_to_json_type = {

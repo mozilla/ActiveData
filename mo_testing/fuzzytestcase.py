@@ -15,7 +15,7 @@ from collections import Mapping
 
 import mo_dots
 from mo_collections.unique_index import UniqueIndex
-from mo_dots import coalesce, literal_field, unwrap
+from mo_dots import coalesce, literal_field, unwrap, wrap
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception, Except
 from mo_logs.strings import expand_template
@@ -119,7 +119,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                     v1 = test[k]
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
         elif isinstance(test, (set, list)) and isinstance(expected, set):
-            test = set(test)
+            test = set(wrap(t) for t in test)
             if len(test) != len(expected):
                 Log.error(
                     "Sets do not match, element count different:\n{{test|json|indent}}\nexpecting{{expectedtest|json|indent}}",
@@ -132,7 +132,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                     try:
                         assertAlmostEqual(t, e, msg=msg, digits=digits, places=places, delta=delta)
                         break
-                    except Exception, _:
+                    except Exception as _:
                         pass
                 else:
                     Log.error("Sets do not match. {{value|json}} not found in {{test|json}}", value=e, test=test)

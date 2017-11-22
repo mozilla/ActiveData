@@ -183,7 +183,9 @@ class TypedInserter(object):
                 append(_buffer, float2json(value))
                 append(_buffer, u'}')
             elif _type in (set, list, tuple, FlatList):
-                if any(isinstance(v, (Mapping, set, list, tuple, FlatList)) for v in value):
+                if len(value) == 0:
+                    append(_buffer, u'{"'+NESTED_TYPE+'": []}')
+                elif any(isinstance(v, (Mapping, set, list, tuple, FlatList)) for v in value):
                     if NESTED_TYPE not in sub_schema:
                         sub_schema[NESTED_TYPE] = {}
                         net_new_properties.append(path + [NESTED_TYPE])
@@ -193,7 +195,7 @@ class TypedInserter(object):
                 else:
                     # ALLOW PRIMITIVE MULTIVALUES
                     types = list(set(python_type_to_json_type[v.__class__] for v in value))
-                    if len(types) != 1:
+                    if len(types) > 1:
                         from mo_logs import Log
                         Log.error("Can not handle multi-typed multivalues")
                     if types[0] == INTEGER:
@@ -262,7 +264,7 @@ class TypedInserter(object):
         except Exception as e:
             from mo_logs import Log
 
-            Log.error(repr(value) + " is not JSON serializable", e)
+            Log.error(repr(value) + " is not JSON serializable", cause=e)
 
     def _list2json(self, value, sub_schema, path, net_new_properties, _buffer):
         if not value:

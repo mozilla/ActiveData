@@ -51,7 +51,7 @@ def new_instance(
             known_hosts[(host, port)] = ES14
             output = ES14(kwargs=kwargs)
             return output
-        elif version.startswith("5."):
+        elif version.startswith(("5.", "6.")):
             from jx_elasticsearch.es52 import ES52
             type2container.setdefault("elasticsearch", ES52)
             known_hosts[(host, port)] = ES52

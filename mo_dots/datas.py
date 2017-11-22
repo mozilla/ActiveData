@@ -182,7 +182,7 @@ class Data(MutableMapping):
             return d == other
 
         if not d and other == None:
-            return True
+            return False
 
         if not isinstance(other, Mapping):
             return False

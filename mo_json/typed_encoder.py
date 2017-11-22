@@ -65,10 +65,10 @@ def _typed_encode(value, _buffer):
             append(_buffer, u'{}')
             return
         elif value is True:
-            append(_buffer, u'{"'+BOOLEAN_TYPE+'": true}')
+            append(_buffer, u'{"'+BOOLEAN_TYPE+u'":true}')
             return
         elif value is False:
-            append(_buffer, u'{"'+BOOLEAN_TYPE+'": false}')
+            append(_buffer, u'{"'+BOOLEAN_TYPE+u'":false}')
             return
 
         _type = value.__class__
@@ -76,9 +76,9 @@ def _typed_encode(value, _buffer):
             if value:
                 _dict2json(value, _buffer)
             else:
-                append(_buffer, u'{"'+EXISTS_TYPE+'": 1}')
+                append(_buffer, u'{"'+EXISTS_TYPE+u'":1}')
         elif _type is str:
-            append(_buffer, u'{"'+STRING_TYPE+'": "')
+            append(_buffer, u'{"'+STRING_TYPE+u'":"')
             try:
                 v = utf82unicode(value)
             except Exception as e:
@@ -88,44 +88,44 @@ def _typed_encode(value, _buffer):
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
         elif _type is text_type:
-            append(_buffer, u'{"'+STRING_TYPE+'": "')
+            append(_buffer, u'{"'+STRING_TYPE+u'":"')
             for c in value:
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, u'"}')
         elif _type in (int,  long, Decimal):
-            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
+            append(_buffer, u'{"'+NUMBER_TYPE+u'":')
             append(_buffer, float2json(value))
             append(_buffer, u'}')
         elif _type is float:
-            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
+            append(_buffer, u'{"'+NUMBER_TYPE+u'":')
             append(_buffer, float2json(value))
             append(_buffer, u'}')
         elif _type in (set, list, tuple, FlatList):
             if any(isinstance(v, (Mapping, set, list, tuple, FlatList)) for v in value):
-                append(_buffer, u'{"'+NESTED_TYPE+'": ')
+                append(_buffer, u'{"'+NESTED_TYPE+u'":')
                 _list2json(value, _buffer)
                 append(_buffer, u'}')
             else:
                 # ALLOW PRIMITIVE MULTIVALUES
                 _list2json(value, _buffer)
         elif _type is date:
-            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
+            append(_buffer, u'{"'+NUMBER_TYPE+u'":')
             append(_buffer, float2json(time.mktime(value.timetuple())))
             append(_buffer, u'}')
         elif _type is datetime:
-            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
+            append(_buffer, u'{"'+NUMBER_TYPE+u'":')
             append(_buffer, float2json(time.mktime(value.timetuple())))
             append(_buffer, u'}')
         elif _type is Date:
-            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
+            append(_buffer, u'{"'+NUMBER_TYPE+u'":')
             append(_buffer, float2json(time.mktime(value.value.timetuple())))
             append(_buffer, u'}')
         elif _type is timedelta:
-            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
+            append(_buffer, u'{"'+NUMBER_TYPE+u'":')
             append(_buffer, float2json(value.total_seconds()))
             append(_buffer, u'}')
         elif _type is Duration:
-            append(_buffer, u'{"'+NUMBER_TYPE+'": ')
+            append(_buffer, u'{"'+NUMBER_TYPE+u'":')
             append(_buffer, float2json(value.seconds))
             append(_buffer, u'}')
         elif _type is NullType:
@@ -135,7 +135,7 @@ def _typed_encode(value, _buffer):
             t = json2typed(j)
             append(_buffer, t)
         elif hasattr(value, '__iter__'):
-            append(_buffer, u'{"'+NESTED_TYPE+'": ')
+            append(_buffer, u'{"'+NESTED_TYPE+u'":')
             _iter2json(value, _buffer)
             append(_buffer, u'}')
         else:
@@ -171,129 +171,23 @@ def _iter2json(value, _buffer):
 
 
 def _dict2json(value, _buffer):
-    prefix = u'{"'+EXISTS_TYPE+'": 1, '
+    prefix = u'{"'+EXISTS_TYPE+u'":1,'
     for k, v in value.iteritems():
         if v == None or v == "":
             continue
         append(_buffer, prefix)
-        prefix = u", "
+        prefix = u","
         if isinstance(k, str):
             k = utf82unicode(k)
         if not isinstance(k, text_type):
             Log.error("Expecting property name to be a string")
         append(_buffer, json.dumps(encode_property(k)))
-        append(_buffer, u": ")
+        append(_buffer, u":")
         _typed_encode(v, _buffer)
-    if prefix == u", ":
+    if prefix == u",":
         append(_buffer, u'}')
     else:
-        append(_buffer, u'{"'+EXISTS_TYPE+'": 1}')
-
-
-VALUE = 0
-PRIMITIVE = 1
-BEGIN_OBJECT = 2
-OBJECT = 3
-KEYWORD = 4
-STRING = 6
-ESCAPE = 5
-
-
-
-def json2typed(json):
-    context = deque()
-    output = UnicodeBuilder(1024)
-    mode = VALUE
-    for c in json:
-        if c in "\t\r\n ":
-            append(output, c)
-        elif mode == VALUE:
-            if c == "{":
-                context.append(mode)
-                mode = BEGIN_OBJECT
-                append(output, '{"'+EXISTS_TYPE+'": 1')
-                continue
-            elif c == '[':
-                context.append(mode)
-                mode = VALUE
-            elif c == ",":
-                mode = context.pop()
-                if mode != OBJECT:
-                    context.append(mode)
-                    mode = VALUE
-            elif c in "]":
-                mode = context.pop()
-            elif c in "}":
-                mode = context.pop()
-                mode = context.pop()
-            elif c == '"':
-                context.append(mode)
-                mode = STRING
-                append(output, '{"'+STRING_TYPE+'": ')
-            else:
-                mode = PRIMITIVE
-                append(output, '{"'+NUMBER_TYPE+'": ')
-            append(output, c)
-        elif mode == PRIMITIVE:
-            if c == ",":
-                append(output, '}')
-                mode = context.pop()
-                if mode == 0:
-                    context.append(mode)
-            elif c == "]":
-                append(output, '}')
-                mode = context.pop()
-            elif c == "}":
-                append(output, '}')
-                mode = context.pop()
-                mode = context.pop()
-            append(output, c)
-        elif mode == BEGIN_OBJECT:
-            if c == '"':
-                context.append(OBJECT)
-                context.append(KEYWORD)
-                mode = STRING
-                append(output, ',')
-            elif c == "}":
-                mode = context.pop()
-            else:
-                Log.error("not expected")
-            append(output, c)
-        elif mode == KEYWORD:
-            append(output, c)
-            if c == ':':
-                mode = VALUE
-            else:
-                Log.error("Not expected")
-        elif mode == STRING:
-            append(output, c)
-            if c == '"':
-                mode = context.pop()
-                if mode != KEYWORD:
-                    append(output, '}')
-            elif c == '\\':
-                context.append(mode)
-                mode = ESCAPE
-        elif mode == ESCAPE:
-            mode = context.pop()
-            append(output, c)
-        elif mode == OBJECT:
-            if c == '"':
-                context.append(mode)
-                context.append(KEYWORD)
-                mode = STRING
-            elif c == ",":
-                pass
-            elif c == '}':
-                mode = context.pop()
-            else:
-                Log.error("not expected")
-
-            append(output, c)
-
-    if mode == PRIMITIVE:
-        append(output, "}")
-    return output.build()
+        append(_buffer, u'{"'+EXISTS_TYPE+u'":1}')
 
 
 def encode_property(name):
@@ -319,10 +213,6 @@ def unnest_path(encoded):
         if not encoded:
             encoded = "."
 
-    #     remainder = encoded.lstrip(".")
-    #     back = len(encoded) - len(remainder) - 1
-    #     return ("." * back) + join_field(decode_property(c) for c in split_field(remainder) if c != NESTED_TYPE)
-    # else:
     return join_field(decode_property(c) for c in split_field(encoded) if c != NESTED_TYPE)
 
 

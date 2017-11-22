@@ -101,6 +101,26 @@ class Domain(object):
                 Log.error('{{type}} domain expects a {{name|quote}} parameter', type=self.type, name=name)
 
 
+class UnitDomain(Domain):
+    """
+    REPRESENT A ZERO-DIMENSIONAL EDGE
+    """
+    def compare(self, a, b):
+        return 0
+
+    def getCanonicalPart(self, part):
+        return 0
+
+    def getPartByKey(self, key):
+        return 0
+
+    def getKey(self, part):
+        return 0
+
+    def getEnd(self, value):
+        return 0
+
+
 class ValueDomain(Domain):
     __slots__ = ["NULL"]
 

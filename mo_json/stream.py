@@ -12,13 +12,15 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import json
+from collections import Mapping
 from types import GeneratorType
 
+from mo_dots import split_field, startswith_field, relative_field, Data, join_field, Null, wrap
 from mo_logs import Log
-from mo_dots import split_field
+
+DEBUG = False
 
 MIN_READ_SIZE = 8*1024
-DEBUG = False
 WHITESPACE = b" \n\r\t"
 CLOSE = {
     b"{": b"}",
@@ -29,7 +31,8 @@ NO_VARS = set()
 json_decoder = json.JSONDecoder().decode
 
 
-def parse(json, path, expected_vars=NO_VARS):
+
+def parse(json, query_path, expected_vars=NO_VARS):
     """
     INTENDED TO TREAT JSON AS A STREAM; USING MINIMAL MEMORY WHILE IT ITERATES
     THROUGH THE STRUCTURE.  ASSUMING THE JSON IS LARGE, AND HAS A HIGH LEVEL
@@ -40,13 +43,15 @@ def parse(json, path, expected_vars=NO_VARS):
 
     LARGE MANY-PROPERTY OBJECTS CAN BE HANDLED BY `items()`
 
-    :param json: SOME STRING-LIKE STRUCTURE THAT CAN ASSUME WE LOOK AT ONE
-                 CHARACTER AT A TIME, IN ORDER
-    :param path: AN ARRAY OF DOT-SEPARATED STRINGS INDICATING THE
-                 NESTED ARRAY BEING ITERATED.
+    :param json:       SOME STRING-LIKE STRUCTURE THAT CAN ASSUME WE LOOK AT
+                       ONE CHARACTER AT A TIME, IN ORDER
+    :param query_path: A DOT-SEPARATED STRING INDICATING THE PATH TO THE
+                       NESTED ARRAY OPTIONALLY, {"items":query_path} TO
+                       FURTHER ITERATE OVER PROPERTIES OF OBJECTS FOUND AT
+                       query_path
     :param expected_vars: REQUIRED PROPERTY NAMES, USED TO DETERMINE IF
                           MORE-THAN-ONE PASS IS REQUIRED
-    :return: RETURNS AN ITERATOR OVER ALL OBJECTS FROM NESTED path IN LEAF FORM
+    :return: RETURNS AN ITERATOR OVER ALL OBJECTS FROM ARRAY LOCATED AT query_path
     """
     if hasattr(json, "read"):
         # ASSUME IT IS A STREAM
@@ -62,83 +67,52 @@ def parse(json, path, expected_vars=NO_VARS):
         Log.error("Expecting json to be a stream, or a function that will return more bytes")
 
 
-    def _decode(index, parent_path, path, name2index, expected_vars=NO_VARS):
+    def _iterate_list(index, c, parent_path, path, expected_vars):
         c, index = skip_whitespace(index)
+        if c == b']':
+            yield index
+            return
 
-        if not path:
-            if c != b"[":
-                # TREAT VALUE AS SINGLE-VALUE ARRAY
-                yield _decode_token(index, c, parent_path, path, name2index, None, expected_vars)
-            else:
+        while True:
+            if not path:
+                index = _assign_token(index, c, expected_vars)
                 c, index = skip_whitespace(index)
                 if c == b']':
-                    return  # EMPTY ARRAY
-
-                while True:
-                    value, index = _decode_token(index, c, parent_path, path, name2index, None, expected_vars)
+                    yield index
+                    _done(parent_path)
+                    return
+                elif c == b',':
+                    yield index
+                    c, index = skip_whitespace(index)
+            else:
+                for index in _decode_token(index, c, parent_path, path, expected_vars):
                     c, index = skip_whitespace(index)
                     if c == b']':
-                        yield value, index
+                        yield index
+                        _done(parent_path)
                         return
                     elif c == b',':
+                        yield index
                         c, index = skip_whitespace(index)
-                        yield value, index
 
-        else:
-            if c != b'{':
-                Log.error("Expecting all objects to at least have {{path}}", path=path[0])
+    def _done(parent_path):
+        if len(parent_path) < len(done[0]):
+            done[0] = parent_path
 
-            for j, i in _decode_object(index, parent_path, path, name2index, expected_vars=expected_vars):
-                yield j, i
+    def _decode_object(index, c, parent_path, query_path, expected_vars):
+        if "." in expected_vars:
+            if len(done[0]) <= len(parent_path) and all(d == p for d, p in zip(done[0], parent_path)):
+                Log.error("Can not pick up more variables, iterator is done")
 
-    def _decode_token(index, c, full_path, path, name2index, destination, expected_vars):
-        if c == b'{':
-            if not expected_vars:
-                index = jump_to_end(index, c)
-                value = None
-            elif expected_vars[0] == ".":
-                json.mark(index-1)
-                index = jump_to_end(index, c)
-                value = json_decoder(json.release(index).decode("utf8"))
-            else:
-                count = 0
-                for v, i in _decode_object(index, full_path, path, name2index, destination, expected_vars=expected_vars):
-                    index = i
-                    value = v
-                    count += 1
-                if count != 1:
-                    Log.error("Expecting object, nothing nested")
-        elif c == b'[':
-            if not expected_vars:
-                index = jump_to_end(index, c)
-                value = None
-            else:
-                json.mark(index - 1)
-                index = jump_to_end(index, c)
-                value = json_decoder(json.release(index).decode("utf8"))
-        else:
-            if expected_vars and expected_vars[0] == ".":
-                value, index = simple_token(index, c)
-            else:
-                index = jump_to_end(index, c)
-                value = None
+            if query_path:
+                Log.error("Can not extract objects that contain the iteration", var=join_field(query_path))
 
-        return value, index
+            index = _assign_token(index, c, expected_vars)
+            # c, index = skip_whitespace(index)
+            yield index
+            return
 
-    def _decode_object(index, parent_path, path, name2index, destination=None, expected_vars=NO_VARS):
-        """
-        :param index:
-        :param parent_path:  LIST OF PROPERTY NAMES
-        :param path:         ARRAY OF (LIST OF PROPERTY NAMES)
-        :param name2index:
-        :param destination:
-        :param expected_vars:
-        :return:
-        """
-        if destination is None:
-            destination = {}
-
-        nested_done = False
+        did_yield = False
         while True:
             c, index = skip_whitespace(index)
             if c == b',':
@@ -152,47 +126,106 @@ def parse(json, path, expected_vars=NO_VARS):
                 c, index = skip_whitespace(index)
 
                 child_expected = needed(name, expected_vars)
-                if child_expected and nested_done:
-                    Log.error("Expected property found after nested json.  Iteration failed.")
-
-                full_path = parent_path + [name]
-                if path and all(p == f for p, f in zip(path[0], full_path)):
-                    # THE NESTED PROPERTY WE ARE LOOKING FOR
-                    if len(path[0]) == len(full_path):
-                        new_path = path[1:]
+                child_path = parent_path + [name]
+                if any(child_expected):
+                    if not query_path:
+                        index = _assign_token(index, c, child_expected)
+                    elif query_path[0] == name:
+                        for index in _decode_token(index, c, child_path, query_path[1:], child_expected):
+                            did_yield = True
+                            yield index
                     else:
-                        new_path = path
-
-                    nested_done = True
-                    for j, i in _decode(index - 1, full_path, new_path, name2index, expected_vars=child_expected):
-                        index = i
-                        j = {name: j}
-                        for k, v in destination.items():
-                            j.setdefault(k, v)
-                        yield j, index
-                    continue
-
-                if child_expected:
-                    # SOME OTHER PROPERTY
-                    value, index = _decode_token(index, c, full_path, path, name2index, None, expected_vars=child_expected)
-                    destination[name] = value
+                        if len(done[0]) <= len(child_path):
+                            Log.error("Can not pick up more variables, iterator over {{path}} is done", path=join_field(done[0]))
+                        index = _assign_token(index, c, child_expected)
+                elif query_path and query_path[0] == name:
+                    for index in _decode_token(index, c, child_path, query_path[1:], child_expected):
+                        yield index
                 else:
-                    # WE DO NOT NEED THIS VALUE
                     index = jump_to_end(index, c)
-                    continue
+            elif c == "}":
+                if not did_yield:
+                    yield index
+                break
 
+    def set_destination(expected_vars, value):
+        for i, e in enumerate(expected_vars):
+            if e is None:
+                pass
+            elif e == ".":
+                destination[i] = value
+            elif isinstance(value, Mapping):
+                destination[i] = value[e]
+            else:
+                destination[i] = Null
 
+    def _decode_object_items(index, c, parent_path, query_path, expected_vars):
+        """
+        ITERATE THROUGH THE PROPERTIES OF AN OBJECT
+        """
+        c, index = skip_whitespace(index)
+        num_items = 0
+        while True:
+            if c == b',':
+                c, index = skip_whitespace(index)
+            elif c == b'"':
+                name, index = simple_token(index, c)
+                if "name" in expected_vars:
+                    for i, e in enumerate(expected_vars):
+                        if e == "name":
+                            destination[i] = name
+
+                c, index = skip_whitespace(index)
+                if c != b':':
+                    Log.error("Expecting colon")
+                c, index = skip_whitespace(index)
+
+                child_expected = needed("value", expected_vars)
+                index = _assign_token(index, c, child_expected)
+                c, index = skip_whitespace(index)
+                if DEBUG and not num_items % 1000:
+                    Log.note("{{num}} items iterated", num=num_items)
+                yield index
+                num_items += 1
             elif c == "}":
                 break
 
-        if not nested_done:
-            yield destination, index
+    def _decode_token(index, c, parent_path, query_path, expected_vars):
+        if c == b'{':
+            if query_path and query_path[0] == "$items":
+                if any(expected_vars):
+                    for index in _decode_object_items(index, c, parent_path, query_path[1:], expected_vars):
+                        yield index
+                else:
+                    index = jump_to_end(index, c)
+                    yield index
+            elif not any(expected_vars):
+                index = jump_to_end(index, c)
+                yield index
+            else:
+                for index in _decode_object(index, c, parent_path, query_path, expected_vars):
+                    yield index
+        elif c == b'[':
+            for index in _iterate_list(index, c, parent_path, query_path, expected_vars):
+                yield index
+        else:
+            index = _assign_token(index, c, expected_vars)
+            yield index
+
+    def _assign_token(index, c, expected_vars):
+        if not any(expected_vars):
+            return jump_to_end(index, c)
+
+        value, index = simple_token(index, c)
+        set_destination(expected_vars, value)
+
+        return index
 
     def jump_to_end(index, c):
         """
         DO NOT PROCESS THIS JSON OBJECT, JUST RETURN WHERE IT ENDS
         """
-        if c=='"':
+        if c == '"':
             while True:
                 c = json[index]
                 index += 1
@@ -247,7 +280,10 @@ def parse(json, path, expected_vars=NO_VARS):
                     break
             return json_decoder(json.release(index).decode("utf8")), index
         elif c in b"{[":
-            Log.error("Expecting a primitive value")
+            json.mark(index-1)
+            index = jump_to_end(index, c)
+            value = wrap(json_decoder(json.release(index).decode("utf8")))
+            return value, index
         elif c == b"t" and json.slice(index, index + 3) == "rue":
             return True, index + 3
         elif c == b"n" and json.slice(index, index + 3) == "ull":
@@ -261,7 +297,11 @@ def parse(json, path, expected_vars=NO_VARS):
                 if c in b',]}':
                     break
                 index += 1
-            return float(json.release(index)), index
+            text = json.release(index)
+            try:
+                return float(text), index
+            except Exception:
+                Log.error("Not a known JSON primitive: {{text|quote}}", text=text)
 
     def skip_whitespace(index):
         """
@@ -273,31 +313,29 @@ def parse(json, path, expected_vars=NO_VARS):
             c = json[index]
         return c, index + 1
 
-    for j, i in _decode(0, [], map(split_field, listwrap(path)), {}, expected_vars=expected_vars):
-        yield j
+    if isinstance(query_path, Mapping) and query_path.get("items"):
+        path_list = split_field(query_path.get("items")) + ["$items"]  # INSERT A MARKER SO THAT OBJECT IS STREAM DECODED
+    else:
+        path_list = split_field(query_path)
 
-
-
-def listwrap(value):
-    if value == None:
-        return []
-    if isinstance(value, list):
-        return value
-    return [value]
+    destination = [None] * len(expected_vars)
+    c, index = skip_whitespace(0)
+    done = [path_list + [None]]
+    for _ in _decode_token(index, c, [], path_list, expected_vars):
+        output = Data()
+        for i, e in enumerate(expected_vars):
+            output[e] = destination[i]
+        yield output
 
 
 def needed(name, required):
     """
     RETURN SUBSET IF name IN REQUIRED
     """
-    output = []
-    for r in required:
-        if r==name:
-            output.append(".")
-        elif r.startswith(name+"."):
-            output.append(r[len(name)+1:])
-    return output
-
+    return [
+        relative_field(r, name) if r and startswith_field(r, name) else None
+        for r in required
+    ]
 
 class List_usingStream(object):
     """
@@ -325,7 +363,7 @@ class List_usingStream(object):
             pass
 
         if offset < 0:
-            Log.error("Can not go in reverse on stream index=={{index}}", index=index)
+            Log.error("Can not go in reverse on stream index=={{index}} (offset={{offset}})", index=index, offset=offset)
 
         if self._mark == -1:
             self.start += self.buffer_length

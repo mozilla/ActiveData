@@ -18,7 +18,7 @@ from mo_threads import Lock
 from pyLibrary import convert
 from types import FunctionType
 
-from jx_base.expressions import jx_expression
+from jx_python.expressions import jx_expression
 from mo_logs.exceptions import Except
 from mo_logs.strings import expand_template
 from mo_math.randoms import Random

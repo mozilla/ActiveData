@@ -265,13 +265,17 @@ class WarnOnException(object):
     def __init__(
         self,
         template,  # human readable template
+        debug=False,
         **more_params
     ):
+        self.debug = debug
         self.template = template
         self.more_params = more_params
 
     def __enter__(self):
-        pass
+        if self.debug:
+            from mo_logs import Log
+            Log.note(self.template, default_params=self.more_params, stack_depth=1)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if isinstance(exc_val, Exception):

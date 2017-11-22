@@ -16,6 +16,7 @@ from collections import Mapping
 from copy import deepcopy
 
 from future.utils import text_type, binary_type
+from jx_python.expressions import jx_expression_to_function
 
 import mo_json
 from jx_python import jx
@@ -68,6 +69,7 @@ class Index(Features):
     def __init__(
         self,
         index,  # NAME OF THE INDEX, EITHER ALIAS NAME OR FULL VERSION NAME
+        id_column="_id",
         type=None,  # SCHEMA NAME, (DEFAULT TO TYPE IN INDEX, IF ONLY ONE)
         alias=None,
         explore_metadata=True,  # PROBING THE CLUSTER FOR METADATA IS ALLOWED
@@ -126,9 +128,9 @@ class Index(Features):
         if kwargs.tjson:
             from pyLibrary.env.typed_inserter import TypedInserter
 
-            self.encode = TypedInserter(self).typed_encode
+            self.encode = TypedInserter(self, id_column).typed_encode
         else:
-            self.encode = default_encoder
+            self.encode = get_encoder(id_column)
 
 
 
@@ -322,7 +324,7 @@ class Index(Features):
                     for i, item in enumerate(items):
                         if not item.index.ok:
                             fails.append(i)
-                elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5."])):
+                elif self.cluster.version.startswith(("1.4.", "1.5.", "1.6.", "1.7.", "5.", "6.")):
                     for i, item in enumerate(items):
                         if item.index.status not in [200, 201]:
                             fails.append(i)
@@ -396,7 +398,7 @@ class Index(Features):
                 Log.error("Can not set refresh interval ({{error}})", {
                     "error": utf82unicode(response.all_content)
                 })
-        elif any(map(self.cluster.version.startswith, ["1.4.", "1.5.", "1.6.", "1.7.", "5."])):
+        elif self.cluster.version.startswith(("1.4.", "1.5.", "1.6.", "1.7.", "5.", "6.")):
             response = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
                 data=convert.unicode2utf8('{"index":{"refresh_interval":' + value2json(interval) + '}}'),
@@ -637,7 +639,7 @@ class Cluster(object):
             Log.error("Expecting a schema")
         elif isinstance(schema, text_type):
             Log.error("Expecting a schema")
-        elif self.version.startswith("5."):
+        elif self.version.startswith(("5.", "6.")):
             schema = mo_json.json2value(value2json(schema), leaves=True)
         else:
             schema = retro_schema(mo_json.json2value(value2json(schema), leaves=True))
@@ -1197,22 +1199,36 @@ def parse_properties(parent_index_name, parent_name, esProperties):
 
     return columns
 
-def default_encoder(r):
-    id = r.get("id")
-    r_value = r.get('value')
-    if id == None and isinstance(r_value, Mapping):
-        id = r_value.get('_id')
-    if id == None:
-        id = random_id()
 
-    if "json" in r:
-        json = r["json"]
-    elif r_value or isinstance(r_value, (dict, Data)):
-        json = convert.value2json(r_value)
-    else:
-        raise Log.error("Expecting every record given to have \"value\" or \"json\" property")
+def get_encoder(id_expression="_id"):
+    get_id = jx_expression_to_function(id_expression)
 
-    return {"id":id, "json":json}
+    def _encoder(r):
+        id = r.get("id")
+        r_value = r.get('value')
+        if isinstance(r_value, Mapping):
+            r_id = get_id(r_value)
+            del r_value['_id']
+            if id == None:
+                id = r_id
+            elif id != r_id:
+                Log.error("Expecting id and _id in the record to match")
+        if id == None:
+            id = random_id()
+
+        if "json" in r:
+            Log.error("can not handle pure json inserts anymore")
+            json = r["json"]
+        elif r_value or isinstance(r_value, (dict, Data)):
+            json = convert.value2json(r_value)
+        else:
+            raise Log.error("Expecting every record given to have \"value\" or \"json\" property")
+
+        return {"id": id, "json": json}
+
+    return _encoder
+
+
 
 
 def random_id():

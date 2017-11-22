@@ -14,5 +14,7 @@ from __future__ import unicode_literals
 
 
 from mo_times.dates import Date
-from mo_times.durations import Duration, MINUTE, HOUR, DAY
+from mo_times.durations import Duration, ZERO, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, YEAR
 from mo_times.timer import Timer
+
+

@@ -325,7 +325,11 @@ def _string2Duration(text):
 
     if MILLI_VALUES[interval] == None:
         from mo_logs import Log
-        Log.error(interval + " is not a recognized duration type (did you use the pural form by mistake?")
+        Log.error(
+            "{{interval|quote}} in {{text|quote}} is not a recognized duration type (did you use the pural form by mistake?",
+            interval=interval,
+            text=text
+        )
 
     output = Duration(0)
     if MONTH_VALUES[interval] == 0:

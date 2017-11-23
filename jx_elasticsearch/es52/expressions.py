@@ -682,15 +682,17 @@ def to_painless(self, schema):
     value = self.term.to_painless(schema)
     if value.many:
         return BooleanOp("boolean", Painless(
-            miss=value.missing,
+            miss=value.miss,
             type=value.type,
             expr="(" + value.expr + ")[0]",
             frum=value.frum
         )).to_painless(schema)
     elif value.type == BOOLEAN:
-        return value
+        miss = value.miss
+        value.miss = FALSE
+        return WhenOp("when",  miss, **{"then": FALSE, "else": value}).partial_eval().to_painless(schema)
     else:
-        return NotOp("not", value.missing()).partial_eval().to_painless(schema)
+        return NotOp("not", value.miss).partial_eval().to_painless(schema)
 
 @extend(BooleanOp)
 def to_esfilter(self, schema):

@@ -155,6 +155,13 @@ class Expression(object):
     def name(self):
         return self.__class__.__name__
 
+    @property
+    def many(self):
+        """
+        :return: True IF THE EXPRESSION RETURNS A MULTIVALUE (WHICH IS NOT A LIST OR A TUPLE)
+        """
+        return False
+
     def __data__(self):
         raise NotImplementedError
 
@@ -235,6 +242,10 @@ class Variable(Expression):
 
     def __data__(self):
         return self.var
+
+    @property
+    def many(self):
+        return True
 
     def vars(self):
         return {self.var}
@@ -1274,7 +1285,7 @@ class FirstOp(Expression):
         term = self.term.partial_eval()
         if isinstance(self.term, FirstOp):
             return term
-        elif term is NULL or self.term.type != OBJECT:
+        elif term.type != OBJECT and not term.many:
             return term
         elif isinstance(term, Literal):
             Log.error("not handled yet")

@@ -428,7 +428,7 @@ class FromESMetadata(Schema):
                                 Log.note(
                                     "Old columns {{names|json}} last updated {{dates|json}}",
                                     names=wrap(old_columns).es_column,
-                                    dates=wrap(old_columns).last_updated
+                                    dates=[Date(t).format() for t in wrap(old_columns).last_updated]
                                 )
                             self.todo.extend(old_columns)
                             # TEST CONSISTENCY
@@ -439,9 +439,9 @@ class FromESMetadata(Schema):
                             if DEBUG:
                                 Log.note("no more metatdata to update")
 
+                column = self.todo.pop(Till(seconds=(10*MINUTE).seconds))
                 if DEBUG:
                     Log.note("update {{table}}.{{column}}", table=column.es_index, column=column.es_column)
-                column = self.todo.pop(Till(seconds=(10*MINUTE).seconds))
                 if column:
                     if column.es_index in self.index_does_not_exist:
                         with self.meta.columns.locker:

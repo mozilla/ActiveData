@@ -65,7 +65,7 @@ class AggsDecoder(object):
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
 
                 if col.partitions != None:
-                    if len(col.partitions) < 6:
+                    if col.multi > 1 and len(col.partitions) < 6:
                         return object.__new__(MultivalueDecoder)
 
                     partitions = col.partitions[:limit:]

@@ -1287,6 +1287,8 @@ class FirstOp(Expression):
             return term
         elif term.type != OBJECT and not term.many:
             return term
+        elif term is NULL:
+            return term
         elif isinstance(term, Literal):
             Log.error("not handled yet")
         else:
@@ -1773,6 +1775,12 @@ class CoalesceOp(Expression):
 
     def __data__(self):
         return {"coalesce": [t.__data__() for t in self.terms]}
+
+    def __eq__(self, other):
+        if isinstance(other, CoalesceOp):
+            if len(self.terms) == len(other.terms):
+                return all(s == o for s, o in zip(self.terms, other.terms))
+        return False
 
     def missing(self):
         # RETURN true FOR RECORDS THE WOULD RETURN NULL
@@ -2430,6 +2438,11 @@ class InOp(Expression):
             return {"in": {self.value.var: self.superset.value}}
         else:
             return {"in": [self.value.__data__(), self.superset.__data__()]}
+
+    def __eq__(self, other):
+        if isinstance(other, InOp):
+            return self.value == other.value and self.superset == other.superset
+        return False
 
     def vars(self):
         return self.value.vars()

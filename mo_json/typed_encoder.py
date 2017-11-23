@@ -28,7 +28,7 @@ from mo_times.dates import Date
 from mo_times.durations import Duration
 
 
-TYPE_PREFIX = "__type__"
+TYPE_PREFIX = u'\u0442\u0443\u0440\u0435-'  # "туре"
 BOOLEAN_TYPE = TYPE_PREFIX+"boolean"
 NUMBER_TYPE = TYPE_PREFIX+"number"
 STRING_TYPE = TYPE_PREFIX+"string"

@@ -23,9 +23,9 @@ from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, Or
 from jx_python import jx
 from mo_dots import set_default, coalesce, literal_field, Data, relative_field, unwraplist
 from mo_dots import wrap
-from mo_json import quote
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
+from mo_logs.strings import quote
 from mo_math import MAX, MIN
 from mo_math import Math
 

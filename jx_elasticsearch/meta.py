@@ -439,6 +439,8 @@ class FromESMetadata(Schema):
                             if DEBUG:
                                 Log.note("no more metatdata to update")
 
+                if DEBUG:
+                    Log.note("update {{table}}.{{column}}", table=column.es_index, column=column.es_column)
                 column = self.todo.pop(Till(seconds=(10*MINUTE).seconds))
                 if column:
                     if column.es_index in self.index_does_not_exist:
@@ -455,8 +457,6 @@ class FromESMetadata(Schema):
                     elif column.last_updated >= Date.now()-TOO_OLD:
                         continue
                     try:
-                        if DEBUG:
-                            Log.note("update {{table}}.{{column}}", table=column.es_index, column=column.es_column)
                         self._update_cardinality(column)
                         if DEBUG and not column.es_index.startswith(TEST_TABLE_PREFIX):
                             Log.note("updated {{column.name}}", column=column)

@@ -146,7 +146,7 @@ class ESUtils(object):
 
     def execute_tests(self, subtest, tjson=True, places=6):
         subtest = wrap(subtest)
-        subtest.name = extract_stack()[1]['method']
+        subtest.name = text_type(extract_stack()[1]['method'])
 
         self.fill_container(subtest, tjson=tjson)
         self.send_queries(subtest, places=places)

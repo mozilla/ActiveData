@@ -455,7 +455,7 @@ def value2json(value):
         return text_type(_json_encoder(scrubbed))
     except Exception as e:
         e = Except.wrap(e)
-        Log.warning("problem serializing {{type}}", type=repr(value), cause=e)
+        Log.warning("problem serializing {{type}}", type=text_type(repr(value)), cause=e)
         raise e
 
 

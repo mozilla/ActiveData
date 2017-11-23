@@ -54,12 +54,6 @@ def replace(match):
     return ESCAPE_DCT[match.group(0)]
 
 
-def quote(value):
-    if value == None:
-        return ""
-    return "\"" + ESCAPE.sub(replace, value) + "\""
-
-
 def float2json(value):
     """
     CONVERT NUMBER TO JSON STRING, WITH BETTER CONTROL OVER ACCURACY

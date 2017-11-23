@@ -22,6 +22,7 @@ from __builtin__ import round as _round
 from collections import Mapping
 from datetime import datetime as builtin_datetime
 from datetime import timedelta, date
+from json.encoder import encode_basestring
 
 from future.utils import text_type
 from mo_dots import coalesce, wrap, get_module
@@ -336,8 +337,17 @@ def comma(value):
 
 def quote(value):
     if value == None:
-        return ""
-    return _json.dumps(value)
+        output = ""
+    elif isinstance(value, text_type):
+        output = encode_basestring(value)
+    else:
+        output = _json.dumps(value)
+    return output
+
+
+def hex(value):
+    return hex(value)
+
 
 
 _SNIP = "...<snip>..."

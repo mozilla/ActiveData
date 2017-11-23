@@ -12,14 +12,18 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import itertools
-from copy import copy, deepcopy
+from copy import copy
 from itertools import product
 
 from jx_base import STRUCT
+from jx_base.query import QueryOp
+from jx_base.schema import Schema
 from jx_python import jx
 from jx_python import meta as jx_base_meta
-from mo_dots import Data, relative_field, concat_field
-from mo_dots import coalesce, set_default, Null, literal_field, split_field, join_field, ROOT_PATH
+from jx_python.containers.list_usingPythonList import ListContainer
+from jx_python.meta import ColumnList, metadata_columns, metadata_tables, Column, Table
+from mo_dots import Data, relative_field, concat_field, SELF_PATH
+from mo_dots import coalesce, set_default, Null, split_field, join_field
 from mo_dots import wrap
 from mo_json.typed_encoder import EXISTS_TYPE
 from mo_kwargs import override
@@ -29,11 +33,6 @@ from mo_threads import Queue
 from mo_threads import THREAD_STOP
 from mo_threads import Thread
 from mo_threads import Till
-
-from jx_base.query import QueryOp
-from jx_base.schema import Schema
-from jx_python.containers.list_usingPythonList import ListContainer
-from jx_python.meta import ColumnList, metadata_columns, metadata_tables, Column, Table
 from mo_times.dates import Date
 from mo_times.durations import HOUR, MINUTE
 from mo_times.timer import Timer
@@ -73,7 +72,7 @@ class FromESMetadata(Schema):
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
         self.es_metadata = Null
-        self.abs_columns = Null
+        self.abs_columns = set()
         self.last_es_metadata = Date.now()-OLD_METADATA
 
         self.meta=Data()
@@ -137,22 +136,15 @@ class FromESMetadata(Schema):
             self.es_metadata = self.default_es.get_metadata(force=True)
             meta = self.es_metadata.indices[es_index]
 
-        for _, properties in meta.mappings.items():
+        for data_type, properties in meta.mappings.items():
+            if data_type == "_default_":
+                continue
             properties.properties["_id"] = {"type": "string", "index": "not_analyzed"}
             self._parse_properties(meta.index, properties, meta)
 
     def _parse_properties(self, abs_index, properties, meta):
         # IT IS IMPORTANT THAT NESTED PROPERTIES NAME ALL COLUMNS, AND
         # ALL COLUMNS ARE GIVEN NAMES FOR ALL NESTED PROPERTIES
-        abs_columns = self.abs_columns = elasticsearch.parse_properties(abs_index, None, properties.properties)
-        abs_columns = abs_columns.filter(  # TODO: REMOVE WHEN jobs PROPERTY EXPLOSION IS CONTAINED
-            lambda r: not r.es_column.startswith("other.") and
-                      not r.es_column.startswith("previous_values.cf_") and
-                      not r.es_index.startswith("debug") and
-                      r.es_column.find("=") == -1 and
-                      r.es_column.find(" ") == -1
-        )
-
         def add_column(c, query_path):
             c.last_updated = Date.now() - TOO_OLD
             if query_path[0] != ".":
@@ -165,6 +157,8 @@ class FromESMetadata(Schema):
                     self._upsert_column(c_)
                 self._upsert_column(c)
 
+        abs_columns = elasticsearch.parse_properties(abs_index, None, properties.properties)
+        self.abs_columns.update(abs_columns)
         with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
             # LIST OF EVERY NESTED PATH
             query_paths = [[c.es_column] for c in abs_columns if c.type == "nested"]
@@ -181,7 +175,7 @@ class FromESMetadata(Schema):
                         break
             for q in query_paths:
                 q.append(".")
-            query_paths.append(ROOT_PATH)
+            query_paths.append(SELF_PATH)
 
             # ADD RELATIVE COLUMNS
             for abs_column in abs_columns:

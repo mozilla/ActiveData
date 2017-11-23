@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from future.utils import text_type
+from future.utils import text_type, binary_type
 
 import mo_json
 from jx_python import jx
@@ -25,6 +25,7 @@ from mo_logs.exceptions import suppress_exception
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_threads import Thread, Queue, Till, THREAD_STOP
 from mo_times import MINUTE, Duration
+from pyLibrary.convert import bytes2base64
 from pyLibrary.env.elasticsearch import Cluster
 
 MAX_BAD_COUNT = 5
@@ -119,6 +120,8 @@ def _deep_json_to_string(value, depth):
         return value
     elif isinstance(value, text_type):
         return strings.limit(value, LOG_STRING_LENGTH)
+    elif isinstance(value, binary_type):
+        return strings.limit(bytes2base64(value), LOG_STRING_LENGTH)
     else:
         return strings.limit(value2json(value), LOG_STRING_LENGTH)
 

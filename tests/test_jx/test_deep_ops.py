@@ -148,12 +148,12 @@ class TestDeepOps(BaseTestCase):
                 "sort": ["o"]
             },
             "es_query": {  # FOR REFERENCE
-                           "query": {"nested": {
-                               "path": "_a",
-                               "inner_hits": {"size": 100000},
-                               "filter": {"term": {"_a.b": "x"}}
-                           }},
-                           "fields": ["o"]
+                "query": {"nested": {
+                    "path": "_a",
+                    "inner_hits": {"size": 100000},
+                    "filter": {"term": {"_a.b": "x"}}
+                }},
+                "fields": ["o"]
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -163,19 +163,11 @@ class TestDeepOps(BaseTestCase):
                     {"o": 3, "b": "x"}
                 ]},
             "expecting_table": {
-            "meta": {"format": "table"},
-                "header": ["o", "a", "c"],
+                "header": ["b", "o"],
                 "data": [
-                    [1, {"b": "x", "v": 5}, NULL],
-                    [2, {"b": "x", "v": 7}, NULL],
-                    [3,
-                        [
-                            {"b": "x", "v": 2},
-                            {"b": "y", "v": 3}
-                        ],
-                        NULL
-                    ],
-                    [4, NULL, "x"]
+                    ["x", 1],
+                    ["x", 1],
+                    ["x", 1]
                 ]
             },
             "expecting_cube": {
@@ -183,21 +175,12 @@ class TestDeepOps(BaseTestCase):
                 "edges": [
                     {
                         "name": "rownum",
-                        "domain": {"type": "rownum", "min": 0, "max": 4, "interval": 1}
+                        "domain": {"type": "rownum", "min": 0, "max": 3, "interval": 1}
                     }
                 ],
                 "data": {
-                    "a": [
-                        {"b": "x", "v": 5},
-                        {"b": "x", "v": 7},
-                        [
-                            {"b": "x", "v": 2},
-                            {"b": "y", "v": 3}
-                        ],
-                        NULL
-                    ],
-                    "c": [NULL, NULL, NULL, "x"],
-                    "o": [1, 2, 3, 4]
+                    "b": ["x", "x", "x"],
+                    "o": [1, 2, 3]
                 }
             }
         }

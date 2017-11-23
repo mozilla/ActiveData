@@ -207,7 +207,7 @@ class Expression(object):
         return self.data_type
 
     def __eq__(self, other):
-        Log.note("this is slow on {{type}}", type=self.__class__.__name__)
+        Log.note("this is slow on {{type}}", type=text_type(self.__class__.__name__))
         if other is None:
             return False
         return self.__data__() == other.__data__()

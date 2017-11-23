@@ -209,8 +209,8 @@ class Log(object):
             f = sys._getframe(stack_depth + 1)
             log_params.location = {
                 "line": f.f_lineno,
-                "file": f.f_code.co_filename.split(os.sep)[-1],
-                "method": f.f_code.co_name
+                "file": text_type(f.f_code.co_filename.split(os.sep)[-1]),
+                "method": text_type(f.f_code.co_name)
             }
             thread = _Thread.current()
             log_params.thread = {"name": thread.name, "id": thread.id}
@@ -469,9 +469,9 @@ def write_profile(profile_settings, stats):
 # GET THE MACHINE METADATA
 machine_metadata = wrap({
     "pid":  os.getpid(),
-    "python": platform.python_implementation(),
-    "os": (platform.system() + platform.release()).strip(),
-    "name": platform.node()
+    "python": text_type(platform.python_implementation()),
+    "os": text_type(platform.system() + platform.release()).strip(),
+    "name": text_type(platform.node())
 })
 
 

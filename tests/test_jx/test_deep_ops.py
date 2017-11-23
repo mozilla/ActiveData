@@ -166,8 +166,8 @@ class TestDeepOps(BaseTestCase):
                 "header": ["b", "o"],
                 "data": [
                     ["x", 1],
-                    ["x", 1],
-                    ["x", 1]
+                    ["x", 2],
+                    ["x", 3]
                 ]
             },
             "expecting_cube": {

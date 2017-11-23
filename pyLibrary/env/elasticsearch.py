@@ -646,7 +646,12 @@ class Cluster(object):
             schema = retro_schema(mo_json.json2value(value2json(schema), leaves=True))
 
         for n, m in schema.mappings.items():
-            m.dynamic_templates = DEFAULT_DYNAMIC_TEMPLATES + m.dynamic_templates
+            m.dynamic_templates = DEFAULT_DYNAMIC_TEMPLATES + m.dynamic_templates + [{
+                "default_all": {
+                    "mapping": {"store": True},
+                    "match": "*"
+                }
+            }]
 
         if limit_replicas:
             # DO NOT ASK FOR TOO MANY REPLICAS

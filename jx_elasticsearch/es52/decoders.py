@@ -17,12 +17,13 @@ from future.utils import text_type, binary_type
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_base.expressions import TupleOp
+from jx_base.expressions import TupleOp, value2json
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, OrOp, AndOp, InequalityOp, LeavesOp
 from jx_python import jx
-from mo_dots import set_default, coalesce, literal_field, Data, relative_field
+from mo_dots import set_default, coalesce, literal_field, Data, relative_field, unwraplist
 from mo_dots import wrap
+from mo_json import quote
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_math import MAX, MIN
@@ -52,6 +53,7 @@ class AggsDecoder(object):
                     dimension={"fields": e.value.terms}
                 )
                 return object.__new__(DimFieldListDecoder, e)
+
             elif isinstance(e.value, Variable):
                 schema = query.frum.schema
                 cols = schema.leaves(e.value.var)
@@ -63,6 +65,9 @@ class AggsDecoder(object):
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
 
                 if col.partitions != None:
+                    if len(col.partitions) < 6:
+                        return object.__new__(MultivalueDecoder)
+
                     partitions = col.partitions[:limit:]
                     if e.domain.sort==-1:
                         partitions = list(reversed(sorted(partitions)))
@@ -447,6 +452,42 @@ class RangeDecoder(AggsDecoder):
     @property
     def num_columns(self):
         return 1
+
+
+class MultivalueDecoder(SetDecoder):
+    def __init__(self, edge, query, limit):
+        AggsDecoder.__init__(self, edge, query, limit)
+        self.var = edge.value.var
+        self.values = query.frum.schema[edge.value.var][0].partitions
+        self.parts = []
+
+    def append_query(self, es_query, start):
+        self.start = start
+
+        es_field = self.query.frum.schema.leaves(self.var)[0].es_column
+        for i, v in enumerate(self.values):
+            es_query =  wrap({"aggs": {
+                "_match": set_default({"terms": {
+                    "script": 'doc['+quote(es_field)+'].values.contains(' + value2json(v) + ') ? 1 : 0'
+                }}, es_query)
+            }})
+
+        return es_query
+
+    def get_value_from_row(self, row):
+        return unwraplist([v for v, p in zip(self.values, row[self.start:self.start + self.num_columns:]) if p["key"] == '1'])
+
+    def get_index(self, row):
+        find = self.get_value_from_row(row)
+        try:
+            return self.parts.index(find)
+        except Exception:
+            self.parts.append(find)
+            return len(self.parts)-1
+
+    @property
+    def num_columns(self):
+        return len(self.values)
 
 
 class ObjectDecoder(AggsDecoder):

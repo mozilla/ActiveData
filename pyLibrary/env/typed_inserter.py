@@ -130,9 +130,9 @@ class TypedInserter(object):
                 if NESTED_TYPE in sub_schema:
                     # PREFER NESTED, WHEN SEEN BEFORE
                     if value:
-                        append(_buffer, u'{"'+EXISTS_TYPE+'": 1, "'+NESTED_TYPE+'": [')
+                        append(_buffer, u'{"'+NESTED_TYPE+'": [')
                         self._dict2json(value, sub_schema[NESTED_TYPE], path + [NESTED_TYPE], net_new_properties, _buffer)
-                        append(_buffer, ']}')
+                        append(_buffer, '], "' + EXISTS_TYPE + '":' + text_type(len(value)) + '}')
                     else:
                         # SINGLETON LISTS OF null SHOULD NOT EXIST
                         pass
@@ -144,7 +144,7 @@ class TypedInserter(object):
                     if value:
                         self._dict2json(value, sub_schema, path, net_new_properties, _buffer)
                     else:
-                        append(_buffer, u'{"'+EXISTS_TYPE+'": 1}')
+                        append(_buffer, u'{"'+EXISTS_TYPE+'": 0}')
             elif _type is binary_type:
                 if STRING_TYPE not in sub_schema:
                     sub_schema[STRING_TYPE] = True
@@ -300,7 +300,7 @@ class TypedInserter(object):
         append(_buffer, u'], "'+EXISTS_TYPE+'":' + text_type(count))
 
     def _dict2json(self, value, sub_schema, path, net_new_properties, _buffer):
-        prefix = u'{"'+EXISTS_TYPE+'": 1, '
+        prefix = u'{'
         for k, v in value.iteritems():
             if v == None or v == "":
                 continue
@@ -317,9 +317,9 @@ class TypedInserter(object):
             append(_buffer, u": ")
             self._typed_encode(v, sub_schema[k], path+[k], net_new_properties, _buffer)
         if prefix == u", ":
-            append(_buffer, u'}')
+            append(_buffer, u', "'+EXISTS_TYPE+'": 1}')
         else:
-            append(_buffer, u'{"'+EXISTS_TYPE+'": 1}')
+            append(_buffer, u'{"'+EXISTS_TYPE+'": 0}')
 
 
 json_encoder = json.JSONEncoder(

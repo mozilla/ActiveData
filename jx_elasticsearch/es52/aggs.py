@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from future.utils import text_type
+from jx_base import OBJECT, EXISTS
 
 from jx_base.domains import SetDomain
 from jx_base.expressions import TupleOp, NULL
@@ -147,12 +148,16 @@ def es_aggsop(es, frum, query):
                 canonical_names = []
                 for es_col in es_cols:
                     cn = literal_field(es_col.es_column + "_count")
-                    canonical_names.append(cn)
-                    es_query.aggs[cn].value_count.field = es_col.es_column
+                    if es_col.type == EXISTS:
+                        canonical_names.append(cn + ".doc_count")
+                        es_query.aggs[cn].filter.range = {es_col.es_column: {"gt": 0}}
+                    else:
+                        canonical_names.append(cn+ ".value")
+                        es_query.aggs[cn].value_count.field = es_col.es_column
                 if len(es_cols) == 1:
-                    s.pull = jx_expression_to_function(canonical_names[0] + ".value")
+                    s.pull = jx_expression_to_function(canonical_names[0])
                 else:
-                    s.pull = jx_expression_to_function({"add": [cn + ".value" for cn in canonical_names]})
+                    s.pull = jx_expression_to_function({"add": canonical_names})
             elif s.aggregate == "median":
                 if len(es_cols) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")

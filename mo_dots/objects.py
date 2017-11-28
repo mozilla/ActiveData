@@ -14,10 +14,9 @@ from __future__ import unicode_literals
 from collections import Mapping
 from datetime import date, datetime
 from decimal import Decimal
-from types import GeneratorType
 
 from mo_dots import wrap, unwrap, Data, FlatList, NullType, get_attr, set_attr
-from mo_future import text_type, binary_type, get_function_defaults, get_function_arguments, none_type
+from mo_future import text_type, binary_type, get_function_defaults, get_function_arguments, none_type, generator_types
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -58,7 +57,11 @@ class DataObject(Mapping):
         try:
             return obj.__dict__.items()
         except Exception as e:
-            raise e
+            return [
+                (k, getattr(obj, k, None))
+                for k in dir(obj)
+                if not k.startswith("__")
+            ]
 
     def iteritems(self):
         obj = _get(self, "_obj")
@@ -110,7 +113,7 @@ def datawrap(v):
         return None   # So we allow `is None`
     elif type_ is list:
         return FlatList(v)
-    elif type_ is GeneratorType:
+    elif type_ in generator_types:
         return (wrap(vv) for vv in v)
     elif isinstance(v, (text_type, binary_type, int, float, Decimal, datetime, date, Data, FlatList, NullType, none_type)):
         return v

@@ -16,10 +16,12 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import sys
-import thread
+
 from copy import copy
 from datetime import datetime, timedelta
 from time import sleep
+
+from mo_future import get_ident, start_new_thread, interrupt_main
 
 from mo_dots import Data, unwraplist, Null
 from mo_logs import Log, Except
@@ -78,7 +80,7 @@ class AllThread(object):
 class MainThread(object):
     def __init__(self):
         self.name = "Main Thread"
-        self.id = thread.get_ident()
+        self.id = get_ident()
         self.children = []
         self.timers = None
 
@@ -175,7 +177,7 @@ class Thread(object):
 
     def start(self):
         try:
-            self.thread = thread.start_new_thread(Thread._run, (self,))
+            self.thread = start_new_thread(Thread._run, (self,))
             return self
         except Exception as e:
             Log.error("Can not start thread", e)
@@ -203,7 +205,7 @@ class Thread(object):
     def _run(self):
         with CProfiler():
 
-            self.id = thread.get_ident()
+            self.id = get_ident()
             with ALL_LOCK:
                 ALL[self.id] = self
 
@@ -321,7 +323,7 @@ class Thread(object):
         if not isinstance(please_stop, Signal):
             please_stop = Signal()
 
-        please_stop.on_go(lambda: thread.start_new_thread(_stop_main_thread, ()))
+        please_stop.on_go(lambda: start_new_thread(_stop_main_thread, ()))
 
         self_thread = Thread.current()
         if self_thread != MAIN_THREAD:
@@ -346,7 +348,7 @@ class Thread(object):
 
     @staticmethod
     def current():
-        id = thread.get_ident()
+        id = get_ident()
         with ALL_LOCK:
             try:
                 return ALL[id]
@@ -410,7 +412,7 @@ def _wait_for_interrupt(please_stop):
 
 def _interrupt_main_safely():
     try:
-        thread.interrupt_main()
+        interrupt_main()
     except KeyboardInterrupt:
         # WE COULD BE INTERRUPTING SELF
         pass
@@ -419,7 +421,7 @@ MAIN_THREAD = MainThread()
 
 ALL_LOCK = Lock("threads ALL_LOCK")
 ALL = dict()
-ALL[thread.get_ident()] = MAIN_THREAD
+ALL[get_ident()] = MAIN_THREAD
 
 MAIN_THREAD.timers = Thread.run("timers", till.daemon)
 MAIN_THREAD.children.remove(MAIN_THREAD.timers)

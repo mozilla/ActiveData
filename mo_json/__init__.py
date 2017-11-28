@@ -19,7 +19,7 @@ from decimal import Decimal
 
 from mo_dots import FlatList, NullType, Data, wrap_leaves, wrap, Null
 from mo_dots.objects import DataObject
-from mo_future import text_type, none_type, long
+from mo_future import text_type, none_type, long, binary_type
 from mo_logs import Except, strings, Log
 from mo_logs.strings import expand_template
 from mo_times import Date, Duration
@@ -149,9 +149,11 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
         is_done.add(_id)
 
         output = {}
-        for k, v in value.iteritems():
-            if isinstance(k, basestring):
+        for k, v in value.items():
+            if isinstance(k, text_type):
                 pass
+            elif isinstance(k, binary_type):
+                k = k.decode('utf8')
             elif hasattr(k, "__unicode__"):
                 k = text_type(k)
             else:
@@ -256,7 +258,7 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
     :param leaves: ASSUME JSON KEYS ARE DOT-DELIMITED
     :return: Python value
     """
-    if isinstance(json_string, str):
+    if not isinstance(json_string, text_type):
         Log.error("only unicode json accepted")
 
     try:

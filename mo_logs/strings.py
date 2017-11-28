@@ -458,6 +458,9 @@ def _simple_expand(template, seq):
             val = toString(val)
             return val
         except Exception as e:
+            from mo_logs import Except
+
+            e = Except.wrap(e)
             try:
                 if e.message.find("is not JSON serializable"):
                     # WORK HARDER

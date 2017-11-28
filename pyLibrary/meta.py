@@ -220,7 +220,7 @@ def DataClass(name, columns, constraint=True):
     :return: The class that has been created
     """
 
-    columns = wrap([{"name": c, "required": True, "nulls": False, "type": object} if isinstance(c, basestring) else c for c in columns])
+    columns = wrap([{"name": c, "required": True, "nulls": False, "type": object} if isinstance(c, text_type) else c for c in columns])
     slots = columns.name
     required = wrap(filter(lambda c: c.required and not c.nulls and not c.default, columns)).name
     nulls = wrap(filter(lambda c: c.nulls, columns)).name
@@ -330,7 +330,7 @@ temp = {{class_name}}
 def _exec(code, name):
     temp = None
     try:
-        exec (code)
+        exec(code)
         globals()[name] = temp
         return temp
     except Exception as e:

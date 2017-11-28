@@ -23,12 +23,11 @@ from jx_python import expressions as _expressions
 from jx_python import flat_list, group_by
 from mo_dots import listwrap, wrap, unwrap, FlatList, NullType
 from mo_dots import set_default, Null, Data, split_field, coalesce, join_field
-from mo_future import text_type, number_types, string_types, boolean_type, none_type, long
+from mo_future import text_type, boolean_type, none_type, long
 from mo_logs import Log
 from mo_math import Math
 from mo_math import UNION, MIN
 from pyLibrary import convert
-from types import GeneratorType
 
 import mo_dots
 from jx_base.container import Container
@@ -77,7 +76,7 @@ def run(query, frum=Null):
         return DUAL.query(query_op)
     elif isinstance(frum, Container):
         return frum.query(query_op)
-    elif isinstance(frum, (list, set, GeneratorType)):
+    elif isinstance(frum, (list, set) + generator_types):
         frum = wrap(list(frum))
     elif isinstance(frum, Cube):
         if is_aggs(query_op):

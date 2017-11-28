@@ -21,6 +21,7 @@ from time import time as _time
 from mo_future import text_type, PY3
 
 from mo_dots import Null
+from mo_logs import Except
 from mo_logs.strings import deformat
 
 from mo_times.durations import Duration, MILLI_VALUES
@@ -354,7 +355,8 @@ def unicode2Date(value, format=None):
     try:  # 2.7 DOES NOT SUPPORT %z
         local_value = parse_date(value)  #eg 2014-07-16 10:57 +0200
         return _unix2Date(datetime2unix((local_value - local_value.utcoffset()).replace(tzinfo=None)))
-    except Exception:
+    except Exception as e:
+        e = Except.wrap(e)  # FOR DEBUGGING
         pass
 
     formats = [

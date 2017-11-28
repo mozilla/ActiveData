@@ -21,18 +21,24 @@ none_type = type(None)
 boolean_type = type(True)
 
 if PY3:
+    import collections
+
     text_type = str
     string_types = str
     binary_type = bytes
     integer_types = int
     number_types = (int, float)
     long = int
+
     xrange = range
+    filter_type = type(filter(lambda x: True, []))
+    generator_types = (collections.Iterable, filter_type)
+
     round = round
     from html.parser import HTMLParser
     from urllib.parse import urlparse
     from io import StringIO
-    from _thread import allocate_lock, get_ident
+    from _thread import allocate_lock, get_ident, start_new_thread, interrupt_main
 
     def get_function_name(func):
         return func.__name__
@@ -56,6 +62,7 @@ if PY3:
 
 else:
     import __builtin__
+    from types import GeneratorType
 
     text_type = __builtin__.unicode
     string_types = (str, unicode)
@@ -63,12 +70,15 @@ else:
     integer_types = (int, long)
     number_types = (int, long, float)
     long = __builtin__.long
+
     xrange = __builtin__.xrange
+    generator_types = (GeneratorType,)
+
     round = __builtin__.round
     import HTMLParser
     from urlparse import urlparse
-    import StringIO
-    from thread import allocate_lock, get_ident
+    from StringIO import StringIO
+    from thread import allocate_lock, get_ident, start_new_thread, interrupt_main
 
     def get_function_name(func):
         return func.func_name

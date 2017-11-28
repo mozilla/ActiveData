@@ -17,7 +17,7 @@ import sys
 from collections import Mapping
 
 from mo_dots import Data, listwrap, unwraplist, set_default, Null
-from mo_future import text_type
+from mo_future import text_type, PY3
 from mo_logs.strings import indent, expand_template
 
 
@@ -107,8 +107,12 @@ class Except(Exception):
 
         return output
 
-    def __str__(self):
-        return self.__unicode__().encode('latin1', 'replace')
+    if PY3:
+        def __str__(self):
+            return self.__unicode__()
+    else:
+        def __str__(self):
+            return self.__unicode__().encode('latin1', 'replace')
 
     def __data__(self):
         return Data(

@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 import itertools
 
-from future.utils import text_type
+from mo_future import text_type
 
 from jx_base import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER
 from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, ScriptOp, \

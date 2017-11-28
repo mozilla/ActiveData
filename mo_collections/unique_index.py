@@ -16,6 +16,7 @@ from collections import Mapping, Iterable, Set
 
 from mo_dots import unwrap, tuplewrap, wrap
 from mo_dots.objects import datawrap
+from mo_future import PY2
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 
@@ -116,8 +117,12 @@ class UniqueIndex(Set, Mapping):
     def __contains__(self, key):
         return self[key] != None
 
-    def __iter__(self):
-        return (wrap(v) for v in self._data.itervalues())
+    if PY2:
+        def __iter__(self):
+            return (wrap(v) for v in self._data.itervalues())
+    else:
+        def __iter__(self):
+            return (wrap(v) for v in self._data.values())
 
     def __sub__(self, other):
         output = UniqueIndex(self._keys, fail_on_dup=self.fail_on_dup)

@@ -15,10 +15,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from thread import allocate_lock as _allocate_lock
+from mo_future import allocate_lock as _allocate_lock
 from time import sleep, time
 
-from future.utils import text_type
+from mo_future import text_type
 
 from mo_threads.signal import Signal
 

@@ -21,6 +21,7 @@ from future.utils import text_type, binary_type
 
 from jx_base import python_type_to_json_type, INTEGER, NUMBER
 from mo_dots import Data, FlatList, NullType, unwrap
+from mo_future import utf8_json_encoder
 from mo_json import ESCAPE_DCT, float2json, json2value
 from mo_json.encoder import pretty_json, problem_serializing, UnicodeBuilder, COMMA, COLON
 from mo_json.typed_encoder import untype_path, encode_property, BOOLEAN_TYPE, NESTED_TYPE, EXISTS_TYPE, STRING_TYPE, NUMBER_TYPE, TYPE_PREFIX
@@ -260,11 +261,11 @@ class TypedInserter(object):
             else:
                 from mo_logs import Log
 
-                Log.error(repr(value) + " is not JSON serializable")
+                Log.error(text_type(repr(value)) + " is not JSON serializable")
         except Exception as e:
             from mo_logs import Log
 
-            Log.error(repr(value) + " is not JSON serializable", cause=e)
+            Log.error(text_type(repr(value)) + " is not JSON serializable", cause=e)
 
     def _list2json(self, value, sub_schema, path, net_new_properties, _buffer):
         if not value:
@@ -301,7 +302,7 @@ class TypedInserter(object):
 
     def _dict2json(self, value, sub_schema, path, net_new_properties, _buffer):
         prefix = u'{'
-        for k, v in value.iteritems():
+        for k, v in ((kk, value[kk]) for kk in sorted(value.keys())):
             if v == None or v == "":
                 continue
             append(_buffer, prefix)
@@ -322,14 +323,4 @@ class TypedInserter(object):
             append(_buffer, u'{"'+EXISTS_TYPE+'": 0}')
 
 
-json_encoder = json.JSONEncoder(
-    skipkeys=False,
-    ensure_ascii=False,  # DIFF FROM DEFAULTS
-    check_circular=True,
-    allow_nan=True,
-    indent=None,
-    separators=(COMMA, COLON),
-    encoding='utf8',
-    default=None,
-    sort_keys=True
-).encode
+json_encoder = utf8_json_encoder

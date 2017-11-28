@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from future.utils import text_type, binary_type
+from mo_future import text_type, binary_type
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION

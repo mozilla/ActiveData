@@ -14,11 +14,11 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 import sys
-from future.utils import text_type, binary_type
+from mo_future import text_type, binary_type
 from types import GeneratorType
 from mo_dots.utils import get_logger, get_module
 
-NoneType = type(None)
+none_type = type(None)
 ModuleType = type(sys.modules[__name__])
 
 
@@ -418,7 +418,7 @@ def wrap(v):
         m = object.__new__(Data)
         _set(m, "_dict", v)
         return m
-    elif type_ is NoneType:
+    elif type_ is none_type:
         return Null
     elif type_ is list:
         return FlatList(v)

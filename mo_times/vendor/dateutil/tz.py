@@ -4,16 +4,16 @@ Copyright (c) 2003-2007  Gustavo Niemeyer <gustavo@niemeyer.net>
 This module offers extensions to the standard Python
 datetime module.
 """
+
 __license__ = "Simplified BSD"
 
 import datetime
-import struct
-import time
-import sys
 import os
+import struct
+import sys
+import time
 
-string_types = basestring
-PY3 = sys.version_info[0] == 3
+from mo_future import PY3, string_types
 
 relativedelta = None
 parser = None

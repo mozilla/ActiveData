@@ -12,21 +12,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import __builtin__
 import cgi
+import json as _json
 import math
 import re
 import string
-import json as _json
-from __builtin__ import round as _round
 from collections import Mapping
 from datetime import datetime as builtin_datetime
 from datetime import timedelta, date
 from json.encoder import encode_basestring
 
-from future.utils import text_type
 from mo_dots import coalesce, wrap, get_module
-from mo_logs.convert import datetime2unix, datetime2string, value2json,  milli2datetime, unix2datetime
+from mo_future import text_type, xrange, binary_type, round as _round, PY3
+from mo_logs.convert import datetime2unix, datetime2string, value2json, milli2datetime, unix2datetime
 from mo_logs.url import value2url_param
 
 _json_encoder = None
@@ -62,7 +60,7 @@ def expand_template(template, value):
     :return: UNICODE STRING WITH VARIABLES EXPANDED
     """
     value = wrap(value)
-    if isinstance(template, basestring):
+    if isinstance(template, text_type):
         return _simple_expand(template, (value,))
 
     return _expand(template, (value,))
@@ -195,7 +193,7 @@ def round(value, decimal=None, digits=None, places=None):
 
     right_of_decimal = max(decimal, 0)
     format = "{:." + text_type(right_of_decimal) + "f}"
-    return format.format(__builtin__.round(value, decimal))
+    return format.format(_round(value, decimal))
 
 
 def percent(value, decimal=None, digits=None, places=None):
@@ -211,7 +209,7 @@ def percent(value, decimal=None, digits=None, places=None):
     decimal = coalesce(decimal, 0)
     right_of_decimal = max(decimal, 0)
     format = "{:." + text_type(right_of_decimal) + "%}"
-    return format.format(__builtin__.round(value, decimal + 2))
+    return format.format(_round(value, decimal + 2))
 
 
 def find(value, find, start=0):
@@ -325,7 +323,7 @@ def comma(value):
     FORMAT WITH THOUSANDS COMMA (,) SEPARATOR
     """
     try:
-        if float(value) == __builtin__.round(float(value), 0):
+        if float(value) == _round(float(value), 0):
             output = "{:,}".format(int(value))
         else:
             output = "{:,}".format(float(value))
@@ -410,7 +408,7 @@ def _expand(template, seq):
     """
     seq IS TUPLE OF OBJECTS IN PATH ORDER INTO THE DATA TREE
     """
-    if isinstance(template, basestring):
+    if isinstance(template, text_type):
         return _simple_expand(template, seq)
     elif isinstance(template, Mapping):
         template = wrap(template)
@@ -465,7 +463,7 @@ def _simple_expand(template, seq):
                     # WORK HARDER
                     val = toString(val)
                     return val
-            except Exception, f:
+            except Exception as f:
                 if not _Log:
                     _late_import()
 
@@ -479,7 +477,10 @@ def _simple_expand(template, seq):
     return pattern.sub(replacer, template)
 
 
-delchars = "".join(c.decode("latin1") for c in map(chr, range(256)) if not c.decode("latin1").isalnum())
+if PY3:
+    delchars = "".join(c for c in map(chr, range(256)) if not c.isalnum())
+else:
+    delchars = "".join(c.decode("latin1") for c in map(chr, range(256)) if not c.decode("latin1").isalnum())
 
 
 def deformat(value):
@@ -488,7 +489,7 @@ def deformat(value):
 
     FOR SOME REASON translate CAN NOT BE CALLED:
         ERROR: translate() takes exactly one argument (2 given)
-	    File "C:\Python27\lib\string.py", line 493, in translate
+        File "C:\Python27\lib\string.py", line 493, in translate
     """
     output = []
     for c in value:
@@ -638,14 +639,14 @@ def utf82unicode(value):
         if not _Log:
             _late_import()
 
-        if not isinstance(value, basestring):
+        if not isinstance(value, binary_type):
             _Log.error("Can not convert {{type}} to unicode because it's not a string",  type= type(value).__name__)
 
         e = _Except.wrap(e)
         for i, c in enumerate(value):
             try:
                 c.decode("utf8")
-            except Exception, f:
+            except Exception as f:
                 _Log.error("Can not convert charcode {{c}} in string  index {{i}}", i=i, c=ord(c), cause=[e, _Except.wrap(f)])
 
         try:
@@ -655,8 +656,8 @@ def utf82unicode(value):
             pass
 
         try:
-            a = text_type(value.decode("iso-8859-1"))
-            _Log.error("Can not explain conversion failure, but seems to be iso-8859-1", e)
+            a = text_type(value.decode("latin1"))
+            _Log.error("Can not explain conversion failure, but seems to be latin1", e)
         except Exception:
             pass
 

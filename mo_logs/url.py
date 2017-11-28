@@ -12,10 +12,10 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from collections import Mapping
-from urlparse import urlparse
 
-from future.utils import text_type
 from mo_dots import wrap, Data
+from mo_future import text_type, binary_type
+from mo_future import urlparse
 
 _value2json = None
 _json2value = None
@@ -113,10 +113,10 @@ def int2hex(value, size):
 
 
 _map2url = {chr(i): chr(i) for i in range(32, 128)}
-for c in b" {}<>;/?:@&=+$,":
-    _map2url[c] = b"%" + str(int2hex(ord(c), 2))
+for c in " {}<>;/?:@&=+$,":
+    _map2url[c] = b"%" + int2hex(ord(c), 2).encode('latin1')
 for i in range(128, 256):
-    _map2url[chr(i)] = b"%" + str(int2hex(i, 2))
+    _map2url[chr(i)] = b"%" + int2hex(i, 2).encode('latin1')
 
 
 names = ["path", "query", "fragment"]

@@ -11,10 +11,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import __builtin__
 import math
 
 from mo_dots import Null, coalesce
+from mo_future import round as _round
 
 
 class Math(object):
@@ -164,27 +164,27 @@ class Math(object):
         if digits != None:
             if digits <= 0:
                 if value == 0:
-                    return int(__builtin__.round(value, digits))
+                    return int(_round(value, digits))
                 try:
                     m = pow(10, math.ceil(math.log10(abs(value))))
-                    return int(__builtin__.round(value / m, digits) * m)
+                    return int(_round(value / m, digits) * m)
                 except Exception as e:
                     from mo_logs import Log
 
                     Log.error("not expected", e)
             else:
                 if value == 0:
-                    return __builtin__.round(value, digits)
+                    return _round(value, digits)
                 try:
                     m = pow(10, math.ceil(math.log10(abs(value))))
-                    return __builtin__.round(value / m, digits) * m
+                    return _round(value / m, digits) * m
                 except Exception as e:
                     from mo_logs import Log
                     Log.error("not expected", e)
         elif decimal <= 0:
-            return int(__builtin__.round(value, decimal))
+            return int(_round(value, decimal))
         else:
-            return __builtin__.round(value, decimal)
+            return _round(value, decimal)
 
 
     @staticmethod

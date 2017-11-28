@@ -16,7 +16,7 @@ import math
 import sys
 from math import sqrt
 
-from future.utils import text_type
+from mo_future import text_type
 from mo_dots import coalesce, Data, Null
 from mo_logs import Log
 from mo_math import OR

@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from future.utils import text_type
+from mo_future import text_type, get_function_arguments, get_function_defaults, get_function_name
 from mo_dots import zip as dict_zip, get_logger, wrap
 
 from mo_logs import Except
@@ -34,22 +34,22 @@ def override(func):
     3) DEFAULT VALUES ASSIGNED IN FUNCTION DEFINITION
     """
 
-    params = func.func_code.co_varnames[:func.func_code.co_argcount]
-    if not func.func_defaults:
+    params = get_function_arguments(func)
+    if not get_function_defaults(func):
         defaults = {}
     else:
-        defaults = {k: v for k, v in zip(reversed(params), reversed(func.func_defaults))}
+        defaults = {k: v for k, v in zip(reversed(params), reversed(get_function_defaults(func)))}
 
     if "kwargs" not in params:
         # WE ASSUME WE ARE ONLY ADDING A kwargs PARAMETER TO SOME REGULAR METHOD
         def w_settings(*args, **kwargs):
             settings = kwargs.get("kwargs")
 
-            params = func.func_code.co_varnames[:func.func_code.co_argcount]
-            if not func.func_defaults:
+            params = get_function_arguments(func)
+            if not get_function_defaults(func):
                 defaults = {}
             else:
-                defaults = {k: v for k, v in zip(reversed(params), reversed(func.func_defaults))}
+                defaults = {k: v for k, v in zip(reversed(params), reversed(get_function_defaults(func)))}
 
             ordered_params = dict(zip(params, args))
 
@@ -58,14 +58,15 @@ def override(func):
 
     def wrapper(*args, **kwargs):
         try:
-            if func.func_name in ("__init__", "__new__") and "kwargs" in kwargs:
+            func_name = get_function_name(func)
+            if func_name in ("__init__", "__new__") and "kwargs" in kwargs:
                 packed = params_pack(params, kwargs, dict_zip(params[1:], args[1:]), kwargs["kwargs"], defaults)
                 return func(args[0], **packed)
-            elif func.func_name in ("__init__", "__new__") and len(args) == 2 and len(kwargs) == 0 and isinstance(args[1], Mapping):
+            elif func_name in ("__init__", "__new__") and len(args) == 2 and len(kwargs) == 0 and isinstance(args[1], Mapping):
                 # ASSUME SECOND UNNAMED PARAM IS kwargs
                 packed = params_pack(params, args[1], defaults)
                 return func(args[0], **packed)
-            elif func.func_name in ("__init__", "__new__"):
+            elif func_name in ("__init__", "__new__"):
                 # DO NOT INCLUDE self IN kwargs
                 packed = params_pack(params, kwargs, dict_zip(params[1:], args[1:]), defaults)
                 return func(args[0], **packed)
@@ -93,11 +94,11 @@ def override(func):
                 return func(**packed)
         except TypeError as e:
             e = Except.wrap(e)
-            if e.message.startswith(func.func_name) and "takes at least" in e:
+            if e.message.startswith(func_name) and "takes at least" in e:
                 missing = [p for p in params if str(p) not in packed]
                 get_logger().error(
                     "Problem calling {{func_name}}:  Expecting parameter {{missing}}",
-                    func_name=func.func_name,
+                    func_name=func_name,
                     missing=missing,
                     stack_depth=1
                 )

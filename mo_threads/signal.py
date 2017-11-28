@@ -15,8 +15,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from thread import allocate_lock as _allocate_lock
-
+from mo_future import allocate_lock as _allocate_lock, text_type
 from mo_logs import Log
 
 DEBUG = False
@@ -149,7 +148,7 @@ class Signal(object):
         return self.name.decode(text_type)
 
     def __repr__(self):
-        return repr(self._go)
+        return text_type(repr(self._go))
 
     def __or__(self, other):
         if other == None:

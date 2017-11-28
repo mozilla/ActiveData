@@ -17,9 +17,8 @@ from decimal import Decimal
 from types import GeneratorType
 
 from mo_dots import wrap, unwrap, Data, FlatList, NullType, get_attr, set_attr
+from mo_future import text_type, binary_type, get_function_defaults, get_function_arguments, none_type
 
-
-NoneType = type(None)
 _get = object.__getattribute__
 _set = object.__setattr__
 WRAPPED_CLASSES = set()
@@ -107,13 +106,13 @@ def datawrap(v):
         return v
     elif type_ is DataObject:
         return v
-    elif type_ is NoneType:
+    elif type_ is none_type:
         return None   # So we allow `is None`
     elif type_ is list:
         return FlatList(v)
     elif type_ is GeneratorType:
         return (wrap(vv) for vv in v)
-    elif isinstance(v, (basestring, int, float, Decimal, datetime, date, Data, FlatList, NullType, NoneType)):
+    elif isinstance(v, (text_type, binary_type, int, float, Decimal, datetime, date, Data, FlatList, NullType, none_type)):
         return v
     elif isinstance(v, Mapping):
         return DataObject(v)
@@ -137,11 +136,12 @@ class DictClass(object):
     def __call__(self, *args, **kwargs):
         settings = wrap(kwargs).settings
 
-        params = self.constructor.func_code.co_varnames[1:self.constructor.func_code.co_argcount]
-        if not self.constructor.func_defaults:
+        params = get_function_arguments(self.constructor)[1:]
+        func_defaults = get_function_defaults(self.constructor)
+        if not func_defaults:
             defaults = {}
         else:
-            defaults = {k: v for k, v in zip(reversed(params), reversed(self.constructor.func_defaults))}
+            defaults = {k: v for k, v in zip(reversed(params), reversed(func_defaults))}
 
         ordered_params = dict(zip(params, args))
 

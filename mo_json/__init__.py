@@ -13,21 +13,16 @@ from __future__ import unicode_literals
 
 import math
 import re
-
 from collections import Mapping
-
 from datetime import date, timedelta, datetime
 from decimal import Decimal
 
-from future.utils import text_type
-from types import NoneType
-
 from mo_dots import FlatList, NullType, Data, wrap_leaves, wrap, Null
 from mo_dots.objects import DataObject
+from mo_future import text_type, none_type, long
 from mo_logs import Except, strings, Log
 from mo_logs.strings import expand_template
 from mo_times import Date, Duration
-
 
 FIND_LOOPS = False
 CAN_NOT_DECODE_JSON = "Can not decode JSON"
@@ -47,7 +42,7 @@ ESCAPE_DCT = {
 for i in range(0x20):
     ESCAPE_DCT.setdefault(chr(i), u'\\u{0:04x}'.format(i))
 
-ESCAPE = re.compile(ur'[\x00-\x1f\\"\b\f\n\r\t]')
+ESCAPE = re.compile(r'[\x00-\x1f\\"\b\f\n\r\t]')
 
 
 def replace(match):
@@ -120,7 +115,7 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
         stack = stack + [_id]
     type_ = value.__class__
 
-    if type_ in (NoneType, NullType):
+    if type_ in (none_type, NullType):
         return None
     elif type_ is text_type:
         return scrub_text(value)
@@ -196,7 +191,7 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
             output.append(v)
         return output
     elif hasattr(value, '__call__'):
-        return repr(value)
+        return text_type(repr(value))
     else:
         return _scrub(DataObject(value), is_done, stack, scrub_text, scrub_number)
 
@@ -224,7 +219,7 @@ def value2json(obj, pretty=False, sort_keys=False, keep_whitespace=True):
             return json
         except Exception:
             pass
-        Log.error("Can not encode into JSON: {{value}}", value=repr(obj), cause=e)
+        Log.error("Can not encode into JSON: {{value}}", value=text_type(repr(obj)), cause=e)
 
 
 def remove_line_comment(line):

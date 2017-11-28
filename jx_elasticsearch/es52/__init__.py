@@ -20,8 +20,6 @@ from jx_base.expressions import jx_expression
 from jx_base.queries import is_variable_name
 from jx_base.query import QueryOp
 from jx_base.schema import Schema
-# from jx_elasticsearch.es09 import aggop as es09_aggop
-# from jx_elasticsearch.es09 import setop as es09_setop
 from jx_elasticsearch.es52.aggs import es_aggsop, is_aggsop
 from jx_elasticsearch.es52.deep import is_deepop, es_deepop
 from jx_elasticsearch.es52.setop import is_setop, es_setop

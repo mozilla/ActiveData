@@ -15,7 +15,7 @@ from __future__ import unicode_literals
 import json as _json
 from datetime import datetime, date
 
-from future.utils import text_type
+from mo_future import text_type, PY3
 
 
 def unix2datetime(u):
@@ -67,20 +67,14 @@ def int2hex(value, size):
     return (("0" * size) + hex(value)[2:])[-size:]
 
 
-def latin12unicode(value):
-    if isinstance(value, text_type):
-        from mo_logs import Log
-        Log.error("can not convert unicode from latin1")
-    try:
-        return text_type(value.decode('iso-8859-1'))
-    except Exception as e:
-        from mo_logs import Log
-        Log.error("Can not convert {{value|quote}} to unicode", value=value, cause=e)
-
-
-_map2url = {chr(i): latin12unicode(chr(i)) for i in range(32, 256)}
-for c in " {}<>;/?:@&=+$,":
-    _map2url[c] = "%" + int2hex(ord(c), 2)
+if PY3:
+    _map2url = {chr(i).encode('latin1'): chr(i) for i in range(32, 256)}
+    for c in [b" ", b"{", b"}", b"<", b">", b";", b"/", b"?", b":", b"@", b"&", b"=", b"+", b"$", b",", b"%"]:
+        _map2url[c] = "%" + int2hex(ord(c.decode('latin1')), 2)
+else:
+    _map2url = {chr(i): chr(i).decode('latin1') for i in range(32, 256)}
+    for c in b" {}<>;/?:@&=+$,%":
+        _map2url[c] = "%" + int2hex(ord(c), 2)
 
 
 def value2json(value):

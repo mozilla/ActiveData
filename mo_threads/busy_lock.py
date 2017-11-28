@@ -16,8 +16,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from thread import get_ident as _get_ident
 from time import sleep
+
+from mo_future import get_ident as _get_ident
 
 _get = dict.get
 _set = dict.setdefault

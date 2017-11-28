@@ -11,6 +11,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import mo_json
+from mo_future import text_type
+
 from mo_dots import set_default, wrap, _get_attr, Null, coalesce
 from mo_json import value2json
 from mo_logs import Log
@@ -184,17 +187,6 @@ def wrap_function(cache_store, func_):
     return output
 
 
-# _repr = Repr()
-# _repr.maxlevel = 3
-
-def repr(obj):
-    """
-    JUST LIKE __builtin__.repr(), BUT WITH SOME REASONABLE LIMITS
-    """
-    return repr(obj)
-    return _repr.repr(obj)
-
-
 class _FakeLock():
 
 
@@ -347,10 +339,10 @@ def _exec(code, name):
 
 def value2quote(value):
     # RETURN PRETTY PYTHON CODE FOR THE SAME
-    if isinstance(value, basestring):
+    if isinstance(value, text_type):
         return mo_json.quote(value)
     else:
-        return repr(value)
+        return text_type(repr(value))
 
 
 class extenstion_method(object):

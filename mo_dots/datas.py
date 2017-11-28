@@ -14,17 +14,11 @@ from __future__ import unicode_literals
 from collections import MutableMapping, Mapping
 from copy import deepcopy
 
-from future.utils import PY3
-
 from mo_dots import _getdefault, hash_value, literal_field, coalesce, listwrap, get_logger
+from mo_future import text_type
 
 _get = object.__getattribute__
 _set = object.__setattr__
-
-if PY3:
-    text_type = str
-else:
-    text_type = (unicode, str)
 
 
 DEBUG = False
@@ -49,14 +43,12 @@ class Data(MutableMapping):
         else:
             if args:
                 args0 = args[0]
-                if isinstance(args0, dict):
-                    _set(self, "_dict", args0)
-                elif isinstance(args0, Data):
+                if isinstance(args0, Data):
                     _set(self, "_dict", _get(args0, "_dict"))
-                elif isinstance(args0, list):
-                    _set(self, "_dict", dict(args0))
+                elif isinstance(args0, dict):
+                    _set(self, "_dict", args0)
                 else:
-                    raise TypeError()
+                    _set(self, "_dict", dict(args0))
             elif kwargs:
                 _set(self, "_dict", unwrap(kwargs))
             else:
@@ -91,8 +83,7 @@ class Data(MutableMapping):
             else:
                 return output
 
-        if not isinstance(key, text_type):
-            get_logger().error("only string keys are supported")
+        key = text_type(key)
 
         d = _get(self, "_dict")
 
@@ -244,9 +235,6 @@ class Data(MutableMapping):
         return wrap(deepcopy(d, memo))
 
     def __delitem__(self, key):
-        if isinstance(key, str):
-            key = key.decode("utf8")
-
         if key.find(".") == -1:
             d = _get(self, "_dict")
             d.pop(key, None)
@@ -259,9 +247,7 @@ class Data(MutableMapping):
         d.pop(seq[-1], None)
 
     def __delattr__(self, key):
-        if isinstance(key, str):
-            key = key.decode("utf8")
-
+        key = text_type(key)
         d = _get(self, "_dict")
         d.pop(key, None)
 

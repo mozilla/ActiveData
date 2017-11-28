@@ -14,8 +14,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import time
-from thread import allocate_lock
 
+from mo_future import allocate_lock
 from mo_logs import Log
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_logs.strings import expand_template

@@ -13,26 +13,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import json
 import sys
 from collections import Mapping
 
-from future.utils import text_type
 from mo_dots import Data, listwrap, unwraplist, set_default, Null
-
+from mo_future import text_type
 from mo_logs.strings import indent, expand_template
-
-json_encoder = json.JSONEncoder(
-    skipkeys=False,
-    ensure_ascii=False,  # DIFF FROM DEFAULTS
-    check_circular=True,
-    allow_nan=True,
-    indent=None,
-    separators=None,
-    encoding='utf-8',
-    default=None,
-    sort_keys=False
-).encode
 
 
 FATAL = "FATAL"
@@ -91,7 +77,7 @@ class Except(Exception):
         return expand_template(self.template, self.params)
 
     def __contains__(self, value):
-        if isinstance(value, basestring):
+        if isinstance(value, text_type):
             if self.template.find(value) >= 0 or self.message.find(value) >= 0:
                 return True
 

@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import datetime
 import re
 
-from future.utils import text_type
+from mo_future import text_type
 
 from mo_dots import get_module, wrap
 from mo_math import MIN, Math

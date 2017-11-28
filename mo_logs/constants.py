@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 
 import sys
 
-import mo_dots
+from mo_dots import set_attr as mo_dots_set_attr
 from mo_dots import wrap, join_field, split_field
 
 DEBUG = True
@@ -31,7 +31,7 @@ def set(constants):
     for k, new_value in constants.leaves():
         errors = []
         try:
-            old_value = mo_dots.set_attr(sys.modules, k, new_value)
+            old_value = mo_dots_set_attr(sys.modules, k, new_value)
             continue
         except Exception as e:
             errors.append(e)
@@ -51,18 +51,20 @@ def set(constants):
                 prefix = join_field(path[:1])
                 name = join_field(path[i:])
                 if caller_module.endswith(prefix):
-                    old_value = mo_dots.set_attr(caller_globals, name, new_value)
+                    old_value = mo_dots_set_attr(caller_globals, name, new_value)
                     if DEBUG:
                         from mo_logs import Log
 
-                        Log.note("Changed {{module}}[{{attribute}}] from {{old_value}} to {{new_value}}",
-                            module= prefix,
-                            attribute= name,
-                            old_value= old_value,
-                            new_value= new_value)
+                        Log.note(
+                            "Changed {{module}}[{{attribute}}] from {{old_value}} to {{new_value}}",
+                            module=prefix,
+                            attribute=name,
+                            old_value=old_value,
+                            new_value=new_value
+                        )
                     break
         except Exception as e:
-            errors.append[e]
+            errors.append(e)
 
         if errors:
             from mo_logs import Log

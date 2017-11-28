@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from future.utils import text_type
+from mo_future import text_type
 from mo_dots import split_field
 from mo_dots import unwrap
 from mo_json import json2value

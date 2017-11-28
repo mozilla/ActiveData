@@ -15,7 +15,7 @@ import re
 from collections import Mapping
 from copy import deepcopy
 
-from future.utils import text_type, binary_type
+from mo_future import text_type, binary_type
 from jx_python.expressions import jx_expression_to_function
 
 import mo_json
@@ -361,7 +361,7 @@ class Index(Features):
 
         except Exception as e:
             if e.message.startswith("sequence item "):
-                Log.error("problem with {{data}}", data=repr(lines[int(e.message[14:16].strip())]), cause=e)
+                Log.error("problem with {{data}}", data=text_type(repr(lines[int(e.message[14:16].strip())])), cause=e)
             Log.error("problem sending to ES", e)
 
     # RECORDS MUST HAVE id AND json AS A STRING OR

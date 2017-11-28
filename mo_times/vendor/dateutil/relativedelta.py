@@ -6,8 +6,10 @@ datetime module.
 """
 __license__ = "Simplified BSD"
 
-import datetime
 import calendar
+import datetime
+
+from mo_future import long
 
 integer_types = (int, long)
 

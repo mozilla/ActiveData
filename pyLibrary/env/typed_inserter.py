@@ -137,9 +137,11 @@ class TypedInserter(object):
                     if value:
                         append(_buffer, '{"'+NESTED_TYPE+'"'+COLON+'[')
                         self._dict2json(value, sub_schema[NESTED_TYPE], path + [NESTED_TYPE], net_new_properties, _buffer)
-                        append(_buffer, ']'+COMMA+'"' + EXISTS_TYPE + '"'+COLON+ + text_type(len(value)) + '}')
+                        append(_buffer, ']'+COMMA+'"' + EXISTS_TYPE + '"'+COLON + text_type(len(value)) + '}')
                     else:
                         # SINGLETON LISTS OF null SHOULD NOT EXIST
+                        from mo_logs import Log
+
                         Log.error("should not happen")
                 else:
                     if EXISTS_TYPE not in sub_schema:

@@ -1924,7 +1924,7 @@ class SuffixOp(Expression):
 
     def __data__(self):
         if isinstance(self.field, Variable) and isinstance(self.suffix, Literal):
-            return {"suffix": {self.field.var: json2value(self.suffix.json)}}
+            return {"suffix": {self.field.var: self.suffix.value}}
         else:
             return {"suffix": [self.field.__data__(), self.suffix.__data__()]}
 
@@ -2727,6 +2727,7 @@ operators = {
     "number": NumberOp,
     "offset": OffsetOp,
     "or": OrOp,
+    "postfix": SuffixOp,
     "prefix": PrefixOp,
     "range": RangeOp,
     "regex": RegExpOp,

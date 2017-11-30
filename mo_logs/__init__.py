@@ -367,7 +367,7 @@ class Log(object):
         :return:
         """
         if not isinstance(template, text_type):
-            sys.stderr.write(b"Log.error was expecting a unicode template")
+            sys.stderr.write(str("Log.error was expecting a unicode template"))
             Log.error("Log.error was expecting a unicode template")
 
         if default_params and isinstance(listwrap(default_params)[0], BaseException):

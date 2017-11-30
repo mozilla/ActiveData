@@ -395,6 +395,7 @@ class TempDirectory(File):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.delete()
 
+
 class TempFile(File):
     def __new__(cls, *args, **kwargs):
         return object.__new__(cls)

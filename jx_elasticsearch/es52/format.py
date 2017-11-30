@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from mo_dots import Data, set_default, wrap, split_field, coalesce
+from mo_future import sort_using_key
 from mo_logs import Log
 from pyLibrary import convert
 
@@ -51,7 +52,7 @@ def format_cube(decoders, aggs, start, query, select):
 
     cube = Cube(
         query.select,
-        sorted(new_edges, key=lambda e: e.dim),  # ENSURE EDGES ARE IN SAME ORDER AS QUERY
+        sort_using_key(new_edges, key=lambda e: e.dim),  # ENSURE EDGES ARE IN SAME ORDER AS QUERY
         {s.name: m for s, m in matricies}
     )
     cube.frum = query

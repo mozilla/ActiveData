@@ -1912,6 +1912,29 @@ class PrefixOp(Expression):
         return FALSE
 
 
+class SuffixOp(Expression):
+    has_simple_form = True
+
+    def __init__(self, op, term):
+        Expression.__init__(self, op, term)
+        if isinstance(term, Mapping):
+            self.field, self.suffix = term.items()[0]
+        else:
+            self.field, self.suffix = term
+
+    def __data__(self):
+        if isinstance(self.field, Variable) and isinstance(self.suffix, Literal):
+            return {"suffix": {self.field.var: json2value(self.suffix.json)}}
+        else:
+            return {"suffix": [self.field.__data__(), self.suffix.__data__()]}
+
+    def vars(self):
+        return {self.field.var}
+
+    def map(self, map_):
+        return SuffixOp("suffix", [self.field.map(map_), self.suffix.map(map_)])
+
+
 class ConcatOp(Expression):
     has_simple_form = True
     data_type = STRING
@@ -2714,6 +2737,7 @@ operators = {
     "select": SelectOp,
     "split": SplitOp,
     "string": StringOp,
+    "suffix": SuffixOp,
     "sub": BinaryOp,
     "subtract": BinaryOp,
     "sum": MultiOp,

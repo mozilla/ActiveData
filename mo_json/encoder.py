@@ -23,7 +23,7 @@ from math import floor
 from past.builtins import xrange
 
 from mo_dots import Data, FlatList, NullType, Null
-from mo_future import text_type, binary_type, long, utf8_json_encoder
+from mo_future import text_type, binary_type, long, utf8_json_encoder, sort_using_key
 from mo_json import ESCAPE_DCT, scrub, float2json
 from mo_logs import Except
 from mo_logs.strings import utf82unicode, quote
@@ -166,7 +166,7 @@ def _value2json(value, _buffer):
             return
 
         type = value.__class__
-        if type is str:
+        if type is binary_type:
             append(_buffer, QUOTE)
             try:
                 v = utf82unicode(value)
@@ -261,10 +261,10 @@ def _iter2json(value, _buffer):
 def _dict2json(value, _buffer):
     try:
         prefix = u"{\""
-        for k, v in value.iteritems():
+        for k, v in value.items():
             append(_buffer, prefix)
             prefix = COMMA_QUOTE
-            if isinstance(k, str):
+            if isinstance(k, binary_type):
                 k = utf82unicode(k)
             for c in k:
                 append(_buffer, ESCAPE_DCT.get(c, c))
@@ -296,8 +296,8 @@ def pretty_json(value):
                 if len(items) == 1:
                     return "{" + unicode_key(items[0][0]) + PRETTY_COLON + pretty_json(items[0][1]).strip() + "}"
 
-                items = sorted(items, lambda a, b: value_compare(a[0], b[0]))
-                values = [unicode_key(k) + PRETTY_COLON + indent(pretty_json(v)).strip() for k, v in items if v != None]
+                items = sort_using_key(items, lambda r: r[0])
+                values = [quote(k) + PRETTY_COLON + indent(pretty_json(v)).strip() for k, v in items if v != None]
                 return "{\n" + INDENT + (",\n" + INDENT).join(values) + "\n}"
             except Exception as e:
                 from mo_logs import Log
@@ -318,7 +318,7 @@ def pretty_json(value):
         elif value in (None, Null):
             return "null"
         elif isinstance(value, (text_type, binary_type)):
-            if isinstance(value, str):
+            if isinstance(value, binary_type):
                 value = utf82unicode(value)
             try:
                 return quote(value)
@@ -415,13 +415,13 @@ def pretty_json(value):
         else:
             try:
                 if int(value) == value:
-                    return str(int(value))
+                    return text_type(int(value))
             except Exception:
                 pass
 
             try:
                 if float(value) == value:
-                    return str(float(value))
+                    return text_type(float(value))
             except Exception:
                 pass
 

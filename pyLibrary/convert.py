@@ -336,8 +336,12 @@ def int2hex(value, size):
     return (("0" * size) + hex(value)[2:])[-size:]
 
 
-def hex2bytes(value):
-    return value.decode("hex")
+if PY3:
+    def hex2bytes(value):
+        return bytearray.fromhex(value)
+else:
+    def hex2bytes(value):
+        return value.decode("hex")
 
 
 def bytes2hex(value, separator=" "):

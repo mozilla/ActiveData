@@ -18,7 +18,7 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 from time import time as _time
 
-from mo_future import text_type, PY3
+from mo_future import text_type, PY3, long
 
 from mo_dots import Null
 from mo_logs import Except

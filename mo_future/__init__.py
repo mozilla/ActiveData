@@ -22,6 +22,7 @@ boolean_type = type(True)
 
 if PY3:
     import collections
+    from functools import cmp_to_key
 
     text_type = str
     string_types = str
@@ -46,8 +47,17 @@ if PY3:
     def get_function_arguments(func):
         return func.__code__.co_varnames[:func.__code__.co_argcount]
 
+    def get_function_code(func):
+        return func.__code__
+
     def get_function_defaults(func):
         return func.__defaults__
+
+    def sort_using_cmp(data, cmp):
+        return sorted(data, key=cmp_to_key(cmp))
+
+    def sort_using_key(data, key):
+        return sorted(data, key=key)
 
     utf8_json_encoder = json.JSONEncoder(
         skipkeys=False,
@@ -86,8 +96,21 @@ else:
     def get_function_arguments(func):
         return func.func_code.co_varnames[:func.func_code.co_argcount]
 
+    def get_function_code(func):
+        return func.func_code
+
     def get_function_defaults(func):
         return func.func_defaults
+
+    def sort_using_cmp(data, cmp):
+        return sorted(data, cmp=cmp)
+
+    def sort_using_key(data, key):
+        return sorted(data, key=key)
+        # return sorted(
+        #     ((key(d), d) for d in data),
+        #     lambda a, b: (1 if (a[0]>b[0]) else (-1 if (a[0]<b[0]) else 0))
+        # )
 
     utf8_json_encoder = json.JSONEncoder(
         skipkeys=False,

@@ -555,7 +555,7 @@ class MySQL(object):
                     return self.quote_sql(value.template)
                 param = {k: self.quote_sql(v) for k, v in value.param.items()}
                 return SQL(expand_template(value.template, param))
-            elif isinstance(value, basestring):
+            elif isinstance(value, text_type):
                 return SQL(self.db.literal(value))
             elif isinstance(value, Mapping):
                 return SQL(self.db.literal(json_encode(value)))

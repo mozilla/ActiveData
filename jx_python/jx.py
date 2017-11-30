@@ -23,7 +23,7 @@ from jx_python import expressions as _expressions
 from jx_python import flat_list, group_by
 from mo_dots import listwrap, wrap, unwrap, FlatList, NullType
 from mo_dots import set_default, Null, Data, split_field, coalesce, join_field
-from mo_future import text_type, boolean_type, none_type, long
+from mo_future import text_type, boolean_type, none_type, long, generator_types, sort_using_cmp
 from mo_logs import Log
 from mo_math import Math
 from mo_math import UNION, MIN
@@ -529,7 +529,7 @@ def sort(data, fieldnames=None, already_normalized=False):
             return Null
 
         if not fieldnames:
-            return wrap(sorted(data, value_compare))
+            return wrap(sort_using_cmp(data, value_compare))
 
         if already_normalized:
             formal = fieldnames
@@ -549,9 +549,9 @@ def sort(data, fieldnames=None, already_normalized=False):
             return 0
 
         if isinstance(data, list):
-            output = FlatList([unwrap(d) for d in sorted(data, cmp=comparer)])
+            output = FlatList([unwrap(d) for d in sort_using_cmp(data, cmp=comparer)])
         elif hasattr(data, "__iter__"):
-            output = FlatList([unwrap(d) for d in sorted(list(data), cmp=comparer)])
+            output = FlatList([unwrap(d) for d in sort_using_cmp(list(data), cmp=comparer)])
         else:
             Log.error("Do not know how to handle")
             output = None

@@ -55,7 +55,11 @@ class Data(MutableMapping):
                 _set(self, "_dict", {})
 
     def __bool__(self):
-        return True
+        d = _get(self, "_dict")
+        if isinstance(d, dict):
+            return bool(d)
+        else:
+            return d != None
 
     def __nonzero__(self):
         d = _get(self, "_dict")

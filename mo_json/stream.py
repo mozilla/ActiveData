@@ -24,7 +24,7 @@ MIN_READ_SIZE = 8*1024
 WHITESPACE = b" \n\r\t"
 CLOSE = {
     b"{": b"}",
-    b"[": "]"
+    b"[": b"]"
 }
 NO_VARS = set()
 
@@ -143,7 +143,7 @@ def parse(json, query_path, expected_vars=NO_VARS):
                         yield index
                 else:
                     index = jump_to_end(index, c)
-            elif c == "}":
+            elif c == b"}":
                 if not did_yield:
                     yield index
                 break
@@ -187,7 +187,7 @@ def parse(json, query_path, expected_vars=NO_VARS):
                     Log.note("{{num}} items iterated", num=num_items)
                 yield index
                 num_items += 1
-            elif c == "}":
+            elif c == b"}":
                 break
 
     def _decode_token(index, c, parent_path, query_path, expected_vars):
@@ -225,7 +225,7 @@ def parse(json, query_path, expected_vars=NO_VARS):
         """
         DO NOT PROCESS THIS JSON OBJECT, JUST RETURN WHERE IT ENDS
         """
-        if c == '"':
+        if c == b'"':
             while True:
                 c = json[index]
                 index += 1
@@ -284,11 +284,11 @@ def parse(json, query_path, expected_vars=NO_VARS):
             index = jump_to_end(index, c)
             value = wrap(json_decoder(json.release(index).decode("utf8")))
             return value, index
-        elif c == b"t" and json.slice(index, index + 3) == "rue":
+        elif c == b"t" and json.slice(index, index + 3) == b"rue":
             return True, index + 3
-        elif c == b"n" and json.slice(index, index + 3) == "ull":
+        elif c == b"n" and json.slice(index, index + 3) == b"ull":
             return None, index + 3
-        elif c == b"f" and json.slice(index, index + 4) == "alse":
+        elif c == b"f" and json.slice(index, index + 4) == b"alse":
             return False, index + 4
         else:
             json.mark(index-1)
@@ -357,10 +357,8 @@ class List_usingStream(object):
 
     def __getitem__(self, index):
         offset = index - self.start
-        try:
-            return self.buffer[offset]
-        except IndexError:
-            pass
+        if offset < len(self.buffer):
+            return self.buffer[offset:offset + 1]
 
         if offset < 0:
             Log.error("Can not go in reverse on stream index=={{index}} (offset={{offset}})", index=index, offset=offset)
@@ -374,7 +372,7 @@ class List_usingStream(object):
                 more = self.get_more()
                 self.buffer += more
                 self.buffer_length = len(self.buffer)
-            return self.buffer[offset]
+            return self.buffer[offset:offset+1]
 
         needless_bytes = self._mark - self.start
         if needless_bytes:
@@ -389,7 +387,7 @@ class List_usingStream(object):
             self.buffer_length = len(self.buffer)
 
         try:
-            return self.buffer[offset]
+            return self.buffer[offset:offset+1]
         except Exception as e:
             Log.error("error", cause=e)
 

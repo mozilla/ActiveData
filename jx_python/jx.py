@@ -590,7 +590,7 @@ def value_compare(l, r, ordering=1):
 
         ltype = type(l)
         rtype = type(r)
-        type_diff = TYPE_ORDER[ltype] - TYPE_ORDER[rtype]
+        type_diff = TYPE_ORDER.get(ltype, 10) - TYPE_ORDER.get(rtype, 10)
         if type_diff != 0:
             return ordering if type_diff > 0 else -ordering
 

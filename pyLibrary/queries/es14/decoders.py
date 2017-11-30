@@ -59,6 +59,10 @@ class AggsDecoder(object):
                     # SPECIAL MULTIVALUE COLUMNS
                     col.partitions = ["e10s", "chunked", "gfx", "stylo"]
                     return object.__new__(MultivalueDecoder)
+                elif col.names["."] == "build.type":
+                    # SPECIAL MULTIVALUE COLUMNS
+                    col.partitions = ["opt", "debug", "pgo", "asan", "ccov", "jsdcov"]
+                    return object.__new__(MultivalueDecoder)
 
                 if col.type in STRUCT:
                     return object.__new__(ObjectDecoder)

@@ -9,12 +9,13 @@
 #
 from __future__ import absolute_import
 from __future__ import division
-from __future__ import unicode_literals
+# REMOVED SO LOGIC SWITCHES FROM BYTES TO STRING BETWEEN PY2 AND PY3 RESPECTIVELY
+# from __future__ import unicode_literals
 
 from collections import Mapping
 
 from mo_dots import wrap, Data
-from mo_future import text_type, binary_type
+from mo_future import text_type, PY3
 from mo_future import urlparse
 
 _value2json = None
@@ -27,12 +28,17 @@ def _late_import():
     global _json2value
     global _Log
 
-    from mo_json import value2json as _value2json
-    from mo_json import json2value as _json2value
+    from mo_json import value2json as value2json_
+    from mo_json import json2value as json2value_
     from mo_logs import Log as _Log
 
-    _ = _value2json
-    _ = _json2value
+    if PY3:
+        _value2json = value2json_
+        _json2value = json2value_
+    else:
+        _value2json = lambda v: value2json_(v).encode('latin1')
+        _json2value = lambda v: json2value_(v.decode('latin1'))
+
     _ = _Log
 
 
@@ -89,35 +95,35 @@ class URL(object):
         return self.__str__().decode('utf8')  # ASSUME chr<128 ARE VALID UNICODE
 
     def __str__(self):
-        url = b""
+        url = ""
         if self.host:
             url = self.host
         if self.scheme:
-            url = self.scheme + b"://"+url
+            url = self.scheme + "://" + url
         if self.port:
-            url = url + b":" + str(self.port)
+            url = url + ":" + str(self.port)
         if self.path:
-            if self.path[0]=="/":
+            if self.path[0] == "/":
                 url += str(self.path)
             else:
-                url += b"/"+str(self.path)
+                url += "/" + str(self.path)
         if self.query:
-            url = url + b'?' + value2url_param(self.query)
+            url = url + "?" + value2url_param(self.query)
         if self.fragment:
-            url = url + b'#' + value2url_param(self.fragment)
+            url = url + "#" + value2url_param(self.fragment)
         return url
 
 
-def int2hex(value, size):
+def int_to_hex(value, size):
     return (("0" * size) + hex(value)[2:])[-size:]
 
-
-_map2url = {chr(i): chr(i) for i in range(32, 128)}
+_str_to_url = {chr(i): chr(i) for i in range(32, 128)}
 for c in " {}<>;/?:@&=+$,":
-    _map2url[c] = b"%" + int2hex(ord(c), 2).encode('latin1')
+    _str_to_url[c] = "%" + int_to_hex(ord(c), 2)
 for i in range(128, 256):
-    _map2url[chr(i)] = b"%" + int2hex(i, 2).encode('latin1')
+    _str_to_url[chr(i)] = "%" + int_to_hex(i, 2)
 
+_url_to_str = {v: k for k, v in _str_to_url.items()}
 
 names = ["path", "query", "fragment"]
 indicator = ["/", "?", "#"]
@@ -140,23 +146,20 @@ def url_param2value(param):
     """
     CONVERT URL QUERY PARAMETERS INTO DICT
     """
-    if isinstance(param, text_type):
-        param = param.encode("ascii")
-
     def _decode(v):
         output = []
         i = 0
         while i < len(v):
             c = v[i]
             if c == "%":
-                d = (v[i + 1:i + 3]).decode("hex")
+                d = _url_to_str[v[i:i + 3]]
                 output.append(d)
                 i += 3
             else:
                 output.append(c)
                 i += 1
 
-        output = (b"".join(output)).decode("latin1")
+        output = ("".join(output))
         try:
             if not _Log:
                 _late_import()
@@ -166,14 +169,14 @@ def url_param2value(param):
         return output
 
     query = Data()
-    for p in param.split(b'&'):
+    for p in param.split("&"):
         if not p:
             continue
-        if p.find(b"=") == -1:
+        if p.find("=") == -1:
             k = p
             v = True
         else:
-            k, v = p.split(b"=")
+            k, v = p.split("=")
             v = _decode(v)
 
         u = query.get(k)
@@ -185,6 +188,8 @@ def url_param2value(param):
             query[k] = [u, v]
 
     return query
+
+
 
 
 def value2url_param(value):
@@ -200,16 +205,14 @@ def value2url_param(value):
 
     if isinstance(value, Mapping):
         value_ = wrap(value)
-        output = b"&".join([
-            value2url_param(k) + b"=" + (value2url_param(v) if isinstance(v, basestring) else value2url_param(_value2json(v)))
+        output = "&".join([
+            value2url_param(k) + "=" + (value2url_param(v) if isinstance(v, text_type) else value2url_param(_value2json(v)))
             for k, v in value_.leaves()
             ])
     elif isinstance(value, text_type):
-        output = b"".join(_map2url[c] for c in value.encode('utf8'))
-    elif isinstance(value, str):
-        output = b"".join(_map2url[c] for c in value)
+        output = "".join(_str_to_url[c] for c in value)
     elif hasattr(value, "__iter__"):
-        output = b",".join(value2url_param(v) for v in value)
+        output = ",".join(value2url_param(v) for v in value)
     else:
         output = str(value)
     return output

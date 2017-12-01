@@ -23,6 +23,7 @@ boolean_type = type(True)
 if PY3:
     import collections
     from functools import cmp_to_key
+    from configparser import ConfigParser
 
     text_type = str
     string_types = str
@@ -73,6 +74,8 @@ if PY3:
 else:
     import __builtin__
     from types import GeneratorType
+    from ConfigParser import ConfigParser
+
 
     text_type = __builtin__.unicode
     string_types = (str, unicode)

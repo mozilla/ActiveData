@@ -72,9 +72,53 @@ class TestLoadAndSaveQueries(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, bytes)
 
+    def test_recovery_of_empty_string(self):
+
+        test = {
+            "data": [
+                {"a": "bee"}
+            ],
+            "query": {
+                "meta": {"save": True},
+                "from": TEST_TABLE,
+                "select": "a",
+                "where": {"prefix": {"a": ""}}
+            },
+            "expecting_list": {
+                "meta": {
+                    "format": "list"
+                },
+                "data": ["bee"]
+            }
+        }
+
+        settings = self.utils.fill_container(test)
+
+        bytes = unicode2utf8(value2json({
+            "from": settings.index,
+            "select": "a",
+            "where": {"prefix": ["a", {"literal": ""}]},
+            "format": "list"
+        }))
+        expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
+        wrap(test).expecting_list.meta.saved_as = expected_hash
+
+        self.utils.send_queries(test)
+
+        # ENSURE THE QUERY HAS BEEN INDEXED
+        Log.note("Flush saved query")
+        container = elasticsearch.Index(index="saved_queries", kwargs=settings)
+        container.flush(forced=True)
+        with Timer("wait for 5 seconds"):
+            Till(seconds=5).wait()
+
+        url = URL(self.utils.service_url)
+        response = self.utils.try_till_response(url.scheme + "://" + url.host + ":" + text_type(url.port) + "/find/" + expected_hash, data=b'')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.all_content, bytes)
 
 
 
-
+    # TODO: TEST RECOVERY OF QUERY USING {"prefix": {var: ""}} (EMPTY STRING IS NOT RECORDED RIGHT
 
 

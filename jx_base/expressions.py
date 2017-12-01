@@ -927,7 +927,7 @@ class EqOp(Expression):
 
     def __new__(cls, op, terms):
         if isinstance(terms, list):
-            return object.__new__(cls, op, terms)
+            return object.__new__(cls)
 
         items = terms.items()
         if len(items) == 1:

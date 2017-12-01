@@ -12,8 +12,8 @@ Licensed under the MIT license http://www.opensource.org/licenses/mit-license.ph
 
 __author__ = "Adam Newman"
 
-from cipher_mode import CipherMode
-from mode_test import GeneralTestEncryptionMode
+from mo_math.vendor.aespython.cipher_mode import CipherMode
+from mo_math.vendor.aespython.mode_test import GeneralTestEncryptionMode
 
 class CBCMode(CipherMode):
     """Perform CBC operation on a block and retain IV information for next operation"""

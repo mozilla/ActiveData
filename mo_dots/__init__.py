@@ -449,7 +449,7 @@ def _wrap_leaves(value):
 
             if key == "":
                 get_logger().error("key is empty string.  Probably a bad idea")
-            if isinstance(key, str):
+            if isinstance(key, binary_type):
                 key = key.decode("utf8")
 
             d = output

@@ -43,7 +43,7 @@ def compile_expression(source):
     _ = re
     _ = wrap_leaves
 
-    output = None
+    fake_locals = {}
     try:
         exec(
 """
@@ -53,8 +53,10 @@ def output(row, rownum=None, rows=None):
         return """ + source + """
     except Exception as e:
         Log.error("Problem with dynamic function {{func|quote}}",  func=_source, cause=e)
-"""
+""",
+            globals(),
+            fake_locals
         )
     except Exception as e:
         Log.error("Bad source: {{source}}", source=source, cause=e)
-    return output
+    return fake_locals['output']

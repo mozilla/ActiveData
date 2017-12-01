@@ -15,7 +15,7 @@ from copy import copy
 from datetime import date
 from datetime import datetime
 
-from mo_future import text_type
+from mo_future import text_type, long
 from jx_base import STRUCT
 
 from jx_python import jx
@@ -332,7 +332,7 @@ _type_to_name = {
     str: "string",
     text_type: "string",
     int: "integer",
-    long: "long",
+    long: "integer",
     float: "double",
     Data: "object",
     dict: "object",

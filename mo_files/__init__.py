@@ -464,6 +464,6 @@ def join_path(*path):
     if not simpler:
         joined = "."
     else:
-        joined = b'/'.join(simpler)
+        joined = '/'.join(simpler)
     return joined
 

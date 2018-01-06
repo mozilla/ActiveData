@@ -54,6 +54,7 @@ def cors_wrapper(func):
     def output(*args, **kwargs):
         response = func(*args, **kwargs)
         headers = response.headers
+        _setdefault(headers, "Content-Security-Policy", "default-src https:")
         _setdefault(headers, "Access-Control-Allow-Origin", "*")
         _setdefault(headers, "Access-Control-Allow-Headers", flask.request.headers.get("Access-Control-Request-Headers"))
         _setdefault(headers, "Access-Control-Allow-Methods", flask.request.headers.get("Access-Control-Request-Methods"))

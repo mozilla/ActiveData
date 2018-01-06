@@ -17,23 +17,24 @@ from ssl import SSLContext
 from tempfile import NamedTemporaryFile
 
 import flask
-from active_data import record_request, cors_wrapper
 from flask import Flask
+from werkzeug.contrib.fixers import HeaderRewriterFix
+from werkzeug.wrappers import Response
+
+import active_data
+from active_data import record_request, cors_wrapper
+from active_data.actions import save_query
+from active_data.actions.contribute import send_contribute
+from active_data.actions.json import get_raw_json
+from active_data.actions.jx import jx_query
+from active_data.actions.save_query import SaveQueries, find_query
+from active_data.actions.sql import sql_query
+from active_data.actions.static import download
 from mo_files import File
 from mo_logs import Log
 from mo_logs import constants, startup
 from mo_threads import Thread
 from pyLibrary import convert
-from werkzeug.contrib.fixers import HeaderRewriterFix
-from werkzeug.wrappers import Response
-
-import active_data
-from active_data.actions import save_query
-from active_data.actions.jx import jx_query
-from active_data.actions.sql import sql_query
-from active_data.actions.json import get_raw_json
-from active_data.actions.save_query import SaveQueries, find_query
-from active_data.actions.static import download
 from pyLibrary.env import elasticsearch
 from pyLibrary.queries import containers
 from pyLibrary.queries.meta import FromESMetadata
@@ -58,6 +59,7 @@ app.add_url_rule('/sql', None, sql_query, defaults={'path': ''}, methods=['GET',
 app.add_url_rule('/sql/', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
 app.add_url_rule('/query/<path:path>', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
 app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
+app.add_url_rule('/contribute.json', None, send_contribute, methods=['GET'])
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])

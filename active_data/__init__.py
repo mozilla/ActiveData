@@ -59,6 +59,8 @@ def cors_wrapper(func):
         _setdefault(headers, "Access-Control-Allow-Methods", flask.request.headers.get("Access-Control-Request-Methods"))
         _setdefault(headers, "Content-Type", "application/json")
         _setdefault(headers, "Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+        _setdefault(headers, "X-Frame-Options", "DENY")
+        _setdefault(headers, "X-Content-Type-Options", "nosniff")
         return response
 
     output.provide_automatic_options = False

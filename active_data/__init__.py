@@ -62,6 +62,7 @@ def cors_wrapper(func):
         _setdefault(headers, "Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
         _setdefault(headers, "X-Frame-Options", "DENY")
         _setdefault(headers, "X-Content-Type-Options", "nosniff")
+        _setdefault(headers, "Referrer-Policy", "strict-origin")
         return response
 
     output.provide_automatic_options = False

@@ -34,12 +34,11 @@ from mo_files import File
 from mo_logs import Log
 from mo_logs import constants, startup
 from mo_threads import Thread
-from pyLibrary import convert
 from pyLibrary.env import elasticsearch
 from pyLibrary.queries import containers
 from pyLibrary.queries.meta import FromESMetadata
 
-OVERVIEW = File("active_data/public/index.html").read()
+OVERVIEW = File("active_data/public/index.html").read_bytes()
 
 app = Flask(__name__)
 config = None
@@ -68,7 +67,7 @@ def _default(path):
     record_request(flask.request, None, flask.request.get_data(), None)
 
     return Response(
-        convert.unicode2utf8(OVERVIEW),
+        OVERVIEW,
         status=200,
         headers={
             "Content-Type": "text/html"
@@ -184,7 +183,7 @@ def _exit():
         Log.warning("werkzeug.server.shutdown does not exist")
 
     return Response(
-        convert.unicode2utf8(OVERVIEW),
+        OVERVIEW,
         status=400,
         headers={
             "Content-Type": "text/html"

@@ -8,5 +8,6 @@ A list of (mostly incomplete) documents comparing JSON Query Expressions with ot
 * [PythonQL](compare_PythonQL.md) - **not started** - Link to PythonQL
 Expressions
 * [Oracle](compare_Oracle.md) - **not started** - List of language features that may prove useful
+* [JSONiq](compare_JSONiq.md) - **not started** - yet another query language
 
 

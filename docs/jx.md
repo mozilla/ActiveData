@@ -1,13 +1,11 @@
-JSON Query Expression Documentation
-===================================
+# JSON Query Expression Documentation
 
 JSON query expressions are best considered as SQL parse trees, in JSON format; each
 property corresponds to a SQL clause. There are some differences from SQL,
 especially when it comes to using default clauses, but I hope your knowledge
 of SQL can jump-start your use of JSON Expressions.
 
-Specific Reading
-----------------
+### Specific Reading
 
 * [Tutorial](jx_tutorial.md) - For some examples
 * [Select Clause](jx_clause_select.md) - Data transformation using the `select` clause
@@ -17,15 +15,10 @@ Specific Reading
 * [Time Math](jx_time.md) - Writing expressions in the time domain
 * [Commands](jx_update.md) - Update data with JSON Expressions
 * [Reference](jx_reference.md) - A bare list of allowed clauses and options for JSON query expressions
+* [Comparisions](compare.md) - Compare JSON Query Expressions to other query languages
 
 
-Comparisons
------------
-
-* [GraphQL vs JSON Query Expressions](GraphQL.md)
-
-Motivation
-----------
+## Motivation
 
 JSON Expressions have the following benefits over SQL
 
@@ -37,8 +30,7 @@ JSON Expressions have the following benefits over SQL
 * Language independence
 
 
-Non-Goals
----------
+## Non-Goals
 
 * **Use something better than JSON** - JSON expressions are deliberately a
 JSON specification; and avoids the complexities of defining a DSL syntax.
@@ -58,10 +50,9 @@ are not implemented.
 implemented, and the specification itself is incomplete. What does exist has
 tests to maintain stability.
 
-More about the Benefits
------------------------
+## More about the Benefits
 
-### Expression Simplification
+### Benefit: Expression Simplification
 
 JSON Expressions provide data transformation and expressions over multi-
 dimensional and unclean data. It simplifies expressions by defining
@@ -94,7 +85,7 @@ Javascript equivalent
 #### Dereferencing with `nulls`
 
 The dot operator is a function. It too is impacted by the definition of `null`.
-Databases have only primitive concepts of objects and dereferencing.
+Most databases have primitive object accessors, if any. [MDX uses concise 'dot' access to members](https://docs.microsoft.com/en-us/sql/analysis-services/multidimensional-models/mdx/working-with-members-tuples-and-sets-mdx).
 
 JSON Expression
 
@@ -102,22 +93,21 @@ JSON Expression
 
 Javascript equivalent
 
-	function get(a, x){ //x=="b"
+	function get (a, b){
 		if (a==null) return null;
-		if (x==null) return null;
-		if (a[x]===undefined) return null;
-		return a[x];
+		if (b==null) return null;
+		if (a[b]===undefined) return null;
+		return a[b];
  	}
 
-
-Using the *out-of-context* definition, expressions, list comprehensions, and
+Using the *out-of-context* definition; expressions, list comprehensions, and
 query expressions are all simplified:  
 
 1. **`null` checks are avoided** - all `null` checks are built into every function
 2. **boundary checks are avoided** - window functions are not required to
 verify boundaries because all points outside a domain map to `null`.  
 
-### Translating Data Shape
+### Benefit: Translating Data Shape
 
 JSON Expressions operate on JSON, with a focus on translating arrays of JSON.
 JSON expressions are not limited to arrays, and work on other (un)ordered sets
@@ -125,7 +115,7 @@ that come out of databases and document stores. The [`select` clause](jx_clause_
 is responsible for record-wise translation.
 
 
-### Pivot Tables and Data Frames
+### Benefit: Pivot Tables and Data Frames
 
 A specific type of data transformation involves converting general sets into
 data frames, which pivot tables are specific instances. The full domain of
@@ -200,21 +190,18 @@ Alaska will show, despite it having no employees. Furthermore, filtering
 employees by some criterion will continue to return the same number of
 rows, only with the `count` changed.  
 
-Meta-Programming
-----------------
+### Benefit: Easy Meta-Programming
 
 The `from` expression is the most complex; covering set operations, list
 comprehensions, and relational operators; each shaped by the variety of
-clauses the `from` expression accepts. These clauses can be programatically
+clauses it accepts. These clauses can be programatically
 composed because JSON is just data. In practice this happens most when
 specifying query domains.
 
 
-History
-=======
+## History
 
-Original Implementation
------------------------
+### Original Implementation
 
 JSON Expressions were originally designed to send complex aggregation queries
 to Elasticsearch version 0.90.x. In that version, ES only had "facets"; which
@@ -231,8 +218,7 @@ ElasticSearch now has aggregations, and the JSON expression translation layer
 is simplified, but the pivot table extraction, and expression simplification
 is still required.
 
-Exploring Possible Expression Formats
--------------------------------------
+### Exploring Possible Expression Formats
 
 When serializing data structures, specifically data structures involving
 function operations, there are three common operator positions:

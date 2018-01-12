@@ -26,8 +26,15 @@ from mo_times.dates import Date
 from mo_times.durations import MINUTE
 from pyLibrary import convert
 
+QUERY_TOO_LARGE = "Query is too large"
+
 
 def send_error(active_data_timer, body, e):
+    status = 400
+
+    if QUERY_TOO_LARGE in e:
+        status = 413
+
     record_request(flask.request, None, body, e)
     Log.warning("Could not process\n{{body}}", body=body.decode("latin1"), cause=e)
     e = e.__data__()
@@ -42,7 +49,7 @@ def send_error(active_data_timer, body, e):
 
     return Response(
         convert.unicode2utf8(convert.value2json(e)),
-        status=400
+        status=status
     )
 
 

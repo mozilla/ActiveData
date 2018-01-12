@@ -329,10 +329,10 @@ class {{class_name}}(Mapping):
 
 def _exec(code, name):
     try:
-        g = globals()
-        exec(code, g, g)
-        temp = g[name]
-        setattr(temp, "_code", code)
+        globs = globals()
+        fake_locals = {}
+        exec(code, globs, fake_locals)
+        temp = globs[name] = fake_locals[name]
         return temp
     except Exception as e:
         Log.error("Can not make class\n{{code}}", code=code, cause=e)

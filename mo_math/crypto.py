@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 
 import base64
 
-from mo_future import text_type
+from mo_future import text_type, binary_type
 from mo_dots import Data, get_module
 from mo_logs import Log
 
@@ -87,12 +87,12 @@ def decrypt(data, _key):
     for _, e in _groupby16(raw):
         out_data.extend(aes_cbc_256.decrypt_block(e))
 
-    return str(out_data[:_input.length:]).decode("utf8")
+    return binary_type(out_data[:_input.length:]).decode("utf8")
 
 
 def bytes2base64(value):
     if isinstance(value, bytearray):
-        value = str(value)
+        value = binary_type(value)
     return base64.b64encode(value).decode("utf8")
 
 

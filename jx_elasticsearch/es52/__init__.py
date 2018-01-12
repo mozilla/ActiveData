@@ -26,7 +26,7 @@ from jx_elasticsearch.es52.setop import is_setop, es_setop
 from jx_elasticsearch.es52.util import aggregates
 from jx_elasticsearch.meta import FromESMetadata
 from jx_python import jx
-from mo_dots import Data, Null
+from mo_dots import Data, Null, unwrap
 from mo_dots import coalesce, split_field, literal_field, unwraplist, join_field
 from mo_dots import wrap, listwrap
 from mo_dots.lists import FlatList
@@ -69,7 +69,10 @@ class ES52(Container):
     ):
         Container.__init__(self, None)
         if not container.config.default:
-            container.config.default.settings = kwargs
+            container.config.default = {
+                "type": "elasticsearch",
+                "settings": unwrap(kwargs)
+            }
         self.settings = kwargs
         self.name = coalesce(name, alias, index)
         if read_only:
@@ -124,7 +127,7 @@ class ES52(Container):
 
     def query(self, _query):
         try:
-            query = QueryOp.wrap(_query, schema=self)
+            query = QueryOp.wrap(_query, table=self)
 
             for n in self.namespaces:
                 query = n.convert(query)

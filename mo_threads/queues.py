@@ -391,7 +391,7 @@ class ThreadedQueue(Queue):
                 # ONE LAST PUSH, DO NOT HAVE TIME TO DEAL WITH ERRORS
                 push_to_queue()
 
-        self.thread = Thread.run("threaded queue for " + name, worker_bee, parent_thread=self)
+        self.thread = Thread.run("threaded queue for " + name, worker_bee) # parent_thread=self)
 
     def add(self, value, timeout=None):
         with self.lock:

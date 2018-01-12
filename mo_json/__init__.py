@@ -154,8 +154,8 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
                 pass
             elif isinstance(k, binary_type):
                 k = k.decode('utf8')
-            elif hasattr(k, "__unicode__"):
-                k = text_type(k)
+            # elif hasattr(k, "__unicode__"):
+            #     k = text_type(k)
             else:
                 Log.error("keys must be strings")
             v = _scrub(v, is_done, stack, scrub_text, scrub_number)

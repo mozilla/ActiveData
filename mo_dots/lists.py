@@ -55,7 +55,10 @@ class FlatList(list):
             length = len(_get(self, "list"))
 
             i = index.start
-            i = min(max(i, 0), length)
+            if i is None:
+                i = 0
+            else:
+                i = min(max(i, 0), length)
             j = index.stop
             if j is None:
                 j = length
@@ -159,7 +162,10 @@ class FlatList(list):
         return self
 
     def pop(self, index=None):
-        return wrap(_get(self, "list").pop(index))
+        if index is None:
+            return wrap(_get(self, "list").pop())
+        else:
+            return wrap(_get(self, "list").pop(index))
 
     def __add__(self, value):
         if value == None:

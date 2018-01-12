@@ -114,7 +114,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
         elif isinstance(expected, Mapping):
             for k, v2 in expected.items():
-                if isinstance(k, basestring):
+                if isinstance(k, text_type):
                     v1 = mo_dots.get_attr(test, literal_field(k))
                 else:
                     v1 = test[k]

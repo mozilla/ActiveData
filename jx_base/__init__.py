@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from uuid import uuid4
 
 from mo_dots import NullType, Data
-from mo_future import text_type, none_type
+from mo_future import text_type, none_type, PY2
 
 IS_NULL = '0'
 BOOLEAN = 'boolean'
@@ -42,6 +42,8 @@ python_type_to_json_type = {
     list: NESTED
 }
 
+if PY2:
+    python_type_to_json_type[str]=STRING
 
 def generateGuid():
     """Gets a random GUID.

@@ -110,7 +110,7 @@ class AESCipher:
     def decipher_block (self, state):
         """Perform AES block decipher on input"""
         if len(state) != 16:
-            Log.error("Expecting block of 16")
+            Log.error(u"Expecting block of 16")
 
         self._add_round_key(state, self._Nr)
 

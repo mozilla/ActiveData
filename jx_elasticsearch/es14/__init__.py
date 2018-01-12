@@ -26,7 +26,7 @@ from jx_elasticsearch.es14.setop import is_setop, es_setop
 from jx_elasticsearch.es14.util import aggregates
 from jx_elasticsearch.meta import FromESMetadata
 from jx_python import jx
-from mo_dots import Data, Null
+from mo_dots import Data, Null, unwrap
 from mo_dots import coalesce, split_field, literal_field, unwraplist, join_field
 from mo_dots import wrap, listwrap
 from mo_dots.lists import FlatList
@@ -68,7 +68,10 @@ class ES14(Container):
     ):
         Container.__init__(self, None)
         if not container.config.default:
-            container.config.default.settings = kwargs
+            container.config.default = {
+                "type": "elasticsearch",
+                "settings": unwrap(kwargs)
+            }
         self.settings = kwargs
         self.name = coalesce(name, alias, index)
         if read_only:

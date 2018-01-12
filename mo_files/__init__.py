@@ -71,6 +71,15 @@ class File(object):
     def new_instance(cls, *path):
         return File(join_path(*path))
 
+    def __div__(self, other):
+        return File(join_path(self, other))
+
+    def __truediv__(self, other):
+        return File(join_path(self, other))
+
+    def __rtruediv__(self, other):
+        return File(join_path(other, self))
+
     @property
     def timestamp(self):
         output = os.path.getmtime(self.abspath)
@@ -127,7 +136,11 @@ class File(object):
     @property
     def mime_type(self):
         if not self._mime_type:
-            if self.abspath.endswith(".json"):
+            if self.abspath.endswith(".js"):
+                self._mime_type = "application/javascript"
+            elif self.abspath.endswith(".css"):
+                self._mime_type = "text/css"
+            elif self.abspath.endswith(".json"):
                 self._mime_type = "application/json"
             else:
                 self._mime_type, _ = mime.guess_type(self.abspath)
@@ -383,8 +396,8 @@ class File(object):
 
 
 class TempDirectory(File):
-    def __new__(cls, *args, **kwargs):
-        return object.__new__(cls)
+    def __new__(cls):
+        return File.__new__(cls, None)
 
     def __init__(self):
         File.__init__(self, mkdtemp())
@@ -438,14 +451,21 @@ def join_path(*path):
     def scrub(i, p):
         if isinstance(p, File):
             p = p.abspath
-        if p == "/":
-            return "."
         p = p.replace(os.sep, "/")
-        if p[-1] == b'/':
+        if p == "":
+            return "."
+        if p[-1] == '/':
             p = p[:-1]
-        if i > 0 and p[0] == b'/':
+        if i > 0 and p[0] == '/':
             p = p[1:]
         return p
+
+    if path and path[0] and path[0][0] == '/':
+        is_abs = True
+        path = list(path)
+        path[0] = path[0][1:]
+    else:
+        is_abs = False
 
     scrubbed = []
     for i, p in enumerate(path):
@@ -456,14 +476,25 @@ def join_path(*path):
             pass
         elif s == "..":
             if simpler:
-                simpler.pop()
+                if simpler[-1] == '..':
+                    simpler.append(s)
+                else:
+                    simpler.pop()
+            elif is_abs:
+                Log.error("can not get parent of root")
             else:
                 simpler.append(s)
         else:
             simpler.append(s)
-    if not simpler:
-        joined = "."
-    else:
-        joined = '/'.join(simpler)
-    return joined
 
+    if is_abs:
+        if not simpler:
+            joined = "/"
+        else:
+            joined = '/' + ('/'.join(simpler))
+    else:
+        if not simpler:
+            joined = "."
+        else:
+            joined = '/'.join(simpler)
+    return joined

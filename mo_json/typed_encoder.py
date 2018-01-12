@@ -15,12 +15,12 @@ from collections import Mapping
 
 from mo_dots import split_field, join_field
 
-TYPE_PREFIX = u'\u0442\u0443\u0440\u0435-'  # "туре"
-BOOLEAN_TYPE = TYPE_PREFIX+"boolean"
-NUMBER_TYPE = TYPE_PREFIX+"number"
-STRING_TYPE = TYPE_PREFIX+"string"
-NESTED_TYPE = TYPE_PREFIX+"nested"
-EXISTS_TYPE = TYPE_PREFIX+"exists"
+TYPE_PREFIX = "~"   # u'\u0442\u0443\u0440\u0435-'  # "туре"
+BOOLEAN_TYPE = TYPE_PREFIX+"b~"
+NUMBER_TYPE = TYPE_PREFIX+"n~"
+STRING_TYPE = TYPE_PREFIX+"s~"
+NESTED_TYPE = TYPE_PREFIX+"N~"
+EXISTS_TYPE = TYPE_PREFIX+"e~"
 
 
 def encode_property(name):

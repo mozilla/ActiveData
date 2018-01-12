@@ -41,7 +41,7 @@ from pyLibrary.env.elasticsearch import es_type_to_json_type
 
 MAX_COLUMN_METADATA_AGE = 12 * HOUR
 ENABLE_META_SCAN = False
-DEBUG = True
+DEBUG = False
 TOO_OLD = 2*HOUR
 OLD_METADATA = MINUTE
 TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES

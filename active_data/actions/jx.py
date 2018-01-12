@@ -14,7 +14,7 @@ import flask
 from flask import Response
 
 from active_data import record_request, cors_wrapper
-from active_data.actions import save_query, send_error, test_mode_wait
+from active_data.actions import save_query, send_error, test_mode_wait, QUERY_TOO_LARGE
 from jx_base.container import Container
 from jx_python import jx, wrap_from
 from mo_files import File
@@ -46,7 +46,7 @@ def jx_query(path):
                             }
                         )
                     elif int(flask.request.headers["content-length"]) > QUERY_SIZE_LIMIT:
-                        Log.error("Query is too large")
+                        Log.error(QUERY_TOO_LARGE)
 
                     request_body = flask.request.get_data().strip()
                     text = convert.utf82unicode(request_body)

@@ -643,7 +643,7 @@ def utf82unicode(value):
             _late_import()
 
         if not isinstance(value, binary_type):
-            _Log.error("Can not convert {{type}} to unicode because it's not a string",  type= type(value).__name__)
+            _Log.error("Can not convert {{type}} to unicode because it's not bytes",  type= type(value).__name__)
 
         e = _Except.wrap(e)
         for i, c in enumerate(value):

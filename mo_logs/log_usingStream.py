@@ -15,13 +15,14 @@ from __future__ import unicode_literals
 
 import sys
 
-from mo_future import PY3
+from mo_future import PY3, allocate_lock
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_logs.strings import expand_template
 
 
 class StructuredLogger_usingStream(StructuredLogger):
     def __init__(self, stream):
+        self.locker = allocate_lock()
         try:
             if stream in (sys.stdout, sys.stderr):
                 if PY3:
@@ -37,7 +38,11 @@ class StructuredLogger_usingStream(StructuredLogger):
 
     def write(self, template, params):
         value = expand_template(template, params)
-        self.writer(value + "\n")
+        self.locker.acquire()
+        try:
+            self.writer(value + "\n")
+        finally:
+            self.locker.release()
 
     def stop(self):
         pass

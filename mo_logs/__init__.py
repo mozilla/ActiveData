@@ -17,7 +17,7 @@ import sys
 from collections import Mapping
 from datetime import datetime
 
-from mo_dots import coalesce, listwrap, wrap, unwrap, unwraplist, set_default
+from mo_dots import coalesce, listwrap, wrap, unwrap, unwraplist, set_default, FlatList
 from mo_future import text_type
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.strings import indent
@@ -377,7 +377,18 @@ class Log(object):
         params = dict(unwrap(default_params), **more_params)
 
         add_to_trace = False
-        cause = wrap(unwraplist([Except.wrap(c, stack_depth=1) for c in listwrap(cause)]))
+        if cause == None:
+            pass
+        elif isinstance(cause, list):
+            cause = []
+            for c in listwrap(cause):  # CAN NOT USE LIST-COMPREHENSION IN PYTHON3 (EXTRA STACK DEPTH FROM THE IN-LINED GENERATOR)
+                cause.append(Except.wrap(c, stack_depth=1))
+            cause = FlatList(cause)
+        elif isinstance(cause, BaseException):
+            cause = Except.wrap(cause, stack_depth=1)
+        else:
+            Log.error("can only accept Exception , or list of exceptions")
+
         trace = exceptions.extract_stack(stack_depth + 1)
 
         if add_to_trace:

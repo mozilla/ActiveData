@@ -325,13 +325,13 @@ class MySQL(object):
     def _where2sql(self, where):
         if where == None:
             return ""
-        return SQL("WHERE " + _esfilter2sqlwhere(self.db, where))
+        return SQL("WHERE ") + _esfilter2sqlwhere(self.db, where)
 
 
 def _isolate(separator, list):
     try:
         if len(list) > 1:
-            return "(\n" + indent((" " + separator + "\n").join(list)) + "\n)"
+            return "(\n" + indent(SQL(" " + separator + "\n").join(list)) + "\n)"
         else:
             return list[0]
     except Exception as e:
@@ -362,7 +362,7 @@ def _esfilter2sqlwhere(db, esfilter):
     elif esfilter["not"]:
         return "NOT (" + esfilter2sqlwhere(db, esfilter["not"]) + ")"
     elif esfilter.term:
-        return _isolate("AND", [db.quote_column(col) + "=" + db.quote_value(val) for col, val in esfilter.term.items()])
+        return _isolate("AND", [db.quote_column(col) + SQL("=") + db.quote_value(val) for col, val in esfilter.term.items()])
     elif esfilter.terms:
         for col, v in esfilter.terms.items():
             if len(v) == 0:
@@ -391,23 +391,24 @@ def _esfilter2sqlwhere(db, esfilter):
         return "(" + esfilter.script + ")"
     elif esfilter.range:
         name2sign = {
-            "gt": ">",
-            "gte": ">=",
-            "lte": "<=",
-            "lt": "<"
+            "gt": SQL(">"),
+            "gte": SQL(">="),
+            "lte": SQL("<="),
+            "lt": SQL("<")
         }
 
         def single(col, r):
             min = coalesce(r["gte"], r[">="])
             max = coalesce(r["lte"], r["<="])
-            if min and max:
+            if min != None and max != None:
                 # SPECIAL CASE (BETWEEN)
-                return db.quote_column(col) + SQL(" BETWEEN ") + db.quote_value(min) + SQL(" AND ") + db.quote_value(max)
+                sql = db.quote_column(col) + SQL(" BETWEEN ") + db.quote_value(min) + SQL(" AND ") + db.quote_value(max)
             else:
-                return " AND ".join(
+                sql = SQL(" AND ").join(
                     db.quote_column(col) + name2sign[sign] + db.quote_value(value)
                     for sign, value in r.items()
                 )
+            return sql
 
         output = _isolate("AND", [single(col, ranges) for col, ranges in esfilter.range.items()])
         return output

@@ -15,16 +15,15 @@ import re
 from collections import Mapping
 from copy import deepcopy
 
-from mo_future import text_type, binary_type
-from jx_python.expressions import jx_expression_to_function
-
 import mo_json
 from jx_python import jx
+from jx_python.expressions import jx_expression_to_function
 from jx_python.meta import Column
 from mo_dots import coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field
 from mo_dots import wrap
 from mo_dots.lists import FlatList
-from mo_json import value2json, json2value
+from mo_future import text_type, binary_type
+from mo_json import value2json
 from mo_json.typed_encoder import EXISTS_TYPE, BOOLEAN_TYPE, STRING_TYPE, NUMBER_TYPE, NESTED_TYPE, TYPE_PREFIX
 from mo_kwargs import override
 from mo_logs import Log, strings
@@ -83,8 +82,8 @@ class Index(Features):
     ):
         if index==None:
             Log.error("not allowed")
-        if index == alias:
-            Log.error("must have a unique index name")
+        # if index == alias:
+        #     Log.error("must have a unique index name")
 
         self.cluster_state = None
         self.debug = debug
@@ -130,9 +129,9 @@ class Index(Features):
 
             self.encode = TypedInserter(self, id_column).typed_encode
         else:
+            if not kwargs.read_only:
+                Log.warning("{{index}} is not typed", index=self.settings.index)
             self.encode = get_encoder(id_column)
-
-
 
     @property
     def url(self):
@@ -193,6 +192,7 @@ class Index(Features):
             },
             timeout=coalesce(self.settings.timeout, 30)
         )
+        self.settings.alias = alias
 
         # WAIT FOR ALIAS TO APPEAR
         while True:
@@ -201,6 +201,8 @@ class Index(Features):
                 return
             Log.note("Waiting for alias {{alias}} to appear", alias=alias)
             Till(seconds=1).wait()
+
+
 
     def get_index(self, alias):
         """
@@ -336,12 +338,13 @@ class Index(Features):
                     if len(fails) <= 3:
                         cause = [
                             Except(
-                                template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
+                                template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}} (typed={{tjson}}):\n{{line}}",
                                 status=items[i].index.status,
                                 error=items[i].index.error,
                                 some=len(fails) - 1,
-                                line=strings.limit(lines[i * 2 + 1], 500 if not self.debug else 100000),
+                                line=strings.limit(lines[i * 2 + 1].decode('utf8'), 500 if not self.debug else 100000),
                                 index=self.settings.index,
+                                tjson=self.settings.tjson,
                                 id=items[i].index._id
                             )
                             for i in fails
@@ -349,12 +352,13 @@ class Index(Features):
                     else:
                         i=fails[0]
                         cause = Except(
-                            template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}}:\n{{line}}",
+                            template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}} (typed={{tjson}}):\n{{line}}",
                             status=items[i].index.status,
                             error=items[i].index.error,
                             some=len(fails) - 1,
-                            line=strings.limit(lines[i * 2 + 1], 500 if not self.debug else 100000),
+                            line=strings.limit(lines[i * 2 + 1].decode('utf8'), 500 if not self.debug else 100000),
                             index=self.settings.index,
+                            tjson=self.settings.tjson,
                             id=items[i].index._id
                         )
                     Log.error("Problems with insert", cause=cause)
@@ -400,16 +404,15 @@ class Index(Features):
                     "error": utf82unicode(response.all_content)
                 })
         elif self.cluster.version.startswith(("1.4.", "1.5.", "1.6.", "1.7.", "5.", "6.")):
-            response = self.cluster.put(
+            result = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
                 data=convert.unicode2utf8('{"index":{"refresh_interval":' + value2json(interval) + '}}'),
                 **kwargs
             )
 
-            result = mo_json.json2value(utf82unicode(response.all_content))
             if not result.acknowledged:
                 Log.error("Can not set refresh interval ({{error}})", {
-                    "error": utf82unicode(response.all_content)
+                    "error": result
                 })
         else:
             Log.error("Do not know how to handle ES version {{version}}", version=self.cluster.version)
@@ -537,14 +540,21 @@ class Cluster(object):
             kwargs.alias = best.alias
             kwargs.index = best.index
         elif kwargs.alias == None:
-            kwargs.alias = kwargs.index
+            kwargs.alias = best.alias
             kwargs.index = best.index
 
         index = kwargs.index
         meta = self.get_metadata()
         columns = parse_properties(index, ".", meta.indices[index].mappings.values()[0].properties)
         if len(columns) != 0:
-            kwargs.tjson = tjson or any(c.names["."].find("." + TYPE_PREFIX) != -1 for c in columns)
+            kwargs.tjson = tjson or any(
+                c.names["."].startswith(TYPE_PREFIX) or
+                c.names["."].find("." + TYPE_PREFIX) != -1
+                for c in columns
+            )
+
+        if not kwargs.tjson:
+            Log.warning("Not typed index, columns are:\n{{columns|json}}", columns=columns)
 
         return Index(kwargs)
 
@@ -560,7 +570,7 @@ class Cluster(object):
         return indexes.last()
 
     @override
-    def get_index(self, index, type=None, alias=None, read_only=True, kwargs=None):
+    def get_index(self, index, type=None, alias=None, tjson=None, read_only=True, kwargs=None):
         """
         TESTS THAT THE INDEX EXISTS BEFORE RETURNING A HANDLE
         """
@@ -568,13 +578,14 @@ class Cluster(object):
             # GET EXACT MATCH, OR ALIAS
             aliases = self.get_aliases()
             if index in aliases.index:
-                return Index(kwargs)
-            if index in aliases.alias:
+                pass
+            elif index in aliases.alias:
                 match = [a for a in aliases if a.alias == index][0]
                 kwargs.alias = match.alias
                 kwargs.index = match.index
-                return Index(kwargs)
-            Log.error("Can not find index {{index_name}}", index_name=kwargs.index)
+            else:
+                Log.error("Can not find index {{index_name}}", index_name=kwargs.index)
+            return Index(kwargs)
         else:
             # GET BEST MATCH, INCLUDING PROTOTYPE
             best = self._get_best(kwargs)
@@ -587,6 +598,11 @@ class Cluster(object):
             elif kwargs.alias == None:
                 kwargs.alias = kwargs.index
                 kwargs.index = best.index
+
+            if tjson is None:
+                metadata = self.get_metadata()
+                metadata[kwargs.index]
+
             return Index(kwargs)
 
     def get_alias(self, alias):
@@ -622,6 +638,7 @@ class Cluster(object):
         create_timestamp=None,
         schema=None,
         limit_replicas=None,
+        limit_replicas_warning=True,
         read_only=False,
         tjson=True,
         kwargs=None
@@ -645,7 +662,9 @@ class Cluster(object):
         else:
             schema = retro_schema(mo_json.json2value(value2json(schema), leaves=True))
 
-        for n, m in schema.mappings.items():
+        for m in schema.mappings.values():
+            if tjson:
+                m.properties[EXISTS_TYPE] = {"type": "long", "store": True}
             m.dynamic_templates = DEFAULT_DYNAMIC_TEMPLATES + m.dynamic_templates + [{
                 "default_all": {
                     "mapping": {"store": True},
@@ -657,10 +676,12 @@ class Cluster(object):
             # DO NOT ASK FOR TOO MANY REPLICAS
             health = self.get("/_cluster/health")
             if schema.settings.index.number_of_replicas >= health.number_of_nodes:
-                Log.warning("Reduced number of replicas: {{from}} requested, {{to}} realized",
-                    {"from": schema.settings.index.number_of_replicas},
-                    to= health.number_of_nodes - 1
-                )
+                if limit_replicas_warning:
+                    Log.warning(
+                        "Reduced number of replicas: {{from}} requested, {{to}} realized",
+                        {"from": schema.settings.index.number_of_replicas},
+                        to=health.number_of_nodes - 1
+                    )
                 schema.settings.index.number_of_replicas = health.number_of_nodes - 1
 
         self.put(
@@ -752,12 +773,9 @@ class Cluster(object):
         url = self.settings.host + ":" + text_type(self.settings.port) + path
 
         try:
-            if b'headers' not in kwargs:
-                headers = kwargs[b'headers'] = {}
-            else:
-                headers = kwargs[b'headers']
-            headers.setdefault(b"Accept-Encoding", b"gzip,deflate")
-            headers.setdefault(b"Content-Type", b"application/json")
+            heads = wrap(kwargs).headers
+            heads["Accept-Encoding"] = "gzip,deflate"
+            heads["Content-Type"] = "application/json"
 
             data = kwargs.get(b'data')
             if data == None:
@@ -797,7 +815,7 @@ class Cluster(object):
                 Log.error(
                     "Problem with call to {{url}}" + suggestion + "\n{{body|left(10000)}}",
                     url=url,
-                    body=strings.limit(kwargs["data"], 100 if self.debug else 10000),
+                    body=strings.limit(kwargs["data"].decode('utf8'), 100 if self.debug else 10000),
                     cause=e
                 )
             else:
@@ -856,10 +874,15 @@ class Cluster(object):
     def put(self, path, **kwargs):
         url = self.settings.host + ":" + text_type(self.settings.port) + path
 
+        heads = wrap(kwargs).headers
+        heads[b"Accept-Encoding"] = b"gzip,deflate"
+        heads[b"Content-Type"] = b"application/json"
+
         data = kwargs.get(b'data')
         if data == None:
             pass
         elif isinstance(data, Mapping):
+
             kwargs[b'data'] = data = convert.unicode2utf8(convert.value2json(data))
         elif not isinstance(kwargs["data"], str):
             Log.error("data must be utf8 encoded string")
@@ -1157,27 +1180,9 @@ def parse_properties(parent_index_name, parent_name, esProperties):
             continue
         if not property.type:
             continue
-        if property.type == "multi_field":
-            property.type = property.fields[name].type  # PULL DEFAULT TYPE
-            for i, (n, p) in enumerate(property.fields.items()):
-                if n == name:
-                    # DEFAULT
-                    columns.append(Column(
-                        es_index=index_name,
-                        es_column=column_name,
-                        names={".": jx_name},
-                        nested_path=ROOT_PATH,
-                        type=p.type
-                    ))
-                else:
-                    columns.append(Column(
-                        es_index=index_name,
-                        es_column=column_name + "\\." + n,
-                        names={".": jx_name + "\\." + n},
-                        nested_path=ROOT_PATH,
-                        type=p.type
-                    ))
-            continue
+        if property.fields:
+            child_columns = parse_properties(index_name, column_name, property.fields)
+            columns.extend(child_columns)
 
         if property.type in es_type_to_json_type.keys():
             columns.append(Column(

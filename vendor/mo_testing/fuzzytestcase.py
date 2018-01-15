@@ -13,6 +13,8 @@ import types
 import unittest
 from collections import Mapping
 
+from future.moves.itertools import zip_longest
+
 import mo_dots
 from mo_collections.unique_index import UniqueIndex
 from mo_dots import coalesce, literal_field, unwrap, wrap
@@ -76,26 +78,6 @@ class FuzzyTestCase(unittest.TestCase):
 
         Log.error("Expecting an exception to be raised")
 
-def zipall(*args):
-    """
-    LOOP THROUGH LONGEST OF THE LISTS, None-FILL THE REMAINDER
-    """
-    iters = [iter(a) for a in args]
-
-    def _next(_iter):
-        try:
-            return False, _iter.next()
-        except:
-            return True, None
-
-    while True:
-        is_done, value = zip(*(_next(a) for a in iters))
-        if all(is_done):
-            return
-        else:
-            yield value
-
-
 def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=None):
     show_detail = True
     test = unwrap(test)
@@ -145,7 +127,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                 return
             if expected == None:
                 expected = []  # REPRESENT NOTHING
-            for a, b in zipall(test, expected):
+            for a, b in zip_longest(test, expected):
                 assertAlmostEqual(a, b, msg=msg, digits=digits, places=places, delta=delta)
         else:
             assertAlmostEqualValue(test, expected, msg=msg, digits=digits, places=places, delta=delta)

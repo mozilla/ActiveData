@@ -561,6 +561,22 @@ class NullOp(Literal):
     def __eq__(self, other):
         return other == None
 
+    def __gt__(self, other):
+        return False
+
+    def __lt__(self, other):
+        return False
+
+    def __ge__(self, other):
+        if other == None:
+            return True
+        return False
+
+    def __le__(self, other):
+        if other == None:
+            return True
+        return False
+
     def __data__(self):
         return {"null": {}}
 
@@ -1917,13 +1933,17 @@ class SuffixOp(Expression):
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
-        if isinstance(term, Mapping):
+        if not term:
+            self.field = self.suffix = None
+        elif isinstance(term, Mapping):
             self.field, self.suffix = term.items()[0]
         else:
             self.field, self.suffix = term
 
     def __data__(self):
-        if isinstance(self.field, Variable) and isinstance(self.suffix, Literal):
+        if self.field is None:
+            return {"suffix": {}}
+        elif isinstance(self.field, Variable) and isinstance(self.suffix, Literal):
             return {"suffix": {self.field.var: self.suffix.value}}
         else:
             return {"suffix": [self.field.__data__(), self.suffix.__data__()]}
@@ -1932,7 +1952,10 @@ class SuffixOp(Expression):
         return {self.field.var}
 
     def map(self, map_):
-        return SuffixOp("suffix", [self.field.map(map_), self.suffix.map(map_)])
+        if self.field is None:
+            return TRUE
+        else:
+            return SuffixOp("suffix", [self.field.map(map_), self.suffix.map(map_)])
 
 
 class ConcatOp(Expression):

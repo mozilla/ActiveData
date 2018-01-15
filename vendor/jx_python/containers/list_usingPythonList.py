@@ -86,8 +86,15 @@ class ListContainer(Container):
             output.window(param)
 
         if q.format:
-            if q.format=="list":
+            if q.format == "list":
                 return Data(data=output.data)
+            elif q.format == "table":
+                head = list(set(k for r in output.data for k in r.keys()))
+                data = [
+                    (r[h] for h in head)
+                    for r in output.data
+                ]
+                return Data(header=head, data=data)
             else:
                 Log.error("unknown format {{format}}", format=q.format)
         else:

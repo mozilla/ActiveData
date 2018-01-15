@@ -73,7 +73,7 @@ class Index(Features):
         alias=None,
         explore_metadata=True,  # PROBING THE CLUSTER FOR METADATA IS ALLOWED
         read_only=True,
-        tjson=False,  # STORED AS TYPED JSON
+        tjson=None,  # STORED AS TYPED JSON
         timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
         consistency="one",  # ES WRITE CONSISTENCY (https://www.elastic.co/guide/en/elasticsearch/reference/1.7/docs-index_.html#index-consistency)
         debug=False,  # DO NOT SHOW THE DEBUG STATEMENTS
@@ -124,12 +124,13 @@ class Index(Features):
         if self.debug:
             Log.alert("elasticsearch debugging for {{url}} is on", url=self.url)
 
-        if kwargs.tjson:
+        if tjson:
             from pyLibrary.env.typed_inserter import TypedInserter
 
             self.encode = TypedInserter(self, id_column).typed_encode
         else:
-            if not kwargs.read_only:
+            if tjson is None and not read_only:
+                kwargs.tjson = False
                 Log.warning("{{index}} is not typed", index=self.settings.index)
             self.encode = get_encoder(id_column)
 
@@ -529,7 +530,7 @@ class Cluster(object):
         schema=None,
         limit_replicas=None,
         read_only=False,
-        tjson=False,
+        tjson=None,
         kwargs=None
     ):
         best = self._get_best(kwargs)
@@ -546,17 +547,18 @@ class Cluster(object):
         index = kwargs.index
         meta = self.get_metadata()
         columns = parse_properties(index, ".", meta.indices[index].mappings.values()[0].properties)
+
+        tjson = kwargs.tjson
         if len(columns) != 0:
             kwargs.tjson = tjson or any(
                 c.names["."].startswith(TYPE_PREFIX) or
                 c.names["."].find("." + TYPE_PREFIX) != -1
                 for c in columns
             )
-
-        if not kwargs.tjson:
+        if tjson is None and not kwargs.tjson:
             Log.warning("Not typed index, columns are:\n{{columns|json}}", columns=columns)
 
-        return Index(kwargs)
+        return Index(kwargs=kwargs, cluster=self)
 
     def _get_best(self, settings):
         aliases = self.get_aliases()
@@ -585,7 +587,7 @@ class Cluster(object):
                 kwargs.index = match.index
             else:
                 Log.error("Can not find index {{index_name}}", index_name=kwargs.index)
-            return Index(kwargs)
+            return Index(kwargs=kwargs, cluster=self)
         else:
             # GET BEST MATCH, INCLUDING PROTOTYPE
             best = self._get_best(kwargs)
@@ -603,7 +605,7 @@ class Cluster(object):
                 metadata = self.get_metadata()
                 metadata[kwargs.index]
 
-            return Index(kwargs)
+            return Index(kwargs=kwargs, cluster=self)
 
     def get_alias(self, alias):
         """
@@ -615,7 +617,7 @@ class Cluster(object):
             settings = self.settings.copy()
             settings.alias = alias
             settings.index = alias
-            return Index(read_only=True, kwargs=settings)
+            return Index(read_only=True, kwargs=settings, cluster=self)
         Log.error("Can not find any index with alias {{alias_name}}",  alias_name= alias)
 
     def get_prototype(self, alias):
@@ -657,7 +659,10 @@ class Cluster(object):
             Log.error("Expecting a schema")
         elif isinstance(schema, text_type):
             Log.error("Expecting a schema")
-        elif self.version.startswith(("5.", "6.")):
+        elif self.version.startswith("5."):
+            schema.settings.index.max_inner_result_window = None  # NOT ACCEPTED BY ES5
+            schema = mo_json.json2value(value2json(schema), leaves=True)
+        elif self.version.startswith("6."):
             schema = mo_json.json2value(value2json(schema), leaves=True)
         else:
             schema = retro_schema(mo_json.json2value(value2json(schema), leaves=True))
@@ -703,7 +708,7 @@ class Cluster(object):
             Till(seconds=1).wait()
         Log.alert("Made new index {{index|quote}}", index=index)
 
-        es = Index(kwargs=kwargs)
+        es = Index(kwargs=kwargs, cluster=self)
         return es
 
     def delete_index(self, index_name):

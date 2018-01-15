@@ -47,7 +47,7 @@ def download(filename):
 @cache(duration=DAY)
 def _read_file(filename):
     try:
-        file = File.new_instance(STATIC_DIRECTORY, filename)
+        file = STATIC_DIRECTORY / filename
         if not file.abspath.startswith(STATIC_DIRECTORY.abspath):
             return "", 404, "text/html"
 

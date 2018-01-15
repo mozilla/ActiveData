@@ -428,7 +428,7 @@ class TempFile(File):
 def _copy(from_, to_):
     if from_.is_directory():
         for c in os.listdir(from_.abspath):
-            _copy(File.new_instance(from_, c), File.new_instance(to_, c))
+            _copy(from_ / c, to_ / c)
     else:
         File.new_instance(to_).write_bytes(File.new_instance(from_).read_bytes())
 
@@ -447,10 +447,9 @@ def datetime2string(value, format="%Y-%m-%d %H:%M:%S"):
         Log.error(u"Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
 
 
+
 def join_path(*path):
     def scrub(i, p):
-        if isinstance(p, File):
-            p = p.abspath
         p = p.replace(os.sep, "/")
         if p == "":
             return "."
@@ -460,12 +459,16 @@ def join_path(*path):
             p = p[1:]
         return p
 
-    if path and path[0] and path[0][0] == '/':
-        is_abs = True
-        path = list(path)
-        path[0] = path[0][1:]
-    else:
-        is_abs = False
+    path = [p.abspath if isinstance(p, File) else p for p in path]
+    abs_prefix = ''
+    if path and path[0]:
+        if path[0][0] == '/':
+            abs_prefix = '/'
+            path[0] = path[0][1:]
+        elif os.sep == '\\' and path[0][1:].startswith(':/'):
+            # If windows, then look for the "c:/" prefix
+            abs_prefix = path[0][0:3]
+            path[0] = path[0][3:]
 
     scrubbed = []
     for i, p in enumerate(path):
@@ -480,21 +483,19 @@ def join_path(*path):
                     simpler.append(s)
                 else:
                     simpler.pop()
-            elif is_abs:
-                Log.error("can not get parent of root")
+            elif abs_prefix:
+                raise Exception("can not get parent of root")
             else:
                 simpler.append(s)
         else:
             simpler.append(s)
 
-    if is_abs:
-        if not simpler:
-            joined = "/"
+    if not simpler:
+        if abs_prefix:
+            joined = abs_prefix
         else:
-            joined = '/' + ('/'.join(simpler))
-    else:
-        if not simpler:
             joined = "."
-        else:
-            joined = '/'.join(simpler)
+    else:
+        joined = abs_prefix + ('/'.join(simpler))
+
     return joined

@@ -326,8 +326,8 @@ def _get_attr(obj, path):
         # TRY FILESYSTEM
         File = get_module("mo_files").File
         possible_error = None
-        python_file = File.new_instance(File(obj.__file__).parent, attr_name).set_extension("py")
-        python_module = File.new_instance(File(obj.__file__).parent, attr_name, "__init__.py")
+        python_file = (File(obj.__file__).parent / attr_name).set_extension("py")
+        python_module = (File(obj.__file__).parent / attr_name / "__init__.py")
         if python_file.exists or python_module.exists:
             try:
                 # THIS CASE IS WHEN THE __init__.py DOES NOT IMPORT THE SUBDIR FILE

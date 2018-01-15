@@ -292,6 +292,13 @@ class FromESMetadata(Schema):
                 count = result.hits.total
                 cardinality = 1001
                 multi = 1001
+            elif column.es_column == "_id":
+                result = self.default_es.post("/" + es_index + "/_search", data={
+                    "query": {"match_all": {}},
+                    "size": 0
+                })
+                count = cardinality = result.hits.total
+                multi = 1
             else:
                 result = self.default_es.post("/" + es_index + "/_search", data={
                     "aggs": {

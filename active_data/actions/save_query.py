@@ -71,7 +71,7 @@ class SaveQueries(object):
         es = Cluster(kwargs).get_or_create_index(
             schema=convert.json2value(convert.value2json(SCHEMA), leaves=True),
             limit_replicas=True,
-            typed=False,
+            tjson=False,
             kwargs=kwargs
         )
         # ENSURE THE TYPE EXISTS FOR PROBING
@@ -92,7 +92,7 @@ class SaveQueries(object):
     def find(self, hash):
         result = self.es.query({
             "select": ["hash", "query"],
-            "from": {"type": "elasticsearch", "settings": self.es.settings},
+            "from": "saved_queries",
             "where": {"prefix": {"hash": hash}},
             "format": "list"
         })
@@ -128,7 +128,7 @@ class SaveQueries(object):
         available = {h: True for h in short_hashes}
 
         existing = self.es.query({
-            "from": {"type": "elasticsearch", "settings": self.es.settings},
+            "from": "saved_queries",
             "where": {"terms": {"hash": short_hashes}},
             "meta": {"timeout": "2second"}
         })

@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_base.expressions import NULL
 from mo_dots import wrap
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
@@ -319,12 +320,12 @@ class TestFilters(BaseTestCase):
                     {"v": "this-is-a-test"},
                     {"v": "this-is-a-vest"},
                     {"v": "test"},
-                    {"v": ""},
-                    {"v": None}
+                    {"v": NULL},
+                    {"v": NULL}
                 ]
             }
         }
-        self.utils.execute_es_tests(test)
+        self.utils.execute_tests(test)
 
 
 

@@ -21,6 +21,7 @@
 		"port": 9200,
 		"index": "active_data_requests",
 		"type": "request_log",
+		"tjson": false,
 		"schema": {
 			"$ref": "//../../resources/schema/request_log.schema.json"
 		}

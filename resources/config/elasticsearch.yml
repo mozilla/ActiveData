@@ -1,43 +1,40 @@
-cluster.name: active-data
-node.zone: spot
-node.name: coordinator2
+node.name: coordinator6
 node.master: true
 node.data: false
+node.ingest: true
+node.attr.zone: spot
 
-script.inline: on
-script.indexed: on
+cluster.name: ActiveData-es6
 
 cluster.routing.allocation.awareness.attributes: zone
+cluster.routing.allocation.enable: none
 cluster.routing.allocation.cluster_concurrent_rebalance: 1
 cluster.routing.allocation.node_concurrent_recoveries: 1
 
-bootstrap.mlockall: true
-cloud:
-    aws:
-        region: us-west-2
-        protocol: https
-        ec2:
-            protocol: https
-discovery.type: ec2
-discovery.zen.publish_timeout: 60
-discovery.zen.ping.multicast.enabled: false
-discovery.zen.minimum_master_nodes: 1
+thread_pool.bulk.queue_size: 3000
+thread_pool.index.queue_size: 1000
 
-index.number_of_shards: 1
-index.number_of_replicas: 1
-index.translog.interval: 60s
-index.translog.flush_threshold_size: 1gb
-
-indices.memory.index_buffer_size: 20%
-indices.recovery.concurrent_streams: 1
 indices.recovery.max_bytes_per_sec: 1000mb
 
-http.compression: true
-http.cors.allow-origin: "/.*/"
-http.cors.enabled: true
-http.compression: true
-http.max_content_length: 1000mb
-http.timeout: 600
+script.painless.regex.enabled: true
+script.max_compilations_rate: 10000/1m
 
-threadpool.bulk.queue_size: 3000
-threadpool.index.queue_size: 1000
+bootstrap.memory_lock: true
+path.data: /data1
+path.logs: /data1/logs
+
+discovery:
+    ec2:
+        endpoint: us-west-2
+        protocol: https
+        groups: sg-c69186bb
+
+discovery.zen.minimum_master_nodes: 1
+discovery.zen.ping.unicast.hosts: 172.31.1.240
+
+http.compression: true
+http.cors.enabled: true
+http.cors.allow-origin: "*"
+http.max_content_length: 1000mb
+
+network.host : _site_, _local_

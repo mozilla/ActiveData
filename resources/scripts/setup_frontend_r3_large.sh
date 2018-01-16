@@ -18,13 +18,24 @@
 
 sudo yum -y update
 
-# ORACLE'S JAVA VERISON 8 IS APPARENTLY MUCH FASTER
-# YOU MUST AGREE TO ORACLE'S LICENSE TERMS TO USE THIS COMMAND
+
+# SETUP EPHEMERAL DRIVE
+
+sudo mount /dev/sdb
+yes | sudo mkfs -t ext4 /dev/sdb
+sudo mkdir /data1
+sudo mount /dev/sdb /data1
+sudo sed -i '$ a\\/dev/sdb   /data1       ext4    defaults,nofail  0   2' /etc/fstab
+sudo mount -a
+
+
+# PUT A COPY OF THE JRE INTO THIS TEMP DIR
 cd /home/ec2-user/
 mkdir temp
 cd temp
-wget -c --no-cookies --no-check-certificate --header "Cookie: s_cc=true; s_nr=1425654197863; s_sq=%5B%5BB%5D%5D; oraclelicense=accept-securebackup-cookie; gpw_e24=http%3A%2F%2Fwww.oracle.com%2Ftechnetwork%2Fjava%2Fjavase%2Fdownloads%2Fjre8-downloads-2133155.html" "http://download.oracle.com/otn-pub/java/jdk/8u40-b25/jre-8u40-linux-x64.rpm" --output-document="jdk-8u5-linux-x64.rpm"
-sudo rpm -i jdk-8u5-linux-x64.rpm
+
+# INSTALL JAVA 8
+sudo rpm -i jre-8u131-linux-x64.rpm
 sudo alternatives --install /usr/bin/java java /usr/java/default/bin/java 20000
 export JAVA_HOME=/usr/java/default
 
@@ -33,21 +44,20 @@ java -version
 
 # INSTALL ELASTICSEARCH
 cd /home/ec2-user/
-wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.7.1.tar.gz
-tar zxfv elasticsearch-1.7.1.tar.gz
+wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.1.2.tar.gz
+tar zxfv elasticsearch-6.1.2.tar.gz
 sudo mkdir /usr/local/elasticsearch
-sudo cp -R elasticsearch-1.7.1/* /usr/local/elasticsearch/
+sudo cp -R elasticsearch-6.1.2/* /usr/local/elasticsearch/
+rm -fr elasticsearch*
 
 
+# INSTALL CLOUD PLUGIN
 cd /usr/local/elasticsearch/
+sudo bin/elasticsearch-plugin install -b discovery-ec2
 
-# BE SURE TO MATCH THE PLUGIN WITH ES VERSION
-# https://github.com/elasticsearch/elasticsearch-cloud-aws
-sudo bin/plugin install elasticsearch/elasticsearch-cloud-aws/2.7.1
-
-
-#ES HEAD IS WONDERFUL!
-sudo bin/plugin install mobz/elasticsearch-head
+sudo rm -f /usr/local/elasticsearch/config/elasticsearch.yml
+sudo rm -f /usr/local/elasticsearch/config/jvm.options
+sudo rm -f /usr/local/elasticsearch/config/log4j2.properties
 
 
 #INSTALL GIT
@@ -57,15 +67,7 @@ sudo yum install -y git-core
 #INSTALL PYTHON27
 sudo yum -y install python27
 
-rm -fr /home/ec2-user/temp
-mkdir  /home/ec2-user/temp
-cd /home/ec2-user/temp
-wget https://bootstrap.pypa.io/get-pip.py
-sudo python27 get-pip.py
-sudo rm /usr/bin/pip
-sudo ln -s /usr/local/bin/pip /usr/bin/pip
-
-#INSTALL MODIFIED SUPERVISOR
+#INSTALL SUPERVISOR
 sudo yum install -y libffi-devel
 sudo yum install -y openssl-devel
 sudo yum groupinstall -y "Development tools"
@@ -74,14 +76,14 @@ sudo pip install pyopenssl
 sudo pip install ndg-httpsclient
 sudo pip install pyasn1
 sudo pip install requests
-sudo pip install supervisor-plus-cron
+sudo pip install supervisor
 
 cd /usr/bin
 sudo ln -s /usr/local/bin/supervisorctl supervisorctl
 
 
 #INSTALL gunicorn
-sudo pip install -y gunicorn
+sudo pip install gunicorn
 
 #INSTALL nginx
 sudo yum install -y nginx
@@ -89,9 +91,10 @@ sudo yum install -y nginx
 sudo chown -R ec2-user:ec2-user /var/lib/nginx/
 
 # SIMPLE PLACE FOR LOGS
-mkdir ~/logs
+chown ec2-user:ec2-user -R /data1
+mkdir /data1/logs
 cd /
-sudo ln -s /home/ec2-user/logs logs
+ln -s  /data1/logs /home/ec2-user/logs
 
 
 # CLONE ACTIVEDATA
@@ -99,7 +102,7 @@ cd ~
 git clone https://github.com/klahnakoski/ActiveData.git
 
 cd ~/ActiveData/
-git checkout master
+git checkout frontend6
 sudo pip install -r requirements.txt
 
 

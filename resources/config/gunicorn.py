@@ -4,9 +4,9 @@ backlog = 64
 workers = 20
 timeout = 24*60*60
 
-accesslog = "/logs/gunicorn_access.log"
-errorlog = "/logs/gunicorn_error.log"
-logfile = "/logs/gunicorn_debug.log"
+accesslog = "/data1/logs/gunicorn_access.log"
+errorlog = "/data1/logs/gunicorn_error.log"
+logfile = "/data1/logs/gunicorn_debug.log"
 
 access_log_format = '{' \
                     '"remote_addr": "%(h)s",' \

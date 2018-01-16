@@ -43,7 +43,8 @@
 				"log_type": "ses",
 				"from_address": "klahnakoski@mozilla.com",
 				"to_address": "klahnakoski@mozilla.com",
-				"subject": "[ALERT][STAGING] Problem in ActiveData Frontend"
+				"subject": "[ALERT][STAGING] Problem in ActiveData Frontend",
+				"$ref": "~/private.json"
 			}
 		]
 	}

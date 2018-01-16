@@ -79,7 +79,7 @@ class URL(object):
             if not _Log:
                 _late_import()
 
-            _Log.error("problem parsing {{value}} to URL", value=value, cause=e)
+            _Log.error(u"problem parsing {{value}} to URL", value=value, cause=e)
 
     def __nonzero__(self):
         if self.scheme or self.host or self.port or self.path or self.query or self.fragment:
@@ -201,7 +201,7 @@ def value2url_param(value):
         _late_import()
 
     if value == None:
-        _Log.error("Can not encode None into a URL")
+        _Log.error(u"Can not encode None into a URL")
 
     if isinstance(value, Mapping):
         value_ = wrap(value)

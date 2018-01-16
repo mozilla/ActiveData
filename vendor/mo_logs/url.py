@@ -63,7 +63,7 @@ class URL(object):
 
             if value.startswith("file://") or value.startswith("//"):
                 # urlparse DOES NOT WORK IN THESE CASES
-                scheme, suffix = value.split("//", 2)
+                scheme, suffix = value.split("//", 1)
                 self.scheme = scheme.rstrip(":")
                 parse(self, suffix, 0, 1)
                 self.query = wrap(url_param2value(self.query))

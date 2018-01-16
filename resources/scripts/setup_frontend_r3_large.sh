@@ -20,7 +20,6 @@ sudo yum -y update
 
 
 # SETUP EPHEMERAL DRIVE
-
 sudo mount /dev/sdb
 yes | sudo mkfs -t ext4 /dev/sdb
 sudo mkdir /data1
@@ -28,6 +27,24 @@ sudo mount /dev/sdb /data1
 sudo sed -i '$ a\\/dev/sdb   /data1       ext4    defaults,nofail  0   2' /etc/fstab
 sudo mount -a
 
+#INCREASE FILE LIMITS
+
+sudo sed -i '$ a\fs.file-max = 100000' /etc/sysctl.conf
+sudo sed -i '$ a\vm.max_map_count = 262144' /etc/sysctl.conf
+
+sudo sed -i '$ a\root soft nofile 100000' /etc/security/limits.conf
+sudo sed -i '$ a\root hard nofile 100000' /etc/security/limits.conf
+sudo sed -i '$ a\root soft memlock unlimited' /etc/security/limits.conf
+sudo sed -i '$ a\root hard memlock unlimited' /etc/security/limits.conf
+
+sudo sed -i '$ a\ec2-user soft nofile 100000' /etc/security/limits.conf
+sudo sed -i '$ a\ec2-user hard nofile 100000' /etc/security/limits.conf
+sudo sed -i '$ a\ec2-user soft memlock unlimited' /etc/security/limits.conf
+sudo sed -i '$ a\ec2-user hard memlock unlimited' /etc/security/limits.conf
+
+#HAVE CHANGES TAKE EFFECT
+sudo sysctl -p
+sudo su ec2-user
 
 # PUT A COPY OF THE JRE INTO THIS TEMP DIR
 cd /home/ec2-user/
@@ -111,7 +128,7 @@ sudo pip install -r requirements.txt
 ###############################################################################
 
 # ELASTICSEARCH CONFIG
-chown -R ec2-user:ec2-user /usr/local/elasticsearch
+sudo chown -R ec2-user:ec2-user /usr/local/elasticsearch
 cp ~/ActiveData/resources/config/elasticsearch.yml     /usr/local/elasticsearch/config/elasticsearch.yml
 cp ~/ActiveData/resources/config/es6_jvm.options       /usr/local/elasticsearch/config/jvm.options
 cp ~/ActiveData/resources/config/es6_log4j2.properties /usr/local/elasticsearch/config/log4j2.properties
@@ -128,7 +145,7 @@ sudo /usr/local/bin/supervisorctl update
 
 
 #NGINX CONFIG
-sudo cp ~/ActiveData/resources/config/nginx.conf /etc/nginx/nginx.conf
+sudo cp ~/ActiveData/resources/config/nginx_testing.conf /etc/nginx/nginx.conf
 
 sudo /etc/init.d/nginx start
 

@@ -192,16 +192,20 @@ SCHEMA = {
             },
             "properties": {
                 "create_time": {
-                    "type": "double"
+                    "type": "double",
+                    "store": True
                 },
                 "last_used": {
-                    "type": "double"
+                    "type": "double",
+                    "store": True
                 },
                 "hash": {
-                    "type": "keyword"
+                    "type": "keyword",
+                    "store": True
                 },
                 "query": {
-                    "type": "text"
+                    "type": "text",
+                    "store": True
                 }
             }
         }

@@ -3,13 +3,16 @@
 		"pyLibrary.env.http.default_headers": {
 			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
 		},
- 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000
+		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
+		"jx_elasticsearch.meta.ENABLE_META_SCAN": true,
+		"jx_base.expressions.ALLOW_SCRIPTING": true
 	},
 	"request_logs": {
 		"host": "http://localhost",
 		"port": 9200,
 		"index": "activedata_requests",
 		"type": "request_log",
+		"tjson": false,
 		"schema": {
 			"$ref": "//../schema/request_log.schema.json"
 		}
@@ -21,6 +24,7 @@
 		"type": "query",
 		"debug": true
 	},
+	"use": "elasticsearch",
 	"elasticsearch": {
 		"host": "http://localhost",
 		"port": 9200,
@@ -34,14 +38,13 @@
 		"log": [
 			{
 				"log_type": "console"
+			},
+			{
+				"log_type": "ses",
+				"from_address": "klahnakoski@mozilla.com",
+				"to_address": "klahnakoski@mozilla.com",
+				"subject": "[ALERT][STAGING] Problem in ActiveData Frontend"
 			}
-//			{
-//				"class": "logging.handlers.RotatingFileHandler",
-//				"filename": "/data1/logs/active_data.log",
-//				"maxBytes": 10000000,
-//				"backupCount": 10,
-//				"encoding": "utf8"
-//			}
 		]
 	}
 

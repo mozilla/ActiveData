@@ -90,7 +90,8 @@ def setup():
             {
                 "name": "app_name",
                 "help": "gunicorn supplied argument",
-                "type": str
+                "type": str,
+                "required": False
             }
         ],
         env_filename=os.environ.get('ACTIVEDATA_CONFIG')
@@ -147,7 +148,7 @@ def run_gunicorn():
             return app
 
         def load_config(self):
-            pass 
+            pass
 
     print("run run")
     GunicornApp().run()

@@ -74,7 +74,7 @@ def _default(path):
     )
 
 
-def setup(settings=None):
+def setup():
     global config
 
     try:
@@ -87,7 +87,7 @@ def setup(settings=None):
                 "default": 0,
                 "required": False
             },
-            filename=settings | os.environ.get('ACTIVEDATA_CONFIG')
+            filename=os.environ.get('ACTIVEDATA_CONFIG')
         )
         constants.set(config.constants)
         Log.start(config.debug)

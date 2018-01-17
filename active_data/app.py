@@ -197,6 +197,8 @@ def _exit():
     )
 
 
+print("app loaded with " + __name__)
+
 if __name__ == "__main__":
     try:
         print("start")

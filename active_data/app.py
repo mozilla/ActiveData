@@ -86,13 +86,13 @@ def setup():
                 "dest": "process_num",
                 "default": 0,
                 "required": False
+            },
+            {
+                "name": "app_name",
+                "help": "gunicorn supplied argument",
+                "type": str,
+                "required": False
             }
-            # {
-            #     "name": "app_name",
-            #     "help": "gunicorn supplied argument",
-            #     "type": str,
-            #     "required": False
-            # }
         ],
         env_filename=os.environ.get('ACTIVEDATA_CONFIG')
     )
@@ -222,11 +222,9 @@ if __name__ in ("__main__", "active_data.app"):
         if config.flask:
             run_flask()
         else:
-            run_gunicorn()
+            pass
+            # run_gunicorn()
     except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
         Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
     finally:
         Log.stop()
-
-    sys.exit(0)
-

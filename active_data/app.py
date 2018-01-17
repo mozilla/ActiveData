@@ -135,7 +135,9 @@ def setup():
             setup_ssl()
 
         print('setup complete')
-    except Exception, e:
+    except Exception as e:
+        print('ERROR')
+
         print('ERROR' + str(e))
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
 

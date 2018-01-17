@@ -80,6 +80,9 @@ def read_settings(filename=None, defs=None, env_filename=None):
             "required": False
         })
         args = argparse(defs)
+
+        print("parsed args")
+
         if env_filename:
             args.filename = env_filename
         settings = mo_json_config.get("file://" + args.filename.replace(os.sep, "/"))

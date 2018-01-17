@@ -191,10 +191,12 @@ def _exit():
     )
 
 
-try:
-    setup()
-    app.run(**config.flask)
-finally:
-    Log.stop()
+if __name__ in ("__main__", "active_data.app"):
+    try:
+        setup()
+        app.run(**config.flask)
+    finally:
+        Log.stop()
 
-sys.exit(0)
+    sys.exit(0)
+

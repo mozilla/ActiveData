@@ -41,7 +41,7 @@ from mo_dots import listwrap, wrap, unwrap
 
 class _ArgParser(_argparse.ArgumentParser):
     def error(self, message):
-        Log.error("argparse error: {{error}}", message)
+        Log.error("argparse error: {{error}}", error=message)
 
 
 def argparse(defs):

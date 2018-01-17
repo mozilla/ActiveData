@@ -196,14 +196,10 @@ def _exit():
         }
     )
 
-print("name is "+__name__)
 if __name__ in ("__main__", "active_data.app"):
     try:
-        print("setup")
         setup()
-        print("flask = "+config.flask)
-        if not config.flask:
-            print("run app")
+        if config.flask:
             app.run(**config.flask)
     finally:
         Log.stop()

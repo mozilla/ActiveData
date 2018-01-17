@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import os
 import sys
 from _ssl import PROTOCOL_SSLv23
 from collections import Mapping
@@ -17,9 +18,9 @@ from ssl import SSLContext
 from tempfile import NamedTemporaryFile
 
 import flask
-import os
 from flask import Flask
 from werkzeug.contrib.fixers import HeaderRewriterFix
+from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.wrappers import Response
 
 import active_data
@@ -41,6 +42,7 @@ from pyLibrary.env import elasticsearch
 OVERVIEW = File("active_data/public/index.html").read()
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app)
 config = None
 
 

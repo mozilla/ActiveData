@@ -23,7 +23,6 @@ from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
 import active_data
-import jx_base
 from active_data import record_request, cors_wrapper
 from active_data.actions import save_query
 from active_data.actions.json import get_raw_json
@@ -101,9 +100,6 @@ def setup():
         constants.set(config.constants)
         Log.start(config.debug)
 
-        if config.args.process_num and config.flask.port:
-            config.flask.port += config.args.process_num
-
         # PIPE REQUEST LOGS TO ES DEBUG
         if config.request_logs:
             request_logger = elasticsearch.Cluster(config.request_logs).get_or_create_index(config.request_logs)
@@ -115,27 +111,46 @@ def setup():
             "settings": config.elasticsearch.copy()
         }
 
-        # TURN ON /exit FOR WINDOWS DEBUGGING
-        if config.flask.debug or config.flask.allow_exit:
-            config.flask.allow_exit = None
-            Log.warning("ActiveData is in debug mode")
-            app.add_url_rule('/exit', 'exit', _exit)
-
         # TRIGGER FIRST INSTANCE
         if config.saved_queries:
             setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
 
-        if config.flask.ssl_context:
-            if config.args.process_num:
-                Log.error("can not serve ssl and multiple Flask instances at once")
-            setup_ssl()
 
     except BaseException as e:  # MUST CATCH BaseException BECAUSE gunicorn LIKES TO EXIT THAT WAY, AND NOT REPORT
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
 
 
-def setup_ssl():
+def run_flask():
+    if config.flask.port and config.args.process_num:
+        config.flask.port += config.args.process_num
+
+    # TURN ON /exit FOR WINDOWS DEBUGGING
+    if config.flask.debug or config.flask.allow_exit:
+        config.flask.allow_exit = None
+        Log.warning("ActiveData is in debug mode")
+        app.add_url_rule('/exit', 'exit', _exit)
+
+    if config.flask.ssl_context:
+        if config.args.process_num:
+            Log.error("can not serve ssl and multiple Flask instances at once")
+        setup_flask_ssl()
+
+    app.run(**config.flask)
+
+
+def run_gunicorn():
+    from gunicorn.app.base import BaseApplication
+
+    class GunicornApp(BaseApplication):
+
+        def load(self):
+            return app
+
+    GunicornApp().run()
+
+
+def setup_flask_ssl():
     config.flask.ssl_context = None
 
     if not config.flask.ssl_context:
@@ -196,11 +211,14 @@ def _exit():
         }
     )
 
+
 if __name__ in ("__main__", "active_data.app"):
     try:
         setup()
         if config.flask:
-            app.run(**config.flask)
+            run_flask()
+        else:
+            run_gunicorn()
     finally:
         Log.stop()
 

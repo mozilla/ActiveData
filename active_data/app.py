@@ -77,48 +77,44 @@ def _default(path):
 def setup():
     global config
 
-    try:
-        config = startup.read_settings(
-            defs=[
-                {
-                    "name": ["--process_num", "--process"],
-                    "help": "Additional port offset (for multiple Flask processes",
-                    "type": int,
-                    "dest": "process_num",
-                    "default": 0,
-                    "required": False
-                },
-                {
-                    "name": "app_name",
-                    "help": "gunicorn supplied argument",
-                    "type": str
-                }
-            ],
-            env_filename=os.environ.get('ACTIVEDATA_CONFIG')
-        )
+    config = startup.read_settings(
+        defs=[
+            {
+                "name": ["--process_num", "--process"],
+                "help": "Additional port offset (for multiple Flask processes",
+                "type": int,
+                "dest": "process_num",
+                "default": 0,
+                "required": False
+            },
+            {
+                "name": "app_name",
+                "help": "gunicorn supplied argument",
+                "type": str
+            }
+        ],
+        env_filename=os.environ.get('ACTIVEDATA_CONFIG')
+    )
 
-        constants.set(config.constants)
-        Log.start(config.debug)
+    constants.set(config.constants)
+    Log.start(config.debug)
 
-        # PIPE REQUEST LOGS TO ES DEBUG
-        if config.request_logs:
-            request_logger = elasticsearch.Cluster(config.request_logs).get_or_create_index(config.request_logs)
-            active_data.request_log_queue = request_logger.threaded_queue(max_size=2000)
+    # PIPE REQUEST LOGS TO ES DEBUG
+    if config.request_logs:
+        request_logger = elasticsearch.Cluster(config.request_logs).get_or_create_index(config.request_logs)
+        active_data.request_log_queue = request_logger.threaded_queue(max_size=2000)
 
-        # SETUP DEFAULT CONTAINER, SO THERE IS SOMETHING TO QUERY
-        container.config.default = {
-            "type": "elasticsearch",
-            "settings": config.elasticsearch.copy()
-        }
+    # SETUP DEFAULT CONTAINER, SO THERE IS SOMETHING TO QUERY
+    container.config.default = {
+        "type": "elasticsearch",
+        "settings": config.elasticsearch.copy()
+    }
 
-        # TRIGGER FIRST INSTANCE
-        if config.saved_queries:
-            setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
-        HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
+    # TRIGGER FIRST INSTANCE
+    if config.saved_queries:
+        setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
 
-
-    except BaseException as e:  # MUST CATCH BaseException BECAUSE gunicorn LIKES TO EXIT THAT WAY, AND NOT REPORT
-        Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
+    HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
 
 
 def run_flask():
@@ -214,11 +210,15 @@ def _exit():
 
 if __name__ in ("__main__", "active_data.app"):
     try:
+        print("setup")
         setup()
         if config.flask:
             run_flask()
         else:
+            print("run gunicorn")
             run_gunicorn()
+    except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
+        Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
     finally:
         Log.stop()
 

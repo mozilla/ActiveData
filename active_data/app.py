@@ -97,6 +97,7 @@ def setup():
         constants.set(config.constants)
         Log.start(config.debug)
 
+        print('1')
         if config.args.process_num and config.flask.port:
             config.flask.port += config.args.process_num
 
@@ -111,6 +112,8 @@ def setup():
             "settings": config.elasticsearch.copy()
         }
 
+        print('2')
+
         # TURN ON /exit FOR WINDOWS DEBUGGING
         if config.flask.debug or config.flask.allow_exit:
             config.flask.allow_exit = None
@@ -122,6 +125,8 @@ def setup():
             setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
 
+        print('3')
+
         if config.flask.ssl_context:
             if config.args.process_num:
                 Log.error("can not serve ssl and multiple Flask instances at once")
@@ -129,6 +134,7 @@ def setup():
 
         print('setup complete')
     except Exception, e:
+        print('ERROR' + str(e))
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
 
 

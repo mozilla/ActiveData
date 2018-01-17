@@ -20,7 +20,6 @@ from tempfile import NamedTemporaryFile
 import flask
 from flask import Flask
 from werkzeug.contrib.fixers import HeaderRewriterFix
-# from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.wrappers import Response
 
 import active_data
@@ -43,7 +42,6 @@ from pyLibrary.env import elasticsearch
 OVERVIEW = File("active_data/public/index.html").read()
 
 app = Flask(__name__)
-# app.wsgi_app = ProxyFix(app.wsgi_app)
 config = None
 
 

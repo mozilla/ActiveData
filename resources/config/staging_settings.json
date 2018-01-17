@@ -45,6 +45,13 @@
 				"to_address": "klahnakoski@mozilla.com",
 				"subject": "[ALERT][STAGING] Problem in ActiveData Frontend6",
 				"$ref": "file://~/private.json#aws_credentials"
+			},
+			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "/data1/logs/active_data.log",
+				"maxBytes": 10000000,
+				"backupCount": 10,
+				"encoding": "utf8"
 			}
 		]
 	}

@@ -40,14 +40,20 @@ from mo_dots import listwrap, wrap, unwrap
 
 
 def argparse(defs):
+    print("argparse 1")
     parser = _argparse.ArgumentParser()
+    print("argparse 2")
     for d in listwrap(defs):
+        print("argparse n")
         args = d.copy()
         name = args.name
         args.name = None
         parser.add_argument(*unwrap(listwrap(name)), **args)
+    print("argparse 3")
     namespace = parser.parse_args()
+    print("argparse 4")
     output = {k: getattr(namespace, k) for k in vars(namespace)}
+    print("argparse 5")
     return wrap(output)
 
 

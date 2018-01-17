@@ -191,6 +191,8 @@ def _exit():
     )
 
 
+print("running with "+__name__)
+
 if __name__ in ("__main__", "active_data.app"):
     try:
         setup()

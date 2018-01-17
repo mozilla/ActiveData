@@ -39,21 +39,20 @@ from mo_dots import listwrap, wrap, unwrap
 # dest - The name of the attribute to be added to the object returned by parse_args().
 
 
+class _ArgParser(_argparse.ArgumentParser):
+    def error(self, message):
+        Log.error("argparse error: {{error}}", message)
+
+
 def argparse(defs):
-    print("argparse 1")
-    parser = _argparse.ArgumentParser()
-    print("argparse 2")
+    parser = _ArgParser()
     for d in listwrap(defs):
-        print("argparse n")
         args = d.copy()
         name = args.name
         args.name = None
         parser.add_argument(*unwrap(listwrap(name)), **args)
-    print("argparse 3")
     namespace = parser.parse_args()
-    print("argparse 4")
     output = {k: getattr(namespace, k) for k in vars(namespace)}
-    print("argparse 5")
     return wrap(output)
 
 

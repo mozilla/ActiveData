@@ -135,10 +135,7 @@ def setup():
             setup_ssl()
 
         print('setup complete')
-    except BaseException as e:
-        print('ERROR')
-
-        print('ERROR' + str(e))
+    except BaseException as e:  # MUST CATCH BaseException BECAUSE gunicorn LIKES TO EXIT THAT WAY, AND NOT REPORT
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
 
 

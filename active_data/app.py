@@ -94,7 +94,9 @@ def setup():
             env_filename=os.environ.get('ACTIVEDATA_CONFIG')
         )
 
+        print('0.1')
         constants.set(config.constants)
+        print('0.2')
         Log.start(config.debug)
 
         print('1')

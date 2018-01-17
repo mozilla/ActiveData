@@ -86,13 +86,13 @@ def setup():
                 "dest": "process_num",
                 "default": 0,
                 "required": False
-            },
-            {
-                "name": "app_name",
-                "help": "gunicorn supplied argument",
-                "type": str,
-                "required": False
             }
+            # {
+            #     "name": "app_name",
+            #     "help": "gunicorn supplied argument",
+            #     "type": str,
+            #     "required": False
+            # }
         ],
         env_filename=os.environ.get('ACTIVEDATA_CONFIG')
     )

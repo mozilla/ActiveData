@@ -127,7 +127,7 @@ def setup():
                 Log.error("can not serve ssl and multiple Flask instances at once")
             setup_ssl()
 
-        return app
+        print('setup complete')
     except Exception, e:
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
 
@@ -200,8 +200,10 @@ if __name__ in ("__main__", "active_data.app"):
     try:
         print("calling setup")
         setup()
+        print("calling run")
         app.run(**config.flask)
     finally:
+        print("done")
         Log.stop()
 
     sys.exit(0)

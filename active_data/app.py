@@ -79,6 +79,9 @@ def setup():
     global config
 
     try:
+
+        print('ACTIVEDATA_CONFIG = '+os.environ.get('ACTIVEDATA_CONFIG'))
+
         config = startup.read_settings(
             defs={
                 "name": ["--process_num", "--process"],
@@ -195,6 +198,7 @@ print("running with "+__name__)
 
 if __name__ in ("__main__", "active_data.app"):
     try:
+        print("calling setup")
         setup()
         app.run(**config.flask)
     finally:

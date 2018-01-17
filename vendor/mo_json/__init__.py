@@ -322,7 +322,7 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
 
 
 def bytes2hex(value, separator=" "):
-    return separator.join('{:02X}'.format(x) for x in value)
+    return separator.join('{:02X}'.format(ord(x)) for x in value)
 
 
 def utf82unicode(value):

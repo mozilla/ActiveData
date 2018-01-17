@@ -24,6 +24,7 @@ from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
 import active_data
+import jx_base
 from active_data import record_request, cors_wrapper
 from active_data.actions import save_query
 from active_data.actions.json import get_raw_json
@@ -123,6 +124,9 @@ def setup():
             if config.args.process_num:
                 Log.error("can not serve ssl and multiple Flask instances at once")
             setup_ssl()
+
+        if not jx_base.container.config.default.settings:
+            Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
 
         return app
     except Exception, e:

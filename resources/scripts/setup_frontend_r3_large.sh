@@ -149,6 +149,6 @@ sudo cp ~/ActiveData/resources/config/nginx_testing.conf /etc/nginx/nginx.conf
 
 sudo /etc/init.d/nginx start
 
-more /logs/nginx.pid
+more /data1/logs/nginx.pid
 
 

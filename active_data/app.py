@@ -40,7 +40,20 @@ from pyLibrary.env import elasticsearch
 
 OVERVIEW = File("active_data/public/index.html").read()
 
-flask_app = Flask(__name__)
+
+class ActiveDataApp(Flask):
+
+    def run(self, *args, **kwargs):
+        # ENSURE THE LOGGING IS CLEANED UP
+        try:
+            Flask.run(self, *args, **kwargs)
+        except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
+            Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
+        finally:
+            Log.stop()
+
+flask_app = ActiveDataApp(__name__)
+
 config = None
 
 
@@ -135,36 +148,6 @@ def run_flask():
     flask_app.run(**config.flask)
 
 
-
-gunicorn_app = None
-
-
-def setup_gunicorn():
-    global gunicorn_app
-    from gunicorn.app.base import BaseApplication
-
-    print("make class")
-    class GunicornApp(BaseApplication):
-
-        def load(self):
-            print("return app")
-
-            return flask_app
-
-        def load_config(self):
-            pass
-
-        def run(self):
-            try:
-                BaseApplication.run(self)
-            except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
-                Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
-            finally:
-                Log.stop()
-
-    gunicorn_app = GunicornApp()
-
-
 def setup_flask_ssl():
     config.flask.ssl_context = None
 
@@ -237,11 +220,4 @@ if __name__ in ("__main__", "active_data.app"):
             Log.stop()
 
     if config.flask:
-        try:
-            run_flask()
-        except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
-            Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
-        finally:
-            Log.stop()
-    else:
-        setup_gunicorn()
+        run_flask()

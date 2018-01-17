@@ -95,14 +95,13 @@ def setup():
                 {
                     "name": "app_name",
                     "help": "gunicorn supplied argument",
-                    "type": str,
-                    "required": False
+                    "type": str
                 }
             ],
             env_filename=os.environ.get('ACTIVEDATA_CONFIG')
         )
 
-        print('0.1')
+        print('0.1 - app_name='+config.app_name)
         constants.set(config.constants)
         print('0.2')
         Log.start(config.debug)

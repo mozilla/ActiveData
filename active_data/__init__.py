@@ -64,7 +64,3 @@ def cors_wrapper(func):
     output.provide_automatic_options = False
     output.__name__ = func.__name__
     return output
-
-
-from active_data import app
-

@@ -79,9 +79,6 @@ def setup():
     global config
 
     try:
-
-        print('ACTIVEDATA_CONFIG = '+os.environ.get('ACTIVEDATA_CONFIG'))
-
         config = startup.read_settings(
             defs=[
                 {
@@ -101,12 +98,9 @@ def setup():
             env_filename=os.environ.get('ACTIVEDATA_CONFIG')
         )
 
-        print('0.1 - app_name='+config.app_name)
         constants.set(config.constants)
-        print('0.2')
         Log.start(config.debug)
 
-        print('1')
         if config.args.process_num and config.flask.port:
             config.flask.port += config.args.process_num
 
@@ -121,8 +115,6 @@ def setup():
             "settings": config.elasticsearch.copy()
         }
 
-        print('2')
-
         # TURN ON /exit FOR WINDOWS DEBUGGING
         if config.flask.debug or config.flask.allow_exit:
             config.flask.allow_exit = None
@@ -134,14 +126,11 @@ def setup():
             setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
         HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
 
-        print('3')
-
         if config.flask.ssl_context:
             if config.args.process_num:
                 Log.error("can not serve ssl and multiple Flask instances at once")
             setup_ssl()
 
-        print('setup complete')
     except BaseException as e:  # MUST CATCH BaseException BECAUSE gunicorn LIKES TO EXIT THAT WAY, AND NOT REPORT
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
 
@@ -208,16 +197,11 @@ def _exit():
     )
 
 
-print("running with "+__name__)
-
 if __name__ in ("__main__", "active_data.app"):
     try:
-        print("calling setup")
         setup()
-        print("calling run")
         app.run(**config.flask)
     finally:
-        print("done")
         Log.stop()
 
     sys.exit(0)

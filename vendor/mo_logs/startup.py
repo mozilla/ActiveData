@@ -64,7 +64,6 @@ def read_settings(filename=None, defs=None, env_filename=None):
     :return:
     """
     # READ SETTINGS
-    print("reading settings")
     if filename:
         settings_file = File(filename)
         if not settings_file.exists:
@@ -76,9 +75,7 @@ def read_settings(filename=None, defs=None, env_filename=None):
             settings.args = argparse(defs)
         return settings
     else:
-        print("reading settings 1")
         defs = listwrap(defs)
-        print("reading settings 2")
         defs.append({
             "name": ["--config", "--settings", "--settings-file", "--settings_file"],
             "help": "path to JSON file with settings",
@@ -87,10 +84,7 @@ def read_settings(filename=None, defs=None, env_filename=None):
             "default": "./config.json",
             "required": False
         })
-        print("reading settings 3")
         args = argparse(defs)
-
-        print("parsed args")
 
         if env_filename:
             args.filename = env_filename

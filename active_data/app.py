@@ -127,6 +127,8 @@ def setup():
 
         if not jx_base.container.config.default.settings:
             Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
+        else:
+            Log.note("we got {{config}}", config=jx_base.container.config.default)
 
         return app
     except Exception, e:

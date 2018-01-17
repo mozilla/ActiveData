@@ -138,11 +138,18 @@ def run_flask():
 def run_gunicorn():
     from gunicorn.app.base import BaseApplication
 
+    print("make class")
     class GunicornApp(BaseApplication):
 
         def load(self):
+            print("return app")
+
             return app
 
+        def load_config(self):
+            pass 
+
+    print("run run")
     GunicornApp().run()
 
 
@@ -210,12 +217,10 @@ def _exit():
 
 if __name__ in ("__main__", "active_data.app"):
     try:
-        print("setup")
         setup()
         if config.flask:
             run_flask()
         else:
-            print("run gunicorn")
             run_gunicorn()
     except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
         Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)

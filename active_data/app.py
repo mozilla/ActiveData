@@ -90,6 +90,8 @@ def setup():
             },
             filename=os.environ.get('ACTIVEDATA_CONFIG')
         )
+        print("got config")
+
         constants.set(config.constants)
         Log.start(config.debug)
 
@@ -197,6 +199,7 @@ def _exit():
 
 if __name__ == "__main__":
     try:
+        print("start")
         setup()
         app.run(**config.flask)
     finally:

@@ -231,9 +231,10 @@ if __name__ in ("__main__", "active_data.app"):
     try:
         setup()
     except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
-        Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
-    finally:
-        Log.stop()
+        try:
+            Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
+        finally:
+            Log.stop()
 
     if config.flask:
         try:

@@ -90,7 +90,6 @@ def setup():
             },
             env_filename=os.environ.get('ACTIVEDATA_CONFIG')
         )
-        print("got config")
 
         constants.set(config.constants)
         Log.start(config.debug)
@@ -124,11 +123,6 @@ def setup():
             if config.args.process_num:
                 Log.error("can not serve ssl and multiple Flask instances at once")
             setup_ssl()
-
-        if not jx_base.container.config.default.settings:
-            Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
-        else:
-            Log.note("we got {{config}}", config=jx_base.container.config.default)
 
         return app
     except Exception, e:
@@ -197,15 +191,10 @@ def _exit():
     )
 
 
-print("app loaded with " + __name__)
+try:
+    setup()
+    app.run(**config.flask)
+finally:
+    Log.stop()
 
-if __name__ == "__main__":
-    try:
-        print("start")
-        setup()
-        app.run(**config.flask)
-    finally:
-        Log.stop()
-
-    sys.exit(0)
-
+sys.exit(0)

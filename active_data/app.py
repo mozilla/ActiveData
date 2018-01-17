@@ -83,14 +83,22 @@ def setup():
         print('ACTIVEDATA_CONFIG = '+os.environ.get('ACTIVEDATA_CONFIG'))
 
         config = startup.read_settings(
-            defs={
-                "name": ["--process_num", "--process"],
-                "help": "Additional port offset (for multiple Flask processes",
-                "type": int,
-                "dest": "process_num",
-                "default": 0,
-                "required": False
-            },
+            defs=[
+                {
+                    "name": ["--process_num", "--process"],
+                    "help": "Additional port offset (for multiple Flask processes",
+                    "type": int,
+                    "dest": "process_num",
+                    "default": 0,
+                    "required": False
+                },
+                {
+                    "name": "app_name",
+                    "help": "gunicorn supplied argument",
+                    "type": str,
+                    "required": False
+                }
+            ],
             env_filename=os.environ.get('ACTIVEDATA_CONFIG')
         )
 

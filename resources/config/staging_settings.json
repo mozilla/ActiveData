@@ -1,22 +1,17 @@
 {
-	"flask": {
-		"host": "0.0.0.0",
-		"port": 8080,
-		"debug": false,
-		"threaded": true,
-		"processes": 1
-	},
 	"constants": {
 		"pyLibrary.env.http.default_headers": {
 			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
 		},
- 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000
+		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
+		"jx_elasticsearch.meta.ENABLE_META_SCAN": false
 	},
 	"request_logs": {
 		"host": "http://localhost",
 		"port": 9200,
 		"index": "activedata_requests",
 		"type": "request_log",
+		"tjson": false,
 		"schema": {
 			"$ref": "//../schema/request_log.schema.json"
 		}
@@ -28,6 +23,7 @@
 		"type": "query",
 		"debug": true
 	},
+	"use": "elasticsearch",
 	"elasticsearch": {
 		"host": "http://localhost",
 		"port": 9200,
@@ -41,14 +37,21 @@
 		"log": [
 			{
 				"log_type": "console"
+			},
+			{
+				"log_type": "ses",
+				"from_address": "klahnakoski@mozilla.com",
+				"to_address": "klahnakoski@mozilla.com",
+				"subject": "[ALERT][STAGING] Problem in ActiveData Frontend6",
+				"$ref": "file://~/private.json#aws_credentials"
+			},
+			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "/data1/logs/activedata.log",
+				"maxBytes": 10000000,
+				"backupCount": 10,
+				"encoding": "utf8"
 			}
-//			{
-//				"class": "logging.handlers.RotatingFileHandler",
-//				"filename": "/logs/active_data.log",
-//				"maxBytes": 10000000,
-//				"backupCount": 10,
-//				"encoding": "utf8"
-//			}
 		]
 	}
 

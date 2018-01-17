@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import os
 import sys
 from _ssl import PROTOCOL_SSLv23
 from collections import Mapping
@@ -39,27 +40,40 @@ from pyLibrary.env import elasticsearch
 
 OVERVIEW = File("active_data/public/index.html").read()
 
-app = Flask(__name__)
+
+class ActiveDataApp(Flask):
+
+    def run(self, *args, **kwargs):
+        # ENSURE THE LOGGING IS CLEANED UP
+        try:
+            Flask.run(self, *args, **kwargs)
+        except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
+            Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
+        finally:
+            Log.stop()
+
+flask_app = ActiveDataApp(__name__)
+
 config = None
 
 
-@app.route('/', defaults={'path': ''}, methods=['OPTIONS', 'HEAD'])
-@app.route('/<path:path>', methods=['OPTIONS', 'HEAD'])
+@flask_app.route('/', defaults={'path': ''}, methods=['OPTIONS', 'HEAD'])
+@flask_app.route('/<path:path>', methods=['OPTIONS', 'HEAD'])
 @cors_wrapper
 def _head(path):
     return Response(b'', status=200)
 
-app.add_url_rule('/tools/<path:filename>', None, download)
-app.add_url_rule('/find/<path:hash>', None, find_query)
-app.add_url_rule('/query', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
-app.add_url_rule('/query/', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
-app.add_url_rule('/sql', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
-app.add_url_rule('/sql/', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
-app.add_url_rule('/query/<path:path>', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
-app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
+flask_app.add_url_rule('/tools/<path:filename>', None, download)
+flask_app.add_url_rule('/find/<path:hash>', None, find_query)
+flask_app.add_url_rule('/query', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
+flask_app.add_url_rule('/query/', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
+flask_app.add_url_rule('/sql', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
+flask_app.add_url_rule('/sql/', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
+flask_app.add_url_rule('/query/<path:path>', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
+flask_app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
 
 
-@app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
+@flask_app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
 @cors_wrapper
 def _default(path):
     record_request(flask.request, None, flask.request.get_data(), None)
@@ -73,12 +87,12 @@ def _default(path):
     )
 
 
-def setup(settings=None):
+def setup():
     global config
 
-    try:
-        config = startup.read_settings(
-            defs={
+    config = startup.read_settings(
+        defs=[
+            {
                 "name": ["--process_num", "--process"],
                 "help": "Additional port offset (for multiple Flask processes",
                 "type": int,
@@ -86,47 +100,55 @@ def setup(settings=None):
                 "default": 0,
                 "required": False
             },
-            filename=settings
-        )
-        constants.set(config.constants)
-        Log.start(config.debug)
+            {
+                "name": "app_name",
+                "help": "gunicorn supplied argument",
+                "type": str
+            }
+        ],
+        env_filename=os.environ.get('ACTIVEDATA_CONFIG')
+    )
 
-        if config.args.process_num and config.flask.port:
-            config.flask.port += config.args.process_num
+    constants.set(config.constants)
+    Log.start(config.debug)
 
-        # PIPE REQUEST LOGS TO ES DEBUG
-        if config.request_logs:
-            request_logger = elasticsearch.Cluster(config.request_logs).get_or_create_index(config.request_logs)
-            active_data.request_log_queue = request_logger.threaded_queue(max_size=2000)
+    # PIPE REQUEST LOGS TO ES DEBUG
+    if config.request_logs:
+        request_logger = elasticsearch.Cluster(config.request_logs).get_or_create_index(config.request_logs)
+        active_data.request_log_queue = request_logger.threaded_queue(max_size=2000)
 
-        # SETUP DEFAULT CONTAINER, SO THERE IS SOMETHING TO QUERY
-        container.config.default = {
-            "type": "elasticsearch",
-            "settings": config.elasticsearch.copy()
-        }
+    # SETUP DEFAULT CONTAINER, SO THERE IS SOMETHING TO QUERY
+    container.config.default = {
+        "type": "elasticsearch",
+        "settings": config.elasticsearch.copy()
+    }
 
-        # TURN ON /exit FOR WINDOWS DEBUGGING
-        if config.flask.debug or config.flask.allow_exit:
-            config.flask.allow_exit = None
-            Log.warning("ActiveData is in debug mode")
-            app.add_url_rule('/exit', 'exit', _exit)
+    # TRIGGER FIRST INSTANCE
+    if config.saved_queries:
+        setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
 
-        # TRIGGER FIRST INSTANCE
-        if config.saved_queries:
-            setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
-        HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
-
-        if config.flask.ssl_context:
-            if config.args.process_num:
-                Log.error("can not serve ssl and multiple Flask instances at once")
-            setup_ssl()
-
-        return app
-    except Exception, e:
-        Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
+    HeaderRewriterFix(flask_app, remove_headers=['Date', 'Server'])
 
 
-def setup_ssl():
+def run_flask():
+    if config.flask.port and config.args.process_num:
+        config.flask.port += config.args.process_num
+
+    # TURN ON /exit FOR WINDOWS DEBUGGING
+    if config.flask.debug or config.flask.allow_exit:
+        config.flask.allow_exit = None
+        Log.warning("ActiveData is in debug mode")
+        flask_app.add_url_rule('/exit', 'exit', _exit)
+
+    if config.flask.ssl_context:
+        if config.args.process_num:
+            Log.error("can not serve ssl and multiple Flask instances at once")
+        setup_flask_ssl()
+
+    flask_app.run(**config.flask)
+
+
+def setup_flask_ssl():
     config.flask.ssl_context = None
 
     if not config.flask.ssl_context:
@@ -161,7 +183,7 @@ def setup_ssl():
 
     def runner(please_stop):
         Log.warning("ActiveData listening on encrypted port {{port}}", port=ssl_flask.port)
-        app.run(**ssl_flask)
+        flask_app.run(**ssl_flask)
 
     Thread.run("SSL Server", runner)
 
@@ -188,12 +210,14 @@ def _exit():
     )
 
 
-if __name__ == "__main__":
+if __name__ in ("__main__", "active_data.app"):
     try:
         setup()
-        app.run(**config.flask)
-    finally:
-        Log.stop()
+    except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
+        try:
+            Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
+        finally:
+            Log.stop()
 
-    sys.exit(0)
-
+    if config.flask:
+        run_flask()

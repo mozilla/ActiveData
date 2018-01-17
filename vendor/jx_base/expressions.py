@@ -12,22 +12,19 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import itertools
-import json
 import operator
 from collections import Mapping
 from decimal import Decimal
-
-from mo_future import text_type, utf8_json_encoder, get_function_name
 
 import mo_json
 from jx_base import OBJECT, python_type_to_json_type, BOOLEAN, NUMBER, INTEGER, STRING
 from jx_base.queries import is_variable_name, get_property_name
 from mo_dots import coalesce, wrap, Null, split_field
+from mo_future import text_type, utf8_json_encoder, get_function_name
 from mo_json import scrub
-from mo_json.encoder import COLON, COMMA
 from mo_logs import Log, Except
 from mo_math import Math, MAX, MIN, UNION
-from mo_times.dates import Date, parse_time_expression, unicode2Date
+from mo_times.dates import Date, unicode2Date
 
 ALLOW_SCRIPTING = False
 EMPTY_DICT = {}

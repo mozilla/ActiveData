@@ -71,7 +71,7 @@ Configuration and Logs
 ### Config and Logs
 
 * Configuration is `~/ActiveData/resources/config/supervisord.conf`
-* Logs are `/logs/active_data.log`
+* Logs are `/data1/logs/active_data.log`
 
 
 ActiveData Manager
@@ -81,7 +81,7 @@ Overall, the *Manager* machine is responsible for running CRON jobs against Acti
 
 * The [Manager setup](https://github.com/klahnakoski/ActiveData-ETL/blob/manager/resources/scripts/setup_manager.sh) reveals the repositories being used 
 * [CRON jobs](https://github.com/klahnakoski/ActiveData-ETL/blob/manager/resources/cron/manager.cron) is the list of actions being performed
-* Logs are found at `/logs`
+* Logs are found at `/data1/logs`
 
 
 <span style="color:red">As a temporary measure, MoDataSubmission is running a web server here too.</span>

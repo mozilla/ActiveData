@@ -196,7 +196,7 @@ def _exit():
         }
     )
 
-
+print("name is "+__name__)
 if __name__ in ("__main__", "active_data.app"):
     try:
         print("setup")

@@ -6,8 +6,7 @@ timeout = 24*60*60
 
 capture_output = True
 accesslog = "/data1/logs/gunicorn_access.log"
-errorlog = "-"
-# errorlog = "/data1/logs/gunicorn_error.log"
+errorlog = "/data1/logs/gunicorn_error.log"
 logfile = "/data1/logs/gunicorn_debug.log"
 
 access_log_format = (

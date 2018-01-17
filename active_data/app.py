@@ -200,7 +200,8 @@ def _exit():
 if __name__ in ("__main__", "active_data.app"):
     try:
         setup()
-        app.run(**config.flask)
+        if not config.flask:
+            app.run(**config.flask)
     finally:
         Log.stop()
 

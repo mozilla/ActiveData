@@ -17,6 +17,7 @@ from ssl import SSLContext
 from tempfile import NamedTemporaryFile
 
 import flask
+import os
 from flask import Flask
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
@@ -73,7 +74,7 @@ def _default(path):
     )
 
 
-def setup(settings=None):
+def setup():
     global config
 
     try:
@@ -86,7 +87,7 @@ def setup(settings=None):
                 "default": 0,
                 "required": False
             },
-            filename=settings
+            filename=os.environ.get('ACTIVEDATA_CONFIG')
         )
         constants.set(config.constants)
         Log.start(config.debug)

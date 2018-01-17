@@ -88,7 +88,7 @@ def setup():
                 "default": 0,
                 "required": False
             },
-            filename=os.environ.get('ACTIVEDATA_CONFIG')
+            env_filename=os.environ.get('ACTIVEDATA_CONFIG')
         )
         print("got config")
 

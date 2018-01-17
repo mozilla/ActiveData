@@ -40,27 +40,27 @@ from pyLibrary.env import elasticsearch
 
 OVERVIEW = File("active_data/public/index.html").read()
 
-app = Flask(__name__)
+flask_app = Flask(__name__)
 config = None
 
 
-@app.route('/', defaults={'path': ''}, methods=['OPTIONS', 'HEAD'])
-@app.route('/<path:path>', methods=['OPTIONS', 'HEAD'])
+@flask_app.route('/', defaults={'path': ''}, methods=['OPTIONS', 'HEAD'])
+@flask_app.route('/<path:path>', methods=['OPTIONS', 'HEAD'])
 @cors_wrapper
 def _head(path):
     return Response(b'', status=200)
 
-app.add_url_rule('/tools/<path:filename>', None, download)
-app.add_url_rule('/find/<path:hash>', None, find_query)
-app.add_url_rule('/query', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
-app.add_url_rule('/query/', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
-app.add_url_rule('/sql', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
-app.add_url_rule('/sql/', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
-app.add_url_rule('/query/<path:path>', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
-app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
+flask_app.add_url_rule('/tools/<path:filename>', None, download)
+flask_app.add_url_rule('/find/<path:hash>', None, find_query)
+flask_app.add_url_rule('/query', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
+flask_app.add_url_rule('/query/', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
+flask_app.add_url_rule('/sql', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
+flask_app.add_url_rule('/sql/', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
+flask_app.add_url_rule('/query/<path:path>', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
+flask_app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
 
 
-@app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
+@flask_app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
 @cors_wrapper
 def _default(path):
     record_request(flask.request, None, flask.request.get_data(), None)
@@ -90,8 +90,7 @@ def setup():
             {
                 "name": "app_name",
                 "help": "gunicorn supplied argument",
-                "type": str,
-                "required": False
+                "type": str
             }
         ],
         env_filename=os.environ.get('ACTIVEDATA_CONFIG')
@@ -115,7 +114,7 @@ def setup():
     if config.saved_queries:
         setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
 
-    HeaderRewriterFix(app, remove_headers=['Date', 'Server'])
+    HeaderRewriterFix(flask_app, remove_headers=['Date', 'Server'])
 
 
 def run_flask():
@@ -126,17 +125,22 @@ def run_flask():
     if config.flask.debug or config.flask.allow_exit:
         config.flask.allow_exit = None
         Log.warning("ActiveData is in debug mode")
-        app.add_url_rule('/exit', 'exit', _exit)
+        flask_app.add_url_rule('/exit', 'exit', _exit)
 
     if config.flask.ssl_context:
         if config.args.process_num:
             Log.error("can not serve ssl and multiple Flask instances at once")
         setup_flask_ssl()
 
-    app.run(**config.flask)
+    flask_app.run(**config.flask)
 
 
-def run_gunicorn():
+
+gunicorn_app = None
+
+
+def setup_gunicorn():
+    global gunicorn_app
     from gunicorn.app.base import BaseApplication
 
     print("make class")
@@ -145,13 +149,20 @@ def run_gunicorn():
         def load(self):
             print("return app")
 
-            return app
+            return flask_app
 
         def load_config(self):
             pass
 
-    print("run run")
-    GunicornApp().run()
+        def run(self):
+            try:
+                BaseApplication.run(self)
+            except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
+                Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
+            finally:
+                Log.stop()
+
+    gunicorn_app = GunicornApp()
 
 
 def setup_flask_ssl():
@@ -189,7 +200,7 @@ def setup_flask_ssl():
 
     def runner(please_stop):
         Log.warning("ActiveData listening on encrypted port {{port}}", port=ssl_flask.port)
-        app.run(**ssl_flask)
+        flask_app.run(**ssl_flask)
 
     Thread.run("SSL Server", runner)
 
@@ -219,12 +230,17 @@ def _exit():
 if __name__ in ("__main__", "active_data.app"):
     try:
         setup()
-        if config.flask:
-            run_flask()
-        else:
-            pass
-            # run_gunicorn()
     except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
-        Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
+        Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
     finally:
         Log.stop()
+
+    if config.flask:
+        try:
+            run_flask()
+        except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
+            Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
+        finally:
+            Log.stop()
+    else:
+        setup_gunicorn()

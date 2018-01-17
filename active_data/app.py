@@ -135,7 +135,7 @@ def setup():
             setup_ssl()
 
         print('setup complete')
-    except Exception as e:
+    except BaseException as e:
         print('ERROR')
 
         print('ERROR' + str(e))

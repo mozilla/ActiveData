@@ -66,7 +66,7 @@ def read_settings(filename=None, defs=None):
     else:
         defs = listwrap(defs)
         defs.append({
-            "name": ["--settings", "--settings-file", "--settings_file"],
+            "name": ["--config", "--settings", "--settings-file", "--settings_file"],
             "help": "path to JSON file with settings",
             "type": str,
             "dest": "filename",

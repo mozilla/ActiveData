@@ -65,3 +65,6 @@ def cors_wrapper(func):
     output.__name__ = func.__name__
     return output
 
+
+from active_data import app
+

@@ -103,7 +103,9 @@ def setup():
             {
                 "name": "app_name",
                 "help": "gunicorn supplied argument",
-                "type": str
+                "type": str,
+                "nargs": "?",
+                "default": "<dummy value>"
             }
         ],
         env_filename=os.environ.get('ACTIVEDATA_CONFIG')

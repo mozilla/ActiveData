@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 from unittest import skip
 
+import os
 from future.utils import text_type
 
 import mo_json_config
@@ -26,7 +27,7 @@ from pyLibrary.env import http
 from tests import error
 from tests.test_jx import BaseTestCase, global_settings
 
-APP_CONFIG_FILE = "tests/config/app_staging_settings.json"
+APP_CONFIG_FILE = os.environ.get("TEST_CONFIG") | "tests/config/app_staging_settings.json"
 ES_CLUSTER_LOCATION = None
 
 
@@ -50,7 +51,6 @@ class TestUnittests(BaseTestCase):
         # TestUnittests.process.stop()
         # TestUnittests.process.join()
         pass
-
 
     def test_simple_query(self):
         if self.not_real_service():

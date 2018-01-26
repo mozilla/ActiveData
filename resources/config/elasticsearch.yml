@@ -23,14 +23,9 @@ bootstrap.memory_lock: true
 path.data: /data1
 path.logs: /data1/logs
 
-discovery:
-    ec2:
-        endpoint: us-west-2
-        protocol: https
-        groups: sg-c69186bb
-
+discovery.ec2.endpoint: ec2.us-west-2.amazonaws.com
+discovery.zen.hosts_provider: ec2
 discovery.zen.minimum_master_nodes: 1
-discovery.zen.ping.unicast.hosts: 172.31.1.240
 
 http.compression: true
 http.cors.enabled: true

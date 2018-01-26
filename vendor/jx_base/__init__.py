@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from collections import Mapping
 from uuid import uuid4
 
 from mo_dots import NullType, Data
@@ -40,12 +41,16 @@ python_type_to_json_type = {
     NullType: OBJECT,
     none_type: OBJECT,
     Data: OBJECT,
+    dict: OBJECT,
+    object: OBJECT,
+    Mapping: OBJECT,
     list: NESTED,
     Date: NUMBER
 }
 
 if PY2:
     python_type_to_json_type[str]=STRING
+    python_type_to_json_type[long]=NUMBER
 
 def generateGuid():
     """Gets a random GUID.

@@ -39,7 +39,7 @@ def main():
 
         File(config.args.file).write("".join(map(convert.json2value, result.hits.hits)))
 
-    except Exception, e:
+    except Exception as e:
         Log.error("Problem with etl", e)
     finally:
         Log.stop()

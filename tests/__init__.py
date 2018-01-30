@@ -128,7 +128,7 @@ class ESUtils(object):
                     create_time = Date(a.index[-15:], "%Y%m%d_%H%M%S")  # EXAMPLE testing_0ef53e45b320160118_180420
                     if create_time < Date.now() - 10 * MINUTE:
                         cluster.delete_index(a.index)
-            except Exception, e:
+            except Exception as e:
                 Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
 
     def tearDownClass(self):
@@ -239,7 +239,7 @@ class ESUtils(object):
             result = convert.json2value(convert.utf82unicode(response.all_content))
 
             return result
-        except Exception, e:
+        except Exception as e:
             Log.error("Failed query", e)
 
     def try_till_response(self, *args, **kwargs):
@@ -247,7 +247,7 @@ class ESUtils(object):
             try:
                 response = self.server.get(*args, **kwargs)
                 return response
-            except Exception, e:
+            except Exception as e:
                 e = Except.wrap(e)
                 if "No connection could be made because the target machine actively refused it" in e:
                     Log.alert("Problem connecting")
@@ -259,7 +259,7 @@ class ESUtils(object):
             try:
                 response = self.server.post(*args, **kwargs)
                 return response
-            except Exception, e:
+            except Exception as e:
                 e = Except.wrap(e)
                 if "No connection could be made because the target machine actively refused it" in e:
                     Log.alert("Problem connecting")
@@ -442,5 +442,5 @@ try:
     if not test_jx.global_settings.use:
         Log.error('Must have a {"use": type} set in the config file')
     test_jx.utils = container_types[test_jx.global_settings.use](test_jx.global_settings)
-except Exception, e:
+except Exception as e:
     Log.warning("problem", e)

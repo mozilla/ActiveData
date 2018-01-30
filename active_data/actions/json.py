@@ -51,7 +51,7 @@ def get_raw_json(path):
             response_data,
             status=200
         )
-    except Exception, e:
+    except Exception as e:
         e = Except.wrap(e)
         return send_error(active_data_timer, body, e)
 

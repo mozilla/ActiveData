@@ -53,7 +53,7 @@ def find_query(hash):
                 convert.unicode2utf8(query),
                 status=200
             )
-    except Exception, e:
+    except Exception as e:
         e = Except.wrap(e)
         Log.warning("problem finding query with hash={{hash}}", hash=hash, cause=e)
         return Response(
@@ -82,7 +82,7 @@ class SaveQueries(object):
                 "last_used": Date.now(),
                 "query": "{}"
             }})
-        except Exception, e:
+        except Exception as e:
             Log.warning("Problem saving query", cause=e)
         es.add_alias(es.settings.alias)
         es.flush()
@@ -158,7 +158,7 @@ class SaveQueries(object):
     def stop(self):
         try:
             self.queue.add(Thread.STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
-        except Exception, e:
+        except Exception as e:
             pass
 
         try:

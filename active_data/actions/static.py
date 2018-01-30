@@ -40,7 +40,7 @@ def download(filename):
                 "Content-Type": mimetype
             }
         )
-    except Exception, e:
+    except Exception as e:
         Log.error("Could not get file {{file}}", file=filename, cause=e)
 
 

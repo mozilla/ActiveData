@@ -68,7 +68,7 @@ def jx_query(path):
                     if data.meta.save:
                         try:
                             result.meta.saved_as = save_query.query_finder.save(data)
-                        except Exception, e:
+                        except Exception as e:
                             Log.warning("Unexpected save problem", cause=e)
 
                 result.meta.timing.preamble = Math.round(preamble_timer.duration.seconds, digits=4)
@@ -96,7 +96,7 @@ def jx_query(path):
                         "Content-Type": result.meta.content_type
                     }
                 )
-        except Exception, e:
+        except Exception as e:
             e = Except.wrap(e)
             return send_error(query_timer, request_body, e)
 

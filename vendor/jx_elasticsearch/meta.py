@@ -75,7 +75,7 @@ class FromESMetadata(Schema):
         self.abs_columns = set()
         self.last_es_metadata = Date.now()-OLD_METADATA
 
-        self.meta=Data()
+        self.meta = Data()
         table_columns = metadata_tables()
         column_columns = metadata_columns()
         self.meta.tables = ListContainer("meta.tables", [], wrap({c.names["."]: c for c in table_columns}))

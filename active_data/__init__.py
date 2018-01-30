@@ -13,11 +13,14 @@ from __future__ import unicode_literals
 import flask
 
 from mo_dots import wrap
+from mo_files import File
 from mo_json import value2json
 from mo_logs import Log
 from mo_times.dates import Date
 
 request_log_queue = None
+
+OVERVIEW = File("active_data/public/index.html").read()
 
 
 def record_request(request, query_, data, error):
@@ -41,7 +44,7 @@ def record_request(request, query_, data, error):
         })
         log["from"] = request.headers.get('from')
         request_log_queue.add({"value": log})
-    except Exception, e:
+    except Exception as e:
         Log.warning("Can not record", cause=e)
 
 

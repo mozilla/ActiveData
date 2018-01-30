@@ -19,15 +19,14 @@ ActiveData is a service! You can certainly setup your own service, but it is eas
 ## Requirements
 
 * Python2.7 installed
-* Elasticsearch **version 1.7.x**
+* Elasticsearch **version 6.x**
 
 
 ### Elasticsearch Configuration
 
-Elasticsearch has a configuration file at `config/elasticsearch.yml`. You must modify it to turn on scripting.  Add these two lines at the top of the file:
+Elasticsearch has a configuration file at `config/elasticsearch.yml`. You must modify it to handle a high number of scripts 
 
-    script.inline: on
-    script.indexed: on
+    script.max_compilations_rate: 10000/1m
 
 We enable compression for faster transfer speeds
 
@@ -79,7 +78,7 @@ and install your requirements:
 
 The ActiveData service requires a configuration file that will point to the
 default Elasticsearch index. You can find a few sample config files in
-`resources/config`. `simple_settings.json` is simplest one:
+`tests/config`. `simple_settings.json` is simplest one:
 
 ```javascript
     {

@@ -74,7 +74,7 @@ def sql_query(path):
                 if data.meta.save:
                     try:
                         result.meta.saved_as = save_query.query_finder.save(data)
-                    except Exception, e:
+                    except Exception as e:
                         Log.warning("Unexpected save problem", cause=e)
 
             result.meta.timing.preamble = Math.round(preamble_timer.duration.seconds, digits=4)

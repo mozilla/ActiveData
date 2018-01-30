@@ -131,7 +131,7 @@ def test_mode_wait(query):
                 "fresh column name={{column.names}} updated={{column.last_updated|date}} parts={{column.partitions}}",
                 column=c
             )
-    except Exception, e:
+    except Exception as e:
         Log.warning("could not pickup columns", cause=e)
 
 

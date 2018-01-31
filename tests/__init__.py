@@ -36,6 +36,8 @@ from pyLibrary.env import http
 from pyLibrary.testing import elasticsearch
 from test_jx import TEST_TABLE
 
+DEFAULT_TEST_CONFIG = "tests/config/elasticsearch.json"
+
 
 class ESUtils(object):
     """
@@ -420,14 +422,10 @@ class FakeHttp(object):
         })
 
 
-test_jx.global_settings = mo_json_config.get("file://tests/config/elasticsearch.json")
-constants.set(test_jx.global_settings.constants)
-Log.alert("Resetting test count")
-NEXT = 0
-
 container_types = Data(
     elasticsearch=ESUtils,
 )
+
 
 try:
     # read_alternate_settings
@@ -435,7 +433,8 @@ try:
     if filename:
         test_jx.global_settings = mo_json_config.get("file://" + filename)
     else:
-        Log.alert("No TEST_CONFIG environment variable to point to config file.  Using /tests/config/elasticsearch.json")
+        Log.alert("No TEST_CONFIG environment variable to point to config file.  Using " + DEFAULT_TEST_CONFIG)
+        test_jx.global_settings = mo_json_config.get("file://" + DEFAULT_TEST_CONFIG)
 
     Log.start(test_jx.global_settings.debug)
 
@@ -444,3 +443,7 @@ try:
     test_jx.utils = container_types[test_jx.global_settings.use](test_jx.global_settings)
 except Exception as e:
     Log.warning("problem", e)
+
+constants.set(test_jx.global_settings.constants)
+Log.alert("Resetting test count")
+NEXT = 0

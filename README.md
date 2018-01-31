@@ -36,7 +36,7 @@ And it is a good idea to give your cluster a unique name so it does not join oth
 
 	cluster.name: lahnakoski_dev
 
-Then you can run Elasticsearch:
+then you can run Elasticsearch:
  
     c:\elasticsearch>bin\elasticsearch
 

@@ -10,7 +10,7 @@ branches:
 
 env:
   global:
-      - PYTHONPATH=.
+      - PYTHONPATH=.:vendor
       - ES_VERSION=6.1.3
       - ES_DOWNLOAD_URL=https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-$ES_VERSION.tar.gz
 

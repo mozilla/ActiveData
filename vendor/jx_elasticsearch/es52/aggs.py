@@ -229,7 +229,6 @@ def es_aggsop(es, frum, query):
                 else:
                     s.pull = lambda row: UNION(p(row) for p in pulls)
             else:
-                es_cols = [c for c in es_cols if c.type != EXISTS]  # DO NOT PERFORM STATS ON OBJECTS
                 if len(es_cols) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
 

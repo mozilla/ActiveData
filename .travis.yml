@@ -12,13 +12,13 @@ env:
   global:
       - PYTHONPATH=.
       - ES_VERSION=6.1.3
-      - ES_DOWNLOAD_URL=https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-${ES_VERSION}.tar.gz
+      - ES_DOWNLOAD_URL=https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-$ES_VERSION.tar.gz
 
 install:
-  - "wget ${ES_DOWNLOAD_URL}"
-  - "tar -xzf elasticsearch-${ES_VERSION}.tar.gz"
+  - "wget $ES_DOWNLOAD_URL"
+  - "tar -xzf elasticsearch-$ES_VERSION.tar.gz"
   - "sudo cp -f tests/travis/elasticsearch.yml ./elasticsearch-${ES_VERSION}/config/elasticsearch.yml"
-  - "./elasticsearch-${ES_VERSION}/bin/elasticsearch &"
+  - "./elasticsearch-$ES_VERSION/bin/elasticsearch &"
   - "pip install -r requirements.txt"
   - "wget -q --waitretry=1 --retry-connrefused -T 10 -O - http://127.0.0.1:9200"
 

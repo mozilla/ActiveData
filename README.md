@@ -27,6 +27,7 @@ ActiveData is a service! You can certainly setup your own service, but it is eas
 
 Elasticsearch has a configuration file at `config/elasticsearch.yml`. You must modify it to handle a high number of scripts 
 
+    script.painless.regex.enabled: true
     script.max_compilations_rate: 10000/1m
 
 We enable compression for faster transfer speeds
@@ -65,7 +66,7 @@ you should expect something like
 
 ## Installation
 
-It is still too early for PyPi install, so please clone *master* off of github:
+It is still too early for PyPi install, so please clone `master` branch off of github:
 
     git clone https://github.com/klahnakoski/ActiveData.git
     git checkout master

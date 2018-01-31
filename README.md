@@ -5,8 +5,9 @@ Provide high speed filtering and aggregation over data see [ActiveData Wiki Page
 
 |Branch      |Status   |
 |------------|---------|
-|master      | [![Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=master)](https://travis-ci.org/klahnakoski/ActiveData) |
-|dev         | [![Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=dev)](https://travis-ci.org/klahnakoski/ActiveData)    |
+|master      | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=master)](https://travis-ci.org/mozilla/ActiveData) |
+|dev         | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=dev)](https://travis-ci.org/mozilla/ActiveData)    |
+|frontend6   | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=frontend6)](https://travis-ci.org/mozilla/ActiveData)    |
 
 
 

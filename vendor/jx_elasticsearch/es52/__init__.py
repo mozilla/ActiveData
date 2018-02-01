@@ -133,7 +133,7 @@ class ES52(Container):
                 query = n.convert(query)
 
             for s in listwrap(query.select):
-                if not aggregates.get(s.aggregate):
+                if s.aggregate != None and not aggregates.get(s.aggregate):
                     Log.error(
                         "ES can not aggregate {{name}} because {{aggregate|quote}} is not a recognized aggregate",
                         name=s.name,

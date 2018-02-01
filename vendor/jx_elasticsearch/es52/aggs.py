@@ -137,7 +137,7 @@ def es_aggsop(es, frum, query):
                 new_select["count_"+literal_field(s.value.var)] += [s]
             else:
                 new_select[literal_field(s.value.var)] += [s]
-        else:
+        elif s.aggregate:
             formula.append(s)
 
     for canonical_name, many in new_select.items():

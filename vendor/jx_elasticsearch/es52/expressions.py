@@ -840,13 +840,22 @@ def to_painless(self, schema):
     )
 
 
+_painless_operators = {
+    "add": (" + ", "0"),  # (operator, zero-array default value) PAIR
+    "sum": (" + ", "0"),
+    "mul": (" * ", "1"),
+    "mult": (" * ", "1"),
+    "multiply": (" * ", "1")
+}
+
+
 @extend(MultiOp)
 def to_painless(self, schema):
-    op, unit = MultiOp.operators[self.op]
+    op, unit = _painless_operators[self.op]
     if self.nulls:
         calc = op.join(
-            "((" + t.missing().to_painless(schema).expr + ") ? " + unit + " : (" + NumberOp("number", t).partial_eval().to_painless(schema).expr + "))" for
-            t in self.terms
+            "((" + t.missing().to_painless(schema).expr + ") ? " + unit + " : (" + NumberOp("number", t).partial_eval().to_painless(schema).expr + "))"
+            for t in self.terms
         )
         return WhenOp(
             "when",

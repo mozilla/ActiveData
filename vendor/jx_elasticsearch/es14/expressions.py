@@ -855,31 +855,6 @@ def to_ruby(self, schema):
     )
 
 
-@extend(MultiOp)
-def to_ruby(self, schema):
-    op, unit = MultiOp.operators[self.op]
-    if self.nulls:
-        calc = op.join(
-            "((" + t.missing().to_ruby(schema).expr + ") ? " + unit + " : (" + NumberOp("number", t).partial_eval().to_ruby(schema).expr + "))" for
-            t in self.terms
-        )
-        return WhenOp(
-            "when",
-            AndOp("and", [t.missing() for t in self.terms]),
-            **{"then": self.default, "else": Ruby(type=NUMBER, expr=calc, frum=self)}
-        ).partial_eval().to_ruby(schema)
-    else:
-        calc = op.join(
-            "(" + NumberOp("number", t).to_ruby(schema).expr + ")"
-            for t in self.terms
-        )
-        return WhenOp(
-            "when",
-            OrOp("or", [t.missing() for t in self.terms]),
-            **{"then": self.default, "else": Ruby(type=NUMBER, expr=calc, frum=self)}
-        ).partial_eval().to_ruby(schema)
-
-
 @extend(RegExpOp)
 def to_esfilter(self, schema):
     if isinstance(self.pattern, Literal) and isinstance(self.var, Variable):

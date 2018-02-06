@@ -27,7 +27,7 @@ from pyLibrary.env import http
 from tests import error
 from tests.test_jx import BaseTestCase, global_settings
 
-APP_CONFIG_FILE = os.environ.get("TEST_CONFIG") | "tests/config/app_staging_settings.json"
+APP_CONFIG_FILE = os.environ.get("TEST_CONFIG") or "tests/config/app_config.json"
 ES_CLUSTER_LOCATION = None
 
 
@@ -42,7 +42,7 @@ class TestUnittests(BaseTestCase):
         # START DIRECT-TO-ACTIVEDATA-ES SERVICE
         global ES_CLUSTER_LOCATION
 
-        app_config = mo_json_config.get("file://"+APP_CONFIG_FILE)
+        app_config = mo_json_config.get("file://" + TESTS_CONFIG_FILE)
         global_settings.service_url = "http://localhost:"+text_type(app_config.flask.port)+"/query"
         ES_CLUSTER_LOCATION = app_config.elasticsearch.host
 

@@ -207,3 +207,7 @@ class AndSignals(object):
             remaining = self.remaining
         if not remaining:
             self.signal.go()
+
+
+DONE = Signal()
+DONE.go()

@@ -25,6 +25,7 @@ from mo_json import scrub
 from mo_logs import Log, Except
 from mo_math import Math, MAX, MIN, UNION
 from mo_times.dates import Date, unicode2Date
+from pyLibrary.sql import SQL, SQL_TRUE, SQL_FALSE, SQL_ONE, SQL_ZERO
 
 ALLOW_SCRIPTING = False
 EMPTY_DICT = {}
@@ -518,6 +519,8 @@ class Literal(Expression):
 
     def missing(self):
         if self.term in [None, Null]:
+            return TRUE
+        if self.value == '':
             return TRUE
         return FALSE
 
@@ -1339,7 +1342,7 @@ class BooleanOp(Expression):
             if term.type in [INTEGER, NUMBER, STRING]:
                 return TRUE
         else:
-            return NotOp("not", is_missing).partial_eval()
+            return BooleanOp("boolean", term)
 
 
 class IsBooleanOp(Expression):
@@ -1661,11 +1664,11 @@ class MultiOp(Expression):
     data_type = NUMBER
 
     operators = {
-        "add": (" + ", "0"),  # (operator, zero-array default value) PAIR
-        "sum": (" + ", "0"),
-        "mul": (" * ", "1"),
-        "mult": (" * ", "1"),
-        "multiply": (" * ", "1")
+        "add": (SQL(" + "), SQL_ZERO),  # (operator, zero-array default value) PAIR
+        "sum": (SQL(" + "), SQL_ZERO),
+        "mul": (SQL(" * "), SQL_ONE),
+        "mult": (SQL(" * "), SQL_ONE),
+        "multiply": (SQL(" * "), SQL_ONE)
     }
 
     def __init__(self, op, terms, **clauses):

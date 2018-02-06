@@ -36,7 +36,7 @@ from pyLibrary.env import http
 from pyLibrary.testing import elasticsearch
 from test_jx import TEST_TABLE
 
-DEFAULT_TEST_CONFIG = "tests/config/elasticsearch.json"
+DEFAULT_TEST_CONFIG = "tests/config/test_config.json"
 
 
 class ESUtils(object):

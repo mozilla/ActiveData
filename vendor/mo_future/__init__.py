@@ -26,22 +26,29 @@ if PY3:
     from configparser import ConfigParser
     from itertools import zip_longest
 
+    izip = zip
+
     text_type = str
     string_types = str
     binary_type = bytes
     integer_types = int
     number_types = (int, float)
     long = int
+    unichr = chr
 
     xrange = range
     filter_type = type(filter(lambda x: True, []))
     generator_types = (collections.Iterable, filter_type)
+    unichr = chr
 
     round = round
     from html.parser import HTMLParser
     from urllib.parse import urlparse
     from io import StringIO
     from _thread import allocate_lock, get_ident, start_new_thread, interrupt_main
+
+    def transpose(*args):
+        return list(zip(*args))
 
     def get_function_name(func):
         return func.__name__
@@ -77,6 +84,8 @@ else:
     from types import GeneratorType
     from ConfigParser import ConfigParser
     from itertools import izip_longest as zip_longest
+    from __builtin__ import zip as transpose
+    from itertools import izip
 
     text_type = __builtin__.unicode
     string_types = (str, unicode)
@@ -84,9 +93,11 @@ else:
     integer_types = (int, long)
     number_types = (int, long, float)
     long = __builtin__.long
+    unichr = __builtin__.unichr
 
     xrange = __builtin__.xrange
     generator_types = (GeneratorType,)
+    unichr = __builtin__.unichr
 
     round = __builtin__.round
     import HTMLParser

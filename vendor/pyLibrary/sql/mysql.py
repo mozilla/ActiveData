@@ -468,9 +468,9 @@ class MySQL(object):
         try:
             command = (
                 "INSERT INTO " + self.quote_column(table_name) + "(" +
-                SQL(",").join([self.quote_column(k) for k in keys]) +
+                SQL_COMMA.join([self.quote_column(k) for k in keys]) +
                 ") VALUES (" +
-                SQL(",").join([self.quote_value(record[k]) for k in keys]) +
+                SQL_COMMA.join([self.quote_value(record[k]) for k in keys]) +
                 ")"
             )
             self.execute(command)
@@ -488,7 +488,7 @@ class MySQL(object):
             ",".join([self.quote_column(k) for k in new_record.keys()]) +
             ")\n" +
             "SELECT a.* FROM (SELECT " + ",".join([self.quote_value(v) + " " + self.quote_column(k) for k, v in new_record.items()]) + " FROM DUAL) a\n" +
-            "LEFT JOIN " +
+            SQL_LEFT_JOIN +
             "(SELECT 'dummy' exist FROM " + self.quote_column(table_name) + " WHERE " + condition + " LIMIT 1) b ON 1=1 WHERE exist IS Null"
         )
         self.execute(command, {})
@@ -556,7 +556,7 @@ class MySQL(object):
         """
         try:
             if value == None:
-                return SQL("NULL")
+                return SQL_NULL
             elif isinstance(value, SQL):
                 if not value.param:
                     # value.template CAN BE MORE THAN A TEMPLATE STRING

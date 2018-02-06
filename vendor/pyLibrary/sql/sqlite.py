@@ -14,11 +14,10 @@ from __future__ import unicode_literals
 
 import os
 import re
-import sqlite3
 import sys
 from collections import Mapping
 
-from mo_future import text_type
+from mo_future import text_type, zip_longest
 from mo_dots import Data, coalesce
 from mo_files import File
 from mo_logs import Log
@@ -26,14 +25,19 @@ from mo_logs.exceptions import Except, extract_stack, ERROR
 from mo_logs.strings import quote
 from mo_math.stats import percentile
 from mo_threads import Queue, Signal, Thread
+from mo_threads.signal import DONE
 from mo_times import Date, Duration
 from mo_times.timer import Timer
 
 from pyLibrary import convert
-from pyLibrary.sql import DB, SQL
+from pyLibrary.sql import DB, SQL, SQL_TRUE, SQL_FALSE, SQL_NULL
 
-DEBUG = False
+DEBUG = True
+TRACE = True
+DEBUG_EXECUTE = True
 DEBUG_INSERT = False
+
+sqlite3 = None
 
 _load_extension_warning_sent = False
 _upgraded = False
@@ -41,17 +45,22 @@ _upgraded = False
 
 def _upgrade():
     global _upgraded
-    _upgraded = True
+    global sqlite3
+
     try:
         import sys
 
         sqlite_dll = File.new_instance(sys.exec_prefix, "dlls/sqlite3.dll")
-        python_dll = File("pyLibrary/vendor/sqlite/sqlite3.dll")
-        if python_dll.read_bytes() != sqlite_dll.read_bytes():
+        python_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3.dll")
+        if not all(a==b for a, b in zip_longest(python_dll.read_bytes(), sqlite_dll.read_bytes())):
             backup = sqlite_dll.backup()
             File.copy(python_dll, sqlite_dll)
     except Exception as e:
         Log.warning("could not upgrade python's sqlite", cause=e)
+
+    import sqlite3
+    _ = sqlite3
+    _upgraded = True
 
 
 class Sqlite(DB):
@@ -74,7 +83,7 @@ class Sqlite(DB):
         self.db = db
         self.queue = Queue("sql commands")   # HOLD (command, result, signal) PAIRS
         self.worker = Thread.run("sqlite db thread", self._worker)
-        self.get_trace = DEBUG
+        self.get_trace = TRACE
         self.upgrade = upgrade
 
     def _enhancements(self):
@@ -100,16 +109,20 @@ class Sqlite(DB):
         COMMANDS WILL BE EXECUTED IN THE ORDER THEY ARE GIVEN
         BUT CAN INTERLEAVE WITH OTHER TREAD COMMANDS
         :param command: COMMAND FOR SQLITE
-        :return: None
+        :return: Signal FOR IF YOU WANT TO BE NOTIFIED WHEN DONE
         """
-        if DEBUG:  # EXECUTE IMMEDIATELY FOR BETTER STACK TRACE
-            return self.query(command)
+        if DEBUG_EXECUTE:  # EXECUTE IMMEDIATELY FOR BETTER STACK TRACE
+            self.query(command)
+            return DONE
 
         if self.get_trace:
             trace = extract_stack(1)
         else:
             trace = None
-        self.queue.add((command, None, None, trace))
+
+        is_done = Signal()
+        self.queue.add((command, None, is_done, trace))
+        return is_done
 
     def query(self, command):
         """
@@ -177,6 +190,11 @@ class Sqlite(DB):
                                 Log.note("Result:\n{{data}}", data=text)
                         except Exception as e:
                             e = Except.wrap(e)
+                            e.cause = Except(
+                                type=ERROR,
+                                template="Bad call to Sqlite",
+                                trace=trace
+                            )
                             result.exception = Except(ERROR, "Problem with\n{{command|indent}}", command=command, cause=e)
                         finally:
                             signal.go()
@@ -232,24 +250,26 @@ def quote_column(column_name, table=None):
 
 def quote_table(column):
     if _no_need_to_quote.match(column):
-        return column
-    return quote(column)
+        return SQL(column)
+    return SQL(quote(column))
 
 
 def quote_value(value):
     if isinstance(value, (Mapping, list)):
-        return "."
+        return SQL(".")
     elif isinstance(value, Date):
-        return text_type(value.unix)
+        return SQL(text_type(value.unix))
     elif isinstance(value, Duration):
-        return text_type(value.seconds)
+        return SQL(text_type(value.seconds))
     elif isinstance(value, text_type):
-        return "'" + value.replace("'", "''") + "'"
+        return SQL("'" + value.replace("'", "''") + "'")
     elif value == None:
-        return "NULL"
+        return SQL_NULL
     elif value is True:
-        return "1"
+        return SQL_TRUE
     elif value is False:
-        return "0"
+        return SQL_FALSE
     else:
-        return text_type(value)
+        return SQL(text_type(value))
+
+

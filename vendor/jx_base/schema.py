@@ -46,7 +46,7 @@ def _indexer(columns, query_path):
                 startswith_field(nfp, full_name) and
                 c.type not in [EXISTS, OBJECT] and
                 (c.es_column != "_id" or full_name == "_id") and
-                startswith_field(c.nested_path[0], query_path)
+                startswith_field(query_path, c.nested_path[0])
             ):
                 cs = lookup_variables.setdefault(full_name, set())
                 cs.add(c)

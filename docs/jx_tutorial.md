@@ -15,7 +15,7 @@ queried. ActiveData has a default container, which it uses to translate names
 to explicit data sources that can be queried.
 
 ```javascript
-	{"from": "unittest"}
+{"from": "unittest"}
 
 ```
 
@@ -32,24 +32,24 @@ The ActiveData Query Tool hides the formatting feature of the ActiveData service
 * `cube` - (default) returns the cube form - This format is good for analysis, charting, and is compact for large, dense, datasets.
 
 ```javascript
-	{
-		"from":"unittest",
-		"format":"list"
-	}
+{
+    "from": "unittest",
+    "format": "list"
+}
 ```
 
 ### Inspecting Individual Records
 
-The `"format":"list"` clause is great for extracting specific records from ActiveData. Individual records will give you an idea of what is available, and allow you to drill down while exploring possible anomalies.
+The `"format": "list"` clause is great for extracting specific records from ActiveData. Individual records will give you an idea of what is available, and allow you to drill down while exploring possible anomalies.
 
 ```javascript
 {
-	"from":"unittest",
-	"where":{"eq":{
-		"run.suite":"mochitest-browser-chrome",
-		"result.test":"Main app process exited normally"
-	}},
-	"format":"list"
+    "from": "unittest",
+    "where": {"eq": {
+        "run.suite": "mochitest-browser-chrome",
+        "result.test": "Main app process exited normally"
+    }},
+    "format": "list"
 }
 ```
 
@@ -62,10 +62,10 @@ In the above case, I was curious about the test named "Main app process exited n
 **The ActiveData service limits responses to 10 rows by default**. To increase this limit (or decrease it) Use the `limit` clause to set an upper bound on the response:
 
 ```javascript
-	{
-		"from": "unittest",
-		"limit": 100
-	}
+{
+    "from": "unittest",
+    "limit": 100
+}
 
 ```
 
@@ -77,8 +77,8 @@ Use the `where` clause to restrict our results to those that match.
 
 ```javascript
 {
-	"from": "unittest",
-	"where":{"eq":{"build.platform": "linux64"}}
+    "from": "unittest",
+    "where": {"eq": {"build.platform": "linux64"}}
 }
 ```
 
@@ -92,12 +92,12 @@ The `unittest` records are quite large, and in most cases you will not be intere
 
 ```javascript
 {
-	"from":"unittest",
-	"select":"run.stats.bytes",
-	"where":{"and":[
-		{"eq":{"build.platform":"linux64"}},
-		{"gt":{"run.stats.bytes":600000000}}
-	]}
+    "from": "unittest",
+    "select": "run.stats.bytes",
+    "where": {"and": [
+        {"eq": {"build.platform": "linux64"}},
+        {"gt": {"run.stats.bytes": 600000000}}
+    ]}
 }
 ```
 
@@ -105,12 +105,12 @@ Knowing the size is not enough: What files are they?
 
 ```javascript
 {
-	"from":"unittest.run.files",
-	"select":["run.stats.bytes","run.files.url"],
-	"where":{"and":[
-		{"eq":{"build.platform":"linux64"}},
-		{"gt":{"run.stats.bytes":600000000}}
-	]}
+    "from": "unittest.run.files",
+    "select": ["run.stats.bytes","run.files.url"],
+    "where": {"and": [
+        {"eq": {"build.platform": "linux64"}},
+        {"gt": {"run.stats.bytes": 600000000}}
+    ]}
 }
 ```
 
@@ -130,12 +130,12 @@ How many of these monster files are there?
 
 ```javascript
 {
-	"from":"unittest",
-	"groupby":["build.platform"],
-	"where":{"and":[
-		{"eq":{"etl.id":0}},
-		{"gt":{"run.stats.bytes":600000000}}		
-	]}
+    "from": "unittest",
+    "groupby": ["build.platform"],
+    "where": {"and": [
+        {"eq": {"etl.id": 0}},
+        {"gt": {"run.stats.bytes": 600000000}}        
+    ]}
 }
 ```
 
@@ -149,13 +149,13 @@ How big do these files get?
 
 ```javascript
 {
-	"from":"unittest",
-	"select":{"value":"run.stats.bytes","aggregate":"max"},
-	"groupby":["build.platform"],
-	"where":{"and":[
-		{"eq":{"etl.id":0}},
-		{"gt":{"run.stats.bytes":600000000}}
-	]}
+    "from": "unittest",
+    "select": {"value": "run.stats.bytes","aggregate": "max"},
+    "groupby": ["build.platform"],
+    "where": {"and": [
+        {"eq": {"etl.id": 0}},
+        {"gt": {"run.stats.bytes": 600000000}}
+    ]}
 }
 ```
 
@@ -173,13 +173,13 @@ outside the domain.
 
 ```javascript
 {
-	"from":"unittest",
-	"select":{"value":"run.stats.bytes","aggregate":"max"},
-	"edges":["build.platform"],
-	"where":{"and":[
-		{"eq":{"etl.id":0}},
-		{"gt":{"run.stats.bytes":600000000}}
-	]}
+    "from": "unittest",
+    "select": {"value": "run.stats.bytes","aggregate": "max"},
+    "edges": ["build.platform"],
+    "where": {"and": [
+        {"eq": {"etl.id": 0}},
+        {"gt": {"run.stats.bytes": 600000000}}
+    ]}
 }
 ```
 
@@ -191,16 +191,16 @@ description of the domain.
 
 ```javascript
 {
-	"from":"unittest",
-	"edges":[{
-		"name":"platform", 
-		"value":"build.platform", 
-		"domain":{"type":"set", "partitions":["win32"]
-	}],
-	"where":{"and":[
-		{"eq":{"etl.id":0}},
-		{"gt":{"run.stats.bytes":600000000}}
-	]}
+    "from": "unittest",
+    "edges": [{
+        "name": "platform", 
+        "value": "build.platform", 
+        "domain": {"type": "set", "partitions": ["win32"]
+    }],
+    "where": {"and": [
+        {"eq": {"etl.id": 0}},
+        {"gt": {"run.stats.bytes": 600000000}}
+    ]}
 }
 ```
 

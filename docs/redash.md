@@ -1,6 +1,6 @@
 # ActiveData SQL and the Redash Connector
 
-https://sql.telemetry.mozilla.org/ has a simple Redash connector that communicates with the https://activedata.allizom.org/sql endpoint. This endpoint does the work of parsing and executing the query sent to it.   
+[sql.telemetry.mozilla.org](https://sql.telemetry.mozilla.org/) has a simple Redash connector that communicates with the [ActiveData SQL endpoint](https://activedata.allizom.org/sql). The endpoint does the work of parsing and executing the query sent to it.   
 
 ## SQL Flavour
 

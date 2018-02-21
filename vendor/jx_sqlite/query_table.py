@@ -14,19 +14,20 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import mo_json
-from future.utils import text_type
-from jx_python import jx
-from jx_sqlite import quote_table, sql_aggs, unique_name, untyped_column
-from mo_collections.matrix import Matrix, index_to_coordinate
-from mo_dots import listwrap, coalesce, Data, wrap, startswith_field, unwrap, unwraplist, concat_field, relative_field
-from mo_logs import Log
-
+from jx_base import STRUCT
 from jx_base.domains import SimpleSetDomain
 from jx_base.expressions import jx_expression, Variable, TupleOp
-from jx_base import STRUCT
-from jx_python.meta import Column
 from jx_base.query import QueryOp
+from jx_python import jx
+from jx_python.meta import Column
+from jx_sqlite import sql_aggs, unique_name, untyped_column
 from jx_sqlite.groupby_table import GroupbyTable
+from mo_collections.matrix import Matrix, index_to_coordinate
+from mo_dots import listwrap, coalesce, Data, wrap, startswith_field, unwrap, unwraplist, concat_field, relative_field, Null
+from mo_future import text_type
+from mo_logs import Log
+from pyLibrary.sql import SQL, SQL_WHERE, SQL_FROM, SQL_SELECT, sql_list, sql_iso, SQL_ORDERBY, sql_count
+from pyLibrary.sql.sqlite import quote_column
 
 
 class QueryTable(GroupbyTable):
@@ -34,16 +35,16 @@ class QueryTable(GroupbyTable):
         return column.names[self.sf.fact]
 
     def __len__(self):
-        counter = self.db.query("SELECT COUNT(*) FROM " + quote_table(self.sf.fact))[0][0]
+        counter = self.db.query(SQL_SELECT + sql_count("*") + SQL_FROM + quote_column(self.sf.fact))[0][0]
         return counter
 
     def __nonzero__(self):
-        counter = self.db.query("SELECT COUNT(*) FROM " + quote_table(self.sf.fact))[0][0]
+        counter = self.db.query(SQL_SELECT + sql_count("*") + SQL_FROM + quote_column(self.sf.fact))[0][0]
         return bool(counter)
 
     def delete(self, where):
         filter = where.to_sql()
-        self.db.execute("DELETE FROM " + quote_table(self.sf.fact) + " WHERE " + filter)
+        self.db.execute("DELETE" + SQL_FROM + quote_column(self.sf.fact) + SQL_WHERE + filter)
 
     def vars(self):
         return set(self.columns.keys())
@@ -65,18 +66,18 @@ class QueryTable(GroupbyTable):
                 continue
             column_names.append(cname)
             if len(cs) == 1:
-                select.append(quote_table(c.es_column) + " " + quote_table(c.name))
+                select.append(quote_column(c.es_column) + " " + quote_column(c.name))
             else:
                 select.append(
                     "coalesce(" +
-                    ",".join(quote_table(c.es_column) for c in cs) +
-                    ") " + quote_table(c.name)
+                    sql_list(quote_column(c.es_column) for c in cs) +
+                    ") " + quote_column(c.name)
                 )
 
         result = self.db.query(
-            " SELECT " + "\n,".join(select) +
-            " FROM " + quote_table(self.sf.fact) +
-            " WHERE " + jx_expression(filter).to_sql()
+            SQL_SELECT + SQL("\n,").join(select) +
+            SQL_FROM + quote_column(self.sf.fact) +
+            SQL_WHERE + jx_expression(filter).to_sql()
         )
         return wrap([{c: v for c, v in zip(column_names, r)} for r in result.data])
 
@@ -88,22 +89,21 @@ class QueryTable(GroupbyTable):
         if not startswith_field(query['from'], self.sf.fact):
             Log.error("Expecting table, or some nested table")
         frum, query['from'] = query['from'], self
-        schema = self.sf.tables["."].schema
-        query = QueryOp.wrap(query, schema)
+        table = self.sf.tables[relative_field(frum, self.sf.fact)]
+        schema = table.schema
+        query = QueryOp.wrap(query, table=table, schema=schema)
         new_table = "temp_" + unique_name()
 
         if query.format == "container":
-            create_table = "CREATE TABLE " + quote_table(new_table) + " AS "
+            create_table = "CREATE TABLE " + quote_column(new_table) + " AS "
         else:
             create_table = ""
 
         if query.groupby and query.format != "cube":
-            query = QueryOp.wrap(query, schema)
             op, index_to_columns = self._groupby_op(query, frum)
             command = create_table + op
         elif query.groupby:
             query.edges, query.groupby = query.groupby, query.edges
-            query = QueryOp.wrap(query, schema)
             op, index_to_columns = self._edges_op(query, frum)
             command = create_table + op
             query.edges, query.groupby = query.groupby, query.edges
@@ -243,7 +243,9 @@ class QueryTable(GroupbyTable):
                     else:
                         data_cubes[s.push_name][coord][s.push_child] = s.pull(row)
 
-            if isinstance(query.select, list):
+            if query.select == None:
+                select = Null
+            elif isinstance(query.select, list):
                 select = [{"name": s.name} for s in query.select]
             else:
                 select = {"name": query.select.name}
@@ -414,19 +416,23 @@ class QueryTable(GroupbyTable):
     def _window_op(self, query, window):
         # http://www2.sqlite.org/cvstrac/wiki?p=UnsupportedSqlAnalyticalFunctions
         if window.value == "rownum":
-            return "ROW_NUMBER()-1 OVER (" + \
-                   " PARTITION BY " + (", ".join(window.edges.values)) + \
-                   " ORDER BY " + (", ".join(window.edges.sort)) + \
-                   ") AS " + quote_table(window.name)
+            return (
+                "ROW_NUMBER()-1 OVER (" +
+                " PARTITION BY " + sql_iso(sql_list(window.edges.values)) +
+                SQL_ORDERBY + sql_iso(sql_list(window.edges.sort)) +
+                ") AS " + quote_column(window.name)
+            )
 
         range_min = text_type(coalesce(window.range.min, "UNBOUNDED"))
         range_max = text_type(coalesce(window.range.max, "UNBOUNDED"))
 
-        return sql_aggs[window.aggregate] + "(" + window.value.to_sql() + ") OVER (" + \
-               " PARTITION BY " + (", ".join(window.edges.values)) + \
-               " ORDER BY " + (", ".join(window.edges.sort)) + \
-               " ROWS BETWEEN " + range_min + " PRECEDING AND " + range_max + " FOLLOWING " + \
-               ") AS " + quote_table(window.name)
+        return (
+            sql_aggs[window.aggregate] + sql_iso(window.value.to_sql())+" OVER (" +
+            " PARTITION BY " + sql_iso(sql_list(window.edges.values)) +
+            SQL_ORDERBY + sql_iso(sql_list(window.edges.sort)) +
+            " ROWS BETWEEN " + range_min + " PRECEDING AND " + range_max + " FOLLOWING " +
+            ") AS " + quote_column(window.name)
+        )
 
     def _normalize_select(self, select):
         output = []

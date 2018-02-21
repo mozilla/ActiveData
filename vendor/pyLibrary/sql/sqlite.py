@@ -30,7 +30,7 @@ from mo_times import Date, Duration
 from mo_times.timer import Timer
 
 from pyLibrary import convert
-from pyLibrary.sql import DB, SQL, SQL_TRUE, SQL_FALSE, SQL_NULL
+from pyLibrary.sql import DB, SQL, SQL_TRUE, SQL_FALSE, SQL_NULL, SQL_SELECT, sql_iso
 
 DEBUG = True
 TRACE = True
@@ -163,7 +163,7 @@ class Sqlite(DB):
 
                     full_path = file.abspath
                     self.db.enable_load_extension(True)
-                    self.db.execute("SELECT load_extension(" + self.quote_value(full_path) + ")")
+                    self.db.execute(SQL_SELECT + "load_extension" + sql_iso(self.quote_value(full_path)))
             except Exception as e:
                 if not _load_extension_warning_sent:
                     _load_extension_warning_sent = True
@@ -238,20 +238,17 @@ _no_need_to_quote = re.compile(r"^\w+$", re.UNICODE)
 
 
 def quote_column(column_name, table=None):
+    if isinstance(column_name, SQL):
+        return column_name
+
     if not isinstance(column_name, text_type):
         Log.error("expecting a name")
     if table != None:
-        return SQL(quote(table) + "." + quote(column_name))
+        return SQL(" " + quote(table) + "." + quote(column_name) + " ")
     else:
         if _no_need_to_quote.match(column_name):
-            return SQL(column_name)
-        return SQL(quote(column_name))
-
-
-def quote_table(column):
-    if _no_need_to_quote.match(column):
-        return SQL(column)
-    return SQL(quote(column))
+            return SQL(" " + column_name + " ")
+        return SQL(" " + quote(column_name) + " ")
 
 
 def quote_value(value):
@@ -273,3 +270,7 @@ def quote_value(value):
         return SQL(text_type(value))
 
 
+def join_column(a, b):
+    a = quote_column(a)
+    b = quote_column(b)
+    return SQL(a.template.rstrip() + "." + b.template.lstrip())

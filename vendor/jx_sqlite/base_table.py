@@ -13,15 +13,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from future.utils import text_type
-from mo_kwargs import override
+from mo_future import text_type
 
 from jx_base import generateGuid
-from jx_sqlite import UID, GUID
-from jx_sqlite.snowflake import Snowflake
-from jx_python import jx
 from jx_base.container import Container
-from pyLibrary.sql.sqlite import Sqlite
+from jx_python import jx
+from jx_sqlite import UID
+from jx_sqlite.snowflake import Snowflake
+from mo_kwargs import override
+from pyLibrary.sql import SQL, SQL_UNION_ALL, SQL_SELECT
+from pyLibrary.sql.sqlite import Sqlite, quote_value
 
 _config=None
 
@@ -36,7 +37,6 @@ class BaseTable(Container):
         :return: HANDLE FOR TABLE IN db
         """
         global _config
-        Container.__init__(self, frum=None)
         if db:
             self.db = db
         else:
@@ -63,6 +63,8 @@ class BaseTable(Container):
         existence = self.db.query("PRAGMA table_info(__digits__)")
         if not existence.data:
             self.db.execute("CREATE TABLE __digits__(value INTEGER)")
-            self.db.execute("INSERT INTO __digits__ " + "\nUNION ALL ".join("SELECT " + text_type(i) for i in range(10)))
+            self.db.execute("INSERT INTO __digits__ " + SQL_UNION_ALL.join(SQL_SELECT + SQL(quote_value(i)) for i in range(10)))
 
-
+    @property
+    def schema(self):
+        return self.sf.tables['.'].schema

@@ -16,14 +16,17 @@ from __future__ import unicode_literals
 from collections import Mapping
 from copy import copy
 
-from future.utils import text_type
-from mo_dots import Data, split_field, join_field, concat_field, Null
+from mo_kwargs import override
+
+from mo_dots import split_field, concat_field, join_field, Data
+
+from mo_future import text_type
 from mo_json import json2value
 from mo_math.randoms import Random
 from mo_times import Date
-
 from pyLibrary.meta import DataClass
-from pyLibrary.sql.sqlite import quote_table
+from pyLibrary.sql import SQL
+from pyLibrary.sql.sqlite import quote_column
 
 GUID = "_id"
 UID = "__id__"  # will not be quoted
@@ -44,7 +47,7 @@ def column_key(k, v):
         return None
     elif isinstance(v, bool):
         return k, "boolean"
-    elif isinstance(v, basestring):
+    elif isinstance(v, text_type):
         return k, "string"
     elif isinstance(v, list):
         return k, None
@@ -61,7 +64,7 @@ def get_type(v):
         return None
     elif isinstance(v, bool):
         return "boolean"
-    elif isinstance(v, basestring):
+    elif isinstance(v, text_type):
         return "string"
     elif isinstance(v, Mapping):
         return "object"
@@ -97,7 +100,7 @@ def get_if_type(value, type):
 def is_type(value, type):
     if value == None:
         return False
-    elif isinstance(value, basestring) and type == "string":
+    elif isinstance(value, text_type) and type == "string":
         return value
     elif isinstance(value, list):
         return False
@@ -127,7 +130,7 @@ def untyped_column(column_name):
 
 
 def _make_column_name(number):
-    return COLUMN + text_type(number)
+    return SQL(COLUMN + text_type(number))
 
 
 sql_aggs = {
@@ -165,10 +168,10 @@ STATS = {
     "avg": "AVG({{value}})"
 }
 
-quoted_GUID = quote_table(GUID)
-quoted_UID = quote_table(UID)
-quoted_ORDER = quote_table(ORDER)
-quoted_PARENT = quote_table(PARENT)
+quoted_GUID = quote_column(GUID)
+quoted_UID = quote_column(UID)
+quoted_ORDER = quote_column(ORDER)
+quoted_PARENT = quote_column(PARENT)
 
 
 def sql_text_array_to_set(column):
@@ -178,7 +181,7 @@ def sql_text_array_to_set(column):
             return set()
         else:
             value = json2value(row[column])
-            return set(value)
+            return set(value) - {None}
 
     return _convert
 
@@ -285,3 +288,18 @@ json_types = {
     "TINYINT": "boolean",
     "OBJECT": "nested"
 }
+
+
+from jx_sqlite.base_table import BaseTable
+from jx_sqlite.query_table import QueryTable
+
+
+class Container(QueryTable):
+
+    @override
+    def __init__(self, name, db=None, uid=UID, kwargs=None):
+        BaseTable.__init__(self, name, db, uid, kwargs)
+
+
+
+

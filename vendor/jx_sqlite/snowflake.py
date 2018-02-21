@@ -1,15 +1,30 @@
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http:# mozilla.org/MPL/2.0/.
+#
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 from collections import OrderedDict
 from copy import copy
 
-from mo_dots import relative_field, listwrap, split_field, join_field, wrap, startswith_field, concat_field, Null, coalesce, set_default
-from mo_logs import Log
+from jx_base.container import Container
 
-from jx_sqlite import quote_table, typed_column, UID, quoted_UID, quoted_GUID,sql_types, quoted_PARENT, ORDER, quoted_ORDER
-from jx_sqlite import untyped_column
+from jx_base import STRUCT
 from jx_base.queries import get_property_name
 from jx_python import jx
 from jx_python.meta import Column
-from jx_base import STRUCT
+from jx_sqlite import typed_column, UID, quoted_UID, sql_types, quoted_PARENT, quoted_ORDER, quoted_GUID
+from jx_sqlite import untyped_column
+from mo_dots import relative_field, listwrap, split_field, join_field, wrap, startswith_field, concat_field, Null, coalesce, set_default
+from mo_future import text_type
+from mo_logs import Log
+from pyLibrary.sql import SQL_FROM, sql_iso, sql_list, SQL_LIMIT, SQL_SELECT, SQL_ZERO, SQL_STAR
 from pyLibrary.sql.sqlite import quote_column
 
 
@@ -25,10 +40,6 @@ class Snowflake(object):
         self.tables = OrderedDict()  # MAP FROM NESTED PATH TO Table OBJECT, PARENTS PROCEED CHILDREN
         if not self.read_db():
             self.create_fact(uid)
-
-    # def __del__(self):
-    #     for nested_path, table in self.tables.items():
-    #         self.db.execute("DROP TABLE " + quote_table(concat_field(self.fact, nested_path)))
 
     def read_db(self):
         """
@@ -48,7 +59,7 @@ class Snowflake(object):
             self.add_table_to_schema(nested_path)
 
             # LOAD THE COLUMNS
-            command = "PRAGMA table_info(" + quote_table(table.name) + ")"
+            command = "PRAGMA table_info"+sql_iso(quote_column(table.name))
             details = self.db.query(command)
 
             for cid, name, dtype, notnull, dfft_value, pk in details.data:
@@ -91,19 +102,16 @@ class Snowflake(object):
                 new_columns.append(c)
 
         command = (
-            "CREATE TABLE " + quote_table(self.fact) + "(" +
-            (",".join(
+            "CREATE TABLE " + quote_column(self.fact) + sql_iso(sql_list(
                 [quoted_GUID + " TEXT "] +
                 [quoted_UID + " INTEGER"] +
-                [quote_column(c.es_column) + " " + sql_types[c.type] for c in self.tables["."].schema.columns]
-            )) +
-            ", PRIMARY KEY (" +
-            (", ".join(
-                [quoted_GUID] +
-                [quoted_UID] +
-                [quote_column(c.es_column) for c in self.tables["."].schema.columns]
-            )) +
-            "))"
+                [quote_column(c.es_column) + " " + sql_types[c.type] for c in self.tables["."].schema.columns] +
+                ["PRIMARY KEY " + sql_iso(sql_list(
+                    [quoted_GUID] +
+                    [quoted_UID] +
+                    [quote_column(c.es_column) for c in self.tables["."].schema.columns]
+                ))]
+            ))
         )
 
         self.db.execute(command)
@@ -128,19 +136,19 @@ class Snowflake(object):
         cname = column.names["."]
         if column.type == "nested":
             # WE ARE ALSO NESTING
-            self._nest_column(column, cname)
+            self._nest_column(column, [cname]+column.nested_path)
 
         table = concat_field(self.fact, column.nested_path[0])
 
         self.db.execute(
-            "ALTER TABLE " + quote_table(table) +
+            "ALTER TABLE " + quote_column(table) +
             " ADD COLUMN " + quote_column(column.es_column) + " " + sql_types[column.type]
         )
 
         self.add_column_to_schema(column)
 
     def _nest_column(self, column, new_path):
-        destination_table = concat_field(self.fact, new_path)
+        destination_table = concat_field(self.fact, new_path[0])
         existing_table = concat_field(self.fact, column.nested_path[0])
 
         # FIND THE INNER COLUMNS WE WILL BE MOVING
@@ -148,26 +156,26 @@ class Snowflake(object):
         for c in self.columns:
             if destination_table!=column.es_index and column.es_column==c.es_column:
                 moving_columns.append(c)
-                c.nested_path = [new_path] + c.nested_path
+                c.nested_path = new_path
 
         # TODO: IF THERE ARE CHILD TABLES, WE MUST UPDATE THEIR RELATIONS TOO?
 
         # DEFINE A NEW TABLE?
         # LOAD THE COLUMNS
-        command = "PRAGMA table_info(" + quote_table(destination_table) + ")"
+        command = "PRAGMA table_info"+sql_iso(quote_column(destination_table))
         details = self.db.query(command)
         if not details.data:
             command = (
-                "CREATE TABLE " + quote_table(destination_table) + "(" +
-                (",".join(
-                    [quoted_UID + " INTEGER", quoted_PARENT + " INTEGER", quoted_ORDER+" INTEGER"]
-                )) +
-                ", PRIMARY KEY (" + quoted_UID + ")" +
-                ", FOREIGN KEY (" + quoted_PARENT + ") REFERENCES " + quote_table(existing_table) + "(" + quoted_UID + ")"
-                ")"
+                "CREATE TABLE " + quote_column(destination_table) + sql_iso(sql_list([
+                    quoted_UID + "INTEGER",
+                    quoted_PARENT + "INTEGER",
+                    quoted_ORDER + "INTEGER",
+                    "PRIMARY KEY " + sql_iso(quoted_UID),
+                    "FOREIGN KEY " + sql_iso(quoted_PARENT) + " REFERENCES " + quote_column(existing_table) + sql_iso(quoted_UID)
+                ]))
             )
             self.db.execute(command)
-            self.add_table_to_schema([new_path])
+            self.add_table_to_schema(new_path)
 
         # TEST IF THERE IS ANY DATA IN THE NEW NESTED ARRAY
         if not moving_columns:
@@ -175,7 +183,7 @@ class Snowflake(object):
 
         column.es_index = destination_table
         self.db.execute(
-            "ALTER TABLE " + quote_table(destination_table) +
+            "ALTER TABLE " + quote_column(destination_table) +
             " ADD COLUMN " + quote_column(column.es_column) + " " + sql_types[column.type]
         )
 
@@ -183,17 +191,17 @@ class Snowflake(object):
         for col in moving_columns:
             column = col.es_column
             tmp_table = "tmp_" + existing_table
-            columns = self.db.query("select * from " + quote_table(existing_table) + " LIMIT 0").header
+            columns = list(map(text_type, self.db.query(SQL_SELECT + SQL_STAR + SQL_FROM + quote_column(existing_table) + SQL_LIMIT + SQL_ZERO).header))
             self.db.execute(
-                "ALTER TABLE " + quote_table(existing_table) +
-                " RENAME TO " + quote_table(tmp_table)
+                "ALTER TABLE " + quote_column(existing_table) +
+                " RENAME TO " + quote_column(tmp_table)
             )
             self.db.execute(
-                "CREATE TABLE " + quote_table(existing_table) +
-                " AS SELECT " + (", ".join([quote_table(c) for c in columns if c!=column])) +
-                " FROM " + quote_table(tmp_table)
+                "CREATE TABLE " + quote_column(existing_table) + " AS " +
+                SQL_SELECT + sql_list([quote_column(c) for c in columns if c != column]) +
+                SQL_FROM + quote_column(tmp_table)
             )
-            self.db.execute("DROP TABLE " + quote_table(tmp_table))
+            self.db.execute("DROP TABLE " + quote_column(tmp_table))
 
     def add_table_to_schema(self, nested_path):
         table = Table(nested_path)
@@ -212,13 +220,15 @@ class Snowflake(object):
         for table in self.tables.values():
             rel_name = column.names[table.name] = relative_field(abs_name, table.name)
             table.schema.add(rel_name, column)
+            table.columns.append(column)
 
 
-class Table(object):
+class Table(Container):
 
     def __init__(self, nested_path):
         self.nested_path = nested_path
-        self.schema = Schema(nested_path)  # MAP FROM RELATIVE NAME TO LIST OF COLUMNS
+        self._schema = Schema(nested_path)
+        self.columns = []  # PLAIN DATABASE COLUMNS
 
     @property
     def name(self):
@@ -227,6 +237,10 @@ class Table(object):
         """
         return self.nested_path[0]
 
+    @property
+    def schema(self):
+        return self._schema
+
 
 class Schema(object):
     """
@@ -234,6 +248,8 @@ class Schema(object):
     """
 
     def __init__(self, nested_path):
+        if nested_path[-1] != '.':
+            Log.error("Expecting full nested path")
         self.map = {}
         self.nested_path = nested_path
 
@@ -241,10 +257,20 @@ class Schema(object):
         if column_name != column.names[self.nested_path[0]]:
             Log.error("Logic error")
 
-        container = self.map.get(column_name)
-        if not container:
-            container = self.map[column_name] = []
-        container.append(column)
+        for np in self.nested_path:
+            rel_name = column.names[np]
+            container = self.map.get(rel_name)
+            if not container:
+                container = self.map[rel_name] = set()
+            hidden = [
+                c
+                for c in container
+                if len(c.nested_path[0]) < len(np)
+            ]
+            for h in hidden:
+                container.remove(h)
+
+            container.add(column)
 
     def remove(self, column_name, column):
         if column_name != column.names[self.nested_path[0]]:
@@ -281,13 +307,17 @@ class Schema(object):
         return [c for cs in self.map.values() for c in cs]
 
     def leaves(self, prefix):
-        return [
+        output = self.map.get(prefix)
+        if output:
+            return output
+
+        return set(
             c
             for k, cs in self.map.items()
             if startswith_field(k, prefix)
             for c in cs
             if c.type not in STRUCT
-        ]
+        )
 
     def map_to_sql(self, var=""):
         """

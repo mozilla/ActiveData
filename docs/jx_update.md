@@ -8,7 +8,9 @@ JSON Expressions have limited update features, assuming they are even enabled fo
 
 Add documents to the container
 
-	{"insert": [doc1, doc2, ...]}
+```javascript
+{"insert": [doc1, doc2, ...]}
+```
 
 
 `update` Command
@@ -16,14 +18,16 @@ Add documents to the container
 
 The `update` command accepts up to three parameters: `set`, `clear` and `where`
 
-	{"update": {
-		"where": filter,
-		"clear": [path1, path2, ...],
-		"set": {
-			leaf: expression
-			...
-		}
-	}}
+```javascript
+{"update": {
+    "where": filter,
+    "clear": [path1, path2, ...],
+    "set": {
+        leaf: expression
+        ...
+    }
+}}
+```
 
 * The `where` clause is an expression that must return `true` for the documents to be updated. If this clause is missing, all records are updated.
 * The `clear` clause is used to remove values from the document. The path(s) can refer to specific primitive values or whole objects. Clearing is done **before** the `set` clause.
@@ -35,10 +39,12 @@ Removing Documents
 
 Removing documents is done by clearing them
 
-	{"update": {
-		"where": filter,
-		"clear": ".",
-	}}
+```javascript
+{"update": {
+    "where": filter,
+    "clear": ".",
+}}
+```
 
 The dot (`.`) refers to the whole document; by clearing it you are effectively remove it.
 

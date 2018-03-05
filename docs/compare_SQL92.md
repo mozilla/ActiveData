@@ -696,7 +696,8 @@ Rule-based partitions
 
 One record results in two or more output records
 
-    CASE
+    SELECT
+        CASE
         WHEN d.digit=0 AND c.amount IS NULL THEN t.amount
         WHEN d.digit=0 THEN -c.amount
         WHEN d.digit=1 AND c.amount<>-t.amount THEN t.amount+c.amount

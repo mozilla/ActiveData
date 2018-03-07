@@ -22,13 +22,13 @@ Getting a feel for the JSON Expressions `select` clause is easiest done by compa
 </td><td>
 <b>SQL</b><br>
 <pre>
- 
+<br>
 SELECT
     person AS name,
     years AS age
 FROM
     test
- 
+<br>
 </pre>
 </td></tr></table>
 

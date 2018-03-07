@@ -1,6 +1,10 @@
 # JSON Query Expression Documentation
 
-JSON query expressions are best considered as SQL parse trees, in JSON format; each
+JSON Query Expressions are meant to be a communication standard between 
+services. They are targeted toward business intelligence, analytic 
+processing, data warehouse and dashboard applications.
+
+JSON query expressions are best viewed as SQL parse trees where each
 property corresponds to a SQL clause. There are some differences from SQL,
 especially when it comes to using default clauses, but I hope your knowledge
 of SQL can jump-start your use of JSON Expressions.
@@ -71,15 +75,15 @@ definition.
 
 JSON Expression
 
-	{"add": ["a", "b"]}
+    {"add": ["a", "b"]}
 
 Javascript equivalent
 
-	function add(a, b){
-		if (a==null) return b;
-		if (b==null) return a;
-		return a + b;
- 	}
+    function add(a, b){
+        if (a==null) return b;
+        if (b==null) return a;
+        return a + b;
+     }
 
 
 #### Dereferencing with `nulls`
@@ -89,16 +93,16 @@ Most databases have primitive object accessors, if any. [MDX uses concise 'dot' 
 
 JSON Expression
 
-	"a.b"
+    "a.b"
 
 Javascript equivalent
 
-	function get (a, b){
-		if (a==null) return null;
-		if (b==null) return null;
-		if (a[b]===undefined) return null;
-		return a[b];
- 	}
+    function get (a, b){
+        if (a==null) return null;
+        if (b==null) return null;
+        if (a[b]===undefined) return null;
+        return a[b];
+     }
 
 Using the *out-of-context* definition; expressions, list comprehensions, and
 query expressions are all simplified:  
@@ -130,14 +134,14 @@ Here is an example that shows the problem.
 <b>SQL</b><br>
 <pre>
 SELECT
-	state,
-	count(id) as `count`
+    state,
+    count(id) as `count`
 FROM
-	employees
+    employees
 GROUP BY
-	state
+    state
 ORDER BY
-	state
+    state
 </pre>
 </td><td>
 <b>Result</b><br>
@@ -160,14 +164,14 @@ is representing in
 <b>JSON Query Expression</b><br>
 <pre>
 {
-	"select": {
-		"name":"count", 
-		"value":"id", 
-		"aggregate":"count
-	},
-	"from": "employees",
-	"edges":["state"]
-	"sort": "state"
+    "select": {
+        "name":"count", 
+        "value":"id", 
+        "aggregate":"count
+    },
+    "from": "employees",
+    "edges":["state"]
+    "sort": "state"
 }
 </pre>
 </td><td>

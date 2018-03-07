@@ -21,7 +21,7 @@ Getting a feel for the JSON Expressions `select` clause is easiest done by compa
 </pre>
 </td><td>
 <b>SQL</b><br>
-```sql
+<code>
 
 SELECT
     person AS name,
@@ -29,7 +29,7 @@ SELECT
 FROM
     test
 
-```
+</code>
 </td></tr></table>
 
 JSON expressions are clearly more verbose than SQL, but there are many shortcuts to mitigate this, plus the `select` clause can do more than SQL.

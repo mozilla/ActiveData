@@ -21,15 +21,15 @@ Getting a feel for the JSON Expressions `select` clause is easiest done by compa
 </pre>
 </td><td>
 <b>SQL</b><br>
-<pre>
+```sql
 
 SELECT
     person AS name,
     years AS age
 FROM
-    test 
+    test
 
-</pre>
+```
 </td></tr></table>
 
 JSON expressions are clearly more verbose than SQL, but there are many shortcuts to mitigate this, plus the `select` clause can do more than SQL.
@@ -92,8 +92,7 @@ The path separator is the dot (`.`), with literal dots escaped using backslash. 
     }]
 
 
-`select` Simplifications
-------------------------
+## `select` Simplifications
 
 All other select clause variations are shortcuts for the standard clause.
 
@@ -405,17 +404,6 @@ The star can be used on the end of a path. The path is not flattened, but the st
 </td></tr></table>
 
 
-Aggregation
------------
+# Aggregation
 
 When a JSON query expressions includes a `groupby` or `edges` clause, the members of the `select` clause must include the `aggregate` property; which indicates what to do with the many possible values being assigned to the `name`.
-
-
-
-
-
-
-
-  
-
-

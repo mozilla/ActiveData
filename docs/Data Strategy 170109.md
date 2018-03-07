@@ -63,39 +63,39 @@ The current scale is good, but should be increased for faster speeds and higher 
 ### Time Consuming Categories
 
 * ETL is a problem - Transformation, denormalization, scrubbing, multiple sources
-	* JSON solves the denormalization problem
-	  * many2one (a variation on properties)
-	  * one2many (nested documents)
-	* JSON solves the more common data migrations (add/remove columns)
-	* audit trail (multiple sources)
-	* <s>Common data time line transformations (slowly changing dimensions)</s> (not relevant)
+    * JSON solves the denormalization problem
+      * many2one (a variation on properties)
+      * one2many (nested documents)
+    * JSON solves the more common data migrations (add/remove columns)
+    * audit trail (multiple sources)
+    * <s>Common data time line transformations (slowly changing dimensions)</s> (not relevant)
 * Liveliness is a problem
-	* Monitoring processes 
-	* Managing server
-	* Machine replacement
-	* CPU/Memory costs
-	* **Uptime is not a priority** reduces effort and cost
+    * Monitoring processes 
+    * Managing server
+    * Machine replacement
+    * CPU/Memory costs
+    * **Uptime is not a priority** reduces effort and cost
 * Big is a problem
-	* Think global, act local 
-	* build to fail
-	* distributed transactions
-	* streaming, memory/disk limits
+    * Think global, act local 
+    * build to fail
+    * distributed transactions
+    * streaming, memory/disk limits
 
 ### Time Consuming Combinations
 
 * Big ETL
-	* Data/Processing anomalies
-	* Schema diversity
-	* Constant change
+    * Data/Processing anomalies
+    * Schema diversity
+    * Constant change
 * Big and Lively
-	* <s>Manage loosing machines</s> (solved by ES, and opens up using spot instances)
-	* <s>Fast response time</s> (solved by ES) 
-	* Automate management of machines
-	* Automate management of cost
-	* Automate load balancing
+    * <s>Manage loosing machines</s> (solved by ES, and opens up using spot instances)
+    * <s>Fast response time</s> (solved by ES) 
+    * Automate management of machines
+    * Automate management of cost
+    * Automate load balancing
 * Live ETL
-	* <s>Optimizations to process fast</s> (not attempted)
-	* <s>Responsiveness to deal with failure</s> (not attempted)
+    * <s>Optimizations to process fast</s> (not attempted)
+    * <s>Responsiveness to deal with failure</s> (not attempted)
 
 ¿Using Telemetry?
 -----------------

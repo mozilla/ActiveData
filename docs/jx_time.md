@@ -19,7 +19,7 @@ Time can be
 **Example**
 
     {"date": "June 30, 2015 19:50:10"}
-	{"date": 1435693810}  # June 30, 2015 19:50:10
+    {"date": 1435693810}  # June 30, 2015 19:50:10
 
 ### Relative Time
 
@@ -32,7 +32,7 @@ There are a few relative time values:
 
 **Example**
 
-	{"date": "today"}
+    {"date": "today"}
 
 ### Duration
 
@@ -45,17 +45,17 @@ notice they are singular, not plural.
 
 **Example**
 
-	{"date": "day"}
-	{"date": "week"}
-	{'date": "year"}
+    {"date": "day"}
+    {"date": "week"}
+    {'date": "year"}
 
 ### Expressions
 
 The `date` operator also accepts simple algebraic expressions. Duration can be added (`+`) and subtracted (`-`) from dates, and each other. Duration can also be multiplied by a scalar which is simply prefix numeric value (no operator).
 
-	{"date": "today-3month"}            # three months before beginning of today (GMT)
-	{"date": "now-today"}               # number of seconds since beginning of today (GMT)
-	{"date": "2month + week - 13hour"}  # legitimate, but meaningless
+    {"date": "today-3month"}            # three months before beginning of today (GMT)
+    {"date": "now-today"}               # number of seconds since beginning of today (GMT)
+    {"date": "2month + week - 13hour"}  # legitimate, but meaningless
 
 
 More Expressions
@@ -69,12 +69,12 @@ The [`floor` operator](jx_expressions.md#floor-operator) rounds down to closest 
 
 Here are some examples using the floor function:
 
-	# Let example = {"date": "June 30, 2015 19:50:10"}
+    # Let example = {"date": "June 30, 2015 19:50:10"}
 
-	{"floor": {"example": {"date": "hour" }}} ⇒ June 30, 2015 19:00:00
-	{"floor": {"example": {"date": "day"  }}} ⇒ June 30, 2015 00:00:00
-	{"floor": {"example": {"date": "week" }}} ⇒ June 28, 2015 00:00:00
-	{"floor": {"example": {"date": "month"}}} ⇒ June 1, 2015 00:00:00
+    {"floor": {"example": {"date": "hour" }}} ⇒ June 30, 2015 19:00:00
+    {"floor": {"example": {"date": "day"  }}} ⇒ June 30, 2015 00:00:00
+    {"floor": {"example": {"date": "week" }}} ⇒ June 28, 2015 00:00:00
+    {"floor": {"example": {"date": "month"}}} ⇒ June 1, 2015 00:00:00
 
 `floor` can be used to group timestamps into familiar sized buckets.
 
@@ -95,12 +95,12 @@ The [`mod` operator](jx_expressions.md#mod-operator) can help reveal seasonal pa
     
     time_of_day = {"mod": {"start_time": {"date": "day" }}}
 
-	seconds_into_week = {"mod": [
+    seconds_into_week = {"mod": [
         "start_time",  
         {"date": "week"}
     ]}
 
-	day_of_week = {"mod": [
+    day_of_week = {"mod": [
         {"floor": {"start_time": {"date": "day"}}}, 
         {"date": "week"}
     ]}

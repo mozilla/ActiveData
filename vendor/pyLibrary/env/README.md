@@ -33,15 +33,15 @@ rest API directly.
 Both ```Cluster``` and ```Index``` objects accept the same settings dict,
 selecting only the properties it requires.
 
-	{
-		"host" : "http://192.168.0.98",
-		"port" : 9200,
-		"index" : "b2g_tests",
-		"type" : "test_result",
-		"debug" : true,
-		"limit_replicas" : true,
-		"schema_file" : "./resources/schema/test_schema.json"
-	},
+    {
+        "host" : "http://192.168.0.98",
+        "port" : 9200,
+        "index" : "b2g_tests",
+        "type" : "test_result",
+        "debug" : true,
+        "limit_replicas" : true,
+        "schema_file" : "./resources/schema/test_schema.json"
+    },
 
 
 

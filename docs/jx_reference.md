@@ -322,45 +322,45 @@ the dataset. In this project [`Mozilla.*` have been pre-defined](https://github.
     <pre>var details=yield(ESQuery.run({
         "from":"bugs",
         "select":[
-        	"bug_id",
-    		<b>Mozilla.BugStatus.getSelect()</b>,
-    		"assigned_to",
-    		{"name":"dependson", "value":"get(_source, \"dependson\")"},
-    		"status_whiteboard",
-    		"component"
-    	],
-    	"esfilter":{"and":[
-    		Mozilla.CurrentRecords.esfilter,
-    		{"terms":{"bug_id":Object.keys(allBugs)}}
-    	]}
+            "bug_id",
+            <b>Mozilla.BugStatus.getSelect()</b>,
+            "assigned_to",
+            {"name":"dependson", "value":"get(_source, \"dependson\")"},
+            "status_whiteboard",
+            "component"
+        ],
+        "esfilter":{"and":[
+            Mozilla.CurrentRecords.esfilter,
+            {"terms":{"bug_id":Object.keys(allBugs)}}
+        ]}
     }));</pre>
 
   - **edge.domain** - Pre-defined dimensions can be used as domain values
 
     <pre>var chart=yield (ESQuery.run({
-    	"from":"bugs",
-    	"select": {"name":"num_bug", "value":"bug_id", "aggregate":"count"},
-    	"edges":[
-    		{"name":"type", allowNulls:true, "domain":<b>Mozilla.Projects["B2G 1.0.1 (TEF)"].getDomain()</b>},
-    		{"name":"date",
-    			"range":{"min":"modified_ts", "max":"expires_on"},
-    			"allowNulls":false,
-    			"domain":{"type":"time", "min":sampleMin, "max":sampleMax, "interval":sampleInterval}
-    		}
-    	]
+        "from":"bugs",
+        "select": {"name":"num_bug", "value":"bug_id", "aggregate":"count"},
+        "edges":[
+            {"name":"type", allowNulls:true, "domain":<b>Mozilla.Projects["B2G 1.0.1 (TEF)"].getDomain()</b>},
+            {"name":"date",
+                "range":{"min":"modified_ts", "max":"expires_on"},
+                "allowNulls":false,
+                "domain":{"type":"time", "min":sampleMin, "max":sampleMax, "interval":sampleInterval}
+            }
+        ]
     }));</pre>
 
 
   - **esfilter** - most commonly used in esfilters so that simple names replace complex filtering logic
 
     <pre>var q = yield(ESQuery.run({
-    	"name":"Product Breakdown",
-		"from":"bugs",
-		"select":{"name":"count", "value":"bug_id", "aggregate":"count"},
-		"edges":[
-			{"name":"product", "value":"product"}
-		],
-		"esfilter":<b>Mozilla.BugStatus.Open.esfilter</b>
-	});</pre>
+        "name":"Product Breakdown",
+        "from":"bugs",
+        "select":{"name":"count", "value":"bug_id", "aggregate":"count"},
+        "edges":[
+            {"name":"product", "value":"product"}
+        ],
+        "esfilter":<b>Mozilla.BugStatus.Open.esfilter</b>
+    });</pre>
 
 

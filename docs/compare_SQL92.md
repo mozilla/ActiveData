@@ -28,11 +28,11 @@ A deliberate feature of a JSON expressions is it's JSON. It can be easily declar
 
 Many of the SQL's shortcomings, which I touch on below, are overcome by string concatenation on client-side code. Good ORM libraries will formalize this string manipulation with a series of function calls, which are used to create a abstract syntax tree, which is serialized to SQL. SQLAlchemy is a particularly good ORM because it leverages Python's magic methods to make elegant imperative Python expressions generate those data structures behind the scenes. But, in every case, you are running code that generates a data structure, which is then used to generate SQL.      
 
-	ORM Expressions -> AST -> SQL -> network -> SQL -> AST -> Query
+    ORM Expressions -> AST -> SQL -> network -> SQL -> AST -> Query
 
 JSON expressions are slightly better in this regard; It is its own AST, and does not require serialization to a complex intermediate language. Furthermore, an ORM library would be trivial to write, so trivial that it would provide negligible benefit over simply stating the JSON structure directly.
 
-	JSON Expressions -> JSON -> network -> JSON -> JSON Expressions -> Query 
+    JSON Expressions -> JSON -> network -> JSON -> JSON Expressions -> Query 
 
 ### Splitting credit and debit
 
@@ -62,8 +62,8 @@ Domains are useful abstraction that give names to complex business rules.  Our `
     {
     "from": "transactions",
     "select": [
-		"account_number",
-		"money*"
+        "account_number",
+        "money*"
     }
 
 
@@ -97,7 +97,7 @@ And
     "from": "transactions",
     "select": [
         "account_number",
-		"charge_breakdown*"
+        "charge_breakdown*"
     ]
     }
 

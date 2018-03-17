@@ -95,6 +95,7 @@ class Container(object):
         else:
             Log.error("Do not know how to handle {{type}}", type=frum.__class__.__name__)
 
+
     def __init__(self, frum, schema=None):
         object.__init__(self)
         if not type2container:

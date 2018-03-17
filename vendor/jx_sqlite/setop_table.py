@@ -13,18 +13,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import STRUCT
+from jx_base import STRUCT, OBJECT
 from jx_base.expressions import BooleanOp
 from jx_base.queries import get_property_name
 from jx_python.meta import Column
-from jx_sqlite import quoted_UID, quoted_GUID, get_column, _make_column_name, ORDER, COLUMN, set_column, quoted_PARENT, ColumnMapping, quoted_ORDER
+from jx_sqlite import quoted_UID, quoted_GUID, get_column, _make_column_name, ORDER, COLUMN, set_column, quoted_PARENT, ColumnMapping, quoted_ORDER, GUID
 from jx_sqlite.expressions import sql_type_to_json_type, LeavesOp
 from jx_sqlite.insert_table import InsertTable
 from mo_dots import listwrap, Data, unwraplist, split_field, join_field, startswith_field, unwrap, relative_field, concat_field, literal_field, Null
 from mo_future import text_type
 from mo_future import unichr
 from mo_math import UNION, MAX
-from pyLibrary.sql import SQL_UNION_ALL, SQL_LEFT_JOIN, SQL_FROM, SQL_WHERE, SQL_SELECT, SQL_ON, SQL_AND, SQL_LIMIT, SQL_ORDERBY, SQL_NULL, SQL_IS_NULL, SQL_IS_NOT_NULL, sql_iso, sql_list, sql_alias
+from pyLibrary.sql import SQL_UNION_ALL, SQL_LEFT_JOIN, SQL_FROM, SQL_WHERE, SQL_SELECT, SQL_ON, SQL_AND, SQL_LIMIT, SQL_ORDERBY, SQL_NULL, SQL_IS_NULL, SQL_IS_NOT_NULL, sql_iso, sql_list, sql_alias, SQL_TRUE, SQL
 from pyLibrary.sql.sqlite import quote_value, quote_column, join_column
 
 
@@ -33,42 +33,19 @@ class SetOpTable(InsertTable):
         # GET LIST OF COLUMNS
         frum_path = split_field(frum)
         primary_nested_path = join_field(frum_path[1:])
-        vars_ = UNION([v.var for s in listwrap(query.select) for v in s.value.vars()])
+        vars_ = UNION([v.var for select in listwrap(query.select) for v in select.value.vars()])
         schema = self.sf.tables[primary_nested_path].schema
 
-        nest_to_alias = {
-            nested_path: "__" + unichr(ord('a') + i) + "__"
-            for i, (nested_path, sub_table) in enumerate(self.sf.tables.items())
-        }
-
-        active_columns = {".": []}
-        for cname, cols in schema.items():
-            if any(startswith_field(cname, v) for v in vars_):
-                for c in cols:
-                    if c.type in STRUCT:
-                        continue
-                    nest = c.nested_path[0]
-                    active = active_columns.get(nest)
-                    if not active:
-                        active = active_columns[nest] = []
-                    active.append(c)
-
-        for nested_path, s in self.sf.tables.items():
-            for cname, cols in s.schema.items():
-                if not any(startswith_field(cname, c.names[c.nested_path[0]]) for n, cc in active_columns.items() for c in cc):
-                    for c in cols:
-                        if c.type in STRUCT:
-                            continue
-                        nest = c.nested_path[0]
-                        active = active_columns.get(nest)
-                        if not active:
-                            active = active_columns[nest] = []
-                        active.append(c)
+        active_columns = {".": set()}
+        for v in vars_:
+            for c in schema.leaves(v):
+                nest = c.nested_path[0]
+                active_columns.setdefault(nest, set()).add(c)
 
         # ANY VARS MENTIONED WITH NO COLUMNS?
         for v in vars_:
             if not any(startswith_field(cname, v) for cname in schema.keys()):
-                active_columns["."].append(Column(
+                active_columns["."].add(Column(
                     names={".": v},
                     type="null",
                     es_column=".",
@@ -87,8 +64,8 @@ class SetOpTable(InsertTable):
 
         sorts = []
         if query.sort:
-            for s in query.sort:
-                col = s.value.to_sql(schema)[0]
+            for select in query.sort:
+                col = select.value.to_sql(schema)[0]
                 for t, sql in col.sql.items():
                     json_type = sql_type_to_json_type[t]
                     if json_type in STRUCT:
@@ -97,23 +74,24 @@ class SetOpTable(InsertTable):
                     # SQL HAS ABS TABLE REFERENCE
                     column_alias = _make_column_name(column_number)
                     sql_selects.append(sql_alias(sql, column_alias))
-                    if s.sort == -1:
+                    if select.sort == -1:
                         sorts.append(column_alias + SQL_IS_NOT_NULL)
                         sorts.append(column_alias + " DESC")
                     else:
                         sorts.append(column_alias + SQL_IS_NULL)
                         sorts.append(column_alias)
 
-        selects = []
         primary_doc_details = Data()
         # EVERY SELECT STATEMENT THAT WILL BE REQUIRED, NO MATTER THE DEPTH
         # WE WILL CREATE THEM ACCORDING TO THE DEPTH REQUIRED
-        for nested_path, sub_table in self.sf.tables.items():
+        nested_path = []
+        for step, sub_table in self.sf.tables.items():
+            nested_path.insert(0, step)
             nested_doc_details = {
                 "sub_table": sub_table,
                 "children": [],
                 "index_to_column": {},
-                "nested_path": [nested_path]  # fake the real nested path, we only look at [0] anyway
+                "nested_path": nested_path
             }
 
             # INSERT INTO TREE
@@ -121,7 +99,7 @@ class SetOpTable(InsertTable):
                 primary_doc_details = nested_doc_details
             else:
                 def place(parent_doc_details):
-                    if startswith_field(nested_path, parent_doc_details['nested_path'][0]):
+                    if startswith_field(step, parent_doc_details['nested_path'][0]):
                         for c in parent_doc_details['children']:
                             if place(c):
                                 return True
@@ -129,146 +107,80 @@ class SetOpTable(InsertTable):
 
                 place(primary_doc_details)
 
-            alias = nested_doc_details['alias'] = nest_to_alias[nested_path]
+            alias = nested_doc_details['alias'] = nest_to_alias[step]
 
-            if nested_path == "." and quoted_GUID in vars_:
-                column_number = index_to_uid[nested_path] = nested_doc_details['id_coord'] = len(sql_selects)
-                sql_select = join_column(alias, quoted_GUID)
-                sql_selects.append(sql_alias(sql_select, _make_column_name(column_number)))
-                index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = ColumnMapping(
-                    push_name="_id",
-                    push_column_name="_id",
-                    push_column=0,
-                    push_child=".",
-                    sql=sql_select,
-                    pull=get_column(column_number),
-                    type="string",
-                    column_alias=_make_column_name(column_number),
-                    nested_path=[nested_path]  # fake the real nested path, we only look at [0] anyway
-                )
-                query.select = [s for s in listwrap(query.select) if s.name != "_id"]
-
-            # WE ALWAYS ADD THE UID AND ORDER
-            column_number = index_to_uid[nested_path] = nested_doc_details['id_coord'] = len(sql_selects)
+            # WE ALWAYS ADD THE UID
+            column_number = index_to_uid[step] = nested_doc_details['id_coord'] = len(sql_selects)
             sql_select = join_column(alias, quoted_UID)
             sql_selects.append(sql_alias(sql_select, _make_column_name(column_number)))
-            if nested_path != ".":
+            if step != ".":
+                # ID AND ORDER FOR CHILD TABLES
                 index_to_column[column_number] = ColumnMapping(
                     sql=sql_select,
                     type="number",
-                    nested_path=[nested_path],  # fake the real nested path, we only look at [0] anyway
+                    nested_path=nested_path,
                     column_alias=_make_column_name(column_number)
-
                 )
                 column_number = len(sql_selects)
-                sql_select = join_column(alias , quoted_ORDER)
+                sql_select = join_column(alias, quoted_ORDER)
                 sql_selects.append(sql_alias(sql_select, _make_column_name(column_number)))
                 index_to_column[column_number] = ColumnMapping(
                     sql=sql_select,
                     type="number",
-                    nested_path=[nested_path],  # fake the real nested path, we only look at [0] anyway
+                    nested_path=nested_path,
                     column_alias=_make_column_name(column_number)
-
                 )
 
             # WE DO NOT NEED DATA FROM TABLES WE REQUEST NOTHING FROM
-            if nested_path not in active_columns:
+            if step not in active_columns:
                 continue
 
-            if len(active_columns[nested_path]) != 0:
-                # ADD SQL SELECT COLUMNS FOR EACH jx SELECT CLAUSE
-                si = 0
-                for s in listwrap(query.select):
-                    try:
-                        column_number = len(sql_selects)
-                        s.pull = get_column(column_number)
-                        db_columns = s.value.partial_eval().to_sql(schema)
-
-                        if isinstance(s.value, LeavesOp):
-                            for column in db_columns:
-                                if isinstance(column.nested_path, list):
-                                    column.nested_path = column.nested_path[0]
-                                if column.nested_path and column.nested_path != nested_path:
-                                    continue
-                                for t, unsorted_sql in column.sql.items():
-                                    json_type = sql_type_to_json_type[t]
-                                    if json_type in STRUCT:
-                                        continue
-                                    column_number = len(sql_selects)
-                                    # SQL HAS ABS TABLE REFERENCE
-                                    column_alias = _make_column_name(column_number)
-                                    if concat_field(alias, unsorted_sql) in selects and len(unsorted_sql.split()) == 1:
-                                        continue
-                                    selects.append(concat_field(alias, unsorted_sql))
-                                    sql_selects.append(sql_alias(join_column(alias, unsorted_sql), column_alias))
-                                    index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = ColumnMapping(
-                                        push_name=literal_field(get_property_name(concat_field(s.name, column.name))),
-                                        push_column_name=get_property_name(concat_field(s.name, column.name)),
-                                        push_column=si,
-                                        push_child=".",
-                                        pull=get_column(column_number),
-                                        sql=unsorted_sql,
-                                        type=json_type,
-                                        column_alias=column_alias,
-                                        nested_path=[nested_path]  # fake the real nested path, we only look at [0] anyway
-                                    )
-                                    si += 1
-                        else:
-                            for column in db_columns:
-                                if isinstance(column.nested_path, list):
-                                    column.nested_path = column.nested_path[0]
-                                if column.nested_path and column.nested_path != nested_path:
-                                    continue
-                                for t, unsorted_sql in column.sql.items():
-                                    json_type = sql_type_to_json_type[t]
-                                    if json_type in STRUCT:
-                                        continue
-                                    column_number = len(sql_selects)
-                                    # SQL HAS ABS TABLE REFERENCE
-                                    column_alias = _make_column_name(column_number)
-                                    if concat_field(alias, unsorted_sql) in selects and len(unsorted_sql.split()) == 1:
-                                        continue
-                                    selects.append(concat_field(alias, unsorted_sql))
-                                    sql_selects.append(sql_alias(join_column(alias, unsorted_sql), column_alias))
-                                    index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = ColumnMapping(
-                                        push_name=s.name,
-                                        push_column_name=s.name,
-                                        push_column=si,
-                                        push_child=column.name,
-                                        pull=get_column(column_number),
-                                        sql=unsorted_sql,
-                                        type=json_type,
-                                        column_alias=column_alias,
-                                        nested_path=[nested_path]
-                                        # fake the real nested path, we only look at [0] anyway
-                                    )
-                    finally:
-                        si += 1
-            elif startswith_field(nested_path, primary_nested_path):
-                # ADD REQUIRED COLUMNS, FOR DEEP STUFF
-                for ci, c in enumerate(active_columns[nested_path]):
-                    if c.type in STRUCT:
-                        continue
-
+            # ADD SQL SELECT COLUMNS FOR EACH jx SELECT CLAUSE
+            si = 0
+            for select in listwrap(query.select):
+                try:
                     column_number = len(sql_selects)
-                    nested_path = c.nested_path
-                    unsorted_sql = join_column(nest_to_alias[nested_path[0]] , c.es_column)
-                    column_alias = _make_column_name(column_number)
-                    if concat_field(alias, unsorted_sql) in selects and len(unsorted_sql.split()) == 1:
-                        continue
-                    selects.append(concat_field(alias, unsorted_sql))
-                    sql_selects.append(sql_alias(join_column(alias, unsorted_sql) , column_alias))
-                    index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = ColumnMapping(
-                        push_name=s.name,
-                        push_column_name=s.name,
-                        push_column=si,
-                        push_child=relative_field(c.names["."], s.name),
-                        pull=get_column(column_number),
-                        sql=unsorted_sql,
-                        type=c.type,
-                        column_alias=column_alias,
-                        nested_path=nested_path
-                    )
+                    select.pull = get_column(column_number)
+                    db_columns = select.value.partial_eval().to_sql(schema)
+
+                    for column in db_columns:
+                        if isinstance(column.nested_path, list):
+                            column.nested_path = column.nested_path[0]  # IN THE EVENT THIS "column" IS MULTIVALUED
+                        for t, unsorted_sql in column.sql.items():
+                            json_type = sql_type_to_json_type[t]
+                            if json_type in STRUCT:
+                                continue
+                            column_number = len(sql_selects)
+                            column_alias = _make_column_name(column_number)
+                            sql_selects.append(sql_alias(unsorted_sql, column_alias))
+                            if startswith_field(primary_nested_path, step) and isinstance(select.value, LeavesOp):
+                                # ONLY FLATTEN primary_nested_path AND PARENTS, NOT CHILDREN
+                                index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = ColumnMapping(
+                                    push_name=literal_field(get_property_name(concat_field(select.name, column.name))),
+                                    push_child=".",
+                                    push_column_name=get_property_name(concat_field(select.name, column.name)),
+                                    push_column=si,
+                                    pull=get_column(column_number),
+                                    sql=unsorted_sql,
+                                    type=json_type,
+                                    column_alias=column_alias,
+                                    nested_path=nested_path
+                                )
+                                si += 1
+                            else:
+                                index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = ColumnMapping(
+                                    push_name=select.name,
+                                    push_child=column.name,
+                                    push_column_name=select.name,
+                                    push_column=si,
+                                    pull=get_column(column_number),
+                                    sql=unsorted_sql,
+                                    type=json_type,
+                                    column_alias=column_alias,
+                                    nested_path=nested_path
+                                )
+                finally:
+                    si += 1
 
         where_clause = BooleanOp("boolean", query.where).partial_eval().to_sql(schema, boolean=True)[0].sql.b
         unsorted_sql = self._make_sql_for_one_nest_in_set_op(
@@ -406,16 +318,13 @@ class SetOpTable(InsertTable):
 
             if isinstance(query.select, list) or isinstance(query.select.value, LeavesOp):
                 num_rows = len(data)
-                map_index_to_name = {c.push_column: c.push_column_name for c in cols}
-                temp_data = Data()
+                temp_data = {c.push_column_name: [None] * num_rows for c in cols}
                 for rownum, d in enumerate(data):
-                    for k, v in d.items():
-                        if temp_data[k] == None:
-                            temp_data[k] = [None] * num_rows
-                        temp_data[k][rownum] = v
+                    for c in cols:
+                        temp_data[c.push_column_name][rownum] = d[c.push_name]
                 return Data(
                     meta={"format": "cube"},
-                    data={n: temp_data[literal_field(n)] for c, n in map_index_to_name.items()},
+                    data=temp_data,
                     edges=[{
                         "name": "rownum",
                         "domain": {
@@ -466,7 +375,6 @@ class SetOpTable(InsertTable):
                         data=output_data
                     )
             if isinstance(query.select, list) or isinstance(query.select.value, LeavesOp):
-                num_rows = len(data)
                 column_names = [None] * (max(c.push_column for c in cols) + 1)
                 for c in cols:
                     column_names[c.push_column] = c.push_column_name
@@ -474,10 +382,8 @@ class SetOpTable(InsertTable):
                 temp_data = []
                 for rownum, d in enumerate(data):
                     row = [None] * len(column_names)
-                    for i, (k, v) in enumerate(sorted(d.items())):
-                        for c in cols:
-                            if k == c.push_name:
-                                row[c.push_column] = v
+                    for c in cols:
+                        row[c.push_column] = d[c.push_name]
                     temp_data.append(row)
 
                 return Data(
@@ -521,12 +427,8 @@ class SetOpTable(InsertTable):
                 temp_data = []
                 for rownum, d in enumerate(data):
                     row = {}
-                    for k, v in d.items():
-                        for c in cols:
-                            if c.push_name == c.push_column_name == k:
-                                row[c.push_column_name] = v
-                            elif c.push_name == k and c.push_column_name != k:
-                                row[c.push_column_name] = v
+                    for c in cols:
+                        row[c.push_column_name] = d[c.push_name]
                     temp_data.append(row)
                 return Data(
                     meta={"format": "list"},
@@ -563,13 +465,13 @@ class SetOpTable(InsertTable):
         children_sql = []
         done = []
         if not where_clause:
-            where_clause = "1"
+            where_clause = SQL_TRUE
         # STATEMENT FOR EACH NESTED PATH
         for i, (nested_path, sub_table) in enumerate(self.sf.tables.items()):
             if any(startswith_field(nested_path, d) for d in done):
                 continue
 
-            alias = "__" + unichr(ord('a') + i) + "__"
+            alias = quote_column("__" + unichr(ord('a') + i) + "__")
 
             if primary_nested_path == nested_path:
                 select_clause = []
@@ -587,13 +489,13 @@ class SetOpTable(InsertTable):
                         select_clause.append(sql_alias(SQL_NULL, sql_select.column_alias))
 
                 if nested_path == ".":
-                    from_clause += SQL_FROM + quote_column(self.sf.fact) + " " + alias
+                    from_clause += SQL_FROM + sql_alias(quote_column(self.sf.fact), alias)
                 else:
                     from_clause += (
-                        SQL_LEFT_JOIN + quote_column(concat_field(self.sf.fact, sub_table.name)) + " " + alias +
+                        SQL_LEFT_JOIN + sql_alias(quote_column(concat_field(self.sf.fact, sub_table.name)), alias) +
                         SQL_ON + join_column(alias, quoted_PARENT) + " = " + join_column(parent_alias, quoted_UID)
                     )
-                    where_clause = sql_iso(where_clause) + SQL_AND + join_column(alias , quoted_ORDER) + " > 0"
+                    where_clause = sql_iso(where_clause) + SQL_AND + join_column(alias, quoted_ORDER) + " > 0"
                 parent_alias = alias
 
             elif startswith_field(primary_nested_path, nested_path):
@@ -614,7 +516,7 @@ class SetOpTable(InsertTable):
                 # CHILD TABLE
                 # GET FIRST ROW FOR EACH NESTED TABLE
                 from_clause += (
-                    SQL_LEFT_JOIN + quote_column(concat_field(self.sf.fact, sub_table.name)) + " " + alias +
+                    SQL_LEFT_JOIN + sql_alias(quote_column(concat_field(self.sf.fact, sub_table.name)), alias) +
                     SQL_ON + join_column(alias, quoted_PARENT) + " = " + join_column(parent_alias, quoted_UID) +
                     SQL_AND + join_column(alias, ORDER) + " = 0"
                 )
@@ -634,7 +536,11 @@ class SetOpTable(InsertTable):
                 continue
 
         sql = SQL_UNION_ALL.join(
-            [SQL_SELECT + sql_list(select_clause) + from_clause + SQL_WHERE + where_clause] +
+            [
+                SQL_SELECT + sql_list(select_clause) +
+                from_clause +
+                SQL_WHERE + where_clause
+            ] +
             children_sql
         )
 

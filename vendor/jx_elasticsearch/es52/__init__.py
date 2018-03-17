@@ -127,7 +127,7 @@ class ES52(Container):
 
     def query(self, _query):
         try:
-            query = QueryOp.wrap(_query, table=self)
+            query = QueryOp.wrap(_query, table=self, schema=self.schema)
 
             for n in self.namespaces:
                 query = n.convert(query)

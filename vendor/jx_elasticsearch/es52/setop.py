@@ -75,10 +75,10 @@ def es_setop(es, query):
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if isinstance(select.value, LeavesOp) and isinstance(select.value.term, Variable):
             term = select.value.term
-            leaves = schema.values(term.var)
+            leaves = schema.leaves(term.var)
             for c in leaves:
                 full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
-                if c.type == NESTED or c.nested_path[0] != ".":
+                if c.type == NESTED:
                     es_query.stored_fields = ["_source"]
                     new_select.append({
                         "name": full_name,
@@ -87,6 +87,8 @@ def es_setop(es, query):
                         "pull": get_pull_source(c.es_column)
                     })
                     put_index += 1
+                elif c.nested_path[0] != ".":
+                    es_query.stored_fields = ["_source"]
                 else:
                     es_query.stored_fields += [c.es_column]
                     new_select.append({

@@ -585,7 +585,7 @@ FUNCTIONS = {
         "}};\n",
 
     "Value2Pipe":
-        'var Value2Pipe = function(value){\n' + # SPACES ARE IMPORTANT BETWEEN "="
+        'var Value2Pipe = function(value){\n' +  # SPACES ARE IMPORTANT BETWEEN "=".
         "if (value==null){ \"0\" }else " +
         "if (value is ArrayList || value is org.elasticsearch.common.mvel2.util.FastList){" +
         "var out = \"\";\n" +

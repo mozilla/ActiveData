@@ -25,7 +25,7 @@ from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, O
     InequalityOp, extend, RowsOp, OffsetOp, GetOp, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, RangeOp, CaseOp, AndOp, \
-    ConcatOp, InOp, jx_expression, Expression, WhenOp, MaxOp, SplitOp, NULL, SelectOp, SuffixOp
+    ConcatOp, InOp, jx_expression, Expression, WhenOp, MaxOp, SplitOp, NULL, SelectOp, SuffixOp, LastOp
 from jx_python.expression_compiler import compile_expression
 from mo_times.dates import Date
 
@@ -100,11 +100,17 @@ def to_python(self, not_null=False, boolean=False, many=False):
     return "listwrap("+obj+")[" + code + "]"
 
 
+@extend(LastOp)
+def to_python(self, not_null=False, boolean=False, many=False):
+    term = self.term.to_python()
+    return "listwrap(" + term + ").last()"
+
+
 @extend(SelectOp)
 def to_python(self, not_null=False, boolean=False, many=False):
     return (
         "wrap_leaves({" +
-        ", ".join(
+        ','.join(
             quote(t['name']) + ":" + t['value'].to_python() for t in self.terms
         ) +
         "})"
@@ -148,7 +154,7 @@ def to_python(self, not_null=False, boolean=False, many=False):
     elif len(self.terms) == 1:
         return "(" + self.terms[0].to_python() + ",)"
     else:
-        return "(" + (', '.join(t.to_python() for t in self.terms)) + ")"
+        return "(" + (','.join(t.to_python() for t in self.terms)) + ")"
 
 
 @extend(LeavesOp)
@@ -239,7 +245,7 @@ def to_python(self, not_null=False, boolean=False, many=False):
 
 @extend(MaxOp)
 def to_python(self, not_null=False, boolean=False, many=False):
-    return "max(["+(",".join(t.to_python() for t in self.terms))+"])"
+    return "max(["+(','.join(t.to_python() for t in self.terms))+"])"
 
 
 

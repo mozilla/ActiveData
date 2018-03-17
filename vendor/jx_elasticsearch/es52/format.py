@@ -230,7 +230,7 @@ def format_list(decoders, aggs, start, query, select):
                     output[s.name] = s.pull(agg)
                 yield output
         else:
-
+            is_sent = Matrix(dims=dims, zeros=0)
             for row, coord, agg in aggs_iterator(aggs, decoders):
                 is_sent[coord] = 1
 

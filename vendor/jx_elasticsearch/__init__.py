@@ -43,7 +43,7 @@ def new_instance(
 
         url = URL(host)
         url.port = port
-        status = http.get_json(text_type(url))
+        status = http.get_json(text_type(url), stream=False)
         version = status.version.number
         if version.startswith("1."):
             from jx_elasticsearch.es14 import ES14

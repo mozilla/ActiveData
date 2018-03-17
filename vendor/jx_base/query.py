@@ -206,7 +206,7 @@ class QueryOp(Expression):
         return FALSE
 
     @staticmethod
-    def wrap(query, table=None, schema=None):
+    def wrap(query, table, schema):
         """
         NORMALIZE QUERY SO IT CAN STILL BE JSON
         """
@@ -215,25 +215,9 @@ class QueryOp(Expression):
 
         query = wrap(query)
 
-        output = QueryOp("from", None)
+        output = QueryOp("from", table)
         output.format = query.format
         output.limit = Math.min(MAX_LIMIT, coalesce(query.limit, DEFAULT_LIMIT))
-
-        # ENSURE from IS A REAL TABLE
-        if isinstance(table, Container):
-            if table.name != query['from']:
-                Log.error("Expecting table to match the 'from' clause")
-            output.frum = table
-            schema = table.schema
-        else:
-            from jx_python import wrap_from
-            output.frum = wrap_from(query["from"], schema=schema)
-
-        # FIND A SCHEMA IF THERE IS NONE YET
-        if not schema and isinstance(output.frum, Schema):
-            schema = output.frum
-        if not schema and hasattr(output.frum, "schema"):
-            schema = output.frum.schema
 
         if query.select or isinstance(query.select, (Mapping, list)):
             output.select = _normalize_selects(query.select, query.frum, schema=schema)
@@ -310,7 +294,7 @@ def _normalize_selects(selects, frum, schema=None, ):
     if frum == None or isinstance(frum, (list, set, text_type)):
         if isinstance(selects, list):
             if len(selects) == 0:
-                return None
+                return Null
             else:
                 output = [_normalize_select_no_context(s, schema=schema) for s in selects]
         else:
@@ -356,7 +340,7 @@ def _normalize_select(select, frum, schema=None):
             set_default(
                 {
                     "name": c.name,
-                    "value": jx_expression(c.name)
+                    "value": jx_expression(c.name, schema=schema)
                 },
                 canonical
             )
@@ -365,7 +349,7 @@ def _normalize_select(select, frum, schema=None):
     elif isinstance(select.value, text_type):
         if select.value.endswith(".*"):
             canonical.name = coalesce(select.name, ".")
-            value = jx_expression(select[:-2])
+            value = jx_expression(select[:-2], schema=schema)
             if not isinstance(value, Variable):
                 Log.error("`*` over general expression not supported yet")
                 output.append([
@@ -383,7 +367,7 @@ def _normalize_select(select, frum, schema=None):
                 Log.error("do not know what to do")
         else:
             canonical.name = coalesce(select.name, select.value, select.aggregate)
-            canonical.value = jx_expression(select.value)
+            canonical.value = jx_expression(select.value, schema=schema)
             output.append(canonical)
 
     output = wrap(output)
@@ -408,9 +392,9 @@ def _normalize_select_no_context(select, schema=None):
     if not select.value:
         output.name = coalesce(select.name, select.aggregate)
         if output.name:
-            output.value = jx_expression(".")
+            output.value = jx_expression(".", schema=schema)
         else:
-            return None
+            return Null
     elif isinstance(select.value, text_type):
         if select.value.endswith(".*"):
             name = select.value[:-2]
@@ -419,19 +403,19 @@ def _normalize_select_no_context(select, schema=None):
         else:
             if select.value == ".":
                 output.name = coalesce(select.name, select.aggregate, ".")
-                output.value = jx_expression(select.value)
+                output.value = jx_expression(select.value, schema=schema)
             elif select.value == "*":
                 output.name = coalesce(select.name, select.aggregate, ".")
                 output.value = LeavesOp("leaves", Variable("."))
             else:
                 output.name = coalesce(select.name, select.value, select.aggregate)
-                output.value = jx_expression(select.value)
+                output.value = jx_expression(select.value, schema=schema)
     elif isinstance(select.value, (int, float)):
         if not output.name:
             output.name = text_type(select.value)
-        output.value = jx_expression(select.value)
+        output.value = jx_expression(select.value, schema=schema)
     else:
-        output.value = jx_expression(select.value)
+        output.value = jx_expression(select.value, schema=schema)
 
     if not output.name:
         Log.error("expecting select to have a name: {{select}}",  select= select)
@@ -461,12 +445,12 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
         Log.error("Edge has no value, or expression is empty")
     elif isinstance(edge, text_type):
         if schema:
-            leaves = unwraplist(schema.leaves(edge))
+            leaves = unwraplist(list(schema.leaves(edge)))
             if not leaves or isinstance(leaves, (list, set)):
                 return [
                     Data(
                         name=edge,
-                        value=jx_expression(edge),
+                        value=jx_expression(edge, schema=schema),
                         allowNulls=True,
                         dim=dim_index
                     )
@@ -474,7 +458,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
             elif isinstance(leaves, _Column):
                 return [Data(
                     name=edge,
-                    value=jx_expression(edge),
+                    value=jx_expression(edge, schema=schema),
                     allowNulls=True,
                     dim=dim_index,
                     domain=_normalize_domain(domain=leaves, limit=limit, schema=schema)
@@ -482,7 +466,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
             elif isinstance(leaves.fields, list) and len(leaves.fields) == 1:
                 return [Data(
                     name=leaves.name,
-                    value=jx_expression(leaves.fields[0]),
+                    value=jx_expression(leaves.fields[0], schema=schema),
                     allowNulls=True,
                     dim=dim_index,
                     domain=leaves.getDomain()
@@ -498,7 +482,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
             return [
                 Data(
                     name=edge,
-                    value=jx_expression(edge),
+                    value=jx_expression(edge, schema=schema),
                     allowNulls=True,
                     dim=dim_index
                 )
@@ -515,7 +499,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
 
             return [Data(
                 name=edge.name,
-                value=jx_expression(edge.value),
+                value=jx_expression(edge.value, schema=schema),
                 allowNulls=bool(coalesce(edge.allowNulls, True)),
                 dim=dim_index,
                 domain=domain
@@ -525,7 +509,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
 
         return [Data(
             name=coalesce(edge.name, edge.value),
-            value=jx_expression(edge.value),
+            value=jx_expression(edge.value, schema=schema),
             range=_normalize_range(edge.range),
             allowNulls=bool(coalesce(edge.allowNulls, True)),
             dim=dim_index,
@@ -557,7 +541,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
                     {
                         "name": concat_field(prefix, literal_field(relative_field(untype_path(c.names["."]), prefix))),
                         "put": {"name": literal_field(untype_path(c.names["."]))},
-                        "value": jx_expression(c.es_column),
+                        "value": jx_expression(c.es_column, schema=schema),
                         "allowNulls": True,
                         "domain": {"type": "default"}
                     }
@@ -568,7 +552,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
                 return wrap([{
                     "name": untype_path(prefix),
                     "put": {"name": literal_field(untype_path(prefix))},
-                    "value": jx_expression(prefix),
+                    "value": jx_expression(prefix, schema=schema),
                     "allowNulls": True,
                     "dim":dim_index,
                     "domain": {"type": "default"}
@@ -576,10 +560,10 @@ def _normalize_group(edge, dim_index, limit, schema=None):
 
         return wrap([{
             "name": edge,
-            "value": jx_expression(edge),
+            "value": jx_expression(edge, schema=schema),
             "allowNulls": True,
-            "dim":dim_index,
-            "domain": {"type": "default"}
+            "dim": dim_index,
+            "domain": Domain(type="default", limit=limit)
         }])
     else:
         edge = wrap(edge)
@@ -591,7 +575,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
 
         return wrap([{
             "name": coalesce(edge.name, edge.value),
-            "value": jx_expression(edge.value),
+            "value": jx_expression(edge.value, schema=schema),
             "allowNulls": True,
             "dim":dim_index,
             "domain": {"type": "default"}
@@ -623,7 +607,7 @@ def _normalize_domain(domain=None, limit=None, schema=None):
 def _normalize_window(window, schema=None):
     v = window.value
     try:
-        expr = jx_expression(v)
+        expr = jx_expression(v, schema=schema)
     except Exception:
         expr = ScriptOp("script", v)
 
@@ -653,7 +637,7 @@ def _normalize_range(range):
 def _normalize_where(where, schema=None):
     if where == None:
         return TRUE
-    return jx_expression(where)
+    return jx_expression(where, schema=schema)
 
 
 def _map_term_using_schema(master, path, term, schema_edges):

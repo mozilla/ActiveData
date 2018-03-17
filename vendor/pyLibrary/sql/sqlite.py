@@ -49,7 +49,7 @@ def _upgrade():
 
     try:
         import sys
-
+        Log.error("Fix to work with 64bit windows too")
         original_dll = File.new_instance(sys.exec_prefix, "dlls/sqlite3.dll")
         source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3.dll")
         if not all(a==b for a, b in zip_longest(source_dll.read_bytes(), original_dll.read_bytes())):
@@ -244,7 +244,7 @@ def quote_column(column_name, table=None):
     if not isinstance(column_name, text_type):
         Log.error("expecting a name")
     if table != None:
-        return SQL(" " + quote(table) + "." + quote(column_name) + " ")
+        return SQL(" d" + quote(table) + "." + quote(column_name) + " ")
     else:
         if _no_need_to_quote.match(column_name):
             return SQL(" " + column_name + " ")

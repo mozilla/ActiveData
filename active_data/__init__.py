@@ -11,6 +11,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import flask
+import zlib
 
 from mo_dots import wrap
 from mo_json import value2json
@@ -46,6 +47,11 @@ def record_request(request, query_, data, error):
 
 
 def cors_wrapper(func):
+    """
+    Decorator for CORS
+    :param func:  Flask method that handles requests and returns a response
+    :return: Same, but with permissive CORS headers set
+    """
     def _setdefault(obj, key, value):
         if value == None:
             return
@@ -64,3 +70,4 @@ def cors_wrapper(func):
     output.provide_automatic_options = False
     output.__name__ = func.__name__
     return output
+

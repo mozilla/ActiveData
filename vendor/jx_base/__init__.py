@@ -11,10 +11,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from collections import Mapping
 from uuid import uuid4
 
-from mo_dots import NullType, Data
-from mo_future import text_type, none_type, PY2
+from mo_dots import NullType, Data, FlatList
+from mo_future import text_type, none_type, PY2, long
 from mo_times import Date
 
 IS_NULL = '0'
@@ -27,7 +28,7 @@ NESTED = "nested"
 EXISTS = "exists"
 
 JSON_TYPES = [BOOLEAN, INTEGER, NUMBER, STRING, OBJECT]
-PRIMITIVE = [EXISTS, BOOLEAN, INTEGER, NUMBER, STRING]
+PRIMITIVE = [BOOLEAN, INTEGER, NUMBER, STRING]
 STRUCT = [EXISTS, OBJECT, NESTED]
 
 
@@ -40,12 +41,18 @@ python_type_to_json_type = {
     NullType: OBJECT,
     none_type: OBJECT,
     Data: OBJECT,
+    dict: OBJECT,
+    object: OBJECT,
+    Mapping: OBJECT,
     list: NESTED,
+    FlatList: NESTED,
     Date: NUMBER
 }
 
 if PY2:
-    python_type_to_json_type[str]=STRING
+    python_type_to_json_type[str] = STRING
+    python_type_to_json_type[long] = NUMBER
+
 
 def generateGuid():
     """Gets a random GUID.
@@ -60,4 +67,4 @@ def generateGuid():
     print uuid.UUID(a).hex
 
     """
-    return str(uuid4())
+    return text_type(uuid4())

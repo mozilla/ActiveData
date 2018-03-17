@@ -22,9 +22,9 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
     ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, simplified
 from mo_dots import coalesce, wrap, Null, unwraplist, set_default, literal_field
-from mo_json import quote
+
 from mo_logs import Log, suppress_exception
-from mo_logs.strings import expand_template
+from mo_logs.strings import expand_template, quote
 from mo_math import MAX, OR
 from pyLibrary.convert import string2regexp
 
@@ -853,31 +853,6 @@ def to_ruby(self, schema):
         expr=acc,
         frum=self
     )
-
-
-@extend(MultiOp)
-def to_ruby(self, schema):
-    op, unit = MultiOp.operators[self.op]
-    if self.nulls:
-        calc = op.join(
-            "((" + t.missing().to_ruby(schema).expr + ") ? " + unit + " : (" + NumberOp("number", t).partial_eval().to_ruby(schema).expr + "))" for
-            t in self.terms
-        )
-        return WhenOp(
-            "when",
-            AndOp("and", [t.missing() for t in self.terms]),
-            **{"then": self.default, "else": Ruby(type=NUMBER, expr=calc, frum=self)}
-        ).partial_eval().to_ruby(schema)
-    else:
-        calc = op.join(
-            "(" + NumberOp("number", t).to_ruby(schema).expr + ")"
-            for t in self.terms
-        )
-        return WhenOp(
-            "when",
-            OrOp("or", [t.missing() for t in self.terms]),
-            **{"then": self.default, "else": Ruby(type=NUMBER, expr=calc, frum=self)}
-        ).partial_eval().to_ruby(schema)
 
 
 @extend(RegExpOp)

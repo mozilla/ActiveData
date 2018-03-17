@@ -23,7 +23,7 @@ from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
 import active_data
-from active_data import record_request, cors_wrapper
+from active_data import record_request, cors_wrapper, OVERVIEW
 from active_data.actions import save_query
 from active_data.actions.json import get_raw_json
 from active_data.actions.jx import jx_query
@@ -37,8 +37,6 @@ from mo_logs import constants, startup
 from mo_threads import Thread
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch
-
-OVERVIEW = File("active_data/public/index.html").read()
 
 
 class ActiveDataApp(Flask):
@@ -103,7 +101,9 @@ def setup():
             {
                 "name": "app_name",
                 "help": "gunicorn supplied argument",
-                "type": str
+                "type": str,
+                "nargs": "?",
+                "default": "<dummy value>"
             }
         ],
         env_filename=os.environ.get('ACTIVEDATA_CONFIG')
@@ -173,7 +173,7 @@ def setup_flask_ssl():
             context.load_cert_chain(tempfile.name, keyfile=File(ssl_flask.ssl_context.privatekey_file).abspath)
 
             ssl_flask.ssl_context = context
-        except Exception, e:
+        except Exception as e:
             Log.error("Could not handle ssl context construction", cause=e)
         finally:
             try:

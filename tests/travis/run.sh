@@ -1,5 +1,4 @@
-export PYTHONPATH=.
-#export PYTHONPATH=.:tests
+export PYTHONPATH=.:vendor
 
 python active_data/app.py --settings=tests/travis/app.json &
 sleep 5

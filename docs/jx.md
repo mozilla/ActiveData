@@ -1,8 +1,8 @@
-# JSON Query Expression Documentation
+# JSON Query Expressions
 
 JSON Query Expressions are meant to be a communication standard between 
 services. They are targeted toward business intelligence, analytic 
-processing, data warehouse and dashboard applications.
+processing, data warehouse, and dashboard applications.
 
 JSON query expressions are best viewed as SQL parse trees where each
 property corresponds to a SQL clause. There are some differences from SQL,
@@ -11,20 +11,22 @@ of SQL can jump-start your use of JSON Expressions.
 
 ### Specific Reading
 
-* [Tutorial](jx_tutorial.md) - For some examples
+* [Expressions](jx_expressions.md) - Covers basic expressions, not queries
+* [Tutorial](jx_tutorial.md) - For some query examples
 * [Select Clause](jx_clause_select.md) - Data transformation using the `select` clause
 * [Edges Clause](jx_clause_edges.md) - Grouping and Aggregation using the `edges` clause
 * [Window Clause](jx_clause_window.md) - Using window functions
-* [Expressions](jx_expressions.md) - Covers all the other expressions
 * [Time Math](jx_time.md) - Writing expressions in the time domain
 * [Commands](jx_update.md) - Update data with JSON Expressions
 * [Reference](jx_reference.md) - A bare list of allowed clauses and options for JSON query expressions
 * [Comparisions](compare.md) - Compare JSON Query Expressions to other query languages
 
+The rest of this document is a discussion of design decisions and overall logical data model required understand messy data as occupying a clean, sparse, multidimensional space.  
+
 
 ## Motivation
 
-JSON Expressions have the following benefits over SQL
+JSON Query Expressions have the following benefits over SQL
 
 * Simplified expressions over unclean data.
 * Ability to translate shape of the data.

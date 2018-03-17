@@ -1,4 +1,8 @@
-script.inline: on
-script.indexed: on
+
+script.painless.regex.enabled: true
+script.max_compilations_rate: 10000/1m
 
 http.compression: true
+http.max_content_length: 1000mb
+
+network.host: _local_

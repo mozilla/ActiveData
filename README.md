@@ -5,8 +5,9 @@ Provide high speed filtering and aggregation over data see [ActiveData Wiki Page
 
 |Branch      |Status   |
 |------------|---------|
-|master      | [![Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=master)](https://travis-ci.org/klahnakoski/ActiveData) |
-|dev         | [![Build Status](https://travis-ci.org/klahnakoski/ActiveData.svg?branch=dev)](https://travis-ci.org/klahnakoski/ActiveData)    |
+|master      | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=master)](https://travis-ci.org/mozilla/ActiveData) |
+|dev         | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=dev)](https://travis-ci.org/mozilla/ActiveData)    |
+|frontend6   | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=frontend6)](https://travis-ci.org/mozilla/ActiveData)    |
 
 
 
@@ -19,15 +20,15 @@ ActiveData is a service! You can certainly setup your own service, but it is eas
 ## Requirements
 
 * Python2.7 installed
-* Elasticsearch **version 1.7.x**
+* Elasticsearch **version 6.x**
 
 
 ### Elasticsearch Configuration
 
-Elasticsearch has a configuration file at `config/elasticsearch.yml`. You must modify it to turn on scripting.  Add these two lines at the top of the file:
+Elasticsearch has a configuration file at `config/elasticsearch.yml`. You must modify it to handle a high number of scripts 
 
-    script.inline: on
-    script.indexed: on
+    script.painless.regex.enabled: true
+    script.max_compilations_rate: 10000/1m
 
 We enable compression for faster transfer speeds
 
@@ -37,7 +38,7 @@ And it is a good idea to give your cluster a unique name so it does not join oth
 
     cluster.name: lahnakoski_dev
 
-Then you can run Elasticsearch:
+then you can run Elasticsearch:
  
     c:\elasticsearch>bin\elasticsearch
 
@@ -65,7 +66,7 @@ you should expect something like
 
 ## Installation
 
-It is still too early for PyPi install, so please clone *master* off of github:
+It is still too early for PyPi install, so please clone `master` branch off of github:
 
     git clone https://github.com/klahnakoski/ActiveData.git
     git checkout master
@@ -79,7 +80,7 @@ and install your requirements:
 
 The ActiveData service requires a configuration file that will point to the
 default Elasticsearch index. You can find a few sample config files in
-`resources/config`. `simple_settings.json` is simplest one:
+`tests/config`. `simple_settings.json` is simplest one:
 
 ```javascript
     {

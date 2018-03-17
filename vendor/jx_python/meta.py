@@ -15,7 +15,7 @@ from copy import copy
 from datetime import date
 from datetime import datetime
 
-from mo_future import text_type, long
+from mo_future import text_type, long, PY2
 from jx_base import STRUCT
 
 from jx_python import jx
@@ -37,85 +37,6 @@ singlton = None
 
 
 
-
-def metadata_columns():
-    return wrap(
-        [
-            Column(
-                names={".":c},
-                es_index="meta.columns",
-                es_column=c,
-                type="string",
-                nested_path=ROOT_PATH
-            )
-            for c in [
-                "type",
-                "nested_path",
-                "es_column",
-                "es_index"
-            ]
-        ] + [
-            Column(
-                es_index="meta.columns",
-                names={".":c},
-                es_column=c,
-                type="object",
-                nested_path=ROOT_PATH
-            )
-            for c in [
-                "names",
-                "domain",
-                "partitions"
-            ]
-        ] + [
-            Column(
-                names={".": c},
-                es_index="meta.columns",
-                es_column=c,
-                type="long",
-                nested_path=ROOT_PATH
-            )
-            for c in [
-                "count",
-                "cardinality"
-            ]
-        ] + [
-            Column(
-                names={".": "last_updated"},
-                es_index="meta.columns",
-                es_column="last_updated",
-                type="time",
-                nested_path=ROOT_PATH
-            )
-        ]
-    )
-
-
-def metadata_tables():
-    return wrap(
-        [
-            Column(
-                names={".": c},
-                es_index="meta.tables",
-                es_column=c,
-                type="string",
-                nested_path=ROOT_PATH
-            )
-            for c in [
-                "name",
-                "url",
-                "query_path"
-            ]
-        ]+[
-            Column(
-                names={".": "timestamp"},
-                es_index="meta.tables",
-                es_column="timestamp",
-                type="integer",
-                nested_path=ROOT_PATH
-            )
-        ]
-    )
 
 
 class Table(DataClass("Table", [
@@ -332,7 +253,6 @@ _type_to_name = {
     str: "string",
     text_type: "string",
     int: "integer",
-    long: "integer",
     float: "double",
     Data: "object",
     dict: "object",
@@ -343,6 +263,9 @@ _type_to_name = {
     datetime: "double",
     date: "double"
 }
+
+if PY2:
+    _type_to_name[long] = "integer"
 
 _merge_type = {
     "undefined": {

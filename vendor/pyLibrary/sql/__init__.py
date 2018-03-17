@@ -46,10 +46,11 @@ class SQL(text_type):
         else:
             return SQL(other.sql + self.sql)
 
-    def join(self, list):
-        if not all(isinstance(s, SQL) for s in list):
+    def join(self, list_):
+        list_ = list(list_)
+        if not all(isinstance(s, SQL) for s in list_):
             Log.error("Can only join other SQL")
-        return SQL(self.sql.join(list))
+        return SQL(self.sql.join(list_))
 
     if PY3:
         def __bytes__(self):
@@ -57,6 +58,42 @@ class SQL(text_type):
     else:
         def __str__(self):
             Log.error("do not do this")
+
+
+
+SQL_STAR = SQL(" * ")
+
+SQL_AND = SQL(" AND ")
+SQL_OR = SQL(" OR ")
+SQL_ON = SQL(" ON ")
+
+SQL_CASE = SQL(" CASE ")
+SQL_WHEN = SQL(" WHEN ")
+SQL_THEN = SQL(" THEN ")
+SQL_ELSE = SQL(" ELSE ")
+SQL_END = SQL(" END ")
+
+SQL_COMMA = SQL(", ")
+SQL_UNION_ALL = SQL("\nUNION ALL\n")
+SQL_UNION = SQL("\nUNION\n")
+SQL_LEFT_JOIN = SQL("\nLEFT JOIN\n")
+SQL_INNER_JOIN = SQL("\nJOIN\n")
+SQL_EMPTY_STRING = SQL("''")
+SQL_TRUE = SQL(" 1 ")
+SQL_FALSE = SQL(" 0 ")
+SQL_ONE = SQL(" 1 ")
+SQL_ZERO = SQL(" 0 ")
+SQL_NULL = SQL(" NULL ")
+SQL_IS_NULL = SQL(" IS NULL ")
+SQL_IS_NOT_NULL = SQL(" IS NOT NULL ")
+SQL_SELECT = SQL("\nSELECT\n")
+SQL_FROM = SQL("\nFROM\n")
+SQL_WHERE = SQL("\nWHERE\n")
+SQL_GROUPBY = SQL("\nGROUP BY\n")
+SQL_ORDERBY = SQL("\nORDER BY\n")
+SQL_DESC = SQL(" DESC ")
+SQL_ASC = SQL(" ASC ")
+SQL_LIMIT = SQL("\nLIMIT\n")
 
 
 class DB(object):
@@ -67,3 +104,28 @@ class DB(object):
     def db_type_to_json_type(self, type):
         raise NotImplementedError()
 
+def sql_list(list_):
+    list_ = list(list_)
+    if not all(isinstance(s, SQL) for s in list_):
+        Log.error("Can only join other SQL")
+    return SQL(", ".join(l.template for l in list_))
+
+
+def sql_iso(sql):
+    return "("+sql+")"
+
+
+def sql_count(sql):
+    return "COUNT(" + sql + ")"
+
+
+def sql_concat(list_):
+    return SQL(" || ").join(sql_iso(l) for l in list_)
+
+
+def sql_alias(value, alias):
+    return SQL(value.template + " AS " + alias.template)
+
+
+def sql_coalesce(list_):
+    return "COALESCE(" + SQL_COMMA.join(list_) + ")"

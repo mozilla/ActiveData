@@ -695,6 +695,7 @@ class DefaultDecoder(SetDecoder):
 class DimFieldListDecoder(SetDecoder):
     def __init__(self, edge, query, limit):
         AggsDecoder.__init__(self, edge, query, limit)
+        edge.allowNulls = False
         self.fields = edge.domain.dimension.fields
         self.domain = self.edge.domain
         self.domain.limit = Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
@@ -712,11 +713,10 @@ class DimFieldListDecoder(SetDecoder):
                     "size": self.domain.limit
                 }}, es_query)}
             }}})
-            if self.edge.allowNulls:
-                nest.aggs._missing = set_default(
-                    {"filter": NotOp("not", exists).to_esfilter(self.schema)},
-                    es_query
-                )
+            nest.aggs._missing = set_default(
+                {"filter": NotOp("not", exists).to_esfilter(self.schema)},
+                es_query
+            )
             es_query = nest
 
         if self.domain.where:
@@ -743,9 +743,12 @@ class DimFieldListDecoder(SetDecoder):
         )
 
     def get_index(self, row):
-        find = tuple(p.get("key") for p in row[self.start:self.start + self.num_columns:])
-        return self.domain.getIndexByKey(find)
-
+        part = row[self.start:self.start + len(self.fields):]
+        if part[0]['doc_count']==0:
+            return None
+        find = tuple(p.get("key") for p in part)
+        output = self.domain.getIndexByKey(find)
+        return output
     @property
     def num_columns(self):
         return len(self.fields)

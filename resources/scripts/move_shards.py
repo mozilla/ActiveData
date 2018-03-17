@@ -43,7 +43,7 @@ def main():
 
         Log.start(settings)
         move_shards(settings)
-    except Exception, e:
+    except Exception as e:
         Log.error("Problem with assign of shards", e)
     finally:
         Log.stop()

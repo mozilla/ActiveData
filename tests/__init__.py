@@ -17,7 +17,7 @@ import signal
 import subprocess
 from string import ascii_lowercase
 
-from future.utils import text_type
+from mo_future import text_type
 
 import mo_json_config
 from jx_base import container
@@ -35,6 +35,8 @@ from pyLibrary import convert
 from pyLibrary.env import http
 from pyLibrary.testing import elasticsearch
 from test_jx import TEST_TABLE
+
+DEFAULT_TEST_CONFIG = "tests/config/test_config.json"
 
 
 class ESUtils(object):
@@ -128,7 +130,7 @@ class ESUtils(object):
                     create_time = Date(a.index[-15:], "%Y%m%d_%H%M%S")  # EXAMPLE testing_0ef53e45b320160118_180420
                     if create_time < Date.now() - 10 * MINUTE:
                         cluster.delete_index(a.index)
-            except Exception, e:
+            except Exception as e:
                 Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
 
     def tearDownClass(self):
@@ -179,7 +181,7 @@ class ESUtils(object):
             frum = subtest.query["from"]
             if frum == None:
                 subtest.query["from"] = _settings.index
-            elif isinstance(frum, basestring):
+            elif isinstance(frum, text_type):
                 subtest.query["from"] = frum.replace(TEST_TABLE, _settings.index)
             else:
                 Log.error("Do not know how to handle")
@@ -239,7 +241,7 @@ class ESUtils(object):
             result = convert.json2value(convert.utf82unicode(response.all_content))
 
             return result
-        except Exception, e:
+        except Exception as e:
             Log.error("Failed query", e)
 
     def try_till_response(self, *args, **kwargs):
@@ -247,7 +249,7 @@ class ESUtils(object):
             try:
                 response = self.server.get(*args, **kwargs)
                 return response
-            except Exception, e:
+            except Exception as e:
                 e = Except.wrap(e)
                 if "No connection could be made because the target machine actively refused it" in e:
                     Log.alert("Problem connecting")
@@ -259,7 +261,7 @@ class ESUtils(object):
             try:
                 response = self.server.post(*args, **kwargs)
                 return response
-            except Exception, e:
+            except Exception as e:
                 e = Except.wrap(e)
                 if "No connection could be made because the target machine actively refused it" in e:
                     Log.alert("Problem connecting")
@@ -306,13 +308,13 @@ def compare_to_expected(query, result, expect, places):
             if isinstance(expect.data, list):
                 try:
                     expect.data = jx.sort(expect.data, sort_order.name)
-                except Exception, _:
+                except Exception as _:
                     pass
 
             if isinstance(result.data, list):
                 try:
                     result.data = jx.sort(result.data, sort_order.name)
-                except Exception, _:
+                except Exception as _:
                     pass
 
     elif result.meta.format == "cube" and len(result.edges) == 1 and result.edges[0].name == "rownum" and not query.sort:
@@ -420,14 +422,10 @@ class FakeHttp(object):
         })
 
 
-test_jx.global_settings = mo_json_config.get("file://tests/config/elasticsearch.json")
-constants.set(test_jx.global_settings.constants)
-Log.alert("Resetting test count")
-NEXT = 0
-
 container_types = Data(
     elasticsearch=ESUtils,
 )
+
 
 try:
     # read_alternate_settings
@@ -435,12 +433,16 @@ try:
     if filename:
         test_jx.global_settings = mo_json_config.get("file://" + filename)
     else:
-        Log.alert("No TEST_CONFIG environment variable to point to config file.  Using /tests/config/elasticsearch.json")
-
+        Log.alert("No TEST_CONFIG environment variable to point to config file.  Using " + DEFAULT_TEST_CONFIG)
+        test_jx.global_settings = mo_json_config.get("file://" + DEFAULT_TEST_CONFIG)
+    constants.set(test_jx.global_settings.constants)
     Log.start(test_jx.global_settings.debug)
 
     if not test_jx.global_settings.use:
         Log.error('Must have a {"use": type} set in the config file')
     test_jx.utils = container_types[test_jx.global_settings.use](test_jx.global_settings)
-except Exception, e:
-    Log.warning("problem", e)
+except Exception as e:
+    Log.warning("problem", cause=e)
+
+Log.alert("Resetting test count")
+NEXT = 0

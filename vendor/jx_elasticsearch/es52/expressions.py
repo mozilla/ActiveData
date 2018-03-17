@@ -840,13 +840,22 @@ def to_painless(self, schema):
     )
 
 
+_painless_operators = {
+    "add": (" + ", "0"),  # (operator, zero-array default value) PAIR
+    "sum": (" + ", "0"),
+    "mul": (" * ", "1"),
+    "mult": (" * ", "1"),
+    "multiply": (" * ", "1")
+}
+
+
 @extend(MultiOp)
 def to_painless(self, schema):
-    op, unit = MultiOp.operators[self.op]
+    op, unit = _painless_operators[self.op]
     if self.nulls:
         calc = op.join(
-            "((" + t.missing().to_painless(schema).expr + ") ? " + unit + " : (" + NumberOp("number", t).partial_eval().to_painless(schema).expr + "))" for
-            t in self.terms
+            "((" + t.missing().to_painless(schema).expr + ") ? " + unit + " : (" + NumberOp("number", t).partial_eval().to_painless(schema).expr + "))"
+            for t in self.terms
         )
         return WhenOp(
             "when",
@@ -1300,13 +1309,13 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
         if not vars_:
             return Null
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
-        var_to_depth = {v: len(c.nested_path) - 1 for v in vars_ for c in schema[v]}
+        var_to_depth = {v: max(len(c.nested_path) - 1, 0) for v in vars_ for c in schema[v]}
         all_depths = set(var_to_depth.values())
-        if -1 in all_depths:
-            Log.error(
-                "Can not find column with name {{column|quote}}",
-                column=unwraplist([k for k, v in var_to_depth.items() if v == -1])
-            )
+        # if -1 in all_depths:
+        #     Log.error(
+        #         "Can not find column with name {{column|quote}}",
+        #         column=unwraplist([k for k, v in var_to_depth.items() if v == -1])
+        #     )
         if len(all_depths) == 0:
             all_depths = {0}
         output = wrap([[] for _ in range(MAX(all_depths) + 1)])

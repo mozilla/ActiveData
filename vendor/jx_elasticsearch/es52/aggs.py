@@ -15,7 +15,7 @@ from mo_future import text_type
 from jx_base import OBJECT, EXISTS
 
 from jx_base.domains import SetDomain
-from jx_base.expressions import TupleOp, NULL
+from jx_base.expressions import TupleOp, NULL, value2json
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es09.util import post as es_post
 from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
@@ -137,7 +137,7 @@ def es_aggsop(es, frum, query):
                 new_select["count_"+literal_field(s.value.var)] += [s]
             else:
                 new_select[literal_field(s.value.var)] += [s]
-        else:
+        elif s.aggregate:
             formula.append(s)
 
     for canonical_name, many in new_select.items():
@@ -382,6 +382,7 @@ def drill(agg):
         deeper = agg.get("_filter") or agg.get("_nested")
     return agg
 
+
 def aggs_iterator(aggs, decoders, coord=True):
     """
     DIG INTO ES'S RECURSIVE aggs DATA-STRUCTURE:
@@ -436,11 +437,12 @@ def aggs_iterator(aggs, decoders, coord=True):
     if coord:
         for a, parts in _aggs_iterator(unwrap(aggs), depth - 1):
             coord = tuple(d.get_index(parts) for d in decoders)
+            if any(c is None for c in coord):
+                continue
             yield parts, coord, a
     else:
         for a, parts in _aggs_iterator(unwrap(aggs), depth - 1):
             yield parts, None, a
-
 
 
 def count_dim(aggs, decoders):

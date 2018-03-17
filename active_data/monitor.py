@@ -83,7 +83,7 @@ def main():
         Log.start(config.debug)
         please_stop = Signal("main stop signal")
         Thread.wait_for_shutdown_signal(please_stop)
-    except Exception, e:
+    except Exception as e:
         Log.error("Problem with etl", cause=e)
     finally:
         Log.stop()

@@ -4,7 +4,7 @@ JSON Expressions
 Summary
 -------
 
-JSON Expressions are JSON objects inspired by [Polish prefix notation](http://en.wikipedia.org/wiki/Polish_notation): All expression objects are `{name: value}` pairs, where the operator is the name, and value holds the parameters.
+JSON Expressions are JSON objects meant for inter-application communication. All expression objects are `{name: value}` pairs, where the operator is the name, and value holds the parameters.
 
     {operator_name: parameters}
 

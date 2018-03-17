@@ -34,6 +34,7 @@ from mo_math import Math
 
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 10000
+DEFAULT_SELECT = Data(name="count", value=jx_expression("."), aggregate="count", default=0)
 
 _jx = None
 _Column = None
@@ -238,7 +239,7 @@ class QueryOp(Expression):
             output.select = _normalize_selects(query.select, query.frum, schema=schema)
         else:
             if query.edges or query.groupby:
-                output.select = Data(name="count", value=jx_expression("."), aggregate="count", default=0)
+                output.select = DEFAULT_SELECT
             else:
                 output.select = _normalize_selects(".", query.frum)
 
@@ -309,12 +310,11 @@ def _normalize_selects(selects, frum, schema=None, ):
     if frum == None or isinstance(frum, (list, set, text_type)):
         if isinstance(selects, list):
             if len(selects) == 0:
-                output = Data()
-                return output
+                return None
             else:
                 output = [_normalize_select_no_context(s, schema=schema) for s in selects]
         else:
-            return _normalize_select_no_context(selects)
+            return _normalize_select_no_context(selects, schema=schema)
     elif isinstance(selects, list):
         output = [ss for s in selects for ss in _normalize_select(s, frum=frum, schema=schema)]
     else:
@@ -410,7 +410,7 @@ def _normalize_select_no_context(select, schema=None):
         if output.name:
             output.value = jx_expression(".")
         else:
-            return output
+            return None
     elif isinstance(select.value, text_type):
         if select.value.endswith(".*"):
             name = select.value[:-2]

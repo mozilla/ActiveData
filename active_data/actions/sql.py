@@ -74,7 +74,7 @@ def sql_query(path):
                 if data.meta.save:
                     try:
                         result.meta.saved_as = save_query.query_finder.save(data)
-                    except Exception, e:
+                    except Exception as e:
                         Log.warning("Unexpected save problem", cause=e)
 
             result.meta.timing.preamble = Math.round(preamble_timer.duration.seconds, digits=4)
@@ -90,7 +90,7 @@ def sql_query(path):
             # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
             timing_replacement = b'"total": ' + str(Math.round(query_timer.duration.seconds, digits=4)) +\
                                  b', "jsonification": ' + str(Math.round(json_timer.duration.seconds, digits=4))
-            response_data = response_data.replace(b'"total": "{{TOTAL_TIME}}"', timing_replacement)
+            response_data = response_data.replace(b'"total":"{{TOTAL_TIME}}"', timing_replacement)
             Log.note("Response is {{num}} bytes in {{duration}}", num=len(response_data), duration=query_timer.duration)
 
             return Response(

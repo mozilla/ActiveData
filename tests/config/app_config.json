@@ -1,4 +1,7 @@
 {
+	"use": "elasticsearch",
+	"service_url": "http://127.0.0.1:5000/query",
+	"sql_url": "http://127.0.0.1:5000/sql",
 	"flask": {
 		"host": "0.0.0.0",
 		"port": 5000,
@@ -19,10 +22,11 @@
 	"request_logs": {
 		"host": "http://localhost",
 		"port": 9200,
-		"index": "active_data_requests",
+		"index": "activedata_requests",
 		"type": "request_log",
+		"tjson": false,
 		"schema": {
-			"$ref": "//../../resources/schema/request_log.schema.json"
+			"$ref": "//.../resources/schema/request_log.schema.json"
 		}
 	},
 	"saved_queries": {
@@ -30,7 +34,7 @@
 		"port": 9200,
 		"index": "saved_queries",
 		"type": "query",
-		"debug": true
+		"debug": false
 	},
 	"elasticsearch": {
 		"host": "http://localhost",
@@ -48,6 +52,20 @@
 		"log": [
 			{
 				"log_type": "console"
+			},
+			{
+				"log_type": "email",
+				"from_address": "klahnakoski@mozilla.com",
+				"to_address": "klahnakoski@mozilla.com",
+				"subject": "[ALERT][DEV]Problem with ActiveData Server",
+				"$ref": "file://~/private.json#email"
+			},
+			{
+				"log_type": "elasticsearch",
+				"host": "http://localhost",
+				"port": 9200,
+				"index": "debug_active_data",
+				"type": "active_data"
 			}
 		]
 	}

@@ -11,11 +11,9 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from active_data import OVERVIEW
 from mo_json_config import URL
 from pyLibrary import convert
-
-from active_data.app import OVERVIEW
-from mo_threads import Till
 from pyLibrary.env import http
 from tests.test_jx import BaseTestCase, TEST_TABLE
 

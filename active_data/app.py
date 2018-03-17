@@ -11,7 +11,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import os
-import sys
 from _ssl import PROTOCOL_SSLv23
 from collections import Mapping
 from ssl import SSLContext
@@ -23,7 +22,7 @@ from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
 import active_data
-from active_data import record_request, cors_wrapper, OVERVIEW
+from active_data import record_request, OVERVIEW
 from active_data.actions import save_query
 from active_data.actions.json import get_raw_json
 from active_data.actions.jx import jx_query
@@ -37,6 +36,8 @@ from mo_logs import constants, startup
 from mo_threads import Thread
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch
+from pyLibrary.env.flask_wrappers import cors_wrapper
+from tuid.app import tuid_endpoint
 
 
 class ActiveDataApp(Flask):
@@ -69,6 +70,7 @@ flask_app.add_url_rule('/sql', None, sql_query, defaults={'path': ''}, methods=[
 flask_app.add_url_rule('/sql/', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
 flask_app.add_url_rule('/query/<path:path>', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
 flask_app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
+flask_app.add_url_rule('/tuid/<path:path>', None, tuid_endpoint, methods=['GET'])
 
 
 @flask_app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])

@@ -163,7 +163,7 @@ class SaveQueries(object):
 
         try:
             self.queue.close()
-        except Exception, f:
+        except Exception as f:
             pass
 
 SCHEMA = {

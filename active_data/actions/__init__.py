@@ -70,7 +70,7 @@ def replace_vars(text, params=None):
             replacement = text_type(Date(var).unix)
             text = text[:index] + replacement + text[end:]
             start = index + len(replacement)
-        except Exception, _:
+        except Exception as _:
             start += 1
 
         var = strings.between(text, "{{", "}}", start)

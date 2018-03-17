@@ -21,13 +21,10 @@ from mo_logs import Log
 from mo_logs import constants, startup
 from mo_logs.strings import utf82unicode, unicode2utf8
 
-from pyLibrary.env.flask_wrappers import gzip_wrapper
+from pyLibrary.env.flask_wrappers import gzip_wrapper, cors_wrapper
 from tuid.service import TUIDService
 
 OVERVIEW = File("tuid/public/index.html").read_bytes()
-
-
-app = Flask(__name__)
 
 
 class TUIDApp(Flask):
@@ -42,13 +39,14 @@ class TUIDApp(Flask):
             Log.stop()
 
 
-flask_app = TUIDApp(__name__)
+flask_app = None
 config = None
 service = None
 
 
-# @gzip_wrapper
-def query_to_service_call(path):
+@gzip_wrapper
+@cors_wrapper
+def tuid_endpoint(path):
     try:
         request_body = flask.request.get_data().strip()
         query = json2value(utf82unicode(request_body))
@@ -100,18 +98,12 @@ def _stream_table(files):
     yield b']}'
 
 
-
-flask_app.add_url_rule(str('/query'), None, query_to_service_call, defaults={'path': ''}, methods=[str('GET'), str('POST')])
-flask_app.add_url_rule(str('/query/'), None, query_to_service_call, defaults={'path': ''}, methods=[str('GET'), str('POST')])
-
-
-@flask_app.route(str('/'), defaults={'path': ''}, methods=[str('OPTIONS'), str('HEAD')])
-@flask_app.route(str('/<path:path>'), methods=[str('OPTIONS'), str('HEAD')])
+@cors_wrapper
 def _head(path):
     return Response(b'', status=200)
 
-@flask_app.route(str('/'), defaults={'path': ''}, methods=[str('GET'), str('POST')])
-@flask_app.route(str('/<path:path>'), methods=[str('GET'), str('POST')])
+
+@cors_wrapper
 def _default(path):
     return Response(
         OVERVIEW,
@@ -123,6 +115,18 @@ def _default(path):
 
 
 if __name__ in ("__main__",):
+    flask_app = TUIDApp(__name__)
+
+    flask_app.add_url_rule(str('/query'), None, tuid_endpoint, defaults={'path': ''}, methods=[str('GET'), str('POST')])
+    flask_app.add_url_rule(str('/query/'), None, tuid_endpoint, defaults={'path': ''}, methods=[str('GET'), str('POST')])
+
+    flask_app.add_url_rule(str('/'), None, _head, defaults={'path': ''}, methods=[str('OPTIONS'), str('HEAD')])
+    flask_app.add_url_rule(str('/<path:path>'), None, _head, methods=[str('OPTIONS'), str('HEAD')])
+
+    flask_app.add_url_rule(str('/'), None, _default, defaults={'path': ''}, methods=[str('GET'), str('POST')])
+    flask_app.add_url_rule(str('/<path:path>'), None, _default, methods=[str('GET'), str('POST')])
+
+
     try:
         config = startup.read_settings(
             env_filename=os.environ.get('TUID_CONFIG')

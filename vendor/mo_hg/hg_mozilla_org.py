@@ -366,7 +366,7 @@ class HgMozillaOrg(object):
             Log.error("do not know what to do")
 
     def _normalize_revision(self, r, found_revision, push, get_diff):
-        new_names = set(r.keys()) - {"rev", "node", "user", "description", "desc", "date", "files", "backedoutby", "parents", "children", "branch", "tags", "pushuser", "pushdate", "pushid", "phase", "bookmarks"}
+        new_names = set(r.keys()) - KNOWN_TAGS
         if new_names and not r.tags:
             Log.warning("hg is returning new property names ({{names}})", names=new_names)
 
@@ -637,3 +637,24 @@ def _copy_but(value, exclude):
             elif v != None:
                 output[k] = v
     return output if output else None
+
+
+KNOWN_TAGS = {
+    "rev", 
+    "node", 
+    "user", 
+    "description", 
+    "desc", 
+    "date", 
+    "files", 
+    "backedoutby", 
+    "parents", 
+    "children", 
+    "branch", 
+    "tags", 
+    "pushuser", 
+    "pushdate", 
+    "pushid", 
+    "phase", 
+    "bookmarks"
+}

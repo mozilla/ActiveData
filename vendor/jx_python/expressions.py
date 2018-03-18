@@ -295,7 +295,7 @@ def to_python(self, not_null=False, boolean=False, many=False):
 
 @extend(SuffixOp)
 def to_python(self, not_null=False, boolean=False, many=False):
-    return "(" + self.field.to_python() + ").endswith(" + self.suffix.to_python() + ")"
+    return "(" + self.term.to_python() + ").endswith(" + self.suffix.to_python() + ")"
 
 
 @extend(ConcatOp)

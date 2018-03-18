@@ -15,13 +15,15 @@ import mimetypes
 import flask
 from werkzeug.wrappers import Response
 
-from active_data import record_request, cors_wrapper
-from mo_logs import Log
+from active_data import record_request
 from mo_files import File
-from pyLibrary.meta import cache
+from mo_logs import Log
 from mo_times.durations import DAY
+from pyLibrary.env.flask_wrappers import cors_wrapper
+from pyLibrary.meta import cache
 
 STATIC_DIRECTORY = File.new_instance("active_data/public")
+
 
 @cors_wrapper
 def download(filename):

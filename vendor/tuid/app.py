@@ -24,7 +24,8 @@ from mo_logs.strings import utf82unicode, unicode2utf8
 from pyLibrary.env.flask_wrappers import gzip_wrapper, cors_wrapper
 from tuid.service import TUIDService
 
-OVERVIEW = File("tuid/public/index.html").read_bytes()
+
+OVERVIEW = None
 
 
 class TUIDApp(Flask):
@@ -115,6 +116,7 @@ def _default(path):
 
 
 if __name__ in ("__main__",):
+    OVERVIEW = File("tuid/public/index.html").read_bytes()
     flask_app = TUIDApp(__name__)
 
     flask_app.add_url_rule(str('/query'), None, tuid_endpoint, defaults={'path': ''}, methods=[str('GET'), str('POST')])

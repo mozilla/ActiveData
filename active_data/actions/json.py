@@ -11,16 +11,16 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import flask
-from active_data import cors_wrapper
 from flask import Response
-from jx_python import jx, wrap_from
-from mo_dots import Data, wrap
-from mo_logs import Log, Except
-from pyLibrary import convert
 
 from active_data.actions import send_error
 from jx_base.container import Container
+from jx_python import jx, wrap_from
+from mo_dots import Data, wrap
+from mo_logs import Log, Except
 from mo_times.timer import Timer
+from pyLibrary import convert
+from pyLibrary.env.flask_wrappers import cors_wrapper
 
 
 @cors_wrapper

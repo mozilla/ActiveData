@@ -13,12 +13,13 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 import flask
-from active_data import record_request, cors_wrapper
+from active_data import record_request
 from flask import Response
 from jx_python import jx, wrap_from
 from mo_dots import wrap, listwrap
 from mo_json import utf82unicode, json2value, value2json
 from mo_logs import Log
+from mo_logs.strings import unicode2utf8
 from mo_math import Math
 
 import moz_sql_parser
@@ -28,7 +29,7 @@ from jx_base.container import Container
 from mo_logs.exceptions import Except
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_times.timer import Timer
-from pyLibrary.convert import unicode2utf8
+from pyLibrary.env.flask_wrappers import cors_wrapper
 
 
 @cors_wrapper
@@ -120,7 +121,7 @@ def parse_sql(sql):
                 g.name = s.name
                 s.value = None  # MARK FOR REMOVAL
                 break
-            except Exception as e:
+            except Exception:
                 pass
 
         if isinstance(val, Mapping):

@@ -17,21 +17,20 @@ import signal
 import subprocess
 from string import ascii_lowercase
 
-from mo_future import text_type
-
 import mo_json_config
 from jx_base import container
 from jx_base.query import QueryOp
 from jx_python import jx
 from mo_dots import wrap, coalesce, unwrap, listwrap, Data, literal_field
+from mo_future import text_type
+from mo_json import value2json, json2value
 from mo_kwargs import override
 from mo_logs import Log, Except, constants
 from mo_logs.exceptions import extract_stack
-from mo_logs.strings import expand_template
+from mo_logs.strings import expand_template, unicode2utf8, utf82unicode
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_times.dates import Date
 from mo_times.durations import MINUTE
-from pyLibrary import convert
 from pyLibrary.env import http
 from pyLibrary.testing import elasticsearch
 from test_jx import TEST_TABLE
@@ -209,13 +208,13 @@ class ESUtils(object):
 
                 subtest.query.format = format
                 subtest.query.meta.testing = True  # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
-                query = convert.unicode2utf8(convert.value2json(subtest.query))
+                query = unicode2utf8(value2json(subtest.query))
                 # EXECUTE QUERY
                 response = self.try_till_response(self.service_url, data=query)
 
                 if response.status_code != 200:
                     error(response)
-                result = convert.json2value(convert.utf82unicode(response.all_content))
+                result = json2value(utf82unicode(response.all_content))
 
                 # HOW TO COMPARE THE OUT-OF-ORDER DATA?
                 compare_to_expected(subtest.query, result, expected, places)
@@ -232,13 +231,13 @@ class ESUtils(object):
         query = wrap(query)
 
         try:
-            query = convert.unicode2utf8(convert.value2json(query))
+            query = unicode2utf8(value2json(query))
             # EXECUTE QUERY
             response = self.try_till_response(self.service_url, data=query)
 
             if response.status_code != 200:
                 error(response)
-            result = convert.json2value(convert.utf82unicode(response.all_content))
+            result = json2value(utf82unicode(response.all_content))
 
             return result
         except Exception as e:
@@ -368,10 +367,10 @@ def sort_table(result):
 
 
 def error(response):
-    response = convert.utf82unicode(response.content)
+    response = utf82unicode(response.content)
 
     try:
-        e = Except.new_instance(convert.json2value(response))
+        e = Except.new_instance(json2value(response))
     except Exception:
         e = None
 
@@ -411,10 +410,10 @@ class FakeHttp(object):
                 "status_code": 400
             })
 
-        text = convert.utf82unicode(body)
-        data = convert.json2value(text)
+        text = utf82unicode(body)
+        data = json2value(text)
         result = jx.run(data)
-        output_bytes = convert.unicode2utf8(convert.value2json(result))
+        output_bytes = unicode2utf8(value2json(result))
         return wrap({
             "status_code": 200,
             "all_content": output_bytes,

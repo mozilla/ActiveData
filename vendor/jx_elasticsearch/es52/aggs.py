@@ -61,7 +61,7 @@ def get_decoders_by_depth(query):
             edge = edge.copy()
             vars_ = edge.value.vars()
             for v in vars_:
-                if not schema.leaves(v, meta=True):
+                if not schema.leaves(v.var, meta=True):
                     Log.error("{{var}} does not exist in schema", var=v)
         elif edge.range:
             vars_ = edge.range.min.vars() | edge.range.max.vars()
@@ -79,7 +79,7 @@ def get_decoders_by_depth(query):
 
         try:
             vars_ |= edge.value.vars()
-            depths = set(len(c.nested_path) - 1 for v in vars_ for c in schema.leaves(v))
+            depths = set(len(c.nested_path) - 1 for v in vars_ for c in schema.leaves(v.var))
             if -1 in depths:
                 Log.error(
                     "Do not know of column {{column}}",

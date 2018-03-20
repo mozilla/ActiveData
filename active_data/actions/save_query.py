@@ -17,6 +17,7 @@ from flask import Response
 import jx_elasticsearch
 from jx_python.containers.cube import Cube
 from mo_dots import wrap
+from mo_json import json2value
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -70,7 +71,7 @@ class SaveQueries(object):
         settings ARE FOR THE ELASTICSEARCH INDEX
         """
         es = Cluster(kwargs).get_or_create_index(
-            schema=convert.json2value(convert.value2json(SCHEMA), leaves=True),
+            schema=json2value(convert.value2json(SCHEMA), leaves=True),
             limit_replicas=True,
             tjson=False,
             kwargs=kwargs

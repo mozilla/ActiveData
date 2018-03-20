@@ -17,11 +17,13 @@ import signal
 import subprocess
 from string import ascii_lowercase
 
+import jx_elasticsearch
+
 import mo_json_config
 from jx_base import container
 from jx_base.query import QueryOp
 from jx_python import jx
-from mo_dots import wrap, coalesce, unwrap, listwrap, Data, literal_field
+from mo_dots import wrap, coalesce, unwrap, listwrap, Data, literal_field, Null
 from mo_future import text_type
 from mo_json import value2json, json2value
 from mo_kwargs import override
@@ -216,8 +218,10 @@ class ESUtils(object):
                     error(response)
                 result = json2value(utf82unicode(response.all_content))
 
-                # HOW TO COMPARE THE OUT-OF-ORDER DATA?
-                compare_to_expected(subtest.query, result, expected, places)
+
+                table = jx_elasticsearch.new_instance(self._es_test_settings)
+                query = QueryOp.wrap(subtest.query, table, table.schema)
+                compare_to_expected(query, result, expected, places)
                 Log.note("PASS {{name|quote}} (format={{format}})", name=subtest.name, format=format)
             if num_expectations == 0:
                 Log.error(
@@ -290,11 +294,6 @@ def compare_to_expected(query, result, expect, places):
             sort_table(result)
             sort_table(expect)
     elif result.meta.format == "list":
-        if query["from"].startswith("meta."):
-            pass
-        else:
-            query = QueryOp.wrap(query)
-
         if not query.sort:
             try:
                 # result.data MAY BE A LIST OF VALUES, NOT OBJECTS

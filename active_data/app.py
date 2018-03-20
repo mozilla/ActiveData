@@ -33,6 +33,7 @@ from jx_base import container
 from mo_files import File
 from mo_logs import Log
 from mo_logs import constants, startup
+from mo_logs.strings import unicode2utf8
 from mo_threads import Thread
 from pyLibrary import convert
 from pyLibrary.env import elasticsearch
@@ -79,7 +80,7 @@ def _default(path):
     record_request(flask.request, None, flask.request.get_data(), None)
 
     return Response(
-        convert.unicode2utf8(OVERVIEW),
+        unicode2utf8(OVERVIEW),
         status=200,
         headers={
             "Content-Type": "text/html"
@@ -204,7 +205,7 @@ def _exit():
         Log.warning("werkzeug.server.shutdown does not exist")
 
     return Response(
-        convert.unicode2utf8(OVERVIEW),
+        unicode2utf8(OVERVIEW),
         status=400,
         headers={
             "Content-Type": "text/html"

@@ -962,10 +962,10 @@ def to_painless(self, schema):
 
 @extend(PrefixOp)
 def to_esfilter(self, schema):
-    if not self.field:
+    if not self.expr:
         return {"match_all": {}}
-    elif isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
-        var = schema.leaves(self.field.var)[0].es_column
+    elif isinstance(self.expr, Variable) and isinstance(self.prefix, Literal):
+        var = schema.leaves(self.expr.var)[0].es_column
         return {"prefix": {var: self.prefix.value}}
     else:
         return ScriptOp("script",  self.to_painless(schema).script(schema)).to_esfilter(schema)
@@ -1039,7 +1039,7 @@ def to_painless(self, schema):
             acc.append(Painless(
                 miss=frum.missing(),
                 type=c.type,
-                expr="doc[" + q + "].values",
+                expr="doc[" + q + "].values" if c.type!=BOOLEAN else "doc[" + q + "].value",
                 frum=frum,
                 many=True
             ))

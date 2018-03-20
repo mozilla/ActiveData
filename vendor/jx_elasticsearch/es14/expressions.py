@@ -139,7 +139,18 @@ def to_ruby(self, schema):
 
 @extend(CaseOp)
 def to_esfilter(self, schema):
-    return ScriptOp("script",  self.to_ruby(schema).script(schema)).to_esfilter(schema)
+    if self.type == BOOLEAN:
+        return OrOp(
+            "or",
+            [
+                AndOp("and", [w.when, w.then])
+                for w in self.whens[:-1]
+            ] +
+            self.whens[-1:]
+        ).partial_eval().to_esfilter(schema)
+    else:
+        Log.error("do not know how to handle")
+        return ScriptOp("script", self.to_ruby(schema).script(schema)).to_esfilter(schema)
 
 
 @extend(ConcatOp)

@@ -74,15 +74,15 @@ class TestLoadAndSaveQueries(BaseTestCase):
 
     def test_recovery_of_empty_string(self):
 
-        test = {
+        test = wrap({
             "data": [
                 {"a": "bee"}
             ],
             "query": {
-                "meta": {"save": True},
                 "from": TEST_TABLE,
                 "select": "a",
-                "where": {"prefix": {"a": ""}}
+                "where": {"prefix": {"a": ""}},
+                "format": "list"
             },
             "expecting_list": {
                 "meta": {
@@ -90,19 +90,15 @@ class TestLoadAndSaveQueries(BaseTestCase):
                 },
                 "data": ["bee"]
             }
-        }
+        })
 
         settings = self.utils.fill_container(test)
 
-        bytes = unicode2utf8(value2json({
-            "from": settings.index,
-            "select": "a",
-            "where": {"prefix": ["a", {"literal": ""}]},
-            "format": "list"
-        }))
+        bytes = unicode2utf8(value2json(test.query))
         expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
-        wrap(test).expecting_list.meta.saved_as = expected_hash
+        test.expecting_list.meta.saved_as = expected_hash
 
+        test.query.meta = {"save": True}
         self.utils.send_queries(test)
 
         # ENSURE THE QUERY HAS BEEN INDEXED

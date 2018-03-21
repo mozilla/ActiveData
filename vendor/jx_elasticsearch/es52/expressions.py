@@ -20,7 +20,7 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified
 from mo_dots import coalesce, wrap, Null, unwraplist, set_default, literal_field
 from mo_logs import Log, suppress_exception
 from mo_logs.strings import expand_template, quote
@@ -413,6 +413,15 @@ def to_painless(self, schema):
 @extend(FloorOp)
 def to_esfilter(self, schema):
     Log.error("Logic error")
+
+
+
+@simplified
+@extend(EqOp)
+def partial_eval(self):
+    lhs = self.lhs.partial_eval()
+    rhs = self.rhs.partial_eval()
+    return EqOp("eq", [lhs, rhs])
 
 
 @extend(EqOp)
@@ -972,19 +981,19 @@ def to_esfilter(self, schema):
 
 @extend(SuffixOp)
 def to_painless(self, schema):
-    if not self.field:
+    if not self.suffix:
         return "true"
     else:
-        return "(" + self.field.to_painless(schema) + ").endsWith(" + self.prefix.to_painless(schema) + ")"
+        return "(" + self.expr.to_painless(schema) + ").endsWith(" + self.suffix.to_painless(schema) + ")"
 
 
 @extend(SuffixOp)
 def to_esfilter(self, schema):
-    if not self.field:
+    if not self.suffix:
         return {"match_all": {}}
-    elif isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
-        var = schema.leaves(self.field.var)[0].es_column
-        return {"regexp": {var: ".*"+string2regexp(self.prefix.value)}}
+    elif isinstance(self.expr, Variable) and isinstance(self.suffix, Literal):
+        var = schema.leaves(self.expr.var)[0].es_column
+        return {"regexp": {var: ".*"+string2regexp(self.suffix.value)}}
     else:
         return ScriptOp("script",  self.to_painless(schema).script(schema)).to_esfilter(schema)
 

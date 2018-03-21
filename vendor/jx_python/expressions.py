@@ -290,7 +290,7 @@ def to_python(self, not_null=False, boolean=False, many=False):
 
 @extend(PrefixOp)
 def to_python(self, not_null=False, boolean=False, many=False):
-    return "(" + self.field.to_python() + ").startswith(" + self.prefix.to_python() + ")"
+    return "(" + self.expr.to_python() + ").startswith(" + self.prefix.to_python() + ")"
 
 
 @extend(SuffixOp)

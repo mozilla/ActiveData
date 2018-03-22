@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from jx_elasticsearch.es09.util import aggregates, build_es_query, compileEdges2Term
-from jx_elasticsearch.es09.util import post as es_post
+from jx_elasticsearch import post as es_post
 from jx_python import jx
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix

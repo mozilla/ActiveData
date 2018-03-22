@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from jx_base.queries import is_variable_name
 from jx_elasticsearch import es09
 from jx_elasticsearch.es09.util import aggregates, fix_es_stats, build_es_query
-from jx_elasticsearch.es09.util import post as es_post
+from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.expressions import Variable
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function

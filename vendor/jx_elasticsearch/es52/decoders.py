@@ -19,13 +19,13 @@ from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
 from jx_base.expressions import TupleOp, value2json
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
-from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, OrOp, AndOp, InequalityOp, LeavesOp
+from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, OrOp, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
 from jx_python import jx
 from mo_dots import set_default, coalesce, literal_field, Data, relative_field, unwraplist
 from mo_dots import wrap
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
-from mo_logs.strings import quote
+from mo_logs.strings import quote, expand_template
 from mo_math import MAX, MIN
 from mo_math import Math
 
@@ -38,7 +38,7 @@ class AggsDecoder(object):
             # if query.groupby:
             #     return object.__new__(DefaultDecoder, e)
 
-            if isinstance(e.value, (text_type, binary_type)):
+            if isinstance(e.value, text_type):
                 Log.error("Expecting Variable or Expression, not plain string")
 
             if isinstance(e.value, LeavesOp):
@@ -143,18 +143,17 @@ class SetDecoder(AggsDecoder):
     def __init__(self, edge, query, limit):
         AggsDecoder.__init__(self, edge, query, limit)
         domain = self.domain = edge.domain
+        self.sorted = None
 
         # WE ASSUME IF THE VARIABLES MATCH, THEN THE SORT TERM AND EDGE TERM MATCH, AND WE SORT BY TERM
         # self.sorted = {1: "asc", -1: "desc", None: None}[getattr(edge.domain, 'sort', None)]
-        edge_var = edge.value.vars()
+        edge_var = set(v.var for v in edge.value.vars())
         if query.sort:
             for s in query.sort:
-                if not edge_var - s.value.vars():
+                if not edge_var - set(v.var for v in s.value.vars()):
                     self.sorted = {1: "asc", -1: "desc"}[s.sort]
                     parts = jx.sort(domain.partitions, {"value": domain.key, "sort": s.sort})
                     edge.domain = self.domain = SimpleSetDomain(key=domain.key, label=domain.label, partitions=parts)
-        else:
-            self.sorted = None
 
     def append_query(self, es_query, start):
         self.start = start
@@ -465,17 +464,19 @@ class MultivalueDecoder(SetDecoder):
         self.start = start
 
         es_field = self.query.frum.schema.leaves(self.var)[0].es_column
-        for i, v in enumerate(self.values):
-            es_query =  wrap({"aggs": {
-                "_match": set_default({"terms": {
-                    "script": 'doc['+quote(es_field)+'].values.contains(' + value2json(v) + ') ? 1 : 0'
-                }}, es_query)
-            }})
+        es_query =  wrap({"aggs": {
+            "_match": set_default({"terms": {
+                "script":  expand_template(LIST_TO_PIPE, {"expr": 'doc[' + quote(es_field) + '].values'})
+            }}, es_query)
+        }})
 
         return es_query
 
     def get_value_from_row(self, row):
-        return unwraplist([v for v, p in zip(self.values, row[self.start:self.start + self.num_columns:]) if p["key"] == '1'])
+        values = row[self.start]['key'].replace("||", "\b").split("|")
+        if len(values) == 2:
+            return None
+        return unwraplist([v.replace("\b", "|") for v in values[1:-1]])
 
     def get_index(self, row):
         find = self.get_value_from_row(row)
@@ -487,7 +488,7 @@ class MultivalueDecoder(SetDecoder):
 
     @property
     def num_columns(self):
-        return len(self.values)
+        return 1
 
 
 class ObjectDecoder(AggsDecoder):

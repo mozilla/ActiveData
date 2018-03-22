@@ -284,12 +284,6 @@ def format_list_from_aggop(decoders, aggs, start, query, select):
         })
 
 
-
-
-
-
-
-
 def format_line(decoders, aggs, start, query, select):
     list = format_list(decoders, aggs, start, query, select)
 

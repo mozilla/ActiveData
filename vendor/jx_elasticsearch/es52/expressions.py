@@ -27,13 +27,32 @@ from mo_logs.strings import expand_template, quote
 from mo_math import MAX, OR
 from pyLibrary.convert import string2regexp
 
-TO_STRING = """Optional.of({{expr}}).map(
-                        value -> {
-                            String output = String.valueOf(value);
-                            if (output.endsWith(".0")) output = output.substring(0, output.length() - 2);
-                            return output;
-                        }
-                ).orElse(null)"""
+NUMBER_TO_STRING = """
+Optional.of({{expr}}).map(
+    value -> {
+        String output = String.valueOf(value);
+        if (output.endsWith(".0")) output = output.substring(0, output.length() - 2);
+        return output;
+    }
+).orElse(null)
+"""
+
+LIST_TO_PIPE = """
+StringBuffer output=new StringBuffer();
+for(String s : {{expr}}){
+    output.append("|");
+    String sep2="";
+    StringTokenizer parts = new StringTokenizer(s, "|");
+    while (parts.hasMoreTokens()){
+        output.append(sep2);
+        output.append(parts.nextToken());
+        sep2="||";
+    }//for
+}//for
+output.append("|");
+return output.toString()
+"""
+
 
 
 class Painless(Expression):
@@ -934,7 +953,7 @@ def to_painless(self, schema):
         return Painless(
             miss=self.term.missing().partial_eval(),
             type=STRING,
-            expr=expand_template(TO_STRING, {"expr":value.expr}),
+            expr=expand_template(NUMBER_TO_STRING, {"expr":value.expr}),
             frum=self
         )
     elif value.type == STRING:
@@ -943,7 +962,7 @@ def to_painless(self, schema):
         return Painless(
             miss=self.term.missing().partial_eval(),
             type=STRING,
-            expr=expand_template(TO_STRING, {"expr":value.expr}),
+            expr=expand_template(NUMBER_TO_STRING, {"expr":value.expr}),
             frum=self
         )
 

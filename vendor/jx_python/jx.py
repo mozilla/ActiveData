@@ -570,6 +570,11 @@ def value_compare(left, right, ordering=1):
 
     try:
         if isinstance(left, list) or isinstance(right, list):
+            if left == None:
+                return ordering
+            elif right == None:
+                return - ordering
+
             left = listwrap(left)
             right = listwrap(right)
             for a, b in zip(left, right):

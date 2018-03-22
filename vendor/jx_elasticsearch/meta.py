@@ -299,10 +299,10 @@ class FromESMetadata(Schema):
                     },
                     "size": 0
                 })
-                r = result.aggregations.count
+                agg_results = result.aggregations
                 count = result.hits.total
-                cardinality = coalesce(r.value, r._nested.value, r.doc_count)
-                multi = coalesce(r.multi.value, 1)
+                cardinality = coalesce(agg_results.count.value, agg_results._nested.value, agg_results.doc_count)
+                multi = int(coalesce(agg_results.multi.value, 1))
                 if cardinality == None:
                    Log.error("logic error")
 

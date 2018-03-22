@@ -11,21 +11,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_future import text_type
-from jx_base import OBJECT, EXISTS
-
+from jx_base import EXISTS
 from jx_base.domains import SetDomain
-from jx_base.expressions import TupleOp, NULL, value2json
+from jx_base.expressions import TupleOp, NULL
 from jx_base.query import DEFAULT_LIMIT
-from jx_elasticsearch.es09.util import post as es_post
-from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
-from jx_elasticsearch.es52.decoders import DimFieldListDecoder
+from jx_elasticsearch import post as es_post
+from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder, DimFieldListDecoder
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp
 from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, unwraplist
+from mo_future import text_type
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
 from mo_logs.strings import quote

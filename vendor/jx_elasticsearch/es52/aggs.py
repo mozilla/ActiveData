@@ -278,7 +278,7 @@ def es_aggsop(es, frum, query):
             es_query.aggs[median_name].percentiles.percents += [50]
 
             s.pull = get_pull_stats(stats_name, median_name)
-        elif s.aggregate=="union":
+        elif s.aggregate == "union":
             # USE TERMS AGGREGATE TO SIMULATE union
             stats_name = literal_field(canonical_name)
             es_query.aggs[stats_name].terms.script_field = s.value.to_painless(schema).script(schema)

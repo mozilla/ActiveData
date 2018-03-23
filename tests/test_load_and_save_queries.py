@@ -114,7 +114,6 @@ class TestLoadAndSaveQueries(BaseTestCase):
         self.assertEqual(response.all_content, bytes)
 
 
-
     # TODO: TEST RECOVERY OF QUERY USING {"prefix": {var: ""}} (EMPTY STRING IS NOT RECORDED RIGHT
 
 

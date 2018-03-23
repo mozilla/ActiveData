@@ -370,7 +370,7 @@ class TestAggOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use == "elasticsearch", "requires scripted metric aggregations")  # https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-scripted-metric-aggregation.html
+    # @skipIf(global_settings.use == "elasticsearch", "requires scripted metric aggregations")  # https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-scripted-metric-aggregation.html
     def test_max_on_tuple(self):
         test = {
             "data": [

@@ -454,6 +454,7 @@ def write_profile(profile_settings, stats):
     from pyLibrary import convert
     from mo_files import File
 
+    Log.note("aggregating {{num}} profile stats", num=len(stats))
     acc = stats[0]
     for s in stats[1:]:
         acc.add(s)

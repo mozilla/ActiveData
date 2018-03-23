@@ -142,4 +142,5 @@ class CProfiler(object):
             self.cprofiler.disable()
             _Log.cprofiler_stats.add(pstats.Stats(self.cprofiler))
             del self.cprofiler
+            _Log.note("done cprofile")
 

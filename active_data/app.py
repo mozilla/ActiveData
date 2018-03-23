@@ -198,29 +198,28 @@ def setup_flask_ssl():
 
 def _exit():
     Log.note("Got request to shutdown")
-    shutdown = flask.request.environ.get('werkzeug.server.shutdown')
-    if shutdown:
-        shutdown()
-    else:
-        Log.warning("werkzeug.server.shutdown does not exist")
-
-    return Response(
-        unicode2utf8(OVERVIEW),
-        status=400,
-        headers={
-            "Content-Type": "text/html"
-        }
-    )
+    try:
+        return Response(
+            unicode2utf8(OVERVIEW),
+            status=400,
+            headers={
+                "Content-Type": "text/html"
+            }
+        )
+    finally:
+        shutdown = flask.request.environ.get('werkzeug.server.shutdown')
+        if shutdown:
+            shutdown()
+        else:
+            Log.warning("werkzeug.server.shutdown does not exist")
 
 
 if __name__ in ("__main__", "active_data.app"):
     try:
         setup()
+        if config.flask:
+            run_flask()
     except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
-        try:
-            Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
-        finally:
-            Log.stop()
+        Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
 
-    if config.flask:
-        run_flask()
+

@@ -345,6 +345,19 @@ def to_esfilter(self, schema):
     Log.error("not supported")
 
 
+@extend(TupleOp)
+def to_painless(self, schema):
+    terms = [FirstOp("first", t).partial_eval().to_painless(schema) for t in self.terms]
+    expr = 'new Object[]{'+','.join(t.expr for t in terms)+'}'
+    return Painless(
+        type=OBJECT,
+        expr=expr,
+        miss=FALSE,
+        many=FALSE,
+        frum=self
+    )
+
+
 @extend(LeavesOp)
 def to_painless(self, schema):
     Log.error("not supported")
@@ -698,6 +711,16 @@ def to_painless(self, schema):
 
 @extend(FirstOp)
 def to_painless(self, schema):
+    if isinstance(self.term, Variable):
+        columns = schema.values(self.term.var)
+        if len(columns) == 1:
+            return Painless(
+                miss="doc[" + quote(columns[0].es_column) + "].missing()",
+                type=self.term.type,
+                expr="doc[" + quote(columns[0].es_column) + "].value",
+                frum=self
+            )
+
     term = self.term.to_painless(schema)
 
     if isinstance(term.frum, CoalesceOp):

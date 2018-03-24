@@ -98,7 +98,7 @@ class Log(object):
             for log in listwrap(settings.log):
                 Log.add_log(Log.new_instance(log))
 
-        if settings.cprofile.enabled==True:
+        if settings.cprofile.enabled == True:
             Log.alert("cprofiling is enabled, writing to {{filename}}", filename=os.path.abspath(settings.cprofile.filename))
 
     @classmethod

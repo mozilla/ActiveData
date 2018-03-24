@@ -47,7 +47,7 @@
 	"debug": {
 		"trace": true,
 		"cprofile": {
-			"enabled": true,
+			"enabled": false,
 			"filename": "./results/profile.tab"
 		},
 		"log": [

@@ -26,9 +26,56 @@ from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, 
 from mo_future import text_type
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
-from mo_logs.strings import quote
+from mo_logs.strings import quote, expand_template
 from mo_math import Math, MAX, UNION
 from mo_times.timer import Timer
+
+
+COMPARE_TUPLE = """
+(a, b)->{
+    int i=0;
+    for (dummy in a){  //ONLY THIS FOR LOOP IS ACCEPTED (ALL OTHER FORMS THROW NullPointerException)
+        if (a[i]==null) return -1*({{dir}});
+        if (b[i]==null) return 1*({{dir}});
+
+        if (a[i]!=b[i]) {
+            if (a[i] instanceof Boolean){
+                if (b[i] instanceof Boolean){
+                    int cmp = Boolean.compare(a[i], b[i]);
+                    if (cmp != 0) return cmp;
+                } else {
+                    return -1;
+                }//endif                    
+            }else if (a[i] instanceof Number) {
+                if (b[i] instanceof Boolean) {
+                    return 1                
+                } else if (b[i] instanceof Number) {
+                    int cmp = Double.compare(a[i], b[i]);
+                    if (cmp != 0) return cmp;
+                } else {
+                    return -1;
+                }//endif
+            }else {
+                if (b[i] instanceof Boolean) {
+                    return 1;
+                } else if (b[i] instanceof Number) {
+                    return 1;
+                } else {
+                    int cmp = ((String)a[i]).compareTo((String)b[i]);
+                    if (cmp != 0) return cmp;
+                }//endif
+            }//endif
+        }//endif
+        i=i+1;
+    }//for
+    return 0;
+}
+"""
+
+
+MAX_OF_TUPLE = """
+(Object[])Arrays.asList(new Object[]{{{expr1}}, {{expr2}}}).stream().{{op}}("""+COMPARE_TUPLE+""").get()
+"""
 
 
 def is_aggsop(es, query):
@@ -241,8 +288,34 @@ def es_aggsop(es, frum, query):
             if s.aggregate == "count":
                 # TUPLES ALWAYS EXIST, SO COUNTING THEM IS EASY
                 s.pull = "doc_count"
+            elif s.aggregate in ('max', 'maximum', 'min', 'minimum'):
+                if s.aggregate in ('max', 'maximum'):
+                    dir = 1
+                    op = "max"
+                else:
+                    dir = -1
+                    op = 'min'
+
+                nully = TupleOp("tuple", [NULL]*len(s.value.terms)).partial_eval().to_painless(schema).expr
+                selfy = s.value.partial_eval().to_painless(schema).expr
+
+                script = {"scripted_metric": {
+                    'init_script': 'params._agg.best = ' + nully + ';',
+                    'map_script': 'params._agg.best = ' + expand_template(MAX_OF_TUPLE, {"expr1": "params._agg.best", "expr2": selfy, "dir": dir, "op": op}) + ";",
+                    'combine_script': 'return params._agg.best',
+                    'reduce_script': 'return params._aggs.stream().max(' + expand_template(COMPARE_TUPLE, {"dir": dir, "op": op}) + ').get()',
+                }}
+                if schema.query_path[0] == ".":
+                    es_query.aggs[canonical_name] = script
+                    s.pull = jx_expression_to_function(literal_field(canonical_name) + ".value")
+                else:
+                    es_query.aggs[canonical_name] = {
+                        "nested": {"path": schema.query_path[0]},
+                        "aggs": {"_nested": script}
+                    }
+                    s.pull = jx_expression_to_function(literal_field(canonical_name) + "._nested.value")
             else:
-                Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
+               Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
             es_query.aggs[literal_field(canonical_name)].value_count.script = s.value.partial_eval().to_painless(schema).script(schema)
             s.pull = jx_expression_to_function(literal_field(canonical_name) + ".value")

@@ -715,7 +715,7 @@ def to_painless(self, schema):
         columns = schema.values(self.term.var)
         if len(columns) == 1:
             return Painless(
-                miss="doc[" + quote(columns[0].es_column) + "].missing()",
+                miss=self.term.missing(),
                 type=self.term.type,
                 expr="doc[" + quote(columns[0].es_column) + "].value",
                 frum=self

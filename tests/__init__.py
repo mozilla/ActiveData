@@ -17,6 +17,8 @@ import signal
 import subprocess
 from string import ascii_lowercase
 
+from pyLibrary.env.elasticsearch import Cluster
+
 import jx_elasticsearch
 
 import mo_json_config
@@ -438,6 +440,8 @@ try:
 
     if not test_jx.global_settings.use:
         Log.error('Must have a {"use": type} set in the config file')
+
+    test_jx.global_settings.elasticsearch.version = Cluster(test_jx.global_settings.elasticsearch).version
     test_jx.utils = container_types[test_jx.global_settings.use](test_jx.global_settings)
 except Exception as e:
     Log.warning("problem", cause=e)

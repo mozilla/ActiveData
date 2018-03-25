@@ -75,7 +75,7 @@ def es_setop(es, query):
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if isinstance(select.value, LeavesOp) and isinstance(select.value.term, Variable):
             term = select.value.term
-            leaves = schema.leaves(term.var)
+            leaves = schema.values(term.var)
             for c in leaves:
                 full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
                 if c.type == NESTED:

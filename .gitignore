@@ -30,3 +30,4 @@ pyLibrary/.svn
 /resources/jre-8u131-linux-x64.rpm
 /*.sqlite
 /temp.md
+/vendor/pyLibrary/vendor/sqlite

@@ -310,7 +310,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use=="sqlite", "Can't handle array of primitives for now")
+    @skipIf(global_settings.use == "sqlite", "Can't handle array of primitives for now")
     def test_select_in_w_multivalue(self):
         test = {
             "data": [
@@ -841,6 +841,33 @@ class TestSetOps(BaseTestCase):
                 "data": [
                     {"b": 0},
                     {"b": NULL}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_right(self):
+        test = {
+            "data": [
+                {"v": "this-is-a-test"},
+                {"v": "this-is-a-vest"},
+                {"v": "test"},
+                {"v": ""},
+                {"v": None}
+            ],
+            "query": {
+                "select": [{"name": "v", "value": {"right": {"v": 4}}}],
+                "from": TEST_TABLE
+            },
+            "expecting_list": {
+                "meta": {
+                    "format": "list"},
+                "data": [
+                    {"v": "test"},
+                    {"v": "vest"},
+                    {"v": "test"},
+                    {"v": NULL},
+                    {"v": NULL}
                 ]
             }
         }

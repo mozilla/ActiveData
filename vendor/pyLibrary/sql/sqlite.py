@@ -17,7 +17,7 @@ import re
 import sys
 from collections import Mapping
 
-from mo_future import text_type, zip_longest
+from mo_future import allocate_lock as _allocate_lock, text_type, zip_longest
 from mo_dots import Data, coalesce
 from mo_files import File
 from mo_logs import Log
@@ -32,9 +32,9 @@ from mo_times.timer import Timer
 from pyLibrary import convert
 from pyLibrary.sql import DB, SQL, SQL_TRUE, SQL_FALSE, SQL_NULL, SQL_SELECT, sql_iso
 
-DEBUG = True
+DEBUG = False
 TRACE = True
-DEBUG_EXECUTE = True
+DEBUG_EXECUTE = False
 DEBUG_INSERT = False
 
 sqlite3 = None
@@ -48,13 +48,23 @@ def _upgrade():
     global sqlite3
 
     try:
-        import sys
-        Log.error("Fix to work with 64bit windows too")
-        original_dll = File.new_instance(sys.exec_prefix, "dlls/sqlite3.dll")
-        source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3.dll")
-        if not all(a==b for a, b in zip_longest(source_dll.read_bytes(), original_dll.read_bytes())):
-            backup = original_dll.backup()
-            File.copy(source_dll, original_dll)
+        Log.note("sqlite not upgraded ")
+        # return
+        # 
+        # import sys
+        # import platform
+        # if "windows" in platform.system().lower():
+        #     original_dll = File.new_instance(sys.exec_prefix, "dlls/sqlite3.dll")
+        #     if platform.architecture()[0]=='32bit':
+        #         source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_32.dll")
+        #     else:
+        #         source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_64.dll")
+        # 
+        #     if not all(a == b for a, b in zip_longest(source_dll.read_bytes(), original_dll.read_bytes())):
+        #         original_dll.backup()
+        #         File.copy(source_dll, original_dll)
+        # else:
+        #     pass
     except Exception as e:
         Log.warning("could not upgrade python's sqlite", cause=e)
 
@@ -79,12 +89,13 @@ class Sqlite(DB):
         if upgrade and not _upgraded:
             _upgrade()
 
-        self.filename = filename
+        self.filename = File(filename).abspath
         self.db = db
         self.queue = Queue("sql commands")   # HOLD (command, result, signal) PAIRS
         self.worker = Thread.run("sqlite db thread", self._worker)
         self.get_trace = TRACE
         self.upgrade = upgrade
+        self.closed = False
 
     def _enhancements(self):
         def regex(pattern, value):
@@ -111,6 +122,8 @@ class Sqlite(DB):
         :param command: COMMAND FOR SQLITE
         :return: Signal FOR IF YOU WANT TO BE NOTIFIED WHEN DONE
         """
+        if self.closed:
+            Log.error("database is closed")
         if DEBUG_EXECUTE:  # EXECUTE IMMEDIATELY FOR BETTER STACK TRACE
             self.query(command)
             return DONE
@@ -124,70 +137,115 @@ class Sqlite(DB):
         self.queue.add((command, None, is_done, trace))
         return is_done
 
+    def commit(self):
+        """
+        WILL BLOCK CALLING THREAD UNTIL ALL PREVIOUS execute() CALLS ARE COMPLETED
+        :return:
+        """
+        if self.closed:
+            Log.error("database is closed")
+        signal = _allocate_lock()
+        signal.acquire()
+        self.queue.add((COMMIT, None, signal, None))
+        signal.acquire()
+        return
+
     def query(self, command):
         """
         WILL BLOCK CALLING THREAD UNTIL THE command IS COMPLETED
         :param command: COMMAND FOR SQLITE
         :return: list OF RESULTS
         """
+        if self.closed:
+            Log.error("database is closed")
         if not self.worker:
             self.worker = Thread.run("sqlite db thread", self._worker)
 
-        signal = Signal()
+        signal = _allocate_lock()
+        signal.acquire()
         result = Data()
         self.queue.add((command, result, signal, None))
-        signal.wait()
+        signal.acquire()
         if result.exception:
             Log.error("Problem with Sqlite call", cause=result.exception)
         return result
 
+    def close(self):
+        """
+        OPTIONAL COMMIT-AND-CLOSE
+        IF THIS IS NOT DONE, THEN THE THREAD THAT SPAWNED THIS INSTANCE
+        :return:
+        """
+        self.closed = True
+        signal = _allocate_lock()
+        signal.acquire()
+        self.queue.add((COMMIT, None, signal, None))
+        signal.acquire()
+        self.worker.please_stop.go()
+        return
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     def _worker(self, please_stop):
         global _load_extension_warning_sent
 
-        if DEBUG:
-            Log.note("Sqlite version {{version}}", version=sqlite3.sqlite_version)
-        if Sqlite.canonical:
-            self.db = Sqlite.canonical
-        else:
-            self.db = sqlite3.connect(coalesce(self.filename, ':memory:'), check_same_thread = False)
-
-            library_loc = File.new_instance(sys.modules[__name__].__file__, "../..")
-            full_path = File.new_instance(library_loc, "vendor/sqlite/libsqlitefunctions.so").abspath
-            try:
-                trace = extract_stack(0)[0]
-                if self.upgrade:
-                    if os.name == 'nt':
-                        file = File.new_instance(trace["file"], "../../vendor/sqlite/libsqlitefunctions.so")
-                    else:
-                        file = File.new_instance(trace["file"], "../../vendor/sqlite/libsqlitefunctions")
-
-                    full_path = file.abspath
-                    self.db.enable_load_extension(True)
-                    self.db.execute(SQL_SELECT + "load_extension" + sql_iso(self.quote_value(full_path)))
-            except Exception as e:
-                if not _load_extension_warning_sent:
-                    _load_extension_warning_sent = True
-                    Log.warning("Could not load {{file}}}, doing without. (no SQRT for you!)", file=full_path, cause=e)
-
         try:
-            while not please_stop:
-                command, result, signal, trace = self.queue.pop(till=please_stop)
+            if DEBUG:
+                Log.note("Sqlite version {{version}}", version=sqlite3.sqlite_version)
+            if Sqlite.canonical:
+                self.db = Sqlite.canonical
+            else:
+                self.db = sqlite3.connect(coalesce(self.filename, ':memory:'), check_same_thread = False)
 
+                library_loc = File.new_instance(sys.modules[__name__].__file__, "../..")
+                full_path = File.new_instance(library_loc, "vendor/sqlite/libsqlitefunctions.so").abspath
+                try:
+                    trace = extract_stack(0)[0]
+                    if self.upgrade:
+                        if os.name == 'nt':
+                            file = File.new_instance(trace["file"], "../../vendor/sqlite/libsqlitefunctions.so")
+                        else:
+                            file = File.new_instance(trace["file"], "../../vendor/sqlite/libsqlitefunctions")
+
+                        full_path = file.abspath
+                        self.db.enable_load_extension(True)
+                        self.db.execute(SQL_SELECT + "load_extension" + sql_iso(self.quote_value(full_path)))
+                except Exception as e:
+                    if not _load_extension_warning_sent:
+                        _load_extension_warning_sent = True
+                        Log.warning("Could not load {{file}}}, doing without. (no SQRT for you!)", file=full_path, cause=e)
+
+            while not please_stop:
+                quad = self.queue.pop(till=please_stop)
+                if quad is None:
+                    break
+                command, result, signal, trace = quad
+
+                show_timing = False
                 if DEBUG_INSERT and command.strip().lower().startswith("insert"):
-                    Log.note("Running command\n{{command|indent}}", command=command)
+                    Log.note("Running command\n{{command|limit(100)|indent}}", command=command)
+                    show_timing = True
                 if DEBUG and not command.strip().lower().startswith("insert"):
-                    Log.note("Running command\n{{command|indent}}", command=command)
-                with Timer("Run command", debug=DEBUG):
-                    if signal is not None:
+                    Log.note("Running command\n{{command|limit(100)|indent}}", command=command)
+                    show_timing = True
+                with Timer("SQL Timing", silent=not show_timing):
+                    if command is COMMIT:
+                        self.db.commit()
+                        signal.release()
+                    elif signal is not None:
                         try:
                             curr = self.db.execute(command)
-                            self.db.commit()
-                            result.meta.format = "table"
-                            result.header = [d[0] for d in curr.description] if curr.description else None
-                            result.data = curr.fetchall()
-                            if DEBUG and result.data:
-                                text = convert.table2csv(list(result.data))
-                                Log.note("Result:\n{{data}}", data=text)
+                            if result is not None:
+                                result.meta.format = "table"
+                                result.header = [d[0] for d in curr.description] if curr.description else None
+                                result.data = curr.fetchall()
+                                if DEBUG and result.data:
+                                    text = convert.table2csv(list(result.data))
+                                    Log.note("Result:\n{{data}}", data=text)
                         except Exception as e:
                             e = Except.wrap(e)
                             e.cause = Except(
@@ -195,13 +253,18 @@ class Sqlite(DB):
                                 template="Bad call to Sqlite",
                                 trace=trace
                             )
-                            result.exception = Except(ERROR, "Problem with\n{{command|indent}}", command=command, cause=e)
+                            if result is None:
+                                Log.error("Problem with\n{{command|indent}}", command=command, cause=e)
+                            else:
+                                result.exception = Except(ERROR, "Problem with\n{{command|indent}}", command=command, cause=e)
                         finally:
-                            signal.go()
+                            if isinstance(signal, Signal):
+                                signal.go()
+                            else:
+                                signal.release()
                     else:
                         try:
                             self.db.execute(command)
-                            self.db.commit()
                         except Exception as e:
                             e = Except.wrap(e)
                             e.cause = Except(
@@ -213,11 +276,11 @@ class Sqlite(DB):
 
         except Exception as e:
             if not please_stop:
-                Log.error("Problem with sql thread", e)
+                Log.warning("Problem with sql thread", cause=e)
         finally:
+            self.closed = True
             if DEBUG:
                 Log.note("Database is closed")
-            self.db.commit()
             self.db.close()
 
     def quote_column(self, column_name, table=None):
@@ -274,3 +337,6 @@ def join_column(a, b):
     a = quote_column(a)
     b = quote_column(b)
     return SQL(a.template.rstrip() + "." + b.template.lstrip())
+
+
+COMMIT = "commit"

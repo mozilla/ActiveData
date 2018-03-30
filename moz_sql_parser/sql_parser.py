@@ -14,17 +14,32 @@ from __future__ import unicode_literals
 import ast
 import sys
 
-from pyparsing import \
-    CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, \
-    nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore
+from pyparsing import CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, _ustr
 
 ParserElement.enablePackrat()
-DEBUG = False
-END = None
-
 
 # THE PARSING DEPTH IS NASTY
 sys.setrecursionlimit(1500)
+
+
+DEBUG = False
+END = None
+
+all_exceptions = {}
+def record_exception(instring, loc, expr, exc):
+    # if DEBUG:
+    #     print ("Exception raised:" + _ustr(exc))
+    es = all_exceptions.setdefault(loc, [])
+    es.append(exc)
+
+
+def nothing(*args):
+    pass
+
+if DEBUG:
+    debug = (None, None, None)
+else:
+    debug = (nothing, nothing, record_exception)
 
 
 keywords = [
@@ -59,29 +74,29 @@ locs = locals()
 reserved = []
 for k in keywords:
     name = k.upper().replace(" ", "")
-    locs[name] = value = Keyword(k, caseless=True).setName(k.lower()).setDebug(DEBUG)
+    locs[name] = value = Keyword(k, caseless=True).setName(k.lower()).setDebugActions(*debug)
     reserved.append(value)
 RESERVED = MatchFirst(reserved)
 
 KNOWN_OPS = [
     (BETWEEN, AND),
-    Literal("||").setName("concat").setDebug(DEBUG),
-    Literal("*").setName("mult").setDebug(DEBUG),
-    Literal("/").setName("div").setDebug(DEBUG),
-    Literal("+").setName("add").setDebug(DEBUG),
-    Literal("-").setName("sub").setDebug(DEBUG),
-    Literal("<>").setName("neq").setDebug(DEBUG),
-    Literal(">").setName("gt").setDebug(DEBUG),
-    Literal("<").setName("lt").setDebug(DEBUG),
-    Literal(">=").setName("gte").setDebug(DEBUG),
-    Literal("<=").setName("lte").setDebug(DEBUG),
-    IN.setName("in").setDebug(DEBUG),
-    IS.setName("eq").setDebug(DEBUG),
-    Literal("=").setName("eq").setDebug(DEBUG),
-    Literal("==").setName("eq").setDebug(DEBUG),
-    Literal("!=").setName("neq").setDebug(DEBUG),
-    OR.setName("or").setDebug(DEBUG),
-    AND.setName("and").setDebug(DEBUG)
+    Literal("||").setName("concat").setDebugActions(*debug),
+    Literal("*").setName("mult").setDebugActions(*debug),
+    Literal("/").setName("div").setDebugActions(*debug),
+    Literal("+").setName("add").setDebugActions(*debug),
+    Literal("-").setName("sub").setDebugActions(*debug),
+    Literal("<>").setName("neq").setDebugActions(*debug),
+    Literal(">").setName("gt").setDebugActions(*debug),
+    Literal("<").setName("lt").setDebugActions(*debug),
+    Literal(">=").setName("gte").setDebugActions(*debug),
+    Literal("<=").setName("lte").setDebugActions(*debug),
+    IN.setName("in").setDebugActions(*debug),
+    IS.setName("is").setDebugActions(*debug),
+    Literal("=").setName("eq").setDebugActions(*debug),
+    Literal("==").setName("eq").setDebugActions(*debug),
+    Literal("!=").setName("neq").setDebugActions(*debug),
+    OR.setName("or").setDebugActions(*debug),
+    AND.setName("and").setDebugActions(*debug)
 ]
 
 
@@ -113,6 +128,11 @@ def to_json_operator(instring, tokensStart, retTokens):
             return {"exists": tok[0]}
         elif tok[0] == "null":
             return {"exists": tok[2]}
+    elif op == "is":
+        if tok[2] == 'null':
+            return {"missing": tok[0]}
+        else:
+            return {"exists": tok[0]}
 
     return {op: [tok[i * 2] for i in range(int((len(tok) + 1) / 2))]}
 
@@ -157,17 +177,12 @@ def to_join_call(instring, tokensStart, retTokens):
 
 
 def to_select_call(instring, tokensStart, retTokens):
-    # toks = datawrap(retTokens)
-    # return {
-    #     "select": toks.select,
-    #     "from": toks['from'],
-    #     "where": toks.where,
-    #     "groupby": toks.groupby,
-    #     "having": toks.having,
-    #     "limit": toks.limit
-    #
-    # }
-    return retTokens
+    tok = retTokens[0].asDict()
+
+    if tok.get('value')[0][0] == '*':
+        return '*'
+    else:
+        return tok
 
 
 def to_union_call(instring, tokensStart, retTokens):
@@ -211,51 +226,44 @@ def to_string(instring, tokensStart, retTokens):
     return {"literal": ast.literal_eval(val)}
 
 # NUMBERS
-E = CaselessLiteral("E")
-# binop = oneOf("= != < > >= <= eq ne lt le gt ge", caseless=True)
-arithSign = Word("+-", exact=1)
-realNum = Combine(
-    Optional(arithSign) +
-    (Word(nums) + "." + Optional(Word(nums)) | ("." + Word(nums))) +
-    Optional(E + Optional(arithSign) + Word(nums))
-).addParseAction(unquote)
-intNum = Combine(
-    Optional(arithSign) +
-    Word(nums) +
-    Optional(E + Optional("+") + Word(nums))
-).addParseAction(unquote)
+realNum = Regex(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?").addParseAction(unquote)
+intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(unquote)
 
 # STRINGS, NUMBERS, VARIABLES
-sqlString = Combine(Regex(r"\'(\'\'|\\.|[^'])*\'")).addParseAction(to_string)
-identString = Combine(Regex(r'\"(\"\"|\\.|[^"])*\"')).addParseAction(unquote)
-ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas, alphanums + "_$") | identString, delim=".", combine=True))).setName("identifier")
+sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(to_string)
+identString = Regex(r'\"(\"\"|\\.|[^"])*\"').addParseAction(unquote)
+ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alphanums + "_$") | identString, delim=".", combine=True))).setName("identifier")
 
 # EXPRESSIONS
 expr = Forward()
 
 # CASE
-case = (CASE + Group(ZeroOrMore((WHEN + expr("when") + THEN + expr("then")).addParseAction(to_when_call)))("case") + Optional(ELSE+expr("else")) + END).addParseAction(to_case_call)
-
+case = (
+    CASE +
+    Group(ZeroOrMore((WHEN + expr("when") + THEN + expr("then")).addParseAction(to_when_call)))("case") +
+    Optional(ELSE + expr("else")) +
+    END
+).addParseAction(to_case_call)
 
 selectStmt = Forward()
 compound = (
-    (Literal("-")("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
-    (Keyword("not", caseless=True)("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
-    (Keyword("distinct", caseless=True)("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
-    Keyword("null", caseless=True).setName("null").setDebug(DEBUG) |
+    (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
+    (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
+    Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
     case |
-    (Literal("(").setDebug(DEBUG).suppress() + selectStmt + Literal(")").suppress()) |
-    (Literal("(").setDebug(DEBUG).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
-    realNum.setName("float").setDebug(DEBUG) |
-    intNum.setName("int").setDebug(DEBUG) |
-    sqlString.setName("string").setDebug(DEBUG) |
+    (Literal("(").setDebugActions(*debug).suppress() + selectStmt + Literal(")").suppress()) |
+    (Literal("(").setDebugActions(*debug).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
+    realNum.setName("float").setDebugActions(*debug) |
+    intNum.setName("int").setDebugActions(*debug) |
+    (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
+    sqlString.setName("string").setDebugActions(*debug) |
     (
-        Word(alphas)("op").setName("function name").setDebug(DEBUG) +
-        Literal("(").setName("func_param").setDebug(DEBUG) +
+        Word(alphas)("op").setName("function name").setDebugActions(*debug) +
+        Literal("(").setName("func_param").setDebugActions(*debug) +
         Optional(selectStmt | Group(delimitedList(expr)))("params") +
         ")"
-    ).addParseAction(to_json_call).setDebug(DEBUG) |
-    ident.copy().setName("variable").setDebug(DEBUG)
+    ).addParseAction(to_json_call).setDebugActions(*debug) |
+    ident.copy().setName("variable").setDebugActions(*debug)
 )
 expr << Group(infixNotation(
     compound,
@@ -275,42 +283,46 @@ expr << Group(infixNotation(
             to_json_operator
         )
     ]
-).setName("expression").setDebug(DEBUG))
+).setName("expression").setDebugActions(*debug))
 
 # SQL STATEMENT
 selectColumn = Group(
-    Group(expr).setName("expression1")("value").setDebug(DEBUG) + Optional(Optional(AS) + ident.copy().setName("column_name1")("name").setDebug(DEBUG)) |
-    Literal('*')("value").setDebug(DEBUG)
-).setName("column")
+    Group(expr).setName("expression1")("value").setDebugActions(*debug) + Optional(Optional(AS) + ident.copy().setName("column_name1")("name").setDebugActions(*debug)) |
+    Literal('*')("value").setDebugActions(*debug)
+).setName("column").addParseAction(to_select_call)
 
 
-tableName = ident("value").setName("table_name1").setDebug(DEBUG) + Optional(AS) + ident("name").setName("table_alias1").setDebug(DEBUG) | \
-            ident.setName("table_name2").setDebug(DEBUG)
+tableName = (
+    ident("value").setName("table name").setDebugActions(*debug) +
+    Optional(AS) +
+    ident("name").setName("table alias").setDebugActions(*debug) |
+    ident.setName("table name").setDebugActions(*debug)
+)
 
 join = ((CROSSJOIN | INNERJOIN | JOIN)("op") + tableName("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
 
-sortColumn = expr("value").setName("sort1").setDebug(DEBUG) + Optional(DESC("sort")) | \
-             expr("value").setName("sort2").setDebug(DEBUG)
+sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort")) | \
+             expr("value").setName("sort2").setDebugActions(*debug)
 
 # define SQL tokens
 selectStmt << Group(
     Group(Group(
         delimitedList(
             Group(
-                SELECT.suppress().setDebug(DEBUG) + delimitedList(selectColumn)("select") +
+                SELECT.suppress().setDebugActions(*debug) + delimitedList(selectColumn)("select") +
                 Optional(
-                    FROM.suppress().setDebug(DEBUG) + (delimitedList(Group(tableName)) + ZeroOrMore(join))("from") +
-                    Optional(WHERE.suppress().setDebug(DEBUG) + expr.setName("where"))("where") +
-                    Optional(GROUPBY.suppress().setDebug(DEBUG) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
-                    Optional(HAVING.suppress().setDebug(DEBUG) + expr("having").setName("having")) +
-                    Optional(LIMIT.suppress().setDebug(DEBUG) + expr("limit"))
+                    FROM.suppress().setDebugActions(*debug) + (delimitedList(Group(tableName)) + ZeroOrMore(join))("from") +
+                    Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
+                    Optional(GROUPBY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
+                    Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +
+                    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit"))
                 )
             ),
             delim=UNION
         )
     )("union"))("from") +
-    Optional(ORDERBY.suppress().setDebug(DEBUG) + delimitedList(Group(sortColumn))("orderby").setName("orderby")) +
-    Optional(LIMIT.suppress().setDebug(DEBUG) + expr("limit"))
+    Optional(ORDERBY.suppress().setDebugActions(*debug) + delimitedList(Group(sortColumn))("orderby").setName("orderby")) +
+    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit"))
 ).addParseAction(to_union_call)
 
 

@@ -27,3 +27,7 @@ pyLibrary/.svn
 /active_data/public/modevlib/ESQueryRunner.js
 /pyLibrary1
 /docs/ActiveData Notes.rtf
+/*.sqlite
+/resources/jre-8u131-linux-x64.rpm
+/vendor/pyLibrary/vendor/sqlite
+/temp.md

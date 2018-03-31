@@ -13,17 +13,17 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 import flask
+from flask import Response
+
 import moz_sql_parser
 from active_data import record_request, cors_wrapper
-from flask import Response
+from active_data.actions import save_query, send_error, test_mode_wait
+from active_data.actions.jx import BLANK, QUERY_SIZE_LIMIT
 from mo_dots import wrap, listwrap
 from mo_json import utf82unicode, json2value, value2json
 from mo_logs import Log
-from mo_math import Math
-
-from active_data.actions import save_query, send_error, test_mode_wait
-from active_data.actions.jx import BLANK, QUERY_SIZE_LIMIT
 from mo_logs.exceptions import Except
+from mo_math import Math
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_times.timer import Timer
 from pyLibrary.convert import unicode2utf8
@@ -112,7 +112,7 @@ def parse_sql(sql):
     query = wrap(moz_sql_parser.parse(sql))
     # PULL OUT THE AGGREGATES
     for s in listwrap(query.select):
-        val = s.value
+        val = s if s == "*" else s.value
         # LOOK FOR GROUPBY COLUMN IN SELECT CLAUSE, REMOVE DUPLICATION
         for g in listwrap(query.groupby):
             try:
@@ -128,6 +128,6 @@ def parse_sql(sql):
                 if val[a]:
                     s.aggregate = a
                     s.value = val[a]
-    query.select = [s for s in listwrap(query.select) if s.value != None]
+    query.select = [s for s in listwrap(query.select) if s == "*" or s.value != None]
     query.format = "table"
     return query

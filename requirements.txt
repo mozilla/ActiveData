@@ -1,4 +1,5 @@
 Flask
 pymysql
 requests
+mo_future
 moz-sql-parser

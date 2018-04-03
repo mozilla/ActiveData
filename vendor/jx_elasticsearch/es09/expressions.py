@@ -15,6 +15,8 @@ from collections import Mapping
 from datetime import datetime
 import re
 
+from jx_base.queries import keyword_pattern
+
 from mo_future import text_type
 from pyLibrary import convert
 from mo_collections import reverse
@@ -129,13 +131,13 @@ class _MVEL(object):
         list = []
         for s in selectList:
             if is_deep:
-                if s.value and isKeyword(s.value):
+                if s.value and is_variable_name(s.value):
                     shortForm = self._translate(s.value)
                     list.append("Value2Pipe(" + shortForm + ")\n")
                 else:
                     Log.error("do not know how to handle yet")
             else:
-                if s.value and isKeyword(s.value):
+                if s.value and is_variable_name(s.value):
                     list.append("Value2Pipe(getDocValue(" + value2MVEL(s.value) + "))\n")
                 elif s.value:
                     shortForm = self._translate(s.value)
@@ -490,19 +492,8 @@ def _where(esFilter, _translate):
 
 
 VAR_CHAR = "abcdefghijklmnopqurstvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_.\""
-keyword_pattern = re.compile(r"\.*\w*(?:\.\w+)*")
 
 
-def isKeyword(value):
-    """
-    RETURN TRUE IF THE value IS JUST A NAME OF A FIELD, A LIST OF FIELDS, (OR A VALUE)
-    """
-    if not value or not isinstance(value, text_type):
-        Log.error("Expecting a string")
-
-    if keyword_pattern.match(value):
-        return True
-    return False
 
 
 def value2MVEL(value):

@@ -29,13 +29,13 @@ from active_data.actions.jx import jx_query
 from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.sql import sql_query
 from active_data.actions.static import download
+from active_data.actions.contribute import send_contribute
 from jx_base import container
 from mo_files import File
 from mo_logs import Log
 from mo_logs import constants, startup
 from mo_logs.strings import unicode2utf8
 from mo_threads import Thread
-from pyLibrary import convert
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.flask_wrappers import cors_wrapper
 from tuid.app import tuid_endpoint
@@ -64,6 +64,7 @@ def _head(path):
     return Response(b'', status=200)
 
 flask_app.add_url_rule('/tools/<path:filename>', None, download)
+flask_app.add_url_rule('/contribute.json', None, send_contribute)
 flask_app.add_url_rule('/find/<path:hash>', None, find_query)
 flask_app.add_url_rule('/query', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
 flask_app.add_url_rule('/query/', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])

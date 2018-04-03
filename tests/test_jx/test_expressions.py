@@ -30,6 +30,12 @@ class TestExpressions(FuzzyTestCase):
             "That's a good variable name!"
         )
 
+    def test_dash_var(self):
+        self.assertTrue(
+            is_variable_name(u'a-b'),
+            "That's a good variable name!"
+        )
+
     def test_value_not_a_variable(self):
         result = jx_expression({"eq": {"result.test": "/XMLHttpRequest/send-entity-body-document.htm"}}).vars()
         expected = {"result.test"}

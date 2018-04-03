@@ -535,6 +535,15 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+
+# TODO: GROUPBY NUMBER SHOULD NOT RESULT IN A STRING
+#         "groupby":[{
+#        		"name":"date",
+#        		"value":{"floor":[{"div":{"run.timestamp":86400}},1]}
+#        	}],
+
+
+
 # TODO: AGG SHALLOW FIELD WITH DEEP GROUPBY
 # {
 #     "from": "coverage.source.file.covered",

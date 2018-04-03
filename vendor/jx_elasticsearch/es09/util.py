@@ -13,6 +13,10 @@ from __future__ import unicode_literals
 
 from datetime import datetime
 
+from jx_base.queries import is_variable_name
+
+from mo_logs.strings import quote
+
 from mo_logs import Log, strings
 from mo_dots import Data
 from mo_dots import coalesce
@@ -23,7 +27,7 @@ from mo_math import COUNT
 from mo_math import Math
 from mo_math import stats
 from jx_base import domains
-from jx_elasticsearch.es09.expressions import value2MVEL, isKeyword
+from jx_elasticsearch.es09.expressions import value2MVEL
 from mo_times import durations
 
 
@@ -68,7 +72,7 @@ def compileTime2Term(edge):
     # IS THERE A LIMIT ON THE DOMAIN?
     numPartitions = len(edge.domain.partitions)
     value = edge.value
-    if isKeyword(value):
+    if is_variable_name(value):
         value = "doc[\"" + value + "\"].value"
 
     nullTest = compileNullTest(edge)
@@ -109,7 +113,7 @@ def compileDuration2Term(edge):
     # IS THERE A LIMIT ON THE DOMAIN?
     numPartitions = len(edge.domain.partitions)
     value = edge.value
-    if isKeyword(value):
+    if is_variable_name(value):
         value = "doc[\"" + value + "\"].value"
 
     ref = coalesce(edge.domain.min, edge.domain.max, durations.ZERO)
@@ -141,7 +145,7 @@ def compileNumeric2Term(edge):
 
     numPartitions = len(edge.domain.partitions)
     value = edge.value
-    if isKeyword(value):
+    if is_variable_name(value):
         value = "doc[\"" + value + "\"].value"
 
     if not edge.domain.max:
@@ -179,7 +183,7 @@ def compileString2Term(edge):
         Log.error("edge script not supported yet")
 
     value = edge.value
-    if isKeyword(value):
+    if is_variable_name(value):
         value = strings.expand_template("getDocValue({{path}})", {"path": quote(value)})
     else:
         Log.error("not handled")
@@ -202,7 +206,7 @@ def compileNullTest(edge):
 
     # IS THERE A LIMIT ON THE DOMAIN?
     value = edge.value
-    if isKeyword(value):
+    if is_variable_name(value):
         value = "doc[\"" + value + "\"].value"
 
     if not edge.domain.max:
@@ -240,7 +244,7 @@ def compileEdges2Term(mvel_compiler, edges, constants):
         def temp(term):
             return FlatList([edge0.domain.getPartByKey(term)])
 
-        if edge0.value and isKeyword(edge0.value):
+        if edge0.value and is_variable_name(edge0.value):
             return Data(
                 field=edge0.value,
                 term2parts=temp

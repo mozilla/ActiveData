@@ -78,9 +78,9 @@ es_type_to_json_type = {
     "object": "object",
     "nested": "nested",
     "source": "json",
-    "boolean": "boolean"
+    "boolean": "boolean",
+    "long": "number"
 }
-
 
 # FOR ELASTICSEARCH aggs
 aggregates1_4 = {

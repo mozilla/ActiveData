@@ -10,7 +10,7 @@ import re
 
 from mo_logs import Log
 
-keyword_pattern = re.compile(r"(\$|\w|\\\.)+(?:\.(\$|\w|\\\.)+)*")
+keyword_pattern = re.compile(r"(\$|\w|\\\.|-)+(?:\.(\$|\w|\\\.|-)+)*")
 
 
 

@@ -17,6 +17,7 @@ from jx_base.expressions import NULL
 from mo_dots import wrap
 from mo_logs import Log
 from mo_logs.exceptions import extract_stack
+from mo_times import Date
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
@@ -215,6 +216,58 @@ class TestSorting(BaseTestCase):
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "edges": [{"name": "a", "domain": {"type": "set", "partitions": [
+                    {"value": "a"},
+                    {"value": "c"}
+                ]}}],
+                "data": {
+                    "count": [5, 4, 1]
+                }
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_groupby_expression_and_sort(self):
+        test = {
+            "data": [
+                {"a": Date("2018-04-01 12:34:00").unix, "value": 1},
+                {"a": Date("2018-04-01 13:34:00").unix, "value": 3},
+                {"a": Date("2018-04-01 15:34:00").unix, "value": 4},
+                {"a": Date("2018-04-01 08:34:00").unix, "value": 6},
+                {"a": Date("2018-04-02 00:34:00").unix, "value": 7},
+                {"value": 99},
+                {"a": Date("2018-04-02 01:34:00").unix, "value": 8},
+                {"a": Date("2018-04-02 02:44:00").unix, "value": 9},
+                {"a": Date("2018-04-02 04:54:00").unix, "value": 10},
+                {"a": Date("2018-04-02 14:04:00").unix, "value": 11}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": {
+                    "name": "date",
+                    "value": {"floor": {"div": ["a", 86400]}}
+                },
+                "sort": {"floor": {"div": ["a", 86400]}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"date": "a", "count": 5},
+                    {"date": "c", "count": 4},
+                    {"count": 1}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["date", "count"],
+                "data": [
+                    ["", 5],
+                    ["c", 4],
+                    [NULL, 1]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [{"name": "date", "domain": {"type": "set", "partitions": [
                     {"value": "a"},
                     {"value": "c"}
                 ]}}],

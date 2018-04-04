@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 from jx_base.expressions import jx_expression
 from jx_base.queries import is_variable_name
 from mo_testing.fuzzytestcase import FuzzyTestCase
+from mo_times import Date
 
 
 class TestExpressions(FuzzyTestCase):
@@ -46,3 +47,9 @@ class TestExpressions(FuzzyTestCase):
         result = jx_expression(where).map({"a": "c"}).__data__()
         self.assertEqual(result, {"in": {"c": [1, 2]}})
 
+    def test_date_literal(self):
+        expr = {"date": {"literal": "today-month"}}
+
+        result = jx_expression(expr).partial_eval()
+        expected = Date.today().unix
+        self.assertEqual(expr, expected)

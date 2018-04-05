@@ -361,7 +361,7 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(True.version.startswith("5."), "Not supported by es5")
+    @skipIf(global_settings.elasticsearch.version.startswith("5."), "Not supported by es5")
     def test_groupby_left_id(self):
         test = {
             "data": [set_default(d, {"_id": "aa" + text_type(i)}) for i, d in enumerate(simple_test_data)],

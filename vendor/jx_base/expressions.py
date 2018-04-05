@@ -20,7 +20,7 @@ import mo_json
 from jx_base import OBJECT, python_type_to_json_type, BOOLEAN, NUMBER, INTEGER, STRING, IS_NULL
 from jx_base.queries import is_variable_name, get_property_name
 from mo_dots import coalesce, wrap, Null, split_field
-from mo_future import text_type, utf8_json_encoder, get_function_name
+from mo_future import text_type, utf8_json_encoder, get_function_name, zip_longest
 from mo_json import scrub
 from mo_logs import Log, Except
 from mo_math import Math, MAX, MIN, UNION
@@ -997,6 +997,11 @@ class EqOp(Expression):
         else:
             return {"eq": [self.lhs.__data__(), self.rhs.__data__()]}
 
+    def __eq__(self, other):
+        if isinstance(other, EqOp):
+            return self.lhs == other.lhs and self.rhs == other.rhs
+        return False
+
     def vars(self):
         return self.lhs.vars() | self.rhs.vars()
 
@@ -1147,6 +1152,11 @@ class AndOp(Expression):
 
     def __data__(self):
         return {"and": [t.__data__() for t in self.terms]}
+
+    def __eq__(self, other):
+        if isinstance(other, AndOp):
+            return all(a == b for a, b in zip_longest(self.terms, other.terms))
+        return False
 
     def vars(self):
         output = set()

@@ -271,7 +271,11 @@ class Variable(Expression):
         return self.var.__hash__()
 
     def __eq__(self, other):
-        return self.var.__eq__(other)
+        if isinstance(other, Variable):
+            return self.var == other.var
+        elif isinstance(other, text_type):
+            return self.var == other
+        return False
 
     def __unicode__(self):
         return self.var
@@ -424,8 +428,8 @@ class ScriptOp(Expression):
         if not isinstance(script, text_type):
             Log.error("expecting text of a script")
         self.simplified = True
-        self.script = script,
-        self.data_type=data_type
+        self.script = script
+        self.data_type = data_type
 
     @classmethod
     def define(cls, expr):

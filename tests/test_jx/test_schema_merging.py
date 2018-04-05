@@ -22,6 +22,7 @@ class TestSchemaMerging(BaseTestCase):
     TESTS THAT DEMONSTRATE DIFFERENT SCHEMAS
     """
 
+    @skipIf(global_settings.elasticsearch, "not implemented yet")
     def test_select(self):
         test = {
             "data": [
@@ -195,7 +196,7 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.is_travis, "not expected to pass yet")
+    @skipIf(global_settings.elasticsearch, "not implemented yet")
     def test_dots_in_property_names3(self):
         test = {
             "data": [
@@ -237,6 +238,7 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    @skipIf(global_settings.elasticsearch, "not implemented yet")
     def test_count(self):
         test = {
             "data": [
@@ -270,6 +272,7 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    @skipIf(global_settings.elasticsearch, "not implemented yet")
     def test_sum(self):
         test = {
             "data": [

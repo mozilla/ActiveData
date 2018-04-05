@@ -67,7 +67,7 @@ class TestSQL(BaseTestCase):
         sql = "SELECT 1"
         expected = {
             "meta": {"format": "table"},
-            "header": ["1"],
+            "header": ["."],
             "data": [
                 [1]
             ]

@@ -321,8 +321,8 @@ class GeneralRangeDecoder(AggsDecoder):
         aggs = {}
         for i, p in enumerate(domain.partitions):
             filter_ = AndOp("and", [
-                InequalityOp("lte", [range.min, self.to_float(p.min)]),
-                InequalityOp("gt", [range.max, self.to_float(p.min)])
+                InequalityOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
+                InequalityOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
             ])
             aggs["_join_" + text_type(i)] = set_default(
                 {"filter": filter_.to_esfilter(self.schema)},

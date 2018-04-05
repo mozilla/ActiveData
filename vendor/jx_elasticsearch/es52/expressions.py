@@ -398,7 +398,10 @@ def to_esfilter(self, schema):
             Log.error("operator {{op|quote}} does not work on objects", op=self.op)
         return {"range": {lhs: {self.op: self.rhs.value}}}
     else:
-        return {"script": {"script": {"lang": "painless", "inline": self.to_painless(schema).script(schema)}}}
+        script = self.to_painless(schema)
+        if script.miss is not FALSE:
+            Log.error("inequality must be decisive")
+        return {"script": {"script": {"lang": "painless", "inline": script.expr}}}
 
 
 @extend(DivOp)
@@ -703,7 +706,16 @@ def to_painless(self, schema):
 
 @extend(OrOp)
 def to_esfilter(self, schema):
-    return {"bool": {"should": [t.to_esfilter(schema) for t in self.terms]}}
+    # OR(x) == NOT(AND(NOT(xi) for xi in x))
+    output = {"bool": {"must_not": {"bool": {"must": [
+        NotOp("not", t).partial_eval().to_esfilter(schema)
+        for t in self.terms
+    ]}}}}
+    return output
+
+    # WE REQUIRE EXIT-EARLY SEMANTICS, OTHERWISE EVERY EXPRESSION IS A SCRIPT EXPRESSION
+    # {"bool":{"should"  :[a, b, c]}} RUNS IN PARALLEL
+    # {"bool":{"must_not":[a, b, c]}} ALSO RUNS IN PARALLEL
 
 
 @extend(LengthOp)
@@ -1380,7 +1392,7 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
         if not vars_:
             return Null
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
-        var_to_depth = {v: max(len(c.nested_path) - 1, 0) for v in vars_ for c in schema[v]}
+        var_to_depth = {v.var: max(len(c.nested_path) - 1, 0) for v in vars_ for c in schema[v.var]}
         all_depths = set(var_to_depth.values())
         # if -1 in all_depths:
         #     Log.error(
@@ -1391,7 +1403,7 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
             all_depths = {0}
         output = wrap([[] for _ in range(MAX(all_depths) + 1)])
     else:
-        all_depths = set(var_to_depth[v] for v in vars_)
+        all_depths = set(var_to_depth[v.var] for v in vars_)
 
     if len(all_depths) == 1:
         output[list(all_depths)[0]] += [where]

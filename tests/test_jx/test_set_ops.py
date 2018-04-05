@@ -1083,6 +1083,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    @skipIf(global_settings.elasticsearch, "not implemented yet")
     def test_select_array_as_value(self):
         test = {
             "data": [

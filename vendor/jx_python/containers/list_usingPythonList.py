@@ -91,7 +91,7 @@ class ListContainer(Container):
             elif q.format == "table":
                 head = [c.names['.'] for c in output.schema.columns]
                 data = [
-                    [r[h] for h in head]
+                    [r if h == '.' else r[h] for h in head]
                     for r in output.data
                 ]
                 return Data(header=head, data=data, meta={"format": "table"})

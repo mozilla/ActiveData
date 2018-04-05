@@ -721,7 +721,7 @@ class DateOp(Literal):
     def __init__(self, op, term):
         if hasattr(self, "date"):
             return
-        self.date = term
+        self.date = term = coalesce(term.literal, term)
         v = unicode2Date(self.date)
         if isinstance(v, Date):
             Literal.__init__(self, op, v.unix)

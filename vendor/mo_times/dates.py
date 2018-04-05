@@ -397,7 +397,7 @@ def unicode2Date(value, format=None):
 
     else:
         from mo_logs import Log
-        Log.error("Can not interpret {{value}} as a datetime",  value= value)
+        Log.error("Can not interpret {{value}} as a datetime", value=value)
 
 
 DATETIME_EPOCH = datetime(1970, 1, 1)

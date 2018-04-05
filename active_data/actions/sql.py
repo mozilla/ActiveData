@@ -140,8 +140,6 @@ def parse_sql(sql):
             except Exception:
                 pass
 
-    query.select = [s for s in listwrap(query.select) if s.value != None]
-
     # RENAME orderby TO sort
     query.sort, query.orderby = query.orderby, None
     query.format = "table"

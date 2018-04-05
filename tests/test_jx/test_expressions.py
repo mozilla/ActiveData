@@ -11,10 +11,11 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+
 from jx_base.expressions import jx_expression
 from jx_base.queries import is_variable_name
 from mo_testing.fuzzytestcase import FuzzyTestCase
-from mo_times import Date
+from mo_times import Date, MONTH
 
 
 class TestExpressions(FuzzyTestCase):
@@ -50,6 +51,7 @@ class TestExpressions(FuzzyTestCase):
     def test_date_literal(self):
         expr = {"date": {"literal": "today-month"}}
 
-        result = jx_expression(expr).partial_eval()
-        expected = Date.today().unix
-        self.assertEqual(expr, expected)
+        from jx_python.expression_compiler import compile_expression
+        result = compile_expression(jx_expression(expr).partial_eval().to_python())(None)
+        expected = (Date.today()-MONTH).unix
+        self.assertEqual(result, expected)

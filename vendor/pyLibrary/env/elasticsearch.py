@@ -18,8 +18,7 @@ from copy import deepcopy
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from jx_python.meta import Column
-from mo_dots import coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field
-from mo_dots import wrap, FlatList
+from mo_dots import wrap, FlatList, coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field
 from mo_future import text_type, binary_type
 from mo_json import value2json, json2value
 from mo_json.typed_encoder import EXISTS_TYPE, BOOLEAN_TYPE, STRING_TYPE, NUMBER_TYPE, NESTED_TYPE, TYPE_PREFIX
@@ -79,16 +78,11 @@ class Index(Features):
     ):
         if index==None:
             Log.error("not allowed")
-        # if index == alias:
-        #     Log.error("must have a unique index name")
 
-        self.cluster_state = None
+        self.info = None
         self.debug = debug
         self.settings = kwargs
-        if cluster:
-            self.cluster = cluster
-        else:
-            self.cluster = Cluster(kwargs)
+        self.cluster = cluster or Cluster(kwargs)
 
         try:
             full_index = self.get_index(index)
@@ -127,9 +121,17 @@ class Index(Features):
             self.encode = TypedInserter(self, id_column).typed_encode
         else:
             if tjson == None and not read_only:
-                kwargs.tjson = False
-                Log.warning("{{index}} is not typed tjson={{tjson}}", index=self.settings.index, tjson=self.settings.tjson)
-            self.encode = get_encoder(id_column)
+                props = self.get_properties()
+                if props[EXISTS_TYPE]:
+                    kwargs.tjson=True
+                    from pyLibrary.env.typed_inserter import TypedInserter
+                    self.encode = TypedInserter(self, id_column).typed_encode
+                else:
+                    kwargs.tjson = False
+                    Log.warning("{{index}} is not typed tjson={{tjson}}", index=self.settings.index, tjson=self.settings.tjson)
+                    self.encode = get_encoder(id_column)
+            else:
+                self.encode = get_encoder(id_column)
 
     @property
     def url(self):
@@ -142,7 +144,7 @@ class Index(Features):
 
             if index == None and retry:
                 #TRY AGAIN, JUST IN CASE
-                self.cluster.cluster_state = None
+                self.cluster.info = None
                 return self.get_properties(retry=False)
 
             if not index.mappings[self.settings.type]:
@@ -180,7 +182,7 @@ class Index(Features):
 
     def add_alias(self, alias=None):
         alias = coalesce(alias, self.settings.alias)
-        self.cluster_state = None
+        self.info = None
         self.cluster.post(
             "/_aliases",
             data={
@@ -250,32 +252,62 @@ class Index(Features):
             Log.error("Index opened in read only mode, no changes allowed")
         self.cluster.get_metadata()
 
-        if self.cluster.cluster_state.version.number.startswith("0.90"):
+        if self.debug:
+            Log.note("Delete bugs:\n{{query}}", query=filter)
+
+        if self.cluster.info.version.number.startswith("0.90"):
             query = {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}
-        elif self.cluster.cluster_state.version.number.startswith("1."):
+
+            result = self.cluster.delete(
+                self.path + "/_query",
+                data=value2json(query),
+                timeout=600,
+                params={"consistency": self.settings.consistency}
+            )
+            for name, status in result._indices.items():
+                if status._shards.failed > 0:
+                    Log.error("Failure to delete from {{index}}", index=name)
+
+        elif self.cluster.info.version.number.startswith("1."):
             query = {"query": {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}}
+
+            result = self.cluster.delete(
+                self.path + "/_query",
+                data=value2json(query),
+                timeout=600,
+                params={"consistency": self.settings.consistency}
+            )
+            for name, status in result._indices.items():
+                if status._shards.failed > 0:
+                    Log.error("Failure to delete from {{index}}", index=name)
+
+        elif self.cluster.info.version.number.startswith(("5.", "6.")):
+            query = {"query": filter}
+
+            wait_for_active_shards = coalesce(  # EARLIER VERSIONS USED "consistency" AS A PARAMETER
+                self.settings.wait_for_active_shards,
+                {"one": 1, None: None}[self.settings.consistency]
+            )
+
+            result = self.cluster.post(
+                self.path + "/_delete_by_query",
+                json=query,
+                timeout=600,
+                params={"wait_for_active_shards": wait_for_active_shards}
+            )
+
+            if result.failures:
+                Log.error("Failure to delete fom {{index}}:\n{{data|pretty}}", index=self.settings.index, data=result)
+
         else:
             raise NotImplementedError
 
-        if self.debug:
-            Log.note("Delete bugs:\n{{query}}",  query= query)
-
-        result = self.cluster.delete(
-            self.path + "/_query",
-            data=value2json(query),
-            timeout=600,
-            params={"consistency": self.settings.consistency}
-        )
-
-        for name, status in result._indices.items():
-            if status._shards.failed > 0:
-                Log.error("Failure to delete from {{index}}", index=name)
 
 
     def extend(self, records):
@@ -473,8 +505,6 @@ class Index(Features):
             error_target=errors
         )
 
-    def delete(self):
-        self.cluster.delete_index(index_name=self.settings.index)
 
 
 HOPELESS = [
@@ -513,7 +543,7 @@ class Cluster(object):
             return
 
         self.settings = kwargs
-        self.cluster_state = None
+        self.info = None
         self._metadata = None
         self.metadata_locker = Lock()
         self.debug = kwargs.debug
@@ -600,10 +630,6 @@ class Cluster(object):
                 kwargs.alias = kwargs.index
                 kwargs.index = best.index
 
-            if tjson is None:
-                metadata = self.get_metadata()
-                metadata[kwargs.index]
-
             return Index(kwargs=kwargs, cluster=self)
 
     def get_alias(self, alias):
@@ -631,6 +657,20 @@ class Cluster(object):
         ])
         return output
 
+    def delete_all_but(self, prefix, name):
+        """
+        :param prefix: INDEX MUST HAVE THIS AS A PREFIX AND THE REMAINDER MUST BE DATE_TIME
+        :param name: INDEX WITH THIS NAME IS NOT DELETED
+        :return:
+        """
+        if prefix == name:
+            Log.note("{{index_name}} will not be deleted", {"index_name": prefix})
+        for a in self.get_aliases():
+            # MATCH <prefix>YYMMDD_HHMMSS FORMAT
+            if re.match(re.escape(prefix) + "\\d{8}_\\d{6}", a.index) and a.index != name:
+                self.delete_index(a.index)
+
+
     @override
     def create_index(
         self,
@@ -657,20 +697,16 @@ class Cluster(object):
         if schema == None:
             Log.error("Expecting a schema")
         elif isinstance(schema, text_type):
-            Log.error("Expecting a schema")
+            Log.error("Expecting a JSON schema")
 
-        for m in schema.mappings.values():
+        for k, m in list(schema.mappings.items()):
             if tjson:
-                m.properties[EXISTS_TYPE] = {"type": "long", "store": True}
+                schema.mappings[k] = add_typed_annotations(m)
+
+            schema.mappings[k].date_detection = False  # DISABLE DATE DETECTION
             m.dynamic_templates = (
                 DEFAULT_DYNAMIC_TEMPLATES +
-                m.dynamic_templates #+
-                # [{
-                #     "default_all": {
-                #         "mapping": {"store": True},
-                #         "match": "*"
-                #     }
-                # }]
+                m.dynamic_templates
             )
 
         if self.version.startswith("5."):
@@ -774,8 +810,8 @@ class Cluster(object):
                     for a in m.aliases:
                         if not indices[a]:
                             indices[a] = m
-                self.cluster_state = wrap(self.get("/", stream=False))
-                self.version = self.cluster_state.version.number
+                self.info = wrap(self.get("/", stream=False))
+                self.version = self.info.version.number
             return self._metadata
 
         return self._metadata
@@ -1063,7 +1099,7 @@ class Alias(Features):
 
             if index == None and retry:
                 #TRY AGAIN, JUST IN CASE
-                self.cluster.cluster_state = None
+                self.cluster.info = None
                 return self.get_schema(retry=False)
 
             #TODO: REMOVE THIS BUG CORRECTION
@@ -1087,12 +1123,12 @@ class Alias(Features):
     def delete(self, filter):
         self.cluster.get_metadata()
 
-        if self.cluster.cluster_state.version.number.startswith("0.90"):
+        if self.cluster.info.version.number.startswith("0.90"):
             query = {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}
-        elif self.cluster.cluster_state.version.number.startswith("1."):
+        elif self.cluster.info.version.number.startswith("1."):
             query = {"query": {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
@@ -1352,6 +1388,33 @@ def retro_properties(properties):
             v.analyzer = None
         output[k] = v
     return output
+
+
+def add_typed_annotations(meta):
+    from pyLibrary.env.typed_inserter import json_type_to_inserter_type
+
+    if meta.type in ["text", "keyword", "string", "float", "double", "integer", "nested", "boolean"]:
+        return {
+            "type": "object",
+            "dynamic": True,
+            "properties": {
+                json_type_to_inserter_type[es_type_to_json_type[meta.type]]: meta,
+                EXISTS_TYPE: {"type": "long", "store": True}
+            }
+        }
+    else:
+        output = {}
+        for meta_name, meta_value in meta.items():
+            if meta_name=='properties':
+                output[meta_name]={
+                    prop_name: add_typed_annotations(about) if prop_name not in [BOOLEAN_TYPE, NUMBER_TYPE, STRING_TYPE, BOOLEAN_TYPE] else about
+                    for prop_name, about in meta_value.items()
+                }
+                output[meta_name][EXISTS_TYPE] = {"type": "long", "store": True}
+            else:
+                output[meta_name]=meta_value
+
+        return output
 
 
 DEFAULT_DYNAMIC_TEMPLATES = wrap([

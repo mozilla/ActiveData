@@ -66,10 +66,10 @@ def run(query, frum=Null):
     BUT IT IS ALSO PROCESSING A list CONTAINER; SEPARATE TO A ListContainer
     """
     if frum == None:
-        query_op = QueryOp.wrap(query)
-        frum = query_op.frum
+        frum = wrap(query)['from']
+        query_op = QueryOp.wrap(query, table=frum, schema=frum.schema)
     else:
-        query_op = QueryOp.wrap(query, frum.schema)
+        query_op = QueryOp.wrap(query, frum, frum.schema)
 
     if frum == None:
         from jx_python.containers.list_usingPythonList import DUAL
@@ -570,6 +570,11 @@ def value_compare(left, right, ordering=1):
 
     try:
         if isinstance(left, list) or isinstance(right, list):
+            if left == None:
+                return ordering
+            elif right == None:
+                return - ordering
+
             left = listwrap(left)
             right = listwrap(right)
             for a, b in zip(left, right):

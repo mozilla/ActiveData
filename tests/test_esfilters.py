@@ -85,4 +85,8 @@ class S(object):
     def values(self, name):
         return wrap([{"es_column": name}])
 
+    def leaves(self, name):
+        return wrap([{"es_column": name}])
+
+
 schema = S()

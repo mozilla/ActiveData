@@ -33,7 +33,7 @@ _get = object.__getattribute__
 
 class ListContainer(Container):
     def __init__(self, name, data, schema=None):
-        #TODO: STORE THIS LIKE A CUBE FOR FASTER ACCESS AND TRANSFORMATION
+        # TODO: STORE THIS LIKE A CUBE FOR FASTER ACCESS AND TRANSFORMATION
         data = list(unwrap(data))
         Container.__init__(self, data, schema)
         if schema == None:
@@ -89,12 +89,27 @@ class ListContainer(Container):
             if q.format == "list":
                 return Data(data=output.data, meta={"format": "list"})
             elif q.format == "table":
-                head = list(set(k for r in output.data for k in r.keys()))
+                head = [c.names['.'] for c in output.schema.columns]
                 data = [
-                    (r[h] for h in head)
+                    [r if h == '.' else r[h] for h in head]
                     for r in output.data
                 ]
                 return Data(header=head, data=data, meta={"format": "table"})
+            elif q.format == "cube":
+                head = [c.names['.'] for c in output.schema.columns]
+                rows = [
+                    [r[h] for h in head]
+                    for r in output.data
+                ]
+                data = {h: c for h, c in zip(head, zip(*rows))}
+                return Data(
+                    data=data,
+                    meta={"format": "cube"},
+                    edges=[{
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": len(rows), "interval": 1}
+                    }]
+                )
             else:
                 Log.error("unknown format {{format}}", format=q.format)
         else:

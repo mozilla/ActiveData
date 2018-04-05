@@ -17,7 +17,7 @@ from jx_base import NESTED
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
-from jx_elasticsearch.es09.util import post as es_post
+from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es14.expressions import Variable, LeavesOp
 from jx_elasticsearch.es14.util import jx_sort_to_es_sort, es_query_template
 from jx_python.containers.cube import Cube

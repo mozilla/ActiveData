@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from mo_json import json2value
 from pyLibrary import convert
 from mo_logs import constants, startup
 from mo_logs import Log
@@ -37,7 +38,7 @@ def main():
             "size": 200000
         })
 
-        File(config.args.file).write("".join(map(convert.json2value, result.hits.hits)))
+        File(config.args.file).write("".join(map(json2value, result.hits.hits)))
 
     except Exception as e:
         Log.error("Problem with etl", e)

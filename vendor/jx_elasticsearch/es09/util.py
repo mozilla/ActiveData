@@ -13,6 +13,10 @@ from __future__ import unicode_literals
 
 from datetime import datetime
 
+from jx_base.queries import is_variable_name
+
+from mo_logs.strings import quote
+
 from mo_logs import Log, strings
 from mo_dots import Data
 from mo_dots import coalesce
@@ -23,33 +27,11 @@ from mo_math import COUNT
 from mo_math import Math
 from mo_math import stats
 from jx_base import domains
-from jx_elasticsearch.es09.expressions import value2MVEL, isKeyword
+from jx_elasticsearch.es09.expressions import value2MVEL
 from mo_times import durations
 
-TrueFilter = {"match_all": {}}
+
 DEBUG = False
-
-# SCRUB THE QUERY SO IT IS VALID
-# REPORT ERROR IF OUTPUT APEARS TO HAVE HIT GIVEN limit
-def post(es, es_query, limit):
-    post_result = None
-    try:
-        if not es_query.sort:
-            es_query.sort = None
-        post_result = es.search(es_query)
-
-        for facetName, f in post_result.facets.items():
-            if f._type == "statistical":
-                continue
-            if not f.terms:
-                continue
-
-            if not DEBUG and not limit and len(f.terms) == limit:
-                Log.error("Not all data delivered (" + str(len(f.terms)) + "/" + str(f.total) + ") try smaller range")
-    except Exception as e:
-        Log.error("Error with FromES", e)
-
-    return post_result
 
 
 def build_es_query(query):
@@ -90,7 +72,7 @@ def compileTime2Term(edge):
     # IS THERE A LIMIT ON THE DOMAIN?
     numPartitions = len(edge.domain.partitions)
     value = edge.value
-    if isKeyword(value):
+    if is_variable_name(value):
         value = "doc[\"" + value + "\"].value"
 
     nullTest = compileNullTest(edge)
@@ -131,7 +113,7 @@ def compileDuration2Term(edge):
     # IS THERE A LIMIT ON THE DOMAIN?
     numPartitions = len(edge.domain.partitions)
     value = edge.value
-    if isKeyword(value):
+    if is_variable_name(value):
         value = "doc[\"" + value + "\"].value"
 
     ref = coalesce(edge.domain.min, edge.domain.max, durations.ZERO)
@@ -163,7 +145,7 @@ def compileNumeric2Term(edge):
 
     numPartitions = len(edge.domain.partitions)
     value = edge.value
-    if isKeyword(value):
+    if is_variable_name(value):
         value = "doc[\"" + value + "\"].value"
 
     if not edge.domain.max:
@@ -201,7 +183,7 @@ def compileString2Term(edge):
         Log.error("edge script not supported yet")
 
     value = edge.value
-    if isKeyword(value):
+    if is_variable_name(value):
         value = strings.expand_template("getDocValue({{path}})", {"path": quote(value)})
     else:
         Log.error("not handled")
@@ -224,7 +206,7 @@ def compileNullTest(edge):
 
     # IS THERE A LIMIT ON THE DOMAIN?
     value = edge.value
-    if isKeyword(value):
+    if is_variable_name(value):
         value = "doc[\"" + value + "\"].value"
 
     if not edge.domain.max:
@@ -262,7 +244,7 @@ def compileEdges2Term(mvel_compiler, edges, constants):
         def temp(term):
             return FlatList([edge0.domain.getPartByKey(term)])
 
-        if edge0.value and isKeyword(edge0.value):
+        if edge0.value and is_variable_name(edge0.value):
             return Data(
                 field=edge0.value,
                 term2parts=temp

@@ -15,7 +15,7 @@ Provide high speed filtering and aggregation over data see [ActiveData Wiki Page
 
 ActiveData is a service! You can certainly setup your own service, but it is easier to use Mozilla's!
 
-	curl -XPOST -d "{\"from\":\"unittest\"}" http://activedata.allizom.org/query
+    curl -XPOST -d "{\"from\":\"unittest\"}" http://activedata.allizom.org/query
 
 ## Requirements
 
@@ -36,7 +36,7 @@ We enable compression for faster transfer speeds
 
 And it is a good idea to give your cluster a unique name so it does not join others on your local network
 
-	cluster.name: lahnakoski_dev
+    cluster.name: lahnakoski_dev
 
 then you can run Elasticsearch:
  
@@ -44,23 +44,23 @@ then you can run Elasticsearch:
 
 Elasticsearch runs off port 9200. Test it is working 
 
-	curl http://localhost:9200
+    curl http://localhost:9200
 
 you should expect something like 
 
-	{
-	  "status" : 200,
-	  "name" : "dev",
-	  "cluster_name" : "lahnakoski_dev",
-	  "version" : {
-	    "number" : "1.7.5",
-	    "build_hash" : "00f95f4ffca6de89d68b7ccaf80d148f1f70e4d4",
-	    "build_timestamp" : "2016-02-02T09:55:30Z",
-	    "build_snapshot" : false,
-	    "lucene_version" : "4.10.4"
-	  },
-	  "tagline" : "You Know, for Search"
-	}
+    {
+      "status" : 200,
+      "name" : "dev",
+      "cluster_name" : "lahnakoski_dev",
+      "version" : {
+        "number" : "1.7.5",
+        "build_hash" : "00f95f4ffca6de89d68b7ccaf80d148f1f70e4d4",
+        "build_timestamp" : "2016-02-02T09:55:30Z",
+        "build_snapshot" : false,
+        "lucene_version" : "4.10.4"
+      },
+      "tagline" : "You Know, for Search"
+    }
 
 
 

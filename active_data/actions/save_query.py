@@ -12,25 +12,27 @@ from __future__ import unicode_literals
 
 import hashlib
 
-import jx_elasticsearch
-from active_data import cors_wrapper
 from flask import Response
+
+import jx_elasticsearch
+from jx_python.containers.cube import Cube
 from mo_dots import wrap
+from mo_json import json2value
 from mo_kwargs import override
 from mo_logs import Log
-from mo_threads import Thread
-from pyLibrary import convert
-
-from jx_python.containers.cube import Cube
-from mo_json import json2value
 from mo_logs.exceptions import Except
+from mo_logs.strings import unicode2utf8
+from mo_threads import Thread
 from mo_times.dates import Date
+from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Cluster
+from pyLibrary.env.flask_wrappers import cors_wrapper
 
 HASH_BLOCK_SIZE = 100
 
 
 query_finder = None
+
 
 @cors_wrapper
 def find_query(hash):
@@ -50,14 +52,14 @@ def find_query(hash):
             )
         else:
             return Response(
-                convert.unicode2utf8(query),
+                unicode2utf8(query),
                 status=200
             )
     except Exception as e:
         e = Except.wrap(e)
         Log.warning("problem finding query with hash={{hash}}", hash=hash, cause=e)
         return Response(
-            convert.unicode2utf8(convert.value2json(e)),
+            unicode2utf8(convert.value2json(e)),
             status=400
         )
 
@@ -69,7 +71,7 @@ class SaveQueries(object):
         settings ARE FOR THE ELASTICSEARCH INDEX
         """
         es = Cluster(kwargs).get_or_create_index(
-            schema=convert.json2value(convert.value2json(SCHEMA), leaves=True),
+            schema=json2value(convert.value2json(SCHEMA), leaves=True),
             limit_replicas=True,
             tjson=False,
             kwargs=kwargs
@@ -116,7 +118,7 @@ class SaveQueries(object):
     def save(self, query):
         query.meta = None
         json = convert.value2json(query)
-        hash = convert.unicode2utf8(json)
+        hash = unicode2utf8(json)
 
         # TRY MANY HASHES AT ONCE
         hashes = [None] * HASH_BLOCK_SIZE
@@ -163,7 +165,7 @@ class SaveQueries(object):
 
         try:
             self.queue.close()
-        except Exception, f:
+        except Exception as f:
             pass
 
 SCHEMA = {

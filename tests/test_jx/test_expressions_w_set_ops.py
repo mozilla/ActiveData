@@ -310,7 +310,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use=="sqlite", "Can't handle array of primitives for now")
+    @skipIf(global_settings.use == "sqlite", "Can't handle array of primitives for now")
     def test_select_in_w_multivalue(self):
         test = {
             "data": [
@@ -816,6 +816,58 @@ class TestSetOps(BaseTestCase):
                 "data": [
                     {"a": "is", "c": "is", "d": "/this", "e": "/this", "f": "/a/directory"},
                     {"d": "/"}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_lack_of_eval(self):
+        test = {
+            "data": [
+                {"v": "/this/is/a/directory"},
+                {"v": "/"}
+            ],
+            "query": {
+                "select": [
+                    {"name": "b", "value": {"case": [
+                        {"when": {"missing": {"literal": "/this/"}}, "then": 0},
+                        {"find": {"v": "/this/"}, "start": 0}
+                    ]}}
+                ],
+                "from": TEST_TABLE
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"b": 0},
+                    {"b": NULL}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_right(self):
+        test = {
+            "data": [
+                {"v": "this-is-a-test"},
+                {"v": "this-is-a-vest"},
+                {"v": "test"},
+                {"v": ""},
+                {"v": None}
+            ],
+            "query": {
+                "select": [{"name": "v", "value": {"right": {"v": 4}}}],
+                "from": TEST_TABLE
+            },
+            "expecting_list": {
+                "meta": {
+                    "format": "list"},
+                "data": [
+                    {"v": "test"},
+                    {"v": "vest"},
+                    {"v": "test"},
+                    {"v": NULL},
+                    {"v": NULL}
                 ]
             }
         }

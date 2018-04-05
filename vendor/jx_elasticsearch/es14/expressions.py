@@ -139,7 +139,18 @@ def to_ruby(self, schema):
 
 @extend(CaseOp)
 def to_esfilter(self, schema):
-    return ScriptOp("script",  self.to_ruby(schema).script(schema)).to_esfilter(schema)
+    if self.type == BOOLEAN:
+        return OrOp(
+            "or",
+            [
+                AndOp("and", [w.when, w.then])
+                for w in self.whens[:-1]
+            ] +
+            self.whens[-1:]
+        ).partial_eval().to_esfilter(schema)
+    else:
+        Log.error("do not know how to handle")
+        return ScriptOp("script", self.to_ruby(schema).script(schema)).to_esfilter(schema)
 
 
 @extend(ConcatOp)
@@ -853,6 +864,31 @@ def to_ruby(self, schema):
         expr=acc,
         frum=self
     )
+
+
+@extend(MultiOp)
+def to_ruby(self, schema):
+    op, unit = MultiOp.operators[self.op]
+    if self.nulls:
+        calc = op.join(
+            "((" + t.missing().to_ruby(schema).expr + ") ? " + unit + " : (" + NumberOp("number", t).partial_eval().to_ruby(schema).expr + "))" for
+            t in self.terms
+        )
+        return WhenOp(
+            "when",
+            AndOp("and", [t.missing() for t in self.terms]),
+            **{"then": self.default, "else": Ruby(type=NUMBER, expr=calc, frum=self)}
+        ).partial_eval().to_ruby(schema)
+    else:
+        calc = op.join(
+            "(" + NumberOp("number", t).to_ruby(schema).expr + ")"
+            for t in self.terms
+        )
+        return WhenOp(
+            "when",
+            OrOp("or", [t.missing() for t in self.terms]),
+            **{"then": self.default, "else": Ruby(type=NUMBER, expr=calc, frum=self)}
+        ).partial_eval().to_ruby(schema)
 
 
 @extend(RegExpOp)

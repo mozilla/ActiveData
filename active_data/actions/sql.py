@@ -13,12 +13,13 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 import flask
-from active_data import record_request, cors_wrapper
+from active_data import record_request
 from flask import Response
 from jx_python import jx, wrap_from
-from mo_dots import wrap, listwrap
+from mo_dots import wrap, listwrap, unwraplist
 from mo_json import utf82unicode, json2value, value2json
 from mo_logs import Log
+from mo_logs.strings import unicode2utf8
 from mo_math import Math
 
 import moz_sql_parser
@@ -28,7 +29,7 @@ from jx_base.container import Container
 from mo_logs.exceptions import Except
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_times.timer import Timer
-from pyLibrary.convert import unicode2utf8
+from pyLibrary.env.flask_wrappers import cors_wrapper
 
 
 @cors_wrapper
@@ -105,29 +106,49 @@ def sql_query(path):
         return send_error(query_timer, request_body, e)
 
 
-KNOWN_SQL_AGGREGATES = {"sum", "count", "avg"}
+KNOWN_SQL_AGGREGATES = {"sum", "count", "avg", "median", "percentile"}
 
 
 def parse_sql(sql):
     query = wrap(moz_sql_parser.parse(sql))
+    redundant_select = []
     # PULL OUT THE AGGREGATES
     for s in listwrap(query.select):
-        val = s.value
+        val = s if s == '*' else s.value
+
+        # EXTRACT KNOWN AGGREGATE FUNCTIONS
+        if isinstance(val, Mapping):
+            for a in KNOWN_SQL_AGGREGATES:
+                value = val[a]
+                if value != None:
+                    if isinstance(value, list):
+                        # AGGREGATE WITH PARAMETERS  EG percentile(value, 0.90)
+                        s.aggregate = a
+                        s[a] = unwraplist(value[1::])
+                        s.value = value[0]
+                    else:
+                        # SIMPLE AGGREGATE
+                        s.aggregate = a
+                        s.value = value
+
         # LOOK FOR GROUPBY COLUMN IN SELECT CLAUSE, REMOVE DUPLICATION
         for g in listwrap(query.groupby):
             try:
                 assertAlmostEqual(g.value, val, "")
                 g.name = s.name
-                s.value = None  # MARK FOR REMOVAL
+                redundant_select.append(s)
                 break
-            except Exception as e:
+            except Exception:
                 pass
 
-        if isinstance(val, Mapping):
-            for a in KNOWN_SQL_AGGREGATES:
-                if val[a]:
-                    s.aggregate = a
-                    s.value = val[a]
-    query.select = [s for s in listwrap(query.select) if s.value != None]
+    # REMOVE THE REDUNDANT select
+    if isinstance(query.select, list):
+        for r in redundant_select:
+            query.select.remove(r)
+    elif query.select and redundant_select:
+        query.select = None
+
+    # RENAME orderby TO sort
+    query.sort, query.orderby = query.orderby, None
     query.format = "table"
     return query

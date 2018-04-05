@@ -18,7 +18,9 @@ from future.utils import text_type
 
 import mo_json_config
 from mo_dots import wrap
+from mo_json import json2value
 from mo_logs import Log, Except
+from mo_logs.strings import unicode2utf8, utf82unicode
 from mo_times.dates import Date, Duration
 from mo_times.durations import DAY
 from mo_times.timer import Timer
@@ -56,13 +58,13 @@ class TestUnittests(BaseTestCase):
         if self.not_real_service():
             return
 
-        query = convert.unicode2utf8(convert.value2json({"from": "unittest"}))
+        query = unicode2utf8(convert.value2json({"from": "unittest"}))
         # EXECUTE QUERY
         with Timer("query"):
             response = http.get(self.service_url, data=query)
             if response.status_code != 200:
                 error(response)
-        result = convert.json2value(convert.utf82unicode(response.all_content))
+        result = json2value(utf82unicode(response.all_content))
 
         Log.note("result\n{{result|indent}}", {"result": result})
 
@@ -93,13 +95,13 @@ class TestUnittests(BaseTestCase):
             }
         }})
 
-        query = convert.unicode2utf8(convert.value2json(test.query))
+        query = unicode2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
             response = self.utils.try_till_response(self.service_url, data=query)
             if response.status_code != 200:
                 error(response)
-        result = convert.json2value(convert.utf82unicode(response.all_content))
+        result = json2value(utf82unicode(response.all_content))
 
         Log.note("result\n{{result|indent}}", {"result": result})
 
@@ -130,13 +132,13 @@ class TestUnittests(BaseTestCase):
             ]
         }})
 
-        query = convert.unicode2utf8(convert.value2json(test.query))
+        query = unicode2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
             response = http.get(self.service_url, data=query)
             if response.status_code != 200:
                 error(response)
-        result = convert.json2value(convert.utf82unicode(response.all_content))
+        result = json2value(utf82unicode(response.all_content))
 
         Log.note("result\n{{result|indent}}", {"result": result})
 
@@ -171,13 +173,13 @@ class TestUnittests(BaseTestCase):
             }
         }})
 
-        query = convert.unicode2utf8(convert.value2json(test.query))
+        query = unicode2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
             response = http.get(self.service_url, data=query)
             if response.status_code != 200:
                 error(response)
-        result = convert.json2value(convert.utf82unicode(response.all_content))
+        result = json2value(utf82unicode(response.all_content))
 
         Log.note("result\n{{result|indent}}", {"result": result})
 
@@ -223,13 +225,13 @@ class TestUnittests(BaseTestCase):
             "format": "table"
         }})
 
-        query = convert.unicode2utf8(convert.value2json(test.query))
+        query = unicode2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
             response = http.get(self.service_url, data=query)
             if response.status_code != 200:
                 error(response)
-        result = convert.json2value(convert.utf82unicode(response.all_content))
+        result = json2value(utf82unicode(response.all_content))
 
         Log.note("result\n{{result|indent}}", {"result": result})
 
@@ -264,13 +266,13 @@ class TestUnittests(BaseTestCase):
             "format": "table"
         }})
 
-        query = convert.unicode2utf8(convert.value2json(test.query))
+        query = unicode2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
             response = http.get(self.service_url, data=query)
             if response.status_code != 200:
                 error(response)
-        result = convert.json2value(convert.utf82unicode(response.all_content))
+        result = json2value(utf82unicode(response.all_content))
 
         Log.note("result\n{{result|indent}}", {"result": result})
 
@@ -290,13 +292,13 @@ class TestUnittests(BaseTestCase):
             "limit": 100,
             "format": "list"
         }})
-        query = convert.unicode2utf8(convert.value2json(test.query))
+        query = unicode2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
             response = http.get(self.service_url, data=query)
             if response.status_code != 200:
                 error(response)
-        result = convert.json2value(convert.utf82unicode(response.all_content))
+        result = json2value(utf82unicode(response.all_content))
 
         Log.note("result\n{{result|indent}}", {"result": result})
 

@@ -11,17 +11,21 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import flask
-from active_data import cors_wrapper
 from flask import Response
-from jx_python import jx, wrap_from
-from mo_dots import Data, wrap
-from mo_logs import Log, Except
-from pyLibrary import convert
 
 from active_data.actions import send_error
 from jx_base.container import Container
+from jx_python import jx, wrap_from
+from mo_dots import wrap, unwraplist, listwrap
+from mo_json import value2json
+from mo_logs import Log, Except
+from mo_logs.strings import unicode2utf8
+from mo_math import Math
 from mo_times.timer import Timer
+from pyLibrary import convert
+from pyLibrary.env.flask_wrappers import cors_wrapper
 
+_ = value2json
 
 @cors_wrapper
 def get_raw_json(path):
@@ -29,9 +33,10 @@ def get_raw_json(path):
     body = flask.request.get_data()
     try:
         with active_data_timer:
-            args = wrap(Data(**flask.request.args))
+            args = scrub_args(flask.request.args)
             limit = args.limit if args.limit else 10
             args.limit = None
+
             frum = wrap_from(path)
             result = jx.run({
                 "from": path,
@@ -45,7 +50,7 @@ def get_raw_json(path):
 
         result.meta.active_data_response_time = active_data_timer.duration
 
-        response_data = convert.unicode2utf8(convert.value2json(result.data, pretty=True))
+        response_data = unicode2utf8(convert.value2json(result.data, pretty=True))
         Log.note("Response is {{num}} bytes", num=len(response_data))
         return Response(
             response_data,
@@ -55,3 +60,17 @@ def get_raw_json(path):
         e = Except.wrap(e)
         return send_error(active_data_timer, body, e)
 
+
+def scrub_args(args):
+    output = {}
+    for k, v in list(args.items()):
+        vs = []
+        for v in listwrap(v):
+            if Math.is_integer(v):
+                vs.append(int(v))
+            elif Math.is_number(v):
+                vs.append(float(v))
+            else:
+                vs.append(v)
+        output[k] = unwraplist(vs)
+    return wrap(output)

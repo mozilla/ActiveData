@@ -19,10 +19,10 @@ from mo_dots import wrap
 from mo_json import value2json
 from mo_json_config import URL
 from mo_logs import Log
+from mo_logs.strings import unicode2utf8
 from mo_threads import Till
 from mo_times import Timer
 from pyLibrary import convert
-from pyLibrary.convert import unicode2utf8
 from pyLibrary.env import elasticsearch
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
@@ -74,15 +74,15 @@ class TestLoadAndSaveQueries(BaseTestCase):
 
     def test_recovery_of_empty_string(self):
 
-        test = {
+        test = wrap({
             "data": [
                 {"a": "bee"}
             ],
             "query": {
-                "meta": {"save": True},
                 "from": TEST_TABLE,
                 "select": "a",
-                "where": {"prefix": {"a": ""}}
+                "where": {"prefix": {"a": ""}},
+                "format": "list"
             },
             "expecting_list": {
                 "meta": {
@@ -90,19 +90,15 @@ class TestLoadAndSaveQueries(BaseTestCase):
                 },
                 "data": ["bee"]
             }
-        }
+        })
 
         settings = self.utils.fill_container(test)
 
-        bytes = unicode2utf8(value2json({
-            "from": settings.index,
-            "select": "a",
-            "where": {"prefix": ["a", {"literal": ""}]},
-            "format": "list"
-        }))
+        bytes = unicode2utf8(value2json(test.query))
         expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
-        wrap(test).expecting_list.meta.saved_as = expected_hash
+        test.expecting_list.meta.saved_as = expected_hash
 
+        test.query.meta = {"save": True}
         self.utils.send_queries(test)
 
         # ENSURE THE QUERY HAS BEEN INDEXED
@@ -116,7 +112,6 @@ class TestLoadAndSaveQueries(BaseTestCase):
         response = self.utils.try_till_response(url.scheme + "://" + url.host + ":" + text_type(url.port) + "/find/" + expected_hash, data=b'')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, bytes)
-
 
 
     # TODO: TEST RECOVERY OF QUERY USING {"prefix": {var: ""}} (EMPTY STRING IS NOT RECORDED RIGHT

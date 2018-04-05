@@ -26,16 +26,11 @@ from jx_elasticsearch.es52.setop import is_setop, es_setop
 from jx_elasticsearch.es52.util import aggregates
 from jx_elasticsearch.meta import FromESMetadata
 from jx_python import jx
-from mo_dots import Data, Null, unwrap
-from mo_dots import coalesce, split_field, literal_field, unwraplist, join_field
-from mo_dots import wrap, listwrap
-from mo_dots.lists import FlatList
-from mo_json import scrub
+from mo_dots import Data, Null, unwrap, coalesce, split_field, literal_field, unwraplist, join_field, wrap, listwrap, FlatList
+from mo_json import scrub, value2json
 from mo_json.typed_encoder import TYPE_PREFIX
 from mo_kwargs import override
-from mo_logs import Log
-from mo_logs.exceptions import Except
-from pyLibrary import convert
+from mo_logs import Log, Except
 from pyLibrary.env import elasticsearch, http
 
 
@@ -127,7 +122,7 @@ class ES52(Container):
 
     def query(self, _query):
         try:
-            query = QueryOp.wrap(_query, table=self)
+            query = QueryOp.wrap(_query, table=self, schema=self.schema)
 
             for n in self.namespaces:
                 query = n.convert(query)
@@ -222,7 +217,7 @@ class ES52(Container):
                 for s in scripts:
                     updates.append({"update": {"_id": h._id, "_routing": unwraplist(h.fields[literal_field(schema._routing.path)])}})
                     updates.append(s)
-            content = ("\n".join(convert.value2json(c) for c in updates) + "\n").encode('utf-8')
+            content = ("\n".join(value2json(c) for c in updates) + "\n")
             response = self._es.cluster.post(
                 self._es.path + "/_bulk",
                 data=content,

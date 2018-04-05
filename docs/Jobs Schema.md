@@ -62,15 +62,15 @@ run, each chunk is given a number
 * `run.buildbot_status` - *string* BuildBot's end status
 * `run.files` - *array* of files recorded for this suite, one or more of which
 are the structured log digested to make this record
-	* `run.files.name` - *string* name of the file
-	* `run.files.url` - *string* url where he contents can/could be found
+    * `run.files.name` - *string* name of the file
+    * `run.files.url` - *string* url where he contents can/could be found
 * `run.machine` - *object* properties of the machine that ran the suite
-	* `run.machine.os` - *string* operating system
-	* `run.machine.name` - *string* the particular piece of hardware that this jobs ran
-	* `run.machine.pool` - *string* the buildbot/task cluster pool that this machine belongs
-	* `run.machine.type` - *string* indicator if a "vm", or emulator", or other that may affect performance of this test
-	* `run.machine.aws_type` - *string* AWS instance type
-	* `run.machine.aws_id` - *string* machine ID, for correlating possible problems
+    * `run.machine.os` - *string* operating system
+    * `run.machine.name` - *string* the particular piece of hardware that this jobs ran
+    * `run.machine.pool` - *string* the buildbot/task cluster pool that this machine belongs
+    * `run.machine.type` - *string* indicator if a "vm", or emulator", or other that may affect performance of this test
+    * `run.machine.aws_type` - *string* AWS instance type
+    * `run.machine.aws_id` - *string* machine ID, for correlating possible problems
 * `run.talos` - *boolean* indicates if Talos performance results can be found
 in the text log
 * `run.logurl` - *string* url to find the text log
@@ -101,12 +101,12 @@ Properties describing the build
 Properties of the changeset, revision and push
 
 * `repo.changeset` - *object*
-	* `repo.changeset.id` - *string* unique hash value of changeset
+    * `repo.changeset.id` - *string* unique hash value of changeset
     * `repo.changeset.files` - *strings* full path to files changed
-	* `repo.changeset.date` - *timestamp*
-	* `repo.changeset.description` - *string* text assigned to push *This 
+    * `repo.changeset.date` - *timestamp*
+    * `repo.changeset.description` - *string* text assigned to push *This 
     property has been parsed into words*
-	* `repo.changeset.author` - *string* author info
+    * `repo.changeset.author` - *string* author info
 * `repo.index` - *integer* unique value given to this revision by hg.mozilla.org
 * `repo.branch` - *string* name of the branch
 * `repo.push` - *object* more about the push

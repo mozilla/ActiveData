@@ -11,18 +11,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from collections import Mapping
-
-from mo_dots import Data, set_default, wrap, split_field, coalesce
-from mo_future import sort_using_key
-from mo_logs import Log
-from pyLibrary import convert
-
 from jx_base.expressions import TupleOp
 from jx_elasticsearch.es52.aggs import count_dim, aggs_iterator, format_dispatch, drill
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
+from mo_dots import Data, set_default, wrap, split_field, coalesce
+from mo_future import sort_using_key
+from mo_logs import Log
 from mo_logs.strings import quote
+from pyLibrary import convert
 
 FunctionType = type(lambda: 1)
 
@@ -208,7 +205,7 @@ def format_list(decoders, aggs, start, query, select):
         if query.sort and not query.groupby:
             # TODO: USE THE format_table() TO PRODUCE THE NEEDED VALUES INSTEAD OF DUPLICATING LOGIC HERE
             all_coord = is_sent._all_combos()  # TRACK THE EXPECTED COMBINATIONS
-            for row, coord, agg in aggs_iterator(aggs, decoders):
+            for _, coord, agg in aggs_iterator(aggs, decoders):
                 missing_coord = all_coord.next()
                 while coord != missing_coord:
                     # INSERT THE MISSING COORDINATE INTO THE GENERATION
@@ -230,7 +227,7 @@ def format_list(decoders, aggs, start, query, select):
                     output[s.name] = s.pull(agg)
                 yield output
         else:
-
+            is_sent = Matrix(dims=dims, zeros=0)
             for row, coord, agg in aggs_iterator(aggs, decoders):
                 is_sent[coord] = 1
 
@@ -282,12 +279,6 @@ def format_list_from_aggop(decoders, aggs, start, query, select):
             "meta": {"format": "value"},
             "data": item
         })
-
-
-
-
-
-
 
 
 def format_line(decoders, aggs, start, query, select):

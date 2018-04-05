@@ -22,12 +22,12 @@ Getting a feel for the JSON Expressions `select` clause is easiest done by compa
 </td><td>
 <b>SQL</b><br>
 <pre>
-
+<nbsp>
 SELECT
-	person AS name,
-	years AS age
+    person AS name,
+    years AS age
 FROM
-	test 
+    test
 
 </pre>
 </td></tr></table>
@@ -40,11 +40,11 @@ The Standard `select` Clause
 
 The select clause is used for both selecting particular values, and for creating new structures from those values. A select clause is a list that maps the leaves of one data structure to the leaves of another.
 
-	"select": [
-		{"value": source_path_1, "name": destination_path_1}
-		{"value": source_path_2, "name": destination_path_2}
-		...
-	]
+    "select": [
+        {"value": source_path_1, "name": destination_path_1}
+        {"value": source_path_2, "name": destination_path_2}
+        ...
+    ]
 
 The path separator is the dot (`.`), with literal dots escaped using backslash. Paths need not point to primitive values, and can refer to objects.
 
@@ -53,47 +53,46 @@ The path separator is the dot (`.`), with literal dots escaped using backslash. 
 
 **Source Data**
 
-	test = [{
-	    "build": {
-	        "branch": {
-	            "name": "mozilla-inbound",
-	            "locale": "en-US"
-	        }
-	        "date": "2015-09-18"
-	    },
-	    "run": {
-	        "suite": "mochitest"
-	        "chunk": 2
-	    }
-	}]
+    test = [{
+        "build": {
+            "branch": {
+                "name": "mozilla-inbound",
+                "locale": "en-US"
+            }
+            "date": "2015-09-18"
+        },
+        "run": {
+            "suite": "mochitest"
+            "chunk": 2
+        }
+    }]
 
 **Query**
 
-	{
-	    "from": test,
-	    "select": [
-	        {"name":"branch.name", "value":"build.branch.name"},
-	        {"name":"suite.name", "value":"run.suite"},
-	        {"name":"suite.chunk", "value":"run.chunk"}
-	    ],
-	    "format": "list
-	}
+    {
+        "from": test,
+        "select": [
+            {"name":"branch.name", "value":"build.branch.name"},
+            {"name":"suite.name", "value":"run.suite"},
+            {"name":"suite.chunk", "value":"run.chunk"}
+        ],
+        "format": "list
+    }
 
 **Result**
 
-	test = [{
-	    "branch": {
-	        "name": "mozilla-inbound"
-	    },
-	    "suite": {
-	        "name": "mochitest"
-	        "chunk": 2
-	    }
-	}]
+    test = [{
+        "branch": {
+            "name": "mozilla-inbound"
+        },
+        "suite": {
+            "name": "mochitest"
+            "chunk": 2
+        }
+    }]
 
 
-`select` Simplifications
-------------------------
+## `select` Simplifications
 
 All other select clause variations are shortcuts for the standard clause.
 
@@ -405,17 +404,6 @@ The star can be used on the end of a path. The path is not flattened, but the st
 </td></tr></table>
 
 
-Aggregation
------------
+# Aggregation
 
 When a JSON query expressions includes a `groupby` or `edges` clause, the members of the `select` clause must include the `aggregate` property; which indicates what to do with the many possible values being assigned to the `name`.
-
-
-
-
-
-
-
-  
-
-

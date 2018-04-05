@@ -79,11 +79,11 @@ Performance result
     {
         "name": "result", 
         "domain" {
-			"type": "numeric",
-			"units": "count/second"
-			"higher_is_better": true
-		}
-	}
+            "type": "numeric",
+            "units": "count/second"
+            "higher_is_better": true
+        }
+    }
 
 
 Page Load Time
@@ -91,11 +91,11 @@ Page Load Time
     {
         "name": "result", 
         "domain" {
-			"type": "numeric",
-			"units": "second/count"
-			"higher_is_better": false
-		}
-	}
+            "type": "numeric",
+            "units": "second/count"
+            "higher_is_better": false
+        }
+    }
 
 
 Power consumption
@@ -103,11 +103,11 @@ Power consumption
     {
         "name": "measure", 
         "domain" {
-			"type": "numeric",
-			"units": "milli * volt * amps"
-			"higher_is_better": false
-		}
-	}
+            "type": "numeric",
+            "units": "milli * volt * amps"
+            "higher_is_better": false
+        }
+    }
 
 Memory
 
@@ -115,11 +115,11 @@ Memory
     {
         "name": "memory", 
         "domain" {
-			"type": "numeric",
-			"units": "mega bytes"
-			"higher_is_better": false
-		}
-	}
+            "type": "numeric",
+            "units": "mega bytes"
+            "higher_is_better": false
+        }
+    }
 
 
 Acceleration (not an actual Mozilla test)
@@ -127,10 +127,10 @@ Acceleration (not an actual Mozilla test)
     {
         "name": "value", 
         "domain" {
-			"type": "numeric",
-			"units": "meter / (second * second)"
-			"higher_is_better": true
-		}
-	}
+            "type": "numeric",
+            "units": "meter / (second * second)"
+            "higher_is_better": true
+        }
+    }
 
 

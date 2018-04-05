@@ -28,11 +28,11 @@ A deliberate feature of a JSON expressions is it's JSON. It can be easily declar
 
 Many of the SQL's shortcomings, which I touch on below, are overcome by string concatenation on client-side code. Good ORM libraries will formalize this string manipulation with a series of function calls, which are used to create a abstract syntax tree, which is serialized to SQL. SQLAlchemy is a particularly good ORM because it leverages Python's magic methods to make elegant imperative Python expressions generate those data structures behind the scenes. But, in every case, you are running code that generates a data structure, which is then used to generate SQL.      
 
-	ORM Expressions -> AST -> SQL -> network -> SQL -> AST -> Query
+    ORM Expressions -> AST -> SQL -> network -> SQL -> AST -> Query
 
 JSON expressions are slightly better in this regard; It is its own AST, and does not require serialization to a complex intermediate language. Furthermore, an ORM library would be trivial to write, so trivial that it would provide negligible benefit over simply stating the JSON structure directly.
 
-	JSON Expressions -> JSON -> network -> JSON -> JSON Expressions -> Query 
+    JSON Expressions -> JSON -> network -> JSON -> JSON Expressions -> Query 
 
 ### Splitting credit and debit
 
@@ -62,8 +62,8 @@ Domains are useful abstraction that give names to complex business rules.  Our `
     {
     "from": "transactions",
     "select": [
-		"account_number",
-		"money*"
+        "account_number",
+        "money*"
     }
 
 
@@ -97,7 +97,7 @@ And
     "from": "transactions",
     "select": [
         "account_number",
-		"charge_breakdown*"
+        "charge_breakdown*"
     ]
     }
 
@@ -109,24 +109,24 @@ Filter by Rank
 Here is a common SQL pattern:
 
 ```sql
+SELECT
+  *
+FROM
+  alerts.alerts a
+LEFT JOIN
+  (
     SELECT
-      *
+      branch,
+      MAX(last_updated) max_date
     FROM
-      alerts.alerts a
-    LEFT JOIN
-      (
-        SELECT
-          branch,
-          MAX(last_updated) max_date
-        FROM
-          alerts.alerts
-        WHERE
-          revision like '%c1f6%'
-        GROUP BY
-          branch
-      ) m ON m.branch = a.branch AND m.max_date=a.last_updated
+      alerts.alerts
     WHERE
       revision like '%c1f6%'
+    GROUP BY
+      branch
+  ) m ON m.branch = a.branch AND m.max_date=a.last_updated
+WHERE
+  revision like '%c1f6%'
     ;
 ```
 
@@ -146,21 +146,21 @@ I suggest a new `having` clause, as per SQL, but with additional parameters to
 specify grouping and more-detailed ordering:
 
 ```javacript
-    {
-        "from":"alerts",
-        "where":{"regexp":{"revision":".*c1f6.*"}},
-        "having":{"edges":["branch"], "sort":["last_updated"], "rank":"last"}
-    }
+{
+    "from":"alerts",
+    "where":{"regexp":{"revision":".*c1f6.*"}},
+    "having":{"edges":["branch"], "sort":["last_updated"], "rank":"last"}
+}
 ```
 
 If you really wanted dups, we can use "maximum"
 
 ```javacript
-    {
-        "from":"alerts",
-        "where":{"regexp":{"revision":".*c1f6.*"}},
-        "having":{"edges":["branch"], "sort":["last_updated"], "rank":"maximum"}
-    }
+{
+    "from":"alerts",
+    "where":{"regexp":{"revision":".*c1f6.*"}},
+    "having":{"edges":["branch"], "sort":["last_updated"], "rank":"maximum"}
+}
 ```
 
 Here is an example of how simple we can go:
@@ -195,6 +195,7 @@ Here is an example of how simple we can go:
 
 Reporting multiple dimensions as columns
 
+```sql
     sum(CASE WHEN code='thisDay' THEN num_opened else 0 end) thisDay_opened,
     sum(CASE WHEN code='thisDay' THEN num_closed else 0 end) thisDay_closed,
     sum(CASE WHEN code='this7Day' THEN num_opened else 0 end) this7Day_opened,
@@ -203,9 +204,11 @@ Reporting multiple dimensions as columns
     sum(CASE WHEN code='thisMonth' THEN num_closed else 0 end) thisMonth_closed,
     sum(CASE WHEN code='lastMonth' THEN num_opened else 0 end) lastMonth_opened,
     sum(CASE WHEN code='lastMonth' THEN num_closed else 0 end) lastMonth_closed,
+```
 
 Normalizing to 1000's or millions
 
+```sql
     sum(CASE WHEN code='thisDay' THEN 1000000*(num_opened)/population else 0 end) thisDay_opened_pct,
     sum(CASE WHEN code='thisDay' THEN 1000000*(num_closed)/population else 0 end) thisDay_closed_pct,
     sum(CASE WHEN code='this7Day' THEN 1000000*(num_opened)/population else 0 end) this7Day_opened_pct,
@@ -214,9 +217,11 @@ Normalizing to 1000's or millions
     sum(CASE WHEN code='thisMonth' THEN 1000000*(num_closed)/population else 0 end) thisMonth_closed_pct,
     sum(CASE WHEN code='lastMonth' THEN 1000000*(num_opened)/population else 0 end) lastMonth_opened_pct,
     sum(CASE WHEN code='lastMonth' THEN 1000000*(num_closed)/population else 0 end) lastMonth_closed_pct,
+```
 
 Left join of dimension and ALL partitions
 
+```sql
     FROM
         (
         SELECT
@@ -230,71 +235,79 @@ Left join of dimension and ALL partitions
         ) p
     LEFT JOIN
         BLAH BLAH
+```
 
 
 Again, the partitions
 
+```sql
     LEFT JOIN
         temp_time_ranges r
     ON
         time_convert(r.mindate, 'EDT', 'GMT') <= s.date AND
         s.date < time_convert(r.maxdate, 'EDT', 'GMT')
-
+```
 
 Showing both volume and count
 
+```sql
     sum(CASE WHEN r.code='this90Day' THEN s.quantity ELSE 0 END)/90*30 quantity_90,
     sum(CASE WHEN r.code='this90Day' THEN s.volume ELSE 0 END)/90*30 volume_90,
+```
 
 Show by hour of day, spit by column
 
+```sql
     hour(time_convert(t.transaction_date, 'GMT', 'EDT')) hour_of_day,
     sum(CASE WHEN t.type NOT IN('Fees', 'Load-Bill Payment', 'Corporate Load', 'Load-Bank Transfer') THEN 1 ELSE 0 END)/91*30 numOther,
     sum(CASE WHEN t.type='Fees' THEN 1 ELSE 0 END)/91*30 numFees,
     sum(CASE WHEN t.type='Load-Bill Payment' THEN 1 ELSE 0 END)/91*30 numBillPayment,
     sum(CASE WHEN t.type='Load-Bank Transfer' THEN 1 ELSE 0 END)/91*30 numBankTransfer,
     sum(CASE WHEN t.type='Corporate Load' THEN 1 ELSE 0 END)/91*30 numCorporate
+```
 
 
 Report by timezone, using num open, num closed, and net
 
+```sql
     hour(time_convert(t.transaction_date, 'GMT', 'EDT')) hour_of_day,
     sum(CASE WHEN t.type NOT IN('Fees', 'Load-Bill Payment', 'Corporate Load', 'Load-Bank Transfer') THEN 1 ELSE 0 END)/91*30 numOther,
     sum(CASE WHEN t.type='Fees' THEN 1 ELSE 0 END)/91*30 numFees,
     sum(CASE WHEN t.type='Load-Bill Payment' THEN 1 ELSE 0 END)/91*30 numBillPayment,
     sum(CASE WHEN t.type='Load-Bank Transfer' THEN 1 ELSE 0 END)/91*30 numBankTransfer,
     sum(CASE WHEN t.type='Corporate Load' THEN 1 ELSE 0 END)/91*30 numCorporate
-
+```
 
 The benefit of partitions is that they are guaranteed to not overlap. In this
 case, the `Other` part is left with all remaining transaction types. There is
 no double counting, and no missed values.
 
 ```javascript
-    payType = {
-        "name":"payType",
-        "type":"set",
-        "partitions":[
-            {"name":"Fees", "where":{"term":{"type":"Fees"}}},
-            {"name":"BillPayment", "where":{"term":{"type":"Load-Bill Payment"}}},
-            {"name":"BankTransfer", "where":{"term":{"type":"Load-Bank Transfer"}}},
-            {"name":"Corporate", "where":{"term":{"type":"Corporate Load"}}},
-            {"name":"Other"}
-        ]
-    }
+payType = {
+    "name":"payType",
+    "type":"set",
+    "partitions":[
+        {"name":"Fees", "where":{"term":{"type":"Fees"}}},
+        {"name":"BillPayment", "where":{"term":{"type":"Load-Bill Payment"}}},
+        {"name":"BankTransfer", "where":{"term":{"type":"Load-Bank Transfer"}}},
+        {"name":"Corporate", "where":{"term":{"type":"Corporate Load"}}},
+        {"name":"Other"}
+    ]
+}
 
-    query = {
-        "from":transactions
-        "select":{"name":"num", "aggregate":"count"}
-        "edges":[
-            {"domain":payType}
-        ]
-    }
+query = {
+    "from":transactions
+    "select":{"name":"num", "aggregate":"count"}
+    "edges":[
+        {"domain":payType}
+    ]
+}
 ```
 
 If data can be split according to independent criterion, then you avoid the
 inevitable power-set that results.
 
+```sql
     SELECT
         count(1) `count`
         CASE
@@ -309,10 +322,10 @@ inevitable power-set that results.
         END category,
     FROM
         accounts
+```
 
 
-
-
+```javascript
     cardStatusDomain = {
         "name":"category",
         "type":"set",
@@ -344,7 +357,7 @@ inevitable power-set that results.
         {"name":"auto", "domain":autoDomain}
     ]
     }
-
+```
 
 The using partition order to define the mutually exclusive sets reduces total
 number of rules written, but the order of presentation may be different
@@ -683,7 +696,8 @@ Rule-based partitions
 
 One record results in two or more output records
 
-    CASE
+    SELECT
+        CASE
         WHEN d.digit=0 AND c.amount IS NULL THEN t.amount
         WHEN d.digit=0 THEN -c.amount
         WHEN d.digit=1 AND c.amount<>-t.amount THEN t.amount+c.amount

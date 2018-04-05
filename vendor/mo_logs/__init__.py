@@ -98,7 +98,7 @@ class Log(object):
             for log in listwrap(settings.log):
                 Log.add_log(Log.new_instance(log))
 
-        if settings.cprofile.enabled==True:
+        if settings.cprofile.enabled == True:
             Log.alert("cprofiling is enabled, writing to {{filename}}", filename=os.path.abspath(settings.cprofile.filename))
 
     @classmethod
@@ -325,7 +325,7 @@ class Log(object):
         :return:
         """
         if not isinstance(template, text_type):
-            Log.error("Log.note was expecting a unicode template")
+            Log.error("Log.warning was expecting a unicode template")
 
         if isinstance(default_params, BaseException):
             cause = default_params
@@ -378,23 +378,24 @@ class Log(object):
 
         add_to_trace = False
         if cause == None:
-            pass
+            causes = None
         elif isinstance(cause, list):
-            cause = []
+            causes = []
             for c in listwrap(cause):  # CAN NOT USE LIST-COMPREHENSION IN PYTHON3 (EXTRA STACK DEPTH FROM THE IN-LINED GENERATOR)
-                cause.append(Except.wrap(c, stack_depth=1))
-            cause = FlatList(cause)
+                causes.append(Except.wrap(c, stack_depth=1))
+            causes = FlatList(causes)
         elif isinstance(cause, BaseException):
-            cause = Except.wrap(cause, stack_depth=1)
+            causes = Except.wrap(cause, stack_depth=1)
         else:
-            Log.error("can only accept Exception , or list of exceptions")
+            causes = None
+            Log.error("can only accept Exception, or list of exceptions")
 
         trace = exceptions.extract_stack(stack_depth + 1)
 
         if add_to_trace:
             cause[0].trace.extend(trace[1:])
 
-        e = Except(exceptions.ERROR, template, params, cause, trace)
+        e = Except(exceptions.ERROR, template, params, causes, trace)
         raise_from_none(e)
 
     @classmethod
@@ -453,6 +454,7 @@ def write_profile(profile_settings, stats):
     from pyLibrary import convert
     from mo_files import File
 
+    Log.note("aggregating {{num}} profile stats", num=len(stats))
     acc = stats[0]
     for s in stats[1:]:
         acc.add(s)

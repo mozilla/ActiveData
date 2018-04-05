@@ -56,26 +56,26 @@ Properties that describe the run of this test suite, and the many tests that are
 * `run.timestamp` - *timestamp*
 * `run.job_number` - *string*
 * `run.files` - *array* of files recorded for this suite, one or more of which are the structured log digested to make this record
-	* `run.files.name` - *string* name of the file
-	* `run.files.url` - *string* url where he contents can/could be found
+    * `run.files.name` - *string* name of the file
+    * `run.files.url` - *string* url where he contents can/could be found
 * `run.machine` - *object* properties of the machine that ran the suite
-	* `machine.os` - *string* operating system
-	* `machine.name` - *string* the particular piece of hardware that ran suite
+    * `machine.os` - *string* operating system
+    * `machine.name` - *string* the particular piece of hardware that ran suite
 * `run.stats` - *object* various counts for this suite/chunk
-	* `run.stats.ok` - *long* number of tests where `result==expected`
-	* `run.stats.pass` - *long* number of tests that passed
-	* `run.stats.fail` - *long* number of tests that end in failure
-	* `run.stats.error` - *long* number of tests ending in error
-	* `run.stats.skip` - *long* number of tests skipped
-	* `run.stats.none` - *long* number of tests that did not end
-	* `run.stats.timeout` - *long* number of tests that ended in timeout
-	* `run.stats.crash` - *long* number of tests that ended in crash
-	* `run.stats.total` - *long* number of tests
-	* `run.stats.start_time` - *timestamp* when the suite started running
-	* `run.stats.end_time` - *timestamp* when the suite finished running
-	* `run.stats.duration` - *seconds* duration of this suite
-	* `run.stats.bytes` - *long* number of bytes in structured log
-	* `run.stats.lines` - *long* number of lines in the structured log
+    * `run.stats.ok` - *long* number of tests where `result==expected`
+    * `run.stats.pass` - *long* number of tests that passed
+    * `run.stats.fail` - *long* number of tests that end in failure
+    * `run.stats.error` - *long* number of tests ending in error
+    * `run.stats.skip` - *long* number of tests skipped
+    * `run.stats.none` - *long* number of tests that did not end
+    * `run.stats.timeout` - *long* number of tests that ended in timeout
+    * `run.stats.crash` - *long* number of tests that ended in crash
+    * `run.stats.total` - *long* number of tests
+    * `run.stats.start_time` - *timestamp* when the suite started running
+    * `run.stats.end_time` - *timestamp* when the suite finished running
+    * `run.stats.duration` - *seconds* duration of this suite
+    * `run.stats.bytes` - *long* number of bytes in structured log
+    * `run.stats.lines` - *long* number of lines in the structured log
 * `run.talos` - *boolean* indicates if Talos performance results can be found in the text log
 * `run.logurl` - *string* url to find the text log
 * `run.key` - *string* created by PulseTranslator to represent these other properties
@@ -104,11 +104,11 @@ Properties describing the build
 Properties of the changeset, revision and push
 
 * `repo.changeset` - *object*
-	* `repo.changeset.id` - *string* unique hash value of changeset
+    * `repo.changeset.id` - *string* unique hash value of changeset
     * `repo.changeset.files` - *strings* full path to files changed
-	* `repo.changeset.date` - *timestamp*
-	* `repo.changeset.description` - *string* text assigned to push *This property has been parsed into words
-	* `repo.changeset.author` - *string* author info
+    * `repo.changeset.date` - *timestamp*
+    * `repo.changeset.description` - *string* text assigned to push *This property has been parsed into words
+    * `repo.changeset.author` - *string* author info
 * `repo.index` - *integer* unique value given to this revision by hg.mozilla.org
 * `repo.branch` - *string* name of the branch
 * `repo.push` - *object* more about the push

@@ -24,7 +24,7 @@ will assume the `user` table is the centre of the snowflake (the grain), select 
 
 **Computation Bounded** 
 
-GraphQL is not capable of aggregation, nor table joins; you only get back what you put in. This is an acceptable limitation for OLTP applications, and provides a computational upper-bound on the requests received by the server, namely O(n), where n is the number of objects returned. This allows servers to provide a QoS, and continue to be responsive, or predictable, under load.  
+GraphQL is not capable of aggregation, nor table joins; you only get back what you put in. This is an acceptable limitation for OLTP applications, and provides a computational upper-bound on the requests received by the server, namely O(n), where n is the number of objects returned. This allows servers to provide a Quality-of-Service, and continue to be responsive, or predictable, under load.  
 
 Compared to SQL, where joins can have O(e^N) performance, GraphQL can serve a niche.  
 

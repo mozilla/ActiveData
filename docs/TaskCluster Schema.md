@@ -52,19 +52,19 @@ Properties describing the running task. A copy of other task properties in an at
     * `run.suite.flavor` - *string* variation on the suite
 * `run.chunk` - *integer* each suite is broken into chucks to parallelize the run, each chunk is given a number
 * `run.machine` - *object* properties of the machine that ran the suite
-	* `machine.platform` - *string* high-level platform category
-	* `machine.name` - *string* the particular piece of hardware that ran suite
+    * `machine.platform` - *string* high-level platform category
+    * `machine.name` - *string* the particular piece of hardware that ran suite
 
 ## `repo` Columns
 
 Properties of the changeset, revision and push
 
 * `repo.changeset` - *object*
-	* `repo.changeset.id` - *string* unique hash value of changeset
+    * `repo.changeset.id` - *string* unique hash value of changeset
     * `repo.changeset.files` - *strings* full path to files changed
-	* `repo.changeset.date` - *timestamp*
-	* `repo.changeset.description` - *string* text assigned to push *This property has been parsed into words
-	* `repo.changeset.author` - *string* author info
+    * `repo.changeset.date` - *timestamp*
+    * `repo.changeset.description` - *string* text assigned to push *This property has been parsed into words
+    * `repo.changeset.author` - *string* author info
 * `repo.index` - *integer* unique value given to this revision by hg.mozilla.org
 * `repo.branch` - *string* name of the branch
 * `repo.push` - *object* more about the push
@@ -108,21 +108,21 @@ Every task can generate multiple artifacts.  This is a nested array, so you can 
 TaskCluster allows the worker to annotate the task metatdata. This is good, but does result in a non-standard inner property names found in `metadata` or `extra`, or `tags`, or any two, or all three.  All these properties are flattened into `{"name":name, "value":value}` form, and put in the `task.tags` array.  Where `name` is the full path the the primitive JSON `value`.
 
 For example, 
-	
-	{"extra":{
-		"suite":{
-			"name":"mochitest", 
-			"flavor":"browser-chrome-chunked"
-		}
-	}}
+    
+    {"extra":{
+        "suite":{
+            "name":"mochitest", 
+            "flavor":"browser-chrome-chunked"
+        }
+    }}
 
 is converted to 
 
     {"task":{"tags":[
-		{"name":"suite.flavor","value":"browser-chrome-chunked"},
-		{"name":"suite.name","value":"mochitest"}
-	]}
-					
+        {"name":"suite.flavor","value":"browser-chrome-chunked"},
+        {"name":"suite.name","value":"mochitest"}
+    ]}
+                    
 
 ## `task.action.timings` Table
 

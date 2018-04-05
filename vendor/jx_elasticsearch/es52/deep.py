@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from jx_base import STRUCT, NESTED
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT
-from jx_elasticsearch.es09.util import post as es_post
+from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, LeavesOp
 from jx_elasticsearch.es52.setop import format_dispatch, get_pull_function, get_pull
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template

@@ -17,21 +17,24 @@ import signal
 import subprocess
 from string import ascii_lowercase
 
-from mo_future import text_type
+from pyLibrary.env.elasticsearch import Cluster
+
+import jx_elasticsearch
 
 import mo_json_config
 from jx_base import container
 from jx_base.query import QueryOp
 from jx_python import jx
-from mo_dots import wrap, coalesce, unwrap, listwrap, Data, literal_field
+from mo_dots import wrap, coalesce, unwrap, listwrap, Data, literal_field, Null
+from mo_future import text_type
+from mo_json import value2json, json2value
 from mo_kwargs import override
 from mo_logs import Log, Except, constants
 from mo_logs.exceptions import extract_stack
-from mo_logs.strings import expand_template
+from mo_logs.strings import expand_template, unicode2utf8, utf82unicode
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_times.dates import Date
 from mo_times.durations import MINUTE
-from pyLibrary import convert
 from pyLibrary.env import http
 from pyLibrary.testing import elasticsearch
 from test_jx import TEST_TABLE
@@ -209,16 +212,18 @@ class ESUtils(object):
 
                 subtest.query.format = format
                 subtest.query.meta.testing = True  # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
-                query = convert.unicode2utf8(convert.value2json(subtest.query))
+                query = unicode2utf8(value2json(subtest.query))
                 # EXECUTE QUERY
                 response = self.try_till_response(self.service_url, data=query)
 
                 if response.status_code != 200:
                     error(response)
-                result = convert.json2value(convert.utf82unicode(response.all_content))
+                result = json2value(utf82unicode(response.all_content))
 
-                # HOW TO COMPARE THE OUT-OF-ORDER DATA?
-                compare_to_expected(subtest.query, result, expected, places)
+
+                table = jx_elasticsearch.new_instance(self._es_test_settings)
+                query = QueryOp.wrap(subtest.query, table, table.schema)
+                compare_to_expected(query, result, expected, places)
                 Log.note("PASS {{name|quote}} (format={{format}})", name=subtest.name, format=format)
             if num_expectations == 0:
                 Log.error(
@@ -232,13 +237,13 @@ class ESUtils(object):
         query = wrap(query)
 
         try:
-            query = convert.unicode2utf8(convert.value2json(query))
+            query = unicode2utf8(value2json(query))
             # EXECUTE QUERY
             response = self.try_till_response(self.service_url, data=query)
 
             if response.status_code != 200:
                 error(response)
-            result = convert.json2value(convert.utf82unicode(response.all_content))
+            result = json2value(utf82unicode(response.all_content))
 
             return result
         except Exception as e:
@@ -291,11 +296,6 @@ def compare_to_expected(query, result, expect, places):
             sort_table(result)
             sort_table(expect)
     elif result.meta.format == "list":
-        if query["from"].startswith("meta."):
-            pass
-        else:
-            query = QueryOp.wrap(query)
-
         if not query.sort:
             try:
                 # result.data MAY BE A LIST OF VALUES, NOT OBJECTS
@@ -361,17 +361,17 @@ def sort_table(result):
     """
     SORT ROWS IN TABLE, EVEN IF ELEMENTS ARE JSON
     """
-    data = wrap([{unicode(i): v for i, v in enumerate(row) if v != None} for row in result.data])
+    data = wrap([{text_type(i): v for i, v in enumerate(row) if v != None} for row in result.data])
     sort_columns = jx.sort(set(jx.get_columns(data, leaves=True).name))
     data = jx.sort(data, sort_columns)
     result.data = [tuple(row[text_type(i)] for i in range(len(result.header))) for row in data]
 
 
 def error(response):
-    response = convert.utf82unicode(response.content)
+    response = utf82unicode(response.content)
 
     try:
-        e = Except.new_instance(convert.json2value(response))
+        e = Except.new_instance(json2value(response))
     except Exception:
         e = None
 
@@ -411,10 +411,10 @@ class FakeHttp(object):
                 "status_code": 400
             })
 
-        text = convert.utf82unicode(body)
-        data = convert.json2value(text)
+        text = utf82unicode(body)
+        data = json2value(text)
         result = jx.run(data)
-        output_bytes = convert.unicode2utf8(convert.value2json(result))
+        output_bytes = unicode2utf8(value2json(result))
         return wrap({
             "status_code": 200,
             "all_content": output_bytes,
@@ -440,6 +440,8 @@ try:
 
     if not test_jx.global_settings.use:
         Log.error('Must have a {"use": type} set in the config file')
+
+    test_jx.global_settings.elasticsearch.version = Cluster(test_jx.global_settings.elasticsearch).version
     test_jx.utils = container_types[test_jx.global_settings.use](test_jx.global_settings)
 except Exception as e:
     Log.warning("problem", cause=e)

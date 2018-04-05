@@ -17,6 +17,7 @@
 		},
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
 		"jx_elasticsearch.meta.ENABLE_META_SCAN": true,
+		"jx_elasticsearch.meta.DEBUG": false,
 		"jx_base.expressions.ALLOW_SCRIPTING": true
 	},
 	"request_logs": {

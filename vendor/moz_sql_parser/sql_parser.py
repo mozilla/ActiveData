@@ -14,8 +14,7 @@ from __future__ import unicode_literals
 import ast
 import sys
 
-from pyparsing import \
-    CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, _ustr
+from pyparsing import CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, _ustr
 
 ParserElement.enablePackrat()
 
@@ -92,7 +91,7 @@ KNOWN_OPS = [
     Literal(">=").setName("gte").setDebugActions(*debug),
     Literal("<=").setName("lte").setDebugActions(*debug),
     IN.setName("in").setDebugActions(*debug),
-    IS.setName("eq").setDebugActions(*debug),
+    IS.setName("is").setDebugActions(*debug),
     Literal("=").setName("eq").setDebugActions(*debug),
     Literal("==").setName("eq").setDebugActions(*debug),
     Literal("!=").setName("neq").setDebugActions(*debug),
@@ -129,6 +128,11 @@ def to_json_operator(instring, tokensStart, retTokens):
             return {"exists": tok[0]}
         elif tok[0] == "null":
             return {"exists": tok[2]}
+    elif op == "is":
+        if tok[2] == 'null':
+            return {"missing": tok[0]}
+        else:
+            return {"exists": tok[0]}
 
     return {op: [tok[i * 2] for i in range(int((len(tok) + 1) / 2))]}
 
@@ -173,17 +177,12 @@ def to_join_call(instring, tokensStart, retTokens):
 
 
 def to_select_call(instring, tokensStart, retTokens):
-    # toks = datawrap(retTokens)
-    # return {
-    #     "select": toks.select,
-    #     "from": toks['from'],
-    #     "where": toks.where,
-    #     "groupby": toks.groupby,
-    #     "having": toks.having,
-    #     "limit": toks.limit
-    #
-    # }
-    return retTokens
+    tok = retTokens[0].asDict()
+
+    if tok.get('value')[0][0] == '*':
+        return '*'
+    else:
+        return tok
 
 
 def to_union_call(instring, tokensStart, retTokens):
@@ -227,23 +226,12 @@ def to_string(instring, tokensStart, retTokens):
     return {"literal": ast.literal_eval(val)}
 
 # NUMBERS
-E = CaselessLiteral("E")
-# binop = oneOf("= != < > >= <= eq ne lt le gt ge", caseless=True)
-arithSign = Word("+-", exact=1)
-realNum = Combine(
-    Optional(arithSign) +
-    (Word(nums) + "." + Optional(Word(nums)) | ("." + Word(nums))) +
-    Optional(E + Optional(arithSign) + Word(nums))
-).addParseAction(unquote)
-intNum = Combine(
-    Optional(arithSign) +
-    Word(nums) +
-    Optional(E + Optional("+") + Word(nums))
-).addParseAction(unquote)
+realNum = Regex(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?").addParseAction(unquote)
+intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(unquote)
 
 # STRINGS, NUMBERS, VARIABLES
-sqlString = Combine(Regex(r"\'(\'\'|\\.|[^'])*\'")).addParseAction(to_string)
-identString = Combine(Regex(r'\"(\"\"|\\.|[^"])*\"')).addParseAction(unquote)
+sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(to_string)
+identString = Regex(r'\"(\"\"|\\.|[^"])*\"').addParseAction(unquote)
 ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alphanums + "_$") | identString, delim=".", combine=True))).setName("identifier")
 
 # EXPRESSIONS
@@ -259,7 +247,6 @@ case = (
 
 selectStmt = Forward()
 compound = (
-    (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
@@ -268,6 +255,7 @@ compound = (
     (Literal("(").setDebugActions(*debug).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
     realNum.setName("float").setDebugActions(*debug) |
     intNum.setName("int").setDebugActions(*debug) |
+    (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     sqlString.setName("string").setDebugActions(*debug) |
     (
         Word(alphas)("op").setName("function name").setDebugActions(*debug) +
@@ -301,7 +289,7 @@ expr << Group(infixNotation(
 selectColumn = Group(
     Group(expr).setName("expression1")("value").setDebugActions(*debug) + Optional(Optional(AS) + ident.copy().setName("column_name1")("name").setDebugActions(*debug)) |
     Literal('*')("value").setDebugActions(*debug)
-).setName("column")
+).setName("column").addParseAction(to_select_call)
 
 
 tableName = (

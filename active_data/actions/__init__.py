@@ -19,12 +19,12 @@ from active_data.actions import save_query
 from jx_base import STRUCT
 from jx_python import meta
 from mo_dots import coalesce, join_field, split_field
+from mo_json import value2json
 from mo_logs import Log, strings
-from mo_logs.strings import expand_template
+from mo_logs.strings import expand_template, unicode2utf8
 from mo_threads import Till
 from mo_times.dates import Date
 from mo_times.durations import MINUTE
-from pyLibrary import convert
 
 QUERY_TOO_LARGE = "Query is too large"
 
@@ -48,7 +48,7 @@ def send_error(active_data_timer, body, e):
     # remove_trace(e)
 
     return Response(
-        convert.unicode2utf8(convert.value2json(e)),
+        unicode2utf8(value2json(e)),
         status=status
     )
 
@@ -70,7 +70,7 @@ def replace_vars(text, params=None):
             replacement = text_type(Date(var).unix)
             text = text[:index] + replacement + text[end:]
             start = index + len(replacement)
-        except Exception, _:
+        except Exception as _:
             start += 1
 
         var = strings.between(text, "{{", "}}", start)

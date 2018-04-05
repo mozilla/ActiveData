@@ -20,20 +20,39 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE
 from mo_dots import coalesce, wrap, Null, unwraplist, set_default, literal_field
 from mo_logs import Log, suppress_exception
 from mo_logs.strings import expand_template, quote
 from mo_math import MAX, OR
 from pyLibrary.convert import string2regexp
 
-TO_STRING = """Optional.of({{expr}}).map(
-                        value -> {
-                            String output = String.valueOf(value);
-                            if (output.endsWith(".0")) output = output.substring(0, output.length() - 2);
-                            return output;
-                        }
-                ).orElse(null)"""
+NUMBER_TO_STRING = """
+Optional.of({{expr}}).map(
+    value -> {
+        String output = String.valueOf(value);
+        if (output.endsWith(".0")) output = output.substring(0, output.length() - 2);
+        return output;
+    }
+).orElse(null)
+"""
+
+LIST_TO_PIPE = """
+StringBuffer output=new StringBuffer();
+for(String s : {{expr}}){
+    output.append("|");
+    String sep2="";
+    StringTokenizer parts = new StringTokenizer(s, "|");
+    while (parts.hasMoreTokens()){
+        output.append(sep2);
+        output.append(parts.nextToken());
+        sep2="||";
+    }//for
+}//for
+output.append("|");
+return output.toString()
+"""
+
 
 
 class Painless(Expression):
@@ -132,7 +151,18 @@ def to_painless(self, schema):
 
 @extend(CaseOp)
 def to_esfilter(self, schema):
-    return ScriptOp("script",  self.to_painless(schema).script(schema)).to_esfilter(schema)
+    if self.type == BOOLEAN:
+        return OrOp(
+            "or",
+            [
+                AndOp("and", [w.when, w.then])
+                for w in self.whens[:-1]
+            ] +
+            self.whens[-1:]
+        ).partial_eval().to_esfilter(schema)
+    else:
+        Log.error("do not know how to handle")
+        return ScriptOp("script", self.to_ruby(schema).script(schema)).to_esfilter(schema)
 
 
 @extend(ConcatOp)
@@ -315,6 +345,19 @@ def to_esfilter(self, schema):
     Log.error("not supported")
 
 
+@extend(TupleOp)
+def to_painless(self, schema):
+    terms = [FirstOp("first", t).partial_eval().to_painless(schema) for t in self.terms]
+    expr = 'new Object[]{'+','.join(t.expr for t in terms)+'}'
+    return Painless(
+        type=OBJECT,
+        expr=expr,
+        miss=FALSE,
+        many=FALSE,
+        frum=self
+    )
+
+
 @extend(LeavesOp)
 def to_painless(self, schema):
     Log.error("not supported")
@@ -355,7 +398,10 @@ def to_esfilter(self, schema):
             Log.error("operator {{op|quote}} does not work on objects", op=self.op)
         return {"range": {lhs: {self.op: self.rhs.value}}}
     else:
-        return {"script": {"script": {"lang": "painless", "inline": self.to_painless(schema).script(schema)}}}
+        script = self.to_painless(schema)
+        if script.miss is not FALSE:
+            Log.error("inequality must be decisive")
+        return {"script": {"script": {"lang": "painless", "inline": script.expr}}}
 
 
 @extend(DivOp)
@@ -383,17 +429,26 @@ def to_esfilter(self, schema):
 
 @extend(FloorOp)
 def to_painless(self, schema):
-    lhs = self.lhs.to_painless(schema)
-    rhs = self.rhs.to_painless(schema)
-    script = "(int)Math.floor(((double)(" + lhs + ") / (double)(" + rhs + ")).doubleValue())*(" + rhs + ")"
+    lhs = self.lhs.partial_eval().to_painless(schema)
+    rhs = self.rhs.partial_eval().to_painless(schema)
+
+    if rhs.frum is ONE:
+        script = "(int)Math.floor(" + lhs.expr + ")"
+    else:
+        script = "Math.floor((" + lhs.expr + ") / (" + rhs.expr + "))*(" + rhs.expr + ")"
 
     output = WhenOp(
         "when",
-        OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, ZERO])]),
+        OrOp("or", [lhs.miss, rhs.miss, EqOp("eq", [self.rhs, ZERO])]),
         **{
             "then": self.default,
             "else":
-                ScriptOp("script", script)
+                Painless(
+                    type=NUMBER,
+                    expr=script,
+                    frum=self,
+                    miss=FALSE
+                )
         }
     ).to_painless(schema)
     return output
@@ -402,6 +457,15 @@ def to_painless(self, schema):
 @extend(FloorOp)
 def to_esfilter(self, schema):
     Log.error("Logic error")
+
+
+
+@simplified
+@extend(EqOp)
+def partial_eval(self):
+    lhs = self.lhs.partial_eval()
+    rhs = self.rhs.partial_eval()
+    return EqOp("eq", [lhs, rhs])
 
 
 @extend(EqOp)
@@ -642,7 +706,16 @@ def to_painless(self, schema):
 
 @extend(OrOp)
 def to_esfilter(self, schema):
-    return {"bool": {"should": [t.to_esfilter(schema) for t in self.terms]}}
+    # OR(x) == NOT(AND(NOT(xi) for xi in x))
+    output = {"bool": {"must_not": {"bool": {"must": [
+        NotOp("not", t).partial_eval().to_esfilter(schema)
+        for t in self.terms
+    ]}}}}
+    return output
+
+    # WE REQUIRE EXIT-EARLY SEMANTICS, OTHERWISE EVERY EXPRESSION IS A SCRIPT EXPRESSION
+    # {"bool":{"should"  :[a, b, c]}} RUNS IN PARALLEL
+    # {"bool":{"must_not":[a, b, c]}} ALSO RUNS IN PARALLEL
 
 
 @extend(LengthOp)
@@ -659,6 +732,16 @@ def to_painless(self, schema):
 
 @extend(FirstOp)
 def to_painless(self, schema):
+    if isinstance(self.term, Variable):
+        columns = schema.values(self.term.var)
+        if len(columns) == 1:
+            return Painless(
+                miss=MissingOp("missing", self.term),
+                type=self.term.type,
+                expr="doc[" + quote(columns[0].es_column) + "].value",
+                frum=self
+            )
+
     term = self.term.to_painless(schema)
 
     if isinstance(term.frum, CoalesceOp):
@@ -914,7 +997,7 @@ def to_painless(self, schema):
         return Painless(
             miss=self.term.missing().partial_eval(),
             type=STRING,
-            expr=expand_template(TO_STRING, {"expr":value.expr}),
+            expr=expand_template(NUMBER_TO_STRING, {"expr":value.expr}),
             frum=self
         )
     elif value.type == STRING:
@@ -923,7 +1006,7 @@ def to_painless(self, schema):
         return Painless(
             miss=self.term.missing().partial_eval(),
             type=STRING,
-            expr=expand_template(TO_STRING, {"expr":value.expr}),
+            expr=expand_template(NUMBER_TO_STRING, {"expr":value.expr}),
             frum=self
         )
 
@@ -951,29 +1034,29 @@ def to_painless(self, schema):
 
 @extend(PrefixOp)
 def to_esfilter(self, schema):
-    if not self.field:
+    if not self.expr:
         return {"match_all": {}}
-    elif isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
-        var = schema.leaves(self.field.var)[0].es_column
+    elif isinstance(self.expr, Variable) and isinstance(self.prefix, Literal):
+        var = schema.leaves(self.expr.var)[0].es_column
         return {"prefix": {var: self.prefix.value}}
     else:
         return ScriptOp("script",  self.to_painless(schema).script(schema)).to_esfilter(schema)
 
 @extend(SuffixOp)
 def to_painless(self, schema):
-    if not self.field:
+    if not self.suffix:
         return "true"
     else:
-        return "(" + self.field.to_painless(schema) + ").endsWith(" + self.prefix.to_painless(schema) + ")"
+        return "(" + self.expr.to_painless(schema) + ").endsWith(" + self.suffix.to_painless(schema) + ")"
 
 
 @extend(SuffixOp)
 def to_esfilter(self, schema):
-    if not self.field:
+    if not self.suffix:
         return {"match_all": {}}
-    elif isinstance(self.field, Variable) and isinstance(self.prefix, Literal):
-        var = schema.leaves(self.field.var)[0].es_column
-        return {"regexp": {var: ".*"+string2regexp(self.prefix.value)}}
+    elif isinstance(self.expr, Variable) and isinstance(self.suffix, Literal):
+        var = schema.leaves(self.expr.var)[0].es_column
+        return {"regexp": {var: ".*"+string2regexp(self.suffix.value)}}
     else:
         return ScriptOp("script",  self.to_painless(schema).script(schema)).to_esfilter(schema)
 
@@ -1003,7 +1086,7 @@ def to_esfilter(self, schema):
 
 @extend(ScriptOp)
 def to_painless(self, schema):
-    return Painless(type=OBJECT, expr=self.script)
+    return Painless(type=self.data_type, expr=self.script, frum=self)
 
 
 @extend(ScriptOp)
@@ -1028,7 +1111,7 @@ def to_painless(self, schema):
             acc.append(Painless(
                 miss=frum.missing(),
                 type=c.type,
-                expr="doc[" + q + "].values",
+                expr="doc[" + q + "].values" if c.type!=BOOLEAN else "doc[" + q + "].value",
                 frum=frum,
                 many=True
             ))
@@ -1309,7 +1392,7 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
         if not vars_:
             return Null
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
-        var_to_depth = {v: max(len(c.nested_path) - 1, 0) for v in vars_ for c in schema[v]}
+        var_to_depth = {v.var: max(len(c.nested_path) - 1, 0) for v in vars_ for c in schema[v.var]}
         all_depths = set(var_to_depth.values())
         # if -1 in all_depths:
         #     Log.error(
@@ -1320,7 +1403,7 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
             all_depths = {0}
         output = wrap([[] for _ in range(MAX(all_depths) + 1)])
     else:
-        all_depths = set(var_to_depth[v] for v in vars_)
+        all_depths = set(var_to_depth[v.var] for v in vars_)
 
     if len(all_depths) == 1:
         output[list(all_depths)[0]] += [where]

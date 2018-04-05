@@ -17,7 +17,7 @@ from jx_base import NESTED
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
-from jx_elasticsearch.es09.util import post as es_post
+from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.expressions import Variable, LeavesOp
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template
 from jx_python.containers.cube import Cube
@@ -78,7 +78,7 @@ def es_setop(es, query):
             leaves = schema.values(term.var)
             for c in leaves:
                 full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
-                if c.type == NESTED or c.nested_path[0] != ".":
+                if c.type == NESTED:
                     es_query.stored_fields = ["_source"]
                     new_select.append({
                         "name": full_name,
@@ -87,6 +87,8 @@ def es_setop(es, query):
                         "pull": get_pull_source(c.es_column)
                     })
                     put_index += 1
+                elif c.nested_path[0] != ".":
+                    es_query.stored_fields = ["_source"]
                 else:
                     es_query.stored_fields += [c.es_column]
                     new_select.append({

@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import unicode_literals
 
+from active_data.actions.sql import parse_sql
 from jx_base.expressions import NULL
 from mo_dots import wrap, Data
 
@@ -66,7 +67,7 @@ class TestSQL(BaseTestCase):
         sql = "SELECT 1"
         expected = {
             "meta": {"format": "table"},
-            "header": ["1"],
+            "header": ["."],
             "data": [
                 [1]
             ]
@@ -74,6 +75,46 @@ class TestSQL(BaseTestCase):
         result = self._run_sql_query(sql)
         compare_to_expected(result.meta.jx_query, result, expected, places=6)
 
+    def test_groupby_w_aggregates(self):
+        sql = """
+        SELECT 
+            floor(run.timestamp/86400) as date,
+            count(result.value) AS "count",
+            median(result.value) AS "median",
+            percentile(result.value, 0.9) AS "90th"
+        FROM 
+            perf 
+        WHERE 
+            run.timestamp>=date('today-month') AND
+            run.framework.name='vcs' AND
+            run.suite='clone'
+        GROUP BY
+            floor(run.timestamp/86400)
+        ORDER BY 
+            floor(run.timestamp/86400)
+        """
+
+        expected = {
+            "select": [
+                {"name": "count", "value": "result.value", "aggregate": "count"},
+                {"name": "median", "value": "result.value", "aggregate": "median"},
+                {"name": "90th", "value": "result.value", "aggregate": "percentile", "percentile": 0.9}
+            ],
+            "from": "perf",
+            "groupby": {
+                "name": "date",
+                "value": {"floor": {"div": ["run.timestamp", 86400]}}
+            },
+            "where": {"and": [
+                {"gte": ["run.timestamp", {"date": {"literal": "today-month"}}]},
+                {"eq": ["run.framework.name", {"literal": "vcs"}]},
+                {"eq": ["run.suite", {"literal": "clone"}]}
+            ]},
+            "sort": {"value": {"floor": {"div": ["run.timestamp", 86400]}}}
+        }
+
+        result = parse_sql(sql)
+        self.assertEqual(result, expected, "expecting to be parsed ")
 
     def execute(self, test):
         test = wrap(test)

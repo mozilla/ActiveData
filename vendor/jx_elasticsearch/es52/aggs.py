@@ -11,26 +11,71 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_future import text_type
-from jx_base import OBJECT, EXISTS
-
+from jx_base import EXISTS
 from jx_base.domains import SetDomain
-from jx_base.expressions import TupleOp, NULL, value2json
+from jx_base.expressions import TupleOp, NULL
 from jx_base.query import DEFAULT_LIMIT
-from jx_elasticsearch.es09.util import post as es_post
-from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
-from jx_elasticsearch.es52.decoders import DimFieldListDecoder
+from jx_elasticsearch import post as es_post
+from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder, DimFieldListDecoder
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp
 from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, unwraplist
+from mo_future import text_type
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
-from mo_logs.strings import quote
+from mo_logs.strings import quote, expand_template
 from mo_math import Math, MAX, UNION
 from mo_times.timer import Timer
+
+
+COMPARE_TUPLE = """
+(a, b)->{
+    int i=0;
+    for (dummy in a){  //ONLY THIS FOR LOOP IS ACCEPTED (ALL OTHER FORMS THROW NullPointerException)
+        if (a[i]==null) return -1*({{dir}});
+        if (b[i]==null) return 1*({{dir}});
+
+        if (a[i]!=b[i]) {
+            if (a[i] instanceof Boolean){
+                if (b[i] instanceof Boolean){
+                    int cmp = Boolean.compare(a[i], b[i]);
+                    if (cmp != 0) return cmp;
+                } else {
+                    return -1;
+                }//endif                    
+            }else if (a[i] instanceof Number) {
+                if (b[i] instanceof Boolean) {
+                    return 1                
+                } else if (b[i] instanceof Number) {
+                    int cmp = Double.compare(a[i], b[i]);
+                    if (cmp != 0) return cmp;
+                } else {
+                    return -1;
+                }//endif
+            }else {
+                if (b[i] instanceof Boolean) {
+                    return 1;
+                } else if (b[i] instanceof Number) {
+                    return 1;
+                } else {
+                    int cmp = ((String)a[i]).compareTo((String)b[i]);
+                    if (cmp != 0) return cmp;
+                }//endif
+            }//endif
+        }//endif
+        i=i+1;
+    }//for
+    return 0;
+}
+"""
+
+
+MAX_OF_TUPLE = """
+(Object[])Arrays.asList(new Object[]{{{expr1}}, {{expr2}}}).stream().{{op}}("""+COMPARE_TUPLE+""").get()
+"""
 
 
 def is_aggsop(es, query):
@@ -61,7 +106,7 @@ def get_decoders_by_depth(query):
             edge = edge.copy()
             vars_ = edge.value.vars()
             for v in vars_:
-                if not schema.leaves(v, meta=True):
+                if not schema.leaves(v.var, meta=True):
                     Log.error("{{var}} does not exist in schema", var=v)
         elif edge.range:
             vars_ = edge.range.min.vars() | edge.range.max.vars()
@@ -79,7 +124,7 @@ def get_decoders_by_depth(query):
 
         try:
             vars_ |= edge.value.vars()
-            depths = set(len(c.nested_path) - 1 for v in vars_ for c in schema.leaves(v))
+            depths = set(len(c.nested_path) - 1 for v in vars_ for c in schema.leaves(v.var))
             if -1 in depths:
                 Log.error(
                     "Do not know of column {{column}}",
@@ -103,10 +148,8 @@ def sort_edges(query, prop):
     ordered_edges = []
     remaining_edges = getattr(query, prop)
     for s in query.sort:
-        if not isinstance(s.value, Variable):
-            Log.error("can only sort by terms")
         for e in remaining_edges:
-            if e.value.var == s.value.var:
+            if e.value == s.value:
                 if isinstance(e.domain, SetDomain):
                     pass  # ALREADY SORTED?
                 else:
@@ -114,6 +157,9 @@ def sort_edges(query, prop):
                 ordered_edges.append(e)
                 remaining_edges.remove(e)
                 break
+        else:
+            Log.error("Can not sort by {{expr}}, can only sort by an existing edge expression", expr=s.value)
+
     ordered_edges.extend(remaining_edges)
     return ordered_edges
 
@@ -243,8 +289,34 @@ def es_aggsop(es, frum, query):
             if s.aggregate == "count":
                 # TUPLES ALWAYS EXIST, SO COUNTING THEM IS EASY
                 s.pull = "doc_count"
+            elif s.aggregate in ('max', 'maximum', 'min', 'minimum'):
+                if s.aggregate in ('max', 'maximum'):
+                    dir = 1
+                    op = "max"
+                else:
+                    dir = -1
+                    op = 'min'
+
+                nully = TupleOp("tuple", [NULL]*len(s.value.terms)).partial_eval().to_painless(schema).expr
+                selfy = s.value.partial_eval().to_painless(schema).expr
+
+                script = {"scripted_metric": {
+                    'init_script': 'params._agg.best = ' + nully + ';',
+                    'map_script': 'params._agg.best = ' + expand_template(MAX_OF_TUPLE, {"expr1": "params._agg.best", "expr2": selfy, "dir": dir, "op": op}) + ";",
+                    'combine_script': 'return params._agg.best',
+                    'reduce_script': 'return params._aggs.stream().max(' + expand_template(COMPARE_TUPLE, {"dir": dir, "op": op}) + ').get()',
+                }}
+                if schema.query_path[0] == ".":
+                    es_query.aggs[canonical_name] = script
+                    s.pull = jx_expression_to_function(literal_field(canonical_name) + ".value")
+                else:
+                    es_query.aggs[canonical_name] = {
+                        "nested": {"path": schema.query_path[0]},
+                        "aggs": {"_nested": script}
+                    }
+                    s.pull = jx_expression_to_function(literal_field(canonical_name) + "._nested.value")
             else:
-                Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
+               Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
             es_query.aggs[literal_field(canonical_name)].value_count.script = s.value.partial_eval().to_painless(schema).script(schema)
             s.pull = jx_expression_to_function(literal_field(canonical_name) + ".value")
@@ -280,7 +352,7 @@ def es_aggsop(es, frum, query):
             es_query.aggs[median_name].percentiles.percents += [50]
 
             s.pull = get_pull_stats(stats_name, median_name)
-        elif s.aggregate=="union":
+        elif s.aggregate == "union":
             # USE TERMS AGGREGATE TO SIMULATE union
             stats_name = literal_field(canonical_name)
             es_query.aggs[stats_name].terms.script_field = s.value.to_painless(schema).script(schema)

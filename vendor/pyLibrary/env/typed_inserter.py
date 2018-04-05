@@ -18,7 +18,7 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 
 from jx_python.expressions import jx_expression_to_function
-from mo_future import text_type, binary_type
+from mo_future import text_type, binary_type, sort_using_key
 from jx_python.meta import Column
 
 from jx_base import python_type_to_json_type, INTEGER, NUMBER, EXISTS, NESTED, STRING, BOOLEAN, STRUCT, OBJECT
@@ -338,11 +338,11 @@ class TypedInserter(object):
             sep = COMMA
             self._typed_encode(v, sub_schema, path, net_new_properties, _buffer)
             count += 1
-        append(_buffer, ']'+COMMA+QUOTED_EXISTS_TYPE+COLON+ + text_type(count))
+        append(_buffer, ']' + COMMA + QUOTED_EXISTS_TYPE + COLON + text_type(count))
 
     def _dict2json(self, value, sub_schema, path, net_new_properties, _buffer):
         prefix = '{'
-        for k, v in ((kk, value[kk]) for kk in sorted(value.keys())):
+        for k, v in sort_using_key(value.items(), lambda r: r[0]):
             if v == None or v == '':
                 continue
             append(_buffer, prefix)

@@ -114,7 +114,6 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test, tjson=True)
 
-    @skipIf(True, "not implemented yet")
     def test_dots_in_property_names(self):
         test = {
             "data": [

@@ -13,21 +13,22 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from mo_future import text_type, binary_type
-
+from jx_base import STRING, NUMBER, BOOLEAN
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_base.expressions import TupleOp, value2json
+from jx_base.expressions import TupleOp, TrueOp, TRUE
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
-from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, OrOp, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
+from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
 from jx_python import jx
 from mo_dots import set_default, coalesce, literal_field, Data, relative_field, unwraplist
 from mo_dots import wrap
+from mo_future import text_type
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_logs.strings import quote, expand_template
 from mo_math import MAX, MIN
 from mo_math import Math
+from pyLibrary.convert import string2boolean
 
 
 class AggsDecoder(object):
@@ -144,6 +145,7 @@ class SetDecoder(AggsDecoder):
         AggsDecoder.__init__(self, edge, query, limit)
         domain = self.domain = edge.domain
         self.sorted = None
+        self.pull = pull_functions[STRING]
 
         # WE ASSUME IF THE VARIABLES MATCH, THEN THE SORT TERM AND EDGE TERM MATCH, AND WE SORT BY TERM
         # self.sorted = {1: "asc", -1: "desc", None: None}[getattr(edge.domain, 'sort', None)]
@@ -213,7 +215,7 @@ class SetDecoder(AggsDecoder):
         return self.domain.getKeyByIndex(index)
 
     def get_value_from_row(self, row):
-        return row[self.start].get('key')
+        return self.pull(row[self.start].get('key'))
 
     def get_index(self, row):
         try:
@@ -319,8 +321,8 @@ class GeneralRangeDecoder(AggsDecoder):
         aggs = {}
         for i, p in enumerate(domain.partitions):
             filter_ = AndOp("and", [
-                InequalityOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
-                InequalityOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
+                InequalityOp("lte", [range.min, self.to_float(p.min)]),
+                InequalityOp("gt", [range.max, self.to_float(p.min)])
             ])
             aggs["_join_" + text_type(i)] = set_default(
                 {"filter": filter_.to_esfilter(self.schema)},
@@ -464,7 +466,7 @@ class MultivalueDecoder(SetDecoder):
         self.start = start
 
         es_field = self.query.frum.schema.leaves(self.var)[0].es_column
-        es_query =  wrap({"aggs": {
+        es_query = wrap({"aggs": {
             "_match": set_default({"terms": {
                 "script":  expand_template(LIST_TO_PIPE, {"expr": 'doc[' + quote(es_field) + '].values'})
             }}, es_query)
@@ -580,73 +582,73 @@ class DefaultDecoder(SetDecoder):
         self.parts = list()
         self.key2index = {}
         self.computed_domain = False
+        self.script = self.edge.value.partial_eval().to_painless(self.schema)
+        self.pull = pull_functions[self.script.data_type]
+        self.missing = self.script.miss.partial_eval()
+        self.exists = NotOp("not", self.missing).partial_eval()
 
-        # WE ASSUME IF THE VARIABLES MATCH, THEN THE SORT TERM AND EDGE TERM MATCH, AND WE SORT BY TERM
-        self.sorted = None
-        edge_var = edge.value.vars()
-        for s in query.sort:
-            if not edge_var - s.value.vars():
-                self.sorted = {1: "asc", -1: "desc"}[s.sort]
+        # WHEN SORT VALUE AND EDGE VALUE MATCHES, WE SORT BY TERM
+        sort_candidates = [s for s in self.query.sort if s.value == self.edge.value]
+        if sort_candidates:
+            self.es_order = {"_term": {1: "asc", -1: "desc"}[sort_candidates[0].sort]}
+        else:
+            self.es_order = None
 
     def append_query(self, es_query, start):
         self.start = start
 
-        value = self.edge.value.partial_eval()
-        script = value.to_painless(self.schema)
-        exists = NotOp("not", script.miss).partial_eval()
         if not isinstance(self.edge.value, Variable):
-
-            output = wrap({"aggs": {
-                "_match": {
-                    "filter": exists.to_esfilter(self.schema),
-                    "aggs": {
-                        "_filter": set_default(
-                            {"terms": {
-                                "script": {
-                                    "lang": "painless",
-                                    "inline": script.expr
-                                },
-                                "size": self.domain.limit,
-                                "order": {"_term": self.sorted} if self.sorted else None
-                            }},
-                            es_query
-                        )
-                    }
-                },
-                "_missing": set_default(
-                    {"filter": NotOp("not", exists).to_esfilter(self.schema)},
-                    es_query
-                )
-            }})
-            return output
-        elif self.edge.value.var in [s.value.var for s in self.query.sort]:
-            sort_dir = [s.sort for s in self.query.sort if s.value.var == self.edge.value.var][0]
-            output = wrap({"aggs": {
-                "_match": set_default(
-                    {"terms": {
-                        "field": self.schema.leaves(self.edge.value.var)[0].es_column,
-                        "size": self.domain.limit,
-                        "order": {"_term": "asc" if sort_dir == 1 else "desc"}
-                    }},
-                    es_query
-                ),
-                "_missing": set_default(
-                    {"filter": NotOp("not", exists).to_esfilter(self.schema)},
-                    es_query
-                )
-            }})
+            if self.exists is TRUE:
+                # IF True THEN WE DO NOT NEED THE _filter OR THE _missing (THIS RARELY HAPPENS THOUGH)
+                output = wrap({"aggs": {
+                    "_match": set_default(
+                        {"terms": {
+                            "script": {
+                                "lang": "painless",
+                                "inline": self.script.expr
+                            },
+                            "size": self.domain.limit,
+                            "order": self.es_order
+                        }},
+                        es_query
+                    )
+                }})
+            else:
+                output = wrap({"aggs": {
+                    "_match": {  # _match AND _filter REVERSED SO _match LINES UP WITH _missing
+                        "filter": self.exists.to_esfilter(self.schema),
+                        "aggs": {
+                            "_filter": set_default(
+                                {"terms": {
+                                    "script": {
+                                        "lang": "painless",
+                                        "inline": self.script.expr
+                                    },
+                                    "size": self.domain.limit,
+                                    "order": self.es_order
+                                }},
+                                es_query
+                            )
+                        }
+                    },
+                    "_missing": set_default(
+                        {"filter": self.missing.to_esfilter(self.schema)},
+                        es_query
+                    )
+                }})
             return output
         else:
             output = wrap({"aggs": {
                 "_match": set_default(
                     {"terms": {
                         "field": self.schema.leaves(self.edge.value.var)[0].es_column,
-                        "size": self.domain.limit
+                        "size": self.domain.limit,
+                        "order": self.es_order
                     }},
                     es_query
                 ),
                 "_missing": set_default(
-                    {"filter": NotOp("not", exists).to_esfilter(self.schema)},
+                    {"filter": self.missing.to_esfilter(self.schema)},
                     es_query
                 )
             }})
@@ -656,7 +658,7 @@ class DefaultDecoder(SetDecoder):
         part = row[self.start]
         if part['doc_count']:
             if part.get('key') != None:
-                self.parts.append(part.get('key'))
+                self.parts.append(self.pull(part.get('key')))
             else:
                 self.edge.allowNulls = True  # OK! WE WILL ALLOW NULLS
 
@@ -671,19 +673,19 @@ class DefaultDecoder(SetDecoder):
         if self.computed_domain:
             try:
                 part = row[self.start]
-                return self.domain.getIndexByKey(part.get('key'))
+                return self.domain.getIndexByKey(self.pull(part.get('key')))
             except Exception as e:
                 Log.error("problem", cause=e)
         else:
             try:
                 part = row[self.start]
-                key = part.get('key')
+                key = self.pull(part.get('key'))
                 i = self.key2index.get(key)
                 if i is None:
                     i = len(self.parts)
                     part = {"key": key, "dataIndex": i}
-                    self.parts.append({"key": key, "dataIndex": i})
-                    self.key2index[i] = part
+                    self.parts.append(part)
+                    self.key2index[key] = i
                 return i
             except Exception as e:
                 Log.error("problem", cause=e)
@@ -755,3 +757,8 @@ class DimFieldListDecoder(SetDecoder):
         return len(self.fields)
 
 
+pull_functions = {
+    STRING: lambda x: x,
+    NUMBER: lambda x: float(x) if x !=None else None,
+    BOOLEAN: string2boolean
+}

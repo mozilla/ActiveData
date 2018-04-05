@@ -71,7 +71,7 @@ class Date(object):
 
     def format(self, format="%Y-%m-%d %H:%M:%S"):
         try:
-            return unix2datetime(self.unix).strftime(format)
+            return text_type(unix2datetime(self.unix).strftime(format))
         except Exception as e:
             from mo_logs import Log
 
@@ -164,7 +164,7 @@ class Date(object):
         return self.unix < other.unix
 
     def __eq__(self, other):
-        if other == None:
+        if other == None or other == '':
             return Null
 
         try:

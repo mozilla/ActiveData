@@ -773,9 +773,11 @@ def _normalize_sort(sort=None):
             output.append({"value": s, "sort": 1})
         elif Math.is_integer(s):
             output.append({"value": OffsetOp("offset", s), "sort": 1})
-        elif all(d in sort_direction for d in s.values()) and not s.sort and not s.value:
+        elif not s.sort and not s.value and all(d in sort_direction for d in s.values()):
             for v, d in s.items():
                 output.append({"value": jx_expression(v), "sort": sort_direction[d]})
+        elif not s.sort and not s.value:
+            Log.error("`sort` clause must have a `value` property")
         else:
             output.append({"value": jx_expression(coalesce(s.value, s.field)), "sort": coalesce(sort_direction[s.sort], 1)})
     return output

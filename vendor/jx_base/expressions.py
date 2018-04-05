@@ -419,12 +419,13 @@ class ScriptOp(Expression):
     ONLY FOR WHEN YOU TRUST THE SCRIPT SOURCE
     """
 
-    def __init__(self, op, script):
+    def __init__(self, op, script, data_type=OBJECT):
         Expression.__init__(self, op, None)
         if not isinstance(script, text_type):
             Log.error("expecting text of a script")
         self.simplified = True
-        self.script = script
+        self.script = script,
+        self.data_type=data_type
 
     @classmethod
     def define(cls, expr):
@@ -553,6 +554,7 @@ class Literal(Expression):
     def partial_eval(self):
         return self
 ZERO = Literal("literal", 0)
+ONE = Literal("literal", 1)
 
 
 class NullOp(Literal):
@@ -721,7 +723,10 @@ class DateOp(Literal):
     def __init__(self, op, term):
         if hasattr(self, "date"):
             return
-        self.date = term = coalesce(term.literal, term)
+        if isinstance(term, text_type):
+            self.date = term
+        else:
+            self.date = coalesce(term.literal, term)
         v = unicode2Date(self.date)
         if isinstance(v, Date):
             Literal.__init__(self, op, v.unix)
@@ -928,7 +933,11 @@ class FloorOp(Expression):
 
     def __init__(self, op, terms, default=NULL):
         Expression.__init__(self, op, terms)
-        self.lhs, self.rhs = terms
+        if len(terms) == 1:
+            self.lhs = terms[0]
+            self.rhs = ONE
+        else:
+            self.lhs, self.rhs = terms
         self.default = default
 
     def __data__(self):

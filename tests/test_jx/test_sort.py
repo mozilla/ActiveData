@@ -244,15 +244,15 @@ class TestSorting(BaseTestCase):
                 "from": TEST_TABLE,
                 "groupby": {
                     "name": "date",
-                    "value": {"floor": {"div": ["a", 86400]}}
+                    "value": {"floor": [{"div": ["a", 86400]}]}
                 },
-                "sort": {"floor": {"div": ["a", 86400]}}
+                "sort": {"value": {"floor": [{"div": ["a", 86400]}]}}
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"date": "a", "count": 5},
-                    {"date": "c", "count": 4},
+                    {"date": 17622, "count": 4},
+                    {"date": 17623, "count": 5},
                     {"count": 1}
                 ]
             },
@@ -260,19 +260,19 @@ class TestSorting(BaseTestCase):
                 "meta": {"format": "table"},
                 "header": ["date", "count"],
                 "data": [
-                    ["", 5],
-                    ["c", 4],
+                    [17622, 4],
+                    [17623, 5],
                     [NULL, 1]
                 ]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "edges": [{"name": "date", "domain": {"type": "set", "partitions": [
-                    {"value": "a"},
-                    {"value": "c"}
+                    {"value": 17622},
+                    {"value": 17623}
                 ]}}],
                 "data": {
-                    "count": [5, 4, 1]
+                    "count": [4, 5, 1]
                 }
             }
         }

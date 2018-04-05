@@ -111,6 +111,7 @@ KNOWN_SQL_AGGREGATES = {"sum", "count", "avg", "median", "percentile"}
 
 def parse_sql(sql):
     query = wrap(moz_sql_parser.parse(sql))
+    redundant_select = []
     # PULL OUT THE AGGREGATES
     for s in listwrap(query.select):
         val = s if s == '*' else s.value
@@ -135,10 +136,17 @@ def parse_sql(sql):
             try:
                 assertAlmostEqual(g.value, val, "")
                 g.name = s.name
-                s.value = None  # MARK FOR REMOVAL
+                redundant_select.append(s)
                 break
             except Exception:
                 pass
+
+    # REMOVE THE REDUNDANT select
+    if isinstance(query.select, list):
+        for r in redundant_select:
+            query.select.remove(r)
+    elif query.select and redundant_select:
+        query.select = None
 
     # RENAME orderby TO sort
     query.sort, query.orderby = query.orderby, None

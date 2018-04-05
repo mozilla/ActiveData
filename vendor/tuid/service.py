@@ -8,19 +8,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import os
-import subprocess
-
-import whatthepatch
-
 from mo_dots import Null, coalesce
-from mo_files import File
 from mo_future import text_type
 from mo_hg.hg_mozilla_org import HgMozillaOrg
 from mo_kwargs import override
-from mo_logs import Log, Except
+from mo_logs import Log
 from pyLibrary.env import http
-from pyLibrary.sql import sql_list, sql_iso
 from pyLibrary.sql.sqlite import quote_value
 from tuid import sql
 

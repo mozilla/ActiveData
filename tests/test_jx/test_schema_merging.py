@@ -114,7 +114,6 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test, tjson=True)
 
-    @skipIf(global_settings.is_travis, "not expected to pass yet")
     def test_dots_in_property_names(self):
         test = {
             "data": [
@@ -155,7 +154,6 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.is_travis, "not expected to pass yet")
     def test_dots_in_property_names2(self):
         test = {
             "data": [

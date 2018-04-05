@@ -83,7 +83,7 @@ class TestMetadata(BaseTestCase):
         }
         self.utils.send_queries(test)
 
-    @skipIf(global_settings.elasticsearch, "not implemented yet")
+    @skipIf(True, "not implemented yet")
     def test_get_nested_columns(self):
         settings = self.utils.fill_container({
             "query": {"from": TEST_TABLE},  # DUMMY QUERY

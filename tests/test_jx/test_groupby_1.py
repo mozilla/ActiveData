@@ -361,7 +361,7 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.elasticsearch.version.startswith("5."), "Not supported by es5")
+    @skipIf(True.version.startswith("5."), "Not supported by es5")
     def test_groupby_left_id(self):
         test = {
             "data": [set_default(d, {"_id": "aa" + text_type(i)}) for i, d in enumerate(simple_test_data)],
@@ -379,7 +379,7 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.elasticsearch, "not implemented yet")
+    @skipIf(True, "not implemented yet")
     def test_groupby_multivalue_nested(self):
         test = {
             "data": [

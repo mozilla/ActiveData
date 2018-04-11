@@ -21,7 +21,7 @@ from copy import copy
 from datetime import datetime, timedelta
 from time import sleep
 
-from mo_future import get_ident, start_new_thread, interrupt_main
+from mo_future import get_ident, start_new_thread, interrupt_main, get_function_name
 
 from mo_dots import Data, unwraplist, Null
 from mo_logs import Log, Except
@@ -293,7 +293,9 @@ class Thread(object):
     @staticmethod
     def run(name, target, *args, **kwargs):
         # ENSURE target HAS please_stop ARGUMENT
-        if "please_stop" not in target.__code__.co_varnames:
+        if get_function_name(target) == 'wrapper':
+            pass  # GIVE THE override DECORATOR A PASS
+        elif "please_stop" not in target.__code__.co_varnames:
             Log.error("function must have please_stop argument for signalling emergency shutdown")
 
         Thread.num_threads += 1

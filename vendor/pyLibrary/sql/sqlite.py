@@ -48,7 +48,7 @@ def _upgrade():
     global sqlite3
 
     try:
-        Log.note("sqlite not upgraded ")
+        Log.note("sqlite not upgraded")
         # return
         # 
         # import sys
@@ -64,7 +64,7 @@ def _upgrade():
         #         original_dll.backup()
         #         File.copy(source_dll, original_dll)
         # else:
-        #     pass
+        #     pass    
     except Exception as e:
         Log.warning("could not upgrade python's sqlite", cause=e)
 
@@ -96,6 +96,8 @@ class Sqlite(DB):
         self.get_trace = TRACE
         self.upgrade = upgrade
         self.closed = False
+        Log.note("Sqlite version {{version}}", version=self.query("select sqlite_version()").data[0][0])
+
 
     def _enhancements(self):
         def regex(pattern, value):

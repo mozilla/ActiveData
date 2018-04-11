@@ -35,8 +35,8 @@ class TuidClient(object):
         self.push_queue = aws.Queue(push_queue) if push_queue else None
         self.config = kwargs
 
-        if DEBUG:
-            File(db_filename).delete()
+        #if DEBUG:
+        #    File(db_filename).delete()
         self.db = Sqlite(filename=db_filename)
 
         if not self.db.query("SELECT name FROM sqlite_master WHERE type='table';").data:
@@ -66,18 +66,7 @@ class TuidClient(object):
 
             with Timer("markup sources for {{num}} files", {"num": len(filenames)}):
                 # WHAT DO WE HAVE
-                response = self.db.query(
-                    "SELECT file, tuids FROM tuid WHERE revision=" + quote_value(revision) +
-                    " AND file in " + sql_iso(sql_list(map(quote_value, filenames)))
-                )
-                found = {file: json2value(tuids) for file, tuids in response.data}
-
-                remaining = set(filenames) - set(found.keys())
-                if remaining:
-                    more = self._get_tuid_from_endpoint(revision, remaining)
-                    if more == None:
-                        return
-                    found.update(more)
+                found = self._get_tuid_from_endpoint(revision, filenames)
 
                 for source in sources:
                     line_to_tuid = found[source.file.name]
@@ -103,11 +92,6 @@ class TuidClient(object):
         :return: A LIST OF TUIDS
         """
         revision = revision[:12]
-        # TRY THE DATABASE
-        response = self.db.query("SELECT tuids FROM tuid WHERe revision=" + quote_value(revision) + " AND file=" + quote_value(file))
-        if response.data:
-            return json2value(response.data[0][0])
-
         service_response = wrap(self._get_tuid_from_endpoint(revision, [file]))
         for f, t in service_response.items():
             return t
@@ -127,39 +111,51 @@ class TuidClient(object):
             silent=not self.enabled
         ):
             try:
-                request = wrap({
-                    "from": "files",
-                    "where": {"and": [
-                        {"eq": {"revision": revision}},
-                        {"in": {"path": files}}
-                    ]},
-                    "meta": {
-                        "format": "list",
-                        "request_time": Date.now()
-                    }
-                })
-                if self.push_queue is not None:
-                    Log.note("record tuid request to SQS: {{timestamp}}", timestamp=request.meta.request_time)
-                    self.push_queue.add(request)
+                proced_filenames = [file.lstrip('/') for file in files]
 
-                if not self.enabled:
-                    return None
-
-                response = http.post_json(
-                    self.endpoint,
-                    json=request,
-                    timeout=self.timeout
+                response = self.db.query(
+                    "SELECT file, tuids FROM tuid WHERE revision=" + quote_value(revision) +
+                    " AND file in " + sql_iso(sql_list(map(quote_value, proced_filenames)))
                 )
+                found = {file: json2value(tuids) for file, tuids in response.data}
 
-                self.db.execute(
-                    "INSERT INTO tuid (revision, file, tuids) VALUES " + sql_list(
-                        sql_iso(sql_list(map(quote_value, (revision, r.path, value2json(r.tuids)))))
-                        for r in response.data
+                remaining = set(proced_filenames) - set(found.keys())
+                new_response = None
+                if remaining:
+                    request = wrap({
+                        "from": "files",
+                        "where": {"and": [
+                            {"eq": {"revision": revision}},
+                            {"in": {"path": remaining}}
+                        ]},
+                        "meta": {
+                            "format": "list",
+                            "request_time": Date.now()
+                        }
+                    })
+                    if self.push_queue is not None:
+                        Log.note("record tuid request to SQS: {{timestamp}}", timestamp=request.meta.request_time)
+                        self.push_queue.add(request)
+
+                    if not self.enabled:
+                        return None
+
+                    new_response = http.post_json(
+                        self.endpoint,
+                        json=request,
+                        timeout=self.timeout
                     )
-                )
-                self.db.commit()
 
-                return {r.path: r.tuids for r in response.data}
+                    self.db.execute(
+                        "INSERT INTO tuid (revision, file, tuids) VALUES " + sql_list(
+                            sql_iso(sql_list(map(quote_value, (revision, r.path, value2json(r.tuids)))))
+                            for r in new_response.data
+                        )
+                    )
+                    self.db.commit()
+
+                found.update({r.path: r.tuids for r in new_response.data} if new_response else {})
+                return found
 
             except Exception as e:
                 if self.enabled:

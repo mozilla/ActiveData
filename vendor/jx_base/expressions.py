@@ -505,15 +505,8 @@ class Literal(Expression):
         elif self.term == None:
             return False
 
-        Log.warning("expensive")
-
-        from mo_testing.fuzzytestcase import assertAlmostEqual
-
-        try:
-            assertAlmostEqual(self.term, other)
-            return True
-        except Exception:
-            return False
+        if isinstance(other, Literal):
+            return (self.term == other.term) or (self.json == other.json)
 
     def __data__(self):
         return {"literal": self.value}

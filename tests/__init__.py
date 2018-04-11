@@ -66,9 +66,8 @@ class ESUtils(object):
     @override
     def __init__(
         self,
-        service_url,  # location of the ActiveData server we are testing
+        testing,  # location of the ActiveData server endpoints we are testing
         backend_es,  # the ElasticSearch settings for filling the backend
-        sql_url=None,  # location of the SQL service
         fast_testing=False,
         kwargs=None
     ):
@@ -77,8 +76,7 @@ class ESUtils(object):
 
         letters = text_type(ascii_lowercase)
         self.random_letter = letters[int(Date.now().unix / 30) % 26]
-        self.service_url = service_url
-        self.sql_url = sql_url
+        self.testing = testing
         self.backend_es = backend_es
         self.settings = kwargs
         self._es_test_settings = None
@@ -214,7 +212,7 @@ class ESUtils(object):
                 subtest.query.meta.testing = True  # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
                 query = unicode2utf8(value2json(subtest.query))
                 # EXECUTE QUERY
-                response = self.try_till_response(self.service_url, data=query)
+                response = self.try_till_response(self.testing.query, data=query)
 
                 if response.status_code != 200:
                     error(response)
@@ -239,7 +237,7 @@ class ESUtils(object):
         try:
             query = unicode2utf8(value2json(query))
             # EXECUTE QUERY
-            response = self.try_till_response(self.service_url, data=query)
+            response = self.try_till_response(self.testing.query, data=query)
 
             if response.status_code != 200:
                 error(response)

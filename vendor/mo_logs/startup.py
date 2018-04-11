@@ -69,7 +69,7 @@ def read_settings(filename=None, defs=None, env_filename=None):
     if filename:
         settings_file = File(filename)
         if not settings_file.exists:
-            Log.error("Can not file settings file {{filename}}", {
+            Log.error("Can not read configuration file {{filename}}", {
                 "filename": settings_file.abspath
             })
         settings = mo_json_config.get("file:///" + settings_file.abspath)

@@ -123,15 +123,15 @@ class TestSQL(BaseTestCase):
         self.utils.send_queries(test)
 
     def _run_sql_query(self, sql):
-        if not self.utils.sql_url:
-            Log.error("This test requires a `sql_url` parameter in the settings file")
+        if not self.utils.testing.sql:
+            Log.error("This test requires a `testing.sql` parameter in the config file")
 
         test = Data(data=simple_test_data)
         self.utils.fill_container(test)
         sql = sql.replace(TEST_TABLE, test.query['from'])
 
-        url = URL(self.utils.sql_url)
+        url = URL(self.utils.testing.sql)
         response = self.utils.post_till_response(str(url), json={"meta": {"testing": True}, "sql": sql})
         self.assertEqual(response.status_code, 200)
-        return json2value(utf82unicode(response.all_content))
+        return json2value(utf82unicode(response.content))
 

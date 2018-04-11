@@ -41,7 +41,7 @@ GET_LATEST_MODIFICATION = "SELECT revision FROM latestFileMod WHERE file=?"
 class TUIDService:
 
     @override
-    def __init__(self, database, hg, hg_cache, conn=None, kwargs=None):
+    def __init__(self, database, hg, hg_cache=None, conn=None, kwargs=None):
         try:
             self.config = kwargs
 
@@ -178,7 +178,7 @@ class TUIDService:
         :param cset: revision to get diff from
         :return: unified diff object from diff_to_moves
         """
-        url = 'https://hg.mozilla.org/' + self.config['hg']['branch'] + '/raw-rev/' + cset
+        url = 'https://hg.mozilla.org/' + self.config.hg.branch + '/raw-rev/' + cset
         if DEBUG:
             Log.note("HG: {{url}}", url=url)
 
@@ -202,7 +202,7 @@ class TUIDService:
         :return: list of (file, list(tuids)) tuples
         """
         result = []
-        URL_TO_FILES = 'https://hg.mozilla.org/' + self.config['hg']['branch'] + '/json-info/' + revision
+        URL_TO_FILES = 'https://hg.mozilla.org/' + self.config.hg.branch + '/json-info/' + revision
         try:
             mozobject = http.get_json(url=URL_TO_FILES, retry=RETRY)
         except Exception as e:
@@ -415,10 +415,10 @@ class TUIDService:
 
         tmp = [cset for cset in latest_csets]
         Log.note("Searching for frontier(s): {{frontier}} ", frontier=str(tmp))
-        Log.note("HG URL: {{url}}", url='https://hg.mozilla.org/' + self.config['hg']['branch'] + '/rev/' + tmp[0])
+        Log.note("HG URL: {{url}}", url='https://hg.mozilla.org/' + self.config.hg.branch + '/rev/' + tmp[0])
         while not found_last_frontier:
             # Get a changelog
-            clog_url = 'https://hg.mozilla.org/' + self.config['hg']['branch'] + '/json-log/' + final_rev
+            clog_url = 'https://hg.mozilla.org/' + self.config.hg.branch + '/json-log/' + final_rev
             try:
                 Log.note("Searching through changelog {{url}}", url=clog_url)
                 clog_obj = http.get_json(clog_url, retry=RETRY)
@@ -651,7 +651,7 @@ class TUIDService:
         # Get annotated file (cannot get around using this).
         # Unfortunately, this also means we always have to
         # deal with a small network delay.
-        url = 'https://hg.mozilla.org/' + self.config['hg']['branch'] + '/json-annotate/' + revision + "/" + file
+        url = 'https://hg.mozilla.org/' + self.config.hg.branch + '/json-annotate/' + revision + "/" + file
 
         existing_tuids = {}
         tmp_tuids = []
@@ -779,10 +779,10 @@ class TUIDService:
                 final_rev = ''
                 found_last_frontier = False
                 Log.note("Searching for frontier: {{frontier}} ", frontier=frontier)
-                Log.note("HG URL: {{url}}", url='https://hg.mozilla.org/' + self.config['hg']['branch'] + '/rev/' + frontier)
+                Log.note("HG URL: {{url}}", url='https://hg.mozilla.org/' + self.config.hg.branch + '/rev/' + frontier)
                 while not found_last_frontier:
                     # Get a changelog
-                    clog_url = 'https://hg.mozilla.org/' + self.config['hg']['branch'] + '/json-log/' + final_rev
+                    clog_url = 'https://hg.mozilla.org/' + self.config.hg.branch + '/json-log/' + final_rev
                     try:
                         Log.note("Searching through changelog {{url}}", url=clog_url)
                         clog_obj = http.get_json(clog_url, retry=RETRY)
@@ -817,7 +817,7 @@ class TUIDService:
                         "where": {"and": [
                             {"in": {"build.type": ["ccov", "jsdcov"]}},
                             {"gte": {"run.timestamp": {"date": "today-day"}}},
-                            {"eq": {"repo.branch.name": self.config['hg']['branch']}}
+                            {"eq": {"repo.branch.name": self.config.hg.branch}}
                         ]},
                         "select": [
                             {"aggregate": "min", "value": "run.timestamp"},

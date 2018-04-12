@@ -204,8 +204,8 @@ class Sqlite(DB):
             if Sqlite.canonical:
                 self.db = Sqlite.canonical
             else:
-                self.db = sqlite3.connect(coalesce(self.filename, ':memory:'), check_same_thread = False)
-                if self.config.load_functions:
+                self.db = sqlite3.connect(coalesce(self.filename, ':memory:'), check_same_thread=False)
+                if self.settings.load_functions:
                     self._load_functions()
 
             while not please_stop:

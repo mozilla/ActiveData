@@ -359,6 +359,12 @@ class Thread(object):
 
 def _stop_main_thread(*args):
     try:
+        if len(args):
+            Log.note("exit with {{value}}", value=args[0])
+    except Exception as e:
+        pass
+
+    try:
         MAIN_THREAD.stop()
     except Exception as e:
         e = Except.wrap(e)

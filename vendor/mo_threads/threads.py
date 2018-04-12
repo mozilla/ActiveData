@@ -362,7 +362,7 @@ class Thread(object):
                 return MAIN_THREAD
 
 
-def _stop_main_thread():
+def _stop_main_thread(*args):
     try:
         MAIN_THREAD.stop()
     except Exception as e:

@@ -17,6 +17,8 @@ import re
 import sys
 from collections import Mapping
 
+from mo_kwargs import override
+
 from mo_future import allocate_lock as _allocate_lock, text_type, zip_longest
 from mo_dots import Data, coalesce
 from mo_files import File
@@ -50,7 +52,7 @@ def _upgrade():
     try:
         Log.note("sqlite not upgraded")
         # return
-        # 
+        #
         # import sys
         # import platform
         # if "windows" in platform.system().lower():
@@ -59,12 +61,12 @@ def _upgrade():
         #         source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_32.dll")
         #     else:
         #         source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_64.dll")
-        # 
+        #
         #     if not all(a == b for a, b in zip_longest(source_dll.read_bytes(), original_dll.read_bytes())):
         #         original_dll.backup()
         #         File.copy(source_dll, original_dll)
         # else:
-        #     pass    
+        #     pass
     except Exception as e:
         Log.warning("could not upgrade python's sqlite", cause=e)
 
@@ -81,7 +83,8 @@ class Sqlite(DB):
 
     canonical = None
 
-    def __init__(self, filename=None, db=None, upgrade=True):
+    @override
+    def __init__(self, filename=None, db=None, upgrade=True, load_functions=True, kwargs=None):
         """
         :param db:  Optional, wrap a sqlite db in a thread
         :return: Multithread-safe database
@@ -89,6 +92,7 @@ class Sqlite(DB):
         if upgrade and not _upgraded:
             _upgrade()
 
+        self.settings = kwargs
         self.filename = File(filename).abspath
         self.db = db
         self.queue = Queue("sql commands")   # HOLD (command, result, signal) PAIRS
@@ -97,7 +101,6 @@ class Sqlite(DB):
         self.upgrade = upgrade
         self.closed = False
         Log.note("Sqlite version {{version}}", version=self.query("select sqlite_version()").data[0][0])
-
 
     def _enhancements(self):
         def regex(pattern, value):
@@ -202,24 +205,8 @@ class Sqlite(DB):
                 self.db = Sqlite.canonical
             else:
                 self.db = sqlite3.connect(coalesce(self.filename, ':memory:'), check_same_thread = False)
-
-                library_loc = File.new_instance(sys.modules[__name__].__file__, "../..")
-                full_path = File.new_instance(library_loc, "vendor/sqlite/libsqlitefunctions.so").abspath
-                try:
-                    trace = extract_stack(0)[0]
-                    if self.upgrade:
-                        if os.name == 'nt':
-                            file = File.new_instance(trace["file"], "../../vendor/sqlite/libsqlitefunctions.so")
-                        else:
-                            file = File.new_instance(trace["file"], "../../vendor/sqlite/libsqlitefunctions")
-
-                        full_path = file.abspath
-                        self.db.enable_load_extension(True)
-                        self.db.execute(SQL_SELECT + "load_extension" + sql_iso(self.quote_value(full_path)))
-                except Exception as e:
-                    if not _load_extension_warning_sent:
-                        _load_extension_warning_sent = True
-                        Log.warning("Could not load {{file}}}, doing without. (no SQRT for you!)", file=full_path, cause=e)
+                if self.config.load_functions:
+                    self._load_functions()
 
             while not please_stop:
                 quad = self.queue.pop(till=please_stop)
@@ -284,6 +271,26 @@ class Sqlite(DB):
             if DEBUG:
                 Log.note("Database is closed")
             self.db.close()
+
+    def _load_functions(self):
+        global _load_extension_warning_sent
+        library_loc = File.new_instance(sys.modules[__name__].__file__, "../..")
+        full_path = File.new_instance(library_loc, "vendor/sqlite/libsqlitefunctions.so").abspath
+        try:
+            trace = extract_stack(0)[0]
+            if self.upgrade:
+                if os.name == 'nt':
+                    file = File.new_instance(trace["file"], "../../vendor/sqlite/libsqlitefunctions.so")
+                else:
+                    file = File.new_instance(trace["file"], "../../vendor/sqlite/libsqlitefunctions")
+
+                full_path = file.abspath
+                self.db.enable_load_extension(True)
+                self.db.execute(SQL_SELECT + "load_extension" + sql_iso(self.quote_value(full_path)))
+        except Exception as e:
+            if not _load_extension_warning_sent:
+                _load_extension_warning_sent = True
+                Log.warning("Could not load {{file}}}, doing without. (no SQRT for you!)", file=full_path, cause=e)
 
     def quote_column(self, column_name, table=None):
         return quote_column(column_name, table)

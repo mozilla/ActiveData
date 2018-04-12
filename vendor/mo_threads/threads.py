@@ -20,6 +20,8 @@ from copy import copy
 from datetime import datetime, timedelta
 from time import sleep
 
+import signal
+
 from mo_dots import Data, unwraplist, Null
 from mo_future import get_ident, start_new_thread, interrupt_main, get_function_name
 from mo_logs import Log, Except
@@ -367,8 +369,6 @@ def _stop_main_thread():
     sys.exit(0)
 
 
-
-
 def _wait_for_exit(please_stop):
     """
     /dev/null SPEWS INFINITE LINES, DO NOT POLL AS OFTEN
@@ -421,8 +421,10 @@ def _interrupt_main_safely():
 
 
 MAIN_THREAD = MainThread()
+signal.signal(signal.SIGTERM, _stop_main_thread)
+signal.signal(signal.SIGINT, _stop_main_thread)
+
 
 ALL_LOCK = Lock("threads ALL_LOCK")
-
 ALL = dict()
 ALL[get_ident()] = MAIN_THREAD

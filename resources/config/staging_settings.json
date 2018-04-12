@@ -35,7 +35,8 @@
 	},
 	"tuid": {
 		"database": {
-			"name": "tuid.db"
+			"name": "tuid.db",
+			"load_functions": false
 		},
 		"hg": {
 			"branch": "mozilla-central"

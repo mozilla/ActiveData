@@ -14,16 +14,16 @@ import os
 
 import flask
 from flask import Flask, Response
-from mo_dots import listwrap, coalesce
+from mo_dots import listwrap, coalesce, unwraplist
 from mo_files import File
 from mo_json import value2json, json2value
 from mo_logs import Log
 from mo_logs import constants, startup
 from mo_logs.strings import utf82unicode, unicode2utf8
+from mo_times import Timer
 
 from pyLibrary.env.flask_wrappers import gzip_wrapper, cors_wrapper
-from tuid.service import TUIDService
-
+from tuid.service import TUIDService, TuidMap
 
 OVERVIEW = None
 
@@ -68,14 +68,22 @@ def tuid_endpoint(path):
 
         rev = None
         paths = None
-        for a in query.where['and']:
+        for a in ands:
             rev = coalesce(rev, a.eq.revision)
-            paths = listwrap(coalesce(paths, a['in'].path, a.eq.path))
+            paths = unwraplist(coalesce(paths, a['in'].path, a.eq.path))
 
+        paths = listwrap(paths)
         # RETURN TUIDS
-        response = service.get_tuids_from_files(paths, rev)
+        with Timer("tuid internal response time for {{num}} files", {"num": len(paths)}):
+            response = service.get_tuids_from_files(revision=rev, files=paths)
+
+        if query.meta.format == 'list':
+            formatter = _stream_list
+        else:
+            formatter = _stream_table
+
         return Response(
-            _stream_table(response),
+            formatter(response),
             status=200,
             headers={
                 "Content-Type": "application/json"
@@ -94,9 +102,36 @@ def tuid_endpoint(path):
 
 def _stream_table(files):
     yield b'{"format":"table", "header":["path", "tuids"], "data":['
-    for f in files:
-        yield value2json(f).encode('utf8')
+    for f, pairs in files:
+        yield value2json([f, _map_to_array(pairs)]).encode('utf8')
     yield b']}'
+
+
+def _stream_list(files):
+    sep = b'{"format":"list", "data":['
+    for f, pairs in files:
+        yield sep
+        yield value2json({"path": f, "tuids": _map_to_array(pairs)}).encode('utf8')
+        sep = b","
+    yield b']}'
+
+
+def _map_to_array(pairs):
+    """
+    MAP THE (tuid, line) PAIRS TO A SINGLE ARRAY OF TUIDS
+    :param pairs:
+    :return:
+    """
+    if pairs:
+        pairs = [TuidMap(*p) for p in pairs]
+        max_line = max(p.line for p in pairs)
+        tuids = [None] * max_line
+        for p in pairs:
+            if p.line:  # line==0 IS A PLACEHOLDER FOR FILES THAT DO NOT EXIST
+                tuids[p.line-1] = p.tuid
+        return tuids
+    else:
+        return None
 
 
 @cors_wrapper
@@ -119,8 +154,8 @@ if __name__ in ("__main__",):
     OVERVIEW = File("tuid/public/index.html").read_bytes()
     flask_app = TUIDApp(__name__)
 
-    flask_app.add_url_rule(str('/query'), None, tuid_endpoint, defaults={'path': ''}, methods=[str('GET'), str('POST')])
-    flask_app.add_url_rule(str('/query/'), None, tuid_endpoint, defaults={'path': ''}, methods=[str('GET'), str('POST')])
+    flask_app.add_url_rule(str('/tuid'), None, tuid_endpoint, defaults={'path': ''}, methods=[str('GET'), str('POST')])
+    flask_app.add_url_rule(str('/tuid/'), None, tuid_endpoint, defaults={'path': ''}, methods=[str('GET'), str('POST')])
 
     flask_app.add_url_rule(str('/'), None, _head, defaults={'path': ''}, methods=[str('OPTIONS'), str('HEAD')])
     flask_app.add_url_rule(str('/<path:path>'), None, _head, methods=[str('OPTIONS'), str('HEAD')])

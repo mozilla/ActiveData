@@ -2,8 +2,11 @@
 	"use":"elasticsearch",
 
 	"fastTesting": false,  //IMPORTANT VARIABLE!  true WILL RUN TESTS FASTER, false INCLUDES NETWORK RESPONSE TESTS
-	"service_url": "http://127.0.0.1:5000/query",
-	"sql_url": "http://127.0.0.1:5000/sql",
+	"testing":{
+		"query": "http://127.0.0.1:5000/query",
+		"sql": "http://127.0.0.1:5000/sql",
+		"tuid": "http://127.0.0.1:5000/tuid"
+	},
 	"backend_es": {
 		"index": "testdata",
 		"type": "test_result",

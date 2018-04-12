@@ -97,6 +97,7 @@ def diff_to_json(unified_diff):
 
 def diff_to_moves(unified_diff):
     """
+    TODO: WE SHOULD BE ABLE TO STREAM THE RAW DIFF SO WE HANDLE LARGE ONES
     FOR EACH FILE, RETURN AN ARRAY OF (line, action) PAIRS
     :param unified_diff: raw diff
     :return: (file, line, action) triples

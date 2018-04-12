@@ -74,7 +74,9 @@ def _jx_expression(expr):
     if isinstance(expr, Expression):
         Log.error("Expecting JSON, not expression")
 
-    if expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal, Date)):
+    if expr is None:
+        return TRUE
+    elif expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal, Date)):
         return Literal(None, expr)
     elif isinstance(expr, text_type):
         return Variable(expr)
@@ -503,15 +505,8 @@ class Literal(Expression):
         elif self.term == None:
             return False
 
-        Log.warning("expensive")
-
-        from mo_testing.fuzzytestcase import assertAlmostEqual
-
-        try:
-            assertAlmostEqual(self.term, other)
-            return True
-        except Exception:
-            return False
+        if isinstance(other, Literal):
+            return (self.term == other.term) or (self.json == other.json)
 
     def __data__(self):
         return {"literal": self.value}

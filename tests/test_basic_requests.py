@@ -22,14 +22,14 @@ from tests.test_jx import BaseTestCase, TEST_TABLE
 class TestBasicRequests(BaseTestCase):
 
     def test_empty_request(self):
-        response = self.utils.try_till_response(self.utils.service_url, data=b"")
+        response = self.utils.try_till_response(self.utils.testing.query, data=b"")
         self.assertEqual(response.status_code, 400)
 
     def test_root_request(self):
         if self.utils.not_real_service():
             return
 
-        url = URL(self.utils.service_url)
+        url = URL(self.utils.testing.query)
         url.path = ""
         url = str(url)
         response = self.utils.try_till_response(url, data=b"")
@@ -37,7 +37,7 @@ class TestBasicRequests(BaseTestCase):
         self.assertEqual(response.all_content, OVERVIEW)
 
     def test_bad_file_request(self):
-        url = URL(self.utils.service_url)
+        url = URL(self.utils.testing.query)
         url.path = "/tools/../../README.md"
 
         response = self.utils.try_till_response(str(url), data=b"")
@@ -45,7 +45,7 @@ class TestBasicRequests(BaseTestCase):
         self.assertEqual(response.all_content, "")
 
     def test_query_on_static_file(self):
-        url = URL(self.utils.service_url)
+        url = URL(self.utils.testing.query)
         url.path = "/tools/index.html?123"
 
         response = self.utils.try_till_response(str(url), data=b"")
@@ -63,7 +63,7 @@ class TestBasicRequests(BaseTestCase):
             "query": {"from": ""}  # DUMMY LINE
         })
 
-        url = URL(self.utils.service_url)
+        url = URL(self.utils.testing.query)
         url.path = "json/" + settings.index
         url.query = {"a": 1}
 
@@ -96,7 +96,7 @@ class TestBasicRequests(BaseTestCase):
         container.add({"value": data})
         container.refresh()
 
-        result = http.post_json(url=self.utils.service_url, json={"meta": {"testing": True}, "format": "list", "from": container.settings.index})
+        result = http.post_json(url=self.utils.testing.query, json={"meta": {"testing": True}, "format": "list", "from": container.settings.index})
         self.assertEqual(result.data, [data])
         try:
             self.utils._es_cluster.delete_index(container.settings.index)

@@ -67,7 +67,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
         with Timer("wait for 5 seconds"):
             Till(seconds=5).wait()
 
-        url = URL(self.utils.service_url)
+        url = URL(self.utils.testing.query)
         response = self.utils.try_till_response(url.scheme + "://" + url.host + ":" + text_type(url.port) + "/find/" + expected_hash, data=b'')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, bytes)
@@ -108,7 +108,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
         with Timer("wait for 5 seconds"):
             Till(seconds=5).wait()
 
-        url = URL(self.utils.service_url)
+        url = URL(self.utils.testing.query)
         response = self.utils.try_till_response(url.scheme + "://" + url.host + ":" + text_type(url.port) + "/find/" + expected_hash, data=b'')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, bytes)

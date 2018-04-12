@@ -31,3 +31,4 @@ pyLibrary/.svn
 /*.sqlite
 /temp.md
 /vendor/pyLibrary/vendor/sqlite
+/tuid.db

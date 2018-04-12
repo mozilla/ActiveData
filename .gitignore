@@ -6,7 +6,6 @@ out
 pyLibrary/.svn
 .idea
 *.iml
-*.txt
 /pyLibrary/.svn
 /results
 /docs/Pulse Icon.png

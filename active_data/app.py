@@ -53,6 +53,7 @@ class ActiveDataApp(Flask):
         finally:
             Log.stop()
 
+
 flask_app = ActiveDataApp(__name__)
 
 config = None

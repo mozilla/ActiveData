@@ -700,10 +700,11 @@ class Cluster(object):
             Log.error("Expecting a JSON schema")
 
         for k, m in list(schema.mappings.items()):
+            m.date_detection = False  # DISABLE DATE DETECTION
+
             if tjson:
                 m = schema.mappings[k] = wrap(add_typed_annotations(m))
 
-            m.date_detection = False  # DISABLE DATE DETECTION
             m.dynamic_templates = (
                 DEFAULT_DYNAMIC_TEMPLATES +
                 m.dynamic_templates
@@ -1446,6 +1447,12 @@ DEFAULT_DYNAMIC_TEMPLATES = wrap([
         "default_typed_nested": {
             "mapping": {"type": "nested", "store": True},
             "match": NESTED_TYPE
+        }
+    },
+    {
+        "default_string": {
+            "mapping": {"type": "keyword", "store": True},
+            "match_mapping_type": "string"
         }
     }
 ])

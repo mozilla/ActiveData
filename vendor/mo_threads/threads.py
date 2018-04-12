@@ -20,17 +20,12 @@ from copy import copy
 from datetime import datetime, timedelta
 from time import sleep
 
-import signal
-
 from mo_dots import Data, unwraplist, Null
 from mo_future import get_ident, start_new_thread, interrupt_main, get_function_name
 from mo_logs import Log, Except
-from mo_threads import till
 from mo_threads.lock import Lock
 from mo_threads.profiles import CProfiler
-# from mo_threads.queues import Queue
-from mo_threads.signal import AndSignals
-from mo_threads.signal import Signal
+from mo_threads.signal import AndSignals, Signal
 from mo_threads.till import Till
 
 DEBUG = False
@@ -423,9 +418,6 @@ def _interrupt_main_safely():
 
 
 MAIN_THREAD = MainThread()
-signal.signal(signal.SIGTERM, _stop_main_thread)
-signal.signal(signal.SIGINT, _stop_main_thread)
-
 
 ALL_LOCK = Lock("threads ALL_LOCK")
 ALL = dict()

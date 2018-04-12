@@ -85,6 +85,7 @@ class MainThread(object):
         self.name = "Main Thread"
         self.id = get_ident()
         self.children = []
+        self.logging = None
         self.timers = None
 
     def add_child(self, child):
@@ -125,6 +126,7 @@ class MainThread(object):
         if join_errors:
             Log.error("Problem while stopping {{name|quote}}", name=self.name, cause=unwraplist(join_errors))
 
+        self.logging.stop()
         self.timers.stop()
         self.timers.join()
 

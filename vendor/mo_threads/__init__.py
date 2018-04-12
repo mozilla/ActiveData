@@ -30,8 +30,7 @@ Log.cprofiler_stats = Queue("cprofiler stats")  # ACCUMULATION OF STATS FROM ALL
 
 threads.MAIN_THREAD.timers = Thread.run("timers daemon", till.daemon)
 threads.MAIN_THREAD.children.remove(threads.MAIN_THREAD.timers)
-
-
+threads.MAIN_THREAD.loggging = Log.stop
 
 
 # from threading import Thread as _threading_Thread

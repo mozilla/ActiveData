@@ -1,10 +1,11 @@
 {
+	"use": "elasticsearch",
 	"constants": {
 		"pyLibrary.env.http.default_headers": {
 			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
 		},
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
-		"jx_elasticsearch.meta.ENABLE_META_SCAN": false
+		"jx_elasticsearch.meta.ENABLE_META_SCAN": true
 	},
 	"request_logs": {
 		"host": "http://localhost",
@@ -21,19 +22,57 @@
 		"port": 9200,
 		"index": "saved_queries",
 		"type": "query",
-		"debug": true
+		"debug": false
 	},
-	"use": "elasticsearch",
 	"elasticsearch": {
 		"host": "http://localhost",
 		"port": 9200,
 		"index": "testdata",
 		"type": "test_result",
-		"debug": false
+		"debug": true
+	},
+	"tuid": {
+		"database": {
+			"name": "tuid.db"
+		},
+		"hg": {
+			"branch": "mozilla-central"
+		},
+		"_hg_cache": {
+			"use_cache": true,
+			"hg": {
+				"url": "https://hg.mozilla.org"
+			},
+			"branches": {
+				"host": "http://localhost",
+				"port": 9200,
+				"index": "branches",
+				"type": "branch",
+				"tjson": true,
+				"timeout": 300,
+				"consistency": "one", // WE ONLY NEED ONE SHARD TO BE AVAILABLE
+				"debug": false,
+				"limit_replicas": false
+			},
+			"repo": {
+				"host": "http://localhost",
+				"port": 9200,
+				"index": "repo",
+				"type": "revision",
+				"tjson": true,
+				"timeout": 300,
+				"consistency": "one", // WE ONLY NEED ONE SHARD TO BE AVAILABLE
+				"debug": false,
+				"limit_replicas": false
+			}
+		}
 	},
 	"debug": {
 		"trace": true,
-		"cprofile": false,
+		"cprofile": {
+			"enabled": false,
+			"filename": "./results/profile.tab"
+		},
 		"log": [
 			{
 				"log_type": "console"
@@ -44,6 +83,13 @@
 				"to_address": "klahnakoski@mozilla.com",
 				"subject": "[ALERT][STAGING] Problem in ActiveData Frontend6",
 				"$ref": "file://~/private.json#aws_credentials"
+			},
+			{
+				"log_type": "elasticsearch",
+				"host": "http://localhost",
+				"port": 9200,
+				"index": "debug_active_data",
+				"type": "active_data"
 			},
 			{
 				"class": "logging.handlers.RotatingFileHandler",

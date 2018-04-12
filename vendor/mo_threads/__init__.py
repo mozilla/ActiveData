@@ -22,14 +22,14 @@ from mo_threads.lock import Lock
 from mo_threads.multiprocess import Process
 from mo_threads.queues import Queue, ThreadedQueue
 from mo_threads.signal import Signal
-from mo_threads.threads import Thread, THREAD_STOP, THREAD_TIMEOUT, MainThread, _stop_main_thread
+from mo_threads.threads import Thread, THREAD_STOP, THREAD_TIMEOUT, MainThread, _stop_main_thread, MAIN_THREAD
 from mo_threads.till import Till
 
 Log.cprofiler_stats = Queue("cprofiler stats")  # ACCUMULATION OF STATS FROM ALL THREADS
 
-threads.MAIN_THREAD.timers = Thread.run("timers daemon", till.daemon)
-threads.MAIN_THREAD.children.remove(threads.MAIN_THREAD.timers)
-threads.MAIN_THREAD.loggging = Log.stop
+MAIN_THREAD.timers = Thread.run("timers daemon", till.daemon)
+MAIN_THREAD.children.remove(threads.MAIN_THREAD.timers)
+MAIN_THREAD.stop_logging = Log.stop
 
 
 _signal.signal(_signal.SIGTERM, _stop_main_thread)

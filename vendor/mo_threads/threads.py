@@ -16,19 +16,20 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import sys
-
 from copy import copy
 from datetime import datetime, timedelta
 from time import sleep
 
-from mo_future import get_ident, start_new_thread, interrupt_main, get_function_name
-
 from mo_dots import Data, unwraplist, Null
+from mo_future import get_ident, start_new_thread, interrupt_main, get_function_name
 from mo_logs import Log, Except
-from mo_logs.profiles import CProfiler
-from mo_threads import Till, Lock, Signal, till
-
+from mo_threads import till
+from mo_threads.lock import Lock
+from mo_threads.profiles import CProfiler
+# from mo_threads.queues import Queue
 from mo_threads.signal import AndSignals
+from mo_threads.signal import Signal
+from mo_threads.till import Till
 
 DEBUG = False
 
@@ -418,11 +419,10 @@ def _interrupt_main_safely():
         # WE COULD BE INTERRUPTING SELF
         pass
 
+
 MAIN_THREAD = MainThread()
 
 ALL_LOCK = Lock("threads ALL_LOCK")
+
 ALL = dict()
 ALL[get_ident()] = MAIN_THREAD
-
-MAIN_THREAD.timers = Thread.run("timers daemon", till.daemon)
-MAIN_THREAD.children.remove(MAIN_THREAD.timers)

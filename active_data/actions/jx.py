@@ -20,9 +20,9 @@ from jx_python import jx, wrap_from
 from mo_files import File
 from mo_json import value2json, json2value
 from mo_logs import Log, Except
-from mo_logs.profiles import CProfiler
 from mo_logs.strings import unicode2utf8, utf82unicode
 from mo_math import Math
+from mo_threads.profiles import CProfiler
 from mo_times.timer import Timer
 from pyLibrary.env.flask_wrappers import cors_wrapper
 

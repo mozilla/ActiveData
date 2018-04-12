@@ -53,6 +53,10 @@ class ActiveDataApp(Flask):
         finally:
             Log.stop()
 
+    def __call__(self, environ, start_response):
+        print("called")
+        return Flask.__call__(self, environ, start_response)
+
 
 flask_app = ActiveDataApp(__name__)
 

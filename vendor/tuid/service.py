@@ -45,7 +45,7 @@ class TUIDService:
         try:
             self.config = kwargs
 
-            self.conn = conn if conn else sql.Sql(self.config.database.name)
+            self.conn = conn if conn else sql.Sql(self.config.database)
             self.hg_cache = HgMozillaOrg(hg_cache) if hg_cache else Null
 
             if not self.conn.get_one("SELECT name FROM sqlite_master WHERE type='table';"):

@@ -15,8 +15,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from thread import get_ident
-
 from mo_logs import Log
 from mo_threads.lock import Lock
 from mo_threads.multiprocess import Process
@@ -24,7 +22,6 @@ from mo_threads.queues import Queue, ThreadedQueue
 from mo_threads.signal import Signal
 from mo_threads.threads import Thread, THREAD_STOP, THREAD_TIMEOUT, MainThread
 from mo_threads.till import Till
-
 
 Log.cprofiler_stats = Queue("cprofiler stats")  # ACCUMULATION OF STATS FROM ALL THREADS
 

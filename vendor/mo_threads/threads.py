@@ -360,7 +360,7 @@ class Thread(object):
 def _stop_main_thread(*args):
     try:
         if len(args):
-            Log.note("exit with {{value}}", value=args[0])
+            Log.warning("exit with {{value}}", value=args[0])
     except Exception as e:
         pass
 

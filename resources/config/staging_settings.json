@@ -35,7 +35,7 @@
 	},
 	"tuid": {
 		"database": {
-			"name": "tuid.db",
+			"filename": "tuid.db",
 			"load_functions": false
 		},
 		"hg": {

@@ -308,13 +308,13 @@ class Thread(object):
     def wait_for_shutdown_signal(
         please_stop=False,  # ASSIGN SIGNAL TO STOP EARLY
         allow_exit=False,  # ALLOW "exit" COMMAND ON CONSOLE TO ALSO STOP THE APP
-        wait_forever=True  # IGNORE CHILD THREADS, NEVER EXIT.  False -> IF NO CHILD THREADS LEFT, THEN EXIT
+        wait_forever=True  # IGNORE CHILD THREADS, NEVER EXIT.  False => IF NO CHILD THREADS LEFT, THEN EXIT
     ):
         """
         FOR USE BY PROCESSES NOT EXPECTED TO EVER COMPLETE UNTIL EXTERNAL
         SHUTDOWN IS REQUESTED
 
-        SLEEP UNTIL keyboard interrupt, OR please_stop, OR "exit"
+        CALLING THREAD WILL SLEEP UNTIL keyboard interrupt, OR please_stop, OR "exit"
 
         :param please_stop:
         :param allow_exit:
@@ -324,7 +324,7 @@ class Thread(object):
         if not isinstance(please_stop, Signal):
             please_stop = Signal()
 
-        please_stop.on_go(lambda: start_new_thread(_stop_main_thread, ()))
+        please_stop.on_go(lambda: start_new_thread(stop_main_thread, ()))
 
         self_thread = Thread.current()
         if self_thread != MAIN_THREAD:
@@ -342,8 +342,10 @@ class Thread(object):
                 _wait_for_exit(please_stop)
             else:
                 _wait_for_interrupt(please_stop)
-        except (KeyboardInterrupt, SystemExit) as _:
+        except KeyboardInterrupt as _:
             Log.alert("SIGINT Detected!  Stopping...")
+        except SystemExit as _:
+            Log.alert("SIGTERM Detected!  Stopping...")
         finally:
             please_stop.go()
 
@@ -357,7 +359,7 @@ class Thread(object):
                 return MAIN_THREAD
 
 
-def _stop_main_thread(*args):
+def stop_main_thread(*args):
     try:
         if len(args):
             Log.warning("exit with {{value}}", value=args[0])

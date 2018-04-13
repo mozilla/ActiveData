@@ -1406,16 +1406,28 @@ def add_typed_annotations(meta):
     else:
         output = {}
         for meta_name, meta_value in meta.items():
-            if meta_name=='properties':
-                output[meta_name]={
+            if meta_name == 'properties':
+                output[meta_name] = {
                     prop_name: add_typed_annotations(about) if prop_name not in [BOOLEAN_TYPE, NUMBER_TYPE, STRING_TYPE, BOOLEAN_TYPE] else about
                     for prop_name, about in meta_value.items()
                 }
                 output[meta_name][EXISTS_TYPE] = {"type": "long", "store": True}
             else:
-                output[meta_name]=meta_value
+                output[meta_name] = meta_value
 
         return output
+
+
+def diff_schema(A, B):
+    return _diff_schema(A, B)
+
+
+def _diff_schema(path, A, B):
+    # what to do with conflicts?
+    pass
+
+
+
 
 
 DEFAULT_DYNAMIC_TEMPLATES = wrap([

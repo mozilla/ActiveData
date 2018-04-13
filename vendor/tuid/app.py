@@ -45,7 +45,6 @@ config = None
 service = None
 
 
-@gzip_wrapper
 @cors_wrapper
 def tuid_endpoint(path):
     try:
@@ -162,7 +161,6 @@ if __name__ in ("__main__",):
 
     flask_app.add_url_rule(str('/'), None, _default, defaults={'path': ''}, methods=[str('GET'), str('POST')])
     flask_app.add_url_rule(str('/<path:path>'), None, _default, methods=[str('GET'), str('POST')])
-
 
     try:
         config = startup.read_settings(

@@ -5,7 +5,7 @@
 			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
 		},
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
-		"jx_elasticsearch.meta.ENABLE_META_SCAN": true,
+		"jx_elasticsearch.meta.ENABLE_META_SCAN": false,
 		"jx_elasticsearch.meta.DEBUG": true,
 		"jx_base.expressions.ALLOW_SCRIPTING": false
 	},
@@ -32,43 +32,6 @@
 		"index": "testdata",
 		"type": "test_result",
 		"debug": true
-	},
-	"tuid": {
-		"database": {
-			"filename": "tuid.db",
-			"load_functions": false
-		},
-		"hg": {
-			"branch": "mozilla-central"
-		},
-		"_hg_cache": {
-			"use_cache": true,
-			"hg": {
-				"url": "https://hg.mozilla.org"
-			},
-			"branches": {
-				"host": "http://localhost",
-				"port": 9200,
-				"index": "branches",
-				"type": "branch",
-				"tjson": true,
-				"timeout": 300,
-				"consistency": "one", // WE ONLY NEED ONE SHARD TO BE AVAILABLE
-				"debug": false,
-				"limit_replicas": false
-			},
-			"repo": {
-				"host": "http://localhost",
-				"port": 9200,
-				"index": "repo",
-				"type": "revision",
-				"tjson": true,
-				"timeout": 300,
-				"consistency": "one", // WE ONLY NEED ONE SHARD TO BE AVAILABLE
-				"debug": false,
-				"limit_replicas": false
-			}
-		}
 	},
 	"debug": {
 		"trace": true,

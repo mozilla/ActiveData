@@ -162,7 +162,6 @@ class Thread(object):
             self.parent = Thread.current()
             self.parent.add_child(self)
 
-
     def __enter__(self):
         return self
 

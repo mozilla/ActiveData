@@ -166,7 +166,7 @@ if __name__ in ("__main__",):
 
     try:
         config = startup.read_settings(
-            env_filename=os.environ.get('TUID_CONFIG')
+            filename=os.environ.get('TUID_CONFIG')
         )
 
         constants.set(config.constants)

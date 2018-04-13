@@ -21,7 +21,7 @@
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
 		"jx_elasticsearch.meta.ENABLE_META_SCAN": true,
 		"jx_elasticsearch.meta.DEBUG": true,
-		"jx_base.expressions.ALLOW_SCRIPTING": true
+		"jx_base.expressions.ALLOW_SCRIPTING": false
 	},
 	"request_logs": {
 		"host": "http://localhost",
@@ -33,15 +33,15 @@
 			"$ref": "//.../resources/schema/request_log.schema.json"
 		}
 	},
-	"saved_queries": {
-		"host": "http://localhost",
+	"saved_queries":{
+		"host": "http://54.149.21.8",
 		"port": 9200,
 		"index": "saved_queries",
 		"type": "query",
 		"debug": false
 	},
 	"elasticsearch": {
-		"host": "http://localhost",
+		"host": "http://54.149.21.8",
 		"port": 9200,
 		"index": "testdata",
 		"type": "test_result",
@@ -61,7 +61,7 @@
 				"url": "https://hg.mozilla.org"
 			},
 			"branches": {
-				"host": "http://localhost",
+				"host": "http://54.149.21.8",
 				"port": 9200,
 				"index": "branches",
 				"type": "branch",
@@ -72,7 +72,7 @@
 				"limit_replicas": false
 			},
 			"repo": {
-				"host": "http://localhost",
+				"host": "http://54.149.21.8",
 				"port": 9200,
 				"index": "repo",
 				"type": "revision",
@@ -95,11 +95,11 @@
 				"log_type": "console"
 			},
 			{
-				"log_type": "email",
+				"log_type": "ses",
 				"from_address": "klahnakoski@mozilla.com",
 				"to_address": "klahnakoski@mozilla.com",
-				"subject": "[ALERT][DEV]Problem with ActiveData Server",
-				"$ref": "file://~/private.json#email"
+				"subject": "[ALERT][STAGING] Problem in ActiveData Frontend6",
+				"$ref": "file://~/private.json#aws_credentials"
 			},
 			{
 				"log_type": "elasticsearch",
@@ -107,7 +107,15 @@
 				"port": 9200,
 				"index": "debug_active_data",
 				"type": "active_data"
+			},
+			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "/data1/logs/activedata.log",
+				"maxBytes": 10000000,
+				"backupCount": 10,
+				"encoding": "utf8"
 			}
 		]
 	}
+
 }

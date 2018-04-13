@@ -369,8 +369,6 @@ class FromESMetadata(Schema):
             else:
                 parts = jx.sort(aggs.buckets.key)
 
-            if DEBUG:
-                Log.note("{{field}} has {{parts}}", field=column.names["."], parts=parts)
             with self.meta.columns.locker:
                 self.meta.columns.update({
                     "set": {

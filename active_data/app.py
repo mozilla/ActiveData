@@ -53,6 +53,7 @@ class ActiveDataApp(Flask):
         finally:
             Log.stop()
 
+
 flask_app = ActiveDataApp(__name__)
 
 config = None
@@ -92,6 +93,7 @@ def setup():
     global config
 
     config = startup.read_settings(
+        filename=os.environ.get('ACTIVEDATA_CONFIG'),
         defs=[
             {
                 "name": ["--process_num", "--process"],
@@ -100,16 +102,8 @@ def setup():
                 "dest": "process_num",
                 "default": 0,
                 "required": False
-            },
-            {
-                "name": "app_name",
-                "help": "gunicorn supplied argument",
-                "type": str,
-                "nargs": "?",
-                "default": "<dummy value>"
             }
-        ],
-        env_filename=os.environ.get('ACTIVEDATA_CONFIG')
+        ]
     )
 
     constants.set(config.constants)

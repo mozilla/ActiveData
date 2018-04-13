@@ -103,7 +103,7 @@ class Log(object):
 
     @classmethod
     def stop(cls):
-        from mo_logs import profiles
+        from mo_threads import profiles
 
         if cls.cprofiler and hasattr(cls, "settings"):
             if cls.cprofiler == None:

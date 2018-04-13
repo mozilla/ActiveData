@@ -16,25 +16,11 @@ import pstats
 from datetime import datetime
 from time import clock
 
-from mo_dots import Data
-from mo_dots import wrap
-
+from mo_dots import Data, wrap
+from mo_logs import Log
 
 ON = False
 profiles = {}
-
-_Log = None
-
-
-def _late_import():
-    global _Log
-
-    from mo_logs import Log as _Log
-    from mo_threads import Queue
-
-    if _Log.cprofiler_stats == None:
-        _Log.cprofiler_stats = Queue("cprofiler stats")  # ACCUMULATION OF STATS FROM ALL THREADS
-
 
 class Profiler(object):
     """
@@ -48,13 +34,12 @@ class Profiler(object):
             output = profiles.get(args[0])
             if output:
                 return output
-        output = object.__new__(cls, *args)
+        output = object.__new__(cls)
         return output
 
     def __init__(self, description):
-        from jx_python.windows import Stats
-
         if ON and not hasattr(self, "description"):
+            from jx_python.windows import Stats
             self.description = description
             self.samples = []
             self.stats = Stats()()
@@ -127,20 +112,18 @@ class CProfiler(object):
     """
 
     def __init__(self):
-        if not _Log:
-            _late_import()
         self.cprofiler = None
 
     def __enter__(self):
-        if _Log.cprofiler:
-            _Log.note("starting cprofile")
+        if Log.cprofiler:
+            Log.note("starting cprofile")
             self.cprofiler = cProfile.Profile()
             self.cprofiler.enable()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.cprofiler:
             self.cprofiler.disable()
-            _Log.cprofiler_stats.add(pstats.Stats(self.cprofiler))
+            Log.cprofiler_stats.add(pstats.Stats(self.cprofiler))
             del self.cprofiler
-            _Log.note("done cprofile")
+            Log.note("done cprofile")
 

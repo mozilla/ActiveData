@@ -16,19 +16,17 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import sys
-
 from copy import copy
 from datetime import datetime, timedelta
 from time import sleep
 
-from mo_future import get_ident, start_new_thread, interrupt_main, get_function_name
-
 from mo_dots import Data, unwraplist, Null
+from mo_future import get_ident, start_new_thread, interrupt_main, get_function_name
 from mo_logs import Log, Except
-from mo_logs.profiles import CProfiler
-from mo_threads import Till, Lock, Signal, till
-
-from mo_threads.signal import AndSignals
+from mo_threads.lock import Lock
+from mo_threads.profiles import CProfiler
+from mo_threads.signal import AndSignals, Signal
+from mo_threads.till import Till
 
 DEBUG = False
 
@@ -82,6 +80,7 @@ class MainThread(object):
         self.name = "Main Thread"
         self.id = get_ident()
         self.children = []
+        self.stop_logging = None
         self.timers = None
 
     def add_child(self, child):
@@ -122,6 +121,7 @@ class MainThread(object):
         if join_errors:
             Log.error("Problem while stopping {{name|quote}}", name=self.name, cause=unwraplist(join_errors))
 
+        self.stop_logging()
         self.timers.stop()
         self.timers.join()
 
@@ -161,7 +161,6 @@ class Thread(object):
         else:
             self.parent = Thread.current()
             self.parent.add_child(self)
-
 
     def __enter__(self):
         return self
@@ -308,13 +307,13 @@ class Thread(object):
     def wait_for_shutdown_signal(
         please_stop=False,  # ASSIGN SIGNAL TO STOP EARLY
         allow_exit=False,  # ALLOW "exit" COMMAND ON CONSOLE TO ALSO STOP THE APP
-        wait_forever=True  # IGNORE CHILD THREADS, NEVER EXIT.  False -> IF NO CHILD THREADS LEFT, THEN EXIT
+        wait_forever=True  # IGNORE CHILD THREADS, NEVER EXIT.  False => IF NO CHILD THREADS LEFT, THEN EXIT
     ):
         """
         FOR USE BY PROCESSES NOT EXPECTED TO EVER COMPLETE UNTIL EXTERNAL
         SHUTDOWN IS REQUESTED
 
-        SLEEP UNTIL keyboard interrupt, OR please_stop, OR "exit"
+        CALLING THREAD WILL SLEEP UNTIL keyboard interrupt, OR please_stop, OR "exit"
 
         :param please_stop:
         :param allow_exit:
@@ -324,7 +323,7 @@ class Thread(object):
         if not isinstance(please_stop, Signal):
             please_stop = Signal()
 
-        please_stop.on_go(lambda: start_new_thread(_stop_main_thread, ()))
+        please_stop.on_go(lambda: start_new_thread(stop_main_thread, ()))
 
         self_thread = Thread.current()
         if self_thread != MAIN_THREAD:
@@ -342,8 +341,10 @@ class Thread(object):
                 _wait_for_exit(please_stop)
             else:
                 _wait_for_interrupt(please_stop)
-        except (KeyboardInterrupt, SystemExit) as _:
+        except KeyboardInterrupt as _:
             Log.alert("SIGINT Detected!  Stopping...")
+        except SystemExit as _:
+            Log.alert("SIGTERM Detected!  Stopping...")
         finally:
             please_stop.go()
 
@@ -357,15 +358,19 @@ class Thread(object):
                 return MAIN_THREAD
 
 
-def _stop_main_thread():
+def stop_main_thread(*args):
+    try:
+        if len(args):
+            Log.warning("exit with {{value}}", value=args[0])
+    except Exception as e:
+        pass
+
     try:
         MAIN_THREAD.stop()
     except Exception as e:
         e = Except.wrap(e)
-        Log.warning("Problem with threads", cause=e)
+        Log.warning("Problem with stop of main thread", cause=e)
     sys.exit(0)
-
-
 
 
 def _wait_for_exit(please_stop):
@@ -418,11 +423,9 @@ def _interrupt_main_safely():
         # WE COULD BE INTERRUPTING SELF
         pass
 
+
 MAIN_THREAD = MainThread()
 
 ALL_LOCK = Lock("threads ALL_LOCK")
 ALL = dict()
 ALL[get_ident()] = MAIN_THREAD
-
-MAIN_THREAD.timers = Thread.run("timers daemon", till.daemon)
-MAIN_THREAD.children.remove(MAIN_THREAD.timers)

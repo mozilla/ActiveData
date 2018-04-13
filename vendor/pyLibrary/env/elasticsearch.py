@@ -700,10 +700,11 @@ class Cluster(object):
             Log.error("Expecting a JSON schema")
 
         for k, m in list(schema.mappings.items()):
+            m.date_detection = False  # DISABLE DATE DETECTION
+
             if tjson:
                 m = schema.mappings[k] = wrap(add_typed_annotations(m))
 
-            m.date_detection = False  # DISABLE DATE DETECTION
             m.dynamic_templates = (
                 DEFAULT_DYNAMIC_TEMPLATES +
                 m.dynamic_templates
@@ -1405,16 +1406,28 @@ def add_typed_annotations(meta):
     else:
         output = {}
         for meta_name, meta_value in meta.items():
-            if meta_name=='properties':
-                output[meta_name]={
+            if meta_name == 'properties':
+                output[meta_name] = {
                     prop_name: add_typed_annotations(about) if prop_name not in [BOOLEAN_TYPE, NUMBER_TYPE, STRING_TYPE, BOOLEAN_TYPE] else about
                     for prop_name, about in meta_value.items()
                 }
                 output[meta_name][EXISTS_TYPE] = {"type": "long", "store": True}
             else:
-                output[meta_name]=meta_value
+                output[meta_name] = meta_value
 
         return output
+
+
+def diff_schema(A, B):
+    return _diff_schema(A, B)
+
+
+def _diff_schema(path, A, B):
+    # what to do with conflicts?
+    pass
+
+
+
 
 
 DEFAULT_DYNAMIC_TEMPLATES = wrap([
@@ -1446,6 +1459,12 @@ DEFAULT_DYNAMIC_TEMPLATES = wrap([
         "default_typed_nested": {
             "mapping": {"type": "nested", "store": True},
             "match": NESTED_TYPE
+        }
+    },
+    {
+        "default_string": {
+            "mapping": {"type": "keyword", "store": True},
+            "match_mapping_type": "string"
         }
     }
 ])

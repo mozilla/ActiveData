@@ -94,6 +94,9 @@ def test_mode_wait(query):
         now = Date.now()
         end_time = now + MINUTE
 
+        if query["from"].startswith("meta."):
+            return
+
         # MARK COLUMNS DIRTY
         m.meta.columns.update({
             "clear": [

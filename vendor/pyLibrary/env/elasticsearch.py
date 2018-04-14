@@ -116,14 +116,16 @@ class Index(Features):
             Log.alert("elasticsearch debugging for {{url}} is on", url=self.url)
 
         props = self.get_properties()
-        if props[EXISTS_TYPE]:
+        if props == None:
+            tjson = kwargs.tjson = True
+        elif props[EXISTS_TYPE]:
             if tjson is False:
-                Log.error("expecting tjson paramter to match index properties")
+                Log.error("expecting tjson parameter to match properties of {{index}}", index=index)
             elif tjson == None:
                 tjson = kwargs.tjson = True
         else:
             if tjson is True:
-                Log.error("expecting tjson paramter to match index properties")
+                Log.error("expecting tjson parameter to match properties of {{index}}", index=index)
             elif tjson == None:
                 tjson = kwargs.tjson = False
 
@@ -148,12 +150,12 @@ class Index(Features):
                 self.cluster.info = None
                 return self.get_properties(retry=False)
 
-            if not index.mappings[self.settings.type]:
+            if not index.mappings[self.settings.type] and (index.mappings.keys()-{"_default_"}):
                 Log.warning(
                     "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{metadata|json}}",
                     index=self.settings.index,
                     type=self.settings.type,
-                    metadata=jx.sort(metadata.indices.keys())
+                    metadata=jx.sort(index.mappings.keys())
                 )
                 return Null
             return index.mappings[self.settings.type].properties

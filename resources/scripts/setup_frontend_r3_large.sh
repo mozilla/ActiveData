@@ -116,10 +116,18 @@ ln -s  /data1/logs /home/ec2-user/logs
 
 # CLONE ACTIVEDATA
 cd ~
-git clone https://github.com/klahnakoski/ActiveData.git
+git clone https://github.com/mozilla/ActiveData.git
 
 cd ~/ActiveData/
 git checkout frontend6
+sudo pip install -r requirements.txt
+
+# CLONE TUID
+cd ~
+git clone https://github.com/mozilla/TUID.git
+
+cd ~/ActiveData/
+git checkout master
 sudo pip install -r requirements.txt
 
 

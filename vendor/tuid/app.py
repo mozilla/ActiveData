@@ -74,7 +74,7 @@ def tuid_endpoint(path):
         paths = listwrap(paths)
         # RETURN TUIDS
         with Timer("tuid internal response time for {{num}} files", {"num": len(paths)}):
-            response = service.get_tuids_from_files(revision=rev, files=paths)
+            response = service.get_tuids_from_files(revision=rev, files=paths, going_forward=True)
 
         if query.meta.format == 'list':
             formatter = _stream_list
@@ -166,7 +166,6 @@ if __name__ in ("__main__",):
         config = startup.read_settings(
             filename=os.environ.get('TUID_CONFIG')
         )
-
         constants.set(config.constants)
         Log.start(config.debug)
         service = TUIDService(config.tuid)

@@ -115,23 +115,24 @@ class Index(Features):
         if self.debug:
             Log.alert("elasticsearch debugging for {{url}} is on", url=self.url)
 
+        props = self.get_properties()
+        if props[EXISTS_TYPE]:
+            if tjson is False:
+                Log.error("expecting tjson paramter to match index properties")
+            elif tjson == None:
+                tjson = kwargs.tjson = True
+        else:
+            if tjson is True:
+                Log.error("expecting tjson paramter to match index properties")
+            elif tjson == None:
+                tjson = kwargs.tjson = False
+
         if tjson:
             from pyLibrary.env.typed_inserter import TypedInserter
 
             self.encode = TypedInserter(self, id_column).typed_encode
         else:
-            if tjson == None and not read_only:
-                props = self.get_properties()
-                if props[EXISTS_TYPE]:
-                    kwargs.tjson=True
-                    from pyLibrary.env.typed_inserter import TypedInserter
-                    self.encode = TypedInserter(self, id_column).typed_encode
-                else:
-                    kwargs.tjson = False
-                    Log.warning("{{index}} is not typed tjson={{tjson}}", index=self.settings.index, tjson=self.settings.tjson)
-                    self.encode = get_encoder(id_column)
-            else:
-                self.encode = get_encoder(id_column)
+            self.encode = get_encoder(id_column)
 
     @property
     def url(self):
@@ -1425,9 +1426,6 @@ def diff_schema(A, B):
 def _diff_schema(path, A, B):
     # what to do with conflicts?
     pass
-
-
-
 
 
 DEFAULT_DYNAMIC_TEMPLATES = wrap([

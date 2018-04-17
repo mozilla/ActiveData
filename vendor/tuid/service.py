@@ -275,6 +275,9 @@ class TUIDService:
                     if DEBUG:
                         Log.note("Will update frontier for file {{file}}.", file=file)
                     frontier_update_list.append((file, latest_rev[0]))
+                elif latest_rev == revision:
+                    tmp_res = self.destringify_tuids(self._get_annotation(latest_rev[0], file))
+                    result.append((file, tmp_res))
                 else:
                     # File has never been seen before, get it's initial
                     # annotation to work from in the future.
@@ -464,6 +467,7 @@ class TUIDService:
                 # Go to the next log page
                 final_rev = clog_obj['changesets'][len(clog_obj['changesets'])-1]['node'][:12]
 
+        added_files = {}
         if not still_looking:
             for cset_len12 in diffs_cache:
                 parsed_diff = self.get_diff(cset_len12)
@@ -480,6 +484,9 @@ class TUIDService:
                         if new_name == 'dev/null':
                             removed_files[old_name] = True
                         continue
+
+                    if old_name == 'dev/null':
+                        added_files[new_name] = True
 
                     # At this point, file is in the database, and is
                     # asked to be processed, and we are still
@@ -527,6 +534,7 @@ class TUIDService:
                 Log.note("Frontier update: {{count}}/{{total}} - {{percent|percent(decimal=0)}} | {{rev}}|{{file}} ", count=count,
                                                 total=total, file=file, rev=proc_rev, percent=count / total)
 
+            modified = True
             if proc and file not in removed_files and csets_proced < max_csets_proc:
                 # Process this file using the diffs found
 
@@ -541,9 +549,17 @@ class TUIDService:
 
                 ann_inserts.append((revision, file, self.stringify_tuids(tmp_res)))
             elif file not in removed_files:
-                # File is new, or the name was changed - we need to create
-                # a new initial entry for this file.
-                tmp_res = self.get_tuids(file, proc_rev, commit=False)
+                old_ann = self._get_annotation(rev, file)
+                if old_ann is None or (old_ann == '' and file in added_files):
+                    # File is new, or re-added - we need to create
+                    # a new initial entry for this file.
+                    tmp_res = self.get_tuids(file, proc_rev, commit=False)
+                else:
+                    # File was not modified since last
+                    # known revision
+                    tmp_res = self.destringify_tuids(old_ann) if old_ann != '' else []
+                    ann_inserts.append((revision, file, old_ann[0]))
+                    modified = False
             else:
                 # File was removed
                 ann_inserts.append((revision, file, ''))
@@ -551,7 +567,7 @@ class TUIDService:
 
             if tmp_res:
                 result.append((file, tmp_res))
-                if proc_rev != revision:
+                if proc_rev != revision and not modified:
                     # If the file hasn't changed up to this revision,
                     # reinsert it with the same previous annotate.
                     if not self._get_annotation(revision, file):
@@ -585,6 +601,7 @@ class TUIDService:
 
         if len(ann_inserts) > 0:
             count = 0
+            ann_inserts = list(set(ann_inserts))
             while count < len(ann_inserts):
                 tmp_inserts = ann_inserts[count:count + SQL_BATCH_SIZE]
                 count += SQL_BATCH_SIZE

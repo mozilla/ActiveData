@@ -115,23 +115,26 @@ class Index(Features):
         if self.debug:
             Log.alert("elasticsearch debugging for {{url}} is on", url=self.url)
 
+        props = self.get_properties()
+        if props == None:
+            tjson = kwargs.tjson = True
+        elif props[EXISTS_TYPE]:
+            if tjson is False:
+                Log.error("expecting tjson parameter to match properties of {{index}}", index=index)
+            elif tjson == None:
+                tjson = kwargs.tjson = True
+        else:
+            if tjson is True:
+                Log.error("expecting tjson parameter to match properties of {{index}}", index=index)
+            elif tjson == None:
+                tjson = kwargs.tjson = False
+
         if tjson:
             from pyLibrary.env.typed_inserter import TypedInserter
 
             self.encode = TypedInserter(self, id_column).typed_encode
         else:
-            if tjson == None and not read_only:
-                props = self.get_properties()
-                if props[EXISTS_TYPE]:
-                    kwargs.tjson=True
-                    from pyLibrary.env.typed_inserter import TypedInserter
-                    self.encode = TypedInserter(self, id_column).typed_encode
-                else:
-                    kwargs.tjson = False
-                    Log.warning("{{index}} is not typed tjson={{tjson}}", index=self.settings.index, tjson=self.settings.tjson)
-                    self.encode = get_encoder(id_column)
-            else:
-                self.encode = get_encoder(id_column)
+            self.encode = get_encoder(id_column)
 
     @property
     def url(self):
@@ -147,12 +150,12 @@ class Index(Features):
                 self.cluster.info = None
                 return self.get_properties(retry=False)
 
-            if not index.mappings[self.settings.type]:
+            if not index.mappings[self.settings.type] and (index.mappings.keys()-{"_default_"}):
                 Log.warning(
                     "ElasticSearch index {{index|quote}} does not have type {{type|quote}} in {{metadata|json}}",
                     index=self.settings.index,
                     type=self.settings.type,
-                    metadata=jx.sort(metadata.indices.keys())
+                    metadata=jx.sort(index.mappings.keys())
                 )
                 return Null
             return index.mappings[self.settings.type].properties
@@ -1425,9 +1428,6 @@ def diff_schema(A, B):
 def _diff_schema(path, A, B):
     # what to do with conflicts?
     pass
-
-
-
 
 
 DEFAULT_DYNAMIC_TEMPLATES = wrap([

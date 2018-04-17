@@ -47,43 +47,6 @@
 		"type": "test_result",
 		"debug": true
 	},
-	"tuid": {
-		"database": {
-			"filename": "tuid.db",
-			"load_functions": false
-		},
-		"hg": {
-			"branch": "mozilla-central"
-		},
-		"_hg_cache": {
-			"use_cache": true,
-			"hg": {
-				"url": "https://hg.mozilla.org"
-			},
-			"branches": {
-				"host": "http://54.149.21.8",
-				"port": 9200,
-				"index": "branches",
-				"type": "branch",
-				"tjson": true,
-				"timeout": 300,
-				"consistency": "one", // WE ONLY NEED ONE SHARD TO BE AVAILABLE
-				"debug": false,
-				"limit_replicas": false
-			},
-			"repo": {
-				"host": "http://54.149.21.8",
-				"port": 9200,
-				"index": "repo",
-				"type": "revision",
-				"tjson": true,
-				"timeout": 300,
-				"consistency": "one", // WE ONLY NEED ONE SHARD TO BE AVAILABLE
-				"debug": false,
-				"limit_replicas": false
-			}
-		}
-	},
 	"debug": {
 		"trace": true,
 		"cprofile": {

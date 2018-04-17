@@ -201,12 +201,16 @@ class Sqlite(DB):
         try:
             if DEBUG:
                 Log.note("Sqlite version {{version}}", version=sqlite3.sqlite_version)
-            if Sqlite.canonical:
-                self.db = Sqlite.canonical
-            else:
-                self.db = sqlite3.connect(coalesce(self.filename, ':memory:'), check_same_thread=False)
-                if self.settings.load_functions:
-                    self._load_functions()
+            try:
+                if Sqlite.canonical:
+                    self.db = Sqlite.canonical
+                else:
+                    self.db = sqlite3.connect(coalesce(self.filename, ':memory:'), check_same_thread=False)
+            except Exception as e:
+                Log.error("could not open file {{filename}}", filename=self.filename)
+
+            if self.settings.load_functions:
+                self._load_functions()
 
             while not please_stop:
                 quad = self.queue.pop(till=please_stop)

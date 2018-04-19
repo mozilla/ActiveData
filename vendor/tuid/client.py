@@ -10,14 +10,12 @@
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary import aws
-
-from mo_dots import listwrap, wrap, Null
-from mo_files import File
+from mo_dots import listwrap, wrap
 from mo_json import json2value, value2json
 from mo_kwargs import override
 from mo_logs import Log
 from mo_times import Timer, Date
+from pyLibrary import aws
 from pyLibrary.env import http
 from pyLibrary.sql import sql_iso, sql_list
 from pyLibrary.sql.sqlite import Sqlite, quote_value
@@ -136,8 +134,12 @@ class TuidClient(object):
                         }
                     })
                     if self.push_queue is not None:
-                        Log.note("record tuid request to SQS: {{timestamp}}", timestamp=request.meta.request_time)
+                        if DEBUG:
+                            Log.note("record tuid request to SQS: {{timestamp}}", timestamp=request.meta.request_time)
                         self.push_queue.add(request)
+                    else:
+                        if DEBUG:
+                            Log.note("no recorded tuid request")
 
                     if not self.enabled:
                         return None

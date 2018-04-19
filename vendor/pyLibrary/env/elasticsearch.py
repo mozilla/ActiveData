@@ -201,13 +201,11 @@ class Index(Features):
 
         # WAIT FOR ALIAS TO APPEAR
         while True:
-            response = self.cluster.get("/_cluster/state", retry={"times": 5}, timeout=3)
-            if alias in response.metadata.indices[self.settings.index].aliases:
+            metadata = self.cluster.get_metadata(force=True)
+            if alias in metadata.indices[self.settings.index].aliases:
                 return
             Log.note("Waiting for alias {{alias}} to appear", alias=alias)
             Till(seconds=1).wait()
-
-
 
     def get_index(self, alias):
         """
@@ -760,8 +758,8 @@ class Cluster(object):
         # CONFIRM INDEX EXISTS
         while True:
             try:
-                state = self.get("/_cluster/state", retry={"times": 5}, timeout=3, stream=False)
-                if index in state.metadata.indices:
+                metadata = self.get_metadata(force=True)
+                if index in metadata.indices:
                     self._metadata = None
                     break
                 Log.note("Waiting for index {{index}} to appear", index=index)
@@ -811,7 +809,7 @@ class Cluster(object):
             if not desc["aliases"]:
                 output.append({"index": index, "alias": None})
             elif desc['aliases'][0] == index:
-                pass
+                Log.error("should not happen")
             else:
                 for a in desc["aliases"]:
                     output.append({"index": index, "alias": a})
@@ -825,15 +823,8 @@ class Cluster(object):
             response = self.get("/_cluster/state", retry={"times": 3}, timeout=30, stream=False)
             with self.metadata_locker:
                 self._metadata = wrap(response.metadata)
-                # REPLICATE MAPPING OVER ALL ALIASES
-                indices = self._metadata.indices
-                for i, m in jx.sort(indices.items(), {"value": {"offset": 0}, "sort": -1}):
-                    m.index = i
-                    for a in m.aliases:
-                        if not indices[a]:
-                            indices[a] = m
-                self.info = wrap(self.get("/", stream=False))
-                self.version = self.info.version.number
+            self.info = wrap(self.get("/", stream=False))
+            self.version = self.info.version.number
             return self._metadata
 
         return self._metadata
@@ -1081,7 +1072,7 @@ class Alias(Features):
                 mappings = self.cluster.get("/"+self.settings.index+"/_mapping")[self.settings.index]
 
             # FIND MAPPING WITH MOST PROPERTIES (AND ASSUME THAT IS THE CANONICAL TYPE)
-            type, props = get_best_mapping(mappings.mappings)
+            type, props = get_best_type_from_mapping(mappings.mappings)
             if type == None:
                 Log.error("Can not find schema type for index {{index}}", index=coalesce(self.settings.alias, self.settings.index))
 
@@ -1278,7 +1269,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
     return columns
 
 
-def get_best_mapping(mapping):
+def get_best_type_from_mapping(mapping):
     """
     THERE ARE MULTIPLE TYPES IN AN INDEX, PICK THE BEST
     :param mapping: THE ES MAPPING DOCUMENT

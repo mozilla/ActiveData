@@ -20,11 +20,8 @@ from jx_base.container import Container
 from jx_base.schema import Schema
 from jx_python import jx
 from mo_collections import UniqueIndex
-from mo_dots import Data, concat_field, get_attr, listwrap, unwraplist, NullType, FlatList, set_default
-from mo_dots import split_field, join_field, ROOT_PATH
-from mo_dots import wrap
-from mo_future import none_type
-from mo_future import text_type, long, PY2
+from mo_dots import Data, concat_field, get_attr, listwrap, unwraplist, NullType, FlatList, set_default, split_field, join_field, ROOT_PATH,  wrap
+from mo_future import none_type, text_type, long, PY2
 from mo_json.typed_encoder import untype_path, unnest_path
 from mo_logs import Log
 from mo_threads import Lock
@@ -45,24 +42,29 @@ class ColumnList(Container):
         self.extend(METADATA_COLUMNS)
 
     def find(self, es_index, abs_column_name):
-        if "." in es_index:
-            if es_index.startswith("meta."):
-                self._update_meta()
+        with self.locker:
+            if "." in es_index:
+                if es_index.startswith("meta."):
+                    self._update_meta()
+                else:
+                    Log.error("unlikely index name")
+            if not abs_column_name:
+                return [c for cs in self.data.get(es_index, {}).values() for c in cs]
             else:
-                Log.error("unlikely index name")
-        if not abs_column_name:
-            return [c for cs in self.data.get(es_index, {}).values() for c in cs]
-        else:
-            return self.data.get(es_index, {}).get(abs_column_name, [])
+                return self.data.get(es_index, {}).get(abs_column_name, [])
 
     def extend(self, columns):
         self.dirty = True
-        for column in columns:
-            self.add(column)
+        with self.locker:
+            for column in columns:
+                self._add(column)
 
     def add(self, column):
         self.dirty = True
+        with self.locker:
+            self._add(column)
 
+    def _add(self, column):
         columns_for_table = self.data.setdefault(column.es_index, {})
         existing_columns = columns_for_table.setdefault(column.names["."], [])
 
@@ -120,7 +122,7 @@ class ColumnList(Container):
                     yield column
 
     def __len__(self):
-        return self.count
+        return self.data['meta.columns']['es_index'].count
 
     def update(self, command):
         self.dirty = True
@@ -131,61 +133,67 @@ class ColumnList(Container):
                 columns = self.find(eq.es_index, eq.name)
                 columns = [c for c in columns if all(get_attr(c, k) == v for k, v in eq.items())]
             else:
-                columns = list(self)
-                columns = jx.filter(columns, command.where)
+                with self.locker:
+                    columns = list(self)
+                    columns = jx.filter(columns, command.where)
 
-            for col in list(columns):
-                for k in command["clear"]:
-                    if k == ".":
-                        columns.remove(col)
-                    else:
-                        col[k] = None
+            with self.locker:
+                for col in list(columns):
+                    for k in command["clear"]:
+                        if k == ".":
+                            columns.remove(col)
+                        else:
+                            col[k] = None
 
-                for k, v in command.set.items():
-                    col[k] = v
+                    for k, v in command.set.items():
+                        col[k] = v
         except Exception as e:
             Log.error("should not happen", cause=e)
 
     def query(self, query):
-        self._update_meta()
-        query.frum = self.__iter__()
-        output = jx.run(query)
+        with self.locker:
+            self._update_meta()
+            query.frum = self.__iter__()
+            output = jx.run(query)
 
         return output
 
     def groupby(self, keys):
-        self._update_meta()
-        return jx.groupby(self.__iter__(), keys)
+        with self.locker:
+            self._update_meta()
+            return jx.groupby(self.__iter__(), keys)
 
     @property
     def schema(self):
-        self._update_meta()
-        return wrap({k: set(v) for k, v in self.data["meta.columns"].items()})
+        with self.locker:
+            self._update_meta()
+            return wrap({k: set(v) for k, v in self.data["meta.columns"].items()})
 
     def denormalized(self):
         """
         THE INTERNAL STRUCTURE FOR THE COLUMN METADATA IS VERY DIFFERENT FROM
         THE DENORMALIZED PERSPECITVE. THIS PROVIDES THAT PERSPECTIVE FOR QUERIES
         """
-        self._update_meta()
-        output = [
-            {
-                "table": concat_field(c.es_index, untype_path(table)),
-                "name": untype_path(name),
-                "cardinality": c.cardinality,
-                "es_column": c.es_column,
-                "es_index": c.es_index,
-                "last_updated": c.last_updated,
-                "count": c.count,
-                "nested_path": [unnest_path(n) for n in c.nested_path],
-                "type": c.type
-            }
-            for tname, css in self.data.items()
-            for cname, cs in css.items()
-            for c in cs
-            if c.type not in STRUCT  # and c.es_column != "_id"
-            for table, name in c.names.items()
-        ]
+        with self.locker:
+            self._update_meta()
+            output = [
+                {
+                    "table": concat_field(c.es_index, untype_path(table)),
+                    "name": untype_path(name),
+                    "cardinality": c.cardinality,
+                    "es_column": c.es_column,
+                    "es_index": c.es_index,
+                    "last_updated": c.last_updated,
+                    "count": c.count,
+                    "nested_path": [unnest_path(n) for n in c.nested_path],
+                    "type": c.type
+                }
+                for tname, css in self.data.items()
+                for cname, cs in css.items()
+                for c in cs
+                if c.type not in STRUCT  # and c.es_column != "_id"
+                for table, name in c.names.items()
+            ]
         if not self.meta_schema:
             self.meta_schema = get_schema_from_list("meta\\.columns", output)
 

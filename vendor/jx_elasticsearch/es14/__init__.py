@@ -13,8 +13,6 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from mo_json.typed_encoder import TYPE_PREFIX
-
 from jx_base import container
 from jx_base.container import Container
 from jx_base.dimensions import Dimension
@@ -32,8 +30,7 @@ from mo_dots import Data, Null, unwrap, coalesce, split_field, literal_field, un
 from mo_json import scrub, value2json
 from mo_json.typed_encoder import TYPE_PREFIX
 from mo_kwargs import override
-from mo_logs import Log
-from mo_logs.exceptions import Except
+from mo_logs import Log, Except
 from pyLibrary.env import elasticsearch, http
 
 

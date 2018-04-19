@@ -49,7 +49,10 @@ class ActiveDataApp(Flask):
         try:
             Flask.run(self, *args, **kwargs)
         except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
-            Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
+            if e.args and e.args[0] == 0:
+                pass  # ASSUME NORMAL EXIT
+            else:
+                Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
         finally:
             Log.stop()
 

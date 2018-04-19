@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from collections import Mapping
 from datetime import date
 from datetime import datetime
 
@@ -19,7 +20,7 @@ from jx_base.container import Container
 from jx_base.schema import Schema
 from jx_python import jx
 from mo_collections import UniqueIndex
-from mo_dots import Data, concat_field, get_attr, listwrap, unwraplist, NullType, FlatList
+from mo_dots import Data, concat_field, get_attr, listwrap, unwraplist, NullType, FlatList, set_default
 from mo_dots import split_field, join_field, ROOT_PATH
 from mo_dots import wrap
 from mo_future import none_type
@@ -40,31 +41,79 @@ class ColumnList(Container):
     def __init__(self):
         self.data = {}  # MAP FROM ES_INDEX TO (abs_column_name to COLUMNS)
         self.locker = Lock()
-        self.count = 0
         self.meta_schema = None
+        self.extend(METADATA_COLUMNS)
 
     def find(self, es_index, abs_column_name):
-        if "." in es_index and not es_index.startswith("meta."):
-            Log.error("unlikely index name")
+        if "." in es_index:
+            if es_index.startswith("meta."):
+                self._update_meta()
+            else:
+                Log.error("unlikely index name")
         if not abs_column_name:
             return [c for cs in self.data.get(es_index, {}).values() for c in cs]
         else:
             return self.data.get(es_index, {}).get(abs_column_name, [])
 
-    def insert(self, columns):
+    def extend(self, columns):
+        self.dirty = True
         for column in columns:
             self.add(column)
 
     def add(self, column):
+        self.dirty = True
+
         columns_for_table = self.data.setdefault(column.es_index, {})
-        abs_cname = column.names["."]
-        _columns = columns_for_table.get(abs_cname)
-        if not _columns:
-            _columns = columns_for_table[abs_cname] = []
-        _columns.append(column)
-        self.count += 1
+        existing_columns = columns_for_table.setdefault(column.names["."], [])
+
+        if not existing_columns:
+            existing_columns.append(column)
+            return column
+        else:
+            for canonical in existing_columns:
+                if canonical.type == column.type and canonical is not column:
+                    set_default(column.names, canonical.names)
+                    for key in Column.__slots__:
+                        canonical[key] = column[key]
+                    return canonical
+
+    def _update_meta(self):
+        if not self.dirty:
+            return
+
+        for mcl in self.data.get("meta.columns").values():
+            for mc in mcl:
+                count = 0
+                values = set()
+                objects = 0
+                multi = 1
+                for t, cs in self.data.items():
+                    for c, css in cs.items():
+                        for column in css:
+                            value = column[mc.names["."]]
+                            if value == None:
+                                pass
+                            else:
+                                count += 1
+                                if isinstance(value, list):
+                                    multi = max(multi, len(value))
+                                    try:
+                                        values |= set(value)
+                                    except Exception:
+                                        objects += len(value)
+                                elif isinstance(value, Mapping):
+                                    objects += 1
+                                else:
+                                    values.add(value)
+                mc.count = count
+                mc.cardinality = len(values) + objects
+                mc.partitions = jx.sort(values)
+                mc.multi = multi
+                mc.last_updated = Date.now()
+        self.dirty = False
 
     def __iter__(self):
+        self._update_meta()
         for t, cs in self.data.items():
             for c, css in cs.items():
                 for column in css:
@@ -74,6 +123,7 @@ class ColumnList(Container):
         return self.count
 
     def update(self, command):
+        self.dirty = True
         try:
             command = wrap(command)
             eq = command.where.eq
@@ -97,16 +147,19 @@ class ColumnList(Container):
             Log.error("should not happen", cause=e)
 
     def query(self, query):
+        self._update_meta()
         query.frum = self.__iter__()
         output = jx.run(query)
 
         return output
 
     def groupby(self, keys):
+        self._update_meta()
         return jx.groupby(self.__iter__(), keys)
 
     @property
     def schema(self):
+        self._update_meta()
         return wrap({k: set(v) for k, v in self.data["meta.columns"].items()})
 
     def denormalized(self):
@@ -114,6 +167,7 @@ class ColumnList(Container):
         THE INTERNAL STRUCTURE FOR THE COLUMN METADATA IS VERY DIFFERENT FROM
         THE DENORMALIZED PERSPECITVE. THIS PROVIDES THAT PERSPECTIVE FOR QUERIES
         """
+        self._update_meta()
         output = [
             {
                 "table": concat_field(c.es_index, untype_path(table)),
@@ -129,7 +183,7 @@ class ColumnList(Container):
             for tname, css in self.data.items()
             for cname, cs in css.items()
             for c in cs
-            if c.type not in STRUCT # and c.es_column != "_id"
+            if c.type not in STRUCT  # and c.es_column != "_id"
             for table, name in c.names.items()
         ]
         if not self.meta_schema:
@@ -204,9 +258,48 @@ def _get_schema_from_list(frum, table_name, prefix_path, nested_path, columns):
                     _get_schema_from_list([value], table_name, prefix_path + [name], nested_path, columns)
                 elif this_type == "nested":
                     np = listwrap(nested_path)
-                    newpath = unwraplist([join_field(split_field(np[0])+[name])]+np)
+                    newpath = unwraplist([join_field(split_field(np[0]) + [name])] + np)
                     _get_schema_from_list(value, table_name, prefix_path + [name], newpath, columns)
 
+
+METADATA_COLUMNS = (
+    [
+        Column(
+            names={".": c},
+            es_index="meta.columns",
+            es_column=c,
+            type="string",
+            nested_path=ROOT_PATH
+        )
+        for c in ["type", "nested_path", "es_column", "es_index"]
+    ] + [
+        Column(
+            es_index="meta.columns",
+            names={".": c},
+            es_column=c,
+            type="object",
+            nested_path=ROOT_PATH
+        )
+        for c in ["names", "partitions"]
+    ] + [
+        Column(
+            names={".": c},
+            es_index="meta.columns",
+            es_column=c,
+            type="long",
+            nested_path=ROOT_PATH
+        )
+        for c in ["count", "cardinality", "multi"]
+    ] + [
+        Column(
+            names={".": "last_updated"},
+            es_index="meta.columns",
+            es_column="last_updated",
+            type="time",
+            nested_path=ROOT_PATH
+        )
+    ]
+)
 
 _type_to_name = {
     none_type: "undefined",
@@ -330,4 +423,3 @@ _merge_type = {
         "nested": "nested"
     }
 }
-

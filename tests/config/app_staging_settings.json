@@ -38,7 +38,7 @@
 		"port": 9200,
 		"index": "saved_queries",
 		"type": "query",
-		"debug": false
+		"debug": true
 	},
 	"elasticsearch": {
 		"host": "http://54.149.21.8",

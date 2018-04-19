@@ -471,7 +471,7 @@ def strip_extension(key):
 
 
 def _unzip(compressed):
-    buff = StringIO.StringIO(compressed)
+    buff = StringIO(compressed)
     archive = zipfile.ZipFile(buff, mode='r')
     return archive.read(archive.namelist()[0])
 

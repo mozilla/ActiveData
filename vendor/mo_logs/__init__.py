@@ -103,6 +103,12 @@ class Log(object):
 
     @classmethod
     def stop(cls):
+        """
+        DECONSTRUCTS ANY LOGGING, AND RETURNS TO DIRECT-TO-stdout LOGGING
+        EXECUTING MULUTIPLE TIMES IN A ROW IS SAFE, IT HAS NO NET EFFECT, IT STILL LOGS TO stdout
+        :return: NOTHING
+        """
+
         from mo_threads import profiles
 
         if cls.cprofiler and hasattr(cls, "settings"):
@@ -473,6 +479,10 @@ def write_profile(profile_settings, stats):
     ]
     stats_file = File(profile_settings.filename, suffix=convert.datetime2string(datetime.now(), "_%Y%m%d_%H%M%S"))
     stats_file.write(convert.list2tab(stats))
+
+
+def _same_frame(frameA, frameB):
+    return (frameA.line, frameA.file) == (frameB.line, frameB.file)
 
 
 # GET THE MACHINE METADATA

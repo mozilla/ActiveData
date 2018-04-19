@@ -22,7 +22,7 @@ from mo_logs import constants, startup
 from mo_logs.strings import utf82unicode, unicode2utf8
 from mo_times import Timer
 
-from pyLibrary.env.flask_wrappers import gzip_wrapper, cors_wrapper
+from pyLibrary.env.flask_wrappers import cors_wrapper
 from tuid.service import TUIDService, TuidMap
 
 OVERVIEW = None
@@ -153,14 +153,8 @@ if __name__ in ("__main__",):
     OVERVIEW = File("tuid/public/index.html").read_bytes()
     flask_app = TUIDApp(__name__)
 
-    flask_app.add_url_rule(str('/tuid'), None, tuid_endpoint, defaults={'path': ''}, methods=[str('GET'), str('POST')])
-    flask_app.add_url_rule(str('/tuid/'), None, tuid_endpoint, defaults={'path': ''}, methods=[str('GET'), str('POST')])
-
-    flask_app.add_url_rule(str('/'), None, _head, defaults={'path': ''}, methods=[str('OPTIONS'), str('HEAD')])
-    flask_app.add_url_rule(str('/<path:path>'), None, _head, methods=[str('OPTIONS'), str('HEAD')])
-
-    flask_app.add_url_rule(str('/'), None, _default, defaults={'path': ''}, methods=[str('GET'), str('POST')])
-    flask_app.add_url_rule(str('/<path:path>'), None, _default, methods=[str('GET'), str('POST')])
+    flask_app.add_url_rule(str('/'), None, tuid_endpoint, defaults={'path': ''}, methods=[str('GET'), str('POST')])
+    flask_app.add_url_rule(str('/<path:path>'), None, tuid_endpoint, methods=[str('GET'), str('POST')])
 
     try:
         config = startup.read_settings(
@@ -168,7 +162,11 @@ if __name__ in ("__main__",):
         )
         constants.set(config.constants)
         Log.start(config.debug)
+
         service = TUIDService(config.tuid)
+
+        # Run the daemon
+        #daemon = Thread.run("TUID Daemon", service._daemon)
     except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
         try:
             Log.error("Serious problem with TUID service construction!  Shutdown!", cause=e)

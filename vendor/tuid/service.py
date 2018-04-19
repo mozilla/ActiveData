@@ -45,8 +45,11 @@ class TUIDService:
         try:
             self.config = kwargs
 
-            self.conn = conn if conn else sql.Sql(self.config.database)
-            self.hg_cache = HgMozillaOrg(hg_cache) if hg_cache else Null
+            self.conn = conn if conn else sql.Sql(self.config.database.name)
+            #self.hg_cache = HgMozillaOrg(hg_cache) if hg_cache else Null
+            print(self.config)
+            print(self.config._hg_cache)
+            self.hg_cache = HgMozillaOrg(kwargs=self.config._hg_cache, use_cache=True) if self.config._hg_cache else Null
 
             if not self.conn.get_one("SELECT name FROM sqlite_master WHERE type='table';"):
                 self.init_db()
@@ -758,7 +761,7 @@ class TUIDService:
         return tuids
 
 
-    def _daemon(self, please_stop):
+    def _daemon(self, please_stop, only_coverage_revisions=False):
         '''
         Runs continuously to prefill the temporal and
         annotations table with the coverage revisions*.
@@ -826,7 +829,7 @@ class TUIDService:
                     continue
 
                 # Get all the latest ccov and jsdcov revisions
-                if not coverage_revisions:
+                if (not coverage_revisions) and only_coverage_revisions:
                     active_data_url = 'http://activedata.allizom.org/query'
                     query_json = {
                         "limit": 1000,
@@ -853,8 +856,9 @@ class TUIDService:
                 for cset in csets:
                     if please_stop:
                         return
-                    if cset not in coverage_revisions:
-                        continue
+                    if only_coverage_revisions:
+                        if cset not in coverage_revisions:
+                            continue
                     if DEBUG:
                         Log.note("Moving frontier {{frontier}} forward to {{cset}}.", frontier=prev_cset, cset=cset)
 

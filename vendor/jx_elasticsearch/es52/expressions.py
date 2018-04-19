@@ -56,7 +56,7 @@ return output.toString()
 
 
 class Painless(Expression):
-    __slots__ = ("miss", "type", "expr", "many")
+    __slots__ = ("miss", "data_type", "expr", "many")
 
     def __init__(self, type, expr, frum, miss=None, many=False):
         self.miss = coalesce(miss, FALSE)  # Expression that will return true/false to indicate missing result

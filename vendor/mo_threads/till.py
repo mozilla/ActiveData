@@ -130,7 +130,7 @@ def daemon(please_stop):
                         s.go()
 
     except Exception as e:
-        Log.warning("timer shutdown", cause=e)
+        Log.warning("unexpected timer shutdown", cause=e)
     finally:
         if DEBUG:
             Log.alert("TIMER SHUTDOWN")

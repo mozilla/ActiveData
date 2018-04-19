@@ -76,18 +76,7 @@ class SaveQueries(object):
             tjson=False,
             kwargs=kwargs
         )
-        # ENSURE THE TYPE EXISTS FOR PROBING
-        try:
-            es.add({"id": "dummy", "value": {
-                "hash": "dummy",
-                "create_time": Date.now(),
-                "last_used": Date.now(),
-                "query": "{}"
-            }})
-        except Exception as e:
-            Log.warning("Problem saving query", cause=e)
         es.add_alias(es.settings.alias)
-        es.flush()
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size, period=1)
         self.es = jx_elasticsearch.new_instance(es.settings)
 

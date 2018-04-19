@@ -77,7 +77,7 @@ def read_settings(filename=None, defs=None):
     })
     args = argparse(defs)
 
-    args.filename = coalesce(args.filename, filename, "./config.json")
+    args.filename = coalesce(filename, args.filename, "./config.json")
     settings_file = File(args.filename)
     if not settings_file.exists:
         Log.error("Can not read configuration file {{filename}}", {

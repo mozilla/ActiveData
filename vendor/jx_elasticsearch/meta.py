@@ -497,7 +497,7 @@ class FromESMetadata(Schema):
                     "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                 })
             if DEBUG:
-                Log.note("Could not get {{col.es_index}}.{{col.es_column}} info", col=c)
+                Log.note("Did not get {{col.es_index}}.{{col.es_column}} info", col=c)
 
 
 def _counting_query(c):

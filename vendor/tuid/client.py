@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 
 from pyLibrary import aws
 
-from mo_dots import listwrap, wrap
+from mo_dots import listwrap, wrap, Null
 from mo_files import File
 from mo_json import json2value, value2json
 from mo_kwargs import override
@@ -67,10 +67,12 @@ class TuidClient(object):
             with Timer("markup sources for {{num}} files", {"num": len(filenames)}):
                 # WHAT DO WE HAVE
                 found = self._get_tuid_from_endpoint(revision, filenames)
+                if found == None:
+                    return  # THIS IS A FAILURE STATE, AND A WARNING HAS ALREADY BEEN RAISED, DO NOTHING
 
                 for source in sources:
                     line_to_tuid = found[source.file.name]
-                    if line_to_tuid is not None:
+                    if line_to_tuid != None:
                         source.file.tuid_covered = [
                             {"line": line, "tuid": line_to_tuid[line]}
                             for line in source.file.covered

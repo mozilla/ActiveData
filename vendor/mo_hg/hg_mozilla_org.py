@@ -206,7 +206,8 @@ class HgMozillaOrg(object):
         if not b:
             b = found_revision.branch = self.branches[(lower_name, DEFAULT_LOCALE)]
             if not b:
-                Log.error("can not find branch ({{branch}}, {{locale}})", branch=lower_name, locale=locale)
+                Log.warning("can not find branch ({{branch}}, {{locale}})", branch=lower_name, locale=locale)
+                return Null
 
         if Date.now() - Date(b.etl.timestamp) > _OLD_BRANCH:
             self.branches = _hg_branches.get_branches(kwargs=self.settings)
@@ -600,6 +601,8 @@ def parse_hg_date(date):
 
 
 def minimize_repo(repo):
+    if repo == None:
+        return Null
     # output = set_default({}, _exclude_from_repo, repo)
     output = wrap(_copy_but(repo, _exclude_from_repo))
     output.changeset.description = strings.limit(output.changeset.description, 1000)

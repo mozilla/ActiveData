@@ -1,10 +1,10 @@
 # JSON Query Expressions
 
 JSON Query Expressions are meant to be a communication standard between 
-services. They are targeted toward business intelligence, analytic 
+application services. They are targeted toward business intelligence, analytic 
 processing, data warehouse, and dashboard applications.
 
-JSON query expressions are best viewed as SQL parse trees where each
+JSON query expressions are best viewed as SQL parse trees, where each
 property corresponds to a SQL clause. There are some differences from SQL,
 especially when it comes to using default clauses, but I hope your knowledge
 of SQL can jump-start your use of JSON Expressions.
@@ -60,9 +60,8 @@ tests to maintain stability.
 
 ### Benefit: Expression Simplification
 
-JSON Expressions provide data transformation and expressions over multi-
-dimensional and unclean data. It simplifies expressions by defining
-[`null` as out-of-context](https://github.com/klahnakoski/pyLibrary/tree/dev/pyLibrary/dot#null-is-the-new-none).
+JSON Expressions provide data transformation and expressions over unclean 
+JSON documents. It simplifies expressions by defining [`null` as out-of-context](https://github.com/klahnakoski/pyLibrary/tree/dev/pyLibrary/dot#null-is-the-new-none).
 The *out-of-context* definition is different than the definition used by
 many other languages; which means every operator and expression must be
 translated from JSON Expressions to the destination language. This translation
@@ -86,7 +85,6 @@ Javascript equivalent
         if (b==null) return a;
         return a + b;
      }
-
 
 #### Dereferencing with `nulls`
 

@@ -12,7 +12,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import itertools
-from copy import copy
 from itertools import product
 
 from jx_base import STRUCT, Table
@@ -29,7 +28,7 @@ from mo_logs.strings import quote
 from mo_threads import Queue, THREAD_STOP, Thread, Till
 from mo_times import HOUR, MINUTE, Timer, Date
 from pyLibrary.env import elasticsearch
-from pyLibrary.env.elasticsearch import es_type_to_json_type
+from pyLibrary.env.elasticsearch import es_type_to_json_type, get_best_mapping
 
 MAX_COLUMN_METADATA_AGE = 12 * HOUR
 ENABLE_META_SCAN = False
@@ -63,17 +62,17 @@ class FromESMetadata(Schema):
         self.index_does_not_exist = set()
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
+        self.aliases = {}
+        self.known_aliases = set()
         self.es_metadata = Null
         self.abs_columns = set()
         self.last_es_metadata = Date.now()-OLD_METADATA
 
         self.meta = Data()
-        table_columns = metadata_tables()
-        column_columns = metadata_columns()
-        self.meta.tables = ListContainer("meta.tables", [], wrap({c.names["."]: c for c in table_columns}))
         self.meta.columns = ColumnList()
-        self.meta.columns.insert(column_columns)
-        self.meta.columns.insert(table_columns)
+        table_columns = metadata_tables()
+        self.meta.tables = ListContainer("meta.tables", [], wrap({c.names["."]: c for c in table_columns}))
+        self.meta.columns.extend(table_columns)
         # TODO: fix monitor so it does not bring down ES
         if ENABLE_META_SCAN:
             self.worker = Thread.run("refresh metadata", self.monitor)
@@ -93,48 +92,42 @@ class FromESMetadata(Schema):
         with self.meta.tables.locker:
             return wrap([t for t in self.meta.tables.data if t.name == table_name])
 
-    def _upsert_column(self, c):
-        # ASSUMING THE  self.meta.columns.locker IS HAD
-        existing_columns = self.meta.columns.find(c.es_index, c.names["."])
-        for canonical in existing_columns:
-            if canonical.type == c.type and canonical is not c:
-                set_default(c.names, canonical.names)
-                for key in Column.__slots__:
-                    canonical[key] = c[key]
-                if DEBUG:
-                    Log.note("todo: {{table}}::{{column}}", table=canonical.es_index, column=canonical.es_column)
-                self.todo.add(canonical)
-                break
-        else:
-            self.meta.columns.add(c)
-            self.todo.add(c)
+    def _get_columns(self, alias=None):
+        """
+        :param alias: A REAL ALIAS (OR NAME OF INDEX THAT HAS NO ALIAS)
+        :return:
+        """
+        # FIND ALL INDEXES OF ALIAS
+        indexes = list(reversed(sorted(i for i, a in self.aliases.items() if a == alias)))
+        # PICK ONE
+        canonical_index = indexes[0]
+        meta = self.default_es.get_metadata().indices[canonical_index]
 
-            if ENABLE_META_SCAN:
-                if DEBUG:
-                    Log.note("todo: {{table}}::{{column}}", table=c.es_index, column=c.es_column)
-                # MARK meta.columns AS DIRTY TOO
-                cols = self.meta.columns.find("meta.columns", None)
-                for cc in cols:
-                    cc.partitions = cc.cardinality = None
-                    cc.last_updated = Date.now() - TOO_OLD
-                self.todo.extend(cols)
-
-    def _get_columns(self, table=None):
-        # TODO: HANDLE MORE THEN ONE ES, MAP TABLE SHORT_NAME TO ES INSTANCE
-        table_path = split_field(table)
-        es_index = table_path[0]
-        meta = self.es_metadata.indices[es_index]
         if not meta or self.last_es_metadata < Date.now() - OLD_METADATA:
-            self.es_metadata = self.default_es.get_metadata(force=True)
-            meta = self.es_metadata.indices[es_index]
+            self.last_es_metadata = Date.now()
+            metadata = self.default_es.get_metadata(force=True)
+            props = [
+                (self.default_es.get_index(index=i, type=t, debug=DEBUG), t, m.properties)
+                for i, d in metadata.indices.items()
+                if i in indexes
+                for t, m in [get_best_mapping(d.mappings)]
+            ]
 
-        for data_type, properties in meta.mappings.items():
-            if data_type == "_default_":
-                continue
-            properties.properties["_id"] = {"type": "string", "index": "not_analyzed"}
-            self._parse_properties(meta.index, properties, meta)
+            # CONFIRM ALL COLUMNS ARE SAME, FIX IF NOT
+            all_comparisions = list(jx.pairwise(props)) + list(jx.pairwise(jx.reverse(props)))
+            dirty = False
+            for (i1, t1, p1), (i2, t2, p2) in all_comparisions:
+                diff = elasticsearch.diff_schema(p2, p1)
+                for d in diff:
+                    dirty = True
+                    i2.add_property(*d)
+            meta = self.default_es.get_metadata(force=dirty).indices[canonical_index]
 
-    def _parse_properties(self, abs_index, properties, meta):
+            data_type, mapping = get_best_mapping(meta.mappings)
+            mapping.properties["_id"] = {"type": "string", "index": "not_analyzed"}
+            self._parse_properties(alias, mapping, meta)
+
+    def _parse_properties(self, alias, mapping, meta):
         # IT IS IMPORTANT THAT NESTED PROPERTIES NAME ALL COLUMNS, AND
         # ALL COLUMNS ARE GIVEN NAMES FOR ALL NESTED PROPERTIES
         def add_column(c, query_path):
@@ -143,13 +136,9 @@ class FromESMetadata(Schema):
                 c.names[query_path[0]] = relative_field(c.names["."], query_path[0])
 
             with self.meta.columns.locker:
-                for alias in meta.aliases:
-                    c_ = copy(c)
-                    c_.es_index = alias
-                    self._upsert_column(c_)
-                self._upsert_column(c)
+                self.todo.add(self.meta.columns.add(c))
 
-        abs_columns = elasticsearch.parse_properties(abs_index, None, properties.properties)
+        abs_columns = elasticsearch.parse_properties(alias, None, mapping.properties)
         self.abs_columns.update(abs_columns)
         with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
             # LIST OF EVERY NESTED PATH
@@ -193,27 +182,45 @@ class FromESMetadata(Schema):
         table_path = split_field(table_name)
         es_index_name = table_path[0]
         query_path = join_field(table_path[1:])
-        table = self.get_table(es_index_name)[0]
+
+        # FIND ALIAS
+        alias = self.aliases.get(es_index_name)
+        if not alias:
+            if es_index_name in self.known_aliases:
+                alias = es_index_name
+            else:
+                # ENSURE INDEX -> ALIAS IS IN A MAPPING FOR LATER
+                for a in self.default_es.get_aliases():
+                    self.known_aliases.add(a.alias)
+                    self.aliases[a.index] = coalesce(a.alias, a.index)
+                alias = self.aliases.get(es_index_name)
+                if not alias:
+                    if es_index_name in self.known_aliases:
+                        alias = es_index_name
+                    else:
+                        Log.error("{{table|quote}} does not exist", table=table_name)
+
+        table = self.get_table(alias)[0]
         abs_column_name = None if column_name == None else concat_field(query_path, column_name)
 
         try:
             # LAST TIME WE GOT INFO FOR THIS TABLE
             if not table:
                 table = Table(
-                    name=es_index_name,
+                    name=alias,
                     url=None,
                     query_path=['.'],
                     timestamp=Date.now()
                 )
                 with self.meta.tables.locker:
                     self.meta.tables.add(table)
-                self._get_columns(table=es_index_name)
             elif force or table.timestamp == None or table.timestamp < Date.now() - MAX_COLUMN_METADATA_AGE:
                 table.timestamp = Date.now()
-                self._get_columns(table=es_index_name)
+
+            self._get_columns(alias=alias)
 
             with self.meta.columns.locker:
-                columns = self.meta.columns.find(es_index_name, column_name)
+                columns = self.meta.columns.find(alias, column_name)
             if columns:
                 columns = jx.sort(columns, "names.\.")
                 # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
@@ -228,7 +235,7 @@ class FromESMetadata(Schema):
         if abs_column_name:
             Log.error("no columns matching {{table}}.{{column}}", table=table_name, column=abs_column_name)
         else:
-            self._get_columns(table=table_name)  # TO TEST WHAT HAPPENED
+            self._get_columns(alias=table_name)  # TO TEST WHAT HAPPENED
             Log.error("no columns for {{table}}?!", table=table_name)
 
     def _update_cardinality(self, column):
@@ -437,9 +444,12 @@ class FromESMetadata(Schema):
                                 Log.note("no more metatdata to update")
 
                 column = self.todo.pop(Till(seconds=(10*MINUTE).seconds))
-                if DEBUG:
-                    Log.note("update {{table}}.{{column}}", table=column.es_index, column=column.es_column)
                 if column:
+                    if column is THREAD_STOP:
+                        continue
+
+                    if DEBUG:
+                        Log.note("update {{table}}.{{column}}", table=column.es_index, column=column.es_column)
                     if column.es_index in self.index_does_not_exist:
                         with self.meta.columns.locker:
                             self.meta.columns.update({
@@ -487,7 +497,7 @@ class FromESMetadata(Schema):
                     "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
                 })
             if DEBUG:
-                Log.note("Could not get {{col.es_index}}.{{col.es_column}} info", col=c)
+                Log.note("Did not get {{col.es_index}}.{{col.es_column}} info", col=c)
 
 
 def _counting_query(c):
@@ -509,59 +519,6 @@ def _counting_query(c):
         return {"cardinality": {
             "field": c.es_column
         }}
-
-
-def metadata_columns():
-    return wrap(
-        [
-            Column(
-                names={".":c},
-                es_index="meta.columns",
-                es_column=c,
-                type="string",
-                nested_path=ROOT_PATH
-            )
-            for c in [
-                "type",
-                "nested_path",
-                "es_column",
-                "es_index"
-            ]
-        ] + [
-            Column(
-                es_index="meta.columns",
-                names={".":c},
-                es_column=c,
-                type="object",
-                nested_path=ROOT_PATH
-            )
-            for c in [
-                "names",
-                "domain",
-                "partitions"
-            ]
-        ] + [
-            Column(
-                names={".": c},
-                es_index="meta.columns",
-                es_column=c,
-                type="long",
-                nested_path=ROOT_PATH
-            )
-            for c in [
-                "count",
-                "cardinality"
-            ]
-        ] + [
-            Column(
-                names={".": "last_updated"},
-                es_index="meta.columns",
-                es_column="last_updated",
-                type="time",
-                nested_path=ROOT_PATH
-            )
-        ]
-    )
 
 
 def metadata_tables():

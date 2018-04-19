@@ -411,6 +411,12 @@ def lower_match(value, candidates):
 
 
 def wrap(v):
+    """
+    WRAP AS Data OBJECT FOR DATA PROCESSING: https://github.com/klahnakoski/mo-dots/tree/dev/docs
+    :param v:  THE VALUE TO WRAP
+    :return:  Data INSTANCE
+    """
+
     type_ = _get(v, "__class__")
 
     if type_ is dict:

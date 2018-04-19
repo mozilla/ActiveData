@@ -160,7 +160,11 @@ class Date(object):
         return self.add(-other)
 
     def __lt__(self, other):
-        other = Date(other)
+        try:
+            other = Date(other)
+        except Exception:
+            return False
+
         return self.unix < other.unix
 
     def __eq__(self, other):

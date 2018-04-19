@@ -195,7 +195,7 @@ description of the domain.
     "edges": [{
         "name": "platform", 
         "value": "build.platform", 
-        "domain": {"type": "set", "partitions": ["win32"]
+        "domain": {"type": "set", "partitions": ["win32"]}
     }],
     "where": {"and": [
         {"eq": {"etl.id": 0}},

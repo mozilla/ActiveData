@@ -49,6 +49,8 @@ As of this writing (September 2016) the following tables are available.
 
 ### 2. Investigate the schema
 
+<font style="font-weight: bold;;background-color: yellow;color:red">April 2018 - The "jobs" table is no longer in use. There is a similar "task" table but it has a different schema.</font>
+
 Knowing the column names and types is not enough.  Knowing the set-of-values that columns take on is often more important. The first step is to show some records so you can get a feeling for both:
 
     {"from": "jobs"} 

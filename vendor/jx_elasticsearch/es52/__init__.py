@@ -62,7 +62,7 @@ class ES52(Container):
         typed=None,
         kwargs=None
     ):
-        Container.__init__(self, None)
+        Container.__init__(self)
         if not container.config.default:
             container.config.default = {
                 "type": "elasticsearch",

@@ -15,8 +15,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import signal as _signal
-
 from mo_logs import Log
 from mo_threads.lock import Lock
 from mo_threads.multiprocess import Process
@@ -29,11 +27,8 @@ Log.cprofiler_stats = Queue("cprofiler stats")  # ACCUMULATION OF STATS FROM ALL
 
 MAIN_THREAD.timers = Thread.run("timers daemon", till.daemon)
 MAIN_THREAD.children.remove(threads.MAIN_THREAD.timers)
-MAIN_THREAD.stop_logging = Log.stop
 
 
-_signal.signal(_signal.SIGTERM, stop_main_thread)
-_signal.signal(_signal.SIGINT, stop_main_thread)
 
 
 

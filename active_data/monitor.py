@@ -16,7 +16,7 @@ from mo_logs import Log
 from mo_files import File
 from pyLibrary.meta import use_settings
 from pyLibrary.thread.multiprocess import Process
-from mo_threads import Signal, Thread
+from mo_threads import Signal, Thread, MAIN_THREAD
 from mo_threads import Till
 from mo_times.dates import Date
 from mo_times.durations import DAY
@@ -82,7 +82,7 @@ def main():
         constants.set(config.constants)
         Log.start(config.debug)
         please_stop = Signal("main stop signal")
-        Thread.wait_for_shutdown_signal(please_stop)
+        MAIN_THREAD.wait_for_shutdown_signal(please_stop)
     except Exception as e:
         Log.error("Problem with etl", cause=e)
     finally:

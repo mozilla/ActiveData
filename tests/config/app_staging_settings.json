@@ -2,8 +2,7 @@
 	"use": "elasticsearch",
 	"testing":{
 		"query": "http://127.0.0.1:5000/query",
-		"sql": "http://127.0.0.1:5000/sql",
-		"tuid": "http://127.0.0.1:5000/tuid"
+		"sql": "http://127.0.0.1:5000/sql"
 	},
 	"flask": {
 		"host": "0.0.0.0",

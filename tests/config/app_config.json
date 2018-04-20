@@ -2,8 +2,7 @@
 	"use": "elasticsearch",
 	"testing":{
 		"query": "http://127.0.0.1:5000/query",
-		"sql": "http://127.0.0.1:5000/sql",
-		"tuid": "http://127.0.0.1:5000/tuid"
+		"sql": "http://127.0.0.1:5000/sql"
 	},
 	"flask": {
 		"host": "0.0.0.0",
@@ -46,43 +45,6 @@
 		"index": "testdata",
 		"type": "test_result",
 		"debug": true
-	},
-	"tuid": {
-		"database": {
-			"filename": "tuid.db",
-			"load_functions": false
-		},
-		"hg": {
-			"branch": "mozilla-central"
-		},
-		"_hg_cache": {
-			"use_cache": true,
-			"hg": {
-				"url": "https://hg.mozilla.org"
-			},
-			"branches": {
-				"host": "http://localhost",
-				"port": 9200,
-				"index": "branches",
-				"type": "branch",
-				"tjson": true,
-				"timeout": 300,
-				"consistency": "one", // WE ONLY NEED ONE SHARD TO BE AVAILABLE
-				"debug": false,
-				"limit_replicas": false
-			},
-			"repo": {
-				"host": "http://localhost",
-				"port": 9200,
-				"index": "repo",
-				"type": "revision",
-				"tjson": true,
-				"timeout": 300,
-				"consistency": "one", // WE ONLY NEED ONE SHARD TO BE AVAILABLE
-				"debug": false,
-				"limit_replicas": false
-			}
-		}
 	},
 	"debug": {
 		"trace": true,

@@ -43,11 +43,9 @@ class ColumnList(Container):
 
     def find(self, es_index, abs_column_name):
         with self.locker:
-            if "." in es_index:
-                if es_index.startswith("meta."):
-                    self._update_meta()
-                else:
-                    Log.error("unlikely index name")
+            if es_index.startswith("meta."):
+                self._update_meta()
+
             if not abs_column_name:
                 return [c for cs in self.data.get(es_index, {}).values() for c in cs]
             else:
@@ -62,7 +60,7 @@ class ColumnList(Container):
     def add(self, column):
         self.dirty = True
         with self.locker:
-            self._add(column)
+            return self._add(column)
 
     def _add(self, column):
         columns_for_table = self.data.setdefault(column.es_index, {})

@@ -116,7 +116,7 @@ class Index(Features):
             Log.alert("elasticsearch debugging for {{url}} is on", url=self.url)
 
         props = self.get_properties()
-        if props == None:
+        if not props:
             tjson = coalesce(kwargs.tjson, True)  # TYPED JSON IS DEFAULT
         elif props[EXISTS_TYPE]:
             if tjson is False:
@@ -818,6 +818,7 @@ class Cluster(object):
     def get_metadata(self, force=False):
         if not self.settings.explore_metadata:
             Log.error("Metadata exploration has been disabled")
+
 
         if not self._metadata or force:
             response = self.get("/_cluster/state", retry={"times": 3}, timeout=30, stream=False)

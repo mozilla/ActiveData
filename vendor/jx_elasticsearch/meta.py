@@ -92,7 +92,7 @@ class FromESMetadata(Schema):
         with self.meta.tables.locker:
             return wrap([t for t in self.meta.tables.data if t.name == table_name])
 
-    def _get_columns(self, alias=None):
+    def _reload_columns(self, alias=None):
         """
         :param alias: A REAL ALIAS (OR NAME OF INDEX THAT HAS NO ALIAS)
         :return:
@@ -153,7 +153,7 @@ class FromESMetadata(Schema):
                 rel_column = abs_column.__copy__()
                 rel_column.type = es_type_to_json_type[rel_column.type]
                 for query_path in query_paths:
-                    rel_column.last_updated = Date.now() - TOO_OLD
+                    rel_column.last_updated = None
                     rel_column.names[query_path[0]] = relative_field(rel_column.names["."], query_path[0])
                     self.todo.add(self.meta.columns.add(rel_column))
         pass
@@ -193,7 +193,6 @@ class FromESMetadata(Schema):
                         Log.error("{{table|quote}} does not exist", table=table_name)
 
         table = self.get_table(alias)[0]
-        abs_column_name = None if column_name == None else concat_field(query_path, column_name)
 
         try:
             # LAST TIME WE GOT INFO FOR THIS TABLE
@@ -209,25 +208,18 @@ class FromESMetadata(Schema):
             elif force or table.timestamp == None or table.timestamp < Date.now() - MAX_COLUMN_METADATA_AGE:
                 table.timestamp = Date.now()
 
-            self._get_columns(alias=alias)
+            self._reload_columns(alias=alias)
 
             columns = self.meta.columns.find(alias, column_name)
-            if columns:
-                columns = jx.sort(columns, "names.\.")
-                # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
-                while len(self.todo) and not all(columns.get("last_updated")):
-                    if DEBUG:
-                        Log.note("waiting for columns to update {{columns|json}}", columns=[c.es_index+"."+c.es_column for c in columns if not c.last_updated])
-                    Till(seconds=1).wait()
-                return columns
+            columns = jx.sort(columns, "names.\.")
+            # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
+            while len(self.todo) and not all(columns.get("last_updated")):
+                if DEBUG:
+                    Log.note("waiting for columns to update {{columns|json}}", columns=[c.es_index+"."+c.es_column for c in columns if not c.last_updated])
+                Till(seconds=1).wait()
+            return columns
         except Exception as e:
             Log.error("Not expected", cause=e)
-
-        if abs_column_name:
-            Log.error("no columns matching {{table}}.{{column}}", table=table_name, column=abs_column_name)
-        else:
-            self._get_columns(alias=table_name)  # TO TEST WHAT HAPPENED
-            Log.error("no columns for {{table}}?!", table=table_name)
 
     def _update_cardinality(self, column):
         """

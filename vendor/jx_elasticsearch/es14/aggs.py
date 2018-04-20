@@ -11,8 +11,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_future import text_type
-
 from jx_base.domains import SetDomain
 from jx_base.expressions import TupleOp, NULL
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
@@ -25,15 +23,14 @@ from jx_elasticsearch.es14.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, unwraplist
+from mo_future import text_type
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
-from mo_logs.strings import quote
 from mo_math import Math, MAX, UNION
 from mo_times.timer import Timer
 
 
 def is_aggsop(es, query):
-    es.cluster.get_metadata()
     if query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate):
         return True
     return False

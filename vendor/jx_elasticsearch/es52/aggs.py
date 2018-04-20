@@ -79,7 +79,6 @@ MAX_OF_TUPLE = """
 
 
 def is_aggsop(es, query):
-    es.cluster.get_metadata()
     if query.edges or query.groupby or any(a != None and a != "none" for a in listwrap(query.select).aggregate):
         return True
     return False

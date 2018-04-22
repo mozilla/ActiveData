@@ -14,13 +14,15 @@ from __future__ import unicode_literals
 import itertools
 from itertools import product
 
+from mo_collections.relation import Relation_usingList
+
 from jx_base import STRUCT, Table
 from jx_base.query import QueryOp
 from jx_base.schema import Schema
 from jx_python import jx, meta as jx_base_meta
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
-from mo_dots import Data, relative_field, concat_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, join_field, wrap
+from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, join_field, wrap
 from mo_json.typed_encoder import EXISTS_TYPE
 from mo_kwargs import override
 from mo_logs import Log
@@ -28,7 +30,7 @@ from mo_logs.strings import quote
 from mo_threads import Queue, THREAD_STOP, Thread, Till
 from mo_times import HOUR, MINUTE, Timer, Date
 from pyLibrary.env import elasticsearch
-from pyLibrary.env.elasticsearch import es_type_to_json_type, get_best_type_from_mapping
+from pyLibrary.env.elasticsearch import es_type_to_json_type, _get_best_type_from_mapping
 
 MAX_COLUMN_METADATA_AGE = 12 * HOUR
 ENABLE_META_SCAN = False
@@ -58,12 +60,12 @@ class FromESMetadata(Schema):
         self.too_old = TOO_OLD
         self.settings = kwargs
         self.default_name = coalesce(name, alias, index)
-        self.default_es = elasticsearch.Cluster(kwargs=kwargs)
+        self.es_cluster = elasticsearch.Cluster(kwargs=kwargs)
         self.index_does_not_exist = set()
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
-        self.aliases = {}
-        self.known_aliases = set()
+        self.index_to_alias = Relation_usingList()
+        self.alias_new_since = {}
         self.es_metadata = Null
         self.abs_columns = set()
         self.last_es_metadata = Date.now()-OLD_METADATA
@@ -86,7 +88,7 @@ class FromESMetadata(Schema):
 
     @property
     def url(self):
-        return self.default_es.path + "/" + self.default_name.replace(".", "/")
+        return self.es_cluster.path + "/" + self.default_name.replace(".", "/")
 
     def get_table(self, table_name):
         with self.meta.tables.locker:
@@ -98,34 +100,35 @@ class FromESMetadata(Schema):
         :return:
         """
         # FIND ALL INDEXES OF ALIAS
-        indexes = list(reversed(sorted(i for i, a in self.aliases.items() if a == alias)))
-        # PICK ONE
-        canonical_index = indexes[0]
-        meta = self.default_es.get_metadata().indices[canonical_index]
+        canonical_index = self.es_cluster.get_best_matching_index(alias).index
+        times = self.es_cluster.index_new_since
 
-        if not meta or self.last_es_metadata < Date.now() - OLD_METADATA:
-            self.last_es_metadata = Date.now()
-            metadata = self.default_es.get_metadata(force=True)
-            props = [
-                (self.default_es.get_index(index=i, type=t, debug=DEBUG), t, m.properties)
-                for i, d in metadata.indices.items()
-                if i in indexes
-                for t, m in [get_best_type_from_mapping(d.mappings)]
-            ]
+        indexes = self.index_to_alias.get_domain(alias)
+        update_required = max(times[i] for i in indexes) > self.es_cluster.last_metadata
+        metadata = self.es_cluster.get_metadata(force=update_required).indices[canonical_index]
 
-            # CONFIRM ALL COLUMNS ARE SAME, FIX IF NOT
-            all_comparisions = list(jx.pairwise(props)) + list(jx.pairwise(jx.reverse(props)))
-            dirty = False
-            for (i1, t1, p1), (i2, t2, p2) in all_comparisions:
-                diff = elasticsearch.diff_schema(p2, p1)
-                for d in diff:
-                    dirty = True
-                    i2.add_property(*d)
-            meta = self.default_es.get_metadata(force=dirty).indices[canonical_index]
+        props = [
+            # (index, type, properties) TRIPLE
+            (self.es_cluster.get_index(index=i, type=t, debug=DEBUG), t, m.properties)
+            for i, d in metadata.indices.items()
+            if i in indexes
+            for t, m in [_get_best_type_from_mapping(d.mappings)]
+        ]
 
-            data_type, mapping = get_best_type_from_mapping(meta.mappings)
-            mapping.properties["_id"] = {"type": "string", "index": "not_analyzed"}
-            self._parse_properties(alias, mapping, meta)
+        # CONFIRM ALL COLUMNS ARE SAME, FIX IF NOT
+        all_comparisions = list(jx.pairwise(props)) + list(jx.pairwise(jx.reverse(props)))
+        dirty = False
+        # NOTICE THE SAEM (index, type, properties) TRIPLE FROM ABOVE
+        for (i1, t1, p1), (i2, t2, p2) in all_comparisions:
+            diff = elasticsearch.diff_schema(p2, p1)
+            for d in diff:
+                dirty = True
+                i2.add_property(*d)
+        meta = self.es_cluster.get_metadata(force=dirty).indices[canonical_index]
+
+        data_type, mapping = _get_best_type_from_mapping(meta.mappings)
+        mapping.properties["_id"] = {"type": "string", "index": "not_analyzed"}
+        self._parse_properties(alias, mapping, meta)
 
     def _parse_properties(self, alias, mapping, meta):
         abs_columns = elasticsearch.parse_properties(alias, None, mapping.properties)
@@ -172,25 +175,28 @@ class FromESMetadata(Schema):
         RETURN METADATA COLUMNS
         """
         table_path = split_field(table_name)
-        es_index_name = table_path[0]
-        query_path = join_field(table_path[1:])
+        root_table_name = table_path[0]
 
         # FIND ALIAS
-        alias = self.aliases.get(es_index_name)
+        if root_table_name in self.alias_new_since:
+            alias = root_table_name
+        else:
+            alias = self.index_to_alias[root_table_name]
+
         if not alias:
-            if es_index_name in self.known_aliases:
-                alias = es_index_name
+            self.es_cluster.get_metadata(force=True)
+            # ENSURE INDEX -> ALIAS IS IN A MAPPING FOR LATER
+            for a in self.es_cluster.get_aliases():
+                self.alias_new_since[a.alias] = self.es_cluster.index_new_since[a.index]
+                self.index_to_alias[a.index] = coalesce(a.alias, a.index)
+
+            if root_table_name in self.alias_new_since:
+                alias = root_table_name
             else:
-                # ENSURE INDEX -> ALIAS IS IN A MAPPING FOR LATER
-                for a in self.default_es.get_aliases():
-                    self.known_aliases.add(a.alias)
-                    self.aliases[a.index] = coalesce(a.alias, a.index)
-                alias = self.aliases.get(es_index_name)
-                if not alias:
-                    if es_index_name in self.known_aliases:
-                        alias = es_index_name
-                    else:
-                        Log.error("{{table|quote}} does not exist", table=table_name)
+                alias = self.index_to_alias[root_table_name]
+
+            if not alias:
+                Log.error("{{table|quote}} does not exist", table=table_name)
 
         table = self.get_table(alias)[0]
 
@@ -263,7 +269,7 @@ class FromESMetadata(Schema):
             is_text = [cc for cc in self.abs_columns if cc.es_column == column.es_column and cc.type == "text"]
             if is_text:
                 # text IS A MULTIVALUE STRING THAT CAN ONLY BE FILTERED
-                result = self.default_es.post("/" + es_index + "/_search", data={
+                result = self.es_cluster.post("/" + es_index + "/_search", data={
                     "aggs": {
                         "count": {"filter": {"match_all": {}}}
                     },
@@ -273,14 +279,14 @@ class FromESMetadata(Schema):
                 cardinality = 1001
                 multi = 1001
             elif column.es_column == "_id":
-                result = self.default_es.post("/" + es_index + "/_search", data={
+                result = self.es_cluster.post("/" + es_index + "/_search", data={
                     "query": {"match_all": {}},
                     "size": 0
                 })
                 count = cardinality = result.hits.total
                 multi = 1
             else:
-                result = self.default_es.post("/" + es_index + "/_search", data={
+                result = self.es_cluster.post("/" + es_index + "/_search", data={
                     "aggs": {
                         "count": _counting_query(column),
                         "multi": {"max": {"script": "doc[" + quote(column.es_column) + "].values.size()"}}
@@ -346,7 +352,7 @@ class FromESMetadata(Schema):
             else:
                 query.aggs["_"] = {"terms": {"field": column.es_column, "size": cardinality}}
 
-            result = self.default_es.post("/" + es_index + "/_search", data=query)
+            result = self.es_cluster.post("/" + es_index + "/_search", data=query)
 
             aggs = result.aggregations._
             if aggs._nested:

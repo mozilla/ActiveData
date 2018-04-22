@@ -428,7 +428,7 @@ def wrap(v):
     elif type_ is list:
         return FlatList(v)
     elif type_ in generator_types:
-        return FlatList(list(v))
+        return FlatList(list(unwrap(vv) for vv in v))
     else:
         return v
 

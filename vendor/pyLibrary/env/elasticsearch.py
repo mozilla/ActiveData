@@ -12,13 +12,13 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import re
-from collections import Mapping
+from collections import Mapping, namedtuple
 from copy import deepcopy
 
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from jx_python.meta import Column
-from mo_dots import wrap, FlatList, coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field
+from mo_dots import wrap, FlatList, coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field, unwrap
 from mo_future import text_type, binary_type
 from mo_json import value2json, json2value
 from mo_json.typed_encoder import EXISTS_TYPE, BOOLEAN_TYPE, STRING_TYPE, NUMBER_TYPE, NESTED_TYPE, TYPE_PREFIX
@@ -29,7 +29,7 @@ from mo_logs.strings import utf82unicode, unicode2utf8
 from mo_math import Math
 from mo_math.randoms import Random
 from mo_threads import Lock, ThreadedQueue, Till
-from mo_times import Date, Timer
+from mo_times import Date, Timer, MINUTE
 from pyLibrary import convert
 from pyLibrary.env import http
 
@@ -37,6 +37,8 @@ ES_STRUCT = ["object", "nested"]
 ES_NUMERIC_TYPES = ["long", "integer", "double", "float"]
 ES_PRIMITIVE_TYPES = ["string", "boolean", "integer", "date", "long", "double"]
 INDEX_DATE_FORMAT = "%Y%m%d_%H%M%S"
+
+STALE_METADATA = 10 * MINUTE
 
 DATA_KEY = text_type("data")
 
@@ -85,7 +87,7 @@ class Index(Features):
         self.cluster = cluster or Cluster(kwargs)
 
         try:
-            full_index = self.get_index(index)
+            full_index = cluster.get_canonical_index(index)
             if full_index and alias==None:
                 kwargs.alias = kwargs.index
                 kwargs.index = full_index
@@ -93,24 +95,17 @@ class Index(Features):
                 Log.error("not allowed")
             if type == None:
                 # NO type PROVIDED, MAYBE THERE IS A SUITABLE DEFAULT?
-                with self.cluster.metadata_locker:
-                    index_ = self.cluster._metadata.indices[self.settings.index]
-                if not index_:
-                    indices = self.cluster.get_metadata().indices
-                    index_ = indices[self.settings.index]
+                about = self.cluster.get_metadata().indices[self.settings.index]
+                type = self.settings.type = _get_best_type_from_mapping(about.mappings)[0]
+                if type == "_default_":
+                    Log.error("not allowed")
+            if not type:
+                Log.error("not allowed")
 
-                candidate_types = list(index_.mappings.keys())
-                if len(candidate_types) != 1:
-                    Log.error("Expecting `type` parameter")
-                self.settings.type = type = candidate_types[0]
+            self.path = "/" + full_index + "/" + type
         except Exception as e:
             # EXPLORING (get_metadata()) IS NOT ALLOWED ON THE PUBLIC CLUSTER
             Log.error("not expected", cause=e)
-
-        if not type:
-            Log.error("not allowed")
-
-        self.path = "/" + full_index + "/" + type
 
         if self.debug:
             Log.alert("elasticsearch debugging for {{url}} is on", url=self.url)
@@ -206,27 +201,6 @@ class Index(Features):
                 return
             Log.note("Waiting for alias {{alias}} to appear", alias=alias)
             Till(seconds=1).wait()
-
-    def get_index(self, alias):
-        """
-        RETURN THE INDEX USED BY THIS alias
-        """
-        alias_list = self.cluster.get_aliases()
-        output = jx.sort(set([
-            a.index
-            for a in alias_list
-            if a.alias == alias or
-                a.index == alias or
-                (re.match(re.escape(alias) + "\\d{8}_\\d{6}", a.index) and a.index != alias)
-        ]))
-
-        if len(output) > 1:
-            Log.error("only one index with given alias==\"{{alias}}\" expected",  alias= alias)
-
-        if not output:
-            return Null
-
-        return output.last()
 
     def is_proto(self, index):
         """
@@ -560,12 +534,13 @@ class Cluster(object):
 
         self.settings = kwargs
         self.info = None
-        self._metadata = None
+        self._metadata = Null
+        self.index_new_since = {}  # MAP FROM INDEX NAME TO TIME THE INDEX METADATA HAS CHANGED
         self.metadata_locker = Lock()
+        self.last_metadata = Date.now()
         self.debug = debug
         self.version = None
         self.path = kwargs.host + ":" + text_type(kwargs.port)
-        self.get_metadata()
 
     @override
     def get_or_create_index(
@@ -578,7 +553,7 @@ class Cluster(object):
         tjson=None,
         kwargs=None
     ):
-        best = self._get_best(kwargs)
+        best = self.get_best_matching_index(index, alias)
         if not best:
             output = self.create_index(kwargs=kwargs, schema=schema, limit_replicas=limit_replicas)
             return output
@@ -591,30 +566,20 @@ class Cluster(object):
 
         index = kwargs.index
         meta = self.get_metadata()
-        columns = parse_properties(index, ".", meta.indices[index].mappings.values()[0].properties)
+        type, about = _get_best_type_from_mapping(meta.indices[index].mappings)
 
-        tjson = kwargs.tjson
-        if len(columns) != 0:
-            kwargs.tjson = tjson or any(
-                c.names["."].startswith(TYPE_PREFIX) or
-                c.names["."].find("." + TYPE_PREFIX) != -1
-                for c in columns
-            )
-        if tjson is None and not kwargs.tjson:
-            Log.warning("Not typed index, columns are:\n{{columns|json}}", columns=columns)
+        if tjson == None:
+            tjson = True
+            columns = parse_properties(index, ".", about.properties)
+            if len(columns) > 0:
+                tjson = any(
+                    c.names["."].startswith(TYPE_PREFIX) or
+                    c.names["."].find("." + TYPE_PREFIX) != -1
+                    for c in columns
+                )
+            kwargs.tjson = tjson
 
         return Index(kwargs=kwargs, cluster=self)
-
-    def _get_best(self, settings):
-        aliases = self.get_aliases()
-        indexes = jx.sort([
-            a
-            for a in aliases
-            if (a.alias == settings.index and settings.alias == None) or
-            (re.match(re.escape(settings.index) + r'\d{8}_\d{6}', a.index) and settings.alias == None) or
-            (a.index == settings.index and (settings.alias == None or a.alias == None or a.alias == settings.alias))
-        ], "index")
-        return indexes.last()
 
     @override
     def get_index(self, index, type, alias=None, tjson=None, read_only=True, kwargs=None):
@@ -623,7 +588,7 @@ class Cluster(object):
         """
         if read_only:
             # GET EXACT MATCH, OR ALIAS
-            aliases = self.get_aliases()
+            aliases = wrap(self.get_aliases())
             if index in aliases.index:
                 pass
             elif index in aliases.alias:
@@ -635,7 +600,7 @@ class Cluster(object):
             return Index(kwargs=kwargs, cluster=self)
         else:
             # GET BEST MATCH, INCLUDING PROTOTYPE
-            best = self._get_best(kwargs)
+            best = self.get_best_matching_index(index, alias)
             if not best:
                 Log.error("Can not find index {{index_name}}", index_name=kwargs.index)
 
@@ -660,6 +625,42 @@ class Cluster(object):
             settings.index = alias
             return Index(read_only=True, kwargs=settings, cluster=self)
         Log.error("Can not find any index with alias {{alias_name}}",  alias_name= alias)
+
+    def get_canonical_index(self, alias):
+        """
+        RETURN THE INDEX USED BY THIS alias
+        THIS IS ACCORDING TO THE STRICT LIFECYCLE RULES:
+        THERE IS ONLY ONE INDEX WITH AN ALIAS
+        """
+        output = jx.sort(set(
+            i
+            for ai in self.get_aliases()
+            for a, i in [(ai.alias, ai.index)]
+            if a == alias or i == alias or (re.match(re.escape(alias) + "\\d{8}_\\d{6}", i) and i != alias)
+        ))
+
+        if len(output) > 1:
+            Log.error("only one index with given alias==\"{{alias}}\" expected", alias=alias)
+
+        if not output:
+            return Null
+
+        return output.last()
+
+    def get_best_matching_index(self, index, alias=None):
+        indexes = jx.sort(
+            [
+                ai_pair
+                for pattern in [re.escape(index) + r'\d{8}_\d{6}']
+                for ai_pair in self.get_aliases()
+                for a, i in [(ai_pair.alias, ai_pair.index)]
+                if (a == index and alias == None) or
+                   (re.match(pattern, i) and alias == None) or
+                   (i == index and (alias == None or a == None or a == alias))
+            ],
+            "index"
+        )
+        return indexes.last()
 
     def get_prototype(self, alias):
         """
@@ -756,11 +757,10 @@ class Cluster(object):
         )
 
         # CONFIRM INDEX EXISTS
-        while True:
+        while not Till(seconds=30):
             try:
                 metadata = self.get_metadata(force=True)
                 if index in metadata.indices:
-                    self._metadata = None
                     break
                 Log.note("Waiting for index {{index}} to appear", index=index)
             except Exception as e:
@@ -803,31 +803,33 @@ class Cluster(object):
         RETURN LIST OF {"alias":a, "index":i} PAIRS
         ALL INDEXES INCLUDED, EVEN IF NO ALIAS {"alias":Null}
         """
-        metadata = self.get_metadata()
-        output = []
-        for index, desc in metadata.indices.items():
+        for index, desc in self.get_metadata().indices.items():
             if not desc["aliases"]:
-                output.append({"index": index, "alias": None})
+                yield wrap({"index": index})
             elif desc['aliases'][0] == index:
                 Log.error("should not happen")
             else:
                 for a in desc["aliases"]:
-                    output.append({"index": index, "alias": a})
-        return wrap(output)
+                    yield wrap({"index": index, "alias": a})
 
     def get_metadata(self, force=False):
         if not self.settings.explore_metadata:
             Log.error("Metadata exploration has been disabled")
-
-
-        if not self._metadata or force:
-            response = self.get("/_cluster/state", retry={"times": 3}, timeout=30, stream=False)
-            with self.metadata_locker:
-                self._metadata = wrap(response.metadata)
-            self.info = wrap(self.get("/", stream=False))
-            self.version = self.info.version.number
+        if not force and self._metadata and Date.now() < self.last_metadata + STALE_METADATA:
             return self._metadata
 
+        old_indices = self._metadata.indices
+        response = self.get("/_cluster/state", retry={"times": 3}, timeout=30, stream=False)
+        now = self.last_metadata = Date.now()
+        with self.metadata_locker:
+            self._metadata = wrap(response.metadata)
+            for index_name, meta in self._metadata.indices.items():
+                for type_name, about in meta.mappings.items():
+                    diff = diff_schema(about.properties, old_indices[index_name].mappings[type_name].properties)
+                    if diff:
+                        self.index_new_since[index_name] = now
+        self.info = wrap(self.get("/", stream=False))
+        self.version = self.info.version.number
         return self._metadata
 
     def post(self, path, **kwargs):
@@ -1073,7 +1075,7 @@ class Alias(Features):
                 mappings = self.cluster.get("/"+self.settings.index+"/_mapping")[self.settings.index]
 
             # FIND MAPPING WITH MOST PROPERTIES (AND ASSUME THAT IS THE CANONICAL TYPE)
-            type, props = get_best_type_from_mapping(mappings.mappings)
+            type, props = _get_best_type_from_mapping(mappings.mappings)
             if type == None:
                 Log.error("Can not find schema type for index {{index}}", index=coalesce(self.settings.alias, self.settings.index))
 
@@ -1192,6 +1194,7 @@ class Alias(Features):
                 cause=e
             )
 
+
 def parse_properties(parent_index_name, parent_name, esProperties):
     """
     RETURN THE COLUMN DEFINITIONS IN THE GIVEN esProperties OBJECT
@@ -1201,8 +1204,6 @@ def parse_properties(parent_index_name, parent_name, esProperties):
         index_name = parent_index_name
         column_name = concat_field(parent_name, name)
         jx_name = column_name
-        if split_field(column_name)[-1] == EXISTS_TYPE:
-            property.type = "exists"
 
         if property.type == "nested" and property.properties:
             # NESTED TYPE IS A NEW TYPE DEFINITION
@@ -1270,21 +1271,23 @@ def parse_properties(parent_index_name, parent_name, esProperties):
     return columns
 
 
-def get_best_type_from_mapping(mapping):
+def _get_best_type_from_mapping(mapping):
     """
     THERE ARE MULTIPLE TYPES IN AN INDEX, PICK THE BEST
     :param mapping: THE ES MAPPING DOCUMENT
     :return: (type_name, mapping) PAIR (mapping.properties WILL HAVE PROPERTIES
     """
-    best_k = None
-    best_m = None
+    best_type_name = None
+    best_mapping = None
     for k, m in mapping.items():
         if k == "_default_":
             continue
-        if best_k is None or len(m.properties) > len(best_m.properties):
-            best_k = k
-            best_m = m
-    return best_k, best_m
+        if best_type_name is None or len(m.properties) > len(best_mapping.properties):
+            best_type_name = k
+            best_mapping = m
+    if best_type_name == None:
+        return "_default_", mapping["_default_"]
+    return best_type_name, best_mapping
 
 
 def get_encoder(id_expression="_id"):
@@ -1440,6 +1443,12 @@ def add_typed_annotations(meta):
 
 
 def diff_schema(A, B):
+    """
+    RETURN PROPERTIES IN A, BUT NOT IN B
+    :param A: elasticsearch properties
+    :param B: elasticsearch properties
+    :return: (name, properties) PAIRS WHERE name IS DOT-DELIMITED PATH
+    """
     output =[]
     def _diff_schema(path, A, B):
         for k, av in A.items():
@@ -1592,4 +1601,3 @@ _merge_type = {
         "nested": "nested"
     }
 }
-

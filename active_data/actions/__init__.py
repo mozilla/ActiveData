@@ -90,15 +90,18 @@ def test_mode_wait(query):
         return
 
     try:
-        m = meta.singlton
+        metadata_manager = meta.singlton
         now = Date.now()
         end_time = now + MINUTE
 
         if query["from"].startswith("meta."):
             return
 
+        alias = join_field(split_field(query["from"])[0:1])
+        metadata_manager.meta.tables[alias].timestamp = now  # TRIGGER A METADATA RELOAD AFTER THIS TIME
+
         # MARK COLUMNS DIRTY
-        m.meta.columns.update({
+        metadata_manager.meta.columns.update({
             "clear": [
                 "partitions",
                 "count",
@@ -106,19 +109,18 @@ def test_mode_wait(query):
                 "multi",
                 "last_updated"
             ],
-            "where": {"eq": {"es_index": join_field(split_field(query["from"])[0:1])}}
+            "where": {"eq": {"es_index": alias}}
         })
 
         # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
-        cols = [c for c in m.get_columns(table_name=query["from"], force=True) if c.type not in STRUCT]
+        cols = [c for c in metadata_manager.get_columns(table_name=query["from"], force=True) if c.type not in STRUCT]
         for c in cols:
             Log.note("Mark {{column.names}} dirty at {{time}}", column=c, time=now)
-            c.last_updated = now - m.too_old
-            m.todo.push(c)
+            metadata_manager.todo.push(c)
 
         while end_time > now:
             # GET FRESH VERSIONS
-            cols = [c for c in m.get_columns(table_name=query["from"]) if c.type not in STRUCT]
+            cols = [c for c in metadata_manager.get_columns(table_name=query["from"]) if c.type not in STRUCT]
             for c in cols:
                 if not c.last_updated or now >= c.last_updated or c.cardinality == None:
                     Log.note(

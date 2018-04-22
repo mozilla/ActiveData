@@ -37,7 +37,8 @@ class Relation_usingList(object):
 
     def __getitem__(self, key):
         """
-        RETURN AN ARRAY OF OBJECTS THAT key MAPS TO
+        USE THIS IF YOU ARE CONFIDENT THIS IS A MANY-TO-ONE MAPPING
+        RETURN THE SINGLE CO-DOMAIN OBJECT THIS key MAPS TO
         """
         output = [v for k, v in self.all if k == key]
         if not output:

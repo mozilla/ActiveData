@@ -80,8 +80,7 @@ class ES52(Container):
         self.edges = Data()
         self.worker = None
 
-        columns = self.meta.get_columns(table_name=coalesce(name, alias, index))
-        self._schema = Schema(coalesce(name, alias, index), columns)
+        columns = self.meta.get_columns(table_name=name)
 
         if typed == None:
             # SWITCH ON TYPED MODE

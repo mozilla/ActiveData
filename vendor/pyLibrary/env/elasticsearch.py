@@ -823,11 +823,20 @@ class Cluster(object):
         now = self.last_metadata = Date.now()
         with self.metadata_locker:
             self._metadata = wrap(response.metadata)
-            for index_name, meta in self._metadata.indices.items():
-                for type_name, about in meta.mappings.items():
-                    diff = diff_schema(about.properties, old_indices[index_name].mappings[type_name].properties)
-                    if diff:
-                        self.index_new_since[index_name] = now
+            for new_index_name, new_meta in self._metadata.indices.items():
+                old_index = old_indices[new_index_name]
+                if not old_index:
+                    self.index_new_since[new_index_name] = now
+                else:
+                    for type_name, new_about in new_meta.mappings.items():
+                        old_about = old_index.mappings[type_name]
+                        diff = diff_schema(new_about.properties, old_about.properties)
+                        if diff:
+                            self.index_new_since[new_index_name] = now
+            for old_index_name, old_meta in old_indices.items():
+                new_index = self._metadata.indices[old_index_name]
+                if not new_index:
+                    self.index_new_since[old_index_name] = now
         self.info = wrap(self.get("/", stream=False))
         self.version = self.info.version.number
         return self._metadata

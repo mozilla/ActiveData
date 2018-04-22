@@ -14,6 +14,8 @@ from __future__ import unicode_literals
 import itertools
 from itertools import product
 
+from mo_math import MAX
+
 from mo_collections.relation import Relation_usingList
 
 from jx_base import STRUCT, Table
@@ -65,13 +67,15 @@ class FromESMetadata(Schema):
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
         self.index_to_alias = Relation_usingList()
-        self.alias_new_since = {}
         self.es_metadata = Null
         self.abs_columns = set()
         self.last_es_metadata = Date.now()-OLD_METADATA
 
         self.meta = Data()
         self.meta.columns = ColumnList()
+
+
+        self.alias_new_since = {}
         table_columns = metadata_tables()
         self.meta.tables = ListContainer("meta.tables", [], wrap({c.names["."]: c for c in table_columns}))
         self.meta.columns.extend(table_columns)
@@ -187,7 +191,7 @@ class FromESMetadata(Schema):
             self.es_cluster.get_metadata(force=True)
             # ENSURE INDEX -> ALIAS IS IN A MAPPING FOR LATER
             for a in self.es_cluster.get_aliases():
-                self.alias_new_since[a.alias] = self.es_cluster.index_new_since[a.index]
+                self.alias_new_since[a.alias] = MAX([self.es_cluster.index_new_since[a.index], self.alias_new_since.get(a.alias)])
                 self.index_to_alias[a.index] = coalesce(a.alias, a.index)
 
             if root_table_name in self.alias_new_since:
@@ -516,12 +520,16 @@ def metadata_tables():
             ]
         ]+[
             Column(
-                names={".": "timestamp"},
+                names={".": c},
                 es_index="meta.tables",
-                es_column="timestamp",
+                es_column=c,
                 type="integer",
                 nested_path=ROOT_PATH
             )
+            for c in [
+                "timestamp",
+                "new_since"
+            ]
         ]
     )
 

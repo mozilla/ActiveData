@@ -24,7 +24,7 @@ from jx_elasticsearch.es14.aggs import es_aggsop, is_aggsop
 from jx_elasticsearch.es14.deep import is_deepop, es_deepop
 from jx_elasticsearch.es14.setop import is_setop, es_setop
 from jx_elasticsearch.es14.util import aggregates
-from jx_elasticsearch.meta import FromESMetadata
+from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python import jx
 from mo_dots import Data, Null, unwrap, coalesce, split_field, literal_field, unwraplist, join_field, wrap, listwrap, FlatList
 from mo_json import scrub, value2json
@@ -41,7 +41,7 @@ class ES14(Container):
 
     def __new__(cls, *args, **kwargs):
         if (len(args) == 1 and args[0].get("index") == "meta") or kwargs.get("index") == "meta":
-            output = FromESMetadata.__new__(FromESMetadata, *args, **kwargs)
+            output = ElasticsearchMetadata.__new__(ElasticsearchMetadata, *args, **kwargs)
             output.__init__(*args, **kwargs)
             return output
         else:
@@ -75,7 +75,7 @@ class ES14(Container):
         else:
             self._es = elasticsearch.Cluster(kwargs=kwargs).get_index(read_only=read_only, kwargs=kwargs)
 
-        self.meta = FromESMetadata(kwargs=kwargs)
+        self.meta = ElasticsearchMetadata(kwargs=kwargs)
         self.settings.type = self._es.settings.type
         self.edges = Data()
         self.worker = None
@@ -122,7 +122,7 @@ class ES14(Container):
 
     def query(self, _query):
         try:
-            query = QueryOp.wrap(_query, table=self, schema=self.schema)
+            query = QueryOp.wrap(_query, container=self, namespace=self.schema)
 
             for n in self.namespaces:
                 query = n.convert(query)

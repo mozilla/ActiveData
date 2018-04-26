@@ -244,6 +244,11 @@ class Table(Container):
         return self._schema
 
 
+    def map(self, mapping):
+        return self
+
+
+
 class Schema(object):
     """
     A Schema MAPS ALL COLUMNS IN SNOWFLAKE FROM THE PERSPECTIVE OF A SINGLE TABLE (a nested_path)

@@ -49,7 +49,6 @@ def is_deepop(es, query):
 
 def es_deepop(es, query):
     schema = query.frum.schema
-    columns = schema.columns
     query_path = schema.query_path
 
     # TODO: FIX THE GREAT SADNESS CAUSED BY EXECUTING post_expressions

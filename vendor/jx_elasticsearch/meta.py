@@ -14,18 +14,19 @@ from __future__ import unicode_literals
 import itertools
 from itertools import product
 
+import jx_base
+from jx_base.namespace import Namespace
 from mo_math import MAX
 
 from mo_collections.relation import Relation_usingList
 
-from jx_base import STRUCT, Table
+from jx_base import STRUCT, TableDesc
 from jx_base.query import QueryOp
-from jx_base.schema import Schema
 from jx_python import jx, meta as jx_base_meta
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
-from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, join_field, wrap
-from mo_json.typed_encoder import EXISTS_TYPE
+from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, join_field, wrap, concat_field, startswith_field
+from mo_json.typed_encoder import EXISTS_TYPE, TYPE_PREFIX, untype_path
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.strings import quote
@@ -42,9 +43,9 @@ OLD_METADATA = MINUTE
 TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
 
 
-class FromESMetadata(Schema):
+class ElasticsearchMetadata(Namespace):
     """
-    QUERY THE METADATA
+    MANAGE SNOWFLAKE SCHEMAS FOR EACH OF THE ALIASES FOUND IN THE CLUSTER
     """
 
     def __new__(cls, *args, **kwargs):
@@ -74,7 +75,7 @@ class FromESMetadata(Schema):
         self.meta = Data()
         self.meta.columns = ColumnList()
 
-
+        self.alias_to_query_paths = {}
         self.alias_new_since = {}
         table_columns = metadata_tables()
         self.meta.tables = ListContainer("meta.tables", [], wrap({c.names["."]: c for c in table_columns}))
@@ -87,16 +88,8 @@ class FromESMetadata(Schema):
         return
 
     @property
-    def query_path(self):
-        return None
-
-    @property
     def url(self):
         return self.es_cluster.path + "/" + self.default_name.replace(".", "/")
-
-    def get_table(self, table_name):
-        with self.meta.tables.locker:
-            return wrap([t for t in self.meta.tables.data if t.name == table_name])
 
     def _reload_columns(self, alias=None):
         """
@@ -122,7 +115,7 @@ class FromESMetadata(Schema):
         # CONFIRM ALL COLUMNS ARE SAME, FIX IF NOT
         all_comparisions = list(jx.pairwise(props)) + list(jx.pairwise(jx.reverse(props)))
         dirty = False
-        # NOTICE THE SAEM (index, type, properties) TRIPLE FROM ABOVE
+        # NOTICE THE SAME (index, type, properties) TRIPLE FROM ABOVE
         for (i1, t1, p1), (i2, t2, p2) in all_comparisions:
             diff = elasticsearch.diff_schema(p2, p1)
             for d in diff:
@@ -152,8 +145,9 @@ class FromESMetadata(Schema):
                         b.insert(i, aa)
                         break
             for q in query_paths:
-                q.append(".")
+                q.append(SELF_PATH)
             query_paths.append(SELF_PATH)
+            self.alias_to_query_paths[alias] = query_paths
 
             # ADD RELATIVE COLUMNS
             for abs_column in abs_columns:
@@ -202,12 +196,13 @@ class FromESMetadata(Schema):
             if not alias:
                 Log.error("{{table|quote}} does not exist", table=table_name)
 
+        now = Date.now()
         table = self.get_table(alias)[0]
 
         try:
             # LAST TIME WE GOT INFO FOR THIS TABLE
             if not table:
-                table = Table(
+                table = TableDesc(
                     name=alias,
                     url=None,
                     query_path=['.'],
@@ -215,10 +210,10 @@ class FromESMetadata(Schema):
                 )
                 with self.meta.tables.locker:
                     self.meta.tables.add(table)
-            elif force or table.timestamp == None or table.timestamp < Date.now() - MAX_COLUMN_METADATA_AGE:
-                table.timestamp = Date.now()
-
-            self._reload_columns(alias=alias)
+                self._reload_columns(alias=alias)
+            elif force or table.timestamp < now - MAX_COLUMN_METADATA_AGE:
+                table.timestamp = now
+                self._reload_columns(alias=alias)
 
             columns = self.meta.columns.find(alias, column_name)
             columns = jx.sort(columns, "names.\.")
@@ -463,7 +458,7 @@ class FromESMetadata(Schema):
             if c == THREAD_STOP:
                 break
 
-            if not c.last_updated or c.last_updated >= Date.now()-TOO_OLD:
+            if c.last_updated >= Date.now()-TOO_OLD:
                 continue
 
             self.meta.columns.update({
@@ -480,6 +475,144 @@ class FromESMetadata(Schema):
             })
             if DEBUG:
                 Log.note("Did not get {{col.es_index}}.{{col.es_column}} info", col=c)
+
+    def get_table(self, alias_name):
+        with self.meta.tables.locker:
+            return wrap([t for t in self.meta.tables.data if t.name == alias_name])
+
+    def get_snowflake(self, fact_table_name):
+        return Snowflake(fact_table_name, self)
+
+    def get_schema(self, name):
+        query_path = split_field(name)
+        return self.get_snowflake(query_path[0]).get_schema(join_field(query_path[1:]))
+
+
+class Snowflake(object):
+    """
+    REPRESENT ONE ALIAS, AND ITS NESTED ARRAYS
+    """
+
+    def __init__(self, alias, namespace):
+        self.alias = alias
+        self.namespace = namespace
+
+
+    def get_schema(self, query_path):
+        return Schema(query_path, self)
+
+    @property
+    def query_paths(self):
+        """
+        RETURN A LIST OF ALL NESTED COLUMNS
+        """
+        return self.namespace.alias_to_query_paths[self.alias]
+
+    @property
+    def columns(self):
+        """
+        RETURN ALL COLUMNS FROM ORIGIN OF FACT TABLE
+        """
+        return self.namespace.get_columns(self.alias)
+
+
+class Schema(jx_base.Schema):
+    """
+    REPRESENT JUST ONE TABLE IN A SNOWFLAKE
+    """
+
+    def __init__(self, query_path, snowflake):
+        self.query_path = [
+            p
+            for p in snowflake.query_paths
+            if untype_path(p[0]) == query_path
+        ][0][0]
+        self.snowflake = snowflake
+
+    def leaves(self, column_name):
+        """
+        :param column_name:
+        :return: ALL COLUMNS THAT START WITH column_name, NOT INCLUDING DEEPER NESTED COLUMNS
+        """
+        column_name = untype_path(column_name)
+        columns = self.snowflake.namespace.get_columns(self.snowflake.alias)
+        if self.query_path == '.':
+            return [
+                c
+                for c in columns
+                if startswith_field(untype_path(c.names['.']), column_name) and
+                   startswith_field(self.query_path, c.nested_path[0]) and
+                   c.type not in STRUCT
+            ]
+        else:
+            return [
+                c
+                for c in columns
+                if (
+                    (
+                        startswith_field(untype_path(c.names['.']), column_name) or
+                        startswith_field(untype_path(c.names[self.query_path]), column_name)
+                    ) and
+                    startswith_field(self.query_path, c.nested_path[0]) and
+                    c.type not in STRUCT
+                )
+            ]
+
+    def values(self, column_name):
+        """
+        RETURN ALL COLUMNS THAT column_name REFERES TO
+        """
+        column_name = untype_path(column_name)
+        columns = self.snowflake.namespace.get_columns(self.snowflake.alias)
+        if self.query_path == '.':
+            return [
+                c
+                for c in columns
+                if untype_path(c.names[self.query_path]) == column_name and
+                   startswith_field(self.query_path, c.nested_path[0]) and
+                   c.type not in STRUCT
+            ]
+        else:
+            return [
+                c
+                for c in columns
+                if (
+                    (
+                        untype_path(c.names['.']) == column_name or
+                        untype_path(c.names[self.query_path]) == column_name
+                    ) and
+                    startswith_field(self.query_path, c.nested_path[0]) and
+                    c.type not in STRUCT
+                )
+            ]
+
+    def __getitem__(self, column_name):
+        return self.values(column_name)
+
+
+    @property
+    def name(self):
+        return concat_field(self.snowflake.alias, self.query_path)
+
+    def map_to_es(self):
+        """
+        RETURN A MAP FROM THE NAMESPACE TO THE es_column NAME
+        """
+        full_name = self.query_path
+        return set_default(
+            {
+                c.names[full_name]: c.es_column
+                for c in self.snowflake.columns
+                if c.type not in STRUCT
+            },
+            {
+                c.names["."]: c.es_column
+                for c in self.snowflake.columns
+                if c.type not in STRUCT
+            }
+        )
+
+
 
 
 def _counting_query(c):
@@ -527,26 +660,8 @@ def metadata_tables():
                 nested_path=ROOT_PATH
             )
             for c in [
-                "timestamp",
-                "new_since"
+                "timestamp"
             ]
         ]
     )
-
-
-def init_database(sql):
-
-
-
-    sql.execute("""
-        CREATE TABLE tables AS (
-            table_name VARCHAR(200), 
-            alias CHAR        
-        
-        )
-    
-    
-    """)
-
-
 

@@ -66,16 +66,17 @@ class ColumnList(Container):
         columns_for_table = self.data.setdefault(column.es_index, {})
         existing_columns = columns_for_table.setdefault(column.names["."], [])
 
-        if not existing_columns:
-            existing_columns.append(column)
-            return column
-        else:
-            for canonical in existing_columns:
-                if canonical.type == column.type and canonical is not column:
-                    set_default(column.names, canonical.names)
-                    for key in Column.__slots__:
-                        canonical[key] = column[key]
-                    return canonical
+        for canonical in existing_columns:
+            if canonical is column:
+                return canonical
+            if canonical.type == column.type:
+                set_default(column.names, canonical.names)
+                for key in Column.__slots__:
+                    canonical[key] = column[key]
+                return canonical
+        existing_columns.append(column)
+        return column
+
 
     def _update_meta(self):
         if not self.dirty:

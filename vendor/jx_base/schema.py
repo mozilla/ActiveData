@@ -84,12 +84,12 @@ def _indexer(columns, query_path):
 
 class Schema(object):
     """
-    A Schema MAPS ALL COLUMNS IN SNOWFLAKE FROM NAME TO COLUMN INSTANCE
+    A Schema MAPS COLUMN NAMES OF A SINGLE TABLE TO COLUMN INSTANCES THAT MATCH
     """
 
     def __init__(self, table_name, columns):
         """
-        :param table_name: THE FACT TABLE
+        :param table_name: THE ORIGN TABLE ("." IS THE FACT TABLE)
         :param query_path: PATH TO ARM OF SNOWFLAKE
         :param columns: ALL COLUMNS IN SNOWFLAKE
         """
@@ -148,7 +148,7 @@ class Schema(object):
 
     def map_to_es(self):
         """
-        RETURN A MAP FROM THE NAME SPACE TO THE es_column NAME
+        RETURN A MAP FROM THE NAMESPACE TO THE es_column NAME
         """
         full_name = self.query_path
         return set_default(

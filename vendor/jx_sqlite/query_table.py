@@ -91,7 +91,7 @@ class QueryTable(GroupbyTable):
         frum, query['from'] = query['from'], self
         table = self.sf.tables[relative_field(frum, self.sf.fact)]
         schema = table.schema
-        query = QueryOp.wrap(query, table=table, schema=schema)
+        query = QueryOp.wrap(query, container=table, namespace=schema)
         new_table = "temp_" + unique_name()
 
         if query.format == "container":

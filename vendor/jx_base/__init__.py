@@ -223,7 +223,19 @@ class {{class_name}}(Mapping):
     return _exec(code, name)
 
 
-class Table(DataClass(
+class Facts(object):
+
+    def __init__(self, container, snowflake):
+        self.container = container
+        self.snowflake = snowflake
+
+    @property
+    def namespace(self):
+        return self.container.namespace
+
+
+
+class TableDesc(DataClass(
     "Table",
     [
         "name",
@@ -239,6 +251,7 @@ class Table(DataClass(
     def columns(self):
         Log.error("not implemented")
         # return singlton.get_columns(table_name=self.name)
+
 
 
 Column = DataClass(
@@ -262,3 +275,6 @@ Column = DataClass(
         {"eq": [{"last": "nested_path"}, {"literal": "."}]}
     ]}
 )
+
+from jx_base.schema import Schema
+from jx_base.table import Table

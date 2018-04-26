@@ -1094,7 +1094,7 @@ class Alias(Features):
     def url(self):
         return self.cluster.path.rstrip("/") + "/" + self.path.lstrip("/")
 
-    def get_schema(self, retry=True):
+    def get_snowflake(self, retry=True):
         if self.settings.explore_metadata:
             indices = self.cluster.get_metadata().indices
             if not self.settings.alias or self.settings.alias==self.settings.index:

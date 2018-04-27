@@ -102,7 +102,7 @@ def es_deepop(es, query):
             col_names = set()
             for c in leaves:
                 if c.nested_path[0] == ".":
-                    if c.type == NESTED:
+                    if c.jx_type == NESTED:
                         continue
                     es_query.stored_fields += [c.es_column]
                 c_name = untype_path(c.names[query_path])
@@ -133,7 +133,7 @@ def es_deepop(es, query):
                 for n in net_columns:
                     pull = get_pull_function(n)
                     if n.nested_path[0] == ".":
-                        if n.type == NESTED:
+                        if n.jx_type == NESTED:
                             continue
                         es_query.stored_fields += [n.es_column]
 
@@ -240,3 +240,5 @@ class MapToLocal(object):
             return get_pull(cs[0])
         else:
             return "coalesce(" + (",".join(get_pull(c) for c in cs)) + ")"
+
+

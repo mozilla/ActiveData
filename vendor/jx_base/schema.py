@@ -156,13 +156,13 @@ class Schema(object):
                 c.names[full_name]: c.es_column
                 for k, cs in self.lookup.items()
                 # if startswith_field(k, full_name)
-                for c in cs if c.type not in STRUCT
+                for c in cs if c.jx_type not in STRUCT
             },
             {
                 c.names["."]: c.es_column
                 for k, cs in self.lookup.items()
                 # if startswith_field(k, full_name)
-                for c in cs if c.type not in STRUCT
+                for c in cs if c.jx_type not in STRUCT
             }
         )
 

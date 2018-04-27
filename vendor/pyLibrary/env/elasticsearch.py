@@ -1225,7 +1225,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                 es_index=index_name,
                 es_column=column_name,
                 names={".": jx_name},
-                type="nested",
+                es_type="nested",
                 nested_path=ROOT_PATH
             ))
 
@@ -1239,7 +1239,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                 es_index=index_name,
                 es_column=column_name,
                 nested_path=ROOT_PATH,
-                type="source" if property.enabled == False else "object"
+                es_type="source" if property.enabled == False else "object"
             ))
 
         if property.dynamic:
@@ -1256,7 +1256,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                 es_column=column_name,
                 names={".": jx_name},
                 nested_path=ROOT_PATH,
-                type=property.type
+                es_type=property.type
             ))
             if property.index_name and name != property.index_name:
                 columns.append(Column(
@@ -1264,7 +1264,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                     es_column=column_name,
                     names={".": jx_name},
                     nested_path=ROOT_PATH,
-                    type=property.type
+                    es_type=property.type
                 ))
         elif property.enabled == None or property.enabled == False:
             columns.append(Column(
@@ -1272,7 +1272,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                 es_column=column_name,
                 names={".": jx_name},
                 nested_path=ROOT_PATH,
-                type="source" if property.enabled == False else "object"
+                es_type="source" if property.enabled == False else "object"
             ))
         else:
             Log.warning("unknown type {{type}} for property {{path}}", type=property.type, path=query_path)

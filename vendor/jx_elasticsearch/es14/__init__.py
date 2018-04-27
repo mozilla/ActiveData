@@ -209,7 +209,7 @@ class ES14(Container):
                 scripts.append({"doc": v.doc})
             else:
                 v = scrub(v)
-                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_ruby(schema).script(schema)})
+                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_es_script(schema).script(schema)})
 
         if results.hits.hits:
             updates = []

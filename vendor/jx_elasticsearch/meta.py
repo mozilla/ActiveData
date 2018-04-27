@@ -69,7 +69,7 @@ class ElasticsearchMetadata(Namespace):
 
         self.index_to_alias = Relation_usingList()
         self.es_metadata = Null
-        self.abs_columns = set()
+        # self.abs_columns = set()
         self.last_es_metadata = Date.now()-OLD_METADATA
 
         self.meta = Data()
@@ -129,10 +129,9 @@ class ElasticsearchMetadata(Namespace):
 
     def _parse_properties(self, alias, mapping, meta):
         abs_columns = elasticsearch.parse_properties(alias, None, mapping.properties)
-        self.abs_columns.update(abs_columns)
         with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
             # LIST OF EVERY NESTED PATH
-            query_paths = [[c.es_column] for c in abs_columns if c.type == "nested"]
+            query_paths = [[c.es_column] for c in abs_columns if c.es_type == "nested"]
             for a, b in itertools.product(query_paths, query_paths):
                 aa = a[0]
                 bb = b[0]
@@ -146,17 +145,16 @@ class ElasticsearchMetadata(Namespace):
                         break
             for q in query_paths:
                 q.append(SELF_PATH)
-            query_paths.append(SELF_PATH)
+            query_paths.append(ROOT_PATH)
             self.alias_to_query_paths[alias] = query_paths
 
-            # ADD RELATIVE COLUMNS
+            # ADD RELATIVE NAMES
             for abs_column in abs_columns:
-                rel_column = abs_column.__copy__()
-                rel_column.type = es_type_to_json_type[rel_column.type]
+                abs_column.last_updated = None
+                abs_column.jx_type = es_type_to_json_type[abs_column.es_type]
                 for query_path in query_paths:
-                    rel_column.last_updated = None
-                    rel_column.names[query_path[0]] = relative_field(rel_column.names["."], query_path[0])
-                    self.todo.add(self.meta.columns.add(rel_column))
+                    abs_column.names[query_path[0]] = relative_field(abs_column.names["."], query_path[0])
+                self.todo.add(self.meta.columns.add(abs_column))
         pass
 
     def query(self, _query):
@@ -233,7 +231,7 @@ class ElasticsearchMetadata(Namespace):
         if column.es_index in self.index_does_not_exist:
             return
 
-        if column.type in STRUCT:
+        if column.jx_type in STRUCT:
             Log.error("not supported")
         try:
             if column.es_index == "meta.columns":
@@ -265,7 +263,7 @@ class ElasticsearchMetadata(Namespace):
 
             es_index = column.es_index.split(".")[0]
 
-            is_text = [cc for cc in self.abs_columns if cc.es_column == column.es_column and cc.type == "text"]
+            is_text = [cc for cc in self.meta.columns if cc.es_column == column.es_column and cc.es_type == "text"]
             if is_text:
                 # text IS A MULTIVALUE STRING THAT CAN ONLY BE FILTERED
                 result = self.es_cluster.post("/" + es_index + "/_search", data={
@@ -327,7 +325,7 @@ class ElasticsearchMetadata(Namespace):
                     "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
                 })
                 return
-            elif column.type in elasticsearch.ES_NUMERIC_TYPES and cardinality > 30:
+            elif column.es_type in elasticsearch.ES_NUMERIC_TYPES and cardinality > 30:
                 if DEBUG:
                     Log.note("{{field}} has {{num}} parts", field=column.es_index, num=cardinality)
                 self.meta.columns.update({
@@ -405,7 +403,7 @@ class ElasticsearchMetadata(Namespace):
                     old_columns = [
                         c
                         for c in self.meta.columns
-                        if (c.last_updated == None or c.last_updated < Date.now()-TOO_OLD) and c.type not in STRUCT
+                        if (c.last_updated == None or c.last_updated < Date.now()-TOO_OLD) and c.jx_type not in STRUCT
                     ]
                     if old_columns:
                         if DEBUG:
@@ -436,7 +434,7 @@ class ElasticsearchMetadata(Namespace):
                             "where": {"eq": {"es_index": column.es_index}}
                         })
                         continue
-                    if column.type in STRUCT or column.es_column.endswith("." + EXISTS_TYPE):
+                    if column.jx_type in STRUCT or column.es_column.endswith("." + EXISTS_TYPE):
                         column.last_updated = Date.now()
                         continue
                     elif column.last_updated >= Date.now()-TOO_OLD:
@@ -542,7 +540,7 @@ class Schema(jx_base.Schema):
                 for c in columns
                 if (
                     c.names['.'] != "_id" and
-                    c.type not in STRUCT and
+                    c.jx_type not in STRUCT and
                     startswith_field(unnest_path(c.names[path]), column_name) and
                     startswith_field(path, c.nested_path[0])
                 )
@@ -564,7 +562,7 @@ class Schema(jx_base.Schema):
                 if (
                     untype_path(c.names[path]) == column_name and
                     startswith_field(path, c.nested_path[0]) and
-                    c.type not in STRUCT
+                    c.jx_type not in STRUCT
                 )
             ]
             if output:
@@ -612,7 +610,7 @@ def _counting_query(c):
             "aggs": {
                 "_nested": {"cardinality": {
                     "field": c.es_column,
-                    "precision_threshold": 10 if c.type in elasticsearch.ES_NUMERIC_TYPES else 100
+                    "precision_threshold": 10 if c.es_type in elasticsearch.ES_NUMERIC_TYPES else 100
                 }}
             }
         }
@@ -629,7 +627,7 @@ def metadata_tables():
                 names={".": c},
                 es_index="meta.tables",
                 es_column=c,
-                type="string",
+                es_type="string",
                 nested_path=ROOT_PATH
             )
             for c in [
@@ -642,7 +640,7 @@ def metadata_tables():
                 names={".": c},
                 es_index="meta.tables",
                 es_column=c,
-                type="integer",
+                es_type="integer",
                 nested_path=ROOT_PATH
             )
             for c in [

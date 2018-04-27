@@ -113,14 +113,14 @@ def test_mode_wait(query):
         })
 
         # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
-        cols = [c for c in metadata_manager.get_columns(table_name=query["from"], force=True) if c.type not in STRUCT]
+        cols = [c for c in metadata_manager.get_columns(table_name=query["from"], force=True) if c.jx_type not in STRUCT]
         for c in cols:
             Log.note("Mark {{column.names}} dirty at {{time}}", column=c, time=now)
             metadata_manager.todo.push(c)
 
         while end_time > now:
             # GET FRESH VERSIONS
-            cols = [c for c in metadata_manager.get_columns(table_name=query["from"]) if c.type not in STRUCT]
+            cols = [c for c in metadata_manager.get_columns(table_name=query["from"]) if c.jx_type not in STRUCT]
             for c in cols:
                 if not c.last_updated or now >= c.last_updated or c.cardinality == None:
                     Log.note(

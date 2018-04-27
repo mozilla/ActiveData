@@ -180,7 +180,7 @@ class SetDecoder(AggsDecoder):
             }}, es_query)
         else:
             terms = set_default({"terms": {
-                "script": value.to_ruby(self.schema).script(self.schema),
+                "script": value.to_es_script(self.schema).script(self.schema),
                 "size": limit
             }}, es_query)
 
@@ -242,7 +242,7 @@ def _range_composer(edge, domain, es_query, to_float, schema):
     if isinstance(edge.value, Variable):
         calc = {"field": schema.leaves(edge.value.var)[0].es_column}
     else:
-        calc = {"script": edge.value.to_ruby(schema).script(schema)}
+        calc = {"script": edge.value.to_es_script(schema).script(schema)}
 
     return wrap({"aggs": {
         "_match": set_default(
@@ -547,7 +547,7 @@ class DefaultDecoder(SetDecoder):
         self.start = start
 
         value = self.edge.value.partial_eval()
-        script = value.to_ruby(self.schema)
+        script = value.to_es_script(self.schema)
         exists = NotOp("not", script.miss).partial_eval()
         if not isinstance(self.edge.value, Variable):
 

@@ -63,7 +63,7 @@ def jx_expression(expr, schema=None):
         if len(leaves) == 0:
             v.data_type = IS_NULL
         if len(leaves) == 1:
-            v.data_type = list(leaves)[0].type
+            v.data_type = list(leaves)[0].jx_type
     return output
 
 
@@ -2405,9 +2405,9 @@ class SplitOp(Expression):
         )
 
     def missing(self):
-        v = self.value.to_ruby(not_null=True)
-        find = self.find.to_ruby(not_null=True)
-        index = v + ".indexOf(" + find + ", " + self.start.to_ruby() + ")"
+        v = self.value.to_es_script(not_null=True)
+        find = self.find.to_es_script(not_null=True)
+        index = v + ".indexOf(" + find + ", " + self.start.to_es_script() + ")"
 
         return AndOp("and", [
             self.default.missing(),

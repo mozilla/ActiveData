@@ -69,14 +69,13 @@ class ColumnList(Container):
         for canonical in existing_columns:
             if canonical is column:
                 return canonical
-            if canonical.type == column.type:
+            if canonical.es_type == column.es_type:
                 set_default(column.names, canonical.names)
                 for key in Column.__slots__:
                     canonical[key] = column[key]
                 return canonical
         existing_columns.append(column)
         return column
-
 
     def _update_meta(self):
         if not self.dirty:
@@ -185,12 +184,13 @@ class ColumnList(Container):
                     "last_updated": c.last_updated,
                     "count": c.count,
                     "nested_path": [unnest_path(n) for n in c.nested_path],
-                    "type": c.type
+                    "es_type": c.es_type,
+                    "jx_type": c.jx_type
                 }
                 for tname, css in self.data.items()
                 for cname, cs in css.items()
                 for c in cs
-                if c.type not in STRUCT  # and c.es_column != "_id"
+                if c.jx_type not in STRUCT  # and c.es_column != "_id"
                 for table, name in c.names.items()
             ]
         if not self.meta_schema:
@@ -229,7 +229,7 @@ def _get_schema_from_list(frum, table_name, prefix_path, nested_path, columns):
                     names={table_name: full_name},
                     es_column=full_name,
                     es_index=".",
-                    type="undefined",
+                    es_type="undefined",
                     nested_path=nested_path
                 )
                 columns.add(column)
@@ -243,7 +243,7 @@ def _get_schema_from_list(frum, table_name, prefix_path, nested_path, columns):
                         names={table_name: full_name},
                         es_column=full_name,
                         es_index=".",
-                        type="undefined",
+                        es_type="undefined",
                         nested_path=nested_path
                     )
                     columns.add(column)
@@ -275,16 +275,16 @@ METADATA_COLUMNS = (
             names={".": c},
             es_index="meta.columns",
             es_column=c,
-            type="string",
+            es_type="string",
             nested_path=ROOT_PATH
         )
-        for c in ["type", "nested_path", "es_column", "es_index"]
+        for c in ["es_type", "jx_type", "nested_path", "es_column", "es_index"]
     ] + [
         Column(
             es_index="meta.columns",
             names={".": c},
             es_column=c,
-            type="object",
+            es_type="object",
             nested_path=ROOT_PATH
         )
         for c in ["names", "partitions"]
@@ -293,7 +293,7 @@ METADATA_COLUMNS = (
             names={".": c},
             es_index="meta.columns",
             es_column=c,
-            type="long",
+            es_type="long",
             nested_path=ROOT_PATH
         )
         for c in ["count", "cardinality", "multi"]
@@ -302,7 +302,7 @@ METADATA_COLUMNS = (
             names={".": "last_updated"},
             es_index="meta.columns",
             es_column="last_updated",
-            type="time",
+            es_type="time",
             nested_path=ROOT_PATH
         )
     ]

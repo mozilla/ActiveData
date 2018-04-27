@@ -362,7 +362,7 @@ def _normalize_select(select, frum, schema=None):
                         canonical
                     )
                     for c in frum.get_columns()
-                    if c.type not in STRUCT
+                    if c.jx_type not in STRUCT
                 ])
             else:
                 Log.error("do not know what to do")

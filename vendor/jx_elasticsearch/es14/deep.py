@@ -97,7 +97,7 @@ def es_deepop(es, query):
             col_names = set()
             for c in leaves:
                 if c.nested_path[0] == ".":
-                    if c.type == NESTED:
+                    if c.jx_type == NESTED:
                         continue
                     es_query.fields += [c.es_column]
                 c_name = untype_path(c.names[query_path])
@@ -128,7 +128,7 @@ def es_deepop(es, query):
                 for n in net_columns:
                     pull = get_pull_function(n)
                     if n.nested_path[0] == ".":
-                        if n.type == NESTED:
+                        if n.jx_type == NESTED:
                             continue
                         es_query.fields += [n.es_column]
 
@@ -162,7 +162,7 @@ def es_deepop(es, query):
                     #     Log.error("deep field not expected")
 
             pull_name = EXPRESSION_PREFIX + s.name
-            map_to_local = {untype_path(k): get_pull(cc) for k, c in schema.lookup.items() for cc in c if cc.type not in STRUCT}
+            map_to_local = MapToLocal(schema)
             pull = jx_expression_to_function(pull_name)
             post_expressions[pull_name] = compile_expression(expr.map(map_to_local).to_python())
 

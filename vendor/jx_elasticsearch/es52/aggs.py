@@ -186,33 +186,33 @@ def es_aggsop(es, frum, query):
 
     for canonical_name, many in new_select.items():
         for s in many:
-            es_cols = frum.schema.values(s.value.var)
+            columns = frum.schema.values(s.value.var)
 
             if s.aggregate == "count":
                 canonical_names = []
-                for es_col in es_cols:
-                    cn = literal_field(es_col.es_column + "_count")
-                    if es_col.type == EXISTS:
+                for column in columns:
+                    cn = literal_field(column.es_column + "_count")
+                    if column.jx_type == EXISTS:
                         canonical_names.append(cn + ".doc_count")
-                        es_query.aggs[cn].filter.range = {es_col.es_column: {"gt": 0}}
+                        es_query.aggs[cn].filter.range = {column.es_column: {"gt": 0}}
                     else:
                         canonical_names.append(cn+ ".value")
-                        es_query.aggs[cn].value_count.field = es_col.es_column
-                if len(es_cols) == 1:
+                        es_query.aggs[cn].value_count.field = column.es_column
+                if len(canonical_names) == 1:
                     s.pull = jx_expression_to_function(canonical_names[0])
                 else:
                     s.pull = jx_expression_to_function({"add": canonical_names})
             elif s.aggregate == "median":
-                if len(es_cols) > 1:
+                if len(columns) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
                 # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
 
-                es_query.aggs[key].percentiles.field = es_cols[0].es_column
+                es_query.aggs[key].percentiles.field = columns[0].es_column
                 es_query.aggs[key].percentiles.percents += [50]
                 s.pull = jx_expression_to_function(key + ".values.50\.0")
             elif s.aggregate == "percentile":
-                if len(es_cols) > 1:
+                if len(columns) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
                 # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
@@ -220,48 +220,48 @@ def es_aggsop(es, frum, query):
                     Log.error("Expecting percentile to be a float from 0.0 to 1.0")
                 percent = Math.round(s.percentile * 100, decimal=6)
 
-                es_query.aggs[key].percentiles.field = es_cols[0].es_column
+                es_query.aggs[key].percentiles.field = columns[0].es_column
                 es_query.aggs[key].percentiles.percents += [percent]
                 s.pull = jx_expression_to_function(key + ".values." + literal_field(text_type(percent)))
             elif s.aggregate == "cardinality":
                 canonical_names = []
-                for es_col in es_cols:
-                    cn = literal_field(es_col.es_column + "_cardinality")
+                for column in columns:
+                    cn = literal_field(column.es_column + "_cardinality")
                     canonical_names.append(cn)
-                    es_query.aggs[cn].cardinality.field = es_col.es_column
-                if len(es_cols) == 1:
+                    es_query.aggs[cn].cardinality.field = column.es_column
+                if len(columns) == 1:
                     s.pull = jx_expression_to_function(canonical_names[0] + ".value")
                 else:
                     s.pull = jx_expression_to_function({"add": [cn + ".value" for cn in canonical_names], "default": 0})
             elif s.aggregate == "stats":
-                if len(es_cols) > 1:
+                if len(columns) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
                 # REGULAR STATS
                 stats_name = literal_field(canonical_name)
-                es_query.aggs[stats_name].extended_stats.field = es_cols[0].es_column
+                es_query.aggs[stats_name].extended_stats.field = columns[0].es_column
 
                 # GET MEDIAN TOO!
                 median_name = literal_field(canonical_name + "_percentile")
-                es_query.aggs[median_name].percentiles.field = es_cols[0].es_column
+                es_query.aggs[median_name].percentiles.field = columns[0].es_column
                 es_query.aggs[median_name].percentiles.percents += [50]
 
                 s.pull = get_pull_stats(stats_name, median_name)
             elif s.aggregate == "union":
                 pulls = []
-                for es_col in es_cols:
+                for column in columns:
                     script = {"scripted_metric": {
                         'init_script': 'params._agg.terms = new HashSet()',
-                        'map_script': 'for (v in doc['+quote(es_col.es_column)+'].values) params._agg.terms.add(v)',
+                        'map_script': 'for (v in doc['+quote(column.es_column)+'].values) params._agg.terms.add(v)',
                         'combine_script': 'return params._agg.terms.toArray()',
                         'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { if (a!=null) for (v in a) {output.add(v)} } return output.toArray()',
                     }}
-                    stats_name = encode_property(es_col.es_column)
-                    if es_col.nested_path[0] == ".":
+                    stats_name = encode_property(column.es_column)
+                    if column.nested_path[0] == ".":
                         es_query.aggs[stats_name] = script
                         pulls.append(jx_expression_to_function(stats_name + ".value"))
                     else:
                         es_query.aggs[stats_name] = {
-                            "nested": {"path": es_col.nested_path[0]},
+                            "nested": {"path": column.nested_path[0]},
                             "aggs": {"_nested": script}
                         }
                         pulls.append(jx_expression_to_function(stats_name + "._nested.value"))
@@ -273,11 +273,11 @@ def es_aggsop(es, frum, query):
                 else:
                     s.pull = lambda row: UNION(p(row) for p in pulls)
             else:
-                if len(es_cols) > 1:
+                if len(columns) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
 
                 # PULL VALUE OUT OF THE stats AGGREGATE
-                es_query.aggs[literal_field(canonical_name)].extended_stats.field = es_cols[0].es_column
+                es_query.aggs[literal_field(canonical_name)].extended_stats.field = columns[0].es_column
                 s.pull = jx_expression_to_function({"coalesce": [literal_field(canonical_name) + "." + aggregates[s.aggregate], s.default]})
 
     for i, s in enumerate(formula):

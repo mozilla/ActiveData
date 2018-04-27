@@ -60,7 +60,7 @@ class TypedInserter(object):
         if es:
             _schema = Data()
             for c in parse_properties(es.settings.alias, ".", es.get_properties()):
-                if c.type not in (OBJECT, NESTED):
+                if c.es_type not in (OBJECT, NESTED):
                     _schema[c.names["."]] = c
             self.schema = unwrap(_schema)
         else:
@@ -127,7 +127,7 @@ class TypedInserter(object):
         try:
             if isinstance(sub_schema, Column):
                 value_json_type = python_type_to_json_type[value.__class__]
-                column_json_type = es_type_to_json_type[sub_schema.type]
+                column_json_type = es_type_to_json_type[sub_schema.es_type]
 
                 if value_json_type == column_json_type:
                     pass  # ok

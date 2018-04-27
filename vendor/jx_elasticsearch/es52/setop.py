@@ -77,7 +77,7 @@ def es_setop(es, query):
             leaves = schema.leaves(term.var)
             for c in leaves:
                 full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
-                if c.type == NESTED:
+                if c.jx_type == NESTED:
                     es_query.stored_fields = ["_source"]
                     new_select.append({
                         "name": full_name,
@@ -102,7 +102,7 @@ def es_setop(es, query):
             leaves = schema.leaves(s_column)
             nested_selects = {}
             if leaves:
-                if s_column=='.' or any(c.type == NESTED for c in leaves):
+                if s_column == '.' or any(c.jx_type == NESTED for c in leaves):
                     # PULL WHOLE NESTED ARRAYS
                     es_query.stored_fields = ["_source"]
                     for c in leaves:
@@ -119,7 +119,7 @@ def es_setop(es, query):
                     for c in leaves:
                         if len(c.nested_path) == 1:
                             jx_name = untype_path(c.names["."])
-                            if c.type == NESTED:
+                            if c.jx_type == NESTED:
                                 es_query.stored_fields = ["_source"]
                                 new_select.append({
                                     "name": select.name,

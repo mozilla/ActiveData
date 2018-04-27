@@ -162,7 +162,7 @@ def to_esfilter(self, schema):
         ).partial_eval().to_esfilter(schema)
     else:
         Log.error("do not know how to handle")
-        return ScriptOp("script", self.to_ruby(schema).script(schema)).to_esfilter(schema)
+        return ScriptOp("script", self.to_es_script(schema).script(schema)).to_esfilter(schema)
 
 
 @extend(ConcatOp)
@@ -1110,8 +1110,8 @@ def to_painless(self, schema):
             q = quote(varname)
             acc.append(Painless(
                 miss=frum.missing(),
-                type=c.type,
-                expr="doc[" + q + "].values" if c.type!=BOOLEAN else "doc[" + q + "].value",
+                type=c.jx_type,
+                expr="doc[" + q + "].values" if c.jx_type != BOOLEAN else "doc[" + q + "].value",
                 frum=frum,
                 many=True
             ))

@@ -261,8 +261,8 @@ Column = DataClass(
         "names",  # MAP FROM TABLE NAME TO COLUMN NAME (ONE COLUMN CAN HAVE MULTIPLE NAMES)
         "es_column",
         "es_index",
-        # "es_type",
-        "type",
+        "es_type",
+        {"name": "jx_type", "nulls": True},
         {"name": "useSource", "default": False},
         {"name": "nested_path", "nulls": True},  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
         {"name": "count", "nulls": True},

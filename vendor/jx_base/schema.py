@@ -133,7 +133,7 @@ class Schema(object):
         """
         return list(self.lookup_variables.get(unnest_path(name), Null))
 
-    def leaves(self, name, meta=False):
+    def leaves(self, name):
         """
         RETURN LEAVES OF GIVEN PATH NAME
         pull leaves, considering query_path and namespace

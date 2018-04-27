@@ -264,9 +264,6 @@ class Variable(Expression):
         return {self}
 
     def map(self, map_):
-        if not isinstance(map_, Mapping):
-            Log.error("Expecting Mapping")
-
         return Variable(coalesce(map_.get(self.var), self.var))
 
     def __hash__(self):

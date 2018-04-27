@@ -49,7 +49,7 @@ def is_deepop(es, query):
 
 def es_deepop(es, query):
     schema = query.frum.schema
-    query_path = schema.query_path
+    query_path = schema.query_path[0]
 
     # TODO: FIX THE GREAT SADNESS CAUSED BY EXECUTING post_expressions
     # THE EXPRESSIONS SHOULD BE PUSHED TO THE CONTAINER:  ES ALLOWS
@@ -160,14 +160,14 @@ def es_deepop(es, query):
         else:
             expr = s.value
             for v in expr.vars():
-                for c in schema[v]:
+                for c in schema[v.var]:
                     if c.nested_path[0] == ".":
                         es_query.stored_fields += [c.es_column]
                     # else:
                     #     Log.error("deep field not expected")
 
             pull_name = EXPRESSION_PREFIX + s.name
-            map_to_local = {untype_path(k): get_pull(cc) for k, c in schema.lookup.items() for cc in c if cc.type not in STRUCT}
+            map_to_local = MapToLocal(schema)
             pull = jx_expression_to_function(pull_name)
             post_expressions[pull_name] = compile_expression(expr.map(map_to_local).to_python())
 
@@ -222,3 +222,21 @@ def es_deepop(es, query):
         Log.error("problem formatting", e)
 
 
+class MapToLocal(object):
+    """
+    MAP FROM RELATIVE/ABSOLUTE NAMESPACE TO PYTHON THAT WILL EXTRACT RESULT
+    """
+    def __init__(self, map_to_columns):
+        self.map_to_columns = map_to_columns
+
+    def __getitem__(self, item):
+        return self.get(item)
+
+    def get(self, item):
+        cs = self.map_to_columns[item]
+        if len(cs) == 0:
+            return "Null"
+        elif len(cs) == 1:
+            return get_pull(cs[0])
+        else:
+            return "coalesce(" + (",".join(get_pull(c) for c in cs)) + ")"

@@ -26,7 +26,7 @@ from jx_python import jx, meta as jx_base_meta
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
 from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, join_field, wrap, concat_field, startswith_field
-from mo_json.typed_encoder import EXISTS_TYPE, TYPE_PREFIX, untype_path
+from mo_json.typed_encoder import EXISTS_TYPE, TYPE_PREFIX, untype_path, unnest_path
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.strings import quote
@@ -526,7 +526,7 @@ class Schema(jx_base.Schema):
             p
             for p in snowflake.query_paths
             if untype_path(p[0]) == query_path
-        ][0][0]
+        ][0]
         self.snowflake = snowflake
 
     def leaves(self, column_name):
@@ -534,85 +534,71 @@ class Schema(jx_base.Schema):
         :param column_name:
         :return: ALL COLUMNS THAT START WITH column_name, NOT INCLUDING DEEPER NESTED COLUMNS
         """
-        column_name = untype_path(column_name)
-        columns = self.snowflake.namespace.get_columns(self.snowflake.alias)
-        if self.query_path == '.':
-            return [
-                c
-                for c in columns
-                if startswith_field(untype_path(c.names['.']), column_name) and
-                   startswith_field(self.query_path, c.nested_path[0]) and
-                   c.type not in STRUCT
-            ]
-        else:
-            return [
+        column_name = unnest_path(column_name)
+        columns = self.columns
+        for path in self.query_path:
+            output = [
                 c
                 for c in columns
                 if (
-                    (
-                        startswith_field(untype_path(c.names['.']), column_name) or
-                        startswith_field(untype_path(c.names[self.query_path]), column_name)
-                    ) and
-                    startswith_field(self.query_path, c.nested_path[0]) and
-                    c.type not in STRUCT
+                    c.names['.'] != "_id" and
+                    c.type not in STRUCT and
+                    startswith_field(unnest_path(c.names[path]), column_name) and
+                    startswith_field(path, c.nested_path[0])
                 )
             ]
+            if output:
+                return output
+        return []
 
     def values(self, column_name):
         """
         RETURN ALL COLUMNS THAT column_name REFERES TO
         """
-        column_name = untype_path(column_name)
-        columns = self.snowflake.namespace.get_columns(self.snowflake.alias)
-        if self.query_path == '.':
-            return [
-                c
-                for c in columns
-                if untype_path(c.names[self.query_path]) == column_name and
-                   startswith_field(self.query_path, c.nested_path[0]) and
-                   c.type not in STRUCT
-            ]
-        else:
-            return [
+        column_name = unnest_path(column_name)
+        columns = self.columns
+        for path in self.query_path:
+            output = [
                 c
                 for c in columns
                 if (
-                    (
-                        untype_path(c.names['.']) == column_name or
-                        untype_path(c.names[self.query_path]) == column_name
-                    ) and
-                    startswith_field(self.query_path, c.nested_path[0]) and
+                    untype_path(c.names[path]) == column_name and
+                    startswith_field(path, c.nested_path[0]) and
                     c.type not in STRUCT
                 )
             ]
+            if output:
+                return output
+        return output
 
     def __getitem__(self, column_name):
         return self.values(column_name)
 
-
     @property
     def name(self):
-        return concat_field(self.snowflake.alias, self.query_path)
+        return concat_field(self.snowflake.alias, self.query_path[0])
+
+    @property
+    def columns(self):
+        return self.snowflake.namespace.get_columns(self.snowflake.alias)
 
     def map_to_es(self):
         """
         RETURN A MAP FROM THE NAMESPACE TO THE es_column NAME
         """
-        full_name = self.query_path
-        return set_default(
-            {
-                c.names[full_name]: c.es_column
-                for c in self.snowflake.columns
-                if c.type not in STRUCT
-            },
-            {
-                c.names["."]: c.es_column
-                for c in self.snowflake.columns
-                if c.type not in STRUCT
-            }
-        )
-
-
+        output = {}
+        for path in self.query_path:
+            set_default(
+                output,
+                {
+                    k: c.es_column
+                    for c in self.snowflake.columns
+                    if c.type not in STRUCT
+                    for rel_name in [c.names[path]]
+                    for k in [rel_name, untype_path(rel_name), unnest_path(rel_name)]
+                }
+            )
+        return output
 
 
 def _counting_query(c):

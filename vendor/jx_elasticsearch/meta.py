@@ -536,7 +536,7 @@ class Schema(jx_base.Schema):
             p
             for p in snowflake.query_paths
             if untype_path(p[0]) == query_path
-        ][0][0]
+        ][0]
         self.snowflake = snowflake
 
     def leaves(self, column_name):

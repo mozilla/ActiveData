@@ -55,7 +55,7 @@ def is_setop(es, query):
 def es_setop(es, query):
     schema = query.frum.schema
 
-    es_query, filters = es_query_template(schema.query_path)
+    es_query, filters = es_query_template(schema.query_path[0])
     nested_filter = None
     set_default(filters[0], query.where.partial_eval().to_esfilter(schema))
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)

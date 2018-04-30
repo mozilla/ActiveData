@@ -11,6 +11,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from mo_future import text_type
+
+from mo_logs import Log
+
 from jx_base import STRING, BOOLEAN, NUMBER, OBJECT
 from jx_elasticsearch.es52.expressions import Variable
 from mo_dots import wrap
@@ -22,6 +26,9 @@ def es_query_template(path):
     :param path: THE NESTED PATH (NOT INCLUDING TABLE NAME)
     :return:
     """
+
+    if not isinstance(path, text_type):
+        Log.error("expecting path to be a string")
 
     if path != ".":
         f0 = {}

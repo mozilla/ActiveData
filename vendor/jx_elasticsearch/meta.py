@@ -554,7 +554,6 @@ class Schema(jx_base.Schema):
                 if (
                     (c.names['.'] != "_id" or column_name == "_id") and
                     c.jx_type not in OBJECTS and
-                    # startswith_field(deep_path, c.nested_path[0]) and
                     startswith_field(unnest_path(c.names[path]), column_name)
                 )
             ]
@@ -575,8 +574,7 @@ class Schema(jx_base.Schema):
                 for c in columns
                 if (
                     c.jx_type not in STRUCT and
-                    untype_path(c.names[path]) == column_name and
-                    startswith_field(deep_path, c.nested_path[0])
+                    untype_path(c.names[path]) == column_name
                 )
             ]
             if output:

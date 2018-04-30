@@ -155,7 +155,7 @@ def es_setop(es, query):
                                 where.nested.inner_hits._source = False
                                 where.nested.inner_hits.stored_fields += [c.es_column]
 
-                                child = relative_field(untype_path(c.names[schema.query_path]), s_column)
+                                child = relative_field(untype_path(c.names[schema.query_path[0]]), s_column)
                                 pull = accumulate_nested_doc(nested_path, Variable(relative_field(s_column, unnest_path(nested_path))))
                                 new_select.append({
                                     "name": select.name,

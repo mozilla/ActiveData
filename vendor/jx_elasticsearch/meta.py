@@ -552,10 +552,10 @@ class Schema(jx_base.Schema):
                 c
                 for c in columns
                 if (
-                    c.names['.'] != "_id" and
+                    (c.names['.'] != "_id" or column_name == "_id") and
                     c.jx_type not in OBJECTS and
-                    startswith_field(unnest_path(c.names[path]), column_name) and
-                    startswith_field(deep_path, c.nested_path[0])
+                    # startswith_field(deep_path, c.nested_path[0]) and
+                    startswith_field(unnest_path(c.names[path]), column_name)
                 )
             ]
             if output:

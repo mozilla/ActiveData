@@ -194,7 +194,7 @@ class ESUtils(object):
         try:
             # EXECUTE QUERY
             num_expectations = 0
-            for k, v in subtest.items():
+            for i, (k, v) in enumerate(subtest.items()):
                 if k.startswith("expecting_"):  # WHAT FORMAT ARE WE REQUESTING
                     format = k[len("expecting_"):]
                 elif k == "expecting":  # NO FORMAT REQUESTED (TO TEST DEFAULT FORMATS)
@@ -206,7 +206,7 @@ class ESUtils(object):
                 expected = v
 
                 subtest.query.format = format
-                subtest.query.meta.testing = True  # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
+                subtest.query.meta.testing = (i == 0)  # MARK FIRST QUERY FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
                 query = unicode2utf8(value2json(subtest.query))
                 # EXECUTE QUERY
                 response = self.try_till_response(self.testing.query, data=query)
@@ -263,7 +263,7 @@ class ESUtils(object):
             except Exception as e:
                 e = Except.wrap(e)
                 if "No connection could be made because the target machine actively refused it" in e:
-                    Log.alert("Problem connecting")
+                    Log.alert("Problem connecting, retrying")
                 else:
                     Log.error("Server raised exception", e)
 

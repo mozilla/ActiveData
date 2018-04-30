@@ -13,73 +13,10 @@ from __future__ import unicode_literals
 
 from copy import copy
 
-from jx_base import STRUCT, NESTED, PRIMITIVE, OBJECT, EXISTS
-from mo_dots import join_field, split_field, Null, startswith_field, set_default, wrap
-from mo_json.typed_encoder import unnest_path, untype_path, NESTED_TYPE
+from jx_base import STRUCT, NESTED, OBJECT, EXISTS
+from mo_dots import Null, startswith_field, set_default, wrap
+from mo_json.typed_encoder import unnest_path, untype_path
 from mo_logs import Log
-
-
-def _indexer(columns, query_path):
-    all_names = set(unnest_path(n) for c in columns for n in c.names.values()) | {"."}
-
-    lookup_leaves = {}  # ALL LEAF VARIABLES
-    for full_name in all_names:
-        for c in columns:
-            cname = c.names[query_path]
-            nfp = unnest_path(cname)
-            if (
-                startswith_field(nfp, full_name) and
-                c.type not in [EXISTS, OBJECT, NESTED] and
-                (c.es_column != "_id" or full_name == "_id")
-            ):
-                cs = lookup_leaves.setdefault(full_name, set())
-                cs.add(c)
-                cs = lookup_leaves.setdefault(untype_path(full_name), set())
-                cs.add(c)
-
-    lookup_variables = {}  # ALL NOT-NESTED VARIABLES
-    for full_name in all_names:
-        for c in columns:
-            cname = c.names[query_path]
-            nfp = unnest_path(cname)
-            if (
-                startswith_field(nfp, full_name) and
-                c.type not in [EXISTS, OBJECT] and
-                (c.es_column != "_id" or full_name == "_id") and
-                startswith_field(c.nested_path[0], query_path)
-            ):
-                cs = lookup_variables.setdefault(full_name, set())
-                cs.add(c)
-                cs = lookup_variables.setdefault(untype_path(full_name), set())
-                cs.add(c)
-
-    relative_lookup = {}
-    for c in columns:
-        try:
-            cname = c.names[query_path]
-            cs = relative_lookup.setdefault(cname, set())
-            cs.add(c)
-
-            ucname = untype_path(cname)
-            cs = relative_lookup.setdefault(ucname, set())
-            cs.add(c)
-        except Exception as e:
-            Log.error("Should not happen", cause=e)
-
-    if query_path != ".":
-        # ADD ABSOLUTE NAMES TO THE NAMESAPCE
-        absolute_lookup, more_leaves, more_variables = _indexer(columns, ".")
-        for k, cs in absolute_lookup.items():
-            if k not in relative_lookup:
-                relative_lookup[k] = cs
-        for k, cs in more_leaves.items():
-            if k not in lookup_leaves:
-                lookup_leaves[k] = cs
-        for k, cs in more_variables.items():
-            if k not in lookup_variables:
-                lookup_variables[k] = cs
-
-    return relative_lookup, lookup_leaves, lookup_variables
 
 
 class Schema(object):
@@ -89,19 +26,12 @@ class Schema(object):
 
     def __init__(self, table_name, columns):
         """
-        :param table_name: THE ORIGN TABLE ("." IS THE FACT TABLE)
-        :param query_path: PATH TO ARM OF SNOWFLAKE
+        :param table_name: A FULL NAME FOR THIS TABLE (NOT USED)
         :param columns: ALL COLUMNS IN SNOWFLAKE
         """
         self._columns = copy(columns)
-        table_path = split_field(table_name)
-        self.table = join_field(table_path[:1])  # USED AS AN EXPLICIT STATEMENT OF PERSPECTIVE IN THE DATABASE
-        query_path = join_field(table_path[1:])  # TODO: REPLACE WITH THE nested_path ARRAY
-        if query_path == ".":
-            self.query_path = query_path
-        else:
-            query_path += "."+NESTED_TYPE
-            self.query_path = [c for c in columns if c.type == NESTED and c.names["."] == query_path][0].es_column
+        self.table = table_name
+        self.query_path = "."
         self.lookup, self.lookup_leaves, self.lookup_variables = _indexer(columns, self.query_path)
 
     def __getitem__(self, column_name):
@@ -116,6 +46,10 @@ class Schema(object):
 
     def get_column(self, name, table=None):
         return self.lookup[name]
+
+    @property
+    def columns(self):
+        return self._columns
 
     def get_column_name(self, column):
         """
@@ -170,4 +104,67 @@ class Schema(object):
     def columns(self):
         return copy(self._columns)
 
+
+
+def _indexer(columns, query_path):
+    all_names = set(unnest_path(n) for c in columns for n in c.names.values()) | {"."}
+
+    lookup_leaves = {}  # ALL LEAF VARIABLES
+    for full_name in all_names:
+        for c in columns:
+            cname = c.names[query_path]
+            nfp = unnest_path(cname)
+            if (
+                startswith_field(nfp, full_name) and
+                c.es_type not in [EXISTS, OBJECT, NESTED] and
+                (c.es_column != "_id" or full_name == "_id")
+            ):
+                cs = lookup_leaves.setdefault(full_name, set())
+                cs.add(c)
+                cs = lookup_leaves.setdefault(untype_path(full_name), set())
+                cs.add(c)
+
+    lookup_variables = {}  # ALL NOT-NESTED VARIABLES
+    for full_name in all_names:
+        for c in columns:
+            cname = c.names[query_path]
+            nfp = unnest_path(cname)
+            if (
+                startswith_field(nfp, full_name) and
+                c.es_type not in [EXISTS, OBJECT] and
+                (c.es_column != "_id" or full_name == "_id") and
+                startswith_field(c.nested_path[0], query_path)
+            ):
+                cs = lookup_variables.setdefault(full_name, set())
+                cs.add(c)
+                cs = lookup_variables.setdefault(untype_path(full_name), set())
+                cs.add(c)
+
+    relative_lookup = {}
+    for c in columns:
+        try:
+            cname = c.names[query_path]
+            cs = relative_lookup.setdefault(cname, set())
+            cs.add(c)
+
+            ucname = untype_path(cname)
+            cs = relative_lookup.setdefault(ucname, set())
+            cs.add(c)
+        except Exception as e:
+            Log.error("Should not happen", cause=e)
+
+    if query_path != ".":
+        # ADD ABSOLUTE NAMES TO THE NAMESAPCE
+        absolute_lookup, more_leaves, more_variables = _indexer(columns, ".")
+        for k, cs in absolute_lookup.items():
+            if k not in relative_lookup:
+                relative_lookup[k] = cs
+        for k, cs in more_leaves.items():
+            if k not in lookup_leaves:
+                lookup_leaves[k] = cs
+        for k, cs in more_variables.items():
+            if k not in lookup_variables:
+                lookup_variables[k] = cs
+
+    return relative_lookup, lookup_leaves, lookup_variables
 

@@ -13,8 +13,7 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from jx_base import container, Table
-
+from jx_base import container
 from jx_base.container import Container
 from jx_base.dimensions import Dimension
 from jx_base.expressions import jx_expression
@@ -24,7 +23,7 @@ from jx_elasticsearch.es52.aggs import es_aggsop, is_aggsop
 from jx_elasticsearch.es52.deep import is_deepop, es_deepop
 from jx_elasticsearch.es52.setop import is_setop, es_setop
 from jx_elasticsearch.es52.util import aggregates
-from jx_elasticsearch.meta import ElasticsearchMetadata
+from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
 from mo_dots import Data, Null, unwrap, coalesce, split_field, literal_field, unwraplist, join_field, wrap, listwrap, FlatList
 from mo_json import scrub, value2json
@@ -216,7 +215,7 @@ class ES52(Container):
                 scripts.append({"doc": v.doc})
             else:
                 v = scrub(v)
-                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_painless(schema).script(schema)})
+                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_es_script(schema).script(schema)})
 
         if results.hits.hits:
             updates = []

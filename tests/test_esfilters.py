@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 from jx_base import OBJECT
 from jx_base.expressions import jx_expression, NULL
-from jx_elasticsearch.es52.expressions import Painless, simplify_esfilter
+from jx_elasticsearch.es52.expressions import EsScript, simplify_esfilter
 from mo_dots import Null, wrap
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times.dates import Date
@@ -78,7 +78,7 @@ class TestESFilters(FuzzyTestCase):
 
     def test_painless(self):
         # THIS TEST IS USED TO FORCE-IMPORT OF elasticsearch EXTENSION METHODS
-        a = Painless(type=OBJECT, expr=NULL, frum=NULL)
+        a = EsScript(type=OBJECT, expr=NULL, frum=NULL)
 
 
 class S(object):

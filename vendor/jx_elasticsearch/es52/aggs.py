@@ -109,7 +109,7 @@ def get_decoders_by_depth(query):
         elif edge.range:
             vars_ = edge.range.min.vars() | edge.range.max.vars()
             for v in vars_:
-                if not schema[v]:
+                if not schema[v.var]:
                     Log.error("{{var}} does not exist in schema", var=v)
         elif edge.domain.dimension:
             vars_ = edge.domain.dimension.fields
@@ -295,8 +295,8 @@ def es_aggsop(es, frum, query):
                     dir = -1
                     op = 'min'
 
-                nully = TupleOp("tuple", [NULL]*len(s.value.terms)).partial_eval().to_painless(schema).expr
-                selfy = s.value.partial_eval().to_painless(schema).expr
+                nully = TupleOp("tuple", [NULL]*len(s.value.terms)).partial_eval().to_es_script(schema).expr
+                selfy = s.value.partial_eval().to_es_script(schema).expr
 
                 script = {"scripted_metric": {
                     'init_script': 'params._agg.best = ' + nully + ';',
@@ -316,13 +316,13 @@ def es_aggsop(es, frum, query):
             else:
                Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
-            es_query.aggs[literal_field(canonical_name)].value_count.script = s.value.partial_eval().to_painless(schema).script(schema)
+            es_query.aggs[literal_field(canonical_name)].value_count.script = s.value.partial_eval().to_es_script(schema).script(schema)
             s.pull = jx_expression_to_function(literal_field(canonical_name) + ".value")
         elif s.aggregate == "median":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")
 
-            es_query.aggs[key].percentiles.script = s.value.to_painless(schema).script(schema)
+            es_query.aggs[key].percentiles.script = s.value.to_es_script(schema).script(schema)
             es_query.aggs[key].percentiles.percents += [50]
             s.pull = jx_expression_to_function(key + ".values.50\.0")
         elif s.aggregate == "percentile":
@@ -330,35 +330,35 @@ def es_aggsop(es, frum, query):
             key = literal_field(canonical_name + " percentile")
             percent = Math.round(s.percentile * 100, decimal=6)
 
-            es_query.aggs[key].percentiles.script = s.value.to_painless(schema).script(schema)
+            es_query.aggs[key].percentiles.script = s.value.to_es_script(schema).script(schema)
             es_query.aggs[key].percentiles.percents += [percent]
             s.pull = jx_expression_to_function(key + ".values." + literal_field(text_type(percent)))
         elif s.aggregate == "cardinality":
             # ES USES DIFFERENT METHOD FOR CARDINALITY
             key = canonical_name + " cardinality"
 
-            es_query.aggs[key].cardinality.script = s.value.to_painless(schema).script(schema)
+            es_query.aggs[key].cardinality.script = s.value.to_es_script(schema).script(schema)
             s.pull = jx_expression_to_function(key + ".value")
         elif s.aggregate == "stats":
             # REGULAR STATS
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].extended_stats.script = s.value.to_painless(schema).script(schema)
+            es_query.aggs[stats_name].extended_stats.script = s.value.to_es_script(schema).script(schema)
 
             # GET MEDIAN TOO!
             median_name = literal_field(canonical_name + " percentile")
-            es_query.aggs[median_name].percentiles.script = s.value.to_painless(schema).script(schema)
+            es_query.aggs[median_name].percentiles.script = s.value.to_es_script(schema).script(schema)
             es_query.aggs[median_name].percentiles.percents += [50]
 
             s.pull = get_pull_stats(stats_name, median_name)
         elif s.aggregate == "union":
             # USE TERMS AGGREGATE TO SIMULATE union
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].terms.script_field = s.value.to_painless(schema).script(schema)
+            es_query.aggs[stats_name].terms.script_field = s.value.to_es_script(schema).script(schema)
             s.pull = jx_expression_to_function(stats_name + ".buckets.key")
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = jx_expression_to_function(canonical_name + "." + aggregates[s.aggregate])
-            es_query.aggs[canonical_name].extended_stats.script = s.value.to_painless(schema).script(schema)
+            es_query.aggs[canonical_name].extended_stats.script = s.value.to_es_script(schema).script(schema)
 
     decoders = get_decoders_by_depth(query)
     start = 0

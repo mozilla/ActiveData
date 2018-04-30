@@ -14,10 +14,8 @@ from __future__ import unicode_literals
 
 class Table(object):
 
-    def __init__(self, full_name, container):
+    def __init__(self, full_name):
         self.name = full_name
-        self.container = container
-        self.schema = container.namespace.get_schema(full_name)
 
     def map(self, mapping):
         return self

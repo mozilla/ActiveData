@@ -15,12 +15,12 @@ from collections import Mapping
 from datetime import date
 from datetime import datetime
 
-from jx_base import STRUCT, Column
-from jx_base.container import Container
+import jx_base
+from jx_base import STRUCT, Column, Table
 from jx_base.schema import Schema
 from jx_python import jx
 from mo_collections import UniqueIndex
-from mo_dots import Data, concat_field, get_attr, listwrap, unwraplist, NullType, FlatList, set_default, split_field, join_field, ROOT_PATH,  wrap
+from mo_dots import Data, concat_field, get_attr, listwrap, unwraplist, NullType, FlatList, set_default, split_field, join_field, ROOT_PATH, wrap
 from mo_future import none_type, text_type, long, PY2
 from mo_json.typed_encoder import untype_path, unnest_path
 from mo_logs import Log
@@ -30,15 +30,16 @@ from mo_times.dates import Date
 singlton = None
 
 
-class ColumnList(Container):
+class ColumnList(Table):
     """
     OPTIMIZED FOR THE PARTICULAR ACCESS PATTERNS USED
     """
 
     def __init__(self):
+        Table.__init__(self, "meta.columns")
         self.data = {}  # MAP FROM ES_INDEX TO (abs_column_name to COLUMNS)
         self.locker = Lock()
-        self.meta_schema = None
+        self._schema = None
         self.extend(METADATA_COLUMNS)
 
     def find(self, es_index, abs_column_name):
@@ -163,9 +164,15 @@ class ColumnList(Container):
 
     @property
     def schema(self):
-        with self.locker:
-            self._update_meta()
-            return wrap({k: set(v) for k, v in self.data["meta.columns"].items()})
+        if not self._schema:
+            with self.locker:
+                self._update_meta()
+                self._schema = Schema(".", [c for cs in self.data["meta.columns"].values() for c in cs])
+        return self._schema
+
+    @property
+    def namespace(self):
+        return self
 
     def denormalized(self):
         """
@@ -185,7 +192,7 @@ class ColumnList(Container):
                     "count": c.count,
                     "nested_path": [unnest_path(n) for n in c.nested_path],
                     "es_type": c.es_type,
-                    "jx_type": c.jx_type
+                    "type": c.jx_type
                 }
                 for tname, css in self.data.items()
                 for cname, cs in css.items()
@@ -193,11 +200,16 @@ class ColumnList(Container):
                 if c.jx_type not in STRUCT  # and c.es_column != "_id"
                 for table, name in c.names.items()
             ]
-        if not self.meta_schema:
-            self.meta_schema = get_schema_from_list("meta\\.columns", output)
 
         from jx_python.containers.list_usingPythonList import ListContainer
-        return ListContainer("meta\\.columns", data=output, schema=self.meta_schema)
+        return ListContainer(
+            self.name,
+            data=output,
+            schema=jx_base.Schema(
+                "meta.columns",
+                SIMPLE_METADATA_COLUMNS
+            )
+        )
 
 
 def get_schema_from_list(table_name, frum):
@@ -258,8 +270,8 @@ def _get_schema_from_list(frum, table_name, prefix_path, nested_path, columns):
                             this_type = "nested"
                 else:
                     this_type = _type_to_name[value.__class__]
-                new_type = _merge_type[column.type][this_type]
-                column.type = new_type
+                new_type = _merge_type[column.es_type][this_type]
+                column.es_type = new_type
 
                 if this_type == "object":
                     _get_schema_from_list([value], table_name, prefix_path + [name], nested_path, columns)
@@ -307,6 +319,37 @@ METADATA_COLUMNS = (
         )
     ]
 )
+
+SIMPLE_METADATA_COLUMNS = (
+    [
+        Column(
+            names={".": c},
+            es_index="meta.columns",
+            es_column=c,
+            es_type="string",
+            nested_path=ROOT_PATH
+        )
+        for c in ["table", "name", "type", "nested_path"]
+    ] + [
+        Column(
+            names={".": c},
+            es_index="meta.columns",
+            es_column=c,
+            es_type="long",
+            nested_path=ROOT_PATH
+        )
+        for c in ["count", "cardinality", "multi"]
+    ] + [
+        Column(
+            names={".": "last_updated"},
+            es_index="meta.columns",
+            es_column="last_updated",
+            es_type="time",
+            nested_path=ROOT_PATH
+        )
+    ]
+)
+
 
 _type_to_name = {
     none_type: "undefined",

@@ -177,7 +177,7 @@ def es_setop(es, query):
                 })
             put_index += 1
         else:
-            painless = select.value.partial_eval().to_painless(schema)
+            painless = select.value.partial_eval().to_es_script(schema)
             es_query.script_fields[literal_field(select.name)] = {"script": {
                 "lang": "painless",
                 "inline": painless.script(schema)

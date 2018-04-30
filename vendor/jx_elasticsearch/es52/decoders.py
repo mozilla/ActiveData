@@ -188,7 +188,7 @@ class SetDecoder(AggsDecoder):
             terms = set_default({"terms": {
                 "script": {
                     "lang": "painless",
-                    "inline": value.to_painless(self.schema).script(self.schema)
+                    "inline": value.to_es_script(self.schema).script(self.schema)
                 },
                 "size": limit
             }}, es_query)
@@ -251,7 +251,7 @@ def _range_composer(edge, domain, es_query, to_float, schema):
     if isinstance(edge.value, Variable):
         calc = {"field": schema.leaves(edge.value.var)[0].es_column}
     else:
-        calc = {"script": edge.value.to_painless(schema).script(schema)}
+        calc = {"script": edge.value.to_es_script(schema).script(schema)}
 
     return wrap({"aggs": {
         "_match": set_default(
@@ -582,7 +582,7 @@ class DefaultDecoder(SetDecoder):
         self.parts = list()
         self.key2index = {}
         self.computed_domain = False
-        self.script = self.edge.value.partial_eval().to_painless(self.schema)
+        self.script = self.edge.value.partial_eval().to_es_script(self.schema)
         self.pull = pull_functions[self.script.data_type]
         self.missing = self.script.miss.partial_eval()
         self.exists = NotOp("not", self.missing).partial_eval()

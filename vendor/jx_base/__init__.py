@@ -14,14 +14,11 @@ from __future__ import unicode_literals
 from collections import Mapping
 from uuid import uuid4
 
-from mo_json import value2json
-
-from mo_logs.strings import expand_template, quote
-
-from mo_logs import Log
-
 from mo_dots import NullType, Data, FlatList, wrap, coalesce, listwrap
 from mo_future import text_type, none_type, PY2
+from mo_json import value2json
+from mo_logs import Log
+from mo_logs.strings import expand_template, quote
 from mo_times import Date
 
 IS_NULL = '0'
@@ -223,16 +220,6 @@ class {{class_name}}(Mapping):
     return _exec(code, name)
 
 
-class Facts(object):
-
-    def __init__(self, container, snowflake):
-        self.container = container
-        self.snowflake = snowflake
-
-    @property
-    def namespace(self):
-        return self.container.namespace
-
 
 
 class TableDesc(DataClass(
@@ -276,5 +263,10 @@ Column = DataClass(
     ]}
 )
 
-from jx_base.schema import Schema
+
+from jx_base.container import Container
+from jx_base.namespace import Namespace
+from jx_base.facts import Facts
+from jx_base.snowflake import Snowflake
 from jx_base.table import Table
+from jx_base.schema import Schema

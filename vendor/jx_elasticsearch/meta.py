@@ -25,7 +25,7 @@ from jx_base.query import QueryOp
 from jx_python import jx, meta as jx_base_meta
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
-from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, join_field, wrap, concat_field, startswith_field
+from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, join_field, wrap, concat_field, startswith_field, literal_field
 from mo_json.typed_encoder import EXISTS_TYPE, TYPE_PREFIX, untype_path, unnest_path
 from mo_kwargs import override
 from mo_logs import Log
@@ -68,6 +68,8 @@ class ElasticsearchMetadata(Namespace):
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
         self.index_to_alias = Relation_usingList()
+
+
         self.es_metadata = Null
         # self.abs_columns = set()
         self.last_es_metadata = Date.now()-OLD_METADATA
@@ -75,10 +77,16 @@ class ElasticsearchMetadata(Namespace):
         self.meta = Data()
         self.meta.columns = ColumnList()
 
-        self.alias_to_query_paths = {}
-        self.alias_new_since = {}
+        self.alias_to_query_paths = {
+            "meta.columns": [['.']],
+            "meta.tables": [['.']]
+        }
+        self.alias_new_since = {
+            "meta.columns": Date.now(),
+            "meta.tables": Date.now()
+        }
         table_columns = metadata_tables()
-        self.meta.tables = ListContainer("meta.tables", [], wrap({c.names["."]: c for c in table_columns}))
+        self.meta.tables = ListContainer("meta.tables", [], jx_base.Schema(".", table_columns))
         self.meta.columns.extend(table_columns)
         # TODO: fix monitor so it does not bring down ES
         if ENABLE_META_SCAN:
@@ -101,7 +109,7 @@ class ElasticsearchMetadata(Namespace):
         times = self.es_cluster.index_new_since
 
         indexes = self.index_to_alias.get_domain(alias)
-        update_required = max(times[i] for i in indexes) > self.es_cluster.last_metadata
+        update_required = not (MAX(times[i] for i in indexes) < self.es_cluster.last_metadata)
         metadata = self.es_cluster.get_metadata(force=update_required).indices[canonical_index]
 
         props = [
@@ -482,6 +490,8 @@ class ElasticsearchMetadata(Namespace):
         return Snowflake(fact_table_name, self)
 
     def get_schema(self, name):
+        if name == "meta.columns":
+            return self.meta.columns.schema
         query_path = split_field(name)
         return self.get_snowflake(query_path[0]).get_schema(join_field(query_path[1:]))
 
@@ -511,7 +521,7 @@ class Snowflake(object):
         """
         RETURN ALL COLUMNS FROM ORIGIN OF FACT TABLE
         """
-        return self.namespace.get_columns(self.alias)
+        return self.namespace.get_columns(literal_field(self.alias))
 
 
 class Schema(jx_base.Schema):
@@ -520,11 +530,13 @@ class Schema(jx_base.Schema):
     """
 
     def __init__(self, query_path, snowflake):
+        if not isinstance(snowflake.query_paths[0], list):
+            Log.error("Snowflake query paths should be a list of string tuples (well, technically, a list of lists of strings)")
         self.query_path = [
             p
             for p in snowflake.query_paths
             if untype_path(p[0]) == query_path
-        ][0]
+        ][0][0]
         self.snowflake = snowflake
 
     def leaves(self, column_name):
@@ -534,15 +546,16 @@ class Schema(jx_base.Schema):
         """
         column_name = unnest_path(column_name)
         columns = self.columns
+        deep_path = self.query_path[0]
         for path in self.query_path:
             output = [
                 c
                 for c in columns
                 if (
                     c.names['.'] != "_id" and
-                    c.jx_type not in STRUCT and
+                    c.jx_type not in OBJECTS and
                     startswith_field(unnest_path(c.names[path]), column_name) and
-                    startswith_field(path, c.nested_path[0])
+                    startswith_field(deep_path, c.nested_path[0])
                 )
             ]
             if output:
@@ -555,14 +568,15 @@ class Schema(jx_base.Schema):
         """
         column_name = unnest_path(column_name)
         columns = self.columns
+        deep_path = self.query_path[0]
         for path in self.query_path:
             output = [
                 c
                 for c in columns
                 if (
+                    c.jx_type not in STRUCT and
                     untype_path(c.names[path]) == column_name and
-                    startswith_field(path, c.nested_path[0]) and
-                    c.jx_type not in STRUCT
+                    startswith_field(deep_path, c.nested_path[0])
                 )
             ]
             if output:
@@ -578,7 +592,7 @@ class Schema(jx_base.Schema):
 
     @property
     def columns(self):
-        return self.snowflake.namespace.get_columns(self.snowflake.alias)
+        return self.snowflake.namespace.get_columns(literal_field(self.snowflake.alias))
 
     def map_to_es(self):
         """
@@ -591,12 +605,20 @@ class Schema(jx_base.Schema):
                 {
                     k: c.es_column
                     for c in self.snowflake.columns
-                    if c.type not in STRUCT
+                    if c.jx_type not in STRUCT
                     for rel_name in [c.names[path]]
                     for k in [rel_name, untype_path(rel_name), unnest_path(rel_name)]
                 }
             )
         return output
+
+
+class Table(jx_base.Table):
+
+    def __init__(self, full_name, container):
+        jx_base.Table.__init__(self, full_name)
+        self.container=container
+        self.schema = container.namespace.get_schema(full_name)
 
 
 def _counting_query(c):
@@ -649,3 +671,5 @@ def metadata_tables():
         ]
     )
 
+
+OBJECTS = (jx_base.OBJECT, jx_base.EXISTS)

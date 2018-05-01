@@ -11,12 +11,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import STRUCT, NESTED, EXISTS
+from jx_base import NESTED
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es14.expressions import split_expression_by_depth, AndOp, Variable, LeavesOp
-from jx_elasticsearch.es14.setop import format_dispatch, get_pull_function, get_pull
+from jx_elasticsearch.es14.setop import format_dispatch, get_pull_function
 from jx_elasticsearch.es14.util import jx_sort_to_es_sort, es_query_template
 from jx_python.expressions import compile_expression, jx_expression_to_function
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, concat_field, set_default, relative_field, startswith_field
@@ -49,8 +49,7 @@ def is_deepop(es, query):
 
 def es_deepop(es, query):
     schema = query.frum.schema
-    columns = schema.columns
-    query_path = schema.query_path
+    query_path = schema.query_path[0]
 
     # TODO: FIX THE GREAT SADNESS CAUSED BY EXECUTING post_expressions
     # THE EXPRESSIONS SHOULD BE PUSHED TO THE CONTAINER:  ES ALLOWS
@@ -155,7 +154,7 @@ def es_deepop(es, query):
         else:
             expr = s.value
             for v in expr.vars():
-                for c in schema[v]:
+                for c in schema[v.var]:
                     if c.nested_path[0] == ".":
                         es_query.fields += [c.es_column]
                     # else:

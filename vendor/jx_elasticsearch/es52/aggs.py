@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from jx_base import EXISTS
 from jx_base.domains import SetDomain
 from jx_base.expressions import TupleOp, NULL
-from jx_base.query import DEFAULT_LIMIT
+from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder, DimFieldListDecoder
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp

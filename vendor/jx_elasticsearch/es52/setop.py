@@ -19,7 +19,7 @@ from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.expressions import Variable, LeavesOp
-from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template, es_and, es_or, es_not, es_script
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
@@ -143,7 +143,7 @@ def es_setop(es, query):
                                     filters[0][k] = None
                                 set_default(
                                     filters[0],
-                                    {"bool": {"must": [where, {"bool": {"should": nested_filter}}]}}
+                                    es_and([where, es_or(nested_filter)])
                                 )
 
                             nested_path = c.nested_path[0]
@@ -178,10 +178,7 @@ def es_setop(es, query):
             put_index += 1
         else:
             painless = select.value.partial_eval().to_es_script(schema)
-            es_query.script_fields[literal_field(select.name)] = {"script": {
-                "lang": "painless",
-                "inline": painless.script(schema)
-            }}
+            es_query.script_fields[literal_field(select.name)] = es_script(painless.script(schema)).script
             new_select.append({
                 "name": select.name,
                 "pull": jx_expression_to_function("fields." + literal_field(select.name)),

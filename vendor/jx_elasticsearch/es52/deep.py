@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import STRUCT, NESTED
+from jx_base import NESTED
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post

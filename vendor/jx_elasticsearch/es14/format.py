@@ -11,17 +11,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from collections import Mapping
-
-from mo_dots import Data, set_default, wrap, split_field, coalesce
-from mo_logs import Log
-from pyLibrary import convert
-
 from jx_base.expressions import TupleOp
 from jx_elasticsearch.es14.aggs import count_dim, aggs_iterator, format_dispatch, drill
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
+from mo_dots import Data, set_default, wrap, split_field, coalesce
+from mo_future import sort_using_key
+from mo_logs import Log
 from mo_logs.strings import quote
+from pyLibrary import convert
 
 FunctionType = type(lambda: 1)
 

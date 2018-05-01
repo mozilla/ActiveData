@@ -11,12 +11,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_base import EXISTS
 from jx_base.domains import SetDomain
 from jx_base.expressions import TupleOp, NULL
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
 from jx_elasticsearch import post as es_post
-from jx_elasticsearch.es14.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder
-from jx_elasticsearch.es14.decoders import DimFieldListDecoder
+from jx_elasticsearch.es14.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder, DimFieldListDecoder
 from jx_elasticsearch.es14.expressions import split_expression_by_depth, AndOp, Variable, NullOp
 from jx_elasticsearch.es14.setop import get_pull_stats
 from jx_elasticsearch.es14.util import aggregates
@@ -62,7 +62,7 @@ def get_decoders_by_depth(query):
         elif edge.range:
             vars_ = edge.range.min.vars() | edge.range.max.vars()
             for v in vars_:
-                if not schema[v]:
+                if not schema[v.var]:
                     Log.error("{{var}} does not exist in schema", var=v)
         elif edge.domain.dimension:
             vars_ = edge.domain.dimension.fields

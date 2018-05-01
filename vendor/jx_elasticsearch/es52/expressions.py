@@ -19,6 +19,7 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
     ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE
+from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and
 from mo_dots import coalesce, wrap, Null, set_default, literal_field
 from mo_future import text_type
 from mo_logs import Log, suppress_exception
@@ -83,7 +84,7 @@ class EsScript(Expression):
         return "(" + missing.to_es_script(schema).expr + ")?null:(" + self.expr + ")"
 
     def to_esfilter(self, schema):
-        return {"script": {"script": {"lang": "painless", "inline": self.script(schema)}}}
+        return {"script": es_script(self.script(schema))}
 
     def to_es_script(self, schema):
         return self
@@ -129,7 +130,7 @@ def to_esfilter(self, schema):
     if self.op in ["eq", "term"]:
         return {"term": {self.lhs.var: self.rhs.to_esfilter(schema)}}
     elif self.op in ["ne", "neq"]:
-        return {"bool": {"must_not": {"term": {self.lhs.var: self.rhs.to_esfilter(schema)}}}}
+        return es_not({"term": {self.lhs.var: self.rhs.to_esfilter(schema)}})
     elif self.op in BinaryOp.ineq_ops:
         return {"range": {self.lhs.var: {self.op: self.rhs.value}}}
     else:
@@ -326,7 +327,7 @@ def to_es_script(self, schema):
 
 @extend(NullOp)
 def to_esfilter(self, schema):
-    return {"bool": {"must_not": {"match_all": {}}}}
+    return es_not({"match_all": {}})
 
 
 @extend(FalseOp)
@@ -336,7 +337,7 @@ def to_es_script(self, schema):
 
 @extend(FalseOp)
 def to_esfilter(self, schema):
-    return {"bool": {"must_not": {"match_all": {}}}}
+    return MATCH_NONE
 
 
 @extend(TupleOp)
@@ -400,7 +401,7 @@ def to_esfilter(self, schema):
         script = self.to_es_script(schema)
         if script.miss is not FALSE:
             Log.error("inequality must be decisive")
-        return {"script": {"script": {"lang": "painless", "inline": script.expr}}}
+        return {"script": es_script(script.expr)}
 
 
 @extend(DivOp)
@@ -617,7 +618,7 @@ def to_esfilter(self, schema):
         if len(columns) == 0:
             return {"match_all": {}}
         elif len(columns) == 1:
-            return {"bool": {"must_not": {"term": {columns[0].es_column: self.rhs.value}}}}
+            return es_not({"term": {columns[0].es_column: self.rhs.value}})
         else:
             Log.error("column split to multiple, not handled")
     else:
@@ -626,7 +627,7 @@ def to_esfilter(self, schema):
 
         if lhs.many:
             if rhs.many:
-                return wrap({"bool": {"must_not":
+                return es_not(
                     ScriptOp(
                         "script",
                         (
@@ -634,20 +635,20 @@ def to_esfilter(self, schema):
                             "(" + rhs.expr + ").containsAll(" + lhs.expr + ")"
                         )
                     ).to_esfilter(schema)
-                }})
+                )
             else:
-                return wrap({"bool": {"must_not":
+                return es_not(
                     ScriptOp("script", "(" + lhs.expr + ").contains(" + rhs.expr + ")").to_esfilter(schema)
-                }})
+                )
         else:
             if rhs.many:
-                return wrap({"bool": {"must_not":
+                return es_not(
                     ScriptOp("script", "(" + rhs.expr + ").contains(" + lhs.expr + ")").to_esfilter(schema)
-                }})
+                )
             else:
-                return wrap({"bool": {"must":
+                return es_not(
                     ScriptOp("script", "(" + lhs.expr + ") != (" + rhs.expr + ")").to_esfilter(schema)
-                }})
+                )
 
 @extend(NotOp)
 def to_es_script(self, schema):
@@ -668,7 +669,7 @@ def to_esfilter(self, schema):
         return {"exists": {"field": v}}
     else:
         operand = self.term.to_esfilter(schema)
-        return {"bool": {"must_not": operand}}
+        return es_not(operand)
 
 
 @extend(AndOp)
@@ -689,7 +690,7 @@ def to_esfilter(self, schema):
     if not len(self.terms):
         return {"match_all": {}}
     else:
-        return {"bool": {"must": [t.to_esfilter(schema) for t in self.terms]}}
+        return es_and([t.to_esfilter(schema) for t in self.terms])
 
 
 @extend(OrOp)
@@ -705,10 +706,10 @@ def to_es_script(self, schema):
 @extend(OrOp)
 def to_esfilter(self, schema):
     # OR(x) == NOT(AND(NOT(xi) for xi in x))
-    output = {"bool": {"must_not": {"bool": {"must": [
+    output = es_not(es_and([
         NotOp("not", t).partial_eval().to_esfilter(schema)
         for t in self.terms
-    ]}}}}
+    ]))
     return output
 
     # WE REQUIRE EXIT-EARLY SEMANTICS, OTHERWISE EVERY EXPRESSION IS A SCRIPT EXPRESSION
@@ -1089,7 +1090,7 @@ def to_es_script(self, schema):
 
 @extend(ScriptOp)
 def to_esfilter(self, schema):
-    return {"script": {"script": {"lang": "painless", "inline": self.script}}}
+    return {"script": es_script(self.script)}
 
 
 @extend(Variable)
@@ -1213,7 +1214,7 @@ def to_es_script(self, schema):
 
 
 MATCH_ALL = wrap({"match_all": {}})
-MATCH_NONE = wrap({"bool": {"must_not": {"match_all": {}}}})
+MATCH_NONE = es_not({"match_all": {}})
 
 
 def simplify_esfilter(esfilter):
@@ -1297,7 +1298,7 @@ def _normalize(esfilter):
                 esfilter = output[0]
                 break
             elif isDiff:
-                esfilter = wrap({"bool": {"must": output}})
+                esfilter = es_and(output)
             continue
 
         if esfilter.bool.should:

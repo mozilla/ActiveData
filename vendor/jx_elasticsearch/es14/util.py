@@ -11,6 +11,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from mo_future import text_type
+
+from mo_logs import Log
+
 from jx_base import STRING, BOOLEAN, NUMBER, OBJECT
 from jx_elasticsearch.es14.expressions import Variable
 from mo_dots import wrap
@@ -22,6 +26,9 @@ def es_query_template(path):
     :param path: THE NESTED PATH (NOT INCLUDING TABLE NAME)
     :return:
     """
+
+    if not isinstance(path, text_type):
+        Log.error("expecting path to be a string")
 
     if path != ".":
         f0 = {}
@@ -66,7 +73,7 @@ def jx_sort_to_es_sort(sort, schema):
 
             for type in types:
                 for c in cols:
-                    if c.type == type:
+                    if c.jx_type == type:
                         if s.sort == -1:
                             output.append({c.es_column: "desc"})
                         else:
@@ -109,3 +116,18 @@ aggregates = {
 
 NON_STATISTICAL_AGGS = {"none", "one"}
 
+
+def es_and(terms):
+    return wrap({"and": terms})
+
+
+def es_or(terms):
+    return wrap({"or": terms})
+
+
+def es_not(term):
+    return wrap({"not": term})
+
+
+def es_script(term):
+    return wrap({"script": term})

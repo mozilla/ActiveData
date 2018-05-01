@@ -116,3 +116,18 @@ aggregates = {
 
 NON_STATISTICAL_AGGS = {"none", "one"}
 
+
+def es_and(terms):
+    return wrap({"bool": {"must": terms}})
+
+
+def es_or(terms):
+    return wrap({"bool": {"should": terms}})
+
+
+def es_not(term):
+    return wrap({"bool": {"must_not": term}})
+
+
+def es_script(term):
+    return wrap({"script": {"lang": "painless", "inline": term}})

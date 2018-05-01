@@ -87,7 +87,7 @@ def es_setop(es, query):
                     })
                     put_index += 1
                 elif c.nested_path[0] != ".":
-                    es_query.fields = ["_source"]
+                    pass  # THE NESTED PARENT WILL CAPTURE THIS
                 else:
                     es_query.fields += [c.es_column]
                     new_select.append({
@@ -102,7 +102,7 @@ def es_setop(es, query):
             leaves = schema.leaves(s_column)
             nested_selects = {}
             if leaves:
-                if any(c.jx_type == NESTED for c in leaves):
+                if s_column == '.' or any(c.jx_type == NESTED for c in leaves):
                     # PULL WHOLE NESTED ARRAYS
                     es_query.fields = ["_source"]
                     for c in leaves:
@@ -168,7 +168,7 @@ def es_setop(es, query):
                                     "pull": pull
                                 })
                             else:
-                                nested_selects[nested_path].nested.inner_hits.fields+=[c.es_column]
+                                nested_selects[nested_path].nested.inner_hits.fields += [c.es_column]
             else:
                 new_select.append({
                     "name": select.name,
@@ -178,7 +178,7 @@ def es_setop(es, query):
             put_index += 1
         else:
             painless = select.value.partial_eval().to_es_script(schema)
-            es_query.script_fields[literal_field(select.name)] = es_script(painless.script(schema))
+            es_query.script_fields[literal_field(select.name)] =  es_script(painless.script(schema))
             new_select.append({
                 "name": select.name,
                 "pull": jx_expression_to_function("fields." + literal_field(select.name)),

@@ -14,6 +14,8 @@ from __future__ import unicode_literals
 import itertools
 from collections import Mapping
 
+from mo_math import UNION
+
 import jx_base
 from jx_base import Container
 from jx_base.expressions import jx_expression, Expression, Variable, TRUE
@@ -178,7 +180,10 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
             new_schema = None
 
         if isinstance(select, list):
-            if all(isinstance(s.value, Variable) for s in select):
+            if all(
+                isinstance(s.value, Variable) and s.name == s.value.var
+                for s in select
+            ):
                 names = set(s.value.var for s in select)
                 new_schema = Schema(".", [c for c in self.schema.columns if c.names['.'] in names])
 

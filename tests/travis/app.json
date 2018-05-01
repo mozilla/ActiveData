@@ -5,17 +5,6 @@
 		"query": "http://127.0.0.1:5000/query",
 		"sql": "http://127.0.0.1:5000/sql"
 	},
-	"backend_es": {
-		"index": "testdata",
-		"type": "test_result",
-		"host": "http://localhost",
-		"port": 9200,
-		"schema": {
-			"settings": {"index": {"number_of_shards": 1}},
-			"$ref": "//.../resources/schema/basic_schema.json.template?type=test_result"
-		},
-		"debug": true
-	},
 	"flask": {
 		"host": "0.0.0.0",
 		"port": 5000,
@@ -31,6 +20,7 @@
 		},
  		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
 		"jx_elasticsearch.meta.ENABLE_META_SCAN": true,
+		"jx_elasticsearch.meta.DEBUG": false,
 		"jx_base.expressions.ALLOW_SCRIPTING": true
 	},
 	"request_logs": {

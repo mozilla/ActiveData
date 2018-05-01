@@ -16,6 +16,7 @@ from datetime import date
 from datetime import datetime
 
 import jx_base
+from jx_base import python_type_to_json_type
 from jx_base import STRUCT, Column, Table
 from jx_base.schema import Schema
 from jx_python import jx
@@ -241,11 +242,13 @@ def _get_schema_from_list(frum, table_name, prefix_path, nested_path, columns):
                     names={table_name: full_name},
                     es_column=full_name,
                     es_index=".",
-                    es_type="undefined",
+                    jx_type=python_type_to_json_type[d.__class__],
+                    es_type=row_type,
                     nested_path=nested_path
                 )
                 columns.add(column)
-            column.type = _merge_type[column.type][row_type]
+            column.es_type = _merge_type[column.es_type][row_type]
+            column.jx_type = _merge_type[column.jx_type][row_type]
         else:
             for name, value in d.items():
                 full_name = join_field(prefix_path + [name])
@@ -380,6 +383,7 @@ _merge_type = {
         "long": "long",
         "float": "float",
         "double": "double",
+        "number": "number",
         "string": "string",
         "object": "object",
         "nested": "nested"
@@ -391,6 +395,7 @@ _merge_type = {
         "long": "long",
         "float": "float",
         "double": "double",
+        "number": "number",
         "string": "string",
         "object": None,
         "nested": None
@@ -402,6 +407,7 @@ _merge_type = {
         "long": "long",
         "float": "float",
         "double": "double",
+        "number": "number",
         "string": "string",
         "object": None,
         "nested": None
@@ -413,6 +419,7 @@ _merge_type = {
         "long": "long",
         "float": "double",
         "double": "double",
+        "number": "number",
         "string": "string",
         "object": None,
         "nested": None
@@ -424,6 +431,7 @@ _merge_type = {
         "long": "double",
         "float": "float",
         "double": "double",
+        "number": "number",
         "string": "string",
         "object": None,
         "nested": None
@@ -435,6 +443,19 @@ _merge_type = {
         "long": "double",
         "float": "double",
         "double": "double",
+        "number": "number",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "number": {
+        "undefined": "number",
+        "boolean": "number",
+        "integer": "number",
+        "long": "number",
+        "float": "number",
+        "double": "number",
+        "number": "number",
         "string": "string",
         "object": None,
         "nested": None
@@ -446,6 +467,7 @@ _merge_type = {
         "long": "string",
         "float": "string",
         "double": "string",
+        "number": "string",
         "string": "string",
         "object": None,
         "nested": None
@@ -457,6 +479,7 @@ _merge_type = {
         "long": None,
         "float": None,
         "double": None,
+        "number": None,
         "string": None,
         "object": "object",
         "nested": "nested"
@@ -468,6 +491,7 @@ _merge_type = {
         "long": None,
         "float": None,
         "double": None,
+        "number": None,
         "string": None,
         "object": "nested",
         "nested": "nested"

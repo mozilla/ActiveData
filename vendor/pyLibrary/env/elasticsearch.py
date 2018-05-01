@@ -87,7 +87,7 @@ class Index(Features):
         self.cluster = cluster or Cluster(kwargs)
 
         try:
-            full_index = cluster.get_canonical_index(index)
+            full_index = self.cluster.get_canonical_index(index)
             if full_index and alias==None:
                 kwargs.alias = kwargs.index
                 kwargs.index = full_index

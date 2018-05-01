@@ -16,7 +16,7 @@ from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es14.expressions import split_expression_by_depth, AndOp, Variable, LeavesOp
-from jx_elasticsearch.es14.setop import format_dispatch, get_pull_function
+from jx_elasticsearch.es14.setop import format_dispatch, get_pull_function, get_pull
 from jx_elasticsearch.es14.util import jx_sort_to_es_sort, es_query_template
 from jx_python.expressions import compile_expression, jx_expression_to_function
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, concat_field, set_default, relative_field, startswith_field
@@ -214,5 +214,25 @@ def es_deepop(es, query):
         return output
     except Exception as e:
         Log.error("problem formatting", e)
+
+
+class MapToLocal(object):
+    """
+    MAP FROM RELATIVE/ABSOLUTE NAMESPACE TO PYTHON THAT WILL EXTRACT RESULT
+    """
+    def __init__(self, map_to_columns):
+        self.map_to_columns = map_to_columns
+
+    def __getitem__(self, item):
+        return self.get(item)
+
+    def get(self, item):
+        cs = self.map_to_columns[item]
+        if len(cs) == 0:
+            return "Null"
+        elif len(cs) == 1:
+            return get_pull(cs[0])
+        else:
+            return "coalesce(" + (",".join(get_pull(c) for c in cs)) + ")"
 
 

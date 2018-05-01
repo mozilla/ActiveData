@@ -18,7 +18,7 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, LeftOp
 from jx_elasticsearch.es14.util import es_not, es_script, es_or, es_and
 from mo_dots import coalesce, wrap, Null, set_default, literal_field
 from mo_future import text_type
@@ -36,6 +36,24 @@ TO_STRING = """
         return output;
     })()
 """
+
+
+LIST_TO_PIPE = """
+StringBuffer output=new StringBuffer();
+for(String s : {{expr}}){
+    output.append("|");
+    String sep2="";
+    StringTokenizer parts = new StringTokenizer(s, "|");
+    while (parts.hasMoreTokens()){
+        output.append(sep2);
+        output.append(parts.nextToken());
+        sep2="||";
+    }//for
+}//for
+output.append("|");
+return output.toString()
+"""
+
 
 
 
@@ -718,12 +736,7 @@ def to_es_script(self, schema):
     if isinstance(self.term, Variable):
         columns = schema.values(self.term.var)
         if len(columns) == 1:
-            return EsScript(
-                miss=MissingOp("missing", self.term),
-                type=self.term.type,
-                expr="doc[" + quote(columns[0].es_column) + "].value",
-                frum=self
-            )
+            return self.term.to_es_script(schema, many=False)
 
     term = self.term.to_es_script(schema)
 
@@ -1078,7 +1091,7 @@ def to_esfilter(self, schema):
 
 
 @extend(Variable)
-def to_es_script(self, schema):
+def to_es_script(self, schema, many=True):
     if self.var == ".":
         return "_source"
     else:
@@ -1091,12 +1104,21 @@ def to_es_script(self, schema):
             varname = c.es_column
             frum = Variable(c.es_column)
             q = quote(varname)
-            acc.append(EsScript(
-                miss=frum.missing(),
-                type=c.jx_type,
-                expr="doc[" + q + "].values" if c.jx_type != BOOLEAN else "doc[" + q + "].value",
-                frum=frum,
-                many=True
+            if many:
+                acc.append(EsScript(
+                    miss=frum.missing(),
+                    type=c.jx_type,
+                    expr="doc[" + q + "].values" if c.jx_type != BOOLEAN else "doc[" + q + "].value==\"T\"",
+                    frum=frum,
+                    many=True
+                ))
+            else:
+                acc.append(EsScript(
+                    miss=frum.missing(),
+                    type=c.jx_type,
+                    expr="doc[" + q + "].value" if c.jx_type != BOOLEAN else "doc[" + q + "].value==\"T\"",
+                    frum=frum,
+                    many=True
             ))
 
         if len(acc) == 0:

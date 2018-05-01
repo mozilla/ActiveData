@@ -16,18 +16,16 @@ from collections import Mapping
 from jx_base import STRING, NUMBER, BOOLEAN
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_base.expressions import TupleOp, TrueOp, TRUE
+from jx_base.expressions import TupleOp, TRUE
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
 from jx_python import jx
-from mo_dots import set_default, coalesce, literal_field, Data, relative_field, unwraplist
-from mo_dots import wrap
+from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, unwraplist
 from mo_future import text_type
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_logs.strings import quote, expand_template
-from mo_math import MAX, MIN
-from mo_math import Math
+from mo_math import MAX, MIN, Math
 from pyLibrary.convert import string2boolean
 
 
@@ -603,10 +601,7 @@ class DefaultDecoder(SetDecoder):
                 output = wrap({"aggs": {
                     "_match": set_default(
                         {"terms": {
-                            "script": {
-                                "lang": "painless",
-                                "inline": self.script.expr
-                            },
+                            "script": {"lang": "painless", "inline": self.script.expr},
                             "size": self.domain.limit,
                             "order": self.es_order
                         }},
@@ -620,10 +615,7 @@ class DefaultDecoder(SetDecoder):
                         "aggs": {
                             "_filter": set_default(
                                 {"terms": {
-                                    "script": {
-                                        "lang": "painless",
-                                        "inline": self.script.expr
-                                    },
+                                    "script": {"lang": "painless", "inline": self.script.expr},
                                     "size": self.domain.limit,
                                     "order": self.es_order
                                 }},

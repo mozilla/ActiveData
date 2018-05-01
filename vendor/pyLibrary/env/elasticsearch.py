@@ -12,13 +12,13 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import re
-from collections import Mapping, namedtuple
+from collections import Mapping
 from copy import deepcopy
 
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from jx_python.meta import Column
-from mo_dots import wrap, FlatList, coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field, unwrap
+from mo_dots import wrap, FlatList, coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field
 from mo_future import text_type, binary_type
 from mo_json import value2json, json2value
 from mo_json.typed_encoder import EXISTS_TYPE, BOOLEAN_TYPE, STRING_TYPE, NUMBER_TYPE, NESTED_TYPE, TYPE_PREFIX
@@ -539,7 +539,7 @@ class Cluster(object):
         self.metadata_locker = Lock()
         self.last_metadata = Date.now()
         self.debug = debug
-        self.version = None
+        self._version = None
         self.path = kwargs.host + ":" + text_type(kwargs.port)
 
     @override
@@ -838,8 +838,14 @@ class Cluster(object):
                 if not new_index:
                     self.index_new_since[old_index_name] = now
         self.info = wrap(self.get("/", stream=False))
-        self.version = self.info.version.number
+        self._version = self.info.version.number
         return self._metadata
+
+    @property
+    def version(self):
+        if self._version is None:
+            self.get_metadata()
+        return self._version
 
     def post(self, path, **kwargs):
         url = self.settings.host + ":" + text_type(self.settings.port) + path

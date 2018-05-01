@@ -343,6 +343,7 @@ set_default(format_dispatch, {
     "list": (format_list, None, "application/json")
 })
 
+
 def get_pull(column):
     if column.nested_path[0] == ".":
         return concat_field("fields", literal_field(column.es_column))

@@ -734,12 +734,7 @@ def to_es_script(self, schema):
     if isinstance(self.term, Variable):
         columns = schema.values(self.term.var)
         if len(columns) == 1:
-            return EsScript(
-                miss=MissingOp("missing", self.term),
-                type=self.term.type,
-                expr="doc[" + quote(columns[0].es_column) + "].value",
-                frum=self
-            )
+            return Variable(columns[0].es_column).to_es_script(schema, many=False)
 
     term = self.term.to_es_script(schema)
 
@@ -1094,7 +1089,7 @@ def to_esfilter(self, schema):
 
 
 @extend(Variable)
-def to_es_script(self, schema):
+def to_es_script(self, schema, many=True):
     if self.var == ".":
         return "_source"
     else:
@@ -1107,13 +1102,22 @@ def to_es_script(self, schema):
             varname = c.es_column
             frum = Variable(c.es_column)
             q = quote(varname)
-            acc.append(EsScript(
-                miss=frum.missing(),
-                type=c.jx_type,
-                expr="doc[" + q + "].values" if c.jx_type != BOOLEAN else "doc[" + q + "].value",
-                frum=frum,
-                many=True
-            ))
+            if many:
+                acc.append(EsScript(
+                    miss=frum.missing(),
+                    type=c.jx_type,
+                    expr="doc[" + q + "].values" if c.jx_type != BOOLEAN else "doc[" + q + "].value",
+                    frum=frum,
+                    many=True
+                ))
+            else:
+                acc.append(EsScript(
+                    miss=frum.missing(),
+                    type=c.jx_type,
+                    expr="doc[" + q + "].value" if c.jx_type != BOOLEAN else "doc[" + q + "].value",
+                    frum=frum,
+                    many=True
+                ))
 
         if len(acc) == 0:
             return NULL.to_es_script(schema)

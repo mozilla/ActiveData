@@ -19,7 +19,7 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
     ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE
-from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and
+from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_missing
 from mo_dots import coalesce, wrap, Null, set_default, literal_field
 from mo_future import text_type
 from mo_logs import Log, suppress_exception
@@ -579,11 +579,11 @@ def to_esfilter(self, schema):
         if not cols:
             return {"match_all": {}}
         elif len(cols) == 1:
-            return {"bool": {"must_not": {"exists": {"field": cols[0].es_column}}}}
+            return es_missing(cols[0].es_column)
         else:
-            return {"bool": {"must": [
-                {"bool": {"must_not": {"exists": {"field": c.es_column}}}} for c in cols]
-            }}
+            return es_and([
+                es_missing(c.es_column) for c in cols
+            ])
     else:
         return ScriptOp("script", self.to_es_script(schema).script(schema)).to_esfilter(schema)
 
@@ -734,7 +734,7 @@ def to_es_script(self, schema):
     if isinstance(self.term, Variable):
         columns = schema.values(self.term.var)
         if len(columns) == 1:
-            return Variable(columns[0].es_column).to_es_script(schema, many=False)
+            return self.term.to_es_script(schema, many=False)
 
     term = self.term.to_es_script(schema)
 
@@ -1342,18 +1342,14 @@ def _normalize(esfilter):
                     if OR(vv == None for vv in v):
                         rest = [vv for vv in v if vv != None]
                         if len(rest) > 0:
-                            return {
-                                "bool": {"should": [
-                                    {"bool": {"must_not": {"exists": {"field": k}}}},
-                                    {"terms": {k: rest}}
-                                ]},
-                                "isNormal": True
-                            }
+                            output = es_or([
+                                es_missing(k),
+                                {"terms": {k: rest}}
+                            ])
                         else:
-                            return {
-                                "bool": {"must_not": {"exists": {"field": k}}},
-                                "isNormal": True
-                            }
+                            output = es_missing(k)
+                        output.isNormal = True
+                        return output
                     else:
                         esfilter.isNormal = True
                         return esfilter

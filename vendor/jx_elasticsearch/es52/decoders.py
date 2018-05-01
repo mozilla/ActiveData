@@ -19,6 +19,7 @@ from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
 from jx_base.expressions import TupleOp, TRUE
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
+from jx_elasticsearch.es52.util import es_missing
 from jx_python import jx
 from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, unwraplist
 from mo_future import text_type
@@ -521,7 +522,7 @@ class ObjectDecoder(AggsDecoder):
                     "size": self.domain.limit
                 }}, es_query),
                 "_missing": set_default(
-                    {"filter": {"bool": {"must_not": {"exists": {"field": v}}}}},
+                    {"filter": es_missing(v)},
                     es_query
                 )
             }})

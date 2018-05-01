@@ -581,11 +581,11 @@ def to_esfilter(self, schema):
         if not cols:
             return {"match_all": {}}
         elif len(cols) == 1:
-            return {"missing": {"field": cols[0].es_column}}
+            return es_missing(cols[0].es_column)
         else:
-            return {"and": [
-                {"missing": {"field": c.es_column}} for c in cols
-            ]}
+            return es_and([
+                es_missing(c.es_column) for c in cols
+            ])
     else:
         return ScriptOp("script", self.to_es_script(schema).script(schema)).to_esfilter(schema)
 
@@ -1344,18 +1344,14 @@ def _normalize(esfilter):
                     if OR(vv == None for vv in v):
                         rest = [vv for vv in v if vv != None]
                         if len(rest) > 0:
-                            return {
-                                "or": [
-                                    {"missing": {"field": k}},
-                                    {"terms": {k: rest}}
-                                ],
-                                "isNormal": True
-                            }
+                            output = es_or([
+                                es_missing(k),
+                                {"terms": {k: rest}}
+                            ])
                         else:
-                            return {
-                                "missing": {"field": k},
-                                "isNormal": True
-                            }
+                            output = es_missing(k)
+                        output.isNormal = True
+                        return output
                     else:
                         esfilter.isNormal = True
                         return esfilter

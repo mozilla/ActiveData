@@ -110,7 +110,7 @@ class ElasticsearchMetadata(Namespace):
 
         indexes = self.index_to_alias.get_domain(alias)
         update_required = not (MAX(times[i] for i in indexes) < self.es_cluster.last_metadata)
-        metadata = self.es_cluster.get_metadata(force=update_required).indices[canonical_index]
+        metadata = self.es_cluster.get_metadata(force=update_required)
 
         props = [
             # (index, type, properties) TRIPLE
@@ -128,7 +128,7 @@ class ElasticsearchMetadata(Namespace):
             diff = elasticsearch.diff_schema(p2, p1)
             for d in diff:
                 dirty = True
-                i2.add_property(*d)
+                i1.add_property(*d)
         meta = self.es_cluster.get_metadata(force=dirty).indices[canonical_index]
 
         data_type, mapping = _get_best_type_from_mapping(meta.mappings)

@@ -1470,7 +1470,11 @@ def diff_schema(A, B):
             bv = B[k]
             if bv == None:
                 output.append((concat_field(path, k), av))
-            elif av.type != bv.type:
+            elif av.type == bv.type:
+                pass  # OK
+            elif (av.type == None and bv.type == 'object') or (av.type == 'object' and bv.type == None):
+                pass  # OK
+            else:
                 Log.warning("inconsistent types: {{typeA}} vs {{typeB}}", typeA=av.type, typeB=bv.type)
             _diff_schema(concat_field(path, k), av.properties, bv.properties)
 

@@ -66,7 +66,7 @@ class Snowflake(object):
                 cname, ctype = untyped_column(name)
                 column = Column(
                     names={np: relative_field(cname, np) for np in nested_path},
-                    type=coalesce(ctype, {"TEXT": "string", "REAL": "number", "INTEGER": "integer"}.get(dtype)),
+                    es_type=coalesce(ctype, {"TEXT": "string", "REAL": "number", "INTEGER": "integer"}.get(dtype)),
                     nested_path=nested_path,
                     es_column=name,
                     es_index=table.name
@@ -92,7 +92,7 @@ class Snowflake(object):
             else:
                 c = Column(
                     names={".": u},
-                    type="string",
+                    es_type="string",
                     es_column=typed_column(u, "string"),
                     es_index=self.fact
                 )
@@ -244,6 +244,11 @@ class Table(Container):
         return self._schema
 
 
+    def map(self, mapping):
+        return self
+
+
+
 class Schema(object):
     """
     A Schema MAPS ALL COLUMNS IN SNOWFLAKE FROM THE PERSPECTIVE OF A SINGLE TABLE (a nested_path)
@@ -254,14 +259,14 @@ class Schema(object):
             Log.error("Expecting full nested path")
         source = Column(
             names={".": "."},
-            type=OBJECT,
+            es_type=OBJECT,
             es_column="_source",
             es_index=nested_path,
             nested_path=nested_path
         )
         guid = Column(
             names={".": GUID},
-            type=STRING,
+            es_type=STRING,
             es_column=GUID,
             es_index=nested_path,
             nested_path=nested_path

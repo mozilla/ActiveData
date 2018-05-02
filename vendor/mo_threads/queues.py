@@ -149,7 +149,7 @@ class Queue(object):
         if timeout != None:
             time_to_stop_waiting = now + timeout
         else:
-            time_to_stop_waiting = Null
+            time_to_stop_waiting = None
 
         if self.next_warning < now:
             self.next_warning = now + wait_time

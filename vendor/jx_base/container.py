@@ -47,7 +47,9 @@ def _delayed_imports():
 
 class Container(object):
     """
-    Containers are data storage capable of handing queries on that storage
+    CONTAINERS HOLD MULTIPLE FACTS AND CAN HANDLE
+    GENERAL JSON QUERY EXPRESSIONS ON ITS CONTENTS
+    METADATA FOR A Container IS CALL A Namespace
     """
 
     __slots__ = ["data", "namespaces"]

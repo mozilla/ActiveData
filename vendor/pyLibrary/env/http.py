@@ -220,10 +220,6 @@ def post(url, **kwargs):
     return HttpResponse(request('post', url, **kwargs))
 
 
-def delete(url, **kwargs):
-    return HttpResponse(request('delete', url, **kwargs))
-
-
 def post_json(url, **kwargs):
     """
     ASSUME RESPONSE IN IN JSON
@@ -246,7 +242,7 @@ def post_json(url, **kwargs):
             return details
     except Exception as e:
         if response.status_code not in [200, 201]:
-            Log.error(u"Bad response code {{code}}", code=response.status_code)
+            Log.error(u"Bad response code {{code}}", code=response.status_code, cause=e)
         else:
             Log.error(u"Unexpected return value {{content}}", content=c, cause=e)
 

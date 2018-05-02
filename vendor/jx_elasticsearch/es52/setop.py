@@ -19,12 +19,11 @@ from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.expressions import Variable, LeavesOp
-from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template, es_and, es_or, es_not, es_script
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
-from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field
-from mo_dots import listwrap
+from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap
 from mo_dots.lists import FlatList
 from mo_json.typed_encoder import untype_path, unnest_path, untyped
 from mo_logs import Log
@@ -56,7 +55,7 @@ def is_setop(es, query):
 def es_setop(es, query):
     schema = query.frum.schema
 
-    es_query, filters = es_query_template(schema.query_path)
+    es_query, filters = es_query_template(schema.query_path[0])
     nested_filter = None
     set_default(filters[0], query.where.partial_eval().to_esfilter(schema))
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
@@ -75,10 +74,10 @@ def es_setop(es, query):
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if isinstance(select.value, LeavesOp) and isinstance(select.value.term, Variable):
             term = select.value.term
-            leaves = schema.values(term.var)
+            leaves = schema.leaves(term.var)
             for c in leaves:
                 full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
-                if c.type == NESTED:
+                if c.jx_type == NESTED:
                     es_query.stored_fields = ["_source"]
                     new_select.append({
                         "name": full_name,
@@ -103,7 +102,7 @@ def es_setop(es, query):
             leaves = schema.leaves(s_column)
             nested_selects = {}
             if leaves:
-                if s_column=='.' or any(c.type == NESTED for c in leaves):
+                if s_column == '.' or any(c.jx_type == NESTED for c in leaves):
                     # PULL WHOLE NESTED ARRAYS
                     es_query.stored_fields = ["_source"]
                     for c in leaves:
@@ -120,7 +119,7 @@ def es_setop(es, query):
                     for c in leaves:
                         if len(c.nested_path) == 1:
                             jx_name = untype_path(c.names["."])
-                            if c.type == NESTED:
+                            if c.jx_type == NESTED:
                                 es_query.stored_fields = ["_source"]
                                 new_select.append({
                                     "name": select.name,
@@ -144,7 +143,7 @@ def es_setop(es, query):
                                     filters[0][k] = None
                                 set_default(
                                     filters[0],
-                                    {"bool": {"must": [where, {"bool": {"should": nested_filter}}]}}
+                                    es_and([where, es_or(nested_filter)])
                                 )
 
                             nested_path = c.nested_path[0]
@@ -156,7 +155,7 @@ def es_setop(es, query):
                                 where.nested.inner_hits._source = False
                                 where.nested.inner_hits.stored_fields += [c.es_column]
 
-                                child = relative_field(untype_path(c.names[schema.query_path]), s_column)
+                                child = relative_field(untype_path(c.names[schema.query_path[0]]), s_column)
                                 pull = accumulate_nested_doc(nested_path, Variable(relative_field(s_column, unnest_path(nested_path))))
                                 new_select.append({
                                     "name": select.name,
@@ -169,7 +168,7 @@ def es_setop(es, query):
                                     "pull": pull
                                 })
                             else:
-                                nested_selects[nested_path].nested.inner_hits.stored_fields+=[c.es_column]
+                                nested_selects[nested_path].nested.inner_hits.stored_fields += [c.es_column]
             else:
                 new_select.append({
                     "name": select.name,
@@ -178,11 +177,8 @@ def es_setop(es, query):
                 })
             put_index += 1
         else:
-            painless = select.value.partial_eval().to_painless(schema)
-            es_query.script_fields[literal_field(select.name)] = {"script": {
-                "lang": "painless",
-                "inline": painless.script(schema)
-            }}
+            painless = select.value.partial_eval().to_es_script(schema)
+            es_query.script_fields[literal_field(select.name)] = es_script(painless.script(schema))
             new_select.append({
                 "name": select.name,
                 "pull": jx_expression_to_function("fields." + literal_field(select.name)),
@@ -346,6 +342,7 @@ set_default(format_dispatch, {
     "table": (format_table, None, "application/json"),
     "list": (format_list, None, "application/json")
 })
+
 
 def get_pull(column):
     if column.nested_path[0] == ".":

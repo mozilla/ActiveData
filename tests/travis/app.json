@@ -3,8 +3,7 @@
 	"use": "elasticsearch",
 	"testing":{
 		"query": "http://127.0.0.1:5000/query",
-		"sql": "http://127.0.0.1:5000/sql",
-		"tuid": "http://127.0.0.1:5000/tuid"
+		"sql": "http://127.0.0.1:5000/sql"
 	},
 	"backend_es": {
 		"index": "testdata",
@@ -32,6 +31,7 @@
 		},
  		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
 		"jx_elasticsearch.meta.ENABLE_META_SCAN": true,
+		"jx_elasticsearch.meta.DEBUG": false,
 		"jx_base.expressions.ALLOW_SCRIPTING": true
 	},
 	"request_logs": {

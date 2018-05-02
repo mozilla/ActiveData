@@ -19,12 +19,11 @@ from jx_base.dimensions import Dimension
 from jx_base.expressions import jx_expression
 from jx_base.queries import is_variable_name
 from jx_base.query import QueryOp
-from jx_base.schema import Schema
 from jx_elasticsearch.es52.aggs import es_aggsop, is_aggsop
 from jx_elasticsearch.es52.deep import is_deepop, es_deepop
 from jx_elasticsearch.es52.setop import is_setop, es_setop
 from jx_elasticsearch.es52.util import aggregates
-from jx_elasticsearch.meta import FromESMetadata
+from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
 from mo_dots import Data, Null, unwrap, coalesce, split_field, literal_field, unwraplist, join_field, wrap, listwrap, FlatList
 from mo_json import scrub, value2json
@@ -41,7 +40,7 @@ class ES52(Container):
 
     def __new__(cls, *args, **kwargs):
         if (len(args) == 1 and args[0].get("index") == "meta") or kwargs.get("index") == "meta":
-            output = FromESMetadata.__new__(FromESMetadata, *args, **kwargs)
+            output = ElasticsearchMetadata.__new__(ElasticsearchMetadata, *args, **kwargs)
             output.__init__(*args, **kwargs)
             return output
         else:
@@ -69,19 +68,18 @@ class ES52(Container):
                 "settings": unwrap(kwargs)
             }
         self.settings = kwargs
-        self.name = coalesce(name, alias, index)
+        self.name = name = coalesce(name, alias, index)
         if read_only:
             self._es = elasticsearch.Alias(alias=coalesce(alias, index), kwargs=kwargs)
         else:
             self._es = elasticsearch.Cluster(kwargs=kwargs).get_index(read_only=read_only, kwargs=kwargs)
 
-        self.meta = FromESMetadata(kwargs=kwargs)
+        self._namespace = ElasticsearchMetadata(kwargs=kwargs)
         self.settings.type = self._es.settings.type
         self.edges = Data()
         self.worker = None
 
-        columns = self.meta.get_columns(table_name=coalesce(name, alias, index))
-        self._schema = Schema(coalesce(name, alias, index), columns)
+        columns = self._namespace.get_snowflake(self._es.settings.alias).columns  # ABSOLUTE COLUMNS
 
         if typed == None:
             # SWITCH ON TYPED MODE
@@ -90,8 +88,19 @@ class ES52(Container):
             self.typed = typed
 
     @property
-    def schema(self):
-        return self._schema
+    def snowflake(self):
+        return self._namespace.get_snowflake(self._es.settings.alias)
+
+    @property
+    def namespace(self):
+        return self._namespace
+
+
+    def get_table(self, full_name):
+        return Table(full_name, self)
+
+    def get_schema(self, query_path):
+        return self._namespace.get_schema(query_path)
 
     def __data__(self):
         settings = self.settings.copy()
@@ -122,10 +131,7 @@ class ES52(Container):
 
     def query(self, _query):
         try:
-            query = QueryOp.wrap(_query, table=self, schema=self.schema)
-
-            for n in self.namespaces:
-                query = n.convert(query)
+            query = QueryOp.wrap(_query, container=self, namespace=self.namespace)
 
             for s in listwrap(query.select):
                 if s.aggregate != None and not aggregates.get(s.aggregate):
@@ -209,7 +215,7 @@ class ES52(Container):
                 scripts.append({"doc": v.doc})
             else:
                 v = scrub(v)
-                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_painless(schema).script(schema)})
+                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_es_script(schema).script(schema)})
 
         if results.hits.hits:
             updates = []

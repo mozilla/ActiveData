@@ -14,6 +14,15 @@ from __future__ import unicode_literals
 import itertools
 from collections import Mapping
 
+from mo_math import UNION
+
+import jx_base
+from jx_base import Container
+from jx_base.expressions import jx_expression, Expression, Variable, TRUE
+from jx_python.expression_compiler import compile_expression
+from jx_python.expressions import jx_expression_to_function
+from jx_python.lists.aggs import is_aggs, list_aggs
+from jx_python.meta import get_schema_from_list
 from mo_collections import UniqueIndex
 from mo_dots import Data, wrap, listwrap, unwraplist, unwrap, Null
 from mo_future import sort_using_key
@@ -21,17 +30,13 @@ from mo_logs import Log
 from mo_threads import Lock
 from pyLibrary import convert
 
-from jx_base.expressions import jx_expression, Expression, TrueOp, Variable, TRUE
-from jx_python.expressions import jx_expression_to_function
-from jx_base.container import Container
-from jx_python.expression_compiler import compile_expression
-from jx_python.lists.aggs import is_aggs, list_aggs
-from jx_python.meta import get_schema_from_list
-
 _get = object.__getattribute__
 
 
-class ListContainer(Container):
+class ListContainer(Container, jx_base.Namespace, jx_base.Table):
+    """
+    A CONTAINER WITH ONLY ONE TABLE
+    """
     def __init__(self, name, data, schema=None):
         # TODO: STORE THIS LIKE A CUBE FOR FASTER ACCESS AND TRANSFORMATION
         data = list(unwrap(data))
@@ -51,6 +56,10 @@ class ListContainer(Container):
     @property
     def schema(self):
         return self._schema
+
+    @property
+    def namespace(self):
+        return self
 
     def last(self):
         """
@@ -171,6 +180,13 @@ class ListContainer(Container):
             new_schema = None
 
         if isinstance(select, list):
+            if all(
+                isinstance(s.value, Variable) and s.name == s.value.var
+                for s in select
+            ):
+                names = set(s.value.var for s in select)
+                new_schema = Schema(".", [c for c in self.schema.columns if c.names['.'] in names])
+
             push_and_pull = [(s.name, jx_expression_to_function(s.value)) for s in selects]
             def selector(d):
                 output = Data()
@@ -251,6 +267,23 @@ class ListContainer(Container):
     def __len__(self):
         return len(self.data)
 
+    # class Namespace(jx_base.Namespace):
+
+    def get_snowflake(self, name):
+        if self.name != name:
+            Log.error("This container only has table by name of {{name}}", name=name)
+        return self
+
+    def get_schema(self, name):
+        if self.name != name:
+            Log.error("This container only has table by name of {{name}}", name=name)
+        return self.schema
+
+    def get_table(self, name):
+        if self.name != name:
+            Log.error("This container only has table by name of {{name}}", name=name)
+        return self
+
 
 def _exec(code):
     try:
@@ -259,6 +292,7 @@ def _exec(code):
         return temp
     except Exception as e:
         Log.error("Could not execute {{code|quote}}", code=code, cause=e)
+
 
 
 

@@ -188,6 +188,9 @@ def format_list_from_groupby(decoders, aggs, start, query, select):
                 output[s.name] = s.pull(agg)
             yield output
 
+    for g in query.groupby:
+        g.put.name = coalesce(g.put.name, g.name)
+
     output = Data(
         meta={"format": "list"},
         data=list(data())

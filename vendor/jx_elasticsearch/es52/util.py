@@ -11,6 +11,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from mo_future import text_type
+
+from mo_logs import Log
+
 from jx_base import STRING, BOOLEAN, NUMBER, OBJECT
 from jx_elasticsearch.es52.expressions import Variable
 from mo_dots import wrap
@@ -23,18 +27,21 @@ def es_query_template(path):
     :return:
     """
 
+    if not isinstance(path, text_type):
+        Log.error("expecting path to be a string")
+
     if path != ".":
         f0 = {}
         f1 = {}
         output = wrap({
-            "query": {"bool": {"must": [
+            "query": es_and([
                 f0,
                 {"nested": {
                     "path": path,
                     "query": f1,
                     "inner_hits": {"size": 100000}
                 }}
-            ]}},
+            ]),
             "from": 0,
             "size": 0,
             "sort": []
@@ -43,7 +50,7 @@ def es_query_template(path):
     else:
         f0 = {}
         output = wrap({
-            "query": {"bool": {"must": [f0]}},
+            "query": es_and([f0]),
             "from": 0,
             "size": 0,
             "sort": []
@@ -66,7 +73,7 @@ def jx_sort_to_es_sort(sort, schema):
 
             for type in types:
                 for c in cols:
-                    if c.type == type:
+                    if c.jx_type == type:
                         if s.sort == -1:
                             output.append({c.es_column: "desc"})
                         else:
@@ -109,3 +116,22 @@ aggregates = {
 
 NON_STATISTICAL_AGGS = {"none", "one"}
 
+
+def es_and(terms):
+    return wrap({"bool": {"filter": terms}})
+
+
+def es_or(terms):
+    return wrap({"bool": {"should": terms}})
+
+
+def es_not(term):
+    return wrap({"bool": {"must_not": term}})
+
+
+def es_script(term):
+    return wrap({"script": {"lang": "painless", "inline": term}})
+
+
+def es_missing(term):
+    return {"bool": {"must_not": {"exists": {"field": term}}}}

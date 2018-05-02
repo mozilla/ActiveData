@@ -411,7 +411,7 @@ class TempDirectory(File):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        Thread.run("delete "+self.name, delete_daemon, file=self)
+        Thread.run("delete dir "+self.name, delete_daemon, file=self)
 
 
 class TempFile(File):
@@ -431,7 +431,7 @@ class TempFile(File):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        Thread.run("delete "+self.name, delete_daemon, file=self)
+        Thread.run("delete file "+self.name, delete_daemon, file=self)
 
 
 def _copy(from_, to_):

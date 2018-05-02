@@ -435,7 +435,6 @@ class Log(object):
         trace = exceptions.extract_stack(stack_depth + 1)
 
         e = Except(exceptions.ERROR, template, params, cause, trace)
-        str_e = text_type(e)
 
         error_mode = cls.error_mode
         with suppress_exception:
@@ -449,7 +448,7 @@ class Log(object):
                 )
         cls.error_mode = error_mode
 
-        sys.stderr.write(str_e.encode('utf8'))
+        sys.stderr.write(str(e))
 
 
     def write(self):

@@ -16,7 +16,7 @@ from flask import Response
 from active_data import record_request
 from active_data.actions import save_query, send_error, test_mode_wait, QUERY_TOO_LARGE
 from jx_base.container import Container
-from jx_python import jx, wrap_from
+from jx_python import jx, find_container
 from mo_files import File
 from mo_json import value2json, json2value
 from mo_logs import Log, Except
@@ -58,8 +58,8 @@ def jx_query(path):
 
                 translate_timer = Timer("translate")
                 with translate_timer:
-                    frum = wrap_from(data['from'])
-                    result = jx.run(data, frum=frum)
+                    frum = find_container(data['from'])
+                    result = jx.run(data, container=frum)
 
                     if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                         result = result.format(data.format)

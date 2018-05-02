@@ -14,14 +14,13 @@ import os
 
 import flask
 from flask import Flask, Response
+
 from mo_dots import listwrap, coalesce, unwraplist
-from mo_files import File
 from mo_json import value2json, json2value
 from mo_logs import Log
 from mo_logs import constants, startup
 from mo_logs.strings import utf82unicode, unicode2utf8
 from mo_times import Timer
-
 from pyLibrary.env.flask_wrappers import cors_wrapper
 from tuid.service import TUIDService, TuidMap
 
@@ -150,7 +149,6 @@ def _default(path):
 
 
 if __name__ in ("__main__",):
-    OVERVIEW = File("tuid/public/index.html").read_bytes()
     flask_app = TUIDApp(__name__)
 
     flask_app.add_url_rule(str('/'), None, tuid_endpoint, defaults={'path': ''}, methods=[str('GET'), str('POST')])

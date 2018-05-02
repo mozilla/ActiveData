@@ -17,15 +17,12 @@ import signal
 import subprocess
 from string import ascii_lowercase
 
-from pyLibrary.env.elasticsearch import Cluster
-
 import jx_elasticsearch
-
 import mo_json_config
-from jx_base import container
+from jx_base import container as jx_containers
 from jx_base.query import QueryOp
 from jx_python import jx
-from mo_dots import wrap, coalesce, unwrap, listwrap, Data, literal_field, Null
+from mo_dots import wrap, coalesce, unwrap, listwrap, Data, literal_field
 from mo_future import text_type
 from mo_json import value2json, json2value
 from mo_kwargs import override
@@ -33,9 +30,9 @@ from mo_logs import Log, Except, constants
 from mo_logs.exceptions import extract_stack
 from mo_logs.strings import expand_template, unicode2utf8, utf82unicode
 from mo_testing.fuzzytestcase import assertAlmostEqual
-from mo_times.dates import Date
-from mo_times.durations import MINUTE
+from mo_times import Date, MINUTE
 from pyLibrary.env import http
+from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.testing import elasticsearch
 from test_jx import TEST_TABLE
 
@@ -83,8 +80,8 @@ class ESUtils(object):
         self._es_cluster = None
         self._index = None
 
-        if not container.config.default:
-            container.config.default = {
+        if not jx_containers.config.default:
+            jx_containers.config.default = {
                 "type": "elasticsearch",
                 "settings": backend_es
             }
@@ -97,7 +94,7 @@ class ESUtils(object):
             # THIS MAKES FOR SLIGHTLY FASTER TEST TIMES BECAUSE THE PROXY IS
             # MISSING
             self.server = FakeHttp()
-            container.config.default = {
+            jx_containers.config.default = {
                 "type": "elasticsearch",
                 "settings": kwargs.backend_es.copy()
             }
@@ -197,7 +194,7 @@ class ESUtils(object):
         try:
             # EXECUTE QUERY
             num_expectations = 0
-            for k, v in subtest.items():
+            for i, (k, v) in enumerate(subtest.items()):
                 if k.startswith("expecting_"):  # WHAT FORMAT ARE WE REQUESTING
                     format = k[len("expecting_"):]
                 elif k == "expecting":  # NO FORMAT REQUESTED (TO TEST DEFAULT FORMATS)
@@ -209,7 +206,7 @@ class ESUtils(object):
                 expected = v
 
                 subtest.query.format = format
-                subtest.query.meta.testing = True  # MARK ALL QUERIES FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
+                subtest.query.meta.testing = (i == 0)  # MARK FIRST QUERY FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
                 query = unicode2utf8(value2json(subtest.query))
                 # EXECUTE QUERY
                 response = self.try_till_response(self.testing.query, data=query)
@@ -218,9 +215,8 @@ class ESUtils(object):
                     error(response)
                 result = json2value(utf82unicode(response.all_content))
 
-
-                table = jx_elasticsearch.new_instance(self._es_test_settings)
-                query = QueryOp.wrap(subtest.query, table, table.schema)
+                container = jx_elasticsearch.new_instance(self._es_test_settings)
+                query = QueryOp.wrap(subtest.query, container, container.namespace)
                 compare_to_expected(query, result, expected, places)
                 Log.note("PASS {{name|quote}} (format={{format}})", name=subtest.name, format=format)
             if num_expectations == 0:
@@ -267,7 +263,7 @@ class ESUtils(object):
             except Exception as e:
                 e = Except.wrap(e)
                 if "No connection could be made because the target machine actively refused it" in e:
-                    Log.alert("Problem connecting")
+                    Log.alert("Problem connecting, retrying")
                 else:
                     Log.error("Server raised exception", e)
 

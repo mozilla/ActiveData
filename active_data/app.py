@@ -22,7 +22,6 @@ from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
 import active_data
-import tuid
 from active_data import record_request, OVERVIEW
 from active_data.actions import save_query
 from active_data.actions.contribute import send_contribute
@@ -38,8 +37,6 @@ from mo_logs.strings import unicode2utf8
 from mo_threads import Thread
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.flask_wrappers import cors_wrapper
-from tuid.app import tuid_endpoint
-from tuid.service import TUIDService
 
 
 class ActiveDataApp(Flask):
@@ -116,13 +113,6 @@ def setup():
     if config.request_logs:
         request_logger = elasticsearch.Cluster(config.request_logs).get_or_create_index(config.request_logs)
         active_data.request_log_queue = request_logger.threaded_queue(max_size=2000)
-
-    # ADD TUID SERVICE
-    if config.tuid:
-        tuid.app.service = TUIDService(config.tuid)
-        flask_app.add_url_rule('/tuid', None, tuid_endpoint, defaults={'path': ''}, methods=['GET', 'POST'])
-        flask_app.add_url_rule('/tuid/', None, tuid_endpoint, defaults={'path': ''}, methods=['GET', 'POST'])
-        flask_app.add_url_rule('/tuid/<path:path>', None, tuid_endpoint, defaults={'path': ''}, methods=['GET', 'POST'])
 
     # SETUP DEFAULT CONTAINER, SO THERE IS SOMETHING TO QUERY
     container.config.default = {

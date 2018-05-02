@@ -15,7 +15,7 @@ from collections import Mapping
 import flask
 from active_data import record_request
 from flask import Response
-from jx_python import jx, wrap_from
+from jx_python import jx, find_container
 from mo_dots import wrap, listwrap, unwraplist
 from mo_json import utf82unicode, json2value, value2json
 from mo_logs import Log
@@ -64,8 +64,8 @@ def sql_query(path):
                 if not data.sql:
                     Log.error("Expecting a `sql` parameter")
                 jx_query = parse_sql(data.sql)
-                frum = wrap_from(jx_query['from'])
-                result = jx.run(jx_query, frum=frum)
+                frum = find_container(jx_query['from'])
+                result = jx.run(jx_query, container=frum)
                 if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                     result = result.format(jx_query.format)
                 result.meta.jx_query = jx_query

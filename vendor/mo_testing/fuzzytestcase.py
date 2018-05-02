@@ -198,7 +198,6 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
             if diff < Math.ceiling(Math.log10(abs(test)))-places:
                 return
 
-
         standardMsg = expand_template("{{test|json}} != {{expected|json}} within {{places}} places", locals())
 
     raise AssertionError(coalesce(msg, "") + ": (" + standardMsg + ")")

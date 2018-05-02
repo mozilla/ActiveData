@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from time import sleep
 
 from mo_dots import Data, unwraplist, Null
-from mo_future import get_ident, start_new_thread, interrupt_main, get_function_name
+from mo_future import get_ident, start_new_thread, interrupt_main, get_function_name, text_type
 from mo_logs import Log, Except
 from mo_threads.lock import Lock
 from mo_threads.profiles import CProfiler
@@ -158,7 +158,7 @@ class MainThread(object):
             Log.error("Only the main thread can sleep forever (waiting for KeyboardInterrupt)")
 
         if isinstance(please_stop, Signal):
-            self.please_stop.on_go(please_stop)
+            self.please_stop.on_go(please_stop.go)
         else:
             please_stop = self.please_stop
 
@@ -278,7 +278,7 @@ class Thread(object):
                 try:
                     Log.fatal("Problem in thread {{name|quote}}", name=self.name, cause=e)
                 except Exception:
-                    sys.stderr.write(b"ERROR in thread: " + str(self.name) + b" " + str(e) + b"\n")
+                    sys.stderr.write(str("ERROR in thread: " + self.name + " " + text_type(e) + "\n"))
         finally:
             try:
                 children = copy(self.children)

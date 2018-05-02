@@ -56,7 +56,7 @@ class InsertTable(BaseTable):
             v: c.es_column
             for v in _vars
             for c in self.columns.get(v, Null)
-            if c.type not in STRUCT
+            if c.es_type not in STRUCT
         }
         where_sql = where.map(_map).to_sql()
         new_columns = set(command.set.keys()) - set(self.columns.keys())
@@ -65,7 +65,7 @@ class InsertTable(BaseTable):
             ctype = get_type(nested_value)
             column = Column(
                 names={".": new_column_name},
-                type=ctype,
+                es_type=ctype,
                 es_index=self.sf.fact,
                 es_column=typed_column(new_column_name, ctype)
             )
@@ -154,7 +154,7 @@ class InsertTable(BaseTable):
                     for c in cs:
                         column = Column(
                             names={".": c.name},
-                            type=c.type,
+                            es_type=c.type,
                             es_index=c.es_index,
                             es_column=c.es_column,
                             nested_path=[nested_column_name] + c.nested_path
@@ -266,7 +266,7 @@ class InsertTable(BaseTable):
 
                     c = Column(
                         names={".": cname},
-                        type=value_type,
+                        es_type=value_type,
                         es_column=typed_column(cname, value_type),
                         es_index=table,
                         nested_path=nested_path
@@ -290,7 +290,7 @@ class InsertTable(BaseTable):
                     required_changes.append({"nest": (c, nested_path)})
                     deep_c = Column(
                         names={".": cname},
-                        type=value_type,
+                        es_type=value_type,
                         es_column=typed_column(cname, value_type),
                         es_index=table,
                         nested_path=nested_path

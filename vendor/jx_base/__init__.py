@@ -14,14 +14,11 @@ from __future__ import unicode_literals
 from collections import Mapping
 from uuid import uuid4
 
-from mo_json import value2json
-
-from mo_logs.strings import expand_template, quote
-
-from mo_logs import Log
-
 from mo_dots import NullType, Data, FlatList, wrap, coalesce, listwrap
 from mo_future import text_type, none_type, PY2
+from mo_json import value2json
+from mo_logs import Log
+from mo_logs.strings import expand_template, quote
 from mo_times import Date
 
 IS_NULL = '0'
@@ -223,7 +220,9 @@ class {{class_name}}(Mapping):
     return _exec(code, name)
 
 
-class Table(DataClass(
+
+
+class TableDesc(DataClass(
     "Table",
     [
         "name",
@@ -241,6 +240,7 @@ class Table(DataClass(
         # return singlton.get_columns(table_name=self.name)
 
 
+
 Column = DataClass(
     "Column",
     [
@@ -248,8 +248,8 @@ Column = DataClass(
         "names",  # MAP FROM TABLE NAME TO COLUMN NAME (ONE COLUMN CAN HAVE MULTIPLE NAMES)
         "es_column",
         "es_index",
-        # "es_type",
-        "type",
+        "es_type",
+        {"name": "jx_type", "nulls": True},
         {"name": "useSource", "default": False},
         {"name": "nested_path", "nulls": True},  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
         {"name": "count", "nulls": True},
@@ -262,3 +262,11 @@ Column = DataClass(
         {"eq": [{"last": "nested_path"}, {"literal": "."}]}
     ]}
 )
+
+
+from jx_base.container import Container
+from jx_base.namespace import Namespace
+from jx_base.facts import Facts
+from jx_base.snowflake import Snowflake
+from jx_base.table import Table
+from jx_base.schema import Schema

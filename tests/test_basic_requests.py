@@ -96,7 +96,14 @@ class TestBasicRequests(BaseTestCase):
         container.add({"value": data})
         container.refresh()
 
-        result = http.post_json(url=self.utils.testing.query, json={"meta": {"testing": True}, "format": "list", "from": container.settings.index})
+        result = http.post_json(
+            url=self.utils.testing.query,
+            json={
+                "from": container.settings.index,
+                "meta": {"testing": True},
+                "format": "list"
+            }
+        )
         self.assertEqual(result.data, [data])
         try:
             self.utils._es_cluster.delete_index(container.settings.index)

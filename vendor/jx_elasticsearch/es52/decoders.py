@@ -16,18 +16,17 @@ from collections import Mapping
 from jx_base import STRING, NUMBER, BOOLEAN
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_base.expressions import TupleOp, TrueOp, TRUE
+from jx_base.expressions import TupleOp, TRUE
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
+from jx_elasticsearch.es52.util import es_missing
 from jx_python import jx
-from mo_dots import set_default, coalesce, literal_field, Data, relative_field, unwraplist
-from mo_dots import wrap
+from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, unwraplist
 from mo_future import text_type
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_logs.strings import quote, expand_template
-from mo_math import MAX, MIN
-from mo_math import Math
+from mo_math import MAX, MIN, Math
 from pyLibrary.convert import string2boolean
 
 
@@ -188,7 +187,7 @@ class SetDecoder(AggsDecoder):
             terms = set_default({"terms": {
                 "script": {
                     "lang": "painless",
-                    "inline": value.to_painless(self.schema).script(self.schema)
+                    "inline": value.to_es_script(self.schema).script(self.schema)
                 },
                 "size": limit
             }}, es_query)
@@ -251,7 +250,7 @@ def _range_composer(edge, domain, es_query, to_float, schema):
     if isinstance(edge.value, Variable):
         calc = {"field": schema.leaves(edge.value.var)[0].es_column}
     else:
-        calc = {"script": edge.value.to_painless(schema).script(schema)}
+        calc = {"script": edge.value.to_es_script(schema).script(schema)}
 
     return wrap({"aggs": {
         "_match": set_default(
@@ -523,7 +522,7 @@ class ObjectDecoder(AggsDecoder):
                     "size": self.domain.limit
                 }}, es_query),
                 "_missing": set_default(
-                    {"filter": {"bool": {"must_not": {"exists": {"field": v}}}}},
+                    {"filter": es_missing(v)},
                     es_query
                 )
             }})
@@ -582,7 +581,7 @@ class DefaultDecoder(SetDecoder):
         self.parts = list()
         self.key2index = {}
         self.computed_domain = False
-        self.script = self.edge.value.partial_eval().to_painless(self.schema)
+        self.script = self.edge.value.partial_eval().to_es_script(self.schema)
         self.pull = pull_functions[self.script.data_type]
         self.missing = self.script.miss.partial_eval()
         self.exists = NotOp("not", self.missing).partial_eval()
@@ -603,10 +602,7 @@ class DefaultDecoder(SetDecoder):
                 output = wrap({"aggs": {
                     "_match": set_default(
                         {"terms": {
-                            "script": {
-                                "lang": "painless",
-                                "inline": self.script.expr
-                            },
+                            "script": {"lang": "painless", "inline": self.script.expr},
                             "size": self.domain.limit,
                             "order": self.es_order
                         }},
@@ -620,10 +616,7 @@ class DefaultDecoder(SetDecoder):
                         "aggs": {
                             "_filter": set_default(
                                 {"terms": {
-                                    "script": {
-                                        "lang": "painless",
-                                        "inline": self.script.expr
-                                    },
+                                    "script": {"lang": "painless", "inline": self.script.expr},
                                     "size": self.domain.limit,
                                     "order": self.es_order
                                 }},

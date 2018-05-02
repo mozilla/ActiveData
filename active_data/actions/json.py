@@ -15,7 +15,7 @@ from flask import Response
 
 from active_data.actions import send_error
 from jx_base.container import Container
-from jx_python import jx, wrap_from
+from jx_python import jx, find_container
 from mo_dots import wrap, unwraplist, listwrap
 from mo_json import value2json
 from mo_logs import Log, Except
@@ -37,7 +37,7 @@ def get_raw_json(path):
             limit = args.limit if args.limit else 10
             args.limit = None
 
-            frum = wrap_from(path)
+            frum = find_container(path)
             result = jx.run({
                 "from": path,
                 "where": {"eq": args},

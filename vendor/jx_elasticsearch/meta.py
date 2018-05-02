@@ -20,7 +20,7 @@ from mo_math import MAX
 
 from mo_collections.relation import Relation_usingList
 
-from jx_base import STRUCT, TableDesc
+from jx_base import STRUCT, TableDesc, BOOLEAN
 from jx_base.query import QueryOp
 from jx_python import jx, meta as jx_base_meta
 from jx_python.containers.list_usingPythonList import ListContainer
@@ -226,7 +226,10 @@ class ElasticsearchMetadata(Namespace):
             # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
             while len(self.todo) and not all(columns.get("last_updated")):
                 if DEBUG:
-                    Log.note("waiting for columns to update {{columns|json}}", columns=[c.es_index+"."+c.es_column for c in columns if not c.last_updated])
+                    if len(columns) > 10:
+                        Log.note("waiting for {{num}} columns to update", num=len([c for c in columns if not c.last_updated]))
+                    else:
+                        Log.note("waiting for columns to update {{columns|json}}", columns=[c.es_index+"."+c.es_column for c in columns if not c.last_updated])
                 Till(seconds=1).wait()
             return columns
         except Exception as e:
@@ -289,6 +292,16 @@ class ElasticsearchMetadata(Namespace):
                     "size": 0
                 })
                 count = cardinality = result.hits.total
+                multi = 1
+            elif column.es_type == BOOLEAN:
+                result = self.es_cluster.post("/" + es_index + "/_search", data={
+                    "aggs": {
+                        "count": _counting_query(column)
+                    },
+                    "size": 0
+                })
+                count = result.hits.total
+                cardinality = 2
                 multi = 1
             else:
                 result = self.es_cluster.post("/" + es_index + "/_search", data={

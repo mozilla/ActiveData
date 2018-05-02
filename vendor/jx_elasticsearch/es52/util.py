@@ -118,7 +118,7 @@ NON_STATISTICAL_AGGS = {"none", "one"}
 
 
 def es_and(terms):
-    return wrap({"bool": {"must": terms}})
+    return wrap({"bool": {"filter": terms}})
 
 
 def es_or(terms):

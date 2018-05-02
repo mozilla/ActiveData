@@ -1248,8 +1248,8 @@ def _normalize(esfilter):
     while isDiff:
         isDiff = False
 
-        if esfilter.bool.must:
-            terms = esfilter.bool.must
+        if esfilter['and']:
+            terms = esfilter['and']
             for (i0, t0), (i1, t1) in itertools.product(enumerate(terms), enumerate(terms)):
                 if i0 == i1:
                     continue  # SAME, IGNORE
@@ -1290,10 +1290,10 @@ def _normalize(esfilter):
                     continue
                 if a == MATCH_NONE:
                     return MATCH_NONE
-                if a.bool.must:
+                if a['and']:
                     isDiff = True
                     a.isNormal = None
-                    output.extend(a.bool.must)
+                    output.extend(a['and'])
                 else:
                     a.isNormal = None
                     output.append(a)

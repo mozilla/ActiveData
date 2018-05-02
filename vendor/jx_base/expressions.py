@@ -1184,10 +1184,10 @@ class AndOp(Expression):
             elif simple.type != BOOLEAN:
                 Log.error("expecting boolean value")
 
-            for and_terms in or_terms:
+            for and_terms in list(or_terms):
                 if NotOp("not", simple).partial_eval() in and_terms:
-                    return FALSE
-                if simple not in and_terms:
+                    or_terms.remove(and_terms)
+                elif simple not in and_terms:
                     and_terms.append(simple)
 
         if len(or_terms) == 1:

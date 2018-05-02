@@ -705,12 +705,14 @@ def to_es_script(self, schema):
 
 @extend(OrOp)
 def to_esfilter(self, schema):
+    return es_or([t.partial_eval().to_esfilter(schema) for t in self.terms])
+
     # OR(x) == NOT(AND(NOT(xi) for xi in x))
-    output = es_not(es_and([
-        NotOp("not", t).partial_eval().to_esfilter(schema)
-        for t in self.terms
-    ]))
-    return output
+    # output = es_not(es_and([
+    #     NotOp("not", t).partial_eval().to_esfilter(schema)
+    #     for t in self.terms
+    # ]))
+    # return output
 
     # WE REQUIRE EXIT-EARLY SEMANTICS, OTHERWISE EVERY EXPRESSION IS A SCRIPT EXPRESSION
     # {"bool":{"should"  :[a, b, c]}} RUNS IN PARALLEL
@@ -1246,8 +1248,8 @@ def _normalize(esfilter):
     while isDiff:
         isDiff = False
 
-        if esfilter.bool.must:
-            terms = esfilter.bool.must
+        if esfilter.bool.filter:
+            terms = esfilter.bool.filter
             for (i0, t0), (i1, t1) in itertools.product(enumerate(terms), enumerate(terms)):
                 if i0 == i1:
                     continue  # SAME, IGNORE
@@ -1288,10 +1290,10 @@ def _normalize(esfilter):
                     continue
                 if a == MATCH_NONE:
                     return MATCH_NONE
-                if a.bool.must:
+                if a.bool.filter:
                     isDiff = True
                     a.isNormal = None
-                    output.extend(a.bool.must)
+                    output.extend(a.bool.filter)
                 else:
                     a.isNormal = None
                     output.append(a)

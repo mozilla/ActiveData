@@ -37,9 +37,9 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         """
         settings ARE FOR THE ELASTICSEARCH INDEX
         """
-        kwargs.timeout = Duration(coalesce(self.es.settings.timeout, "30second")).seconds
-        kwargs.retry.times = coalesce(self.es.settings.retry.times, 3)
-        kwargs.retry.sleep = Duration(coalesce(self.es.settings.retry.sleep, MINUTE)).seconds
+        kwargs.timeout = Duration(coalesce(kwargs.timeout, "30second")).seconds
+        kwargs.retry.times = coalesce(kwargs.retry.times, 3)
+        kwargs.retry.sleep = Duration(coalesce(kwargs.retry.sleep, MINUTE)).seconds
 
         self.es = Cluster(kwargs).get_or_create_index(
             schema=mo_json.json2value(value2json(SCHEMA), leaves=True),

@@ -79,7 +79,7 @@ class ES52(Container):
         self.edges = Data()
         self.worker = None
 
-        columns = self._namespace.get_snowflake(self._es.settings.alias).columns  # ABSOLUTE COLUMNS
+        columns = self._namespace.get_snowflake(self.es.settings.alias).columns  # ABSOLUTE COLUMNS
 
         if typed == None:
             # SWITCH ON TYPED MODE

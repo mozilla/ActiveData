@@ -15,7 +15,7 @@ from mo_collections import UniqueIndex
 from mo_dots import Data, set_default, FlatList
 from mo_hg.hg_mozilla_org import DEFAULT_LOCALE
 from mo_kwargs import override
-from mo_logs import Log
+from mo_logs import Log, Except
 from mo_logs import startup, constants
 from mo_math import MAX
 from mo_times.dates import Date
@@ -47,6 +47,7 @@ def get_branches(hg, branches, kwargs=None):
         except Exception as e:
             Log.error("Bad branch in ES index", cause=e)
     except Exception as e:
+        e = Except.wrap(e)
         if "Can not find index " in e:
             set_default(branches, {"schema": branches_schema})
             es = cluster.get_or_create_index(branches)

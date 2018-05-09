@@ -84,7 +84,7 @@ class Sqlite(DB):
     canonical = None
 
     @override
-    def __init__(self, filename=None, db=None, upgrade=True, load_functions=True, kwargs=None):
+    def __init__(self, filename=None, db=None, upgrade=True, load_functions=False, kwargs=None):
         """
         :param db:  Optional, wrap a sqlite db in a thread
         :return: Multithread-safe database
@@ -100,7 +100,8 @@ class Sqlite(DB):
         self.get_trace = TRACE
         self.upgrade = upgrade
         self.closed = False
-        Log.note("Sqlite version {{version}}", version=self.query("select sqlite_version()").data[0][0])
+        if DEBUG:
+            Log.note("Sqlite version {{version}}", version=self.query("select sqlite_version()").data[0][0])
 
     def _enhancements(self):
         def regex(pattern, value):
@@ -290,17 +291,11 @@ class Sqlite(DB):
 
                 full_path = file.abspath
                 self.db.enable_load_extension(True)
-                self.db.execute(SQL_SELECT + "load_extension" + sql_iso(self.quote_value(full_path)))
+                self.db.execute(SQL_SELECT + "load_extension" + sql_iso(quote_value(full_path)))
         except Exception as e:
             if not _load_extension_warning_sent:
                 _load_extension_warning_sent = True
-                Log.warning("Could not load {{file}}}, doing without. (no SQRT for you!)", file=full_path, cause=e)
-
-    def quote_column(self, column_name, table=None):
-        return quote_column(column_name, table)
-
-    def quote_value(self, value):
-        return quote_value(value)
+                Log.warning("Could not load {{file}}, doing without. (no SQRT for you!)", file=full_path, cause=e)
 
     def create_new_functions(self):
 
@@ -309,6 +304,7 @@ class Sqlite(DB):
             return reg.search(item) is not None
 
         self.db.create_function("REGEXP", 2, regexp)
+
 
 _no_need_to_quote = re.compile(r"^\w+$", re.UNICODE)
 

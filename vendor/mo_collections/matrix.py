@@ -134,7 +134,10 @@ class Matrix(object):
 
     def __eq__(self, other):
         if other == None:
-            return False
+            if self.num:
+                return False
+            else:
+                return self.cube == other
         return self.value == other
 
     def __add__(self, other):
@@ -168,8 +171,11 @@ class Matrix(object):
         return other / self.value
 
     def __iter__(self):
-        # TODO: MAKE THIS FASTER BY NOT CALLING __getitem__ (MAKES CUBE OBJECTS)
-        return ((c, self[c]) for c in self._all_combos())
+        if not self.dims:
+            return [self.value].__iter__()
+        else:
+            # TODO: MAKE THIS FASTER BY NOT CALLING __getitem__ (MAKES CUBE OBJECTS)
+            return ((c, self[c]) for c in self._all_combos())
 
     def __float__(self):
         return self.value

@@ -270,4 +270,4 @@ def _split_field(field):
     if field == ".":
         return []
     else:
-        return [k.replace("\a", ".") for k in field.replace("\.", "\a").split(".")]
+        return [k.replace("\a", ".") for k in field.replace("\\.", "\a").split(".")]

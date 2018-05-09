@@ -121,14 +121,15 @@ class ElasticsearchMetadata(Namespace):
         ]
 
         # CONFIRM ALL COLUMNS ARE SAME, FIX IF NOT
-        all_comparisions = list(jx.pairwise(props)) + list(jx.pairwise(jx.reverse(props)))
         dirty = False
+        all_comparisions = list(jx.pairwise(props)) + list(jx.pairwise(jx.reverse(props)))
         # NOTICE THE SAME (index, type, properties) TRIPLE FROM ABOVE
         for (i1, t1, p1), (i2, t2, p2) in all_comparisions:
             diff = elasticsearch.diff_schema(p2, p1)
-            for d in diff:
-                dirty = True
-                i1.add_property(*d)
+            if not self.settings.read_only:
+                for d in diff:
+                    dirty = True
+                    i1.add_property(*d)
         meta = self.es_cluster.get_metadata(force=dirty).indices[canonical_index]
 
         data_type, mapping = _get_best_type_from_mapping(meta.mappings)
@@ -234,6 +235,8 @@ class ElasticsearchMetadata(Namespace):
             return columns
         except Exception as e:
             Log.error("Not expected", cause=e)
+
+        return []
 
     def _update_cardinality(self, column):
         """

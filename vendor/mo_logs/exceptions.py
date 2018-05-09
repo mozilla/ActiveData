@@ -55,6 +55,13 @@ class Except(Exception):
 
     @classmethod
     def wrap(cls, e, stack_depth=0):
+        """
+        ENSURE THE STACKTRACE AND CAUSAL CHAIN IS CAPTURED, PLUS ADD FEATURES OF Except
+
+        :param e: AN EXCEPTION OF ANY TYPE
+        :param stack_depth: HOW MANY CALLS TO TAKE OFF THE TOP OF THE STACK TRACE
+        :return: A Except OBJECT OF THE SAME
+        """
         if e == None:
             return Null
         elif isinstance(e, (list, Except)):
@@ -101,7 +108,6 @@ class Except(Exception):
             for c in listwrap(self.cause):
                 with suppress_exception:
                     cause_strings.append(text_type(c))
-
 
             output += "caused by\n\t" + "and caused by\n\t".join(cause_strings)
 

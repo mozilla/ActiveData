@@ -218,11 +218,11 @@ def get_schema_from_list(table_name, frum):
     SCAN THE LIST FOR COLUMN TYPES
     """
     columns = UniqueIndex(keys=("names.\\.",))
-    _get_schema_from_list(frum, ".", prefix_path=[], nested_path=ROOT_PATH, columns=columns)
+    _get_schema_from_list(frum, ".", parent=".", nested_path=ROOT_PATH, columns=columns)
     return Schema(table_name=table_name, columns=list(columns))
 
 
-def _get_schema_from_list(frum, table_name, prefix_path, nested_path, columns):
+def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
     """
     :param frum: The list
     :param table_name: Name of the table this list holds records for
@@ -234,8 +234,9 @@ def _get_schema_from_list(frum, table_name, prefix_path, nested_path, columns):
 
     for d in frum:
         row_type = _type_to_name[d.__class__]
+
         if row_type != "object":
-            full_name = join_field(prefix_path)
+            full_name = parent
             column = columns[full_name]
             if not column:
                 column = Column(
@@ -251,7 +252,7 @@ def _get_schema_from_list(frum, table_name, prefix_path, nested_path, columns):
             column.jx_type = _merge_type[column.jx_type][row_type]
         else:
             for name, value in d.items():
-                full_name = join_field(prefix_path + [name])
+                full_name = concat_field(parent, name)
                 column = columns[full_name]
                 if not column:
                     column = Column(
@@ -262,13 +263,14 @@ def _get_schema_from_list(frum, table_name, prefix_path, nested_path, columns):
                         nested_path=nested_path
                     )
                     columns.add(column)
-                if isinstance(value, list):
-                    if len(value) == 0:
+                if isinstance(value, (list, set)):  # GET TYPE OF MULTIVALUE
+                    v = list(value)
+                    if len(v) == 0:
                         this_type = "undefined"
-                    elif len(value) == 1:
-                        this_type = _type_to_name[value[0].__class__]
+                    elif len(v) == 1:
+                        this_type = _type_to_name[v[0].__class__]
                     else:
-                        this_type = _type_to_name[value[0].__class__]
+                        this_type = _type_to_name[v[0].__class__]
                         if this_type == "object":
                             this_type = "nested"
                 else:
@@ -277,11 +279,11 @@ def _get_schema_from_list(frum, table_name, prefix_path, nested_path, columns):
                 column.es_type = new_type
 
                 if this_type == "object":
-                    _get_schema_from_list([value], table_name, prefix_path + [name], nested_path, columns)
+                    _get_schema_from_list([value], table_name, full_name, nested_path, columns)
                 elif this_type == "nested":
                     np = listwrap(nested_path)
                     newpath = unwraplist([join_field(split_field(np[0]) + [name])] + np)
-                    _get_schema_from_list(value, table_name, prefix_path + [name], newpath, columns)
+                    _get_schema_from_list(value, table_name, full_name, newpath, columns)
 
 
 METADATA_COLUMNS = (

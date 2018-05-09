@@ -16,7 +16,7 @@ import pstats
 from datetime import datetime
 from time import clock
 
-from mo_dots import Data, wrap
+from mo_dots import Data, wrap, Null
 from mo_logs import Log
 
 ON = False
@@ -121,9 +121,16 @@ class CProfiler(object):
             self.cprofiler.enable()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.cprofiler:
+        if self.cprofiler is not None:
             self.cprofiler.disable()
             Log.cprofiler_stats.add(pstats.Stats(self.cprofiler))
             del self.cprofiler
             Log.note("done cprofile")
 
+    def enable(self):
+        if self.cprofiler is not None:
+            return self.cprofiler.enable()
+
+    def disable(self):
+        if self.cprofiler is not None:
+            return self.cprofiler.disable()

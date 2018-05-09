@@ -163,7 +163,7 @@ def es_aggsop(es, frum, query):
 
                 es_query.aggs[key].percentiles.field = columns[0].es_column
                 es_query.aggs[key].percentiles.percents += [50]
-                s.pull = jx_expression_to_function(key + ".values.50\.0")
+                s.pull = jx_expression_to_function(key + ".values.50\\.0")
             elif s.aggregate == "percentile":
                 if len(columns) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
@@ -255,7 +255,7 @@ def es_aggsop(es, frum, query):
 
             es_query.aggs[key].percentiles.script = s.value.to_es_script(schema).script(schema)
             es_query.aggs[key].percentiles.percents += [50]
-            s.pull = jx_expression_to_function(key + ".values.50\.0")
+            s.pull = jx_expression_to_function(key + ".values.50\\.0")
         elif s.aggregate == "percentile":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")

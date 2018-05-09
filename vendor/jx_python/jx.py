@@ -591,11 +591,15 @@ def value_compare(left, right, ordering=1):
 
         ltype = type(left)
         rtype = type(right)
-        type_diff = TYPE_ORDER.get(ltype, 10) - TYPE_ORDER.get(rtype, 10)
+        ltype_num = TYPE_ORDER.get(ltype, 10)
+        rtype_num = TYPE_ORDER.get(rtype, 10)
+        type_diff = ltype_num - rtype_num
         if type_diff != 0:
             return ordering if type_diff > 0 else -ordering
 
-        if ltype is builtin_tuple:
+        if ltype_num == 9:
+            return 0
+        elif ltype is builtin_tuple:
             for a, b in zip(left, right):
                 c = value_compare(a, b)
                 if c != 0:
@@ -1084,6 +1088,8 @@ def accumulate(vals):
 
 def reverse(vals):
     # TODO: Test how to do this fastest
+    if not hasattr(vals, "len"):
+        vals = list(vals)
     l = len(vals)
     output = [None] * l
 

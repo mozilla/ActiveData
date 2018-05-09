@@ -37,8 +37,15 @@ if PY3:
     unichr = chr
 
     xrange = range
-    filter_type = type(filter(lambda x: True, []))
-    generator_types = (collections.Iterable, filter_type)
+    def _gen():
+        yield
+
+    generator_types = (
+        type(_gen()),
+        type(filter(lambda x: True, [])),
+        type({}.items()),
+        type({}.values())
+    )
     unichr = chr
 
     round = round
@@ -47,6 +54,9 @@ if PY3:
     from io import StringIO
     from io import BytesIO
     from _thread import allocate_lock, get_ident, start_new_thread, interrupt_main
+
+    def iteritems(d):
+        return d.items()
 
     def transpose(*args):
         return list(zip(*args))
@@ -106,6 +116,9 @@ else:
     from StringIO import StringIO
     from io import BytesIO
     from thread import allocate_lock, get_ident, start_new_thread, interrupt_main
+
+    def iteritems(d):
+        return d.iteritems()
 
     def get_function_name(func):
         return func.func_name

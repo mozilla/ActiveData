@@ -37,6 +37,7 @@ class Timer(object):
         self.param = wrap(coalesce(param, {}))
         self.debug = debug
         self.silent = silent
+        self.agg = 0
         self.start = 0
         self.end = 0
         self.interval = None
@@ -51,6 +52,7 @@ class Timer(object):
     def __exit__(self, type, value, traceback):
         self.end = time()
         self.interval = self.end - self.start
+        self.agg += self.interval
 
         if self.debug:
             param = wrap(self.param)
@@ -60,7 +62,15 @@ class Timer(object):
 
     @property
     def duration(self):
+        end = time()
         if not self.end:
-            return Duration(time() - self.start)
+            return Duration(end - self.start)
 
         return Duration(self.interval)
+
+    @property
+    def total(self):
+        if not self.end:
+            Log.error("please ask for total time outside the context of measuring")
+
+        return Duration(self.agg)

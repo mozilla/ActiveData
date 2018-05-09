@@ -220,8 +220,6 @@ class {{class_name}}(Mapping):
     return _exec(code, name)
 
 
-
-
 class TableDesc(DataClass(
     "Table",
     [

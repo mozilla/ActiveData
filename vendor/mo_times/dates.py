@@ -427,6 +427,8 @@ def datetime2unix(value):
 
 
 def unix2datetime(unix):
+    if unix == None:
+        return Null
     return datetime.utcfromtimestamp(unix)
 
 

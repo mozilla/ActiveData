@@ -198,8 +198,7 @@ def es_setop(es, query):
         else:
             Log.error("Do not know what to do")
 
-    with Timer("call to ES") as call_timer:
-        Log.note("{{data}}", data=es_query)
+    with Timer("call to ES", silent=True) as call_timer:
         data = es_post(es, es_query, query.limit)
 
     T = data.hits.hits
@@ -373,6 +372,6 @@ def get_pull_stats(stats_name, median_name):
         {"name": "sos", "value": stats_name + ".sum_of_squares"},
         {"name": "std", "value": stats_name + ".std_deviation"},
         {"name": "var", "value": stats_name + ".variance"},
-        {"name": "median", "value": median_name + ".values.50\.0"}
+        {"name": "median", "value": median_name + ".values.50\\.0"}
     ]})
 

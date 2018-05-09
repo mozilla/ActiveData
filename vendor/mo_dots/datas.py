@@ -15,7 +15,7 @@ from collections import MutableMapping, Mapping
 from copy import deepcopy
 
 from mo_dots import _getdefault, hash_value, literal_field, coalesce, listwrap, get_logger
-from mo_future import text_type
+from mo_future import text_type, PY2
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -210,7 +210,7 @@ class Data(MutableMapping):
     def iteritems(self):
         # LOW LEVEL ITERATION, NO WRAPPING
         d = _get(self, "_dict")
-        return ((k, wrap(v)) for k, v in d.iteritems())
+        return ((k, wrap(v)) for k, v in iteritems(d))
 
     def keys(self):
         d = _get(self, "_dict")
@@ -299,7 +299,7 @@ def _split_field(field):
     """
     SIMPLE SPLIT, NO CHECKS
     """
-    return [k.replace("\a", ".") for k in field.replace("\.", "\a").split(".")]
+    return [k.replace("\a", ".") for k in field.replace("\\.", "\a").split(".")]
 
 
 class _DictUsingSelf(dict):
@@ -429,9 +429,15 @@ class _DictUsingSelf(dict):
                 output.append((prefix + literal_field(k), v))
         return output
 
-    def iteritems(self):
-        for k, v in dict.iteritems(self):
-            yield k, wrap(v)
+    if PY2:
+        def iteritems(self):
+            for k, v in dict.iteritems(self):
+                yield k, wrap(v)
+    else:
+        def iteritems(self):
+            for k, v in dict.items(self):
+                yield k, wrap(v)
+
 
     def keys(self):
         return set(dict.keys(self))

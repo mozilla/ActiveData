@@ -37,6 +37,10 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         """
         settings ARE FOR THE ELASTICSEARCH INDEX
         """
+        kwargs.timeout = Duration(coalesce(self.es.settings.timeout, "30second")).seconds
+        kwargs.retry.times = coalesce(self.es.settings.retry.times, 3)
+        kwargs.retry.sleep = Duration(coalesce(self.es.settings.retry.sleep, MINUTE)).seconds
+
         self.es = Cluster(kwargs).get_or_create_index(
             schema=mo_json.json2value(value2json(SCHEMA), leaves=True),
             limit_replicas=True,
@@ -46,8 +50,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         self.batch_size = batch_size
         self.es.add_alias(coalesce(kwargs.alias, kwargs.index))
         self.queue = Queue("debug logs to es", max=max_size, silent=True)
-        self.es.settings.retry.times = coalesce(self.es.settings.retry.times, 3)
-        self.es.settings.retry.sleep = Duration(coalesce(self.es.settings.retry.sleep, MINUTE))
+
         Thread.run("add debug logs to es", self._insert_loop)
 
     def write(self, template, params):

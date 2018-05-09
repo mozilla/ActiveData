@@ -92,7 +92,8 @@ class Cube(Container):
         if not self.edges:
             return 1
 
-        return len(self.data.values()[0])
+        for d in self.data.values():
+            return len(d)
 
     def __iter__(self):
         if self.is_value:

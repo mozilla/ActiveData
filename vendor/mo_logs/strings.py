@@ -22,8 +22,10 @@ from datetime import datetime as builtin_datetime
 from datetime import timedelta, date
 from json.encoder import encode_basestring
 
-from mo_dots import coalesce, wrap, get_module
-from mo_future import text_type, xrange, binary_type, round as _round, PY3, get_function_name
+import sys
+
+from mo_dots import coalesce, wrap, get_module, Data
+from mo_future import text_type, xrange, binary_type, round as _round, PY3, get_function_name, zip_longest
 from mo_logs.convert import datetime2unix, datetime2string, value2json, milli2datetime, unix2datetime
 from mo_logs.url import value2url_param
 
@@ -514,7 +516,7 @@ THE REST OF THIS FILE IS TEMPLATE EXPANSION CODE USED BY mo-logs
 
 def expand_template(template, value):
     """
-    :param template: A UNICODE STRING WITH VARIABLE NAMES IN MOUSTACHES `{{}}`
+    :param template: A UNICODE STRING WITH VARIABLE NAMES IN MOUSTACHES `{{.}}`
     :param value: Data HOLDING THE PARAMTER VALUES
     :return: UNICODE STRING WITH VARIABLES EXPANDED
     """
@@ -718,7 +720,7 @@ def edit_distance(s1, s2):
 DIFF_PREFIX = re.compile(r"@@ -(\d+(?:\s*,\d+)?) \+(\d+(?:\s*,\d+)?) @@")
 
 
-def apply_diff(text, diff, reverse=False):
+def apply_diff(text, diff, reverse=False, verify=True):
     """
     SOME EXAMPLES OF diff
     #@@ -1 +1 @@
@@ -739,45 +741,99 @@ def apply_diff(text, diff, reverse=False):
     +
     +Content Team Engagement & Tasks : https://appreview.etherpad.mozilla.org/40
     """
+
+    output = text
     if not diff:
-        return text
-    if diff[0].strip() == "":
-        return text
+        return output
 
-    matches = DIFF_PREFIX.match(diff[0].strip())
-    if not matches:
-        if not _Log:
-            _late_import()
+    start_of_hunk = 0
+    while True:
+        if start_of_hunk>=len(diff):
+            break
+        header = diff[start_of_hunk]
+        start_of_hunk += 1
+        if not header.strip():
+            continue
 
-        _Log.error("Can not handle {{diff}}\n",  diff= diff[0])
+        matches = DIFF_PREFIX.match(header.strip())
+        if not matches:
+            if not _Log:
+                _late_import()
 
-    remove = [int(i.strip()) for i in matches.group(1).split(",")]
-    if len(remove) == 1:
-        remove = [remove[0], 1]  # DEFAULT 1
-    add = [int(i.strip()) for i in matches.group(2).split(",")]
-    if len(add) == 1:
-        add = [add[0], 1]
+            _Log.error("Can not handle \n---\n{{diff}}\n---\n",  diff=diff)
 
-    # UNUSUAL CASE WHERE @@ -x +x, n @@ AND FIRST LINE HAS NOT CHANGED
-    half = int(len(diff[1]) / 2)
-    first_half = diff[1][:half]
-    last_half = diff[1][half:half * 2]
-    if remove[1] == 1 and add[0] == remove[0] and first_half[1:] == last_half[1:]:
-        diff[1] = first_half
-        diff.insert(2, last_half)
+        remove = tuple(int(i.strip()) for i in matches.group(1).split(","))  # EXPECTING start_line, length TO REMOVE
+        remove = Data(start=remove[0], length=1 if len(remove) == 1 else remove[1])  # ASSUME FIRST LINE
+        add = tuple(int(i.strip()) for i in matches.group(2).split(","))  # EXPECTING start_line, length TO ADD
+        add = Data(start=add[0], length=1 if len(add) == 1 else add[1])
 
-    if not reverse:
-        if remove[1] != 0:
-            text = text[:remove[0] - 1] + text[remove[0] + remove[1] - 1:]
-        text = text[:add[0] - 1] + [d[1:] for d in diff[1 + remove[1]:1 + remove[1] + add[1]]] + text[add[0] - 1:]
-        text = apply_diff(text, diff[add[1] + remove[1] + 1:], reverse=reverse)
-    else:
-        text = apply_diff(text, diff[add[1] + remove[1] + 1:], reverse=reverse)
-        if add[1] != 0:
-            text = text[:add[0] - 1] + text[add[0] + add[1] - 1:]
-        text = text[:remove[0] - 1] + [d[1:] for d in diff[1:1 + remove[1]]] + text[remove[0] - 1:]
+        if remove.start == 0 and remove.length == 0:
+            remove.start = add.start
+        if add.start == 0 and add.length == 0:
+            add.start = remove.start
 
-    return text
+        if remove.start != add.start:
+            if not _Log:
+                _late_import()
+            _Log.warning("Do not know how to handle")
+
+        def repair_hunk(diff):
+            # THE LAST DELETED LINE MAY MISS A "\n" MEANING THE FIRST
+            # ADDED LINE WILL BE APPENDED TO THE LAST DELETED LINE
+            # EXAMPLE: -kward has the details.+kward has the details.
+            # DETECT THIS PROBLEM FOR THIS HUNK AND FIX THE DIFF
+            problem_line = diff[start_of_hunk + remove.length - 1]
+            if reverse:
+                if add.length == 0:
+                    return diff
+                first_added_line = output[add.start - 1]
+                if problem_line.endswith('+' + first_added_line):
+                    split_point = len(problem_line) - len(first_added_line) - 1
+                else:
+                    return diff
+            else:
+                if remove.length == 0:
+                    return diff
+                last_removed_line = output[remove.start - 1]
+                if problem_line.startswith('-' + last_removed_line + "+"):
+                    split_point = len(last_removed_line) + 1
+                else:
+                    return diff
+
+            new_diff = (
+                diff[:start_of_hunk + remove.length - 1] +
+                [problem_line[:split_point], problem_line[split_point:]] +
+                diff[start_of_hunk + remove.length:]
+            )
+            return new_diff
+
+        diff = repair_hunk(diff)
+        diff = [d for d in diff if d != "\\ no newline at end of file"]  # ANOTHER REPAIR
+
+        if reverse:
+            new_output = (
+                output[:add.start - 1] +
+                [d[1:] for d in diff[start_of_hunk:start_of_hunk + remove.length]] +
+                output[add.start + add.length - 1:]
+            )
+        else:
+            # APPLYING DIFF FORWARD REQUIRES WE APPLY THE HUNKS IN REVERSE TO GET THE LINE NUMBERS RIGHT?
+            new_output = (
+                output[:remove.start-1] +
+                [d[1:] for d in diff[start_of_hunk + remove.length :start_of_hunk + remove.length + add.length ]] +
+                output[remove.start + remove.length - 1:]
+            )
+        start_of_hunk += remove.length + add.length
+        output = new_output
+
+    if verify:
+        original = apply_diff(output, diff, not reverse, False)
+        if any(t!=o for t, o in zip_longest(text, original)):
+            if not _Log:
+                _late_import()
+            _Log.error("logical verification check failed")
+
+    return output
 
 
 def unicode2utf8(value):

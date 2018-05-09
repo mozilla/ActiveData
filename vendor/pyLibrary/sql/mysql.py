@@ -30,7 +30,7 @@ from mo_math import Math
 from mo_times import Date
 from pymysql import connect, InterfaceError, cursors
 
-from mo_future import text_type, utf8_json_encoder
+from mo_future import text_type, utf8_json_encoder, binary_type
 from pyLibrary.sql import SQL, SQL_NULL, SQL_SELECT, SQL_LIMIT, SQL_WHERE, SQL_LEFT_JOIN, SQL_FROM, SQL_AND, sql_list, sql_iso, SQL_ASC, SQL_TRUE, SQL_ONE, SQL_DESC, SQL_IS_NULL, sql_alias
 from pyLibrary.sql.sqlite import join_column
 

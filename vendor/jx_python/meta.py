@@ -21,7 +21,7 @@ from jx_base import STRUCT, Column, Table
 from jx_base.schema import Schema
 from jx_python import jx
 from mo_collections import UniqueIndex
-from mo_dots import Data, concat_field, get_attr, listwrap, unwraplist, NullType, FlatList, set_default, split_field, join_field, ROOT_PATH, wrap
+from mo_dots import Data, concat_field, get_attr, listwrap, unwraplist, NullType, FlatList, set_default, split_field, join_field, ROOT_PATH, wrap, coalesce
 from mo_future import none_type, text_type, long, PY2
 from mo_json.typed_encoder import untype_path, unnest_path
 from mo_logs import Log
@@ -249,7 +249,7 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
                 )
                 columns.add(column)
             column.es_type = _merge_type[column.es_type][row_type]
-            column.jx_type = _merge_type[column.jx_type][row_type]
+            column.jx_type = _merge_type[coalesce(column.jx_type, "undefined")][row_type]
         else:
             for name, value in d.items():
                 full_name = concat_field(parent, name)

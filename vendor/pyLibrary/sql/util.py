@@ -13,6 +13,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from mo_dots import wrap
+from bzETL.transform_bugzilla import esfilter2sqlwhere
 
 def find_holes(db, table_name, column_name, _range, filter=None):
     """

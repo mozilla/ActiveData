@@ -126,9 +126,22 @@ sudo pip install -r requirements.txt
 cd ~
 git clone https://github.com/mozilla/TUID.git
 
-cd ~/ActiveData/
+cd ~/TUID/
 git checkout master
 sudo pip install -r requirements.txt
+
+
+# CLONE esFrontLine
+cd ~
+git clone https://github.com/mozilla/esFrontLine.git
+
+cd ~/esFrontLine/
+git checkout activedata
+git pull origin activedata
+sudo pip install -r requirements.txt
+
+
+
 
 
 ###############################################################################

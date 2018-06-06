@@ -12,9 +12,12 @@ from __future__ import unicode_literals
 
 import flask
 from flask import Response
-from mo_dots import coalesce
 
-from mo_future import binary_type
+from mo_dots import coalesce
+from mo_files import File
+from mo_json import value2json
+from mo_logs import Log
+from mo_logs.strings import unicode2utf8
 from pyLibrary.env.big_data import ibytes2icompressed
 
 TOO_SMALL_TO_COMPRESS = 510  # DO NOT COMPRESS DATA WITH LESS THAN THIS NUMBER OF BYTES
@@ -63,4 +66,52 @@ def cors_wrapper(func):
     return output
 
 
+def dockerflow(flask_app, backend_check):
+    """
+    ADD ROUTING TO HANDLE DOCKERFLOW APP REQUIREMENTS
+    (see https://github.com/mozilla-services/Dockerflow#containerized-app-requirements)
+    :param flask_app: THE (Flask) APP
+    :param backend_check: METHOD THAT WILL CHECK THE BACKEND IS WORKING
+    :return:
+    """
+    global VERSION_JSON
 
+    try:
+        VERSION_JSON = File("~/app/version.json").read_bytes()
+
+        @cors_wrapper
+        def version():
+            return Response(
+                VERSION_JSON,
+                status=200,
+                headers={
+                    "Content-Type": "application/json"
+                }
+            )
+
+        @cors_wrapper
+        def heartbeat():
+            try:
+                backend_check()
+                return Response(status=200)
+            except Exception as e:
+                return Response(
+                    unicode2utf8(value2json(e)),
+                    status=500,
+                    headers={
+                        "Content-Type": "application/json"
+                    }
+                )
+
+        @cors_wrapper
+        def lbheartbeat():
+            return Response(status=200)
+
+        flask_app.add_url_rule(str('/__version__'), None, version, defaults={'path': ''}, methods=[str('GET'), str('POST')])
+        flask_app.add_url_rule(str('/__heartbeat__'), None, heartbeat, defaults={'path': ''}, methods=[str('GET'), str('POST')])
+        flask_app.add_url_rule(str('/__lbheartbeat__'), None, lbheartbeat, defaults={'path': ''}, methods=[str('GET'), str('POST')])
+    except Exception as e:
+        Log.error("Problem setting up listeners for dockerflow", cause=e)
+
+
+VERSION_JSON = None

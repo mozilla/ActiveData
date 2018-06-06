@@ -149,6 +149,9 @@ class Log(object):
         if settings.log_type == "console":
             from mo_logs.log_usingThreadedStream import StructuredLogger_usingThreadedStream
             return StructuredLogger_usingThreadedStream(sys.stdout)
+        if settings.log_type == "mozlog":
+            from mo_logs.log_usingMozLog import StructuredLogger_usingMozLog
+            return StructuredLogger_usingMozLog(sys.stdout, coalesce(settings.app_name, settings.appname))
         if settings.log_type == "stream" or settings.stream:
             from mo_logs.log_usingThreadedStream import StructuredLogger_usingThreadedStream
             return StructuredLogger_usingThreadedStream(settings.stream)

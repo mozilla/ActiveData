@@ -511,7 +511,6 @@ class Snowflake(object):
         self.alias = alias
         self.namespace = namespace
 
-
     def get_schema(self, query_path):
         return Schema(query_path, self)
 
@@ -544,12 +543,15 @@ class Schema(jx_base.Schema):
     def __init__(self, query_path, snowflake):
         if not isinstance(snowflake.query_paths[0], list):
             Log.error("Snowflake query paths should be a list of string tuples (well, technically, a list of lists of strings)")
-        self.query_path = [
-            p
-            for p in snowflake.query_paths
-            if untype_path(p[0]) == query_path
-        ][0]
-        self.snowflake = snowflake
+        try:
+            self.query_path = [
+                p
+                for p in snowflake.query_paths
+                if untype_path(p[0]) == query_path
+            ][0]
+            self.snowflake = snowflake
+        except Exception as e:
+            Log.error("logic error", cause=e)
 
     def leaves(self, column_name):
         """

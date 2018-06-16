@@ -185,8 +185,7 @@ class HgMozillaOrg(object):
                 output.changeset.diff = None
             if not get_moves:
                 output.changeset.moves = None
-            if DEBUG:
-                Log.note("Got hg ({{branch}}, {{locale}}, {{revision}}) from ES", branch=output.branch.name, locale=locale, revision=output.changeset.id)
+            DEBUG and Log.note("Got hg ({{branch}}, {{locale}}, {{revision}}) from ES", branch=output.branch.name, locale=locale, revision=output.changeset.id)
             if output.push.date >= Date.now()-MAX_TODO_AGE:
                 self.todo.add((output.branch, listwrap(output.parents)))
                 self.todo.add((output.branch, listwrap(output.children)))
@@ -545,8 +544,7 @@ class HgMozillaOrg(object):
                 pass
 
             url = expand_template(DIFF_URL, {"location": revision.branch.url, "rev": changeset_id})
-            if DEBUG:
-                Log.note("get unified diff from {{url}}", url=url)
+            DEBUG and Log.note("get unified diff from {{url}}", url=url)
             try:
                 response = http.get(url)
                 diff = response.content.decode("utf8")
@@ -605,8 +603,7 @@ class HgMozillaOrg(object):
                 pass
 
             url = expand_template(DIFF_URL, {"location": revision.branch.url, "rev": changeset_id})
-            if DEBUG:
-                Log.note("get unified diff from {{url}}", url=url)
+            DEBUG and Log.note("get unified diff from {{url}}", url=url)
             try:
                 moves = http.get(url).content.decode('latin1')  # THE ENCODING DOES NOT MATTER BECAUSE WE ONLY USE THE '+', '-' PREFIXES IN THE DIFF
                 return diff_to_moves(text_type(moves))

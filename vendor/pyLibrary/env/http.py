@@ -31,9 +31,9 @@ from jx_python import jx
 from mo_dots import Data, coalesce, wrap, set_default, unwrap, Null
 from mo_future import text_type, PY2
 from mo_json import value2json, json2value
-from mo_logs import Log, strings
-from mo_logs.strings import utf82unicode, unicode2utf8
+from mo_logs import Log
 from mo_logs.exceptions import Except
+from mo_logs.strings import utf82unicode, unicode2utf8
 from mo_math import Math
 from mo_threads import Lock
 from mo_threads import Till
@@ -156,8 +156,7 @@ def request(method, url, zip=None, retry=None, **kwargs):
                 Till(seconds=retry.sleep).wait()
 
             try:
-                if DEBUG:
-                    Log.note(u"http {{method|upper}} to {{url}}", method=method, url=text_type(url))
+                DEBUG and Log.note(u"http {{method|upper}} to {{url}}", method=method, url=text_type(url))
                 request_count += 1
 
                 del kwargs['retry']
@@ -227,18 +226,17 @@ def post_json(url, **kwargs):
     """
     if 'json' in kwargs:
         kwargs['data'] = unicode2utf8(value2json(kwargs['json']))
+        del kwargs['json']
     elif 'data' in kwargs:
         kwargs['data'] = unicode2utf8(value2json(kwargs['data']))
     else:
         Log.error(u"Expecting `json` parameter")
-
     response = post(url, **kwargs)
     details = json2value(utf82unicode(response.content))
     if response.status_code not in [200, 201]:
         Log.error(u"Bad response code {{code}}", code=response.status_code, cause=Except.wrap(details))
     else:
         return details
-
 
 def put(url, **kwargs):
     return HttpResponse(request('put', url, **kwargs))

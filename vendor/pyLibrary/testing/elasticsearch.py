@@ -45,7 +45,7 @@ def open_test_instance(name, settings):
         cluster = Cluster(settings)
         try:
             old_index = cluster.get_index(kwargs=settings)
-            old_index.delete()
+            cluster.delete_index(old_index.settings.index)
         except Exception as e:
             if "Can not find index" not in e:
                 Log.error("unexpected", cause=e)

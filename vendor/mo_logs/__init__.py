@@ -250,7 +250,7 @@ class Log(object):
             cause = Except(exceptions.UNEXPECTED, text_type(cause), trace=exceptions._extract_traceback(0))
 
         trace = exceptions.extract_stack(1)
-        e = Except(exceptions.UNEXPECTED, template, params, cause, trace)
+        e = Except(type=exceptions.UNEXPECTED, template=template, params=params, cause=cause, trace=trace)
         Log.note(
             "{{error}}",
             error=e,
@@ -343,7 +343,7 @@ class Log(object):
         cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
         trace = exceptions.extract_stack(stack_depth + 1)
 
-        e = Except(exceptions.WARNING, template, params, cause, trace)
+        e = Except(type=exceptions.WARNING, template=template, params=params, cause=cause, trace=trace)
         Log.note(
             "{{error|unicode}}",
             error=e,
@@ -401,7 +401,7 @@ class Log(object):
         if add_to_trace:
             cause[0].trace.extend(trace[1:])
 
-        e = Except(exceptions.ERROR, template, params, causes, trace)
+        e = Except(type=exceptions.ERROR, template=template, params=params, cause=cause, trace=trace)
         raise_from_none(e)
 
     @classmethod
@@ -434,7 +434,7 @@ class Log(object):
         cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
         trace = exceptions.extract_stack(stack_depth + 1)
 
-        e = Except(exceptions.ERROR, template, params, cause, trace)
+        e = Except(type=exceptions.ERROR, template=template, params=params, cause=cause, trace=trace)
 
         error_mode = cls.error_mode
         with suppress_exception:

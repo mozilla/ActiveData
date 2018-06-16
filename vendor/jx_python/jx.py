@@ -66,7 +66,7 @@ def run(query, container=Null):
     BUT IT IS ALSO PROCESSING A list CONTAINER; SEPARATE TO A ListContainer
     """
     if container == None:
-        container = wrap(query)['from'].container
+        container = wrap(query)['from']
         query_op = QueryOp.wrap(query, container=container, namespace=container.schema)
     else:
         query_op = QueryOp.wrap(query, container, container.namespace)

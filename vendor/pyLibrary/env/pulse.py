@@ -82,7 +82,7 @@ class Consumer(Thread):
             count += 1
 
         if self.settings.debug:
-            Log.note("{{data}}",  data= data)
+            Log.note("{{data}}", data=data)
         if self.target_queue != None:
             try:
                 self.target_queue.add(data)

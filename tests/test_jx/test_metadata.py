@@ -29,7 +29,7 @@ class TestMetadata(BaseTestCase):
             ]
         })
 
-        settings = self.utils.fill_container(test, tjson=False)
+        settings = self.utils.fill_container(test, typed=False)
 
         table_name = settings.index
 

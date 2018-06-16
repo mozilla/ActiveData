@@ -188,7 +188,7 @@ def _value2json(value, _buffer):
             _value2json(d, _buffer)
             return
         elif type in (int, long, Decimal):
-            append(_buffer, float2json(value))
+            append(_buffer, text_type(value))
         elif type is float:
             if math.isnan(value) or math.isinf(value):
                 append(_buffer, u'null')
@@ -271,6 +271,7 @@ def _dict2json(value, _buffer):
         from mo_logs import Log
 
         Log.error(text_type(repr(value)) + " is not JSON serializable", cause=e)
+
 
 ARRAY_ROW_LENGTH = 80
 ARRAY_ITEM_MAX_LENGTH = 30

@@ -27,7 +27,7 @@ from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
 from mo_dots import Data, Null, unwrap, coalesce, split_field, literal_field, unwraplist, join_field, wrap, listwrap, FlatList
 from mo_json import scrub, value2json
-from mo_json.typed_encoder import TYPE_PREFIX
+from mo_json.typed_encoder import TYPE_PREFIX, EXISTS_TYPE
 from mo_kwargs import override
 from mo_logs import Log, Except
 from pyLibrary.env import elasticsearch, http
@@ -80,16 +80,19 @@ class ES52(Container):
         self.worker = None
 
         columns = self._namespace.get_snowflake(self.es.settings.alias).columns  # ABSOLUTE COLUMNS
+        is_typed = any(c.es_column == EXISTS_TYPE for c in columns)
 
         if typed == None:
             # SWITCH ON TYPED MODE
-            self.typed = any(c.es_column.find("."+TYPE_PREFIX) != -1 for c in columns)
+            self.typed = is_typed
         else:
+            if is_typed != typed:
+                Log.error("Expecting given typed {{typed}} to match {{is_typed}}", typed=typed, is_typed=is_typed)
             self.typed = typed
 
     @property
     def snowflake(self):
-        return self._namespace.get_snowflake(self._es.settings.alias)
+        return self._namespace.get_snowflake(self.es.settings.alias)
 
     @property
     def namespace(self):

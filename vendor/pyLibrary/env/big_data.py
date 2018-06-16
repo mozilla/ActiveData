@@ -388,8 +388,7 @@ def icompressed2ibytes(source):
         bytes_count += len(data)
         if Math.floor(last_bytes_count, 1000000) != Math.floor(bytes_count, 1000000):
             last_bytes_count = bytes_count
-            if DEBUG:
-                Log.note("bytes={{bytes}}", bytes=bytes_count)
+            DEBUG and Log.note("bytes={{bytes}}", bytes=bytes_count)
         yield data
 
 

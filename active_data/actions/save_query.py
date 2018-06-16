@@ -73,7 +73,7 @@ class SaveQueries(object):
         es = Cluster(kwargs).get_or_create_index(
             schema=json2value(convert.value2json(SCHEMA), leaves=True),
             limit_replicas=True,
-            tjson=False,
+            typed=False,
             kwargs=kwargs
         )
         es.add_alias(es.settings.alias)

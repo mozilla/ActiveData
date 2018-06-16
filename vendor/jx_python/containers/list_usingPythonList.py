@@ -279,9 +279,9 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
         return self.schema
 
     def get_table(self, name):
-        if self.name != name:
-            Log.error("This container only has table by name of {{name}}", name=name)
-        return self
+        if self is name or self.name == name:
+            return self
+        Log.error("This container only has table by name of {{name}}", name=name)
 
 
 def _exec(code):

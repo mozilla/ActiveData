@@ -275,10 +275,13 @@ def es_aggsop(es, frum, query):
             else:
                 if len(columns) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
-
-                # PULL VALUE OUT OF THE stats AGGREGATE
-                es_query.aggs[literal_field(canonical_name)].extended_stats.field = columns[0].es_column
-                s.pull = jx_expression_to_function({"coalesce": [literal_field(canonical_name) + "." + aggregates[s.aggregate], s.default]})
+                elif len(columns) <1:
+                    # PULL VALUE OUT OF THE stats AGGREGATE
+                    s.pull = jx_expression_to_function({"null":{}})
+                else:
+                    # PULL VALUE OUT OF THE stats AGGREGATE
+                    es_query.aggs[literal_field(canonical_name)].extended_stats.field = columns[0].es_column
+                    s.pull = jx_expression_to_function({"coalesce": [literal_field(canonical_name) + "." + aggregates[s.aggregate], s.default]})
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)

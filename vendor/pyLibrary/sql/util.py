@@ -13,9 +13,9 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from mo_dots import wrap
-from bzETL.transform_bugzilla import esfilter2sqlwhere
+from jx_mysql import esfilter2sqlwhere
 
-def find_holes(db, table_name, column_name, _range, filter=None):
+def find_holes(db_module, db, table_name, column_name, _range, filter=None):
     """
     FIND HOLES IN A DENSE COLUMN OF INTEGERS
     RETURNS A LIST OF {"min"min, "max":max} OBJECTS
@@ -27,9 +27,9 @@ def find_holes(db, table_name, column_name, _range, filter=None):
     params = {
         "min": _range.min,
         "max": _range.max - 1,
-        "column_name": db.quote_column(column_name),
-        "table_name": db.quote_column(table_name),
-        "filter": esfilter2sqlwhere(db, filter)
+        "column_name": db_module.quote_column(column_name),
+        "table_name": db_module.quote_column(table_name),
+        "filter": esfilter2sqlwhere(filter)
     }
 
     min_max = db.query("""

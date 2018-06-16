@@ -144,14 +144,14 @@ class ESUtils(object):
     def not_real_service(self):
         return self.settings.fastTesting
 
-    def execute_tests(self, subtest, tjson=True, places=6):
+    def execute_tests(self, subtest, typed=True, places=6):
         subtest = wrap(subtest)
         subtest.name = text_type(extract_stack()[1]['method'])
 
-        self.fill_container(subtest, tjson=tjson)
+        self.fill_container(subtest, typed=typed)
         self.send_queries(subtest, places=places)
 
-    def fill_container(self, subtest, tjson=True):
+    def fill_container(self, subtest, typed=True):
         """
         RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
         """
@@ -169,7 +169,7 @@ class ESUtils(object):
             _settings.schema = mo_json_config.get(url)
 
             # MAKE CONTAINER
-            container = self._es_cluster.get_or_create_index(tjson=tjson, kwargs=_settings)
+            container = self._es_cluster.get_or_create_index(typed=typed, kwargs=_settings)
             container.add_alias(_settings.index)
 
             # INSERT DATA

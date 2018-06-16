@@ -110,16 +110,14 @@ def _replace_ref(node, url):
         if ref.fragment:
             new_value = mo_dots.get_attr(new_value, ref.fragment)
 
-        if DEBUG:
-            Log.note("Replace {{ref}} with {{new_value}}", ref=ref, new_value=new_value)
+        DEBUG and Log.note("Replace {{ref}} with {{new_value}}", ref=ref, new_value=new_value)
 
         if not output:
             output = new_value
         else:
             output = unwrap(set_default(output, new_value))
 
-        if DEBUG:
-            Log.note("Return {{output}}", output=output)
+        DEBUG and Log.note("Return {{output}}", output=output)
 
         return output
     elif isinstance(node, list):
@@ -209,8 +207,7 @@ def get_file(ref, url):
     path = ref.path if os.sep != "\\" else ref.path[1::].replace("/", "\\")
 
     try:
-        if DEBUG:
-            Log.note("reading file {{path}}", path=path)
+        DEBUG and Log.note("reading file {{path}}", path=path)
         content = File(path).read()
     except Exception as e:
         content = None

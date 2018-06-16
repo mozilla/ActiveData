@@ -131,7 +131,11 @@ class ColumnList(Table):
             eq = command.where.eq
             if eq.es_index:
                 columns = self.find(eq.es_index, eq.name)
-                columns = [c for c in columns if all(get_attr(c, k) == v for k, v in eq.items())]
+                columns = [
+                    c
+                    for c in columns
+                    if all(get_attr(c, k) == v for k, v in eq.items())
+                ]
             else:
                 with self.locker:
                     columns = list(self)

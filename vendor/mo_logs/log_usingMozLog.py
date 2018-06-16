@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from decimal import Decimal
 
 from mo_dots import wrap
-from mo_json import value2json
+from mo_json import value2json, datetime2unix
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import ERROR, NOTE, WARNING, ALARM
@@ -42,10 +42,10 @@ class StructuredLogger_usingMozLog(StructuredLogger):
 
     def write(self, template, params):
         output = {
-            "Timestamp": round(Decimal(params.timstamp) * Decimal(1e9)),  # NANOSECONDS
+            "Timestamp": (Decimal(datetime2unix(params.timestamp)) * Decimal(1e9)).to_integral_exact(),  # NANOSECONDS
             "Type": params.template,
             "Logger": params.machine.name,
-            "Hostname": "server-a123.mozilla.org",
+            "Hostname": self.app_name,
             "EnvVersion": "2.0",
             "Severity": severity_map.get(params.context, 3),  # https://en.wikipedia.org/wiki/Syslog#Severity_levels
             "Pid": params.machine.pid,
@@ -64,3 +64,7 @@ severity_map = {
     ALARM: 5,
     NOTE: 6
 }
+
+
+def datatime2decimal(value):
+    return

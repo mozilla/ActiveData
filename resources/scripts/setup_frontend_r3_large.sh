@@ -102,6 +102,12 @@ cd ~/ActiveData/
 git checkout master
 sudo pip install -r requirements.txt
 
+###############################################################################
+# BE SURE TO INSTALL esFrontLine
+###############################################################################
+
+# ./setup_frontend_r3_large.esfrontline.sh
+
 
 ###############################################################################
 # PLACE ALL CONFIG FILES

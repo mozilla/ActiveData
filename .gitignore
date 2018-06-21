@@ -32,3 +32,4 @@ pyLibrary/.svn
 /vendor/pyLibrary/vendor/sqlite
 /metadata.sqlite
 /temp.md
+/*.db

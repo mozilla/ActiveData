@@ -14,10 +14,6 @@ cluster.routing.allocation.node_concurrent_recoveries: 1
 thread_pool.bulk.queue_size: 3000
 thread_pool.index.queue_size: 1000
 
-index.translog.durability: async
-index.translog.flush_threshold_size: 1000mb
-index.translog.sync_interval: 60s
-
 indices.recovery.max_bytes_per_sec: 1000mb
 
 script.painless.regex.enabled: true

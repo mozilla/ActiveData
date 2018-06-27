@@ -56,10 +56,10 @@
 			{
 				"log_type": "console"
 			},
-			{
-				"log_type": "mozlog",
-				"appname": "ActiveData-testing"
-			},
+//			{
+//				"log_type": "mozlog",
+//				"appname": "ActiveData-testing"
+//			},
 			{
 				"log_type": "email",
 				"from_address": "klahnakoski@mozilla.com",

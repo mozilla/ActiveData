@@ -41,4 +41,9 @@ curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": 
 
 curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": {\"index\": \"treeherder20160722_171527\",\"shard\": 1,\"from_node\": \"spot_00C8C755\",\"to_node\": \"spot_BAC8AE00\"}}]}"
 curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": {\"index\": \"treeherder20160722_171527\",\"shard\": 2,\"from_node\": \"spot_BAC8AE00\",\"to_node\": \"spot_01B4ADC5\"}}]}"
-curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": {\"index\": \"treeherder20160722_171527\",\"shard\": 0,\"from_node\": \"spot_00C8C755\",\"to_node\": \"spot_00C8C755\"}}]}"
+
+
+curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": {\"index\": \"coverage20180617_000000\",\"shard\": 35,\"from_node\": \"spot_34.219.85.42\",\"to_node\": \"3\"}}]}"  -H "Content-Type: application/json"
+
+
+

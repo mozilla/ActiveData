@@ -122,15 +122,6 @@ cd ~/ActiveData/
 git checkout frontend6
 sudo pip install -r requirements.txt
 
-# CLONE TUID
-cd ~
-git clone https://github.com/mozilla/TUID.git
-
-cd ~/TUID/
-git checkout master
-sudo pip install -r requirements.txt
-
-
 # CLONE esFrontLine
 cd ~
 git clone https://github.com/mozilla/esFrontLine.git

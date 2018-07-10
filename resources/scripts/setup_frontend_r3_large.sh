@@ -122,15 +122,6 @@ cd ~/ActiveData/
 git checkout frontend6
 sudo pip install -r requirements.txt
 
-# CLONE TUID
-cd ~
-git clone https://github.com/mozilla/TUID.git
-
-cd ~/TUID/
-git checkout master
-sudo pip install -r requirements.txt
-
-
 # CLONE esFrontLine
 cd ~
 git clone https://github.com/mozilla/esFrontLine.git
@@ -169,7 +160,7 @@ sudo /usr/local/bin/supervisorctl update
 sudo cp ~/ActiveData/resources/config/nginx_testing.conf /etc/nginx/nginx.conf
 
 # sudo kill -SIGINT `cat /data1/logs/nginx.pid`
-
+sleep 2
 sudo /etc/init.d/nginx start
 
 more /data1/logs/nginx.pid

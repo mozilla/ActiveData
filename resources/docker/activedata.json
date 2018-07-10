@@ -1,0 +1,67 @@
+{
+	"use": "elasticsearch",
+	"constants": {
+		"pyLibrary.env.http.default_headers": {
+			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
+		},
+		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
+		"jx_elasticsearch.meta.ENABLE_META_SCAN": false,
+		"jx_elasticsearch.meta.DEBUG": true,
+		"jx_base.expressions.ALLOW_SCRIPTING": false
+	},
+	"request_logs": {
+		"host": {"$ref":"env://ES_HOST"},
+		"port": {"$ref":"env://ES_PORT"},
+		"index": "activedata_requests",
+		"type": "request_log",
+		"tjson": false,
+		"schema": {
+			"$ref": "//../schema/request_log.schema.json"
+		}
+	},
+	"saved_queries":{
+		"host": {"$ref":"env://ES_HOST"},
+		"port": {"$ref":"env://ES_PORT"},
+		"index": "saved_queries",
+		"type": "query",
+		"debug": false
+	},
+	"elasticsearch": {
+		"host": {"$ref":"env://ES_HOST"},
+		"port": {"$ref":"env://ES_PORT"},
+		"index": "testdata",
+		"type": "test_result",
+		"debug": true
+	},
+	"debug": {
+		"trace": true,
+		"cprofile": {
+			"enabled": false,
+			"filename": "./results/profile.tab"
+		},
+		"log": [
+			{
+				"log_type": "console"
+			},
+			{
+				"log_type": "mozlog",
+				"appname": {"$ref":"env://LOG_APPNAME"}
+			},
+			{
+				"log_type": "elasticsearch",
+				"host": {"$ref":"env://ES_HOST"},
+				"port": {"$ref":"env://ES_PORT"},
+				"index": "debug_active_data",
+				"type": "active_data"
+			},
+			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "/app/logs/activedata.log",
+				"maxBytes": 10000000,
+				"backupCount": 10,
+				"encoding": "utf8"
+			}
+		]
+	}
+
+}

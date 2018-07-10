@@ -32,4 +32,4 @@ RUN python -m pip --no-cache-dir install --user -r requirements.txt \
     && python -m pip install pyasn1 \
     && python -m pip install supervisor
 
-CMD /usr/local/bin/supervisord -c $HOME/resources/config/docker/supervisor.conf
+CMD /usr/local/bin/supervisord -c $HOME/resources/docker/supervisord.conf

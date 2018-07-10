@@ -4,9 +4,3 @@ pymysql
 requests
 moz-sql-parser
 boto
-gunicorn
-pyopenssl
-ndg-httpsclient
-pyasn1
-requests
-supervisor

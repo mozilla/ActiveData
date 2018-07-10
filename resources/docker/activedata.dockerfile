@@ -1,6 +1,6 @@
-FROM python:2.17.15
+FROM python:2.7
 
-ARG BRANCH=frontend6
+ARG BRANCH=dev
 ARG HOME=/app
 
 WORKDIR $HOME
@@ -22,5 +22,14 @@ RUN mkdir -p /etc/dpkg/dpkg.cfg.d \
     && git clone https://github.com/mozilla/ActiveData.git $HOME \
     && git checkout $BRANCH \
     && git config --global user.email "klahnakoski@mozilla.com" \
-    && git config --global user.name "Kyle Lahnakoski"
+    && git config --global user.name "Kyle Lahnakoski" \
     && mkdir $HOME/logs
+
+RUN python -m pip --no-cache-dir install --user -r requirements.txt \
+    && python -m pip install gunicorn \
+    && python -m pip install pyopenssl \
+    && python -m pip install ndg-httpsclient \
+    && python -m pip install pyasn1 \
+    && python -m pip install supervisor
+
+CMD $HOME/.local/bin/supervisord -c $HOME/resources/config/docker/supervisord.conf

@@ -160,7 +160,7 @@ sudo /usr/local/bin/supervisorctl update
 sudo cp ~/ActiveData/resources/config/nginx_testing.conf /etc/nginx/nginx.conf
 
 # sudo kill -SIGINT `cat /data1/logs/nginx.pid`
-
+sleep 2
 sudo /etc/init.d/nginx start
 
 more /data1/logs/nginx.pid

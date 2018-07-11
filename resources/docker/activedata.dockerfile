@@ -44,4 +44,4 @@ RUN addgroup --gid 10001 $USER
        --gecos we,dont,care,yeah \
        $USER
 
-CMD /usr/local/bin/supervisord -b 0.0.0.0:$PORT -c $HOME/resources/docker/supervisord.conf
+CMD /usr/local/bin/supervisord -c $HOME/resources/docker/supervisord.conf

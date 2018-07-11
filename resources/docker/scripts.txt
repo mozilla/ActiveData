@@ -16,5 +16,6 @@ cd /app
 
 
 
+echo $PORT
 cp /app/resources/docker/supervisord.conf /etc/supervisor/supervisord.conf
-/usr/local/bin/supervisord -c $HOME/resources/docker/supervisord.conf
+/usr/local/bin/supervisord

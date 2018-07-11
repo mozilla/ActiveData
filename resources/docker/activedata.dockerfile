@@ -51,4 +51,4 @@ RUN addgroup --gid 10001 $USER \
        --gecos we,dont,care,yeah \
        $USER
 
-ENTRYPOINT /usr/local/bin/supervisord -c $HOME/resources/docker/supervisord.conf
+ENTRYPOINT /usr/local/bin/supervisord -n -c $HOME/resources/docker/supervisord.conf

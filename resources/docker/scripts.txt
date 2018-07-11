@@ -14,10 +14,6 @@ cd /app
 /usr/local/bin/gunicorn -b 0.0.0.0:$PORT --config=resources/docker/gunicorn.py active_data.app:flask_app
 
 
-
-
-echo $PORT
 /usr/local/bin/supervisord -c /app/resources/docker/supervisord.conf
-
 curl -XPOST http://localhost:8000/__version__
 

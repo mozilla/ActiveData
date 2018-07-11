@@ -119,7 +119,7 @@ def setup():
 
     if config.dockerflow:
         def backend_check():
-            http.post_json(config.elasticsearch.host + ":" + text_type(config.elasticsearch.port))
+            http.get_json(config.elasticsearch.host + ":" + text_type(config.elasticsearch.port))
         dockerflow(flask_app, backend_check)
 
     # SETUP DEFAULT CONTAINER, SO THERE IS SOMETHING TO QUERY

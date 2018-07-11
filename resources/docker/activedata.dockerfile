@@ -33,7 +33,7 @@ RUN python -m pip --no-cache-dir install --user -r requirements.txt \
     && python -m pip install pyasn1 \
     && python -m pip install supervisor
 
-RUN addgroup --gid 10001 $USER
+RUN addgroup --gid 10001 $USER \
     && adduser \
        --gid 10001 \
        --uid 10001 \

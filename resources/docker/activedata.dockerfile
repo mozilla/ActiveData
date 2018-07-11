@@ -45,5 +45,6 @@ RUN addgroup --gid 10001 $USER \
        --gecos we,dont,care,yeah \
        $USER
 
-ENTRYPOINT cp $HOME/resources/docker/supervisord.conf /etc/supervisor/supervisord.conf \
-    && service supervisor start
+CMD echo $PORT \
+           && cp $HOME/resources/docker/supervisord.conf /etc/supervisor/supervisord.conf \
+           && service supervisor start

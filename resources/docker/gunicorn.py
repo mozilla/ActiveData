@@ -1,6 +1,4 @@
-import os
 
-bind = "0.0.0.0:"+str(os.environ['PORT'])
 
 backlog = 64
 timeout = 10*60

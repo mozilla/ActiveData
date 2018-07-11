@@ -77,7 +77,7 @@ def dockerflow(flask_app, backend_check):
     global VERSION_JSON
 
     try:
-        VERSION_JSON = File("~/app/version.json").read_bytes()
+        VERSION_JSON = File("~/version.json").read_bytes()
 
         @cors_wrapper
         def version():

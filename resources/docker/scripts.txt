@@ -16,4 +16,5 @@ cd /app
 
 
 
+cp /app/resources/docker/supervisord.conf /etc/supervisor/supervisord.conf
 /usr/local/bin/supervisord -c $HOME/resources/docker/supervisord.conf

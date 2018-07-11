@@ -19,6 +19,7 @@ RUN mkdir -p /etc/dpkg/dpkg.cfg.d \
         vim-tiny \
         nano \
         sudo \
+        supervisor \
     && rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/* /usr/share/locale/* \
     && git clone https://github.com/mozilla/ActiveData.git $HOME \
     && git checkout $BRANCH \
@@ -44,4 +45,4 @@ RUN addgroup --gid 10001 $USER \
        --gecos we,dont,care,yeah \
        $USER
 
-CMD /usr/local/bin/supervisord -c $HOME/resources/docker/supervisord.conf
+# CMD /usr/local/bin/supervisord -c $HOME/resources/docker/supervisord.conf

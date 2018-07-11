@@ -6,6 +6,8 @@ All commands are meant to be run from the root directory for this repo; not this
 
 ### Build
 
+The `activedata.docker` file lists the `ARGS` so they can be overridden at build time. You can use the defaults:
+
     docker build --file resources\docker\activedata.dockerfile --no-cache --tag activedata .
 
 *This command is also in the `build.sh` script*

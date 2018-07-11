@@ -1,9 +1,9 @@
 FROM python:2.7
 
 ARG REPO_URL=https://github.com/mozilla/ActiveData
-ARG REPO_BRANCH=dev
+#ARG REPO_BRANCH=dev
+ARG REPO_TAG=v2.0
 ARG BUILD_URL=https://travis-ci.org/mozilla/ActiveData
-#ARG REPO_TAG=v0.2
 ARG HOME=/app
 ARG USER=app
 
@@ -25,7 +25,7 @@ RUN mkdir -p /etc/dpkg/dpkg.cfg.d \
         supervisor \
     && rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/* /usr/share/locale/* \
     && git clone $REPO_URL.git $HOME \
-    && git checkout $REPO_BRANCH \
+    && git checkout tags/$REPO_TAG \
     && git config --global user.email "klahnakoski@mozilla.com" \
     && git config --global user.name "Kyle Lahnakoski" \
     && mkdir $HOME/logs

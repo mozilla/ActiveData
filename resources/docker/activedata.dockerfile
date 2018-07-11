@@ -1,5 +1,6 @@
 FROM python:2.7
 
+ARG
 ARG BRANCH=dev
 ARG HOME=/app
 ARG USER=app
@@ -45,4 +46,5 @@ RUN addgroup --gid 10001 $USER \
        --gecos we,dont,care,yeah \
        $USER
 
-# CMD /usr/local/bin/supervisord -c $HOME/resources/docker/supervisord.conf
+RUN cp $HOME/resources/docker/supervisord.conf /etc/supervisor/supervisord.conf
+    && service supervisor start

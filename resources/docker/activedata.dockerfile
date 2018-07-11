@@ -2,6 +2,7 @@ FROM python:2.7
 
 ARG BRANCH=dev
 ARG HOME=/app
+ARG USER=app
 
 WORKDIR $HOME
 RUN mkdir -p /etc/dpkg/dpkg.cfg.d \
@@ -32,4 +33,15 @@ RUN python -m pip --no-cache-dir install --user -r requirements.txt \
     && python -m pip install pyasn1 \
     && python -m pip install supervisor
 
-CMD /usr/local/bin/supervisord -c $HOME/resources/docker/supervisord.conf
+RUN addgroup --gid 10001 $USER
+    && adduser \
+       --gid 10001 \
+       --uid 10001 \
+       --home $HOME \
+       --shell /usr/sbin/nologin \
+       --no-create-home \
+       --disabled-password \
+       --gecos we,dont,care,yeah \
+       $USER
+
+CMD /usr/local/bin/supervisord -b 0.0.0.0:$PORT -c $HOME/resources/docker/supervisord.conf

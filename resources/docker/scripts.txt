@@ -1,0 +1,6 @@
+
+
+export ACTIVEDATA_CONFIG=resources/docker/activedata.json
+export PYTHONPATH='.:vendor'
+cd /app.
+python active_data/app.py

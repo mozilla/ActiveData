@@ -41,9 +41,6 @@
 		},
 		"log": [
 			{
-				"log_type": "console"
-			},
-			{
 				"log_type": "mozlog",
 				"appname": {"$ref":"env://LOG_APPNAME"}
 			},

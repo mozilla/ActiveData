@@ -517,9 +517,9 @@ class Cluster(object):
 
     @override
     def __new__(cls, host, port=9200, kwargs=None):
-        if not isinstance(port, int):
+        if not Math.is_integer(port):
             Log.error("port must be integer")
-        cluster = known_clusters.get((host, port))
+        cluster = known_clusters.get((host, int(port)))
         if cluster:
             return cluster
 

@@ -1,5 +1,6 @@
 FROM python:2.7
 
+ARG REPO=https://github.com/mozilla/ActiveData
 ARG BRANCH=dev
 ARG HOME=/app
 ARG USER=app
@@ -21,7 +22,7 @@ RUN mkdir -p /etc/dpkg/dpkg.cfg.d \
         sudo \
         supervisor \
     && rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/* /usr/share/locale/* \
-    && git clone https://github.com/mozilla/ActiveData.git $HOME \
+    && git clone $REPO.git $HOME \
     && git checkout $BRANCH \
     && git config --global user.email "klahnakoski@mozilla.com" \
     && git config --global user.name "Kyle Lahnakoski" \
@@ -34,6 +35,9 @@ RUN python -m pip --no-cache-dir install --user -r requirements.txt \
     && python -m pip install pyasn1 \
     && python -m pip install supervisor
 
+#RUN export PYTHONPATH=.:vendor \
+#    && python resources/docker/build_version.py
+
 RUN addgroup --gid 10001 $USER \
     && adduser \
        --gid 10001 \
@@ -45,6 +49,6 @@ RUN addgroup --gid 10001 $USER \
        --gecos we,dont,care,yeah \
        $USER
 
-ENTRYPOINT echo $PORT \
-           && cp $HOME/resources/docker/supervisord.conf /etc/supervisor/supervisord.conf \
-           && /usr/local/bin/supervisord
+#ENTRYPOINT echo $PORT \
+#           && cp $HOME/resources/docker/supervisord.conf /etc/supervisor/supervisord.conf \
+#           && /usr/local/bin/supervisord

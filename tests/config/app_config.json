@@ -39,6 +39,7 @@
 		"type": "query",
 		"debug": false
 	},
+	"dockerflow":true,
 	"elasticsearch": {
 		"host": "http://localhost",
 		"port": 9200,

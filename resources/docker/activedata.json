@@ -9,6 +9,7 @@
 		"jx_elasticsearch.meta.DEBUG": true,
 		"jx_base.expressions.ALLOW_SCRIPTING": false
 	},
+	"dockerflow": true,
 	"request_logs": {
 		"host": {"$ref":"env://ES_HOST"},
 		"port": {"$ref":"env://ES_PORT"},

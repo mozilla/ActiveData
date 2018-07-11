@@ -3,10 +3,9 @@
 *.pyc
 *.tab
 out
-pyLibrary/.svn
 .idea
 *.iml
-/pyLibrary/.svn
+version.json
 /results
 /docs/Pulse Icon.png
 /docs/gmail.png
@@ -31,3 +30,4 @@ pyLibrary/.svn
 /temp.md
 /vendor/pyLibrary/vendor/sqlite
 /tuid.db
+

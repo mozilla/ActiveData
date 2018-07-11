@@ -14,7 +14,7 @@ File("version.json").write(value2json(
         "source": os.environ.get('REPO_URL'),
         "version": coalesce(os.environ.get('REPO_TAG'), os.environ.get('REPO_BRANCH')),
         "commit": get_git_revision(),
-        "build": os.environ.get('CIRCLE_BUILD_URL')
+        "build": os.environ.get('BUILD_URL')
     },
     pretty=True
 ))

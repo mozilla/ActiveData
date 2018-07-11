@@ -2,6 +2,7 @@ FROM python:2.7
 
 ARG REPO_URL=https://github.com/mozilla/ActiveData
 ARG REPO_BRANCH=dev
+ARG BUILD_URL=https://travis-ci.org/mozilla/ActiveData
 #ARG REPO_TAG=v0.2
 ARG HOME=/app
 ARG USER=app
@@ -50,6 +51,5 @@ RUN addgroup --gid 10001 $USER \
        --gecos we,dont,care,yeah \
        $USER
 
-#ENTRYPOINT echo $PORT \
-#           && cp $HOME/resources/docker/supervisord.conf /etc/supervisor/supervisord.conf \
-#           && /usr/local/bin/supervisord
+ENTRYPOINT cp $HOME/resources/docker/supervisord.conf /etc/supervisor/supervisord.conf \
+           && /usr/local/bin/supervisord

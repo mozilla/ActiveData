@@ -19,3 +19,5 @@ cd /app
 echo $PORT
 cp /app/resources/docker/supervisord.conf /etc/supervisor/supervisord.conf
 /usr/local/bin/supervisord
+curl -XPOST http://localhost:8000/__version__
+

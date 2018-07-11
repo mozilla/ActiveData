@@ -1,6 +1,5 @@
 FROM python:2.7
 
-ARG
 ARG BRANCH=dev
 ARG HOME=/app
 ARG USER=app

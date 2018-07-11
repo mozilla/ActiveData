@@ -1,7 +1,8 @@
 FROM python:2.7
 
-ARG REPO=https://github.com/mozilla/ActiveData
-ARG BRANCH=dev
+ARG REPO_URL=https://github.com/mozilla/ActiveData
+ARG REPO_BRANCH=dev
+#ARG REPO_TAG=v0.2
 ARG HOME=/app
 ARG USER=app
 
@@ -22,8 +23,8 @@ RUN mkdir -p /etc/dpkg/dpkg.cfg.d \
         sudo \
         supervisor \
     && rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/* /usr/share/locale/* \
-    && git clone $REPO.git $HOME \
-    && git checkout $BRANCH \
+    && git clone $REPO_URL.git $HOME \
+    && git checkout $REPO_BRANCH \
     && git config --global user.email "klahnakoski@mozilla.com" \
     && git config --global user.name "Kyle Lahnakoski" \
     && mkdir $HOME/logs
@@ -35,8 +36,8 @@ RUN python -m pip --no-cache-dir install --user -r requirements.txt \
     && python -m pip install pyasn1 \
     && python -m pip install supervisor
 
-#RUN export PYTHONPATH=.:vendor \
-#    && python resources/docker/build_version.py
+RUN export PYTHONPATH=.:vendor \
+    && python resources/docker/version.py
 
 RUN addgroup --gid 10001 $USER \
     && adduser \

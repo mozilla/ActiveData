@@ -17,6 +17,8 @@ from mo_logs import Log, Except, suppress_exception
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_threads import Thread, Queue, Till, THREAD_STOP
 
+DEBUG = False
+
 
 class StructuredLogger_usingThread(StructuredLogger):
 
@@ -40,7 +42,7 @@ class StructuredLogger_usingThread(StructuredLogger):
             except Exception as e:
                 print("problem in " + StructuredLogger_usingThread.__name__ + ": " + str(e))
             finally:
-                print("stop the child")
+                Log.note("stop the child")
                 logger.stop()
 
         self.thread = Thread("Thread for " + self.__class__.__name__, worker, logger)
@@ -56,13 +58,13 @@ class StructuredLogger_usingThread(StructuredLogger):
             raise e  # OH NO!
 
     def stop(self):
-        print("stop to be had")
+        Log.note("Stopping threaded logger")
         try:
             self.queue.add(THREAD_STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
-            print("joined on thread")
+            DEBUG and Log.note("joined on thread")
         except Exception as e:
-            print("problem in " + StructuredLogger_usingThread.__name__ + ": " + str(e))
+            Log.note("problem in threaded logger" + str(e))
 
         with suppress_exception:
             self.queue.close()

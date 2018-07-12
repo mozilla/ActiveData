@@ -123,8 +123,9 @@ class Log(object):
 
         if profiles.ON and hasattr(cls, "settings"):
             profiles.write(cls.settings.profile)
-        cls.main_log.stop()
-        cls.main_log = StructuredLogger_usingStream(sys.stdout)
+
+        main_log, cls.main_log = cls.main_log, StructuredLogger_usingStream(sys.stdout)
+        main_log.stop()
 
     @classmethod
     def new_instance(cls, settings):

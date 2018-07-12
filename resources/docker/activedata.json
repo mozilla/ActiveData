@@ -39,27 +39,7 @@
 		"cprofile": {
 			"enabled": false,
 			"filename": "./results/profile.tab"
-		},
-		"log": [
-			{
-				"log_type": "mozlog",
-				"appname": {"$ref":"env://LOG_APPNAME"}
-			},
-			{
-				"class": "logging.handlers.RotatingFileHandler",
-				"filename": "/app/logs/activedata.log",
-				"maxBytes": 10000000,
-				"backupCount": 10,
-				"encoding": "utf8"
-			},
-			{
-				"log_type": "elasticsearch",
-				"host": {"$ref":"env://ES_HOST"},
-				"port": {"$ref":"env://ES_PORT"},
-				"index": "debug_active_data",
-				"type": "active_data"
-			}
-		]
+		}
 	}
 
 }

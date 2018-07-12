@@ -31,11 +31,7 @@ RUN mkdir -p /etc/dpkg/dpkg.cfg.d \
     && mkdir $HOME/logs
 
 RUN python -m pip --no-cache-dir install --user -r requirements.txt \
-    && python -m pip install gunicorn \
-    && python -m pip install pyopenssl \
-    && python -m pip install ndg-httpsclient \
-    && python -m pip install pyasn1 \
-    && python -m pip install supervisor
+    && python -m pip install gunicorn
 
 RUN export PYTHONPATH=.:vendor \
     && python resources/docker/version.py
@@ -51,4 +47,5 @@ RUN addgroup --gid 10001 $USER \
        --gecos we,dont,care,yeah \
        $USER
 
-ENTRYPOINT /usr/local/bin/supervisord -n -c $HOME/resources/docker/supervisord.conf
+
+ENTRYPOINT /usr/local/bin/gunicorn -b 0.0.0.0:$PORT --config=resources/docker/gunicorn.py active_data.app:flask_app

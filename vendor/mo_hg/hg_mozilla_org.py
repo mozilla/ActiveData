@@ -62,7 +62,7 @@ DAEMON_QUEUE_SIZE = 2 ** 15
 DAEMON_RECENT_HG_PULL = 2 * SECOND  # DETERMINE IF WE GOT DATA FROM HG (RECENT), OR ES (OLDER)
 MAX_TODO_AGE = DAY  # THE DAEMON WILL NEVER STOP SCANNING; DO NOT ADD OLD REVISIONS TO THE todo QUEUE
 MIN_ETL_AGE = Date("03may2018").unix  # ARTIFACTS OLDER THAN THIS IN ES ARE REPLACED
-
+UNKNOWN_PUSH = "Unknown push {{revision}}"
 
 MAX_DIFF_SIZE = 1000
 DIFF_URL = "{{location}}/raw-rev/{{rev}}"
@@ -425,7 +425,8 @@ class HgMozillaOrg(object):
             output = _get_url(url, branch, **kwargs)
             return output
         except Exception as e:
-            output = Null
+            if UNKNOWN_PUSH in e:
+                Log.error("Tried {{url}} and failed", {"url": url}, cause=e)
 
         try:
             (Till(seconds=5)).wait()
@@ -626,7 +627,7 @@ def _get_url(url, branch, **kwargs):
         response = http.get(url, **kwargs)
         data = json2value(response.content.decode("utf8"))
         if isinstance(data, (text_type, str)) and data.startswith("unknown revision"):
-            Log.error("Unknown push {{revision}}", revision=strings.between(data, "'", "'"))
+            Log.error(UNKNOWN_PUSH, revision=strings.between(data, "'", "'"))
         branch.url = _trim(url)  # RECORD THIS SUCCESS IN THE BRANCH
         return data
 

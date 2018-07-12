@@ -18,6 +18,7 @@ from collections import Mapping
 import mo_dots
 from mo_dots import set_default, wrap, unwrap
 from mo_files import File
+from mo_future import text_type
 from mo_json import json2value
 from mo_json_config.convert import ini2value
 from mo_logs import Log, Except
@@ -30,7 +31,7 @@ def get(url):
     """
     USE json.net CONVENTIONS TO LINK TO INLINE OTHER JSON
     """
-    url = str(url)
+    url = text_type(url)
     if url.find("://") == -1:
         Log.error("{{url}} must have a prototcol (eg http://) declared", url=url)
 
@@ -114,6 +115,8 @@ def _replace_ref(node, url):
 
         if not output:
             output = new_value
+        elif isinstance(output, text_type):
+            Log.error("Can not handle set_default({{output}},{{new_value}})", output=output, new_value=new_value)
         else:
             output = unwrap(set_default(output, new_value))
 
@@ -239,7 +242,7 @@ def get_env(ref, url):
     try:
         new_value = json2value(os.environ[ref])
     except Exception as e:
-        new_value = os.environ[ref]
+        new_value = os.environ.get(ref)
     return new_value
 
 

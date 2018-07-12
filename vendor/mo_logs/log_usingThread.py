@@ -62,7 +62,7 @@ class StructuredLogger_usingThread(StructuredLogger):
         try:
             self.queue.add(THREAD_STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
-            DEBUG and Log.note("joined on thread")
+            Log.note("joined on thread")
         except Exception as e:
             Log.note("problem in threaded logger" + str(e))
 

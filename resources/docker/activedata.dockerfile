@@ -2,7 +2,7 @@ FROM python:2.7
 
 ARG REPO_TAG=
 ARG REPO_URL=https://github.com/mozilla/ActiveData
-ARG REPO_BRANCH=dev
+ARG REPO_BRANCH=gunicorn
 ARG BUILD_URL=https://travis-ci.org/mozilla/ActiveData
 ARG HOME=/app
 ARG USER=app

@@ -30,13 +30,15 @@ class StructuredLogger_usingThread(StructuredLogger):
         def worker(logger, please_stop):
             try:
                 while not please_stop:
-                    Till(seconds=1).wait()
+                    (Till(seconds=1) | please_stop).wait()
                     logs = self.queue.pop_all()
                     for log in logs:
                         if log is THREAD_STOP:
                             please_stop.go()
                         else:
                             logger.write(**log)
+            except Exception as e:
+                print("problem in " + StructuredLogger_usingThread.__name__ + ": " + str(e))
             finally:
                 logger.stop()
 
@@ -53,10 +55,11 @@ class StructuredLogger_usingThread(StructuredLogger):
             raise e  # OH NO!
 
     def stop(self):
-        with suppress_exception:
+        try:
             self.queue.add(THREAD_STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
-            self.logger.stop()
+        except Exception as e:
+            print("problem in " + StructuredLogger_usingThread.__name__ + ": " + str(e))
 
         with suppress_exception:
             self.queue.close()

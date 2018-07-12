@@ -40,6 +40,7 @@ class StructuredLogger_usingThread(StructuredLogger):
             except Exception as e:
                 print("problem in " + StructuredLogger_usingThread.__name__ + ": " + str(e))
             finally:
+                print("stop the child")
                 logger.stop()
 
         self.thread = Thread("Thread for " + self.__class__.__name__, worker, logger)
@@ -55,9 +56,11 @@ class StructuredLogger_usingThread(StructuredLogger):
             raise e  # OH NO!
 
     def stop(self):
+        print("stop to be had")
         try:
             self.queue.add(THREAD_STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
+            print("joined on thread")
         except Exception as e:
             print("problem in " + StructuredLogger_usingThread.__name__ + ": " + str(e))
 

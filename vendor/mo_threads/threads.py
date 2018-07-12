@@ -264,7 +264,6 @@ class Thread(object):
                 with self.synch_lock:
                     self.end_of_thread = Null
         except Exception as e:
-            print(e)
             e = Except.wrap(e)
             with self.synch_lock:
                 self.end_of_thread = Data(exception=e)

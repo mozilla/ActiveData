@@ -6,12 +6,15 @@ All commands are meant to be run from the root directory for this repo; not this
 
 ### Build
 
-The `activedata.docker` file lists the `ARGS` so they can be overridden at build time. You can use the defaults:
+The `activedata.docker` file has default values for most `ARGS` to simplify the build:
 
     docker build --file resources\docker\activedata.dockerfile --no-cache --tag activedata .
 
 *This command is also in the `build.sh` script*
 
+**Notes**
+
+* use `--build-arg REPO_TAG=v2.0` to build a specific version
 
 ### Configuration
 

@@ -18,9 +18,6 @@ from tempfile import NamedTemporaryFile
 
 import flask
 from flask import Flask
-from mo_future import text_type
-
-from mo_logs.url import URL
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
@@ -35,6 +32,7 @@ from active_data.actions.sql import sql_query
 from active_data.actions.static import download
 from jx_base import container
 from mo_files import File
+from mo_future import text_type
 from mo_logs import Log, constants, startup
 from mo_logs.strings import unicode2utf8
 from mo_threads import Thread
@@ -223,5 +221,7 @@ if __name__ in ("__main__", "active_data.app"):
             run_flask()
     except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
+    finally:
+        Log.stop()
 
 

@@ -14,6 +14,6 @@ cd /app
 /usr/local/bin/gunicorn -b 0.0.0.0:$PORT --config=resources/docker/gunicorn.py active_data.app:flask_app
 
 
-/usr/local/bin/supervisord -c /app/resources/docker/supervisord.conf
-curl -XPOST http://localhost:8000/__version__
 
+docker run --interactive --tty --env-file ./resources/docker/activedata.env -p 8000:8000/tcp --mount source=activedata_state,destination=/app/logs activedata bash
+curl -XPOST http://localhost:8000/__version__

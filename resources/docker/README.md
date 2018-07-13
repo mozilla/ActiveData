@@ -36,3 +36,15 @@ This will not work unless the enviroment file (`activedata.env`) references an E
 
 * Notice `PORT` in `activedata.env` matches the port of the `-p 8000:8000/tcp` option
 * The docker image requires inter-run state; both for logs and metadata storage; be sure to mount some (small) amount of storage to `/app/logs`.  This has been hard coded.
+
+### Troubleshoot
+
+In the event that the container exits soon after starting, you can better see the reason by starting the container with `bash`
+
+    docker run --interactive --tty --env-file ./resources/docker/activedata.env -p 8000:8000/tcp --mount source=activedata_state,destination=/app/logs activedata bash
+
+and running ActiveData directly
+
+    python active_data/app.py
+
+gunicorn appears to be cutting off the stdout too early to capture the reason for shutdown

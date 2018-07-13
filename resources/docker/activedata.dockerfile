@@ -2,7 +2,7 @@ FROM python:2.7
 
 ARG REPO_TAG=
 ARG REPO_URL=https://github.com/mozilla/ActiveData
-ARG REPO_BRANCH=gunicorn
+ARG REPO_BRANCH=dev
 ARG BUILD_URL=https://travis-ci.org/mozilla/ActiveData
 ARG HOME=/app
 ARG USER=app
@@ -47,4 +47,4 @@ RUN addgroup --gid 10001 $USER \
        --gecos we,dont,care,yeah \
        $USER
 
-# ENTRYPOINT /usr/local/bin/gunicorn -b 0.0.0.0:$PORT --config=resources/docker/gunicorn.py active_data.app:flask_app
+CMD /usr/local/bin/gunicorn -b 0.0.0.0:$PORT --config=resources/docker/gunicorn.py active_data.app:flask_app

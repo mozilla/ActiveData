@@ -22,6 +22,7 @@
 		"jx_elasticsearch.meta.DEBUG": true,
 		"jx_base.expressions.ALLOW_SCRIPTING": true
 	},
+	"dockerflow": true,
 	"request_logs": {
 		"host": "http://localhost",
 		"port": 9200,
@@ -39,7 +40,6 @@
 		"type": "query",
 		"debug": false
 	},
-	"dockerflow":true,
 	"elasticsearch": {
 		"host": "http://localhost",
 		"port": 9200,
@@ -54,27 +54,34 @@
 			"filename": "./results/profile.tab"
 		},
 		"log": [
-			{
-				"log_type": "console"
-			},
 //			{
-//				"log_type": "mozlog",
-//				"appname": "ActiveData-testing"
+//				"log_type": "console"
 //			},
 			{
-				"log_type": "email",
-				"from_address": "klahnakoski@mozilla.com",
-				"to_address": "klahnakoski@mozilla.com",
-				"subject": "[ALERT][DEV]Problem with ActiveData Server",
-				"$ref": "file://~/private.json#email"
+				"log_type": "mozlog",
+				"appname": "ActiveData"
 			},
 			{
-				"log_type": "elasticsearch",
-				"host": "http://localhost",
-				"port": 9200,
-				"index": "debug_active_data",
-				"type": "active_data"
-			}
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "/app/logs/activedata.log",
+				"maxBytes": 10000000,
+				"backupCount": 10,
+				"encoding": "utf8"
+			},
+//			{
+//				"log_type": "email",
+//				"from_address": "klahnakoski@mozilla.com",
+//				"to_address": "klahnakoski@mozilla.com",
+//				"subject": "[ALERT][DEV]Problem with ActiveData Server",
+//				"$ref": "file://~/private.json#email"
+//			},
+//			{
+//				"log_type": "elasticsearch",
+//				"host": "http://localhost",
+//				"port": 9200,
+//				"index": "debug_active_data",
+//				"type": "active_data"
+//			}
 		]
 	}
 }

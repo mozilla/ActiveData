@@ -92,11 +92,11 @@ class Log(object):
 
         if settings.log:
             cls.logging_multi = StructuredLogger_usingMulti()
-            from mo_logs.log_usingThread import StructuredLogger_usingThread
-            cls.main_log = StructuredLogger_usingThread(cls.logging_multi)
-
             for log in listwrap(settings.log):
                 Log.add_log(Log.new_instance(log))
+
+            from mo_logs.log_usingThread import StructuredLogger_usingThread
+            cls.main_log = StructuredLogger_usingThread(cls.logging_multi)
 
         if settings.cprofile.enabled == True:
             Log.alert("cprofiling is enabled, writing to {{filename}}", filename=os.path.abspath(settings.cprofile.filename))
@@ -123,8 +123,9 @@ class Log(object):
 
         if profiles.ON and hasattr(cls, "settings"):
             profiles.write(cls.settings.profile)
-        cls.main_log.stop()
-        cls.main_log = StructuredLogger_usingStream(sys.stdout)
+
+        main_log, cls.main_log = cls.main_log, StructuredLogger_usingStream(sys.stdout)
+        main_log.stop()
 
     @classmethod
     def new_instance(cls, settings):

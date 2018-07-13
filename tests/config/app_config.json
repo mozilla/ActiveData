@@ -22,6 +22,7 @@
 		"jx_elasticsearch.meta.DEBUG": true,
 		"jx_base.expressions.ALLOW_SCRIPTING": true
 	},
+	"dockerflow": true,
 	"request_logs": {
 		"host": "http://localhost",
 		"port": 9200,
@@ -39,7 +40,6 @@
 		"type": "query",
 		"debug": false
 	},
-	"dockerflow":true,
 	"elasticsearch": {
 		"host": "http://localhost",
 		"port": 9200,

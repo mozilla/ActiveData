@@ -1,0 +1,62 @@
+# Python CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/python:2.7.15
+
+      # ELASTICSEARCH
+      # https://www.elastic.co/guide/en/elasticsearch/reference/6.3/docker.html
+      - image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.3.0
+        environment:
+          cluster.name: activedata-test
+          bootstrap.memory_lock: true
+          ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+          bootstrap.system_call_filter: false
+          transport.host: localhost
+          discovery.type: single-node
+
+    working_directory: ~/repo
+
+    environment:
+      PYTHONPATH: .:vendor
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "requirements.txt" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
+
+      - run:
+          name: install dependencies
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            pip install -r requirements.txt
+
+      - save_cache:
+          paths:
+            - ./venv
+          key: v1-dependencies-{{ checksum "requirements.txt" }}
+
+      - run:
+          name: run tests
+          environment:
+            PYTHONPATH: .:vendor
+            TEST_CONFIG: tests/travis/app.json
+          command: |
+            . venv/bin/activate
+            python active_data/app.py --settings=tests/travis/app.json &
+            sleep 5
+            python -m unittest discover tests --failfast
+
+      - store_artifacts:
+          path: test-reports
+          destination: test-reports

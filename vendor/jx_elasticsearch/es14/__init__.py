@@ -52,7 +52,6 @@ class ES14(Container):
         host,
         index,
         type=None,
-        alias=None,
         name=None,
         port=9200,
         read_only=True,

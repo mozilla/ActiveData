@@ -89,24 +89,22 @@ class ColumnList(Table):
                 values = set()
                 objects = 0
                 multi = 1
-                for t, cs in self.data.items():
-                    for c, css in cs.items():
-                        for column in css:
-                            value = column[mc.names["."]]
-                            if value == None:
-                                pass
-                            else:
-                                count += 1
-                                if isinstance(value, list):
-                                    multi = max(multi, len(value))
-                                    try:
-                                        values |= set(value)
-                                    except Exception:
-                                        objects += len(value)
-                                elif isinstance(value, Mapping):
-                                    objects += 1
-                                else:
-                                    values.add(value)
+                for column in self._all_columns():
+                    value = column[mc.names["."]]
+                    if value == None:
+                        pass
+                    else:
+                        count += 1
+                        if isinstance(value, list):
+                            multi = max(multi, len(value))
+                            try:
+                                values |= set(value)
+                            except Exception:
+                                objects += len(value)
+                        elif isinstance(value, Mapping):
+                            objects += 1
+                        else:
+                            values.add(value)
                 mc.count = count
                 mc.cardinality = len(values) + objects
                 mc.partitions = jx.sort(values)
@@ -114,12 +112,18 @@ class ColumnList(Table):
                 mc.last_updated = Date.now()
         self.dirty = False
 
+    def _all_columns(self):
+        return [
+            column
+            for t, cs in self.data.items()
+            for _, css in cs.items()
+            for column in css
+        ]
+
     def __iter__(self):
-        self._update_meta()
-        for t, cs in self.data.items():
-            for c, css in cs.items():
-                for column in css:
-                    yield column
+        with self.locker:
+            self._update_meta()
+            return iter(self._all_columns())
 
     def __len__(self):
         return self.data['meta.columns']['es_index'].count

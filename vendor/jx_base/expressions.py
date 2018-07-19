@@ -80,7 +80,7 @@ def _jx_expression(expr):
     elif isinstance(expr, text_type):
         return Variable(expr)
     elif isinstance(expr, (list, tuple)):
-        return TupleOp("tuple", map(jx_expression, expr))  # FORMALIZE
+        return TupleOp("tuple", list(map(jx_expression, expr)))  # FORMALIZE
 
     expr = wrap(expr)
     try:

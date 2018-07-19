@@ -24,6 +24,7 @@ from pyLibrary.env import elasticsearch, http
 
 EXTRA_WAIT_TIME = 20 * SECOND  # WAIT TIME TO SEND TO AWS, IF WE wait_forever
 OLD_BRANCH = DAY
+BRANCH_WHITELIST = None
 
 
 @override
@@ -174,6 +175,15 @@ def _get_single_branch_from_hg(settings, description, dir):
                 _path = path.strip("/").split("/")
                 detail.locale = _path[-1]
                 detail.name = "weave"
+
+            if BRANCH_WHITELIST is not None:
+                found = False
+                for br in BRANCH_WHITELIST:
+                    if br in str(detail.name):
+                        found = True
+                        break
+                if not found:
+                    continue
 
             Log.note("Branch {{name}} {{locale}}", name=detail.name, locale=detail.locale)
             output.append(detail)

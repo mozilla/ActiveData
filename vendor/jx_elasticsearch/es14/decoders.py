@@ -159,7 +159,7 @@ class SetDecoder(AggsDecoder):
         domain = self.domain
 
         domain_key = domain.key
-        include, text_include = zip(*(
+        include, text_include = transpose(*(
             (
                 float(v) if isinstance(v, (int, float)) else v,
                 text_type(float(v)) if isinstance(v, (int, float)) else v
@@ -497,7 +497,7 @@ class ObjectDecoder(AggsDecoder):
             prefix = edge.value.var
             flatter = lambda k: relative_field(k, prefix)
 
-        self.put, self.fields = zip(*[
+        self.put, self.fields = transpose(*[
             (flatter(untype_path(c.names["."])), c.es_column)
             for c in query.frum.schema.leaves(prefix)
         ])

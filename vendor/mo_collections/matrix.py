@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_future import text_type
+from mo_future import text_type, xrange
 from mo_dots import Null, Data, coalesce, get_module
 from mo_kwargs import override
 from mo_logs import Log
@@ -335,18 +335,18 @@ def _getitem(c, i):
             return (len(c), ), c
         elif isinstance(select, slice):
             sub = c[select]
-            dims, cube = zip(*[_getitem(cc, i[1::]) for cc in sub])
+            dims, cube = transpose(*[_getitem(cc, i[1::]) for cc in sub])
             return (len(cube),) + dims[0], cube
         else:
             return (), c[select]
     else:
         select = i[0]
         if select == None:
-            dims, cube = zip(*[_getitem(cc, i[1::]) for cc in c])
+            dims, cube = transpose(*[_getitem(cc, i[1::]) for cc in c])
             return (len(cube),)+dims[0], cube
         elif isinstance(select, slice):
             sub = c[select]
-            dims, cube = zip(*[_getitem(cc, i[1::]) for cc in sub])
+            dims, cube = transpose(*[_getitem(cc, i[1::]) for cc in sub])
             return (len(cube),)+dims[0], cube
         else:
             with suppress_exception:

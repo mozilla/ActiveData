@@ -328,7 +328,7 @@ def format_cube(T, select, query=None):
             data={h: Matrix(list=[]) for i, h in enumerate(table.header)}
         )
 
-    cols = zip(*unwrap(table.data))
+    cols = transpose(*unwrap(table.data))
     return Cube(
         select,
         edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(table.data), "interval": 1}}],

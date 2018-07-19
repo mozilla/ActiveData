@@ -19,16 +19,16 @@ from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.expressions import Variable, LeavesOp
-from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template, es_and, es_or, es_not, es_script
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template, es_and, es_or, es_script
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap
 from mo_dots.lists import FlatList
+from mo_future import transpose
 from mo_json.typed_encoder import untype_path, unnest_path, untyped
 from mo_logs import Log
-from mo_math import AND
-from mo_math import MAX
+from mo_math import AND, MAX
 from mo_times.timer import Timer
 
 format_dispatch = {}
@@ -327,7 +327,7 @@ def format_cube(T, select, query=None):
             data={h: Matrix(list=[]) for i, h in enumerate(table.header)}
         )
 
-    cols = zip(*unwrap(table.data))
+    cols = transpose(*unwrap(table.data))
     return Cube(
         select,
         edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(table.data), "interval": 1}}],

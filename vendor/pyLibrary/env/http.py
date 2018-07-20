@@ -158,9 +158,6 @@ def request(method, url, headers=None, zip=None, retry=None, **kwargs):
             try:
                 DEBUG and Log.note(u"http {{method|upper}} to {{url}}", method=method, url=text_type(url))
                 request_count += 1
-
-                del kwargs['retry']
-                del kwargs['zip']
                 return session.request(method=method, headers=headers, url=str(url), **kwargs)
             except Exception as e:
                 e = Except.wrap(e)

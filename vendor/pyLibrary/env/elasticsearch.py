@@ -501,7 +501,6 @@ class Index(Features):
         )
 
 
-
 HOPELESS = [
     "Document contains at least one immense term",
     "400 MapperParsingException",
@@ -510,9 +509,8 @@ HOPELESS = [
     "JsonParseException"
 ]
 
+known_clusters = {}  # MAP FROM (host, port) PAIR TO CLUSTER INSTANCE
 
-
-known_clusters = {}
 
 class Cluster(object):
 

@@ -238,7 +238,6 @@ class TableDesc(DataClass(
         # return singlton.get_columns(table_name=self.name)
 
 
-
 Column = DataClass(
     "Column",
     [

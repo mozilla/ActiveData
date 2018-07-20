@@ -15,6 +15,7 @@ import hashlib
 
 from future.utils import text_type
 
+from active_data.actions import save_query
 from mo_dots import wrap
 from mo_json import value2json
 from mo_json_config import URL
@@ -62,7 +63,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
 
         # ENSURE THE QUERY HAS BEEN INDEXED
         Log.note("Flush saved query (with hash {{hash}})", hash=expected_hash)
-        container = elasticsearch.Index(index="saved_queries", kwargs=settings)
+        container = elasticsearch.Index(index="saved_queries", type=save_query.DATA_TYPE, kwargs=settings)
         container.flush(forced=True)
         with Timer("wait for 5 seconds"):
             Till(seconds=5).wait()

@@ -169,6 +169,8 @@ class ElasticsearchMetadata(Namespace):
                 q.append(SELF_PATH)
             query_paths.append(ROOT_PATH)
             self.alias_to_query_paths[alias] = query_paths
+            for i in self.index_to_alias.get_domain(alias):
+                self.alias_to_query_paths[i] = query_paths
 
             # ADD RELATIVE NAMES
             for abs_column in abs_columns:
@@ -523,8 +525,8 @@ class Snowflake(object):
     REPRESENT ONE ALIAS, AND ITS NESTED ARRAYS
     """
 
-    def __init__(self, alias, namespace):
-        self.alias = alias
+    def __init__(self, name, namespace):
+        self.name = name
         self.namespace = namespace
 
     def get_schema(self, query_path):
@@ -535,10 +537,10 @@ class Snowflake(object):
         """
         RETURN A LIST OF ALL NESTED COLUMNS
         """
-        output = self.namespace.alias_to_query_paths.get(self.alias)
+        output = self.namespace.alias_to_query_paths.get(self.name)
         if output:
             return output
-        Log.error("Can not find index {{index|quote}}", index=self.alias)
+        Log.error("Can not find index {{index|quote}}", index=self.name)
 
     @property
     def columns(self):
@@ -548,7 +550,7 @@ class Snowflake(object):
 
 
 
-        return self.namespace.get_columns(literal_field(self.alias))
+        return self.namespace.get_columns(literal_field(self.name))
 
 
 class Schema(jx_base.Schema):

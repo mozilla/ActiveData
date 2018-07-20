@@ -97,7 +97,6 @@ class ES52(Container):
     def namespace(self):
         return self._namespace
 
-
     def get_table(self, full_name):
         return Table(full_name, self)
 
@@ -197,12 +196,13 @@ class ES52(Container):
         THE where CLAUSE IS AN ES FILTER
         """
         command = wrap(command)
-        schema = self.es.get_properties()
-        es_filter = jx_expression(command.where).to_esfilter(self.schema)
+        table = self.get_table(command['update'])
+        # schema = self.es.get_properties()
+        es_filter = jx_expression(command.where).to_esfilter(table.schema)
 
         # GET IDS OF DOCUMENTS
         results = self.es.search({
-            "stored_fields": listwrap(schema._routing.path),
+            "stored_fields": "_id",
             "query": {"bool": {
                 "filter": es_filter
             }},
@@ -224,7 +224,7 @@ class ES52(Container):
             updates = []
             for h in results.hits.hits:
                 for s in scripts:
-                    updates.append({"update": {"_id": h._id, "_routing": unwraplist(h.fields[literal_field(schema._routing.path)])}})
+                    updates.append({"update": {"_id": h._id}})
                     updates.append(s)
             content = ("\n".join(value2json(c) for c in updates) + "\n")
             response = self.es.cluster.post(
@@ -238,7 +238,7 @@ class ES52(Container):
                 Log.error("could not update: {{error}}", error=[e.error for i in response["items"] for e in i.values() if e.status not in (200, 201)])
 
         # DELETE BY QUERY, IF NEEDED
-        if '.' in listwarp(command.clear):
+        if '.' in listwrap(command.clear):
             self.es.delete_record(es_filter)
             return
 

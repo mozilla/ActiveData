@@ -10,15 +10,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from collections import Mapping
+
 import flask
 from flask import Response
 from future.utils import text_type
 
+import jx_elasticsearch
 from active_data import record_request
 from active_data.actions import save_query
-from jx_base import STRUCT
+from jx_base import STRUCT, container
 from jx_python import meta
-from mo_dots import coalesce, join_field, split_field
+from jx_python.containers.list_usingPythonList import ListContainer
+from mo_dots import coalesce, join_field, split_field, set_default, startswith_field
 from mo_json import value2json
 from mo_logs import Log, strings
 from mo_logs.strings import expand_template, unicode2utf8
@@ -97,7 +101,7 @@ def test_mode_wait(query):
         if query["from"].startswith("meta."):
             return
 
-        alias = join_field(split_field(query["from"])[0:1])
+        alias, _ = join_field(split_field(query["from"])[0:1])
         metadata_manager.meta.tables[alias].timestamp = now  # TRIGGER A METADATA RELOAD AFTER THIS TIME
 
         # MARK COLUMNS DIRTY
@@ -138,5 +142,56 @@ def test_mode_wait(query):
             )
     except Exception as e:
         Log.warning("could not pickup columns", cause=e)
+
+
+metadata = None
+
+
+def find_container(frum):
+    """
+    :param frum:
+    :param schema:
+    :return:
+    """
+    global metadata
+    if not metadata:
+        if not container.config.default.settings:
+            Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
+        metadata = jx_elasticsearch.new_instance(index=frum, kwargs=container.config.default.settings)
+
+    if isinstance(frum, text_type):
+
+        path = split_field(frum)
+        if path[0] == "meta":
+            if path[1] in ["columns", "tables"]:
+                return metadata.namespace.meta[path[1]].denormalized()
+            else:
+                Log.error("{{name}} not a recognized table", name=frum)
+
+        type_ = container.config.default.type
+        fact_table_name = split_field(frum)[0]
+
+        settings = set_default(
+            {
+                "index": fact_table_name,
+                "name": frum,
+                "exists": True,
+            },
+            container.config.default.settings
+        )
+        settings.type = None
+        return container.type2container[type_](settings)
+    elif isinstance(frum, Mapping) and frum.type and container.type2container[frum.type]:
+        # TODO: Ensure the frum.name is set, so we capture the deep queries
+        if not frum.type:
+            Log.error("Expecting from clause to have a 'type' property")
+        return container.type2container[frum.type](frum.settings)
+    elif isinstance(frum, Mapping) and (frum["from"] or isinstance(frum["from"], (list, set))):
+        from jx_base.query import QueryOp
+        return QueryOp.wrap(frum, namespace=schema)
+    elif isinstance(frum, (list, set)):
+        return _ListContainer("test_list", frum)
+    else:
+        return frum
 
 

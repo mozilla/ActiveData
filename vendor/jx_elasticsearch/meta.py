@@ -18,7 +18,7 @@ import jx_base
 from jx_base import STRUCT, TableDesc, BOOLEAN
 from jx_base.namespace import Namespace
 from jx_base.query import QueryOp
-from jx_python import jx, meta as jx_base_meta
+from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
 from mo_collections.relation import Relation_usingList
@@ -26,7 +26,7 @@ from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_de
 from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
 from mo_kwargs import override
 from mo_logs import Log
-from mo_logs.exceptions import extract_stack, Except
+from mo_logs.exceptions import Except
 from mo_logs.strings import quote
 from mo_math import MAX
 from mo_threads import Queue, THREAD_STOP, Thread, Till
@@ -88,7 +88,14 @@ class ElasticsearchMetadata(Namespace):
             "meta.tables": Date.now()
         }
         table_columns = metadata_tables()
-        self.meta.tables = ListContainer("meta.tables", [], jx_base.Schema(".", table_columns))
+        self.meta.tables = ListContainer(
+            "meta.tables",
+            [
+                # TableDesc("meta.columns", None, ".", Date.now()),
+                # TableDesc("meta.tables", None, ".", Date.now())
+            ],
+            jx_base.Schema(".", table_columns)
+        )
         self.meta.columns.extend(table_columns)
         # TODO: fix monitor so it does not bring down ES
         if ENABLE_META_SCAN:
@@ -96,6 +103,10 @@ class ElasticsearchMetadata(Namespace):
         else:
             self.worker = Thread.run("refresh metadata", self.not_monitor)
         return
+
+    @property
+    def namespace(self):
+        return self.meta.columns.namespace
 
     @property
     def url(self):
@@ -505,9 +516,13 @@ class ElasticsearchMetadata(Namespace):
             })
             DEBUG and Log.note("Did not get {{col.es_index}}.{{col.es_column}} info", col=c)
 
-    def get_table(self, alias_name):
+    def get_table(self, name):
+        if name == "meta.columns":
+            return ListContainer(self.meta.columns)
+
+            # return self.meta.columns
         with self.meta.tables.locker:
-            return wrap([t for t in self.meta.tables.data if t.name == alias_name])
+            return wrap([t for t in self.meta.tables.data if t.name == name])
 
     def get_snowflake(self, fact_table_name):
         return Snowflake(fact_table_name, self)
@@ -547,9 +562,6 @@ class Snowflake(object):
         """
         RETURN ALL COLUMNS FROM ORIGIN OF FACT TABLE
         """
-
-
-
         return self.namespace.get_columns(literal_field(self.name))
 
 

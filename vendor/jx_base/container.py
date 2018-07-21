@@ -52,7 +52,6 @@ class Container(object):
     METADATA FOR A Container IS CALL A Namespace
     """
 
-    __slots__ = ["data", "namespaces"]
 
     @classmethod
     def new_instance(type, frum, schema=None):

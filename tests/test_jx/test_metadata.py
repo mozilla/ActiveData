@@ -20,7 +20,6 @@ from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 class TestMetadata(BaseTestCase):
 
-
     def test_meta(self):
         test = wrap({
             "query": {"from": TEST_TABLE},

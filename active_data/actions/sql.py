@@ -15,7 +15,7 @@ from collections import Mapping
 import flask
 from active_data import record_request
 from flask import Response
-from jx_python import jx, find_container
+from jx_python import jx
 from mo_dots import wrap, listwrap, unwraplist
 from mo_json import utf82unicode, json2value, value2json
 from mo_logs import Log
@@ -23,7 +23,7 @@ from mo_logs.strings import unicode2utf8
 from mo_math import Math
 
 import moz_sql_parser
-from active_data.actions import save_query, send_error, test_mode_wait
+from active_data.actions import save_query, send_error, test_mode_wait, find_container
 from active_data.actions.jx import BLANK, QUERY_SIZE_LIMIT
 from jx_base.container import Container
 from mo_logs.exceptions import Except

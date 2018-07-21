@@ -31,7 +31,7 @@ from mo_times.dates import Date
 singlton = None
 
 
-class ColumnList(Table):
+class ColumnList(Table, jx_base.Container):
     """
     OPTIMIZED FOR THE PARTICULAR ACCESS PATTERNS USED
     """
@@ -112,6 +112,13 @@ class ColumnList(Table):
                 mc.last_updated = Date.now()
         self.dirty = False
 
+    def get_snapshot(self):
+        with self.locker:
+            self._update_meta()
+            if not self._schema:
+                self._schema = Schema(".", [c for cs in self.data["meta.columns"].values() for c in cs])
+            return self._all_columns(), self._schema
+
     def _all_columns(self):
         return [
             column
@@ -159,12 +166,10 @@ class ColumnList(Table):
             Log.error("should not happen", cause=e)
 
     def query(self, query):
-        with self.locker:
-            self._update_meta()
-            query.frum = self.__iter__()
-            output = jx.run(query)
-
-        return output
+        snapshot, schema = self.get_snapshot()
+        from jx_python.containers.list_usingPythonList import ListContainer
+        query.frum = ListContainer("meta.columns", snapshot, schema)
+        return jx.run(query)
 
     def groupby(self, keys):
         with self.locker:
@@ -181,6 +186,11 @@ class ColumnList(Table):
 
     @property
     def namespace(self):
+        return self
+
+    def get_table(self, table_name):
+        if table_name != "meta.columns":
+            Log.error("this container has only the meta.columns")
         return self
 
     def denormalized(self):

@@ -112,13 +112,6 @@ class ColumnList(Table, jx_base.Container):
                 mc.last_updated = Date.now()
         self.dirty = False
 
-    def get_snapshot(self):
-        with self.locker:
-            self._update_meta()
-            if not self._schema:
-                self._schema = Schema(".", [c for cs in self.data["meta.columns"].values() for c in cs])
-            return self._all_columns(), self._schema
-
     def _all_columns(self):
         return [
             column
@@ -166,9 +159,16 @@ class ColumnList(Table, jx_base.Container):
             Log.error("should not happen", cause=e)
 
     def query(self, query):
-        snapshot, schema = self.get_snapshot()
+        # NOT EXPECTED TO BE RUN
+        Log.error("not")
+        with self.locker:
+            self._update_meta()
+            if not self._schema:
+                self._schema = Schema(".", [c for cs in self.data["meta.columns"].values() for c in cs])
+            snapshot = self._all_columns()
+
         from jx_python.containers.list_usingPythonList import ListContainer
-        query.frum = ListContainer("meta.columns", snapshot, schema)
+        query.frum = ListContainer("meta.columns", snapshot, self._schema)
         return jx.run(query)
 
     def groupby(self, keys):

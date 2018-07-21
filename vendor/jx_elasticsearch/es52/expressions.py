@@ -705,18 +705,22 @@ def to_es_script(self, schema):
 
 @extend(OrOp)
 def to_esfilter(self, schema):
-    return es_or([t.partial_eval().to_esfilter(schema) for t in self.terms])
+    # TODO: REPLICATE THIS WHOLE expression.py SO IT IS CLEAR ES5 QUERIES ARE A BIT DIFFERENT
+    if schema.snowflake.namespace.es_cluster.version.startswith("5."):
+        # VERSION 5.2.x
+        # WE REQUIRE EXIT-EARLY SEMANTICS, OTHERWISE EVERY EXPRESSION IS A SCRIPT EXPRESSION
+        # {"bool":{"should"  :[a, b, c]}} RUNS IN PARALLEL
+        # {"bool":{"must_not":[a, b, c]}} ALSO RUNS IN PARALLEL
 
-    # OR(x) == NOT(AND(NOT(xi) for xi in x))
-    # output = es_not(es_and([
-    #     NotOp("not", t).partial_eval().to_esfilter(schema)
-    #     for t in self.terms
-    # ]))
-    # return output
-
-    # WE REQUIRE EXIT-EARLY SEMANTICS, OTHERWISE EVERY EXPRESSION IS A SCRIPT EXPRESSION
-    # {"bool":{"should"  :[a, b, c]}} RUNS IN PARALLEL
-    # {"bool":{"must_not":[a, b, c]}} ALSO RUNS IN PARALLEL
+        # OR(x) == NOT(AND(NOT(xi) for xi in x))
+        output = es_not(es_and([
+            NotOp("not", t).partial_eval().to_esfilter(schema)
+            for t in self.terms
+        ]))
+        return output
+    else:
+        # VERSION 6.2
+        return es_or([t.partial_eval().to_esfilter(schema) for t in self.terms])
 
 
 @extend(LengthOp)

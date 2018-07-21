@@ -618,11 +618,11 @@ class Schema(jx_base.Schema):
 
     @property
     def name(self):
-        return concat_field(self.snowflake.alias, self.query_path[0])
+        return concat_field(self.snowflake.name, self.query_path[0])
 
     @property
     def columns(self):
-        return self.snowflake.namespace.get_columns(literal_field(self.snowflake.alias))
+        return self.snowflake.namespace.get_columns(literal_field(self.snowflake.name))
 
     def map_to_es(self):
         """

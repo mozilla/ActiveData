@@ -366,7 +366,7 @@ def es_aggsop(es, frum, query):
     decoders = get_decoders_by_depth(query)
     start = 0
 
-    #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
+    # <TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
     split_where = split_expression_by_depth(query.where, schema=frum.schema)
 
     if len(split_field(frum.name)) > 1:

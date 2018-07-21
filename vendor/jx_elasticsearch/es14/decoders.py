@@ -123,13 +123,13 @@ class AggsDecoder(object):
         pass
 
     def get_value_from_row(self, row):
-        Log.error("Not implemented")
+        raise NotImplementedError()
 
     def get_value(self, index):
-        Log.error("Not implemented")
+        raise NotImplementedError()
 
     def get_index(self, row):
-        Log.error("Not implemented")
+        raise NotImplementedError()
 
     @property
     def num_columns(self):

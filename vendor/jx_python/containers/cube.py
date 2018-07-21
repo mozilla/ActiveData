@@ -409,7 +409,7 @@ class Cube(Container):
 
     def window(self, window):
         if window.edges or window.sort:
-            Log.error("not implemented")
+            raise NotImplementedError()
 
         from jx_python import jx
 

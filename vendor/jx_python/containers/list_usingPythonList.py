@@ -207,7 +207,7 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
 
     def having(self, having):
         _ = having
-        Log.error("not implemented")
+        raise NotImplementedError()
 
     def format(self, format):
         if format == "table":

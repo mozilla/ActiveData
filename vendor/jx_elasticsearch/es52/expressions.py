@@ -25,6 +25,7 @@ from mo_future import text_type
 from mo_logs import Log, suppress_exception
 from mo_logs.strings import expand_template, quote
 from mo_math import MAX, OR
+from mo_times import Date
 from pyLibrary.convert import string2regexp
 
 NUMBER_TO_STRING = """
@@ -255,6 +256,12 @@ def to_es_script(self, schema):
             return EsScript(
                 type=OBJECT,
                 expr="[" + ", ".join(_convert(vv).expr for vv in v) + "]",
+                frum=self
+            )
+        if isinstance(v, Date):
+            return EsScript(
+                type=NUMBER,
+                expr=text_type(v.unix),
                 frum=self
             )
 

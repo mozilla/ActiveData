@@ -19,6 +19,7 @@ from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from jx_python.meta import Column
 from mo_dots import wrap, FlatList, coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field
+from mo_files.url import URL
 from mo_future import text_type, binary_type
 from mo_json import value2json, json2value
 from mo_json.typed_encoder import EXISTS_TYPE, BOOLEAN_TYPE, STRING_TYPE, NUMBER_TYPE, NESTED_TYPE, TYPE_PREFIX, json_type_to_inserter_type
@@ -137,7 +138,7 @@ class Index(Features):
 
     @property
     def url(self):
-        return self.cluster.path.rstrip("/") + "/" + self.path.lstrip("/")
+        return self.cluster.url / self.path
 
     def get_properties(self, retry=True):
         if self.settings.explore_metadata:
@@ -543,7 +544,7 @@ class Cluster(object):
         self.metatdata_last_updated = Date.now()
         self.debug = debug
         self._version = None
-        self.path = kwargs.host + ":" + text_type(kwargs.port)
+        self.url = URL(host, port=port)
 
     @override
     def get_or_create_index(
@@ -858,7 +859,7 @@ class Cluster(object):
         return self._version
 
     def post(self, path, **kwargs):
-        url = self.settings.host + ":" + text_type(self.settings.port) + path
+        url = self.url / path  # self.settings.host + ":" + text_type(self.settings.port) + path
 
         try:
             heads = wrap(kwargs).headers
@@ -869,15 +870,20 @@ class Cluster(object):
             if data == None:
                 pass
             elif isinstance(data, Mapping):
-                kwargs[DATA_KEY] = unicode2utf8(value2json(data))
+                data = kwargs[DATA_KEY] = unicode2utf8(value2json(data))
             elif isinstance(data, text_type):
-                kwargs[DATA_KEY] = unicode2utf8(data)
+                data = kwargs[DATA_KEY] = unicode2utf8(data)
+            elif hasattr(data, str("__iter__")):
+                pass  # ASSUME THIS IS AN ITERATOR OVER BYTES
             else:
                 Log.error("data must be utf8 encoded string")
 
             if self.debug:
-                sample = kwargs.get(DATA_KEY, b"")[:300]
-                Log.note("{{url}}:\n{{data|indent}}", url=url, data=sample)
+                if isinstance(data, binary_type):
+                    sample = kwargs.get(DATA_KEY, b"")[:300]
+                    Log.note("{{url}}:\n{{data|indent}}", url=url, data=sample)
+                else:
+                    Log.note("{{url}}:\n\t<stream>", url=url)
 
             self.debug and Log.note("POST {{url}}", url=url)
             response = http.post(url, **kwargs)
@@ -895,7 +901,7 @@ class Cluster(object):
             return details
         except Exception as e:
             e = Except.wrap(e)
-            if url[0:4] != "http":
+            if url.scheme != "http":
                 suggestion = " (did you forget \"http://\" prefix on the host name?)"
             else:
                 suggestion = ""
@@ -1101,7 +1107,7 @@ class Alias(Features):
 
     @property
     def url(self):
-        return self.cluster.path.rstrip("/") + "/" + self.path.lstrip("/")
+        return self.cluster.url / self.path
 
     def get_snowflake(self, retry=True):
         if self.settings.explore_metadata:
@@ -1531,6 +1537,24 @@ DEFAULT_DYNAMIC_TEMPLATES = wrap([
         "default_string": {
             "mapping": {"type": "keyword", "store": True},
             "match_mapping_type": "string"
+        }
+    },
+    {
+        "default_long": {
+            "mapping": {"type": "long", "store": True},
+            "match_mapping_type": "long"
+        }
+    },
+    {
+        "default_double": {
+            "mapping": {"type": "double", "store": True},
+            "match_mapping_type": "double"
+        }
+    },
+    {
+        "default_integer": {
+            "mapping": {"type": "integer", "store": True},
+            "match_mapping_type": "integer"
         }
     }
 ])

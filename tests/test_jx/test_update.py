@@ -7,13 +7,15 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_base.expressions import NULL
+
 import jx_elasticsearch
 from mo_dots import wrap
-from test_jx import BaseTestCase, TEST_TABLE
+from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
 class TestUpdate(BaseTestCase):
@@ -27,9 +29,9 @@ class TestUpdate(BaseTestCase):
                 {"a": 6, "b": 2},
                 {"a": 2}
             ]}),
-            typed=True
+            typed=False
         )
-        container = jx_elasticsearch.new_instance(self._es_test_settings)
+        container = jx_elasticsearch.new_instance(self.utils._es_test_settings)
         container.update({
             "update": settings.index,
             "set": {"c": {"add": ["a", "b"]}}
@@ -37,11 +39,11 @@ class TestUpdate(BaseTestCase):
 
         self.utils.send_queries({
             "query": {
-                "from": TEST_TABLE,
-                "select": "c"
+                "from": settings.index,
+                "select": ["c", "a"]
             },
-            "expecting_list": {
-                "meta": {"format": "list"},
-                "data": [6, 7, 7, 8, 2]
+            "expecting_table": {
+                "header": ["a", "c"],
+                "data": [[1, 6], [3, 7], [4, 7], [6, 8], [2, NULL]]
             }
         })

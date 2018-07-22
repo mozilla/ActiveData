@@ -193,6 +193,8 @@ def es_setop(es, query):
             if es_query.stored_fields[0] == "_source":
                 es_query.stored_fields = ["_source"]
                 n.pull = get_pull_source(n.value.var)
+            elif n.value == "_id":
+                n.pull = jx_expression_to_function("_id")
             else:
                 n.pull = jx_expression_to_function(concat_field("fields", literal_field(n.value.var)))
         else:

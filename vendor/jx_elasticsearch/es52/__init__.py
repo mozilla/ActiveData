@@ -27,7 +27,7 @@ from jx_elasticsearch.es52.setop import is_setop, es_setop
 from jx_elasticsearch.es52.util import aggregates
 from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
-from mo_dots import Data, Null, unwrap, coalesce, split_field, literal_field, unwraplist, join_field, wrap, listwrap, FlatList, concat_field
+from mo_dots import Data, Null, unwrap, coalesce, split_field, literal_field, unwraplist, join_field, wrap, listwrap, FlatList, concat_field, set_default
 from mo_json import scrub, value2json
 from mo_json.typed_encoder import TYPE_PREFIX, EXISTS_TYPE
 from mo_kwargs import override
@@ -161,7 +161,7 @@ class ES52(Container):
         except Exception as e:
             e = Except.wrap(e)
             if "Data too large, data for" in e:
-                http.post(self.es.cluster.path+"/_cache/clear")
+                http.post(self.es.cluster.url / "_cache/clear")
                 Log.error("Problem (Tried to clear Elasticsearch cache)", e)
             Log.error("problem", e)
 
@@ -199,46 +199,37 @@ class ES52(Container):
         """
         command = wrap(command)
         table = self.get_table(command['update'])
+
+        es_index = self.es.cluster.get_index(read_only=False, alias=None, kwargs=self.es.settings)
+
         schema = table.schema
         es_filter = jx_expression(command.where).to_esfilter(schema)
 
         # GET IDS OF DOCUMENTS
-        results = self.es.search({
-            "stored_fields": "_id",
-            "query": {"bool": {
-                "filter": es_filter
-            }},
-            "size": 10000
-        })
+        query = {
+            "from": command['update'],
+            "select": ["_id"] + [
+                {"name": k, "value": v}
+                for k, v in command.set.items()
+            ],
+            "where": command.where,
+            "format": "list",
+            "limit": 10000
+        }
 
-        update_schema = jx_base.schema.Schema(
-            schema.name, [
-                cc
-                for c in schema.columns
-                for cc in [copy(c)]
-                for cc.es_column in [concat_field("ctx._source", c.es_column)]
-            ])
+        results = self.query(query)
 
-        # SCRIPT IS SAME FOR ALL (CAN ONLY HANDLE ASSIGNMENT TO CONSTANT)
-        scripts = FlatList()
-        for k, v in command.set.items():
-            if not is_variable_name(k):
-                Log.error("Only support simple paths for now")
-            if isinstance(v, Mapping) and v.doc:
-                scripts.append({"doc": v.doc})
-            else:
-                v = scrub(v)
-                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_es_script(update_schema).script(update_schema)})
-
-        if results.hits.hits:
-            updates = []
-            for h in results.hits.hits:
-                for s in scripts:
-                    updates.append({"update": {"_id": h._id}})
-                    updates.append(s)
-            content = ("\n".join(value2json(c) for c in updates) + "\n")
+        if results.data:
+            content = "".join(
+                t
+                for r in results.data
+                for _id, row in [(r._id, r)]
+                for _ in [row.__setitem__('_id', None)]  # WARNING! DESTRUCTIVE TO row
+                for update in map(value2json, ({"update": {"_id": _id}}, {"doc": row}))
+                for t in (update, "\n")
+            )
             response = self.es.cluster.post(
-                self.es.path + "/_bulk",
+                es_index.path + "/" + "_bulk",
                 data=content,
                 headers={"Content-Type": "application/json"},
                 timeout=self.settings.timeout,
@@ -251,5 +242,7 @@ class ES52(Container):
         if '.' in listwrap(command.clear):
             self.es.delete_record(es_filter)
             return
+
+        es_index.flush()
 
 

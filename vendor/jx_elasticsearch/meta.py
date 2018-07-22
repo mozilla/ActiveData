@@ -110,7 +110,7 @@ class ElasticsearchMetadata(Namespace):
 
     @property
     def url(self):
-        return self.es_cluster.path + "/" + self.default_name.replace(".", "/")
+        return self.es_cluster.url / self.default_name.replace(".", "/")
 
     def _reload_columns(self, table_desc):
         """
@@ -454,10 +454,10 @@ class ElasticsearchMetadata(Namespace):
                     ]
                     if old_columns:
                         DEBUG and Log.note(
-                                "Old columns {{names|json}} last updated {{dates|json}}",
-                                names=wrap(old_columns).es_column,
-                                dates=[Date(t).format() for t in wrap(old_columns).last_updated]
-                            )
+                            "Old columns {{names|json}} last updated {{dates|json}}",
+                            names=wrap(old_columns).es_column,
+                            dates=[Date(t).format() for t in wrap(old_columns).last_updated]
+                        )
                         self.todo.extend(old_columns)
                         # TEST CONSISTENCY
                         for c, d in product(list(self.todo.queue), list(self.todo.queue)):

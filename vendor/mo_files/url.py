@@ -1,6 +1,6 @@
 from collections import Mapping
 
-from mo_dots import wrap, Data
+from mo_dots import wrap, Data, coalesce
 from mo_future import urlparse, text_type, PY2, unichr
 from mo_logs import Log
 
@@ -12,14 +12,14 @@ class URL(object):
     [1] https://docs.python.org/3/library/urllib.parse.html
     """
 
-    def __init__(self, value):
+    def __init__(self, value, port=None, path=None, query=None, fragment=None):
         try:
             self.scheme = None
             self.host = None
-            self.port = None
-            self.path = ""
-            self.query = ""
-            self.fragment = ""
+            self.port = port
+            self.path = path
+            self.query = query
+            self.fragment = fragment
 
             if value == None:
                 return
@@ -33,11 +33,11 @@ class URL(object):
             else:
                 output = urlparse(value)
                 self.scheme = output.scheme
-                self.port = output.port
+                self.port = coalesce(port, output.port)
                 self.host = output.netloc.split(":")[0]
-                self.path = output.path
-                self.query = wrap(url_param2value(output.query))
-                self.fragment = output.fragment
+                self.path = coalesce(path, output.path)
+                self.query = coalesce(query, wrap(url_param2value(output.query)))
+                self.fragment = coalesce(fragment, output.fragment)
         except Exception as e:
             Log.error("problem parsing {{value}} to URL", value=value, cause=e)
 

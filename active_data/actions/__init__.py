@@ -101,7 +101,7 @@ def test_mode_wait(query):
         if query["from"].startswith("meta."):
             return
 
-        alias, _ = join_field(split_field(query["from"])[0:1])
+        alias = join_field(split_field(query["from"])[0:1])
         metadata_manager.meta.tables[alias].timestamp = now  # TRIGGER A METADATA RELOAD AFTER THIS TIME
 
         # MARK COLUMNS DIRTY

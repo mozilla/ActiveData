@@ -94,14 +94,14 @@ def test_mode_wait(query):
         return
 
     try:
-        metadata_manager = meta.singlton
+        metadata_manager = find_container(query['from']).namespace
         now = Date.now()
         end_time = now + MINUTE
 
         if query["from"].startswith("meta."):
             return
 
-        alias = join_field(split_field(query["from"])[0:1])
+        alias = split_field(query["from"])[0]
         metadata_manager.meta.tables[alias].timestamp = now  # TRIGGER A METADATA RELOAD AFTER THIS TIME
 
         # MARK COLUMNS DIRTY

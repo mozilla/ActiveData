@@ -73,7 +73,7 @@ def _jx_expression(expr):
     if isinstance(expr, Expression):
         Log.error("Expecting JSON, not expression")
 
-    if expr == None:
+    if expr is None:
         return TRUE
     elif expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal, Date)):
         return Literal(None, expr)

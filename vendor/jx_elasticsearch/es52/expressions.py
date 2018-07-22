@@ -1174,7 +1174,7 @@ def to_es_script(self, schema):
                 frum=self
             )
         else:
-            Log.error("do not know how to handle")
+            Log.error("do not know how to handle: {{self}}", self=self.__data__())
     else:
         return self.partial_eval().to_es_script(schema)
 

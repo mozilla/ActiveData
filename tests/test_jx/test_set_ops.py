@@ -359,8 +359,9 @@ class TestSetOps(BaseTestCase):
                 "select": ["_id", "a"],
                 "from": TEST_TABLE
             },
-            "expecting_list": {
-                "meta": {"format": "list"},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header":["_id", "a"],
                 "data": [
                     [Math.is_hex, "b"]
                 ]

@@ -737,7 +737,8 @@ class Cluster(object):
                 DEFAULT_DYNAMIC_TEMPLATES +
                 m.dynamic_templates
             )
-
+            if self.version.startswith("6."):
+                m.dynamic_templates = [t for t in m.dynamic_templates if "default_integer" not in t]
         if self.version.startswith("5."):
             schema.settings.index.max_inner_result_window = None  # NOT ACCEPTED BY ES5
             schema = json2value(value2json(schema), leaves=True)

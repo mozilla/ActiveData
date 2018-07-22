@@ -14,7 +14,6 @@ from __future__ import unicode_literals
 
 from unittest import skipIf
 
-from jx_base.expressions import NULL
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 
@@ -116,7 +115,7 @@ class TestAggOps(BaseTestCase):
                 "meta": {"format": "cube"},
                 "edges": [],
                 "data": {
-                    "a": 681.3
+                    "a": 723.7
                 }
             }
         }

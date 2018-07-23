@@ -67,9 +67,6 @@ jobs:
     docker:
       - image: docker:18.06-git
 
-    environment:
-      REPO_TAG = $REPO_TAG
-
     steps:
       - checkout
       - setup_remote_docker

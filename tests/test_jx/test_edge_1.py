@@ -1673,7 +1673,7 @@ class TestEdge1(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_tests(test)
+        self.utils.execute_tests(test, places=1.5)
 
     def test_count_constant(self):
         test = {

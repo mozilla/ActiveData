@@ -252,7 +252,7 @@ def es_aggsop(es, frum, query):
                 for column in columns:
                     script = {"scripted_metric": {
                         'init_script': 'params._agg.terms = new HashSet()',
-                        'map_script': 'for (v in doc['+quote(column.es_column)+'].values) params._agg.terms.add(v)',
+                        'map_script': 'for (v in doc['+quote(column.es_column)+'].values) params._agg.terms.add(v);',
                         'combine_script': 'return params._agg.terms.toArray()',
                         'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { if (a!=null) for (v in a) {output.add(v)} } return output.toArray()',
                     }}

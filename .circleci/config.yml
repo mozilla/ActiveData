@@ -89,11 +89,7 @@ workflows:
   version: 2
   test_and_dockerize:
     jobs:
-      - test:
-          filters:
-            branches:
-              only:
-                - bugzilla-etl
+      - test
       - dock:
           requires:
             - test

@@ -119,7 +119,7 @@ class TestAggOps(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_tests(test, places=1.5)
+        self.utils.execute_tests(test, places=1.5)  # 1.5 approx +/- 3%
 
     @skipIf(global_settings.use=="sqlite", "not expected to pass yet")
     def test_stats(self):

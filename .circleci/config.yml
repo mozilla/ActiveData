@@ -4,7 +4,7 @@
 #
 version: 2
 jobs:
-  build:
+  test:
     docker:
       - image: circleci/python:2.7.15
 
@@ -61,3 +61,25 @@ jobs:
       - store_artifacts:
           path: test-reports
           destination: test-reports
+  dock:
+    working_directory: ~/repo
+
+    docker:
+      - image: docker:18.06-git
+
+    steps:
+      - checkout
+
+      - run:
+          name: Build Docker Image
+          command: |
+            build --file resources\docker\activedata.dockerfile --build-arg REPO_TAG=$REPO_TAG --no-cache --tag activedata .
+      - run:
+          name: Save Docker image layer cache
+          command: |
+            mkdir -p caches
+            docker save -o caches/activedata.tar activedata
+      - save_cache:
+          key: ${REPO_TAG}
+          paths:
+            - /caches/activedata.tar

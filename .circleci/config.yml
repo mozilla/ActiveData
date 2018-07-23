@@ -3,6 +3,12 @@
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2
+
+general:
+  branches:
+    only:
+     - bugzilla-etl
+
 jobs:
   test:
     docker:
@@ -87,9 +93,5 @@ workflows:
   version: 2
   test_and_dockerize:
     jobs:
-#      - test
+      - test
       - dock
-general:
-  branches:
-    only:
-     - bugzilla-etl

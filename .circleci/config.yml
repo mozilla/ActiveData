@@ -61,7 +61,7 @@ jobs:
 #      - store_artifacts:
 #          path: test-reports
 #          destination: test-reports
-  dock:
+  build:
     working_directory: ~/repo
 
     docker:

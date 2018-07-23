@@ -104,18 +104,18 @@ class TestAggOps(BaseTestCase):
                 "select": {"value": "a", "aggregate": "percentile", "percentile": 0.90}
             },
             "expecting_list": {
-                "meta": {"format": "value"}, "data": 681.3
+                "meta": {"format": "value"}, "data": 702.5
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a"],
-                "data": [[681.3]]
+                "data": [[702.5]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "edges": [],
                 "data": {
-                    "a": 723.7
+                    "a": 702.5
                 }
             }
         }

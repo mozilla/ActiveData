@@ -22,7 +22,6 @@
 		"jx_elasticsearch.meta.DEBUG": true,
 		"jx_base.expressions.ALLOW_SCRIPTING": true
 	},
-	"dockerflow": true,
 	"request_logs": {
 		"host": "http://localhost",
 		"port": 9200,
@@ -57,10 +56,6 @@
 			{
 				"log_type": "console"
 			},
-//			{
-//				"log_type": "mozlog",
-//				"appname": "ActiveData-testing"
-//			},
 			{
 				"log_type": "email",
 				"from_address": "klahnakoski@mozilla.com",

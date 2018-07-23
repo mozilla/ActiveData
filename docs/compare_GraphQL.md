@@ -59,7 +59,7 @@ I realize many people enjoy "$#:%@" in their languages, and maybe you can defend
 
 ## Detailed Comparison
 
-The rest of this document goes into detail. My argument depends on the use of a "host language"; which is the turning-complete language you are using to send JSON Expressions. The host language is most likely Javascript, or Python because they make composing JSON easy, but other languages can host JSON Expressions too. What's important to point out is GraphQL is also used in the context of a host language; its extra "features" result in two ways of doing the same thing.
+The rest of this document goes into detail. My argument depends on the use of a "host language"; which is the Turing-complete language you are using to send JSON Expressions. The host language is most likely Javascript, or Python because they make composing JSON easy, but other languages can host JSON Expressions too. What's important to point out is GraphQL is also used in the context of a host language; its extra "features" result in two ways of doing the same thing.
 
 My objective is to demonstrate that the simple semantics of JSON Expressions allow the host language to compose JSON queries, negating the need for pre-processing operators, and making for a simpler query language to reason about. 
 

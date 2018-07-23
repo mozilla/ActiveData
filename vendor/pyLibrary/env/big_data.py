@@ -32,6 +32,7 @@ DEBUG = False
 MIN_READ_SIZE = 8 * 1024
 MAX_STRING_SIZE = 1 * 1024 * 1024
 
+
 class FileString(text_type):
     """
     ACTS LIKE A STRING, BUT IS A FILE

@@ -19,7 +19,7 @@ from datetime import date, datetime, timedelta
 import time
 from jx_base import Column, python_type_to_json_type, NESTED, EXISTS, STRING, NUMBER, INTEGER, BOOLEAN
 from mo_dots import Data, FlatList, NullType, join_field, split_field
-from mo_future import text_type, binary_type, sort_using_key
+from mo_future import text_type, binary_type, sort_using_key, long
 from mo_logs import Log
 from mo_logs.strings import quote, utf82unicode
 from mo_times import Date, Duration
@@ -362,7 +362,7 @@ def _dict2json(value, sub_schema, path, net_new_properties, buffer):
         if k not in sub_schema:
             sub_schema[k] = {}
             net_new_properties.append(path + [k])
-        append(buffer, encode_basestring(k))
+        append(buffer, encode_basestring(encode_property(k)))
         append(buffer, COLON)
         typed_encode(v, sub_schema[k], path + [k], net_new_properties, buffer)
     if prefix is COMMA:

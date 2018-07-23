@@ -18,7 +18,7 @@ import jx_base
 from jx_base import STRUCT, TableDesc, BOOLEAN
 from jx_base.namespace import Namespace
 from jx_base.query import QueryOp
-from jx_python import jx, meta as jx_base_meta
+from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
 from mo_collections.relation import Relation_usingList
@@ -26,7 +26,7 @@ from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_de
 from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
 from mo_kwargs import override
 from mo_logs import Log
-from mo_logs.exceptions import extract_stack
+from mo_logs.exceptions import Except
 from mo_logs.strings import quote
 from mo_math import MAX
 from mo_threads import Queue, THREAD_STOP, Thread, Till
@@ -88,7 +88,14 @@ class ElasticsearchMetadata(Namespace):
             "meta.tables": Date.now()
         }
         table_columns = metadata_tables()
-        self.meta.tables = ListContainer("meta.tables", [], jx_base.Schema(".", table_columns))
+        self.meta.tables = ListContainer(
+            "meta.tables",
+            [
+                # TableDesc("meta.columns", None, ".", Date.now()),
+                # TableDesc("meta.tables", None, ".", Date.now())
+            ],
+            jx_base.Schema(".", table_columns)
+        )
         self.meta.columns.extend(table_columns)
         # TODO: fix monitor so it does not bring down ES
         if ENABLE_META_SCAN:
@@ -98,8 +105,12 @@ class ElasticsearchMetadata(Namespace):
         return
 
     @property
+    def namespace(self):
+        return self.meta.columns.namespace
+
+    @property
     def url(self):
-        return self.es_cluster.path + "/" + self.default_name.replace(".", "/")
+        return self.es_cluster.url / self.default_name.replace(".", "/")
 
     def _reload_columns(self, table_desc):
         """
@@ -141,10 +152,14 @@ class ElasticsearchMetadata(Namespace):
 
     def _parse_properties(self, alias, mapping, meta):
         abs_columns = elasticsearch.parse_properties(alias, None, mapping.properties)
-        if any(c.cardinality == 0 for c in abs_columns):
+        if any(c.cardinality == 0 and c.names['.'] != '_id' for c in abs_columns):
             Log.warning(
                 "Some columns are not stored {{names}}",
-                names=[c.names['.'] for c in abs_columns if c.cardinality == 0]
+                names=[
+                    ".".join((c.es_index, c.names['.']))
+                    for c in abs_columns
+                    if c.cardinality == 0
+                ]
             )
 
         with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
@@ -165,11 +180,13 @@ class ElasticsearchMetadata(Namespace):
                 q.append(SELF_PATH)
             query_paths.append(ROOT_PATH)
             self.alias_to_query_paths[alias] = query_paths
+            for i in self.index_to_alias.get_domain(alias):
+                self.alias_to_query_paths[i] = query_paths
 
             # ADD RELATIVE NAMES
             for abs_column in abs_columns:
                 abs_column.last_updated = None
-                abs_column.jx_type = es_type_to_json_type[abs_column.es_type]
+                abs_column.jx_type = jx_type(abs_column)
                 for query_path in query_paths:
                     abs_column.names[query_path[0]] = relative_field(abs_column.names["."], query_path[0])
                 self.todo.add(self.meta.columns.add(abs_column))
@@ -356,7 +373,7 @@ class ElasticsearchMetadata(Namespace):
                 })
                 return
             elif column.es_type in elasticsearch.ES_NUMERIC_TYPES and cardinality > 30:
-                DEBUG and Log.note("{{field}} has {{num}} parts", field=column.es_index, num=cardinality)
+                DEBUG and Log.note("{{table}}.{{field}} has {{num}} parts", table=column.es_index, field=column.es_column, num=cardinality)
                 self.meta.columns.update({
                     "set": {
                         "count": count,
@@ -399,6 +416,7 @@ class ElasticsearchMetadata(Namespace):
         except Exception as e:
             # CAN NOT IMPORT: THE TEST MODULES SETS UP LOGGING
             # from tests.test_jx import TEST_TABLE
+            e = Except.wrap(e)
             TEST_TABLE = "testdata"
             is_missing_index = any(w in e for w in ["IndexMissingException", "index_not_found_exception"])
             is_test_table = any(column.es_index.startswith(t) for t in [TEST_TABLE_PREFIX, TEST_TABLE])
@@ -436,10 +454,10 @@ class ElasticsearchMetadata(Namespace):
                     ]
                     if old_columns:
                         DEBUG and Log.note(
-                                "Old columns {{names|json}} last updated {{dates|json}}",
-                                names=wrap(old_columns).es_column,
-                                dates=[Date(t).format() for t in wrap(old_columns).last_updated]
-                            )
+                            "Old columns {{names|json}} last updated {{dates|json}}",
+                            names=wrap(old_columns).es_column,
+                            dates=[Date(t).format() for t in wrap(old_columns).last_updated]
+                        )
                         self.todo.extend(old_columns)
                         # TEST CONSISTENCY
                         for c, d in product(list(self.todo.queue), list(self.todo.queue)):
@@ -453,23 +471,23 @@ class ElasticsearchMetadata(Namespace):
                     if column is THREAD_STOP:
                         continue
 
-                    DEBUG and Log.note("update {{table}}.{{column}}", table=column.es_index, column=column.es_column)
-                    if column.es_index in self.index_does_not_exist:
-                        self.meta.columns.update({
-                            "clear": ".",
-                            "where": {"eq": {"es_index": column.es_index}}
-                        })
-                        continue
-                    if column.jx_type in STRUCT or column.es_column.endswith("." + EXISTS_TYPE):
-                        column.last_updated = Date.now()
-                        continue
-                    elif column.last_updated >= Date.now()-TOO_OLD:
-                        continue
-                    try:
-                        self._update_cardinality(column)
-                        (DEBUG and not column.es_index.startswith(TEST_TABLE_PREFIX)) and Log.note("updated {{column.name}}", column=column)
-                    except Exception as e:
-                        Log.warning("problem getting cardinality for {{column.name}}", column=column, cause=e)
+                    with Timer("update {{table}}.{{column}}", param={"table":column.es_index, "column":column.es_column}, debug=DEBUG):
+                        if column.es_index in self.index_does_not_exist:
+                            self.meta.columns.update({
+                                "clear": ".",
+                                "where": {"eq": {"es_index": column.es_index}}
+                            })
+                            continue
+                        if column.jx_type in STRUCT or column.es_column.endswith("." + EXISTS_TYPE):
+                            column.last_updated = Date.now()
+                            continue
+                        elif column.last_updated >= Date.now()-TOO_OLD:
+                            continue
+                        try:
+                            self._update_cardinality(column)
+                            (DEBUG and not column.es_index.startswith(TEST_TABLE_PREFIX)) and Log.note("updated {{column.name}}", column=column)
+                        except Exception as e:
+                            Log.warning("problem getting cardinality for {{column.name}}", column=column, cause=e)
             except Exception as e:
                 Log.warning("problem in cardinality monitor", cause=e)
 
@@ -498,9 +516,13 @@ class ElasticsearchMetadata(Namespace):
             })
             DEBUG and Log.note("Did not get {{col.es_index}}.{{col.es_column}} info", col=c)
 
-    def get_table(self, alias_name):
+    def get_table(self, name):
+        if name == "meta.columns":
+            return ListContainer(self.meta.columns)
+
+            # return self.meta.columns
         with self.meta.tables.locker:
-            return wrap([t for t in self.meta.tables.data if t.name == alias_name])
+            return wrap([t for t in self.meta.tables.data if t.name == name])
 
     def get_snowflake(self, fact_table_name):
         return Snowflake(fact_table_name, self)
@@ -518,8 +540,8 @@ class Snowflake(object):
     REPRESENT ONE ALIAS, AND ITS NESTED ARRAYS
     """
 
-    def __init__(self, alias, namespace):
-        self.alias = alias
+    def __init__(self, name, namespace):
+        self.name = name
         self.namespace = namespace
 
     def get_schema(self, query_path):
@@ -530,20 +552,17 @@ class Snowflake(object):
         """
         RETURN A LIST OF ALL NESTED COLUMNS
         """
-        output = self.namespace.alias_to_query_paths.get(self.alias)
+        output = self.namespace.alias_to_query_paths.get(self.name)
         if output:
             return output
-        Log.error("Can not find index {{index|quote}}", index=self.alias)
+        Log.error("Can not find index {{index|quote}}", index=self.name)
 
     @property
     def columns(self):
         """
         RETURN ALL COLUMNS FROM ORIGIN OF FACT TABLE
         """
-        if any("verify_no_private_attachments" in t['method'] for t in extract_stack()):
-            pass
-
-        return self.namespace.get_columns(literal_field(self.alias))
+        return self.namespace.get_columns(literal_field(self.name))
 
 
 class Schema(jx_base.Schema):
@@ -611,11 +630,11 @@ class Schema(jx_base.Schema):
 
     @property
     def name(self):
-        return concat_field(self.snowflake.alias, self.query_path[0])
+        return concat_field(self.snowflake.name, self.query_path[0])
 
     @property
     def columns(self):
-        return self.snowflake.namespace.get_columns(literal_field(self.snowflake.alias))
+        return self.snowflake.namespace.get_columns(literal_field(self.snowflake.name))
 
     def map_to_es(self):
         """
@@ -693,6 +712,15 @@ def metadata_tables():
             ]
         ]
     )
+
+
+def jx_type(column):
+    """
+    return the jx_type for given column
+    """
+    if column.es_column.endswith(EXISTS_TYPE):
+        return jx_base.EXISTS
+    return es_type_to_json_type[column.es_type]
 
 
 OBJECTS = (jx_base.OBJECT, jx_base.EXISTS)

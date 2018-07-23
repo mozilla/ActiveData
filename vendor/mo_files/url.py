@@ -1,8 +1,7 @@
 from collections import Mapping
-from urlparse import urlparse
 
-from mo_dots import wrap, Data
-from mo_json import value2json, json2value
+from mo_dots import wrap, Data, coalesce
+from mo_future import urlparse, text_type, PY2, unichr
 from mo_logs import Log
 
 
@@ -13,14 +12,14 @@ class URL(object):
     [1] https://docs.python.org/3/library/urllib.parse.html
     """
 
-    def __init__(self, value):
+    def __init__(self, value, port=None, path=None, query=None, fragment=None):
         try:
             self.scheme = None
             self.host = None
-            self.port = None
-            self.path = ""
-            self.query = ""
-            self.fragment = ""
+            self.port = port
+            self.path = path
+            self.query = query
+            self.fragment = fragment
 
             if value == None:
                 return
@@ -34,11 +33,11 @@ class URL(object):
             else:
                 output = urlparse(value)
                 self.scheme = output.scheme
-                self.port = output.port
+                self.port = coalesce(port, output.port)
                 self.host = output.netloc.split(":")[0]
-                self.path = output.path
-                self.query = wrap(url_param2value(output.query))
-                self.fragment = output.fragment
+                self.path = coalesce(path, output.path)
+                self.query = coalesce(query, wrap(url_param2value(output.query)))
+                self.fragment = coalesce(fragment, output.fragment)
         except Exception as e:
             Log.error("problem parsing {{value}} to URL", value=value, cause=e)
 
@@ -52,26 +51,44 @@ class URL(object):
             return True
         return False
 
+    def __truediv__(self, other):
+        if not isinstance(other, text_type):
+            Log.error(u"Expecting text path")
+        output = self.__copy__()
+        output.path = output.path.rstrip('/') + "/" + other.lstrip('/')
+        return output
+
     def __unicode__(self):
         return self.__str__().decode('utf8')  # ASSUME chr<128 ARE VALID UNICODE
 
+    def __copy__(self):
+        output = URL(None)
+        output.scheme = self.scheme
+        output.host = self.host
+        output.port = self.port
+        output.path = self.path
+        output.query = self.query
+        output.fragment = self.fragment
+        return output
+
+
     def __str__(self):
-        url = b""
+        url = ""
         if self.host:
             url = self.host
         if self.scheme:
-            url = self.scheme + b"://"+url
+            url = self.scheme + "://"+url
         if self.port:
-            url = url + b":" + str(self.port)
+            url = url + ":" + str(self.port)
         if self.path:
-            if self.path[0]=="/":
+            if self.path[0] == text_type("/"):
                 url += str(self.path)
             else:
-                url += b"/"+str(self.path)
+                url += "/" + str(self.path)
         if self.query:
-            url = url + b'?' + value2url_param(self.query)
+            url = url + '?' + value2url_param(self.query)
         if self.fragment:
-            url = url + b'#' + value2url_param(self.fragment)
+            url = url + '#' + value2url_param(self.fragment)
         return url
 
 
@@ -79,11 +96,18 @@ def int2hex(value, size):
     return (("0" * size) + hex(value)[2:])[-size:]
 
 
-_map2url = {chr(i): chr(i) for i in range(32, 128)}
-for c in b" {}<>;/?:@&=+$,":
-    _map2url[c] = b"%" + str(int2hex(ord(c), 2))
-for i in range(128, 256):
-    _map2url[chr(i)] = b"%" + str(int2hex(i, 2))
+if PY2:
+    _map2url = {chr(i): chr(i) for i in range(32, 128)}
+    for c in " {}<>;/?:@&=+$,":
+        _map2url[c] = "%" + str(int2hex(ord(c), 2))
+    for i in range(128, 256):
+        _map2url[chr(i)] = "%" + str(int2hex(i, 2))
+else:
+    _map2url = {unichr(i): unichr(i) for i in range(32, 128)}
+    for c in " {}<>;/?:@&=+$,":
+        _map2url[c] = "%" + int2hex(ord(c), 2)
+    for i in range(128, 256):
+        _map2url[unichr(i)] = "%" + str(int2hex(i, 2))
 
 
 names = ["path", "query", "fragment"]

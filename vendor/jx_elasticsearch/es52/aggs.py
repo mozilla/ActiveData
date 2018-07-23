@@ -222,6 +222,7 @@ def es_aggsop(es, frum, query):
 
                 es_query.aggs[key].percentiles.field = columns[0].es_column
                 es_query.aggs[key].percentiles.percents += [percent]
+                es_query.aggs[key].percentiles.tdigest.compression = 2
                 s.pull = jx_expression_to_function(key + ".values." + literal_field(text_type(percent)))
             elif s.aggregate == "cardinality":
                 canonical_names = []
@@ -251,7 +252,7 @@ def es_aggsop(es, frum, query):
                 for column in columns:
                     script = {"scripted_metric": {
                         'init_script': 'params._agg.terms = new HashSet()',
-                        'map_script': 'for (v in doc['+quote(column.es_column)+'].values) params._agg.terms.add(v)',
+                        'map_script': 'for (v in doc['+quote(column.es_column)+'].values) params._agg.terms.add(v);',
                         'combine_script': 'return params._agg.terms.toArray()',
                         'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { if (a!=null) for (v in a) {output.add(v)} } return output.toArray()',
                     }}
@@ -366,7 +367,7 @@ def es_aggsop(es, frum, query):
     decoders = get_decoders_by_depth(query)
     start = 0
 
-    #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
+    # <TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
     split_where = split_expression_by_depth(query.where, schema=frum.schema)
 
     if len(split_field(frum.name)) > 1:

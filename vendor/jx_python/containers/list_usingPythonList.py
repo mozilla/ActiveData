@@ -14,8 +14,6 @@ from __future__ import unicode_literals
 import itertools
 from collections import Mapping
 
-from mo_math import UNION
-
 import jx_base
 from jx_base import Container
 from jx_base.expressions import jx_expression, Expression, Variable, TRUE
@@ -207,7 +205,7 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
 
     def having(self, having):
         _ = having
-        Log.error("not implemented")
+        raise NotImplementedError()
 
     def format(self, format):
         if format == "table":

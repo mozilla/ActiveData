@@ -234,9 +234,8 @@ class TableDesc(DataClass(
 )):
     @property
     def columns(self):
-        Log.error("not implemented")
+        raise NotImplementedError()
         # return singlton.get_columns(table_name=self.name)
-
 
 
 Column = DataClass(

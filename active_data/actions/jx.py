@@ -14,9 +14,9 @@ import flask
 from flask import Response
 
 from active_data import record_request
-from active_data.actions import save_query, send_error, test_mode_wait, QUERY_TOO_LARGE
+from active_data.actions import save_query, send_error, test_mode_wait, QUERY_TOO_LARGE, find_container
 from jx_base.container import Container
-from jx_python import jx, find_container
+from jx_python import jx
 from mo_files import File
 from mo_json import value2json, json2value
 from mo_logs import Log, Except

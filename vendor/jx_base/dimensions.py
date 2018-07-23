@@ -138,7 +138,7 @@ class Dimension(object):
             def edges2value(*values):
                 if isinstance(fields, Mapping):
                     output = Data()
-                    for e, v in zip(edges, values):
+                    for e, v in transpose(edges, values):
                         output[e.name] = v
                     return output
                 else:

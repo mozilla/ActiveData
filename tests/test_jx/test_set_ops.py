@@ -8,6 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
@@ -346,6 +347,27 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_id_and_value_select(self):
+        """
+        ALWAYS GOOD TO HAVE AN ID, CALL IT "_id"
+        """
+        test = {
+            "data": [
+                {"a": "b"}
+            ],
+            "query": {
+                "select": ["_id", "a"],
+                "from": TEST_TABLE
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header":["_id", "a"],
+                "data": [
+                    [Math.is_hex, "b"]
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
 
     def test_single_star_select(self):
         test = {

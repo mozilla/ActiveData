@@ -7,6 +7,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
@@ -552,10 +553,10 @@ class HgMozillaOrg(object):
                 json_diff = diff_to_json(diff)
                 num_changes = _count(c for f in json_diff for c in f.changes)
                 if json_diff:
-                    if num_changes < MAX_DIFF_SIZE:
-                        return json_diff
-                    elif revision.changeset.description.startswith("merge "):
+                    if revision.changeset.description.startswith("merge "):
                         return None  # IGNORE THE MERGE CHANGESETS
+                    elif num_changes < MAX_DIFF_SIZE:
+                        return json_diff
                     else:
                         Log.warning("Revision at {{url}} has a diff with {{num}} changes, ignored", url=url, num=num_changes)
                         for file in json_diff:

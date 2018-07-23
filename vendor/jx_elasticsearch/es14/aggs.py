@@ -175,6 +175,7 @@ def es_aggsop(es, frum, query):
 
                 es_query.aggs[key].percentiles.field = columns[0].es_column
                 es_query.aggs[key].percentiles.percents += [percent]
+                es_query.aggs[key].percentiles.compression = 2
                 s.pull = jx_expression_to_function(key + ".values." + literal_field(text_type(percent)))
             elif s.aggregate == "cardinality":
                 canonical_names = []

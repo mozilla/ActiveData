@@ -8,6 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
@@ -34,7 +35,9 @@ from mo_times import Date, MINUTE
 from pyLibrary.env import http
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.testing import elasticsearch
-from test_jx import TEST_TABLE
+from tests import test_jx
+
+_ = test_jx  # REQUIRED TO SET test_jx.utils
 
 DEFAULT_TEST_CONFIG = "tests/config/test_config.json"
 
@@ -182,7 +185,7 @@ class ESUtils(object):
             if frum == None:
                 subtest.query["from"] = _settings.index
             elif isinstance(frum, text_type):
-                subtest.query["from"] = frum.replace(TEST_TABLE, _settings.index)
+                subtest.query["from"] = frum.replace(test_jx.TEST_TABLE, _settings.index)
             else:
                 Log.error("Do not know how to handle")
         except Exception as e:

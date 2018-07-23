@@ -25,6 +25,12 @@ from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.strings import indent
 
 _Thread = None
+if PY3:
+    STDOUT = sys.stdout.buffer
+else:
+    STDOUT = sys.stdout
+
+
 
 class Log(object):
     """
@@ -124,7 +130,7 @@ class Log(object):
         if profiles.ON and hasattr(cls, "settings"):
             profiles.write(cls.settings.profile)
 
-        main_log, cls.main_log = cls.main_log, StructuredLogger_usingStream(sys.stdout)
+        main_log, cls.main_log = cls.main_log, StructuredLogger_usingStream(STDOUT)
         main_log.stop()
 
     @classmethod
@@ -149,10 +155,10 @@ class Log(object):
             return StructuredLogger_usingFile(settings.filename)
         if settings.log_type == "console":
             from mo_logs.log_usingThreadedStream import StructuredLogger_usingThreadedStream
-            return StructuredLogger_usingThreadedStream(sys.stdout)
+            return StructuredLogger_usingThreadedStream(STDOUT)
         if settings.log_type == "mozlog":
             from mo_logs.log_usingMozLog import StructuredLogger_usingMozLog
-            return StructuredLogger_usingMozLog(sys.stdout, coalesce(settings.app_name, settings.appname))
+            return StructuredLogger_usingMozLog(STDOUT, coalesce(settings.app_name, settings.appname))
         if settings.log_type == "stream" or settings.stream:
             from mo_logs.log_usingThreadedStream import StructuredLogger_usingThreadedStream
             return StructuredLogger_usingThreadedStream(settings.stream)
@@ -510,5 +516,5 @@ from mo_logs.log_usingStream import StructuredLogger_usingStream
 
 
 if not Log.main_log:
-    Log.main_log = StructuredLogger_usingStream(sys.stdout)
+    Log.main_log = StructuredLogger_usingStream(STDOUT)
 

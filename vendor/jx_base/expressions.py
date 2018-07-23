@@ -80,7 +80,7 @@ def _jx_expression(expr):
     elif isinstance(expr, text_type):
         return Variable(expr)
     elif isinstance(expr, (list, tuple)):
-        return TupleOp("tuple", map(jx_expression, expr))  # FORMALIZE
+        return TupleOp("tuple", list(map(jx_expression, expr)))  # FORMALIZE
 
     expr = wrap(expr)
     try:
@@ -873,6 +873,11 @@ class InequalityOp(Expression):
             return {self.op: {self.lhs.var, self.rhs.value}}
         else:
             return {self.op: [self.lhs.__data__(), self.rhs.__data__()]}
+
+    def __eq__(self, other):
+        if not isinstance(other, InequalityOp):
+            return False
+        return self.op == other.op and self.lhs == other.lhs and self.rhs == other.rhs
 
     def vars(self):
         return self.lhs.vars() | self.rhs.vars()

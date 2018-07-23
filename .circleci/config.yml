@@ -63,7 +63,7 @@ jobs:
           path: test-reports
           destination: test-reports
 
-  dock:
+  dockeraize:
     working_directory: ~/repo
 
     docker:
@@ -75,8 +75,8 @@ jobs:
       - run:
           name: Build Docker Image
           command: |
-            echo BUILDING ACTIVEDATA WITH TAG = $REPO_TAG
-            docker build --file resources/docker/activedata.dockerfile --build-arg REPO_TAG=${CIRCLE_TAG} --no-cache --tag activedata .
+            echo BUILDING ACTIVEDATA WITH TAG = $CIRCLE_TAG
+            docker build --file resources/docker/activedata.dockerfile --build-arg REPO_TAG=$CIRCLE_TAG --no-cache --tag activedata .
       - run:
           name: Save Docker image layer cache
           command: |
@@ -94,9 +94,13 @@ workflows:
             branches:
               only:
                 - bugzilla-etl
-      - dock:
+            tags:
+              only: /^v.*/
+      - dockerize:
           requires:
             - test
           filters:
+            branches:
+              ignore: /.*/
             tags:
-              only: /^v2\..*/
+              only: /^v.*/

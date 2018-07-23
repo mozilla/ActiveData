@@ -77,15 +77,18 @@ jobs:
       - run:
           name: Save Docker image layer cache
           command: |
-            mkdir -p caches
-            docker save -o caches/activedata.tar activedata
-      - save_cache:
-          key: ${REPO_TAG}
-          paths:
-            - /caches/activedata.tar
+            docker save -o /tmp/activedata.tar activedata
+
+      - store_artifacts:
+          path: /tmp/activedata.tar
+
 workflows:
   version: 2
   test_and_dockerize:
     jobs:
 #      - test
       - dock
+general:
+  branches:
+    only:
+     - bugzilla-etl

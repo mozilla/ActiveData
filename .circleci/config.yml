@@ -67,13 +67,16 @@ jobs:
     docker:
       - image: docker:18.06-git
 
+    environment:
+      REPO_TAG = $REPO_TAG
+
     steps:
       - checkout
       - setup_remote_docker
       - run:
           name: Build Docker Image
           command: |
-            docker build --file resources/docker/activedata.dockerfile --build-arg REPO_TAG=${REPO_TAG} --no-cache --tag activedata .
+            docker build --file resources/docker/activedata.dockerfile --build-arg REPO_TAG=$REPO_TAG --no-cache --tag activedata .
       - run:
           name: Save Docker image layer cache
           command: |

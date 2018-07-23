@@ -76,7 +76,7 @@ jobs:
           name: Build Docker Image
           command: |
             echo BUILDING ACTIVEDATA WITH TAG = $REPO_TAG
-            docker build --file resources/docker/activedata.dockerfile --no-cache --tag activedata .
+            docker build --file resources/docker/activedata.dockerfile --build-arg REPO_TAG=${CIRCLE_TAG} --no-cache --tag activedata .
       - run:
           name: Save Docker image layer cache
           command: |

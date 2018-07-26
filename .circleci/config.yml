@@ -78,12 +78,17 @@ jobs:
             echo BUILDING ACTIVEDATA WITH TAG = $CIRCLE_TAG
             docker build --file resources/docker/activedata.dockerfile --build-arg REPO_TAG=$CIRCLE_TAG --no-cache --tag activedata .
       - run:
-          name: Save Docker image layer cache
+          name: Push to Dockerhub
           command: |
-            docker save -o /tmp/activedata.tar activedata
+            echo "${DOCKER_PASS}" | docker login -u="${DOCKER_USER}" --password-stdin
 
-      - store_artifacts:
-          path: /tmp/activedata.tar
+            export DOCKER_IMAGE="mozilla/activedata:${CIRCLE_TAG}"
+            docker tag "activedata" "${DOCKER_IMAGE}"
+            docker push "${DOCKER_IMAGE}"
+
+            export DOCKER_IMAGE="mozilla/activedata:latest"
+            docker tag "activedata" "${DOCKER_IMAGE}"
+            docker push "${DOCKER_IMAGE}"
 
 workflows:
   version: 2

@@ -313,7 +313,7 @@ class Index(Features):
             if not lines:
                 return
 
-            with Timer("Add {{num}} documents to {{index}}", {"num": len(lines) / 2, "index":self.settings.index}, debug=self.debug):
+            with Timer("Add {{num}} documents to {{index}}", {"num": int(len(lines) / 2), "index":self.settings.index}, debug=self.debug):
                 try:
                     data_string = "\n".join(l for l in lines) + "\n"
                 except Exception as e:

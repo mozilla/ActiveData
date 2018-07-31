@@ -15,7 +15,7 @@ from collections import MutableMapping, Mapping
 from copy import deepcopy
 
 from mo_dots import _getdefault, hash_value, literal_field, coalesce, listwrap, get_logger
-from mo_future import text_type, PY2
+from mo_future import text_type, PY2, iteritems
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -69,7 +69,8 @@ class Data(MutableMapping):
             return d != None
 
     def __contains__(self, item):
-        if Data.__getitem__(self, item):
+        value = Data.__getitem__(self, item)
+        if isinstance(value, Mapping) or value:
             return True
         return False
 

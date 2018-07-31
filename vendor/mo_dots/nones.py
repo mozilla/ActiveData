@@ -223,6 +223,7 @@ class NullType(object):
     def __hash__(self):
         return hash(None)
 
+
 Null = NullType()   # INSTEAD OF None!!!
 
 

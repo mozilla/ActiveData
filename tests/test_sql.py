@@ -117,6 +117,22 @@ class TestSQL(BaseTestCase):
         result = parse_sql(sql)
         self.assertEqual(result, expected, "expecting to be parsed ")
 
+    def test_in_clause(self):
+        sql = "select * from " + TEST_TABLE + " where a IN ('b', 'c')"
+        expected = {
+            "meta": {"format": "table"},
+            "header": ["a", "v"],
+            "data": [
+                ["c", 13],
+                ["b", 2],
+                ["b", None],
+                ["c", 7],
+                ["c", 11]
+            ]
+        }
+        result = self._run_sql_query(sql)
+        compare_to_expected(result.meta.jx_query, result, expected, places=6)
+
     def execute(self, test):
         test = wrap(test)
         self.utils.fill_container(test)

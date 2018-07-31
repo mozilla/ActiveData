@@ -1,0 +1,111 @@
+# Python CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2
+
+jobs:
+  test:
+    docker:
+      - image: circleci/python:2.7.15
+
+      # ELASTICSEARCH
+      # https://www.elastic.co/guide/en/elasticsearch/reference/6.3/docker.html
+      - image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.3.0
+        environment:
+          cluster.name: activedata-test
+          bootstrap.memory_lock: true
+          ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+          bootstrap.system_call_filter: false
+          transport.host: localhost
+          discovery.type: single-node
+
+    working_directory: ~/repo
+
+    environment:
+      PYTHONPATH: .:vendor
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "requirements.txt" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
+
+      - run:
+          name: install dependencies
+          command: |
+            pip install virtualenv
+            python -m virtualenv venv
+            . venv/bin/activate
+            pip install -r requirements.txt
+
+      - save_cache:
+          paths:
+            - ./venv
+          key: v1-dependencies-{{ checksum "requirements.txt" }}
+
+      - run:
+          name: run tests
+          environment:
+            PYTHONPATH: .:vendor
+            TEST_CONFIG: tests/travis/app.json
+          command: |
+            . venv/bin/activate
+            python active_data/app.py --settings=tests/travis/app.json &
+            sleep 5
+            python -m unittest discover tests --failfast
+
+      - store_artifacts:
+          path: test-reports
+          destination: test-reports
+
+  dockerize:
+    working_directory: ~/repo
+
+    docker:
+      - image: docker:18.06-git
+
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build Docker Image
+          command: |
+            echo BUILDING ACTIVEDATA WITH TAG = $CIRCLE_TAG
+            docker build --file resources/docker/activedata.dockerfile --build-arg REPO_TAG=$CIRCLE_TAG --no-cache --tag activedata .
+      - run:
+          name: Push to Dockerhub
+          command: |
+            echo "${DOCKER_PASS}" | docker login -u="${DOCKER_USER}" --password-stdin
+
+            export DOCKER_IMAGE="mozilla/activedata:${CIRCLE_TAG}"
+            docker tag "activedata" "${DOCKER_IMAGE}"
+            docker push "${DOCKER_IMAGE}"
+
+            export DOCKER_IMAGE="mozilla/activedata:latest"
+            docker tag "activedata" "${DOCKER_IMAGE}"
+            docker push "${DOCKER_IMAGE}"
+
+workflows:
+  version: 2
+  test_and_dockerize:
+    jobs:
+      - test:
+          filters:
+            branches:
+              only:
+                - bugzilla-etl
+            tags:
+              only: /^v.*/
+      - dockerize:
+          requires:
+            - test
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/

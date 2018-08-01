@@ -411,7 +411,7 @@ class Log(object):
         if add_to_trace:
             cause[0].trace.extend(trace[1:])
 
-        e = Except(type=exceptions.ERROR, template=template, params=params, cause=cause, trace=trace)
+        e = Except(type=exceptions.ERROR, template=template, params=params, cause=causes, trace=trace)
         raise_from_none(e)
 
     @classmethod

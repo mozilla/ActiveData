@@ -285,8 +285,7 @@ def _normalize_selects(selects, frum, schema=None, ):
     if frum == None or isinstance(frum, (list, set, unicode)):
         if isinstance(selects, list):
             if len(selects) == 0:
-                output = Data()
-                return output
+                return Null
             else:
                 output = [_normalize_select_no_context(s, schema=schema) for s in selects]
         else:
@@ -389,6 +388,8 @@ def _normalize_select_no_context(select, schema=None):
 
     if isinstance(select, basestring):
         select = Data(value=select)
+    elif isinstance(select, Mapping) and len(select.keys()) == 0:
+        return None
     else:
         select = wrap(select)
 

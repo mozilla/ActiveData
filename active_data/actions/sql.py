@@ -110,9 +110,11 @@ KNOWN_SQL_AGGREGATES = {"sum", "count", "avg", "median", "percentile"}
 
 def parse_sql(sql):
     query = wrap(moz_sql_parser.parse(sql))
+    query.select = listwrap(query.select)
+
     redundant_select = []
     # PULL OUT THE AGGREGATES
-    for s in listwrap(query.select):
+    for s in query.select:
         val = s if s == '*' else s.value
 
         # EXTRACT KNOWN AGGREGATE FUNCTIONS
@@ -147,11 +149,8 @@ def parse_sql(sql):
                 pass
 
     # REMOVE THE REDUNDANT select
-    if isinstance(query.select, list):
-        for r in redundant_select:
-            query.select.remove(r)
-    elif query.select and redundant_select:
-        query.select = None
+    for r in redundant_select:
+        query.select.remove(r)
 
     # RENAME orderby TO sort
     query.sort, query.orderby = query.orderby, None

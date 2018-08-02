@@ -184,8 +184,8 @@ class Data(MutableMapping):
         if not isinstance(d, dict):
             return d == other
 
-        if not d and other == None:
-            return True
+        if other == None:
+            return False
 
         if not isinstance(other, Mapping):
             return False

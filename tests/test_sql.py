@@ -89,6 +89,16 @@ class TestSQL(BaseTestCase):
         result = self._run_sql_query(sql)
         compare_to_expected(result.meta.jx_query, result, expected, places=6)
 
+    def test_empty_count(self):
+        sql = "select count() from " + TEST_TABLE
+        expected = {
+            "meta": {"format": "table"},
+            "header": ["count"],
+            "data": [[6]]
+        }
+        result = self._run_sql_query(sql)
+        compare_to_expected(result.meta.jx_query, result, expected, places=6)
+
     def execute(self, test):
         test = wrap(test)
         self.utils.fill_container(test, tjson=False)

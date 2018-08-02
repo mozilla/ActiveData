@@ -19,7 +19,7 @@ import moz_sql_parser
 from active_data import record_request, cors_wrapper
 from active_data.actions import save_query, send_error, test_mode_wait
 from active_data.actions.jx import BLANK, QUERY_SIZE_LIMIT
-from mo_dots import wrap, listwrap
+from mo_dots import wrap, listwrap, unwraplist
 from mo_json import utf82unicode, json2value, value2json
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -74,7 +74,7 @@ def sql_query(path):
                 if data.meta.save:
                     try:
                         result.meta.saved_as = save_query.query_finder.save(data)
-                    except Exception, e:
+                    except Exception as e:
                         Log.warning("Unexpected save problem", cause=e)
 
             result.meta.timing.preamble = Math.round(preamble_timer.duration.seconds, digits=4)
@@ -105,29 +105,55 @@ def sql_query(path):
         return send_error(query_timer, request_body, e)
 
 
-KNOWN_SQL_AGGREGATES = {"sum", "count", "avg"}
+KNOWN_SQL_AGGREGATES = {"sum", "count", "avg", "median", "percentile"}
 
 
 def parse_sql(sql):
     query = wrap(moz_sql_parser.parse(sql))
+    redundant_select = []
     # PULL OUT THE AGGREGATES
     for s in listwrap(query.select):
-        val = s if s == "*" else s.value
+        val = s if s == '*' else s.value
+
+        # EXTRACT KNOWN AGGREGATE FUNCTIONS
+        if isinstance(val, Mapping):
+            for a in KNOWN_SQL_AGGREGATES:
+                value = val[a]
+                if value != None:
+                    s.aggregate = a
+                    if isinstance(value, list):
+                        # AGGREGATE WITH PARAMETERS  EG percentile(value, 0.90)
+                        s[a] = unwraplist(value[1::])
+                        s.value = value[0]
+                    elif isinstance(value, Mapping):
+                        # EXPRESSION
+                        if len(value.keys()) == 0:
+                            s.value = None
+                        else:
+                            s.value = value
+                    else:
+                        # SIMPLE VALUE
+                        s.value = value
+                    break
+
         # LOOK FOR GROUPBY COLUMN IN SELECT CLAUSE, REMOVE DUPLICATION
         for g in listwrap(query.groupby):
             try:
                 assertAlmostEqual(g.value, val, "")
                 g.name = s.name
-                s.value = None  # MARK FOR REMOVAL
+                redundant_select.append(s)
                 break
-            except Exception as e:
+            except Exception:
                 pass
 
-        if isinstance(val, Mapping):
-            for a in KNOWN_SQL_AGGREGATES:
-                if val[a]:
-                    s.aggregate = a
-                    s.value = val[a]
-    query.select = [s for s in listwrap(query.select) if s == "*" or s.value != None]
+    # REMOVE THE REDUNDANT select
+    if isinstance(query.select, list):
+        for r in redundant_select:
+            query.select.remove(r)
+    elif query.select and redundant_select:
+        query.select = None
+
+    # RENAME orderby TO sort
+    query.sort, query.orderby = query.orderby, None
     query.format = "table"
     return query

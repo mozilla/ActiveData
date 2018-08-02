@@ -130,6 +130,7 @@ def parse_sql(sql):
                         # SIMPLE AGGREGATE
                         s.aggregate = a
                         s.value = value
+                    break
 
         # LOOK FOR GROUPBY COLUMN IN SELECT CLAUSE, REMOVE DUPLICATION
         for g in listwrap(query.groupby):

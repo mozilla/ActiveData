@@ -133,6 +133,16 @@ class TestSQL(BaseTestCase):
         result = self._run_sql_query(sql)
         compare_to_expected(result.meta.jx_query, result, expected, places=6)
 
+    def test_count(self):
+        sql = "select sum(v) total, count() from " + TEST_TABLE
+        expected = {
+            "meta": {"format": "table"},
+            "header": ["total", "count"],
+            "data": [[36, 6]]
+        }
+        result = self._run_sql_query(sql)
+        compare_to_expected(result.meta.jx_query, result, expected, places=6)
+
     def execute(self, test):
         test = wrap(test)
         self.utils.fill_container(test)

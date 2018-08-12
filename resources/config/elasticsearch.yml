@@ -18,10 +18,11 @@ cloud:
         protocol: https
         ec2:
             protocol: https
-discovery.type: ec2
+#discovery.type: ec2
 discovery.zen.publish_timeout: 60
 discovery.zen.ping.multicast.enabled: false
 discovery.zen.minimum_master_nodes: 1
+discovery.zen.ping.unicast.hosts: 172.31.0.196
 
 index.number_of_shards: 1
 index.number_of_replicas: 1

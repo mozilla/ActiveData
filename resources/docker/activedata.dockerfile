@@ -1,6 +1,6 @@
 FROM python:2.7
 
-ARG REPO_TAG=
+ARG REPO_CHECKOUT=
 ARG REPO_URL=https://github.com/mozilla/ActiveData
 ARG BUILD_URL=https://travis-ci.org/mozilla/ActiveData
 ARG HOME=/app
@@ -24,13 +24,11 @@ RUN mkdir -p /etc/dpkg/dpkg.cfg.d \
         supervisor \
     && rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/* /usr/share/locale/* \
     && git clone $REPO_URL.git $HOME \
-    && git checkout tags/$REPO_TAG \
-    && mkdir $HOME/logs
-
-RUN python -m pip --no-cache-dir install --user -r requirements.txt \
+    && git checkout $REPO_CHECKOUT \
+    && mkdir $HOME/logs \
+    && export PYTHONPATH=.:vendor \
+    && python -m pip --no-cache-dir install --user -r requirements.txt \
     && python -m pip install gunicorn
-
-RUN export PYTHONPATH=.:vendor \
     && python resources/docker/version.py
 
 RUN addgroup --gid 10001 $USER \
@@ -44,4 +42,5 @@ RUN addgroup --gid 10001 $USER \
        --gecos we,dont,care,yeah \
        $USER
 
-CMD /usr/local/bin/gunicorn -b 0.0.0.0:$PORT --config=resources/docker/gunicorn.py active_data.app:flask_app
+CMD export PYTHONPATH=.:vendor \
+    && /usr/local/bin/gunicorn -b 0.0.0.0:$PORT --config=resources/docker/gunicorn.py active_data.app:flask_app

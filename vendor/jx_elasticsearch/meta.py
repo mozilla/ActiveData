@@ -487,7 +487,19 @@ class ElasticsearchMetadata(Namespace):
                             self._update_cardinality(column)
                             (DEBUG and not column.es_index.startswith(TEST_TABLE_PREFIX)) and Log.note("updated {{column.name}}", column=column)
                         except Exception as e:
-                            Log.warning("problem getting cardinality for {{column.name}}", column=column, cause=e)
+                            if '"status":404' in e:
+                                self.meta.columns.update({
+                                    "set": {
+                                        "count": 0,
+                                        "cardinality": 0,
+                                        "multi": 0,
+                                        "last_updated": Date.now()
+                                    },
+                                    "clear": ["partitions"],
+                                    "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
+                                })
+                            else:
+                                Log.warning("problem getting cardinality for {{column.name}}", column=column, cause=e)
             except Exception as e:
                 Log.warning("problem in cardinality monitor", cause=e)
 

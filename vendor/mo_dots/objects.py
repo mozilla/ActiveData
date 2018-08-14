@@ -127,7 +127,7 @@ def datawrap(v):
 
 class DictClass(object):
     """
-    ALLOW INSTANCES OF class_ TO ACK LIKE dicts
+    ALLOW INSTANCES OF class_ TO ACT LIKE dicts
     ALLOW CONSTRUCTOR TO ACCEPT @override
     """
 

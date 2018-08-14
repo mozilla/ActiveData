@@ -2563,7 +2563,9 @@ class InOp(Expression):
     def partial_eval(self):
         value = self.value.partial_eval()
         superset = self.superset.partial_eval()
-        if isinstance(value, Literal) and isinstance(superset, Literal):
+        if superset is NULL:
+            return FALSE
+        elif isinstance(value, Literal) and isinstance(superset, Literal):
             return Literal(None, self())
         else:
             return self

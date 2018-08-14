@@ -1148,3 +1148,45 @@ class TestSetOps(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
+
+    def test_select_w_nested_values(self):
+        test = {
+            "data": [
+                {"_a": [{"k": [{"b": 1}, {"b": 2}]}]},
+                {"_a": [{"k": [{"b": 1}, {"b": 2}]}]}
+            ],
+            "query": {
+                "from": TEST_TABLE
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"_a": {"k": [{"b": 1}, {"b": 2}]}},
+                    {"_a": {"k": [{"b": 1}, {"b": 2}]}}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["."],
+                "data": [
+                    [{"_a": {"k": [{"b": 1}, {"b": 2}]}}],
+                    [{"_a": {"k": [{"b": 1}, {"b": 2}]}}]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 2, "interval": 1}
+                    }
+                ],
+                "data": {
+                    ".": [
+                        {"_a": {"k": [{"b": 1}, {"b": 2}]}},
+                        {"_a": {"k": [{"b": 1}, {"b": 2}]}}
+                    ]
+                }
+            }
+        }
+        self.utils.execute_tests(test)

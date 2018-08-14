@@ -18,6 +18,7 @@ from active_data.actions import save_query, send_error, test_mode_wait, QUERY_TO
 from jx_base.container import Container
 from jx_python import jx
 from mo_files import File
+from mo_future import binary_type
 from mo_json import value2json, json2value
 from mo_logs import Log, Except
 from mo_logs.strings import unicode2utf8, utf82unicode
@@ -84,8 +85,8 @@ def jx_query(path):
                 # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
                 # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
                 timing_replacement = (
-                    b'"total":' + str(Math.round(query_timer.duration.seconds, digits=4)) +
-                    b', "jsonification":' + str(Math.round(json_timer.duration.seconds, digits=4))
+                    b'"total":' + binary_type(Math.round(query_timer.duration.seconds, digits=4)) +
+                    b', "jsonification":' + binary_type(Math.round(json_timer.duration.seconds, digits=4))
                 )
                 response_data = response_data.replace(b'"total":"{{TOTAL_TIME}}"', timing_replacement)
                 Log.note("Response is {{num}} bytes in {{duration}}", num=len(response_data), duration=query_timer.duration)

@@ -28,7 +28,7 @@ RUN mkdir -p /etc/dpkg/dpkg.cfg.d \
     && mkdir $HOME/logs \
     && export PYTHONPATH=.:vendor \
     && python -m pip --no-cache-dir install --user -r requirements.txt \
-    && python -m pip install gunicorn
+    && python -m pip install gunicorn \
     && python resources/docker/version.py
 
 RUN addgroup --gid 10001 $USER \

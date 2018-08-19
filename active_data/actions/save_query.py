@@ -76,7 +76,7 @@ class SaveQueries(object):
             typed=False,
             kwargs=kwargs
         )
-        es.add_alias(es.settings.alias)
+        es.add_alias(index)
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size, period=1)
         self.es = jx_elasticsearch.new_instance(es.settings)
 

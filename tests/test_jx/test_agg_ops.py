@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 from unittest import skipIf
 
+from pyLibrary.env import git
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 
@@ -120,7 +121,7 @@ class TestAggOps(BaseTestCase):
         }
         self.utils.execute_es_tests(test, places=2)
 
-    @skipIf(global_settings.use=="sqlite", "not expected to pass yet")
+    @skipIf(global_settings.use == "sqlite", "not expected to pass yet" or git.get_bracnh() == 'master')
     def test_stats(self):
         test = {
             "data": [{"a": i**2} for i in range(30)],

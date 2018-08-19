@@ -14,6 +14,8 @@ from __future__ import unicode_literals
 
 from unittest import skip
 
+from jx_base.query import DEFAULT_LIMIT
+
 from jx_base.expressions import NULL
 from mo_dots import wrap
 from mo_times.dates import Date
@@ -314,7 +316,7 @@ class TestTime(BaseTestCase):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [1514764800] * len(test_data_3)
+                "data": [1514764800] * DEFAULT_LIMIT
             }
         }
         self.utils.execute_tests(test)

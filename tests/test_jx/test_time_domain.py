@@ -310,7 +310,7 @@ class TestTime(BaseTestCase):
             "data": test_data_3,
             "query": {
                 "from": TEST_TABLE,
-                "select": ["*", {"name": "date", "value": {"date": {"literal": "2018-01-01"}}}]
+                "select": {"name": "date", "value": {"date": {"literal": "2018-01-01"}}}
             },
             "expecting_list": {
                 "meta": {"format": "list"},

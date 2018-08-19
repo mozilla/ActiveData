@@ -10,7 +10,7 @@ print("Uses *.dockerfile environment variables to write a verion.json file")
 File("version.json").write(value2json(
     {
         "source": os.environ.get('REPO_URL'),
-        "version": os.environ.get('REPO_TAG'),
+        "version": os.environ.get('REPO_CHECKOUT').replace("tags/", '"'),
         "commit": get_git_revision(),
         "build": os.environ.get('BUILD_URL')
     },

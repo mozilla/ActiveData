@@ -146,10 +146,16 @@ class ColumnList(Table, jx_base.Container):
                     columns = jx.filter(columns, command.where)
 
             with self.locker:
-                for col in list(columns):
+                for col in columns:
                     for k in command["clear"]:
                         if k == ".":
-                            columns.remove(col)
+                            lst = self.data[col.es_index]
+                            cols = lst[col.names['.']]
+                            cols.remove(col)
+                            if len(cols) == 0:
+                                del lst[col.names['.']]
+                                if len(lst) == 0:
+                                    del self.data[col.es_index]
                         else:
                             col[k] = None
 

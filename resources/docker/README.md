@@ -34,7 +34,7 @@ Once the docker image is built, you may run it:
 
 **Notes**
 
-* This will not work unless the enviroment file (`activedata.env`) references an Elasticsearch cluster.
+* The enviroment file (`activedata.env`) must reference an Elasticsearch cluster.
 * The docker image requires inter-run state; both for logs and metadata storage; be sure to mount some (small) amount of storage to `/app/logs`. This has been hard coded.
 * Notice the `-p 8000:8000/tcp` argument matches the `PORT` in `activedata.env`
 

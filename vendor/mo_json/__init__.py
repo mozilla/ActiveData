@@ -17,7 +17,7 @@ from collections import Mapping
 from datetime import date, timedelta, datetime
 from decimal import Decimal
 
-from mo_dots import FlatList, NullType, Data, wrap_leaves, wrap, Null
+from mo_dots import FlatList, NullType, Data, wrap_leaves, wrap, Null, SLOT
 from mo_dots.objects import DataObject
 from mo_future import text_type, none_type, long, binary_type, PY2
 from mo_logs import Except, strings, Log
@@ -158,7 +158,7 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
     elif type_ is Decimal:
         return scrub_number(value)
     elif type_ is Data:
-        return _scrub(_get(value, '_dict'), is_done, stack, scrub_text, scrub_number)
+        return _scrub(_get(value, SLOT), is_done, stack, scrub_text, scrub_number)
     elif isinstance(value, Mapping):
         _id = id(value)
         if _id in is_done:

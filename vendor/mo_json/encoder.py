@@ -171,7 +171,7 @@ def _value2json(value, _buffer):
                 _dict2json(value, _buffer)
             return
         elif type is Data:
-            d = _get(value, "_dict")  # MIGHT BE A VALUE NOT A DICT
+            d = _get(value, SLOT)  # MIGHT BE A VALUE NOT A DICT
             _value2json(d, _buffer)
             return
         elif type in (int, long, Decimal):

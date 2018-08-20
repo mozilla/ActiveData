@@ -1035,7 +1035,7 @@ def _scrub(r):
             return convert.value2number(r)
         elif isinstance(r, Mapping):
             if isinstance(r, Data):
-                r = object.__getattribute__(r, "_dict")
+                r = object.__getattribute__(r, SLOT)
             output = {}
             for k, v in r.items():
                 v = _scrub(v)

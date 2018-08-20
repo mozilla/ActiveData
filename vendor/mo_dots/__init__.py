@@ -208,7 +208,7 @@ def _all_default(d, default, seen=None):
     if default is None:
         return
     if isinstance(default, Data):
-        default = object.__getattribute__(default, b"_dict")  # REACH IN AND GET THE dict
+        default = object.__getattribute__(default, SLOT)  # REACH IN AND GET THE dict
         # Log = _late_import()
         # Log.error("strictly dict (or object) allowed: got {{type}}", type=default.__class__.__name__)
 
@@ -421,7 +421,7 @@ def wrap(v):
 
     if type_ is dict:
         m = object.__new__(Data)
-        _set(m, "_dict", v)
+        _set(m, SLOT, v)
         return m
     elif type_ is none_type:
         return Null
@@ -489,7 +489,7 @@ def _wrap_leaves(value):
 def unwrap(v):
     _type = _get(v, "__class__")
     if _type is Data:
-        d = _get(v, "_dict")
+        d = _get(v, SLOT)
         return d
     elif _type is FlatList:
         return v.list
@@ -569,6 +569,6 @@ def tuplewrap(value):
 
 
 from mo_dots.nones import Null, NullType
-from mo_dots.datas import Data
+from mo_dots.datas import Data, SLOT
 from mo_dots.lists import FlatList
 from mo_dots.objects import DataObject

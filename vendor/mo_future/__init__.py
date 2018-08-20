@@ -17,6 +17,14 @@ import sys
 PY3 = sys.version_info[0] == 3
 PY2 = sys.version_info[0] == 2
 
+PYPY = False
+try:
+    import __pypy__ as _
+    PYPY=True
+except Exception:
+    PYPY=False
+
+
 none_type = type(None)
 boolean_type = type(True)
 

@@ -70,9 +70,6 @@ class Queue(object):
         except Exception as e:
             Log.warning("Tell me about what happened here", e)
 
-        if not self.silent:
-            Log.note("queue iterator is done")
-
     def add(self, value, timeout=None):
         with self.lock:
             if value is THREAD_STOP:

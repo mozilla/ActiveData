@@ -177,7 +177,11 @@ class NullType(object):
         v = o.get(k)
         if v == None:
             return NullType(self, key)
-        return wrap(v.get(key))
+        try:
+            return wrap(v.get(key))
+        except Exception as e:
+            from mo_logs import Log
+            Log.error("not expected", cause=e)
 
     def __setattr__(self, key, value):
         key = text_type(key)

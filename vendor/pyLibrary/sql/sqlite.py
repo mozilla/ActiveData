@@ -287,7 +287,7 @@ class Sqlite(DB):
     def _process_command_item(self, command_item):
         query, result, signal, trace, transaction = command_item
 
-        with Timer("SQL Timing", debug=DEBUG):
+        with Timer("SQL Timing", silent=not DEBUG):
             if transaction is None:
                 # THIS IS A TRANSACTIONLESS QUERY, DELAY IT IF THERE IS A CURRENT TRANSACTION
                 if self.transaction_stack:

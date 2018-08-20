@@ -162,7 +162,7 @@ class ElasticsearchMetadata(Namespace):
                 ]
             )
 
-        with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
+        with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, silent=not DEBUG):
             # LIST OF EVERY NESTED PATH
             query_paths = [[c.es_column] for c in abs_columns if c.es_type == "nested"]
             for a, b in itertools.product(query_paths, query_paths):
@@ -471,7 +471,7 @@ class ElasticsearchMetadata(Namespace):
                     if column is THREAD_STOP:
                         continue
 
-                    with Timer("update {{table}}.{{column}}", param={"table":column.es_index, "column":column.es_column}, debug=DEBUG):
+                    with Timer("update {{table}}.{{column}}", param={"table":column.es_index, "column":column.es_column}, silent=not DEBUG):
                         if column.es_index in self.index_does_not_exist:
                             self.meta.columns.update({
                                 "clear": ".",
@@ -508,19 +508,19 @@ class ElasticsearchMetadata(Namespace):
             if c.last_updated >= Date.now()-TOO_OLD:
                 continue
 
-            self.meta.columns.update({
-                "set": {
-                    "last_updated": Date.now()
-                },
-                "clear":[
-                    "count",
-                    "cardinality",
-                    "multi",
-                    "partitions",
-                ],
-                "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
-            })
-            DEBUG and Log.note("Did not get {{col.es_index}}.{{col.es_column}} info", col=c)
+            with Timer("Update {{col.es_index}}.{{col.es_column}}", param={"col": c}, silent=not DEBUG, too_long=0.05):
+                self.meta.columns.update({
+                    "set": {
+                        "last_updated": Date.now()
+                    },
+                    "clear": [
+                        "count",
+                        "cardinality",
+                        "multi",
+                        "partitions",
+                    ],
+                    "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
+                })
 
     def get_table(self, name):
         if name == "meta.columns":

@@ -313,7 +313,7 @@ class Index(Features):
             if not lines:
                 return
 
-            with Timer("Add {{num}} documents to {{index}}", {"num": int(len(lines) / 2), "index":self.settings.index}, debug=self.debug):
+            with Timer("Add {{num}} documents to {{index}}", {"num": int(len(lines) / 2), "index": self.settings.index}, silent=not self.debug):
                 try:
                     data_string = "\n".join(l for l in lines) + "\n"
                 except Exception as e:
@@ -911,7 +911,7 @@ class Cluster(object):
                 Log.error(
                     "Problem with call to {{url}}" + suggestion + "\n{{body|left(10000)}}",
                     url=url,
-                    body=strings.limit(kwargs[DATA_KEY], 100 if self.debug else 10000),
+                    body=strings.limit(utf82unicode(kwargs[DATA_KEY]), 100 if self.debug else 10000),
                     cause=e
                 )
             else:

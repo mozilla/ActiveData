@@ -11,14 +11,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_future import text_type
-
 from jx_base.container import type2container
+from mo_files.url import URL
 from mo_kwargs import override
 from mo_logs import Log
-from mo_logs.url import URL
 from pyLibrary.env import http
-
 
 DEBUG = False
 

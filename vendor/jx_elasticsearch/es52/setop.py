@@ -19,16 +19,16 @@ from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.expressions import Variable, LeavesOp
-from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template, es_and, es_or, es_not, es_script
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template, es_and, es_or, es_script
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap
 from mo_dots.lists import FlatList
+from mo_future import transpose
 from mo_json.typed_encoder import untype_path, unnest_path, untyped
 from mo_logs import Log
-from mo_math import AND
-from mo_math import MAX
+from mo_math import AND, MAX
 from mo_times.timer import Timer
 
 format_dispatch = {}
@@ -102,11 +102,20 @@ def es_setop(es, query):
             leaves = schema.leaves(s_column)
             nested_selects = {}
             if leaves:
-                if s_column == '.' or any(c.jx_type == NESTED for c in leaves):
+                if s_column == '.':
+                    # PULL ALL SOURCE
+                    es_query.stored_fields = ["_source"]
+                    new_select.append({
+                        "name": select.name,
+                        "value": select.value,
+                        "put": {"name": select.name, "index": put_index, "child": "."},
+                        "pull": get_pull_source(".")
+                    })
+                elif any(c.jx_type == NESTED for c in leaves):
                     # PULL WHOLE NESTED ARRAYS
                     es_query.stored_fields = ["_source"]
                     for c in leaves:
-                        if len(c.nested_path) == 1:
+                        if len(c.nested_path) == 1:  # NESTED PROPERTIES ARE IGNORED, CAPTURED BY THESE FIRT LEVEL PROPERTIES
                             jx_name = untype_path(c.names["."])
                             new_select.append({
                                 "name": select.name,
@@ -193,13 +202,14 @@ def es_setop(es, query):
             if es_query.stored_fields[0] == "_source":
                 es_query.stored_fields = ["_source"]
                 n.pull = get_pull_source(n.value.var)
+            elif n.value == "_id":
+                n.pull = jx_expression_to_function("_id")
             else:
                 n.pull = jx_expression_to_function(concat_field("fields", literal_field(n.value.var)))
         else:
             Log.error("Do not know what to do")
 
-    with Timer("call to ES") as call_timer:
-        Log.note("{{data}}", data=es_query)
+    with Timer("call to ES", silent=True) as call_timer:
         data = es_post(es, es_query, query.limit)
 
     T = data.hits.hits
@@ -328,7 +338,7 @@ def format_cube(T, select, query=None):
             data={h: Matrix(list=[]) for i, h in enumerate(table.header)}
         )
 
-    cols = zip(*unwrap(table.data))
+    cols = transpose(*unwrap(table.data))
     return Cube(
         select,
         edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(table.data), "interval": 1}}],
@@ -373,6 +383,6 @@ def get_pull_stats(stats_name, median_name):
         {"name": "sos", "value": stats_name + ".sum_of_squares"},
         {"name": "std", "value": stats_name + ".std_deviation"},
         {"name": "var", "value": stats_name + ".variance"},
-        {"name": "median", "value": median_name + ".values.50\.0"}
+        {"name": "median", "value": median_name + ".values.50\\.0"}
     ]})
 

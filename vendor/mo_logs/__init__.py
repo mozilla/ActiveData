@@ -19,12 +19,18 @@ from datetime import datetime
 import sys
 
 from mo_dots import coalesce, listwrap, wrap, unwrap, unwraplist, set_default, FlatList
-from mo_future import text_type, PY3
+from mo_future import text_type, PY3, iteritems
 from mo_logs import constants
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.strings import indent
 
 _Thread = None
+if PY3:
+    STDOUT = sys.stdout.buffer
+else:
+    STDOUT = sys.stdout
+
+
 
 class Log(object):
     """
@@ -92,11 +98,11 @@ class Log(object):
 
         if settings.log:
             cls.logging_multi = StructuredLogger_usingMulti()
-            from mo_logs.log_usingThread import StructuredLogger_usingThread
-            cls.main_log = StructuredLogger_usingThread(cls.logging_multi)
-
             for log in listwrap(settings.log):
                 Log.add_log(Log.new_instance(log))
+
+            from mo_logs.log_usingThread import StructuredLogger_usingThread
+            cls.main_log = StructuredLogger_usingThread(cls.logging_multi)
 
         if settings.cprofile.enabled == True:
             Log.alert("cprofiling is enabled, writing to {{filename}}", filename=os.path.abspath(settings.cprofile.filename))
@@ -123,8 +129,9 @@ class Log(object):
 
         if profiles.ON and hasattr(cls, "settings"):
             profiles.write(cls.settings.profile)
-        cls.main_log.stop()
-        cls.main_log = StructuredLogger_usingStream(sys.stdout)
+
+        main_log, cls.main_log = cls.main_log, StructuredLogger_usingStream(STDOUT)
+        main_log.stop()
 
     @classmethod
     def new_instance(cls, settings):
@@ -148,10 +155,10 @@ class Log(object):
             return StructuredLogger_usingFile(settings.filename)
         if settings.log_type == "console":
             from mo_logs.log_usingThreadedStream import StructuredLogger_usingThreadedStream
-            return StructuredLogger_usingThreadedStream(sys.stdout)
+            return StructuredLogger_usingThreadedStream(STDOUT)
         if settings.log_type == "mozlog":
             from mo_logs.log_usingMozLog import StructuredLogger_usingMozLog
-            return StructuredLogger_usingMozLog(sys.stdout, coalesce(settings.app_name, settings.appname))
+            return StructuredLogger_usingMozLog(STDOUT, coalesce(settings.app_name, settings.appname))
         if settings.log_type == "stream" or settings.stream:
             from mo_logs.log_usingThreadedStream import StructuredLogger_usingThreadedStream
             return StructuredLogger_usingThreadedStream(settings.stream)
@@ -253,7 +260,7 @@ class Log(object):
             cause = Except(exceptions.UNEXPECTED, text_type(cause), trace=exceptions._extract_traceback(0))
 
         trace = exceptions.extract_stack(1)
-        e = Except(exceptions.UNEXPECTED, template, params, cause, trace)
+        e = Except(type=exceptions.UNEXPECTED, template=template, params=params, cause=cause, trace=trace)
         Log.note(
             "{{error}}",
             error=e,
@@ -346,7 +353,7 @@ class Log(object):
         cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
         trace = exceptions.extract_stack(stack_depth + 1)
 
-        e = Except(exceptions.WARNING, template, params, cause, trace)
+        e = Except(type=exceptions.WARNING, template=template, params=params, cause=cause, trace=trace)
         Log.note(
             "{{error|unicode}}",
             error=e,
@@ -404,7 +411,7 @@ class Log(object):
         if add_to_trace:
             cause[0].trace.extend(trace[1:])
 
-        e = Except(exceptions.ERROR, template, params, causes, trace)
+        e = Except(type=exceptions.ERROR, template=template, params=params, cause=causes, trace=trace)
         raise_from_none(e)
 
     @classmethod
@@ -437,7 +444,7 @@ class Log(object):
         cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
         trace = exceptions.extract_stack(stack_depth + 1)
 
-        e = Except(exceptions.ERROR, template, params, cause, trace)
+        e = Except(type=exceptions.ERROR, template=template, params=params, cause=cause, trace=trace)
 
         error_mode = cls.error_mode
         with suppress_exception:
@@ -477,7 +484,7 @@ def write_profile(profile_settings, stats):
         "line": f[1],
         "method": f[2].lstrip("<").rstrip(">")
     }
-        for f, d, in acc.stats.iteritems()
+        for f, d, in iteritems(acc.stats)
     ]
     stats_file = File(profile_settings.filename, suffix=convert.datetime2string(datetime.now(), "_%Y%m%d_%H%M%S"))
     stats_file.write(convert.list2tab(stats))
@@ -509,5 +516,5 @@ from mo_logs.log_usingStream import StructuredLogger_usingStream
 
 
 if not Log.main_log:
-    Log.main_log = StructuredLogger_usingStream(sys.stdout)
+    Log.main_log = StructuredLogger_usingStream(STDOUT)
 

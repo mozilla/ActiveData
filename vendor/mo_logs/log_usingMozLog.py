@@ -55,7 +55,7 @@ class StructuredLogger_usingMozLog(StructuredLogger):
             }
         }
         self.stream.write(value2json(output).encode('utf8'))
-        self.stream.write('\n')
+        self.stream.write(b'\n')
 
 
 severity_map = {

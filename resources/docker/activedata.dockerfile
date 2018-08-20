@@ -1,7 +1,10 @@
 FROM python:2.7
 
-ARG BRANCH=dev
+ARG REPO_CHECKOUT=
+ARG REPO_URL=https://github.com/mozilla/ActiveData
+ARG BUILD_URL=https://travis-ci.org/mozilla/ActiveData
 ARG HOME=/app
+ARG USER=app
 
 WORKDIR $HOME
 RUN mkdir -p /etc/dpkg/dpkg.cfg.d \
@@ -18,18 +21,26 @@ RUN mkdir -p /etc/dpkg/dpkg.cfg.d \
         vim-tiny \
         nano \
         sudo \
+        supervisor \
     && rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/* /usr/share/locale/* \
-    && git clone https://github.com/mozilla/ActiveData.git $HOME \
-    && git checkout $BRANCH \
-    && git config --global user.email "klahnakoski@mozilla.com" \
-    && git config --global user.name "Kyle Lahnakoski" \
-    && mkdir $HOME/logs
-
-RUN python -m pip --no-cache-dir install --user -r requirements.txt \
+    && git clone $REPO_URL.git $HOME \
+    && git checkout $REPO_CHECKOUT \
+    && mkdir $HOME/logs \
+    && export PYTHONPATH=.:vendor \
+    && python -m pip --no-cache-dir install --user -r requirements.txt \
     && python -m pip install gunicorn \
-    && python -m pip install pyopenssl \
-    && python -m pip install ndg-httpsclient \
-    && python -m pip install pyasn1 \
-    && python -m pip install supervisor
+    && python resources/docker/version.py
 
-CMD /usr/local/bin/supervisord -c $HOME/resources/config/docker/supervisor.conf
+RUN addgroup --gid 10001 $USER \
+    && adduser \
+       --gid 10001 \
+       --uid 10001 \
+       --home $HOME \
+       --shell /usr/sbin/nologin \
+       --no-create-home \
+       --disabled-password \
+       --gecos we,dont,care,yeah \
+       $USER
+
+CMD export PYTHONPATH=.:vendor \
+    && /usr/local/bin/gunicorn -b 0.0.0.0:$PORT --config=resources/docker/gunicorn.py active_data.app:flask_app

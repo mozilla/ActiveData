@@ -8,6 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
@@ -34,7 +35,9 @@ from mo_times import Date, MINUTE
 from pyLibrary.env import http
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.testing import elasticsearch
-from test_jx import TEST_TABLE
+from tests import test_jx
+
+_ = test_jx  # REQUIRED TO SET test_jx.utils
 
 DEFAULT_TEST_CONFIG = "tests/config/test_config.json"
 
@@ -144,14 +147,14 @@ class ESUtils(object):
     def not_real_service(self):
         return self.settings.fastTesting
 
-    def execute_tests(self, subtest, tjson=True, places=6):
+    def execute_tests(self, subtest, typed=True, places=6):
         subtest = wrap(subtest)
         subtest.name = text_type(extract_stack()[1]['method'])
 
-        self.fill_container(subtest, tjson=tjson)
+        self.fill_container(subtest, typed=typed)
         self.send_queries(subtest, places=places)
 
-    def fill_container(self, subtest, tjson=True):
+    def fill_container(self, subtest, typed=True):
         """
         RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
         """
@@ -169,18 +172,20 @@ class ESUtils(object):
             _settings.schema = mo_json_config.get(url)
 
             # MAKE CONTAINER
-            container = self._es_cluster.get_or_create_index(tjson=tjson, kwargs=_settings)
+            container = self._es_cluster.get_or_create_index(typed=typed, kwargs=_settings)
             container.add_alias(_settings.index)
 
             # INSERT DATA
             container.extend({"value": d} for d in subtest.data)
             container.flush()
+            self._es_cluster.get_metadata(force=True)
+
             # ENSURE query POINTS TO CONTAINER
             frum = subtest.query["from"]
             if frum == None:
                 subtest.query["from"] = _settings.index
             elif isinstance(frum, text_type):
-                subtest.query["from"] = frum.replace(TEST_TABLE, _settings.index)
+                subtest.query["from"] = frum.replace(test_jx.TEST_TABLE, _settings.index)
             else:
                 Log.error("Do not know how to handle")
         except Exception as e:

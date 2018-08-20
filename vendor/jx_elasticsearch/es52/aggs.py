@@ -210,7 +210,7 @@ def es_aggsop(es, frum, query):
 
                 es_query.aggs[key].percentiles.field = columns[0].es_column
                 es_query.aggs[key].percentiles.percents += [50]
-                s.pull = jx_expression_to_function(key + ".values.50\.0")
+                s.pull = jx_expression_to_function(key + ".values.50\\.0")
             elif s.aggregate == "percentile":
                 if len(columns) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
@@ -222,6 +222,7 @@ def es_aggsop(es, frum, query):
 
                 es_query.aggs[key].percentiles.field = columns[0].es_column
                 es_query.aggs[key].percentiles.percents += [percent]
+                es_query.aggs[key].percentiles.tdigest.compression = 2
                 s.pull = jx_expression_to_function(key + ".values." + literal_field(text_type(percent)))
             elif s.aggregate == "cardinality":
                 canonical_names = []
@@ -251,7 +252,7 @@ def es_aggsop(es, frum, query):
                 for column in columns:
                     script = {"scripted_metric": {
                         'init_script': 'params._agg.terms = new HashSet()',
-                        'map_script': 'for (v in doc['+quote(column.es_column)+'].values) params._agg.terms.add(v)',
+                        'map_script': 'for (v in doc['+quote(column.es_column)+'].values) params._agg.terms.add(v);',
                         'combine_script': 'return params._agg.terms.toArray()',
                         'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { if (a!=null) for (v in a) {output.add(v)} } return output.toArray()',
                     }}
@@ -275,10 +276,13 @@ def es_aggsop(es, frum, query):
             else:
                 if len(columns) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
-
-                # PULL VALUE OUT OF THE stats AGGREGATE
-                es_query.aggs[literal_field(canonical_name)].extended_stats.field = columns[0].es_column
-                s.pull = jx_expression_to_function({"coalesce": [literal_field(canonical_name) + "." + aggregates[s.aggregate], s.default]})
+                elif len(columns) <1:
+                    # PULL VALUE OUT OF THE stats AGGREGATE
+                    s.pull = jx_expression_to_function({"null":{}})
+                else:
+                    # PULL VALUE OUT OF THE stats AGGREGATE
+                    es_query.aggs[literal_field(canonical_name)].extended_stats.field = columns[0].es_column
+                    s.pull = jx_expression_to_function({"coalesce": [literal_field(canonical_name) + "." + aggregates[s.aggregate], s.default]})
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
@@ -324,7 +328,7 @@ def es_aggsop(es, frum, query):
 
             es_query.aggs[key].percentiles.script = s.value.to_es_script(schema).script(schema)
             es_query.aggs[key].percentiles.percents += [50]
-            s.pull = jx_expression_to_function(key + ".values.50\.0")
+            s.pull = jx_expression_to_function(key + ".values.50\\.0")
         elif s.aggregate == "percentile":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")
@@ -363,7 +367,7 @@ def es_aggsop(es, frum, query):
     decoders = get_decoders_by_depth(query)
     start = 0
 
-    #<TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
+    # <TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
     split_where = split_expression_by_depth(query.where, schema=frum.schema)
 
     if len(split_field(frum.name)) > 1:

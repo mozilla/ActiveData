@@ -15,7 +15,7 @@ from mo_collections import UniqueIndex
 from mo_dots import Data, set_default, FlatList
 from mo_hg.hg_mozilla_org import DEFAULT_LOCALE
 from mo_kwargs import override
-from mo_logs import Log
+from mo_logs import Log, Except
 from mo_logs import startup, constants
 from mo_math import MAX
 from mo_times.dates import Date
@@ -24,6 +24,7 @@ from pyLibrary.env import elasticsearch, http
 
 EXTRA_WAIT_TIME = 20 * SECOND  # WAIT TIME TO SEND TO AWS, IF WE wait_forever
 OLD_BRANCH = DAY
+BRANCH_WHITELIST = None
 
 
 @override
@@ -47,6 +48,7 @@ def get_branches(hg, branches, kwargs=None):
         except Exception as e:
             Log.error("Bad branch in ES index", cause=e)
     except Exception as e:
+        e = Except.wrap(e)
         if "Can not find index " in e:
             set_default(branches, {"schema": branches_schema})
             es = cluster.get_or_create_index(branches)
@@ -173,6 +175,15 @@ def _get_single_branch_from_hg(settings, description, dir):
                 _path = path.strip("/").split("/")
                 detail.locale = _path[-1]
                 detail.name = "weave"
+
+            if BRANCH_WHITELIST is not None:
+                found = False
+                for br in BRANCH_WHITELIST:
+                    if br in str(detail.name):
+                        found = True
+                        break
+                if not found:
+                    continue
 
             Log.note("Branch {{name}} {{locale}}", name=detail.name, locale=detail.locale)
             output.append(detail)

@@ -27,7 +27,7 @@
 		"port": 9200,
 		"index": "activedata_requests",
 		"type": "request_log",
-		"tjson": false,
+		"typed": false,
 		"schema": {
 			"$ref": "//.../resources/schema/request_log.schema.json"
 		}
@@ -56,10 +56,6 @@
 			{
 				"log_type": "console"
 			},
-//			{
-//				"log_type": "mozlog",
-//				"appname": "ActiveData-testing"
-//			},
 			{
 				"log_type": "email",
 				"from_address": "klahnakoski@mozilla.com",

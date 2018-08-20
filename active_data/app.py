@@ -32,11 +32,12 @@ from active_data.actions.sql import sql_query
 from active_data.actions.static import download
 from jx_base import container
 from mo_files import File
+from mo_future import text_type
 from mo_logs import Log, constants, startup
 from mo_logs.strings import unicode2utf8
 from mo_threads import Thread
-from pyLibrary.env import elasticsearch
-from pyLibrary.env.flask_wrappers import cors_wrapper
+from pyLibrary.env import elasticsearch, http
+from pyLibrary.env.flask_wrappers import cors_wrapper, dockerflow
 
 
 class ActiveDataApp(Flask):
@@ -109,10 +110,17 @@ def setup():
     constants.set(config.constants)
     Log.start(config.debug)
 
+    cluster = elasticsearch.Cluster(config.request_logs)
     # PIPE REQUEST LOGS TO ES DEBUG
     if config.request_logs:
-        request_logger = elasticsearch.Cluster(config.request_logs).get_or_create_index(config.request_logs)
+        request_logger = cluster.get_or_create_index(config.request_logs)
         active_data.request_log_queue = request_logger.threaded_queue(max_size=2000)
+
+    if config.dockerflow:
+        def backend_check():
+            http.get_json(config.elasticsearch.host + ":" + text_type(config.elasticsearch.port))
+        dockerflow(flask_app, backend_check)
+
 
     # SETUP DEFAULT CONTAINER, SO THERE IS SOMETHING TO QUERY
     container.config.default = {
@@ -215,5 +223,7 @@ if __name__ in ("__main__", "active_data.app"):
             run_flask()
     except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
+    finally:
+        Log.stop()
 
 

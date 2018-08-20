@@ -4,7 +4,7 @@
 #
 version: 2
 jobs:
-  build:
+  test:
     docker:
       - image: circleci/python:2.7.15
 
@@ -61,3 +61,50 @@ jobs:
       - store_artifacts:
           path: test-reports
           destination: test-reports
+
+  dockerize:
+    working_directory: ~/repo
+
+    docker:
+      - image: docker:18.06-git
+
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build Docker Image
+          command: |
+            echo BUILDING ACTIVEDATA WITH TAG = $CIRCLE_TAG
+            docker build --file resources/docker/activedata.dockerfile --build-arg REPO_CHECKOUT=tags/$CIRCLE_TAG --no-cache --tag activedata .
+      - run:
+          name: Push to Dockerhub
+          command: |
+            echo "${DOCKER_PASS}" | docker login -u="${DOCKER_USER}" --password-stdin
+
+            export DOCKER_IMAGE="mozilla/activedata:${CIRCLE_TAG}"
+            docker tag "activedata" "${DOCKER_IMAGE}"
+            docker push "${DOCKER_IMAGE}"
+
+            export DOCKER_IMAGE="mozilla/activedata:latest"
+            docker tag "activedata" "${DOCKER_IMAGE}"
+            docker push "${DOCKER_IMAGE}"
+
+workflows:
+  version: 2
+  test_and_dockerize:
+    jobs:
+      - test:
+          filters:
+            branches:
+              only:
+                - bugzilla-etl
+            tags:
+              only: /^v.*/
+      - dockerize:
+          requires:
+            - test
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/

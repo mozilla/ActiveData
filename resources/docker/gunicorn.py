@@ -1,4 +1,4 @@
-bind = "0.0.0.0:8080"
+
 
 backlog = 64
 timeout = 10*60

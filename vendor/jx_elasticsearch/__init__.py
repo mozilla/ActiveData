@@ -11,14 +11,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_future import text_type
-
 from jx_base.container import type2container
+from mo_files.url import URL
 from mo_kwargs import override
 from mo_logs import Log
-from mo_logs.url import URL
 from pyLibrary.env import http
-
 
 DEBUG = False
 
@@ -30,7 +27,6 @@ def new_instance(
     host,
     index,
     type=None,
-    alias=None,
     name=None,
     port=9200,
     read_only=True,
@@ -46,7 +42,7 @@ def new_instance(
 
         url = URL(host)
         url.port = port
-        status = http.get_json(text_type(url), stream=False)
+        status = http.get_json(url, stream=False)
         version = status.version.number
         if version.startswith("1."):
             from jx_elasticsearch.es14 import ES14

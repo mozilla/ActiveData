@@ -29,7 +29,7 @@ from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.env.flask_wrappers import cors_wrapper
 
 HASH_BLOCK_SIZE = 100
-
+DATA_TYPE = "query"
 
 query_finder = None
 
@@ -66,17 +66,17 @@ def find_query(hash):
 
 class SaveQueries(object):
     @override
-    def __init__(self, host, index, type="query", max_size=10, batch_size=10, kwargs=None):
+    def __init__(self, host, index, type=DATA_TYPE, max_size=10, batch_size=10, kwargs=None):
         """
         settings ARE FOR THE ELASTICSEARCH INDEX
         """
         es = Cluster(kwargs).get_or_create_index(
             schema=json2value(convert.value2json(SCHEMA), leaves=True),
             limit_replicas=True,
-            tjson=False,
+            typed=False,
             kwargs=kwargs
         )
-        es.add_alias(es.settings.alias)
+        es.add_alias(index)
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size, period=1)
         self.es = jx_elasticsearch.new_instance(es.settings)
 
@@ -97,7 +97,7 @@ class SaveQueries(object):
             return None
 
         self.es.update({
-            "update": {"type": "elasticsearch", "settings": self.es.settings},
+            "update": self.es.name,
             "set": {"last_used": Date.now()},
             "where": {"eq": {"hash": hash}}
         })

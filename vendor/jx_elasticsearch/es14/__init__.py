@@ -27,7 +27,7 @@ from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
 from mo_dots import Data, Null, unwrap, coalesce, split_field, literal_field, unwraplist, join_field, wrap, listwrap, FlatList
 from mo_json import scrub, value2json
-from mo_json.typed_encoder import TYPE_PREFIX
+from mo_json.typed_encoder import TYPE_PREFIX, EXISTS_TYPE
 from mo_kwargs import override
 from mo_logs import Log, Except
 from pyLibrary.env import elasticsearch, http
@@ -52,7 +52,6 @@ class ES14(Container):
         host,
         index,
         type=None,
-        alias=None,
         name=None,
         port=9200,
         read_only=True,
@@ -70,26 +69,29 @@ class ES14(Container):
         self.settings = kwargs
         self.name = name = coalesce(name, alias, index)
         if read_only:
-            self._es = elasticsearch.Alias(alias=coalesce(alias, index), kwargs=kwargs)
+            self.es = elasticsearch.Alias(alias=coalesce(alias, index), kwargs=kwargs)
         else:
-            self._es = elasticsearch.Cluster(kwargs=kwargs).get_index(read_only=read_only, kwargs=kwargs)
+            self.es = elasticsearch.Cluster(kwargs=kwargs).get_index(read_only=read_only, kwargs=kwargs)
 
         self._namespace = ElasticsearchMetadata(kwargs=kwargs)
-        self.settings.type = self._es.settings.type
+        self.settings.type = self.es.settings.type
         self.edges = Data()
         self.worker = None
 
-        columns = self._namespace.get_snowflake(self._es.settings.alias).columns  # ABSOLUTE COLUMNS
+        columns = self._namespace.get_snowflake(self.es.settings.alias).columns  # ABSOLUTE COLUMNS
+        is_typed = any(c.es_column == EXISTS_TYPE for c in columns)
 
         if typed == None:
             # SWITCH ON TYPED MODE
-            self.typed = any(c.es_column.find("."+TYPE_PREFIX) != -1 for c in columns)
+            self.typed = is_typed
         else:
+            if is_typed != typed:
+                Log.error("Expecting given typed {{typed}} to match {{is_typed}}", typed=typed, is_typed=is_typed)
             self.typed = typed
 
     @property
     def snowflake(self):
-        return self._namespace.get_snowflake(self._es.settings.alias)
+        return self._namespace.get_snowflake(self.es.settings.alias)
 
     @property
     def namespace(self):
@@ -127,7 +129,7 @@ class ES14(Container):
 
     @property
     def url(self):
-        return self._es.url
+        return self.es.url
 
     def query(self, _query):
         try:
@@ -148,17 +150,17 @@ class ES14(Container):
                 q2.frum = result
                 return jx.run(q2)
 
-            if is_deepop(self._es, query):
-                return es_deepop(self._es, query)
-            if is_aggsop(self._es, query):
-                return es_aggsop(self._es, frum, query)
-            if is_setop(self._es, query):
-                return es_setop(self._es, query)
+            if is_deepop(self.es, query):
+                return es_deepop(self.es, query)
+            if is_aggsop(self.es, query):
+                return es_aggsop(self.es, frum, query)
+            if is_setop(self.es, query):
+                return es_setop(self.es, query)
             Log.error("Can not handle")
         except Exception as e:
             e = Except.wrap(e)
             if "Data too large, data for" in e:
-                http.post(self._es.cluster.path+"/_cache/clear")
+                http.post(self.es.cluster.url / "_cache/clear")
                 Log.error("Problem (Tried to clear Elasticsearch cache)", e)
             Log.error("problem", e)
 
@@ -195,10 +197,10 @@ class ES14(Container):
         THE where CLAUSE IS AN ES FILTER
         """
         command = wrap(command)
-        schema = self._es.get_properties()
+        schema = self.es.get_properties()
 
         # GET IDS OF DOCUMENTS
-        results = self._es.search({
+        results = self.es.search({
             "fields": listwrap(schema._routing.path),
             "query": {"filtered": {
                 "filter": jx_expression(command.where).to_esfilter(Null)
@@ -224,8 +226,8 @@ class ES14(Container):
                     updates.append({"update": {"_id": h._id, "_routing": unwraplist(h.fields[literal_field(schema._routing.path)])}})
                     updates.append(s)
             content = ("\n".join(value2json(c) for c in updates) + "\n")
-            response = self._es.cluster.post(
-                self._es.path + "/_bulk",
+            response = self.es.cluster.post(
+                self.es.path + "/_bulk",
                 data=content,
                 headers={"Content-Type": "application/json"},
                 timeout=self.settings.timeout,

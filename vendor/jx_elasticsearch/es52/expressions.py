@@ -25,6 +25,7 @@ from mo_future import text_type
 from mo_logs import Log, suppress_exception
 from mo_logs.strings import expand_template, quote
 from mo_math import MAX, OR
+from mo_times import Date
 from pyLibrary.convert import string2regexp
 
 NUMBER_TO_STRING = """
@@ -255,6 +256,12 @@ def to_es_script(self, schema):
             return EsScript(
                 type=OBJECT,
                 expr="[" + ", ".join(_convert(vv).expr for vv in v) + "]",
+                frum=self
+            )
+        if isinstance(v, Date):
+            return EsScript(
+                type=NUMBER,
+                expr=text_type(v.unix),
                 frum=self
             )
 
@@ -705,18 +712,22 @@ def to_es_script(self, schema):
 
 @extend(OrOp)
 def to_esfilter(self, schema):
-    return es_or([t.partial_eval().to_esfilter(schema) for t in self.terms])
+    # TODO: REPLICATE THIS WHOLE expression.py SO IT IS CLEAR ES5 QUERIES ARE A BIT DIFFERENT
+    if schema.snowflake.namespace.es_cluster.version.startswith("5."):
+        # VERSION 5.2.x
+        # WE REQUIRE EXIT-EARLY SEMANTICS, OTHERWISE EVERY EXPRESSION IS A SCRIPT EXPRESSION
+        # {"bool":{"should"  :[a, b, c]}} RUNS IN PARALLEL
+        # {"bool":{"must_not":[a, b, c]}} ALSO RUNS IN PARALLEL
 
-    # OR(x) == NOT(AND(NOT(xi) for xi in x))
-    # output = es_not(es_and([
-    #     NotOp("not", t).partial_eval().to_esfilter(schema)
-    #     for t in self.terms
-    # ]))
-    # return output
-
-    # WE REQUIRE EXIT-EARLY SEMANTICS, OTHERWISE EVERY EXPRESSION IS A SCRIPT EXPRESSION
-    # {"bool":{"should"  :[a, b, c]}} RUNS IN PARALLEL
-    # {"bool":{"must_not":[a, b, c]}} ALSO RUNS IN PARALLEL
+        # OR(x) == NOT(AND(NOT(xi) for xi in x))
+        output = es_not(es_and([
+            NotOp("not", t).partial_eval().to_esfilter(schema)
+            for t in self.terms
+        ]))
+        return output
+    else:
+        # VERSION 6.2
+        return es_or([t.partial_eval().to_esfilter(schema) for t in self.terms])
 
 
 @extend(LengthOp)
@@ -1170,7 +1181,7 @@ def to_es_script(self, schema):
                 frum=self
             )
         else:
-            Log.error("do not know how to handle")
+            Log.error("do not know how to handle: {{self}}", self=self.__data__())
     else:
         return self.partial_eval().to_es_script(schema)
 

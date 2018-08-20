@@ -9,12 +9,13 @@
 		"jx_elasticsearch.meta.DEBUG": true,
 		"jx_base.expressions.ALLOW_SCRIPTING": false
 	},
+	"dockerflow": true,
 	"request_logs": {
 		"host": {"$ref":"env://ES_HOST"},
 		"port": {"$ref":"env://ES_PORT"},
 		"index": "activedata_requests",
 		"type": "request_log",
-		"tjson": false,
+		"typed": false,
 		"schema": {
 			"$ref": "//../schema/request_log.schema.json"
 		}
@@ -40,9 +41,6 @@
 			"filename": "./results/profile.tab"
 		},
 		"log": [
-			{
-				"log_type": "console"
-			},
 			{
 				"log_type": "mozlog",
 				"appname": {"$ref":"env://LOG_APPNAME"}

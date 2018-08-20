@@ -18,7 +18,6 @@ class Graph(object):
         self.edges = []
         self.node_type = node_type
 
-
     def add_edge(self, edge):
         self.edges.append(edge)
 

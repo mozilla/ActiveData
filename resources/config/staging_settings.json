@@ -14,7 +14,7 @@
 		"port": 9200,
 		"index": "activedata_requests",
 		"type": "request_log",
-		"tjson": false,
+		"typed": false,
 		"schema": {
 			"$ref": "//../schema/request_log.schema.json"
 		}

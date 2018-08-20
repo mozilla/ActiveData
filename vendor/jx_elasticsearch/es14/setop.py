@@ -328,7 +328,7 @@ def format_cube(T, select, query=None):
             data={h: Matrix(list=[]) for i, h in enumerate(table.header)}
         )
 
-    cols = zip(*unwrap(table.data))
+    cols = transpose(*unwrap(table.data))
     return Cube(
         select,
         edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(table.data), "interval": 1}}],
@@ -373,6 +373,6 @@ def get_pull_stats(stats_name, median_name):
         {"name": "sos", "value": stats_name + ".sum_of_squares"},
         {"name": "std", "value": stats_name + ".std_deviation"},
         {"name": "var", "value": stats_name + ".variance"},
-        {"name": "median", "value": median_name + ".values.50\.0"}
+        {"name": "median", "value": median_name + ".values.50\\.0"}
     ]})
 

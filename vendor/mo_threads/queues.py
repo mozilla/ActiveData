@@ -22,7 +22,8 @@ from datetime import datetime
 from time import time
 
 from mo_dots import coalesce, Null
-from mo_logs import Log
+from mo_future import long
+from mo_logs import Log, Except
 from mo_threads.lock import Lock
 from mo_threads.signal import Signal
 from mo_threads.threads import THREAD_STOP, THREAD_TIMEOUT, Thread
@@ -34,6 +35,7 @@ DEBUG = False
 DEFAULT_WAIT_TIME = 10 * 60  # SECONDS
 
 datetime.strptime('2012-01-01', '%Y-%m-%d')  # http://bugs.python.org/issue7980
+
 
 class Queue(object):
     """
@@ -67,9 +69,6 @@ class Queue(object):
                     yield value
         except Exception as e:
             Log.warning("Tell me about what happened here", e)
-
-        if not self.silent:
-            Log.note("queue iterator is done")
 
     def add(self, value, timeout=None):
         with self.lock:
@@ -142,22 +141,19 @@ class Queue(object):
         """
         wait_time = 5
 
-        if DEBUG and len(self.queue) > 1 * 1000 * 1000:
-            Log.warning("Queue {{name}} has over a million items")
+        (DEBUG and len(self.queue) > 1 * 1000 * 1000) and Log.warning("Queue {{name}} has over a million items")
 
         now = time()
         if timeout != None:
             time_to_stop_waiting = now + timeout
         else:
-            time_to_stop_waiting = None
+            time_to_stop_waiting = now + DEFAULT_WAIT_TIME
 
         if self.next_warning < now:
             self.next_warning = now + wait_time
 
         while not self.please_stop and len(self.queue) >= self.max:
             if now > time_to_stop_waiting:
-                if not Log:
-                    _late_import()
                 Log.error(THREAD_TIMEOUT)
 
             if self.silent:
@@ -206,8 +202,7 @@ class Queue(object):
                     if self.please_stop:
                         break
                     return None
-        if DEBUG or not self.silent:
-            Log.note(self.name + " queue stopped")
+        (DEBUG or not self.silent) and Log.note(self.name + " queue stopped")
         return THREAD_STOP
 
     def pop_all(self):
@@ -267,12 +262,7 @@ class ThreadedQueue(Queue):
                            # BE CAREFUL!  THE THREAD MAKING THE CALL WILL NOT BE YOUR OWN!
                            # DEFAULT BEHAVIOUR: THIS WILL KEEP RETRYING WITH WARNINGS
     ):
-        if not Log:
-            _late_import()
-
         if period !=None and not isinstance(period, (int, float, long)):
-            if not Log:
-                _late_import()
             Log.error("Expecting a float for the period")
 
         batch_size = coalesce(batch_size, int(max_size / 2) if max_size else None, 900)
@@ -296,8 +286,8 @@ class ThreadedQueue(Queue):
             def push_to_queue():
                 queue.extend(_buffer)
                 del _buffer[:]
-                for f in _post_push_functions:
-                    f()
+                for ppf in _post_push_functions:
+                    ppf()
                 del _post_push_functions[:]
 
             while not please_stop:
@@ -322,7 +312,7 @@ class ThreadedQueue(Queue):
                         _buffer.append(item)
 
                 except Exception as e:
-                    e = _Except.wrap(e)
+                    e = Except.wrap(e)
                     if error_target:
                         try:
                             error_target(e, _buffer)
@@ -347,7 +337,7 @@ class ThreadedQueue(Queue):
                         next_push = Till(till=now + period)
 
                 except Exception as e:
-                    e = _Except.wrap(e)
+                    e = Except.wrap(e)
                     if error_target:
                         try:
                             error_target(e, _buffer)

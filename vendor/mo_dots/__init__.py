@@ -68,7 +68,7 @@ def literal_field(field):
     RETURN SAME WITH DOTS (`.`) ESCAPED
     """
     try:
-        return field.replace(".", "\.")
+        return field.replace(".", "\\.")
     except Exception as e:
         get_logger().error("bad literal", e)
 
@@ -85,7 +85,7 @@ def unliteral_field(field):
     """
     if len(split_field(field)) > 1:
         get_logger().error("Bad call! Dude!")
-    return field.replace("\.", ".")
+    return field.replace("\\.", ".")
 
 
 def split_field(field):
@@ -112,7 +112,7 @@ def join_field(field):
     potent = [f for f in field if f != "."]
     if not potent:
         return "."
-    return ".".join([f.replace(".", "\.") for f in potent])
+    return ".".join([f.replace(".", "\\.") for f in potent])
 
 
 def concat_field(prefix, suffix):
@@ -334,11 +334,11 @@ def _get_attr(obj, path):
                 # WE CAN STILL PUT THE PATH TO THE FILE IN THE from CLAUSE
                 if len(path) == 1:
                     # GET MODULE OBJECT
-                    output = __import__(obj.__name__ + b"." + attr_name.decode('utf8'), globals(), locals(), [attr_name.decode('utf8')], 0)
+                    output = __import__(obj.__name__ + str(".") + str(attr_name), globals(), locals(), [str(attr_name)], 0)
                     return output
                 else:
                     # GET VARIABLE IN MODULE
-                    output = __import__(obj.__name__ + b"." + attr_name.decode('utf8'), globals(), locals(), [path[1].decode('utf8')], 0)
+                    output = __import__(obj.__name__ + str(".") + str(attr_name), globals(), locals(), [str(path[1])], 0)
                     return _get_attr(output, path[1:])
             except Exception as e:
                 Except = get_module("mo_logs.exceptions.Except")

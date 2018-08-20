@@ -7,6 +7,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
@@ -17,18 +18,17 @@ from copy import copy
 import mo_threads
 from mo_dots import set_default, Null, coalesce, unwraplist, listwrap, wrap, Data
 from mo_future import text_type, binary_type
-from mo_hg.parse import diff_to_json
+from mo_hg.parse import diff_to_json, diff_to_moves
 from mo_hg.repos.changesets import Changeset
 from mo_hg.repos.pushs import Push
 from mo_hg.repos.revisions import Revision, revision_schema
-from mo_json import json2value, value2json
+from mo_json import json2value
 from mo_kwargs import override
 from mo_logs import Log, strings, machine_metadata
 from mo_logs.exceptions import Explanation, assert_no_exception, Except, suppress_exception
 from mo_logs.strings import expand_template
 from mo_math.randoms import Random
-from mo_threads import Thread, Lock, Queue, THREAD_STOP
-from mo_threads import Till
+from mo_threads import Thread, Lock, Queue, THREAD_STOP, Till
 from mo_times.dates import Date
 from mo_times.durations import SECOND, Duration, HOUR, MINUTE, DAY
 from pyLibrary.env import http, elasticsearch
@@ -62,10 +62,9 @@ DAEMON_DO_NO_SCAN = ["try"]  # SOME BRANCHES ARE NOT WORTH SCANNING
 DAEMON_QUEUE_SIZE = 2 ** 15
 DAEMON_RECENT_HG_PULL = 2 * SECOND  # DETERMINE IF WE GOT DATA FROM HG (RECENT), OR ES (OLDER)
 MAX_TODO_AGE = DAY  # THE DAEMON WILL NEVER STOP SCANNING; DO NOT ADD OLD REVISIONS TO THE todo QUEUE
-MIN_ETL_AGE = Date("22sep2017").unix  # sept 22nd 2017  ARTIFACTS OLDER THAN THIS IN ES ARE REPLACED
+MIN_ETL_AGE = Date("03may2018").unix  # ARTIFACTS OLDER THAN THIS IN ES ARE REPLACED
+UNKNOWN_PUSH = "Unknown push {{revision}}"
 
-
-GET_DIFF = True
 MAX_DIFF_SIZE = 1000
 DIFF_URL = "{{location}}/raw-rev/{{rev}}"
 FILE_URL = "{{location}}/raw-file/{{rev}}{{path}}"
@@ -120,7 +119,7 @@ class HgMozillaOrg(object):
 
         Thread.run("setup_es", setup_es)
         self.branches = _hg_branches.get_branches(kwargs=kwargs)
-
+        self.timeout = timeout
         Thread.run("hg daemon", self._daemon)
 
     def _daemon(self, please_stop):
@@ -168,7 +167,7 @@ class HgMozillaOrg(object):
                     self._find_revision(r)
 
     @cache(duration=HOUR, lock=True)
-    def get_revision(self, revision, locale=None, get_diff=False):
+    def get_revision(self, revision, locale=None, get_diff=False, get_moves=True):
         """
         EXPECTING INCOMPLETE revision OBJECT
         RETURNS revision
@@ -185,8 +184,9 @@ class HgMozillaOrg(object):
         if output:
             if not get_diff:  # DIFF IS BIG, DO NOT KEEP IT IF NOT NEEDED
                 output.changeset.diff = None
-            if DEBUG:
-                Log.note("Got hg ({{branch}}, {{locale}}, {{revision}}) from ES", branch=output.branch.name, locale=locale, revision=output.changeset.id)
+            if not get_moves:
+                output.changeset.moves = None
+            DEBUG and Log.note("Got hg ({{branch}}, {{locale}}, {{revision}}) from ES", branch=output.branch.name, locale=locale, revision=output.changeset.id)
             if output.push.date >= Date.now()-MAX_TODO_AGE:
                 self.todo.add((output.branch, listwrap(output.parents)))
                 self.todo.add((output.branch, listwrap(output.children)))
@@ -226,16 +226,18 @@ class HgMozillaOrg(object):
                     raw_rev1 = Data(node=revision.changeset.id)
                 else:
                     raise e
-            output = self._normalize_revision(set_default(raw_rev1, raw_rev2), found_revision, push, get_diff)
+            output = self._normalize_revision(set_default(raw_rev1, raw_rev2), found_revision, push, get_diff, get_moves)
             if output.push.date >= Date.now()-MAX_TODO_AGE:
                 self.todo.add((output.branch, listwrap(output.parents)))
                 self.todo.add((output.branch, listwrap(output.children)))
 
             if not get_diff:  # DIFF IS BIG, DO NOT KEEP IT IF NOT NEEDED
                 output.changeset.diff = None
+            if not get_moves:
+                output.changeset.moves = None
             return output
 
-    def _get_from_elasticsearch(self, revision, locale=None, get_diff=False):
+    def _get_from_elasticsearch(self, revision, locale=None, get_diff=False, get_moves=True):
         rev = revision.changeset.id
         if self.es.cluster.version.startswith("1.7."):
             query = {
@@ -276,7 +278,7 @@ class HgMozillaOrg(object):
                     (Till(seconds=Random.int(30))).wait()
                     continue
                 else:
-                    Log.warning("Bad ES call, fall back to TH", cause=e)
+                    Log.warning("Bad ES call, fall back to HG", cause=e)
                     return None
 
         best = docs[0]._source
@@ -285,15 +287,7 @@ class HgMozillaOrg(object):
                 if d._id.endswith(d._source.branch.locale):
                     best = d._source
             Log.warning("expecting no more than one document")
-
-        if not GET_DIFF and not get_diff:
-            return best
-        elif best.changeset.diff:
-            return best
-        elif not best.changeset.files:
-            return best  # NOT EXPECTING A DIFF, RETURN IT ANYWAY
-        else:
-            return None
+        return best
 
     @cache(duration=HOUR, lock=True)
     def _get_raw_json_info(self, url, branch):
@@ -365,7 +359,7 @@ class HgMozillaOrg(object):
         else:
             Log.error("do not know what to do")
 
-    def _normalize_revision(self, r, found_revision, push, get_diff):
+    def _normalize_revision(self, r, found_revision, push, get_diff, get_moves):
         new_names = set(r.keys()) - KNOWN_TAGS
         if new_names and not r.tags:
             Log.warning("hg is returning new property names ({{names}})", names=new_names)
@@ -409,8 +403,10 @@ class HgMozillaOrg(object):
         set_default(rev, r)
 
         # ADD THE DIFF
-        if get_diff or GET_DIFF:
+        if get_diff:
             rev.changeset.diff = self._get_json_diff_from_hg(rev)
+        if get_moves:
+            rev.changeset.moves = self._get_moves_from_hg(rev)
 
         try:
             _id = coalesce(rev.changeset.id12, "") + "-" + rev.branch.name + "-" + coalesce(rev.branch.locale, DEFAULT_LOCALE)
@@ -430,7 +426,8 @@ class HgMozillaOrg(object):
             output = _get_url(url, branch, **kwargs)
             return output
         except Exception as e:
-            output = Null
+            if UNKNOWN_PUSH in e:
+                Log.error("Tried {{url}} and failed", {"url": url}, cause=e)
 
         try:
             (Till(seconds=5)).wait()
@@ -549,25 +546,71 @@ class HgMozillaOrg(object):
                 pass
 
             url = expand_template(DIFF_URL, {"location": revision.branch.url, "rev": changeset_id})
-            if DEBUG:
-                Log.note("get unified diff from {{url}}", url=url)
+            DEBUG and Log.note("get unified diff from {{url}}", url=url)
             try:
                 response = http.get(url)
-                diff = response.content.decode("utf8", "replace")
+                diff = response.content.decode("utf8")
                 json_diff = diff_to_json(diff)
                 num_changes = _count(c for f in json_diff for c in f.changes)
                 if json_diff:
-                    if num_changes < MAX_DIFF_SIZE:
-                        return json_diff
-                    elif revision.changeset.description.startswith("merge "):
+                    if revision.changeset.description.startswith("merge "):
                         return None  # IGNORE THE MERGE CHANGESETS
+                    elif num_changes < MAX_DIFF_SIZE:
+                        return json_diff
                     else:
                         Log.warning("Revision at {{url}} has a diff with {{num}} changes, ignored", url=url, num=num_changes)
                         for file in json_diff:
                             file.changes = None
                         return json_diff
             except Exception as e:
-                Log.warning("could not get unified diff", cause=e)
+                Log.warning("could not get unified diff from {{url}}", url=url, cause=e)
+
+        return inner(revision.changeset.id)
+
+    def _get_moves_from_hg(self, revision):
+        """
+        :param revision: INCOMPLETE REVISION OBJECT
+        :return:
+        """
+        @cache(duration=MINUTE, lock=True)
+        def inner(changeset_id):
+            if self.es.cluster.version.startswith("1.7."):
+                query = {
+                    "query": {"filtered": {
+                        "query": {"match_all": {}},
+                        "filter": {"and": [
+                            {"prefix": {"changeset.id": changeset_id}},
+                            {"range": {"etl.timestamp": {"gt": MIN_ETL_AGE}}}
+                        ]}
+                    }},
+                    "size": 1
+                }
+            else:
+                query = {
+                    "query": {"bool": {"must": [
+                        {"prefix": {"changeset.id": changeset_id}},
+                        {"range": {"etl.timestamp": {"gt": MIN_ETL_AGE}}}
+                    ]}},
+                    "size": 1
+                }
+
+            try:
+                # ALWAYS TRY ES FIRST
+                with self.es_locker:
+                    response = self.es.search(query)
+                    moves = response.hits.hits[0]._source.changeset.moves
+                if moves:
+                    return moves
+            except Exception as e:
+                pass
+
+            url = expand_template(DIFF_URL, {"location": revision.branch.url, "rev": changeset_id})
+            DEBUG and Log.note("get unified diff from {{url}}", url=url)
+            try:
+                moves = http.get(url).content.decode('latin1')  # THE ENCODING DOES NOT MATTER BECAUSE WE ONLY USE THE '+', '-' PREFIXES IN THE DIFF
+                return diff_to_moves(text_type(moves))
+            except Exception as e:
+                Log.warning("could not get unified diff from {{url}}", url=url, cause=e)
 
         return inner(revision.changeset.id)
 
@@ -585,7 +628,7 @@ def _get_url(url, branch, **kwargs):
         response = http.get(url, **kwargs)
         data = json2value(response.content.decode("utf8"))
         if isinstance(data, (text_type, str)) and data.startswith("unknown revision"):
-            Log.error("Unknown push {{revision}}", revision=strings.between(data, "'", "'"))
+            Log.error(UNKNOWN_PUSH, revision=strings.between(data, "'", "'"))
         branch.url = _trim(url)  # RECORD THIS SUCCESS IN THE BRANCH
         return data
 
@@ -601,18 +644,21 @@ def parse_hg_date(date):
 
 
 def minimize_repo(repo):
+    """
+    RETURN A MINIMAL VERSION OF THIS CHANGESET
+    """
     if repo == None:
         return Null
-    # output = set_default({}, _exclude_from_repo, repo)
     output = wrap(_copy_but(repo, _exclude_from_repo))
     output.changeset.description = strings.limit(output.changeset.description, 1000)
     return output
 
 
-_exclude_from_repo = Data()  # A STRUCTURE TO
+_exclude_from_repo = Data()
 for k in [
     "changeset.files",
     "changeset.diff",
+    "changeset.moves",
     "etl",
     "branch.last_used",
     "branch.description",
@@ -621,7 +667,8 @@ for k in [
     "children",
     "parents",
     "phase",
-    "bookmarks"
+    "bookmarks",
+    "tags"
 ]:
     _exclude_from_repo[k] = True
 _exclude_from_repo = _exclude_from_repo
@@ -642,21 +689,21 @@ def _copy_but(value, exclude):
 
 
 KNOWN_TAGS = {
-    "rev", 
-    "node", 
-    "user", 
-    "description", 
-    "desc", 
-    "date", 
-    "files", 
-    "backedoutby", 
-    "parents", 
-    "children", 
-    "branch", 
-    "tags", 
-    "pushuser", 
-    "pushdate", 
-    "pushid", 
-    "phase", 
+    "rev",
+    "node",
+    "user",
+    "description",
+    "desc",
+    "date",
+    "files",
+    "backedoutby",
+    "parents",
+    "children",
+    "branch",
+    "tags",
+    "pushuser",
+    "pushdate",
+    "pushid",
+    "phase",
     "bookmarks"
 }

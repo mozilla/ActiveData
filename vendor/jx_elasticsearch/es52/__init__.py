@@ -11,15 +11,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from collections import Mapping
-from copy import copy
-
-import jx_base
 from jx_base import container
 from jx_base.container import Container
 from jx_base.dimensions import Dimension
 from jx_base.expressions import jx_expression
-from jx_base.queries import is_variable_name
 from jx_base.query import QueryOp
 from jx_elasticsearch.es52.aggs import es_aggsop, is_aggsop
 from jx_elasticsearch.es52.deep import is_deepop, es_deepop
@@ -27,9 +22,9 @@ from jx_elasticsearch.es52.setop import is_setop, es_setop
 from jx_elasticsearch.es52.util import aggregates
 from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
-from mo_dots import Data, Null, unwrap, coalesce, split_field, literal_field, unwraplist, join_field, wrap, listwrap, FlatList, concat_field, set_default
-from mo_json import scrub, value2json
-from mo_json.typed_encoder import TYPE_PREFIX, EXISTS_TYPE
+from mo_dots import Data, unwrap, coalesce, split_field, join_field, wrap, listwrap
+from mo_json import value2json
+from mo_json.typed_encoder import EXISTS_TYPE
 from mo_kwargs import override
 from mo_logs import Log, Except
 from pyLibrary.env import elasticsearch, http

@@ -438,7 +438,7 @@ class ElasticsearchMetadata(Namespace):
                         "multi",
                         "partitions",
                     ],
-                    "where": {"eq": {"names.\\.": ".", "es_index": column.es_index, "es_column": column.es_column}}
+                    "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
                 })
                 Log.warning("Could not get {{col.es_index}}.{{col.es_column}} info", col=column, cause=e)
 

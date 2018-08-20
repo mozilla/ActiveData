@@ -11,6 +11,7 @@ from collections import Mapping
 
 from mo_dots import wrap, Data, coalesce, Null
 from mo_future import urlparse, text_type, PY2, unichr
+from mo_json import value2json
 from mo_logs import Log
 
 

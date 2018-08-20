@@ -109,13 +109,19 @@ def unix(value):
 
     return str(datetime2unix(value))
 
-#
-# @formatter
-# def url(value):
-#     """
-#     convert FROM dict OR string TO URL PARAMETERS
-#     """
-#     return value2url_param(value)
+
+value2url_param = None
+
+
+@formatter
+def url(value):
+    """
+    convert FROM dict OR string TO URL PARAMETERS
+    """
+    global value2url_param
+    if not value2url_param:
+        from mo_files.url import value2url_param
+    return value2url_param(value)
 
 
 @formatter

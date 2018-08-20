@@ -986,8 +986,8 @@ class Cluster(object):
         try:
             response = http.put(url, **kwargs)
             if response.status_code not in [200]:
-                Log.error(response.reason + ": " + utf82unicode(response.all_content))
-            self.debug and Log.note("response: {{response}}", response=utf82unicode(response.all_content)[0:300:])
+                Log.error(response.reason + ": " + utf82unicode(response.content))
+            self.debug and Log.note("response: {{response}}", response=utf82unicode(response.content)[0:300:])
 
             details = json2value(utf82unicode(response.content))
             if details.error:

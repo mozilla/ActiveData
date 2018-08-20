@@ -136,6 +136,7 @@ class ColumnList(Table, jx_base.Container):
             eq = command.where.eq
             if eq.es_index:
                 if eq.es_column and len(eq)==2:
+                    # FASTER
                     with self.locker:
                         all_columns =  self.data.get(eq.es_index, {}).values()
                         columns = [
@@ -159,14 +160,7 @@ class ColumnList(Table, jx_base.Container):
                 columns = jx.filter(columns, command.where)
 
             with self.locker:
-<<<<<<< .mine
                 for col in columns:
-||||||| .r1265
-                for col in list(columns):
-=======
-                self.dirty = True
-                for col in columns:
->>>>>>> .r1284
                     for k in command["clear"]:
                         if k == ".":
                             lst = self.data[col.es_index]

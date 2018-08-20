@@ -1487,6 +1487,8 @@ def diff_schema(A, B):
     output =[]
     def _diff_schema(path, A, B):
         for k, av in A.items():
+            if k == "_id" and path == ".":
+                continue  # DO NOT ADD _id TO ANY SCHEMA DIFF
             bv = B[k]
             if bv == None:
                 output.append((concat_field(path, k), av))

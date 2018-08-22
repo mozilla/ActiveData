@@ -162,7 +162,7 @@ class ElasticsearchMetadata(Namespace):
                 ]
             )
 
-        with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, debug=DEBUG):
+        with Timer("upserting {{num}} columns", {"num": len(abs_columns)}, silent=not DEBUG):
             # LIST OF EVERY NESTED PATH
             query_paths = [[c.es_column] for c in abs_columns if c.es_type == "nested"]
             for a, b in itertools.product(query_paths, query_paths):
@@ -311,7 +311,7 @@ class ElasticsearchMetadata(Namespace):
                     "size": 0
                 })
                 count = result.hits.total
-                cardinality = 1001
+                cardinality = max(1001, count)
                 multi = 1001
             elif column.es_column == "_id":
                 result = self.es_cluster.post("/" + es_index + "/_search", data={
@@ -419,7 +419,7 @@ class ElasticsearchMetadata(Namespace):
             e = Except.wrap(e)
             TEST_TABLE = "testdata"
             is_missing_index = any(w in e for w in ["IndexMissingException", "index_not_found_exception"])
-            is_test_table = any(column.es_index.startswith(t) for t in [TEST_TABLE_PREFIX, TEST_TABLE])
+            is_test_table = column.es_index.startswith((TEST_TABLE_PREFIX, TEST_TABLE))
             if is_missing_index and is_test_table:
                 # WE EXPECT TEST TABLES TO DISAPPEAR
                 self.meta.columns.update({
@@ -438,7 +438,7 @@ class ElasticsearchMetadata(Namespace):
                         "multi",
                         "partitions",
                     ],
-                    "where": {"eq": {"names.\\.": ".", "es_index": column.es_index, "es_column": column.es_column}}
+                    "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
                 })
                 Log.warning("Could not get {{col.es_index}}.{{col.es_column}} info", col=column, cause=e)
 
@@ -471,7 +471,7 @@ class ElasticsearchMetadata(Namespace):
                     if column is THREAD_STOP:
                         continue
 
-                    with Timer("update {{table}}.{{column}}", param={"table":column.es_index, "column":column.es_column}, debug=DEBUG):
+                    with Timer("update {{table}}.{{column}}", param={"table":column.es_index, "column":column.es_column}, silent=not DEBUG):
                         if column.es_index in self.index_does_not_exist:
                             self.meta.columns.update({
                                 "clear": ".",
@@ -489,13 +489,7 @@ class ElasticsearchMetadata(Namespace):
                         except Exception as e:
                             if '"status":404' in e:
                                 self.meta.columns.update({
-                                    "set": {
-                                        "count": 0,
-                                        "cardinality": 0,
-                                        "multi": 0,
-                                        "last_updated": Date.now()
-                                    },
-                                    "clear": ["partitions"],
+                                    "clear": ".",
                                     "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
                                 })
                             else:
@@ -514,19 +508,19 @@ class ElasticsearchMetadata(Namespace):
             if c.last_updated >= Date.now()-TOO_OLD:
                 continue
 
-            self.meta.columns.update({
-                "set": {
-                    "last_updated": Date.now()
-                },
-                "clear":[
-                    "count",
-                    "cardinality",
-                    "multi",
-                    "partitions",
-                ],
-                "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
-            })
-            DEBUG and Log.note("Did not get {{col.es_index}}.{{col.es_column}} info", col=c)
+            with Timer("Update {{col.es_index}}.{{col.es_column}}", param={"col": c}, silent=not DEBUG, too_long=0.05):
+                self.meta.columns.update({
+                    "set": {
+                        "last_updated": Date.now()
+                    },
+                    "clear": [
+                        "count",
+                        "cardinality",
+                        "multi",
+                        "partitions",
+                    ],
+                    "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
+                })
 
     def get_table(self, name):
         if name == "meta.columns":

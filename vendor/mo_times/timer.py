@@ -32,20 +32,19 @@ class Timer(object):
     debug - SET TO False TO DISABLE THIS TIMER
     """
 
-    def __init__(self, description, param=None, debug=True, silent=False):
+    def __init__(self, description, param=None, silent=False, too_long=0):
         self.template = description
         self.param = wrap(coalesce(param, {}))
-        self.debug = debug
         self.silent = silent
         self.agg = 0
+        self.too_long = too_long  # ONLY SHOW TIMING FOR DURATIONS THAT ARE too_long
         self.start = 0
         self.end = 0
         self.interval = None
 
     def __enter__(self):
-        if self.debug:
-            if not self.silent:
-                Log.note("Timer start: " + self.template, stack_depth=1, **self.param)
+        if not self.silent and self.too_long == 0:
+            Log.note("Timer start: " + self.template, stack_depth=1, **self.param)
         self.start = time()
         return self
 
@@ -53,12 +52,12 @@ class Timer(object):
         self.end = time()
         self.interval = self.end - self.start
         self.agg += self.interval
-
-        if self.debug:
-            param = wrap(self.param)
-            param.duration = timedelta(seconds=self.interval)
-            if not self.silent:
-                Log.note("Timer end  : " + self.template + " (took {{duration}})", self.param, stack_depth=1)
+        self.param.duration = timedelta(seconds=self.interval)
+        if not self.silent:
+            if self.too_long == 0:
+                Log.note("Timer end  : " + self.template + " (took {{duration}})", default_params=self.param, stack_depth=1)
+            elif self.interval >= self.too_long:
+                Log.note("Time too long: " + self.template + " ({{duration}})", default_params=self.param, stack_depth=1)
 
     @property
     def duration(self):

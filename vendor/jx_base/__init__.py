@@ -65,9 +65,8 @@ def generateGuid():
 
     a=GenerateGuid()
     import uuid
-    print a
-    print uuid.UUID(a).hex
-
+    print(a)
+    print(uuid.UUID(a).hex)
     """
     return text_type(uuid4())
 

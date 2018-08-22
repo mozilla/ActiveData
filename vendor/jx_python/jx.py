@@ -12,12 +12,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_times import Date
 
 _range = range
 
+from mo_times import Date
 from collections import Mapping
-
 from jx_base import query
 from jx_python import expressions as _expressions
 from jx_python import flat_list, group_by

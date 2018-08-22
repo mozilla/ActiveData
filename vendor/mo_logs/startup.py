@@ -83,7 +83,7 @@ def read_settings(filename=None, defs=None):
         Log.error("Can not read configuration file {{filename}}", {
             "filename": settings_file.abspath
         })
-    settings = mo_json_config.get("file:///" + settings_file.abspath)
+    settings = mo_json_config.get_file(settings_file)
     settings.args = args
     return settings
 

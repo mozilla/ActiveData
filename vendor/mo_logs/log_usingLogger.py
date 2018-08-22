@@ -94,7 +94,7 @@ def make_log_from_settings(settings):
             Log.error("Can not find class {{class}}",  {"class": path}, cause=e)
 
     # IF WE NEED A FILE, MAKE SURE DIRECTORY EXISTS
-    if settings.filename:
+    if settings.filename != None:
         from mo_files import File
 
         f = File(settings.filename)

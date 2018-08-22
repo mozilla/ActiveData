@@ -16,7 +16,8 @@ from __future__ import unicode_literals
 import sys
 from time import time
 
-from mo_future import text_type, PY2, PY3
+from mo_dots import Data
+from mo_future import text_type, PY3
 from mo_logs import Log
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_logs.strings import expand_template
@@ -31,16 +32,14 @@ class StructuredLogger_usingThreadedStream(StructuredLogger):
     def __init__(self, stream):
         assert stream
 
-        use_UTF8 = False
-
         if isinstance(stream, text_type):
-            self.stream = eval(stream)
-            if stream.startswith("sys.") and PY3:
-                self.stream=self.stream.buffer
             name = stream
+            stream = self.stream = eval(stream)
+            if name.startswith("sys.") and PY3:
+                self.stream = Data(write=lambda d: stream.write(d.decode('utf8')))
         else:
-            self.stream = stream
             name = "stream"
+            self.stream = stream
 
         # WRITE TO STREAMS CAN BE *REALLY* SLOW, WE WILL USE A THREAD
         from mo_threads import Queue

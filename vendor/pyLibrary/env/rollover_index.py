@@ -189,7 +189,7 @@ class RolloverIndex(object):
         queue = None
         pending = []  # FOR WHEN WE DO NOT HAVE QUEUE YET
         for key in keys:
-            timer = Timer("Process {{key}}", param={"key": key}, debug=DEBUG)
+            timer = Timer("Process {{key}}", param={"key": key}, silent=not DEBUG)
             try:
                 with timer:
                     for rownum, line in enumerate(source.read_lines(strip_extension(key))):

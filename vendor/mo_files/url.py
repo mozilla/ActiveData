@@ -11,8 +11,9 @@ from collections import Mapping
 
 from mo_dots import wrap, Data, coalesce, Null
 from mo_future import urlparse, text_type, PY2, unichr
-from mo_json import value2json
+from mo_json import value2json, json2value
 from mo_logs import Log
+from pyLibrary.convert import hex2bytes
 
 
 class URL(object):
@@ -108,6 +109,10 @@ def int2hex(value, size):
     return (("0" * size) + hex(value)[2:])[-size:]
 
 
+def hex2chr(hex):
+    return unichr(int(hex, 16))
+
+
 if PY2:
     _map2url = {chr(i): chr(i) for i in range(32, 128)}
     for c in " {}<>;/?:@&=+$,":
@@ -115,11 +120,11 @@ if PY2:
     for i in range(128, 256):
         _map2url[chr(i)] = "%" + str(int2hex(i, 2))
 else:
-    _map2url = {unichr(i): unichr(i) for i in range(32, 128)}
-    for c in " {}<>;/?:@&=+$,":
-        _map2url[c] = "%" + int2hex(ord(c), 2)
+    _map2url = {i: unichr(i) for i in range(32, 128)}
+    for c in b" {}<>;/?:@&=+$,":
+        _map2url[c] = "%" + int2hex(c, 2)
     for i in range(128, 256):
-        _map2url[unichr(i)] = "%" + str(int2hex(i, 2))
+        _map2url[i] = "%" + str(int2hex(i, 2))
 
 
 names = ["path", "query", "fragment"]
@@ -143,8 +148,6 @@ def url_param2value(param):
     """
     CONVERT URL QUERY PARAMETERS INTO DICT
     """
-    if isinstance(param, text_type):
-        param = param.encode("ascii")
     if param == None:
         return Null
 
@@ -154,14 +157,14 @@ def url_param2value(param):
         while i < len(v):
             c = v[i]
             if c == "%":
-                d = (v[i + 1:i + 3]).decode("hex")
+                d = hex2chr(v[i + 1:i + 3])
                 output.append(d)
                 i += 3
             else:
                 output.append(c)
                 i += 1
 
-        output = (b"".join(output)).decode("latin1")
+        output = text_type("".join(output))
         try:
             return json2value(output)
         except Exception:
@@ -169,14 +172,14 @@ def url_param2value(param):
         return output
 
     query = Data()
-    for p in param.split(b'&'):
+    for p in param.split('&'):
         if not p:
             continue
-        if p.find(b"=") == -1:
+        if p.find("=") == -1:
             k = p
             v = True
         else:
-            k, v = p.split(b"=")
+            k, v = p.split("=")
             v = _decode(v)
 
         u = query.get(k)
@@ -200,16 +203,16 @@ def value2url_param(value):
 
     if isinstance(value, Mapping):
         value_ = wrap(value)
-        output = b"&".join([
-            value2url_param(k) + b"=" + (value2url_param(v) if isinstance(v, text_type) else value2url_param(value2json(v)))
+        output = "&".join([
+            value2url_param(k) + "=" + (value2url_param(v) if isinstance(v, text_type) else value2url_param(value2json(v)))
             for k, v in value_.leaves()
             ])
     elif isinstance(value, text_type):
-        output = b"".join(_map2url[c] for c in value.encode('utf8'))
+        output = "".join(_map2url[c] for c in value.encode('utf8'))
     elif isinstance(value, str):
-        output = b"".join(_map2url[c] for c in value)
+        output = "".join(_map2url[c] for c in value)
     elif hasattr(value, "__iter__"):
-        output = b",".join(value2url_param(v) for v in value)
+        output = ",".join(value2url_param(v) for v in value)
     else:
         output = str(value)
     return output

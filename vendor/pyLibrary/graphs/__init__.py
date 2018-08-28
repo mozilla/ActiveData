@@ -18,22 +18,22 @@ from mo_logs import Log
 
 class Graph(object):
     def __init__(self, node_type=None):
-        self.nodes = []
-        self.edges = []
+        self.nodes = set()
+        self.edges = set()
         self.node_type = node_type
 
     def verticies(self):
         return self.nodes
 
     def add_edge(self, edge):
-        self.edges.append(edge)
+        self.nodes |= {edge.parent, edge.child}
+        self.edges.add(edge)
 
     def remove_children(self, node):
         self.edges = [e for e in self.edges if e.parent != node]
 
     def get_children(self, node):
-        #FIND THE REVISION
-        #
+        # FIND THE REVISION
         return [c for p, c in self.edges if p == node]
 
     def get_parents(self, node):

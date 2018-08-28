@@ -13,7 +13,6 @@ from __future__ import unicode_literals
 
 import itertools
 
-from jx_base import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER
 from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, ScriptOp, \
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
@@ -22,6 +21,7 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
 from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_missing
 from mo_dots import coalesce, wrap, Null, set_default, literal_field
 from mo_future import text_type
+from mo_json.typed_encoder import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER
 from mo_logs import Log, suppress_exception
 from mo_logs.strings import expand_template, quote
 from mo_math import MAX, OR

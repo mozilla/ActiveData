@@ -20,7 +20,7 @@ from decimal import Decimal
 from json.encoder import encode_basestring
 from math import floor
 
-from mo_dots import Data, FlatList, NullType, Null
+from mo_dots import Data, FlatList, NullType, Null, SLOT
 from mo_future import text_type, binary_type, long, utf8_json_encoder, sort_using_key, xrange, PYPY
 from mo_json import ESCAPE_DCT, scrub, float2json
 from mo_logs import Except
@@ -274,7 +274,7 @@ def pretty_json(value):
             return "true"
         elif isinstance(value, Mapping):
             try:
-                items = sort_using_key(list(value.items()), lambda r: r[0])
+                items = sort_using_key(value.items(), lambda r: r[0])
                 values = [encode_basestring(k) + PRETTY_COLON + indent(pretty_json(v)).strip() for k, v in items if v != None]
                 if not values:
                     return "{}"

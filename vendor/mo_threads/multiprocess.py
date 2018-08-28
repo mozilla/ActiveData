@@ -158,6 +158,7 @@ class Process(object):
             if line:
                 self.debug and Log.note("{{process}} (stdin): {{line}}", process=self.name, line=line.rstrip())
                 pipe.write(line.encode('utf8') + b"\n")
+                pipe.flush()
 
     def _kill(self):
         try:

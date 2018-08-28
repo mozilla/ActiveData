@@ -58,3 +58,11 @@ class Queue(object):
         self.set.remove(output)
         return output
 
+    def next(self):
+        if len(self.list) == 0:
+            return None
+
+        output = self.list.pop()
+        self.set.remove(output)
+        return output
+

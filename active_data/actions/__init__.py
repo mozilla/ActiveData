@@ -19,11 +19,10 @@ from future.utils import text_type
 import jx_elasticsearch
 from active_data import record_request
 from active_data.actions import save_query
-from jx_base import STRUCT, container
-from jx_python import meta
-from jx_python.containers.list_usingPythonList import ListContainer
-from mo_dots import coalesce, join_field, split_field, set_default, startswith_field
+from jx_base import container
+from mo_dots import coalesce, split_field, set_default
 from mo_json import value2json
+from mo_json.typed_encoder import STRUCT
 from mo_logs import Log, strings
 from mo_logs.strings import expand_template, unicode2utf8
 from mo_threads import Till

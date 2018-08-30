@@ -153,14 +153,15 @@ def find_container(frum):
     :return:
     """
     global metadata
-    if not metadata:
-        if not container.config.default.settings:
-            Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
-        metadata = jx_elasticsearch.new_instance(index=frum, kwargs=container.config.default.settings)
-
     if isinstance(frum, text_type):
-
         path = split_field(frum)
+
+        if not metadata:
+            if not container.config.default.settings:
+                Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
+            # THIS ASSUMES THE INDEX WILL BE THE DEFAULT INDEX
+            metadata = jx_elasticsearch.new_instance(index=path[0], kwargs=container.config.default.settings)
+
         if path[0] == "meta":
             if path[1] in ["columns", "tables"]:
                 return metadata.namespace.meta[path[1]].denormalized()

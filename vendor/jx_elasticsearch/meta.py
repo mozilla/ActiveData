@@ -226,7 +226,7 @@ class ElasticsearchMetadata(Namespace):
                 Log.error("{{table|quote}} does not exist", table=table_name)
 
         try:
-            last_update =  MAX([
+            last_update = MAX([
                 self.es_cluster.index_last_updated[i]
                 for i in self.index_to_alias.get_domain(alias)
             ])
@@ -524,7 +524,7 @@ class ElasticsearchMetadata(Namespace):
 
     def get_table(self, name):
         if name == "meta.columns":
-            return ListContainer(self.meta.columns)
+            return self.meta.columns
 
             # return self.meta.columns
         with self.meta.tables.locker:

@@ -105,11 +105,18 @@ def dominator(graph, head):
     return dom.output
 
 
+LOOPS = "LOOPS"
+ROOTS = "ROOTS"
+
+
 def dominator_tree(graph):
     """
-    RETURN DOMINATOR TREE
-    ALL NODES WITH None AS DOMINATOR ARE ROOT NODES
-    roots = dominator_tree(graph).get_children(None)
+    RETURN DOMINATOR FOREST
+    THERE ARE TWO TREES, "ROOTS" and "LOOPS"
+    ROOTS HAVE NO PARENTS
+    LOOPS ARE NODES THAT ARE A MEMBER OF A CYCLE THAT HAS NO EXTRNAL PARENT
+
+    roots = dominator_tree(graph).get_children(ROOTS)
     """
     todo = Queue()
     done = set()
@@ -134,7 +141,7 @@ def dominator_tree(graph):
         if not parents:
             # node WITHOUT parents IS A ROOT
             done.add(node)
-            dominator.add_edge(Edge(None, node))
+            dominator.add_edge(Edge(ROOTS, node))
             continue
 
         not_done = [p for p in parents if p not in done]
@@ -144,7 +151,7 @@ def dominator_tree(graph):
             if not more_todo:
                 # ALL PARENTS ARE PART OF A CYCLE, MAKE node A ROOT
                 done.add(node)
-                dominator.add_edge(Edge(None, node))
+                dominator.add_edge(Edge(LOOPS, node))
             else:
                 # DO THE PARENTS BEFORE node
                 todo.push(node)
@@ -159,15 +166,25 @@ def dominator_tree(graph):
             done.add(node)
             continue
 
-        common_path = list(reversed(dominator.get_path_to_root(parents[0])))
-        for p in parents[1:]:
-            pfr = list(reversed(dominator.get_path_to_root(p)))
-            # FIND COMMON PATH FROM root
-            for i, (a, b) in enumerate(zip(common_path, pfr)):
-                if a != b:
-                    common_path = common_path[:i]
-                    break
-        dom = common_path[-1]
+        paths_from_roots = [
+            list(reversed(dominator.get_path_to_root(p)))
+            for p in parents
+        ]
+
+        if any(p[0] == ROOTS for p in paths_from_roots):
+            # THIS OBJECT CAN BE REACHED FROM A ROOT, IGNORE PATHS FROM LOOPS
+            paths_from_roots = [p for p in paths_from_roots if p[0] == ROOTS]
+
+        # FIND COMMON PATH FROM root
+        num_paths = len(paths_from_roots)
+        for i, x in enumerate(zip(*paths_from_roots)):
+            if x.count(x[0]) != num_paths:
+                dom = paths_from_roots[0][i-1]
+                break
+        else:
+            dom = paths_from_roots[0][-1]
+
+        # TODO: dom CAN BE None; IF node CAN BE REACHED FROM A LEGIT root *AND* FROM A CYCLE THEN dom is None; WHICH MAY NOT BE LEGIT
         dominator.add_edge(Edge(dom, node))
         done.add(node)
 

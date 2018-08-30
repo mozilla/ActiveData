@@ -50,8 +50,9 @@ class ElasticsearchMetadata(Namespace):
     MANAGE SNOWFLAKE SCHEMAS FOR EACH OF THE ALIASES FOUND IN THE CLUSTER
     """
 
-    def __new__(cls, *args, **kwargs):
-        es_cluster = elasticsearch.Cluster(kwargs['kwargs'])
+    @override
+    def __new__(cls, kwargs, *args, **_kwargs):
+        es_cluster = elasticsearch.Cluster(kwargs)
         output = known_clusters.get(id(es_cluster))
         if output is None:
             output = object.__new__(cls)

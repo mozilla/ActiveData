@@ -20,6 +20,7 @@ import jx_elasticsearch
 from active_data import record_request
 from active_data.actions import save_query
 from jx_base import container
+from jx_elasticsearch.meta import ElasticsearchMetadata
 from mo_dots import coalesce, split_field, set_default
 from mo_json import value2json
 from mo_json.typed_encoder import STRUCT
@@ -143,7 +144,7 @@ def test_mode_wait(query):
         Log.warning("could not pickup columns", cause=e)
 
 
-metadata = None
+namespace = None
 
 
 def find_container(frum):
@@ -152,19 +153,17 @@ def find_container(frum):
     :param schema:
     :return:
     """
-    global metadata
+    global namespace
+    if not namespace:
+        if not container.config.default.settings:
+            Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
+        namespace = ElasticsearchMetadata(container.config.default.settings)
+
     if isinstance(frum, text_type):
         path = split_field(frum)
-
-        if not metadata:
-            if not container.config.default.settings:
-                Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
-            # THIS ASSUMES THE INDEX WILL BE THE DEFAULT INDEX
-            metadata = jx_elasticsearch.new_instance(index=path[0], kwargs=container.config.default.settings)
-
         if path[0] == "meta":
             if path[1] in ["columns", "tables"]:
-                return metadata.namespace.meta[path[1]].denormalized()
+                return namespace.meta[path[1]].denormalized()
             else:
                 Log.error("{{name}} not a recognized table", name=frum)
 

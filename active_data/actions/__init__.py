@@ -19,11 +19,11 @@ from future.utils import text_type
 import jx_elasticsearch
 from active_data import record_request
 from active_data.actions import save_query
-from jx_base import STRUCT, container
-from jx_python import meta
-from jx_python.containers.list_usingPythonList import ListContainer
-from mo_dots import coalesce, join_field, split_field, set_default, startswith_field
+from jx_base import container
+from jx_elasticsearch.meta import ElasticsearchMetadata
+from mo_dots import coalesce, split_field, set_default
 from mo_json import value2json
+from mo_json.typed_encoder import STRUCT
 from mo_logs import Log, strings
 from mo_logs.strings import expand_template, unicode2utf8
 from mo_threads import Till
@@ -126,7 +126,7 @@ def test_mode_wait(query):
             # GET FRESH VERSIONS
             cols = [c for c in metadata_manager.get_columns(table_name=query["from"]) if c.jx_type not in STRUCT]
             for c in cols:
-                if not c.last_updated or now >= c.last_updated or c.cardinality == None:
+                if not c.last_updated or now >= c.last_updated:
                     Log.note(
                         "wait for column (table={{col.es_index}}, name={{col.es_column}}) metadata to arrive",
                         col=c
@@ -144,7 +144,7 @@ def test_mode_wait(query):
         Log.warning("could not pickup columns", cause=e)
 
 
-metadata = None
+namespace = None
 
 
 def find_container(frum):
@@ -153,18 +153,17 @@ def find_container(frum):
     :param schema:
     :return:
     """
-    global metadata
-    if not metadata:
+    global namespace
+    if not namespace:
         if not container.config.default.settings:
             Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
-        metadata = jx_elasticsearch.new_instance(index=frum, kwargs=container.config.default.settings)
+        namespace = ElasticsearchMetadata(container.config.default.settings)
 
     if isinstance(frum, text_type):
-
         path = split_field(frum)
         if path[0] == "meta":
             if path[1] in ["columns", "tables"]:
-                return metadata.namespace.meta[path[1]].denormalized()
+                return namespace.meta[path[1]].denormalized()
             else:
                 Log.error("{{name}} not a recognized table", name=frum)
 

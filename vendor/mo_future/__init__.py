@@ -63,6 +63,9 @@ if PY3:
     from io import BytesIO
     from _thread import allocate_lock, get_ident, start_new_thread, interrupt_main
 
+    def items(d):
+        return list(d.items())
+
     def iteritems(d):
         return d.items()
 
@@ -127,6 +130,9 @@ else:
     from StringIO import StringIO
     from io import BytesIO
     from thread import allocate_lock, get_ident, start_new_thread, interrupt_main
+
+    def items(d):
+        return d.items()
 
     def iteritems(d):
         return d.iteritems()

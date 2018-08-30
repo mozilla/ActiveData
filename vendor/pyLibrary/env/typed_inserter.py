@@ -13,14 +13,13 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from jx_base import NESTED, OBJECT
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import Data, unwrap
 from pyLibrary.env.elasticsearch import parse_properties, random_id
 
 from mo_json import json2value
 from mo_json.encoder import UnicodeBuilder
-from mo_json.typed_encoder import typed_encode
+from mo_json.typed_encoder import typed_encode, OBJECT, NESTED
 
 
 class TypedInserter(object):

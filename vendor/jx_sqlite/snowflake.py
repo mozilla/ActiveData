@@ -13,7 +13,6 @@ from __future__ import unicode_literals
 from collections import OrderedDict
 from copy import copy
 
-from jx_base import STRUCT, OBJECT, EXISTS, STRING
 from jx_base.container import Container
 from jx_base.queries import get_property_name
 from jx_python import jx
@@ -21,6 +20,7 @@ from jx_python.meta import Column
 from jx_sqlite import typed_column, UID, quoted_UID, quoted_GUID, sql_types, quoted_PARENT, quoted_ORDER, GUID, untyped_column
 from mo_dots import relative_field, listwrap, split_field, join_field, wrap, startswith_field, concat_field, Null, coalesce, set_default
 from mo_future import text_type
+from mo_json.typed_encoder import STRUCT, OBJECT, EXISTS, STRING
 from mo_logs import Log
 from pyLibrary.sql import SQL_FROM, sql_iso, sql_list, SQL_LIMIT, SQL_SELECT, SQL_ZERO, SQL_STAR
 from pyLibrary.sql.sqlite import quote_column

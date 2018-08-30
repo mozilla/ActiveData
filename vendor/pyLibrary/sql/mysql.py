@@ -103,11 +103,12 @@ class MySQL(object):
             )
         except Exception as e:
             if self.settings.host.find("://") == -1:
-                Log.error(u"Failure to connect to {{host}}:{{port}}",
-                          host=self.settings.host,
-                          port=self.settings.port,
-                          cause=e
-                          )
+                Log.error(
+                    u"Failure to connect to {{host}}:{{port}}",
+                    host=self.settings.host,
+                    port=self.settings.port,
+                    cause=e
+                )
             else:
                 Log.error(u"Failure to connect.  PROTOCOL PREFIX IS PROBABLY BAD", e)
         self.cursor = None
@@ -560,16 +561,14 @@ def execute_file(
 
 ESCAPE_DCT = {
     u"\\": u"\\\\",
-    # u"\0": u"\\0",
-    # u"\"": u'\\"',
+    u"\0": u"\\0",
+    u"\"": u'\\"',
     u"\'": u"''",
-    # u"\b": u"\\b",
-    # u"\f": u"\\f",
-    # u"\n": u"\\n",
-    # u"\r": u"\\r",
-    # u"\t": u"\\t",
-    # u"%": u"\\%",
-    # u"_": u"\\_"
+    u"\b": u"\\b",
+    u"\f": u"\\f",
+    u"\n": u"\\n",
+    u"\r": u"\\r",
+    u"\t": u"\\t"
 }
 
 

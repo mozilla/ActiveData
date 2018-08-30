@@ -11,21 +11,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import time
 from collections import Mapping
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from json.encoder import encode_basestring
 
-from datetime import date, datetime, timedelta
-import time
-from jx_base import Column, python_type_to_json_type, NESTED, EXISTS, STRING, NUMBER, INTEGER, BOOLEAN
-from mo_dots import Data, FlatList, NullType, join_field, split_field, unwraplist
-from mo_future import text_type, binary_type, sort_using_key, long
+from mo_dots import Data, FlatList, NullType, join_field, split_field
+from mo_future import text_type, binary_type, sort_using_key, long, PY2, none_type
+from mo_json import ESCAPE_DCT, float2json
+from mo_json.encoder import UnicodeBuilder, COLON, COMMA, problem_serializing, json_encoder
 from mo_logs import Log
 from mo_logs.strings import quote, utf82unicode
 from mo_times import Date, Duration
-
-from mo_json import ESCAPE_DCT, float2json
-from mo_json.encoder import UnicodeBuilder, COLON, COMMA, problem_serializing, json_encoder
 
 
 def encode_property(name):
@@ -108,7 +106,8 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
     :return:
     """
     try:
-        if isinstance(sub_schema, Column):
+        # from jx_base import Column
+        if sub_schema.__class__.__name__=='Column':
             value_json_type = python_type_to_json_type[value.__class__]
             column_json_type = es_type_to_json_type[sub_schema.es_type]
 
@@ -145,7 +144,7 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
 
         _type = value.__class__
         if _type in (dict, Data):
-            if isinstance(sub_schema, Column):
+            if sub_schema.__class__.__name__ == 'Column':
                 from mo_logs import Log
                 Log.error("Can not handle {{column|json}}", column=sub_schema)
 
@@ -382,7 +381,43 @@ def _dict2json(value, sub_schema, path, net_new_properties, buffer):
     else:
         append(buffer, '{')
         append(buffer, QUOTED_EXISTS_TYPE)
-        append(buffer, '0}')
+        append(buffer, '1}')
+
+
+IS_NULL = '0'
+BOOLEAN = 'boolean'
+INTEGER = 'integer'
+NUMBER = 'number'
+STRING = 'string'
+OBJECT = 'object'
+NESTED = "nested"
+EXISTS = "exists"
+
+JSON_TYPES = [BOOLEAN, INTEGER, NUMBER, STRING, OBJECT]
+PRIMITIVE = [EXISTS, BOOLEAN, INTEGER, NUMBER, STRING]
+STRUCT = [EXISTS, OBJECT, NESTED]
+
+
+python_type_to_json_type = {
+    int: NUMBER,
+    text_type: STRING,
+    float: NUMBER,
+    None: OBJECT,
+    bool: BOOLEAN,
+    NullType: OBJECT,
+    none_type: OBJECT,
+    Data: OBJECT,
+    dict: OBJECT,
+    object: OBJECT,
+    Mapping: OBJECT,
+    list: NESTED,
+    FlatList: NESTED,
+    Date: NUMBER
+}
+
+if PY2:
+    python_type_to_json_type[str] = STRING
+    python_type_to_json_type[long] = NUMBER
 
 
 TYPE_PREFIX = "~"  # u'\u0442\u0443\u0440\u0435-'  # "туре"

@@ -18,9 +18,9 @@ from copy import deepcopy
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from jx_python.meta import Column
-from mo_dots import wrap, FlatList, coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field
+from mo_dots import wrap, FlatList, coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field, SLOT
 from mo_files.url import URL
-from mo_future import text_type, binary_type
+from mo_future import text_type, binary_type, items
 from mo_json import value2json, json2value
 from mo_json.typed_encoder import EXISTS_TYPE, BOOLEAN_TYPE, STRING_TYPE, NUMBER_TYPE, NESTED_TYPE, TYPE_PREFIX, json_type_to_inserter_type
 from mo_kwargs import override
@@ -726,7 +726,7 @@ class Cluster(object):
         elif isinstance(schema, text_type):
             Log.error("Expecting a JSON schema")
 
-        for k, m in list(schema.mappings.items()):
+        for k, m in items(schema.mappings):
             m.date_detection = False  # DISABLE DATE DETECTION
 
             if typed:

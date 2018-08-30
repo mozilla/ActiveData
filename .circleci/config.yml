@@ -63,6 +63,7 @@ jobs:
           destination: test-reports
 
   dockerize:
+    # FIND THE RESULTING IMAGE AT hub.docker.com/r/mozilla/activedata
     working_directory: ~/repo
 
     docker:

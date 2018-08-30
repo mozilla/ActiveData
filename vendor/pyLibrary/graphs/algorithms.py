@@ -11,7 +11,11 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from collections import deque
+
+from mo_collections.queue import Queue
+
 from mo_math import INTERSECT
+from pyLibrary.graphs import Graph, Edge, Tree
 from pyLibrary.graphs.paths import Step, Path
 from mo_dots import Data
 
@@ -99,3 +103,89 @@ def dominator(graph, head):
     bfs(graph, find_dominator, head)
 
     return dom.output
+
+
+LOOPS = "LOOPS"
+ROOTS = "ROOTS"
+
+
+def dominator_tree(graph):
+    """
+    RETURN DOMINATOR FOREST
+    THERE ARE TWO TREES, "ROOTS" and "LOOPS"
+    ROOTS HAVE NO PARENTS
+    LOOPS ARE NODES THAT ARE A MEMBER OF A CYCLE THAT HAS NO EXTRNAL PARENT
+
+    roots = dominator_tree(graph).get_children(ROOTS)
+    """
+    todo = Queue()
+    done = set()
+    dominator = Tree(None)
+
+    def next_node():
+        nodes = list(graph.nodes)
+
+        while True:
+            if todo:
+                output = todo.pop()
+            elif nodes:
+                output = nodes.pop()
+            else:
+                return
+
+            if output not in done:
+                yield output
+
+    for node in next_node():
+        parents = graph.get_parents(node)
+        if not parents:
+            # node WITHOUT parents IS A ROOT
+            done.add(node)
+            dominator.add_edge(Edge(ROOTS, node))
+            continue
+
+        not_done = [p for p in parents if p not in done]
+        if not_done:
+            # THERE ARE MORE parents TO DO FIRST
+            more_todo = [p for p in not_done if p not in todo]
+            if not more_todo:
+                # ALL PARENTS ARE PART OF A CYCLE, MAKE node A ROOT
+                done.add(node)
+                dominator.add_edge(Edge(LOOPS, node))
+            else:
+                # DO THE PARENTS BEFORE node
+                todo.push(node)
+                for p in more_todo:
+                    todo.push(p)
+            continue
+
+        # WE CAN GET THE DOMINATORS FOR ALL parents
+        if len(parents) == 1:
+            # SHORTCUT
+            dominator.add_edge(Edge(parents[0], node))
+            done.add(node)
+            continue
+
+        paths_from_roots = [
+            list(reversed(dominator.get_path_to_root(p)))
+            for p in parents
+        ]
+
+        if any(p[0] == ROOTS for p in paths_from_roots):
+            # THIS OBJECT CAN BE REACHED FROM A ROOT, IGNORE PATHS FROM LOOPS
+            paths_from_roots = [p for p in paths_from_roots if p[0] == ROOTS]
+
+        # FIND COMMON PATH FROM root
+        num_paths = len(paths_from_roots)
+        for i, x in enumerate(zip(*paths_from_roots)):
+            if x.count(x[0]) != num_paths:
+                dom = paths_from_roots[0][i-1]
+                break
+        else:
+            dom = paths_from_roots[0][-1]
+
+        # TODO: dom CAN BE None; IF node CAN BE REACHED FROM A LEGIT root *AND* FROM A CYCLE THEN dom is None; WHICH MAY NOT BE LEGIT
+        dominator.add_edge(Edge(dom, node))
+        done.add(node)
+
+    return dominator

@@ -34,6 +34,9 @@ class Queue(object):
     def __nonzero__(self):
         return len(self.list) > 0
 
+    def __contains__(self, value):
+        return value in self.set
+
     def __len__(self):
         return self.list.__len__()
 
@@ -44,7 +47,8 @@ class Queue(object):
         self.list.append(value)
 
     def push(self, value):
-        self.add(value)
+        self.set.add(value)
+        self.list.insert(0, value)
 
     def extend(self, values):
         for v in values:
@@ -55,6 +59,14 @@ class Queue(object):
             return None
 
         output = self.list.pop(0)
+        self.set.remove(output)
+        return output
+
+    def next(self):
+        if len(self.list) == 0:
+            return None
+
+        output = self.list.pop()
         self.set.remove(output)
         return output
 

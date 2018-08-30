@@ -12,11 +12,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import OBJECT
 from jx_base.expressions import jx_expression, NULL
 from jx_elasticsearch.es52.expressions import EsScript, simplify_esfilter
 from jx_elasticsearch.es52.util import es_and
 from mo_dots import Null, wrap
+from mo_json.typed_encoder import OBJECT
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times.dates import Date
 

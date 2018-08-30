@@ -11,13 +11,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_future import text_type
-
-from mo_logs import Log
-
-from jx_base import STRING, BOOLEAN, NUMBER, OBJECT
 from jx_elasticsearch.es14.expressions import Variable
 from mo_dots import wrap
+from mo_future import text_type
+from mo_json.typed_encoder import STRING, BOOLEAN, NUMBER, OBJECT
+from mo_logs import Log
 
 
 def es_query_template(path):

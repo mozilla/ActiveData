@@ -120,7 +120,7 @@ class RolloverIndex(object):
                     self.cluster.delete_index(c.index)
                 except Exception as e:
                     Log.warning("could not delete index {{index}}", index=c.index, cause=e)
-        for t, q in list(self.known_queues.items()):
+        for t, q in items(self.known_queues):
             if unix2Date(t) + self.rollover_interval < Date.today() - self.rollover_max:
                 with self.locker:
                     del self.known_queues[t]

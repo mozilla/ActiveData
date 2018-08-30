@@ -15,7 +15,7 @@ import itertools
 from itertools import product
 
 import jx_base
-from jx_base import STRUCT, TableDesc, BOOLEAN
+from jx_base import TableDesc
 from jx_base.namespace import Namespace
 from jx_base.query import QueryOp
 from jx_python import jx
@@ -23,7 +23,7 @@ from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
 from mo_collections.relation import Relation_usingList
 from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, join_field, wrap, concat_field, startswith_field, literal_field
-from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
+from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path, OBJECT, EXISTS, STRUCT, BOOLEAN
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -50,8 +50,9 @@ class ElasticsearchMetadata(Namespace):
     MANAGE SNOWFLAKE SCHEMAS FOR EACH OF THE ALIASES FOUND IN THE CLUSTER
     """
 
-    def __new__(cls, *args, **kwargs):
-        es_cluster = elasticsearch.Cluster(kwargs['kwargs'])
+    @override
+    def __new__(cls, kwargs, *args, **_kwargs):
+        es_cluster = elasticsearch.Cluster(kwargs)
         output = known_clusters.get(id(es_cluster))
         if output is None:
             output = object.__new__(cls)
@@ -226,7 +227,7 @@ class ElasticsearchMetadata(Namespace):
                 Log.error("{{table|quote}} does not exist", table=table_name)
 
         try:
-            last_update =  MAX([
+            last_update = MAX([
                 self.es_cluster.index_last_updated[i]
                 for i in self.index_to_alias.get_domain(alias)
             ])
@@ -524,7 +525,7 @@ class ElasticsearchMetadata(Namespace):
 
     def get_table(self, name):
         if name == "meta.columns":
-            return ListContainer(self.meta.columns)
+            return self.meta.columns
 
             # return self.meta.columns
         with self.meta.tables.locker:
@@ -725,8 +726,8 @@ def jx_type(column):
     return the jx_type for given column
     """
     if column.es_column.endswith(EXISTS_TYPE):
-        return jx_base.EXISTS
+        return EXISTS
     return es_type_to_json_type[column.es_type]
 
 
-OBJECTS = (jx_base.OBJECT, jx_base.EXISTS)
+OBJECTS = (OBJECT, EXISTS)

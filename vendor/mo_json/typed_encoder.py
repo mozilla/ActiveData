@@ -58,7 +58,7 @@ def untyped(value):
 
 def _untype(value):
     if isinstance(value, Mapping):
-        output = {}
+        output = None
 
         for k, v in value.items():
             if k == EXISTS_TYPE:
@@ -69,17 +69,21 @@ def _untype(value):
                 return v
             else:
                 new_v = _untype(v)
-                if isinstance(new_v, list):
-                    len_v = len(new_v)
-                    if len_v==1:
-                        output[decode_property(k)] = new_v[0]
-                    elif len_v>1:
-                        output[decode_property(k)] = new_v
-                elif new_v != None:
+                if new_v is not None:
+                    if output is None:
+                        output = {}
                     output[decode_property(k)] = new_v
         return output
     elif isinstance(value, list):
-        return [_untype(v) for v in value]
+        output = [_untype(v) for v in value]
+        if len(output) == 0:
+            return None
+        elif len(output) == 1:
+            return output[0]
+        else:
+            return output
+    elif value == None:
+        return None
     else:
         return value
 

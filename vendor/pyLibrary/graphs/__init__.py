@@ -7,13 +7,11 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from collections import namedtuple
-
-from mo_logs import Log
 
 
 class Graph(object):
@@ -34,19 +32,19 @@ class Graph(object):
 
     def get_children(self, node):
         # FIND THE REVISION
-        return [c for p, c in self.edges if p == node]
+        return set(c for p, c in self.edges if p == node)
 
     def get_parents(self, node):
-        return [p for p, c in self.edges if c == node]
+        return set(p for p, c in self.edges if c == node)
 
     def get_edges(self, node):
-        return [(p, c) for p, c in self.edges if p == node or c == node]
+        return set((p, c) for p, c in self.edges if p == node or c == node)
 
     def get_family(self, node):
         """
         RETURN ALL ADJACENT NODES
         """
-        return set([p if c == node else c for p, c in self.edges])
+        return self.get_children(node) | self.get_parents(node)
 
 
 Edge = namedtuple("Edge", ["parent", "child"])
@@ -54,19 +52,40 @@ Edge = namedtuple("Edge", ["parent", "child"])
 
 class Tree(Graph):
 
-    def get_parent(self, node):
-        output = [p for p, c in self.edges if c == node]
-        num = len(output)
-        if num == 0:
-            return None
-        elif num == 1:
-            return output[0]
+    def __init__(self, node_type=None):
+        self.parents = {}
+        self.node_type = node_type
+
+    @property
+    def nodes(self):
+        return set(c for c, p in self.parents.items())
+
+    @property
+    def edges(self):
+        return set(Edge(p, c) for c, p in self.parents.items())
+
+    def add_edge(self, edge):
+        self.parents[edge.child] = edge.parent
+
+    def get_children(self, node):
+        return set(c for c, p in self.parents.items())
+
+    def get_parents(self, node):
+        parent = self.parents.get(node)
+        if parent == None:
+            return set()
         else:
-            Log.error("not expected")
+            return {parent}
+
+    def get_edges(self, node):
+        return [(p, c) for c, p in self.parents.items() if p == node or c == node]
+
+    def get_parent(self, node):
+        return self.parents.get(node)
 
     def get_path_to_root(self, node):
         output = []
-        while node:
+        while node is not None:
             output.append(node)
-            node = self.get_parent(node)
+            node = self.parents.get(node)
         return output

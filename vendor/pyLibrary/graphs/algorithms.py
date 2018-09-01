@@ -137,17 +137,17 @@ def dominator_tree(graph):
                 yield output
 
     for node in next_node():
-        parents = graph.get_parents(node)
+        parents = graph.get_parents(node) - {node}
         if not parents:
             # node WITHOUT parents IS A ROOT
             done.add(node)
             dominator.add_edge(Edge(ROOTS, node))
             continue
 
-        not_done = [p for p in parents if p not in done]
+        not_done = parents - done
         if not_done:
             # THERE ARE MORE parents TO DO FIRST
-            more_todo = [p for p in not_done if p not in todo]
+            more_todo = not_done - todo
             if not more_todo:
                 # ALL PARENTS ARE PART OF A CYCLE, MAKE node A ROOT
                 done.add(node)
@@ -162,7 +162,7 @@ def dominator_tree(graph):
         # WE CAN GET THE DOMINATORS FOR ALL parents
         if len(parents) == 1:
             # SHORTCUT
-            dominator.add_edge(Edge(parents[0], node))
+            dominator.add_edge(Edge(list(parents)[0], node))
             done.add(node)
             continue
 

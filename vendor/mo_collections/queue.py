@@ -13,6 +13,8 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
+from collections import deque
+
 
 class Queue(object):
     """
@@ -29,7 +31,7 @@ class Queue(object):
     """
     def __init__(self):
         self.set = set()
-        self.list = []
+        self.list = deque()
 
     def __nonzero__(self):
         return len(self.list) > 0
@@ -40,6 +42,17 @@ class Queue(object):
     def __len__(self):
         return self.list.__len__()
 
+    def __iter__(self):
+        return iter(self.list)
+
+    def __rsub__(self, other):
+        if isinstance(other, set):
+            return other - self.set
+        return set(o for o in other if o not in self.set)
+
+    def __data__(self):
+        return list(self.list)
+
     def add(self, value):
         if value in self.set:
             return self
@@ -47,8 +60,12 @@ class Queue(object):
         self.list.append(value)
 
     def push(self, value):
-        self.set.add(value)
-        self.list.insert(0, value)
+        if value in self.set:
+            self.list.remove(value)
+        else:
+            self.set.add(value)
+
+        self.list.appendleft(value)
 
     def extend(self, values):
         for v in values:
@@ -58,15 +75,6 @@ class Queue(object):
         if len(self.list) == 0:
             return None
 
-        output = self.list.pop(0)
+        output = self.list.popleft()
         self.set.remove(output)
         return output
-
-    def next(self):
-        if len(self.list) == 0:
-            return None
-
-        output = self.list.pop()
-        self.set.remove(output)
-        return output
-

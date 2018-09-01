@@ -21,7 +21,7 @@ from weakref import ref
 from mo_future import allocate_lock as _allocate_lock
 from mo_future import text_type
 
-from mo_threads.signal import Signal
+from mo_threads.signal import Signal, DONE
 
 DEBUG = False
 INTERVAL = 0.1
@@ -35,19 +35,22 @@ class Till(Signal):
 
     locker = _allocate_lock()
     next_ping = time()
-    done = Signal("Timers shutdown")
     enabled = False
     new_timers = []
 
-    def __new__(cls, till=None, timeout=None, seconds=None):
+    def __new__(cls, till=None, seconds=None):
         if not Till.enabled:
-            return Till.done
-        elif till == None and timeout == None and seconds == None:
-            return None
+            return DONE
+        elif till != None:
+            return object.__new__(cls)
+        elif seconds == None:
+            return object.__new__(cls)
+        elif seconds <= 0:
+            return DONE
         else:
             return object.__new__(cls)
 
-    def __init__(self, till=None, timeout=None, seconds=None):
+    def __init__(self, till=None, seconds=None):
         now = time()
         if till != None:
             if not isinstance(till, (float, int)):
@@ -57,13 +60,6 @@ class Till(Signal):
             timeout = till
         elif seconds != None:
             timeout = now + seconds
-        elif timeout != None:
-            if not isinstance(timeout, (float, int)):
-                from mo_logs import Log
-
-                Log.error("Duration objects for Till are no longer allowed")
-
-            timeout = now + timeout
         else:
             from mo_logs import Log
             Log.error("Should not happen")
@@ -75,8 +71,6 @@ class Till(Signal):
                 Till.next_ping = min(Till.next_ping, timeout)
             Till.new_timers.append((timeout, ref(self)))
 
-
-Till.done.go()
 
 
 def daemon(please_stop):

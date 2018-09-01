@@ -159,7 +159,7 @@ class Queue(object):
             if self.silent:
                 self.lock.wait(Till(till=time_to_stop_waiting))
             else:
-                self.lock.wait(Till(timeout=wait_time))
+                self.lock.wait(Till(seconds=wait_time))
                 if len(self.queue) >= self.max:
                     now = time()
                     if self.next_warning < now:

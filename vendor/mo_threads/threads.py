@@ -25,7 +25,7 @@ from mo_dots import Data, unwraplist, Null
 from mo_future import get_ident, start_new_thread, interrupt_main, get_function_name, text_type, allocate_lock
 from mo_logs import Log, Except
 from mo_threads.lock import Lock
-from mo_threads.profiles import CProfiler
+from mo_threads.profiles import CProfiler, write_profiles
 from mo_threads.signal import AndSignals, Signal
 from mo_threads.till import Till
 
@@ -100,7 +100,7 @@ class MainThread(BaseThread):
         self.please_stop = Signal()
         self.stop_logging = Log.stop
         self.timers = None
-        self.cprofiler = Null
+        self.cprofiler = CProfiler()
 
     def stop(self):
         """
@@ -138,6 +138,7 @@ class MainThread(BaseThread):
         self.timers.stop()
         self.timers.join()
 
+        write_profiles(self.cprofiler)
         DEBUG and Log.note("Thread {{name|quote}} now stopped", name=self.name)
         sys.exit(0)
 

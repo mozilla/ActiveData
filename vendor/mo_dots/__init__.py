@@ -417,7 +417,7 @@ def wrap(v):
     :return:  Data INSTANCE
     """
 
-    type_ = _get(v, "__class__")
+    type_ = v.__class__
 
     if type_ is dict:
         m = object.__new__(Data)

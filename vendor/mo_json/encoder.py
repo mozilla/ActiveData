@@ -502,8 +502,8 @@ def unicode_key(key):
 if PYPY:
     json_encoder = pypy_json_encode
 else:
-    from ujson import dumps as ujson_dumps
-    json_encoder = ujson_encode
-    # json_encoder = cPythonJSONEncoder().encode
+    # from ujson import dumps as ujson_dumps
+    # json_encoder = ujson_encode
+    json_encoder = cPythonJSONEncoder().encode
 
 

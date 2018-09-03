@@ -81,7 +81,7 @@ class Log(object):
             profiles.enable_profilers(settings.cprofile.filename)
 
         if settings.profile is True or (isinstance(settings.profile, Mapping) and settings.profile.enabled):
-            Log.error("REMOVED 2018-09-02 revision 3f30ff46f5971776f8ba18")
+            Log.error("REMOVED 2018-09-02, Activedata revision 3f30ff46f5971776f8ba18")
             # from mo_logs import profiles
             #
             # if isinstance(settings.profile, bool):

@@ -67,20 +67,19 @@ def _untype_list(value):
 
 
 def _untype_dict(value):
-    output = None
+    output = {}
 
     for k, v in value.items():
-        if k == EXISTS_TYPE:
-            continue
-        elif k == NESTED_TYPE:
-            return _untype(v)
-        elif k.startswith(TYPE_PREFIX):
-            return v
+        if k.startswith(TYPE_PREFIX):
+            if k == EXISTS_TYPE:
+                continue
+            elif k == NESTED_TYPE:
+                return _untype_list(v)
+            else:
+                return v
         else:
             new_v = _untype(v)
             if new_v is not None:
-                if output is None:
-                    output = {}
                 output[decode_property(k)] = new_v
     return output
 

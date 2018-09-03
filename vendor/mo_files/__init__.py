@@ -24,6 +24,7 @@ from mo_threads import Thread, Till
 
 mime = MimeTypes()
 
+
 class File(object):
     """
     ASSUMES ALL FILE CONTENT IS UTF8 ENCODED STRINGS

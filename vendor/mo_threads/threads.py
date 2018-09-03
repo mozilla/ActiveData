@@ -100,7 +100,7 @@ class MainThread(BaseThread):
         self.please_stop = Signal()
         self.stop_logging = Log.stop
         self.timers = None
-        self.cprofiler = CProfiler()
+        self.cprofiler = None
 
     def stop(self):
         """
@@ -210,7 +210,7 @@ class Thread(BaseThread):
 
         self.thread = None
         self.stopped = Signal("stopped signal for " + self.name)
-        self.cprofiler = Null
+        self.cprofiler = None
 
         if "parent_thread" in kwargs:
             del self.kwargs["parent_thread"]
@@ -369,6 +369,9 @@ class RegisterThread(object):
 
 
 def stop_main_thread(*args):
+    """
+    CLEAN OF ALL THREADS CREATED WITH THIS LIBRARY
+    """
     global DEBUG
 
     DEBUG = True

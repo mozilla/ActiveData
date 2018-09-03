@@ -17,8 +17,8 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from json.encoder import encode_basestring
 
-from mo_dots import Data, FlatList, NullType, join_field, split_field
-from mo_future import text_type, binary_type, sort_using_key, long, PY2, none_type
+from mo_dots import Data, FlatList, NullType, join_field, split_field, unwrap, _get, SLOT, DataObject
+from mo_future import text_type, binary_type, sort_using_key, long, PY2, none_type, generator_types
 from mo_json import ESCAPE_DCT, float2json
 from mo_json.encoder import UnicodeBuilder, COLON, COMMA, problem_serializing, json_encoder
 from mo_logs import Log
@@ -56,34 +56,52 @@ def untyped(value):
     return _untype(value)
 
 
-def _untype(value):
-    if isinstance(value, Mapping):
-        output = None
-
-        for k, v in value.items():
-            if k == EXISTS_TYPE:
-                continue
-            elif k == NESTED_TYPE:
-                return _untype(v)
-            elif k.startswith(TYPE_PREFIX):
-                return v
-            else:
-                new_v = _untype(v)
-                if new_v is not None:
-                    if output is None:
-                        output = {}
-                    output[decode_property(k)] = new_v
-        return output
-    elif isinstance(value, list):
-        output = [_untype(v) for v in value]
-        if len(output) == 0:
-            return None
-        elif len(output) == 1:
-            return output[0]
-        else:
-            return output
-    elif value == None:
+def _untype_list(value):
+    output = [_untype(v) for v in value]
+    if len(output) == 0:
         return None
+    elif len(output) == 1:
+        return output[0]
+    else:
+        return output
+
+
+def _untype_dict(value):
+    output = None
+
+    for k, v in value.items():
+        if k == EXISTS_TYPE:
+            continue
+        elif k == NESTED_TYPE:
+            return _untype(v)
+        elif k.startswith(TYPE_PREFIX):
+            return v
+        else:
+            new_v = _untype(v)
+            if new_v is not None:
+                if output is None:
+                    output = {}
+                output[decode_property(k)] = new_v
+    return output
+
+
+def _untype(value):
+
+    _type = _get(value, "__class__")
+    if _type is Data:
+        return _untype_dict(_get(value, SLOT))
+    elif _type is dict:
+        return _untype_dict(value)
+    elif _type is FlatList:
+        return _untype_list(value.list)
+    elif _type is list:
+        return _untype_list(value)
+    elif _type is NullType:
+        return None
+    elif _type is DataObject:
+        return _untype(_get(value, "_obj"))
+    elif _type in generator_types:
+        return _untype_list(value)
     else:
         return value
 

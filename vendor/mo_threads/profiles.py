@@ -15,14 +15,13 @@ import cProfile
 import pstats
 from datetime import datetime
 
+from mo_dots import Null
 from mo_future import iteritems
 from mo_logs import Log
-from mo_threads import Queue
 
-ENABLED = False
 FILENAME = "profile.tab"
 
-cprofiler_stats = Queue("cprofiler stats")
+cprofiler_stats = None  # ACCUMULATION OF STATS FROM ALL THREADS
 
 
 class CProfiler(object):
@@ -30,11 +29,13 @@ class CProfiler(object):
     cProfiler CONTEXT MANAGER WRAPPER
     """
 
+    __slots__ = ["cprofiler"]
+
     def __init__(self):
         self.cprofiler = None
 
     def __enter__(self):
-        if ENABLED:
+        if cprofiler_stats is not None:
             Log.note("starting cprofile")
             self.cprofiler = cProfile.Profile()
             self.cprofiler.enable()
@@ -55,7 +56,35 @@ class CProfiler(object):
             return self.cprofiler.disable()
 
 
+def enable_profilers(filename):
+    global FILENAME
+    global cprofiler_stats
+
+    if cprofiler_stats is not None:
+        return
+    if filename:
+        FILENAME = filename
+
+    from mo_threads.threads import ALL_LOCK, ALL, Thread
+    from mo_threads.queues import Queue
+    cprofiler_stats = Queue("cprofiler stats")
+
+    current_thread = Thread.current()
+    with ALL_LOCK:
+        threads = list(ALL.values())
+    for t in threads:
+        t.cprofiler = cProfile.Profile()
+        if t is current_thread:
+            Log.note("starting cprofile for thread {{name}}", name=t.name)
+            t.cprofiler.enable()
+        else:
+            Log.note("cprofiler not started for thread {{name}} (already running)", name=t.name)
+
+
 def write_profiles(main_thread_profile):
+    if cprofiler_stats is None:
+        return
+
     from pyLibrary import convert
     from mo_files import File
 
@@ -82,7 +111,6 @@ def write_profiles(main_thread_profile):
     ]
     stats_file = File(FILENAME, suffix=convert.datetime2string(datetime.now(), "_%Y%m%d_%H%M%S"))
     stats_file.write(convert.list2tab(stats))
-
-
+    Log.note("profile written to {{filename}}", filename=stats_file.abspath)
 
 

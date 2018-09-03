@@ -70,21 +70,26 @@ class Log(object):
             from mo_threads import Thread as _Thread
             _ = _Thread
 
+        # ENABLE CPROFILE
         if settings.cprofile is False:
             settings.cprofile = {"enabled": False}
-        elif settings.cprofile is True or (isinstance(settings.cprofile, Mapping) and settings.cprofile.enabled):
+        elif settings.cprofile is True:
             if isinstance(settings.cprofile, bool):
                 settings.cprofile = {"enabled": True, "filename": "cprofile.tab"}
+        if settings.cprofile.enabled:
+            from mo_threads import profiles
+            profiles.enable_profilers(settings.cprofile.filename)
 
         if settings.profile is True or (isinstance(settings.profile, Mapping) and settings.profile.enabled):
-            from mo_logs import profiles
-
-            if isinstance(settings.profile, bool):
-                profiles.ON = True
-                settings.profile = {"enabled": True, "filename": "profile.tab"}
-
-            if settings.profile.enabled:
-                profiles.ON = True
+            Log.error("REMOVED 2018-09-02 revision 3f30ff46f5971776f8ba18")
+            # from mo_logs import profiles
+            #
+            # if isinstance(settings.profile, bool):
+            #     profiles.ON = True
+            #     settings.profile = {"enabled": True, "filename": "profile.tab"}
+            #
+            # if settings.profile.enabled:
+            #     profiles.ON = True
 
         if settings.constants:
             constants.set(settings.constants)
@@ -96,9 +101,6 @@ class Log(object):
 
             from mo_logs.log_usingThread import StructuredLogger_usingThread
             cls.main_log = StructuredLogger_usingThread(cls.logging_multi)
-
-        if settings.cprofile.enabled == True:
-            Log.alert("cprofiling is enabled, writing to {{filename}}", filename=os.path.abspath(settings.cprofile.filename))
 
     @classmethod
     def stop(cls):

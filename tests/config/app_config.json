@@ -18,10 +18,9 @@
 			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
 		},
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
-		"jx_elasticsearch.meta.ENABLE_META_SCAN": false,
+		"jx_elasticsearch.meta.ENABLE_META_SCAN": true,
 		"jx_elasticsearch.meta.DEBUG": true,
-		"jx_base.expressions.ALLOW_SCRIPTING": true,
-		"mo_threads.profiles.ENABLED": true
+		"jx_base.expressions.ALLOW_SCRIPTING": true
 	},
 	"request_logs": {
 		"host": "http://localhost",
@@ -49,6 +48,10 @@
 	},
 	"debug": {
 		"trace": true,
+		"cprofile": {
+			"enabled": false,
+			"filename": "./results/profile.tab"
+		},
 		"log": [
 			{
 				"log_type": "console"

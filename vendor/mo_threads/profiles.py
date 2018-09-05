@@ -15,7 +15,6 @@ import cProfile
 import pstats
 from datetime import datetime
 
-from mo_dots import Null
 from mo_future import iteritems
 from mo_logs import Log
 
@@ -73,10 +72,10 @@ def enable_profilers(filename):
     with ALL_LOCK:
         threads = list(ALL.values())
     for t in threads:
-        t.cprofiler = cProfile.Profile()
+        t.cprofiler = CProfiler()
         if t is current_thread:
             Log.note("starting cprofile for thread {{name}}", name=t.name)
-            t.cprofiler.enable()
+            t.cprofiler.__enter__()
         else:
             Log.note("cprofiler not started for thread {{name}} (already running)", name=t.name)
 
@@ -88,7 +87,7 @@ def write_profiles(main_thread_profile):
     from pyLibrary import convert
     from mo_files import File
 
-    cprofiler_stats.add(main_thread_profile)
+    cprofiler_stats.add(pstats.Stats(main_thread_profile.cprofiler))
     stats = cprofiler_stats.pop_all()
 
     Log.note("aggregating {{num}} profile stats", num=len(stats))

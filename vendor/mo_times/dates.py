@@ -171,37 +171,68 @@ class Date(object):
 
     def __lt__(self, other):
         try:
+            if other == None:
+                return False
+            elif isinstance(other, Date):
+                return self.unix < other.unix
+            elif isinstance(other, (float, int)):
+                return self.unix < other
             other = Date(other)
+            return self.unix < other.unix
         except Exception:
             return False
 
-        return self.unix < other.unix
-
     def __eq__(self, other):
-        if other == None or other == '':
-            return Null
-
         try:
-            return other.unix == self.unix
-        except Exception:
-            pass
-
-        try:
-            return Date(other).unix == self.unix
+            if other == None:
+                return False
+            elif isinstance(other, Date):
+                return self.unix == other.unix
+            elif isinstance(other, (float, int)):
+                return self.unix == other
+            other = Date(other)
+            return self.unix == other.unix
         except Exception:
             return False
 
     def __le__(self, other):
-        other = Date(other)
-        return self.unix <= other.unix
+        try:
+            if other == None:
+                return False
+            elif isinstance(other, Date):
+                return self.unix <= other.unix
+            elif isinstance(other, (float, int)):
+                return self.unix <= other
+            other = Date(other)
+            return self.unix <= other.unix
+        except Exception:
+            return False
 
     def __gt__(self, other):
-        other = Date(other)
-        return self.unix > other.unix
+        try:
+            if other == None:
+                return False
+            elif isinstance(other, Date):
+                return self.unix > other.unix
+            elif isinstance(other, (float, int)):
+                return self.unix > other
+            other = Date(other)
+            return self.unix > other.unix
+        except Exception:
+            return False
 
     def __ge__(self, other):
-        other = Date(other)
-        return self.unix >= other.unix
+        try:
+            if other == None:
+                return False
+            elif isinstance(other, Date):
+                return self.unix >= other.unix
+            elif isinstance(other, (float, int)):
+                return self.unix >= other
+            other = Date(other)
+            return self.unix >= other.unix
+        except Exception:
+            return False
 
     def __add__(self, other):
         return self.add(other)

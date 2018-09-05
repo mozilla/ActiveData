@@ -148,5 +148,6 @@ def daemon(please_stop):
             if s is not None:
                 s.go()
 
+
 def actual_time(rec):
     return 0 if rec[1]() is None else rec[0]

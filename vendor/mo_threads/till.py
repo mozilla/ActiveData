@@ -125,10 +125,10 @@ def daemon(please_stop):
 
                 if work:
                     DEBUG and Log.note(
-                            "done: {{timers}}.  Remaining {{pending}}",
-                            timers=[t for t, s in work] if len(work) <= 5 else len(work),
-                            pending=[t for t, s in sorted_timers] if len(sorted_timers) <= 5 else len(sorted_timers)
-                        )
+                        "done: {{timers}}.  Remaining {{pending}}",
+                        timers=[t for t, s in work] if len(work) <= 5 else len(work),
+                        pending=[t for t, s in sorted_timers] if len(sorted_timers) <= 5 else len(sorted_timers)
+                    )
 
                     for t, r in work:
                         s = r()
@@ -143,8 +143,10 @@ def daemon(please_stop):
         # TRIGGER ALL REMAINING TIMERS RIGHT NOW
         with Till.locker:
             new_work, Till.new_timers = Till.new_timers, []
-        for t, s in new_work + sorted_timers:
-            s.go()
+        for t, r in new_work + sorted_timers:
+            s = r()
+            if s is not None:
+                s.go()
 
 def actual_time(rec):
     return 0 if rec[1]() is None else rec[0]

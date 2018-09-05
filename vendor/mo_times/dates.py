@@ -175,7 +175,7 @@ class Date(object):
                 return False
             elif isinstance(other, Date):
                 return self.unix < other.unix
-            elif isinstance(other, float):
+            elif isinstance(other, (float, int)):
                 return self.unix < other
             other = Date(other)
             return self.unix < other.unix
@@ -188,7 +188,7 @@ class Date(object):
                 return False
             elif isinstance(other, Date):
                 return self.unix == other.unix
-            elif isinstance(other, float):
+            elif isinstance(other, (float, int)):
                 return self.unix == other
             other = Date(other)
             return self.unix == other.unix
@@ -201,7 +201,7 @@ class Date(object):
                 return False
             elif isinstance(other, Date):
                 return self.unix <= other.unix
-            elif isinstance(other, float):
+            elif isinstance(other, (float, int)):
                 return self.unix <= other
             other = Date(other)
             return self.unix <= other.unix
@@ -214,7 +214,7 @@ class Date(object):
                 return False
             elif isinstance(other, Date):
                 return self.unix > other.unix
-            elif isinstance(other, float):
+            elif isinstance(other, (float, int)):
                 return self.unix > other
             other = Date(other)
             return self.unix > other.unix
@@ -227,7 +227,7 @@ class Date(object):
                 return False
             elif isinstance(other, Date):
                 return self.unix >= other.unix
-            elif isinstance(other, float):
+            elif isinstance(other, (float, int)):
                 return self.unix >= other
             other = Date(other)
             return self.unix >= other.unix

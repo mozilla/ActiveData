@@ -472,7 +472,7 @@ class ElasticsearchMetadata(Namespace):
                     if column is THREAD_STOP:
                         continue
 
-                    with Timer("update {{table}}.{{column}}", param={"table":column.es_index, "column":column.es_column}, silent=not DEBUG):
+                    with Timer("update {{table}}.{{column}}", param={"table": column.es_index, "column": column.es_column}, silent=not DEBUG):
                         if column.es_index in self.index_does_not_exist:
                             self.meta.columns.update({
                                 "clear": ".",

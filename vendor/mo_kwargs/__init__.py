@@ -41,15 +41,17 @@ def override(func):
         defaults = {k: v for k, v in zip(reversed(params), reversed(get_function_defaults(func)))}
 
     def raise_error(e, packed):
+        err = text_type(e)
         e = Except.wrap(e)
-        if e.message.startswith(func_name) and "takes at least" in e:
+        if err.startswith(func_name) and ("takes at least" in err or "required positional argument" in err):
             missing = [p for p in params if str(p) not in packed]
+            given = [p for p in params if str(p) in packed]
             get_logger().error(
                 "Problem calling {{func_name}}:  Expecting parameter {{missing}}, given {{given}}",
                 func_name=func_name,
                 missing=missing,
-                given=packed.keys(),
-                stack_depth=1
+                given=given,
+                stack_depth=2
             )
         get_logger().error("Error dispatching call", e)
 

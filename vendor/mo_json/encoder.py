@@ -25,6 +25,7 @@ from mo_future import text_type, binary_type, long, utf8_json_encoder, sort_usin
 from mo_json import ESCAPE_DCT, scrub, float2json
 from mo_logs import Except
 from mo_logs.strings import utf82unicode, quote
+from mo_times import Timer
 from mo_times.dates import Date
 from mo_times.durations import Duration
 
@@ -108,8 +109,10 @@ class cPythonJSONEncoder(object):
             return pretty_json(value)
 
         try:
-            scrubbed = scrub(value)
-            return text_type(self.encoder(scrubbed))
+            with Timer("scrub", too_long=0.1):
+                scrubbed = scrub(value)
+            with Timer("encode", too_long=0.1):
+                return text_type(self.encoder(scrubbed))
         except Exception as e:
             from mo_logs.exceptions import Except
             from mo_logs import Log

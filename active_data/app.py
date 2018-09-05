@@ -35,7 +35,7 @@ from mo_files import File
 from mo_future import text_type
 from mo_logs import Log, constants, startup
 from mo_logs.strings import unicode2utf8
-from mo_threads import Thread
+from mo_threads import Thread, stop_main_thread
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.env.flask_wrappers import cors_wrapper, dockerflow
 
@@ -224,6 +224,6 @@ if __name__ in ("__main__", "active_data.app"):
     except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
     finally:
-        Log.stop()
+        stop_main_thread()
 
 

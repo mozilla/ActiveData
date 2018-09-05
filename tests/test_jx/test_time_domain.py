@@ -250,7 +250,7 @@ class TestTime(BaseTestCase):
                             "type": "duration",
                             "key": "min",
                             "partitions": [
-                                {"min": e.since, "max": expected3[i + 1].since}
+                                {"min": e.since, "max": e.since + DAY.seconds}
                                 for i, e in enumerate(expected3[0:8:])
                             ]
                         }

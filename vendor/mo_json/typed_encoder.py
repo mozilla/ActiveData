@@ -17,8 +17,8 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from json.encoder import encode_basestring
 
-from mo_dots import Data, FlatList, NullType, join_field, split_field
-from mo_future import text_type, binary_type, sort_using_key, long, PY2, none_type
+from mo_dots import Data, FlatList, NullType, join_field, split_field, _get, SLOT, DataObject
+from mo_future import text_type, binary_type, sort_using_key, long, PY2, none_type, generator_types
 from mo_json import ESCAPE_DCT, float2json
 from mo_json.encoder import UnicodeBuilder, COLON, COMMA, problem_serializing, json_encoder
 from mo_logs import Log
@@ -53,33 +53,59 @@ def unnest_path(encoded):
 
 
 def untyped(value):
-    return _untype(value)
+    return _untype_value(value)
 
 
-def _untype(value):
-    if isinstance(value, Mapping):
-        output = {}
+def _untype_list(value):
+    if any(isinstance(v, Mapping) for v in value):
+        # MAY BE MORE TYPED OBJECTS IN THIS LIST
+        output = [_untype_value(v) for v in value]
+    else:
+        # LIST OF PRIMITIVE VALUES
+        output = value
 
-        for k, v in value.items():
+    if len(output) == 0:
+        return None
+    elif len(output) == 1:
+        return output[0]
+    else:
+        return output
+
+
+def _untype_dict(value):
+    output = {}
+
+    for k, v in value.items():
+        if k.startswith(TYPE_PREFIX):
             if k == EXISTS_TYPE:
                 continue
             elif k == NESTED_TYPE:
-                return _untype(v)
-            elif k.startswith(TYPE_PREFIX):
-                return v
+                return _untype_list(v)
             else:
-                new_v = _untype(v)
-                if isinstance(new_v, list):
-                    len_v = len(new_v)
-                    if len_v==1:
-                        output[decode_property(k)] = new_v[0]
-                    elif len_v>1:
-                        output[decode_property(k)] = new_v
-                elif new_v != None:
-                    output[decode_property(k)] = new_v
-        return output
-    elif isinstance(value, list):
-        return [_untype(v) for v in value]
+                return v
+        else:
+            new_v = _untype_value(v)
+            if new_v is not None:
+                output[decode_property(k)] = new_v
+    return output
+
+
+def _untype_value(value):
+    _type = _get(value, "__class__")
+    if _type is Data:
+        return _untype_dict(_get(value, SLOT))
+    elif _type is dict:
+        return _untype_dict(value)
+    elif _type is FlatList:
+        return _untype_list(value.list)
+    elif _type is list:
+        return _untype_list(value)
+    elif _type is NullType:
+        return None
+    elif _type is DataObject:
+        return _untype_value(_get(value, "_obj"))
+    elif _type in generator_types:
+        return _untype_list(value)
     else:
         return value
 
@@ -98,7 +124,7 @@ def encode(value):
 
 def typed_encode(value, sub_schema, path, net_new_properties, buffer):
     """
-    :param value: THE DATASCRUTURE TO ENCODE
+    :param value: THE DATA STRUCTURE TO ENCODE
     :param sub_schema: dict FROM PATH TO Column DESCRIBING THE TYPE
     :param path: list OF CURRENT PATH
     :param net_new_properties: list FOR ADDING NEW PROPERTIES NOT FOUND IN sub_schema

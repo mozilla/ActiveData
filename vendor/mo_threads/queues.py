@@ -244,6 +244,151 @@ class Queue(object):
         self.close()
 
 
+class PriorityQueue(Queue):
+    """
+        ADDS ITEMS TO THEIR PRIORITY AND POP'S THE HIGHEST PRIORITY VALUE (UNLESS REQUESTED OTHERWISE)
+    """
+    def __init__(self, name, numpriorities, max=None, silent=False, unique=False, allow_add_after_close=False):
+        Queue.__init__(self, name=name, max=max, silent=silent, unique=False, allow_add_after_close=False)
+
+        self.numpriorities = numpriorities
+        self.queue = [
+            Queue(name=name, max=max, silent=silent, unique=False, allow_add_after_close=False)
+            for _ in range(numpriorities)
+        ]
+
+    def __iter__(self):
+        try:
+            while True:
+                value = self.pop(self.please_stop)
+                if value is THREAD_STOP:
+                    break
+                if value is not None:
+                    yield value
+        except Exception as e:
+            Log.warning("Tell me about what happened here", e)
+
+        if not self.silent:
+            Log.note("queue iterator is done")
+
+    def add(self, value, timeout=None, priority=0):
+        with self.lock:
+            if value is THREAD_STOP:
+                # INSIDE THE lock SO THAT EXITING WILL RELEASE wait()
+                self.queue[priority].queue.append(value)
+                self.please_stop.go()
+                return
+
+            self.queue[priority]._wait_for_queue_space(timeout=timeout)
+            if self.please_stop and not self.queue[priority].allow_add_after_close:
+                Log.error("Do not add to closed queue")
+            else:
+                if self.unique:
+                    if value not in self.queue[priority].queue:
+                        self.queue[priority].queue.append(value)
+                else:
+                    self.queue[priority].queue.append(value)
+        return self
+
+    def push(self, value, priority=0):
+        """
+        SNEAK value TO FRONT OF THE QUEUE
+        """
+        if self.please_stop and not self.queue[priority].allow_add_after_close:
+            Log.error("Do not push to closed queue")
+
+        with self.lock:
+            self.queue[priority]._wait_for_queue_space()
+            if not self.please_stop:
+                self.queue[priority].queue.appendleft(value)
+        return self
+
+    def __len__(self):
+        with self.lock:
+            return sum([len(q.queue) for q in self.queue])
+
+    def __nonzero__(self):
+        with self.lock:
+            return any(any(r != THREAD_STOP for r in q.queue) for q in self.queue)
+
+    def highest_entry(self):
+        for count, q in enumerate(self.queue):
+            if len(q) > 0:
+                return count
+        return None
+
+    def pop(self, till=None, priority=None):
+        """
+        WAIT FOR NEXT ITEM ON THE QUEUE
+        RETURN THREAD_STOP IF QUEUE IS CLOSED
+        RETURN None IF till IS REACHED AND QUEUE IS STILL EMPTY
+
+        :param till:  A `Signal` to stop waiting and return None
+        :return:  A value, or a THREAD_STOP or None
+        """
+        if till is not None and not isinstance(till, Signal):
+            Log.error("expecting a signal")
+
+        with self.lock:
+            while True:
+                if not priority:
+                    priority = self.highest_entry()
+                if priority:
+                    value = self.queue[priority].queue.popleft()
+                    return value
+                if self.please_stop:
+                    break
+                if not self.lock.wait(till=till | self.please_stop):
+                    if self.please_stop:
+                        break
+                    return None
+        (DEBUG or not self.silent) and Log.note(self.name + " queue stopped")
+        return THREAD_STOP
+
+    def pop_all(self, priority=None):
+        """
+        NON-BLOCKING POP ALL IN QUEUE, IF ANY
+        """
+        output = []
+        with self.lock:
+            if not priority:
+                priority = self.highest_entry()
+            if priority:
+                output = list(self.queue[priority].queue)
+                self.queue[priority].queue.clear()
+        return output
+
+    def pop_all_queues(self):
+        """
+        NON-BLOCKING POP ALL IN QUEUE, IF ANY
+        """
+        output = []
+        with self.lock:
+            for q in self.queue:
+                output.extend(list(q.queue))
+                q.queue.clear()
+
+        return output
+
+    def pop_one(self, priority=None):
+        """
+        NON-BLOCKING POP IN QUEUE, IF ANY
+        """
+        with self.lock:
+            if not priority:
+                priority = self.highest_entry()
+            if self.please_stop:
+                return [THREAD_STOP]
+            elif not self.queue:
+                return None
+            else:
+                v =self.pop(priority=priority)
+                if v is THREAD_STOP:  # SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
+                    self.please_stop.go()
+                return v
+
+
+
 class ThreadedQueue(Queue):
     """
     DISPATCH TO ANOTHER (SLOWER) queue IN BATCHES OF GIVEN size

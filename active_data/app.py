@@ -18,6 +18,7 @@ from tempfile import NamedTemporaryFile
 
 import flask
 from flask import Flask
+from mo_threads.threads import RegisterThread
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
@@ -199,21 +200,22 @@ def setup_flask_ssl():
 
 
 def _exit():
-    Log.note("Got request to shutdown")
-    try:
-        return Response(
-            unicode2utf8(OVERVIEW),
-            status=400,
-            headers={
-                "Content-Type": "text/html"
-            }
-        )
-    finally:
-        shutdown = flask.request.environ.get('werkzeug.server.shutdown')
-        if shutdown:
-            shutdown()
-        else:
-            Log.warning("werkzeug.server.shutdown does not exist")
+    with RegisterThread():
+        Log.note("Got request to shutdown")
+        try:
+            return Response(
+                unicode2utf8(OVERVIEW),
+                status=400,
+                headers={
+                    "Content-Type": "text/html"
+                }
+            )
+        finally:
+            shutdown = flask.request.environ.get('werkzeug.server.shutdown')
+            if shutdown:
+                shutdown()
+            else:
+                Log.warning("werkzeug.server.shutdown does not exist")
 
 
 if __name__ in ("__main__", "active_data.app"):

@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 
 import flask
 from flask import Response
+from mo_threads.threads import RegisterThread
 
 from active_data.actions import send_error, find_container
 from jx_base.container import Container
@@ -29,36 +30,37 @@ _ = value2json
 
 @cors_wrapper
 def get_raw_json(path):
-    active_data_timer = Timer("total duration")
-    body = flask.request.get_data()
-    try:
-        with active_data_timer:
-            args = scrub_args(flask.request.args)
-            limit = args.limit if args.limit else 10
-            args.limit = None
+    with RegisterThread():
+        active_data_timer = Timer("total duration")
+        body = flask.request.get_data()
+        try:
+            with active_data_timer:
+                args = scrub_args(flask.request.args)
+                limit = args.limit if args.limit else 10
+                args.limit = None
 
-            frum = find_container(path)
-            result = jx.run({
-                "from": path,
-                "where": {"eq": args},
-                "limit": limit,
-                "format": "list"
-            }, frum)
+                frum = find_container(path)
+                result = jx.run({
+                    "from": path,
+                    "where": {"eq": args},
+                    "limit": limit,
+                    "format": "list"
+                }, frum)
 
-            if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
-                result = result.format("list")
+                if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
+                    result = result.format("list")
 
-        result.meta.active_data_response_time = active_data_timer.duration
+            result.meta.active_data_response_time = active_data_timer.duration
 
-        response_data = unicode2utf8(convert.value2json(result.data, pretty=True))
-        Log.note("Response is {{num}} bytes", num=len(response_data))
-        return Response(
-            response_data,
-            status=200
-        )
-    except Exception as e:
-        e = Except.wrap(e)
-        return send_error(active_data_timer, body, e)
+            response_data = unicode2utf8(convert.value2json(result.data, pretty=True))
+            Log.note("Response is {{num}} bytes", num=len(response_data))
+            return Response(
+                response_data,
+                status=200
+            )
+        except Exception as e:
+            e = Except.wrap(e)
+            return send_error(active_data_timer, body, e)
 
 
 def scrub_args(args):

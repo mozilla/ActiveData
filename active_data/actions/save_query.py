@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 import hashlib
 
 from flask import Response
+from mo_threads.threads import RegisterThread
 
 import jx_elasticsearch
 from jx_python.containers.cube import Cube
@@ -41,27 +42,28 @@ def find_query(hash):
     :param hash:
     :return: Response OBJECT
     """
-    try:
-        hash = hash.split("/")[0]
-        query = query_finder.find(hash)
+    with RegisterThread():
+        try:
+            hash = hash.split("/")[0]
+            query = query_finder.find(hash)
 
-        if not query:
+            if not query:
+                return Response(
+                    b'{"type": "ERROR", "template": "not found"}',
+                    status=404
+                )
+            else:
+                return Response(
+                    unicode2utf8(query),
+                    status=200
+                )
+        except Exception as e:
+            e = Except.wrap(e)
+            Log.warning("problem finding query with hash={{hash}}", hash=hash, cause=e)
             return Response(
-                b'{"type": "ERROR", "template": "not found"}',
-                status=404
+                unicode2utf8(convert.value2json(e)),
+                status=400
             )
-        else:
-            return Response(
-                unicode2utf8(query),
-                status=200
-            )
-    except Exception as e:
-        e = Except.wrap(e)
-        Log.warning("problem finding query with hash={{hash}}", hash=hash, cause=e)
-        return Response(
-            unicode2utf8(convert.value2json(e)),
-            status=400
-        )
 
 
 class SaveQueries(object):

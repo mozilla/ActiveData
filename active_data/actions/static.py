@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 import mimetypes
 
 import flask
+from mo_threads.threads import RegisterThread
 from werkzeug.wrappers import Response
 
 from active_data import record_request
@@ -32,18 +33,19 @@ def download(filename):
     :param filename:  URL PATH
     :return: Response OBJECT WITH FILE CONTENT
     """
-    try:
-        record_request(flask.request, None, flask.request.get_data(), None)
-        content, status, mimetype = _read_file(filename)
-        return Response(
-            content,
-            status=status,
-            headers={
-                "Content-Type": mimetype
-            }
-        )
-    except Exception as e:
-        Log.error("Could not get file {{file}}", file=filename, cause=e)
+    with RegisterThread():
+        try:
+            record_request(flask.request, None, flask.request.get_data(), None)
+            content, status, mimetype = _read_file(filename)
+            return Response(
+                content,
+                status=status,
+                headers={
+                    "Content-Type": mimetype
+                }
+            )
+        except Exception as e:
+            Log.error("Could not get file {{file}}", file=filename, cause=e)
 
 
 @cache(duration=DAY)

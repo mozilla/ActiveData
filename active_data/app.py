@@ -54,6 +54,7 @@ class ActiveDataApp(Flask):
                 Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
         finally:
             Log.stop()
+            stop_main_thread()
 
 
 flask_app = ActiveDataApp(__name__)
@@ -225,7 +226,6 @@ if __name__ in ("__main__", "active_data.app"):
             run_flask()
     except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
-    finally:
         stop_main_thread()
 
 

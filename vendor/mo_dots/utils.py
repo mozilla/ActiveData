@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 import importlib
 import sys
+from thread import allocate_lock
 
 from mo_future import PY2
 
@@ -39,11 +40,28 @@ def get_logger():
         return _Log
 
 
+
 def get_module(name):
     try:
         return importlib.import_module(name)
     except Exception as e:
         get_logger().error("`pip install " + name.split(".")[0].replace("_", "-") + "` to enable this feature", cause=e)
+
+
+threaded_module_lock = allocate_lock()
+threaded_module_lock.acquire()
+
+
+def threaded_import_module(name):
+    try:
+        with threaded_module_lock:
+            return importlib.import_module(name)
+    except Exception as e:
+        get_logger().error("`pip install " + name.split(".")[0].replace("_", "-") + "` to enable this feature", cause=e)
+
+
+def allow_threaded_import():
+    threaded_module_lock.release()
 
 
 class PoorLogger(object):

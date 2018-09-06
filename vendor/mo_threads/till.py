@@ -18,9 +18,9 @@ from __future__ import unicode_literals
 from time import sleep, time
 from weakref import ref
 
+from mo_dots.utils import threaded_import_module
 from mo_future import allocate_lock as _allocate_lock
 from mo_future import text_type
-
 from mo_threads.signal import Signal, DONE
 
 DEBUG = False
@@ -72,9 +72,8 @@ class Till(Signal):
             Till.new_timers.append((timeout, ref(self)))
 
 
-
 def daemon(please_stop):
-    from mo_logs import Log
+    Log = threaded_import_module("mo_logs").Log
 
     Till.enabled = True
     sorted_timers = []
@@ -90,8 +89,6 @@ def daemon(please_stop):
                 try:
                     sleep(min(later, INTERVAL))
                 except Exception as e:
-                    from mo_logs import Log
-
                     Log.warning(
                         "Call to sleep failed with ({{later}}, {{interval}})",
                         later=later,

@@ -4,17 +4,6 @@ backlog = 64
 timeout = 10*60
 pidfile = '/app/logs/gunicorn.pid'
 
-# FOR DEBUGGING
-# workers = 1
-# capture_output = True
-# accesslog = "-"
-# errorlog = "-"
-
-workers = 5
-accesslog = "/app/logs/gunicorn_access.log"
-errorlog = "/app/logs/gunicorn_error.log"
-logfile = "/app/logs/gunicorn_debug.log"
-
 access_log_format = (
     '{' 
     '"remote_addr": "%(h)s",' 
@@ -29,3 +18,16 @@ access_log_format = (
     '"process_id": "%(p)s"' 
     '}'
 )
+
+# FOR DEBUGGING
+# workers = 1
+# capture_output = True
+# accesslog = "-"
+# errorlog = "-"
+
+# FOR PRODUCTION
+workers = 5
+accesslog = "/app/logs/gunicorn_access.log"
+errorlog = "/app/logs/gunicorn_error.log"
+logfile = "/app/logs/gunicorn_debug.log"
+

@@ -351,7 +351,7 @@ class Thread(BaseThread):
 
         if output is None:
             Log.warning("this thread is not known. Register this thread at earliest known entry point.")
-            return MAIN_THREAD
+            return BaseThread(get_ident())
 
         return output
 

@@ -58,7 +58,7 @@ class StructuredLogger_usingThread(StructuredLogger):
             raise e  # OH NO!
 
     def stop(self):
-        Log.note("Stopping threaded logger")
+        Log.warning("Stopping threaded logger")
         try:
             self.queue.add(THREAD_STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()

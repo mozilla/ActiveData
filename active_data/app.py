@@ -27,7 +27,7 @@ from active_data import record_request, OVERVIEW
 from active_data.actions import save_query
 from active_data.actions.contribute import send_contribute
 from active_data.actions.json import get_raw_json
-from active_data.actions.jx import jx_query
+from active_data.actions.query import jx_query
 from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.sql import sql_query
 from active_data.actions.static import download

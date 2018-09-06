@@ -21,6 +21,7 @@ from active_data import record_request
 from active_data.actions import save_query
 from jx_base import container
 from jx_elasticsearch.meta import ElasticsearchMetadata
+from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import coalesce, split_field, set_default
 from mo_json import value2json
 from mo_json.typed_encoder import STRUCT
@@ -146,6 +147,9 @@ def test_mode_wait(query):
 
 namespace = None
 
+# TODO: The container cache is a hack until a global namespace/container is built
+container_cache = {}  # MAP NAME TO Container OBJECT
+
 
 def find_container(frum):
     """
@@ -160,6 +164,9 @@ def find_container(frum):
         namespace = ElasticsearchMetadata(container.config.default.settings)
 
     if isinstance(frum, text_type):
+        if frum in container_cache:
+            return container_cache[frum]
+
         path = split_field(frum)
         if path[0] == "meta":
             if path[1] in ["columns", "tables"]:
@@ -168,7 +175,7 @@ def find_container(frum):
                 Log.error("{{name}} not a recognized table", name=frum)
 
         type_ = container.config.default.type
-        fact_table_name = split_field(frum)[0]
+        fact_table_name = path[0]
 
         settings = set_default(
             {
@@ -179,7 +186,9 @@ def find_container(frum):
             container.config.default.settings
         )
         settings.type = None
-        return container.type2container[type_](settings)
+        output = container.type2container[type_](settings)
+        container_cache[frum] = output
+        return output
     elif isinstance(frum, Mapping) and frum.type and container.type2container[frum.type]:
         # TODO: Ensure the frum.name is set, so we capture the deep queries
         if not frum.type:
@@ -187,9 +196,9 @@ def find_container(frum):
         return container.type2container[frum.type](frum.settings)
     elif isinstance(frum, Mapping) and (frum["from"] or isinstance(frum["from"], (list, set))):
         from jx_base.query import QueryOp
-        return QueryOp.wrap(frum, namespace=schema)
+        return QueryOp.wrap(frum)
     elif isinstance(frum, (list, set)):
-        return _ListContainer("test_list", frum)
+        return ListContainer("test_list", frum)
     else:
         return frum
 

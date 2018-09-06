@@ -18,8 +18,8 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 from time import time as _time
 
-from mo_dots import Null
-from mo_future import unichr, text_type, long
+from mo_dots import Null, NullType
+from mo_future import unichr, text_type, long, none_type
 from mo_logs import Except
 from mo_logs.strings import deformat
 from mo_math import Math
@@ -171,11 +171,12 @@ class Date(object):
 
     def __lt__(self, other):
         try:
-            if other == None:
+            type_ = other.__class__
+            if type_ in (none_type, NullType):
                 return False
-            elif isinstance(other, Date):
+            elif type_ is Date:
                 return self.unix < other.unix
-            elif isinstance(other, (float, int)):
+            elif type_ in (float, int):
                 return self.unix < other
             other = Date(other)
             return self.unix < other.unix
@@ -184,11 +185,12 @@ class Date(object):
 
     def __eq__(self, other):
         try:
-            if other == None:
+            type_ = other.__class__
+            if type_ in (none_type, NullType):
                 return False
-            elif isinstance(other, Date):
+            elif type_ is Date:
                 return self.unix == other.unix
-            elif isinstance(other, (float, int)):
+            elif type_ in (float, int):
                 return self.unix == other
             other = Date(other)
             return self.unix == other.unix
@@ -197,11 +199,12 @@ class Date(object):
 
     def __le__(self, other):
         try:
-            if other == None:
+            type_ = other.__class__
+            if type_ in (none_type, NullType):
                 return False
-            elif isinstance(other, Date):
+            elif type_ is Date:
                 return self.unix <= other.unix
-            elif isinstance(other, (float, int)):
+            elif type_ in (float, int):
                 return self.unix <= other
             other = Date(other)
             return self.unix <= other.unix
@@ -210,11 +213,12 @@ class Date(object):
 
     def __gt__(self, other):
         try:
-            if other == None:
+            type_ = other.__class__
+            if type_ in (none_type, NullType):
                 return False
-            elif isinstance(other, Date):
+            elif type_ is Date:
                 return self.unix > other.unix
-            elif isinstance(other, (float, int)):
+            elif type_ in (float, int):
                 return self.unix > other
             other = Date(other)
             return self.unix > other.unix
@@ -223,11 +227,12 @@ class Date(object):
 
     def __ge__(self, other):
         try:
-            if other == None:
+            type_ = other.__class__
+            if type_ in (none_type, NullType):
                 return False
-            elif isinstance(other, Date):
+            elif type_ is Date:
                 return self.unix >= other.unix
-            elif isinstance(other, (float, int)):
+            elif type_ in (float, int):
                 return self.unix >= other
             other = Date(other)
             return self.unix >= other.unix

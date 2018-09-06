@@ -13,7 +13,6 @@ from __future__ import unicode_literals
 
 import importlib
 import sys
-from thread import allocate_lock
 
 from mo_future import PY2
 

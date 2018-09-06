@@ -350,7 +350,8 @@ class Thread(BaseThread):
             output = ALL.get(ident)
 
         if output is None:
-            Log.error("this thread is not known. Register this thread at earliest known entry point.")
+            Log.warning("this thread is not known. Register this thread at earliest known entry point.")
+            return MAIN_THREAD
 
         return output
 

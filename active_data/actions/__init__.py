@@ -16,7 +16,6 @@ import flask
 from flask import Response
 from future.utils import text_type
 
-import jx_elasticsearch
 from active_data import record_request
 from active_data.actions import save_query
 from jx_base import container
@@ -154,7 +153,6 @@ container_cache = {}  # MAP NAME TO Container OBJECT
 def find_container(frum):
     """
     :param frum:
-    :param schema:
     :return:
     """
     global namespace

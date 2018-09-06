@@ -146,6 +146,8 @@ def test_mode_wait(query):
 
 
 namespace = None
+
+# TODO: The container cache is a hack until a global namespace/container is built
 container_cache = {}  # MAP NAME TO Container OBJECT
 
 

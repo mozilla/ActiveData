@@ -13,14 +13,12 @@ from __future__ import unicode_literals
 
 import os
 import platform
+import sys
 from collections import Mapping
 from datetime import datetime
 
-import sys
-
 from mo_dots import coalesce, listwrap, wrap, unwrap, unwraplist, set_default, FlatList
-from mo_dots.utils import allow_threaded_import
-from mo_future import text_type, PY3, iteritems
+from mo_future import text_type, PY3
 from mo_logs import constants
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.strings import indent
@@ -58,7 +56,6 @@ class Log(object):
         constants - UPDATE MODULE CONSTANTS AT STARTUP (PRIMARILY INTENDED TO CHANGE DEBUG STATE)
         """
         global _Thread
-        allow_threaded_import()
         if not settings:
             return
         settings = wrap(settings)

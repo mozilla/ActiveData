@@ -15,12 +15,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from collections import namedtuple
 from time import sleep, time
 from weakref import ref
 
-from mo_dots.utils import threaded_import_module
 from mo_future import allocate_lock as _allocate_lock
 from mo_future import text_type
+from mo_logs import Log
 from mo_threads.signal import Signal, DONE
 
 DEBUG = False
@@ -69,12 +70,10 @@ class Till(Signal):
         with Till.locker:
             if timeout != None:
                 Till.next_ping = min(Till.next_ping, timeout)
-            Till.new_timers.append((timeout, ref(self)))
+            Till.new_timers.append(TodoItem(timeout, ref(self)))
 
 
 def daemon(please_stop):
-    Log = threaded_import_module("mo_logs").Log
-
     Till.enabled = True
     sorted_timers = []
 
@@ -115,7 +114,7 @@ def daemon(please_stop):
                     t = actual_time(rec)
                     if now < t:
                         work, sorted_timers = sorted_timers[:i], sorted_timers[i:]
-                        Till.next_ping = min(Till.next_ping, sorted_timers[0][0])
+                        Till.next_ping = min(Till.next_ping, sorted_timers[0].timestamp)
                         break
                 else:
                     work, sorted_timers = sorted_timers, []
@@ -146,5 +145,8 @@ def daemon(please_stop):
                 s.go()
 
 
-def actual_time(rec):
-    return 0 if rec[1]() is None else rec[0]
+def actual_time(todo):
+    return 0 if todo.ref() is None else todo.timestamp
+
+
+TodoItem = namedtuple("TodoItem", ["timestamp", "ref"])

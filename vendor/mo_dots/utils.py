@@ -48,22 +48,6 @@ def get_module(name):
         get_logger().error("`pip install " + name.split(".")[0].replace("_", "-") + "` to enable this feature", cause=e)
 
 
-threaded_module_lock = allocate_lock()
-threaded_module_lock.acquire()
-
-
-def threaded_import_module(name):
-    try:
-        with threaded_module_lock:
-            return importlib.import_module(name)
-    except Exception as e:
-        get_logger().error("`pip install " + name.split(".")[0].replace("_", "-") + "` to enable this feature", cause=e)
-
-
-def allow_threaded_import():
-    threaded_module_lock.release()
-
-
 class PoorLogger(object):
     @classmethod
     def note(cls, note, **kwargs):

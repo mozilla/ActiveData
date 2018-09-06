@@ -17,7 +17,6 @@ import re
 import sys
 from collections import Mapping, namedtuple
 
-from jx_base.expressions import jx_expression
 from mo_dots import Data, coalesce, unwraplist, Null
 from mo_files import File
 from mo_future import allocate_lock as _allocate_lock, text_type

@@ -3,8 +3,10 @@
 # RUN FROM ROOT Bugzilla-ETL DIRECTORY, eg ./resources/docker/debug.sh
 
 
-docker run --interactive --tty --env-file ./resources/docker/activedata.env -p 8000:8000/tcp --mount source=activedata_state,destination=/app/logs activedata bash
+docker run --interactive --tty --env-file ./resources/docker/activedata.env -p 8001:8000/tcp --mount source=activedata_state,destination=/app/logs mozilla/activedata:v2.3rc14 bash
 
 
 export PYTHONPATH=.:vendor
-python active_data/app.py
+/usr/local/bin/gunicorn -b 0.0.0.0:$PORT --config=resources/docker/gunicorn.py active_data.app:flask_app
+
+

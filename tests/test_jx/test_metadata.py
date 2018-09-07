@@ -31,7 +31,7 @@ class TestMetadata(BaseTestCase):
 
         settings = self.utils.fill_container(test, typed=False)
 
-        table_name = settings.index
+        table_name = settings.alias
 
         # WE REQUIRE A QUERY TO FORCE LOADING OF METADATA
         pre_test = {

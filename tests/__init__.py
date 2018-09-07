@@ -24,6 +24,7 @@ from jx_base import container as jx_containers
 from jx_base.query import QueryOp
 from jx_python import jx
 from mo_dots import wrap, coalesce, unwrap, listwrap, Data, literal_field
+from mo_files.url import URL
 from mo_future import text_type
 from mo_json import value2json, json2value
 from mo_kwargs import override
@@ -119,6 +120,18 @@ class ESUtils(object):
             ESUtils.indexes.remove(self._es_test_settings.index)
 
     def setUpClass(self):
+        while True:
+            try:
+                es = test_jx.global_settings.backend_es
+                http.get_json(URL(es.host, port=es.port))
+                break
+            except Exception as e:
+                e = Except.wrap(e)
+                if "No connection could be made because the target machine actively refused it" in e or "Connection refused" in e:
+                    Log.alert("Problem connecting")
+                else:
+                    Log.error("Server raised exception", e)
+
         # REMOVE OLD INDEXES
         cluster = elasticsearch.Cluster(test_jx.global_settings.backend_es)
         aliases = cluster.get_aliases()

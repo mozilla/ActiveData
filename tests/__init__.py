@@ -109,6 +109,7 @@ class ESUtils(object):
         NEXT += 1
 
         self._es_test_settings = self.backend_es.copy()
+        self._es_test_settings.index = index_name
         self._es_cluster = elasticsearch.Cluster(self._es_test_settings)
 
 
@@ -166,7 +167,11 @@ class ESUtils(object):
             _settings.schema = mo_json_config.get(url)
 
             # MAKE CONTAINER
-            container = self._es_cluster.get_or_create_index(typed=typed, schema=subtest.schema, kwargs=_settings)
+            container = self._es_cluster.get_or_create_index(
+                typed=typed,
+                schema=subtest.schema,
+                kwargs=_settings
+            )
             container.add_alias(_settings.index)
 
             _settings.index = container.settings.index

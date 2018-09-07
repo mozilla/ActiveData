@@ -123,6 +123,8 @@ def params_pack(params, *args):
         if a == None:
             continue
         for k, v in a.items():
+            if v == None:
+                continue
             k = text_type(k)
             if k in settings:
                 continue

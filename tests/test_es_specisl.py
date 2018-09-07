@@ -12,11 +12,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from active_data import OVERVIEW
-from mo_json_config import URL
-from mo_logs.strings import unicode2utf8
-from pyLibrary import convert
-from pyLibrary.env import http
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
@@ -103,12 +98,11 @@ class TestESSpecial(BaseTestCase):
             "query": {
                 "select": ["bug_id"],
                 "from": TEST_TABLE,
-                "where": {"eq": {"status_whiteboard(tokenized)": "fx21"}}
+                "where": {"eq": {"status_whiteboard(tokenized)": "test"}}
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [
-                    {"bug_id": 123}
-                ]
+                "meta": {"format": "list"},
+                "data": [{"bug_id": 123}, {"bug_id": 124}]
             }
         }
         self.utils.execute_tests(test)

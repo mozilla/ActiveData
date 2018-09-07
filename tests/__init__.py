@@ -50,7 +50,7 @@ class ESUtils(object):
     BASIC TEST FORMAT:
     {
         "name": "EXAMPLE TEMPLATE",
-        "metadata": {},             # OPTIONAL DATA SHAPE REQUIRED FOR NESTED DOCUMENT QUERIES
+        "schema": {},                # OPTIONAL ES SCHEMA FOR SPECIAL TESTS
         "data": [],                  # THE DOCUMENTS NEEDED FOR THIS TEST
         "query": {                   # THE JSON QUERY EXPRESSION
             "from": TEST_TABLE,      # TEST_TABLE WILL BE REPLACED WITH DATASTORE FILLED WITH data
@@ -109,17 +109,13 @@ class ESUtils(object):
         NEXT += 1
 
         self._es_test_settings = self.backend_es.copy()
-        self._es_test_settings.index = index_name
-        self._es_test_settings.alias = None
         self._es_cluster = elasticsearch.Cluster(self._es_test_settings)
-        self._index = self._es_cluster.get_or_create_index(self._es_test_settings)
 
-        ESUtils.indexes.append(self._index)
 
     def tearDown(self):
-        if self._index in ESUtils.indexes:
-            self._es_cluster.delete_index(self._index.settings.index)
-            ESUtils.indexes.remove(self._index)
+        if self._es_test_settings.index in ESUtils.indexes:
+            self._es_cluster.delete_index(self._es_test_settings.index)
+            ESUtils.indexes.remove(self._es_test_settings.index)
 
     def setUpClass(self):
         # REMOVE OLD INDEXES
@@ -138,7 +134,7 @@ class ESUtils(object):
         cluster = elasticsearch.Cluster(test_jx.global_settings.backend_es)
         for i in ESUtils.indexes:
             try:
-                cluster.delete_index(i.settings.index)
+                cluster.delete_index(i)
                 Log.note("remove index {{index}}", index=i)
             except Exception as e:
                 pass
@@ -160,8 +156,6 @@ class ESUtils(object):
         """
         subtest = wrap(subtest)
         _settings = self._es_test_settings  # ALREADY COPIED AT setUp()
-        # _settings.index = "testing_" + Random.hex(10).lower()
-        # settings.type = "test_result"
 
         try:
             url = "file://resources/schema/basic_schema.json.template?{{.|url}}"
@@ -172,8 +166,11 @@ class ESUtils(object):
             _settings.schema = mo_json_config.get(url)
 
             # MAKE CONTAINER
-            container = self._es_cluster.get_or_create_index(typed=typed, kwargs=_settings)
+            container = self._es_cluster.get_or_create_index(typed=typed, schema=subtest.schema, kwargs=_settings)
             container.add_alias(_settings.index)
+
+            _settings.index = container.settings.index
+            ESUtils.indexes.append(_settings.index)
 
             # INSERT DATA
             container.extend({"value": d} for d in subtest.data)

@@ -111,3 +111,42 @@ class TestBasicRequests(BaseTestCase):
         except Exception:
             pass
 
+    def test_query_on_es_fields(self):
+        schema = {
+            "settings": {"analysis": {
+                "analyzer": {"whiteboard_tokens": {
+                    "type": "custom",
+                    "tokenizer": "whiteboard_tokens_pattern",
+                    "filter": ["stop"]
+                }},
+                "tokenizer": {"whiteboard_tokens_pattern": {
+                    "type": "pattern",
+                    "pattern": "\\s*([,;]*\\[|\\][\\s\\[]*|[;,])\\s*"
+                }}
+            }},
+            "mappings": {"test_result": {
+                "properties": {"status_whiteboard": {
+                    "type": "keyword",
+                    "store": True,
+                    "fields": {"tokenized": {"type": "text", "analyzer": "whiteboard_tokens"}}
+                }}
+            }}
+        }
+
+        test = {
+            "schema": schema,
+            "data": [
+                {
+                    "bug_id": 123,
+                    "status_whiteboard": "[test][fx21]"
+                }
+            ],
+            "query": {
+                "select": ["status_whiteboard"],
+                "from": TEST_TABLE
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [{"status_whiteboard": "[test][fx21]"}]
+            }
+        }
+        self.utils.execute_tests(test)

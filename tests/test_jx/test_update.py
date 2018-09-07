@@ -31,7 +31,7 @@ class TestUpdate(BaseTestCase):
             ]}),
             typed=False
         )
-        container = jx_elasticsearch.new_instance(self.utils._es_test_settings)
+        container = jx_elasticsearch.new_instance(read_only=False, kwargs=self.utils._es_test_settings)
         container.update({
             "update": settings.index,
             "set": {"c": {"add": ["a", "b"]}}

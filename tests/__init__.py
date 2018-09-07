@@ -174,6 +174,7 @@ class ESUtils(object):
             )
             container.add_alias(_settings.index)
 
+            _settings.alias = container.settings.alias
             _settings.index = container.settings.index
             ESUtils.indexes.append(_settings.index)
 

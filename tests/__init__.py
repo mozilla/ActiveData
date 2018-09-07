@@ -271,7 +271,7 @@ class ESUtils(object):
                 return response
             except Exception as e:
                 e = Except.wrap(e)
-                if "No connection could be made because the target machine actively refused it" in e:
+                if "No connection could be made because the target machine actively refused it" in e or "Connection refused" in e:
                     Log.alert("Problem connecting")
                 else:
                     Log.error("Server raised exception", e)

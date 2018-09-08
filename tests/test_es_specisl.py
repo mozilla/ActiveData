@@ -98,7 +98,7 @@ class TestESSpecial(BaseTestCase):
             "query": {
                 "select": ["bug_id"],
                 "from": TEST_TABLE,
-                "where": {"eq": {"status_whiteboard(tokenized)": "test"}}
+                "where": {"eq": {"status_whiteboard.tokenized": "test"}}
             },
             "expecting_list": {
                 "meta": {"format": "list"},

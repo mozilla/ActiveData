@@ -1268,15 +1268,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
         cardinality = 0 if not property.store and not name != '_id' else None
 
         if property.fields:
-            # FIELD ANES ARE PUT IN BRACKETS () SO THEY DO NOT LOOK LIKE PROPERTIES
-            path = split_field(column_name)
-            if not path[-1].startswith(TYPE_PREFIX):
-                Log.error("do not know how to handle")
-            short_name = join_field(path[:-1])
             child_columns = parse_properties(index_name, column_name, property.fields)
-            for cc in child_columns:
-                cc.names = {p: short_name + "(" + n[len(column_name) + 1:] + ")" for p, n in cc.names.items()}
-
             if cardinality is None:
                 for cc in child_columns:
                     cc.cardinality = None

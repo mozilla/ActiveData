@@ -256,8 +256,9 @@ def format_list(T, select, query=None):
         for row in T:
             r = Data()
             for s in select:
-                v = s.pull(row)
-                r[s.put.name][s.put.child] = unwraplist(v)
+                v = unwraplist(s.pull(row))
+                if v is not None:
+                    r[s.put.name][s.put.child] = v
             data.append(r if r else None)
     elif isinstance(query.select.value, LeavesOp):
         for row in T:

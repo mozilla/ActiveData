@@ -984,6 +984,29 @@ class TestSetOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    def test_prefix_w_when(self):
+        test = {
+            "data": [
+                {"a": "test"},
+                {"a": "testkyle"},
+                {"a": None}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": {
+                    "name": "test",
+                    "value": {"when": {"prefix": {"a": "test"}}, "then": 1}
+                }
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [1, 1, NULL]
+            }
+        }
+
+        self.utils.execute_tests(test)
+
+
 
 
 # TODO: {"left": {variable: sentinel}}

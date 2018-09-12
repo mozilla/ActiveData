@@ -11,6 +11,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import flask
+from mo_dots import listwrap
+
 from active_data import record_request, cors_wrapper
 from flask import Response
 from mo_files import File
@@ -58,6 +60,8 @@ def jx_query(path):
                 translate_timer = Timer("translate")
                 with translate_timer:
                     frum = wrap_from(data['from'])
+                    if any(g == "result.test" or g.value == "result.test" for g in listwrap(data.groupby) + listwrap(data.edges)):
+                        return send_error(query_timer, request_body, Except(template="not allowed to groupby result.test"))
                     result = jx.run(data, frum=frum)
 
                     if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers

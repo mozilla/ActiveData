@@ -17,11 +17,11 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp
 from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_missing
 from mo_dots import coalesce, wrap, Null, set_default, literal_field
 from mo_future import text_type
-from mo_json.typed_encoder import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER
+from mo_json.typed_encoder import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER, IS_NULL
 from mo_logs import Log, suppress_exception
 from mo_logs.strings import expand_template, quote
 from mo_math import MAX, OR
@@ -82,7 +82,7 @@ class EsScript(Expression):
         elif missing is TRUE:
             return "null"
 
-        return "(" + missing.to_es_script(schema).expr + ")?null:(" + self.expr + ")"
+        return "(" + missing.to_es_script(schema).expr + ")?null:(" + box(self) + ")"
 
     def to_esfilter(self, schema):
         return {"script": es_script(self.script(schema))}
@@ -325,12 +325,8 @@ def to_esfilter(self, schema):
 
 @extend(NullOp)
 def to_es_script(self, schema):
-    return EsScript(
-        miss=TRUE,
-        type=OBJECT,
-        expr="null",
-        frum=self
-    )
+    return null_script
+
 
 @extend(NullOp)
 def to_esfilter(self, schema):
@@ -339,7 +335,7 @@ def to_esfilter(self, schema):
 
 @extend(FalseOp)
 def to_es_script(self, schema):
-    return EsScript(type=BOOLEAN, expr="false", frum=self)
+    return false_script
 
 
 @extend(FalseOp)
@@ -986,7 +982,9 @@ def to_es_script(self, schema):
     if isinstance(value.frum, CoalesceOp):
         return CoalesceOp("coalesce", [StringOp("string", t).partial_eval() for t in value.frum.terms]).to_es_script(schema)
 
-    if value.type == BOOLEAN:
+    if value.miss is TRUE or value.type is IS_NULL:
+        return null_script
+    elif value.type == BOOLEAN:
         return EsScript(
             miss=self.term.missing().partial_eval(),
             type=STRING,
@@ -1021,9 +1019,14 @@ def to_es_script(self, schema):
     # "((Runnable)((value) -> {String output=String.valueOf(value); if (output.endsWith('.0')) {return output.substring(0, output.length-2);} else return output;})).run(" + value.expr + ")"
 
 
+true_script = EsScript(type=BOOLEAN, expr="true", frum=TRUE)
+false_script = EsScript(type=BOOLEAN, expr="false", frum=FALSE)
+null_script = EsScript(miss=TRUE, type=IS_NULL, expr="null", frum=NULL)
+
+
 @extend(TrueOp)
 def to_es_script(self, schema):
-    return EsScript(type=BOOLEAN, expr="true", frum=self)
+    return true_script
 
 
 @extend(TrueOp)
@@ -1031,12 +1034,27 @@ def to_esfilter(self, schema):
     return {"match_all": {}}
 
 
-@extend(PrefixOp)
+@extend(BasicStartsWithOp)
 def to_es_script(self, schema):
-    if not self.field:
-        return "true"
+    expr = FirstOp("first", self.value).partial_eval().to_es_script(schema)
+    prefix = self.prefix.to_es_script(schema).partial_eval()
+    return EsScript(
+        miss=FALSE,
+        type=BOOLEAN,
+        expr="(" + expr.expr + ").startsWith(" + prefix.expr + ")",
+        frum=self
+    )
+
+
+@extend(BasicStartsWithOp)
+def to_esfilter(self, schema):
+    if not self.value:
+        return {"match_all": {}}
+    elif isinstance(self.value, Variable) and isinstance(self.prefix, Literal):
+        var = schema.leaves(self.value.var)[0].es_column
+        return {"prefix": {var: self.prefix.value}}
     else:
-        return "(" + self.field.to_es_script(schema) + ").startsWith(" + self.prefix.to_es_script(schema) + ")"
+        return ScriptOp("script", self.to_es_script(schema).script(schema)).to_esfilter(schema)
 
 
 @extend(PrefixOp)
@@ -1427,6 +1445,20 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
 
     return output
 
+
+def box(script):
+    """
+    :param es_script:
+    :return: TEXT EXPRESSION WITH NON OBJECTS BOXXED
+    """
+    if script.type is BOOLEAN:
+        return "Boolean.valueOf(" + text_type(script.expr) + ")"
+    elif script.type is INTEGER:
+        return "Integer.valueOf(" + text_type(script.expr) + ")"
+    elif script.type is NUMBER:
+        return "Double.valueOf(" + text_type(script.expr) + ")"
+    else:
+        return script.expr
 
 def get_type(var_name):
     type_ = var_name.split(".$")[1:]

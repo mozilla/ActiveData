@@ -1993,6 +1993,13 @@ class PrefixOp(Expression):
     def missing(self):
         return FALSE
 
+    def partial_eval(self):
+        return WhenOp(
+            "when",
+            AndOp("and", [self.expr.exists(), self.prefix.exists()]),
+            **{"then":BasicStartsWithOp(None, [self.expr, self.prefix]), "else": FALSE}
+        ).partial_eval()
+
 
 class SuffixOp(Expression):
     has_simple_form = True
@@ -2717,6 +2724,33 @@ class CaseOp(Expression):
         else:
             return list(types)[0]
 
+
+
+class BasicStartsWithOp(Expression):
+    """
+    PLACEHOLDER FOR BASIC value.startsWith(find, start) (CAN NOT DEAL WITH NULLS)
+    """
+    data_type = BOOLEAN
+
+    def __init__(self, op, params):
+        Expression.__init__(self, op, params)
+        self.value, self.prefix = params
+
+    def __data__(self):
+        return {"basic.startsWith": [self.value.__data__(), self.prefix.__data__()]}
+
+    def vars(self):
+        return self.value.vars() | self.prefix.vars()
+
+    def missing(self):
+        return FALSE
+
+    @simplified
+    def partial_eval(self):
+        return BasicStartsWithOp("startsWith", [
+            StringOp("string", self.value).partial_eval(),
+            StringOp("string", self.prefix).partial_eval(),
+        ])
 
 
 class BasicIndexOfOp(Expression):

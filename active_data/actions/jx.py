@@ -10,6 +10,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from collections import Mapping
+
 import flask
 from mo_dots import listwrap
 
@@ -60,7 +62,7 @@ def jx_query(path):
                 translate_timer = Timer("translate")
                 with translate_timer:
                     frum = wrap_from(data['from'])
-                    if any(g == "result.test" or g.value == "result.test" for g in listwrap(data.groupby) + listwrap(data.edges)):
+                    if any(g == "result.test" or (isinstance(g, Mapping) and g['value'] == "result.test" )for g in listwrap(data.groupby) + listwrap(data.edges)):
                         return send_error(query_timer, request_body, Except(template="not allowed to groupby result.test"))
                     result = jx.run(data, frum=frum)
 

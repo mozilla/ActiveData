@@ -505,6 +505,7 @@ class DefaultDecoder(SetDecoder):
                 "_match": set_default(
                     {"terms": {
                         "field": self.edge.value.var,
+                        "execution_hint": "map" if self.edge.value.var in ["result.test"] else None,
                         "size": self.domain.limit,
                         "order": {"_term": "asc" if sort_dir == 1 else "desc"}
                     }},
@@ -518,6 +519,7 @@ class DefaultDecoder(SetDecoder):
                 "_match": set_default(
                     {"terms": {
                         "field": self.edge.value.var,
+                        "execution_hint": "map" if self.edge.value.var in ["result.test"] else None,
                         "size": self.domain.limit
                     }},
                     es_query
@@ -582,6 +584,7 @@ class DimFieldListDecoder(SetDecoder):
             nest = wrap({"aggs": {
                 "_match": set_default({"terms": {
                     "field": v,
+                    "execution_hint": "global_ordinals_hash",
                     "size": self.domain.limit
                 }}, es_query)
             }})
@@ -699,6 +702,7 @@ class ObjectDecoder(SetDecoder):
             nest = wrap({"aggs": {
                 "_match": set_default({"terms": {
                     "field": v,
+                    "execution_hint": "global_ordinals_hash",
                     "size": self.domain.limit
                 }}, es_query),
                 "_missing": set_default({"missing": {"field": v}}, es_query)

@@ -18,19 +18,23 @@ from mo_dots import listwrap
 from active_data import record_request, cors_wrapper
 from flask import Response
 from mo_files import File
+from mo_json import value2json, json2value
 from mo_logs import Log
 from mo_math import Math
+from mo_times import DAY
 from pyLibrary import convert
 
 from active_data.actions import save_query, send_error, test_mode_wait
 from mo_logs.exceptions import Except
 from mo_logs.profiles import CProfiler
 from mo_times.timer import Timer
+from pyLibrary.meta import cache
 from pyLibrary.queries import jx, wrap_from
 from pyLibrary.queries.containers import Container
 
 BLANK = convert.unicode2utf8(File("active_data/public/error.html").read())
 QUERY_SIZE_LIMIT = 10*1024*1024
+
 
 
 @cors_wrapper
@@ -63,7 +67,7 @@ def jx_query(path):
                 with translate_timer:
                     frum = wrap_from(data['from'])
                     if any(g == "result.test" or (isinstance(g, Mapping) and g['value'] == "result.test" )for g in listwrap(data.groupby) + listwrap(data.edges)):
-                        return send_error(query_timer, request_body, Except(template="not allowed to groupby result.test"))
+                        allowed_query(value2json(data))
                     result = jx.run(data, frum=frum)
 
                     if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
@@ -105,3 +109,17 @@ def jx_query(path):
             return send_error(query_timer, request_body, e)
 
 
+@cache(duration=DAY)
+def allowed_query(data):
+    data = json2value(data)
+    data.edges=None
+    data.groupby=None
+    data.select= {"value":"result.test", "aggregate":"cardinality"}
+    data.format="list"
+
+    frum = wrap_from(data['from'])
+    result = jx.run(data, frum=frum)
+    if result.data<10000:
+        return True
+    else:
+        Log.error("not allowed to groupby result.test")

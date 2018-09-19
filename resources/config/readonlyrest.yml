@@ -1,0 +1,19 @@
+readonlyrest:
+
+  access_control_rules:
+
+    - name: Accept all requests from localhost
+      hosts: [127.0.0.1]
+
+    - name: Codecoverage RO for Mozilla release services
+      groups:
+        - mozilla-release-services
+      indices:
+        - codecoverage
+        - repo
+
+  users:
+    - username: RELMAN_USERNAME
+      auth_key_sha256: RELMAN_HASH
+      groups:
+        - mozilla-release-services

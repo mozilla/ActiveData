@@ -167,7 +167,9 @@ class MainThread(BaseThread):
             Log.error("Only the main thread can sleep forever (waiting for KeyboardInterrupt)")
 
         if isinstance(please_stop, Signal):
+            # MUTUAL SIGNALING MAKES THESE TWO EFFECTIVELY THE SAME SIGNAL
             self.please_stop.on_go(please_stop.go)
+            please_stop.on_go(self.please_stop)
         else:
             please_stop = self.please_stop
 
@@ -175,9 +177,10 @@ class MainThread(BaseThread):
             # TRIGGER SIGNAL WHEN ALL CHILDREN THEADS ARE DONE
             with self_thread.child_lock:
                 pending = copy(self_thread.children)
-            all = AndSignals(please_stop, len(pending))
+            children_done = AndSignals(please_stop, len(pending))
+            children_done.signal.on_go(self.please_stop.go)
             for p in pending:
-                p.stopped.on_go(all.done)
+                p.stopped.on_go(children_done.done)
 
         try:
             if allow_exit:
@@ -384,7 +387,7 @@ def stop_main_thread(*args):
 
     DEBUG = True
     try:
-        if len(args):
+        if len(args) and args[0]:
             Log.warning("exit with {{value}}", value=_describe_exit_codes.get(args[0], args[0]))
     except Exception as _:
         pass
@@ -406,8 +409,6 @@ def _wait_for_exit(please_stop):
     /dev/null SPEWS INFINITE LINES, DO NOT POLL AS OFTEN
     """
     cr_count = 0  # COUNT NUMBER OF BLANK LINES
-
-    please_stop.on_go(_interrupt_main_safely)
 
     while not please_stop:
         # if DEBUG:
@@ -441,14 +442,6 @@ def _wait_for_interrupt(please_stop):
             sleep(1)
         except Exception:
             pass
-
-
-def _interrupt_main_safely():
-    try:
-        interrupt_main()
-    except KeyboardInterrupt:
-        # WE COULD BE INTERRUPTING SELF
-        pass
 
 
 MAIN_THREAD = MainThread()

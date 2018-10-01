@@ -133,8 +133,8 @@ def to_sql(self, schema, not_null=False, boolean=False):
         }
         for c in schema.columns
         if startswith_field(c.names['.'], term) and (
-            (c.type not in (EXISTS, OBJECT, NESTED) and startswith_field(schema.nested_path[0], c.nested_path[0])) or
-            (c.type not in (EXISTS, OBJECT) and schema.nested_path[0] == c.nested_path[0])
+            (c.jx_type not in (EXISTS, OBJECT, NESTED) and startswith_field(schema.nested_path[0], c.nested_path[0])) or
+            (c.jx_type not in (EXISTS, OBJECT) and schema.nested_path[0] == c.nested_path[0])
         )
     ])
     return output
@@ -188,7 +188,7 @@ def partial_eval(self):
 
 @extend(NeOp)
 def to_sql(self, schema, not_null=False, boolean=False):
-    return NotOp('not', EqOp('eq', self.terms).partial_eval()).partial_eval().to_sql(schema)
+    return NotOp('not', EqOp('eq', [self.lhs, self.rhs]).partial_eval()).partial_eval().to_sql(schema)
 
 
 @extend(BasicIndexOfOp)

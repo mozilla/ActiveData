@@ -21,6 +21,7 @@ from mo_dots import Data, coalesce, unwraplist, Null
 from mo_files import File
 from mo_future import allocate_lock as _allocate_lock, text_type
 from mo_kwargs import override
+from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except, extract_stack, ERROR, format_trace
 from mo_logs.strings import quote
@@ -44,6 +45,29 @@ _upgraded = False
 known_databases = {Null: None}
 
 
+def _upgrade():
+    try:
+        Log.note("sqlite not upgraded")
+        # return
+        #
+        # import sys
+        # import platform
+        # if "windows" in platform.system().lower():
+        #     original_dll = File.new_instance(sys.exec_prefix, "dlls/sqlite3.dll")
+        #     if platform.architecture()[0]=='32bit':
+        #         source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_32.dll")
+        #     else:
+        #         source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_64.dll")
+        #
+        #     if not all(a == b for a, b in zip_longest(source_dll.read_bytes(), original_dll.read_bytes())):
+        #         original_dll.backup()
+        #         File.copy(source_dll, original_dll)
+        # else:
+        #     pass
+    except Exception as e:
+        Log.warning("could not upgrade python's sqlite", cause=e)
+
+
 class Sqlite(DB):
     """
     Allows multi-threaded access
@@ -60,11 +84,18 @@ class Sqlite(DB):
         :param load_functions: LOAD EXTENDED MATH FUNCTIONS (MAY REQUIRE upgrade)
         :param kwargs:
         """
-        if upgrade and not _upgraded:
-            _upgrade()
+        global _upgraded
+        global sqlite3
 
         self.settings = kwargs
-        self.filename = File(filename).abspath
+        if not _upgraded:
+            if upgrade:
+                _upgrade()
+            _upgraded = True
+            import sqlite3
+            _ = sqlite3
+
+        self.filename = File(filename).abspath if filename else None
         if known_databases.get(self.filename):
             Log.error("Not allowed to create more than one Sqlite instance for {{file}}", file=self.filename)
 

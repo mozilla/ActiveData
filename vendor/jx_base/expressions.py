@@ -921,7 +921,7 @@ class DivOp(Expression):
         return DivOp("div", [self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_))
 
     def missing(self):
-        AndOp("and", [
+        return AndOp("and", [
             self.default.missing(),
             OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, ZERO])])
         ]).partial_eval()
@@ -2674,6 +2674,10 @@ class CaseOp(Expression):
 
     def __data__(self):
         return {"case": [w.__data__() for w in self.whens]}
+
+    def __eq__(self, other):
+        if isinstance(other, CaseOp):
+            return all(s==o for s, o in zip(self.whens, other.whens))
 
     def vars(self):
         output = set()

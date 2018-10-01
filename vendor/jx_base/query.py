@@ -484,7 +484,8 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
                     name=edge,
                     value=jx_expression(edge, schema=schema),
                     allowNulls=True,
-                    dim=dim_index
+                    dim=dim_index,
+                    domain=DefaultDomain()
                 )
             ]
     else:
@@ -609,13 +610,15 @@ def _normalize_window(window, schema=None):
     try:
         expr = jx_expression(v, schema=schema)
     except Exception:
-        expr = ScriptOp("script", v)
-
+        if hasattr(v, "__call__"):
+            expr = v
+        else:
+            expr = ScriptOp("script", v)
 
     return Data(
         name=coalesce(window.name, window.value),
         value=expr,
-        edges=[n for e in listwrap(window.edges) for n in _normalize_edge(e, schema)],
+        edges=[n for i, e in enumerate(listwrap(window.edges)) for n in _normalize_edge(e, i, limit=None, schema=schema)],
         sort=_normalize_sort(window.sort),
         aggregate=window.aggregate,
         range=_normalize_range(window.range),

@@ -13,11 +13,12 @@ from __future__ import unicode_literals
 
 from collections import MutableMapping, Mapping
 from copy import deepcopy
+from decimal import Decimal
 
-from mo_dots.lists import FlatList
+from mo_future import text_type, PY2, iteritems, none_type, generator_types, long
 
 from mo_dots import _getdefault, hash_value, literal_field, coalesce, listwrap, get_logger
-from mo_future import text_type, PY2, iteritems, none_type, generator_types
+from mo_dots.lists import FlatList
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -177,6 +178,16 @@ class Data(MutableMapping):
         else:
             d[key] = value
         return self
+
+    def __add__(self, other):
+        return _iadd(_iadd({}, self), other)
+
+    def __radd__(self, other):
+        return _iadd(_iadd({}, other), self)
+
+    def __iadd__(self, other):
+        return _iadd(self, other)
+
 
     def __hash__(self):
         d = self._internal_dict
@@ -529,6 +540,49 @@ def _str(value, depth):
     else:
         return str(type(value))
 
+
+def _iadd(self, other):
+    if not isinstance(other, Mapping):
+        get_logger().error("Expecting a Mapping")
+    d = unwrap(self)
+    for ok, ov in other.items():
+        sv = d.get(ok)
+        if sv == None:
+            d[ok] = deepcopy(ov)
+        elif isinstance(ov, (Decimal, float, long, int)):
+            if isinstance(sv, Mapping):
+                get_logger().error(
+                    "can not add {{stype}} with {{otype}",
+                    stype=sv.__class__.__name__,
+                    otype=ov.__class__.__name__
+                )
+            elif isinstance(sv, list):
+                d[ok].append(ov)
+            else:
+                d[ok] = sv + ov
+        elif isinstance(ov, list):
+            d[ok] = listwrap(sv) + ov
+        elif isinstance(ov, Mapping):
+            if isinstance(sv, Mapping):
+                _iadd(sv, ov)
+            elif isinstance(sv, list):
+                d[ok].append(ov)
+            else:
+                get_logger().error(
+                    "can not add {{stype}} with {{otype}",
+                    stype=sv.__class__.__name__,
+                    otype=ov.__class__.__name__
+                )
+        else:
+            if isinstance(sv, Mapping):
+                get_logger().error(
+                    "can not add {{stype}} with {{otype}",
+                    stype=sv.__class__.__name__,
+                    otype=ov.__class__.__name__
+                )
+            else:
+                d[ok].append(ov)
+    return self
 
 from mo_dots.nones import Null, NullType
 from mo_dots import unwrap, wrap

@@ -54,22 +54,12 @@ revision_schema = {
             "_all": {
                 "enabled": False
             },
-            "dynamic_templates": [
-                {
-                    "default_strings": {
-                        "mapping": {
-                            "type": "keyword"
-                        },
-                        "match_mapping_type": "string",
-                        "match": "*"
-                    }
-                }
-            ],
             "properties": {
                 "changeset": {
                     "type": "object",
                     "properties": {
                         "description": {
+                            "store": True,
                             "index": True,
                             "type": "text",
                             "fields": {
@@ -92,6 +82,7 @@ revision_schema = {
                                             "dynamic": True,
                                             "properties": {
                                                 "content": {
+                                                    "store": True,
                                                     "type": "keyword"
                                                 }
                                             }
@@ -101,6 +92,7 @@ revision_schema = {
                                             "dynamic": True,
                                             "properties": {
                                                 "content": {
+                                                    "store": True,
                                                     "type": "keyword"
                                                 }
                                             }

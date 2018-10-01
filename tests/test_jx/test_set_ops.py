@@ -1190,3 +1190,15 @@ class TestSetOps(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
+
+
+    @skip("please make this test")
+    def text_select_typed_column(self):
+        pass
+        # TODO: The timestamp.~s~ APPEARS TO RESULT IN {"":{"":{"":{"":"2018-09-26 12:41:19.575174"}}}}
+        # {
+        #
+        # 	"select":["machine.name","template","timestamp.~s~"],
+        # 	"from":"debug-etl",
+        # 	"where":{"exists":"timestamp.~s~"}
+        # }

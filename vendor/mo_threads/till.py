@@ -52,6 +52,11 @@ class Till(Signal):
             return object.__new__(cls)
 
     def __init__(self, till=None, seconds=None):
+        """
+        ONE OF THESE PARAMETERS IS REQUIRED
+        :param till: UNIX TIMESTAMP OF WHEN TO SIGNAL
+        :param seconds: PREFERRED OVER timeout
+        """
         now = time()
         if till != None:
             if not isinstance(till, (float, int)):

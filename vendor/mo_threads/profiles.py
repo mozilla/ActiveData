@@ -111,5 +111,3 @@ def write_profiles(main_thread_profile):
     stats_file = File(FILENAME, suffix=convert.datetime2string(datetime.now(), "_%Y%m%d_%H%M%S"))
     stats_file.write(convert.list2tab(stats))
     Log.note("profile written to {{filename}}", filename=stats_file.abspath)
-
-

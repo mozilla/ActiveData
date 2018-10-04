@@ -19,8 +19,7 @@ import mo_json
 from jx_base.queries import is_variable_name, get_property_name
 from mo_dots import coalesce, wrap, Null, split_field
 from mo_future import text_type, utf8_json_encoder, get_function_name, zip_longest
-from mo_json import scrub
-from mo_json.typed_encoder import IS_NULL, OBJECT, BOOLEAN, python_type_to_json_type, NUMBER, INTEGER, STRING
+from mo_json import scrub, IS_NULL, OBJECT, BOOLEAN, NUMBER, INTEGER, STRING, python_type_to_json_type
 from mo_logs import Log, Except
 from mo_math import Math, MAX, MIN, UNION
 from mo_times.dates import Date, unicode2Date
@@ -49,6 +48,8 @@ def simplified(func):
         output = func(self)
         output.simplified = True
         return output
+    func_name = get_function_name(func)
+    mark_as_simple.__name__ = func_name
     return mark_as_simple
 
 
@@ -280,6 +281,12 @@ class Variable(Expression):
 
     def __str__(self):
         return str(self.var)
+
+    def missing(self):
+        if self.var == "_id":
+            return FALSE
+        else:
+            return MissingOp("missing", self)
 IDENTITY = Variable(".")
 
 
@@ -838,12 +845,13 @@ class BinaryOp(Expression):
         else:
             return OrOp("or", [self.lhs.missing(), self.rhs.missing()])
 
-    # @simplified
-    # def partial_eval(self):
-    #     lhs = FirstOp("first", self.lhs).partial_eval()
-    #     rhs = FirstOp("first", self.rhs).partial_eval()
-    #     default_ = FirstOp("first", self.default).partial_eval()
-    #     return BinaryOp(self.op, [lhs, rhs], default=default_)
+    def partial_eval(self):
+        lhs = self.lhs.partial_eval()
+        rhs = self.rhs.partial_eval()
+        if isinstance(lhs, Literal) and isinstance(rhs, Literal):
+            return Literal("literal", builtin_ops[self.op](lhs.value, rhs.value))
+        return BinaryOp(self.op, [lhs, rhs])
+
 
 
 class InequalityOp(Expression):
@@ -1726,6 +1734,15 @@ class MinOp(Expression):
         return output
 
 
+_jx_identity = {
+    "add": ZERO,
+    "sum": ZERO,
+    "mul": ONE,
+    "mult": ONE,
+    "multiply": ONE
+}
+
+
 class MultiOp(Expression):
     has_simple_form = True
     data_type = NUMBER
@@ -1735,7 +1752,7 @@ class MultiOp(Expression):
         self.op = op
         self.terms = terms
         self.default = coalesce(clauses.get("default"), NULL)
-        self.nulls = coalesce(clauses.get("nulls"), FALSE)
+        self.nulls = coalesce(clauses.get("nulls"), FALSE)  # nulls==True WILL HAVE OP RETURN null ONLY IF ALL OPERANDS ARE null
 
     def __data__(self):
         return {self.op: [t.__data__() for t in self.terms], "default": self.default, "nulls": self.nulls}
@@ -1787,11 +1804,33 @@ class MultiOp(Expression):
                 return NULL
             else:
                 return Literal(None, acc)
+        elif self.nulls:
+            if acc is not None:
+                terms.append(Literal("literal", acc))
+
+            output = WhenOp(
+                "when",
+                AndOp("and", [t.missing() for t in terms]),
+                **{
+                    "then": self.default,
+                    "else": BasicMultiOp("basic." + self.op, [
+                        CoalesceOp("coalesce", [t, _jx_identity[self.op]])
+                        for t in terms
+                    ])
+                }
+            ).partial_eval()
         else:
-            if acc is None:
-                output = MultiOp(self.op, terms, default=self.default, nulls=self.nulls)
-            else:
-                output = MultiOp(self.op, [Literal(None, acc)] + terms, default=self.default, nulls=self.nulls)
+            if acc is not None:
+                terms.append(Literal("literal", acc))
+
+            output = WhenOp(
+                "when",
+                AndOp("or", [t.missing() for t in terms]),
+                **{
+                    "then": self.default,
+                    "else": BasicMultiOp("basic." + self.op, terms)
+                }
+            ).partial_eval()
 
         return output
 
@@ -1802,14 +1841,6 @@ def AddOp(op, terms, **clauses):
 
 def MultOp(op, terms, **clauses):
     return MultiOp("mult", terms, **clauses)
-
-
-# def MaxOp(op, terms, **clauses):
-#     return MaxOp("max", terms, **clauses)
-#
-#
-# def MinOp(op, terms, **clauses):
-#     return MinOp("min", terms, **clauses)
 
 
 class RegExpOp(Expression):
@@ -1916,18 +1947,11 @@ class MissingOp(Expression):
 
     @simplified
     def partial_eval(self):
-        expr = self.expr.partial_eval()
-        if isinstance(expr, Variable) and expr.var == "_id":
-            return FALSE
-        if isinstance(expr, Literal):
-            if expr is NULL:
-                return TRUE
-            elif expr.value == None:
-                Log.error("not expected")
-            else:
-                return FALSE
-        self.simplified = True
-        return self
+        output = self.expr.partial_eval().missing()
+        if isinstance(output, MissingOp):
+            return output
+        else:
+            return output.partial_eval()
 
 
 class ExistsOp(Expression):
@@ -2318,7 +2342,7 @@ class FindOp(Expression):
         self.value, self.find = term
         self.default = kwargs.get("default", NULL)
         self.start = kwargs.get("start", ZERO).partial_eval()
-        if isinstance(self.start, NullOp):
+        if self.start is NULL:
             self.start = ZERO
 
     def __data__(self):
@@ -2348,7 +2372,7 @@ class FindOp(Expression):
         )
 
     def missing(self):
-        return AndOp("and", [
+        output = AndOp("and", [
             self.default.missing(),
             OrOp("or", [
                 self.value.missing(),
@@ -2360,6 +2384,7 @@ class FindOp(Expression):
                 ]), Literal(None, -1)])
             ])
         ]).partial_eval()
+        return output
 
     def exists(self):
         return TRUE
@@ -2479,9 +2504,6 @@ class BetweenOp(Expression):
             default=self.default.map(map_),
             start=self.start.map(map_)
         )
-
-    def missing(self):
-        return self.partial_eval().missing()
 
     def __data__(self):
         if isinstance(self.value, Variable) and isinstance(self.prefix, Literal) and isinstance(self.suffix, Literal):
@@ -2729,7 +2751,6 @@ class CaseOp(Expression):
             return list(types)[0]
 
 
-
 class BasicStartsWithOp(Expression):
     """
     PLACEHOLDER FOR BASIC value.startsWith(find, start) (CAN NOT DEAL WITH NULLS)
@@ -2786,6 +2807,61 @@ class BasicIndexOfOp(Expression):
         ])
 
 
+class SqlEqOp(Expression):
+    """
+    PLACEHOLDER FOR BASIC `==` OPERATOR (CAN NOT DEAL WITH NULLS)
+    """
+    data_type = BOOLEAN
+
+    def __init__(self, op, terms):
+        self.lhs, self.rhs = terms
+
+    def __data__(self):
+        return {"sql.eq": [self.lhs.__data__(), self.rhs.__data__()]}
+
+    def missing(self):
+        return FALSE
+
+    def __eq__(self, other):
+        if not isinstance(other, EqOp):
+            return False
+        return self.lhs == other.lhs and self.rhs == other.rhs
+
+
+class SqlInstrOp(Expression):
+    data_type = INTEGER
+
+    def __init__(self, op, params):
+        Expression.__init__(self, op, params)
+        self.value, self.find = params
+
+    def __data__(self):
+        return {"sql.instr": [self.value.__data__(), self.find.__data__()]}
+
+    def vars(self):
+        return self.value.vars() | self.find.vars()
+
+    def missing(self):
+        return FALSE
+
+
+class SqlSubstrOp(Expression):
+    data_type = INTEGER
+
+    def __init__(self, op, params):
+        Expression.__init__(self, op, params)
+        self.value, self.start, self.length = params
+
+    def __data__(self):
+        return {"sql.substr": [self.value.__data__(), self.start.__data__(), self.length.__data__()]}
+
+    def vars(self):
+        return self.value.vars() | self.start.vars() | self.length.vars()
+
+    def missing(self):
+        return FALSE
+
+
 class BasicEqOp(Expression):
     """
     PLACEHOLDER FOR BASIC `==` OPERATOR (CAN NOT DEAL WITH NULLS)
@@ -2805,6 +2881,23 @@ class BasicEqOp(Expression):
         if not isinstance(other, EqOp):
             return False
         return self.lhs==other.lhs and self.rhs==other.rhs
+
+
+class BasicMultiOp(Expression):
+    """
+    PLACEHOLDER FOR BASIC `==` OPERATOR (CAN NOT DEAL WITH NULLS)
+    """
+    data_type = NUMBER
+
+    def __init__(self, op, terms):
+        self.op = op
+        self.terms = terms
+
+    def __data__(self):
+        return {"basic."+self.op: [t.__data__() for t in self.terms]}
+
+    def missing(self):
+        return FALSE
 
 
 class BasicSubstringOp(Expression):
@@ -2903,6 +2996,7 @@ builtin_ops = {
     "lte": operator.le,
     "lt": operator.lt,
     "add": operator.add,
+    "sub": operator.sub,
     "sum": operator.add,
     "mul": operator.mul,
     "mult": operator.mul,

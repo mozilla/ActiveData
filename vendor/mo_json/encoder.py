@@ -111,8 +111,11 @@ class cPythonJSONEncoder(object):
         try:
             with Timer("scrub", too_long=0.1):
                 scrubbed = scrub(value)
-            with Timer("encode", too_long=0.1):
-                return text_type(self.encoder(scrubbed))
+            param = {"size": 0}
+            with Timer("encode {{size}} characters", param=param, too_long=0.1):
+                output = text_type(self.encoder(scrubbed))
+                param["size"] = len(output)
+                return output
         except Exception as e:
             from mo_logs.exceptions import Except
             from mo_logs import Log

@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from jx_elasticsearch.es52.expressions import Variable
 from mo_dots import wrap
 from mo_future import text_type
-from mo_json.typed_encoder import STRING, BOOLEAN, NUMBER, OBJECT
+from mo_json import STRING, BOOLEAN, NUMBER, OBJECT
 from mo_logs import Log
 
 

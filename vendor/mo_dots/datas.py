@@ -151,7 +151,7 @@ class Data(MutableMapping):
             raise e
 
     def __getattr__(self, key):
-        d = self._internal_dict
+        d = _get(self, SLOT)
         v = d.get(key)
         t = v.__class__
 

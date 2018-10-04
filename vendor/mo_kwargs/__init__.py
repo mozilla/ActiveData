@@ -74,16 +74,17 @@ def override(func):
     elif func_name in ("__init__", "__new__"):
         def w_constructor(*args, **kwargs):
             if "kwargs" in kwargs:
-                packed = params_pack(params, kwargs, dict_zip(params, args), kwargs["kwargs"], defaults)
+                packed = params_pack(params, dict_zip(params[1:], args[1:]), kwargs, kwargs["kwargs"], defaults)
             elif len(args) == 2 and len(kwargs) == 0 and isinstance(args[1], Mapping):
                 # ASSUME SECOND UNNAMED PARAM IS kwargs
                 packed = params_pack(params, args[1], defaults)
             else:
                 # DO NOT INCLUDE self IN kwargs
-                packed = params_pack(params, kwargs, dict_zip(params, args), defaults)
+                packed = params_pack(params, dict_zip(params[1:], args[1:]), kwargs, defaults)
             try:
-                return func(**packed)
+                return func(args[0], **packed)
             except TypeError as e:
+                packed['self'] = args[0]  # DO NOT SAY IS MISSING
                 raise_error(e, packed)
         return w_constructor
 

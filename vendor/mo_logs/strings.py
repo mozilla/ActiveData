@@ -489,6 +489,8 @@ _SNIP = "...<snip>..."
 
 @formatter
 def limit(value, length):
+    if value == None:
+        return None
     try:
         # LIMIT THE STRING value TO GIVEN LENGTH, CHOPPING OUT THE MIDDLE IF REQUIRED
         if len(value) <= length:
@@ -592,6 +594,8 @@ def _expand(template, seq):
     if isinstance(template, text_type):
         return _simple_expand(template, seq)
     elif isinstance(template, Mapping):
+        # EXPAND LISTS OF ITEMS USING THIS FORM
+        # {"from":from, "template":template, "separator":separator}
         template = wrap(template)
         assert template["from"], "Expecting template to have 'from' attribute"
         assert template.template, "Expecting template to have 'template' attribute"

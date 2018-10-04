@@ -23,7 +23,7 @@ from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import coalesce, split_field, set_default
 from mo_json import value2json
-from mo_json.typed_encoder import STRUCT
+from mo_json import STRUCT
 from mo_logs import Log, strings
 from mo_logs.strings import expand_template, unicode2utf8
 from mo_threads import Till

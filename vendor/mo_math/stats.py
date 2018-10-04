@@ -24,7 +24,7 @@ from mo_math import almost_equal
 from mo_math.vendor import strangman
 
 DEBUG = True
-DEBUG_STRANGMAN = True
+DEBUG_STRANGMAN = False
 EPSILON = 0.000000001
 ABS_EPSILON = sys.float_info.min * 2  # *2 FOR SAFETY
 

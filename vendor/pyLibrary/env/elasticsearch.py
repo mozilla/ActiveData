@@ -22,7 +22,7 @@ from mo_dots import wrap, FlatList, coalesce, Null, Data, set_default, listwrap,
 from mo_files.url import URL
 from mo_future import text_type, binary_type, items
 from mo_json import value2json, json2value
-from mo_json.typed_encoder import EXISTS_TYPE, BOOLEAN_TYPE, STRING_TYPE, NUMBER_TYPE, NESTED_TYPE, TYPE_PREFIX, json_type_to_inserter_type
+from mo_json.typed_encoder import json_type_to_inserter_type, EXISTS_TYPE, BOOLEAN_TYPE, STRING_TYPE, NUMBER_TYPE, NESTED_TYPE, TYPE_PREFIX
 from mo_kwargs import override
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except

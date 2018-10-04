@@ -24,7 +24,7 @@ from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap
 from mo_dots.lists import FlatList
-from mo_json.typed_encoder import NESTED
+from mo_json import NESTED
 from mo_json.typed_encoder import untype_path, unnest_path, untyped
 from mo_logs import Log
 from mo_math import AND

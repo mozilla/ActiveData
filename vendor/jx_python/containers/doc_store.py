@@ -13,15 +13,14 @@ from __future__ import unicode_literals
 from copy import copy
 from datetime import datetime
 
-from mo_future import text_type
-from mo_dots import wrap, Data, FlatList, literal_field
-from mo_json.typed_encoder import TYPE_PREFIX
-from mo_logs import Log
-from pyLibrary import convert
+from jx_base.query import QueryOp
 from jx_python import jx
 from jx_python.containers import Container
 from jx_python.expressions import Variable, Literal
-from jx_base.query import QueryOp
+from mo_dots import wrap, Data, FlatList, literal_field
+from mo_future import text_type
+from mo_json.typed_encoder import TYPE_PREFIX
+from mo_logs import Log
 
 INDEX = "__index__"
 PARENT = "__parent__"

@@ -17,9 +17,9 @@ from jx_python.expressions import jx_expression_to_function
 from mo_dots import Data, unwrap
 from pyLibrary.env.elasticsearch import parse_properties, random_id
 
-from mo_json import json2value
+from mo_json import json2value, OBJECT, NESTED
 from mo_json.encoder import UnicodeBuilder
-from mo_json.typed_encoder import typed_encode, OBJECT, NESTED
+from mo_json.typed_encoder import typed_encode
 
 
 class TypedInserter(object):

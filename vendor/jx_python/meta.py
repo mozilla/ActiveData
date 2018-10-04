@@ -16,6 +16,8 @@ from datetime import date
 from datetime import datetime
 from decimal import Decimal
 
+from copy import deepcopy
+
 import jx_base
 from jx_base import Column, Table
 from jx_base.schema import Schema
@@ -23,7 +25,8 @@ from jx_python import jx
 from mo_collections import UniqueIndex
 from mo_dots import Data, concat_field, listwrap, unwraplist, NullType, FlatList, set_default, split_field, join_field, ROOT_PATH, wrap, coalesce
 from mo_future import none_type, text_type, long, PY2
-from mo_json.typed_encoder import untype_path, unnest_path, python_type_to_json_type, STRUCT
+from mo_json.typed_encoder import untype_path, unnest_path
+from mo_json import python_type_to_json_type, STRUCT
 from mo_logs import Log
 from mo_threads import Lock
 from mo_times.dates import Date
@@ -43,7 +46,19 @@ class ColumnList(Table, jx_base.Container):
         self._schema = None
         self.extend(METADATA_COLUMNS)
 
-    def find(self, es_index, abs_column_name):
+    def __copy__(self):
+        output = object.__new__(ColumnList)
+        Table.__init__(output, "meta.columns")
+        output.data = {
+            t: {c: list(cs) for c, cs in dd.items()}
+            for t, dd in self.data.items()
+        }
+        output.locker = Lock()
+        output._schema = None
+        return output
+
+
+    def find(self, es_index, abs_column_name=None):
         with self.locker:
             if es_index.startswith("meta."):
                 self._update_meta()
@@ -63,6 +78,9 @@ class ColumnList(Table, jx_base.Container):
         self.dirty = True
         with self.locker:
             return self._add(column)
+
+    def remove_table(self, table_name):
+        del self.data[table_name]
 
     def _add(self, column):
         columns_for_table = self.data.setdefault(column.es_index, {})

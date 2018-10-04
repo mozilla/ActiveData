@@ -15,8 +15,10 @@ import sys
 from contextlib import contextmanager
 from datetime import datetime
 
-from fabric2 import Config
+from fabric2 import Config, Result
 from fabric2 import Connection as _Connection
+from jx_base.expressions import extend
+
 from mo_math.randoms import Random
 
 from mo_dots import set_default, unwrap, wrap
@@ -111,6 +113,11 @@ class Connection(object):
 
     def __getattr__(self, item):
         return getattr(self.conn, item)
+
+
+@extend(Result)
+def __contains__ (self, value):
+    return value in self.stdout or value in self.stderr
 
 
 EMPTY = str("")

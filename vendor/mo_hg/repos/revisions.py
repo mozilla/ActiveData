@@ -64,8 +64,9 @@ revision_schema = {
                             "type": "text",
                             "fields": {
                                 "raw": {
-                                    "type": "text",
-                                    "analyzer": "description_limit"
+                                    "type": "keyword",
+                                    "analyzer": "description_limit",
+                                    "store": True
                                 }
                             }
                         },

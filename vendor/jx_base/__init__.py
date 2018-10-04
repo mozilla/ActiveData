@@ -79,7 +79,7 @@ def DataClass(name, columns, constraint=None):
     required = wrap(filter(lambda c: c.required and not c.nulls and not c.default, columns)).name
     nulls = wrap(filter(lambda c: c.nulls, columns)).name
     defaults = {c.name: coalesce(c.default, None) for c in columns}
-    types = {c.name: coalesce(c.type, object) for c in columns}
+    types = {c.name: coalesce(c.jx_type, object) for c in columns}
 
     code = expand_template(
 """

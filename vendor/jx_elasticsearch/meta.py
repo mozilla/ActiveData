@@ -23,7 +23,8 @@ from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
 from mo_collections.relation import Relation_usingList
 from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, join_field, wrap, concat_field, startswith_field, literal_field
-from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path, OBJECT, EXISTS, STRUCT, BOOLEAN
+from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN
+from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except

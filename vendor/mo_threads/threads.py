@@ -21,8 +21,9 @@ from copy import copy
 from datetime import datetime, timedelta
 from time import sleep, time
 
+
 from mo_dots import Data, unwraplist
-from mo_future import get_ident, start_new_thread, get_function_name, text_type, allocate_lock
+from mo_future import get_ident, start_new_thread, get_function_name, text_type, allocate_lock, PY3
 from mo_logs import Log, Except
 from mo_threads.lock import Lock
 from mo_threads.profiles import CProfiler, write_profiles
@@ -333,7 +334,7 @@ class Thread(BaseThread):
             else:
                 Log.error("Thread {{name|quote}} did not end well", name=self.name, cause=self.end_of_thread.exception)
         else:
-            raise Except(type=THREAD_TIMEOUT)
+            raise Except(context=THREAD_TIMEOUT)
 
     @staticmethod
     def run(name, target, *args, **kwargs):
@@ -391,7 +392,7 @@ def stop_main_thread(*args):
     CLEAN OF ALL THREADS CREATED WITH THIS LIBRARY
     """
     try:
-        if len(args) and args[0]:
+        if len(args) and args[0] != _signal.SIGTERM:
             Log.warning("exit with {{value}}", value=_describe_exit_codes.get(args[0], args[0]))
     except Exception as _:
         pass
@@ -412,6 +413,12 @@ def _wait_for_exit(please_stop):
     """
     /dev/null PIPED TO sys.stdin SPEWS INFINITE LINES, DO NOT POLL AS OFTEN
     """
+    try:
+        import msvcrt
+        _wait_for_exit_on_windows(please_stop)
+    except:
+        pass
+
     cr_count = 0  # COUNT NUMBER OF BLANK LINES
 
     while not please_stop:
@@ -437,6 +444,24 @@ def _wait_for_exit(please_stop):
         if line.strip() == "exit":
             Log.alert("'exit' Detected!  Stopping...")
             return
+
+
+def _wait_for_exit_on_windows(please_stop):
+    import msvcrt
+
+    line = ""
+    while not please_stop:
+        if msvcrt.kbhit():
+            chr = msvcrt.getche()
+            if ord(chr) == 13:
+                if line == "exit":
+                    Log.alert("'exit' Detected!  Stopping...")
+                    return
+            elif ord(chr) > 32:
+                line += chr
+        else:
+            sleep(1)
+
 
 
 def _wait_for_interrupt(please_stop):

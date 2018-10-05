@@ -84,6 +84,13 @@ class EsScript(Expression):
 
         return "(" + missing.to_es_script(schema).expr + ")?null:(" + box(self) + ")"
 
+    def partial_eval(self):
+        frum = self.frum.partial_eval()
+        if frum is self.frum:
+            return self
+
+        return frum.to_es_script(Null)
+
     def to_esfilter(self, schema):
         return {"script": es_script(self.script(schema))}
 
@@ -272,7 +279,8 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     if not self.terms:
         return NULL.to_es_script(schema)
-
+    # acc.miss WILL SAY IF THIS COALESCE RETURNS NULL,
+    # acc.expr WILL ASSUMED TO BE A VALUE, SO THE LAST TERM IS ASSUMED NOT NULL
     v = self.terms[-1]
     acc = FirstOp("first", v).partial_eval().to_es_script(schema)
     for v in reversed(self.terms[:-1]):
@@ -285,7 +293,7 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         elif r.miss is FALSE:
             acc = r
             continue
-        elif acc.type == r.type:
+        elif acc.type == r.type or acc.type == IS_NULL:
             new_type = r.type
         elif acc.type == NUMBER and r.type == INTEGER:
             new_type = NUMBER
@@ -551,7 +559,7 @@ def to_esfilter(self, schema):
 
 
 @extend(BasicMultiOp)
-def to_es_script(self, schema, not_null=True, boolean=False):
+def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     op, identity = _painless_operators[self.op]
     if len(self.terms) == 0:
         return identity
@@ -566,7 +574,7 @@ def to_es_script(self, schema, not_null=True, boolean=False):
 
 
 @extend(MissingOp)
-def to_es_script(self, schema, not_null=False, boolean=True):
+def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     if isinstance(self.expr, Variable):
         if self.expr.var == "_id":
             return EsScript(type=BOOLEAN, expr="false", frum=self)
@@ -671,7 +679,7 @@ def to_esfilter(self, schema):
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     return EsScript(
         type=BOOLEAN,
-        expr="!(" + self.term.to_es_script(schema).expr + ")",
+        expr="!(" + self.term.partial_eval().to_es_script(schema).expr + ")",
         frum=self
     )
 
@@ -1135,7 +1143,7 @@ def to_esfilter(self, schema):
 
 
 @extend(Variable)
-def to_es_script(self, schema, many=True):
+def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     if self.var == ".":
         return "_source"
     else:

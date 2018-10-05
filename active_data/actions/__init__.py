@@ -118,6 +118,8 @@ def test_mode_wait(query):
 
         # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
         cols = [c for c in metadata_manager.get_columns(table_name=query["from"], force=True) if c.jx_type not in STRUCT]
+        if len(cols) <= 1:
+            Log.error("should have columns")
         for c in cols:
             Log.note("Mark {{column.names}} dirty at {{time}}", column=c, time=now)
             metadata_manager.todo.push(c)

@@ -219,7 +219,6 @@ class Expression(object):
         ATTEMPT TO SIMPLIFY THE EXPRESSION:
         PREFERABLY RETURNING A LITERAL, BUT MAYBE A SIMPLER EXPRESSION, OR self IF NOT POSSIBLE
         """
-        self.simplified = True
         return self
 
     @property

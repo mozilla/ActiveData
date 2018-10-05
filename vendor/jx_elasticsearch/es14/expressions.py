@@ -549,7 +549,7 @@ def to_esfilter(self, schema):
 
 
 @extend(MissingOp)
-def to_es_script(self, schema, not_null=False, boolean=True):
+def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     if isinstance(self.expr, Variable):
         if self.expr.var == "_id":
             return EsScript(type=BOOLEAN, expr="false", frum=self)
@@ -1089,7 +1089,7 @@ def to_esfilter(self, schema):
 
 
 @extend(Variable)
-def to_es_script(self, schema, many=True):
+def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     if self.var == ".":
         return "_source"
     else:

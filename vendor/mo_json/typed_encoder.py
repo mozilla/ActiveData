@@ -48,12 +48,11 @@ def unnest_path(encoded):
         encoded = encoded.lstrip(".")
         if not encoded:
             encoded = "."
-    path = split_field(encoded)
-    if not path:
-        return "."
-    if path[-1] == NESTED_TYPE:
-        path = path[:-1]
-    return join_field(decode_property(c) for c in path if not c.startswith(TYPE_PREFIX))
+    return join_field(
+        decode_property(c)
+        for c in split_field(encoded)
+        if c != NESTED_TYPE
+    )
 
 
 def untyped(value):

@@ -227,7 +227,7 @@ class ESUtils(object):
                 expected = v
 
                 subtest.query.format = format
-                subtest.query.meta.testing = (i == 0)  # MARK FIRST QUERY FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
+                subtest.query.meta.testing = (num_expectations == 1)  # MARK FIRST QUERY FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
                 query = unicode2utf8(value2json(subtest.query))
                 # EXECUTE QUERY
                 response = self.try_till_response(self.testing.query, data=query)

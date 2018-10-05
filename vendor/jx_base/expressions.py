@@ -2018,6 +2018,9 @@ class PrefixOp(Expression):
         return FALSE
 
     def partial_eval(self):
+        if not self.expr:
+            return TRUE
+
         return WhenOp(
             "when",
             AndOp("and", [self.expr.exists(), self.prefix.exists()]),

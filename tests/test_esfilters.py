@@ -16,7 +16,7 @@ from jx_base.expressions import jx_expression, NULL
 from jx_elasticsearch.es52.expressions import EsScript, simplify_esfilter
 from jx_elasticsearch.es52.util import es_and
 from mo_dots import Null, wrap
-from mo_json.typed_encoder import OBJECT
+from mo_json import OBJECT
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times.dates import Date
 

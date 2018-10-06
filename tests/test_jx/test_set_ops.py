@@ -15,7 +15,7 @@ from __future__ import unicode_literals
 from jx_base.expressions import NULL
 from mo_dots import wrap
 from mo_math import Math
-from unittest import skipIf
+from unittest import skipIf, skip
 
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
@@ -1190,7 +1190,6 @@ class TestSetOps(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
-
 
     @skip("please make this test")
     def text_select_typed_column(self):

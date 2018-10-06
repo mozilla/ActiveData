@@ -84,12 +84,12 @@ class EsScript(Expression):
 
         return "(" + missing.to_es_script(schema).expr + ")?null:(" + box(self) + ")"
 
-    def partial_eval(self):
-        frum = self.frum.partial_eval()
-        if frum is self.frum:
-            return self
-
-        return frum.to_es_script(Null)
+    # def partial_eval(self):
+    #     frum = self.frum.partial_eval()
+    #     if frum is self.frum:
+    #         return self
+    #
+    #     return frum.to_es_script(Null)
 
     def to_esfilter(self, schema):
         return {"script": es_script(self.script(schema))}
@@ -954,7 +954,8 @@ _painless_operators = {
     "mul": (" * ", "1"),
     "mult": (" * ", "1"),
     "multiply": (" * ", "1"),
-    "basic.add": (" + ", "0")
+    "basic.add": (" + ", "0"),
+    "basic.mult": (" * ", "1")
 }
 
 

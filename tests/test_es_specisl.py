@@ -16,6 +16,9 @@ from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
 class TestESSpecial(BaseTestCase):
+    """
+    TESTS THAT COVER ES SPECIAL FEATURES
+    """
 
     def test_query_on_es_base_field(self):
         schema = {
@@ -56,7 +59,6 @@ class TestESSpecial(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
-
 
     def test_query_on_es_sub_field(self):
         schema = {

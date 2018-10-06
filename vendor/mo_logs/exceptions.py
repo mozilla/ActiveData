@@ -34,7 +34,7 @@ class LogItem(object):
     def __init__(self, context, format, template, params):
         self.context = context
         self.format = format
-        self.template=template
+        self.template = template
         self.params = params
 
     def __data__(self):

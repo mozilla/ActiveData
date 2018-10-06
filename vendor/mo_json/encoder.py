@@ -281,13 +281,13 @@ def pretty_json(value):
         elif isinstance(value, Mapping):
             try:
                 items = sort_using_key(value.items(), lambda r: r[0])
-                values = [encode_basestring(k) + PRETTY_COLON + indent(pretty_json(v)).strip() for k, v in items if v != None]
+                values = [encode_basestring(k) + PRETTY_COLON + pretty_json(v) for k, v in items if v != None]
                 if not values:
                     return "{}"
                 elif len(values) == 1:
                     return "{" + values[0] + "}"
                 else:
-                    return "{\n" + INDENT + (",\n" + INDENT).join(values) + "\n}"
+                    return "{\n" + ",\n".join(indent(v) for v in values) + "\n}"
             except Exception as e:
                 from mo_logs import Log
                 from mo_math import OR

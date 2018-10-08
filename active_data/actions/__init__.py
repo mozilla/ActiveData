@@ -96,7 +96,7 @@ def test_mode_wait(query):
     try:
         metadata_manager = find_container(query['from']).namespace
         now = Date.now()
-        end_time = now + MINUTE
+        timeout = Till(till=(now + MINUTE).unix)
 
         if query["from"].startswith("meta."):
             return
@@ -121,10 +121,10 @@ def test_mode_wait(query):
         if len(cols) <= 1:
             Log.error("should have columns")
         for c in cols:
-            Log.note("Mark {{column.names}} dirty at {{time}}", column=c, time=now)
+            Log.note("Mark {{column.name}} dirty at {{time}}", column=c, time=now)
             metadata_manager.todo.push(c)
 
-        while end_time > now:
+        while not timeout:
             # GET FRESH VERSIONS
             cols = [c for c in metadata_manager.get_columns(table_name=query["from"]) if c.jx_type not in STRUCT]
             for c in cols:
@@ -139,7 +139,7 @@ def test_mode_wait(query):
             Till(seconds=1).wait()
         for c in cols:
             Log.note(
-                "fresh column name={{column.names}} updated={{column.last_updated|date}} parts={{column.partitions}}",
+                "fresh column name={{column.name}} updated={{column.last_updated|date}} parts={{column.partitions}}",
                 column=c
             )
     except Exception as e:

@@ -13,6 +13,8 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
+
+
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
@@ -65,7 +67,7 @@ def es_setop(es, query):
     new_select = FlatList()
     schema = query.frum.schema
     # columns = schema.columns
-    # nested_columns = set(c.names["."] for c in columns if c.nested_path[0] != ".")
+    # nested_columns = set(c.name for c in columns if c.nested_path[0] != ".")
 
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
@@ -76,7 +78,7 @@ def es_setop(es, query):
             term = select.value.term
             leaves = schema.leaves(term.var)
             for c in leaves:
-                full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
+                full_name = concat_field(select.name, relative_field(untype_path(c.name), term.var))
                 if c.jx_type == NESTED:
                     es_query.stored_fields = ["_source"]
                     new_select.append({
@@ -116,7 +118,7 @@ def es_setop(es, query):
                     es_query.stored_fields = ["_source"]
                     for c in leaves:
                         if len(c.nested_path) == 1:  # NESTED PROPERTIES ARE IGNORED, CAPTURED BY THESE FIRT LEVEL PROPERTIES
-                            jx_name = untype_path(c.names["."])
+                            jx_name = untype_path(c.name)
                             new_select.append({
                                 "name": select.name,
                                 "value": Variable(c.es_column),
@@ -127,7 +129,7 @@ def es_setop(es, query):
                     # PULL ONLY WHAT'S NEEDED
                     for c in leaves:
                         if len(c.nested_path) == 1:
-                            jx_name = untype_path(c.names["."])
+                            jx_name = untype_path(c.name)
                             if c.jx_type == NESTED:
                                 es_query.stored_fields = ["_source"]
                                 new_select.append({
@@ -164,7 +166,7 @@ def es_setop(es, query):
                                 where.nested.inner_hits._source = False
                                 where.nested.inner_hits.stored_fields += [c.es_column]
 
-                                child = relative_field(untype_path(c.names[schema.query_path[0]]), s_column)
+                                child = relative_field(untype_path(relative_field(c.name, schema.query_path[0])), s_column)
                                 pull = accumulate_nested_doc(nested_path, Variable(relative_field(s_column, unnest_path(nested_path))))
                                 new_select.append({
                                     "name": select.name,

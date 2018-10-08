@@ -151,7 +151,7 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
             else:
                 from mo_logs import Log
 
-                Log.error("Can not store {{value}} in {{column|quote}}", value=value, column=sub_schema.names['.'])
+                Log.error("Can not store {{value}} in {{column|quote}}", value=value, column=sub_schema.name)
 
             sub_schema = {json_type_to_inserter_type[value_json_type]: sub_schema}
 

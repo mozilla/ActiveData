@@ -579,8 +579,8 @@ class Cluster(object):
             columns = parse_properties(index, ".", about.properties)
             if len(columns) > 0:
                 typed = any(
-                    c.names["."].startswith(TYPE_PREFIX) or
-                    c.names["."].find("." + TYPE_PREFIX) != -1
+                    c.name.startswith(TYPE_PREFIX) or
+                    c.name.find("." + TYPE_PREFIX) != -1
                     for c in columns
                 )
             kwargs.typed = typed
@@ -1242,7 +1242,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
             columns.append(Column(
                 es_index=index_name,
                 es_column=column_name,
-                names={".": jx_name},
+                name=jx_name,
                 es_type="nested",
                 nested_path=ROOT_PATH
             ))
@@ -1253,7 +1253,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
             child_columns = parse_properties(index_name, column_name, property.properties)
             columns.extend(child_columns)
             columns.append(Column(
-                names={".": jx_name},
+                name=jx_name,
                 es_index=index_name,
                 es_column=column_name,
                 nested_path=ROOT_PATH,
@@ -1278,7 +1278,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
             columns.append(Column(
                 es_index=index_name,
                 es_column=column_name,
-                names={".": jx_name},
+                name=jx_name,
                 nested_path=ROOT_PATH,
                 cardinality=cardinality,
                 es_type=property.type
@@ -1287,7 +1287,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                 columns.append(Column(
                     es_index=index_name,
                     es_column=column_name,
-                    names={".": jx_name},
+                    name=jx_name,
                     nested_path=ROOT_PATH,
                     cardinality=0 if property.store else None,
                     es_type=property.type
@@ -1296,7 +1296,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
             columns.append(Column(
                 es_index=index_name,
                 es_column=column_name,
-                names={".": jx_name},
+                name=jx_name,
                 nested_path=ROOT_PATH,
                 cardinality=0 if property.store else None,
                 es_type="source" if property.enabled == False else "object"

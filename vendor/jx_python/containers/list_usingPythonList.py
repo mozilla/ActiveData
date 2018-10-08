@@ -96,14 +96,14 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
             if q.format == "list":
                 return Data(data=output.data, meta={"format": "list"})
             elif q.format == "table":
-                head = [c.names['.'] for c in output.schema.columns]
+                head = [c.name for c in output.schema.columns]
                 data = [
                     [r if h == '.' else r[h] for h in head]
                     for r in output.data
                 ]
                 return Data(header=head, data=data, meta={"format": "table"})
             elif q.format == "cube":
-                head = [c.names['.'] for c in output.schema.columns]
+                head = [c.name for c in output.schema.columns]
                 rows = [
                     [r[h] for h in head]
                     for r in output.data
@@ -182,7 +182,7 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
                 for s in select
             ):
                 names = set(s.value.var for s in select)
-                new_schema = Schema(".", [c for c in self.schema.columns if c.names['.'] in names])
+                new_schema = Schema(".", [c for c in self.schema.columns if c.name in names])
 
             push_and_pull = [(s.name, jx_expression_to_function(s.value)) for s in selects]
             def selector(d):
@@ -300,6 +300,6 @@ from jx_python import jx
 DUAL = ListContainer(
     name="dual",
     data=[{}],
-    schema=Schema(table_name="dual", columns=UniqueIndex(keys=("names.\\.",)))
+    schema=Schema(table_name="dual", columns=UniqueIndex(keys=("name",)))
 )
 

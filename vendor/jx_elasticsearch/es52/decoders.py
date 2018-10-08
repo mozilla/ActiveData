@@ -503,7 +503,7 @@ class ObjectDecoder(AggsDecoder):
             flatter = lambda k: relative_field(k, prefix)
 
         self.put, self.fields = transpose(*[
-            (flatter(untype_path(c.names["."])), c.es_column)
+            (flatter(untype_path(c.name)), c.es_column)
             for c in query.frum.schema.leaves(prefix)
         ])
 

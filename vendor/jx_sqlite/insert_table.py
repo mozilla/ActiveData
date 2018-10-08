@@ -64,7 +64,7 @@ class InsertTable(BaseTable):
             nested_value = command.set[new_column_name]
             ctype = get_type(nested_value)
             column = Column(
-                names={".": new_column_name},
+                name=new_column_name,
                 jx_type=ctype,
                 es_index=self.sf.fact,
                 es_column=typed_column(new_column_name, ctype)
@@ -153,7 +153,7 @@ class InsertTable(BaseTable):
                 for n, cs in nested_table.columns.items():
                     for c in cs:
                         column = Column(
-                            names={".": c.name},
+                            name=c.name,
                             jx_type=c.jx_type,
                             es_type=c.es_type,
                             es_index=c.es_index,
@@ -266,7 +266,7 @@ class InsertTable(BaseTable):
                             deeper_nested_path = path
 
                     c = Column(
-                        names={".": cname},
+                        name=c.name,
                         jx_type=value_type,
                         es_column=typed_column(cname, value_type),
                         es_index=table,
@@ -290,7 +290,7 @@ class InsertTable(BaseTable):
                     abs_schema.remove(cname, c)
                     required_changes.append({"nest": (c, nested_path)})
                     deep_c = Column(
-                        names={".": cname},
+                        name=c.name,
                         jx_type=value_type,
                         es_column=typed_column(cname, value_type),
                         es_index=table,

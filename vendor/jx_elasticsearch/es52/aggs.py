@@ -278,7 +278,7 @@ def es_aggsop(es, frum, query):
                     Log.error("Do not know how to count columns with more than one type (script probably)")
                 elif len(columns) <1:
                     # PULL VALUE OUT OF THE stats AGGREGATE
-                    s.pull = jx_expression_to_function({"null":{}})
+                    s.pull = jx_expression_to_function(NULL)
                 else:
                     # PULL VALUE OUT OF THE stats AGGREGATE
                     es_query.aggs[literal_field(canonical_name)].extended_stats.field = columns[0].es_column

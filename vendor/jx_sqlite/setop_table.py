@@ -45,7 +45,7 @@ class SetOpTable(InsertTable):
         for v in vars_:
             if not any(startswith_field(cname, v) for cname in schema.keys()):
                 active_columns["."].add(Column(
-                    names={".": v},
+                    name=v,
                     jx_type="null",
                     es_column=".",
                     es_index=".",
@@ -237,17 +237,17 @@ class SetOpTable(InsertTable):
                             value = row[i]
                             if isinstance(query.select, list) or isinstance(query.select.value, LeavesOp):
                                 # ASSIGN INNER PROPERTIES
-                                relative_path = concat_field(c.push_name, c.push_child)
+                                relative_field = concat_field(c.push_name, c.push_child)
                             else:  # FACT IS EXPECTED TO BE A SINGLE VALUE, NOT AN OBJECT
-                                relative_path = c.push_child
+                                relative_field = c.push_child
 
-                            if relative_path == ".":
+                            if relative_field == ".":
                                 if value == '':
                                     doc = Null
                                 else:
                                     doc = value
                             elif value != None and value != '':
-                                doc[relative_path] = value
+                                doc[relative_field] = value
 
                 for child_details in nested_doc_details['children']:
                     # EACH NESTED TABLE MUST BE ASSEMBLED INTO A LIST OF OBJECTS
@@ -258,16 +258,16 @@ class SetOpTable(InsertTable):
                             push_name = child_details['nested_path'][0]
                             if isinstance(query.select, list) or isinstance(query.select.value, LeavesOp):
                                 # ASSIGN INNER PROPERTIES
-                                relative_path = relative_field(push_name, curr_nested_path)
+                                relative_field = relative_field(push_name, curr_nested_path)
                             else:  # FACT IS EXPECTED TO BE A SINGLE VALUE, NOT AN OBJECT
-                                relative_path = "."
+                                relative_field = "."
 
-                            if relative_path == "." and doc is Null:
+                            if relative_field == "." and doc is Null:
                                 doc = nested_value
-                            elif relative_path == ".":
+                            elif relative_field == ".":
                                 doc = unwraplist(nested_value)
                             else:
-                                doc[relative_path] = unwraplist(nested_value)
+                                doc[relative_field] = unwraplist(nested_value)
 
                 output.append(doc)
 

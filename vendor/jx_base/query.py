@@ -539,8 +539,8 @@ def _normalize_group(edge, dim_index, limit, schema=None):
             if schema:
                 output = wrap([
                     {
-                        "name": concat_field(prefix, literal_field(relative_field(untype_path(c.names["."]), prefix))),
-                        "put": {"name": literal_field(untype_path(c.names["."]))},
+                        "name": concat_field(prefix, literal_field(relative_field(untype_path(c.name), prefix))),
+                        "put": {"name": literal_field(untype_path(c.name))},
                         "value": jx_expression(c.es_column, schema=schema),
                         "allowNulls": True,
                         "domain": {"type": "default"}

@@ -84,13 +84,12 @@ class ColumnList(Table, jx_base.Container):
 
     def _add(self, column):
         columns_for_table = self.data.setdefault(column.es_index, {})
-        existing_columns = columns_for_table.setdefault(column.names["."], [])
+        existing_columns = columns_for_table.setdefault(column.name, [])
 
         for canonical in existing_columns:
             if canonical is column:
                 return canonical
             if canonical.es_type == column.es_type:
-                set_default(column.names, canonical.names)
                 for key in Column.__slots__:
                     canonical[key] = column[key]
                 return canonical
@@ -108,7 +107,7 @@ class ColumnList(Table, jx_base.Container):
                 objects = 0
                 multi = 1
                 for column in self._all_columns():
-                    value = column[mc.names["."]]
+                    value = column[mc.name]
                     if value == None:
                         pass
                     else:
@@ -189,10 +188,10 @@ class ColumnList(Table, jx_base.Container):
                     for k in command["clear"]:
                         if k == ".":
                             lst = self.data[col.es_index]
-                            cols = lst[col.names['.']]
+                            cols = lst[col.name]
                             cols.remove(col)
                             if len(cols) == 0:
-                                del lst[col.names['.']]
+                                del lst[col.name]
                                 if len(lst) == 0:
                                     del self.data[col.es_index]
                         else:
@@ -247,8 +246,8 @@ class ColumnList(Table, jx_base.Container):
             self._update_meta()
             output = [
                 {
-                    "table": concat_field(c.es_index, untype_path(table)),
-                    "name": untype_path(name),
+                    "table": c.es_index,
+                    "name": untype_path(c.name),
                     "cardinality": c.cardinality,
                     "es_column": c.es_column,
                     "es_index": c.es_index,
@@ -262,7 +261,6 @@ class ColumnList(Table, jx_base.Container):
                 for cname, cs in css.items()
                 for c in cs
                 if c.jx_type not in STRUCT  # and c.es_column != "_id"
-                for table, name in c.names.items()
             ]
 
         from jx_python.containers.list_usingPythonList import ListContainer
@@ -280,7 +278,7 @@ def get_schema_from_list(table_name, frum):
     """
     SCAN THE LIST FOR COLUMN TYPES
     """
-    columns = UniqueIndex(keys=("names.\\.",))
+    columns = UniqueIndex(keys=("name",))
     _get_schema_from_list(frum, ".", parent=".", nested_path=ROOT_PATH, columns=columns)
     return Schema(table_name=table_name, columns=list(columns))
 
@@ -303,7 +301,7 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
             column = columns[full_name]
             if not column:
                 column = Column(
-                    names={table_name: full_name},
+                    name=concat_field(table_name, full_name),
                     es_column=full_name,
                     es_index=".",
                     jx_type=python_type_to_json_type[d.__class__],
@@ -319,7 +317,7 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
                 column = columns[full_name]
                 if not column:
                     column = Column(
-                        names={table_name: full_name},
+                        name=concat_field(table_name, full_name),
                         es_column=full_name,
                         es_index=".",
                         es_type="undefined",
@@ -352,7 +350,7 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
 METADATA_COLUMNS = (
     [
         Column(
-            names={".": c},
+            name=c,
             es_index="meta.columns",
             es_column=c,
             es_type="string",
@@ -362,15 +360,15 @@ METADATA_COLUMNS = (
     ] + [
         Column(
             es_index="meta.columns",
-            names={".": c},
+            name=c,
             es_column=c,
             es_type="object",
             nested_path=ROOT_PATH
         )
-        for c in ["names", "partitions"]
+        for c in ["name", "partitions"]
     ] + [
         Column(
-            names={".": c},
+            name=c,
             es_index="meta.columns",
             es_column=c,
             es_type="long",
@@ -379,7 +377,7 @@ METADATA_COLUMNS = (
         for c in ["count", "cardinality", "multi"]
     ] + [
         Column(
-            names={".": "last_updated"},
+            name= "last_updated",
             es_index="meta.columns",
             es_column="last_updated",
             es_type="time",
@@ -391,7 +389,7 @@ METADATA_COLUMNS = (
 SIMPLE_METADATA_COLUMNS = (
     [
         Column(
-            names={".": c},
+            name=c,
             es_index="meta.columns",
             es_column=c,
             es_type="string",
@@ -400,7 +398,7 @@ SIMPLE_METADATA_COLUMNS = (
         for c in ["table", "name", "type", "nested_path"]
     ] + [
         Column(
-            names={".": c},
+            name=c,
             es_index="meta.columns",
             es_column=c,
             es_type="long",
@@ -409,7 +407,7 @@ SIMPLE_METADATA_COLUMNS = (
         for c in ["count", "cardinality", "multi"]
     ] + [
         Column(
-            names={".": "last_updated"},
+            name="last_updated",
             es_index="meta.columns",
             es_column="last_updated",
             es_type="time",

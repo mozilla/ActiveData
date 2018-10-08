@@ -37,7 +37,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
     if not vars:
         # DOES NOT EXIST
         return wrap([{"name": ".", "sql": {"0": SQL_NULL}, "nested_path": ROOT_PATH}])
-    var_name = list(set(listwrap(vars).names.get('\\.')))
+    var_name = list(set(listwrap(vars).name))
     if len(var_name) > 1:
         Log.error("do not know how to handle")
     var_name = var_name[0]
@@ -45,7 +45,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
     acc = {}
     if boolean:
         for col in cols:
-            cname = relative_field(col.names['.'], var_name)
+            cname = relative_field(col.name, var_name)
             nested_path = col.nested_path[0]
             if col.type == OBJECT:
                 value = SQL_TRUE
@@ -58,7 +58,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
             tempb['b'] = value
     else:
         for col in cols:
-            cname = relative_field(col.names['.'], var_name)
+            cname = relative_field(col.name, var_name)
             if col.type == OBJECT:
                 prefix = self.var + "."
                 for cn, cs in schema.items():
@@ -132,7 +132,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
             "sql": Variable(schema.get_column_name(c)).to_sql(schema)[0].sql
         }
         for c in schema.columns
-        if startswith_field(c.names['.'], term) and (
+        if startswith_field(c.name, term) and (
             (c.jx_type not in (EXISTS, OBJECT, NESTED) and startswith_field(schema.nested_path[0], c.nested_path[0])) or
             (c.jx_type not in (EXISTS, OBJECT) and schema.nested_path[0] == c.nested_path[0])
         )

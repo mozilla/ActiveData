@@ -12,6 +12,8 @@ from __future__ import unicode_literals
 
 from copy import copy
 
+
+
 import jx_base
 from jx_base import Column, Facts
 from jx_base.queries import get_property_name
@@ -64,7 +66,7 @@ class Namespace(jx_base.Namespace):
                     continue
                 cname, ctype = untyped_column(name)
                 self._columns.add(Column(
-                    names={'.': cname},  # I THINK COLUMNS HAVE THIER FULL PATH
+                    name=cname,  # I THINK COLUMNS HAVE THIER FULL PATH
                     jx_type=coalesce(ctype, {"TEXT": "string", "REAL": "number", "INTEGER": "integer"}.get(dtype)),
                     nested_path=full_nested_path,
                     es_type=dtype,
@@ -89,7 +91,7 @@ class Namespace(jx_base.Namespace):
                 pass
             else:
                 c = Column(
-                    names={".": u},
+                    name=u,
                     jx_type="string",
                     es_column=typed_column(u, "string"),
                     es_index=fact_name
@@ -141,7 +143,7 @@ class Snowflake(jx_base.Snowflake):
                 # TODO: DELETE PARENT COLUMNS? : Done
 
     def _add_column(self, column):
-        cname = column.names["."]
+        cname = column.name
         if column.type == "nested":
             # WE ARE ALSO NESTING
             self._nest_column(column, [cname]+column.nested_path)
@@ -217,7 +219,7 @@ class Snowflake(jx_base.Snowflake):
         path = table.name
 
         for c in self._columns:
-            rel_name = c.names[path] = relative_field(c.names["."], path)
+            rel_name = relative_field(c.name, path)
             table.schema.add(rel_name, c)
         return table
 
@@ -227,10 +229,10 @@ class Snowflake(jx_base.Snowflake):
 
     def add_column_to_schema(self, column):
         self._columns.append(column)
-        abs_name = column.names["."]
+        abs_name = column.name
 
         for table in self.tables.values():
-            rel_name = column.names[table.name] = relative_field(abs_name, table.name)
+            rel_name = relative_field(abs_name, table.name)
             table.schema.add(rel_name, column)
             table.columns.append(column)
 
@@ -268,7 +270,7 @@ class Schema(object):
         if nested_path[-1] != '.':
             Log.error("Expecting full nested path")
         source = Column(
-            names={".": "."},
+            name=".",
             jx_type=OBJECT,
             es_type=OBJECT,
             es_column="_source",
@@ -276,7 +278,7 @@ class Schema(object):
             nested_path=nested_path
         )
         guid = Column(
-            names={".": GUID},
+            name=GUID,
             jx_type=STRING,
             es_type='TEXT',
             es_column=GUID,
@@ -288,13 +290,13 @@ class Schema(object):
         self.nested_path = nested_path
 
     def add(self, column_name, column):
-        if column_name != column.names[self.nested_path[0]]:
+        if column_name != relative_field(column.name, self.nested_path[0]):
             Log.error("Logic error")
 
         self._columns.append(column)
 
         for np in self.nested_path:
-            rel_name = column.names[np]
+            rel_name = relative_field(column.name, np)
             container = self.namespace.setdefault(rel_name, set())
             hidden = [
                 c
@@ -311,7 +313,7 @@ class Schema(object):
 
 
     def remove(self, column_name, column):
-        if column_name != column.names[self.nested_path[0]]:
+        if column_name != relative_field(column.name, self.nested_path[0]):
             Log.error("Logic error")
 
         self.namespace[column_name] = [c for c in self.namespace[column_name] if c != column]
@@ -332,7 +334,7 @@ class Schema(object):
         :param column:
         :return: NAME OF column
         """
-        return get_property_name(column.names[self.nested_path[0]])
+        return get_property_name(relative_field(column.name, self.nested_path[0]))
 
     def keys(self):
         return set(self.namespace.keys())
@@ -348,7 +350,7 @@ class Schema(object):
         head = self.namespace.get(prefix, None)
         if not head:
             return Null
-        full_name = list(head)[0].names['.']
+        full_name = list(head)[0].name
         return set(
             c
             for k, cs in self.namespace.items()
@@ -372,15 +374,15 @@ class Schema(object):
                     continue
 
                 if startswith_field(get_property_name(k), var):
-                    origin_dict.setdefault(c.names[origin], []).append(c)
+                    origin_dict.setdefault(relative_field(c.name, origin), []).append(c)
 
                     if origin != c.nested_path[0]:
-                        fact_dict.setdefault(c.names["."], []).append(c)
+                        fact_dict.setdefault(c.name, []).append(c)
                 elif origin == var:
-                    origin_dict.setdefault(concat_field(var, c.names[origin]), []).append(c)
+                    origin_dict.setdefault(concat_field(var, relative_field(c.name, origin)), []).append(c)
 
                     if origin != c.nested_path[0]:
-                        fact_dict.setdefault(concat_field(var, c.names["."]), []).append(c)
+                        fact_dict.setdefault(concat_field(var, c.name), []).append(c)
 
         return set_default(origin_dict, fact_dict)
 

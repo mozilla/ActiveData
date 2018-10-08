@@ -14,6 +14,8 @@ from __future__ import unicode_literals
 import itertools
 from itertools import product
 
+
+
 import jx_base
 from jx_base import TableDesc
 from jx_base.namespace import Namespace
@@ -22,7 +24,7 @@ from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
 from mo_collections.relation import Relation_usingList
-from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, join_field, wrap, concat_field, startswith_field, literal_field
+from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, join_field, wrap, concat_field, startswith_field, literal_field, tail_field
 from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN
 from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
 from mo_kwargs import override
@@ -154,11 +156,11 @@ class ElasticsearchMetadata(Namespace):
 
     def _parse_properties(self, alias, mapping, meta):
         abs_columns = elasticsearch.parse_properties(alias, None, mapping.properties)
-        if any(c.cardinality == 0 and c.names['.'] != '_id' for c in abs_columns):
+        if any(c.cardinality == 0 and c.name != '_id' for c in abs_columns):
             Log.warning(
                 "Some columns are not stored {{names}}",
                 names=[
-                    ".".join((c.es_index, c.names['.']))
+                    ".".join((c.es_index, c.name))
                     for c in abs_columns
                     if c.cardinality == 0
                 ]
@@ -189,8 +191,6 @@ class ElasticsearchMetadata(Namespace):
             for abs_column in abs_columns:
                 abs_column.last_updated = None
                 abs_column.jx_type = jx_type(abs_column)
-                for query_path in query_paths:
-                    abs_column.names[query_path[0]] = relative_field(abs_column.names["."], query_path[0])
                 self.todo.add(self.meta.columns.add(abs_column))
         pass
 
@@ -249,7 +249,7 @@ class ElasticsearchMetadata(Namespace):
                 self._reload_columns(table)
 
             columns = self.meta.columns.find(alias, column_name)
-            columns = jx.sort(columns, "names.\\.")
+            columns = jx.sort(columns, "name")
             # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
             while len(self.todo) and not all(columns.get("last_updated")):
                 if DEBUG:
@@ -538,8 +538,7 @@ class ElasticsearchMetadata(Namespace):
     def get_schema(self, name):
         if name == "meta.columns":
             return self.meta.columns.schema
-        query_path = split_field(name)
-        root, rest = query_path[0], join_field(query_path[1:])
+        root, rest = tail_field(name)
         return self.get_snowflake(root).get_schema(rest)
 
 
@@ -604,9 +603,9 @@ class Schema(jx_base.Schema):
                 c
                 for c in columns
                 if (
-                    (c.names['.'] != "_id" or column_name == "_id") and
+                    (c.name != "_id" or column_name == "_id") and
                     c.jx_type not in OBJECTS and
-                    startswith_field(unnest_path(c.names[path]), column_name)
+                    startswith_field(unnest_path(relative_field(c.name, path)), column_name)
                 )
             ]
             if output:
@@ -615,23 +614,22 @@ class Schema(jx_base.Schema):
 
     def values(self, column_name):
         """
-        RETURN ALL COLUMNS THAT column_name REFERES TO
+        RETURN ALL COLUMNS THAT column_name REFERS TO
         """
         column_name = unnest_path(column_name)
         columns = self.columns
-        deep_path = self.query_path[0]
         for path in self.query_path:
             output = [
                 c
                 for c in columns
                 if (
                     c.jx_type not in STRUCT and
-                    untype_path(c.names[path]) == column_name
+                    untype_path(relative_field(c.name, path)) == column_name
                 )
             ]
             if output:
                 return output
-        return output
+        return []
 
     def __getitem__(self, column_name):
         return self.values(column_name)
@@ -656,7 +654,7 @@ class Schema(jx_base.Schema):
                     k: c.es_column
                     for c in self.snowflake.columns
                     if c.jx_type not in STRUCT
-                    for rel_name in [c.names[path]]
+                    for rel_name in [relative_field(c.name, path)]
                     for k in [rel_name, untype_path(rel_name), unnest_path(rel_name)]
                 }
             )
@@ -696,7 +694,7 @@ def metadata_tables():
     return wrap(
         [
             Column(
-                names={".": c},
+                name=c,
                 es_index="meta.tables",
                 es_column=c,
                 es_type="string",
@@ -709,7 +707,7 @@ def metadata_tables():
             ]
         ]+[
             Column(
-                names={".": c},
+                name=c,
                 es_index="meta.tables",
                 es_column=c,
                 es_type="integer",

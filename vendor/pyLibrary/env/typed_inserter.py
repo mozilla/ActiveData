@@ -33,7 +33,7 @@ class TypedInserter(object):
             _schema = Data()
             for c in parse_properties(es.settings.alias, ".", es.get_properties()):
                 if c.es_type not in (OBJECT, NESTED):
-                    _schema[c.names["."]] = c
+                    _schema[c.name] = c
             self.schema = unwrap(_schema)
         else:
             self.schema = {}

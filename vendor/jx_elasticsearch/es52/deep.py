@@ -11,6 +11,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+
+
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
@@ -85,7 +87,7 @@ def es_deepop(es, query):
 
     # es_query.sort = jx_sort_to_es_sort(query.sort)
     map_to_es_columns = schema.map_to_es()
-    # {c.names["."]: c.es_column for c in schema.leaves(".")}
+    # {c.name: c.es_column for c in schema.leaves(".")}
     query_for_es = query.map(map_to_es_columns)
     es_query.sort = jx_sort_to_es_sort(query_for_es.sort, schema)
 
@@ -105,7 +107,7 @@ def es_deepop(es, query):
                     if c.jx_type == NESTED:
                         continue
                     es_query.stored_fields += [c.es_column]
-                c_name = untype_path(c.names[query_path])
+                c_name = untype_path(relative_field(c.name, query_path))
                 col_names.add(c_name)
                 new_select.append({
                     "name": concat_field(s.name, c_name),
@@ -139,12 +141,12 @@ def es_deepop(es, query):
 
                     # WE MUST FIGURE OUT WHICH NAMESSPACE s.value.var IS USING SO WE CAN EXTRACT THE child
                     for np in n.nested_path:
-                        c_name = untype_path(n.names[np])
+                        c_name = untype_path(relative_field(n.name, np))
                         if startswith_field(c_name, s.value.var):
                             child = relative_field(c_name, s.value.var)
                             break
                     else:
-                        child = relative_field(untype_path(n.names[n.nested_path[0]]), s.value.var)
+                        child = relative_field(untype_path(relative_field(n.name, n.nested_path[0])), s.value.var)
 
                     new_select.append({
                         "name": s.name,

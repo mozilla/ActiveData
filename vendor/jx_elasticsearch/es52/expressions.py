@@ -730,7 +730,7 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
 
 @extend(OrOp)
 def to_esfilter(self, schema):
-    # TODO: REPLICATE THIS WHOLE expression.py SO IT IS CLEAR ES5 QUERIES ARE A BIT DIFFERENT
+
     if schema.snowflake.namespace.es_cluster.version.startswith("5."):
         # VERSION 5.2.x
         # WE REQUIRE EXIT-EARLY SEMANTICS, OTHERWISE EVERY EXPRESSION IS A SCRIPT EXPRESSION

@@ -1202,7 +1202,9 @@ class AndOp(Expression):
                 elif simple not in and_terms:
                     and_terms.append(simple)
 
-        if len(or_terms) == 1:
+        if len(or_terms) == 0:
+            return FALSE
+        elif len(or_terms) == 1:
             and_terms = or_terms[0]
             if len(and_terms) == 0:
                 return TRUE

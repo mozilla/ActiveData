@@ -1804,6 +1804,7 @@ class MultiOp(Expression):
             else:
                 return Literal(None, acc)
         elif self.nulls:
+            # DECISIVE
             if acc is not None:
                 terms.append(Literal("literal", acc))
 
@@ -1819,12 +1820,13 @@ class MultiOp(Expression):
                 }
             ).partial_eval()
         else:
+            # CONSERVATIVE
             if acc is not None:
                 terms.append(Literal("literal", acc))
 
             output = WhenOp(
                 "when",
-                AndOp("or", [t.missing() for t in terms]),
+                OrOp("or", [t.missing() for t in terms]),
                 **{
                     "then": self.default,
                     "else": BasicMultiOp("basic." + self.op, terms)

@@ -16,17 +16,15 @@ from datetime import date
 from datetime import datetime
 from decimal import Decimal
 
-from copy import deepcopy
-
 import jx_base
 from jx_base import Column, Table
 from jx_base.schema import Schema
 from jx_python import jx
 from mo_collections import UniqueIndex
-from mo_dots import Data, concat_field, listwrap, unwraplist, NullType, FlatList, set_default, split_field, join_field, ROOT_PATH, wrap, coalesce
+from mo_dots import Data, concat_field, listwrap, unwraplist, NullType, FlatList, split_field, join_field, ROOT_PATH, wrap, coalesce
 from mo_future import none_type, text_type, long, PY2
-from mo_json.typed_encoder import untype_path, unnest_path
 from mo_json import python_type_to_json_type, STRUCT
+from mo_json.typed_encoder import untype_path, unnest_path
 from mo_logs import Log
 from mo_threads import Lock
 from mo_times.dates import Date

@@ -91,6 +91,7 @@ aggregates = {
     "sum": "sum",
     "add": "sum",
     "count": "value_count",
+    "count_values": "count_values",
     "maximum": "max",
     "minimum": "min",
     "max": "max",

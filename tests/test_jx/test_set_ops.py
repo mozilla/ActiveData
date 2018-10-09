@@ -1192,7 +1192,7 @@ class TestSetOps(BaseTestCase):
         self.utils.execute_tests(test)
 
     @skip("please make this test")
-    def text_select_typed_column(self):
+    def test_select_typed_column(self):
         pass
         # TODO: The timestamp.~s~ APPEARS TO RESULT IN {"":{"":{"":{"":"2018-09-26 12:41:19.575174"}}}}
         # {
@@ -1201,3 +1201,23 @@ class TestSetOps(BaseTestCase):
         # 	"from":"debug-etl",
         # 	"where":{"exists":"timestamp.~s~"}
         # }
+
+    def test_union_columns(self):
+        test = {
+            "data": [
+                {"a": [1, 2, 3], "b": [2, 3, 4]},
+                {"a": [4, 4, 4], "b": [2, 3, 4]}
+            ],
+            "query": {
+                "select": {"name": "x", "value": {"union": ["a", "b"]}},
+                "from": TEST_TABLE
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"x": [1, 2, 3, 4]},
+                    {"x": [2, 3, 4]}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)

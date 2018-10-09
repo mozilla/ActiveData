@@ -2757,6 +2757,58 @@ class CaseOp(Expression):
             return list(types)[0]
 
 
+class UnionOp(Expression):
+
+    def __init__(self, op, terms):
+        Expression.__init__(self, op, terms)
+        if terms == None:
+            self.terms = []
+        elif isinstance(terms, list):
+            self.terms = terms
+        else:
+            self.terms = [terms]
+
+    def __data__(self):
+        return {"union": [t.__data__() for t in self.terms]}
+
+    def vars(self):
+        output = set()
+        for t in self.terms:
+            output |= t.vars()
+        return output
+
+    def map(self, map_):
+        return UnionOp("union", [t.map(map_) for t in self.terms])
+
+    def missing(self):
+        return FALSE
+
+    @simplified
+    def partial_eval(self):
+        minimum = None
+        terms = []
+        for t in self.terms:
+            simple = t.partial_eval()
+            if isinstance(simple, NullOp):
+                pass
+            elif isinstance(simple, Literal):
+                minimum = MIN([minimum, simple.value])
+            else:
+                terms.append(simple)
+        if len(terms) == 0:
+            if minimum == None:
+                return NULL
+            else:
+                return Literal(None, minimum)
+        else:
+            if minimum == None:
+                output = UnionOp("Union", terms)
+            else:
+                output = UnionOp("Union", [Literal(None, minimum)] + terms)
+
+        return output
+
+
 class BasicStartsWithOp(Expression):
     """
     PLACEHOLDER FOR BASIC value.startsWith(find, start) (CAN NOT DEAL WITH NULLS)
@@ -2989,6 +3041,7 @@ operators = {
     "term": EqOp,
     "terms": InOp,
     "tuple": TupleOp,
+    "union": UnionOp,
     "unix": UnixOp,
     "when": WhenOp,
 }

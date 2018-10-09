@@ -17,7 +17,7 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp, BasicMultiOp
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp, BasicMultiOp, UnionOp
 from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_missing
 from mo_dots import coalesce, wrap, Null, set_default, literal_field
 from mo_future import text_type
@@ -1236,6 +1236,24 @@ def to_esfilter(self, schema):
     ]).partial_eval()
 
     return output.to_esfilter(schema)
+
+
+@extend(UnionOp)
+def to_es_script(self, schema, not_null=False, boolean=False, many=True):
+    code = """
+    Optional.of(doc).map(
+        doc -> {
+            HashSet output = new HashSet();
+            {{LOOPS}}
+            return output.toArray();
+        }
+    ).orElse(null)
+    """
+    loops = [
+        "for (v in " + t.partial_eval().to_es_script(schema, many=True) + ") output.add(v);"
+        for t in self.terms
+    ]
+    return code.replace("{{loops}}", "\n".join(loops))
 
 
 @extend(BasicIndexOfOp)

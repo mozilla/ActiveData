@@ -580,13 +580,24 @@ class Schema(jx_base.Schema):
     def __init__(self, query_path, snowflake):
         if not isinstance(snowflake.query_paths[0], list):
             Log.error("Snowflake query paths should be a list of string tuples (well, technically, a list of lists of strings)")
+        self.snowflake = snowflake
         try:
-            self.query_path = [
-                p
+            path = [
+                p[0]
                 for p in snowflake.query_paths
                 if untype_path(p[0]) == query_path
-            ][0]
-            self.snowflake = snowflake
+            ]
+            if path:
+                self.multi = None
+                self.query_path = path[0]
+            else:
+                self.multi = [
+                    c
+                    for c in self.snowflake.columns
+                    if untype_path(c.name) == query_path and c.multi > 1
+                ][0]
+                self.query_path = self.multi.name
+
         except Exception as e:
             Log.error("logic error", cause=e)
 
@@ -640,7 +651,7 @@ class Schema(jx_base.Schema):
 
     @property
     def columns(self):
-        return self.snowflake.namespace.get_columns(literal_field(self.snowflake.name))
+        return self.snowflake.columns
 
     def map_to_es(self):
         """

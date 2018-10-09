@@ -11,6 +11,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from operator import add
+
 from jx_base.domains import SetDomain
 from jx_base.expressions import TupleOp, NULL
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
@@ -273,6 +275,46 @@ def es_aggsop(es, frum, query):
                     s.pull = pulls[0]
                 else:
                     s.pull = lambda row: UNION(p(row) for p in pulls)
+            elif s.aggregate == "count_values":
+                # RETURN MAP FROM VALUE TO THE NUMBER OF TIMES FOUND IN THE DOCUMENTS
+                # NOT A NESTED DOC, RATHER A MULTIVALUE FIELD
+                pulls = []
+                for column in columns:
+                    script = {"scripted_metric": {
+                        'params': {"_agg": {}},
+                        'init_script': 'params._agg.terms = new HashMap()',
+                        'map_script': 'for (v in doc['+quote(column.es_column)+'].values) params._agg.terms.put(v, Optional.ofNullable(params._agg.terms.get(v)).orElse(0)+1);',
+                        'combine_script': 'return params._agg.terms',
+                        'reduce_script': '''
+                            HashMap output = new HashMap(); 
+                            for (agg in params._aggs) {
+                                if (agg!=null){
+                                    for (e in agg.entrySet()) {
+                                        String key = String.valueOf(e.getKey());
+                                        output.put(key, e.getValue() + Optional.ofNullable(output.get(key)).orElse(0));
+                                    } 
+                                }
+                            } 
+                            return output;
+                        '''
+                    }}
+                    stats_name = encode_property(column.es_column)
+                    if column.nested_path[0] == ".":
+                        es_query.aggs[stats_name] = script
+                        pulls.append(jx_expression_to_function(stats_name + ".value"))
+                    else:
+                        es_query.aggs[stats_name] = {
+                            "nested": {"path": column.nested_path[0]},
+                            "aggs": {"_nested": script}
+                        }
+                        pulls.append(jx_expression_to_function(stats_name + "._nested.value"))
+
+                if len(pulls) == 0:
+                    s.pull = NULL
+                elif len(pulls) == 1:
+                    s.pull = pulls[0]
+                else:
+                    s.pull = lambda row: add(p(row) for p in pulls)
             else:
                 if len(columns) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
@@ -370,7 +412,7 @@ def es_aggsop(es, frum, query):
     # <TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
     split_where = split_expression_by_depth(query.where, schema=frum.schema)
 
-    if len(split_field(frum.name)) > 1:
+    if (schema.multi and schema.multi.nested_path[0] != '.') or (not schema.multi and schema.query_path != '.'):
         if any(split_where[2::]):
             Log.error("Where clause is too deep")
 

@@ -417,7 +417,7 @@ def es_aggsop(es, frum, query):
     # <TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
     split_where = split_expression_by_depth(query.where, schema=frum.schema)
 
-    if (schema.multi and schema.multi.nested_path[0] != '.') or (not schema.multi and schema.query_path != '.'):
+    if (schema.multi and schema.multi.nested_path[0] != '.') or (not schema.multi and schema.query_path[0] != '.'):
         if any(split_where[2::]):
             Log.error("Where clause is too deep")
 

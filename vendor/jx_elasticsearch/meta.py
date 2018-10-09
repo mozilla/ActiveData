@@ -583,7 +583,7 @@ class Schema(jx_base.Schema):
         self.snowflake = snowflake
         try:
             path = [
-                p[0]
+                p
                 for p in snowflake.query_paths
                 if untype_path(p[0]) == query_path
             ]
@@ -596,7 +596,10 @@ class Schema(jx_base.Schema):
                     for c in self.snowflake.columns
                     if untype_path(c.name) == query_path and c.multi > 1
                 ][0]
-                self.query_path = self.multi.name
+                self.query_path = [self.multi.name] + self.multi.nested_path
+
+            if not isinstance(self.query_path, list) or self.query_path[-1] != '.':
+                Log.error("error")
 
         except Exception as e:
             Log.error("logic error", cause=e)

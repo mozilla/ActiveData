@@ -102,7 +102,6 @@ class QueryOp(Expression):
             format=copy(self.format)
         )
 
-
     def vars(self, exclude_where=False, exclude_select=False):
         """
         :return: variables in query
@@ -261,7 +260,6 @@ class QueryOp(Expression):
     @property
     def column_names(self):
         return listwrap(self.select).name + self.edges.name + self.groupby.name
-
 
     def __getitem__(self, item):
         if item == "from":

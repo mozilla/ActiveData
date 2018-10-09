@@ -277,7 +277,6 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use=="sqlite", "Can't handle array of primitives for now")
     def test_select_when_on_multivalue(self):
         test = {
             "data": [
@@ -311,7 +310,6 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use == "sqlite", "Can't handle array of primitives for now")
     def test_select_in_w_multivalue(self):
         test = {
             "data": [

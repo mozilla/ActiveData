@@ -36,8 +36,13 @@ COMPARE_TUPLE = """
 (a, b)->{
     int i=0;
     for (dummy in a){  //ONLY THIS FOR LOOP IS ACCEPTED (ALL OTHER FORMS THROW NullPointerException)
-        if (a[i]==null) return -1*({{dir}});
-        if (b[i]==null) return 1*({{dir}});
+        if (a[i]==null){
+            if (b[i]==null){
+                return 0; 
+            }else{
+                return -1*({{dir}});
+            }//endif
+        }else if (b[i]==null) return {{dir}};
 
         if (a[i]!=b[i]) {
             if (a[i] instanceof Boolean){
@@ -348,7 +353,7 @@ def es_aggsop(es, frum, query):
                     'init_script': 'params._agg.best = ' + nully + ';',
                     'map_script': 'params._agg.best = ' + expand_template(MAX_OF_TUPLE, {"expr1": "params._agg.best", "expr2": selfy, "dir": dir, "op": op}) + ";",
                     'combine_script': 'return params._agg.best',
-                    'reduce_script': 'return params._aggs.stream().max(' + expand_template(COMPARE_TUPLE, {"dir": dir, "op": op}) + ').get()',
+                    'reduce_script': 'return params._aggs.stream().'+op+'(' + expand_template(COMPARE_TUPLE, {"dir": dir, "op": op}) + ').get()',
                 }}
                 if schema.query_path[0] == ".":
                     es_query.aggs[canonical_name] = script

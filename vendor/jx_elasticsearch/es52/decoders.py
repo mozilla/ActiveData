@@ -22,7 +22,7 @@ from jx_elasticsearch.es52.util import es_missing
 from jx_python import jx
 from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, unwraplist
 from mo_future import text_type, transpose
-from mo_json import STRING, NUMBER, BOOLEAN
+from mo_json import STRING, NUMBER, BOOLEAN, IS_NULL
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_logs.strings import quote, expand_template
@@ -751,6 +751,7 @@ class DimFieldListDecoder(SetDecoder):
 
 
 pull_functions = {
+    IS_NULL: lambda x: None,
     STRING: lambda x: x,
     NUMBER: lambda x: float(x) if x !=None else None,
     BOOLEAN: string2boolean

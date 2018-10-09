@@ -204,7 +204,6 @@ class TableDesc(DataClass(
 Column = DataClass(
     "Column",
     [
-        # "table",
         "name",
         "es_column",
         "es_index",

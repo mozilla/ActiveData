@@ -65,6 +65,7 @@ def es_deepop(es, query):
         set_default(f, script)
 
     if not wheres[1]:
+        # INCLUDE DOCS WITH NO NESTED DOCS
         more_filter = {
             "bool": {
                 "filter": [AndOp("and", wheres[0]).partial_eval().to_esfilter(schema)],
@@ -144,7 +145,9 @@ def es_deepop(es, query):
                             child = relative_field(c_name, s.value.var)
                             break
                     else:
-                        child = relative_field(untype_path(relative_field(n.name, n.nested_path[0])), s.value.var)
+                        continue
+                        # REMOVED BECAUSE SELECTING INNER PROPERTIES IS NOT ALLOWED
+                        # child = relative_field(untype_path(relative_field(n.name, n.nested_path[0])), s.value.var)
 
                     new_select.append({
                         "name": s.name,
@@ -208,7 +211,7 @@ def es_deepop(es, query):
             Thread.join(need_more)
             for t in more[0].hits.hits:
                 yield t
-    #</COMPLICATED>
+    # </COMPLICATED>
 
     try:
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]

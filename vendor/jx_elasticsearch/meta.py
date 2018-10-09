@@ -155,7 +155,7 @@ class ElasticsearchMetadata(Namespace):
         table_desc.timestamp = es_last_updated
 
     def _parse_properties(self, alias, mapping, meta):
-        abs_columns = elasticsearch.parse_properties(alias, None, mapping.properties)
+        abs_columns = elasticsearch.parse_properties(alias, '.', ROOT_PATH, mapping.properties)
         if any(c.cardinality == 0 and c.name != '_id' for c in abs_columns):
             Log.warning(
                 "Some columns are not stored {{names}}",

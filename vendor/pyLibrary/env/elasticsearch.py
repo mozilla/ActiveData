@@ -576,7 +576,7 @@ class Cluster(object):
 
         if typed == None:
             typed = True
-            columns = parse_properties(index, ".", about.properties)
+            columns = parse_properties(index, ".", ROOT_PATH, about.properties)
             if len(columns) > 0:
                 typed = any(
                     c.name.startswith(TYPE_PREFIX) or
@@ -1222,7 +1222,7 @@ class Alias(Features):
         self.cluster.post("/" + self.settings.alias + "/_refresh")
 
 
-def parse_properties(parent_index_name, parent_name, esProperties):
+def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
     """
     RETURN THE COLUMN DEFINITIONS IN THE GIVEN esProperties OBJECT
     """
@@ -1235,29 +1235,27 @@ def parse_properties(parent_index_name, parent_name, esProperties):
         if property.type == "nested" and property.properties:
             # NESTED TYPE IS A NEW TYPE DEFINITION
             # MARKUP CHILD COLUMNS WITH THE EXTRA DEPTH
-            self_columns = parse_properties(index_name, column_name, property.properties)
-            for c in self_columns:
-                c.nested_path = [column_name] + c.nested_path
+            self_columns = parse_properties(index_name, column_name, [column_name] + nested_path, property.properties)
             columns.extend(self_columns)
             columns.append(Column(
+                name=jx_name,
                 es_index=index_name,
                 es_column=column_name,
-                name=jx_name,
                 es_type="nested",
-                nested_path=ROOT_PATH
+                nested_path=nested_path
             ))
 
             continue
 
         if property.properties:
-            child_columns = parse_properties(index_name, column_name, property.properties)
+            child_columns = parse_properties(index_name, column_name, nested_path, property.properties)
             columns.extend(child_columns)
             columns.append(Column(
                 name=jx_name,
                 es_index=index_name,
                 es_column=column_name,
-                nested_path=ROOT_PATH,
-                es_type="source" if property.enabled == False else "object"
+                es_type="source" if property.enabled == False else "object",
+                nested_path=nested_path
             ))
 
         if property.dynamic:
@@ -1268,7 +1266,7 @@ def parse_properties(parent_index_name, parent_name, esProperties):
         cardinality = 0 if not property.store and not name != '_id' else None
 
         if property.fields:
-            child_columns = parse_properties(index_name, column_name, property.fields)
+            child_columns = parse_properties(index_name, column_name, nested_path, property.fields)
             if cardinality is None:
                 for cc in child_columns:
                     cc.cardinality = None
@@ -1279,27 +1277,27 @@ def parse_properties(parent_index_name, parent_name, esProperties):
                 es_index=index_name,
                 es_column=column_name,
                 name=jx_name,
-                nested_path=ROOT_PATH,
+                es_type=property.type,
                 cardinality=cardinality,
-                es_type=property.type
+                nested_path=nested_path
             ))
             if property.index_name and name != property.index_name:
                 columns.append(Column(
+                    name=jx_name,
                     es_index=index_name,
                     es_column=column_name,
-                    name=jx_name,
-                    nested_path=ROOT_PATH,
+                    es_type=property.type,
                     cardinality=0 if property.store else None,
-                    es_type=property.type
+                    nested_path=nested_path
                 ))
         elif property.enabled == None or property.enabled == False:
             columns.append(Column(
+                name=jx_name,
                 es_index=index_name,
                 es_column=column_name,
-                name=jx_name,
-                nested_path=ROOT_PATH,
+                es_type="source" if property.enabled == False else "object",
                 cardinality=0 if property.store else None,
-                es_type="source" if property.enabled == False else "object"
+                nested_path=nested_path
             ))
         else:
             Log.warning("unknown type {{type}} for property {{path}}", type=property.type, path=parent_name)

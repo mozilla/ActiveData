@@ -363,9 +363,8 @@ def get_pull(column):
     if column.nested_path[0] == ".":
         return concat_field("fields", literal_field(column.es_column))
     else:
-        depth = len(split_field(column.nested_path[0]))
-        rel_name = split_field(column.es_column)[depth:]
-        return join_field(["_inner"] + rel_name)
+        rel_name = relative_field(column.es_column, column.nested_path[0])
+        return concat_field("_inner", rel_name)
 
 
 def get_pull_function(column):

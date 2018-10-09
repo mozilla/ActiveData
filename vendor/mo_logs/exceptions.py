@@ -16,10 +16,9 @@ from __future__ import unicode_literals
 import sys
 from collections import Mapping
 
-from mo_dots import Data, listwrap, unwraplist, set_default, Null, coalesce, wrap
+from mo_dots import Data, listwrap, unwraplist, Null
 from mo_future import text_type, PY3
 from mo_logs.strings import indent, expand_template
-
 
 FATAL = "FATAL"
 ERROR = "ERROR"
@@ -62,7 +61,7 @@ class Except(Exception, LogItem):
             context=context,
             format=None,
             template=template,
-            params=params
+            params=dict(params, **kwargs)
         )
 
         if not trace:

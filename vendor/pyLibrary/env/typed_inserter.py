@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from jx_python.expressions import jx_expression_to_function
-from mo_dots import Data, unwrap
+from mo_dots import Data, unwrap, ROOT_PATH
 from pyLibrary.env.elasticsearch import parse_properties, random_id
 
 from mo_json import json2value, OBJECT, NESTED
@@ -31,7 +31,7 @@ class TypedInserter(object):
 
         if es:
             _schema = Data()
-            for c in parse_properties(es.settings.alias, ".", es.get_properties()):
+            for c in parse_properties(es.settings.alias, ".", ROOT_PATH, es.get_properties()):
                 if c.es_type not in (OBJECT, NESTED):
                     _schema[c.name] = c
             self.schema = unwrap(_schema)

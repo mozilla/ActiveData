@@ -394,7 +394,7 @@ def _normalize_select_no_context(select, schema=None):
             return Null
     elif isinstance(select.value, text_type):
         if select.value.endswith(".*"):
-            name = select.value[:-2]
+            name = select.value[:-2].lstrip(".")
             output.name = coalesce(select.name,  name)
             output.value = LeavesOp("leaves", Variable(name), prefix=coalesce(select.prefix, name))
         else:
@@ -405,7 +405,7 @@ def _normalize_select_no_context(select, schema=None):
                 output.name = coalesce(select.name, select.aggregate, ".")
                 output.value = LeavesOp("leaves", Variable("."))
             else:
-                output.name = coalesce(select.name, select.value, select.aggregate)
+                output.name = coalesce(select.name, select.value.lstrip("."), select.aggregate)
                 output.value = jx_expression(select.value, schema=schema)
     elif isinstance(select.value, (int, float)):
         if not output.name:

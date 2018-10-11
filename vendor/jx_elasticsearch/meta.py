@@ -14,8 +14,6 @@ from __future__ import unicode_literals
 import itertools
 from itertools import product
 
-
-
 import jx_base
 from jx_base import TableDesc
 from jx_base.namespace import Namespace
@@ -24,7 +22,7 @@ from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
 from mo_collections.relation import Relation_usingList
-from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, join_field, wrap, concat_field, startswith_field, literal_field, tail_field
+from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field
 from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN
 from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
 from mo_kwargs import override

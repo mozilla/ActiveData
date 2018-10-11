@@ -12,19 +12,17 @@ from __future__ import unicode_literals
 
 from copy import copy
 
-
-
 import jx_base
 from jx_base import Column, Facts
 from jx_base.queries import get_property_name
-from jx_python.meta import ColumnList
-from jx_sqlite import GUID, untyped_column, UID, typed_column, quoted_GUID, quoted_UID, sql_types, quoted_PARENT, quoted_ORDER
+# from jx_python.meta import ColumnList
+from jx_sqlite import GUID, untyped_column, UID, typed_column, quoted_GUID, quoted_UID, quoted_PARENT, quoted_ORDER
 from mo_dots import startswith_field, Null, relative_field, concat_field, set_default, wrap, tail_field, coalesce, listwrap
 from mo_future import text_type
-from mo_json.typed_encoder import STRING, OBJECT, EXISTS, STRUCT
+from mo_json import STRING, OBJECT, EXISTS, STRUCT
 from mo_logs import Log
 from pyLibrary.sql import SQL_FROM, sql_iso, sql_list, SQL_LIMIT, SQL_SELECT, SQL_ZERO, SQL_STAR
-from pyLibrary.sql.sqlite import quote_column
+from pyLibrary.sql.sqlite import quote_column, json_type_to_sqlite_type
 
 
 class Namespace(jx_base.Namespace):
@@ -103,7 +101,7 @@ class Namespace(jx_base.Namespace):
             "CREATE TABLE " + quote_column(fact_name) + sql_iso(sql_list(
                 [quoted_GUID + " TEXT "] +
                 [quoted_UID + " INTEGER"] +
-                [quote_column(c.es_column) + " " + sql_types[c.jx_type] for c in self.tables["."].schema.columns] +
+                [quote_column(c.es_column) + " " + json_type_to_sqlite_type[c.jx_type] for c in self.tables["."].schema.columns] +
                 ["PRIMARY KEY " + sql_iso(sql_list(
                     [quoted_GUID] +
                     [quoted_UID] +
@@ -152,7 +150,7 @@ class Snowflake(jx_base.Snowflake):
 
         self.namespace.db.execute(
             "ALTER TABLE " + quote_column(table) +
-            " ADD COLUMN " + quote_column(column.es_column) + " " + sql_types[column.type]
+            " ADD COLUMN " + quote_column(column.es_column) + " " + json_type_to_sqlite_type[column.type]
         )
 
         self.add_column_to_schema(column)
@@ -194,7 +192,7 @@ class Snowflake(jx_base.Snowflake):
         column.es_index = destination_table
         self.namespace.db.execute(
             "ALTER TABLE " + quote_column(destination_table) +
-            " ADD COLUMN " + quote_column(column.es_column) + " " + sql_types[column.type]
+            " ADD COLUMN " + quote_column(column.es_column) + " " + json_type_to_sqlite_type[column.type]
         )
 
         # Deleting parent columns

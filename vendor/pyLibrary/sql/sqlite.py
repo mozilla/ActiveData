@@ -20,15 +20,14 @@ from collections import Mapping, namedtuple
 from mo_dots import Data, coalesce, unwraplist, Null
 from mo_files import File
 from mo_future import allocate_lock as _allocate_lock, text_type
-from mo_kwargs import override
+from mo_json import INTEGER, NUMBER, BOOLEAN, STRING, OBJECT, NESTED
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except, extract_stack, ERROR, format_trace
 from mo_logs.strings import quote
 from mo_math.stats import percentile
 from mo_threads import Queue, Thread, Lock, Till
-from mo_times import Date, Duration
-from mo_times.timer import Timer
+from mo_times import Date, Duration, Timer
 from pyLibrary import convert
 from pyLibrary.sql import DB, SQL, SQL_TRUE, SQL_FALSE, SQL_NULL, SQL_SELECT, sql_iso, sql_list
 
@@ -567,3 +566,14 @@ def _upgrade():
     import sqlite3
     _ = sqlite3
     _upgraded = True
+
+
+json_type_to_sqlite_type = {
+    BOOLEAN: "TINYINT",
+    INTEGER: "INTEGER",
+    NUMBER: "REAL",
+    STRING: "TEXT",
+    OBJECT: "TEXT",
+    NESTED: "TEXT"
+}
+

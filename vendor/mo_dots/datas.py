@@ -46,10 +46,10 @@ class Data(MutableMapping):
         else:
             if args:
                 args0 = args[0]
-                if isinstance(args0, Data):
-                    _set(self, SLOT, _get(args0, SLOT))
-                elif isinstance(args0, dict):
+                if isinstance(args0, dict):
                     _set(self, SLOT, args0)
+                elif isinstance(args0, Data):
+                    _set(self, SLOT, _get(args0, SLOT))
                 else:
                     _set(self, SLOT, dict(args0))
             elif kwargs:

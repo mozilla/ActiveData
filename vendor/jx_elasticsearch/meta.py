@@ -23,7 +23,7 @@ from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
 from mo_collections.relation import Relation_usingList
 from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field
-from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN
+from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER
 from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
 from mo_kwargs import override
 from mo_logs import Log
@@ -73,7 +73,7 @@ class ElasticsearchMetadata(Namespace):
         self.index_does_not_exist = set()
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
-        self.index_to_alias = Relation_usingList()
+        self.index_to_alias = {}
 
         self.es_metadata = Null
         self.metadata_last_updated = Date.now() - OLD_METADATA
@@ -127,11 +127,10 @@ class ElasticsearchMetadata(Namespace):
         update_required = not (table_desc.timestamp < es_last_updated)
         metadata = self.es_cluster.get_metadata(force=update_required)
 
-        indexes = self.index_to_alias.get_domain(alias)
         props = [
             (self.es_cluster.get_index(index=i, type=t, debug=DEBUG), t, m.properties)
             for i, d in metadata.indices.items()
-            if i in indexes
+            if self.index_to_alias.get(i) == alias
             for t, m in [_get_best_type_from_mapping(d.mappings)]
         ]
 
@@ -181,13 +180,15 @@ class ElasticsearchMetadata(Namespace):
             for q in query_paths:
                 q.append(SELF_PATH)
             query_paths.append(ROOT_PATH)
-            self.alias_to_query_paths[alias] = query_paths
-            for i in self.index_to_alias.get_domain(alias):
-                self.alias_to_query_paths[i] = query_paths
 
-            # ADD RELATIVE NAMES
+            # ENSURE ALL TABLES HAVCE THE QUERY PATHS SET
+            self.alias_to_query_paths[alias] = query_paths
+            for i, a in self.index_to_alias.items():
+                if a == alias:
+                    self.alias_to_query_paths[i] = query_paths
+
+            # ENSURE COLUMN HAS CORRECT jx_type
             for abs_column in abs_columns:
-                abs_column.last_updated = None
                 abs_column.jx_type = jx_type(abs_column)
                 self.todo.add(self.meta.columns.add(abs_column))
         pass
@@ -209,11 +210,16 @@ class ElasticsearchMetadata(Namespace):
         if name in self.alias_last_updated:
             return name
         else:
-            return self.index_to_alias[name]
+            return self.index_to_alias.get(name)
 
-    def get_columns(self, table_name, column_name=None, force=False):
+    def get_columns(self, table_name, column_name=None, after=None):
         """
         RETURN METADATA COLUMNS
+
+        :param table_name: TABLE WE WANT COLUMNS FOR
+        :param column_name:  OPTIONAL NAME, IF INTERESTED IN ONLY ONE COLUMN
+        :param after: FORCE LOAD, WAITING FOR last_updated TO BE AFTER THIS TIME
+        :return:
         """
         table_path = split_field(table_name)
         root_table_name = table_path[0]
@@ -228,7 +234,8 @@ class ElasticsearchMetadata(Namespace):
         try:
             last_update = MAX([
                 self.es_cluster.index_last_updated[i]
-                for i in self.index_to_alias.get_domain(alias)
+                for i, a in self.index_to_alias.items()
+                if a == alias
             ])
 
             table = self.get_table(alias)[0]
@@ -243,18 +250,19 @@ class ElasticsearchMetadata(Namespace):
                 with self.meta.tables.locker:
                     self.meta.tables.add(table)
                 self._reload_columns(table)
-            elif force or table.timestamp < last_update:
+            elif after or table.timestamp < last_update:
                 self._reload_columns(table)
 
             columns = self.meta.columns.find(alias, column_name)
             columns = jx.sort(columns, "name")
+
             # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
-            while len(self.todo) and not all(columns.get("last_updated")):
+            while len(self.todo) and any(after >= c.last_updated for c in columns):
                 if DEBUG:
                     if len(columns) > 10:
-                        Log.note("waiting for {{num}} columns to update", num=len([c for c in columns if not c.last_updated]))
+                        Log.note("waiting for {{num}} columns to update", num=len([c for c in columns if after >= c.last_updated]))
                     else:
-                        Log.note("waiting for columns to update {{columns|json}}", columns=[c.es_index+"."+c.es_column for c in columns if not c.last_updated])
+                        Log.note("waiting for columns to update {{columns|json}}", columns=[c.es_index + "." + c.es_column for c in columns if after >= c.last_updated])
                 Till(seconds=1).wait()
             return columns
         except Exception as e:
@@ -450,7 +458,7 @@ class ElasticsearchMetadata(Namespace):
                     old_columns = [
                         c
                         for c in self.meta.columns
-                        if (c.last_updated == None or c.last_updated < Date.now()-TOO_OLD) and c.jx_type not in STRUCT
+                        if (c.last_updated < Date.now()-TOO_OLD) and c.jx_type not in STRUCT
                     ]
                     if old_columns:
                         DEBUG and Log.note(
@@ -710,6 +718,8 @@ def metadata_tables():
                 es_index="meta.tables",
                 es_column=c,
                 es_type="string",
+                jx_type=STRING,
+                last_updated=Date.now(),
                 nested_path=ROOT_PATH
             )
             for c in [
@@ -723,6 +733,8 @@ def metadata_tables():
                 es_index="meta.tables",
                 es_column=c,
                 es_type="integer",
+                jx_type=INTEGER,
+                last_updated=Date.now(),
                 nested_path=ROOT_PATH
             )
             for c in [

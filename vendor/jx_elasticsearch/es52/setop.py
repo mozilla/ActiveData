@@ -260,7 +260,10 @@ def format_list(T, select, query=None):
             for s in select:
                 v = unwraplist(s.pull(row))
                 if v is not None:
-                    r[s.put.name][s.put.child] = v
+                    try:
+                        r[s.put.name][s.put.child] = v
+                    except Exception as e:
+                        Log.error("what's happening here?")
             data.append(r if r else None)
     elif isinstance(query.select.value, LeavesOp):
         for row in T:

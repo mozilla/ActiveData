@@ -1242,6 +1242,8 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                 es_index=index_name,
                 es_column=column_name,
                 es_type="nested",
+                jx_type='nested',
+                last_updated=Date.now(),
                 nested_path=nested_path
             ))
 
@@ -1255,6 +1257,8 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                 es_index=index_name,
                 es_column=column_name,
                 es_type="source" if property.enabled == False else "object",
+                jx_type='object',
+                last_updated=Date.now(),
                 nested_path=nested_path
             ))
 
@@ -1274,11 +1278,13 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
 
         if property.type in es_type_to_json_type.keys():
             columns.append(Column(
+                name=jx_name,
                 es_index=index_name,
                 es_column=column_name,
-                name=jx_name,
                 es_type=property.type,
+                jx_type=es_type_to_json_type[property.type],
                 cardinality=cardinality,
+                last_updated=Date.now(),
                 nested_path=nested_path
             ))
             if property.index_name and name != property.index_name:
@@ -1287,7 +1293,9 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                     es_index=index_name,
                     es_column=column_name,
                     es_type=property.type,
+                    jx_type=es_type_to_json_type[property.type],
                     cardinality=0 if property.store else None,
+                    last_updated=Date.now(),
                     nested_path=nested_path
                 ))
         elif property.enabled == None or property.enabled == False:
@@ -1296,7 +1304,9 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                 es_index=index_name,
                 es_column=column_name,
                 es_type="source" if property.enabled == False else "object",
+                jx_type=es_type_to_json_type['object'],
                 cardinality=0 if property.store else None,
+                last_updated=Date.now(),
                 nested_path=nested_path
             ))
         else:

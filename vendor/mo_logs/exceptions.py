@@ -52,7 +52,7 @@ class Except(Exception, LogItem):
             trace=desc.trace
         )
 
-    def __init__(self, context=ERROR, template=Null, params=Null, cause=Null, trace=Null, **kwargs):
+    def __init__(self, context=ERROR, template=Null, params=Null, cause=Null, trace=Null):
         self.cause = Except.wrap(cause)
 
         Exception.__init__(self)
@@ -61,7 +61,7 @@ class Except(Exception, LogItem):
             context=context,
             format=None,
             template=template,
-            params=dict(params, **kwargs)
+            params=params
         )
 
         if not trace:

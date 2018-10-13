@@ -16,21 +16,28 @@ from datetime import date
 from datetime import datetime
 from decimal import Decimal
 
+from pyLibrary.sql import sql_iso, sql_list, SQL_SELECT, SQL, SQL_ORDERBY, SQL_FROM, SQL_WHERE, SQL_AND
+
 import jx_base
 from jx_base import Column, Table
 from jx_base.schema import Schema
 from jx_python import jx
 from mo_collections import UniqueIndex
-from mo_dots import Data, concat_field, listwrap, unwraplist, NullType, FlatList, split_field, join_field, ROOT_PATH, wrap, coalesce
+from mo_dots import Data, concat_field, listwrap, unwraplist, NullType, FlatList, split_field, join_field, ROOT_PATH, wrap, coalesce, Null
 from mo_future import none_type, text_type, long, PY2
-from mo_json import python_type_to_json_type, STRUCT
+from mo_json import python_type_to_json_type, STRUCT, NUMBER, INTEGER, STRING, json2value, value2json
 from mo_json.typed_encoder import untype_path, unnest_path
 from mo_logs import Log
-from mo_threads import Lock
+from mo_threads import Lock, Till, Queue, Thread
 from mo_times.dates import Date
+from pyLibrary.sql.sqlite import Sqlite, quote_column, json_type_to_sqlite_type, quote_value
 
+DEBUG = True
 singlton = None
+DB_FILE = "activedata_metadata.sqlite"
+db_table_name = quote_column("meta.columns")
 
+INSERT, UPDATE, DELETE = 'insert', 'update', 'delete'
 
 class ColumnList(Table, jx_base.Container):
     """
@@ -42,7 +49,125 @@ class ColumnList(Table, jx_base.Container):
         self.data = {}  # MAP FROM ES_INDEX TO (abs_column_name to COLUMNS)
         self.locker = Lock()
         self._schema = None
-        self.extend(METADATA_COLUMNS)
+        self.db = Sqlite(filename=DB_FILE)
+        self.last_load = Null
+        self.todo = Queue("update columns to db")  # HOLD (action, column) PAIR, WHERE action in ['insert', 'update']
+        self._load_db()
+        Thread.run("update " + DB_FILE, self._update_database_worker)
+
+    def _create_db(self):
+        with self.db.transaction() as t:
+            t.execute(
+                "CREATE TABLE " + db_table_name +
+                sql_iso(sql_list(
+                    [
+                        quote_column(c.name) + " " + json_type_to_sqlite_type[c.jx_type]
+                        for c in METADATA_COLUMNS
+                    ] + [
+                        "PRIMARY KEY" + sql_iso(sql_list(map(quote_column, ["es_index", "es_column"])))
+                    ]
+                ))
+            )
+
+            for c in METADATA_COLUMNS:
+                self._add(c)
+                self._insert_column(c, t)
+
+    def _load_db(self):
+        self.last_load = Date.now()
+
+        result = self.db.query(
+            SQL_SELECT + "name" +
+            SQL_FROM + "sqlite_master" +
+            SQL_WHERE + SQL_AND.join([
+                "name=" + db_table_name,
+                "type=" + quote_value("table")
+            ])
+        )
+        if not result.data:
+            self._create_db()
+            return
+
+        result = self.db.query(
+            SQL_SELECT + all_columns +
+            SQL_FROM + db_table_name +
+            SQL_ORDERBY + sql_list(map(quote_column, ["es_index", "name", "es_column"]))
+        )
+
+        with self.locker:
+            for r in result.data:
+                c = row_to_column(result.header, r)
+                self._add(c)
+
+    def _update_database_worker(self, please_stop):
+        while not please_stop:
+            now = Date.now()
+            try:
+                with self.db.transaction() as t:
+                    result = t.query(
+                        SQL_SELECT + all_columns +
+                        SQL_FROM + db_table_name +
+                        SQL_WHERE + "last_updated>" + quote_value(self.last_load) +
+                        SQL_ORDERBY + sql_list(map(quote_column, ["es_index", "name", "es_column"]))
+                    )
+
+                    with self.locker:
+                        for r in result.data:
+                            c = row_to_column(result.header, r)
+                            self._add(c)
+
+                    self.last_load = now
+
+                    updates = self.todo.pop_all()
+                    DEBUG and updates and Log.note("{{num}} columns to push to db", num=len(updates))
+                    for action, column in updates:
+                        DEBUG and Log.note("update db for {{table}}.{{column}}", table=column.es_index, column=column.es_column)
+                        if action is UPDATE:
+                            t.execute(
+                                "UPDATE" + db_table_name +
+                                "SET" + sql_list([
+                                    "count=" + quote_value(column.count),
+                                    "cardinality=" + quote_value(column.cardinality),
+                                    "multi=" + quote_value(column.multi),
+                                    "partitions=" + quote_value(column.partitions),
+                                    "last_updated=" + quote_value(column.last_updated)
+                                ]) +
+                                SQL_WHERE + SQL_AND.join([
+                                    "es_index = " + quote_value(column.es_index),
+                                    "es_column = " + quote_value(column.es_column),
+                                    "last_updated < " + quote_value(column.last_updated)
+                                ])
+                            )
+                        elif action is DELETE:
+                            t.execute(
+                                "DELETE FROM" + db_table_name +
+                                SQL_WHERE + SQL_AND.join([
+                                    "es_index = " + quote_value(column.es_index),
+                                    "es_column = " + quote_value(column.es_column)
+                                ])
+                            )
+                        else:
+                            self._insert_column(column, t)
+            except Exception as e:
+                Log.warning("problem updataing database", cause=e)
+
+            (Till(seconds=10) | please_stop).wait()
+
+    def _insert_column(self, column, transaction):
+        try:
+            transaction.execute(
+                "INSERT INTO" + db_table_name + sql_iso(all_columns) +
+                "VALUES" + sql_iso(sql_list([
+                    quote_value(column[c.name]) if c.name not in ("nested_path", "partitions") else quote_value(value2json(column[c.name]))
+                    for c in METADATA_COLUMNS
+                ]))
+            )
+        except Exception as e:
+            if "exists" in e:
+                # THIS CAN HAPPEN BECAUSE todo HAS OLD COLUMN DATA
+                self.todo.add((UPDATE, column))
+            else:
+                Log.error("do not know how to handle", cause=e)
 
     def __copy__(self):
         output = object.__new__(ColumnList)
@@ -54,7 +179,6 @@ class ColumnList(Table, jx_base.Container):
         output.locker = Lock()
         output._schema = None
         return output
-
 
     def find(self, es_index, abs_column_name=None):
         with self.locker:
@@ -75,7 +199,9 @@ class ColumnList(Table, jx_base.Container):
     def add(self, column):
         self.dirty = True
         with self.locker:
-            return self._add(column)
+            canonical = self._add(column)
+            self.todo.add((INSERT if canonical is column else UPDATE, canonical))
+            return canonical
 
     def remove_table(self, table_name):
         del self.data[table_name]
@@ -88,8 +214,9 @@ class ColumnList(Table, jx_base.Container):
             if canonical is column:
                 return canonical
             if canonical.es_type == column.es_type:
-                for key in Column.__slots__:
-                    canonical[key] = column[key]
+                if column.last_updated > canonical.last_updated:
+                    for key in Column.__slots__:
+                        canonical[key] = column[key]
                 return canonical
         existing_columns.append(column)
         return column
@@ -149,9 +276,16 @@ class ColumnList(Table, jx_base.Container):
             command = wrap(command)
             eq = command.where.eq
             if eq.es_index:
-                all_columns = self.data.get(eq.es_index, {}).values()
                 if len(eq) == 1:
+                    if unwraplist(command.clear)==".":
+                        with self.locker:
+                            del self.data[eq.es_index]
+                            with self.db.transaction() as t:
+                                t.execute("DELETE FROM "+db_table_name+SQL_WHERE+" es_index="+quote_value(eq.es_index))
+                            return
+
                     # FASTEST
+                    all_columns = self.data.get(eq.es_index, {}).values()
                     with self.locker:
                         columns = [
                             c
@@ -160,6 +294,7 @@ class ColumnList(Table, jx_base.Container):
                         ]
                 elif eq.es_column and len(eq) == 2:
                     # FASTER
+                    all_columns = self.data.get(eq.es_index, {}).values()
                     with self.locker:
                         columns = [
                             c
@@ -170,6 +305,7 @@ class ColumnList(Table, jx_base.Container):
 
                 else:
                     # SLOWER
+                    all_columns = self.data.get(eq.es_index, {}).values()
                     with self.locker:
                         columns = [
                             c
@@ -185,6 +321,7 @@ class ColumnList(Table, jx_base.Container):
                 for col in columns:
                     for k in command["clear"]:
                         if k == ".":
+                            self.todo.add((DELETE, col))
                             lst = self.data[col.es_index]
                             cols = lst[col.name]
                             cols.remove(col)
@@ -351,46 +488,57 @@ METADATA_COLUMNS = (
             name=c,
             es_index="meta.columns",
             es_column=c,
-            es_type="string",
+            es_type="keyword",
+            jx_type=STRING,
+            last_updated=Date.now(),
             nested_path=ROOT_PATH
         )
-        for c in ["es_type", "jx_type", "nested_path", "es_column", "es_index"]
-    ] + [
-        Column(
-            es_index="meta.columns",
-            name=c,
-            es_column=c,
-            es_type="object",
-            nested_path=ROOT_PATH
-        )
-        for c in ["name", "partitions"]
+        for c in ["name", "es_type", "jx_type", "nested_path", "es_column", "es_index", "partitions"]
     ] + [
         Column(
             name=c,
             es_index="meta.columns",
             es_column=c,
-            es_type="long",
+            es_type="integer",
+            jx_type=INTEGER,
+            last_updated=Date.now(),
             nested_path=ROOT_PATH
         )
         for c in ["count", "cardinality", "multi"]
     ] + [
         Column(
-            name= "last_updated",
+            name="last_updated",
             es_index="meta.columns",
             es_column="last_updated",
-            es_type="time",
+            es_type="double",
+            jx_type=NUMBER,
+            last_updated=Date.now(),
             nested_path=ROOT_PATH
         )
     ]
 )
 
-SIMPLE_METADATA_COLUMNS = (
+
+def row_to_column(header, row):
+    return Column(**{
+        h: c if c is None or h not in ("nested_path", "partitions") else json2value(c)
+        for h, c in zip(header, row)
+    })
+
+
+
+all_columns = sql_list([quote_column(c.name) for c in METADATA_COLUMNS])
+
+
+SIMPLE_METADATA_COLUMNS = (  # FOR PURLY INTERNAL PYTHON LISTS, NOT MAPPING TO ANOTHER DATASTORE
     [
         Column(
             name=c,
             es_index="meta.columns",
             es_column=c,
             es_type="string",
+            jx_type=STRING,
+            last_updated=Date.now(),
             nested_path=ROOT_PATH
         )
         for c in ["table", "name", "type", "nested_path"]
@@ -400,6 +548,8 @@ SIMPLE_METADATA_COLUMNS = (
             es_index="meta.columns",
             es_column=c,
             es_type="long",
+            jx_type=INTEGER,
+            last_updated=Date.now(),
             nested_path=ROOT_PATH
         )
         for c in ["count", "cardinality", "multi"]
@@ -409,11 +559,12 @@ SIMPLE_METADATA_COLUMNS = (
             es_index="meta.columns",
             es_column="last_updated",
             es_type="time",
+            jx_type=NUMBER,
+            last_updated=Date.now(),
             nested_path=ROOT_PATH
         )
     ]
 )
-
 
 _type_to_name = {
     none_type: "undefined",

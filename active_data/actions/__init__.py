@@ -22,13 +22,13 @@ from jx_base import container
 from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import coalesce, split_field, set_default
-from mo_json import value2json
 from mo_json import STRUCT
+from mo_json import value2json
 from mo_logs import Log, strings
 from mo_logs.strings import expand_template, unicode2utf8
 from mo_threads import Till
 from mo_times.dates import Date
-from mo_times.durations import MINUTE
+from mo_times.durations import MINUTE, SECOND
 
 QUERY_TOO_LARGE = "Query is too large"
 
@@ -106,18 +106,18 @@ def test_mode_wait(query):
 
         # MARK COLUMNS DIRTY
         metadata_manager.meta.columns.update({
+            "set": {"last_updated": now},
             "clear": [
                 "partitions",
                 "count",
                 "cardinality",
-                "multi",
-                "last_updated"
+                "multi"
             ],
             "where": {"eq": {"es_index": alias}}
         })
 
         # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
-        cols = [c for c in metadata_manager.get_columns(table_name=query["from"], force=True) if c.jx_type not in STRUCT]
+        cols = [c for c in metadata_manager.get_columns(table_name=alias, after=now-SECOND) if c.jx_type not in STRUCT]
         if len(cols) <= 1:
             Log.error("should have columns")
         for c in cols:
@@ -126,9 +126,9 @@ def test_mode_wait(query):
 
         while not timeout:
             # GET FRESH VERSIONS
-            cols = [c for c in metadata_manager.get_columns(table_name=query["from"]) if c.jx_type not in STRUCT]
+            cols = [c for c in metadata_manager.get_columns(table_name=query["from"], after=now) if c.jx_type not in STRUCT]
             for c in cols:
-                if not c.last_updated or now >= c.last_updated:
+                if now >= c.last_updated:
                     Log.note(
                         "wait for column (table={{col.es_index}}, name={{col.es_column}}) metadata to arrive",
                         col=c

@@ -208,14 +208,14 @@ Column = DataClass(
         "es_column",
         "es_index",
         "es_type",
-        {"name": "jx_type", "nulls": True},
+        "jx_type",
         {"name": "useSource", "default": False},
-        {"name": "nested_path", "nulls": True},  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
+        "nested_path",  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
         {"name": "count", "nulls": True},
         {"name": "cardinality", "nulls": True},
         {"name": "multi", "nulls": True},
         {"name": "partitions", "nulls": True},
-        {"name": "last_updated", "nulls": True}
+        "last_updated"
     ],
     constraint={"and": [
         {"eq": [{"last": "nested_path"}, {"literal": "."}]}

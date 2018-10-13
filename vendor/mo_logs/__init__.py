@@ -17,7 +17,7 @@ import sys
 from collections import Mapping
 from datetime import datetime
 
-from mo_dots import coalesce, listwrap, wrap, unwrap, unwraplist, FlatList, DataObject
+from mo_dots import coalesce, listwrap, wrap, unwrap, unwraplist, FlatList, DataObject, Data
 from mo_future import text_type, PY3
 from mo_logs import constants
 from mo_logs.exceptions import Except, suppress_exception, LogItem
@@ -216,7 +216,7 @@ class Log(object):
         if "values" in more_params.keys():
             Log.error("Can not handle a logging parameter by name `values`")
 
-        params = dict(default_params, **more_params)
+        params = Data(dict(default_params, **more_params))
         cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
         trace = exceptions.extract_stack(stack_depth + 1)
 
@@ -285,7 +285,7 @@ class Log(object):
         if "values" in more_params.keys():
             Log.error("Can not handle a logging parameter by name `values`")
 
-        params = dict(default_params, **more_params)
+        params = Data(dict(default_params, **more_params))
         cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
         trace = exceptions.extract_stack(stack_depth + 1)
 
@@ -323,7 +323,7 @@ class Log(object):
             cause = default_params
             default_params = {}
 
-        params = dict(default_params, **more_params)
+        params = Data(dict(default_params, **more_params))
 
         add_to_trace = False
         if cause == None:

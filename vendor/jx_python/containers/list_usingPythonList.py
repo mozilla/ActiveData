@@ -98,7 +98,7 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
             elif q.format == "table":
                 head = [c.name for c in output.schema.columns]
                 data = [
-                    [r if h == '.' else r[h] for h in head]
+                    [r if h == "." else r[h] for h in head]
                     for r in output.data
                 ]
                 return Data(header=head, data=data, meta={"format": "table"})

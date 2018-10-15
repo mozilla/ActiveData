@@ -66,7 +66,7 @@ class EdgesTable(SetOpTable):
         orderby = []
         domains = []
 
-        select_clause = [SQL_ONE + EXISTS_COLUMN] + [quote_column(c.es_column) for c in self.sf.tables['.'].columns]
+        select_clause = [SQL_ONE + EXISTS_COLUMN] + [quote_column(c.es_column) for c in self.sf.tables["."].columns]
 
         for edge_index, query_edge in enumerate(query.edges):
             edge_alias = quote_column("e" + text_type(edge_index))

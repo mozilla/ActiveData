@@ -45,9 +45,10 @@ def untype_path(encoded):
 
 def unnest_path(encoded):
     if encoded.startswith(".."):
-        encoded = encoded.lstrip(".")
-        if not encoded:
-            encoded = "."
+        remainder = encoded.lstrip(".")
+        back = len(encoded) - len(remainder)
+        return ("." * back) + unnest_path(remainder)
+
     path = split_field(encoded)
     if not path:
         return "."

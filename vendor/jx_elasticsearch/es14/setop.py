@@ -104,7 +104,7 @@ def es_setop(es, query):
             leaves = schema.leaves(s_column)
             nested_selects = {}
             if leaves:
-                if s_column == '.' or any(c.jx_type == NESTED for c in leaves):
+                if s_column == "." or any(c.jx_type == NESTED for c in leaves):
                     # PULL WHOLE NESTED ARRAYS
                     es_query.fields = ["_source"]
                     for c in leaves:

@@ -17,7 +17,7 @@ import sys
 from collections import Mapping
 from datetime import datetime
 
-from mo_dots import coalesce, listwrap, wrap, unwrap, unwraplist, FlatList, DataObject, Data
+from mo_dots import coalesce, listwrap, wrap, unwraplist, FlatList, Data
 from mo_future import text_type, PY3
 from mo_logs import constants
 from mo_logs.exceptions import Except, suppress_exception, LogItem
@@ -381,7 +381,7 @@ class Log(object):
             f = sys._getframe(stack_depth + 1)
             item.location = {
                 "line": f.f_lineno,
-                "file": text_type(f.f_code.co_filename.split(os.sep)[-1]),
+                "file": text_type(f.f_code.co_filename),
                 "method": text_type(f.f_code.co_name)
             }
             thread = _Thread.current()

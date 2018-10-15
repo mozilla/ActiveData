@@ -434,7 +434,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
         elif t == "s":
             acc.append(v)
         else:
-            acc.append("RTRIM(RTRIM(CAST" + sql_iso(v + " as TEXT), " + quote_value('0')) + ", " + quote_value('.') + ")")
+            acc.append("RTRIM(RTRIM(CAST" + sql_iso(v + " as TEXT), " + quote_value('0')) + ", " + quote_value(".") + ")")
     if not acc:
         return wrap([{}])
     elif len(acc) == 1:

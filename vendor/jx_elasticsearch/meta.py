@@ -21,8 +21,8 @@ from jx_base.query import QueryOp
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
-from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field
-from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER
+from mo_dots import Data, relative_field, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field
+from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER, NESTED
 from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
 from mo_kwargs import override
 from mo_logs import Log
@@ -81,8 +81,8 @@ class ElasticsearchMetadata(Namespace):
         self.meta.columns = ColumnList()
 
         self.alias_to_query_paths = {
-            "meta.columns": [['.']],
-            "meta.tables": [['.']]
+            "meta.columns": [ROOT_PATH],
+            "meta.tables": [ROOT_PATH]
         }
         self.alias_last_updated = {
             "meta.columns": Date.now(),
@@ -151,7 +151,7 @@ class ElasticsearchMetadata(Namespace):
         table_desc.timestamp = es_last_updated
 
     def _parse_properties(self, alias, mapping, meta):
-        abs_columns = elasticsearch.parse_properties(alias, '.', ROOT_PATH, mapping.properties)
+        abs_columns = elasticsearch.parse_properties(alias, ".", ROOT_PATH, mapping.properties)
         if any(c.cardinality == 0 and c.name != '_id' for c in abs_columns):
             Log.warning(
                 "Some columns are not stored {{names}}",
@@ -177,10 +177,10 @@ class ElasticsearchMetadata(Namespace):
                         b.insert(i, aa)
                         break
             for q in query_paths:
-                q.append(SELF_PATH)
+                q.append(".")
             query_paths.append(ROOT_PATH)
 
-            # ENSURE ALL TABLES HAVCE THE QUERY PATHS SET
+            # ENSURE ALL TABLES HAVE THE QUERY PATHS SET
             self.alias_to_query_paths[alias] = query_paths
             for i, a in self.index_to_alias.items():
                 if a == alias:
@@ -245,7 +245,7 @@ class ElasticsearchMetadata(Namespace):
                 table = TableDesc(
                     name=alias,
                     url=None,
-                    query_path=['.'],
+                    query_path=["."],
                     timestamp=Date.MIN
                 )
                 with self.meta.tables.locker:
@@ -421,7 +421,7 @@ class ElasticsearchMetadata(Namespace):
             else:
                 parts = jx.sort(aggs.buckets.key)
 
-            DEBUG and Log.note("update metadata for {{clumn.es_index}}.{{column.es_column}} at {{time}}", column=column, time=now)
+            DEBUG and Log.note("update metadata for {{column.es_index}}.{{column.es_column}} at {{time}}", column=column, time=now)
             self.meta.columns.update({
                 "set": {
                     "count": count,
@@ -609,17 +609,26 @@ class Schema(jx_base.Schema):
                 if untype_path(p[0]) == query_path
             ]
             if path:
+                # WE DO NOT NEED TO LOOK INTO MULTI-VALUED FIELDS AS A TABLE
                 self.multi = None
                 self.query_path = path[0]
             else:
-                self.multi = [
-                    c
-                    for c in self.snowflake.columns
-                    if untype_path(c.name) == query_path and c.multi > 1
-                ][0]
-                self.query_path = [self.multi.name] + self.multi.nested_path
+                # LOOK INTO A SPECIFIC MULTI VALUED COLUMN
+                try:
+                    self.multi = [
+                        c
+                        for c in self.snowflake.columns
+                        if untype_path(c.name) == query_path and c.multi > 1
+                    ][0]
+                    self.query_path = [self.multi.name] + self.multi.nested_path
+                except Exception as e:
+                    # PROBLEM WITH METADATA UPDATE
+                    self.multi = None
+                    self.query_path = [query_path] + ["."]
 
-            if not isinstance(self.query_path, list) or self.query_path[-1] != '.':
+                    Log.warning("Problem getting query path {{path|quote}} in snowflake {{sf|quote}}", path=query_path, sf=snowflake.name, cause=e)
+
+            if not isinstance(self.query_path, list) or self.query_path[-1] != ".":
                 Log.error("error")
 
         except Exception as e:
@@ -658,7 +667,7 @@ class Schema(jx_base.Schema):
                 c
                 for c in columns
                 if (
-                    c.jx_type not in STRUCT and
+                    c.jx_type not in (OBJECT, NESTED) and
                     untype_path(relative_field(c.name, path)) == column_name
                 )
             ]

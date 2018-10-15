@@ -104,7 +104,7 @@ def es_setop(es, query):
             leaves = schema.leaves(s_column)
             nested_selects = {}
             if leaves:
-                if s_column == '.':
+                if s_column == ".":
                     # PULL ALL SOURCE
                     es_query.stored_fields = ["_source"]
                     new_select.append({

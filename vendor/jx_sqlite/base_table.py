@@ -69,4 +69,4 @@ class BaseTable(jx_base.Facts):
 
     @property
     def schema(self):
-        return self.sf.tables['.'].schema
+        return self.sf.tables["."].schema

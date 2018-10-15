@@ -94,28 +94,30 @@ def test_mode_wait(query):
         return
 
     try:
-        metadata_manager = find_container(query['from']).namespace
-        now = Date.now()
-        timeout = Till(seconds=MINUTE.seconds)
-
         if query["from"].startswith("meta."):
             return
 
+        now = Date.now()
         alias = split_field(query["from"])[0]
+        metadata_manager = find_container(alias).namespace
         metadata_manager.meta.tables[alias].timestamp = now  # TRIGGER A METADATA RELOAD AFTER THIS TIME
 
         # MARK COLUMNS DIRTY
-        columns = [c for c in metadata_manager.get_columns(alias) if c.jx_type not in STRUCT]
-        len_cols = 0
+        while True:
+            columns = [c for c in metadata_manager.get_columns(alias) if c.jx_type not in STRUCT]
+            if len(columns) > 1:
+                break
+            else:
+                Log.warning("should have columns")
+                metadata_manager.es_cluster.get_metadata(force=True)
+
         for c in columns:
-            len_cols += 1
             c.cardinality = None  # TRICK METADATA MANAGER THAT THIS IS COLUMN IS STALE
             c.last_updated = now
             Log.note("Mark {{column.name}} dirty at {{time}}", column=c, time=c.last_updated)
             metadata_manager.todo.push(c)
-        if len_cols <= 1:  # _id DOES NOT COUNT
-            Log.error("should have columns")
 
+        timeout = Till(seconds=MINUTE.seconds)
         while not timeout:
             # GET FRESH VERSIONS
             cols = [c for c in metadata_manager.get_columns(table_name=alias, after=now, timeout=timeout) if c.jx_type not in STRUCT]

@@ -265,7 +265,7 @@ class Schema(object):
     """
 
     def __init__(self, nested_path):
-        if nested_path[-1] != '.':
+        if nested_path[-1] != ".":
             Log.error("Expecting full nested path")
         source = Column(
             name=".",

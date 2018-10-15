@@ -203,7 +203,7 @@ def es_aggsop(es, frum, query):
                         canonical_names.append(cn + ".doc_count")
                         es_query.aggs[cn].filter.range = {column.es_column: {"gt": 0}}
                     else:
-                        canonical_names.append(cn+ ".value")
+                        canonical_names.append(cn + ".value")
                         es_query.aggs[cn].value_count.field = column.es_column
                 if len(canonical_names) == 1:
                     s.pull = jx_expression_to_function(canonical_names[0])
@@ -417,7 +417,7 @@ def es_aggsop(es, frum, query):
     # <TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
     split_where = split_expression_by_depth(query.where, schema=frum.schema)
 
-    if (schema.multi and schema.multi.nested_path[0] != '.') or (not schema.multi and schema.query_path[0] != '.'):
+    if (schema.multi and schema.multi.nested_path[0] != ".") or (not schema.multi and schema.query_path[0] != "."):
         if any(split_where[2::]):
             Log.error("Where clause is too deep")
 
@@ -426,7 +426,7 @@ def es_aggsop(es, frum, query):
             start += d.num_columns
 
         if split_where[1]:
-            #TODO: INCLUDE FILTERS ON EDGES
+            # TODO: INCLUDE FILTERS ON EDGES
             filter_ = AndOp("and", split_where[1]).to_esfilter(schema)
             es_query = Data(
                 aggs={"_filter": set_default({"filter": filter_}, es_query)}

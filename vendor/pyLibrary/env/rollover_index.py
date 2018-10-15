@@ -77,7 +77,7 @@ class RolloverIndex(object):
             queue = self.known_queues.get(rounded_timestamp.unix)
         if queue == None:
             candidates = jx.run({
-                "from": ListContainer('.', self.cluster.get_aliases()),
+                "from": ListContainer(".", self.cluster.get_aliases()),
                 "where": {"regex": {"index": self.settings.index + "\d\d\d\d\d\d\d\d_\d\d\d\d\d\d"}},
                 "sort": "index"
             })

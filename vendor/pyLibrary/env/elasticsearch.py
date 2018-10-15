@@ -911,7 +911,7 @@ class Cluster(object):
                 Log.error(
                     "Problem with call to {{url}}" + suggestion + "\n{{body|left(10000)}}",
                     url=url,
-                    body=strings.limit(utf82unicode(kwargs[DATA_KEY]), 100 if self.debug else 10000),
+                    body=strings.limit(utf82unicode(kwargs[DATA_KEY]), 500 if self.debug else 10000),
                     cause=e
                 )
             else:
@@ -923,7 +923,7 @@ class Cluster(object):
             response = http.delete(url, **kwargs)
             if response.status_code not in [200]:
                 Log.error(response.reason+": "+response.all_content)
-            self.debug and Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 130))
+            self.debug and Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 500))
             details = wrap(json2value(utf82unicode(response.all_content)))
             if details.error:
                 Log.error(details.error)
@@ -938,7 +938,7 @@ class Cluster(object):
             response = http.get(url, **kwargs)
             if response.status_code not in [200]:
                 Log.error(response.reason + ": " + response.all_content)
-            self.debug and Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 130))
+            self.debug and Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 500))
             details = wrap(json2value(utf82unicode(response.all_content)))
             if details.error:
                 Log.error(details.error)
@@ -952,7 +952,7 @@ class Cluster(object):
             response = http.head(url, **kwargs)
             if response.status_code not in [200]:
                 Log.error(response.reason+": "+response.all_content)
-            self.debug and Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 130))
+            self.debug and Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 500))
             if response.all_content:
                 details = wrap(json2value(utf82unicode(response.all_content)))
                 if details.error:

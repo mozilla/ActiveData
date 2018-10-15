@@ -21,7 +21,6 @@ from jx_base.query import QueryOp
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
-from mo_collections.relation import Relation_usingList
 from mo_dots import Data, relative_field, SELF_PATH, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field
 from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER
 from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
@@ -212,15 +211,17 @@ class ElasticsearchMetadata(Namespace):
         else:
             return self.index_to_alias.get(name)
 
-    def get_columns(self, table_name, column_name=None, after=None):
+    def get_columns(self, table_name, column_name=None, after=None, timeout=None):
         """
         RETURN METADATA COLUMNS
 
         :param table_name: TABLE WE WANT COLUMNS FOR
         :param column_name:  OPTIONAL NAME, IF INTERESTED IN ONLY ONE COLUMN
         :param after: FORCE LOAD, WAITING FOR last_updated TO BE AFTER THIS TIME
+        :param timeout: Signal; True when should give up
         :return:
         """
+        DEBUG and after and Log.note("getting columns for after {{time}}", time=after)
         table_path = split_field(table_name)
         root_table_name = table_path[0]
 
@@ -256,17 +257,25 @@ class ElasticsearchMetadata(Namespace):
             columns = self.meta.columns.find(alias, column_name)
             columns = jx.sort(columns, "name")
 
-            # AT LEAST WAIT FOR THE COLUMNS TO UPDATE
-            while len(self.todo) and any(after >= c.last_updated for c in columns):
+            if after is None:
+                return columns  # DO NOT WAIT FOR COMPLETE COLUMNS
+
+            # WAIT FOR THE COLUMNS TO UPDATE
+            while True:
+                pending = [c for c in columns if after >= c.last_updated or (c.cardinality == None and c.jx_type not in STRUCT)]
+                if not pending:
+                    break
+                if timeout:
+                    Log.error("trying to gets columns timed out")
                 if DEBUG:
                     if len(columns) > 10:
-                        Log.note("waiting for {{num}} columns to update", num=len([c for c in columns if after >= c.last_updated]))
+                        Log.note("waiting for {{num}} columns to update", num=len(pending))
                     else:
-                        Log.note("waiting for columns to update {{columns|json}}", columns=[c.es_index + "." + c.es_column for c in columns if after >= c.last_updated])
+                        Log.note("waiting for columns to update {{columns|json}}", columns=[c.es_index + "." + c.es_column for c in pending])
                 Till(seconds=1).wait()
             return columns
         except Exception as e:
-            Log.error("Not expected", cause=e)
+            Log.error("Failure to get columns for {{table}}", table=table_name, cause=e)
 
         return []
 
@@ -274,6 +283,7 @@ class ElasticsearchMetadata(Namespace):
         """
         QUERY ES TO FIND CARDINALITY AND PARTITIONS FOR A SIMPLE COLUMN
         """
+        now = Date.now()
         if column.es_index in self.index_does_not_exist:
             return
 
@@ -288,7 +298,7 @@ class ElasticsearchMetadata(Namespace):
                         "count": len(self.meta.columns),
                         "cardinality": len(partitions),
                         "multi": 1,
-                        "last_updated": Date.now()
+                        "last_updated": now
                     },
                     "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
                 })
@@ -301,7 +311,7 @@ class ElasticsearchMetadata(Namespace):
                         "count": len(self.meta.tables),
                         "cardinality": len(partitions),
                         "multi": 1,
-                        "last_updated": Date.now()
+                        "last_updated": now
                     },
                     "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
                 })
@@ -361,7 +371,7 @@ class ElasticsearchMetadata(Namespace):
                         "count": cardinality,
                         "cardinality": cardinality,
                         "multi": 1,
-                        "last_updated": Date.now()
+                        "last_updated": now
                     },
                     "clear": ["partitions"],
                     "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
@@ -374,7 +384,7 @@ class ElasticsearchMetadata(Namespace):
                         "count": count,
                         "cardinality": cardinality,
                         "multi": multi,
-                        "last_updated": Date.now()
+                        "last_updated": now
                     },
                     "clear": ["partitions"],
                     "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
@@ -387,7 +397,7 @@ class ElasticsearchMetadata(Namespace):
                         "count": count,
                         "cardinality": cardinality,
                         "multi": multi,
-                        "last_updated": Date.now()
+                        "last_updated": now
                     },
                     "clear": ["partitions"],
                     "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
@@ -398,7 +408,7 @@ class ElasticsearchMetadata(Namespace):
                     "nested": {"path": column.nested_path[0]},
                     "aggs": {"_nested": {"terms": {"field": column.es_column}}}
                 }
-            elif cardinality == 0:
+            elif cardinality == 0:  # WHEN DOES THIS HAPPEN?
                 query.aggs["_"] = {"terms": {"field": column.es_column}}
             else:
                 query.aggs["_"] = {"terms": {"field": column.es_column, "size": cardinality}}
@@ -411,13 +421,14 @@ class ElasticsearchMetadata(Namespace):
             else:
                 parts = jx.sort(aggs.buckets.key)
 
+            DEBUG and Log.note("update metadata for {{clumn.es_index}}.{{column.es_column}} at {{time}}", column=column, time=now)
             self.meta.columns.update({
                 "set": {
                     "count": count,
                     "cardinality": cardinality,
                     "multi": multi,
                     "partitions": parts,
-                    "last_updated": Date.now()
+                    "last_updated": now
                 },
                 "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
             })
@@ -438,7 +449,7 @@ class ElasticsearchMetadata(Namespace):
             else:
                 self.meta.columns.update({
                     "set": {
-                        "last_updated": Date.now()
+                        "last_updated": now
                     },
                     "clear": [
                         "count",
@@ -481,15 +492,19 @@ class ElasticsearchMetadata(Namespace):
 
                     with Timer("update {{table}}.{{column}}", param={"table": column.es_index, "column": column.es_column}, silent=not DEBUG):
                         if column.es_index in self.index_does_not_exist:
+                            DEBUG and Log.note("{{column.es_column}} does not exist", column=column)
                             self.meta.columns.update({
                                 "clear": ".",
                                 "where": {"eq": {"es_index": column.es_index}}
                             })
                             continue
-                        if column.jx_type in STRUCT or column.es_column.endswith("." + EXISTS_TYPE):
+                        if column.jx_type in STRUCT or split_field(column.es_column)[-1] == EXISTS_TYPE:
+                            DEBUG and Log.note("{{column.es_column}} is a struct", column=column)
                             column.last_updated = Date.now()
                             continue
-                        elif column.last_updated >= Date.now()-TOO_OLD:
+                        elif column.last_updated > Date.now() - TOO_OLD and column.cardinality is not None:
+                            # DO NOT UPDATE FRESH COLUMN METADATA
+                            DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-column.last_updated).seconds)
                             continue
                         try:
                             self._update_cardinality(column)

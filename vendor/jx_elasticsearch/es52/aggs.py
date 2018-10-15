@@ -448,7 +448,7 @@ def es_aggsop(es, frum, query):
             start += d.num_columns
 
     if split_where[0]:
-        #TODO: INCLUDE FILTERS ON EDGES
+        # TODO: INCLUDE FILTERS ON EDGES
         filter = AndOp("and", split_where[0]).to_esfilter(schema)
         es_query = Data(
             aggs={"_filter": set_default({"filter": filter}, es_query)}

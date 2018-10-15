@@ -129,7 +129,7 @@ class ColumnList(Table, jx_base.Container):
                                     "count=" + quote_value(column.count),
                                     "cardinality=" + quote_value(column.cardinality),
                                     "multi=" + quote_value(column.multi),
-                                    "partitions=" + quote_value(column.partitions),
+                                    "partitions=" + quote_value(value2json(column.partitions)),
                                     "last_updated=" + quote_value(column.last_updated)
                                 ]) +
                                 SQL_WHERE + SQL_AND.join([

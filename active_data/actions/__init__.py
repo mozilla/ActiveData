@@ -19,7 +19,7 @@ from future.utils import text_type
 from active_data import record_request
 from active_data.actions import save_query
 from jx_base import container
-from jx_elasticsearch.meta import ElasticsearchMetadata
+from jx_elasticsearch.meta import ElasticsearchMetadata, TOO_OLD
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import coalesce, split_field, set_default
 from mo_json import STRUCT
@@ -96,7 +96,7 @@ def test_mode_wait(query):
     try:
         metadata_manager = find_container(query['from']).namespace
         now = Date.now()
-        timeout = Till(till=(now + MINUTE).unix)
+        timeout = Till(seconds=MINUTE.seconds)
 
         if query["from"].startswith("meta."):
             return
@@ -105,28 +105,20 @@ def test_mode_wait(query):
         metadata_manager.meta.tables[alias].timestamp = now  # TRIGGER A METADATA RELOAD AFTER THIS TIME
 
         # MARK COLUMNS DIRTY
-        metadata_manager.meta.columns.update({
-            "set": {"last_updated": now},
-            "clear": [
-                "partitions",
-                "count",
-                "cardinality",
-                "multi"
-            ],
-            "where": {"eq": {"es_index": alias}}
-        })
-
-        # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
-        cols = [c for c in metadata_manager.get_columns(table_name=alias, after=now-SECOND) if c.jx_type not in STRUCT]
-        if len(cols) <= 1:
-            Log.error("should have columns")
-        for c in cols:
-            Log.note("Mark {{column.name}} dirty at {{time}}", column=c, time=now)
+        columns = [c for c in metadata_manager.get_columns(alias) if c.jx_type not in STRUCT]
+        len_cols = 0
+        for c in columns:
+            len_cols += 1
+            c.cardinality = None  # TRICK METADATA MANAGER THAT THIS IS COLUMN IS STALE
+            c.last_updated = now
+            Log.note("Mark {{column.name}} dirty at {{time}}", column=c, time=c.last_updated)
             metadata_manager.todo.push(c)
+        if len_cols <= 1:  # _id DOES NOT COUNT
+            Log.error("should have columns")
 
         while not timeout:
             # GET FRESH VERSIONS
-            cols = [c for c in metadata_manager.get_columns(table_name=query["from"], after=now) if c.jx_type not in STRUCT]
+            cols = [c for c in metadata_manager.get_columns(table_name=alias, after=now, timeout=timeout) if c.jx_type not in STRUCT]
             for c in cols:
                 if now >= c.last_updated:
                     Log.note(
@@ -138,10 +130,7 @@ def test_mode_wait(query):
                 break
             Till(seconds=1).wait()
         for c in cols:
-            Log.note(
-                "fresh column name={{column.name}} updated={{column.last_updated|date}} parts={{column.partitions}}",
-                column=c
-            )
+            Log.note("fresh column {{column|json}}", column=c)
     except Exception as e:
         Log.warning("could not pickup columns", cause=e)
 

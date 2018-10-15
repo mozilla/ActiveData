@@ -14,6 +14,10 @@ from __future__ import unicode_literals
 import operator
 from collections import Mapping
 from decimal import Decimal
+from encodings.idna import dots
+
+import mo_dots
+from docutils.utils.math.latex2mathml import mo
 
 import mo_json
 from jx_base.queries import is_variable_name, get_property_name
@@ -2771,6 +2775,10 @@ class UnionOp(Expression):
     def __data__(self):
         return {"union": [t.__data__() for t in self.terms]}
 
+    @property
+    def type(self):
+        return merge_types(t.type for t in self.terms)
+
     def vars(self):
         output = set()
         for t in self.terms:
@@ -2974,6 +2982,23 @@ class BasicSubstringOp(Expression):
         return FALSE
 
 
+def merge_types(jx_types):
+    """
+    :param jx_types: ITERABLE OF jx TYPES
+    :return: ONE TYPE TO RULE THEM ALL
+    """
+    return _merge_types[max(_merge_score[t] for t in jx_types)]
+
+
+_merge_score = {
+    IS_NULL: 0,
+    BOOLEAN: 1,
+    INTEGER: 2,
+    NUMBER: 3,
+    STRING: 4,
+    OBJECT: 5
+}
+_merge_types = {v: k for k, v in _merge_score.items()}
 
 operators = {
     "add": MultiOp,

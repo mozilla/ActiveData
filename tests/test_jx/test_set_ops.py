@@ -1205,18 +1205,19 @@ class TestSetOps(BaseTestCase):
     def test_union_columns(self):
         test = {
             "data": [
-                {"a": [1, 2, 3], "b": [2, 3, 4]},
-                {"a": [4, 4, 4], "b": [2, 3, 4]}
+                {"a": [1, 2, 3], "b": [2, 3, 4], "c":1},
+                {"a": [4, 4, 4], "b": [2, 3, 4], "c":2}
             ],
             "query": {
-                "select": {"name": "x", "value": {"union": ["a", "b"]}},
-                "from": TEST_TABLE
+                "select": [{"name": "x", "value": {"union": ["a", "b"]}}],
+                "from": TEST_TABLE,
+                "sort": "c"  # USE sort TO ENSURE ORDER OF ROWS TO MATCH expecting_list
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"x": [1, 2, 3, 4]},
-                    {"x": [2, 3, 4]}
+                    {"x": {1, 2, 3, 4}},
+                    {"x": {2, 3, 4}}
                 ]
             }
         }

@@ -108,7 +108,7 @@ def test_mode_wait(query):
             if len(columns) > 1:
                 break
             else:
-                Log.warning("should have columns")
+                Log.warning("should have columns for {{table}}", table=alias)
                 metadata_manager.es_cluster.get_metadata(force=True)
 
         for c in columns:

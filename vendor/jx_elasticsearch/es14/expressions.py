@@ -63,7 +63,7 @@ class EsScript(Expression):
         self.data_type = type
         self.expr = expr
         self.many = many  # True if script returns multi-value
-        self.frum = frum
+        self.frum = frum  # THE ORIGINAL EXPRESSION THAT MADE expr
 
     @property
     def type(self):

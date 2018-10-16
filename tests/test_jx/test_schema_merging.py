@@ -285,17 +285,17 @@ class TestSchemaMerging(BaseTestCase):
             },
             "expecting_list": {
                 "meta": {"format": "value"},
-                "data": 6
+                "data": 8
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a.b"],
-                "data": [[6]]
+                "data": [[8]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "data": {
-                    "a.b": 6
+                    "a.b": 8
                 }
             }
         }

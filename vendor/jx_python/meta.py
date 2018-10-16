@@ -441,6 +441,7 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
                     es_index=".",
                     jx_type=python_type_to_json_type[d.__class__],
                     es_type=row_type,
+                    last_updated=Date.now(),
                     nested_path=nested_path
                 )
                 columns.add(column)
@@ -456,6 +457,7 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
                         es_column=full_name,
                         es_index=".",
                         es_type="undefined",
+                        last_updated=Date.now(),
                         nested_path=nested_path
                     )
                     columns.add(column)

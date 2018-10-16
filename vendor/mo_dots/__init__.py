@@ -120,14 +120,17 @@ def split_field(field):
         return [field]
 
 
-def join_field(field):
+def join_field(path):
     """
     RETURN field SEQUENCE AS STRING
     """
-    potent = [f for f in field if f != "."]
-    if not potent:
-        return "."
-    return ".".join([f.replace(".", "\\.") for f in potent])
+    output = ".".join([f.replace(".", "\\.") for f in path])
+    return output if output else "."
+
+    # potent = [f for f in path if f != "."]
+    # if not potent:
+    #     return "."
+    # return ".".join([f.replace(".", "\\.") for f in potent])
 
 
 def concat_field(prefix, suffix):

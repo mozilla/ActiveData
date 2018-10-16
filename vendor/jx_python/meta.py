@@ -16,7 +16,7 @@ from datetime import date
 from datetime import datetime
 from decimal import Decimal
 
-from pyLibrary.sql import sql_iso, sql_list, SQL_SELECT, SQL, SQL_ORDERBY, SQL_FROM, SQL_WHERE, SQL_AND
+from pyLibrary.sql import sql_iso, sql_list, SQL_SELECT, SQL, SQL_ORDERBY, SQL_FROM, SQL_WHERE, SQL_AND, SQL_LIMIT
 
 import jx_base
 from jx_base import Column, Table

@@ -657,7 +657,7 @@ class Schema(jx_base.Schema):
                 return output
         return []
 
-    def values(self, column_name):
+    def values(self, column_name, exclude_type=STRUCT):
         """
         RETURN ALL COLUMNS THAT column_name REFERS TO
         """
@@ -668,7 +668,7 @@ class Schema(jx_base.Schema):
                 c
                 for c in columns
                 if (
-                    c.jx_type not in (OBJECT, NESTED) and
+                    c.jx_type not in exclude_type and
                     untype_path(relative_field(c.name, path)) == column_name
                 )
             ]

@@ -1465,11 +1465,6 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
         var_to_depth = {v.var: max(len(c.nested_path) - 1, 0) for v in vars_ for c in schema[v.var]}
         all_depths = set(var_to_depth.values())
-        # if -1 in all_depths:
-        #     Log.error(
-        #         "Can not find column with name {{column|quote}}",
-        #         column=unwraplist([k for k, v in var_to_depth.items() if v == -1])
-        #     )
         if len(all_depths) == 0:
             all_depths = {0}
         output = wrap([[] for _ in range(MAX(all_depths) + 1)])

@@ -641,8 +641,9 @@ class Schema(jx_base.Schema):
         """
         column_name = unnest_path(column_name)
         columns = self.columns
-        deep_path = self.query_path[0]
-        for path in self.query_path:
+        # TODO: '.' IMPLIES ALL FIELDS FROM ABSOLUTE PERPECTIVE, ALL OTHERS ARE A RELATIVE PERSPECTIVE
+        # TODO: HOW TO REFER TO FIELDS THAT MAY BE SHADOWED BY A RELATIVE NAME
+        for path in reversed(self.query_path) if column_name == '.' else self.query_path:
             output = [
                 c
                 for c in columns

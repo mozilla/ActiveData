@@ -15,7 +15,7 @@ from operator import add
 
 from jx_base.domains import SetDomain
 from jx_base.expressions import TupleOp, NULL
-from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
+from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder, DimFieldListDecoder
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp
@@ -23,7 +23,7 @@ from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
-from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, unwraplist, concat_field
+from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, FlatList, unwrap, unwraplist, concat_field
 from mo_future import text_type
 from mo_json import EXISTS
 from mo_json.typed_encoder import encode_property

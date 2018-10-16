@@ -19,6 +19,7 @@ from jx_elasticsearch.es52.setop import format_dispatch, get_pull_function, get_
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template
 from jx_python.expressions import compile_expression, jx_expression_to_function
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, concat_field, set_default, relative_field, startswith_field
+from mo_future import zip_longest
 from mo_json import NESTED
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
@@ -60,8 +61,8 @@ def es_deepop(es, query):
 
     # SPLIT WHERE CLAUSE BY DEPTH
     wheres = split_expression_by_depth(query.where, schema)
-    for i, f in enumerate(es_filters):
-        script = AndOp("and", wheres[i]).partial_eval().to_esfilter(schema)
+    for f, w in zip_longest(es_filters, wheres):
+        script = AndOp("and", w).partial_eval().to_esfilter(schema)
         set_default(f, script)
 
     if not wheres[1]:

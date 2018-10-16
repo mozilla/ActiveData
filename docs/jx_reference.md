@@ -266,8 +266,7 @@ defines the other domain attributes which can be assigned.
       - **edge.domain.partitions.N.min** - minimum value for this partition
       - **edge.domain.partitions.N.max** - supremum value for this partition
 
-`window` Clause
----------------
+## `window` Clause
 
 The `window` clause defines a sequence of window functions to be applied to 
 the result set. Each window function defines an additional attribute, and 
@@ -297,8 +296,7 @@ calculate the attribute value.
 
 **Please note: The javascript JSON Expressions library uses "analytic" instead of "window".**
 
-having
-------
+## `having` Clause (not implemented)
 
 The `having` clause is a filter that uses aggregates and partitions to 
 determine inclusion in the resultant cube.
@@ -308,6 +306,42 @@ determine inclusion in the resultant cube.
   - **sort** – a single attribute name, or array of attribute names, used to 
   declare the rank of every row in the group
   - **aggregate** - an aggregate function used to determine which row is selected
+
+## `sort` Clause
+
+`sort` is used to order the final result. It only makes sense when asking for one dimensional results; like lists, tables and 1D cubes. The `sort` clause will accept one sub-clause, or a list of sub-clauses.
+
+### Standard form
+
+Standard form is meant for automated composition
+
+  - **value** - expression to sort by
+  - **sort** - (optional) use `1` to sort in ascending order, `-1` in descending order. `asc` and `desc` have the same effect respectively. You can ignore this property, or set it to `null` or `0` for no sorting.  
+
+**Example**
+
+    {"sort": {"value": "build.date", "sort": 1}}
+
+### Short form
+
+Short form is more restrictive, but a bit more humane; it has `{field: ordering}` format
+
+  - **field** - the name of the attribute to sort by
+  - **ordering** - the direction of the sort: with the same options as standard form  
+
+**Example**
+
+    {"sort": {"build.date": "asc"}}
+
+### Shortest form
+
+`sort` will also accept a single string with name of the attribute to sort by; and assume the order is ascending
+
+**Example**
+
+    {"sort": "build.date"}
+
+
 
 Pre-Defined Dimensions
 ----------------------

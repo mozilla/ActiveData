@@ -64,7 +64,7 @@ Queries are complex operators over sets, tables, and lists. Technically,
 queries are `from` operators with a variety of optional clauses that 
 direct data transformation.
 
-`from` Operator
+`from` Clause
 ---------------
 
 The `from` operator accepts one parameter: the table, an index, or relation that 
@@ -89,12 +89,19 @@ Example: Pull review requests from BZ:
     "where":{"eq":{"request_status":"?"}}
     }
 
-`select` Clause
----------------
+## `select` Clause
 
-The select clause can be a single object, or an array of objects. The former 
-will result in nameless value inside each cell of the resulting cube. The 
-latter will result in an object, with given attributes, in each cell.
+The `select` clause can be a single object, or an array of objects. The former will result in nameless value. The latter will result in an object, with given attributes, in each cell.
+
+  - **value** – Expression to calculate the result value
+  - **name** – The name given to the resulting attribute. Optional if `value` is a simple variable name.
+  - **aggregate** – one of many aggregate operations
+  - **default** to replace null in the event there is no data
+  - **sort** – one of `increasing`, `decreasing` or `none` (default). Only meaningful when the output of the query is a list, not a cube.
+
+[more documentation on `select`](jx_clause_select.md)
+
+### Examples
 
 Here is an example counting the current number of bugs (open and closed) in 
 the KOI project:
@@ -135,24 +142,15 @@ to rename the attribute, they can be replaced with simply the value:
     }
 
 
-
-  - **name** – The name given to the resulting attribute. Optional if `value` 
-  is a simple variable name.
-  - **value** – Expression to calculate the result value
-  - **aggregate** – one of many aggregate operations
-  - **default** to replace null in the event there is no data
-  - **sort** – one of `increasing`, `decreasing` or `none` (default). Only 
-  meaningful when the output of the query is a list, not a cube.
-
 `select.aggregate` Subclause
 ----------------------------
 
 The `aggregate` sub-clause directs the particular aggregation 
 
-  - **none** – when expecting only one value
+  - **none** – when expecting only one value 
   - **one** – when expecting all values to be identical
   - **binary** – returns 1 if value found, 0 for no value
-  - **exists** – same as binary but returns boolean
+  - **exists** – same as binary but returns Boolean
   - **count** – count number of values
   - **sum** – mathematical summation of values
   - **average** – mathematical average of values
@@ -160,7 +158,7 @@ The `aggregate` sub-clause directs the particular aggregation
   - **minimum** – return minimum value observed
   - **maximum** – return maximum value observed
   - **first** - return first value observed (assuming ordered `from` clause)
-  - **any** - return any value observed (that is not null, of course)
+  - **any** - return one of any value observed
   - **percentile** – return given percentile
     - **select.percentile** defined from 0.0 to 1.0 (required)
     - **select.default** to replace null in the event there is no data
@@ -182,7 +180,6 @@ The `aggregate` sub-clause directs the particular aggregation
 
 All aggregates ignore the null values; If all values are null, it is the same 
 as having no data.
-
 
 `where` Clause
 ------------

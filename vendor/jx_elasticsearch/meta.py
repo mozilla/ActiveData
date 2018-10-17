@@ -233,12 +233,6 @@ class ElasticsearchMetadata(Namespace):
                 Log.error("{{table|quote}} does not exist", table=table_name)
 
         try:
-            last_update = MAX([
-                self.es_cluster.index_last_updated[i]
-                for i, a in self.index_to_alias.items()
-                if a == alias
-            ])
-
             table = self.get_table(alias)[0]
             # LAST TIME WE GOT INFO FOR THIS TABLE
             if not table:
@@ -251,7 +245,7 @@ class ElasticsearchMetadata(Namespace):
                 with self.meta.tables.locker:
                     self.meta.tables.add(table)
                 self._reload_columns(table)
-            elif after or table.timestamp < last_update:
+            elif after or table.timestamp < self.es_cluster.metatdata_last_updated:
                 self._reload_columns(table)
 
             columns = self.meta.columns.find(alias, column_name)

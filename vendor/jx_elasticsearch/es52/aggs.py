@@ -327,8 +327,6 @@ def es_aggsop(es, frum, query):
                 if not columns:
                     s.pull = jx_expression_to_function(NULL)
                 else:
-                    if s.default:
-                        Log.error("do not know how to handle select.default value")
                     pulls = []
                     for c in columns:
                         if relative_field(c.nested_path[0], schema.query_path[0]) == '.':

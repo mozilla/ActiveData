@@ -14,10 +14,6 @@ from __future__ import unicode_literals
 import operator
 from collections import Mapping
 from decimal import Decimal
-from encodings.idna import dots
-
-import mo_dots
-from docutils.utils.math.latex2mathml import mo
 
 import mo_json
 from jx_base.queries import is_variable_name, get_property_name

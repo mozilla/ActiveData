@@ -351,13 +351,15 @@ class Index(Features):
                         cause = [
                             Except(
                                 template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}} (typed={{typed}}):\n{{line}}",
-                                status=items[i].index.status,
-                                error=items[i].index.error,
-                                some=len(fails) - 1,
-                                line=strings.limit(lines[i * 2 + 1], 500 if not self.debug else 100000),
-                                index=self.settings.index,
-                                typed=self.settings.typed,
-                                id=items[i].index._id
+                                params={
+                                    "status":items[i].index.status,
+                                    "error":items[i].index.error,
+                                    "some":len(fails) - 1,
+                                    "line":strings.limit(lines[i * 2 + 1], 500 if not self.debug else 100000),
+                                    "index":self.settings.index,
+                                    "typed":self.settings.typed,
+                                    "id":items[i].index._id
+                                }
                             )
                             for i in fails
                         ]
@@ -365,13 +367,15 @@ class Index(Features):
                         i=fails[0]
                         cause = Except(
                             template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}} (typed={{typed}}):\n{{line}}",
-                            status=items[i].index.status,
-                            error=items[i].index.error,
-                            some=len(fails) - 1,
-                            line=strings.limit(lines[i * 2 + 1], 500 if not self.debug else 100000),
-                            index=self.settings.index,
-                            typed=self.settings.typed,
-                            id=items[i].index._id
+                            params={
+                                "status":items[i].index.status,
+                                "error":items[i].index.error,
+                                "some":len(fails) - 1,
+                                "line":strings.limit(lines[i * 2 + 1], 500 if not self.debug else 100000),
+                                "index":self.settings.index,
+                                "typed":self.settings.typed,
+                                "id":items[i].index._id
+                            }
                         )
                     Log.error("Problems with insert", cause=cause)
             pass
@@ -847,7 +851,7 @@ class Cluster(object):
             for old_index_name, old_meta in old_indices.items():
                 new_index = self._metadata.indices[old_index_name]
                 if not new_index:
-                    DEBUG_METADATA_UPDATE and Log.note("Old index lost: {{index}} at {{time}}", index=new_index_name, time=now)
+                    DEBUG_METADATA_UPDATE and Log.note("Old index lost: {{index}} at {{time}}", index=old_index_name, time=now)
                     self.index_last_updated[old_index_name] = now
         self.info = wrap(self.get("/", stream=False))
         self._version = self.info.version.number

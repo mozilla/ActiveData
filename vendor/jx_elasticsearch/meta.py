@@ -22,7 +22,7 @@ from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
 from mo_dots import Data, relative_field, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field
-from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER, NESTED
+from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER
 from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
 from mo_kwargs import override
 from mo_logs import Log
@@ -91,10 +91,7 @@ class ElasticsearchMetadata(Namespace):
         table_columns = metadata_tables()
         self.meta.tables = ListContainer(
             "meta.tables",
-            [
-                # TableDesc("meta.columns", None, ".", Date.now()),
-                # TableDesc("meta.tables", None, ".", Date.now())
-            ],
+            [],
             jx_base.Schema(".", table_columns)
         )
         self.meta.columns.extend(table_columns)
@@ -104,6 +101,9 @@ class ElasticsearchMetadata(Namespace):
         else:
             self.worker = Thread.run("refresh metadata", self.not_monitor)
         return
+
+
+
 
     @property
     def namespace(self):
@@ -549,7 +549,7 @@ class ElasticsearchMetadata(Namespace):
         if name == "meta.columns":
             return self.meta.columns
 
-            # return self.meta.columns
+
         with self.meta.tables.locker:
             return wrap([t for t in self.meta.tables.data if t.name == name])
 

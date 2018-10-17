@@ -23,7 +23,7 @@ from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
-from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, FlatList, unwrap, unwraplist, concat_field
+from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, FlatList, unwrap, unwraplist, concat_field, relative_field
 from mo_future import text_type
 from mo_json import EXISTS, OBJECT, NESTED
 from mo_json.typed_encoder import encode_property
@@ -331,17 +331,20 @@ def es_aggsop(es, frum, query):
                         Log.error("do not know how to handle select.default value")
                     pulls = []
                     for c in columns:
-                        if c.nested_path[0] == ".":
+                        if relative_field(c.nested_path[0], schema.query_path[0]) == '.':
                             # PULL VALUE OUT OF THE stats AGGREGATE
                             es_query.aggs[literal_field(canonical_name)].extended_stats.field = c.es_column
-                            pulls.append({"coalesce": [concat_field(literal_field(canonical_name), aggregates[s.aggregate]), 0]})
+                            pulls.append({"coalesce": [concat_field(literal_field(canonical_name), aggregates[s.aggregate]), s.default]})
                         else:
                             nest_name = literal_field(concat_field(c.nested_path[0], canonical_name))
                             es_query.aggs[nest_name] = {
                                 "nested": {"path": c.nested_path[0]},
                                 "aggs": {canonical_name: {"extended_stats": {"field": c.es_column}}}
                             }
-                            pulls.append({"coalesce": [concat_field(concat_field(nest_name, literal_field(canonical_name)), aggregates[s.aggregate]), 0]})
+                            pulls.append({"coalesce": [
+                                concat_field(concat_field(nest_name, literal_field(canonical_name)), aggregates[s.aggregate]),
+                                s.default
+                            ]})
                     if len(pulls) == 1:
                         s.pull = jx_expression_to_function(pulls[0])
                     else:

@@ -115,8 +115,8 @@ class ColumnList(Table, jx_base.Container):
                         for r in result.data:
                             c = row_to_column(result.header, r)
                             self._add(c)
-
-                    self.last_load = now
+                            if c.last_updated > self.last_load:
+                                self.last_load = c.last_updated
 
                     updates = self.todo.pop_all()
                     DEBUG and updates and Log.note("{{num}} columns to push to db", num=len(updates))

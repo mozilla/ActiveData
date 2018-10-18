@@ -82,8 +82,8 @@ class ColumnList(Table, jx_base.Container):
         return result
 
     def _create_db(self):
-        with self._transaction() as t:
-            t.execute(
+        with self._transaction():
+            self.db.execute(
                 "CREATE TABLE " + db_table_name +
                 sql_iso(sql_list(
                     [
@@ -128,7 +128,7 @@ class ColumnList(Table, jx_base.Container):
     def _update_database_worker(self, please_stop):
         while not please_stop:
             try:
-                with self._transaction() as t:
+                with self._transaction():
                     result = self._query(
                         SQL_SELECT + all_columns +
                         SQL_FROM + db_table_name +
@@ -316,7 +316,7 @@ class ColumnList(Table, jx_base.Container):
                     if unwraplist(command.clear) == ".":
                         with self.locker:
                             del self.data[eq.es_index]
-                            with self._transaction() as t:
+                            with self._transaction():
                                 self.db.execute("DELETE FROM "+db_table_name+SQL_WHERE+" es_index="+quote_value(eq.es_index))
                             return
 

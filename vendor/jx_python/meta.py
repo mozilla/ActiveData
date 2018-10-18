@@ -11,12 +11,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import sqlite3
 from collections import Mapping
+from contextlib import contextmanager
 from datetime import date
 from datetime import datetime
 from decimal import Decimal
-
-from pyLibrary.sql import sql_iso, sql_list, SQL_SELECT, SQL, SQL_ORDERBY, SQL_FROM, SQL_WHERE, SQL_AND, SQL_LIMIT
 
 import jx_base
 from jx_base import Column, Table
@@ -27,17 +27,19 @@ from mo_dots import Data, concat_field, listwrap, unwraplist, NullType, FlatList
 from mo_future import none_type, text_type, long, PY2
 from mo_json import python_type_to_json_type, STRUCT, NUMBER, INTEGER, STRING, json2value, value2json
 from mo_json.typed_encoder import untype_path, unnest_path
-from mo_logs import Log
+from mo_logs import Log, Except
 from mo_threads import Lock, Till, Queue, Thread
 from mo_times.dates import Date
-from pyLibrary.sql.sqlite import Sqlite, quote_column, json_type_to_sqlite_type, quote_value
+from pyLibrary.sql import sql_iso, sql_list, SQL_SELECT, SQL_ORDERBY, SQL_FROM, SQL_WHERE, SQL_AND
+from pyLibrary.sql.sqlite import quote_column, json_type_to_sqlite_type, quote_value
 
-DEBUG = True
+DEBUG = False
 singlton = None
 DB_FILE = "activedata_metadata.sqlite"
 db_table_name = quote_column("meta.columns")
 
 INSERT, UPDATE, DELETE = 'insert', 'update', 'delete'
+
 
 class ColumnList(Table, jx_base.Container):
     """
@@ -49,14 +51,38 @@ class ColumnList(Table, jx_base.Container):
         self.data = {}  # MAP FROM ES_INDEX TO (abs_column_name to COLUMNS)
         self.locker = Lock()
         self._schema = None
-        self.db = Sqlite(filename=DB_FILE)
+        self.db = sqlite3.connect(
+            database=DB_FILE,
+            check_same_thread=False,
+            isolation_level=None
+        )
         self.last_load = Null
         self.todo = Queue("update columns to db")  # HOLD (action, column) PAIR, WHERE action in ['insert', 'update']
         self._load_db()
         Thread.run("update " + DB_FILE, self._update_database_worker)
 
+    @contextmanager
+    def _transaction(self):
+        self.db.execute("BEGIN")
+        try:
+            yield
+        except Exception as e:
+            e = Except.wrap(e)
+            self.db.execute("ROLLBACK")
+            Log.error("Transaction failed", cause=e)
+        finally:
+            self.db.execute("COMMIT")
+
+    def _query(self, query):
+        result = Data()
+        curr = self.db.execute(query)
+        result.meta.format = "table"
+        result.header = [d[0] for d in curr.description] if curr.description else None
+        result.data = curr.fetchall()
+        return result
+
     def _create_db(self):
-        with self.db.transaction() as t:
+        with self._transaction() as t:
             t.execute(
                 "CREATE TABLE " + db_table_name +
                 sql_iso(sql_list(
@@ -71,12 +97,12 @@ class ColumnList(Table, jx_base.Container):
 
             for c in METADATA_COLUMNS:
                 self._add(c)
-                self._insert_column(c, t)
+                self._insert_column(c)
 
     def _load_db(self):
         self.last_load = Date.now()
 
-        result = self.db.query(
+        result = self._query(
             SQL_SELECT + "name" +
             SQL_FROM + "sqlite_master" +
             SQL_WHERE + SQL_AND.join([
@@ -88,7 +114,7 @@ class ColumnList(Table, jx_base.Container):
             self._create_db()
             return
 
-        result = self.db.query(
+        result = self._query(
             SQL_SELECT + all_columns +
             SQL_FROM + db_table_name +
             SQL_ORDERBY + sql_list(map(quote_column, ["es_index", "name", "es_column"]))
@@ -101,29 +127,29 @@ class ColumnList(Table, jx_base.Container):
 
     def _update_database_worker(self, please_stop):
         while not please_stop:
-            now = Date.now()
             try:
-                with self.db.transaction() as t:
-                    result = t.query(
+                with self._transaction() as t:
+                    result = self._query(
                         SQL_SELECT + all_columns +
                         SQL_FROM + db_table_name +
                         SQL_WHERE + "last_updated>" + quote_value(self.last_load) +
                         SQL_ORDERBY + sql_list(map(quote_column, ["es_index", "name", "es_column"]))
                     )
 
-                    with self.locker:
-                        for r in result.data:
-                            c = row_to_column(result.header, r)
-                            self._add(c)
-                            if c.last_updated > self.last_load:
-                                self.last_load = c.last_updated
+                with self.locker:
+                    for r in result.data:
+                        c = row_to_column(result.header, r)
+                        self._add(c)
+                        if c.last_updated > self.last_load:
+                            self.last_load = c.last_updated
 
-                    updates = self.todo.pop_all()
-                    DEBUG and updates and Log.note("{{num}} columns to push to db", num=len(updates))
-                    for action, column in updates:
+                updates = self.todo.pop_all()
+                DEBUG and updates and Log.note("{{num}} columns to push to db", num=len(updates))
+                for action, column in updates:
+                    with self._transaction():
                         DEBUG and Log.note("update db for {{table}}.{{column}}", table=column.es_index, column=column.es_column)
                         if action is UPDATE:
-                            t.execute(
+                            self.db.execute(
                                 "UPDATE" + db_table_name +
                                 "SET" + sql_list([
                                     "count=" + quote_value(column.count),
@@ -139,7 +165,7 @@ class ColumnList(Table, jx_base.Container):
                                 ])
                             )
                         elif action is DELETE:
-                            t.execute(
+                            self.db.execute(
                                 "DELETE FROM" + db_table_name +
                                 SQL_WHERE + SQL_AND.join([
                                     "es_index = " + quote_value(column.es_index),
@@ -147,15 +173,15 @@ class ColumnList(Table, jx_base.Container):
                                 ])
                             )
                         else:
-                            self._insert_column(column, t)
+                            self._insert_column(column)
             except Exception as e:
                 Log.warning("problem updataing database", cause=e)
 
             (Till(seconds=10) | please_stop).wait()
 
-    def _insert_column(self, column, transaction):
+    def _insert_column(self, column):
         try:
-            transaction.execute(
+            self.db.execute(
                 "INSERT INTO" + db_table_name + sql_iso(all_columns) +
                 "VALUES" + sql_iso(sql_list([
                     quote_value(column[c.name]) if c.name not in ("nested_path", "partitions") else quote_value(value2json(column[c.name]))
@@ -163,11 +189,13 @@ class ColumnList(Table, jx_base.Container):
                 ]))
             )
         except Exception as e:
-            if "exists" in e:
+            e = Except.wrap(e)
+            if "UNIQUE constraint failed" in e:
                 # THIS CAN HAPPEN BECAUSE todo HAS OLD COLUMN DATA
                 self.todo.add((UPDATE, column))
             else:
                 Log.error("do not know how to handle", cause=e)
+
 
     def __copy__(self):
         output = object.__new__(ColumnList)
@@ -216,7 +244,14 @@ class ColumnList(Table, jx_base.Container):
             if canonical.es_type == column.es_type:
                 if column.last_updated > canonical.last_updated:
                     for key in Column.__slots__:
-                        canonical[key] = column[key]
+                        old_value = canonical[key]
+                        new_value = column[key]
+                        if new_value == None:
+                            pass  # DO NOT BOTHER CLEARING OLD VALUES (LIKE cardinality AND paritiions)
+                        elif new_value == old_value:
+                            pass  # NO NEED TO UPDATE WHEN NO CHANGE MADE (COMMON CASE)
+                        else:
+                            canonical[key] = new_value
                 return canonical
         existing_columns.append(column)
         return column
@@ -274,14 +309,15 @@ class ColumnList(Table, jx_base.Container):
         self.dirty = True
         try:
             command = wrap(command)
+            DEBUG and Log.note("Update {{timestamp}}: {{command|json}}", command=command, timestamp=Date(command['set'].last_updated))
             eq = command.where.eq
             if eq.es_index:
                 if len(eq) == 1:
-                    if unwraplist(command.clear)==".":
+                    if unwraplist(command.clear) == ".":
                         with self.locker:
                             del self.data[eq.es_index]
-                            with self.db.transaction() as t:
-                                t.execute("DELETE FROM "+db_table_name+SQL_WHERE+" es_index="+quote_value(eq.es_index))
+                            with self._transaction() as t:
+                                self.db.execute("DELETE FROM "+db_table_name+SQL_WHERE+" es_index="+quote_value(eq.es_index))
                             return
 
                     # FASTEST
@@ -319,6 +355,7 @@ class ColumnList(Table, jx_base.Container):
 
             with self.locker:
                 for col in columns:
+                    DEBUG and Log.note("Update column {{table}}.{{column}}", table=col.es_index, column=col.es_column)
                     for k in command["clear"]:
                         if k == ".":
                             self.todo.add((DELETE, col))
@@ -333,6 +370,13 @@ class ColumnList(Table, jx_base.Container):
                             col[k] = None
 
                     for k, v in command.set.items():
+                        # if k == 'partitions':
+                        #     Log.note("set partitions on {{id}}", id=id(col))
+                        #     def check(please_stop):
+                        #         while not please_stop:
+                        #             Log.note("{{id}}: {{parts}}", id=id(col), parts=col[k])
+                        #             Till(seconds=0.05).wait()
+                        #     Thread.run("check", check)
                         col[k] = v
         except Exception as e:
             Log.error("should not happen", cause=e)

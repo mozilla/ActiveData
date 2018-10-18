@@ -164,7 +164,7 @@ class Date(object):
         return str(unix2datetime(self.unix))
 
     def __repr__(self):
-        return unix2datetime(self.unix).__repr__()
+        unix2datetime(self.unix).__repr__()
 
     def __sub__(self, other):
         if other == None:

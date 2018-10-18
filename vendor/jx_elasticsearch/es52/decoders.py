@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from collections import Mapping
+from time import time
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
@@ -28,6 +29,8 @@ from mo_logs import Log
 from mo_logs.strings import quote, expand_template
 from mo_math import MAX, MIN, Math
 from pyLibrary.convert import string2boolean
+
+DEBUG = True
 
 
 class AggsDecoder(object):
@@ -64,7 +67,19 @@ class AggsDecoder(object):
                 col = cols[0]
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
 
-                if col.partitions != None:
+                temp = col.partitions
+
+                if col.partitions == None:
+                    start = time()
+                    while col.partitions == None:
+                        pass
+                    end = time()
+                    Log.note("took {{duration}} to find parts", duration=end-start)
+                    DEBUG and Log.note("id={{id}} has no parts {{column}}", id=id(col), column=col)
+                    e.domain = set_default(DefaultDomain(limit=limit), e.domain.__data__())
+                    return object.__new__(DefaultDecoder, e)
+                else:
+                    DEBUG and Log.note("id={{id}} has parts!!!", id=id(col))
                     if col.multi > 1 and len(col.partitions) < 6:
                         return object.__new__(MultivalueDecoder)
 
@@ -74,9 +89,6 @@ class AggsDecoder(object):
                     else:
                         partitions = sorted(partitions)
                     e.domain = SimpleSetDomain(partitions=partitions, limit=limit)
-                else:
-                    e.domain = set_default(DefaultDomain(limit=limit), e.domain.__data__())
-                    return object.__new__(DefaultDecoder, e)
 
             else:
                 return object.__new__(DefaultDecoder, e)

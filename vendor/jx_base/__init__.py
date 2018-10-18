@@ -218,6 +218,7 @@ Column = DataClass(
         "last_updated"
     ],
     constraint={"and": [
+        {"not":{"eq":{"es_column":"string"}}},
         {"eq": [{"last": "nested_path"}, {"literal": "."}]}
     ]}
 )

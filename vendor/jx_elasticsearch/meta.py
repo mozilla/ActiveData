@@ -22,13 +22,13 @@ from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
 from mo_dots import Data, relative_field, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field
+from mo_future import text_type
 from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER
 from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_logs.strings import quote
-from mo_math import MAX
 from mo_threads import Queue, THREAD_STOP, Thread, Till
 from mo_times import HOUR, MINUTE, Timer, Date
 from pyLibrary.env import elasticsearch
@@ -123,13 +123,13 @@ class ElasticsearchMetadata(Namespace):
 
         alias = table_desc.name
         canonical_index = self.es_cluster.get_best_matching_index(alias).index
-        update_required = not (table_desc.timestamp < es_last_updated)
-        metadata = self.es_cluster.get_metadata(force=update_required)
+        es_metadata_update_required = not (table_desc.timestamp < es_last_updated)
+        metadata = self.es_cluster.get_metadata(force=es_metadata_update_required)
 
         props = [
             (self.es_cluster.get_index(index=i, type=t, debug=DEBUG), t, m.properties)
             for i, d in metadata.indices.items()
-            if self.index_to_alias.get(i) == alias
+            if alias in d.aliases
             for t, m in [_get_best_type_from_mapping(d.mappings)]
         ]
 
@@ -147,10 +147,11 @@ class ElasticsearchMetadata(Namespace):
 
         data_type, mapping = _get_best_type_from_mapping(meta.mappings)
         mapping.properties["_id"] = {"type": "string", "index": "not_analyzed"}
-        self._parse_properties(alias, mapping, meta)
+        columns = self._parse_properties(alias, mapping)
         table_desc.timestamp = es_last_updated
+        return columns
 
-    def _parse_properties(self, alias, mapping, meta):
+    def _parse_properties(self, alias, mapping):
         abs_columns = elasticsearch.parse_properties(alias, ".", ROOT_PATH, mapping.properties)
         if any(c.cardinality == 0 and c.name != '_id' for c in abs_columns):
             Log.warning(
@@ -187,10 +188,13 @@ class ElasticsearchMetadata(Namespace):
                     self.alias_to_query_paths[i] = query_paths
 
             # ENSURE COLUMN HAS CORRECT jx_type
+            output = []
             for abs_column in abs_columns:
                 abs_column.jx_type = jx_type(abs_column)
-                self.todo.add(self.meta.columns.add(abs_column))
-        pass
+                canonical = self.meta.columns.add(abs_column)
+                output.append(canonical)
+                self.todo.add(canonical)
+        return output
 
     def query(self, _query):
         return self.meta.columns.query(QueryOp(set_default(
@@ -244,11 +248,17 @@ class ElasticsearchMetadata(Namespace):
                 )
                 with self.meta.tables.locker:
                     self.meta.tables.add(table)
-                self._reload_columns(table)
+                columns = self._reload_columns(table)
+                DEBUG and Log.note("columns from reload")
             elif after or table.timestamp < self.es_cluster.metatdata_last_updated:
-                self._reload_columns(table)
+                columns = self._reload_columns(table)
+                DEBUG and Log.note("columns from reload")
+            else:
+                columns = self.meta.columns.find(alias, column_name)
+                DEBUG and Log.note("columns from find()")
 
-            columns = self.meta.columns.find(alias, column_name)
+            DEBUG and Log.note("columns are {{ids}}", ids=[id(c) for c in columns])
+
             columns = jx.sort(columns, "name")
 
             if after is None:
@@ -262,10 +272,10 @@ class ElasticsearchMetadata(Namespace):
                 if timeout:
                     Log.error("trying to gets columns timed out")
                 if DEBUG:
-                    if len(columns) > 10:
-                        Log.note("waiting for {{num}} columns to update", num=len(pending))
+                    if len(pending) > 10:
+                        Log.note("waiting for {{num}} columns to update by {{timestamp}}", num=len(pending), timestamp=after)
                     else:
-                        Log.note("waiting for columns to update {{columns|json}}", columns=[c.es_index + "." + c.es_column for c in pending])
+                        Log.note("waiting for columns to update by {{timestamp}}; {{columns|json}}", timestamp=after, columns=[c.es_index + "." + c.es_column + " id="+text_type(id(c)) for c in pending])
                 Till(seconds=1).wait()
             return columns
         except Exception as e:
@@ -498,7 +508,7 @@ class ElasticsearchMetadata(Namespace):
                             continue
                         elif column.last_updated > Date.now() - TOO_OLD and column.cardinality is not None:
                             # DO NOT UPDATE FRESH COLUMN METADATA
-                            DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-column.last_updated).seconds)
+                            DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-Date(column.last_updated)).seconds)
                             continue
                         try:
                             self._update_cardinality(column)

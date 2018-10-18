@@ -30,6 +30,7 @@ from mo_threads import Till
 from mo_times.dates import Date
 from mo_times.durations import MINUTE, SECOND
 
+DEBUG = True
 QUERY_TOO_LARGE = "Query is too large"
 
 
@@ -102,21 +103,6 @@ def test_mode_wait(query):
         metadata_manager = find_container(alias).namespace
         metadata_manager.meta.tables[alias].timestamp = now  # TRIGGER A METADATA RELOAD AFTER THIS TIME
 
-        # MARK COLUMNS DIRTY
-        while True:
-            columns = [c for c in metadata_manager.get_columns(alias) if c.jx_type not in STRUCT]
-            if len(columns) > 1:
-                break
-            else:
-                Log.warning("should have columns for {{table}}", table=alias)
-                metadata_manager.es_cluster.get_metadata(force=True)
-
-        for c in columns:
-            c.cardinality = None  # TRICK METADATA MANAGER THAT THIS IS COLUMN IS STALE
-            c.last_updated = now
-            Log.note("Mark {{column.name}} dirty at {{time}}", column=c, time=c.last_updated)
-            metadata_manager.todo.push(c)
-
         timeout = Till(seconds=MINUTE.seconds)
         while not timeout:
             # GET FRESH VERSIONS
@@ -132,7 +118,7 @@ def test_mode_wait(query):
                 break
             Till(seconds=1).wait()
         for c in cols:
-            Log.note("fresh column {{column|json}}", column=c)
+            Log.note("fresh column id={{id}}: {{column|json}}", id=id(c), column=c)
     except Exception as e:
         Log.warning("could not pickup columns", cause=e)
 

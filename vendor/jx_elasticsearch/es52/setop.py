@@ -122,7 +122,7 @@ def es_setop(es, query):
                             new_select.append({
                                 "name": select.name,
                                 "value": Variable(c.es_column),
-                                "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)},
+                                "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(c.name, s_column))},
                                 "pull": get_pull_source(c.es_column)
                             })
                 else:
@@ -135,7 +135,7 @@ def es_setop(es, query):
                                 new_select.append({
                                     "name": select.name,
                                     "value": Variable(c.es_column),
-                                    "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)},
+                                    "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(c.name, s_column))},
                                     "pull": get_pull_source(c.es_column)
                                 })
                             else:
@@ -143,7 +143,7 @@ def es_setop(es, query):
                                 new_select.append({
                                     "name": select.name,
                                     "value": Variable(c.es_column),
-                                    "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)}
+                                    "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(c.name, s_column))}
                                 })
                         else:
                             if not nested_filter:

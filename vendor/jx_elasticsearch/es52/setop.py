@@ -28,7 +28,7 @@ from mo_dots import coalesce, split_field, set_default, Data, unwraplist, litera
 from mo_dots.lists import FlatList
 from mo_future import transpose
 from mo_json import NESTED
-from mo_json.typed_encoder import untype_path, unnest_path, untyped
+from mo_json.typed_encoder import untype_path, unnest_path, untyped, decode_property
 from mo_logs import Log
 from mo_math import AND, MAX
 from mo_times.timer import Timer
@@ -119,10 +119,11 @@ def es_setop(es, query):
                     for c in leaves:
                         if len(c.nested_path) == 1:  # NESTED PROPERTIES ARE IGNORED, CAPTURED BY THESE FIRT LEVEL PROPERTIES
                             jx_name = untype_path(c.name)
+                            pre_child = join_field(decode_property(n) for n in split_field(c.name))
                             new_select.append({
                                 "name": select.name,
                                 "value": Variable(c.es_column),
-                                "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(c.name, s_column))},
+                                "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(pre_child, s_column))},
                                 "pull": get_pull_source(c.es_column)
                             })
                 else:
@@ -132,18 +133,20 @@ def es_setop(es, query):
                             jx_name = untype_path(c.name)
                             if c.jx_type == NESTED:
                                 es_query.stored_fields = ["_source"]
+                                pre_child = join_field(decode_property(n) for n in split_field(c.name))
                                 new_select.append({
                                     "name": select.name,
                                     "value": Variable(c.es_column),
-                                    "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(c.name, s_column))},
+                                    "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(pre_child, s_column))},
                                     "pull": get_pull_source(c.es_column)
                                 })
                             else:
                                 es_query.stored_fields += [c.es_column]
+                                pre_child = join_field(decode_property(n) for n in split_field(c.name))
                                 new_select.append({
                                     "name": select.name,
                                     "value": Variable(c.es_column),
-                                    "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(c.name, s_column))}
+                                    "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(pre_child, s_column))}
                                 })
                         else:
                             if not nested_filter:

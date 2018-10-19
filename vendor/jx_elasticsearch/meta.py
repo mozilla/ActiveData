@@ -425,7 +425,7 @@ class ElasticsearchMetadata(Namespace):
             else:
                 parts = jx.sort(aggs.buckets.key)
 
-            DEBUG and Log.note("update metadata for {{column.es_index}}.{{column.es_column}} at {{time}}", column=column, time=now)
+            DEBUG and Log.note("update metadata for {{column.es_index}}.{{column.es_column}} (id={{id}}) at {{time}}", id=id(column), column=column, time=now)
             self.meta.columns.update({
                 "set": {
                     "count": count,
@@ -632,7 +632,7 @@ class Schema(jx_base.Schema):
 
                     Log.warning("Problem getting query path {{path|quote}} in snowflake {{sf|quote}}", path=query_path, sf=snowflake.name, cause=e)
 
-            if not isinstance(self.query_path, list) or self.query_path[-1] != ".":
+            if not isinstance(self.query_path, list) or self.query_path[len(self.query_path) - 1] != ".":
                 Log.error("error")
 
         except Exception as e:

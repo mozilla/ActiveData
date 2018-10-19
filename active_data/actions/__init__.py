@@ -117,8 +117,6 @@ def test_mode_wait(query):
             else:
                 break
             Till(seconds=1).wait()
-        for c in cols:
-            Log.note("fresh column id={{id}}: {{column|json}}", id=id(c), column=c)
     except Exception as e:
         Log.warning("could not pickup columns", cause=e)
 

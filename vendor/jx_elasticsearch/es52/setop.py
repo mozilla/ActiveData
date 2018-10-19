@@ -138,7 +138,6 @@ def es_setop(es, query):
                                     "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)},
                                     "pull": get_pull_source(c.es_column)
                                 })
-
                             else:
                                 es_query.stored_fields += [c.es_column]
                                 new_select.append({

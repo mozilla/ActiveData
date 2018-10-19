@@ -1191,9 +1191,33 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("please make this test")
     def test_select_typed_column(self):
+        test = {
+            "data": [
+                {"a": "test"}
+            ],
+            "query": {
+                "select": ["a.~s~"],
+                "from": TEST_TABLE,
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": {"~s~": "test"}}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a.~s~"],
+                "data": [
+                    ["test"]
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
         pass
+
         # TODO: The timestamp.~s~ APPEARS TO RESULT IN {"":{"":{"":{"":"2018-09-26 12:41:19.575174"}}}}
         # {
         #

@@ -1935,6 +1935,48 @@ class TestEdge1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_negative_range(self):
+        test = {
+            "data": [{"v": -1.0}],
+            "query": {
+                "from": TEST_TABLE,
+                "edges": [
+                    {
+                        "name": "v",
+                        "value": "v",
+                        "domain": {
+                            "type": "range",
+                            "min": -2,
+                            "max": 2,
+                            "interval": 1
+                        }
+                    }
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "v",
+                        "domain": {
+                            "key": "min",
+                            "partitions": [
+                                {"min": -2, "max": -1},
+                                {"min": -1, "max": 0},
+                                {"min": 0, "max": 1},
+                                {"min": 1, "max": 2}
+                            ]
+                        }
+                    }
+                ],
+                "data": {"count": [0, 1, 0, 0, 0]}
+            }
+        }
+        self.utils.execute_tests(test)
+
+
+
+
 
 # TODO: ALLOW USE OF EDGE VARIABLES IN QUERY
 # IN THIS CASE "timestamp.min" REFERS TO A PART OF THE EDGE

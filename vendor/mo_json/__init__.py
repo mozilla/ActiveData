@@ -25,7 +25,7 @@ from mo_logs.strings import expand_template
 from mo_times import Date, Duration
 
 FIND_LOOPS = False
-SNAP_TO_BASE_10 = True  # Identify floats near a round base10 value (has 000 or 999) and shorten
+SNAP_TO_BASE_10 = False  # Identify floats near a round base10 value (has 000 or 999) and shorten
 CAN_NOT_DECODE_JSON = "Can not decode JSON"
 
 IS_NULL = '0'

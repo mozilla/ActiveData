@@ -151,7 +151,9 @@ class Date(object):
 
     @staticmethod
     def today():
-        return _unix2Date(math.floor(_time() / 86400) * 86400)
+        now = _utcnow()
+        now_unix = datetime2unix(now)
+        return _unix2Date(math.floor(now_unix / 86400) * 86400)
 
     @staticmethod
     def range(min, max, interval):

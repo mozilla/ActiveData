@@ -12,15 +12,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from unittest import skip
-
-from jx_base.query import DEFAULT_LIMIT
+from mo_logs import Log
 
 from jx_base.expressions import NULL
+from jx_base.query import DEFAULT_LIMIT
 from mo_dots import wrap
 from mo_times.dates import Date
 from mo_times.durations import WEEK, DAY
-from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
+from tests.test_jx import BaseTestCase, TEST_TABLE
 
 TODAY = Date.today()
 
@@ -207,6 +206,43 @@ class TestTime(BaseTestCase):
                     [r.v for r in expected2 if r.a == "y"],
                     [NULL for r in expected2 if r.a == "x"]
                 ]}
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_time_subtraction(self):
+        """
+        IF THIS FAILS, MAYBE THE JSON ROUNDING ENGINE IS ENABLED
+        """
+        today = Date("2018-10-20")
+        Log.note("Notice {{date}} is {{unix}}", date=today, unix=today.unix)
+        data = [
+            {"a": today, "t": Date("2018-10-20").unix, "v": 2},
+            {"a": today, "t": Date("2018-10-19").unix, "v": 2},
+            {"a": today, "t": Date("2018-10-18").unix, "v": 3},
+            {"a": today, "t": Date("2018-10-17").unix, "v": 5},
+            {"a": today, "t": Date("2018-10-16").unix, "v": 7},
+            {"a": today, "t": Date("2018-10-15").unix, "v": 11},
+            {"a": today, "t": NULL, "v": 27},
+            {"a": today, "t": Date("2018-10-19").unix, "v": 13},
+            {"a": today, "t": Date("2018-10-18").unix, "v": 17},
+            {"a": today, "t": Date("2018-10-16").unix, "v": 19},
+            {"a": today, "t": Date("2018-10-15").unix, "v": 23}
+        ]
+
+        test = {
+            "data": data,
+            "query": {
+                "from": TEST_TABLE,
+                "select": ["a", "t", "v", {"name": "diff", "value": {"sub": ["t", "a"]}}],
+                "limit": 100
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": Date(r.a).unix, "t": Date(r.t).unix, "v":r.v, "diff": (Date(r.t) - Date(r.a)).seconds}
+                    for r in wrap(data)
+                ]
             }
         }
         self.utils.execute_tests(test)

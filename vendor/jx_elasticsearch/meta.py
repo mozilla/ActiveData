@@ -360,7 +360,7 @@ class ElasticsearchMetadata(Namespace):
                             "aggs": {"multi": {"max": {"script": "doc[" + quote(column.es_column) + "].values.size()"}}},
                             "filter": {"bool": {"should": [
                                 {"term": {"etl.timestamp.~n~": (Date.today() - WEEK)}},
-                                {"missing": {"field": "etl.timestamp.~n~"}}
+                                {"bool": {"must_not": {"exists": {"field": "etl.timestamp.~n~"}}}}
                             ]}}
                         }
                     },
